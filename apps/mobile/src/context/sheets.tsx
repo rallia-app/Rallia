@@ -224,6 +224,7 @@ declare module 'react-native-actions-sheet' {
         group: unknown;
         currentUserId: string;
         isModerator: boolean;
+        type?: 'group' | 'community';
         onMemberRemoved?: () => void;
         onPlayerPress?: (playerId: string) => void;
       };

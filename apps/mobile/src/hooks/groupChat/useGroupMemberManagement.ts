@@ -27,6 +27,14 @@ interface NetworkInfo {
   cover_image_url: string | null;
   description: string | null;
   member_count: number;
+  type?: 'community' | 'player_group' | string | null;
+}
+
+export interface SelectedMemberInfo {
+  playerId: string;
+  name: string;
+  profilePictureUrl: string | null;
+  isAdmin: boolean;
 }
 
 export interface SelectedMemberInfo {

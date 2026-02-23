@@ -68,32 +68,52 @@ export function MemberListActionSheet({ payload }: SheetProps<'member-list'>) {
   const group = payload?.group as GroupWithMembers;
   const currentUserId = payload?.currentUserId ?? '';
   const isModerator = payload?.isModerator ?? false;
+  const type = payload?.type ?? 'group'; // Default to 'group' for backwards compatibility
   const onMemberRemoved = payload?.onMemberRemoved;
   const onPlayerPress = payload?.onPlayerPress;
+
+  const isCommunity = type === 'community';
 
   const { colors, isDark } = useThemeStyles();
   const toast = useToast();
   const { t } = useTranslation();
 
-  const [selectedMember, setSelectedMember] = useState<GroupMember | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  // Track locally removed members for immediate UI update
+  const [removedMemberIds, setRemovedMemberIds] = useState<string[]>([]);
+  // Track role changes for immediate UI update: { playerId: 'moderator' | 'member' }
+  const [roleOverrides, setRoleOverrides] = useState<Record<string, 'moderator' | 'member'>>({});
 
   const handleClose = useCallback(() => {
     setSearchQuery('');
+    setRemovedMemberIds([]);
+    setRoleOverrides({});
     SheetManager.hide('member-list');
   }, []);
 
-  // Filter members based on search query
+  // Filter members based on search query and exclude removed members
   const filteredMembers = useMemo(() => {
-    if (!searchQuery.trim()) return group.members;
+    // First filter out removed members
+    let members = group.members.filter(m => !removedMemberIds.includes(m.player_id));
+
+    // Apply role overrides for UI consistency
+    members = members.map(m => {
+      if (roleOverrides[m.player_id]) {
+        return { ...m, role: roleOverrides[m.player_id] };
+      }
+      return m;
+    });
+
+    // Then apply search filter
+    if (!searchQuery.trim()) return members;
     const query = searchQuery.toLowerCase().trim();
-    return group.members.filter(member => {
+    return members.filter(member => {
       const firstName = member.player?.profile?.first_name?.toLowerCase() || '';
       const lastName = member.player?.profile?.last_name?.toLowerCase() || '';
       const displayName = member.player?.profile?.display_name?.toLowerCase() || '';
       return firstName.includes(query) || lastName.includes(query) || displayName.includes(query);
     });
-  }, [group.members, searchQuery]);
+  }, [group.members, searchQuery, removedMemberIds, roleOverrides]);
 
   const removeGroupMemberMutation = useRemoveGroupMember();
   const promoteMemberMutation = usePromoteMember();
@@ -101,14 +121,16 @@ export function MemberListActionSheet({ payload }: SheetProps<'member-list'>) {
 
   const handleMemberOptions = useCallback(
     (member: GroupMember) => {
-      setSelectedMember(member);
+      // Get effective role (with any local overrides applied)
+      const effectiveRole = roleOverrides[member.player_id] || member.role;
+
       // Show member options sheet
       const memberInfo = {
         name:
           member.player?.profile?.display_name ||
           `${member.player?.profile?.first_name || ''} ${member.player?.profile?.last_name || ''}`.trim() ||
           'Unknown',
-        role: member.role as 'member' | 'moderator',
+        role: effectiveRole as 'member' | 'moderator',
         isCreator: group.created_by === member.player_id,
         profilePictureUrl: member.player?.profile?.profile_picture_url,
         playerId: member.player_id,
@@ -116,7 +138,7 @@ export function MemberListActionSheet({ payload }: SheetProps<'member-list'>) {
 
       const isCreator = group.created_by === member.player_id;
       const isSelf = member.player_id === currentUserId;
-      const memberIsModerator = member.role === 'moderator';
+      const memberIsModerator = effectiveRole === 'moderator';
 
       const options: Array<{
         id: string;
@@ -139,6 +161,8 @@ export function MemberListActionSheet({ payload }: SheetProps<'member-list'>) {
                   moderatorId: currentUserId,
                   playerIdToPromote: member.player_id,
                 });
+                // Update role immediately in UI
+                setRoleOverrides(prev => ({ ...prev, [member.player_id]: 'moderator' }));
                 toast.success(t('groups.memberPromoted'));
                 onMemberRemoved?.();
               } catch (error) {
@@ -158,6 +182,8 @@ export function MemberListActionSheet({ payload }: SheetProps<'member-list'>) {
                   moderatorId: currentUserId,
                   playerIdToDemote: member.player_id,
                 });
+                // Update role immediately in UI
+                setRoleOverrides(prev => ({ ...prev, [member.player_id]: 'member' }));
                 toast.success(t('groups.moderatorDemoted'));
                 onMemberRemoved?.();
               } catch (error) {
@@ -169,15 +195,19 @@ export function MemberListActionSheet({ payload }: SheetProps<'member-list'>) {
 
         options.push({
           id: 'remove',
-          label: t('groups.removeFromGroup'),
+          label: isCommunity ? t('community.removeFromCommunity') : t('groups.removeFromGroup'),
           icon: 'person-remove-outline',
           destructive: true,
           onPress: () => {
             Alert.alert(
-              t('groups.removeMember'),
-              t('groups.removeMemberConfirm', {
-                name: member.player?.profile?.first_name || t('groups.thisMember'),
-              }),
+              isCommunity ? t('community.removeMember') : t('groups.removeMember'),
+              isCommunity
+                ? t('community.removeMemberConfirm', {
+                    name: member.player?.profile?.first_name || t('community.thisMember'),
+                  })
+                : t('groups.removeMemberConfirm', {
+                    name: member.player?.profile?.first_name || t('groups.thisMember'),
+                  }),
               [
                 { text: t('common.cancel'), style: 'cancel' },
                 {
@@ -190,11 +220,19 @@ export function MemberListActionSheet({ payload }: SheetProps<'member-list'>) {
                         moderatorId: currentUserId,
                         playerIdToRemove: member.player_id,
                       });
-                      toast.success(t('groups.memberRemoved'));
+                      // Remove member immediately from UI
+                      setRemovedMemberIds(prev => [...prev, member.player_id]);
+                      toast.success(
+                        isCommunity ? t('community.memberRemoved') : t('groups.memberRemoved')
+                      );
                       onMemberRemoved?.();
                     } catch (error) {
                       toast.error(
-                        error instanceof Error ? error.message : t('groups.failedToRemoveMember')
+                        error instanceof Error
+                          ? error.message
+                          : isCommunity
+                            ? t('community.failedToRemoveMember')
+                            : t('groups.failedToRemoveMember')
                       );
                     }
                   },
@@ -219,6 +257,8 @@ export function MemberListActionSheet({ payload }: SheetProps<'member-list'>) {
       group,
       currentUserId,
       isModerator,
+      isCommunity,
+      roleOverrides,
       promoteMemberMutation,
       demoteMemberMutation,
       removeGroupMemberMutation,

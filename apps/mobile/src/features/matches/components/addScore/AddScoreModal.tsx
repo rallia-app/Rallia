@@ -19,13 +19,14 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../../hooks';
 import { AddScoreProvider, useAddScore } from './AddScoreContext';
 import { FindOpponentStep } from './FindOpponentStep';
 import { MatchDetailsStep } from './MatchDetailsStep';
 import { MatchExpectationStep } from './MatchExpectationStep';
 import { CreateTeamsStep } from './CreateTeamsStep';
 import { WinnerScoresStep } from './WinnerScoresStep';
+import { ScoreSubmittedSuccessModal } from './ScoreSubmittedSuccessModal';
 import type { MatchType } from './types';
 import { useCreatePlayedMatch, type CreatePlayedMatchInput } from '@rallia/shared-hooks';
 import { getSportIdByName } from '@rallia/shared-services';
@@ -61,6 +62,8 @@ function AddScoreContent({
 
   const createPlayedMatchMutation = useCreatePlayedMatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [submittedMatchId, setSubmittedMatchId] = useState<string | null>(null);
 
   // Check if there are unsaved changes (any progress beyond initial state)
   const hasUnsavedChanges = useCallback(() => {
@@ -159,15 +162,9 @@ function AddScoreContent({
 
         const result = await createPlayedMatchMutation.mutateAsync(matchInput);
 
-        Alert.alert(t('addScore.scoreSubmitted'), t('addScore.scoreSubmittedMessage'), [
-          {
-            text: t('common.ok'),
-            onPress: () => {
-              onSuccess?.(result.matchId);
-              onClose();
-            },
-          },
-        ]);
+        // Show success modal with animation
+        setSubmittedMatchId(result.matchId);
+        setShowSuccessModal(true);
       } catch (error) {
         console.error('Error submitting score:', error);
         Alert.alert(t('common.error'), t('addScore.failedToSubmit'));
@@ -175,8 +172,17 @@ function AddScoreContent({
         setIsSubmitting(false);
       }
     },
-    [formData, user, onSuccess, onClose, createPlayedMatchMutation, t]
+    [formData, user, createPlayedMatchMutation, t]
   );
+
+  // Handle success modal close
+  const handleSuccessModalClose = useCallback(() => {
+    setShowSuccessModal(false);
+    if (submittedMatchId) {
+      onSuccess?.(submittedMatchId);
+    }
+    onClose();
+  }, [submittedMatchId, onSuccess, onClose]);
 
   const renderStep = () => {
     switch (currentStep) {
@@ -245,6 +251,13 @@ function AddScoreContent({
       >
         {renderStep()}
       </KeyboardAvoidingView>
+
+      {/* Success Modal */}
+      <ScoreSubmittedSuccessModal
+        visible={showSuccessModal}
+        onClose={handleSuccessModalClose}
+        matchId={submittedMatchId || undefined}
+      />
     </SafeAreaView>
   );
 }

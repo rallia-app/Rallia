@@ -1190,6 +1190,16 @@ export default function CommunityDetailScreen() {
                       icon = 'exit';
                       iconColor = '#FF3B30';
                       break;
+                    case 'member_promoted':
+                      message = `${actorName} was promoted to moderator`;
+                      icon = 'arrow-up-circle';
+                      iconColor = '#34C759';
+                      break;
+                    case 'member_demoted':
+                      message = `${actorName} was demoted to member`;
+                      icon = 'arrow-down-circle';
+                      iconColor = '#FF9500';
+                      break;
                     case 'game_created':
                       message = `${actorName} created a new game`;
                       icon = 'sport'; // Rendered as SportIcon below
@@ -1407,6 +1417,7 @@ export default function CommunityDetailScreen() {
                   group: community as unknown as GroupWithMembers,
                   currentUserId: playerId ?? '',
                   isModerator: isModerator ?? false,
+                  type: 'community',
                   onMemberRemoved: () => refetch(),
                   onPlayerPress: (memberId: string) => {
                     SheetManager.hide('member-list');

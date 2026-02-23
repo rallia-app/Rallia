@@ -107,11 +107,7 @@ const AdminSettingsScreen: React.FC = () => {
   // Toggle preference
   const togglePreference = useCallback((type: string, field: 'enabled' | 'email' | 'push') => {
     lightHaptic();
-    setPreferences(prev =>
-      prev.map(p =>
-        p.type === type ? { ...p, [field]: !p[field] } : p
-      )
-    );
+    setPreferences(prev => prev.map(p => (p.type === type ? { ...p, [field]: !p[field] } : p)));
   }, []);
 
   // Get alert type label
@@ -133,7 +129,7 @@ const AdminSettingsScreen: React.FC = () => {
       // In a real implementation, this would call alertService.updateAlertPreference
       // For now, we'll simulate the save
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       toast.success(t('admin.settings.saveSuccess'));
       Logger.logUserAction('admin_settings_saved', { preferences });
     } catch (error) {
@@ -147,27 +143,23 @@ const AdminSettingsScreen: React.FC = () => {
   // Clear all alerts
   const handleClearAllAlerts = useCallback(() => {
     warningHaptic();
-    Alert.alert(
-      t('admin.settings.clearAlertsTitle'),
-      t('admin.settings.clearAlertsMessage'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.confirm'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // Would call alertService to clear all alerts
-              toast.success(t('admin.settings.alertsCleared'));
-              Logger.logUserAction('admin_alerts_cleared');
-            } catch (error) {
-              Logger.error('Failed to clear alerts', error as Error);
-              toast.error(t('errors.unknown'));
-            }
-          },
+    Alert.alert(t('admin.settings.clearAlertsTitle'), t('admin.settings.clearAlertsMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.confirm'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            // Would call alertService to clear all alerts
+            toast.success(t('admin.settings.alertsCleared'));
+            Logger.logUserAction('admin_alerts_cleared');
+          } catch (error) {
+            Logger.error('Failed to clear alerts', error as Error);
+            toast.error(t('errors.unknown'));
+          }
         },
-      ]
-    );
+      },
+    ]);
   }, [toast, t]);
 
   // Loading state
@@ -182,7 +174,10 @@ const AdminSettingsScreen: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['top']}
+    >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity
@@ -192,9 +187,14 @@ const AdminSettingsScreen: React.FC = () => {
         >
           <Ionicons name="arrow-back" size={24} color={colors.icon} />
         </TouchableOpacity>
-        <Text size="lg" weight="bold" color={colors.text}>
-          {t('admin.settings.title')}
-        </Text>
+        <View style={styles.headerTitleContainer}>
+          <Text size="lg" weight="bold" color={colors.text}>
+            {t('admin.settings.title')}
+          </Text>
+          <Text size="xs" color={colors.textMuted}>
+            {t('admin.sections.settings.description')}
+          </Text>
+        </View>
         <TouchableOpacity
           style={[styles.saveButton, { backgroundColor: colors.accent }]}
           onPress={handleSavePreferences}
@@ -217,11 +217,21 @@ const AdminSettingsScreen: React.FC = () => {
       >
         {/* Notification Preferences Section */}
         <View style={styles.section}>
-          <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.sectionTitle}>
+          <Text
+            size="sm"
+            weight="semibold"
+            color={colors.textSecondary}
+            style={styles.sectionTitle}
+          >
             {t('admin.settings.notificationPreferences')}
           </Text>
-          
-          <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+
+          <View
+            style={[
+              styles.card,
+              { backgroundColor: colors.cardBackground, borderColor: colors.border },
+            ]}
+          >
             {/* Table Header */}
             <View style={[styles.tableHeader, { borderBottomColor: colors.border }]}>
               <View style={styles.tableHeaderLabel}>
@@ -252,7 +262,10 @@ const AdminSettingsScreen: React.FC = () => {
                 key={pref.type}
                 style={[
                   styles.tableRow,
-                  index < preferences.length - 1 && { borderBottomColor: colors.border, borderBottomWidth: 1 },
+                  index < preferences.length - 1 && {
+                    borderBottomColor: colors.border,
+                    borderBottomWidth: 1,
+                  },
                 ]}
               >
                 <View style={styles.tableRowLabel}>
@@ -293,11 +306,21 @@ const AdminSettingsScreen: React.FC = () => {
 
         {/* Email Digest Section */}
         <View style={styles.section}>
-          <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.sectionTitle}>
+          <Text
+            size="sm"
+            weight="semibold"
+            color={colors.textSecondary}
+            style={styles.sectionTitle}
+          >
             {t('admin.settings.emailDigest')}
           </Text>
-          
-          <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+
+          <View
+            style={[
+              styles.card,
+              { backgroundColor: colors.cardBackground, borderColor: colors.border },
+            ]}
+          >
             <Text size="xs" color={colors.textMuted} style={styles.digestDescription}>
               {t('admin.settings.emailDigestDescription')}
             </Text>
@@ -332,11 +355,21 @@ const AdminSettingsScreen: React.FC = () => {
 
         {/* Data Management Section */}
         <View style={styles.section}>
-          <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.sectionTitle}>
+          <Text
+            size="sm"
+            weight="semibold"
+            color={colors.textSecondary}
+            style={styles.sectionTitle}
+          >
             {t('admin.settings.dataManagement')}
           </Text>
-          
-          <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+
+          <View
+            style={[
+              styles.card,
+              { backgroundColor: colors.cardBackground, borderColor: colors.border },
+            ]}
+          >
             {/* Export Audit Log */}
             <TouchableOpacity
               style={[styles.actionRow, { borderBottomColor: colors.border }]}
@@ -386,10 +419,7 @@ const AdminSettingsScreen: React.FC = () => {
             </TouchableOpacity>
 
             {/* Clear Alerts */}
-            <TouchableOpacity
-              style={styles.actionRowLast}
-              onPress={handleClearAllAlerts}
-            >
+            <TouchableOpacity style={styles.actionRowLast} onPress={handleClearAllAlerts}>
               <View style={styles.actionRowContent}>
                 <View style={[styles.actionIcon, { backgroundColor: colors.errorBg }]}>
                   <Ionicons name="trash-outline" size={20} color={colors.errorText} />
@@ -411,11 +441,21 @@ const AdminSettingsScreen: React.FC = () => {
         {/* System Info Section (super_admin only) */}
         {role === 'super_admin' && (
           <View style={styles.section}>
-            <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.sectionTitle}>
+            <Text
+              size="sm"
+              weight="semibold"
+              color={colors.textSecondary}
+              style={styles.sectionTitle}
+            >
               {t('admin.settings.systemInfo')}
             </Text>
-            
-            <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+
+            <View
+              style={[
+                styles.card,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
               <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
                 <Text size="sm" color={colors.textMuted}>
                   {t('admin.settings.version')}
@@ -466,13 +506,16 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[3],
     borderBottomWidth: 1,
   },
   backButton: {
     padding: spacingPixels[1],
+    marginRight: spacingPixels[3],
+  },
+  headerTitleContainer: {
+    flex: 1,
   },
   saveButton: {
     paddingHorizontal: spacingPixels[4],

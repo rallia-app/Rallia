@@ -8,26 +8,34 @@
 -- ENUM TYPES
 -- ============================================================
 
--- Report type enum
-CREATE TYPE report_type_enum AS ENUM (
-  'harassment',
-  'cheating',
-  'inappropriate_content',
-  'spam',
-  'impersonation',
-  'no_show',
-  'unsportsmanlike',
-  'other'
-);
+-- Report type enum (create only if not exists)
+DO $$ BEGIN
+  CREATE TYPE report_type_enum AS ENUM (
+    'harassment',
+    'cheating',
+    'inappropriate_content',
+    'spam',
+    'impersonation',
+    'no_show',
+    'unsportsmanlike',
+    'other'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
--- Report status enum
-CREATE TYPE report_status_enum AS ENUM (
-  'pending',
-  'under_review',
-  'dismissed',
-  'action_taken',
-  'escalated'
-);
+-- Report status enum (create only if not exists)
+DO $$ BEGIN
+  CREATE TYPE report_status_enum AS ENUM (
+    'pending',
+    'under_review',
+    'dismissed',
+    'action_taken',
+    'escalated'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ============================================================
 -- PLAYER REPORT TABLE

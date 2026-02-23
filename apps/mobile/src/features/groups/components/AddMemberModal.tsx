@@ -41,6 +41,7 @@ export function AddMemberActionSheet({ payload }: SheetProps<'add-member'>) {
   const [searchResults, setSearchResults] = useState<PlayerProfile[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [addedMemberIds, setAddedMemberIds] = useState<string[]>([]);
   const debouncedSearch = useDebounce(searchQuery, 300);
 
   const addMemberMutation = useAddGroupMember();
@@ -48,6 +49,7 @@ export function AddMemberActionSheet({ payload }: SheetProps<'add-member'>) {
   const handleClose = useCallback(() => {
     setSearchQuery('');
     setSearchResults([]);
+    setAddedMemberIds([]);
     SheetManager.hide('add-member');
   }, []);
 
@@ -67,9 +69,8 @@ export function AddMemberActionSheet({ payload }: SheetProps<'add-member'>) {
             first_name,
             last_name,
             display_name,
-            city,
             profile_picture_url,
-            player!inner(id)
+            player!inner(id, city)
           `
           )
           .neq('id', playerId)
@@ -83,7 +84,7 @@ export function AddMemberActionSheet({ payload }: SheetProps<'add-member'>) {
           first_name: p.first_name,
           last_name: p.last_name,
           display_name: p.display_name,
-          city: p.city,
+          city: (p.player as { city?: string | null })?.city ?? null,
           profile_picture_url: p.profile_picture_url,
         }));
         setSuggestedPlayers(players);
@@ -117,9 +118,8 @@ export function AddMemberActionSheet({ payload }: SheetProps<'add-member'>) {
             first_name,
             last_name,
             display_name,
-            city,
             profile_picture_url,
-            player!inner(id)
+            player!inner(id, city)
           `
           )
           .neq('id', playerId || '')
@@ -135,7 +135,7 @@ export function AddMemberActionSheet({ payload }: SheetProps<'add-member'>) {
           first_name: p.first_name,
           last_name: p.last_name,
           display_name: p.display_name,
-          city: p.city,
+          city: (p.player as { city?: string | null })?.city ?? null,
           profile_picture_url: p.profile_picture_url,
         }));
         setSearchResults(players);
@@ -150,11 +150,12 @@ export function AddMemberActionSheet({ payload }: SheetProps<'add-member'>) {
     searchPlayers();
   }, [debouncedSearch, playerId]);
 
-  // Filter out current members from results
+  // Filter out current members and recently added members from results
   const filteredResults = useMemo(() => {
     const sourceList = searchQuery.length >= 2 ? searchResults : suggestedPlayers;
-    return sourceList.filter(player => !currentMemberIds.includes(player.id));
-  }, [searchResults, suggestedPlayers, currentMemberIds, searchQuery]);
+    const excludedIds = [...currentMemberIds, ...addedMemberIds];
+    return sourceList.filter(player => !excludedIds.includes(player.id));
+  }, [searchResults, suggestedPlayers, currentMemberIds, addedMemberIds, searchQuery]);
 
   const handleAddMember = useCallback(
     async (memberPlayerId: string) => {
@@ -169,6 +170,8 @@ export function AddMemberActionSheet({ payload }: SheetProps<'add-member'>) {
         });
         successHaptic();
         toast.success(t('groups.memberAddedToGroup'));
+        // Immediately remove the player from the list
+        setAddedMemberIds(prev => [...prev, memberPlayerId]);
         onSuccess?.();
       } catch (error) {
         toast.error(error instanceof Error ? error.message : t('groups.failedToAddMember'));

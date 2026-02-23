@@ -134,8 +134,9 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
         },
       });
       resetForm();
-      SheetManager.hide('create-group');
-      // Navigate to the new group
+      // Hide modal first, then navigate
+      await SheetManager.hide('create-group');
+      // Navigate to the new group after modal is dismissed
       navigation.navigate('GroupDetail', { groupId: newGroup.id });
     } catch (error) {
       Alert.alert(

@@ -17,10 +17,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../../hooks';
 import { useProfile } from '@rallia/shared-hooks';
 import { primary } from '@rallia/design-system';
 import { useAddScore } from './AddScoreContext';
+import { MatchResultConfirmModal } from './MatchResultConfirmModal';
 import type { SetScore } from './types';
 
 interface WinnerScoresStepProps {
@@ -36,6 +37,13 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
   const partner = formData.partner;
   const isDoubles = formData.matchType === 'double';
   const isFriendly = formData.expectation === 'friendly';
+
+  // Confirmation modal state
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState<{
+    winner: 'team1' | 'team2';
+    sets: SetScore[];
+  } | null>(null);
 
   // For doubles: Team 1 = You + Partner, Team 2 = remaining 2 opponents
   // For singles: Team 1 = You, Team 2 = Opponent
@@ -115,76 +123,40 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
       ? []
       : sets.filter(s => s.team1Score !== null && s.team2Score !== null);
 
-    // Inline team name logic to avoid dependency issues
-    const team1Name =
-      isDoubles && partner
-        ? `${t('addScore.winnerScores.you')}, ${partner.firstName}`
-        : t('addScore.winnerScores.you');
-    const team2Name =
-      isDoubles && team2Players.length >= 2
-        ? `${team2Players[0]?.firstName}, ${team2Players[1]?.firstName}`
-        : team2Players[0]?.displayName ||
-          team2Players[0]?.firstName ||
-          t('addScore.winnerScores.opponent');
+    // Store pending submit data and show confirmation modal
+    setPendingSubmit({ winner: finalWinner, sets: finalSets });
+    setShowConfirmModal(true);
+  }, [winner, sets, isFriendly, t]);
 
-    // Build summary message
-    const winnerTeamName = finalWinner === 'team1' ? team1Name : team2Name;
-    const loserTeamName = finalWinner === 'team1' ? team2Name : team1Name;
-    const matchDate = formData.matchDate
+  // Handle confirmation from the modal
+  const handleConfirmSubmit = useCallback(() => {
+    if (!pendingSubmit) return;
+
+    updateFormData({
+      winnerId: pendingSubmit.winner,
+      sets: pendingSubmit.sets,
+    });
+    // Pass values directly to avoid React state async issues
+    onSubmit(pendingSubmit.winner, pendingSubmit.sets);
+    setShowConfirmModal(false);
+  }, [pendingSubmit, updateFormData, onSubmit]);
+
+  // Close confirmation modal
+  const handleCloseConfirmModal = useCallback(() => {
+    setShowConfirmModal(false);
+    setPendingSubmit(null);
+  }, []);
+
+  // Get match date formatted
+  const matchDateFormatted = useMemo(() => {
+    return formData.matchDate
       ? formData.matchDate.toLocaleDateString(undefined, {
           month: 'short',
           day: 'numeric',
           year: 'numeric',
         })
       : t('addScore.winnerScores.today');
-
-    let scoresSummary = '';
-    if (!isFriendly && finalSets.length > 0) {
-      const scoresText = finalSets
-        .map((s, i) => {
-          const team1 = finalWinner === 'team1' ? s.team1Score : s.team2Score;
-          const team2 = finalWinner === 'team1' ? s.team2Score : s.team1Score;
-          return `${t('addScore.winnerScores.set', { number: i + 1 })}: ${team1}-${team2}`;
-        })
-        .join('\n');
-      scoresSummary = `\n\n${scoresText}`;
-    }
-
-    const summaryMessage = `${winnerTeamName} ${t('addScore.winnerScores.defeated', {
-      winner: '',
-      loser: '',
-    })
-      .replace('{winner}', '')
-      .replace('{loser}', '')
-      .trim()} ${loserTeamName}\n${t('addScore.winnerScores.date', { date: matchDate })}${isFriendly ? `\n\n${t('addScore.winnerScores.friendlyMatch')}` : scoresSummary}`;
-
-    // Show confirmation dialog
-    Alert.alert(t('addScore.winnerScores.confirmMatchResult'), summaryMessage, [
-      { text: t('addScore.winnerScores.edit'), style: 'cancel' },
-      {
-        text: t('addScore.winnerScores.submit'),
-        onPress: () => {
-          updateFormData({
-            winnerId: finalWinner,
-            sets: finalSets,
-          });
-          // Pass values directly to avoid React state async issues
-          onSubmit(finalWinner, finalSets);
-        },
-      },
-    ]);
-  }, [
-    winner,
-    sets,
-    isFriendly,
-    updateFormData,
-    onSubmit,
-    formData.matchDate,
-    t,
-    isDoubles,
-    partner,
-    team2Players,
-  ]);
+  }, [formData.matchDate, t]);
 
   const canSubmit = isFriendly || winner !== null;
 
@@ -415,6 +387,30 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
           {isSubmitting ? t('addScore.winnerScores.saving') : t('addScore.winnerScores.continue')}
         </Button>
       </View>
+
+      {/* Match Result Confirmation Modal */}
+      {pendingSubmit && (
+        <MatchResultConfirmModal
+          visible={showConfirmModal}
+          onClose={handleCloseConfirmModal}
+          onConfirm={handleConfirmSubmit}
+          winnerName={pendingSubmit.winner === 'team1' ? getTeam1Name() : getTeam2Name()}
+          loserName={pendingSubmit.winner === 'team1' ? getTeam2Name() : getTeam1Name()}
+          matchDate={matchDateFormatted}
+          sets={pendingSubmit.sets}
+          isFriendly={isFriendly}
+          winnerId={pendingSubmit.winner}
+          isLoading={isSubmitting}
+          labels={{
+            title: t('addScore.winnerScores.confirmMatchResult'),
+            editButton: t('addScore.winnerScores.edit'),
+            submitButton: t('addScore.winnerScores.submit'),
+            setLabel: t('addScore.winnerScores.set', { number: '{number}' }),
+            friendlyMatch: t('addScore.winnerScores.friendlyMatch'),
+            savingLabel: t('addScore.winnerScores.saving'),
+          }}
+        />
+      )}
     </ScrollView>
   );
 }

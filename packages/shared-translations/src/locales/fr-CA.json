@@ -1545,6 +1545,7 @@
       "clearChat": "Effacer la conversation"
     },
     "groupChat": {
+      "admin": "Admin",
       "groupMemberCount": "Groupe · {count} membres",
       "groupMemberCount_one": "Groupe · {count} membre",
       "addGroupDescription": "Ajouter une description de groupe",
@@ -1635,6 +1636,12 @@
       "removeModerator": "Retirer modérateur",
       "viewAll": "Voir tout"
     },
+    "removeFromCommunity": "Retirer de la communauté",
+    "removeMember": "Retirer le membre",
+    "removeMemberConfirm": "Êtes-vous sûr de vouloir retirer {name} de cette communauté?",
+    "memberRemoved": "Membre retiré de la communauté",
+    "failedToRemoveMember": "Échec du retrait du membre",
+    "thisMember": "ce membre",
     "pendingRequests": {
       "title": "Demandes en attente",
       "count": "{count} demande(s) en attente",
@@ -1689,7 +1696,8 @@
       "last7DaysActivities": "Activités des 7 derniers jours",
       "activities": "ACTIVITÉS",
       "newMembers": "{count} nouveaux membres",
-      "gamesCreated": "{count, plural, one {{count} partie créée} other {{count} parties créées}}",
+      "gamesCreated": "{count} parties créées",
+      "gamesCreated_one": "{count} partie créée",
       "newMessages": "{count} nouveaux messages dans\nle clavardage",
       "about": "À propos",
       "viewAll": "Voir tout",
@@ -1967,7 +1975,8 @@
       "noActivity": "Aucune activité pour le moment",
       "activities": "ACTIVITÉS",
       "newMembers": "{count} nouveaux membres",
-      "gamesCreated": "{count, plural, one {{count} partie créée} other {{count} parties créées}}",
+      "gamesCreated": "{count} parties créées",
+      "gamesCreated_one": "{count} partie créée",
       "newMessages": "{count} nouveaux messages dans\nle clavardage"
     },
     "home": {
@@ -2030,8 +2039,8 @@
       "wasAddedBy": "{actorName} a été ajouté(e) par {addedByName}",
       "joinedTheGroup": "{actorName} a rejoint le groupe",
       "leftTheGroup": "{actorName} a quitté le groupe",
-      "promotedMember": "{actorName} a promu un membre au rôle de modérateur",
-      "demotedMember": "{actorName} a rétrogradé un modérateur au rôle de membre",
+      "promotedMember": "{actorName} a été promu(e) au rôle de modérateur",
+      "demotedMember": "{actorName} a été rétrogradé(e) au rôle de membre",
       "createdGame": "{actorName} a créé une nouvelle partie",
       "sentMessage": "{actorName} a envoyé un message",
       "updatedGroup": "{actorName} a mis à jour le groupe",
@@ -2482,6 +2491,7 @@
     "sportNotFound": "Sport introuvable: {sport}",
     "scoreSubmitted": "Score soumis!",
     "scoreSubmittedMessage": "Votre score a été soumis. Votre adversaire a 24 heures pour confirmer.",
+    "confirmationWindowNote": "Vous serez notifié(e) une fois que votre adversaire confirmera ou contestera le score.",
     "failedToSubmit": "Échec de la soumission du score. Veuillez réessayer.",
     "findOpponent": {
       "title": "Trouver votre adversaire",
@@ -4046,6 +4056,8 @@
   "admin": {
     "title": "Panneau Admin",
     "panelButton": "Panneau Admin",
+    "comingSoon": "Bientôt disponible",
+    "phase1Notice": "Phase 1 - Certaines fonctionnalités sont encore en développement",
     "roles": {
       "super_admin": "Super Admin",
       "moderator": "Modérateur",
@@ -4056,6 +4068,64 @@
       "activeUsers": "Utilisateurs actifs",
       "matchesToday": "Parties aujourd'hui",
       "pendingReports": "Rapports en attente"
+    },
+    "errors": {
+      "loadFailed": "Échec du chargement des données",
+      "accessDenied": "Accès refusé",
+      "noPermission": "Vous n'avez pas la permission d'accéder à cette zone",
+      "unexpectedError": "Une erreur inattendue s'est produite",
+      "invalidCallback": "Paramètres de rappel invalides"
+    },
+    "dashboard": {
+      "title": "Tableau de bord Admin",
+      "roleLabel": "Votre rôle",
+      "sections": "Actions rapides",
+      "description": "Gérer les organisations, les utilisateurs et les paramètres.",
+      "titleMeta": "Tableau de bord Admin - Rallia",
+      "descriptionMeta": "Tableau de bord d'administration pour les employés de Rallia.",
+      "organizationsCard": {
+        "title": "Organisations",
+        "description": "Gérer toutes les organisations"
+      },
+      "usersCard": {
+        "title": "Utilisateurs",
+        "description": "Voir et gérer les comptes utilisateurs"
+      },
+      "analyticsCard": {
+        "title": "Analytique",
+        "description": "Analyses et statistiques"
+      }
+    },
+    "export": {
+      "selectFormat": "Sélectionner le format d'export",
+      "csvDescription": "Exporter en fichier CSV pour les tableurs",
+      "pdfDescription": "Exporter en document PDF pour impression et partage"
+    },
+    "audit": {
+      "title": "Journal d'activité",
+      "subtitle": "Surveiller toutes les actions admin et événements système",
+      "exportSuccess": "Journal d'activité exporté avec succès",
+      "exportError": "Échec de l'export du journal d'activité",
+      "justNow": "À l'instant",
+      "minutesAgo": "Il y a {{count}} minute",
+      "minutesAgo_other": "Il y a {{count}} minutes",
+      "hoursAgo": "Il y a {{count}} heure",
+      "hoursAgo_other": "Il y a {{count}} heures",
+      "daysAgo": "Il y a {{count}} jour",
+      "daysAgo_other": "Il y a {{count}} jours",
+      "last7Days": "7 derniers jours",
+      "totalActions": "Total des actions",
+      "info": "Info",
+      "warnings": "Avertissements",
+      "critical": "Critique",
+      "filterByAction": "Filtrer par action",
+      "filterByEntity": "Filtrer par entité",
+      "filterBySeverity": "Filtrer par sévérité",
+      "noLogs": "Aucun journal d'activité trouvé",
+      "tryDifferentFilters": "Essayez d'ajuster vos filtres",
+      "noActivityYet": "Aucune activité enregistrée pour le moment",
+      "clearFilters": "Effacer les filtres",
+      "action": "Action"
     },
     "sections": {
       "users": {
@@ -4083,19 +4153,6 @@
         "description": "Configurer les préférences admin"
       }
     },
-    "users": {
-      "title": "Gestion des utilisateurs",
-      "searchPlaceholder": "Rechercher des utilisateurs...",
-      "filterBy": "Filtrer par",
-      "all": "Tous les utilisateurs",
-      "verified": "Vérifiés seulement",
-      "unverified": "Non vérifiés seulement",
-      "banned": "Utilisateurs bannis",
-      "detail": {
-        "title": "Détails de l'utilisateur",
-        "noUser": "Aucun utilisateur trouvé"
-      }
-    },
     "activityLog": {
       "title": "Journal d'activité",
       "empty": "Aucune activité à afficher",
@@ -4103,7 +4160,61 @@
     },
     "moderation": {
       "title": "Modération",
-      "empty": "Aucun rapport à examiner"
+      "empty": "Aucun rapport à examiner",
+      "pending": "En attente",
+      "underReview": "En cours d'examen",
+      "activeBans": "Bannissements actifs",
+      "reports": "Signalements",
+      "bans": "Bannissements",
+      "noReports": "Aucun signalement trouvé",
+      "noBans": "Aucun bannissement actif",
+      "noDescription": "Aucune description fournie",
+      "reportedPlayer": "Joueur signalé",
+      "reporter": "Signalé par",
+      "review": "Examiner",
+      "ban": "Bannir",
+      "dismiss": "Rejeter",
+      "banType": {
+        "temporary": "Temporaire",
+        "permanent": "Permanent"
+      },
+      "active": "Actif",
+      "revoked": "Révoqué",
+      "noReason": "Aucune raison fournie",
+      "bannedOn": "Banni le",
+      "expiresOn": "Expire le",
+      "revokeBan": "Révoquer le bannissement",
+      "revokeTitle": "Révoquer le bannissement",
+      "revokeConfirm": "Êtes-vous sûr de vouloir révoquer ce bannissement ?",
+      "revokeSuccess": "Bannissement révoqué avec succès",
+      "revokeError": "Échec de la révocation du bannissement",
+      "dismissTitle": "Rejeter le signalement",
+      "dismissConfirm": "Êtes-vous sûr de vouloir rejeter ce signalement ?",
+      "dismissSuccess": "Signalement rejeté avec succès",
+      "dismissError": "Échec du rejet du signalement",
+      "reviewStarted": "Examen commencé",
+      "banSuccess": "Utilisateur banni avec succès",
+      "banError": "Échec du bannissement de l'utilisateur",
+      "createBan": "Créer un bannissement",
+      "banningPlayer": "Bannir le joueur",
+      "banTypeLabel": "Type de bannissement",
+      "durationDays": "Durée (jours)",
+      "reasonLabel": "Raison",
+      "reasonPlaceholder": "Entrez la raison du bannissement...",
+      "confirmBan": "Confirmer le bannissement"
+    },
+    "alerts": {
+      "title": "Alertes",
+      "dismissTitle": "Rejeter l'alerte",
+      "dismissMessage": "Êtes-vous sûr de vouloir rejeter cette alerte ?",
+      "markAllReadTitle": "Tout marquer comme lu",
+      "markAllReadMessage": "Êtes-vous sûr de vouloir marquer toutes les alertes comme lues ?",
+      "critical": "Critique",
+      "warning": "Avertissement",
+      "info": "Info",
+      "unread": "Non lu",
+      "noAlerts": "Aucune alerte",
+      "allClear": "Tout est en ordre ! Aucune alerte à afficher."
     },
     "signIn": {
       "title": "Connexion Admin",
@@ -4119,24 +4230,6 @@
       "users": "Utilisateurs",
       "analytics": "Analytique",
       "settings": "Paramètres"
-    },
-    "dashboard": {
-      "title": "Tableau de bord Admin",
-      "description": "Gérez les organisations, les utilisateurs et les paramètres.",
-      "titleMeta": "Tableau de bord Admin - Rallia",
-      "descriptionMeta": "Tableau de bord d'administration pour les employés de Rallia.",
-      "organizationsCard": {
-        "title": "Organisations",
-        "description": "Gérer toutes les organisations"
-      },
-      "usersCard": {
-        "title": "Utilisateurs",
-        "description": "Voir et gérer les comptes utilisateurs"
-      },
-      "analyticsCard": {
-        "title": "Analytique",
-        "description": "Analyses et informations"
-      }
     },
     "organizations": {
       "title": "Organisations",
@@ -4508,6 +4601,28 @@
       "titleMeta": "Utilisateurs - Admin - Rallia",
       "descriptionMeta": "Gérer tous les utilisateurs, y compris les administrateurs, les membres d'organisation et les joueurs.",
       "comingSoon": "Interface de gestion des utilisateurs à venir.",
+      "searchPlaceholder": "Rechercher des utilisateurs...",
+      "filterBy": "Filtrer par",
+      "all": "Tous les utilisateurs",
+      "verified": "Vérifiés seulement",
+      "unverified": "Non vérifiés seulement",
+      "banned": "Utilisateurs bannis",
+      "anonymous": "Utilisateur anonyme",
+      "noEmail": "Pas d'email",
+      "sports": "sports",
+      "matches": "parties",
+      "noSearchResults": "Aucun utilisateur trouvé correspondant à votre recherche",
+      "noUsers": "Aucun utilisateur trouvé",
+      "tryDifferentSearch": "Essayez un autre terme de recherche",
+      "noUsersDescription": "Les utilisateurs apparaîtront ici une fois inscrits",
+      "resultsCount": "{{count}} utilisateur trouvé",
+      "resultsCount_other": "{{count}} utilisateurs trouvés",
+      "exportSuccess": "Données utilisateur exportées avec succès",
+      "exportError": "Échec de l'export des données utilisateur",
+      "skillLevel": "Niveau de compétence",
+      "rating": "Évaluation",
+      "created": "Créé",
+      "participants": "participants",
       "tabs": {
         "admins": "Administrateurs",
         "organizationMembers": "Membres d'organisation",
@@ -4526,7 +4641,29 @@
       },
       "status": {
         "active": "Actif",
-        "inactive": "Inactif"
+        "inactive": "Inactif",
+        "banned": "Banni"
+      },
+      "detail": {
+        "title": "Détails de l'utilisateur",
+        "noUser": "Aucun utilisateur trouvé"
+      },
+      "edit": {
+        "noChanges": "Aucune modification à enregistrer",
+        "saveSuccess": "Utilisateur mis à jour avec succès",
+        "saveFailed": "Échec de la mise à jour de l'utilisateur"
+      },
+      "actions": {
+        "banUser": "Bannir l'utilisateur",
+        "banConfirm": "Êtes-vous sûr de vouloir bannir {{name}} ?",
+        "ban": "Bannir",
+        "banSuccess": "L'utilisateur a été banni",
+        "banFailed": "Échec du bannissement de l'utilisateur",
+        "unbanUser": "Débannir l'utilisateur",
+        "unbanConfirm": "Êtes-vous sûr de vouloir débannir {{name}} ?",
+        "unban": "Débannir",
+        "unbanSuccess": "L'utilisateur a été débanni",
+        "unbanFailed": "Échec du débannissement de l'utilisateur"
       },
       "roles": {
         "super_admin": "Super Admin",
@@ -4576,19 +4713,86 @@
       "description": "Analyses et informations.",
       "titleMeta": "Analytique - Admin - Rallia",
       "descriptionMeta": "Analyses et informations.",
-      "comingSoon": "Tableau de bord analytique à venir."
+      "comingSoon": "Tableau de bord analytique à venir.",
+      "lastUpdated": "Dernière mise à jour",
+      "overview": "Aperçu",
+      "players": "Joueurs",
+      "matches": "Parties",
+      "completed": "Terminées",
+      "views": "vues",
+      "sportStatistics": "Statistiques sportives",
+      "onboardingFunnel": "Entonnoir d'intégration",
+      "matchStatistics": "Statistiques des parties",
+      "scheduled": "Planifiées",
+      "cancelled": "Annulées",
+      "avgParticipants": "Participants moy.",
+      "completionRate": "Taux de complétion",
+      "quickActions": "Actions rapides",
+      "viewUsers": "Voir les utilisateurs",
+      "adminPanel": "Panneau admin",
+      "errorLoading": "Erreur de chargement des données analytiques",
+      "widgets": {
+        "total_players": "Total des joueurs",
+        "active_today": "Actifs aujourd'hui",
+        "new_this_week": "Nouveaux cette semaine",
+        "total_matches": "Total des parties",
+        "completed_matches": "Parties terminées"
+      },
+      "onboarding": {
+        "welcome": "Bienvenue",
+        "sport_selection": "Sélection du sport",
+        "postal_code": "Code postal",
+        "profile_setup": "Configuration du profil",
+        "personal_info": "Infos personnelles",
+        "personal_inf": "Infos personnelles",
+        "skill_level": "Niveau de compétence",
+        "availability": "Disponibilité",
+        "location": "Emplacement",
+        "complete": "Terminé"
+      }
     },
     "settings": {
       "title": "Paramètres",
       "description": "Gérer les paramètres et la configuration.",
       "titleMeta": "Paramètres - Admin - Rallia",
       "descriptionMeta": "Gérer les paramètres.",
-      "comingSoon": "Interface des paramètres à venir."
-    },
-    "errors": {
-      "accessDenied": "Accès refusé. Accès administrateur requis.",
-      "unexpectedError": "Une erreur inattendue s'est produite",
-      "invalidCallback": "Paramètres de rappel invalides"
+      "comingSoon": "Interface des paramètres à venir.",
+      "alertTypes": {
+        "criticalAction": "Actions critiques",
+        "userReport": "Signalements d'utilisateurs",
+        "systemAlert": "Alertes système",
+        "newAdmin": "Nouvel administrateur",
+        "securityAlert": "Alertes de sécurité"
+      },
+      "saveSuccess": "Paramètres enregistrés avec succès",
+      "saveError": "Échec de l'enregistrement des paramètres",
+      "clearAlertsTitle": "Effacer toutes les alertes",
+      "clearAlertsMessage": "Êtes-vous sûr de vouloir effacer toutes les alertes ? Cette action ne peut pas être annulée.",
+      "alertsCleared": "Toutes les alertes ont été effacées",
+      "notificationPreferences": "Préférences de notification",
+      "alertType": "Type d'alerte",
+      "enabled": "Activé",
+      "email": "Courriel",
+      "push": "Push",
+      "emailDigest": "Résumé par courriel",
+      "emailDigestDescription": "Recevez un résumé des activités admin par courriel",
+      "digestOptions": {
+        "none": "Aucun",
+        "daily": "Quotidien",
+        "weekly": "Hebdomadaire",
+        "never": "Jamais"
+      },
+      "dataManagement": "Gestion des données",
+      "exportAuditLog": "Exporter le journal d'audit",
+      "exportAuditLogDescription": "Télécharger tous les journaux d'activité admin",
+      "exportUsers": "Exporter les utilisateurs",
+      "exportUsersDescription": "Télécharger les données utilisateurs en CSV",
+      "clearAlerts": "Effacer les alertes",
+      "clearAlertsDescription": "Supprimer toutes les alertes lues",
+      "systemInfo": "Infos système",
+      "version": "Version",
+      "environment": "Environnement",
+      "adminRole": "Rôle admin"
     }
   },
   "sportSelectionOverlay": {

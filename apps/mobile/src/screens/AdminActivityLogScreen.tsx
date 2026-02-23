@@ -19,11 +19,19 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@rallia/shared-hooks';
-import { spacingPixels, radiusPixels, lightTheme, darkTheme, primary, neutral, status } from '@rallia/design-system';
+import {
+  spacingPixels,
+  radiusPixels,
+  lightTheme,
+  darkTheme,
+  primary,
+  neutral,
+  status,
+} from '@rallia/design-system';
 import { useAuditLog, useAuditStats } from '@rallia/shared-hooks';
 import { useToast } from '@rallia/shared-components';
 import {
@@ -87,23 +95,26 @@ const SEVERITY_OPTIONS: FilterOption[] = [
 const AdminActivityLogScreen: React.FC = () => {
   const { t } = useTranslation();
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
   const toast = useToast();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const themeColors = isDark ? darkTheme : lightTheme;
-  const colors = useMemo(() => ({
-    background: themeColors.background,
-    card: themeColors.card,
-    text: themeColors.foreground,
-    textSecondary: isDark ? primary[300] : neutral[600],
-    textTertiary: themeColors.mutedForeground,
-    border: themeColors.border,
-    primary: isDark ? primary[500] : primary[600],
-    success: status.success.DEFAULT,
-    warning: status.warning.DEFAULT,
-    error: status.error.DEFAULT,
-  }), [isDark, themeColors]);
+  const colors = useMemo(
+    () => ({
+      background: themeColors.background,
+      cardBackground: themeColors.card,
+      text: themeColors.foreground,
+      textSecondary: isDark ? primary[300] : neutral[600],
+      textMuted: themeColors.mutedForeground,
+      border: themeColors.border,
+      icon: themeColors.foreground,
+      accent: isDark ? primary[500] : primary[600],
+      success: status.success.DEFAULT,
+      warning: status.warning.DEFAULT,
+      error: status.error.DEFAULT,
+    }),
+    [isDark, themeColors]
+  );
 
   // Filter state
   const [actionFilter, setActionFilter] = useState<AuditActionType | null>(null);
@@ -115,14 +126,7 @@ const AdminActivityLogScreen: React.FC = () => {
   const [showExportMenu, setShowExportMenu] = useState(false);
 
   // Data hooks
-  const {
-    logs,
-    isLoading,
-    hasMore,
-    refetch,
-    loadMore,
-    setFilters,
-  } = useAuditLog({
+  const { logs, isLoading, hasMore, refetch, loadMore, setFilters } = useAuditLog({
     autoFetch: true,
     filters: {
       actionType: actionFilter || undefined,
@@ -147,44 +151,47 @@ const AdminActivityLogScreen: React.FC = () => {
   const hasActiveFilters = actionFilter || entityFilter || severityFilter;
 
   // Handle export
-  const handleExport = useCallback(async (format: 'csv' | 'pdf') => {
-    if (exporting || logs.length === 0) return;
-    
-    setExporting(true);
-    setShowExportMenu(false);
-    
-    try {
-      // Map logs to export format
-      const exportData = logs.map(log => ({
-        id: log.id,
-        admin_id: log.admin_id,
-        admin_name: log.admin_name || 'Unknown',
-        action_type: log.action_type,
-        entity_type: log.entity_type,
-        entity_id: log.entity_id,
-        description: `${log.action_type} on ${log.entity_type}${log.entity_name ? ` (${log.entity_name})` : ''}`,
-        severity: log.severity,
-        created_at: log.created_at,
-        ip_address: (log.metadata as Record<string, unknown>)?.ip_address as string || null,
-      }));
-      
-      let success: boolean;
-      if (format === 'pdf') {
-        success = await exportService.exportAuditLogsToPDF(exportData);
-      } else {
-        success = await exportService.exportAuditLogs(exportData);
+  const handleExport = useCallback(
+    async (format: 'csv' | 'pdf') => {
+      if (exporting || logs.length === 0) return;
+
+      setExporting(true);
+      setShowExportMenu(false);
+
+      try {
+        // Map logs to export format
+        const exportData = logs.map(log => ({
+          id: log.id,
+          admin_id: log.admin_id,
+          admin_name: log.admin_name || 'Unknown',
+          action_type: log.action_type,
+          entity_type: log.entity_type,
+          entity_id: log.entity_id,
+          description: `${log.action_type} on ${log.entity_type}${log.entity_name ? ` (${log.entity_name})` : ''}`,
+          severity: log.severity,
+          created_at: log.created_at,
+          ip_address: ((log.metadata as Record<string, unknown>)?.ip_address as string) || null,
+        }));
+
+        let success: boolean;
+        if (format === 'pdf') {
+          success = await exportService.exportAuditLogsToPDF(exportData);
+        } else {
+          success = await exportService.exportAuditLogs(exportData);
+        }
+
+        if (success) {
+          toast.success(t('admin.audit.exportSuccess'));
+        }
+      } catch (error) {
+        Logger.error('Failed to export audit logs', error as Error);
+        toast.error(t('admin.audit.exportError'));
+      } finally {
+        setExporting(false);
       }
-      
-      if (success) {
-        toast.success(t('admin.audit.exportSuccess'));
-      }
-    } catch (error) {
-      Logger.error('Failed to export audit logs', error as Error);
-      toast.error(t('admin.audit.exportError'));
-    } finally {
-      setExporting(false);
-    }
-  }, [exporting, logs, toast, t]);
+    },
+    [exporting, logs, toast, t]
+  );
 
   // Show export menu
   const handleExportPress = useCallback(() => {
@@ -225,15 +232,18 @@ const AdminActivityLogScreen: React.FC = () => {
     if (statsLoading || !stats) return null;
 
     return (
-      <View style={[styles.statsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View
+        style={[
+          styles.statsCard,
+          { backgroundColor: colors.cardBackground, borderColor: colors.border },
+        ]}
+      >
         <Text style={[styles.statsTitle, { color: colors.text }]}>
           {t('admin.audit.last7Days')}
         </Text>
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: colors.primary }]}>
-              {stats.total_actions}
-            </Text>
+            <Text style={[styles.statValue, { color: colors.accent }]}>{stats.total_actions}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
               {t('admin.audit.totalActions')}
             </Text>
@@ -274,7 +284,10 @@ const AdminActivityLogScreen: React.FC = () => {
 
     return (
       <View
-        style={[styles.logEntry, { backgroundColor: colors.card, borderColor: colors.border }]}
+        style={[
+          styles.logEntry,
+          { backgroundColor: colors.cardBackground, borderColor: colors.border },
+        ]}
       >
         <View style={[styles.logIcon, { backgroundColor: `${severityColor}15` }]}>
           <Ionicons name={iconName as never} size={20} color={severityColor} />
@@ -292,14 +305,12 @@ const AdminActivityLogScreen: React.FC = () => {
             {item.entity_type}: {item.entity_name || item.entity_id || '-'}
           </Text>
           <View style={styles.logMeta}>
-            <Text style={[styles.logAdmin, { color: colors.textTertiary }]} numberOfLines={1}>
+            <Text style={[styles.logAdmin, { color: colors.textMuted }]} numberOfLines={1}>
               {item.admin_name || item.admin_email || 'System'}
             </Text>
             {item.severity !== 'info' && (
               <View style={[styles.severityBadge, { backgroundColor: `${severityColor}20` }]}>
-                <Text style={[styles.severityText, { color: severityColor }]}>
-                  {item.severity}
-                </Text>
+                <Text style={[styles.severityText, { color: severityColor }]}>{item.severity}</Text>
               </View>
             )}
           </View>
@@ -319,19 +330,19 @@ const AdminActivityLogScreen: React.FC = () => {
       case 'action':
         options = ACTION_TYPE_OPTIONS;
         currentValue = actionFilter;
-        onSelect = (v) => setActionFilter(v as AuditActionType | null);
+        onSelect = v => setActionFilter(v as AuditActionType | null);
         title = t('admin.audit.filterByAction');
         break;
       case 'entity':
         options = ENTITY_TYPE_OPTIONS;
         currentValue = entityFilter;
-        onSelect = (v) => setEntityFilter(v as AuditEntityType | null);
+        onSelect = v => setEntityFilter(v as AuditEntityType | null);
         title = t('admin.audit.filterByEntity');
         break;
       case 'severity':
         options = SEVERITY_OPTIONS;
         currentValue = severityFilter;
-        onSelect = (v) => setSeverityFilter(v as AuditSeverity | null);
+        onSelect = v => setSeverityFilter(v as AuditSeverity | null);
         title = t('admin.audit.filterBySeverity');
         break;
     }
@@ -349,18 +360,18 @@ const AdminActivityLogScreen: React.FC = () => {
           onPress={() => setActiveFilterModal(null)}
         >
           <View
-            style={[styles.modalContent, { backgroundColor: colors.card }]}
+            style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}
             onStartShouldSetResponder={() => true}
           >
             <Text style={[styles.modalTitle, { color: colors.text }]}>{title}</Text>
             <ScrollView style={styles.modalOptions}>
-              {options.map((option) => (
+              {options.map(option => (
                 <TouchableOpacity
                   key={option.value || 'all'}
                   style={[
                     styles.modalOption,
                     currentValue === option.value && {
-                      backgroundColor: `${colors.primary}15`,
+                      backgroundColor: `${colors.accent}15`,
                     },
                   ]}
                   onPress={() => {
@@ -371,13 +382,13 @@ const AdminActivityLogScreen: React.FC = () => {
                   <Text
                     style={[
                       styles.modalOptionText,
-                      { color: currentValue === option.value ? colors.primary : colors.text },
+                      { color: currentValue === option.value ? colors.accent : colors.text },
                     ]}
                   >
                     {option.label}
                   </Text>
                   {currentValue === option.value && (
-                    <Ionicons name="checkmark" size={20} color={colors.primary} />
+                    <Ionicons name="checkmark" size={20} color={colors.accent} />
                   )}
                 </TouchableOpacity>
               ))}
@@ -391,18 +402,14 @@ const AdminActivityLogScreen: React.FC = () => {
   // Render empty state
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Ionicons name="document-text-outline" size={48} color={colors.textTertiary} />
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>
-        {t('admin.audit.noLogs')}
-      </Text>
+      <Ionicons name="document-text-outline" size={48} color={colors.textMuted} />
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('admin.audit.noLogs')}</Text>
       <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-        {hasActiveFilters
-          ? t('admin.audit.tryDifferentFilters')
-          : t('admin.audit.noActivityYet')}
+        {hasActiveFilters ? t('admin.audit.tryDifferentFilters') : t('admin.audit.noActivityYet')}
       </Text>
       {hasActiveFilters && (
         <TouchableOpacity
-          style={[styles.clearButton, { backgroundColor: colors.primary }]}
+          style={[styles.clearButton, { backgroundColor: colors.accent }]}
           onPress={clearFilters}
         >
           <Text style={styles.clearButtonText}>{t('admin.audit.clearFilters')}</Text>
@@ -412,36 +419,32 @@ const AdminActivityLogScreen: React.FC = () => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['top']}
+    >
       {/* Header */}
-      <View
-        style={[
-          styles.header,
-          { paddingTop: insets.top, backgroundColor: colors.card, borderColor: colors.border },
-        ]}
-      >
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name="arrow-back" size={24} color={colors.icon} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            {t('admin.audit.title')}
-          </Text>
-          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('admin.audit.title')}</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>
             {t('admin.audit.subtitle')}
           </Text>
         </View>
         <TouchableOpacity
           style={[
             styles.filterButton,
-            hasActiveFilters && { backgroundColor: `${colors.primary}15` },
+            hasActiveFilters && { backgroundColor: `${colors.accent}15` },
           ]}
           onPress={() => setShowFilters(!showFilters)}
         >
           <Ionicons
             name={hasActiveFilters ? 'filter' : 'filter-outline'}
             size={24}
-            color={hasActiveFilters ? colors.primary : colors.text}
+            color={hasActiveFilters ? colors.accent : colors.icon}
           />
         </TouchableOpacity>
         <TouchableOpacity
@@ -450,12 +453,12 @@ const AdminActivityLogScreen: React.FC = () => {
           disabled={exporting || logs.length === 0}
         >
           {exporting ? (
-            <ActivityIndicator size="small" color={colors.primary} />
+            <ActivityIndicator size="small" color={colors.accent} />
           ) : (
             <Ionicons
               name="download-outline"
               size={24}
-              color={logs.length > 0 ? colors.primary : colors.textSecondary}
+              color={logs.length > 0 ? colors.accent : colors.textMuted}
             />
           )}
         </TouchableOpacity>
@@ -463,77 +466,82 @@ const AdminActivityLogScreen: React.FC = () => {
 
       {/* Filter bar */}
       {showFilters && (
-        <View style={[styles.filterBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.filterBar,
+            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+          ]}
+        >
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <TouchableOpacity
               style={[
                 styles.filterChip,
-                { borderColor: actionFilter ? colors.primary : colors.border },
+                { borderColor: actionFilter ? colors.accent : colors.border },
               ]}
               onPress={() => setActiveFilterModal('action')}
             >
               <Text
                 style={[
                   styles.filterChipText,
-                  { color: actionFilter ? colors.primary : colors.text },
+                  { color: actionFilter ? colors.accent : colors.text },
                 ]}
               >
                 {actionFilter
-                  ? ACTION_TYPE_OPTIONS.find((o) => o.value === actionFilter)?.label
+                  ? ACTION_TYPE_OPTIONS.find(o => o.value === actionFilter)?.label
                   : t('admin.audit.action')}
               </Text>
               <Ionicons
                 name="chevron-down"
                 size={16}
-                color={actionFilter ? colors.primary : colors.textSecondary}
+                color={actionFilter ? colors.accent : colors.textSecondary}
               />
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[
                 styles.filterChip,
-                { borderColor: entityFilter ? colors.primary : colors.border },
+                { borderColor: entityFilter ? colors.accent : colors.border },
               ]}
               onPress={() => setActiveFilterModal('entity')}
             >
               <Text
                 style={[
                   styles.filterChipText,
-                  { color: entityFilter ? colors.primary : colors.text },
+                  { color: entityFilter ? colors.accent : colors.text },
                 ]}
               >
                 {entityFilter
-                  ? ENTITY_TYPE_OPTIONS.find((o) => o.value === entityFilter)?.label
+                  ? ENTITY_TYPE_OPTIONS.find(o => o.value === entityFilter)?.label
                   : t('admin.audit.entity')}
               </Text>
               <Ionicons
                 name="chevron-down"
                 size={16}
-                color={entityFilter ? colors.primary : colors.textSecondary}
+                color={entityFilter ? colors.accent : colors.textSecondary}
               />
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[
                 styles.filterChip,
-                { borderColor: severityFilter ? colors.primary : colors.border },
+                { borderColor: severityFilter ? colors.accent : colors.border },
               ]}
               onPress={() => setActiveFilterModal('severity')}
             >
               <Text
                 style={[
                   styles.filterChipText,
-                  { color: severityFilter ? colors.primary : colors.text },
+                  { color: severityFilter ? colors.accent : colors.text },
                 ]}
               >
                 {severityFilter
-                  ? SEVERITY_OPTIONS.find((o) => o.value === severityFilter)?.label
+                  ? SEVERITY_OPTIONS.find(o => o.value === severityFilter)?.label
                   : t('admin.audit.severity')}
               </Text>
               <Ionicons
                 name="chevron-down"
                 size={16}
-                color={severityFilter ? colors.primary : colors.textSecondary}
+                color={severityFilter ? colors.accent : colors.textSecondary}
               />
             </TouchableOpacity>
 
@@ -555,20 +563,17 @@ const AdminActivityLogScreen: React.FC = () => {
       {/* Content */}
       <FlatList
         data={logs}
-        keyExtractor={(item) => item.id}
+        keyExtractor={item => item.id}
         renderItem={renderLogEntry}
         ListHeaderComponent={renderStatsCard}
         ListEmptyComponent={!isLoading ? renderEmptyState : null}
-        contentContainerStyle={[
-          styles.listContent,
-          logs.length === 0 && styles.emptyContent,
-        ]}
+        contentContainerStyle={[styles.listContent, logs.length === 0 && styles.emptyContent]}
         refreshControl={
           <RefreshControl
             refreshing={isLoading && logs.length === 0}
             onRefresh={refetch}
-            colors={[colors.primary]}
-            tintColor={colors.primary}
+            colors={[colors.accent]}
+            tintColor={colors.accent}
           />
         }
         onEndReached={loadMore}
@@ -576,11 +581,11 @@ const AdminActivityLogScreen: React.FC = () => {
         ListFooterComponent={
           isLoading && logs.length > 0 ? (
             <View style={styles.loadingMore}>
-              <ActivityIndicator size="small" color={colors.primary} />
+              <ActivityIndicator size="small" color={colors.accent} />
             </View>
           ) : hasMore && logs.length > 0 ? (
             <View style={styles.loadMoreHint}>
-              <Text style={[styles.loadMoreText, { color: colors.textTertiary }]}>
+              <Text style={[styles.loadMoreText, { color: colors.textMuted }]}>
                 {t('admin.audit.scrollForMore')}
               </Text>
             </View>
@@ -598,31 +603,26 @@ const AdminActivityLogScreen: React.FC = () => {
         animationType="fade"
         onRequestClose={() => setShowExportMenu(false)}
       >
-        <Pressable
-          style={styles.exportModalOverlay}
-          onPress={() => setShowExportMenu(false)}
-        >
-          <View style={[styles.exportMenu, { backgroundColor: colors.card }]}>
+        <Pressable style={styles.exportModalOverlay} onPress={() => setShowExportMenu(false)}>
+          <View style={[styles.exportMenu, { backgroundColor: colors.cardBackground }]}>
             <Text style={[styles.exportMenuTitle, { color: colors.text }]}>
               {t('admin.export.selectFormat')}
             </Text>
-            
+
             <TouchableOpacity
               style={[styles.exportOption, { borderBottomColor: colors.border }]}
               onPress={() => handleExport('csv')}
               activeOpacity={0.7}
             >
-              <Ionicons name="document-text-outline" size={24} color={colors.primary} />
+              <Ionicons name="document-text-outline" size={24} color={colors.accent} />
               <View style={styles.exportOptionText}>
-                <Text style={[styles.exportOptionTitle, { color: colors.text }]}>
-                  CSV
-                </Text>
+                <Text style={[styles.exportOptionTitle, { color: colors.text }]}>CSV</Text>
                 <Text style={[styles.exportOptionDesc, { color: colors.textSecondary }]}>
                   {t('admin.export.csvDescription')}
                 </Text>
               </View>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={styles.exportOption}
               onPress={() => handleExport('pdf')}
@@ -630,15 +630,13 @@ const AdminActivityLogScreen: React.FC = () => {
             >
               <Ionicons name="document-outline" size={24} color={colors.error} />
               <View style={styles.exportOptionText}>
-                <Text style={[styles.exportOptionTitle, { color: colors.text }]}>
-                  PDF
-                </Text>
+                <Text style={[styles.exportOptionTitle, { color: colors.text }]}>PDF</Text>
                 <Text style={[styles.exportOptionDesc, { color: colors.textSecondary }]}>
                   {t('admin.export.pdfDescription')}
                 </Text>
               </View>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={[styles.exportCancelButton, { backgroundColor: `${colors.textSecondary}15` }]}
               onPress={() => setShowExportMenu(false)}
@@ -651,7 +649,7 @@ const AdminActivityLogScreen: React.FC = () => {
           </View>
         </Pressable>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 };
 

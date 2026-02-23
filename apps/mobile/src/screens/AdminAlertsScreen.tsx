@@ -13,16 +13,30 @@ import {
   FlatList,
   RefreshControl,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@rallia/shared-hooks';
-import { spacingPixels, radiusPixels, lightTheme, darkTheme, primary, neutral, status } from '@rallia/design-system';
+import {
+  spacingPixels,
+  radiusPixels,
+  lightTheme,
+  darkTheme,
+  primary,
+  neutral,
+  status,
+} from '@rallia/design-system';
 import { useAdminAlerts } from '@rallia/shared-hooks';
-import { alertService, supabase, type AdminAlert, type AlertSeverity } from '@rallia/shared-services';
+import {
+  alertService,
+  supabase,
+  type AdminAlert,
+  type AlertSeverity,
+} from '@rallia/shared-services';
 
 // =============================================================================
 // COMPONENT
@@ -31,29 +45,34 @@ import { alertService, supabase, type AdminAlert, type AlertSeverity } from '@ra
 const AdminAlertsScreen: React.FC = () => {
   const { t } = useTranslation();
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const themeColors = isDark ? darkTheme : lightTheme;
-  const colors = useMemo(() => ({
-    background: themeColors.background,
-    card: themeColors.card,
-    text: themeColors.foreground,
-    textSecondary: isDark ? primary[300] : neutral[600],
-    textTertiary: themeColors.mutedForeground,
-    border: themeColors.border,
-    primary: isDark ? primary[500] : primary[600],
-    success: status.success.DEFAULT,
-    warning: status.warning.DEFAULT,
-    error: status.error.DEFAULT,
-  }), [isDark, themeColors]);
+  const colors = useMemo(
+    () => ({
+      background: themeColors.background,
+      cardBackground: themeColors.card,
+      text: themeColors.foreground,
+      textSecondary: isDark ? primary[300] : neutral[600],
+      textMuted: themeColors.mutedForeground,
+      border: themeColors.border,
+      icon: themeColors.foreground,
+      accent: isDark ? primary[500] : primary[600],
+      success: status.success.DEFAULT,
+      warning: status.warning.DEFAULT,
+      error: status.error.DEFAULT,
+    }),
+    [isDark, themeColors]
+  );
 
   // Get current user's admin ID
   const [adminId, setAdminId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAdminId = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         const { data } = await supabase
           .from('admin')
@@ -67,21 +86,15 @@ const AdminAlertsScreen: React.FC = () => {
   }, []);
 
   // Alerts data
-  const {
-    alerts,
-    counts,
-    isLoading,
-    refetch,
-    markAsRead,
-    markAllAsRead,
-    dismiss,
-  } = useAdminAlerts({
-    adminId: adminId || '',
-    autoFetch: !!adminId,
-    includeRead: true,
-    limit: 50,
-    pollingInterval: 60000, // Refresh every minute
-  });
+  const { alerts, counts, isLoading, refetch, markAsRead, markAllAsRead, dismiss } = useAdminAlerts(
+    {
+      adminId: adminId || '',
+      autoFetch: !!adminId,
+      includeRead: true,
+      limit: 50,
+      pollingInterval: 60000, // Refresh every minute
+    }
+  );
 
   // Get severity color
   const getSeverityColor = (severity: AlertSeverity): string => {
@@ -101,52 +114,55 @@ const AdminAlertsScreen: React.FC = () => {
   };
 
   // Handle alert press
-  const handleAlertPress = useCallback(async (alert: AdminAlert) => {
-    if (!alert.is_read) {
-      await markAsRead(alert.id);
-    }
+  const handleAlertPress = useCallback(
+    async (alert: AdminAlert) => {
+      if (!alert.is_read) {
+        await markAsRead(alert.id);
+      }
 
-    // If there's an action URL, navigate to it
-    if (alert.action_url) {
-      // Handle navigation based on action_url
-      // For now, just mark as read
-    }
-  }, [markAsRead]);
+      // If there's an action URL, navigate to it
+      if (alert.action_url) {
+        // Handle navigation based on action_url
+        // For now, just mark as read
+      }
+    },
+    [markAsRead]
+  );
 
   // Handle dismiss
-  const handleDismiss = useCallback((alert: AdminAlert) => {
-    Alert.alert(
-      t('admin.alerts.dismissTitle'),
-      t('admin.alerts.dismissMessage'),
-      [
+  const handleDismiss = useCallback(
+    (alert: AdminAlert) => {
+      Alert.alert(t('admin.alerts.dismissTitle'), t('admin.alerts.dismissMessage'), [
         { text: t('common.cancel'), style: 'cancel' },
         {
           text: t('common.dismiss'),
           style: 'destructive',
           onPress: () => dismiss(alert.id),
         },
-      ]
-    );
-  }, [dismiss, t]);
+      ]);
+    },
+    [dismiss, t]
+  );
 
   // Handle mark all as read
   const handleMarkAllRead = useCallback(() => {
-    Alert.alert(
-      t('admin.alerts.markAllReadTitle'),
-      t('admin.alerts.markAllReadMessage'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.confirm'),
-          onPress: () => markAllAsRead(),
-        },
-      ]
-    );
+    Alert.alert(t('admin.alerts.markAllReadTitle'), t('admin.alerts.markAllReadMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.confirm'),
+        onPress: () => markAllAsRead(),
+      },
+    ]);
   }, [markAllAsRead, t]);
 
   // Render counts summary
   const renderCountsSummary = () => (
-    <View style={[styles.countsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+    <View
+      style={[
+        styles.countsCard,
+        { backgroundColor: colors.cardBackground, borderColor: colors.border },
+      ]}
+    >
       <View style={styles.countsRow}>
         <View style={styles.countItem}>
           <View style={[styles.countBadge, { backgroundColor: `${colors.error}15` }]}>
@@ -173,8 +189,8 @@ const AdminAlertsScreen: React.FC = () => {
           </Text>
         </View>
         <View style={styles.countItem}>
-          <View style={[styles.countBadge, { backgroundColor: `${colors.primary}15` }]}>
-            <Text style={[styles.countValue, { color: colors.primary }]}>{counts.total}</Text>
+          <View style={[styles.countBadge, { backgroundColor: `${colors.accent}15` }]}>
+            <Text style={[styles.countValue, { color: colors.accent }]}>{counts.total}</Text>
           </View>
           <Text style={[styles.countLabel, { color: colors.textSecondary }]}>
             {t('admin.alerts.unread')}
@@ -194,7 +210,7 @@ const AdminAlertsScreen: React.FC = () => {
         style={[
           styles.alertCard,
           {
-            backgroundColor: item.is_read ? colors.background : colors.card,
+            backgroundColor: item.is_read ? colors.background : colors.cardBackground,
             borderColor: colors.border,
             opacity: item.is_read ? 0.7 : 1,
           },
@@ -219,14 +235,11 @@ const AdminAlertsScreen: React.FC = () => {
               {item.title}
             </Text>
             {!item.is_read && (
-              <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />
+              <View style={[styles.unreadDot, { backgroundColor: colors.accent }]} />
             )}
           </View>
 
-          <Text
-            style={[styles.alertMessage, { color: colors.textSecondary }]}
-            numberOfLines={2}
-          >
+          <Text style={[styles.alertMessage, { color: colors.textSecondary }]} numberOfLines={2}>
             {item.message}
           </Text>
 
@@ -236,7 +249,7 @@ const AdminAlertsScreen: React.FC = () => {
                 {alertService.getAlertTypeLabel(item.alert_type)}
               </Text>
             </View>
-            <Text style={[styles.alertTime, { color: colors.textTertiary }]}>
+            <Text style={[styles.alertTime, { color: colors.textMuted }]}>
               {formatTime(item.created_at)}
             </Text>
           </View>
@@ -247,7 +260,7 @@ const AdminAlertsScreen: React.FC = () => {
           onPress={() => handleDismiss(item)}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="close" size={18} color={colors.textTertiary} />
+          <Ionicons name="close" size={18} color={colors.textMuted} />
         </TouchableOpacity>
       </TouchableOpacity>
     );
@@ -256,10 +269,8 @@ const AdminAlertsScreen: React.FC = () => {
   // Render empty state
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Ionicons name="notifications-off-outline" size={48} color={colors.textTertiary} />
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>
-        {t('admin.alerts.noAlerts')}
-      </Text>
+      <Ionicons name="notifications-off-outline" size={48} color={colors.textMuted} />
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('admin.alerts.noAlerts')}</Text>
       <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
         {t('admin.alerts.allClear')}
       </Text>
@@ -267,56 +278,67 @@ const AdminAlertsScreen: React.FC = () => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['top']}
+    >
       {/* Header */}
-      <View
-        style={[
-          styles.header,
-          { paddingTop: insets.top, backgroundColor: colors.card, borderColor: colors.border },
-        ]}
-      >
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name="arrow-back" size={24} color={colors.icon} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
             {t('admin.alerts.title')}
           </Text>
-          {counts.total > 0 && (
-            <View style={[styles.headerBadge, { backgroundColor: colors.primary }]}>
-              <Text style={styles.headerBadgeText}>{counts.total}</Text>
-            </View>
-          )}
+          <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>
+            {t('admin.sections.notifications.description')}
+          </Text>
         </View>
-        {counts.total > 0 && (
-          <TouchableOpacity style={styles.markAllButton} onPress={handleMarkAllRead}>
-            <Ionicons name="checkmark-done-outline" size={24} color={colors.primary} />
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity onPress={refetch} style={styles.refreshButton} disabled={isLoading}>
+          {isLoading ? (
+            <ActivityIndicator size="small" color={colors.accent} />
+          ) : (
+            <Ionicons name="refresh" size={24} color={colors.accent} />
+          )}
+        </TouchableOpacity>
       </View>
+
+      {/* Mark all read button when alerts exist */}
+      {counts.total > 0 && (
+        <TouchableOpacity
+          style={[
+            styles.markAllButton,
+            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+          ]}
+          onPress={handleMarkAllRead}
+        >
+          <Ionicons name="checkmark-done-outline" size={20} color={colors.accent} />
+          <Text style={[styles.markAllText, { color: colors.accent }]}>
+            {t('admin.alerts.markAllReadTitle')}
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {/* Content */}
       <FlatList
         data={alerts}
-        keyExtractor={(item) => item.id}
+        keyExtractor={item => item.id}
         renderItem={renderAlertItem}
         ListHeaderComponent={renderCountsSummary}
         ListEmptyComponent={!isLoading ? renderEmptyState : null}
-        contentContainerStyle={[
-          styles.listContent,
-          alerts.length === 0 && styles.emptyContent,
-        ]}
+        contentContainerStyle={[styles.listContent, alerts.length === 0 && styles.emptyContent]}
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
             onRefresh={refetch}
-            colors={[colors.primary]}
-            tintColor={colors.primary}
+            colors={[colors.accent]}
+            tintColor={colors.accent}
           />
         }
         ItemSeparatorComponent={() => <View style={styles.separator} />}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -341,28 +363,32 @@ const styles = StyleSheet.create({
   },
   headerTitleContainer: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
   },
-  headerBadge: {
-    marginLeft: spacingPixels[2],
-    paddingHorizontal: spacingPixels[2],
-    paddingVertical: 2,
-    borderRadius: 10,
-    minWidth: 20,
-    alignItems: 'center',
-  },
-  headerBadgeText: {
-    color: '#FFFFFF',
+  headerSubtitle: {
     fontSize: 12,
-    fontWeight: '700',
+    marginTop: 2,
+  },
+  refreshButton: {
+    padding: spacingPixels[2],
   },
   markAllButton: {
-    padding: spacingPixels[2],
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacingPixels[3],
+    marginHorizontal: spacingPixels[4],
+    marginTop: spacingPixels[3],
+    borderRadius: radiusPixels.md,
+    borderWidth: 1,
+    gap: spacingPixels[2],
+  },
+  markAllText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   listContent: {
     padding: spacingPixels[4],

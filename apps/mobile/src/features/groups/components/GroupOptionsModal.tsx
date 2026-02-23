@@ -60,8 +60,12 @@ export function GroupOptionsActionSheet({ payload }: SheetProps<'group-options'>
                 },
               ]}
               onPress={() => {
+                // Close the options sheet first, then execute the action after a delay
+                // This prevents race conditions when opening another sheet
                 handleClose();
-                option.onPress();
+                setTimeout(() => {
+                  option.onPress();
+                }, 300);
               }}
               activeOpacity={0.7}
             >
@@ -124,7 +128,6 @@ export const GroupOptionsModal = GroupOptionsActionSheet;
 
 const styles = StyleSheet.create({
   sheetBackground: {
-    flex: 1,
     borderTopLeftRadius: radiusPixels['2xl'],
     borderTopRightRadius: radiusPixels['2xl'],
   },
