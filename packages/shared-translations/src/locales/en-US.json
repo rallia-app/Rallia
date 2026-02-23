@@ -1635,6 +1635,12 @@
       "removeModerator": "Remove Moderator",
       "viewAll": "View all"
     },
+    "removeFromCommunity": "Remove from Community",
+    "removeMember": "Remove Member",
+    "removeMemberConfirm": "Are you sure you want to remove {name} from this community?",
+    "memberRemoved": "Member removed from community",
+    "failedToRemoveMember": "Failed to remove member",
+    "thisMember": "this member",
     "pendingRequests": {
       "title": "Pending Requests",
       "count": "{count} pending request(s)",
@@ -2482,6 +2488,7 @@
     "sportNotFound": "Could not find sport: {sport}",
     "scoreSubmitted": "Score Submitted!",
     "scoreSubmittedMessage": "Your score has been submitted. Your opponent has 24 hours to confirm.",
+    "confirmationWindowNote": "You'll be notified once your opponent confirms or if they dispute the score.",
     "failedToSubmit": "Failed to submit score. Please try again.",
     "findOpponent": {
       "title": "Find your opponent",

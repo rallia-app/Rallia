@@ -510,7 +510,19 @@ export function useCreatePlayedMatch() {
     mutationFn: (input: CreatePlayedMatchInput) => createPlayedMatch(input),
     onSuccess: (_, variables) => {
       if (variables.networkId) {
-        queryClient.invalidateQueries({ queryKey: groupKeys.matches(variables.networkId) });
+        // Use predicate to invalidate all match queries for this network (regardless of daysBack)
+        queryClient.invalidateQueries({
+          predicate: query => {
+            const key = query.queryKey;
+            return (
+              Array.isArray(key) &&
+              key[0] === 'groups' &&
+              key[1] === 'detail' &&
+              key[2] === variables.networkId &&
+              key[3] === 'matches'
+            );
+          },
+        });
         queryClient.invalidateQueries({ queryKey: groupKeys.recentMatch(variables.networkId) });
         // Use predicate to invalidate all leaderboard queries for this network (regardless of daysBack)
         queryClient.invalidateQueries({

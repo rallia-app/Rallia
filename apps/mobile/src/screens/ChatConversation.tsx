@@ -96,6 +96,9 @@ export default function ChatConversationScreen() {
   // Ref for MessageList to scroll to messages
   const messageListRef = React.useRef<MessageListRef>(null);
 
+  // Ref to track if agreement modal has been shown (prevents showing twice)
+  const agreementModalShownRef = React.useRef(false);
+
   // Check if user has agreed to chat rules
   const { data: hasAgreed, isLoading: isLoadingAgreement } = useChatAgreement(playerId);
   const agreeToChatRulesMutation = useAgreeToChatRules();
@@ -109,9 +112,10 @@ export default function ChatConversationScreen() {
     agreeToChatRulesMutation.mutate(playerId);
   }, [playerId, agreeToChatRulesMutation]);
 
-  // Show agreement modal if user hasn't agreed yet
+  // Show agreement modal if user hasn't agreed yet (only once)
   useEffect(() => {
-    if (!isLoadingAgreement && hasAgreed === false) {
+    if (!isLoadingAgreement && hasAgreed === false && !agreementModalShownRef.current) {
+      agreementModalShownRef.current = true;
       SheetManager.show('chat-agreement', {
         payload: {
           chatName: routeTitle,
@@ -120,6 +124,10 @@ export default function ChatConversationScreen() {
           onAgree: handleAgreeToRules,
         },
       });
+    }
+    // Reset ref when agreement status changes to true (user agreed)
+    if (hasAgreed === true) {
+      agreementModalShownRef.current = false;
     }
   }, [hasAgreed, isLoadingAgreement, routeTitle, handleAgreeToRules]);
 

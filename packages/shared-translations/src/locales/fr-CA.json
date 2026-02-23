@@ -1635,6 +1635,12 @@
       "removeModerator": "Retirer modérateur",
       "viewAll": "Voir tout"
     },
+    "removeFromCommunity": "Retirer de la communauté",
+    "removeMember": "Retirer le membre",
+    "removeMemberConfirm": "Êtes-vous sûr de vouloir retirer {name} de cette communauté?",
+    "memberRemoved": "Membre retiré de la communauté",
+    "failedToRemoveMember": "Échec du retrait du membre",
+    "thisMember": "ce membre",
     "pendingRequests": {
       "title": "Demandes en attente",
       "count": "{count} demande(s) en attente",
@@ -2482,6 +2488,7 @@
     "sportNotFound": "Sport introuvable: {sport}",
     "scoreSubmitted": "Score soumis!",
     "scoreSubmittedMessage": "Votre score a été soumis. Votre adversaire a 24 heures pour confirmer.",
+    "confirmationWindowNote": "Vous serez notifié(e) une fois que votre adversaire confirmera ou contestera le score.",
     "failedToSubmit": "Échec de la soumission du score. Veuillez réessayer.",
     "findOpponent": {
       "title": "Trouver votre adversaire",

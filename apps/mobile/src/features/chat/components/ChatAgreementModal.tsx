@@ -48,6 +48,7 @@ export function ChatAgreementActionSheet({ payload }: SheetProps<'chat-agreement
       containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
       indicatorStyle={{ display: 'none' }}
       closable={false}
+      closeOnTouchBackdrop={false}
     >
       <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>

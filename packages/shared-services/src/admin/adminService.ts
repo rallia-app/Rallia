@@ -168,9 +168,8 @@ export async function fetchAdminUsers(params: FetchAdminUsersParams): Promise<Ad
   try {
     // Build the query for profiles with player data
     // Note: gender, city, country are in player table, not profile
-    let query = supabase
-      .from('profile')
-      .select(`
+    let query = supabase.from('profile').select(
+      `
         id,
         email,
         first_name,
@@ -184,12 +183,16 @@ export async function fetchAdminUsers(params: FetchAdminUsersParams): Promise<Ad
         last_active_at,
         onboarding_completed,
         player:player(id, gender, city, country)
-      `, { count: 'exact' });
+      `,
+      { count: 'exact' }
+    );
 
     // Apply search filter
     if (filters.searchQuery && filters.searchQuery.trim()) {
       const searchTerm = `%${filters.searchQuery.trim()}%`;
-      query = query.or(`first_name.ilike.${searchTerm},last_name.ilike.${searchTerm},display_name.ilike.${searchTerm},email.ilike.${searchTerm}`);
+      query = query.or(
+        `first_name.ilike.${searchTerm},last_name.ilike.${searchTerm},display_name.ilike.${searchTerm},email.ilike.${searchTerm}`
+      );
     }
 
     // Apply date range filter
@@ -214,7 +217,7 @@ export async function fetchAdminUsers(params: FetchAdminUsersParams): Promise<Ad
 
     // Get additional data for each user (sport count, match count, active ban)
     const users: AdminUserInfo[] = await Promise.all(
-      (profiles || []).map(async (profile) => {
+      (profiles || []).map(async profile => {
         // Get sports count
         const { count: sportsCount } = await supabase
           .from('player_sport')
@@ -231,7 +234,7 @@ export async function fetchAdminUsers(params: FetchAdminUsersParams): Promise<Ad
         const activeBan = await getActivePlayerBan(profile.id);
 
         // Check last_active_at to determine activity
-        const isActive = profile.last_active_at 
+        const isActive = profile.last_active_at
           ? new Date(profile.last_active_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Active in last 30 days
           : false;
 
@@ -297,7 +300,8 @@ export async function fetchAdminUserDetail(userId: string): Promise<AdminUserDet
     // Note: gender, city, country are in player table, not profile
     const { data: profile, error: profileError } = await supabase
       .from('profile')
-      .select(`
+      .select(
+        `
         id,
         email,
         first_name,
@@ -311,7 +315,8 @@ export async function fetchAdminUserDetail(userId: string): Promise<AdminUserDet
         last_active_at,
         onboarding_completed,
         player:player(id, playing_hand, gender, city, country)
-      `)
+      `
+      )
       .eq('id', userId)
       .single();
 
@@ -322,7 +327,8 @@ export async function fetchAdminUserDetail(userId: string): Promise<AdminUserDet
     // Get sport profiles
     const { data: sportProfiles } = await supabase
       .from('player_sport')
-      .select(`
+      .select(
+        `
         id,
         sport_id,
         is_primary,
@@ -330,13 +336,15 @@ export async function fetchAdminUserDetail(userId: string): Promise<AdminUserDet
         created_at,
         sport:sport(name),
         player_rating_score:player_rating_score(rating_score:rating_score(value, label))
-      `)
+      `
+      )
       .eq('player_id', userId);
 
     // Get recent matches (last 10)
     const { data: matches } = await supabase
       .from('match_participant')
-      .select(`
+      .select(
+        `
         match:match(
           id,
           sport_id,
@@ -345,7 +353,8 @@ export async function fetchAdminUserDetail(userId: string): Promise<AdminUserDet
           status,
           sport:sport(name)
         )
-      `)
+      `
+      )
       .eq('player_id', userId)
       .order('created_at', { ascending: false })
       .limit(10);
@@ -367,7 +376,7 @@ export async function fetchAdminUserDetail(userId: string): Promise<AdminUserDet
     // Get ban history from player_ban table
     const banHistory = await getPlayerBanHistory(userId);
 
-    const isActive = profile.last_active_at 
+    const isActive = profile.last_active_at
       ? new Date(profile.last_active_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
       : false;
 
@@ -399,10 +408,12 @@ export async function fetchAdminUserDetail(userId: string): Promise<AdminUserDet
       sport_profiles: (sportProfiles || []).map(sp => {
         const sportData = Array.isArray(sp.sport) ? sp.sport[0] : sp.sport;
         // Get rating from player_rating_score if available
-        const ratingData = Array.isArray(sp.player_rating_score) ? sp.player_rating_score[0] : sp.player_rating_score;
+        const ratingData = Array.isArray(sp.player_rating_score)
+          ? sp.player_rating_score[0]
+          : sp.player_rating_score;
         const ratingScore = ratingData?.rating_score;
         const ratingInfo = Array.isArray(ratingScore) ? ratingScore[0] : ratingScore;
-        
+
         return {
           id: sp.id,
           sport_id: sp.sport_id,
@@ -413,21 +424,23 @@ export async function fetchAdminUserDetail(userId: string): Promise<AdminUserDet
           created_at: sp.created_at,
         };
       }),
-      recent_matches: (matches || []).map(mp => {
-        const match = mp.match;
-        if (!match) return null;
-        const matchData = Array.isArray(match) ? match[0] : match;
-        const sportData = Array.isArray(matchData?.sport) ? matchData.sport[0] : matchData?.sport;
-        return {
-          id: matchData.id,
-          sport_id: matchData.sport_id,
-          sport_name: sportData?.name || 'Unknown',
-          match_type: matchData.match_type,
-          scheduled_at: matchData.scheduled_at,
-          status: matchData.status || 'scheduled',
-          participant_count: 0,
-        };
-      }).filter((m): m is AdminMatchSummary => m !== null),
+      recent_matches: (matches || [])
+        .map(mp => {
+          const match = mp.match;
+          if (!match) return null;
+          const matchData = Array.isArray(match) ? match[0] : match;
+          const sportData = Array.isArray(matchData?.sport) ? matchData.sport[0] : matchData?.sport;
+          return {
+            id: matchData.id,
+            sport_id: matchData.sport_id,
+            sport_name: sportData?.name || 'Unknown',
+            match_type: matchData.match_type,
+            scheduled_at: matchData.scheduled_at,
+            status: matchData.status || 'scheduled',
+            participant_count: 0,
+          };
+        })
+        .filter((m): m is AdminMatchSummary => m !== null),
       ban_history: banHistory,
     };
   } catch (error) {
@@ -490,7 +503,11 @@ export async function banUser(params: BanUserParams): Promise<AdminBanInfo> {
 /**
  * Unban a user (lift an active ban)
  */
-export async function unbanUser(banId: string, adminId: string, liftReason?: string): Promise<void> {
+export async function unbanUser(
+  banId: string,
+  adminId: string,
+  liftReason?: string
+): Promise<void> {
   try {
     // Get the current ban to log old data
     const { data: currentBan, error: fetchError } = await supabase
@@ -524,13 +541,20 @@ export async function unbanUser(banId: string, adminId: string, liftReason?: str
     }
 
     // Log the admin action
-    await logAdminAction(adminId, 'unban', 'player', currentBan.player_id, {
-      ban_id: banId,
-      was_active: true,
-    }, {
-      ban_id: banId,
-      lifted_reason: liftReason,
-    });
+    await logAdminAction(
+      adminId,
+      'unban',
+      'player',
+      currentBan.player_id,
+      {
+        ban_id: banId,
+        was_active: true,
+      },
+      {
+        ban_id: banId,
+        lifted_reason: liftReason,
+      }
+    );
   } catch (error) {
     console.error('Error in unbanUser:', error);
     throw error;
@@ -611,25 +635,43 @@ export async function getPlayerBanHistory(playerId: string): Promise<AdminBanInf
  */
 export async function logAdminAction(
   adminId: string,
-  actionType: 'view' | 'create' | 'update' | 'delete' | 'ban' | 'unban' | 'export' | 'login' | 'logout' | 'settings_change',
-  entityType: 'player' | 'profile' | 'match' | 'organization' | 'facility' | 'report' | 'conversation' | 'network' | 'admin' | 'system',
+  actionType:
+    | 'view'
+    | 'create'
+    | 'update'
+    | 'delete'
+    | 'ban'
+    | 'unban'
+    | 'export'
+    | 'login'
+    | 'logout'
+    | 'settings_change',
+  entityType:
+    | 'player'
+    | 'profile'
+    | 'match'
+    | 'organization'
+    | 'facility'
+    | 'report'
+    | 'conversation'
+    | 'network'
+    | 'admin'
+    | 'system',
   entityId?: string | null,
   oldData?: Record<string, unknown> | null,
   newData?: Record<string, unknown> | null,
   metadata?: Record<string, unknown>
 ): Promise<void> {
   try {
-    const { error } = await supabase
-      .from('admin_audit_log')
-      .insert({
-        admin_id: adminId,
-        action_type: actionType,
-        entity_type: entityType,
-        entity_id: entityId || null,
-        old_data: oldData || null,
-        new_data: newData || null,
-        metadata: metadata || {},
-      });
+    const { error } = await supabase.from('admin_audit_log').insert({
+      admin_id: adminId,
+      action_type: actionType,
+      entity_type: entityType,
+      entity_id: entityId || null,
+      old_data: oldData || null,
+      new_data: newData || null,
+      metadata: metadata || {},
+    });
 
     if (error) {
       // Don't throw - audit logging failures shouldn't break the main operation
@@ -695,6 +737,7 @@ export async function getAuditLog(params: {
 /**
  * Update a player's profile (admin function)
  * Logs the action to audit trail
+ * Note: city, country, gender are stored in player table, other fields in profile table
  */
 export async function updatePlayerProfile(
   playerId: string,
@@ -702,6 +745,13 @@ export async function updatePlayerProfile(
   updates: EditableProfileFields
 ): Promise<{ success: boolean; data?: AdminUserInfo; error?: string }> {
   try {
+    // Separate profile fields from player fields
+    const { city, country, gender, ...profileUpdates } = updates;
+    const playerUpdates: Record<string, string | undefined> = {};
+    if (city !== undefined) playerUpdates.city = city;
+    if (country !== undefined) playerUpdates.country = country;
+    if (gender !== undefined) playerUpdates.gender = gender;
+
     // Get old profile data for audit
     const { data: oldProfile, error: fetchError } = await supabase
       .from('profile')
@@ -713,38 +763,59 @@ export async function updatePlayerProfile(
       return { success: false, error: `Failed to fetch profile: ${fetchError.message}` };
     }
 
-    // Update profile
-    const { data: updatedProfile, error: updateError } = await supabase
-      .from('profile')
-      .update(updates)
+    // Get old player data for audit (city, country, gender)
+    const { data: oldPlayer } = await supabase
+      .from('player')
+      .select('city, country, gender')
       .eq('id', playerId)
-      .select()
       .single();
 
-    if (updateError) {
-      return { success: false, error: `Failed to update profile: ${updateError.message}` };
+    let updatedProfile = oldProfile;
+
+    // Update profile table if there are profile updates
+    if (Object.keys(profileUpdates).length > 0) {
+      const { data, error: updateError } = await supabase
+        .from('profile')
+        .update(profileUpdates)
+        .eq('id', playerId)
+        .select()
+        .single();
+
+      if (updateError) {
+        return { success: false, error: `Failed to update profile: ${updateError.message}` };
+      }
+      updatedProfile = data;
     }
 
-    // Log the action
+    // Update player table if there are player updates (city, country, gender)
+    let updatedPlayer = oldPlayer;
+    if (Object.keys(playerUpdates).length > 0) {
+      const { data, error: playerUpdateError } = await supabase
+        .from('player')
+        .update(playerUpdates)
+        .eq('id', playerId)
+        .select('city, country, gender')
+        .single();
+
+      if (playerUpdateError) {
+        return { success: false, error: `Failed to update player: ${playerUpdateError.message}` };
+      }
+      updatedPlayer = data;
+    }
+
+    // Log the action (include both profile and player changes)
     await logAdminAction(
       adminId,
       'update',
       'profile',
       playerId,
-      oldProfile,
-      updatedProfile,
+      { ...oldProfile, ...oldPlayer },
+      { ...updatedProfile, ...updatedPlayer },
       {
         changes: updates,
         playerName: `${updatedProfile.first_name || ''} ${updatedProfile.last_name || ''}`.trim(),
       }
     );
-
-    // Fetch player data for city/country (these are now on player table)
-    const { data: playerData } = await supabase
-      .from('player')
-      .select('city, country, gender')
-      .eq('id', playerId)
-      .single();
 
     // Return updated user info
     // Note: gender, city, country are in player table, not profile
@@ -757,10 +828,10 @@ export async function updatePlayerProfile(
         last_name: updatedProfile.last_name,
         display_name: updatedProfile.display_name,
         profile_picture_url: updatedProfile.profile_picture_url,
-        city: playerData?.city || null,
-        country: playerData?.country || null,
+        city: updatedPlayer?.city || null,
+        country: updatedPlayer?.country || null,
         phone_number: updatedProfile.phone,
-        gender: playerData?.gender || null,
+        gender: updatedPlayer?.gender || null,
         date_of_birth: updatedProfile.birth_date,
         created_at: updatedProfile.created_at,
         updated_at: updatedProfile.updated_at,
