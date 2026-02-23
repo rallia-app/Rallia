@@ -38,10 +38,7 @@ import {
   type ReportType,
   type BanType,
 } from '@rallia/shared-hooks';
-import {
-  moderationService,
-  type CreateBanParams,
-} from '@rallia/shared-services';
+import { moderationService, type CreateBanParams } from '@rallia/shared-services';
 import { useTranslation } from '../hooks';
 import type { RootStackParamList } from '../navigation/types';
 import {
@@ -87,12 +84,7 @@ const TabButton: React.FC<TabButtonProps> = ({ label, active, count, onPress, co
     onPress={onPress}
     activeOpacity={0.7}
   >
-    <Text
-      style={[
-        styles.tabLabel,
-        { color: active ? colors.accent : colors.textSecondary },
-      ]}
-    >
+    <Text style={[styles.tabLabel, { color: active ? colors.accent : colors.textSecondary }]}>
       {label}
     </Text>
     {count !== undefined && count > 0 && (
@@ -128,12 +120,18 @@ const ReportCard: React.FC<ReportCardProps> = ({
   const isPending = report.status === 'pending' || report.status === 'under_review';
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+    <View
+      style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+    >
       {/* Header */}
       <View style={styles.cardHeader}>
         <View style={styles.cardHeaderLeft}>
           <View style={[styles.typeIcon, { backgroundColor: `${priorityColor}20` }]}>
-            <Ionicons name={typeIcon as any} size={18} color={priorityColor} />
+            <Ionicons
+              name={typeIcon as keyof typeof Ionicons.glyphMap}
+              size={18}
+              color={priorityColor}
+            />
           </View>
           <View style={styles.cardTitles}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>
@@ -229,7 +227,9 @@ const BanCard: React.FC<BanCardProps> = ({ ban, colors, onRevoke, t }) => {
   const banTypeIcon = ban.ban_type === 'permanent' ? 'lock-closed' : 'time-outline';
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+    <View
+      style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+    >
       {/* Header */}
       <View style={styles.cardHeader}>
         <View style={styles.cardHeaderLeft}>
@@ -240,7 +240,7 @@ const BanCard: React.FC<BanCardProps> = ({ ban, colors, onRevoke, t }) => {
             ]}
           >
             <Ionicons
-              name={banTypeIcon as any}
+              name={banTypeIcon as keyof typeof Ionicons.glyphMap}
               size={18}
               color={isActive ? colors.errorText : colors.successText}
             />
@@ -260,7 +260,9 @@ const BanCard: React.FC<BanCardProps> = ({ ban, colors, onRevoke, t }) => {
             { backgroundColor: isActive ? colors.errorBg : colors.successBg },
           ]}
         >
-          <Text style={[styles.statusText, { color: isActive ? colors.errorText : colors.successText }]}>
+          <Text
+            style={[styles.statusText, { color: isActive ? colors.errorText : colors.successText }]}
+          >
             {isActive ? t('admin.moderation.active') : t('admin.moderation.revoked')}
           </Text>
         </View>
@@ -403,25 +405,21 @@ const AdminModerationScreen: React.FC = () => {
   // Handle dismiss report
   const handleDismissReport = useCallback(
     async (report: PlayerReport) => {
-      Alert.alert(
-        t('admin.moderation.dismissTitle'),
-        t('admin.moderation.dismissConfirm'),
-        [
-          { text: t('common.cancel'), style: 'cancel' },
-          {
-            text: t('admin.moderation.dismiss'),
-            style: 'destructive',
-            onPress: async () => {
-              const success = await dismissReport(report.id);
-              if (success) {
-                toast.show(t('admin.moderation.dismissSuccess'), 'success');
-              } else {
-                toast.show(t('admin.moderation.dismissError'), 'error');
-              }
-            },
+      Alert.alert(t('admin.moderation.dismissTitle'), t('admin.moderation.dismissConfirm'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('admin.moderation.dismiss'),
+          style: 'destructive',
+          onPress: async () => {
+            const success = await dismissReport(report.id);
+            if (success) {
+              toast.show(t('admin.moderation.dismissSuccess'), 'success');
+            } else {
+              toast.show(t('admin.moderation.dismissError'), 'error');
+            }
           },
-        ]
-      );
+        },
+      ]);
     },
     [dismissReport, t, toast]
   );
@@ -476,24 +474,20 @@ const AdminModerationScreen: React.FC = () => {
   // Handle revoke ban
   const handleRevokeBan = useCallback(
     async (ban: PlayerBan) => {
-      Alert.alert(
-        t('admin.moderation.revokeTitle'),
-        t('admin.moderation.revokeConfirm'),
-        [
-          { text: t('common.cancel'), style: 'cancel' },
-          {
-            text: t('admin.moderation.revokeBan'),
-            onPress: async () => {
-              const success = await revokeBan(ban.id, 'Admin revoked');
-              if (success) {
-                toast.show(t('admin.moderation.revokeSuccess'), 'success');
-              } else {
-                toast.show(t('admin.moderation.revokeError'), 'error');
-              }
-            },
+      Alert.alert(t('admin.moderation.revokeTitle'), t('admin.moderation.revokeConfirm'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('admin.moderation.revokeBan'),
+          onPress: async () => {
+            const success = await revokeBan(ban.id, 'Admin revoked');
+            if (success) {
+              toast.show(t('admin.moderation.revokeSuccess'), 'success');
+            } else {
+              toast.show(t('admin.moderation.revokeError'), 'error');
+            }
           },
-        ]
-      );
+        },
+      ]);
     },
     [revokeBan, t, toast]
   );
@@ -563,16 +557,37 @@ const AdminModerationScreen: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['top']}
+    >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.icon} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          {t('admin.moderation.title')}
-        </Text>
-        <View style={styles.headerRight} />
+        <View style={styles.headerTitleContainer}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>
+            {t('admin.moderation.title')}
+          </Text>
+          <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>
+            {t('admin.sections.moderation.description')}
+          </Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => {
+            refetchReports();
+            refetchBans();
+          }}
+          style={styles.refreshButton}
+          disabled={reportsLoading || bansLoading}
+        >
+          {reportsLoading || bansLoading ? (
+            <ActivityIndicator size="small" color={colors.accent} />
+          ) : (
+            <Ionicons name="refresh" size={24} color={colors.accent} />
+          )}
+        </TouchableOpacity>
       </View>
 
       {/* Stats Summary */}
@@ -585,7 +600,9 @@ const AdminModerationScreen: React.FC = () => {
         </View>
         <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
         <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: colors.warningText }]}>{counts.under_review}</Text>
+          <Text style={[styles.statValue, { color: colors.warningText }]}>
+            {counts.under_review}
+          </Text>
           <Text style={[styles.statLabel, { color: colors.textMuted }]}>
             {t('admin.moderation.underReview')}
           </Text>
@@ -633,9 +650,7 @@ const AdminModerationScreen: React.FC = () => {
           }
           onEndReached={loadMoreReports}
           onEndReachedThreshold={0.3}
-          ListEmptyComponent={() =>
-            renderEmpty(reportsLoading, t('admin.moderation.noReports'))
-          }
+          ListEmptyComponent={() => renderEmpty(reportsLoading, t('admin.moderation.noReports'))}
           ListFooterComponent={() => renderFooter(reportsLoadingMore)}
           showsVerticalScrollIndicator={false}
         />
@@ -820,13 +835,19 @@ const styles = StyleSheet.create({
     padding: spacingPixels.xs,
     marginRight: spacingPixels.sm,
   },
-  headerTitle: {
+  headerTitleContainer: {
     flex: 1,
+  },
+  headerTitle: {
     fontSize: fontSizePixels.xl,
     fontWeight: fontWeightNumeric.semibold,
   },
-  headerRight: {
-    width: 40,
+  headerSubtitle: {
+    fontSize: fontSizePixels.xs,
+    marginTop: 2,
+  },
+  refreshButton: {
+    padding: spacingPixels.xs,
   },
   statsContainer: {
     flexDirection: 'row',

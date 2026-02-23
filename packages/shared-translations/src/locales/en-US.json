@@ -4054,6 +4054,8 @@
   "admin": {
     "title": "Admin Panel",
     "panelButton": "Admin Panel",
+    "comingSoon": "Coming Soon",
+    "phase1Notice": "Phase 1 - Some features are still in development",
     "roles": {
       "super_admin": "Super Admin",
       "moderator": "Moderator",
@@ -4064,6 +4066,64 @@
       "activeUsers": "Active Users",
       "matchesToday": "Games Today",
       "pendingReports": "Pending Reports"
+    },
+    "errors": {
+      "loadFailed": "Failed to load data",
+      "accessDenied": "Access Denied",
+      "noPermission": "You do not have permission to access this area",
+      "unexpectedError": "An unexpected error occurred",
+      "invalidCallback": "Invalid callback parameters"
+    },
+    "dashboard": {
+      "title": "Admin Dashboard",
+      "roleLabel": "Your Role",
+      "sections": "Quick Actions",
+      "description": "Manage organizations, users, and settings.",
+      "titleMeta": "Admin Dashboard - Rallia",
+      "descriptionMeta": "Administration dashboard for Rallia employees.",
+      "organizationsCard": {
+        "title": "Organizations",
+        "description": "Manage all organizations"
+      },
+      "usersCard": {
+        "title": "Users",
+        "description": "View and manage user accounts"
+      },
+      "analyticsCard": {
+        "title": "Analytics",
+        "description": "Analytics and insights"
+      }
+    },
+    "export": {
+      "selectFormat": "Select Export Format",
+      "csvDescription": "Export as CSV file for spreadsheet applications",
+      "pdfDescription": "Export as PDF document for printing and sharing"
+    },
+    "audit": {
+      "title": "Activity Log",
+      "subtitle": "Monitor all admin actions and system events",
+      "exportSuccess": "Activity log exported successfully",
+      "exportError": "Failed to export activity log",
+      "justNow": "Just now",
+      "minutesAgo": "{{count}} minute ago",
+      "minutesAgo_other": "{{count}} minutes ago",
+      "hoursAgo": "{{count}} hour ago",
+      "hoursAgo_other": "{{count}} hours ago",
+      "daysAgo": "{{count}} day ago",
+      "daysAgo_other": "{{count}} days ago",
+      "last7Days": "Last 7 Days",
+      "totalActions": "Total Actions",
+      "info": "Info",
+      "warnings": "Warnings",
+      "critical": "Critical",
+      "filterByAction": "Filter by Action",
+      "filterByEntity": "Filter by Entity",
+      "filterBySeverity": "Filter by Severity",
+      "noLogs": "No activity logs found",
+      "tryDifferentFilters": "Try adjusting your filters",
+      "noActivityYet": "No activity recorded yet",
+      "clearFilters": "Clear Filters",
+      "action": "Action"
     },
     "sections": {
       "users": {
@@ -4091,19 +4151,6 @@
         "description": "Configure admin preferences"
       }
     },
-    "users": {
-      "title": "User Management",
-      "searchPlaceholder": "Search users...",
-      "filterBy": "Filter by",
-      "all": "All Users",
-      "verified": "Verified Only",
-      "unverified": "Unverified Only",
-      "banned": "Banned Users",
-      "detail": {
-        "title": "User Details",
-        "noUser": "No user found"
-      }
-    },
     "activityLog": {
       "title": "Activity Log",
       "empty": "No activity to display",
@@ -4111,7 +4158,61 @@
     },
     "moderation": {
       "title": "Moderation",
-      "empty": "No reports to review"
+      "empty": "No reports to review",
+      "pending": "Pending",
+      "underReview": "Under Review",
+      "activeBans": "Active Bans",
+      "reports": "Reports",
+      "bans": "Bans",
+      "noReports": "No reports found",
+      "noBans": "No active bans",
+      "noDescription": "No description provided",
+      "reportedPlayer": "Reported Player",
+      "reporter": "Reporter",
+      "review": "Review",
+      "ban": "Ban",
+      "dismiss": "Dismiss",
+      "banType": {
+        "temporary": "Temporary",
+        "permanent": "Permanent"
+      },
+      "active": "Active",
+      "revoked": "Revoked",
+      "noReason": "No reason provided",
+      "bannedOn": "Banned on",
+      "expiresOn": "Expires on",
+      "revokeBan": "Revoke Ban",
+      "revokeTitle": "Revoke Ban",
+      "revokeConfirm": "Are you sure you want to revoke this ban?",
+      "revokeSuccess": "Ban revoked successfully",
+      "revokeError": "Failed to revoke ban",
+      "dismissTitle": "Dismiss Report",
+      "dismissConfirm": "Are you sure you want to dismiss this report?",
+      "dismissSuccess": "Report dismissed successfully",
+      "dismissError": "Failed to dismiss report",
+      "reviewStarted": "Review started",
+      "banSuccess": "User banned successfully",
+      "banError": "Failed to ban user",
+      "createBan": "Create Ban",
+      "banningPlayer": "Banning Player",
+      "banTypeLabel": "Ban Type",
+      "durationDays": "Duration (Days)",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "Enter reason for ban...",
+      "confirmBan": "Confirm Ban"
+    },
+    "alerts": {
+      "title": "Alerts",
+      "dismissTitle": "Dismiss Alert",
+      "dismissMessage": "Are you sure you want to dismiss this alert?",
+      "markAllReadTitle": "Mark All as Read",
+      "markAllReadMessage": "Are you sure you want to mark all alerts as read?",
+      "critical": "Critical",
+      "warning": "Warning",
+      "info": "Info",
+      "unread": "Unread",
+      "noAlerts": "No Alerts",
+      "allClear": "All clear! No alerts to display."
     },
     "signIn": {
       "title": "Admin Sign In",
@@ -4127,24 +4228,6 @@
       "users": "Users",
       "analytics": "Analytics",
       "settings": "Settings"
-    },
-    "dashboard": {
-      "title": "Admin Dashboard",
-      "description": "Manage organizations, users, and settings.",
-      "titleMeta": "Admin Dashboard - Rallia",
-      "descriptionMeta": "Administration dashboard for Rallia employees.",
-      "organizationsCard": {
-        "title": "Organizations",
-        "description": "Manage all organizations"
-      },
-      "usersCard": {
-        "title": "Users",
-        "description": "View and manage user accounts"
-      },
-      "analyticsCard": {
-        "title": "Analytics",
-        "description": "Analytics and insights"
-      }
     },
     "organizations": {
       "title": "Organizations",
@@ -4516,6 +4599,28 @@
       "titleMeta": "Users - Admin - Rallia",
       "descriptionMeta": "Manage all users including admins, organization members, and players.",
       "comingSoon": "User management interface coming soon.",
+      "searchPlaceholder": "Search users...",
+      "filterBy": "Filter by",
+      "all": "All Users",
+      "verified": "Verified Only",
+      "unverified": "Unverified Only",
+      "banned": "Banned Users",
+      "anonymous": "Anonymous User",
+      "noEmail": "No email",
+      "sports": "sports",
+      "matches": "matches",
+      "noSearchResults": "No users found matching your search",
+      "noUsers": "No users found",
+      "tryDifferentSearch": "Try a different search term",
+      "noUsersDescription": "Users will appear here once they sign up",
+      "resultsCount": "{{count}} user found",
+      "resultsCount_other": "{{count}} users found",
+      "exportSuccess": "User data exported successfully",
+      "exportError": "Failed to export user data",
+      "skillLevel": "Skill Level",
+      "rating": "Rating",
+      "created": "Created",
+      "participants": "participants",
       "tabs": {
         "admins": "Admins",
         "organizationMembers": "Organization Members",
@@ -4534,7 +4639,29 @@
       },
       "status": {
         "active": "Active",
-        "inactive": "Inactive"
+        "inactive": "Inactive",
+        "banned": "Banned"
+      },
+      "detail": {
+        "title": "User Details",
+        "noUser": "No user found"
+      },
+      "edit": {
+        "noChanges": "No changes to save",
+        "saveSuccess": "User updated successfully",
+        "saveFailed": "Failed to update user"
+      },
+      "actions": {
+        "banUser": "Ban User",
+        "banConfirm": "Are you sure you want to ban {{name}}?",
+        "ban": "Ban",
+        "banSuccess": "User has been banned",
+        "banFailed": "Failed to ban user",
+        "unbanUser": "Unban User",
+        "unbanConfirm": "Are you sure you want to unban {{name}}?",
+        "unban": "Unban",
+        "unbanSuccess": "User has been unbanned",
+        "unbanFailed": "Failed to unban user"
       },
       "roles": {
         "super_admin": "Super Admin",
@@ -4584,19 +4711,86 @@
       "description": "Analytics and insights.",
       "titleMeta": "Analytics - Admin - Rallia",
       "descriptionMeta": "Analytics and insights.",
-      "comingSoon": "Analytics dashboard coming soon."
+      "comingSoon": "Analytics dashboard coming soon.",
+      "lastUpdated": "Last updated",
+      "overview": "Overview",
+      "players": "Players",
+      "matches": "Matches",
+      "completed": "Completed",
+      "views": "views",
+      "sportStatistics": "Sport Statistics",
+      "onboardingFunnel": "Onboarding Funnel",
+      "matchStatistics": "Match Statistics",
+      "scheduled": "Scheduled",
+      "cancelled": "Cancelled",
+      "avgParticipants": "Avg. Participants",
+      "completionRate": "Completion Rate",
+      "quickActions": "Quick Actions",
+      "viewUsers": "View Users",
+      "adminPanel": "Admin Panel",
+      "errorLoading": "Error loading analytics data",
+      "widgets": {
+        "total_players": "Total Players",
+        "active_today": "Active Today",
+        "new_this_week": "New This Week",
+        "total_matches": "Total Matches",
+        "completed_matches": "Completed Matches"
+      },
+      "onboarding": {
+        "welcome": "Welcome",
+        "sport_selection": "Sport Selection",
+        "postal_code": "Postal Code",
+        "profile_setup": "Profile Setup",
+        "personal_info": "Personal Info",
+        "personal_inf": "Personal Info",
+        "skill_level": "Skill Level",
+        "availability": "Availability",
+        "location": "Location",
+        "complete": "Complete"
+      }
     },
     "settings": {
       "title": "Settings",
       "description": "Manage settings and configuration.",
       "titleMeta": "Settings - Admin - Rallia",
       "descriptionMeta": "Manage settings.",
-      "comingSoon": "Settings interface coming soon."
-    },
-    "errors": {
-      "accessDenied": "Access denied. Admin access required.",
-      "unexpectedError": "An unexpected error occurred",
-      "invalidCallback": "Invalid callback parameters"
+      "comingSoon": "Settings interface coming soon.",
+      "alertTypes": {
+        "criticalAction": "Critical Actions",
+        "userReport": "User Reports",
+        "systemAlert": "System Alerts",
+        "newAdmin": "New Admin",
+        "securityAlert": "Security Alerts"
+      },
+      "saveSuccess": "Settings saved successfully",
+      "saveError": "Failed to save settings",
+      "clearAlertsTitle": "Clear All Alerts",
+      "clearAlertsMessage": "Are you sure you want to clear all alerts? This action cannot be undone.",
+      "alertsCleared": "All alerts cleared",
+      "notificationPreferences": "Notification Preferences",
+      "alertType": "Alert Type",
+      "enabled": "Enabled",
+      "email": "Email",
+      "push": "Push",
+      "emailDigest": "Email Digest",
+      "emailDigestDescription": "Receive a summary of admin activities by email",
+      "digestOptions": {
+        "none": "None",
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "never": "Never"
+      },
+      "dataManagement": "Data Management",
+      "exportAuditLog": "Export Audit Log",
+      "exportAuditLogDescription": "Download all admin activity logs",
+      "exportUsers": "Export Users",
+      "exportUsersDescription": "Download user data as CSV",
+      "clearAlerts": "Clear Alerts",
+      "clearAlertsDescription": "Remove all read alerts",
+      "systemInfo": "System Info",
+      "version": "Version",
+      "environment": "Environment",
+      "adminRole": "Admin Role"
     }
   },
   "sportSelectionOverlay": {
