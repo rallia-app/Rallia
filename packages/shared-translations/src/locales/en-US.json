@@ -1545,6 +1545,7 @@
       "replyingTo": "Replying to {name}"
     },
     "groupChat": {
+      "admin": "Admin",
       "groupMemberCount": "Group · {count} members",
       "groupMemberCount_one": "Group · {count} member",
       "addGroupDescription": "Add group description",
@@ -1695,7 +1696,8 @@
       "last7DaysActivities": "Last 7 days activities",
       "activities": "ACTIVITIES",
       "newMembers": "{count} new members",
-      "gamesCreated": "{count, plural, one {{count} game created} other {{count} games created}}",
+      "gamesCreated": "{count} games created",
+      "gamesCreated_one": "{count} game created",
       "newMessages": "{count} new messages in\ncommunity chat",
       "about": "About",
       "viewAll": "View all",
@@ -1973,7 +1975,8 @@
       "noActivity": "No activity yet",
       "activities": "ACTIVITIES",
       "newMembers": "{count} new members",
-      "gamesCreated": "{count, plural, one {{count} game created} other {{count} games created}}",
+      "gamesCreated": "{count} games created",
+      "gamesCreated_one": "{count} game created",
       "newMessages": "{count} new messages in\ncommunity chat"
     },
     "home": {
@@ -2036,8 +2039,8 @@
       "wasAddedBy": "{actorName} was added by {addedByName}",
       "joinedTheGroup": "{actorName} joined the group",
       "leftTheGroup": "{actorName} left the group",
-      "promotedMember": "{actorName} promoted a member to moderator",
-      "demotedMember": "{actorName} demoted a moderator to member",
+      "promotedMember": "{actorName} was promoted to moderator",
+      "demotedMember": "{actorName} was demoted to member",
       "createdGame": "{actorName} created a new game",
       "sentMessage": "{actorName} sent a message",
       "updatedGroup": "{actorName} updated the group",

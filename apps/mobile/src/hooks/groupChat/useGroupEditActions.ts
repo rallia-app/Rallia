@@ -24,6 +24,7 @@ interface NetworkInfo {
   cover_image_url: string | null;
   description: string | null;
   member_count: number;
+  type: 'community' | 'player_group' | string | null;
 }
 
 interface UseGroupEditActionsProps {

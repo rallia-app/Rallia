@@ -638,10 +638,18 @@ export async function getNetworkByConversationId(
   cover_image_url: string | null;
   description: string | null;
   member_count: number;
+  type: 'community' | 'player_group' | string | null;
 } | null> {
   const { data, error } = await supabase
     .from('network')
-    .select('id, name, cover_image_url, description, member_count')
+    .select(`
+      id, 
+      name, 
+      cover_image_url, 
+      description, 
+      member_count,
+      network_type:network_type_id (name)
+    `)
     .eq('conversation_id', conversationId)
     .single();
 
@@ -649,5 +657,15 @@ export async function getNetworkByConversationId(
     return null;
   }
 
-  return data;
+  // Extract network type name
+  const networkType = data.network_type as { name?: string } | null;
+
+  return {
+    id: data.id,
+    name: data.name,
+    cover_image_url: data.cover_image_url,
+    description: data.description,
+    member_count: data.member_count,
+    type: networkType?.name || null,
+  };
 }

@@ -1545,6 +1545,7 @@
       "clearChat": "Effacer la conversation"
     },
     "groupChat": {
+      "admin": "Admin",
       "groupMemberCount": "Groupe · {count} membres",
       "groupMemberCount_one": "Groupe · {count} membre",
       "addGroupDescription": "Ajouter une description de groupe",
@@ -1695,7 +1696,8 @@
       "last7DaysActivities": "Activités des 7 derniers jours",
       "activities": "ACTIVITÉS",
       "newMembers": "{count} nouveaux membres",
-      "gamesCreated": "{count, plural, one {{count} partie créée} other {{count} parties créées}}",
+      "gamesCreated": "{count} parties créées",
+      "gamesCreated_one": "{count} partie créée",
       "newMessages": "{count} nouveaux messages dans\nle clavardage",
       "about": "À propos",
       "viewAll": "Voir tout",
@@ -1973,7 +1975,8 @@
       "noActivity": "Aucune activité pour le moment",
       "activities": "ACTIVITÉS",
       "newMembers": "{count} nouveaux membres",
-      "gamesCreated": "{count, plural, one {{count} partie créée} other {{count} parties créées}}",
+      "gamesCreated": "{count} parties créées",
+      "gamesCreated_one": "{count} partie créée",
       "newMessages": "{count} nouveaux messages dans\nle clavardage"
     },
     "home": {
@@ -2036,8 +2039,8 @@
       "wasAddedBy": "{actorName} a été ajouté(e) par {addedByName}",
       "joinedTheGroup": "{actorName} a rejoint le groupe",
       "leftTheGroup": "{actorName} a quitté le groupe",
-      "promotedMember": "{actorName} a promu un membre au rôle de modérateur",
-      "demotedMember": "{actorName} a rétrogradé un modérateur au rôle de membre",
+      "promotedMember": "{actorName} a été promu(e) au rôle de modérateur",
+      "demotedMember": "{actorName} a été rétrogradé(e) au rôle de membre",
       "createdGame": "{actorName} a créé une nouvelle partie",
       "sentMessage": "{actorName} a envoyé un message",
       "updatedGroup": "{actorName} a mis à jour le groupe",

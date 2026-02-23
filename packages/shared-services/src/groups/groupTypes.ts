@@ -27,7 +27,7 @@ export interface Group {
   name: string;
   description: string | null;
   is_private: boolean;
-  max_members: number;
+  max_members: number | null;
   member_count: number;
   conversation_id: string | null;
   cover_image_url: string | null;
