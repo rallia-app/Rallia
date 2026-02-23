@@ -1,0 +1,75 @@
+name: OTA Update (EAS Update)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ota-update
+  cancel-in-progress: true
+
+jobs:
+  ota-update:
+    name: Push OTA Update
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: '16'
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Push OTA update
+        id: update
+        continue-on-error: true
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          cd apps/mobile
+          eas update --branch preview --message "$COMMIT_MSG"
+
+      - name: Notify Discord
+        if: always()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          SHORT_SHA="${GITHUB_SHA::7}"
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+
+          if [ "${{ steps.update.outcome }}" = "success" ]; then
+            COLOR=3066993
+            TITLE="OTA Update Published"
+            DESCRIPTION="JS update pushed to \`preview\` channel."
+          else
+            COLOR=15158332
+            TITLE="OTA Update Failed"
+            DESCRIPTION="Failed to push OTA update to \`preview\` channel."
+          fi
+
+          TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          PAYLOAD=$(jq -n \
+            --arg title "$TITLE" \
+            --argjson color "$COLOR" \
+            --arg timestamp "$TIMESTAMP" \
+            --arg description "$DESCRIPTION" \
+            --arg commit "$SHORT_SHA" \
+            --arg msg "$COMMIT_MSG" \
+            --arg run_url "$RUN_URL" \
+            '{embeds: [{title: $title, description: $description, color: $color, fields: [{name: "Commit", value: ("`" + $commit + "`"), inline: true}, {name: "Message", value: $msg, inline: true}, {name: "Workflow", value: ("[View Logs](" + $run_url + ")"), inline: true}], timestamp: $timestamp, footer: {text: "Rallia OTA Update"}}]}')
+
+          curl -sf -H "Content-Type: application/json" -d "$PAYLOAD" "$DISCORD_WEBHOOK_URL"
