@@ -37,6 +37,13 @@ export interface SelectedMemberInfo {
   isAdmin: boolean;
 }
 
+export interface SelectedMemberInfo {
+  playerId: string;
+  name: string;
+  profilePictureUrl: string | null;
+  isAdmin: boolean;
+}
+
 interface UseGroupMemberManagementProps {
   conversationId: string;
   playerId: string | undefined;
