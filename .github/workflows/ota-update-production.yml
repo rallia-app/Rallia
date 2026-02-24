@@ -1,4 +1,4 @@
-name: OTA Update (EAS Update)
+name: OTA Update — Production
 
 on:
   push:
@@ -6,12 +6,12 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ota-update
+  group: ota-update-production
   cancel-in-progress: true
 
 jobs:
   ota-update:
-    name: Push OTA Update
+    name: Push OTA Update (Production)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -39,7 +39,7 @@ jobs:
         run: |
           COMMIT_MSG=$(git log -1 --pretty=%s)
           cd apps/mobile
-          eas update --branch preview --message "$COMMIT_MSG"
+          eas update --branch production --message "$COMMIT_MSG"
 
       - name: Notify Discord
         if: always()
@@ -52,12 +52,12 @@ jobs:
 
           if [ "${{ steps.update.outcome }}" = "success" ]; then
             COLOR=3066993
-            TITLE="OTA Update Published"
-            DESCRIPTION="JS update pushed to \`preview\` channel."
+            TITLE="Production OTA Update Published"
+            DESCRIPTION="JS update pushed to \`production\` channel."
           else
             COLOR=15158332
-            TITLE="OTA Update Failed"
-            DESCRIPTION="Failed to push OTA update to \`preview\` channel."
+            TITLE="Production OTA Update Failed"
+            DESCRIPTION="Failed to push OTA update to \`production\` channel."
           fi
 
           TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -70,6 +70,6 @@ jobs:
             --arg commit "$SHORT_SHA" \
             --arg msg "$COMMIT_MSG" \
             --arg run_url "$RUN_URL" \
-            '{embeds: [{title: $title, description: $description, color: $color, fields: [{name: "Commit", value: ("`" + $commit + "`"), inline: true}, {name: "Message", value: $msg, inline: true}, {name: "Workflow", value: ("[View Logs](" + $run_url + ")"), inline: true}], timestamp: $timestamp, footer: {text: "Rallia OTA Update"}}]}')
+            '{embeds: [{title: $title, description: $description, color: $color, fields: [{name: "Commit", value: ("`" + $commit + "`"), inline: true}, {name: "Message", value: $msg, inline: true}, {name: "Workflow", value: ("[View Logs](" + $run_url + ")"), inline: true}], timestamp: $timestamp, footer: {text: "Rallia Production OTA"}}]}')
 
           curl -sf -H "Content-Type: application/json" -d "$PAYLOAD" "$DISCORD_WEBHOOK_URL"
