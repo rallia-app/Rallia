@@ -2,10 +2,11 @@
  * AdminDashboardScreen
  *
  * Analytics dashboard for administrators showing:
- * - KPI widgets (users, matches, activity)
+ * - KPI widgets with sparkline trends
+ * - Time range selector (7d, 30d, 90d, YTD)
+ * - Navigation cards to detailed sections
  * - Sport-specific metrics
  * - Onboarding funnel visualization
- * - Quick access to detailed reports
  *
  * Access Requirements:
  * - User must have admin role (any level)
@@ -24,11 +25,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Text } from '@rallia/shared-components';
+import {
+  Text,
+  SparklineChart,
+  TimeRangeSelector,
+  AnalyticsSectionCard,
+} from '@rallia/shared-components';
 import {
   useTheme,
   useAdminAnalytics,
   useAdminStatus,
+  useAnalyticsTimeRange,
   type DashboardWidget,
   type SportStatistics,
   type OnboardingFunnelStep,
@@ -61,8 +68,38 @@ const AdminDashboardScreen: React.FC = () => {
   const isDark = theme === 'dark';
   const { isAdmin } = useAdminStatus();
 
-  // Fetch analytics data
-  const { kpi, widgets, loading, error, lastUpdated, refetch } = useAdminAnalytics();
+  // Time range management
+  const { selectedOption, timeRange, setRange } = useAnalyticsTimeRange({
+    defaultRange: '7d',
+  });
+
+  // Fetch analytics data with trends
+  const {
+    kpi,
+    widgets,
+    trends,
+    loading,
+    trendsLoading,
+    error,
+    lastUpdated,
+    refetch,
+    refetchTrends,
+  } = useAdminAnalytics({
+    includeTrends: true,
+    trendDays: timeRange.days,
+  });
+
+  // Handle time range change
+  const handleTimeRangeChange = useCallback(
+    async (option: '7d' | '30d' | '90d' | 'ytd') => {
+      lightHaptic();
+      await setRange(option);
+      // Refetch trends with new day count
+      const days = option === '7d' ? 7 : option === '30d' ? 30 : option === '90d' ? 90 : timeRange.days;
+      await refetchTrends(days);
+    },
+    [setRange, refetchTrends, timeRange.days]
+  );
 
   // Theme-aware colors
   const themeColors = isDark ? darkTheme : lightTheme;
@@ -113,7 +150,7 @@ const AdminDashboardScreen: React.FC = () => {
     );
   }
 
-  // Render KPI widget card
+  // Render KPI widget card with sparkline
   const renderWidgetCard = (widget: DashboardWidget) => {
     const getChangeColor = () => {
       if (widget.changeType === 'increase') return colors.successText;
@@ -127,6 +164,16 @@ const AdminDashboardScreen: React.FC = () => {
       return 'remove';
     };
 
+    // Get trend type for sparkline color
+    const getTrendType = (): 'positive' | 'negative' | 'neutral' => {
+      if (widget.changeType === 'increase') return 'positive';
+      if (widget.changeType === 'decrease') return 'negative';
+      return 'neutral';
+    };
+
+    // Get trend data for this widget
+    const trendData = widget.trend || trends[widget.id] || [];
+
     return (
       <View
         key={widget.id}
@@ -138,9 +185,22 @@ const AdminDashboardScreen: React.FC = () => {
         <Text style={[styles.widgetTitle, { color: colors.textSecondary }]}>
           {t(`admin.analytics.widgets.${widget.id.replace(/-/g, '_')}` as TranslationKey) || widget.title}
         </Text>
-        <Text style={[styles.widgetValue, { color: colors.text }]}>
-          {typeof widget.value === 'number' ? widget.value.toLocaleString() : widget.value}
-        </Text>
+        <View style={styles.widgetValueRow}>
+          <Text style={[styles.widgetValue, { color: colors.text }]}>
+            {typeof widget.value === 'number' ? widget.value.toLocaleString() : widget.value}
+          </Text>
+          {/* Sparkline chart */}
+          {trendData.length > 0 && (
+            <View style={styles.sparklineContainer}>
+              <SparklineChart
+                data={trendData}
+                width={60}
+                height={28}
+                trend={getTrendType()}
+              />
+            </View>
+          )}
+        </View>
         {widget.change !== undefined && (
           <View style={styles.widgetChange}>
             <Ionicons name={getChangeIcon()} size={14} color={getChangeColor()} />
@@ -280,6 +340,16 @@ const AdminDashboardScreen: React.FC = () => {
           <RefreshControl refreshing={loading} onRefresh={refetch} tintColor={colors.accent} />
         }
       >
+        {/* Time Range Selector */}
+        <View style={styles.timeRangeSection}>
+          <TimeRangeSelector
+            value={selectedOption as '7d' | '30d' | '90d' | 'ytd'}
+            onChange={(range) => handleTimeRangeChange(range as '7d' | '30d' | '90d' | 'ytd')}
+            size="md"
+            disabled={trendsLoading}
+          />
+        </View>
+
         {/* Error State */}
         {error && (
           <View style={[styles.errorBanner, { backgroundColor: colors.errorBg }]}>
@@ -398,38 +468,108 @@ const AdminDashboardScreen: React.FC = () => {
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
             {t('admin.analytics.quickActions' as TranslationKey)}
           </Text>
-          <View style={styles.quickActionsRow}>
-            <TouchableOpacity
-              style={[
-                styles.quickActionButton,
-                { backgroundColor: colors.accentLight, borderColor: colors.accent },
-              ]}
-              onPress={() => {
-                lightHaptic();
-                navigation.navigate('AdminUsers');
-              }}
-            >
-              <Ionicons name="people" size={24} color={colors.accent} />
-              <Text style={[styles.quickActionText, { color: colors.accent }]}>
-                {t('admin.analytics.viewUsers' as TranslationKey)}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.quickActionButton,
-                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-              ]}
-              onPress={() => {
-                lightHaptic();
-                navigation.navigate('AdminPanel');
-              }}
-            >
-              <Ionicons name="settings" size={24} color={colors.textSecondary} />
-              <Text style={[styles.quickActionText, { color: colors.textSecondary }]}>
-                {t('admin.analytics.adminPanel' as TranslationKey)}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          
+          {/* Analytics Section Navigation Cards - Full Width Layout */}
+          <AnalyticsSectionCard
+            title={t('admin.analytics.sections.users' as TranslationKey) || 'User Analytics'}
+            description={t('admin.analytics.sections.usersFullDesc' as TranslationKey) || 'Monitor user growth, retention, and activity patterns across the platform.'}
+            icon="people"
+            onPress={() => {
+              lightHaptic();
+              navigation.navigate('AdminUserAnalytics');
+            }}
+            size="fullWidth"
+          />
+          <AnalyticsSectionCard
+            title={t('admin.analytics.sections.matches' as TranslationKey) || 'Match Analytics'}
+            description={t('admin.analytics.sections.matchesFullDesc' as TranslationKey) || 'Track match creation, completion rates, and scheduling trends.'}
+            icon="tennisball"
+            onPress={() => {
+              lightHaptic();
+              navigation.navigate('AdminMatchAnalytics');
+            }}
+            size="fullWidth"
+          />
+          <AnalyticsSectionCard
+            title={t('admin.analytics.sections.onboarding' as TranslationKey) || 'Onboarding Analytics'}
+            description={t('admin.analytics.sections.onboardingFullDesc' as TranslationKey) || 'Analyze the user journey funnel and identify drop-off points.'}
+            icon="git-branch"
+            onPress={() => {
+              lightHaptic();
+              navigation.navigate('AdminOnboardingAnalytics');
+            }}
+            size="fullWidth"
+          />
+          <AnalyticsSectionCard
+            title={t('admin.analytics.sections.engagement' as TranslationKey) || 'Engagement Analytics'}
+            description={t('admin.analytics.sections.engagementFullDesc' as TranslationKey) || 'Understand user behavior, session metrics, and feature adoption.'}
+            icon="analytics"
+            onPress={() => {
+              lightHaptic();
+              navigation.navigate('AdminEngagementAnalytics');
+            }}
+            size="fullWidth"
+          />
+          <AnalyticsSectionCard
+            title={t('admin.analytics.sections.messaging' as TranslationKey) || 'Messaging Analytics'}
+            description={t('admin.analytics.sections.messagingFullDesc' as TranslationKey) || 'Review communication patterns, message volume, and chat health.'}
+            icon="chatbubbles"
+            onPress={() => {
+              lightHaptic();
+              navigation.navigate('AdminMessagingAnalytics');
+            }}
+            size="fullWidth"
+          />
+          <AnalyticsSectionCard
+            title={t('admin.analytics.sections.rating' as TranslationKey) || 'Rating & Reputation'}
+            description={t('admin.analytics.sections.ratingFullDesc' as TranslationKey) || 'Explore player ratings, certification progress, and reputation trends.'}
+            icon="star"
+            onPress={() => {
+              lightHaptic();
+              navigation.navigate('AdminRatingAnalytics');
+            }}
+            size="fullWidth"
+          />
+          <AnalyticsSectionCard
+            title={t('admin.analytics.sections.moderation' as TranslationKey) || 'Moderation & Safety'}
+            description={t('admin.analytics.sections.moderationFullDesc' as TranslationKey) || 'Monitor reports, bans, and platform safety metrics.'}
+            icon="shield-checkmark"
+            onPress={() => {
+              lightHaptic();
+              navigation.navigate('AdminModerationAnalytics');
+            }}
+            size="fullWidth"
+          />
+          <AnalyticsSectionCard
+            title={t('admin.analytics.sections.community' as TranslationKey) || 'Community Analytics'}
+            description={t('admin.analytics.sections.communityFullDesc' as TranslationKey) || 'Analyze network growth, group activity, and community engagement.'}
+            icon="people-circle"
+            onPress={() => {
+              lightHaptic();
+              navigation.navigate('AdminCommunityAnalytics');
+            }}
+            size="fullWidth"
+          />
+          <AnalyticsSectionCard
+            title={t('admin.analytics.sections.sports' as TranslationKey) || 'Sport Analytics'}
+            description={t('admin.analytics.sections.sportsFullDesc' as TranslationKey) || 'Compare sport popularity, facility usage, and growth trends.'}
+            icon="tennisball"
+            onPress={() => {
+              lightHaptic();
+              navigation.navigate('AdminSportAnalytics');
+            }}
+            size="fullWidth"
+          />
+          <AnalyticsSectionCard
+            title={t('admin.analytics.sections.settings' as TranslationKey) || 'Admin Panel'}
+            description={t('admin.analytics.sections.settingsFullDesc' as TranslationKey) || 'Access system settings, user management, and admin configuration.'}
+            icon="settings"
+            onPress={() => {
+              lightHaptic();
+              navigation.navigate('AdminPanel');
+            }}
+            size="fullWidth"
+          />
         </View>
 
         {/* Bottom spacing */}
@@ -477,6 +617,9 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: spacingPixels[4],
+  },
+  timeRangeSection: {
+    marginBottom: spacingPixels[5],
   },
   errorContainer: {
     flex: 1,
@@ -526,9 +669,18 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginBottom: spacingPixels[2],
   },
+  widgetValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   widgetValue: {
     fontSize: 28,
     fontWeight: '700',
+    flex: 1,
+  },
+  sparklineContainer: {
+    marginLeft: spacingPixels[2],
   },
   widgetChange: {
     flexDirection: 'row',
@@ -539,6 +691,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     marginLeft: 4,
+  },
+  sectionCardsGrid: {
+    flexDirection: 'row',
+    gap: spacingPixels[3],
+    marginBottom: spacingPixels[3],
   },
   sportCard: {
     padding: spacingPixels[4],

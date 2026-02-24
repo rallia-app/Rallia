@@ -59,6 +59,23 @@ export type RootStackParamList = {
   AdminAlerts: undefined; // Admin alerts and notifications
   AdminSettings: undefined; // Admin settings and preferences
   AdminModeration: undefined; // Moderation - reports and bans management
+  
+  // Admin Analytics Sub-Views (Phase 2)
+  AdminOnboardingAnalytics: undefined; // Onboarding funnel analytics
+  AdminUserAnalytics: undefined; // User growth and retention analytics
+  AdminMatchAnalytics: undefined; // Match lifecycle analytics
+  
+  // Admin Analytics Sub-Views (Phase 3)
+  AdminEngagementAnalytics: undefined; // User engagement analytics
+  AdminMessagingAnalytics: undefined; // Messaging and communication analytics
+  
+  // Admin Analytics Sub-Views (Phase 4)
+  AdminRatingAnalytics: undefined; // Rating & reputation analytics
+  AdminModerationAnalytics: undefined; // Moderation and safety analytics
+  
+  // Admin Analytics Sub-Views (Phase 5)
+  AdminCommunityAnalytics: undefined; // Community and network analytics
+  AdminSportAnalytics: undefined; // Sport-specific analytics
 };
 
 // =============================================================================

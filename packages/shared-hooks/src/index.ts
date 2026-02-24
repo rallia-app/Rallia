@@ -50,6 +50,7 @@ export * from './useFavoriteFacilities';
 export * from './useAdminStatus';
 export * from './useAdminUsers';
 export * from './useAdminAnalytics';
+export * from './useAnalyticsTimeRange';
 export * from './useAdminAudit';
 export * from './useModeration';
 export * from './useAdminPush';
