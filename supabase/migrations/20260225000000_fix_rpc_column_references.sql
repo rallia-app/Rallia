@@ -98,6 +98,9 @@ $$;
 -- admin table doesn't have 'name' or 'email' columns
 -- Need to join with profile table to get admin name/email
 -- ============================================================
+-- Drop old function first (return type changed)
+DROP FUNCTION IF EXISTS public.get_admin_audit_log(int, int, uuid, text, text, text, timestamp with time zone, timestamp with time zone);
+
 CREATE OR REPLACE FUNCTION public.get_admin_audit_log(
   p_limit int DEFAULT 50,
   p_offset int DEFAULT 0,

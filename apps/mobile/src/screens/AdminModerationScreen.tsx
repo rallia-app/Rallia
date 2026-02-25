@@ -39,7 +39,7 @@ import {
   type BanType,
 } from '@rallia/shared-hooks';
 import { moderationService, type CreateBanParams } from '@rallia/shared-services';
-import { useTranslation } from '../hooks';
+import { useTranslation, type TranslationKey } from '../hooks';
 import type { RootStackParamList } from '../navigation/types';
 import {
   lightTheme,
@@ -53,6 +53,19 @@ import {
   status,
 } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
+
+// Spacing aliases for this screen (mapping semantic names to spacingPixels keys)
+const spacing = {
+  xs: spacingPixels[1],   // 4px
+  sm: spacingPixels[2],   // 8px
+  md: spacingPixels[4],   // 16px
+  lg: spacingPixels[6],   // 24px
+};
+
+// Font size alias for 'md' which doesn't exist in fontSizePixels
+const fontSize = {
+  md: fontSizePixels.base, // 16px
+};
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -103,7 +116,7 @@ interface ReportCardProps {
   onReview: (report: PlayerReport) => void;
   onDismiss: (report: PlayerReport) => void;
   onBan: (report: PlayerReport) => void;
-  t: (key: string) => string;
+  t: (key: TranslationKey) => string;
 }
 
 const ReportCard: React.FC<ReportCardProps> = ({
@@ -162,7 +175,7 @@ const ReportCard: React.FC<ReportCardProps> = ({
               {t('admin.moderation.reportedPlayer')}:
             </Text>
             <Text style={[styles.metaValue, { color: colors.text }]}>
-              {report.reported_player?.first_name} {report.reported_player?.last_name}
+              {report.reported_player_name}
             </Text>
           </View>
           <View style={styles.metaRow}>
@@ -170,7 +183,7 @@ const ReportCard: React.FC<ReportCardProps> = ({
               {t('admin.moderation.reporter')}:
             </Text>
             <Text style={[styles.metaValue, { color: colors.text }]}>
-              {report.reporter?.first_name} {report.reporter?.last_name}
+              {report.reporter_name}
             </Text>
           </View>
         </View>
@@ -219,11 +232,11 @@ interface BanCardProps {
   ban: PlayerBan;
   colors: ReturnType<typeof useColors>;
   onRevoke: (ban: PlayerBan) => void;
-  t: (key: string) => string;
+  t: (key: TranslationKey) => string;
 }
 
 const BanCard: React.FC<BanCardProps> = ({ ban, colors, onRevoke, t }) => {
-  const isActive = ban.is_active && (!ban.expires_at || new Date(ban.expires_at) > new Date());
+  const isActive = ban.is_active && (!ban.end_date || new Date(ban.end_date) > new Date());
   const banTypeIcon = ban.ban_type === 'permanent' ? 'lock-closed' : 'time-outline';
 
   return (
@@ -247,7 +260,7 @@ const BanCard: React.FC<BanCardProps> = ({ ban, colors, onRevoke, t }) => {
           </View>
           <View style={styles.cardTitles}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>
-              {ban.player?.first_name} {ban.player?.last_name}
+              {ban.player_name}
             </Text>
             <Text style={[styles.cardSubtitle, { color: colors.textMuted }]}>
               {t(`admin.moderation.banType.${ban.ban_type}`)}
@@ -283,13 +296,13 @@ const BanCard: React.FC<BanCardProps> = ({ ban, colors, onRevoke, t }) => {
               {new Date(ban.created_at).toLocaleDateString()}
             </Text>
           </View>
-          {ban.expires_at && (
+          {ban.end_date && (
             <View style={styles.metaRow}>
               <Text style={[styles.metaLabel, { color: colors.textMuted }]}>
                 {t('admin.moderation.expiresOn')}:
               </Text>
               <Text style={[styles.metaValue, { color: colors.text }]}>
-                {new Date(ban.expires_at).toLocaleDateString()}
+                {new Date(ban.end_date).toLocaleDateString()}
               </Text>
             </View>
           )}
@@ -391,7 +404,7 @@ const AdminModerationScreen: React.FC = () => {
     loadMore: loadMoreBans,
     createBan,
     revokeBan,
-  } = useBans({ pageSize: 20, filters: { activeOnly: false } });
+  } = useBans({ pageSize: 20, filters: { isActive: false } });
 
   // Access check
   const hasAccess = isAdmin && hasMinimumRole(role, 'support');
@@ -413,9 +426,9 @@ const AdminModerationScreen: React.FC = () => {
           onPress: async () => {
             const success = await dismissReport(report.id);
             if (success) {
-              toast.show(t('admin.moderation.dismissSuccess'), 'success');
+              toast.success(t('admin.moderation.dismissSuccess'));
             } else {
-              toast.show(t('admin.moderation.dismissError'), 'error');
+              toast.error(t('admin.moderation.dismissError'));
             }
           },
         },
@@ -430,7 +443,7 @@ const AdminModerationScreen: React.FC = () => {
       // Mark as under review
       const success = await reviewReport(report.id, 'under_review');
       if (success) {
-        toast.show(t('admin.moderation.reviewStarted'), 'info');
+        toast.info(t('admin.moderation.reviewStarted'));
       }
     },
     [reviewReport, t, toast]
@@ -451,8 +464,7 @@ const AdminModerationScreen: React.FC = () => {
       playerId: selectedReport.reported_player_id,
       reason: banReason,
       banType,
-      reportId: selectedReport.id,
-      expiresAt:
+      endDate:
         banType === 'temporary'
           ? new Date(Date.now() + parseInt(banDuration) * 24 * 60 * 60 * 1000).toISOString()
           : undefined,
@@ -462,12 +474,12 @@ const AdminModerationScreen: React.FC = () => {
     if (ban) {
       // Also mark report as action taken
       await reviewReport(selectedReport.id, 'action_taken', 'Player banned');
-      toast.show(t('admin.moderation.banSuccess'), 'success');
+      toast.success(t('admin.moderation.banSuccess'));
       setShowBanModal(false);
       setSelectedReport(null);
       setBanReason('');
     } else {
-      toast.show(t('admin.moderation.banError'), 'error');
+      toast.error(t('admin.moderation.banError'));
     }
   }, [selectedReport, banReason, banType, banDuration, createBan, reviewReport, t, toast]);
 
@@ -481,9 +493,9 @@ const AdminModerationScreen: React.FC = () => {
           onPress: async () => {
             const success = await revokeBan(ban.id, 'Admin revoked');
             if (success) {
-              toast.show(t('admin.moderation.revokeSuccess'), 'success');
+              toast.success(t('admin.moderation.revokeSuccess'));
             } else {
-              toast.show(t('admin.moderation.revokeError'), 'error');
+              toast.error(t('admin.moderation.revokeError'));
             }
           },
         },
@@ -549,7 +561,7 @@ const AdminModerationScreen: React.FC = () => {
         <View style={styles.accessDenied}>
           <Ionicons name="lock-closed-outline" size={64} color={colors.textMuted} />
           <Text style={[styles.accessDeniedText, { color: colors.textMuted }]}>
-            {t('admin.accessDenied')}
+            {t('admin.accessDenied' as TranslationKey)}
           </Text>
         </View>
       </SafeAreaView>
@@ -688,8 +700,7 @@ const AdminModerationScreen: React.FC = () => {
 
             {selectedReport && (
               <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
-                {t('admin.moderation.banningPlayer')}: {selectedReport.reported_player?.first_name}{' '}
-                {selectedReport.reported_player?.last_name}
+                {t('admin.moderation.banningPlayer')}: {selectedReport.reported_player_name}
               </Text>
             )}
 
@@ -827,13 +838,13 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacingPixels.md,
-    paddingVertical: spacingPixels.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     borderBottomWidth: 1,
   },
   backButton: {
-    padding: spacingPixels.xs,
-    marginRight: spacingPixels.sm,
+    padding: spacing.xs,
+    marginRight: spacing.sm,
   },
   headerTitleContainer: {
     flex: 1,
@@ -847,13 +858,13 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   refreshButton: {
-    padding: spacingPixels.xs,
+    padding: spacing.xs,
   },
   statsContainer: {
     flexDirection: 'row',
-    padding: spacingPixels.md,
-    marginHorizontal: spacingPixels.md,
-    marginTop: spacingPixels.md,
+    padding: spacing.md,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
     borderRadius: radiusPixels.lg,
   },
   statItem: {
@@ -866,32 +877,32 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: fontSizePixels.xs,
-    marginTop: spacingPixels.xs,
+    marginTop: spacing.xs,
   },
   statDivider: {
     width: 1,
-    marginVertical: spacingPixels.xs,
+    marginVertical: spacing.xs,
   },
   tabsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: spacingPixels.md,
+    paddingHorizontal: spacing.md,
     borderBottomWidth: 1,
-    marginTop: spacingPixels.md,
+    marginTop: spacing.md,
   },
   tabButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacingPixels.md,
-    gap: spacingPixels.xs,
+    paddingVertical: spacing.md,
+    gap: spacing.xs,
   },
   tabLabel: {
-    fontSize: fontSizePixels.md,
+    fontSize: fontSize.md,
     fontWeight: fontWeightNumeric.medium,
   },
   tabBadge: {
-    paddingHorizontal: spacingPixels.xs,
+    paddingHorizontal: spacing.xs,
     paddingVertical: 2,
     borderRadius: radiusPixels.full,
     minWidth: 20,
@@ -902,21 +913,21 @@ const styles = StyleSheet.create({
     fontWeight: fontWeightNumeric.semibold,
   },
   listContent: {
-    padding: spacingPixels.md,
-    paddingBottom: spacingPixels['2xl'],
+    padding: spacing.md,
+    paddingBottom: spacingPixels[12],
   },
   card: {
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
-    marginBottom: spacingPixels.md,
+    marginBottom: spacing.md,
     overflow: 'hidden',
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: spacingPixels.md,
-    paddingBottom: spacingPixels.sm,
+    padding: spacing.md,
+    paddingBottom: spacing.sm,
   },
   cardHeaderLeft: {
     flexDirection: 'row',
@@ -929,13 +940,13 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.md,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacingPixels.sm,
+    marginRight: spacing.sm,
   },
   cardTitles: {
     flex: 1,
   },
   cardTitle: {
-    fontSize: fontSizePixels.md,
+    fontSize: fontSize.md,
     fontWeight: fontWeightNumeric.semibold,
   },
   cardSubtitle: {
@@ -943,8 +954,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   statusBadge: {
-    paddingHorizontal: spacingPixels.sm,
-    paddingVertical: spacingPixels.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
     borderRadius: radiusPixels.full,
   },
   statusText: {
@@ -953,15 +964,15 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
   cardContent: {
-    paddingHorizontal: spacingPixels.md,
-    paddingBottom: spacingPixels.sm,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
   },
   cardDescription: {
     fontSize: fontSizePixels.sm,
     lineHeight: 20,
   },
   cardMeta: {
-    marginTop: spacingPixels.sm,
+    marginTop: spacing.sm,
   },
   metaRow: {
     flexDirection: 'row',
@@ -977,15 +988,15 @@ const styles = StyleSheet.create({
   },
   cardActions: {
     flexDirection: 'row',
-    padding: spacingPixels.sm,
-    paddingHorizontal: spacingPixels.md,
-    gap: spacingPixels.sm,
+    padding: spacing.sm,
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacingPixels.sm,
-    paddingVertical: spacingPixels.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
     borderRadius: radiusPixels.md,
     gap: 4,
   },
@@ -997,15 +1008,15 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacingPixels['4xl'],
+    paddingVertical: spacingPixels[20],
   },
   emptyText: {
-    fontSize: fontSizePixels.md,
-    marginTop: spacingPixels.md,
+    fontSize: fontSize.md,
+    marginTop: spacing.md,
     textAlign: 'center',
   },
   footer: {
-    padding: spacingPixels.md,
+    padding: spacing.md,
     alignItems: 'center',
   },
   accessDenied: {
@@ -1014,46 +1025,46 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   accessDeniedText: {
-    fontSize: fontSizePixels.md,
-    marginTop: spacingPixels.md,
+    fontSize: fontSize.md,
+    marginTop: spacing.md,
   },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: spacingPixels.lg,
+    padding: spacing.lg,
   },
   modalContent: {
     width: '100%',
     maxWidth: 400,
     borderRadius: radiusPixels.xl,
-    padding: spacingPixels.lg,
+    padding: spacing.lg,
   },
   modalTitle: {
     fontSize: fontSizePixels.xl,
     fontWeight: fontWeightNumeric.bold,
-    marginBottom: spacingPixels.xs,
+    marginBottom: spacing.xs,
   },
   modalSubtitle: {
     fontSize: fontSizePixels.sm,
-    marginBottom: spacingPixels.lg,
+    marginBottom: spacing.lg,
   },
   formGroup: {
-    marginBottom: spacingPixels.md,
+    marginBottom: spacing.md,
   },
   formLabel: {
     fontSize: fontSizePixels.sm,
     fontWeight: fontWeightNumeric.medium,
-    marginBottom: spacingPixels.xs,
+    marginBottom: spacing.xs,
   },
   banTypeRow: {
     flexDirection: 'row',
-    gap: spacingPixels.sm,
+    gap: spacing.sm,
   },
   banTypeButton: {
     flex: 1,
-    padding: spacingPixels.sm,
+    padding: spacing.sm,
     borderRadius: radiusPixels.md,
     borderWidth: 1,
     alignItems: 'center',
@@ -1065,8 +1076,8 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderRadius: radiusPixels.md,
-    padding: spacingPixels.sm,
-    fontSize: fontSizePixels.md,
+    padding: spacing.sm,
+    fontSize: fontSize.md,
   },
   textArea: {
     minHeight: 80,
@@ -1074,17 +1085,17 @@ const styles = StyleSheet.create({
   },
   modalActions: {
     flexDirection: 'row',
-    gap: spacingPixels.sm,
-    marginTop: spacingPixels.md,
+    gap: spacing.sm,
+    marginTop: spacing.md,
   },
   modalButton: {
     flex: 1,
-    padding: spacingPixels.md,
+    padding: spacing.md,
     borderRadius: radiusPixels.md,
     alignItems: 'center',
   },
   modalButtonText: {
-    fontSize: fontSizePixels.md,
+    fontSize: fontSize.md,
     fontWeight: fontWeightNumeric.semibold,
   },
 });

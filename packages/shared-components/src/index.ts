@@ -99,5 +99,31 @@ export type { PermissionType } from './overlays';
 export { PreferencesChips } from './preferences';
 export type { PreferencesChipsProps } from './preferences';
 
+// Charts Components
+export {
+  SparklineChart,
+  TimeRangeSelector,
+  AnalyticsSectionCard,
+  BarChart,
+  LineChart,
+  PieChart,
+  FunnelChart,
+} from './charts';
+export type {
+  SparklineChartProps,
+  SparklineDataPoint,
+  TimeRangeSelectorProps,
+  TimeRange,
+  AnalyticsSectionCardProps,
+  BarChartProps,
+  BarChartDataPoint,
+  LineChartProps,
+  LineChartDataPoint,
+  PieChartProps,
+  PieChartDataPoint,
+  FunnelChartProps,
+  FunnelChartDataPoint,
+} from './charts';
+
 // Theme
 export { colors, typography, spacing } from './theme';

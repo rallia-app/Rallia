@@ -53,17 +53,20 @@ export function useAdminDeepLinkGuard(options: UseAdminDeepLinkGuardOptions = {}
   // Handle unauthorized admin link access
   const handleUnauthorizedAccess = useCallback(
     (url: string) => {
-      Logger.warn('Unauthorized admin deep link access attempted:', url);
+      Logger.warn('Unauthorized admin deep link access attempted:', { url });
 
-      // Log the attempt (anonymously if not admin)
-      auditService.logAction({
-        action: 'unauthorized_deep_link_access',
-        entityType: 'admin_panel',
+      // Log the attempt using system entity for anonymous access
+      auditService.logAdminAction({
+        adminId: 'anonymous',
+        actionType: 'view',
+        entityType: 'admin',
         entityId: 'deep_link',
-        details: {
+        metadata: {
           url,
           timestamp: new Date().toISOString(),
+          accessResult: 'denied',
         },
+        severity: 'warning',
       }).catch(() => {
         // Silently fail audit logging
       });
@@ -93,14 +96,15 @@ export function useAdminDeepLinkGuard(options: UseAdminDeepLinkGuardOptions = {}
     async (url: string) => {
       if (adminId) {
         try {
-          await auditService.logAction({
-            action: 'deep_link_access',
-            entityType: 'admin_panel',
+          await auditService.logAdminAction({
+            adminId,
+            actionType: 'view',
+            entityType: 'admin',
             entityId: 'deep_link',
-            details: {
+            metadata: {
               url,
-              adminId,
               timestamp: new Date().toISOString(),
+              accessResult: 'granted',
             },
           });
         } catch {

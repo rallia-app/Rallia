@@ -18,6 +18,7 @@ import {
   getSportStatistics,
   getOnboardingFunnel,
   getMetricTrend,
+  getWidgetTrends,
   buildDashboardWidgets,
   type KPISummary,
   type RealtimeUserStats,
@@ -39,21 +40,31 @@ export interface UseAdminAnalyticsOptions {
   cacheDuration?: number;
   /** Specific sport ID to filter by */
   sportId?: string;
+  /** Number of days for trend data (default: 7) */
+  trendDays?: number;
+  /** Whether to include trend data for sparklines */
+  includeTrends?: boolean;
 }
 
 export interface UseAdminAnalyticsResult {
   /** Full KPI summary */
   kpi: KPISummary | null;
-  /** Dashboard widgets */
+  /** Dashboard widgets with trend data */
   widgets: DashboardWidget[];
+  /** Widget trend data by widget ID */
+  trends: Record<string, MetricTrendPoint[]>;
   /** Loading state */
   loading: boolean;
+  /** Trends loading separately (for lazy loading) */
+  trendsLoading: boolean;
   /** Error state */
   error: Error | null;
   /** Last updated timestamp */
   lastUpdated: Date | null;
   /** Refetch all data */
   refetch: () => Promise<void>;
+  /** Refetch trends only with specific day count */
+  refetchTrends: (days: number) => Promise<void>;
 }
 
 export interface UseUserStatsResult {
@@ -173,21 +184,66 @@ function setCache<T>(key: string, data: T): void {
 export function useAdminAnalytics(
   options: UseAdminAnalyticsOptions = {}
 ): UseAdminAnalyticsResult {
-  const { autoFetch = true, cacheDuration = 5 * 60 * 1000 } = options;
+  const {
+    autoFetch = true,
+    cacheDuration = 5 * 60 * 1000,
+    trendDays = 7,
+    includeTrends = true,
+  } = options;
 
   const [kpi, setKpi] = useState<KPISummary | null>(null);
   const [widgets, setWidgets] = useState<DashboardWidget[]>([]);
+  const [trends, setTrends] = useState<Record<string, MetricTrendPoint[]>>({});
   const [loading, setLoading] = useState(false);
+  const [trendsLoading, setTrendsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const isMounted = useRef(true);
+  const currentTrendDays = useRef(trendDays);
+
+  // Fetch trends data
+  const fetchTrends = useCallback(async (days: number) => {
+    const cacheKey = `widget-trends-${days}`;
+    const cached = getCached<Record<string, MetricTrendPoint[]>>(cacheKey, cacheDuration);
+    
+    if (cached) {
+      setTrends(cached);
+      return cached;
+    }
+
+    try {
+      setTrendsLoading(true);
+      const trendData = await getWidgetTrends(days);
+      
+      if (isMounted.current) {
+        setTrends(trendData);
+        setCache(cacheKey, trendData);
+      }
+      return trendData;
+    } catch (err) {
+      console.error('Error fetching trends:', err);
+      return {};
+    } finally {
+      if (isMounted.current) {
+        setTrendsLoading(false);
+      }
+    }
+  }, [cacheDuration]);
 
   const fetchData = useCallback(async () => {
     // Check cache first
     const cached = getCached<KPISummary>('kpi-summary', cacheDuration);
+    let trendData: Record<string, MetricTrendPoint[]> = {};
+    
     if (cached) {
       setKpi(cached);
-      setWidgets(buildDashboardWidgets(cached));
+      
+      // Fetch trends if enabled
+      if (includeTrends) {
+        trendData = await fetchTrends(currentTrendDays.current);
+      }
+      
+      setWidgets(buildDashboardWidgets(cached, trendData));
       setLastUpdated(new Date(cache.get('kpi-summary')?.timestamp || Date.now()));
       return;
     }
@@ -197,10 +253,15 @@ export function useAdminAnalytics(
       setError(null);
 
       const data = await getKPISummary();
+      
+      // Fetch trends in parallel if enabled
+      if (includeTrends) {
+        trendData = await fetchTrends(currentTrendDays.current);
+      }
 
       if (isMounted.current) {
         setKpi(data);
-        setWidgets(buildDashboardWidgets(data));
+        setWidgets(buildDashboardWidgets(data, trendData));
         setLastUpdated(new Date());
         setCache('kpi-summary', data);
       }
@@ -214,13 +275,27 @@ export function useAdminAnalytics(
         setLoading(false);
       }
     }
-  }, [cacheDuration]);
+  }, [cacheDuration, includeTrends, fetchTrends]);
 
   const refetch = useCallback(async () => {
     // Clear cache to force refresh
     cache.delete('kpi-summary');
+    cache.delete(`widget-trends-${currentTrendDays.current}`);
     await fetchData();
   }, [fetchData]);
+
+  const refetchTrends = useCallback(async (days: number) => {
+    currentTrendDays.current = days;
+    // Clear trend cache for the new day range
+    cache.delete(`widget-trends-${days}`);
+    
+    const trendData = await fetchTrends(days);
+    
+    // Rebuild widgets with new trend data
+    if (kpi && isMounted.current) {
+      setWidgets(buildDashboardWidgets(kpi, trendData));
+    }
+  }, [fetchTrends, kpi]);
 
   useEffect(() => {
     isMounted.current = true;
@@ -236,10 +311,13 @@ export function useAdminAnalytics(
   return {
     kpi,
     widgets,
+    trends,
     loading,
+    trendsLoading,
     error,
     lastUpdated,
     refetch,
+    refetchTrends,
   };
 }
 

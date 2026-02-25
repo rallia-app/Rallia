@@ -272,8 +272,6 @@ export {
   unbanUser,
   getActivePlayerBan,
   getPlayerBanHistory,
-  logAdminAction,
-  getAuditLog,
 } from '@rallia/shared-services';
 
 export default useAdminUsers;

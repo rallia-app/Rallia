@@ -80,7 +80,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
       Notifications: 'notifications',
       NotificationPreferences: 'notifications/preferences',
       Map: 'map',
-      Chat: 'conversation/:conversationId',
+      ChatConversation: 'conversation/:conversationId',
       GroupDetail: 'group/:groupId',
       CommunityDetail: 'community/:communityId',
 

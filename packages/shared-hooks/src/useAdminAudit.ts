@@ -208,7 +208,7 @@ export function useAdminAlerts(options: UseAdminAlertsOptions): UseAdminAlertsRe
           a.id === alertId ? { ...a, is_read: true, read_at: new Date().toISOString() } : a
         )
       );
-      setCounts((prev) => ({
+      setCounts((prev: AlertCounts) => ({
         ...prev,
         total: Math.max(0, prev.total - 1),
       }));
@@ -231,7 +231,7 @@ export function useAdminAlerts(options: UseAdminAlertsOptions): UseAdminAlertsRe
     const success = await alertService.dismissAlert(alertId, adminId);
     if (success) {
       setAlerts((prev) => prev.filter((a) => a.id !== alertId));
-      setCounts((prev) => ({
+      setCounts((prev: AlertCounts) => ({
         ...prev,
         total: Math.max(0, prev.total - 1),
       }));

@@ -20,9 +20,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
 import { useTheme } from '@rallia/shared-hooks';
-import { submitUserFeedback, UserUserFeedbackCategory, Logger } from '@rallia/shared-services';
+import { submitUserFeedback, UserFeedbackCategory, Logger } from '@rallia/shared-services';
 import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
-import { useAuth, useTranslation, useImagePicker } from '../hooks';
+import { useAuth, useTranslation, type TranslationKey, useImagePicker } from '../hooks';
 import { useAppNavigation } from '../navigation/hooks';
 import { uploadImage } from '../services/imageUpload';
 import {
@@ -131,7 +131,7 @@ const FeedbackScreen: React.FC = () => {
 
   const handleAddScreenshot = async () => {
     if (screenshots.length >= MAX_SCREENSHOTS) {
-      toast.error(t('feedback.maxScreenshotsReached', { max: MAX_SCREENSHOTS }));
+      toast.error(t('feedback.maxScreenshotsReached' as TranslationKey, { max: MAX_SCREENSHOTS }));
       return;
     }
     setShowImageSourceModal(true);
@@ -150,12 +150,12 @@ const FeedbackScreen: React.FC = () => {
           setScreenshots(prev => [...prev, uploadResult.url!]);
           lightHaptic();
         } else {
-          toast.error(t('feedback.screenshotUploadError'));
+          toast.error(t('feedback.screenshotUploadError' as TranslationKey));
         }
       }
     } catch (error) {
       Logger.error('Failed to upload screenshot from gallery', error as Error);
-      toast.error(t('feedback.screenshotUploadError'));
+      toast.error(t('feedback.screenshotUploadError' as TranslationKey));
     } finally {
       setIsUploadingImage(false);
     }
@@ -174,12 +174,12 @@ const FeedbackScreen: React.FC = () => {
           setScreenshots(prev => [...prev, uploadResult.url!]);
           lightHaptic();
         } else {
-          toast.error(t('feedback.screenshotUploadError'));
+          toast.error(t('feedback.screenshotUploadError' as TranslationKey));
         }
       }
     } catch (error) {
       Logger.error('Failed to upload screenshot from camera', error as Error);
-      toast.error(t('feedback.screenshotUploadError'));
+      toast.error(t('feedback.screenshotUploadError' as TranslationKey));
     } finally {
       setIsUploadingImage(false);
     }
@@ -211,7 +211,7 @@ const FeedbackScreen: React.FC = () => {
       Logger.logUserAction('feedback_submitted', { category, screenshotCount: screenshots.length });
     } catch (error) {
       Logger.error('Failed to submit feedback', error as Error);
-      toast.error(t('feedback.submitError'));
+      toast.error(t('feedback.submitError' as TranslationKey));
     } finally {
       setIsSubmitting(false);
     }
@@ -246,14 +246,14 @@ const FeedbackScreen: React.FC = () => {
           {/* Header Description */}
           <View style={styles.headerSection}>
             <Text size="sm" color={colors.textSecondary} style={styles.headerDescription}>
-              {t('feedback.description')}
+              {t('feedback.description' as TranslationKey)}
             </Text>
           </View>
 
           {/* Category Selection */}
           <View style={styles.section}>
             <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.sectionLabel}>
-              {t('feedback.categoryLabel')}
+              {t('feedback.categoryLabel' as TranslationKey)}
             </Text>
             <View style={styles.categoryGrid}>
               {CATEGORY_OPTIONS.map((option) => {
@@ -285,7 +285,7 @@ const FeedbackScreen: React.FC = () => {
                       weight={isActive ? 'semibold' : 'medium'}
                       color={isActive ? colors.categoryTextActive : colors.categoryTextInactive}
                     >
-                      {t(`feedback.categories.${option.value}`)}
+                      {t(`feedback.categories.${option.value}` as TranslationKey)}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -296,7 +296,7 @@ const FeedbackScreen: React.FC = () => {
           {/* Subject Input */}
           <View style={styles.section}>
             <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.sectionLabel}>
-              {t('feedback.subjectLabel')} *
+              {t('feedback.subjectLabel' as TranslationKey)} *
             </Text>
             <TextInput
               style={[
@@ -309,7 +309,7 @@ const FeedbackScreen: React.FC = () => {
               ]}
               value={subject}
               onChangeText={setSubject}
-              placeholder={t('feedback.subjectPlaceholder')}
+              placeholder={t('feedback.subjectPlaceholder' as TranslationKey)}
               placeholderTextColor={colors.inputPlaceholder}
               maxLength={MAX_SUBJECT_LENGTH}
               returnKeyType="next"
@@ -317,7 +317,7 @@ const FeedbackScreen: React.FC = () => {
             <View style={styles.inputFooter}>
               {subject.length > 0 && subject.length < MIN_SUBJECT_LENGTH && (
                 <Text size="xs" color={status.warning.DEFAULT}>
-                  {t('feedback.minCharsHint', { min: MIN_SUBJECT_LENGTH })}
+                  {t('feedback.minCharsHint' as TranslationKey, { min: MIN_SUBJECT_LENGTH })}
                 </Text>
               )}
               <Text 
@@ -333,7 +333,7 @@ const FeedbackScreen: React.FC = () => {
           {/* Message Input */}
           <View style={styles.section}>
             <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.sectionLabel}>
-              {t('feedback.messageLabel')} *
+              {t('feedback.messageLabel' as TranslationKey)} *
             </Text>
             <TextInput
               style={[
@@ -347,7 +347,7 @@ const FeedbackScreen: React.FC = () => {
               ]}
               value={message}
               onChangeText={setMessage}
-              placeholder={t('feedback.messagePlaceholder')}
+              placeholder={t('feedback.messagePlaceholder' as TranslationKey)}
               placeholderTextColor={colors.inputPlaceholder}
               multiline
               numberOfLines={6}
@@ -357,7 +357,7 @@ const FeedbackScreen: React.FC = () => {
             <View style={styles.inputFooter}>
               {message.length > 0 && message.length < MIN_MESSAGE_LENGTH && (
                 <Text size="xs" color={status.warning.DEFAULT}>
-                  {t('feedback.minCharsHint', { min: MIN_MESSAGE_LENGTH })}
+                  {t('feedback.minCharsHint' as TranslationKey, { min: MIN_MESSAGE_LENGTH })}
                 </Text>
               )}
               <Text 
@@ -374,10 +374,10 @@ const FeedbackScreen: React.FC = () => {
           {category === 'bug' && (
             <View style={styles.section}>
               <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.sectionLabel}>
-                {t('feedback.screenshotsLabel')}
+                {t('feedback.screenshotsLabel' as TranslationKey)}
               </Text>
               <Text size="xs" color={colors.textMuted} style={styles.screenshotHint}>
-                {t('feedback.screenshotsHint', { max: MAX_SCREENSHOTS })}
+                {t('feedback.screenshotsHint' as TranslationKey, { max: MAX_SCREENSHOTS })}
               </Text>
               
               <View style={styles.screenshotGrid}>
@@ -415,7 +415,7 @@ const FeedbackScreen: React.FC = () => {
                       <>
                         <Ionicons name="camera-outline" size={24} color={colors.textMuted} />
                         <Text size="xs" color={colors.textMuted}>
-                          {t('feedback.addScreenshot')}
+                          {t('feedback.addScreenshot' as TranslationKey)}
                         </Text>
                       </>
                     )}
@@ -430,8 +430,8 @@ const FeedbackScreen: React.FC = () => {
             <Ionicons name="information-circle-outline" size={18} color={colors.textMuted} />
             <Text size="xs" color={colors.textMuted} style={styles.noticeText}>
               {session?.user 
-                ? t('feedback.identifiedNotice')
-                : t('feedback.anonymousNotice')
+                ? t('feedback.identifiedNotice' as TranslationKey)
+                : t('feedback.anonymousNotice' as TranslationKey)
               }
             </Text>
           </View>
@@ -464,7 +464,7 @@ const FeedbackScreen: React.FC = () => {
                   weight="semibold"
                   color={isFormValid ? colors.buttonPrimaryText : colors.buttonDisabledText}
                 >
-                  {t('feedback.submitButton')}
+                  {t('feedback.submitButton' as TranslationKey)}
                 </Text>
               </>
             )}
@@ -490,19 +490,19 @@ const FeedbackScreen: React.FC = () => {
 
             {/* Title */}
             <Text size="xl" weight="bold" color={colors.text} style={styles.modalTitle}>
-              {t('feedback.successTitle')}
+              {t('feedback.successTitle' as TranslationKey)}
             </Text>
 
             {/* Message */}
             <Text size="sm" color={colors.textSecondary} style={styles.modalMessage}>
-              {t('feedback.successMessage')}
+              {t('feedback.successMessage' as TranslationKey)}
             </Text>
 
             {/* Feedback ID */}
             {submittedFeedbackId && (
               <View style={[styles.feedbackIdBox, { backgroundColor: colors.inputBackground }]}>
                 <Text size="xs" color={colors.textMuted}>
-                  {t('feedback.referenceId')}
+                  {t('feedback.referenceId' as TranslationKey)}
                 </Text>
                 <Text size="xs" weight="medium" color={colors.text} style={styles.feedbackIdText}>
                   {submittedFeedbackId.slice(0, 8).toUpperCase()}
@@ -518,7 +518,7 @@ const FeedbackScreen: React.FC = () => {
                 activeOpacity={0.7}
               >
                 <Text size="sm" weight="medium" color={colors.text}>
-                  {t('feedback.submitAnother')}
+                  {t('feedback.submitAnother' as TranslationKey)}
                 </Text>
               </TouchableOpacity>
 
@@ -550,7 +550,7 @@ const FeedbackScreen: React.FC = () => {
         >
           <View style={[styles.imageSourceModal, { backgroundColor: colors.cardBackground }]}>
             <Text size="lg" weight="semibold" color={colors.text} style={styles.imageSourceTitle}>
-              {t('feedback.selectImageSource')}
+              {t('feedback.selectImageSource' as TranslationKey)}
             </Text>
             
             <TouchableOpacity

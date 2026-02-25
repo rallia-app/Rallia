@@ -45,6 +45,8 @@ Notifications.setNotificationHandler({
         shouldShowAlert: true,
         shouldPlaySound: true,
         shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
       };
     }
 
@@ -54,6 +56,8 @@ Notifications.setNotificationHandler({
         shouldShowAlert: true,
         shouldPlaySound: false,
         shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
       };
     }
 
@@ -62,6 +66,8 @@ Notifications.setNotificationHandler({
       shouldShowAlert: true,
       shouldPlaySound: false,
       shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
     };
   },
 });
@@ -133,7 +139,7 @@ export function useAdminPush(options: UseAdminPushOptions): UseAdminPushResult {
       });
       return token.data;
     } catch (error) {
-      Logger.error('Failed to get push token:', error);
+      Logger.error('Failed to get push token:', error instanceof Error ? error : undefined);
       return null;
     }
   }, []);
@@ -214,10 +220,10 @@ export function useAdminPush(options: UseAdminPushOptions): UseAdminPushResult {
 
     return () => {
       if (notificationListenerRef.current) {
-        Notifications.removeNotificationSubscription(notificationListenerRef.current);
+        notificationListenerRef.current.remove();
       }
       if (responseListenerRef.current) {
-        Notifications.removeNotificationSubscription(responseListenerRef.current);
+        responseListenerRef.current.remove();
       }
     };
   }, [enabled, adminId, onNotificationReceived, onNotificationPressed]);
