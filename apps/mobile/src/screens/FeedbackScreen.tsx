@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as Application from 'expo-application';
 import { Text, useToast } from '@rallia/shared-components';
 import { useTheme } from '@rallia/shared-hooks';
 import { submitUserFeedback, UserFeedbackCategory, Logger } from '@rallia/shared-services';
@@ -203,6 +204,11 @@ const FeedbackScreen: React.FC = () => {
         subject: subject.trim(),
         message: message.trim(),
         screenshotUrls: category === 'bug' ? screenshots : undefined,
+        deviceInfo: {
+          platform: Platform.OS,
+          version: Platform.Version,
+        },
+        appVersion: Application.nativeApplicationVersion ?? undefined,
       });
 
       successHaptic();
