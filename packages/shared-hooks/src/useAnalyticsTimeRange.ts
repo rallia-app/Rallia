@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback, useMemo } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getStorageAdapter } from './storage';
 
 export type TimeRangeOption = '7d' | '30d' | '90d' | 'ytd';
 
@@ -120,7 +120,8 @@ export function useAnalyticsTimeRange(options: UseAnalyticsTimeRangeOptions = {}
   // Load persisted range on mount
   const loadPersistedRange = useCallback(async () => {
     try {
-      const stored = await AsyncStorage.getItem(storageKey);
+      const storage = getStorageAdapter();
+      const stored = await storage.getItem(storageKey);
       if (stored && ['7d', '30d', '90d', 'ytd'].includes(stored)) {
         setSelectedOption(stored as TimeRangeOption);
       }
@@ -136,7 +137,8 @@ export function useAnalyticsTimeRange(options: UseAnalyticsTimeRangeOptions = {}
     setSelectedOption(option);
     
     try {
-      await AsyncStorage.setItem(storageKey, option);
+      const storage = getStorageAdapter();
+      await storage.setItem(storageKey, option);
     } catch (error) {
       console.error('Error persisting time range:', error);
     }

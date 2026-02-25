@@ -14,7 +14,8 @@
  */
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { configureSupabaseStorage } from '@rallia/shared-services';
+import { configureSupabaseStorage, setTourStorageAdapter } from '@rallia/shared-services';
+import { setHooksStorageAdapter } from '@rallia/shared-hooks';
 
 /**
  * Configure the shared-services Supabase client with AsyncStorage
@@ -28,6 +29,15 @@ import { configureSupabaseStorage } from '@rallia/shared-services';
  * works correctly in React Native.
  */
 const configuredClient = configureSupabaseStorage(AsyncStorage);
+
+/**
+ * Configure storage adapters for shared packages
+ *
+ * This ensures all shared-services and shared-hooks that need persistence
+ * (tour progress, analytics time range, etc.) use AsyncStorage on mobile.
+ */
+setTourStorageAdapter(AsyncStorage);
+setHooksStorageAdapter(AsyncStorage);
 
 // Export the configured client for use in the mobile app
 export const supabase = configuredClient;

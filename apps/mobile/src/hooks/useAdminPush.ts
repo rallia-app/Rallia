@@ -2,14 +2,16 @@
  * useAdminPush Hook
  *
  * Manages push notification registration and handling for admin users.
+ * 
+ * NOTE: This hook is mobile-specific and should not be in shared-hooks.
+ * It uses native modules (expo-notifications, expo-device, react-native).
  */
 
 import { useEffect, useCallback, useRef } from 'react';
 import { Platform, AppState, type AppStateStatus } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import { adminPushService } from '@rallia/shared-services';
-import { Logger } from '@rallia/shared-services';
+import { adminPushService, Logger } from '@rallia/shared-services';
 
 // =============================================================================
 // TYPES

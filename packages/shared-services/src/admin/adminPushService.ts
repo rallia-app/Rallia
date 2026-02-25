@@ -6,7 +6,6 @@
 
 import { supabase } from '../supabase';
 import { Logger } from '../logger';
-import { Platform } from 'react-native';
 
 // =============================================================================
 // TYPES
@@ -27,7 +26,7 @@ export interface AdminDevice {
 export interface RegisterDeviceParams {
   adminId: string;
   pushToken: string;
-  platform?: 'ios' | 'android' | 'web';
+  platform: 'ios' | 'android' | 'web';
   deviceName?: string;
 }
 
@@ -43,12 +42,10 @@ export const adminPushService = {
     const { adminId, pushToken, platform, deviceName } = params;
 
     try {
-      const devicePlatform = platform || (Platform.OS as 'ios' | 'android' | 'web');
-
       const { data, error } = await supabase.rpc('register_admin_device', {
         p_admin_id: adminId,
         p_push_token: pushToken,
-        p_platform: devicePlatform,
+        p_platform: platform,
         p_device_name: deviceName || null,
       });
 
