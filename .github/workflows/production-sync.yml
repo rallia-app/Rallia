@@ -1,0 +1,76 @@
+name: Production Supabase Sync
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: production-sync
+  cancel-in-progress: false
+
+jobs:
+  production-sync:
+    name: Sync to Production
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Push database migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_PRODUCTION_ACCESS_TOKEN }}
+        run: |
+          npx supabase link --project-ref ncewkeoohdkpbcovbppd
+          npx supabase db push
+
+      - name: Deploy edge functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_PRODUCTION_ACCESS_TOKEN }}
+        run: npx supabase functions deploy
+
+      - name: Notify Discord
+        if: always()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          SHORT_SHA="${GITHUB_SHA::7}"
+          TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          if [ "${{ job.status }}" = "success" ]; then
+            COLOR=3066993
+            TITLE="Production Sync Succeeded"
+          else
+            COLOR=15158332
+            TITLE="Production Sync Failed"
+          fi
+
+          PAYLOAD=$(jq -n \
+            --arg title "$TITLE" \
+            --argjson color "$COLOR" \
+            --arg run_url "$RUN_URL" \
+            --arg sha "$SHORT_SHA" \
+            --arg timestamp "$TIMESTAMP" \
+            '{embeds: [{
+              title: $title,
+              color: $color,
+              fields: [
+                {name: "Commit", value: ("`" + $sha + "`"), inline: true},
+                {name: "Workflow", value: ("[View Logs](" + $run_url + ")"), inline: true}
+              ],
+              timestamp: $timestamp,
+              footer: {text: "Rallia Production Sync"}
+            }]}')
+
+          curl -sf -H "Content-Type: application/json" -d "$PAYLOAD" "$DISCORD_WEBHOOK_URL"
