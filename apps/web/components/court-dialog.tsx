@@ -14,10 +14,10 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Plus, Save } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState, useRef } from 'react';
+import { useRouter } from '@/i18n/navigation';
+import { useEffect, useRef, useState } from 'react';
 
 // These must match the surface_type_enum in the database
 const SURFACE_TYPES = [
@@ -36,7 +36,7 @@ const AVAILABILITY_STATUSES = ['available', 'maintenance', 'closed', 'reserved']
 type SurfaceType = (typeof SURFACE_TYPES)[number];
 type AvailabilityStatus = (typeof AVAILABILITY_STATUSES)[number];
 
-interface Court {
+export interface CourtInitialData {
   id: string;
   name: string | null;
   court_number: number | null;
@@ -49,15 +49,17 @@ interface Court {
   court_sport?: Array<{ sport_id: string }>;
 }
 
-interface EditCourtDialogProps {
+interface CourtDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  court: Court;
+  facilityId: string;
+  initialData?: CourtInitialData;
 }
 
-export function EditCourtDialog({ open, onOpenChange, court }: EditCourtDialogProps) {
+export function CourtDialog({ open, onOpenChange, facilityId, initialData }: CourtDialogProps) {
   const t = useTranslations('courts');
   const router = useRouter();
+  const isEditMode = !!initialData;
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,18 +71,14 @@ export function EditCourtDialog({ open, onOpenChange, court }: EditCourtDialogPr
   const originalSportsRef = useRef<string[]>([]);
 
   // Form state
-  const [name, setName] = useState(court.name || '');
-  const [courtNumber, setCourtNumber] = useState<number | ''>(court.court_number || '');
-  const [surfaceType, setSurfaceType] = useState<SurfaceType | ''>(
-    (court.surface_type as SurfaceType) || ''
-  );
-  const [indoor, setIndoor] = useState(court.indoor ?? false);
-  const [lighting, setLighting] = useState(court.lighting ?? false);
-  const [multiSport, setMultiSport] = useState(court.lines_marked_for_multiple_sports ?? false);
-  const [availabilityStatus, setAvailabilityStatus] = useState<AvailabilityStatus>(
-    (court.availability_status as AvailabilityStatus) || 'available'
-  );
-  const [notes, setNotes] = useState(court.notes || '');
+  const [name, setName] = useState('');
+  const [courtNumber, setCourtNumber] = useState<number | ''>('');
+  const [surfaceType, setSurfaceType] = useState<SurfaceType | ''>('');
+  const [indoor, setIndoor] = useState(false);
+  const [lighting, setLighting] = useState(false);
+  const [multiSport, setMultiSport] = useState(false);
+  const [availabilityStatus, setAvailabilityStatus] = useState<AvailabilityStatus>('available');
+  const [notes, setNotes] = useState('');
 
   // Fetch sports on mount
   useEffect(() => {
@@ -103,33 +101,48 @@ export function EditCourtDialog({ open, onOpenChange, court }: EditCourtDialogPr
     }
   }, [open]);
 
+  // Populate form when initialData changes or dialog opens
+  useEffect(() => {
+    if (open && initialData) {
+      setName(initialData.name || '');
+      setCourtNumber(initialData.court_number || '');
+      setSurfaceType((initialData.surface_type as SurfaceType) || '');
+      setIndoor(initialData.indoor ?? false);
+      setLighting(initialData.lighting ?? false);
+      setMultiSport(initialData.lines_marked_for_multiple_sports ?? false);
+      setAvailabilityStatus((initialData.availability_status as AvailabilityStatus) || 'available');
+      setNotes(initialData.notes || '');
+
+      const courtSports = initialData.court_sport?.map(cs => cs.sport_id) || [];
+      setSelectedSports(courtSports);
+      originalSportsRef.current = courtSports;
+
+      setError(null);
+    }
+  }, [open, initialData]);
+
   const toggleSport = (sportId: string) => {
     setSelectedSports(prev =>
       prev.includes(sportId) ? prev.filter(id => id !== sportId) : [...prev, sportId]
     );
   };
 
-  // Reset form when court changes
-  useEffect(() => {
-    setName(court.name || '');
-    setCourtNumber(court.court_number || '');
-    setSurfaceType((court.surface_type as SurfaceType) || '');
-    setIndoor(court.indoor ?? false);
-    setLighting(court.lighting ?? false);
-    setMultiSport(court.lines_marked_for_multiple_sports ?? false);
-    setAvailabilityStatus((court.availability_status as AvailabilityStatus) || 'available');
-    setNotes(court.notes || '');
-
-    // Set selected sports from court_sport records
-    const courtSports = court.court_sport?.map(cs => cs.sport_id) || [];
-    setSelectedSports(courtSports);
-    originalSportsRef.current = courtSports;
-
+  const resetForm = () => {
+    setName('');
+    setCourtNumber('');
+    setSurfaceType('');
+    setIndoor(false);
+    setLighting(false);
+    setMultiSport(false);
+    setAvailabilityStatus('available');
+    setNotes('');
+    setSelectedSports([]);
     setError(null);
-  }, [court]);
+  };
 
   const handleClose = () => {
     if (!saving) {
+      if (!isEditMode) resetForm();
       onOpenChange(false);
     }
   };
@@ -142,59 +155,93 @@ export function EditCourtDialog({ open, onOpenChange, court }: EditCourtDialogPr
     try {
       const supabase = createClient();
 
-      const { error: updateError } = await supabase
-        .from('court')
-        .update({
-          name: name || null,
-          court_number: courtNumber || null,
-          surface_type: surfaceType || null,
-          indoor,
-          lighting,
-          lines_marked_for_multiple_sports: multiSport,
-          availability_status: availabilityStatus,
-          notes: notes || null,
-        })
-        .eq('id', court.id);
+      if (isEditMode) {
+        // Update mode
+        const { error: updateError } = await supabase
+          .from('court')
+          .update({
+            name: name || null,
+            court_number: courtNumber || null,
+            surface_type: surfaceType || null,
+            indoor,
+            lighting,
+            lines_marked_for_multiple_sports: multiSport,
+            availability_status: availabilityStatus,
+            notes: notes || null,
+          })
+          .eq('id', initialData!.id);
 
-      if (updateError) throw updateError;
+        if (updateError) throw updateError;
 
-      // Sync court_sport records
-      const originalSports = originalSportsRef.current;
-      const sportsToAdd = selectedSports.filter(id => !originalSports.includes(id));
-      const sportsToRemove = originalSports.filter(id => !selectedSports.includes(id));
+        // Sync court_sport records
+        const originalSports = originalSportsRef.current;
+        const sportsToAdd = selectedSports.filter(id => !originalSports.includes(id));
+        const sportsToRemove = originalSports.filter(id => !selectedSports.includes(id));
 
-      // Remove sports that were deselected
-      if (sportsToRemove.length > 0) {
-        const { error: deleteError } = await supabase
-          .from('court_sport')
-          .delete()
-          .eq('court_id', court.id)
-          .in('sport_id', sportsToRemove);
+        if (sportsToRemove.length > 0) {
+          const { error: deleteError } = await supabase
+            .from('court_sport')
+            .delete()
+            .eq('court_id', initialData!.id)
+            .in('sport_id', sportsToRemove);
 
-        if (deleteError) {
-          console.error('Error removing court sports:', deleteError);
+          if (deleteError) throw deleteError;
         }
-      }
 
-      // Add newly selected sports
-      if (sportsToAdd.length > 0) {
-        const newRecords = sportsToAdd.map(sportId => ({
-          court_id: court.id,
-          sport_id: sportId,
-        }));
+        if (sportsToAdd.length > 0) {
+          const newRecords = sportsToAdd.map(sportId => ({
+            court_id: initialData!.id,
+            sport_id: sportId,
+          }));
 
-        const { error: insertError } = await supabase.from('court_sport').insert(newRecords);
-
-        if (insertError) {
-          console.error('Error adding court sports:', insertError);
+          const { error: insertError } = await supabase.from('court_sport').insert(newRecords);
+          if (insertError) throw insertError;
         }
-      }
 
-      onOpenChange(false);
-      router.refresh();
+        onOpenChange(false);
+        router.refresh();
+      } else {
+        // Create mode
+        const { data: court, error: insertError } = await supabase
+          .from('court')
+          .insert({
+            facility_id: facilityId,
+            name: name || null,
+            court_number: courtNumber || null,
+            surface_type: surfaceType || null,
+            indoor,
+            lighting,
+            lines_marked_for_multiple_sports: multiSport,
+            notes: notes || null,
+            availability_status: 'available' as const,
+            is_active: true,
+          })
+          .select('id')
+          .single();
+
+        if (insertError) throw insertError;
+
+        // Insert court_sport records
+        if (selectedSports.length > 0 && court) {
+          const courtSportRecords = selectedSports.map(sportId => ({
+            court_id: court.id,
+            sport_id: sportId,
+          }));
+
+          const { error: sportError } = await supabase
+            .from('court_sport')
+            .insert(courtSportRecords);
+
+          if (sportError) throw sportError;
+        }
+
+        resetForm();
+        onOpenChange(false);
+        router.refresh();
+      }
     } catch (err) {
-      console.error('Error updating court:', err);
-      setError(t('edit.error'));
+      console.error(`Error ${isEditMode ? 'updating' : 'adding'} court:`, err);
+      setError(isEditMode ? t('edit.error') : t('add.error'));
     } finally {
       setSaving(false);
     }
@@ -206,8 +253,12 @@ export function EditCourtDialog({ open, onOpenChange, court }: EditCourtDialogPr
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t('edit.title')}</DialogTitle>
-          <DialogDescription>{court.name || `Court ${court.court_number}`}</DialogDescription>
+          <DialogTitle>{isEditMode ? t('edit.title') : t('add.title')}</DialogTitle>
+          <DialogDescription>
+            {isEditMode
+              ? initialData!.name || `Court ${initialData!.court_number}`
+              : t('add.description')}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -219,9 +270,9 @@ export function EditCourtDialog({ open, onOpenChange, court }: EditCourtDialogPr
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-name">{t('add.nameLabel')}</Label>
+              <Label htmlFor="court-name">{t('add.nameLabel')}</Label>
               <Input
-                id="edit-name"
+                id="court-name"
                 value={name}
                 onChange={e => setName(e.target.value)}
                 placeholder={t('add.namePlaceholder')}
@@ -230,9 +281,9 @@ export function EditCourtDialog({ open, onOpenChange, court }: EditCourtDialogPr
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-courtNumber">{t('add.numberLabel')}</Label>
+              <Label htmlFor="court-number">{t('add.numberLabel')}</Label>
               <Input
-                id="edit-courtNumber"
+                id="court-number"
                 type="number"
                 min="1"
                 value={courtNumber}
@@ -243,11 +294,11 @@ export function EditCourtDialog({ open, onOpenChange, court }: EditCourtDialogPr
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className={isEditMode ? 'grid grid-cols-2 gap-4' : ''}>
             <div className="space-y-2">
-              <Label htmlFor="edit-surfaceType">{t('add.surfaceLabel')}</Label>
+              <Label htmlFor="court-surfaceType">{t('add.surfaceLabel')}</Label>
               <select
-                id="edit-surfaceType"
+                id="court-surfaceType"
                 value={surfaceType}
                 onChange={e => setSurfaceType(e.target.value as SurfaceType | '')}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -262,36 +313,38 @@ export function EditCourtDialog({ open, onOpenChange, court }: EditCourtDialogPr
               </select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="edit-status">{t('table.status')}</Label>
-              <select
-                id="edit-status"
-                value={availabilityStatus}
-                onChange={e => setAvailabilityStatus(e.target.value as AvailabilityStatus)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={saving}
-              >
-                {AVAILABILITY_STATUSES.map(status => (
-                  <option key={status} value={status}>
-                    {t(`status.${status}`)}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {isEditMode && (
+              <div className="space-y-2">
+                <Label htmlFor="court-status">{t('table.status')}</Label>
+                <select
+                  id="court-status"
+                  value={availabilityStatus}
+                  onChange={e => setAvailabilityStatus(e.target.value as AvailabilityStatus)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={saving}
+                >
+                  {AVAILABILITY_STATUSES.map(status => (
+                    <option key={status} value={status}>
+                      {t(`status.${status}`)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
-                id="edit-indoor"
+                id="court-indoor"
                 checked={indoor}
                 onChange={e => setIndoor(e.target.checked)}
                 className="size-4 rounded border-gray-300"
                 disabled={saving}
               />
               <div>
-                <Label htmlFor="edit-indoor" className="cursor-pointer">
+                <Label htmlFor="court-indoor" className="cursor-pointer">
                   {t('add.indoorLabel')}
                 </Label>
                 <p className="text-sm text-muted-foreground">{t('add.indoorHint')}</p>
@@ -301,14 +354,14 @@ export function EditCourtDialog({ open, onOpenChange, court }: EditCourtDialogPr
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
-                id="edit-lighting"
+                id="court-lighting"
                 checked={lighting}
                 onChange={e => setLighting(e.target.checked)}
                 className="size-4 rounded border-gray-300"
                 disabled={saving}
               />
               <div>
-                <Label htmlFor="edit-lighting" className="cursor-pointer">
+                <Label htmlFor="court-lighting" className="cursor-pointer">
                   {t('add.lightingLabel')}
                 </Label>
                 <p className="text-sm text-muted-foreground">{t('add.lightingHint')}</p>
@@ -318,14 +371,14 @@ export function EditCourtDialog({ open, onOpenChange, court }: EditCourtDialogPr
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
-                id="edit-multiSport"
+                id="court-multiSport"
                 checked={multiSport}
                 onChange={e => setMultiSport(e.target.checked)}
                 className="size-4 rounded border-gray-300"
                 disabled={saving}
               />
               <div>
-                <Label htmlFor="edit-multiSport" className="cursor-pointer">
+                <Label htmlFor="court-multiSport" className="cursor-pointer">
                   {t('add.multiSportLabel')}
                 </Label>
                 <p className="text-sm text-muted-foreground">{t('add.multiSportHint')}</p>
@@ -334,9 +387,9 @@ export function EditCourtDialog({ open, onOpenChange, court }: EditCourtDialogPr
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-notes">{t('add.notesLabel')}</Label>
+            <Label htmlFor="court-notes">{t('add.notesLabel')}</Label>
             <textarea
-              id="edit-notes"
+              id="court-notes"
               value={notes}
               onChange={e => setNotes(e.target.value)}
               placeholder={t('add.notesPlaceholder')}
@@ -395,12 +448,12 @@ export function EditCourtDialog({ open, onOpenChange, court }: EditCourtDialogPr
               {saving ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" />
-                  {t('edit.saving')}
+                  {isEditMode ? t('edit.saving') : t('add.adding')}
                 </>
               ) : (
                 <>
-                  <Save className="mr-2 size-4" />
-                  {t('edit.saveButton')}
+                  {isEditMode ? <Save className="mr-2 size-4" /> : <Plus className="mr-2 size-4" />}
+                  {isEditMode ? t('edit.saveButton') : t('add.addButton')}
                 </>
               )}
             </Button>

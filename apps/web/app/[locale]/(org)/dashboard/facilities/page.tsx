@@ -36,14 +36,27 @@ export default async function FacilitiesPage() {
       `
       id,
       name,
+      description,
       address,
       city,
+      postal_code,
+      country,
+      latitude,
+      longitude,
+      timezone,
       is_active,
+      membership_required,
+      facility_type,
+      data_provider_id,
+      external_provider_id,
       created_at,
       court (
         id,
         availability_status,
         is_active
+      ),
+      facility_sport (
+        sport_id
       )
     `
     )
