@@ -41,6 +41,35 @@ const BOOKING_WITH_DETAILS_SELECT = `
 `;
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Extract the error message from a Supabase Edge Function error.
+ *
+ * When the Edge Function returns a non-2xx status, the Supabase client
+ * throws FunctionsHttpError *before* parsing the response body. So `data`
+ * is always null. The raw Response is available on `error.context`.
+ */
+async function extractEdgeFunctionError(
+  error: { context?: Response; message?: string },
+  fallback: string
+): Promise<string> {
+  // FunctionsHttpError stores the raw Response in `context`
+  if (error.context && typeof error.context.json === 'function') {
+    try {
+      const body = await error.context.json();
+      if (body?.error && typeof body.error === 'string') {
+        return body.error;
+      }
+    } catch {
+      // JSON parsing failed — fall through
+    }
+  }
+  return error.message ?? fallback;
+}
+
+// ---------------------------------------------------------------------------
 // Create (Edge Function)
 // ---------------------------------------------------------------------------
 
@@ -56,9 +85,7 @@ export async function createBooking(
   });
 
   if (error) {
-    // Edge Function errors come as FunctionsHttpError with a JSON body
-    const message =
-      (data as { error?: string } | null)?.error ?? error.message ?? 'Failed to create booking';
+    const message = await extractEdgeFunctionError(error, 'Failed to create booking');
     throw new Error(message);
   }
 
@@ -81,8 +108,7 @@ export async function cancelBooking(
   });
 
   if (error) {
-    const message =
-      (data as { error?: string } | null)?.error ?? error.message ?? 'Failed to cancel booking';
+    const message = await extractEdgeFunctionError(error, 'Failed to cancel booking');
     throw new Error(message);
   }
 

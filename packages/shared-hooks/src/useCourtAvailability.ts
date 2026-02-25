@@ -34,6 +34,8 @@ export interface UseCourtAvailabilityOptions {
   facilityTimezone?: string | null;
   /** Dates to fetch availability for (defaults to today and tomorrow) */
   dates?: string[];
+  /** Sport name to filter availability by (e.g., "tennis", "pickleball") */
+  sportName?: string;
   /** Enable/disable the query (default: true) */
   enabled?: boolean;
   /** Maximum number of slots to return (default: 3) */
@@ -347,6 +349,7 @@ export function useCourtAvailability(
     externalProviderId,
     bookingUrlTemplate: _bookingUrlTemplate,
     facilityTimezone,
+    sportName,
     dates = getDefaultDates(),
     enabled = true,
     maxSlots = 20, // Increased to show more slots for date-sectioned display
@@ -367,6 +370,7 @@ export function useCourtAvailability(
           dates,
           dataProviderId,
           externalProviderId,
+          searchString: sportName,
         });
 
         if (!result.success) {

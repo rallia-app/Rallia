@@ -463,13 +463,13 @@ const ParticipantAvatar: React.FC<ParticipantAvatarProps> = ({
               }
             : {
                 backgroundColor: avatarUrl ? hostBorderColor : colors.avatarPlaceholder,
-                borderWidth: isHost ? 2.5 : 2,
-                borderColor: isHost ? hostBorderColor : filledBorderColor,
-                shadowColor: isHost ? hostBorderColor : filledBorderColor,
+                borderWidth: 2.5,
+                borderColor: hostBorderColor,
+                shadowColor: hostBorderColor,
                 shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: isHost ? 0.3 : 0.15,
+                shadowOpacity: 0.3,
                 shadowRadius: 4,
-                elevation: isHost ? 3 : 2,
+                elevation: 3,
               },
         ]}
       >
@@ -1330,30 +1330,9 @@ export const MatchDetailSheet: React.FC = () => {
   const creatorReputationScore = match.created_by_player?.reputation_score;
   const tier = getMatchTier(match.court_status, creatorReputationScore);
 
-  // Tier-aware accent colors
-  const tierAccent = (() => {
-    switch (tier) {
-      case 'mostWanted':
-        return isDark ? accent[400] : accent[500];
-      case 'readyToPlay':
-        return isDark ? secondary[400] : secondary[500];
-      case 'regular':
-      default:
-        return isDark ? primary[400] : primary[500];
-    }
-  })();
-
-  const tierAccentLight = (() => {
-    switch (tier) {
-      case 'mostWanted':
-        return isDark ? accent[700] : accent[200];
-      case 'readyToPlay':
-        return isDark ? secondary[700] : secondary[200];
-      case 'regular':
-      default:
-        return isDark ? primary[700] : primary[200];
-    }
-  })();
+  // All tiers use primary accent colors (tier differentiation is via ribbon badge on cards)
+  const tierAccent = isDark ? primary[400] : primary[500];
+  const tierAccentLight = isDark ? primary[700] : primary[200];
 
   // Live/urgent indicator colors
   const liveColor = isDark ? secondary[400] : secondary[500];
@@ -2303,17 +2282,27 @@ export const MatchDetailSheet: React.FC = () => {
               </Text>
             </View>
             <View style={styles.badgesGrid}>
-              {/* Court Booked badge - uses secondary (coral) for important callout */}
+              {/* Min rating - secondary (coral) */}
+              {match.min_rating_score && match.min_rating_score.label && (
+                <Badge
+                  label={match.min_rating_score.label}
+                  bgColor={isDark ? `${secondary[400]}30` : `${secondary[500]}15`}
+                  textColor={isDark ? secondary[400] : secondary[500]}
+                  icon="analytics"
+                />
+              )}
+
+              {/* Court Booked badge - accent (gold) */}
               {(tier === 'mostWanted' || tier === 'readyToPlay') && (
                 <Badge
                   label={t('match.courtStatus.courtBooked')}
-                  bgColor={isDark ? `${secondary[400]}25` : `${secondary[500]}15`}
-                  textColor={isDark ? secondary[400] : secondary[600]}
+                  bgColor={isDark ? `${accent[400]}30` : `${accent[500]}15`}
+                  textColor={isDark ? accent[400] : accent[500]}
                   icon="checkmark-circle"
                 />
               )}
 
-              {/* Player expectation - competitive uses accent (amber), casual uses primary (teal) */}
+              {/* Player expectation - primary (cyan) */}
               {match.player_expectation && match.player_expectation !== 'both' && (
                 <Badge
                   label={
@@ -2321,35 +2310,9 @@ export const MatchDetailSheet: React.FC = () => {
                       ? t('matchDetail.competitive')
                       : t('matchDetail.casual')
                   }
-                  bgColor={
-                    match.player_expectation === 'competitive'
-                      ? isDark
-                        ? `${accent[400]}25`
-                        : `${accent[500]}15`
-                      : isDark
-                        ? `${primary[400]}25`
-                        : `${primary[500]}15`
-                  }
-                  textColor={
-                    match.player_expectation === 'competitive'
-                      ? isDark
-                        ? accent[400]
-                        : accent[600]
-                      : isDark
-                        ? primary[400]
-                        : primary[600]
-                  }
+                  bgColor={isDark ? `${primary[400]}30` : `${primary[500]}15`}
+                  textColor={isDark ? primary[400] : primary[500]}
                   icon={match.player_expectation === 'competitive' ? 'trophy' : 'happy'}
-                />
-              )}
-
-              {/* Min rating - uses primary (teal) for level info */}
-              {match.min_rating_score && match.min_rating_score.label && (
-                <Badge
-                  label={match.min_rating_score.label}
-                  bgColor={isDark ? `${primary[400]}25` : `${primary[500]}15`}
-                  textColor={isDark ? primary[400] : primary[600]}
-                  icon="analytics"
                 />
               )}
 
@@ -2369,12 +2332,12 @@ export const MatchDetailSheet: React.FC = () => {
                 />
               )}
 
-              {/* Join mode - neutral style for filter info */}
+              {/* Join mode - primary (cyan) */}
               {match.join_mode === 'request' && (
                 <Badge
                   label={t('match.joinMode.request')}
-                  bgColor={isDark ? neutral[800] : neutral[100]}
-                  textColor={isDark ? neutral[300] : neutral[600]}
+                  bgColor={isDark ? `${primary[400]}30` : `${primary[500]}15`}
+                  textColor={isDark ? primary[400] : primary[500]}
                   icon="hand-left"
                 />
               )}

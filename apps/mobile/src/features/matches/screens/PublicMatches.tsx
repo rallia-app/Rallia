@@ -8,6 +8,7 @@ import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { MatchCard, Text } from '@rallia/shared-components';
+import { SportIcon } from '../../../components/SportIcon';
 import {
   useTheme,
   usePlayer,
@@ -18,9 +19,8 @@ import {
 import { useAuth, useThemeStyles, useTranslation, useEffectiveLocation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { useMatchDetailSheet, useSport, useUserHomeLocation } from '../../../context';
-import { SportIcon } from '../../../components/SportIcon';
 import { Logger } from '@rallia/shared-services';
-import { spacingPixels } from '@rallia/design-system';
+import { spacingPixels, neutral } from '@rallia/design-system';
 import { SearchBar, MatchFiltersBar } from '../components';
 
 // =============================================================================
@@ -167,6 +167,13 @@ export default function PublicMatches() {
         t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
         locale={locale}
         currentPlayerId={player?.id}
+        sportIcon={
+          <SportIcon
+            sportName={item.sport?.name ?? 'tennis'}
+            size={100}
+            color={isDark ? neutral[600] : neutral[400]}
+          />
+        }
         onPress={() => {
           Logger.logUserAction('public_match_pressed', { matchId: item.id });
           openMatchDetail(item);
