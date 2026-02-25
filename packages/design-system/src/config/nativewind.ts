@@ -190,8 +190,8 @@ export function generateNativewindGlobalCSS(): string {
   --card-foreground: ${neutral[950]};
   --popover: ${base.white};
   --popover-foreground: ${neutral[950]};
-  --primary: ${neutral[900]};
-  --primary-foreground: ${neutral[50]};
+  --primary: ${primary[600]};
+  --primary-foreground: ${base.white};
   --secondary: ${neutral[100]};
   --secondary-foreground: ${neutral[900]};
   --muted: ${neutral[100]};
@@ -202,7 +202,7 @@ export function generateNativewindGlobalCSS(): string {
   --destructive-foreground: ${base.white};
   --border: ${neutral[200]};
   --input: ${neutral[200]};
-  --ring: ${neutral[400]};
+  --ring: ${primary[600]};
 
   /* Primary scale */
   --primary-50: ${primary[50]};
@@ -252,8 +252,8 @@ export function generateNativewindGlobalCSS(): string {
   --card-foreground: ${neutral[50]};
   --popover: ${neutral[900]};
   --popover-foreground: ${neutral[50]};
-  --primary: ${neutral[200]};
-  --primary-foreground: ${neutral[900]};
+  --primary: ${primary[500]};
+  --primary-foreground: ${base.white};
   --secondary: ${neutral[800]};
   --secondary-foreground: ${neutral[50]};
   --muted: ${neutral[800]};
@@ -264,7 +264,7 @@ export function generateNativewindGlobalCSS(): string {
   --destructive-foreground: ${base.white};
   --border: rgba(255, 255, 255, 0.1);
   --input: rgba(255, 255, 255, 0.15);
-  --ring: ${neutral[500]};
+  --ring: ${primary[500]};
 
   /* Primary scale - Dark mode */
   --primary-50: ${darkMode.primary[50]};
@@ -315,8 +315,8 @@ export const nativeColors = {
     foreground: neutral[950],
     card: base.white,
     cardForeground: neutral[950],
-    primary: neutral[900],
-    primaryForeground: neutral[50],
+    primary: primary[600],
+    primaryForeground: base.white,
     secondary: neutral[100],
     secondaryForeground: neutral[900],
     muted: neutral[100],
@@ -327,7 +327,7 @@ export const nativeColors = {
     destructiveForeground: base.white,
     border: neutral[200],
     input: neutral[200],
-    ring: neutral[400],
+    ring: primary[600],
     palette: { primary, secondary, accent },
   },
   dark: {
@@ -335,8 +335,8 @@ export const nativeColors = {
     foreground: neutral[50],
     card: neutral[900],
     cardForeground: neutral[50],
-    primary: neutral[200],
-    primaryForeground: neutral[900],
+    primary: primary[500],
+    primaryForeground: base.white,
     secondary: neutral[800],
     secondaryForeground: neutral[50],
     muted: neutral[800],
@@ -347,7 +347,7 @@ export const nativeColors = {
     destructiveForeground: base.white,
     border: 'rgba(255, 255, 255, 0.1)',
     input: 'rgba(255, 255, 255, 0.15)',
-    ring: neutral[500],
+    ring: primary[500],
     palette: {
       primary: darkMode.primary,
       secondary: darkMode.secondary,
