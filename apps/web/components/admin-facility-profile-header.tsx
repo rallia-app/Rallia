@@ -4,10 +4,10 @@ import { FacilityDialog, type FacilityInitialData } from '@/components/facility-
 import { FacilityDeleteButton } from '@/components/facility-delete-button';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Link } from '@/i18n/navigation';
+import { Link, useRouter } from '@/i18n/navigation';
 import { ArrowLeft, Edit, MapPin } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 interface AdminFacilityProfileHeaderProps {
   facility: FacilityInitialData;
@@ -17,6 +17,7 @@ interface AdminFacilityProfileHeaderProps {
   city: string | null;
   country: string | null;
   organizationSlug: string;
+  organizationId: string;
   backLabel: string;
 }
 
@@ -28,10 +29,16 @@ export function AdminFacilityProfileHeader({
   city,
   country,
   organizationSlug,
+  organizationId,
   backLabel,
 }: AdminFacilityProfileHeaderProps) {
   const t = useTranslations('facilities');
+  const router = useRouter();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+
+  const handleOrganizationChanged = useCallback(() => {
+    router.push(`/admin/organizations/${organizationSlug}`);
+  }, [router, organizationSlug]);
 
   const addressParts = [address, city, country].filter(Boolean).join(', ');
 
@@ -40,7 +47,9 @@ export function AdminFacilityProfileHeader({
       <FacilityDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
-        initialData={facility}
+        initialData={{ ...facility, organization_id: organizationId }}
+        isAdminContext
+        onOrganizationChanged={handleOrganizationChanged}
       />
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-4">

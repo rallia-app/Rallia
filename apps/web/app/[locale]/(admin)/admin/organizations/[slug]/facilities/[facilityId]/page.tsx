@@ -167,6 +167,7 @@ export default async function AdminFacilityDetailPage({ params }: PageProps) {
         city={facility.city}
         country={facility.country}
         organizationSlug={slug}
+        organizationId={facility.organization_id}
         backLabel={tProfile('facilityDetail.backToOrganization')}
       />
 

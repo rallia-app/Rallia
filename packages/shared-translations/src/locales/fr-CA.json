@@ -3672,7 +3672,11 @@
       "saving": "Enregistrement...",
       "cancelButton": "Annuler",
       "error": "Échec de la mise à jour du site de jeu",
-      "success": "Site de jeu mis à jour avec succès"
+      "success": "Site de jeu mis à jour avec succès",
+      "organizationLabel": "Organisation",
+      "selectOrganization": "Sélectionner l'organisation",
+      "loadingOrganizations": "Chargement des organisations...",
+      "organizationChangeWarning": "Changer l'organisation déplacera ce site de jeu et tous ses terrains/contacts vers l'organisation sélectionnée."
     },
     "new": {
       "subtitle": "Ajoutez une nouveau site de jeu à votre organisation.",

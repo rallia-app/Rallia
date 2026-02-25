@@ -3682,7 +3682,11 @@
       "cancelButton": "Cancel",
       "saving": "Saving...",
       "saveButton": "Save Changes",
-      "error": "Failed to update facility. Please try again."
+      "error": "Failed to update facility. Please try again.",
+      "organizationLabel": "Organization",
+      "selectOrganization": "Select organization",
+      "loadingOrganizations": "Loading organizations...",
+      "organizationChangeWarning": "Changing the organization will move this facility and all its courts/contacts to the selected organization."
     },
     "facilityTypes": {
       "park": "Park",

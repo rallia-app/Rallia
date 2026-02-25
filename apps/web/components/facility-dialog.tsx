@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useRouter } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Loader2, Plus, Save, Search } from 'lucide-react';
+import { AlertTriangle, Loader2, Plus, Save, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
 
@@ -44,6 +44,12 @@ interface Sport {
   slug: string;
 }
 
+interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 export interface FacilityInitialData {
   id: string;
   name: string;
@@ -60,6 +66,7 @@ export interface FacilityInitialData {
   data_provider_id: string | null;
   external_provider_id: string | null;
   facility_sport: Array<{ sport_id: string }>;
+  organization_id?: string;
 }
 
 interface FacilityDialogProps {
@@ -68,6 +75,8 @@ interface FacilityDialogProps {
   initialData?: FacilityInitialData;
   organizationId?: string;
   onSuccess?: (facilityId: string) => void;
+  isAdminContext?: boolean;
+  onOrganizationChanged?: () => void;
 }
 
 export function FacilityDialog({
@@ -76,6 +85,8 @@ export function FacilityDialog({
   initialData,
   organizationId,
   onSuccess,
+  isAdminContext,
+  onOrganizationChanged,
 }: FacilityDialogProps) {
   const t = useTranslations('facilities');
   const router = useRouter();
@@ -93,6 +104,12 @@ export function FacilityDialog({
   // Data providers state
   const [dataProviders, setDataProviders] = useState<DataProvider[]>([]);
   const [loadingDataProviders, setLoadingDataProviders] = useState(true);
+
+  // Admin organization reassignment state
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [loadingOrganizations, setLoadingOrganizations] = useState(false);
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState('');
+  const originalOrganizationIdRef = useRef<string>('');
 
   // Form state
   const [name, setName] = useState('');
@@ -144,7 +161,25 @@ export function FacilityDialog({
 
     fetchSports();
     fetchDataProviders();
-  }, []);
+
+    if (isAdminContext && isEditMode) {
+      const fetchOrganizations = async () => {
+        setLoadingOrganizations(true);
+        try {
+          const response = await fetch('/api/admin/organizations/list');
+          if (response.ok) {
+            const data = await response.json();
+            setOrganizations(data.organizations || []);
+          }
+        } catch (err) {
+          console.error('Error fetching organizations:', err);
+        } finally {
+          setLoadingOrganizations(false);
+        }
+      };
+      fetchOrganizations();
+    }
+  }, [isAdminContext, isEditMode]);
 
   // Populate form when initialData changes or dialog opens
   useEffect(() => {
@@ -166,8 +201,13 @@ export function FacilityDialog({
       const facilitySports = initialData.facility_sport?.map(fs => fs.sport_id) || [];
       setSelectedSports(facilitySports);
       originalSportsRef.current = facilitySports;
+
+      if (isAdminContext && initialData.organization_id) {
+        setSelectedOrganizationId(initialData.organization_id);
+        originalOrganizationIdRef.current = initialData.organization_id;
+      }
     }
-  }, [open, initialData]);
+  }, [open, initialData, isAdminContext]);
 
   const resetForm = () => {
     setName('');
@@ -256,24 +296,35 @@ export function FacilityDialog({
 
       if (isEditMode) {
         // Update mode
+        const updatePayload: Record<string, unknown> = {
+          name,
+          description: description || null,
+          facility_type: (facilityType as (typeof FACILITY_TYPES)[number]) || null,
+          address: address || null,
+          city: city || null,
+          postal_code: postalCode || null,
+          country: (country as 'Canada' | 'United States') || null,
+          latitude: latitude ? parseFloat(latitude) : null,
+          longitude: longitude ? parseFloat(longitude) : null,
+          timezone: timezone || null,
+          membership_required: membershipRequired,
+          data_provider_id: dataProviderId || null,
+          external_provider_id: externalProviderId || null,
+          updated_at: new Date().toISOString(),
+        };
+
+        const orgChanged =
+          isAdminContext &&
+          selectedOrganizationId &&
+          selectedOrganizationId !== originalOrganizationIdRef.current;
+
+        if (orgChanged) {
+          updatePayload.organization_id = selectedOrganizationId;
+        }
+
         const { error: updateError } = await supabase
           .from('facility')
-          .update({
-            name,
-            description: description || null,
-            facility_type: (facilityType as (typeof FACILITY_TYPES)[number]) || null,
-            address: address || null,
-            city: city || null,
-            postal_code: postalCode || null,
-            country: (country as 'Canada' | 'United States') || null,
-            latitude: latitude ? parseFloat(latitude) : null,
-            longitude: longitude ? parseFloat(longitude) : null,
-            timezone: timezone || null,
-            membership_required: membershipRequired,
-            data_provider_id: dataProviderId || null,
-            external_provider_id: externalProviderId || null,
-            updated_at: new Date().toISOString(),
-          })
+          .update(updatePayload)
           .eq('id', initialData!.id);
 
         if (updateError) throw updateError;
@@ -304,7 +355,12 @@ export function FacilityDialog({
         }
 
         onOpenChange(false);
-        router.refresh();
+
+        if (orgChanged && onOrganizationChanged) {
+          onOrganizationChanged();
+        } else {
+          router.refresh();
+        }
       } else {
         // Create mode
         const slug = generateSlug(name);
@@ -381,6 +437,42 @@ export function FacilityDialog({
           {error && (
             <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
               {error}
+            </div>
+          )}
+
+          {isAdminContext && isEditMode && (
+            <div className="space-y-2">
+              <Label htmlFor="facility-organization">{t('edit.organizationLabel')}</Label>
+              {loadingOrganizations ? (
+                <div className="flex items-center gap-2 py-2">
+                  <Loader2 className="size-4 animate-spin" />
+                  <span className="text-sm text-muted-foreground">
+                    {t('edit.loadingOrganizations')}
+                  </span>
+                </div>
+              ) : (
+                <select
+                  id="facility-organization"
+                  value={selectedOrganizationId}
+                  onChange={e => setSelectedOrganizationId(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={saving}
+                >
+                  <option value="">{t('edit.selectOrganization')}</option>
+                  {organizations.map(org => (
+                    <option key={org.id} value={org.id}>
+                      {org.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {selectedOrganizationId &&
+                selectedOrganizationId !== originalOrganizationIdRef.current && (
+                  <div className="flex items-start gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 text-sm text-amber-800 dark:text-amber-200">
+                    <AlertTriangle className="size-4 mt-0.5 shrink-0" />
+                    <span>{t('edit.organizationChangeWarning')}</span>
+                  </div>
+                )}
             </div>
           )}
 
