@@ -1,26 +1,27 @@
-name: Scheduled Preview Build
+name: Production Build & Submit
 
 on:
-  schedule:
-    # Tuesdays and Fridays at 11am EST (16:00 UTC)
-    - cron: '0 16 * * 2,5'
   workflow_dispatch:
-    # Allow manual trigger
+    inputs:
+      release_notes:
+        description: 'Release notes for this build'
+        required: false
+        default: ''
 
 concurrency:
-  group: preview-build
-  cancel-in-progress: true
+  group: production-build
+  cancel-in-progress: false
 
 jobs:
-  preview-build:
-    name: EAS Preview Build
+  production-build:
+    name: EAS Production Build & Submit
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
-      - name: Checkout dev
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
-          ref: dev
+          ref: main
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -32,63 +33,60 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Deploy to Supabase (Staging)
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_STAGING_ACCESS_TOKEN }}
-        run: |
-          echo "Linking to Supabase project..."
-          npx supabase link --project-ref ahbaeewecdeguxtxtvhr
-
-          echo "Pushing database migrations..."
-          npx supabase db push
-
-          echo "Deploying edge functions..."
-          npx supabase functions deploy
-
       - name: Setup Expo
         uses: expo/expo-github-action@v8
         with:
           eas-version: '16'
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Build preview
+      - name: Build production
         id: build
         continue-on-error: true
         run: |
           cd apps/mobile
-          eas build --platform all --profile preview --non-interactive --json \
+          eas build --platform all --profile production --non-interactive --json \
             | tee build-result.json
+
+      - name: Submit to app stores
+        id: submit
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        run: |
+          cd apps/mobile
+          eas submit --platform all --non-interactive
 
       - name: Notify Discord
         if: always()
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-
         run: |
           BUILD_FILE="apps/mobile/build-result.json"
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           SHORT_SHA="${GITHUB_SHA::7}"
+          RELEASE_NOTES="${{ github.event.inputs.release_notes }}"
 
           if [ "${{ steps.build.outcome }}" = "success" ]; then
-            COLOR=3066993
-            TITLE="Preview Build Completed"
+            if [ "${{ steps.submit.outcome }}" = "success" ]; then
+              COLOR=3066993
+              TITLE="Production Build & Submit Completed"
+            else
+              COLOR=15105570
+              TITLE="Production Build OK — Submit Failed"
+            fi
           else
             COLOR=15158332
-            TITLE="Preview Build Failed"
+            TITLE="Production Build Failed"
           fi
 
-          IOS_FIELD=""
-          ANDROID_FIELD=""
           DESCRIPTION=""
+          VERSION_STR=""
 
           if [ -f "$BUILD_FILE" ] && jq empty "$BUILD_FILE" 2>/dev/null; then
-            # Extract project info for constructing Expo build page URLs
             OWNER_NAME=$(jq -r '.[0].project.ownerAccount.name // empty' "$BUILD_FILE")
             PROJECT_SLUG=$(jq -r '.[0].project.slug // empty' "$BUILD_FILE")
 
             IOS_ID=$(jq -r '.[] | select(.platform == "IOS") | .id // empty' "$BUILD_FILE")
             IOS_STATUS=$(jq -r '.[] | select(.platform == "IOS") | .status // empty' "$BUILD_FILE")
-            IOS_ARTIFACT=$(jq -r '.[] | select(.platform == "IOS") | .artifacts.buildUrl // empty' "$BUILD_FILE")
             IOS_APP_VERSION=$(jq -r '.[] | select(.platform == "IOS") | .appVersion // empty' "$BUILD_FILE")
             IOS_BUILD_NUMBER=$(jq -r '.[] | select(.platform == "IOS") | .appBuildVersion // empty' "$BUILD_FILE")
             IOS_CREATED=$(jq -r '.[] | select(.platform == "IOS") | .createdAt // empty' "$BUILD_FILE")
@@ -96,13 +94,11 @@ jobs:
 
             ANDROID_ID=$(jq -r '.[] | select(.platform == "ANDROID") | .id // empty' "$BUILD_FILE")
             ANDROID_STATUS=$(jq -r '.[] | select(.platform == "ANDROID") | .status // empty' "$BUILD_FILE")
-            ANDROID_ARTIFACT=$(jq -r '.[] | select(.platform == "ANDROID") | .artifacts.buildUrl // empty' "$BUILD_FILE")
             ANDROID_APP_VERSION=$(jq -r '.[] | select(.platform == "ANDROID") | .appVersion // empty' "$BUILD_FILE")
             ANDROID_BUILD_NUMBER=$(jq -r '.[] | select(.platform == "ANDROID") | .appBuildVersion // empty' "$BUILD_FILE")
             ANDROID_CREATED=$(jq -r '.[] | select(.platform == "ANDROID") | .createdAt // empty' "$BUILD_FILE")
             ANDROID_COMPLETED=$(jq -r '.[] | select(.platform == "ANDROID") | .completedAt // empty' "$BUILD_FILE")
 
-            # Construct build details page URLs from project info + build ID
             IOS_URL=""
             ANDROID_URL=""
             if [ -n "$OWNER_NAME" ] && [ -n "$PROJECT_SLUG" ]; then
@@ -114,8 +110,6 @@ jobs:
               fi
             fi
 
-            # Build version string if available
-            VERSION_STR=""
             if [ -n "$IOS_APP_VERSION" ]; then
               VERSION_STR="v${IOS_APP_VERSION}"
               if [ -n "$IOS_BUILD_NUMBER" ]; then
@@ -127,7 +121,6 @@ jobs:
               DESCRIPTION="**Version:** ${VERSION_STR}"
             fi
 
-            # Helper: compute duration string from two ISO timestamps
             calc_duration() {
               local start="$1" end="$2"
               if [ -n "$start" ] && [ -n "$end" ]; then
@@ -141,7 +134,6 @@ jobs:
               fi
             }
 
-            # Per-platform status indicators
             ios_icon() {
               if [ "$IOS_STATUS" = "FINISHED" ]; then echo "✅"; else echo "❌"; fi
             }
@@ -149,47 +141,28 @@ jobs:
               if [ "$ANDROID_STATUS" = "FINISHED" ]; then echo "✅"; else echo "❌"; fi
             }
 
-            # iOS field: install page link (not raw artifact — iOS needs device registration)
+            IOS_FIELD=""
             if [ -n "$IOS_URL" ]; then
               IOS_DURATION=$(calc_duration "$IOS_CREATED" "$IOS_COMPLETED")
               IOS_VALUE="$(ios_icon) **${IOS_STATUS:-Unknown}**"
               if [ -n "$IOS_DURATION" ]; then
                 IOS_VALUE="${IOS_VALUE} (${IOS_DURATION})"
               fi
-              IOS_VALUE="${IOS_VALUE}\n[Install Build](${IOS_URL})"
+              IOS_VALUE="${IOS_VALUE}\n[Build Details](${IOS_URL})"
               IOS_FIELD="{\"name\": \"iOS\", \"value\": \"${IOS_VALUE}\", \"inline\": true}"
             fi
 
-            # Android field: direct .apk download link
+            ANDROID_FIELD=""
             if [ -n "$ANDROID_URL" ]; then
               ANDROID_DURATION=$(calc_duration "$ANDROID_CREATED" "$ANDROID_COMPLETED")
               ANDROID_VALUE="$(android_icon) **${ANDROID_STATUS:-Unknown}**"
               if [ -n "$ANDROID_DURATION" ]; then
                 ANDROID_VALUE="${ANDROID_VALUE} (${ANDROID_DURATION})"
               fi
-              if [ -n "$ANDROID_ARTIFACT" ]; then
-                ANDROID_VALUE="${ANDROID_VALUE}\n[Download .apk](${ANDROID_ARTIFACT})"
-              fi
               ANDROID_VALUE="${ANDROID_VALUE}\n[Build Details](${ANDROID_URL})"
               ANDROID_FIELD="{\"name\": \"Android\", \"value\": \"${ANDROID_VALUE}\", \"inline\": true}"
             fi
           fi
-
-          # Changelog: commits since the last preview-build tag
-          CHANGELOG=""
-          LAST_TAG=$(git describe --tags --match "preview-build/*" --abbrev=0 2>/dev/null || true)
-          if [ -n "$LAST_TAG" ]; then
-            LOG=$(git log --oneline --no-merges "${LAST_TAG}..HEAD" -- 2>/dev/null | head -15)
-          else
-            LOG=$(git log --oneline --no-merges -10 2>/dev/null)
-          fi
-          if [ -n "$LOG" ]; then
-            # Escape quotes and backslashes for JSON, truncate to fit Discord field limit
-            CHANGELOG=$(echo "$LOG" | while IFS= read -r line; do echo "• ${line}"; done | head -c 900)
-          fi
-
-          # Tag this commit for next changelog diff
-          git tag "preview-build/${SHORT_SHA}" 2>/dev/null || true
 
           FIELDS="["
           if [ -n "$IOS_FIELD" ]; then
@@ -200,10 +173,9 @@ jobs:
           fi
           FIELDS="${FIELDS}{\"name\": \"Commit\", \"value\": \"\`${SHORT_SHA}\`\", \"inline\": true},"
           FIELDS="${FIELDS}{\"name\": \"Workflow\", \"value\": \"[View Logs](${RUN_URL})\", \"inline\": true}"
-          if [ -n "$CHANGELOG" ]; then
-            # Use jq to safely escape the changelog for JSON
-            CHANGELOG_ESCAPED=$(echo "$CHANGELOG" | jq -Rs '.')
-            FIELDS="${FIELDS},{\"name\": \"Changes\", \"value\": ${CHANGELOG_ESCAPED}, \"inline\": false}"
+          if [ -n "$RELEASE_NOTES" ]; then
+            NOTES_ESCAPED=$(echo "$RELEASE_NOTES" | jq -Rs '.')
+            FIELDS="${FIELDS},{\"name\": \"Release Notes\", \"value\": ${NOTES_ESCAPED}, \"inline\": false}"
           fi
           FIELDS="${FIELDS}]"
 
@@ -215,12 +187,6 @@ jobs:
             --arg timestamp "$TIMESTAMP" \
             --arg description "$DESCRIPTION" \
             --argjson fields "$FIELDS" \
-            '{embeds: [{title: $title, description: $description, color: $color, fields: $fields, timestamp: $timestamp, footer: {text: "Rallia Preview Build"}}]}')
+            '{embeds: [{title: $title, description: $description, color: $color, fields: $fields, timestamp: $timestamp, footer: {text: "Rallia Production Build"}}]}')
 
           curl -sf -H "Content-Type: application/json" -d "$PAYLOAD" "$DISCORD_WEBHOOK_URL"
-
-      - name: Push preview build tag
-        if: always()
-        run: |
-          SHORT_SHA="${GITHUB_SHA::7}"
-          git push origin "preview-build/${SHORT_SHA}" 2>/dev/null || true
