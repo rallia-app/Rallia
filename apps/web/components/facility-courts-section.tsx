@@ -1,6 +1,6 @@
 'use client';
 
-import { AddCourtDialog } from '@/components/add-court-dialog';
+import { CourtDialog } from '@/components/court-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,9 +31,15 @@ interface FacilityCourtsSectionProps {
   facilityId: string;
   courts: Court[];
   canEdit: boolean;
+  disableCourtLinks?: boolean;
 }
 
-export function FacilityCourtsSection({ facilityId, courts, canEdit }: FacilityCourtsSectionProps) {
+export function FacilityCourtsSection({
+  facilityId,
+  courts,
+  canEdit,
+  disableCourtLinks,
+}: FacilityCourtsSectionProps) {
   const t = useTranslations('facilities');
   const tCourts = useTranslations('courts');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -41,16 +47,14 @@ export function FacilityCourtsSection({ facilityId, courts, canEdit }: FacilityC
   return (
     <>
       {canEdit && (
-        <AddCourtDialog open={dialogOpen} onOpenChange={setDialogOpen} facilityId={facilityId} />
+        <CourtDialog open={dialogOpen} onOpenChange={setDialogOpen} facilityId={facilityId} />
       )}
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-lg">{t('detail.courtsSection')}</CardTitle>
-            <CardDescription>
-              {courts.length} {courts.length === 1 ? 'court' : 'courts'} at this facility
-            </CardDescription>
+            <CardDescription>{t('detail.courtsSummary', { count: courts.length })}</CardDescription>
           </div>
           {canEdit && (
             <Button size="sm" onClick={() => setDialogOpen(true)}>
@@ -73,67 +77,90 @@ export function FacilityCourtsSection({ facilityId, courts, canEdit }: FacilityC
             </div>
           ) : (
             <div className="divide-y">
-              {courts.map(court => (
-                <Link
-                  key={court.id}
-                  href={`/dashboard/facilities/${facilityId}/courts/${court.id}`}
-                  className="flex items-center justify-between py-2.5 hover:bg-muted/50 -mx-2 px-2 rounded transition-colors"
-                >
-                  <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                    <div
-                      className={`size-2.5 rounded-full shrink-0 ${
-                        court.availability_status === 'available'
-                          ? 'bg-green-500'
-                          : court.availability_status === 'maintenance'
-                            ? 'bg-yellow-500'
-                            : 'bg-gray-400'
-                      }`}
-                    />
-                    <span className="font-semibold text-sm shrink-0">
-                      {court.name || `Court ${court.court_number}`}
-                    </span>
-                    {court.court_number && court.name && (
-                      <span className="text-xs text-muted-foreground shrink-0">
-                        #{court.court_number}
+              {courts.map(court => {
+                const courtContent = (
+                  <>
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                      <div
+                        className={`size-2.5 rounded-full shrink-0 ${
+                          court.availability_status === 'available'
+                            ? 'bg-green-500'
+                            : court.availability_status === 'maintenance'
+                              ? 'bg-yellow-500'
+                              : 'bg-gray-400'
+                        }`}
+                      />
+                      <span className="font-semibold text-sm shrink-0">
+                        {court.name || `Court ${court.court_number}`}
                       </span>
-                    )}
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
-                      {court.surface_type && (
-                        <span>{tCourts(`surface.${court.surface_type}`)}</span>
-                      )}
-                      {court.indoor !== undefined && court.indoor !== null && (
-                        <span>
-                          • {court.indoor ? tCourts('type.indoor') : tCourts('type.outdoor')}
+                      {court.court_number && court.name && (
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          #{court.court_number}
                         </span>
                       )}
-                      {court.lighting && (
-                        <span className="flex items-center gap-1">
-                          <Lightbulb className="size-2.5" />
-                          Lighting
-                        </span>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
+                        {court.surface_type && (
+                          <span>{tCourts(`surface.${court.surface_type}`)}</span>
+                        )}
+                        {court.indoor !== undefined && court.indoor !== null && (
+                          <span>
+                            • {court.indoor ? tCourts('type.indoor') : tCourts('type.outdoor')}
+                          </span>
+                        )}
+                        {court.lighting && (
+                          <span className="flex items-center gap-1">
+                            <Lightbulb className="size-2.5" />
+                            {tCourts('detail.lighting')}
+                          </span>
+                        )}
+                      </div>
+                      {court.court_sport && court.court_sport.length > 0 && (
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {court.court_sport.map(cs => (
+                            <Badge key={cs.sport_id} variant="outline" className="text-xs">
+                              {cs.sport?.name || cs.sport_id}
+                            </Badge>
+                          ))}
+                        </div>
                       )}
                     </div>
-                    {court.court_sport && court.court_sport.length > 0 && (
-                      <div className="flex items-center gap-1 flex-wrap">
-                        {court.court_sport.map(cs => (
-                          <Badge key={cs.sport_id} variant="outline" className="text-xs">
-                            {cs.sport?.name || cs.sport_id}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Badge
-                      variant={court.availability_status === 'available' ? 'default' : 'secondary'}
-                      className="text-xs"
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge
+                        variant={
+                          court.availability_status === 'available' ? 'default' : 'secondary'
+                        }
+                        className="text-xs"
+                      >
+                        {tCourts(`status.${court.availability_status}`)}
+                      </Badge>
+                      {!disableCourtLinks && (
+                        <ChevronRight className="size-4 text-muted-foreground" />
+                      )}
+                    </div>
+                  </>
+                );
+
+                if (disableCourtLinks) {
+                  return (
+                    <div
+                      key={court.id}
+                      className="flex items-center justify-between py-2.5 -mx-2 px-2 rounded"
                     >
-                      {tCourts(`status.${court.availability_status}`)}
-                    </Badge>
-                    <ChevronRight className="size-4 text-muted-foreground" />
-                  </div>
-                </Link>
-              ))}
+                      {courtContent}
+                    </div>
+                  );
+                }
+
+                return (
+                  <Link
+                    key={court.id}
+                    href={`/dashboard/facilities/${facilityId}/courts/${court.id}`}
+                    className="flex items-center justify-between py-2.5 hover:bg-muted/50 -mx-2 px-2 rounded transition-colors"
+                  >
+                    {courtContent}
+                  </Link>
+                );
+              })}
             </div>
           )}
         </CardContent>

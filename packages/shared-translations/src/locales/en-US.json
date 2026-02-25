@@ -3511,8 +3511,12 @@
       "timezone": "Timezone",
       "description": "Description",
       "membershipRequired": "Membership Required",
+      "facilityType": "Facility Type",
+      "dataProvider": "Data Provider",
+      "externalProviderId": "External Provider ID",
       "editButton": "Edit Facility",
       "courtsSection": "Courts",
+      "courtsSummary": "{count} {count, plural, one {court} other {courts}} at this facility",
       "manageCourts": "Manage Courts",
       "viewAllCourts": "View All Courts",
       "stats": {
@@ -3661,6 +3665,13 @@
       "latitudePlaceholder": "e.g. 45.5017",
       "longitudeLabel": "Longitude",
       "longitudePlaceholder": "e.g. -73.5673",
+      "facilityTypeLabel": "Facility Type",
+      "selectFacilityType": "Select facility type",
+      "dataProviderLabel": "Data Provider",
+      "selectDataProvider": "Select data provider",
+      "loadingDataProviders": "Loading data providers...",
+      "externalProviderIdLabel": "External Provider ID",
+      "externalProviderIdPlaceholder": "External ID from data provider (e.g., siteId)",
       "membershipRequiredLabel": "Membership Required",
       "membershipRequiredHint": "Require users to be members to book courts at this facility.",
       "searchPlace": "Search Google Places",
@@ -3672,6 +3683,26 @@
       "saving": "Saving...",
       "saveButton": "Save Changes",
       "error": "Failed to update facility. Please try again."
+    },
+    "facilityTypes": {
+      "park": "Park",
+      "club": "Club",
+      "community_club": "Community Club",
+      "indoor_center": "Indoor Center",
+      "private": "Private",
+      "municipal": "Municipal",
+      "university": "University",
+      "school": "School",
+      "community_center": "Community Center",
+      "other": "Other"
+    },
+    "delete": {
+      "button": "Delete Facility",
+      "title": "Delete Facility",
+      "description": "Are you sure you want to permanently delete \"{name}\"? This will delete all courts, contacts, images, and files.",
+      "cancel": "Cancel",
+      "confirm": "Delete Facility",
+      "deleting": "Deleting..."
     }
   },
   "courts": {
@@ -4102,6 +4133,14 @@
         "public": "Public",
         "private": "Private"
       },
+      "filters": {
+        "searchPlaceholder": "Search organizations...",
+        "nature": "Nature",
+        "status": "Status",
+        "allNatures": "All natures",
+        "allStatuses": "All statuses",
+        "clearFilters": "Clear filters"
+      },
       "pagination": {
         "showing": "Showing {start} to {end} of {total} organizations",
         "page": "Page {current} of {total}"
@@ -4279,6 +4318,7 @@
           "website": "Website",
           "address": "Address",
           "description": "Description",
+          "dataProvider": "Data Provider",
           "createdAt": "Created At",
           "updatedAt": "Updated At"
         },
@@ -4299,7 +4339,72 @@
         "surfaceType": "Surface Type",
         "lighting": "Lighting",
         "indoor": "Indoor",
-        "error": "Failed to load organization"
+        "error": "Failed to load organization",
+        "addFacility": "Add Facility",
+        "searchFacilitiesPlaceholder": "Search facilities...",
+        "allSports": "All Sports",
+        "clearFilters": "Clear Filters",
+        "facilitiesFiltered": "{filtered} of {total} {total, plural, one {Facility} other {Facilities}}",
+        "noMatchingFacilities": "No facilities match your search",
+        "backToOrganizations": "Back to Organizations",
+        "facilityDetail": {
+          "title": "Facility Detail",
+          "backToOrganization": "Back to Organization",
+          "metadata": "Facility Information"
+        }
+      },
+      "createDialog": {
+        "title": "Create Organization",
+        "description": "Create a new organization with basic information.",
+        "fields": {
+          "name": "Organization Name",
+          "namePlaceholder": "Enter organization name",
+          "nature": "Nature",
+          "type": "Organization Type",
+          "selectType": "Select type (optional)",
+          "email": "Email",
+          "emailPlaceholder": "org@example.com",
+          "phone": "Phone",
+          "phonePlaceholder": "+1 (555) 000-0000",
+          "website": "Website",
+          "websitePlaceholder": "https://example.com",
+          "description": "Description",
+          "descriptionPlaceholder": "Enter organization description...",
+          "isActive": "Active",
+          "isActiveHint": "Organization is visible and operational",
+          "dataProvider": "Data Provider",
+          "selectDataProvider": "Select Data Provider",
+          "dataProviderHint": "Select a data provider for court availability fetching.",
+          "address": "Address",
+          "addressPlaceholder": "Enter address",
+          "city": "City",
+          "cityPlaceholder": "Enter city",
+          "country": "Country",
+          "selectCountry": "Select Country",
+          "postalCode": "Postal Code",
+          "postalCodePlaceholder": "Enter postal code"
+        },
+        "natures": {
+          "public": "Public",
+          "private": "Private"
+        },
+        "types": {
+          "club": "Club",
+          "municipality": "Municipality",
+          "city": "City",
+          "association": "Association"
+        },
+        "actions": {
+          "create": "Create Organization",
+          "creating": "Creating...",
+          "update": "Update Organization",
+          "updating": "Updating...",
+          "cancel": "Cancel"
+        },
+        "editTitle": "Edit Organization",
+        "editDescription": "Update organization details.",
+        "error": "Failed to create organization",
+        "updateError": "Failed to update organization"
       },
       "update": {
         "title": "Update Organization",

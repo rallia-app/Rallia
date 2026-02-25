@@ -471,7 +471,6 @@
 }
 
 /* Input focus effect */
-input:focus,
 textarea:focus {
   transform: scale(1.01);
   transition: transform 0.2s ease;
@@ -512,7 +511,6 @@ a {
 /* Smooth transitions for all interactive elements */
 button,
 a,
-input,
 textarea {
   transition: all 0.2s ease;
 }
@@ -904,7 +902,6 @@ textarea {
 }
 
 /* Input focus enhancements */
-input:focus,
 textarea:focus {
   transform: scale(1.02);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
