@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@rallia/shared-services';
 import type { Sport } from './useSports';
+import { getStorageAdapter } from './storage';
 
 /** Storage key for guest-selected sports (must match SportContext) */
 const GUEST_SPORTS_STORAGE_KEY = '@rallia/guest-selected-sports';
 
 /**
- * Guest sport format stored in AsyncStorage by SportSelectionScreen
+ * Guest sport format stored by SportSelectionScreen
  */
 interface GuestSport {
   id: string;
@@ -113,12 +113,13 @@ export const usePlayerSports = (playerId: string | undefined) => {
   }, [playerId]);
 
   /**
-   * Load guest-selected sports from AsyncStorage and transform to PlayerSport format.
+   * Load guest-selected sports from storage and transform to PlayerSport format.
    * This is used as a fallback when an authenticated user has no player sport records.
    */
   const loadGuestSportsAsFallback = async (currentPlayerId: string): Promise<PlayerSport[]> => {
     try {
-      const savedSportsJson = await AsyncStorage.getItem(GUEST_SPORTS_STORAGE_KEY);
+      const storage = getStorageAdapter();
+      const savedSportsJson = await storage.getItem(GUEST_SPORTS_STORAGE_KEY);
       if (!savedSportsJson) return [];
 
       const guestSports: GuestSport[] = JSON.parse(savedSportsJson);
