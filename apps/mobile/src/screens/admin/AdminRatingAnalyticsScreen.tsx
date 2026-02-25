@@ -171,7 +171,7 @@ export default function AdminRatingAnalyticsScreen() {
       poor: status.error.DEFAULT,
     };
 
-    return data.reputationDistribution.map((item) => ({
+    return data.reputationDistribution.map(item => ({
       value: item.percentage,
       color: tierColors[item.tier],
       text: `${item.percentage}%`,
@@ -181,7 +181,7 @@ export default function AdminRatingAnalyticsScreen() {
   const reputationEventsChartData = useMemo(() => {
     if (!data?.reputationEvents) return [];
 
-    return data.reputationEvents.map((event) => ({
+    return data.reputationEvents.map(event => ({
       value: event.positiveEvents,
       label: event.date.length > 5 ? event.date.slice(5).replace('-', '/') : event.date,
       frontColor: status.success.DEFAULT,
@@ -224,18 +224,16 @@ export default function AdminRatingAnalyticsScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: borderColor }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={textColor} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={[styles.headerTitle, { color: textColor }]}>
-            {t('admin.analytics.sections.ratings' as TranslationKey) || 'Rating Analytics'}
+            {t('admin.analytics.sections.rating' as TranslationKey) || 'Rating Analytics'}
           </Text>
           <Text style={[styles.headerSubtitle, { color: subtextColor }]}>
-            {t('admin.analytics.sections.ratingsDesc' as TranslationKey) || 'Player ratings & reputation'}
+            {t('admin.analytics.sections.ratingDesc' as TranslationKey) ||
+              'Player ratings & reputation'}
           </Text>
         </View>
       </View>
@@ -256,7 +254,8 @@ export default function AdminRatingAnalyticsScreen() {
           <View style={styles.cardHeader}>
             <Ionicons name="stats-chart" size={20} color={primary[500]} />
             <Text style={[styles.cardTitle, { color: textColor }]}>
-              Rating Distribution
+              {t('admin.analytics.rating.ratingDistribution' as TranslationKey) ||
+                'Rating Distribution'}
             </Text>
           </View>
 
@@ -310,7 +309,8 @@ export default function AdminRatingAnalyticsScreen() {
               />
             ) : (
               <Text style={[styles.noDataText, { color: subtextColor }]}>
-                No data available
+                {t('admin.analytics.rating.noDataAvailable' as TranslationKey) ||
+                  'No data available'}
               </Text>
             )}
           </View>
@@ -318,11 +318,9 @@ export default function AdminRatingAnalyticsScreen() {
           {/* Legend */}
           {data?.ratingDistribution?.[selectedSportIndex] && (
             <View style={styles.legendContainer}>
-              {data.ratingDistribution[selectedSportIndex].buckets.map((bucket) => (
+              {data.ratingDistribution[selectedSportIndex].buckets.map(bucket => (
                 <View key={bucket.range} style={styles.legendItem}>
-                  <Text style={[styles.legendLabel, { color: subtextColor }]}>
-                    {bucket.range}
-                  </Text>
+                  <Text style={[styles.legendLabel, { color: subtextColor }]}>{bucket.range}</Text>
                   <Text style={[styles.legendValue, { color: textColor }]}>
                     {bucket.count} ({bucket.percentage}%)
                   </Text>
@@ -337,7 +335,8 @@ export default function AdminRatingAnalyticsScreen() {
           <View style={styles.cardHeader}>
             <Ionicons name="ribbon" size={20} color={primary[500]} />
             <Text style={[styles.cardTitle, { color: textColor }]}>
-              Certification Funnel
+              {t('admin.analytics.rating.certificationFunnel' as TranslationKey) ||
+                'Certification Funnel'}
             </Text>
           </View>
 
@@ -349,15 +348,12 @@ export default function AdminRatingAnalyticsScreen() {
                     styles.funnelBar,
                     {
                       width: `${step.percentage}%`,
-                      backgroundColor:
-                        certificationChartData[index]?.frontColor || primary[500],
+                      backgroundColor: certificationChartData[index]?.frontColor || primary[500],
                     },
                   ]}
                 />
                 <View style={styles.funnelLabels}>
-                  <Text style={[styles.funnelStageLabel, { color: textColor }]}>
-                    {step.stage}
-                  </Text>
+                  <Text style={[styles.funnelStageLabel, { color: textColor }]}>{step.stage}</Text>
                   <Text style={[styles.funnelValue, { color: subtextColor }]}>
                     {step.count.toLocaleString()} ({step.percentage}%)
                   </Text>
@@ -372,7 +368,8 @@ export default function AdminRatingAnalyticsScreen() {
           <View style={styles.cardHeader}>
             <Ionicons name="shield" size={20} color={primary[500]} />
             <Text style={[styles.cardTitle, { color: textColor }]}>
-              Reputation Distribution
+              {t('admin.analytics.rating.reputationDistribution' as TranslationKey) ||
+                'Reputation Distribution'}
             </Text>
           </View>
 
@@ -388,19 +385,16 @@ export default function AdminRatingAnalyticsScreen() {
                   centerLabelComponent={() => (
                     <View style={styles.pieCenterLabel}>
                       <Text style={[styles.pieCenterValue, { color: textColor }]}>
-                        {data?.reputationDistribution?.reduce(
-                          (sum, item) => sum + item.count,
-                          0
-                        )}
+                        {data?.reputationDistribution?.reduce((sum, item) => sum + item.count, 0)}
                       </Text>
                       <Text style={[styles.pieCenterSubtext, { color: subtextColor }]}>
-                        Total Users
+                        {t('admin.analytics.rating.totalUsers' as TranslationKey) || 'Total Users'}
                       </Text>
                     </View>
                   )}
                 />
                 <View style={styles.pieLegend}>
-                  {data?.reputationDistribution?.map((item) => (
+                  {data?.reputationDistribution?.map(item => (
                     <View key={item.tier} style={styles.pieLegendItem}>
                       <View
                         style={[
@@ -432,7 +426,8 @@ export default function AdminRatingAnalyticsScreen() {
               </>
             ) : (
               <Text style={[styles.noDataText, { color: subtextColor }]}>
-                No data available
+                {t('admin.analytics.rating.noDataAvailable' as TranslationKey) ||
+                  'No data available'}
               </Text>
             )}
           </View>
@@ -443,7 +438,8 @@ export default function AdminRatingAnalyticsScreen() {
           <View style={styles.cardHeader}>
             <Ionicons name="time" size={20} color={primary[500]} />
             <Text style={[styles.cardTitle, { color: textColor }]}>
-              Reputation Events
+              {t('admin.analytics.rating.reputationEvents' as TranslationKey) ||
+                'Reputation Events'}
             </Text>
           </View>
 
@@ -467,22 +463,27 @@ export default function AdminRatingAnalyticsScreen() {
               />
             ) : (
               <Text style={[styles.noDataText, { color: subtextColor }]}>
-                No data available
+                {t('admin.analytics.rating.noDataAvailable' as TranslationKey) ||
+                  'No data available'}
               </Text>
             )}
           </View>
 
           <View style={styles.lineChartLegend}>
             <View style={styles.lineChartLegendItem}>
-              <View style={[styles.lineChartLegendDot, { backgroundColor: status.success.DEFAULT }]} />
+              <View
+                style={[styles.lineChartLegendDot, { backgroundColor: status.success.DEFAULT }]}
+              />
               <Text style={[styles.lineChartLegendText, { color: subtextColor }]}>
-                Positive Events
+                {t('admin.analytics.rating.positiveEvents' as TranslationKey) || 'Positive Events'}
               </Text>
             </View>
             <View style={styles.lineChartLegendItem}>
-              <View style={[styles.lineChartLegendDot, { backgroundColor: status.error.DEFAULT }]} />
+              <View
+                style={[styles.lineChartLegendDot, { backgroundColor: status.error.DEFAULT }]}
+              />
               <Text style={[styles.lineChartLegendText, { color: subtextColor }]}>
-                Negative Events
+                {t('admin.analytics.rating.negativeEvents' as TranslationKey) || 'Negative Events'}
               </Text>
             </View>
           </View>
@@ -493,44 +494,53 @@ export default function AdminRatingAnalyticsScreen() {
           <View style={styles.cardHeader}>
             <Ionicons name="people" size={20} color={primary[500]} />
             <Text style={[styles.cardTitle, { color: textColor }]}>
-              Peer Rating Activity
+              {t('admin.analytics.rating.peerRatingActivity' as TranslationKey) ||
+                'Peer Rating Activity'}
             </Text>
           </View>
 
           <View style={styles.metricsGrid}>
-            <View style={[styles.metricBox, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}>
+            <View
+              style={[styles.metricBox, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}
+            >
               <Text style={[styles.metricValue, { color: textColor }]}>
                 {data?.peerRatingActivity?.requestsSent.toLocaleString()}
               </Text>
               <Text style={[styles.metricLabel, { color: subtextColor }]}>
-                Requests Sent
+                {t('admin.analytics.rating.requestsSent' as TranslationKey) || 'Requests Sent'}
               </Text>
             </View>
 
-            <View style={[styles.metricBox, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}>
+            <View
+              style={[styles.metricBox, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}
+            >
               <Text style={[styles.metricValue, { color: textColor }]}>
                 {data?.peerRatingActivity?.requestsCompleted.toLocaleString()}
               </Text>
               <Text style={[styles.metricLabel, { color: subtextColor }]}>
-                Completed
+                {t('admin.analytics.rating.requestsCompleted' as TranslationKey) || 'Completed'}
               </Text>
             </View>
 
-            <View style={[styles.metricBox, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}>
+            <View
+              style={[styles.metricBox, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}
+            >
               <Text style={[styles.metricValue, { color: primary[500] }]}>
                 {data?.peerRatingActivity?.completionRate.toFixed(1)}%
               </Text>
               <Text style={[styles.metricLabel, { color: subtextColor }]}>
-                Completion Rate
+                {t('admin.analytics.rating.completionRate' as TranslationKey) || 'Completion Rate'}
               </Text>
             </View>
 
-            <View style={[styles.metricBox, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}>
+            <View
+              style={[styles.metricBox, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}
+            >
               <Text style={[styles.metricValue, { color: secondary[500] }]}>
                 ±{data?.peerRatingActivity?.avgRatingDifference.toFixed(2)}
               </Text>
               <Text style={[styles.metricLabel, { color: subtextColor }]}>
-                Avg Rating Diff
+                {t('admin.analytics.rating.avgRatingDiff' as TranslationKey) || 'Avg Rating Diff'}
               </Text>
             </View>
 
@@ -545,7 +555,8 @@ export default function AdminRatingAnalyticsScreen() {
                 {data?.peerRatingActivity?.referenceSupportRate.toFixed(1)}%
               </Text>
               <Text style={[styles.metricLabel, { color: subtextColor }]}>
-                Reference Support Rate
+                {t('admin.analytics.rating.referenceSupportRate' as TranslationKey) ||
+                  'Reference Support Rate'}
               </Text>
             </View>
           </View>
@@ -554,25 +565,40 @@ export default function AdminRatingAnalyticsScreen() {
         {/* Key Insights */}
         <View style={[styles.summaryCard, { backgroundColor: `${primary[500]}15` }]}>
           <Text style={[styles.summaryTitle, { color: primary[700] }]}>
-            Key Insights
+            {t('admin.analytics.rating.keyInsights' as TranslationKey) || 'Key Insights'}
           </Text>
           <View style={styles.insightsList}>
             <View style={styles.insightItem}>
               <Ionicons name="checkmark-circle" size={20} color={status.success.DEFAULT} />
               <Text style={[styles.insightText, { color: textColor }]}>
-                {`${data?.certificationFunnel?.find((s) => s.stage === 'Proof Submitted')?.percentage || 0}% of users have submitted rating proofs`}
+                {t('admin.analytics.rating.insightCertification' as TranslationKey, {
+                  percentage:
+                    data?.certificationFunnel?.find(s => s.stage === 'Proof Submitted')
+                      ?.percentage || 0,
+                }) ||
+                  `${data?.certificationFunnel?.find(s => s.stage === 'Proof Submitted')?.percentage || 0}% of users have submitted rating proofs`}
               </Text>
             </View>
             <View style={styles.insightItem}>
               <Ionicons name="trending-up" size={20} color={primary[500]} />
               <Text style={[styles.insightText, { color: textColor }]}>
-                {`${((data?.reputationDistribution?.find((r) => r.tier === 'excellent')?.percentage || 0) + (data?.reputationDistribution?.find((r) => r.tier === 'good')?.percentage || 0)).toFixed(1)}% of users have good or excellent reputation`}
+                {t('admin.analytics.rating.insightReputation' as TranslationKey, {
+                  percentage: (
+                    (data?.reputationDistribution?.find(r => r.tier === 'excellent')?.percentage ||
+                      0) +
+                    (data?.reputationDistribution?.find(r => r.tier === 'good')?.percentage || 0)
+                  ).toFixed(1),
+                }) ||
+                  `${((data?.reputationDistribution?.find(r => r.tier === 'excellent')?.percentage || 0) + (data?.reputationDistribution?.find(r => r.tier === 'good')?.percentage || 0)).toFixed(1)}% of users have good or excellent reputation`}
               </Text>
             </View>
             <View style={styles.insightItem}>
               <Ionicons name="star" size={20} color={status.warning.DEFAULT} />
               <Text style={[styles.insightText, { color: textColor }]}>
-                {`Peer rating completion rate: ${data?.peerRatingActivity?.completionRate.toFixed(1) || 0}%`}
+                {t('admin.analytics.rating.insightPeerRating' as TranslationKey, {
+                  rate: data?.peerRatingActivity?.completionRate.toFixed(1) || 0,
+                }) ||
+                  `Peer rating completion rate: ${data?.peerRatingActivity?.completionRate.toFixed(1) || 0}%`}
               </Text>
             </View>
           </View>
@@ -795,7 +821,9 @@ const styles = StyleSheet.create({
   },
   metricBox: {
     flex: 1,
-    minWidth: (screenWidth - spacingPixels[4] * 2 - spacingPixels[4] * 2 - spacingPixels[2]) / 2 - spacingPixels[2],
+    minWidth:
+      (screenWidth - spacingPixels[4] * 2 - spacingPixels[4] * 2 - spacingPixels[2]) / 2 -
+      spacingPixels[2],
     borderRadius: radiusPixels.md,
     padding: spacingPixels[3],
     alignItems: 'center',

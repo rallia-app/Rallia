@@ -6,13 +6,7 @@
  */
 
 import React, { useMemo, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-} from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -21,20 +15,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme, useAnalyticsTimeRange, type TimeRangeOption } from '@rallia/shared-hooks';
 import { useTranslation } from '../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
-import {
-  Text,
-  TimeRangeSelector,
-  LineChart,
-  BarChart,
-  PieChart,
-} from '@rallia/shared-components';
-import {
-  primary,
-  neutral,
-  status,
-  spacingPixels,
-  radiusPixels,
-} from '@rallia/design-system';
+import { Text, TimeRangeSelector, LineChart, BarChart, PieChart } from '@rallia/shared-components';
+import { primary, neutral, status, spacingPixels, radiusPixels } from '@rallia/design-system';
 import {
   getMessageVolume,
   getConversationHealth,
@@ -182,7 +164,7 @@ const AdminMessagingAnalyticsScreen: React.FC = () => {
 
   // Transform message volume for stacked area chart using LineChart
   const totalMessageChartData = useMemo(() => {
-    return messageVolume.map((volume) => ({
+    return messageVolume.map(volume => ({
       label: volume.date.slice(5), // MM-DD
       value: volume.totalMessages,
     }));
@@ -210,14 +192,17 @@ const AdminMessagingAnalyticsScreen: React.FC = () => {
 
   // Engagement distribution for BarChart
   const engagementChartData = useMemo(() => {
-    return engagementDist.map((bucket) => ({
+    return engagementDist.map(bucket => ({
       label: bucket.bucket,
       value: bucket.userCount,
     }));
   }, [engagementDist]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['top']}
+    >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
@@ -247,7 +232,7 @@ const AdminMessagingAnalyticsScreen: React.FC = () => {
         <View style={styles.timeRangeContainer}>
           <TimeRangeSelector
             value={selectedOption}
-            onChange={(range) => setRange(range as TimeRangeOption)}
+            onChange={range => setRange(range as TimeRangeOption)}
             options={[
               { value: '7d', label: '7D', days: 7 },
               { value: '30d', label: '30D', days: 30 },
@@ -355,9 +340,9 @@ const AdminMessagingAnalyticsScreen: React.FC = () => {
           </Text>
           {messageTypeData.length > 0 ? (
             <View style={styles.pieChartContainer}>
-              <PieChart data={messageTypeData} radius={80} showLegend innerRadius={40} />
+              <PieChart data={messageTypeData} radius={80} showLegend={false} innerRadius={40} />
               <View style={styles.messageTypeLegend}>
-                {messageTypeData.map((type) => (
+                {messageTypeData.map(type => (
                   <View key={type.label} style={styles.legendItem}>
                     <View style={[styles.legendDot, { backgroundColor: type.color }]} />
                     <Text style={[styles.legendLabel, { color: colors.text }]}>{type.label}</Text>
@@ -526,7 +511,9 @@ const AdminMessagingAnalyticsScreen: React.FC = () => {
           <View style={[styles.engagementStats, { borderTopColor: colors.border }]}>
             {engagementDist.map((bucket, index) => (
               <View key={bucket.bucket} style={styles.engagementStatItem}>
-                <View style={[styles.engagementDot, { backgroundColor: getEngagementColor(index) }]} />
+                <View
+                  style={[styles.engagementDot, { backgroundColor: getEngagementColor(index) }]}
+                />
                 <Text style={[styles.engagementLabel, { color: colors.textSecondary }]}>
                   {bucket.bucket}
                 </Text>
@@ -595,7 +582,12 @@ const AdminMessagingAnalyticsScreen: React.FC = () => {
                     </Text>
                   </View>
                 </View>
-                <View style={[styles.adoptionAvgContainer, { backgroundColor: isDark ? neutral[800] : neutral[100] }]}>
+                <View
+                  style={[
+                    styles.adoptionAvgContainer,
+                    { backgroundColor: isDark ? neutral[800] : neutral[100] },
+                  ]}
+                >
                   <Ionicons name="chatbubble" size={16} color={status.warning.DEFAULT} />
                   <Text style={[styles.adoptionAvgText, { color: colors.text }]}>
                     {matchChatAdoption.avgMessagesPerMatch.toFixed(1)} avg messages/match

@@ -22,20 +22,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme, useAnalyticsTimeRange, type TimeRangeOption } from '@rallia/shared-hooks';
 import { useTranslation } from '../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
-import {
-  Text,
-  TimeRangeSelector,
-  LineChart,
-  PieChart,
-  BarChart,
-} from '@rallia/shared-components';
-import {
-  primary,
-  neutral,
-  status,
-  spacingPixels,
-  radiusPixels,
-} from '@rallia/design-system';
+import { Text, TimeRangeSelector, LineChart, PieChart, BarChart } from '@rallia/shared-components';
+import { primary, neutral, status, spacingPixels, radiusPixels } from '@rallia/design-system';
 import {
   getUserGrowthTrend,
   getRetentionCohort,
@@ -114,13 +102,13 @@ function useUserAnalytics(selectedOption: TimeRangeOption) {
       if (growthResult && growthResult.length > 0) {
         setUserGrowth(
           growthResult.map((point: UserGrowthTrend) => ({
-            date: point.periodStart,
+            date: point.periodStart ? String(point.periodStart) : '',
             value: point.newUsers,
           }))
         );
         setCumulativeUsers(
           growthResult.map((point: UserGrowthTrend) => ({
-            date: point.periodStart,
+            date: point.periodStart ? String(point.periodStart) : '',
             value: point.cumulativeUsers,
           }))
         );
@@ -248,16 +236,14 @@ const AdminUserAnalyticsScreen: React.FC = () => {
     return sportDistribution.map((sport, index) => ({
       label: sport.sportName,
       value: sport.userCount,
-      color: [primary[500], status.success.DEFAULT, status.warning.DEFAULT, '#8B5CF6'][
-        index % 4
-      ],
+      color: [primary[500], status.success.DEFAULT, status.warning.DEFAULT, '#8B5CF6'][index % 4],
     }));
   }, [sportDistribution]);
 
   // Group retention data for matrix display
   const retentionMatrix = useMemo(() => {
     const matrix: Map<string, Map<number, number>> = new Map();
-    retentionData.forEach((item) => {
+    retentionData.forEach(item => {
       if (!matrix.has(item.cohortWeek)) {
         matrix.set(item.cohortWeek, new Map());
       }
@@ -267,7 +253,10 @@ const AdminUserAnalyticsScreen: React.FC = () => {
   }, [retentionData]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['top']}
+    >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
@@ -295,7 +284,7 @@ const AdminUserAnalyticsScreen: React.FC = () => {
         <View style={styles.timeRangeContainer}>
           <TimeRangeSelector
             value={selectedOption}
-            onChange={(range) => setRange(range as TimeRangeOption)}
+            onChange={range => setRange(range as TimeRangeOption)}
             options={[
               { value: '7d', label: '7D', days: 7 },
               { value: '30d', label: '30D', days: 30 },
@@ -365,7 +354,10 @@ const AdminUserAnalyticsScreen: React.FC = () => {
               <View style={[styles.chartCard, { backgroundColor: colors.surface }]}>
                 <LineChart
                   data={cumulativeUsers}
-                  title={t('admin.analytics.userGrowth.cumulativeUsers' as TranslationKey) || 'Total Users Over Time'}
+                  title={
+                    t('admin.analytics.userGrowth.cumulativeUsers' as TranslationKey) ||
+                    'Total Users Over Time'
+                  }
                   subtitle="Cumulative user growth"
                   showArea
                   curved
@@ -379,18 +371,59 @@ const AdminUserAnalyticsScreen: React.FC = () => {
             {/* Daily New Users */}
             {userGrowth.length > 0 && (
               <View style={[styles.chartCard, { backgroundColor: colors.surface }]}>
-                <BarChart
-                  data={userGrowth.slice(-14).map((item) => ({
-                    label: new Date(item.date).toLocaleDateString('en-US', {
-                      weekday: 'short',
-                    }),
-                    value: item.value,
-                  }))}
-                  title={t('admin.analytics.userGrowth.newUsers' as TranslationKey) || 'New Users'}
-                  subtitle="Daily registrations (last 14 days)"
-                  showValues
-                  animated
-                />
+                {/* Use LineChart for longer periods (90D, YTD), BarChart for shorter */}
+                {selectedOption === '90d' || selectedOption === 'ytd' ? (
+                  <LineChart
+                    data={userGrowth.map(item => {
+                      const dateObj = item.date ? new Date(item.date) : null;
+                      const isValidDate = dateObj && !isNaN(dateObj.getTime());
+                      return {
+                        label: isValidDate
+                          ? `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}`
+                          : item.date || '',
+                        value: item.value,
+                      };
+                    })}
+                    title={
+                      t('admin.analytics.userGrowth.newUsers' as TranslationKey) || 'New Users'
+                    }
+                    subtitle={
+                      selectedOption === 'ytd'
+                        ? 'Year to date registrations'
+                        : 'Last 90 days registrations'
+                    }
+                    curved
+                    showDataPoints
+                    showXAxisLabels
+                    animated
+                    height={220}
+                  />
+                ) : (
+                  <BarChart
+                    data={userGrowth.slice(selectedOption === '30d' ? -30 : -7).map(item => {
+                      const dateObj = item.date ? new Date(item.date) : null;
+                      const isValidDate = dateObj && !isNaN(dateObj.getTime());
+                      return {
+                        label: isValidDate
+                          ? `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}`
+                          : item.date || '',
+                        value: item.value,
+                      };
+                    })}
+                    title={
+                      t('admin.analytics.userGrowth.newUsers' as TranslationKey) || 'New Users'
+                    }
+                    subtitle={
+                      selectedOption === '30d'
+                        ? 'Last 30 days registrations'
+                        : 'Last 7 days registrations'
+                    }
+                    showValues={selectedOption !== '30d'}
+                    animated
+                    barWidth={selectedOption === '30d' ? 8 : 28}
+                    spacing={selectedOption === '30d' ? 4 : 16}
+                  />
+                )}
               </View>
             )}
 
@@ -399,7 +432,10 @@ const AdminUserAnalyticsScreen: React.FC = () => {
               <View style={[styles.chartCard, { backgroundColor: colors.surface }]}>
                 <PieChart
                   data={sportChartData}
-                  title={t('admin.analytics.sportDistribution.title' as TranslationKey) || 'Sport Distribution'}
+                  title={
+                    t('admin.analytics.sportDistribution.title' as TranslationKey) ||
+                    'Sport Distribution'
+                  }
                   subtitle="Users by preferred sport"
                   donut
                   centerLabel="Users"
@@ -432,7 +468,7 @@ const AdminUserAnalyticsScreen: React.FC = () => {
                         Cohort
                       </Text>
                     </View>
-                    {[0, 1, 2, 3, 4].map((week) => (
+                    {[0, 1, 2, 3, 4].map(week => (
                       <View key={week} style={[styles.retentionCell, styles.retentionHeaderCell]}>
                         <Text style={[styles.retentionHeaderText, { color: colors.textSecondary }]}>
                           W{week}
@@ -456,7 +492,7 @@ const AdminUserAnalyticsScreen: React.FC = () => {
                             })}
                           </Text>
                         </View>
-                        {[0, 1, 2, 3, 4].map((weekNum) => {
+                        {[0, 1, 2, 3, 4].map(weekNum => {
                           const rate = weeks.get(weekNum);
                           const bgOpacity = rate ? rate / 100 : 0;
                           return (

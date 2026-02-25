@@ -17,15 +17,10 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, ViewStyle, Dimensions } from 'react-native';
 import { BarChart as GiftedBarChart } from 'react-native-gifted-charts';
 import { useTheme } from '@rallia/shared-hooks';
-import {
-  primary,
-  neutral,
-  spacingPixels,
-  radiusPixels,
-} from '@rallia/design-system';
+import { primary, neutral, spacingPixels, radiusPixels } from '@rallia/design-system';
 
 export interface BarChartDataPoint {
   /** Bar label (x-axis) */
@@ -148,22 +143,31 @@ export const BarChart: React.FC<BarChartProps> = ({
     [isDark, barColor, gradientColor]
   );
 
+  // Calculate chart width based on screen if not provided
+  const screenWidth = Dimensions.get('window').width;
+  const chartWidth = width || screenWidth - 80; // Account for padding
+
   // Transform data for gifted-charts
   const chartData = useMemo(() => {
+    // For large datasets, show labels only at intervals to avoid crowding
+    const labelInterval = data.length > 20 ? 5 : data.length > 10 ? 2 : 1;
+
     return data.map((item, index) => ({
       value: item.value,
-      label: item.label,
+      // Always include the label text, gifted-charts will handle display
+      label: index % labelInterval === 0 ? item.label || '' : '',
+      labelTextStyle: {
+        color: colors.textSecondary,
+        fontSize: data.length > 15 ? 8 : 10,
+        width: data.length > 15 ? 30 : 45,
+      },
       frontColor: item.color || colors.bar,
       gradientColor: item.gradientColor || colors.gradient,
       topLabelComponent: showValues
         ? () => (
-            <Text
-              style={[
-                styles.valueLabel,
-                { color: colors.textSecondary },
-              ]}
-            >
-              {formatValue(item.value)}{valueSuffix}
+            <Text style={[styles.valueLabel, { color: colors.textSecondary }]}>
+              {formatValue(item.value)}
+              {valueSuffix}
             </Text>
           )
         : undefined,
@@ -174,7 +178,7 @@ export const BarChart: React.FC<BarChartProps> = ({
   // Calculate max value if not provided
   const calculatedMaxValue = useMemo(() => {
     if (maxValue) return maxValue;
-    const max = Math.max(...data.map((d) => d.value));
+    const max = Math.max(...data.map(d => d.value));
     // Round up to nearest nice number
     const magnitude = Math.pow(10, Math.floor(Math.log10(max)));
     return Math.ceil(max / magnitude) * magnitude;
@@ -185,13 +189,9 @@ export const BarChart: React.FC<BarChartProps> = ({
       {/* Header */}
       {(title || subtitle) && (
         <View style={styles.header}>
-          {title && (
-            <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
-          )}
+          {title && <Text style={[styles.title, { color: colors.text }]}>{title}</Text>}
           {subtitle && (
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-              {subtitle}
-            </Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
           )}
         </View>
       )}
@@ -200,7 +200,7 @@ export const BarChart: React.FC<BarChartProps> = ({
       <View style={styles.chartContainer}>
         <GiftedBarChart
           data={chartData}
-          width={width}
+          width={chartWidth}
           height={height}
           barWidth={barWidth}
           spacing={spacing}
@@ -210,7 +210,7 @@ export const BarChart: React.FC<BarChartProps> = ({
           maxValue={calculatedMaxValue}
           noOfSections={noOfSections}
           yAxisTextStyle={{ color: colors.textSecondary, fontSize: 10 }}
-          xAxisLabelTextStyle={{ color: colors.textSecondary, fontSize: 10 }}
+          xAxisLabelTextStyle={{ color: colors.textSecondary, fontSize: data.length > 15 ? 8 : 10 }}
           yAxisColor={showYAxis ? colors.axis : 'transparent'}
           xAxisColor={showXAxis ? colors.axis : 'transparent'}
           rulesColor={showGrid ? colors.grid : 'transparent'}
@@ -218,10 +218,17 @@ export const BarChart: React.FC<BarChartProps> = ({
           isAnimated={animated}
           animationDuration={500}
           horizontal={horizontal}
-          disableScroll={data.length <= 6}
-          showScrollIndicator={false}
-          initialSpacing={10}
-          endSpacing={10}
+          disableScroll={data.length <= 10}
+          showScrollIndicator={data.length > 10}
+          initialSpacing={15}
+          endSpacing={15}
+          rotateLabel={data.length > 7}
+          labelsExtraHeight={data.length > 7 ? 20 : 10}
+          xAxisLabelsHeight={data.length > 7 ? 60 : 35}
+          xAxisLabelsVerticalShift={3}
+          showXAxisIndices={true}
+          xAxisIndicesColor={colors.axis}
+          xAxisIndicesHeight={4}
         />
       </View>
     </View>

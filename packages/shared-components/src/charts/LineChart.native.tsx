@@ -17,16 +17,10 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, ViewStyle, Dimensions } from 'react-native';
 import { LineChart as GiftedLineChart } from 'react-native-gifted-charts';
 import { useTheme } from '@rallia/shared-hooks';
-import {
-  primary,
-  neutral,
-  status,
-  spacingPixels,
-  radiusPixels,
-} from '@rallia/design-system';
+import { primary, neutral, status, spacingPixels, radiusPixels } from '@rallia/design-system';
 
 export interface LineChartDataPoint {
   /** Date string or timestamp */
@@ -196,20 +190,35 @@ export const LineChart: React.FC<LineChartProps> = ({
     [isDark, lineColor, areaColor]
   );
 
+  // Calculate chart width based on screen if not provided
+  const screenWidth = Dimensions.get('window').width;
+  const chartWidth = width || screenWidth - 80; // Account for padding
+
   // Transform single data to chart format
   const chartData = useMemo(() => {
     if (!data) return [];
 
+    // For large datasets, show labels only at intervals to avoid crowding
+    const labelInterval = data.length > 60 ? 10 : data.length > 30 ? 5 : data.length > 14 ? 2 : 1;
+
     return data.map((item, index) => ({
       value: item.value,
-      label: item.label || formatXLabel?.(item.date || '') || formatDateLabel(item.date),
+      label:
+        index % labelInterval === 0
+          ? item.label || formatXLabel?.(item.date || '') || formatDateLabel(item.date)
+          : '',
+      labelTextStyle: {
+        color: colors.textSecondary,
+        fontSize: data.length > 30 ? 8 : 10,
+        width: data.length > 30 ? 35 : 45,
+      },
       dataPointText: showDataPoints && item.dataPointLabel ? item.dataPointLabel : undefined,
       onPress: () => {
         setHoveredPoint({ value: item.value, label: item.label || item.date || '' });
         onDataPointPress?.(item, index);
       },
     }));
-  }, [data, formatXLabel, showDataPoints, onDataPointPress]);
+  }, [data, formatXLabel, showDataPoints, onDataPointPress, colors.textSecondary]);
 
   // For multiple series, we need to render multiple lines
   // gifted-charts supports this with data + data2 props
@@ -218,12 +227,13 @@ export const LineChart: React.FC<LineChartProps> = ({
       return { primaryData: chartData, secondaryData: undefined };
     }
 
-    const primary = series[0]?.data.map((item) => ({
-      value: item.value,
-      label: item.label || formatXLabel?.(item.date || '') || formatDateLabel(item.date),
-    })) || [];
+    const primary =
+      series[0]?.data.map(item => ({
+        value: item.value,
+        label: item.label || formatXLabel?.(item.date || '') || formatDateLabel(item.date),
+      })) || [];
 
-    const secondary = series[1]?.data.map((item) => ({
+    const secondary = series[1]?.data.map(item => ({
       value: item.value,
     }));
 
@@ -232,8 +242,8 @@ export const LineChart: React.FC<LineChartProps> = ({
 
   // Calculate bounds
   const allValues = useMemo(() => {
-    if (data) return data.map((d) => d.value);
-    if (series) return series.flatMap((s) => s.data.map((d) => d.value));
+    if (data) return data.map(d => d.value);
+    if (series) return series.flatMap(s => s.data.map(d => d.value));
     return [0];
   }, [data, series]);
 
@@ -248,13 +258,9 @@ export const LineChart: React.FC<LineChartProps> = ({
       {/* Header */}
       {(title || subtitle) && (
         <View style={styles.header}>
-          {title && (
-            <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
-          )}
+          {title && <Text style={[styles.title, { color: colors.text }]}>{title}</Text>}
           {subtitle && (
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-              {subtitle}
-            </Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
           )}
         </View>
       )}
@@ -271,7 +277,9 @@ export const LineChart: React.FC<LineChartProps> = ({
           ]}
         >
           <Text style={[styles.tooltipValue, { color: colors.text }]}>
-            {valuePrefix}{formatValue(hoveredPoint.value)}{valueSuffix}
+            {valuePrefix}
+            {formatValue(hoveredPoint.value)}
+            {valueSuffix}
           </Text>
           <Text style={[styles.tooltipLabel, { color: colors.textSecondary }]}>
             {hoveredPoint.label}
@@ -285,14 +293,9 @@ export const LineChart: React.FC<LineChartProps> = ({
           {series.map((s, index) => (
             <View key={s.id} style={styles.legendItem}>
               <View
-                style={[
-                  styles.legendColor,
-                  { backgroundColor: s.color || SERIES_COLORS[index] },
-                ]}
+                style={[styles.legendColor, { backgroundColor: s.color || SERIES_COLORS[index] }]}
               />
-              <Text style={[styles.legendText, { color: colors.textSecondary }]}>
-                {s.name}
-              </Text>
+              <Text style={[styles.legendText, { color: colors.textSecondary }]}>{s.name}</Text>
             </View>
           ))}
         </View>
@@ -303,7 +306,7 @@ export const LineChart: React.FC<LineChartProps> = ({
         <GiftedLineChart
           data={primaryData}
           data2={secondaryData}
-          width={width}
+          width={chartWidth}
           height={height}
           color={primaryColor}
           color2={secondaryColor}
@@ -322,7 +325,10 @@ export const LineChart: React.FC<LineChartProps> = ({
           maxValue={calculatedMaxValue}
           noOfSections={noOfSections}
           yAxisTextStyle={{ color: colors.textSecondary, fontSize: 10 }}
-          xAxisLabelTextStyle={{ color: colors.textSecondary, fontSize: 9 }}
+          xAxisLabelTextStyle={{
+            color: colors.textSecondary,
+            fontSize: primaryData.length > 30 ? 8 : 10,
+          }}
           yAxisColor={showYAxisLabels ? colors.axis : 'transparent'}
           xAxisColor={showXAxisLabels ? colors.axis : 'transparent'}
           rulesColor={showGrid ? colors.grid : 'transparent'}
@@ -333,11 +339,18 @@ export const LineChart: React.FC<LineChartProps> = ({
           dataPointsColor2={secondaryColor}
           isAnimated={animated}
           animationDuration={800}
-          initialSpacing={15}
-          endSpacing={15}
-          spacing={width ? width / (primaryData.length + 1) : 50}
+          initialSpacing={20}
+          endSpacing={20}
+          spacing={Math.max(15, chartWidth / (primaryData.length + 1))}
           hideYAxisText={!showYAxisLabels}
           showVerticalLines={false}
+          rotateLabel={primaryData.length > 10}
+          labelsExtraHeight={primaryData.length > 10 ? 20 : 10}
+          xAxisLabelsHeight={primaryData.length > 10 ? 60 : 35}
+          xAxisLabelsVerticalShift={3}
+          showXAxisIndices={true}
+          xAxisIndicesColor={colors.axis}
+          xAxisIndicesHeight={4}
         />
       </View>
     </View>

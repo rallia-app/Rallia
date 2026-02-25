@@ -21,13 +21,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ViewStyle, TouchableOpacity } from 'react-native';
 import { PieChart as GiftedPieChart } from 'react-native-gifted-charts';
 import { useTheme } from '@rallia/shared-hooks';
-import {
-  primary,
-  neutral,
-  status,
-  spacingPixels,
-  radiusPixels,
-} from '@rallia/design-system';
+import { primary, neutral, status, spacingPixels, radiusPixels } from '@rallia/design-system';
 
 export interface PieChartDataPoint {
   /** Segment label */
@@ -172,7 +166,16 @@ export const PieChart: React.FC<PieChartProps> = ({
         textBackgroundColor: 'transparent',
       };
     });
-  }, [data, selectedIndex, focusedIndex, showGradient, showPercentages, showValues, total, onSegmentPress]);
+  }, [
+    data,
+    selectedIndex,
+    focusedIndex,
+    showGradient,
+    showPercentages,
+    showValues,
+    total,
+    onSegmentPress,
+  ]);
 
   // Donut inner radius
   const effectiveInnerRadius = donut ? (innerRadius ?? radius * 0.55) : 0;
@@ -182,24 +185,15 @@ export const PieChart: React.FC<PieChartProps> = ({
       {/* Header */}
       {(title || subtitle) && (
         <View style={styles.header}>
-          {title && (
-            <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
-          )}
+          {title && <Text style={[styles.title, { color: colors.text }]}>{title}</Text>}
           {subtitle && (
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-              {subtitle}
-            </Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
           )}
         </View>
       )}
 
       {/* Chart and Legend */}
-      <View
-        style={[
-          styles.chartArea,
-          legendPosition === 'right' && styles.chartAreaRow,
-        ]}
-      >
+      <View style={[styles.chartArea, legendPosition === 'right' && styles.chartAreaRow]}>
         {/* Pie Chart */}
         <View style={styles.pieContainer}>
           <GiftedPieChart
@@ -237,12 +231,7 @@ export const PieChart: React.FC<PieChartProps> = ({
 
         {/* Legend */}
         {showLegend && (
-          <View
-            style={[
-              styles.legend,
-              legendPosition === 'right' && styles.legendRight,
-            ]}
-          >
+          <View style={[styles.legend, legendPosition === 'right' && styles.legendRight]}>
             {data.map((item, index) => {
               const segmentColor = item.color || DEFAULT_COLORS[index % DEFAULT_COLORS.length];
               const percentage = ((item.value / total) * 100).toFixed(1);
@@ -251,10 +240,7 @@ export const PieChart: React.FC<PieChartProps> = ({
               return (
                 <TouchableOpacity
                   key={item.label}
-                  style={[
-                    styles.legendItem,
-                    isSelected && styles.legendItemSelected,
-                  ]}
+                  style={[styles.legendItem, isSelected && styles.legendItemSelected]}
                   onPress={() => {
                     setSelectedIndex(isSelected ? null : index);
                     onSegmentPress?.(item, index);
@@ -264,7 +250,11 @@ export const PieChart: React.FC<PieChartProps> = ({
                   <View
                     style={[
                       styles.legendColor,
-                      { backgroundColor: segmentColor },
+                      {
+                        backgroundColor: segmentColor,
+                        borderWidth: 1,
+                        borderColor: segmentColor,
+                      },
                     ]}
                   />
                   <View style={styles.legendTextContainer}>
@@ -275,10 +265,14 @@ export const PieChart: React.FC<PieChartProps> = ({
                         isSelected && styles.legendLabelSelected,
                       ]}
                       numberOfLines={1}
+                      ellipsizeMode="tail"
                     >
-                      {item.label}
+                      {item.label || `Item ${index + 1}`}
                     </Text>
-                    <Text style={[styles.legendValue, { color: colors.textSecondary }]}>
+                    <Text
+                      style={[styles.legendValue, { color: colors.textSecondary }]}
+                      numberOfLines={1}
+                    >
                       {formatValue(item.value)} ({percentage}%)
                     </Text>
                   </View>
@@ -308,7 +302,10 @@ function lightenColor(hex: string, amount: number): string {
   const cleanHex = hex.replace('#', '');
   const num = parseInt(cleanHex, 16);
   const r = Math.min(255, Math.floor((num >> 16) + (255 - (num >> 16)) * amount));
-  const g = Math.min(255, Math.floor(((num >> 8) & 0x00ff) + (255 - ((num >> 8) & 0x00ff)) * amount));
+  const g = Math.min(
+    255,
+    Math.floor(((num >> 8) & 0x00ff) + (255 - ((num >> 8) & 0x00ff)) * amount)
+  );
   const b = Math.min(255, Math.floor((num & 0x0000ff) + (255 - (num & 0x0000ff)) * amount));
   return `#${(0x1000000 + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
 }
@@ -332,11 +329,13 @@ const styles = StyleSheet.create({
   },
   chartArea: {
     alignItems: 'center',
+    width: '100%',
   },
   chartAreaRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'center',
+    width: '100%',
   },
   pieContainer: {
     alignItems: 'center',
@@ -359,11 +358,15 @@ const styles = StyleSheet.create({
   legend: {
     marginTop: spacingPixels[4],
     gap: spacingPixels[2],
+    alignSelf: 'stretch',
+    width: '100%',
   },
   legendRight: {
     marginTop: 0,
     marginLeft: spacingPixels[6],
     justifyContent: 'center',
+    alignSelf: 'auto',
+    width: 'auto',
   },
   legendItem: {
     flexDirection: 'row',
@@ -371,22 +374,28 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[1],
     paddingHorizontal: spacingPixels[2],
     borderRadius: radiusPixels.sm,
+    marginBottom: spacingPixels[1],
   },
   legendItemSelected: {
     backgroundColor: `${primary[500]}15`,
   },
   legendColor: {
-    width: 12,
-    height: 12,
-    borderRadius: 2,
+    width: 14,
+    height: 14,
+    minWidth: 14,
+    minHeight: 14,
+    borderRadius: 3,
     marginRight: spacingPixels[3],
+    flexShrink: 0,
   },
   legendTextContainer: {
     flex: 1,
+    flexShrink: 1,
   },
   legendLabel: {
     fontSize: 13,
     fontWeight: '500',
+    flexWrap: 'wrap',
   },
   legendLabelSelected: {
     fontWeight: '600',

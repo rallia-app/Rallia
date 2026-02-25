@@ -299,10 +299,34 @@ export async function getOnboardingFunnel(days: number = 30): Promise<Onboarding
 function getDefaultOnboardingFunnel(): OnboardingFunnelStep[] {
   return [
     { screenName: 'welcome', totalViews: 0, completions: 0, completionRate: 0, avgTimeSeconds: 0 },
-    { screenName: 'personal_info', totalViews: 0, completions: 0, completionRate: 0, avgTimeSeconds: 0 },
-    { screenName: 'sport_selection', totalViews: 0, completions: 0, completionRate: 0, avgTimeSeconds: 0 },
-    { screenName: 'skill_level', totalViews: 0, completions: 0, completionRate: 0, avgTimeSeconds: 0 },
-    { screenName: 'availability', totalViews: 0, completions: 0, completionRate: 0, avgTimeSeconds: 0 },
+    {
+      screenName: 'personal_info',
+      totalViews: 0,
+      completions: 0,
+      completionRate: 0,
+      avgTimeSeconds: 0,
+    },
+    {
+      screenName: 'sport_selection',
+      totalViews: 0,
+      completions: 0,
+      completionRate: 0,
+      avgTimeSeconds: 0,
+    },
+    {
+      screenName: 'skill_level',
+      totalViews: 0,
+      completions: 0,
+      completionRate: 0,
+      avgTimeSeconds: 0,
+    },
+    {
+      screenName: 'availability',
+      totalViews: 0,
+      completions: 0,
+      completionRate: 0,
+      avgTimeSeconds: 0,
+    },
     { screenName: 'location', totalViews: 0, completions: 0, completionRate: 0, avgTimeSeconds: 0 },
     { screenName: 'complete', totalViews: 0, completions: 0, completionRate: 0, avgTimeSeconds: 0 },
   ];
@@ -499,7 +523,10 @@ export async function getAnalyticsSnapshots(params: {
 /**
  * Build dashboard widgets from KPI data
  */
-export function buildDashboardWidgets(kpi: KPISummary, trends?: Record<string, MetricTrendPoint[]>): DashboardWidget[] {
+export function buildDashboardWidgets(
+  kpi: KPISummary,
+  trends?: Record<string, MetricTrendPoint[]>
+): DashboardWidget[] {
   const widgets: DashboardWidget[] = [];
 
   // Total Users widget
@@ -545,9 +572,10 @@ export function buildDashboardWidgets(kpi: KPISummary, trends?: Record<string, M
   });
 
   // Completion Rate widget
-  const completionRate = kpi.matches.totalMatches > 0
-    ? Math.round((kpi.matches.completedMatches / kpi.matches.totalMatches) * 100)
-    : 0;
+  const completionRate =
+    kpi.matches.totalMatches > 0
+      ? Math.round((kpi.matches.completedMatches / kpi.matches.totalMatches) * 100)
+      : 0;
   widgets.push({
     id: 'completion-rate',
     title: 'Match Completion Rate',
@@ -574,7 +602,9 @@ export function buildDashboardWidgets(kpi: KPISummary, trends?: Record<string, M
  * Get trend data for all dashboard widgets
  * This fetches historical data to show trends in sparklines
  */
-export async function getWidgetTrends(days: number = 7): Promise<Record<string, MetricTrendPoint[]>> {
+export async function getWidgetTrends(
+  days: number = 7
+): Promise<Record<string, MetricTrendPoint[]>> {
   const trends: Record<string, MetricTrendPoint[]> = {};
 
   try {
@@ -769,9 +799,10 @@ async function getCompletionRateTrend(days: number): Promise<MetricTrendPoint[]>
         .lt('match_date', nextDate.toISOString().split('T')[0])
         .not('closed_at', 'is', null);
 
-      const rate = totalMatches && totalMatches > 0
-        ? Math.round((completedMatches || 0) / totalMatches * 100)
-        : 0;
+      const rate =
+        totalMatches && totalMatches > 0
+          ? Math.round(((completedMatches || 0) / totalMatches) * 100)
+          : 0;
 
       points.push({
         date: dateStr,
@@ -892,9 +923,7 @@ export async function getOnboardingFunnelRPC(
 /**
  * Get user retention cohort data via RPC
  */
-export async function getRetentionCohort(
-  cohortWeeks: number = 12
-): Promise<RetentionCohort[]> {
+export async function getRetentionCohort(cohortWeeks: number = 12): Promise<RetentionCohort[]> {
   try {
     const { data, error } = await supabase.rpc('get_retention_cohort', {
       p_cohort_weeks: cohortWeeks,
@@ -1002,7 +1031,7 @@ export async function getUserGrowthTrend(
     }
 
     return (data || []).map((row: Record<string, unknown>) => ({
-      periodStart: row.period_start as string,
+      periodStart: row.period_start ? String(row.period_start).split('T')[0] : '',
       newUsers: Number(row.new_users) || 0,
       cumulativeUsers: Number(row.cumulative_users) || 0,
       growthRate: Number(row.growth_rate) || 0,
@@ -1079,10 +1108,7 @@ export interface MatchChatAdoption {
 /**
  * Get session metrics via RPC
  */
-export async function getSessionMetrics(
-  startDate: Date,
-  endDate: Date
-): Promise<SessionMetrics[]> {
+export async function getSessionMetrics(startDate: Date, endDate: Date): Promise<SessionMetrics[]> {
   try {
     const { data, error } = await supabase.rpc('get_session_metrics', {
       p_start_date: startDate.toISOString().split('T')[0],
@@ -1114,7 +1140,7 @@ export async function getSessionMetrics(
 function generateMockSessionMetrics(startDate: Date, endDate: Date): SessionMetrics[] {
   const metrics: SessionMetrics[] = [];
   const current = new Date(startDate);
-  
+
   while (current <= endDate) {
     metrics.push({
       date: current.toISOString().split('T')[0],
@@ -1125,7 +1151,7 @@ function generateMockSessionMetrics(startDate: Date, endDate: Date): SessionMetr
     });
     current.setDate(current.getDate() + 1);
   }
-  
+
   return metrics;
 }
 
@@ -1211,26 +1237,83 @@ export async function getScreenAnalytics(
  */
 function getDefaultScreenAnalytics(): ScreenAnalytics[] {
   return [
-    { screenName: 'Home', totalViews: 15420, uniqueViews: 4521, avgTimeOnScreen: 45, bounceRate: 12 },
-    { screenName: 'MatchList', totalViews: 12350, uniqueViews: 3842, avgTimeOnScreen: 62, bounceRate: 8 },
-    { screenName: 'MatchDetail', totalViews: 9870, uniqueViews: 3215, avgTimeOnScreen: 95, bounceRate: 15 },
-    { screenName: 'Messages', totalViews: 8540, uniqueViews: 2890, avgTimeOnScreen: 120, bounceRate: 5 },
-    { screenName: 'PlayerDirectory', totalViews: 7230, uniqueViews: 2456, avgTimeOnScreen: 78, bounceRate: 18 },
-    { screenName: 'Profile', totalViews: 6890, uniqueViews: 3210, avgTimeOnScreen: 55, bounceRate: 22 },
-    { screenName: 'PlayerProfile', totalViews: 5670, uniqueViews: 2134, avgTimeOnScreen: 68, bounceRate: 25 },
-    { screenName: 'CreateMatch', totalViews: 4520, uniqueViews: 1890, avgTimeOnScreen: 180, bounceRate: 35 },
-    { screenName: 'Groups', totalViews: 3890, uniqueViews: 1567, avgTimeOnScreen: 42, bounceRate: 28 },
-    { screenName: 'Settings', totalViews: 2340, uniqueViews: 1890, avgTimeOnScreen: 35, bounceRate: 45 },
+    {
+      screenName: 'Home',
+      totalViews: 15420,
+      uniqueViews: 4521,
+      avgTimeOnScreen: 45,
+      bounceRate: 12,
+    },
+    {
+      screenName: 'MatchList',
+      totalViews: 12350,
+      uniqueViews: 3842,
+      avgTimeOnScreen: 62,
+      bounceRate: 8,
+    },
+    {
+      screenName: 'MatchDetail',
+      totalViews: 9870,
+      uniqueViews: 3215,
+      avgTimeOnScreen: 95,
+      bounceRate: 15,
+    },
+    {
+      screenName: 'Messages',
+      totalViews: 8540,
+      uniqueViews: 2890,
+      avgTimeOnScreen: 120,
+      bounceRate: 5,
+    },
+    {
+      screenName: 'PlayerDirectory',
+      totalViews: 7230,
+      uniqueViews: 2456,
+      avgTimeOnScreen: 78,
+      bounceRate: 18,
+    },
+    {
+      screenName: 'Profile',
+      totalViews: 6890,
+      uniqueViews: 3210,
+      avgTimeOnScreen: 55,
+      bounceRate: 22,
+    },
+    {
+      screenName: 'PlayerProfile',
+      totalViews: 5670,
+      uniqueViews: 2134,
+      avgTimeOnScreen: 68,
+      bounceRate: 25,
+    },
+    {
+      screenName: 'CreateMatch',
+      totalViews: 4520,
+      uniqueViews: 1890,
+      avgTimeOnScreen: 180,
+      bounceRate: 35,
+    },
+    {
+      screenName: 'Groups',
+      totalViews: 3890,
+      uniqueViews: 1567,
+      avgTimeOnScreen: 42,
+      bounceRate: 28,
+    },
+    {
+      screenName: 'Settings',
+      totalViews: 2340,
+      uniqueViews: 1890,
+      avgTimeOnScreen: 35,
+      bounceRate: 45,
+    },
   ];
 }
 
 /**
  * Get message volume trend via RPC
  */
-export async function getMessageVolume(
-  startDate: Date,
-  endDate: Date
-): Promise<MessageVolume[]> {
+export async function getMessageVolume(startDate: Date, endDate: Date): Promise<MessageVolume[]> {
   try {
     const { data, error } = await supabase.rpc('get_message_volume', {
       p_start_date: startDate.toISOString().split('T')[0],
@@ -1261,13 +1344,13 @@ export async function getMessageVolume(
 function generateMockMessageVolume(startDate: Date, endDate: Date): MessageVolume[] {
   const volumes: MessageVolume[] = [];
   const current = new Date(startDate);
-  
+
   while (current <= endDate) {
     const total = Math.floor(Math.random() * 800) + 200;
     const direct = Math.floor(total * (0.5 + Math.random() * 0.2));
     const group = Math.floor((total - direct) * (0.4 + Math.random() * 0.2));
     const match = total - direct - group;
-    
+
     volumes.push({
       date: current.toISOString().split('T')[0],
       totalMessages: total,
@@ -1277,7 +1360,7 @@ function generateMockMessageVolume(startDate: Date, endDate: Date): MessageVolum
     });
     current.setDate(current.getDate() + 1);
   }
-  
+
   return volumes;
 }
 
@@ -1512,9 +1595,7 @@ export interface FeedbackSentiment {
 /**
  * Get rating distribution per sport
  */
-export async function getRatingDistribution(
-  sportId?: string
-): Promise<RatingDistribution[]> {
+export async function getRatingDistribution(sportId?: string): Promise<RatingDistribution[]> {
   try {
     const { data, error } = await supabase.rpc('get_rating_distribution', {
       p_sport_id: sportId || null,
@@ -1528,27 +1609,29 @@ export async function getRatingDistribution(
     if (data && data.length > 0) {
       // Transform grouped data
       const sportMap = new Map<string, RatingDistribution>();
-      
-      data.forEach((row: {
-        sport_id: string;
-        sport_name: string;
-        rating_range: string;
-        player_count: number;
-        percentage: number;
-      }) => {
-        if (!sportMap.has(row.sport_id)) {
-          sportMap.set(row.sport_id, {
-            sportId: row.sport_id,
-            sportName: row.sport_name,
-            buckets: [],
+
+      data.forEach(
+        (row: {
+          sport_id: string;
+          sport_name: string;
+          rating_range: string;
+          player_count: number;
+          percentage: number;
+        }) => {
+          if (!sportMap.has(row.sport_id)) {
+            sportMap.set(row.sport_id, {
+              sportId: row.sport_id,
+              sportName: row.sport_name,
+              buckets: [],
+            });
+          }
+          sportMap.get(row.sport_id)!.buckets.push({
+            range: row.rating_range,
+            count: Number(row.player_count) || 0,
+            percentage: Number(row.percentage) || 0,
           });
         }
-        sportMap.get(row.sport_id)!.buckets.push({
-          range: row.rating_range,
-          count: Number(row.player_count) || 0,
-          percentage: Number(row.percentage) || 0,
-        });
-      });
+      );
 
       return Array.from(sportMap.values());
     }
@@ -1603,11 +1686,7 @@ export async function getCertificationFunnel(): Promise<CertificationFunnelStep[
     }
 
     if (data && data.length > 0) {
-      return data.map((row: {
-        stage: string;
-        user_count: number;
-        percentage: number;
-      }) => ({
+      return data.map((row: { stage: string; user_count: number; percentage: number }) => ({
         stage: row.stage,
         count: Number(row.user_count) || 0,
         percentage: Number(row.percentage) || 0,
@@ -1647,17 +1726,14 @@ export async function getReputationDistribution(): Promise<ReputationDistributio
     }
 
     if (data && data.length > 0) {
-      return data.map((row: {
-        tier: string;
-        score_range: string;
-        player_count: number;
-        percentage: number;
-      }) => ({
-        tier: row.tier as ReputationDistribution['tier'],
-        scoreRange: row.score_range,
-        count: Number(row.player_count) || 0,
-        percentage: Number(row.percentage) || 0,
-      }));
+      return data.map(
+        (row: { tier: string; score_range: string; player_count: number; percentage: number }) => ({
+          tier: row.tier as ReputationDistribution['tier'],
+          scoreRange: row.score_range,
+          count: Number(row.player_count) || 0,
+          percentage: Number(row.percentage) || 0,
+        })
+      );
     }
 
     return getDefaultReputationDistribution();
@@ -1698,17 +1774,19 @@ export async function getReputationEvents(
     }
 
     if (data && data.length > 0) {
-      return data.map((row: {
-        event_date: string;
-        positive_count: number;
-        negative_count: number;
-        event_types: { type: string; count: number }[];
-      }) => ({
-        date: row.event_date,
-        positiveEvents: Number(row.positive_count) || 0,
-        negativeEvents: Number(row.negative_count) || 0,
-        eventTypes: row.event_types || [],
-      }));
+      return data.map(
+        (row: {
+          event_date: string;
+          positive_count: number;
+          negative_count: number;
+          event_types: { type: string; count: number }[];
+        }) => ({
+          date: row.event_date,
+          positiveEvents: Number(row.positive_count) || 0,
+          negativeEvents: Number(row.negative_count) || 0,
+          eventTypes: row.event_types || [],
+        })
+      );
     }
 
     return getDefaultReputationEvents();
@@ -1724,7 +1802,7 @@ export async function getReputationEvents(
 function getDefaultReputationEvents(): ReputationEventData[] {
   const events: ReputationEventData[] = [];
   const now = new Date();
-  
+
   for (let i = 29; i >= 0; i--) {
     const date = new Date(now);
     date.setDate(date.getDate() - i);
@@ -1740,7 +1818,7 @@ function getDefaultReputationEvents(): ReputationEventData[] {
       ],
     });
   }
-  
+
   return events;
 }
 
@@ -1794,10 +1872,7 @@ function getDefaultPeerRatingActivity(): PeerRatingActivity {
 /**
  * Get report volume over time
  */
-export async function getReportVolume(
-  startDate?: Date,
-  endDate?: Date
-): Promise<ReportVolume[]> {
+export async function getReportVolume(startDate?: Date, endDate?: Date): Promise<ReportVolume[]> {
   try {
     const { data, error } = await supabase.rpc('get_report_volume', {
       p_start_date: startDate?.toISOString().split('T')[0] || null,
@@ -1810,17 +1885,19 @@ export async function getReportVolume(
     }
 
     if (data && data.length > 0) {
-      return data.map((row: {
-        report_date: string;
-        report_count: number;
-        resolved_count: number;
-        resolution_rate: number;
-      }) => ({
-        date: row.report_date,
-        reportCount: Number(row.report_count) || 0,
-        resolvedCount: Number(row.resolved_count) || 0,
-        resolutionRate: Number(row.resolution_rate) || 0,
-      }));
+      return data.map(
+        (row: {
+          report_date: string;
+          report_count: number;
+          resolved_count: number;
+          resolution_rate: number;
+        }) => ({
+          date: row.report_date,
+          reportCount: Number(row.report_count) || 0,
+          resolvedCount: Number(row.resolved_count) || 0,
+          resolutionRate: Number(row.resolution_rate) || 0,
+        })
+      );
     }
 
     return getDefaultReportVolume();
@@ -1836,7 +1913,7 @@ export async function getReportVolume(
 function getDefaultReportVolume(): ReportVolume[] {
   const volumes: ReportVolume[] = [];
   const now = new Date();
-  
+
   for (let i = 29; i >= 0; i--) {
     const date = new Date(now);
     date.setDate(date.getDate() - i);
@@ -1849,7 +1926,7 @@ function getDefaultReportVolume(): ReportVolume[] {
       resolutionRate: Math.round((resolvedCount / reportCount) * 100),
     });
   }
-  
+
   return volumes;
 }
 
@@ -1866,17 +1943,19 @@ export async function getReportTypes(): Promise<ReportType[]> {
     }
 
     if (data && data.length > 0) {
-      return data.map((row: {
-        report_type: string;
-        report_count: number;
-        percentage: number;
-        priority: string;
-      }) => ({
-        type: row.report_type,
-        count: Number(row.report_count) || 0,
-        percentage: Number(row.percentage) || 0,
-        priority: row.priority as ReportType['priority'],
-      }));
+      return data.map(
+        (row: {
+          report_type: string;
+          report_count: number;
+          percentage: number;
+          priority: string;
+        }) => ({
+          type: row.report_type,
+          count: Number(row.report_count) || 0,
+          percentage: Number(row.percentage) || 0,
+          priority: row.priority as ReportType['priority'],
+        })
+      );
     }
 
     return getDefaultReportTypes();
@@ -2001,23 +2080,25 @@ export async function getFeedbackSentiment(): Promise<FeedbackSentiment[]> {
     }
 
     if (data && data.length > 0) {
-      return data.map((row: {
-        category: string;
-        bug_reports: number;
-        feature_requests: number;
-        open_count: number;
-        in_progress_count: number;
-        resolved_count: number;
-      }) => ({
-        category: row.category,
-        bugReports: Number(row.bug_reports) || 0,
-        featureRequests: Number(row.feature_requests) || 0,
-        status: {
-          open: Number(row.open_count) || 0,
-          inProgress: Number(row.in_progress_count) || 0,
-          resolved: Number(row.resolved_count) || 0,
-        },
-      }));
+      return data.map(
+        (row: {
+          category: string;
+          bug_reports: number;
+          feature_requests: number;
+          open_count: number;
+          in_progress_count: number;
+          resolved_count: number;
+        }) => ({
+          category: row.category,
+          bugReports: Number(row.bug_reports) || 0,
+          featureRequests: Number(row.feature_requests) || 0,
+          status: {
+            open: Number(row.open_count) || 0,
+            inProgress: Number(row.in_progress_count) || 0,
+            resolved: Number(row.resolved_count) || 0,
+          },
+        })
+      );
     }
 
     return getDefaultFeedbackSentiment();
@@ -2154,10 +2235,7 @@ export interface SportFacilityData {
 /**
  * Get network growth over time
  */
-export async function getNetworkGrowth(
-  startDate?: Date,
-  endDate?: Date
-): Promise<NetworkGrowth[]> {
+export async function getNetworkGrowth(startDate?: Date, endDate?: Date): Promise<NetworkGrowth[]> {
   try {
     const { data, error } = await supabase.rpc('get_network_growth', {
       p_start_date: startDate?.toISOString().split('T')[0] || null,
@@ -2170,17 +2248,19 @@ export async function getNetworkGrowth(
     }
 
     if (data && data.length > 0) {
-      return data.map((row: {
-        date: string;
-        total_networks: number;
-        active_networks: number;
-        new_networks: number;
-      }) => ({
-        date: row.date,
-        totalNetworks: Number(row.total_networks) || 0,
-        activeNetworks: Number(row.active_networks) || 0,
-        newNetworks: Number(row.new_networks) || 0,
-      }));
+      return data.map(
+        (row: {
+          date: string;
+          total_networks: number;
+          active_networks: number;
+          new_networks: number;
+        }) => ({
+          date: row.date,
+          totalNetworks: Number(row.total_networks) || 0,
+          activeNetworks: Number(row.active_networks) || 0,
+          newNetworks: Number(row.new_networks) || 0,
+        })
+      );
     }
 
     return getDefaultNetworkGrowth();
@@ -2197,7 +2277,7 @@ function getDefaultNetworkGrowth(): NetworkGrowth[] {
   const growth: NetworkGrowth[] = [];
   const now = new Date();
   let totalNetworks = 85;
-  
+
   for (let i = 29; i >= 0; i--) {
     const date = new Date(now);
     date.setDate(date.getDate() - i);
@@ -2210,7 +2290,7 @@ function getDefaultNetworkGrowth(): NetworkGrowth[] {
       newNetworks,
     });
   }
-  
+
   return growth;
 }
 
@@ -2227,21 +2307,23 @@ export async function getNetworkSizeDistribution(): Promise<NetworkSizeDistribut
     }
 
     if (data && data.length > 0) {
-      return data.map((row: {
-        bucket: string;
-        network_count: number;
-        percentage: number;
-        min_members: number;
-        max_members: number;
-      }) => ({
-        bucket: row.bucket,
-        count: Number(row.network_count) || 0,
-        percentage: Number(row.percentage) || 0,
-        memberRange: {
-          min: Number(row.min_members) || 0,
-          max: Number(row.max_members) || 0,
-        },
-      }));
+      return data.map(
+        (row: {
+          bucket: string;
+          network_count: number;
+          percentage: number;
+          min_members: number;
+          max_members: number;
+        }) => ({
+          bucket: row.bucket,
+          count: Number(row.network_count) || 0,
+          percentage: Number(row.percentage) || 0,
+          memberRange: {
+            min: Number(row.min_members) || 0,
+            max: Number(row.max_members) || 0,
+          },
+        })
+      );
     }
 
     return getDefaultNetworkSizeDistribution();
@@ -2267,9 +2349,7 @@ function getDefaultNetworkSizeDistribution(): NetworkSizeDistribution[] {
 /**
  * Get most active networks
  */
-export async function getTopNetworkActivity(
-  limit: number = 10
-): Promise<NetworkActivity[]> {
+export async function getTopNetworkActivity(limit: number = 10): Promise<NetworkActivity[]> {
   try {
     const { data, error } = await supabase.rpc('get_top_network_activity', {
       p_limit: limit,
@@ -2281,23 +2361,25 @@ export async function getTopNetworkActivity(
     }
 
     if (data && data.length > 0) {
-      return data.map((row: {
-        network_id: string;
-        network_name: string;
-        network_type: string;
-        member_count: number;
-        activity_score: number;
-        matches_posted: number;
-        messages_this_month: number;
-      }) => ({
-        networkId: row.network_id,
-        networkName: row.network_name,
-        networkType: row.network_type,
-        memberCount: Number(row.member_count) || 0,
-        activityScore: Number(row.activity_score) || 0,
-        matchesPosted: Number(row.matches_posted) || 0,
-        messagesThisMonth: Number(row.messages_this_month) || 0,
-      }));
+      return data.map(
+        (row: {
+          network_id: string;
+          network_name: string;
+          network_type: string;
+          member_count: number;
+          activity_score: number;
+          matches_posted: number;
+          messages_this_month: number;
+        }) => ({
+          networkId: row.network_id,
+          networkName: row.network_name,
+          networkType: row.network_type,
+          memberCount: Number(row.member_count) || 0,
+          activityScore: Number(row.activity_score) || 0,
+          matchesPosted: Number(row.matches_posted) || 0,
+          messagesThisMonth: Number(row.messages_this_month) || 0,
+        })
+      );
     }
 
     return getDefaultTopNetworkActivity();
@@ -2312,14 +2394,78 @@ export async function getTopNetworkActivity(
  */
 function getDefaultTopNetworkActivity(): NetworkActivity[] {
   return [
-    { networkId: '1', networkName: 'Downtown Tennis Club', networkType: 'club', memberCount: 87, activityScore: 94, matchesPosted: 156, messagesThisMonth: 892 },
-    { networkId: '2', networkName: 'Montreal Pickleball League', networkType: 'league', memberCount: 124, activityScore: 89, matchesPosted: 234, messagesThisMonth: 1245 },
-    { networkId: '3', networkName: 'Westmount Racquet Sports', networkType: 'club', memberCount: 56, activityScore: 85, matchesPosted: 89, messagesThisMonth: 456 },
-    { networkId: '4', networkName: 'Quebec City Tennis', networkType: 'community', memberCount: 203, activityScore: 78, matchesPosted: 178, messagesThisMonth: 987 },
-    { networkId: '5', networkName: 'Corporate Sports Network', networkType: 'corporate', memberCount: 45, activityScore: 72, matchesPosted: 45, messagesThisMonth: 234 },
-    { networkId: '6', networkName: 'Laval Badminton Club', networkType: 'club', memberCount: 38, activityScore: 68, matchesPosted: 67, messagesThisMonth: 345 },
-    { networkId: '7', networkName: 'University Tennis Team', networkType: 'academic', memberCount: 34, activityScore: 65, matchesPosted: 34, messagesThisMonth: 178 },
-    { networkId: '8', networkName: 'Senior Players Network', networkType: 'community', memberCount: 89, activityScore: 61, matchesPosted: 56, messagesThisMonth: 234 },
+    {
+      networkId: '1',
+      networkName: 'Downtown Tennis Club',
+      networkType: 'club',
+      memberCount: 87,
+      activityScore: 94,
+      matchesPosted: 156,
+      messagesThisMonth: 892,
+    },
+    {
+      networkId: '2',
+      networkName: 'Montreal Pickleball League',
+      networkType: 'league',
+      memberCount: 124,
+      activityScore: 89,
+      matchesPosted: 234,
+      messagesThisMonth: 1245,
+    },
+    {
+      networkId: '3',
+      networkName: 'Westmount Racquet Sports',
+      networkType: 'club',
+      memberCount: 56,
+      activityScore: 85,
+      matchesPosted: 89,
+      messagesThisMonth: 456,
+    },
+    {
+      networkId: '4',
+      networkName: 'Quebec City Tennis',
+      networkType: 'community',
+      memberCount: 203,
+      activityScore: 78,
+      matchesPosted: 178,
+      messagesThisMonth: 987,
+    },
+    {
+      networkId: '5',
+      networkName: 'Corporate Sports Network',
+      networkType: 'corporate',
+      memberCount: 45,
+      activityScore: 72,
+      matchesPosted: 45,
+      messagesThisMonth: 234,
+    },
+    {
+      networkId: '6',
+      networkName: 'Laval Badminton Club',
+      networkType: 'club',
+      memberCount: 38,
+      activityScore: 68,
+      matchesPosted: 67,
+      messagesThisMonth: 345,
+    },
+    {
+      networkId: '7',
+      networkName: 'University Tennis Team',
+      networkType: 'academic',
+      memberCount: 34,
+      activityScore: 65,
+      matchesPosted: 34,
+      messagesThisMonth: 178,
+    },
+    {
+      networkId: '8',
+      networkName: 'Senior Players Network',
+      networkType: 'community',
+      memberCount: 89,
+      activityScore: 61,
+      matchesPosted: 56,
+      messagesThisMonth: 234,
+    },
   ];
 }
 
@@ -2383,23 +2529,25 @@ export async function getSportPopularity(): Promise<SportPopularity[]> {
     }
 
     if (data && data.length > 0) {
-      return data.map((row: {
-        sport_id: string;
-        sport_name: string;
-        player_count: number;
-        match_count: number;
-        active_last_30_days: number;
-        percentage: number;
-        growth_percent: number;
-      }) => ({
-        sportId: row.sport_id,
-        sportName: row.sport_name,
-        playerCount: Number(row.player_count) || 0,
-        totalMatches: Number(row.match_count) || 0,
-        activeLast30Days: Number(row.active_last_30_days) || 0,
-        percentage: Number(row.percentage) || 0,
-        growthPercent: Number(row.growth_percent) || 0,
-      }));
+      return data.map(
+        (row: {
+          sport_id: string;
+          sport_name: string;
+          player_count: number;
+          match_count: number;
+          active_last_30_days: number;
+          percentage: number;
+          growth_percent: number;
+        }) => ({
+          sportId: row.sport_id,
+          sportName: row.sport_name,
+          playerCount: Number(row.player_count) || 0,
+          totalMatches: Number(row.match_count) || 0,
+          activeLast30Days: Number(row.active_last_30_days) || 0,
+          percentage: Number(row.percentage) || 0,
+          growthPercent: Number(row.growth_percent) || 0,
+        })
+      );
     }
 
     return getDefaultSportPopularity();
@@ -2414,11 +2562,51 @@ export async function getSportPopularity(): Promise<SportPopularity[]> {
  */
 function getDefaultSportPopularity(): SportPopularity[] {
   return [
-    { sportId: 'tennis', sportName: 'Tennis', playerCount: 4523, totalMatches: 1456, activeLast30Days: 892, percentage: 42, growthPercent: 12.5 },
-    { sportId: 'pickleball', sportName: 'Pickleball', playerCount: 3187, totalMatches: 987, activeLast30Days: 654, percentage: 30, growthPercent: 28.3 },
-    { sportId: 'badminton', sportName: 'Badminton', playerCount: 1567, totalMatches: 456, activeLast30Days: 234, percentage: 15, growthPercent: 8.7 },
-    { sportId: 'padel', sportName: 'Padel', playerCount: 892, totalMatches: 234, activeLast30Days: 156, percentage: 8, growthPercent: 45.2 },
-    { sportId: 'squash', sportName: 'Squash', playerCount: 534, totalMatches: 123, activeLast30Days: 78, percentage: 5, growthPercent: 3.2 },
+    {
+      sportId: 'tennis',
+      sportName: 'Tennis',
+      playerCount: 4523,
+      totalMatches: 1456,
+      activeLast30Days: 892,
+      percentage: 42,
+      growthPercent: 12.5,
+    },
+    {
+      sportId: 'pickleball',
+      sportName: 'Pickleball',
+      playerCount: 3187,
+      totalMatches: 987,
+      activeLast30Days: 654,
+      percentage: 30,
+      growthPercent: 28.3,
+    },
+    {
+      sportId: 'badminton',
+      sportName: 'Badminton',
+      playerCount: 1567,
+      totalMatches: 456,
+      activeLast30Days: 234,
+      percentage: 15,
+      growthPercent: 8.7,
+    },
+    {
+      sportId: 'padel',
+      sportName: 'Padel',
+      playerCount: 892,
+      totalMatches: 234,
+      activeLast30Days: 156,
+      percentage: 8,
+      growthPercent: 45.2,
+    },
+    {
+      sportId: 'squash',
+      sportName: 'Squash',
+      playerCount: 534,
+      totalMatches: 123,
+      activeLast30Days: 78,
+      percentage: 5,
+      growthPercent: 3.2,
+    },
   ];
 }
 
@@ -2441,19 +2629,21 @@ export async function getSportActivityComparison(
     }
 
     if (data && data.length > 0) {
-      return data.map((row: {
-        sport_id: string;
-        sport_name: string;
-        total_matches: number;
-        matches_completed: number;
-        unique_players: number;
-      }) => ({
-        sportId: row.sport_id,
-        sportName: row.sport_name,
-        totalMatches: Number(row.total_matches) || 0,
-        matchesCompleted: Number(row.matches_completed) || 0,
-        uniquePlayers: Number(row.unique_players) || 0,
-      }));
+      return data.map(
+        (row: {
+          sport_id: string;
+          sport_name: string;
+          total_matches: number;
+          matches_completed: number;
+          unique_players: number;
+        }) => ({
+          sportId: row.sport_id,
+          sportName: row.sport_name,
+          totalMatches: Number(row.total_matches) || 0,
+          matchesCompleted: Number(row.matches_completed) || 0,
+          uniquePlayers: Number(row.unique_players) || 0,
+        })
+      );
     }
 
     return getDefaultSportActivityComparison();
@@ -2468,11 +2658,41 @@ export async function getSportActivityComparison(
  */
 function getDefaultSportActivityComparison(): SportActivityComparison[] {
   return [
-    { sportId: 'tennis', sportName: 'Tennis', totalMatches: 1456, matchesCompleted: 1234, uniquePlayers: 2134 },
-    { sportId: 'pickleball', sportName: 'Pickleball', totalMatches: 987, matchesCompleted: 876, uniquePlayers: 1567 },
-    { sportId: 'badminton', sportName: 'Badminton', totalMatches: 456, matchesCompleted: 398, uniquePlayers: 678 },
-    { sportId: 'padel', sportName: 'Padel', totalMatches: 234, matchesCompleted: 212, uniquePlayers: 345 },
-    { sportId: 'squash', sportName: 'Squash', totalMatches: 123, matchesCompleted: 108, uniquePlayers: 234 },
+    {
+      sportId: 'tennis',
+      sportName: 'Tennis',
+      totalMatches: 1456,
+      matchesCompleted: 1234,
+      uniquePlayers: 2134,
+    },
+    {
+      sportId: 'pickleball',
+      sportName: 'Pickleball',
+      totalMatches: 987,
+      matchesCompleted: 876,
+      uniquePlayers: 1567,
+    },
+    {
+      sportId: 'badminton',
+      sportName: 'Badminton',
+      totalMatches: 456,
+      matchesCompleted: 398,
+      uniquePlayers: 678,
+    },
+    {
+      sportId: 'padel',
+      sportName: 'Padel',
+      totalMatches: 234,
+      matchesCompleted: 212,
+      uniquePlayers: 345,
+    },
+    {
+      sportId: 'squash',
+      sportName: 'Squash',
+      totalMatches: 123,
+      matchesCompleted: 108,
+      uniquePlayers: 234,
+    },
   ];
 }
 
@@ -2497,27 +2717,29 @@ export async function getSportGrowthTrends(
     if (data && data.length > 0) {
       // Group by date
       const dateMap = new Map<string, SportGrowthTrend>();
-      
-      data.forEach((row: {
-        trend_date: string;
-        sport_id: string;
-        sport_name: string;
-        new_players: number;
-        new_matches: number;
-      }) => {
-        if (!dateMap.has(row.trend_date)) {
-          dateMap.set(row.trend_date, {
-            date: row.trend_date,
-            sports: [],
+
+      data.forEach(
+        (row: {
+          trend_date: string;
+          sport_id: string;
+          sport_name: string;
+          new_players: number;
+          new_matches: number;
+        }) => {
+          if (!dateMap.has(row.trend_date)) {
+            dateMap.set(row.trend_date, {
+              date: row.trend_date,
+              sports: [],
+            });
+          }
+          dateMap.get(row.trend_date)!.sports.push({
+            sportId: row.sport_id,
+            sportName: row.sport_name,
+            userCount: Number(row.new_players) || 0,
+            matchCount: Number(row.new_matches) || 0,
           });
         }
-        dateMap.get(row.trend_date)!.sports.push({
-          sportId: row.sport_id,
-          sportName: row.sport_name,
-          userCount: Number(row.new_players) || 0,
-          matchCount: Number(row.new_matches) || 0,
-        });
-      });
+      );
 
       return Array.from(dateMap.values()).sort((a, b) => a.date.localeCompare(b.date));
     }
@@ -2538,22 +2760,23 @@ function getDefaultSportGrowthTrends(): SportGrowthTrend[] {
   const sports = ['Tennis', 'Pickleball', 'Badminton', 'Padel', 'Squash'];
   const sportIds = ['tennis', 'pickleball', 'badminton', 'padel', 'squash'];
   const baseCounts = [4000, 2800, 1400, 600, 500];
-  
+
   for (let i = 29; i >= 0; i--) {
     const date = new Date(now);
     date.setDate(date.getDate() - i);
-    
+
     trends.push({
       date: date.toISOString().split('T')[0],
       sports: sports.map((name, idx) => ({
         sportId: sportIds[idx],
         sportName: name,
-        userCount: baseCounts[idx] + Math.floor((29 - i) * (baseCounts[idx] * 0.005) + Math.random() * 20),
+        userCount:
+          baseCounts[idx] + Math.floor((29 - i) * (baseCounts[idx] * 0.005) + Math.random() * 20),
         matchCount: Math.floor(baseCounts[idx] * 0.02 * (1 + Math.random() * 0.3)),
       })),
     });
   }
-  
+
   return trends;
 }
 
@@ -2570,23 +2793,25 @@ export async function getSportFacilityData(): Promise<SportFacilityData[]> {
     }
 
     if (data && data.length > 0) {
-      return data.map((row: {
-        sport_id: string;
-        sport_name: string;
-        facility_count: number;
-        court_count: number;
-        cities_count: number;
-        avg_utilization: number;
-        peak_hours: string;
-      }) => ({
-        sportId: row.sport_id,
-        sportName: row.sport_name,
-        facilityCount: Number(row.facility_count) || 0,
-        courtCount: Number(row.court_count) || 0,
-        citiesCount: Number(row.cities_count) || 0,
-        avgUtilization: Number(row.avg_utilization) || 0,
-        peakHours: row.peak_hours || '17:00-18:00',
-      }));
+      return data.map(
+        (row: {
+          sport_id: string;
+          sport_name: string;
+          facility_count: number;
+          court_count: number;
+          cities_count: number;
+          avg_utilization: number;
+          peak_hours: string;
+        }) => ({
+          sportId: row.sport_id,
+          sportName: row.sport_name,
+          facilityCount: Number(row.facility_count) || 0,
+          courtCount: Number(row.court_count) || 0,
+          citiesCount: Number(row.cities_count) || 0,
+          avgUtilization: Number(row.avg_utilization) || 0,
+          peakHours: row.peak_hours || '17:00-18:00',
+        })
+      );
     }
 
     return getDefaultSportFacilityData();
@@ -2601,11 +2826,51 @@ export async function getSportFacilityData(): Promise<SportFacilityData[]> {
  */
 function getDefaultSportFacilityData(): SportFacilityData[] {
   return [
-    { sportId: 'tennis', sportName: 'Tennis', facilityCount: 234, courtCount: 567, citiesCount: 45, avgUtilization: 72, peakHours: '17:00-18:00' },
-    { sportId: 'pickleball', sportName: 'Pickleball', facilityCount: 156, courtCount: 312, citiesCount: 32, avgUtilization: 68, peakHours: '18:00-19:00' },
-    { sportId: 'badminton', sportName: 'Badminton', facilityCount: 89, courtCount: 178, citiesCount: 21, avgUtilization: 58, peakHours: '19:00-20:00' },
-    { sportId: 'padel', sportName: 'Padel', facilityCount: 45, courtCount: 90, citiesCount: 12, avgUtilization: 75, peakHours: '18:00-19:00' },
-    { sportId: 'squash', sportName: 'Squash', facilityCount: 67, courtCount: 134, citiesCount: 18, avgUtilization: 52, peakHours: '17:00-18:00' },
+    {
+      sportId: 'tennis',
+      sportName: 'Tennis',
+      facilityCount: 234,
+      courtCount: 567,
+      citiesCount: 45,
+      avgUtilization: 72,
+      peakHours: '17:00-18:00',
+    },
+    {
+      sportId: 'pickleball',
+      sportName: 'Pickleball',
+      facilityCount: 156,
+      courtCount: 312,
+      citiesCount: 32,
+      avgUtilization: 68,
+      peakHours: '18:00-19:00',
+    },
+    {
+      sportId: 'badminton',
+      sportName: 'Badminton',
+      facilityCount: 89,
+      courtCount: 178,
+      citiesCount: 21,
+      avgUtilization: 58,
+      peakHours: '19:00-20:00',
+    },
+    {
+      sportId: 'padel',
+      sportName: 'Padel',
+      facilityCount: 45,
+      courtCount: 90,
+      citiesCount: 12,
+      avgUtilization: 75,
+      peakHours: '18:00-19:00',
+    },
+    {
+      sportId: 'squash',
+      sportName: 'Squash',
+      facilityCount: 67,
+      courtCount: 134,
+      citiesCount: 18,
+      avgUtilization: 52,
+      peakHours: '17:00-18:00',
+    },
   ];
 }
 
