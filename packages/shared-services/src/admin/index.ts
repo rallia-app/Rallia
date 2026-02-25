@@ -5,9 +5,8 @@
  * function names across different services.
  */
 
-// Admin Service - User management and user admin functions
-export {
-  // Types
+// Admin Service - Types
+export type {
   AdminUserStatus,
   AdminUserFilters,
   AdminUserInfo,
@@ -20,7 +19,10 @@ export {
   AdminMatchSummary,
   EditableProfileFields,
   AdminAuditLogEntry,
-  // Functions
+} from './adminService';
+
+// Admin Service - Functions
+export {
   fetchAdminUsers,
   fetchAdminUserDetail,
   banUser,
@@ -28,12 +30,10 @@ export {
   getActivePlayerBan,
   getPlayerBanHistory,
   updatePlayerProfile,
-  // Note: logAdminAction and getAuditLog from adminService are excluded - use auditService versions
 } from './adminService';
 
-// Analytics Service
-export {
-  // Dashboard/KPI types
+// Analytics Service - Types
+export type {
   RealtimeUserStats,
   MatchStatistics,
   OnboardingFunnelStep,
@@ -42,7 +42,40 @@ export {
   SportStatistics,
   KPISummary,
   DashboardWidget,
-  // Dashboard/KPI functions
+  OnboardingFunnelRPC,
+  RetentionCohort,
+  MatchAnalyticsRPC,
+  SportDistribution,
+  UserGrowthTrend,
+  SessionMetrics,
+  FeatureAdoption,
+  ScreenAnalytics,
+  MessageVolume,
+  ConversationHealth,
+  EngagementDistribution,
+  MatchChatAdoption,
+  RatingDistribution,
+  CertificationFunnelStep,
+  ReputationDistribution,
+  ReputationEventData,
+  PeerRatingActivity,
+  ReportVolume,
+  ReportTypeDistribution,
+  ResolutionMetrics,
+  BanStatistics,
+  FeedbackSentiment,
+  NetworkGrowth,
+  NetworkSizeDistribution,
+  NetworkActivity,
+  NetworkMatchIntegration,
+  SportPopularity,
+  SportActivityComparison,
+  SportGrowthTrend,
+  SportFacilityData,
+} from './analyticsService';
+
+// Analytics Service - Functions
+export {
   getRealtimeUserStats,
   getMatchStatistics,
   getOnboardingFunnel,
@@ -52,85 +85,40 @@ export {
   getAnalyticsSnapshots,
   buildDashboardWidgets,
   getWidgetTrends,
-  // User/Growth analytics types
-  OnboardingFunnelRPC,
-  RetentionCohort,
-  MatchAnalyticsRPC,
-  SportDistribution,
-  UserGrowthTrend,
-  // User/Growth analytics functions
   getOnboardingFunnelRPC,
   getRetentionCohort,
   getMatchAnalyticsRPC,
   getSportDistribution,
   getUserGrowthTrend,
-  // Session/Engagement types
-  SessionMetrics,
-  FeatureAdoption,
-  ScreenAnalytics,
-  // Session/Engagement functions
   getSessionMetrics,
   getFeatureAdoption,
   getScreenAnalytics,
-  // Messaging types
-  MessageVolume,
-  ConversationHealth,
-  EngagementDistribution,
-  MatchChatAdoption,
-  // Messaging functions
   getMessageVolume,
   getConversationHealth,
   getEngagementDistribution,
   getMatchChatAdoption,
-  // Rating types
-  RatingDistribution,
-  CertificationFunnelStep,
-  ReputationDistribution,
-  ReputationEventData,
-  PeerRatingActivity,
-  // Rating functions
   getRatingDistribution,
   getCertificationFunnel,
   getReputationDistribution,
   getReputationEvents,
   getPeerRatingActivity,
-  // Moderation analytics types
-  ReportVolume,
-  ReportTypeDistribution,
-  ResolutionMetrics,
-  BanStatistics,
-  FeedbackSentiment,
-  // Moderation analytics functions
   getReportVolume,
   getReportTypes,
   getResolutionMetrics,
   getBanStatistics,
   getFeedbackSentiment,
-  // Network/Community types
-  NetworkGrowth,
-  NetworkSizeDistribution,
-  NetworkActivity,
-  NetworkMatchIntegration,
-  // Network/Community functions
   getNetworkGrowth,
   getNetworkSizeDistribution,
   getTopNetworkActivity,
   getNetworkMatchIntegration,
-  // Sport analytics types
-  SportPopularity,
-  SportActivityComparison,
-  SportGrowthTrend,
-  SportFacilityData,
-  // Sport analytics functions
   getSportPopularity,
   getSportActivityComparison,
   getSportGrowthTrends,
   getSportFacilityData,
 } from './analyticsService';
 
-// Audit Service - primary source for audit functions
-export {
-  // Types
+// Audit Service - Types
+export type {
   AuditActionType,
   AuditEntityType,
   AuditSeverity,
@@ -138,7 +126,10 @@ export {
   AuditLogStats,
   AuditLogFilters,
   LogActionParams,
-  // Functions
+} from './auditService';
+
+// Audit Service - Functions and objects
+export {
   logAdminAction,
   getAuditLog,
   getAuditLogStats,
@@ -154,19 +145,20 @@ export {
   getActionTypeLabel,
   getActionTypeIcon,
   getSeverityColor,
-  // Service object
   auditService,
 } from './auditService';
 
-// Alert Service
-export {
-  // Types
+// Alert Service - Types
+export type {
   AlertType,
   AlertSeverity,
   AdminAlert,
   AlertCounts,
   AlertPreference,
-  // Functions
+} from './alertService';
+
+// Alert Service - Functions and objects
+export {
   getAdminAlerts,
   getAlertCounts,
   markAlertRead,
@@ -178,7 +170,6 @@ export {
   getAlertTypeIcon,
   getAlertTypeLabel,
   formatAlertTime,
-  // Service object
   alertService,
 } from './alertService';
 
