@@ -1550,7 +1550,7 @@ export interface ReportVolume {
 }
 
 /** Report type distribution */
-export interface ReportType {
+export interface ReportTypeDistribution {
   type: string;
   count: number;
   percentage: number;
@@ -1933,7 +1933,7 @@ function getDefaultReportVolume(): ReportVolume[] {
 /**
  * Get report types distribution
  */
-export async function getReportTypes(): Promise<ReportType[]> {
+export async function getReportTypes(): Promise<ReportTypeDistribution[]> {
   try {
     const { data, error } = await supabase.rpc('get_report_types');
 
@@ -1953,7 +1953,7 @@ export async function getReportTypes(): Promise<ReportType[]> {
           type: row.report_type,
           count: Number(row.report_count) || 0,
           percentage: Number(row.percentage) || 0,
-          priority: row.priority as ReportType['priority'],
+          priority: row.priority as ReportTypeDistribution['priority'],
         })
       );
     }
@@ -1968,7 +1968,7 @@ export async function getReportTypes(): Promise<ReportType[]> {
 /**
  * Default report types data
  */
-function getDefaultReportTypes(): ReportType[] {
+function getDefaultReportTypes(): ReportTypeDistribution[] {
   return [
     { type: 'No-Show', count: 145, percentage: 35, priority: 'medium' },
     { type: 'Harassment', count: 82, percentage: 20, priority: 'high' },

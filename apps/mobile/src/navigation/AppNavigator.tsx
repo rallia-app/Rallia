@@ -96,6 +96,7 @@ import AdminModerationAnalyticsScreen from '../screens/admin/AdminModerationAnal
 // Phase 5 Analytics Sub-Views
 import AdminCommunityAnalyticsScreen from '../screens/admin/AdminCommunityAnalyticsScreen';
 import AdminSportAnalyticsScreen from '../screens/admin/AdminSportAnalyticsScreen';
+import MapScreen from '../screens/Map';
 
 // Components
 import { ThemeLogo } from '../components/ThemeLogo';
@@ -1204,7 +1205,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="Map"
-        component={Map}
+        component={MapScreen}
         options={{
           headerShown: false,
           presentation: 'fullScreenModal' as const,

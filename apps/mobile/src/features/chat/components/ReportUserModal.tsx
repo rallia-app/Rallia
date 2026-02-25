@@ -16,7 +16,7 @@ import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation } from '../../../hooks';
-import { createReport, type ReportReason, REPORT_REASON_LABELS } from '@rallia/shared-services';
+import { createUserReport, type ReportReason, REPORT_REASON_LABELS } from '@rallia/shared-services';
 import { radiusPixels, primary, status, spacingPixels } from '@rallia/design-system';
 
 const REPORT_REASONS: ReportReason[] = [
@@ -54,7 +54,7 @@ export function ReportUserActionSheet({ payload }: SheetProps<'report-user'>) {
 
     setIsSubmitting(true);
     try {
-      await createReport({
+      await createUserReport({
         reporterId,
         reportedId,
         reason: selectedReason,

@@ -125,7 +125,7 @@ function useCommunityAnalytics(selectedOption: TimeRangeOption) {
 
         // Calculate average members
         if (topResult.length > 0) {
-          const avgMembers = topResult.reduce((sum, n) => sum + n.memberCount, 0) / topResult.length;
+          const avgMembers = topResult.reduce((sum: number, n: NetworkActivity) => sum + n.memberCount, 0) / topResult.length;
           setSummaryMetrics(prev => prev ? { ...prev, avgMembers: Math.round(avgMembers) } : null);
         }
       }

@@ -57,10 +57,10 @@ export const adminPushService = {
         return null;
       }
 
-      Logger.debug('Admin device registered:', data);
+      Logger.debug('Admin device registered:', { data });
       return data as string;
     } catch (err) {
-      Logger.error('Error registering admin device:', err);
+      Logger.error('Error registering admin device:', err instanceof Error ? err : undefined);
       return null;
     }
   },
@@ -80,10 +80,10 @@ export const adminPushService = {
         return false;
       }
 
-      Logger.debug('Admin device unregistered:', data);
+      Logger.debug('Admin device unregistered:', { data });
       return data as boolean;
     } catch (err) {
-      Logger.error('Error unregistering admin device:', err);
+      Logger.error('Error unregistering admin device:', err instanceof Error ? err : undefined);
       return false;
     }
   },
@@ -107,7 +107,7 @@ export const adminPushService = {
 
       return (data || []) as AdminDevice[];
     } catch (err) {
-      Logger.error('Error fetching admin devices:', err);
+      Logger.error('Error fetching admin devices:', err instanceof Error ? err : undefined);
       return [];
     }
   },
@@ -130,7 +130,7 @@ export const adminPushService = {
 
       return true;
     } catch (err) {
-      Logger.error('Error updating device last active:', err);
+      Logger.error('Error updating device last active:', err instanceof Error ? err : undefined);
       return false;
     }
   },
@@ -150,10 +150,10 @@ export const adminPushService = {
         return false;
       }
 
-      Logger.debug('All admin devices deactivated for:', adminId);
+      Logger.debug('All admin devices deactivated for:', { adminId });
       return true;
     } catch (err) {
-      Logger.error('Error deactivating admin devices:', err);
+      Logger.error('Error deactivating admin devices:', err instanceof Error ? err : undefined);
       return false;
     }
   },
@@ -181,7 +181,7 @@ export const adminPushService = {
 
       return data?.length || 0;
     } catch (err) {
-      Logger.error('Error cleaning up inactive devices:', err);
+      Logger.error('Error cleaning up inactive devices:', err instanceof Error ? err : undefined);
       return 0;
     }
   },

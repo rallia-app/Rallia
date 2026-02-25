@@ -193,7 +193,7 @@ const AdminUserDetailScreen: React.FC = () => {
 
   // Update edited field
   const updateEditField = useCallback((field: keyof EditableProfileFields, value: string) => {
-    setEditedProfile(prev => ({ ...prev, [field]: value }));
+    setEditedProfile((prev: Partial<EditableProfileFields>) => ({ ...prev, [field]: value }));
   }, []);
 
   // Get user display name

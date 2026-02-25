@@ -22,7 +22,13 @@ export * from './match-share';
 export * from './groups';
 export * from './communities';
 export * from './chat';
-export * from './reports';
+// Reports - explicit exports to avoid conflicts with admin/moderationService
+export {
+  createReport as createUserReport,
+  CreateReportParams as CreateUserReportParams,
+  ReportReason,
+  REPORT_REASON_LABELS,
+} from './reports';
 // Bookings - client-safe exports (types, validation, status, policy)
 // For server-side functions (createBooking, cancelBooking), use web app's lib/bookings
 export * from './bookings';

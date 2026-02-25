@@ -44,7 +44,7 @@ import {
   getBanStatistics,
   getFeedbackSentiment,
   type ReportVolume,
-  type ReportType,
+  type ReportTypeDistribution,
   type ResolutionMetrics,
   type BanStatistics,
   type FeedbackSentiment,
@@ -62,7 +62,7 @@ const chartWidth = screenWidth - spacingPixels[4] * 2 - spacingPixels[4] * 2;
 
 interface ModerationAnalyticsData {
   reportVolume: ReportVolume[];
-  reportTypes: ReportType[];
+  reportTypes: ReportTypeDistribution[];
   resolutionMetrics: ResolutionMetrics;
   banStatistics: BanStatistics;
   feedbackSentiment: FeedbackSentiment[];
@@ -202,7 +202,7 @@ export default function AdminModerationAnalyticsScreen() {
   const reportTypesChartData = useMemo(() => {
     if (!data?.reportTypes) return [];
 
-    const priorityColors: Record<ReportType['priority'], string> = {
+    const priorityColors: Record<ReportTypeDistribution['priority'], string> = {
       high: status.error.DEFAULT,
       medium: status.warning.DEFAULT,
       low: primary[400],
@@ -390,7 +390,7 @@ export default function AdminModerationAnalyticsScreen() {
                   centerLabelComponent={() => (
                     <View style={styles.pieCenterLabel}>
                       <Text style={[styles.pieCenterValue, { color: textColor }]}>
-                        {data?.reportTypes?.reduce((sum, rt) => sum + rt.count, 0) || 0}
+                        {data?.reportTypes?.reduce((sum: number, rt: ReportTypeDistribution) => sum + rt.count, 0) || 0}
                       </Text>
                       <Text style={[styles.pieCenterSubtext, { color: subtextColor }]}>
                         Total

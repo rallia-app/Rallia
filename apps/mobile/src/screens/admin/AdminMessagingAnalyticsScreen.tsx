@@ -79,7 +79,7 @@ function useMessagingAnalytics(selectedOption: TimeRangeOption) {
       const volumeResult = await getMessageVolume(startDate, endDate);
       if (volumeResult && volumeResult.length > 0) {
         setMessageVolume(volumeResult);
-        const total = volumeResult.reduce((sum, v) => sum + v.totalMessages, 0);
+        const total = volumeResult.reduce((sum: number, v: MessageVolume) => sum + v.totalMessages, 0);
         setTotalMessages(total);
       }
 

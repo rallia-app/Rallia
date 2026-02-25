@@ -98,16 +98,16 @@ function useEngagementAnalytics(selectedOption: TimeRangeOption) {
         setSessionMetrics(sessionsResult);
 
         // Calculate summary metrics
-        const totalSessions = sessionsResult.reduce((sum, s) => sum + s.sessionsCount, 0);
+        const totalSessions = sessionsResult.reduce((sum: number, s: SessionMetrics) => sum + s.sessionsCount, 0);
         const totalDuration = sessionsResult.reduce(
-          (sum, s) => sum + s.avgSessionDuration * s.sessionsCount,
+          (sum: number, s: SessionMetrics) => sum + s.avgSessionDuration * s.sessionsCount,
           0
         );
         const totalScreens = sessionsResult.reduce(
-          (sum, s) => sum + s.screensPerSession * s.sessionsCount,
+          (sum: number, s: SessionMetrics) => sum + s.screensPerSession * s.sessionsCount,
           0
         );
-        const totalBounceRate = sessionsResult.reduce((sum, s) => sum + s.bounceRate, 0);
+        const totalBounceRate = sessionsResult.reduce((sum: number, s: SessionMetrics) => sum + s.bounceRate, 0);
 
         setSummaryMetrics({
           avgSessions: Math.round(totalSessions / sessionsResult.length),
