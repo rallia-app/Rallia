@@ -1458,8 +1458,12 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
   // CREATE REPUTATION EVENT IF APPLICABLE
   // ========================================
   // Check if leaving warrants a reputation penalty per the spec:
-  // Penalty applies when: full match + created >24h before start + not edited <24h before start + leaving <24h before start
-  if (isMatchFull) {
+  // Penalty applies when: joined participant + full match + created >24h before start + not edited <24h before start + leaving <24h before start
+  // Waitlisted players should never incur a penalty for leaving
+  const wasJoinedParticipant = joinedParticipants.some(
+    (p: { player_id: string }) => p.player_id === playerId
+  );
+  if (wasJoinedParticipant && isMatchFull) {
     const matchStartDateTime = new Date(`${match.match_date}T${match.start_time}`);
     const now = new Date();
     const hoursUntilMatch = (matchStartDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
@@ -1499,42 +1503,44 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
     }
   }
 
-  // Send notifications to host and remaining participants
-  // Get player name for notification
-  const { data: profileData } = await supabase
-    .from('profile')
-    .select('first_name, last_name, display_name')
-    .eq('id', playerId)
-    .single();
+  // Only notify other participants when a joined player leaves (not waitlisted players)
+  if (wasJoinedParticipant) {
+    // Get player name for notification
+    const { data: profileData } = await supabase
+      .from('profile')
+      .select('first_name, last_name, display_name')
+      .eq('id', playerId)
+      .single();
 
-  const playerName =
-    profileData?.first_name && profileData?.last_name
-      ? `${profileData.first_name} ${profileData.last_name}`
-      : profileData?.first_name || 'A player';
-  const sportName = (match.sport as { name?: string } | null)?.name;
+    const playerName =
+      profileData?.first_name && profileData?.last_name
+        ? `${profileData.first_name} ${profileData.last_name}`
+        : profileData?.first_name || 'A player';
+    const sportName = (match.sport as { name?: string } | null)?.name;
 
-  // Get all remaining joined participants (excluding the player who left)
-  // Note: The creator is now a participant, so they'll be included in this list if they're joined
-  const remainingParticipants =
-    match.participants?.filter(
-      (p: { player_id: string; status: string }) =>
-        p.status === 'joined' && p.player_id !== playerId
-    ) ?? [];
+    // Get all remaining joined participants (excluding the player who left)
+    // Note: The creator is now a participant, so they'll be included in this list if they're joined
+    const remainingParticipants =
+      match.participants?.filter(
+        (p: { player_id: string; status: string }) =>
+          p.status === 'joined' && p.player_id !== playerId
+      ) ?? [];
 
-  // Recipients are the remaining joined participants (creator is already included if they're a participant)
-  const userIdsToNotify = remainingParticipants.map((p: { player_id: string }) => p.player_id);
+    // Recipients are the remaining joined participants (creator is already included if they're a participant)
+    const userIdsToNotify = remainingParticipants.map((p: { player_id: string }) => p.player_id);
 
-  // Remove duplicates
-  const uniqueUserIds = [...new Set(userIdsToNotify)];
+    // Remove duplicates
+    const uniqueUserIds = [...new Set(userIdsToNotify)];
 
-  if (uniqueUserIds.length > 0) {
-    // Calculate spots left after the player left
-    const spotsLeft = totalCapacity - remainingParticipants.length;
+    if (uniqueUserIds.length > 0) {
+      // Calculate spots left after the player left
+      const spotsLeft = totalCapacity - remainingParticipants.length;
 
-    // Notify all users (fire and forget - don't block on notification)
-    notifyPlayerLeft(uniqueUserIds, matchId, playerName, sportName, spotsLeft).catch(err => {
-      console.error('Failed to send player left notifications:', err);
-    });
+      // Notify all users (fire and forget - don't block on notification)
+      notifyPlayerLeft(uniqueUserIds, matchId, playerName, sportName, spotsLeft).catch(err => {
+        console.error('Failed to send player left notifications:', err);
+      });
+    }
   }
 }
 

@@ -1326,6 +1326,8 @@
     "leaveConfirmTitle": "Leave this game?",
     "leaveConfirmMessage": "You'll be removed from this game.",
     "leaveReputationWarning": "Leaving this game will affect your reputation (-25 points). Other players are counting on you.",
+    "leaveWaitlistConfirmTitle": "Leave the waitlist?",
+    "leaveWaitlistConfirmMessage": "You'll be removed from the waitlist. You can always join again later.",
     "cancelConfirmTitle": "Cancel this game?",
     "cancelConfirmMessage": "This will cancel the game for everyone.",
     "cancelWarning": "{count} other player(s) will be notified",

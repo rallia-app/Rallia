@@ -619,6 +619,125 @@ export default function MatchFiltersBar({
   // Current date selection for the dropdown
   const currentDateSelection = specificDate ? 'pick_date' : dateRange;
 
+  // =============================================================================
+  // SORTED FILTER CHIPS — active filters float to front
+  // =============================================================================
+
+  const filterChips = useMemo(() => {
+    const chips: {
+      key: string;
+      value: string;
+      isActive: boolean;
+      onPress: () => void;
+      icon?: keyof typeof Ionicons.glyphMap;
+    }[] = [
+      {
+        key: 'date',
+        value: getDateDisplay(),
+        isActive: dateRange !== 'all' || specificDate !== null,
+        onPress: handleDateChipPress,
+        icon: specificDate ? 'calendar' : undefined,
+      },
+      {
+        key: 'timeOfDay',
+        value: timeOfDayDisplay,
+        isActive: timeOfDay !== 'all',
+        onPress: () => setShowTimeDropdown(true),
+        icon: getTimeOfDayIcon(timeOfDay),
+      },
+      {
+        key: 'format',
+        value: formatDisplay,
+        isActive: format !== 'all',
+        onPress: () => setShowFormatDropdown(true),
+      },
+      {
+        key: 'matchType',
+        value: matchTypeDisplay,
+        isActive: matchType !== 'all',
+        onPress: () => setShowMatchTypeDropdown(true),
+      },
+      {
+        key: 'duration',
+        value: durationDisplay,
+        isActive: duration !== 'all',
+        onPress: () => setShowDurationDropdown(true),
+        icon: duration !== 'all' ? 'timer-outline' : undefined,
+      },
+      {
+        key: 'distance',
+        value: distanceDisplay,
+        isActive: distance !== 'all',
+        onPress: () => setShowDistanceDropdown(true),
+      },
+      {
+        key: 'skillLevel',
+        value: skillLevelDisplay,
+        isActive: skillLevel !== 'all',
+        onPress: () => setShowSkillDropdown(true),
+      },
+      {
+        key: 'gender',
+        value: genderDisplay,
+        isActive: gender !== 'all',
+        onPress: () => setShowGenderDropdown(true),
+      },
+      {
+        key: 'cost',
+        value: costDisplay,
+        isActive: cost !== 'all',
+        onPress: () => setShowCostDropdown(true),
+        icon: getCostIcon(cost),
+      },
+      {
+        key: 'courtStatus',
+        value: courtStatusDisplay,
+        isActive: courtStatus !== 'all',
+        onPress: () => setShowCourtStatusDropdown(true),
+      },
+      {
+        key: 'joinMode',
+        value: joinModeDisplay,
+        isActive: joinMode !== 'all',
+        onPress: () => setShowJoinModeDropdown(true),
+      },
+    ];
+
+    // Stable sort: active filters first, preserve relative order within each group
+    return [...chips].sort((a, b) => {
+      if (a.isActive && !b.isActive) return -1;
+      if (!a.isActive && b.isActive) return 1;
+      return 0;
+    });
+  }, [
+    getDateDisplay,
+    dateRange,
+    specificDate,
+    handleDateChipPress,
+    timeOfDayDisplay,
+    timeOfDay,
+    getTimeOfDayIcon,
+    formatDisplay,
+    format,
+    matchTypeDisplay,
+    matchType,
+    durationDisplay,
+    duration,
+    distanceDisplay,
+    distance,
+    skillLevelDisplay,
+    skillLevel,
+    genderDisplay,
+    gender,
+    costDisplay,
+    cost,
+    getCostIcon,
+    courtStatusDisplay,
+    courtStatus,
+    joinModeDisplay,
+    joinMode,
+  ]);
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -640,99 +759,7 @@ export default function MatchFiltersBar({
           </View>
         )}
 
-        {/* Date Filter */}
-        <FilterChip
-          value={getDateDisplay()}
-          isActive={dateRange !== 'all' || specificDate !== null}
-          onPress={handleDateChipPress}
-          isDark={isDark}
-          icon={specificDate ? 'calendar' : undefined}
-        />
-
-        {/* Time of Day Filter */}
-        <FilterChip
-          value={timeOfDayDisplay}
-          isActive={timeOfDay !== 'all'}
-          onPress={() => setShowTimeDropdown(true)}
-          isDark={isDark}
-          icon={getTimeOfDayIcon(timeOfDay)}
-        />
-
-        {/* Format Filter */}
-        <FilterChip
-          value={formatDisplay}
-          isActive={format !== 'all'}
-          onPress={() => setShowFormatDropdown(true)}
-          isDark={isDark}
-        />
-
-        {/* Match Type Filter */}
-        <FilterChip
-          value={matchTypeDisplay}
-          isActive={matchType !== 'all'}
-          onPress={() => setShowMatchTypeDropdown(true)}
-          isDark={isDark}
-        />
-
-        {/* Duration Filter */}
-        <FilterChip
-          value={durationDisplay}
-          isActive={duration !== 'all'}
-          onPress={() => setShowDurationDropdown(true)}
-          isDark={isDark}
-          icon={duration !== 'all' ? 'timer-outline' : undefined}
-        />
-
-        {/* Distance Filter */}
-        <FilterChip
-          value={distanceDisplay}
-          isActive={distance !== 'all'}
-          onPress={() => setShowDistanceDropdown(true)}
-          isDark={isDark}
-        />
-
-        {/* Skill Level Filter */}
-        <FilterChip
-          value={skillLevelDisplay}
-          isActive={skillLevel !== 'all'}
-          onPress={() => setShowSkillDropdown(true)}
-          isDark={isDark}
-        />
-
-        {/* Gender Filter */}
-        <FilterChip
-          value={genderDisplay}
-          isActive={gender !== 'all'}
-          onPress={() => setShowGenderDropdown(true)}
-          isDark={isDark}
-        />
-
-        {/* Cost Filter */}
-        <FilterChip
-          value={costDisplay}
-          isActive={cost !== 'all'}
-          onPress={() => setShowCostDropdown(true)}
-          isDark={isDark}
-          icon={getCostIcon(cost)}
-        />
-
-        {/* Court Status Filter */}
-        <FilterChip
-          value={courtStatusDisplay}
-          isActive={courtStatus !== 'all'}
-          onPress={() => setShowCourtStatusDropdown(true)}
-          isDark={isDark}
-        />
-
-        {/* Join Mode Filter */}
-        <FilterChip
-          value={joinModeDisplay}
-          isActive={joinMode !== 'all'}
-          onPress={() => setShowJoinModeDropdown(true)}
-          isDark={isDark}
-        />
-
-        {/* Reset Button */}
+        {/* Reset Button — shown after location selector, before filter chips */}
         {hasActiveFilters && onReset && (
           <TouchableOpacity
             style={[
@@ -755,6 +782,18 @@ export default function MatchFiltersBar({
             </Text>
           </TouchableOpacity>
         )}
+
+        {/* Filter Chips — sorted with active filters first */}
+        {filterChips.map(chip => (
+          <FilterChip
+            key={chip.key}
+            value={chip.value}
+            isActive={chip.isActive}
+            onPress={chip.onPress}
+            isDark={isDark}
+            icon={chip.icon}
+          />
+        ))}
       </ScrollView>
 
       {/* =================================================================== */}

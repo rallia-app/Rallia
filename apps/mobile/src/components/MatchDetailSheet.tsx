@@ -1955,7 +1955,7 @@ export const MatchDetailSheet: React.FC = () => {
           themeColors={warningThemeColors}
           isDark={isDark}
           loading={isCancellingRequest}
-          leftIcon={<Ionicons name="close-outline" size={18} color={ctaDestructive} />}
+          leftIcon={<Ionicons name="close-circle-outline" size={18} color={ctaDestructive} />}
         >
           {t('matchActions.cancelRequest')}
         </Button>
@@ -3100,21 +3100,29 @@ export const MatchDetailSheet: React.FC = () => {
         <View style={styles.actionButtonsContainer}>{renderActionButtons()}</View>
       </View>
 
-      {/* Leave Match Confirmation Modal */}
+      {/* Leave Match / Leave Waitlist Confirmation Modal */}
       <ConfirmationModal
         visible={showLeaveModal}
         onClose={() => setShowLeaveModal(false)}
         onConfirm={handleConfirmLeave}
-        title={t('matchActions.leaveConfirmTitle')}
-        message={t('matchActions.leaveConfirmMessage')}
+        title={
+          isWaitlisted
+            ? t('matchActions.leaveWaitlistConfirmTitle')
+            : t('matchActions.leaveConfirmTitle')
+        }
+        message={
+          isWaitlisted
+            ? t('matchActions.leaveWaitlistConfirmMessage')
+            : t('matchActions.leaveConfirmMessage')
+        }
         additionalInfo={
-          selectedMatch && willLeaveAffectReputation(selectedMatch)
+          !isWaitlisted && selectedMatch && willLeaveAffectReputation(selectedMatch)
             ? t('matchActions.leaveReputationWarning')
             : undefined
         }
-        confirmLabel={t('matches.leaveMatch')}
+        confirmLabel={isWaitlisted ? t('matchActions.leaveWaitlist') : t('matches.leaveMatch')}
         cancelLabel={t('common.cancel')}
-        destructive
+        destructive={!isWaitlisted}
         isLoading={isLeaving}
       />
 

@@ -767,11 +767,11 @@ const CardFooter: React.FC<CardFooterProps> = ({
     ctaTextColor = ctaNeutralText;
     ctaIcon = 'create-outline';
   } else if (isWaitlisted) {
-    // On Waitlist → neutral background with secondary emphasis
+    // On Waitlist → info/blue style to match the waitlisted banner in MatchDetailSheet
     ctaLabel = t('match.cta.waitlisted');
-    ctaBgColor = ctaNeutralBg;
-    ctaTextColor = ctaDestructive;
-    ctaBorderColor = ctaDestructive;
+    ctaBgColor = `${status.info.DEFAULT}15`;
+    ctaTextColor = status.info.DEFAULT;
+    ctaBorderColor = status.info.DEFAULT;
     ctaIcon = 'list-outline';
   } else if (hasJoined) {
     // Leave → danger red
@@ -780,13 +780,13 @@ const CardFooter: React.FC<CardFooterProps> = ({
     ctaTextColor = base.white;
     ctaIcon = 'log-out-outline';
   } else if (hasPendingRequest) {
-    // Pending → neutral background with secondary emphasis (disabled)
+    // Pending → warning/amber style to match the pending approval banner in MatchDetailSheet
     ctaLabel = t('match.cta.pending');
-    ctaBgColor = ctaNeutralBg;
-    ctaTextColor = ctaDestructive;
-    ctaBorderColor = ctaDestructive;
+    ctaBgColor = `${status.warning.DEFAULT}15`;
+    ctaTextColor = status.warning.DEFAULT;
+    ctaBorderColor = status.warning.DEFAULT;
     ctaDisabled = true;
-    ctaIcon = 'close-outline';
+    ctaIcon = 'time-outline';
   } else if (isInvited && !isFull && !isRequestMode) {
     // Invited (pending status) to direct-join match with spots → Accept Invitation (success green)
     ctaLabel = t('match.cta.acceptInvitation');
