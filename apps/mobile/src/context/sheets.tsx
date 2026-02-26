@@ -19,7 +19,6 @@ import { EditCommunityActionSheet } from '../features/communities/components/Edi
 import { MatchTypeActionSheet } from '../features/matches/components/MatchTypeModal';
 import { ScoreConfirmationActionSheet } from '../features/matches/components/ScoreConfirmationModal';
 import { RegisterMatchScoreActionSheet } from '../features/matches/components/RegisterMatchScoreSheet';
-import { BookingConfirmationActionSheet } from '../features/matches/components/BookingConfirmationSheet';
 import { CourtSelectionActionSheet } from '../features/matches/components/CourtSelectionSheet';
 // Facilities components
 import { ExternalBookingActionSheet } from '../features/facilities/components/ExternalBookingSheet';
@@ -265,12 +264,6 @@ declare module 'react-native-actions-sheet' {
         onSuccess?: () => void;
       };
     }>;
-    'booking-confirmation': SheetDefinition<{
-      payload: {
-        onConfirm?: () => void;
-        onCancel?: () => void;
-      };
-    }>;
     'court-selection': SheetDefinition<{
       payload: {
         courts: unknown[];
@@ -290,8 +283,16 @@ declare module 'react-native-actions-sheet' {
         facility: unknown;
         slot: unknown;
         courts: unknown[];
-        /** Callback when booking is successfully completed */
+        /** Callback when booking is successfully completed (e.g. from wizard WhereStep) */
         onSuccess?: (data: {
+          facilityId: string;
+          courtId: string;
+          courtNumber: number | null;
+        }) => void;
+        /** Callback when user taps "Create game" from success step (e.g. from facility screen) */
+        onCreateGameFromBooking?: (data: {
+          facility: unknown;
+          slot: unknown;
           facilityId: string;
           courtId: string;
           courtNumber: number | null;
@@ -547,7 +548,6 @@ export const Sheets = () => {
         'match-type': MatchTypeActionSheet,
         'score-confirmation': ScoreConfirmationActionSheet,
         'register-match-score': RegisterMatchScoreActionSheet,
-        'booking-confirmation': BookingConfirmationActionSheet,
         'court-selection': CourtSelectionActionSheet,
         'external-booking': ExternalBookingActionSheet,
         'court-booking': CourtBookingActionSheet,

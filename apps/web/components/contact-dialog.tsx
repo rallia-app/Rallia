@@ -12,9 +12,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { createClient } from '@/lib/supabase/client';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Plus, Save } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 import { useState, useEffect } from 'react';
 
 interface Sport {
@@ -23,9 +23,11 @@ interface Sport {
   slug: string;
 }
 
-interface Contact {
+type ContactType = 'general' | 'reservation' | 'maintenance' | 'other';
+
+export interface ContactInitialData {
   id: string;
-  contact_type: 'general' | 'reservation' | 'maintenance' | 'other';
+  contact_type: ContactType;
   phone: string | null;
   email: string | null;
   website: string | null;
@@ -34,21 +36,17 @@ interface Contact {
   notes: string | null;
 }
 
-interface EditContactDialogProps {
+interface ContactDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  contact: Contact;
   facilityId: string;
+  initialData?: ContactInitialData;
 }
 
-export function EditContactDialog({
-  open,
-  onOpenChange,
-  contact,
-  facilityId,
-}: EditContactDialogProps) {
+export function ContactDialog({ open, onOpenChange, facilityId, initialData }: ContactDialogProps) {
   const t = useTranslations('facilities.contacts');
   const router = useRouter();
+  const isEditMode = !!initialData;
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,13 +56,13 @@ export function EditContactDialog({
   const [loadingSports, setLoadingSports] = useState(true);
 
   // Form state
-  const [contactType, setContactType] = useState<typeof contact.contact_type>(contact.contact_type);
-  const [phone, setPhone] = useState(contact.phone || '');
-  const [email, setEmail] = useState(contact.email || '');
-  const [website, setWebsite] = useState(contact.website || '');
-  const [isPrimary, setIsPrimary] = useState(contact.is_primary);
-  const [sportId, setSportId] = useState(contact.sport_id || '');
-  const [notes, setNotes] = useState(contact.notes || '');
+  const [contactType, setContactType] = useState<ContactType>('general');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [website, setWebsite] = useState('');
+  const [isPrimary, setIsPrimary] = useState(false);
+  const [sportId, setSportId] = useState<string>('');
+  const [notes, setNotes] = useState('');
 
   // Fetch sports on mount
   useEffect(() => {
@@ -87,22 +85,34 @@ export function EditContactDialog({
     }
   }, [open]);
 
-  // Reset form when contact changes
+  // Populate form when initialData changes or dialog opens
   useEffect(() => {
-    if (open && contact) {
-      setContactType(contact.contact_type);
-      setPhone(contact.phone || '');
-      setEmail(contact.email || '');
-      setWebsite(contact.website || '');
-      setIsPrimary(contact.is_primary);
-      setSportId(contact.sport_id || '');
-      setNotes(contact.notes || '');
+    if (open && initialData) {
+      setContactType(initialData.contact_type);
+      setPhone(initialData.phone || '');
+      setEmail(initialData.email || '');
+      setWebsite(initialData.website || '');
+      setIsPrimary(initialData.is_primary);
+      setSportId(initialData.sport_id || '');
+      setNotes(initialData.notes || '');
       setError(null);
     }
-  }, [open, contact]);
+  }, [open, initialData]);
+
+  const resetForm = () => {
+    setContactType('general');
+    setPhone('');
+    setEmail('');
+    setWebsite('');
+    setIsPrimary(false);
+    setSportId('');
+    setNotes('');
+    setError(null);
+  };
 
   const handleClose = () => {
     if (!saving) {
+      if (!isEditMode) resetForm();
       setError(null);
       onOpenChange(false);
     }
@@ -123,9 +133,29 @@ export function EditContactDialog({
     try {
       const supabase = createClient();
 
-      const { error: updateError } = await supabase
-        .from('facility_contact')
-        .update({
+      if (isEditMode) {
+        // Update mode
+        const { error: updateError } = await supabase
+          .from('facility_contact')
+          .update({
+            contact_type: contactType,
+            phone: phone.trim() || null,
+            email: email.trim() || null,
+            website: website.trim() || null,
+            is_primary: isPrimary,
+            sport_id: sportId || null,
+            notes: notes.trim() || null,
+          })
+          .eq('id', initialData!.id);
+
+        if (updateError) throw updateError;
+
+        onOpenChange(false);
+        router.refresh();
+      } else {
+        // Create mode
+        const { error: insertError } = await supabase.from('facility_contact').insert({
+          facility_id: facilityId,
           contact_type: contactType,
           phone: phone.trim() || null,
           email: email.trim() || null,
@@ -133,16 +163,17 @@ export function EditContactDialog({
           is_primary: isPrimary,
           sport_id: sportId || null,
           notes: notes.trim() || null,
-        })
-        .eq('id', contact.id);
+        });
 
-      if (updateError) throw updateError;
+        if (insertError) throw insertError;
 
-      handleClose();
-      router.refresh();
+        resetForm();
+        onOpenChange(false);
+        router.refresh();
+      }
     } catch (err) {
-      console.error('Error updating contact:', err);
-      setError(t('error') || 'Failed to update contact');
+      console.error(`Error ${isEditMode ? 'updating' : 'creating'} contact:`, err);
+      setError(t('error'));
     } finally {
       setSaving(false);
     }
@@ -152,8 +183,10 @@ export function EditContactDialog({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{t('editContact')}</DialogTitle>
-          <DialogDescription>{t('editDescription')}</DialogDescription>
+          <DialogTitle>{isEditMode ? t('editContact') : t('addContact')}</DialogTitle>
+          <DialogDescription>
+            {isEditMode ? t('editDescription') : t('addDescription')}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -164,13 +197,13 @@ export function EditContactDialog({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="edit-contactType">
+            <Label htmlFor="contact-type">
               {t('contactType')} <span className="text-red-500">*</span>
             </Label>
             <select
-              id="edit-contactType"
+              id="contact-type"
               value={contactType}
-              onChange={e => setContactType(e.target.value as typeof contactType)}
+              onChange={e => setContactType(e.target.value as ContactType)}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={saving}
             >
@@ -183,9 +216,9 @@ export function EditContactDialog({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-phone">{t('phone')}</Label>
+              <Label htmlFor="contact-phone">{t('phone')}</Label>
               <Input
-                id="edit-phone"
+                id="contact-phone"
                 type="tel"
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
@@ -195,9 +228,9 @@ export function EditContactDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-email">{t('email')}</Label>
+              <Label htmlFor="contact-email">{t('email')}</Label>
               <Input
-                id="edit-email"
+                id="contact-email"
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -208,9 +241,9 @@ export function EditContactDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-website">{t('website')}</Label>
+            <Label htmlFor="contact-website">{t('website')}</Label>
             <Input
-              id="edit-website"
+              id="contact-website"
               type="url"
               value={website}
               onChange={e => setWebsite(e.target.value)}
@@ -220,7 +253,7 @@ export function EditContactDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-sportId">{t('sport')}</Label>
+            <Label htmlFor="contact-sportId">{t('sport')}</Label>
             {loadingSports ? (
               <div className="flex items-center gap-2 py-2">
                 <Loader2 className="size-4 animate-spin" />
@@ -228,7 +261,7 @@ export function EditContactDialog({
               </div>
             ) : (
               <select
-                id="edit-sportId"
+                id="contact-sportId"
                 value={sportId}
                 onChange={e => setSportId(e.target.value)}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -246,9 +279,9 @@ export function EditContactDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-notes">{t('notes')}</Label>
+            <Label htmlFor="contact-notes">{t('notes')}</Label>
             <textarea
-              id="edit-notes"
+              id="contact-notes"
               value={notes}
               onChange={e => setNotes(e.target.value)}
               placeholder={t('notesPlaceholder')}
@@ -260,14 +293,14 @@ export function EditContactDialog({
           <div className="flex items-center gap-3">
             <input
               type="checkbox"
-              id="edit-isPrimary"
+              id="contact-isPrimary"
               checked={isPrimary}
               onChange={e => setIsPrimary(e.target.checked)}
               className="size-4 rounded border-gray-300"
               disabled={saving}
             />
             <div>
-              <Label htmlFor="edit-isPrimary" className="cursor-pointer">
+              <Label htmlFor="contact-isPrimary" className="cursor-pointer">
                 {t('isPrimary')}
               </Label>
               <p className="text-sm text-muted-foreground">{t('isPrimaryHint')}</p>
@@ -282,12 +315,12 @@ export function EditContactDialog({
               {saving ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" />
-                  {t('saving')}
+                  {isEditMode ? t('saving') : t('creating')}
                 </>
               ) : (
                 <>
-                  <Save className="mr-2 size-4" />
-                  {t('saveButton')}
+                  {isEditMode ? <Save className="mr-2 size-4" /> : <Plus className="mr-2 size-4" />}
+                  {isEditMode ? t('saveButton') : t('createButton')}
                 </>
               )}
             </Button>

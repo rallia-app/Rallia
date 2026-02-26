@@ -121,16 +121,17 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   // Theme-aware colors
   const colors = {
     backdrop: 'rgba(0, 0, 0, 0.5)',
-    background: themeColors.card,
+    background: isDark ? neutral[800] : themeColors.card,
     text: themeColors.foreground,
     textMuted: themeColors.mutedForeground,
-    border: themeColors.border,
+    border: isDark ? neutral[700] : themeColors.border,
     destructive: status.error.DEFAULT,
     destructiveLight: isDark ? status.error.dark : status.error.light,
     // Warning box uses amber/warning colors for better readability
     warningBackground: isDark ? 'rgba(251, 191, 36, 0.15)' : 'rgba(245, 158, 11, 0.1)',
     warningBorder: isDark ? status.warning.light : status.warning.DEFAULT,
     warningText: isDark ? status.warning.light : status.warning.dark,
+    confirmText: isDark ? themeColors.primaryForeground : BASE_WHITE,
   };
 
   // Handle confirm with haptic
@@ -248,12 +249,12 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                   activeOpacity={0.7}
                 >
                   {isLoading ? (
-                    <ActivityIndicator size="small" color={BASE_WHITE} />
+                    <ActivityIndicator size="small" color={colors.confirmText} />
                   ) : (
                     <Text
                       size="base"
                       weight="medium"
-                      style={{ color: BASE_WHITE, textAlign: 'center' }}
+                      style={{ color: colors.confirmText, textAlign: 'center' }}
                     >
                       {confirmLabel}
                     </Text>

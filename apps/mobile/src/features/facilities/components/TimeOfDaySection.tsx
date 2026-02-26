@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, neutral, accent, status } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import type { FormattedSlot } from '@rallia/shared-hooks';
 import type { TranslationKey, TranslationOptions } from '../../../hooks';
@@ -112,10 +112,10 @@ export default function TimeOfDaySection({
   const config = TIME_OF_DAY_CONFIG[timeOfDay];
   const iconColor =
     timeOfDay === 'morning'
-      ? '#f59e0b' // Amber for morning
+      ? accent[500]
       : timeOfDay === 'afternoon'
-        ? '#f97316' // Orange for afternoon
-        : '#6366f1'; // Indigo for evening
+        ? accent[600]
+        : status.info.DEFAULT;
 
   const handleToggle = useCallback(() => {
     lightHaptic();

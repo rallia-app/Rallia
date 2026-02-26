@@ -8,7 +8,7 @@ import React, { useMemo, useCallback } from 'react';
 import { View, StyleSheet, Animated, TouchableWithoutFeedback } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, primary, neutral, status } from '@rallia/design-system';
 import type { FormattedSlot } from '@rallia/shared-hooks';
 import type { TranslationKey, TranslationOptions } from '../../../hooks';
 
@@ -45,14 +45,14 @@ function getAvailabilityLevel(courtCount: number): 'high' | 'medium' | 'low' {
 /**
  * Get availability indicator color
  */
-function getAvailabilityColor(level: 'high' | 'medium' | 'low', _isDark: boolean): string {
+function getAvailabilityColor(level: 'high' | 'medium' | 'low'): string {
   switch (level) {
     case 'high':
-      return '#10b981'; // Green
+      return status.success.light;
     case 'medium':
-      return '#f59e0b'; // Amber
+      return status.warning.DEFAULT;
     case 'low':
-      return '#ef4444'; // Red
+      return status.error.DEFAULT;
   }
 }
 
@@ -136,15 +136,11 @@ export default function AvailabilitySlotCard({
 
   // Availability level
   const availabilityLevel = getAvailabilityLevel(slot.courtCount);
-  const availabilityColor = getAvailabilityColor(availabilityLevel, isDark);
+  const availabilityColor = getAvailabilityColor(availabilityLevel);
 
-  // Colors
-  const externalAccentColor = isDark ? '#6366f1' : '#8b5cf6';
-  const priceColor = '#10b981';
+  // Colors — unified teal for all slot types
   const disabledOpacity = disabled ? 0.5 : 1;
-
-  // Card border and accent
-  const cardBorderColor = isLocalSlot ? primary[400] : isDark ? '#6366f1' + '80' : '#8b5cf6' + '60';
+  const cardBorderColor = primary[400];
 
   return (
     <TouchableWithoutFeedback
@@ -158,7 +154,7 @@ export default function AvailabilitySlotCard({
           {
             backgroundColor: colors.card,
             borderColor: cardBorderColor,
-            borderWidth: isLocalSlot ? 1.5 : 1,
+            borderWidth: 1.5,
             opacity: fadeAnim.interpolate({
               inputRange: [0, 1],
               outputRange: [0, disabledOpacity],
@@ -167,19 +163,6 @@ export default function AvailabilitySlotCard({
           },
         ]}
       >
-        {/* Gradient-style accent bar */}
-        <View style={styles.accentBarContainer}>
-          <View
-            style={[
-              styles.accentBar,
-              { backgroundColor: isLocalSlot ? primary[400] : externalAccentColor },
-            ]}
-          />
-          {isLocalSlot && (
-            <View style={[styles.accentBarOverlay, { backgroundColor: primary[600] }]} />
-          )}
-        </View>
-
         {/* Time - Hero element */}
         <Text size="xl" weight="bold" color={colors.text} style={styles.time}>
           {slot.time}
@@ -204,17 +187,17 @@ export default function AvailabilitySlotCard({
         {/* Price section */}
         <View style={styles.priceSection}>
           {hasPrice ? (
-            <Text size="base" weight="bold" color={priceColor}>
+            <Text size="base" weight="bold" color={status.success.light}>
               {priceText}
             </Text>
           ) : (
             <View
               style={[
                 styles.freeBadge,
-                { backgroundColor: isDark ? neutral[700] : '#10b981' + '15' },
+                { backgroundColor: isDark ? neutral[700] : status.success.light + '15' },
               ]}
             >
-              <Text size="xs" weight="semibold" color="#10b981">
+              <Text size="xs" weight="semibold" color={status.success.light}>
                 {t('facilityDetail.free')}
               </Text>
             </View>
@@ -232,8 +215,8 @@ export default function AvailabilitySlotCard({
             </>
           ) : partiallyDisabled && isLocalSlot ? (
             <>
-              <View style={[styles.statusDot, { backgroundColor: '#f59e0b' }]} />
-              <Text size="xs" weight="medium" color="#f59e0b">
+              <View style={[styles.statusDot, { backgroundColor: status.warning.DEFAULT }]} />
+              <Text size="xs" weight="medium" color={status.warning.DEFAULT}>
                 {t('facilityDetail.limited')}
               </Text>
             </>
@@ -246,8 +229,8 @@ export default function AvailabilitySlotCard({
             </>
           ) : (
             <>
-              <Ionicons name="open-outline" size={11} color={externalAccentColor} />
-              <Text size="xs" weight="medium" color={externalAccentColor}>
+              <Ionicons name="open-outline" size={11} color={primary[500]} />
+              <Text size="xs" weight="medium" color={primary[500]}>
                 {t('facilityDetail.external')}
               </Text>
             </>
@@ -256,8 +239,13 @@ export default function AvailabilitySlotCard({
 
         {/* Limited availability warning */}
         {availabilityLevel === 'low' && !disabled && (
-          <View style={[styles.limitedBanner, { backgroundColor: '#ef4444' + '15' }]}>
-            <Text size="xs" weight="medium" color="#ef4444" style={{ textAlign: 'center' }}>
+          <View style={[styles.limitedBanner, { backgroundColor: status.error.DEFAULT + '15' }]}>
+            <Text
+              size="xs"
+              weight="medium"
+              color={status.error.DEFAULT}
+              style={{ textAlign: 'center' }}
+            >
               {t('facilityDetail.lastSpot')}
             </Text>
           </View>
@@ -273,22 +261,7 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.xl,
     overflow: 'hidden',
     paddingBottom: spacingPixels[2.5],
-  },
-  accentBarContainer: {
-    height: 4,
-    width: '100%',
-    flexDirection: 'row',
-  },
-  accentBar: {
-    flex: 1,
-    height: '100%',
-  },
-  accentBarOverlay: {
-    position: 'absolute',
-    right: 0,
-    width: '40%',
-    height: '100%',
-    opacity: 0.6,
+    paddingTop: spacingPixels[0.5],
   },
   time: {
     textAlign: 'center',

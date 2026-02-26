@@ -63,6 +63,15 @@ const TOTAL_STEPS = 3;
 // TYPES
 // =============================================================================
 
+/** Initial booking data when opening wizard from facility "Create game" */
+export interface InitialBookingForWizard {
+  facility: unknown;
+  slot: unknown;
+  facilityId: string;
+  courtId: string;
+  courtNumber: number | null;
+}
+
 interface MatchCreationWizardProps {
   /** Callback when wizard should be closed (closes entire sheet) */
   onClose: () => void;
@@ -72,6 +81,10 @@ interface MatchCreationWizardProps {
   onSuccess?: (matchId: string) => void;
   /** If provided, wizard is in edit mode with pre-filled data */
   editMatch?: MatchDetailData;
+  /** When set, wizard pre-fills steps 1–2 from this booking and starts at step 3 */
+  initialBookingForWizard?: InitialBookingForWizard | null;
+  /** Called after applying initialBookingForWizard so context can clear it */
+  onConsumeInitialBooking?: () => void;
 }
 
 interface ThemeColors {
@@ -236,11 +249,30 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
 // MAIN WIZARD COMPONENT
 // =============================================================================
 
+// Helpers for initial booking slot data (mirror WhereStep logic)
+function formatTime24(date: Date): string {
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+function calculateDurationMinutes(start: Date, end: Date): number {
+  return Math.round((end.getTime() - start.getTime()) / (1000 * 60));
+}
+function mapDurationToFormValue(minutes: number): '30' | '60' | '90' | '120' | 'custom' {
+  const standardDurations = [30, 60, 90, 120] as const;
+  for (const d of standardDurations) {
+    if (minutes === d) return String(d) as '30' | '60' | '90' | '120';
+  }
+  return 'custom';
+}
+
 export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   onClose,
   onBackToLanding,
   onSuccess,
   editMatch,
+  initialBookingForWizard,
+  onConsumeInitialBooking,
 }) => {
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
@@ -254,6 +286,8 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
 
   // State
   const [currentStep, setCurrentStep] = useState(1);
+  // Track highest step visited for lazy mounting (avoids mounting all steps on initial render)
+  const [highestStepVisited, setHighestStepVisited] = useState(1);
 
   // Track last saved state to detect unsaved changes
   const lastSavedStep = useRef<number | null>(null);
@@ -423,6 +457,73 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     });
   }, [playerPreferences, preferencesLoading, isEditMode, hasDraft, isDraftForSport, sportId, form]);
 
+  // Helper to format date as YYYY-MM-DD in local time
+  const formatDateLocal = useCallback((date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
+
+  // Apply initial booking data when opening from facility "Create game"
+  const hasAppliedInitialBooking = useRef(false);
+  useEffect(() => {
+    if (!initialBookingForWizard) {
+      hasAppliedInitialBooking.current = false;
+      return;
+    }
+    if (!onConsumeInitialBooking || isEditMode || hasAppliedInitialBooking.current) {
+      return;
+    }
+    const { facility, slot, facilityId, courtId, courtNumber } = initialBookingForWizard;
+    const slotTyped = slot as { datetime: Date; endDateTime: Date };
+    const facilityTyped = facility as {
+      name: string;
+      address?: string;
+      city?: string;
+      timezone?: string;
+    };
+    const facilityTimezone = facilityTyped.timezone || timezone;
+    const matchDate = formatDateLocal(slotTyped.datetime);
+    const startTime = formatTime24(slotTyped.datetime);
+    const endTime = formatTime24(slotTyped.endDateTime);
+    const durationMins = calculateDurationMinutes(slotTyped.datetime, slotTyped.endDateTime);
+    const duration = mapDurationToFormValue(durationMins);
+
+    form.setValue('locationType', 'facility', { shouldDirty: true });
+    form.setValue('facilityId', facilityId, { shouldDirty: true });
+    form.setValue('courtId', courtId, { shouldDirty: true });
+    form.setValue('courtStatus', 'booked', { shouldDirty: true });
+    form.setValue('locationName', facilityTyped.name, { shouldDirty: true });
+    const fullAddress = [facilityTyped.address, facilityTyped.city].filter(Boolean).join(', ');
+    form.setValue('locationAddress', fullAddress || undefined, { shouldDirty: true });
+    form.setValue('matchDate', matchDate, { shouldDirty: true });
+    form.setValue('startTime', startTime, { shouldDirty: true });
+    form.setValue('endTime', endTime, { shouldDirty: true });
+    form.setValue('duration', duration, { shouldDirty: true });
+    form.setValue('customDurationMinutes', durationMins, { shouldDirty: true });
+    form.setValue('timezone', facilityTimezone, { shouldDirty: true });
+
+    setBookedSlotData({
+      matchDate,
+      startTime,
+      endTime,
+      duration,
+      customDurationMinutes: durationMins,
+      timezone: facilityTimezone,
+    });
+    setCurrentStep(3);
+    hasAppliedInitialBooking.current = true;
+    onConsumeInitialBooking();
+  }, [
+    initialBookingForWizard,
+    onConsumeInitialBooking,
+    isEditMode,
+    form,
+    timezone,
+    formatDateLocal,
+  ]);
+
   // Delayed success state for smoother UX
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMatchId, setSuccessMatchId] = useState<string | null>(null);
@@ -506,6 +607,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
           onPress: () => {
             loadFromDraft(draft.data);
             setCurrentStep(draft.currentStep);
+            setHighestStepVisited(draft.currentStep);
             // Mark draft as already saved at this step
             lastSavedStep.current = draft.currentStep;
             hasUnsavedChanges.current = false;
@@ -525,14 +627,6 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       hasUnsavedChanges.current = true;
     }
   }, [isDirty, values]);
-
-  // Helper to format date as YYYY-MM-DD in local time
-  const formatDateLocal = useCallback((date: Date): string => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }, []);
 
   // Clear booked slot data when location type changes away from facility or facility is cleared
   // This unlocks the WhenFormatStep when user changes location type after booking a slot
@@ -622,7 +716,9 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     }
 
     if (currentStep < TOTAL_STEPS) {
-      setCurrentStep(prev => prev + 1);
+      const nextStep = currentStep + 1;
+      setCurrentStep(nextStep);
+      setHighestStepVisited(prev => Math.max(prev, nextStep));
     }
   }, [currentStep, validateStep, values, sportId, saveDraft, isEditMode, t, toast]);
 
@@ -635,7 +731,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     }
   }, [currentStep]);
 
-  // Handle slot booking from WhereStep - auto-fills date/time/duration in WhenStep
+  // Handle slot booking from WhereStep - auto-fills date/time/duration in WhenStep and jumps to step 3
   const handleSlotBooked = useCallback(
     (slotData: {
       matchDate: string;
@@ -660,6 +756,8 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       }
       form.setValue('timezone', slotData.timezone, { shouldDirty: true });
 
+      // Land on Preferences step (step 3) so user only fills out game preferences
+      setCurrentStep(3);
       successHaptic();
     },
     [form]
@@ -1138,6 +1236,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                       setShowInviteStep(false);
                       resetForm();
                       setCurrentStep(1);
+                      setHighestStepVisited(1);
                     }}
                   >
                     <Text size="base" weight="regular" color={colors.textSecondary}>
@@ -1205,6 +1304,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
               t={t}
               isDark={isDark}
               sportId={selectedSport?.id}
+              sportName={selectedSport?.name}
               deviceTimezone={timezone}
               onSlotBooked={handleSlotBooked}
               preferredFacilityId={preferredFacilityId}
@@ -1212,29 +1312,33 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
             />
           </View>
 
-          {/* Step 2: When */}
+          {/* Step 2: When (lazy mounted) */}
           <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
-            <WhenFormatStep
-              form={form}
-              colors={colors}
-              t={t}
-              isDark={isDark}
-              locale={locale}
-              isLocked={bookedSlotData !== null}
-            />
+            {highestStepVisited >= 2 && (
+              <WhenFormatStep
+                form={form}
+                colors={colors}
+                t={t}
+                isDark={isDark}
+                locale={locale}
+                isLocked={bookedSlotData !== null}
+              />
+            )}
           </View>
 
-          {/* Step 3: Preferences */}
+          {/* Step 3: Preferences (lazy mounted) */}
           <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
-            <PreferencesStep
-              form={form}
-              colors={colors}
-              t={t}
-              isDark={isDark}
-              sportName={selectedSport?.name}
-              sportId={selectedSport?.id}
-              userId={session?.user?.id}
-            />
+            {highestStepVisited >= 3 && (
+              <PreferencesStep
+                form={form}
+                colors={colors}
+                t={t}
+                isDark={isDark}
+                sportName={selectedSport?.name}
+                sportId={selectedSport?.id}
+                userId={session?.user?.id}
+              />
+            )}
           </View>
         </Animated.View>
       </View>

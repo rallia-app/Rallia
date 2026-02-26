@@ -11,9 +11,8 @@
  * - Participant avatars
  */
 
-import React, { useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, Animated, Easing } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from './foundation/Text.native';
 import {
@@ -78,76 +77,21 @@ function getMatchTier(courtStatus: string | null, creatorReputationScore?: numbe
  * - regular: primary (teal) - standard matches
  */
 const TIER_PALETTES = {
-  // Most Wanted - accent palette (amber/gold - premium, highly desirable)
   mostWanted: {
-    light: {
-      background: accent[50], // Light amber background
-      accentStart: accent[500],
-      accentEnd: accent[400],
-    },
-    dark: {
-      background: '#2a1f0a', // Rich dark gold background
-      accentStart: accent[400],
-      accentEnd: accent[300],
-    },
+    light: { background: primary[50] },
+    dark: { background: primary[950] },
   },
-  // Ready to Play - secondary palette (coral/red tones)
   readyToPlay: {
-    light: {
-      background: secondary[50], // Light coral background
-      accentStart: secondary[500],
-      accentEnd: secondary[400],
-    },
-    dark: {
-      background: secondary[950], // Very dark coral background
-      accentStart: secondary[400],
-      accentEnd: secondary[300],
-    },
+    light: { background: primary[50] },
+    dark: { background: primary[950] },
   },
-  // Regular - primary palette (teal/mint - fresh, standard)
   regular: {
-    light: {
-      background: primary[50], // Light teal background
-      accentStart: primary[500],
-      accentEnd: primary[400],
-    },
-    dark: {
-      background: primary[950], // Very dark teal background
-      accentStart: primary[400],
-      accentEnd: primary[300],
-    },
+    light: { background: primary[50] },
+    dark: { background: primary[950] },
   },
-  // Expired - neutral/gray palette (disabled, past matches)
   expired: {
-    light: {
-      background: neutral[100], // Light gray background
-      accentStart: neutral[400], // Gray accent
-      accentEnd: neutral[300], // Lighter gray
-    },
-    dark: {
-      background: neutral[900], // Dark gray background
-      accentStart: neutral[500], // Gray accent
-      accentEnd: neutral[400], // Slightly lighter gray
-    },
-  },
-} as const;
-
-/**
- * Most Wanted colors using design system accent scale
- * These colors are used for the premium styling on most wanted matches
- */
-const MOST_WANTED_COLORS = {
-  light: {
-    border: accent[400], // #fbbf24 - main border color
-    glow: accent[300], // #fcd34d - outer glow
-    shimmer: accent[100], // #fef3c7 - inner highlight
-    shadow: accent[500], // #f59e0b - shadow color
-  },
-  dark: {
-    border: accent[500], // #f59e0b - main border color
-    glow: accent[400], // #fbbf24 - outer glow
-    shimmer: accent[200], // #fde68a - inner highlight
-    shadow: accent[600], // #d97706 - shadow color
+    light: { background: neutral[100] },
+    dark: { background: neutral[900] },
   },
 } as const;
 
@@ -251,35 +195,6 @@ function getCompactTimeDisplay(
 // =============================================================================
 // SUB-COMPONENTS
 // =============================================================================
-
-interface GradientStripProps {
-  isDark: boolean;
-  tier: MatchTier;
-}
-
-/**
- * Smooth gradient accent strip at the top of the card
- * Most Wanted tier gets a gold shimmer gradient
- */
-const GradientStrip: React.FC<GradientStripProps> = ({ isDark, tier }) => {
-  const tierColors = TIER_PALETTES[tier][isDark ? 'dark' : 'light'];
-  const mwColors = MOST_WANTED_COLORS[isDark ? 'dark' : 'light'];
-
-  // Most Wanted cards get a gold shimmer gradient
-  const colors: [string, string, ...string[]] =
-    tier === 'mostWanted'
-      ? [mwColors.shimmer, mwColors.border, mwColors.glow, mwColors.border, mwColors.shimmer]
-      : [tierColors.accentStart, tierColors.accentEnd];
-
-  return (
-    <LinearGradient
-      colors={colors}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 0 }}
-      style={[styles.gradientStrip, tier === 'mostWanted' && styles.gradientStripPremium]}
-    />
-  );
-};
 
 // =============================================================================
 // PENDING REQUESTS BADGE (Creator view - top-right notification badge)
@@ -512,13 +427,13 @@ const ParticipantAvatars: React.FC<ParticipantAvatarsProps> = ({ match, colors, 
                 index > 0 && { marginLeft: -8 },
                 {
                   backgroundColor: avatar.url ? colors.tierAccent : colors.avatarPlaceholder,
-                  borderWidth: isHost ? 2.5 : 2,
-                  borderColor: isHost ? colors.tierAccent : colors.tierAccentLight, // Use tier accent - visible in both modes
-                  shadowColor: isHost ? colors.tierAccent : colors.tierAccentLight,
+                  borderWidth: 2.5,
+                  borderColor: colors.tierAccent,
+                  shadowColor: colors.tierAccent,
                   shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: isHost ? 0.3 : 0.15,
-                  shadowRadius: isHost ? 4 : 2,
-                  elevation: isHost ? 3 : 2,
+                  shadowOpacity: 0.3,
+                  shadowRadius: 4,
+                  elevation: 3,
                 },
               ]}
             >
@@ -602,46 +517,25 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
   const tier: MatchTier = isExpired ? 'expired' : baseTier;
   const isMostWanted = tier === 'mostWanted';
 
-  // Get most wanted colors from design system
-  const mwColors = MOST_WANTED_COLORS[isDark ? 'dark' : 'light'];
-
   // Animated pulse effect for urgent matches - use useMemo to avoid accessing refs during render
   const urgentPulseAnimation = useMemo(() => new Animated.Value(0), []);
 
   // Get tier palette colors
   const tierPaletteColors = TIER_PALETTES[tier][isDark ? 'dark' : 'light'];
 
-  // Get tier-specific accent colors
-  const getTierAccentColors = useCallback(
-    (matchTier: MatchTier) => {
-      switch (matchTier) {
-        case 'mostWanted':
-          return {
-            accent: isDark ? accent[400] : accent[500],
-            accentLight: isDark ? accent[700] : accent[200],
-          };
-        case 'readyToPlay':
-          return {
-            accent: isDark ? secondary[400] : secondary[500],
-            accentLight: isDark ? secondary[700] : secondary[200],
-          };
-        case 'expired':
-          return {
-            accent: isDark ? neutral[500] : neutral[400],
-            accentLight: isDark ? neutral[700] : neutral[300],
-          };
-        case 'regular':
-        default:
-          return {
-            accent: isDark ? primary[400] : primary[500],
-            accentLight: isDark ? primary[700] : primary[200],
-          };
-      }
-    },
-    [isDark]
-  );
-
-  const tierAccentColors = getTierAccentColors(tier);
+  // All tiers use primary accent colors (except expired which uses neutral)
+  const tierAccentColors = useMemo(() => {
+    if (tier === 'expired') {
+      return {
+        accent: isDark ? neutral[500] : neutral[400],
+        accentLight: isDark ? neutral[700] : neutral[300],
+      };
+    }
+    return {
+      accent: isDark ? primary[400] : primary[500],
+      accentLight: isDark ? primary[700] : primary[200],
+    };
+  }, [isDark, tier]);
 
   const themeColors = isDark ? darkTheme : lightTheme;
   const colors: ThemeColors = useMemo(
@@ -754,13 +648,8 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
     [urgentPulseAnimation]
   );
 
-  // Dynamic border color based on tier
-  // Most Wanted uses design system accent colors for border
-  const dynamicBorderColor = isMostWanted
-    ? mwColors.border
-    : isDark
-      ? `${tierPaletteColors.accentStart}40` // 25% opacity accent border in dark mode
-      : `${tierPaletteColors.accentStart}20`; // 12% opacity accent border in light mode
+  // Border color always uses primary
+  const dynamicBorderColor = isDark ? `${primary[400]}40` : `${primary[500]}20`;
 
   // Determine if we should show pending requests badge (only for creators with pending requests)
   const showPendingBadge = pendingRequestCount > 0;
@@ -787,7 +676,6 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
           elevation: isDark ? 3 : 2,
           opacity: isExpired ? 0.7 : 1,
         },
-        isMostWanted && [styles.premiumCard, { shadowColor: mwColors.shadow }],
       ]}
       onPress={onPress}
       activeOpacity={0.85}
@@ -796,9 +684,6 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
     >
       {/* Pending join requests badge (top-right corner) */}
       {showPendingBadge && <PendingRequestsBadge count={pendingRequestCount} isDark={isDark} />}
-
-      {/* Gradient accent strip */}
-      <GradientStrip isDark={isDark} tier={tier} />
 
       <View style={styles.content}>
         {/* Day label with indicator */}
@@ -916,26 +801,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     // Note: overflow NOT hidden to allow corner badges to extend outside
     // Shadow is applied dynamically based on theme in the component
-  },
-
-  // Premium "Most Wanted" card styles
-  premiumCard: {
-    borderWidth: 2,
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 4,
-    // shadowColor is set dynamically using mwColors.shadow
-  },
-
-  gradientStrip: {
-    height: 3,
-    zIndex: 1,
-    borderTopLeftRadius: radiusPixels.lg - 1, // Match card border radius
-    borderTopRightRadius: radiusPixels.lg - 1,
-    overflow: 'hidden',
-  },
-  gradientStripPremium: {
-    height: 5, // Slightly taller for premium cards
   },
 
   // Pending requests badge (top-right corner, extends outside card)

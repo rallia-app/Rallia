@@ -1,7 +1,6 @@
 'use client';
 
-import { AddFacilityDialog } from '@/components/add-facility-dialog';
-import { EditFacilityDialog } from '@/components/edit-facility-dialog';
+import { FacilityDialog, type FacilityInitialData } from '@/components/facility-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,11 +28,22 @@ interface Court {
 interface Facility {
   id: string;
   name: string;
+  description: string | null;
   address: string | null;
   city: string | null;
+  postal_code: string | null;
+  country: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  timezone: string | null;
   is_active: boolean;
+  membership_required: boolean;
+  facility_type: string | null;
+  data_provider_id: string | null;
+  external_provider_id: string | null;
   created_at?: string;
   court: Court[];
+  facility_sport: Array<{ sport_id: string }>;
 }
 
 interface FacilitiesListProps {
@@ -195,13 +205,31 @@ export function FacilitiesList({ facilities, organizationId }: FacilitiesListPro
   const t = useTranslations('facilities');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingFacilityId, setEditingFacilityId] = useState<string | null>(null);
+  const [editingFacility, setEditingFacility] = useState<FacilityInitialData | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [sortOption, setSortOption] = useState<SortOption>('name-asc');
 
   const handleEditClick = (facilityId: string) => {
-    setEditingFacilityId(facilityId);
+    const f = facilities.find(fac => fac.id === facilityId);
+    if (!f) return;
+    setEditingFacility({
+      id: f.id,
+      name: f.name,
+      description: f.description,
+      facility_type: f.facility_type,
+      address: f.address,
+      city: f.city,
+      postal_code: f.postal_code,
+      country: f.country,
+      latitude: f.latitude,
+      longitude: f.longitude,
+      timezone: f.timezone,
+      membership_required: f.membership_required,
+      data_provider_id: f.data_provider_id,
+      external_provider_id: f.external_provider_id,
+      facility_sport: f.facility_sport || [],
+    });
     setEditDialogOpen(true);
   };
 
@@ -421,21 +449,21 @@ export function FacilitiesList({ facilities, organizationId }: FacilitiesListPro
         )}
       </div>
 
-      <AddFacilityDialog
+      <FacilityDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         organizationId={organizationId}
       />
-      {editingFacilityId && (
-        <EditFacilityDialog
+      {editingFacility && (
+        <FacilityDialog
           open={editDialogOpen}
           onOpenChange={open => {
             setEditDialogOpen(open);
             if (!open) {
-              setEditingFacilityId(null);
+              setEditingFacility(null);
             }
           }}
-          facilityId={editingFacilityId}
+          initialData={editingFacility}
         />
       )}
     </>

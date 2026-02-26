@@ -1,15 +1,13 @@
+import { AdminOrgFacilitiesSection } from '@/components/admin-org-facilities-section';
+import { AdminOrgProfileHeader } from '@/components/admin-org-profile-header';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { OrganizationDeleteButton } from '@/components/organization-delete-button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Link } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Tables } from '@/types';
-import { Building2, Edit, Globe, Mail, MapPin, Phone, Sun, Home, Layers } from 'lucide-react';
+import { Database, Globe, Mail, MapPin, Phone } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import Image from 'next/image';
 import { notFound } from 'next/navigation';
 
 // Helper to capitalize strings
@@ -21,8 +19,7 @@ function capitalize(str: string | null | undefined): string {
     .join(' ');
 }
 
-// Type aliases for relations - matching the actual query structure
-// FacilityFileJoin represents facility_file joined with file
+// Type aliases for relations
 type FacilityFileJoin = {
   id: string;
   display_order: number | null;
@@ -33,39 +30,21 @@ type FacilityFileJoin = {
     thumbnail_url: string | null;
   } | null;
 };
-type FacilityContact = Pick<
-  Tables<'facility_contact'>,
-  'id' | 'phone' | 'email' | 'website' | 'contact_type' | 'is_primary'
->;
 type Sport = Pick<Tables<'sport'>, 'id' | 'name' | 'slug'>;
-type Court = {
-  id: string;
-  surface_type: string | null;
-  lighting: boolean | null;
-  indoor: boolean | null;
-  name: string | null;
-  court_number: number | null;
-  availability_status: string | null;
-  court_sport: Array<{
-    sport_id: string;
-    sport: Sport;
-  }>;
-};
 type Facility = Pick<
   Tables<'facility'>,
-  'id' | 'name' | 'slug' | 'address' | 'city' | 'country' | 'postal_code' | 'latitude' | 'longitude'
+  'id' | 'name' | 'slug' | 'address' | 'city' | 'country' | 'postal_code'
 > & {
   facility_file: FacilityFileJoin[];
-  facility_contact: FacilityContact[];
   facility_sport: Array<{
     sport_id: string;
     sport: Sport;
   }>;
-  courts: Court[];
 };
 type Organization = Pick<
   Tables<'organization'>,
   | 'id'
+  | 'slug'
   | 'name'
   | 'nature'
   | 'type'
@@ -77,10 +56,12 @@ type Organization = Pick<
   | 'postal_code'
   | 'website'
   | 'description'
+  | 'data_provider_id'
   | 'is_active'
   | 'created_at'
   | 'updated_at'
 > & {
+  data_provider: { name: string } | null;
   facilities: Facility[];
 };
 
@@ -119,9 +100,9 @@ export async function generateMetadata({
 export default async function OrganizationProfilePage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ slug: string; locale: string }>;
 }) {
-  const { slug } = await params;
+  const { slug, locale } = await params;
   const t = await getTranslations('admin.organizations.profile');
   const supabase = await createClient();
 
@@ -134,6 +115,7 @@ export default async function OrganizationProfilePage({
       .select(
         `
         id,
+        slug,
         name,
         nature,
         type,
@@ -145,6 +127,10 @@ export default async function OrganizationProfilePage({
         postal_code,
         website,
         description,
+        data_provider_id,
+        data_provider (
+          name
+        ),
         is_active,
         created_at,
         updated_at
@@ -157,7 +143,7 @@ export default async function OrganizationProfilePage({
       notFound();
     }
 
-    // Fetch facilities with all related data
+    // Fetch facilities with images and sports for overview
     const { data: facilities, error: facilitiesError } = await supabase
       .from('facility')
       .select(
@@ -169,8 +155,6 @@ export default async function OrganizationProfilePage({
         city,
         country,
         postal_code,
-        latitude,
-        longitude,
         facility_file (
           id,
           display_order,
@@ -180,14 +164,6 @@ export default async function OrganizationProfilePage({
             url,
             thumbnail_url
           )
-        ),
-        facility_contact (
-          id,
-          phone,
-          email,
-          website,
-          is_primary,
-          contact_type
         ),
         facility_sport (
           sport_id,
@@ -207,72 +183,9 @@ export default async function OrganizationProfilePage({
       throw new Error('Failed to fetch facilities');
     }
 
-    // Fetch courts
-    const facilityIds = facilities?.map(f => f.id) || [];
-    type CourtData = {
-      id: string;
-      facility_id: string;
-      surface_type: string | null;
-      lighting: boolean | null;
-      indoor: boolean | null;
-      name: string | null;
-      court_number: number | null;
-      availability_status: string | null;
-      court_sport: Array<{
-        sport_id: string;
-        sport: {
-          id: string;
-          name: string;
-          slug: string;
-        };
-      }>;
-    };
-    let courts: CourtData[] = [];
-
-    if (facilityIds.length > 0) {
-      const { data: courtsData, error: courtsError } = await supabase
-        .from('court')
-        .select(
-          `
-          id,
-          facility_id,
-          surface_type,
-          lighting,
-          indoor,
-          name,
-          court_number,
-          availability_status,
-          court_sport (
-            sport_id,
-            sport (
-              id,
-              name,
-              slug
-            )
-          )
-        `
-        )
-        .in('facility_id', facilityIds)
-        .eq('is_active', true)
-        .order('court_number', { ascending: true });
-
-      if (!courtsError) {
-        courts = courtsData || [];
-      }
-    }
-
-    // Organize courts by facility
-    const facilitiesWithCourts = facilities?.map(facility => {
-      const facilityCourts = courts.filter(court => court.facility_id === facility.id);
-      return {
-        ...facility,
-        courts: facilityCourts,
-      };
-    });
-
     organization = {
       ...orgData,
-      facilities: facilitiesWithCourts || [],
+      facilities: facilities || [],
     };
   } catch (error) {
     console.error('Error fetching organization:', error);
@@ -296,7 +209,7 @@ export default async function OrganizationProfilePage({
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
+    return new Intl.DateTimeFormat(locale, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -306,21 +219,30 @@ export default async function OrganizationProfilePage({
   return (
     <div className="flex flex-col w-full gap-8">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">{organization.name}</h1>
-          <p className="text-muted-foreground mt-2 mb-0">{t('description', { slug })}</p>
-        </div>
-        <div className="flex gap-2">
-          <Link href={`/admin/organizations/${slug}/edit`}>
-            <Button>
-              <Edit className="h-4 w-4 mr-2" />
-              {t('updateButton')}
-            </Button>
-          </Link>
-          <OrganizationDeleteButton organizationSlug={slug} organizationName={organization.name} />
-        </div>
-      </div>
+      <AdminOrgProfileHeader
+        slug={slug}
+        organizationName={organization.name}
+        title={organization.name}
+        description={t('description', { slug })}
+        updateButtonLabel={t('updateButton')}
+        backLabel={t('backToOrganizations')}
+        initialData={{
+          slug: organization.slug,
+          name: organization.name,
+          nature: organization.nature as 'public' | 'private',
+          type: organization.type,
+          email: organization.email,
+          phone: organization.phone,
+          website: organization.website,
+          description: organization.description,
+          is_active: organization.is_active,
+          data_provider_id: organization.data_provider_id,
+          address: organization.address,
+          city: organization.city,
+          country: organization.country,
+          postal_code: organization.postal_code,
+        }}
+      />
 
       {/* Organization Info */}
       <Card className="overflow-hidden">
@@ -439,6 +361,20 @@ export default async function OrganizationProfilePage({
                 </div>
               </div>
             )}
+
+            {organization.data_provider && (
+              <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors">
+                <div className="p-2 bg-primary/10 rounded-md">
+                  <Database className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide m-0">
+                    {t('fields.dataProvider')}
+                  </p>
+                  <p className="text-sm font-medium m-0">{organization.data_provider.name}</p>
+                </div>
+              </div>
+            )}
           </div>
 
           <Separator />
@@ -461,244 +397,11 @@ export default async function OrganizationProfilePage({
       </Card>
 
       {/* Facilities */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold">{t('sections.facilities')}</h2>
-          <Badge variant="secondary" className="text-sm px-3 py-1">
-            {organization.facilities.length}{' '}
-            {organization.facilities.length === 1 ? t('facility') : t('facilities')}
-          </Badge>
-        </div>
-
-        {organization.facilities.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="pt-6">
-              <div className="text-center py-12">
-                <Building2 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                <p className="text-muted-foreground m-0">{t('noFacilities')}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          organization.facilities.map(facility => (
-            <Card key={facility.id} className="overflow-hidden">
-              <CardHeader className="bg-muted/30 border-b">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <Building2 className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">{facility.name}</CardTitle>
-                      {(facility.address || facility.city || facility.country) && (
-                        <CardDescription className="mt-1 flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {[
-                            facility.address,
-                            facility.city,
-                            capitalize(facility.country),
-                            facility.postal_code,
-                          ]
-                            .filter(Boolean)
-                            .join(', ')}
-                        </CardDescription>
-                      )}
-                    </div>
-                  </div>
-                  {facility.facility_sport && facility.facility_sport.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 justify-end max-w-[200px]">
-                      {facility.facility_sport.map(fs => (
-                        <Badge key={fs.sport_id} variant="default" className="text-xs">
-                          {capitalize(fs.sport.name)}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="pt-6 space-y-6">
-                {/* Facility Images */}
-                {facility.facility_file && facility.facility_file.length > 0 && (
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                      {t('sections.facilityImages')}
-                    </h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {facility.facility_file
-                        .filter(ff => ff.file) // Filter out entries without file
-                        .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
-                        .map(facilityFile => (
-                          <div
-                            key={facilityFile.id}
-                            className={`relative aspect-video rounded-lg overflow-hidden border-2 ${
-                              facilityFile.is_primary ? 'border-primary' : 'border-transparent'
-                            } shadow-sm hover:shadow-md transition-shadow`}
-                          >
-                            <Image
-                              src={facilityFile.file!.thumbnail_url || facilityFile.file!.url}
-                              alt={facility.name}
-                              fill
-                              className="object-cover"
-                            />
-                            {facilityFile.is_primary && (
-                              <div className="absolute top-2 left-2">
-                                <Badge variant="default" className="text-xs shadow">
-                                  Primary
-                                </Badge>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Contacts */}
-                {facility.facility_contact && facility.facility_contact.length > 0 && (
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                      {t('sections.contacts')}
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {facility.facility_contact.map(contact => (
-                        <div
-                          key={contact.id}
-                          className={`p-4 rounded-lg border-2 space-y-3 ${
-                            contact.is_primary
-                              ? 'border-primary/50 bg-primary/5'
-                              : 'border-muted bg-muted/20'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <Badge variant="outline" className="font-medium">
-                              {capitalize(contact.contact_type)}
-                            </Badge>
-                            {contact.is_primary && (
-                              <Badge variant="default" className="text-xs">
-                                {t('primary')}
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="space-y-2">
-                            {contact.email && (
-                              <div className="flex items-center gap-2 text-sm">
-                                <Mail className="h-4 w-4 text-muted-foreground" />
-                                <a
-                                  href={`mailto:${contact.email}`}
-                                  className="hover:underline hover:text-primary transition-colors"
-                                >
-                                  {contact.email}
-                                </a>
-                              </div>
-                            )}
-                            {contact.phone && (
-                              <div className="flex items-center gap-2 text-sm">
-                                <Phone className="h-4 w-4 text-muted-foreground" />
-                                <a
-                                  href={`tel:${contact.phone}`}
-                                  className="hover:underline hover:text-primary transition-colors"
-                                >
-                                  {contact.phone}
-                                </a>
-                              </div>
-                            )}
-                            {contact.website && (
-                              <div className="flex items-center gap-2 text-sm">
-                                <Globe className="h-4 w-4 text-muted-foreground" />
-                                <a
-                                  href={contact.website}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="hover:underline hover:text-primary transition-colors truncate"
-                                >
-                                  {contact.website.replace(/^https?:\/\//, '')}
-                                </a>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Courts */}
-                {facility.courts && facility.courts.length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                        {t('sections.courts')}
-                      </h4>
-                      <Badge variant="secondary" className="text-xs">
-                        {facility.courts.length}{' '}
-                        {facility.courts.length === 1 ? t('court') : t('courts')}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {facility.courts.map(court => (
-                        <div
-                          key={court.id}
-                          className="p-4 border rounded-lg bg-muted/10 hover:bg-muted/20 transition-colors space-y-3"
-                        >
-                          <div className="flex items-center justify-between">
-                            <p className="font-semibold m-0">
-                              {court.name ||
-                                (court.court_number
-                                  ? `${t('court')} ${court.court_number}`
-                                  : t('court'))}
-                            </p>
-                            <Badge
-                              variant={
-                                court.availability_status === 'available' ? 'default' : 'secondary'
-                              }
-                              className="text-xs"
-                            >
-                              {capitalize(court.availability_status)}
-                            </Badge>
-                          </div>
-
-                          {court.surface_type && (
-                            <div className="flex items-center gap-2 text-sm">
-                              <Layers className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-muted-foreground">{t('surfaceType')}:</span>
-                              <span className="font-medium">{capitalize(court.surface_type)}</span>
-                            </div>
-                          )}
-
-                          <div className="flex flex-wrap gap-2">
-                            {court.lighting && (
-                              <Badge variant="outline" className="text-xs gap-1">
-                                <Sun className="h-3 w-3" />
-                                {t('lighting')}
-                              </Badge>
-                            )}
-                            {court.indoor && (
-                              <Badge variant="outline" className="text-xs gap-1">
-                                <Home className="h-3 w-3" />
-                                {t('indoor')}
-                              </Badge>
-                            )}
-                          </div>
-
-                          {court.court_sport && court.court_sport.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 pt-2 border-t">
-                              {court.court_sport.map(cs => (
-                                <Badge key={cs.sport_id} variant="secondary" className="text-xs">
-                                  {capitalize(cs.sport.name)}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+      <AdminOrgFacilitiesSection
+        facilities={organization.facilities}
+        organizationId={organization.id}
+        slug={slug}
+      />
     </div>
   );
 }

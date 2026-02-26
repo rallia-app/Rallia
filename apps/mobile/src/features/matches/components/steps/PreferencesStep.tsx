@@ -20,7 +20,7 @@ import {
 import { ScrollView as GestureScrollView } from 'react-native-gesture-handler';
 import { UseFormReturn } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
-import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
@@ -406,7 +406,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
   }, [isLoadingRatings, ratingLayoutsReady, ratingScores, minRatingScoreId, ratingScrollViewWidth]);
 
   return (
-    <BottomSheetScrollView
+    <ScrollView
       ref={scrollViewRef}
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
@@ -959,7 +959,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           {notes?.length ?? 0}/500
         </Text>
       </View>
-    </BottomSheetScrollView>
+    </ScrollView>
   );
 };
 

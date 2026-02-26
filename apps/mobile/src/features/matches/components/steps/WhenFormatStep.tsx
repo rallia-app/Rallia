@@ -20,7 +20,7 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { UseFormReturn } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
-import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
@@ -327,7 +327,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
   };
 
   return (
-    <BottomSheetScrollView
+    <ScrollView
       ref={scrollViewRef}
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
@@ -739,7 +739,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
           </View>
         )}
       </View>
-    </BottomSheetScrollView>
+    </ScrollView>
   );
 };
 

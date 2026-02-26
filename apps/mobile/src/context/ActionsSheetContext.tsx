@@ -42,6 +42,15 @@ interface ActionsSheetContextType {
   /** Open the Actions bottom sheet directly to match creation (skips actions menu) */
   openSheetForMatchCreation: () => void;
 
+  /** Open match creation wizard with steps 1–2 pre-filled from a booking (e.g. from facility screen) */
+  openSheetForMatchCreationFromBooking: (data: {
+    facility: unknown;
+    slot: unknown;
+    facilityId: string;
+    courtId: string;
+    courtNumber: number | null;
+  }) => void;
+
   /** Close the Actions bottom sheet */
   closeSheet: () => void;
 
@@ -71,6 +80,18 @@ interface ActionsSheetContextType {
 
   /** Clear the shouldOpenMatchCreation flag after it's been consumed */
   clearMatchCreationFlag: () => void;
+
+  /** Initial booking data when opening wizard from facility "Create game" (consumed by wizard) */
+  initialBookingForWizard: {
+    facility: unknown;
+    slot: unknown;
+    facilityId: string;
+    courtId: string;
+    courtNumber: number | null;
+  } | null;
+
+  /** Clear initial booking data after wizard has consumed it */
+  clearInitialBookingFlag: () => void;
 }
 
 // =============================================================================
@@ -100,6 +121,15 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
 
   // Flag to open directly to match creation wizard
   const [shouldOpenMatchCreation, setShouldOpenMatchCreation] = useState(false);
+
+  // Initial booking data when opening wizard from facility "Create game" (steps 1–2 pre-filled, step 3 to fill)
+  const [initialBookingForWizard, setInitialBookingForWizard] = useState<{
+    facility: unknown;
+    slot: unknown;
+    facilityId: string;
+    courtId: string;
+    courtNumber: number | null;
+  } | null>(null);
 
   // Refetch profile when auth state changes
   // Refetch profile when auth state changes
@@ -150,7 +180,8 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
    * Open the sheet, computing the appropriate initial mode
    */
   const openSheet = useCallback(() => {
-    setEditMatchData(null); // Clear any previous edit data
+    setEditMatchData(null);
+    setInitialBookingForWizard(null);
     const mode = computeInitialMode();
     setContentMode(mode);
     sheetRef.current?.present();
@@ -162,6 +193,7 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
   const openSheetForEdit = useCallback((match: MatchDetailData) => {
     setEditMatchData(match);
     setShouldOpenMatchCreation(false);
+    setInitialBookingForWizard(null);
     setContentMode('actions'); // Always show actions mode when editing
     sheetRef.current?.present();
   }, []);
@@ -176,16 +208,46 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
     if (mode !== 'actions') {
       setContentMode(mode);
       setShouldOpenMatchCreation(false);
+      setInitialBookingForWizard(null);
       sheetRef.current?.present();
       return;
     }
 
     // User is authenticated and onboarded - open directly to match creation
     setEditMatchData(null);
+    setInitialBookingForWizard(null);
     setShouldOpenMatchCreation(true);
     setContentMode('actions');
     sheetRef.current?.present();
   }, [computeInitialMode]);
+
+  /**
+   * Open match creation wizard with steps 1–2 pre-filled from a booking (from facility screen)
+   */
+  const openSheetForMatchCreationFromBooking = useCallback(
+    (data: {
+      facility: unknown;
+      slot: unknown;
+      facilityId: string;
+      courtId: string;
+      courtNumber: number | null;
+    }) => {
+      const mode = computeInitialMode();
+      if (mode !== 'actions') {
+        setContentMode(mode);
+        setShouldOpenMatchCreation(false);
+        setInitialBookingForWizard(null);
+        sheetRef.current?.present();
+        return;
+      }
+      setEditMatchData(null);
+      setInitialBookingForWizard(data);
+      setShouldOpenMatchCreation(true);
+      setContentMode('actions');
+      sheetRef.current?.present();
+    },
+    [computeInitialMode]
+  );
 
   /**
    * Clear the edit match data
@@ -199,6 +261,13 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
    */
   const clearMatchCreationFlag = useCallback(() => {
     setShouldOpenMatchCreation(false);
+  }, []);
+
+  /**
+   * Clear initial booking data after wizard has consumed it
+   */
+  const clearInitialBookingFlag = useCallback(() => {
+    setInitialBookingForWizard(null);
   }, []);
 
   /**
@@ -230,6 +299,7 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
     openSheet,
     openSheetForEdit,
     openSheetForMatchCreation,
+    openSheetForMatchCreationFromBooking,
     closeSheet,
     contentMode,
     setContentMode,
@@ -240,6 +310,8 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
     clearEditMatch,
     shouldOpenMatchCreation,
     clearMatchCreationFlag,
+    initialBookingForWizard,
+    clearInitialBookingFlag,
   };
 
   return (

@@ -20,6 +20,8 @@ interface FacilityCardProps {
   onPress: () => void;
   onToggleFavorite: (facility: FacilitySearchResult) => void;
   isMaxFavoritesReached: boolean;
+  /** When false, the favorite heart is hidden (e.g. signed out or not onboarded). When undefined, falls back to isAuthenticated. */
+  showFavoriteButton?: boolean;
   colors: {
     card: string;
     cardForeground: string;
@@ -49,9 +51,11 @@ export default function FacilityCard({
   onPress,
   onToggleFavorite,
   isMaxFavoritesReached,
+  showFavoriteButton,
   colors,
 }: FacilityCardProps) {
   const { isAuthenticated } = useAuth();
+  const canShowFavorite = showFavoriteButton !== undefined ? showFavoriteButton : isAuthenticated;
 
   const handleFavoritePress = useCallback(() => {
     lightHaptic();
@@ -78,7 +82,7 @@ export default function FacilityCard({
               {facility.name}
             </Text>
           </View>
-          {isAuthenticated && (
+          {canShowFavorite && (
             <TouchableOpacity
               onPress={handleFavoritePress}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
