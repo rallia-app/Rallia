@@ -807,6 +807,19 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
             colors={colors}
             compact
           />
+          <OptionCard
+            icon="transgender-outline"
+            title={t('matchCreation.fields.genderOther')}
+            selected={preferredOpponentGender === 'other'}
+            onPress={() =>
+              setValue('preferredOpponentGender', 'other', {
+                shouldValidate: true,
+                shouldDirty: true,
+              })
+            }
+            colors={colors}
+            compact
+          />
         </View>
       </View>
 

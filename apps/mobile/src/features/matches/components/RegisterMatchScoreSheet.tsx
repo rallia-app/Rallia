@@ -33,7 +33,7 @@ import {
   neutral,
 } from '@rallia/design-system';
 import { lightHaptic, selectionHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation, type TranslationKey } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import { usePlayer } from '@rallia/shared-hooks';
 import { submitMatchResultForMatch } from '@rallia/shared-services';
 import type { MatchWithDetails, MatchParticipantWithPlayer } from '@rallia/shared-types';
@@ -81,6 +81,7 @@ function deriveWinningTeamFromSets(sets: SetScore[]): 1 | 2 | null {
 export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-match-score'>) {
   const match = payload?.match as MatchWithDetails | null | undefined;
   const onSuccess = payload?.onSuccess;
+  const onDismiss = payload?.onDismiss;
 
   const { isDark } = useThemeStyles();
   const { t } = useTranslation();
@@ -174,6 +175,16 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
     };
   }, [isDoubles, partnerId, otherParticipants, getParticipantName, t]);
 
+  // Track whether submit succeeded so onClose can skip onDismiss (onSuccess already reopens the detail sheet)
+  const didSubmitRef = useRef(false);
+
+  const handleSheetClose = useCallback(() => {
+    if (!didSubmitRef.current) {
+      onDismiss?.();
+    }
+    didSubmitRef.current = false;
+  }, [onDismiss]);
+
   const handleClose = useCallback(() => {
     Keyboard.dismiss();
     lightHaptic();
@@ -257,6 +268,7 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
         })),
       });
       successHaptic();
+      didSubmitRef.current = true;
       SheetManager.hide('register-match-score');
       onSuccess?.();
     } catch (err) {
@@ -274,6 +286,7 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
     return (
       <ActionSheet
         gestureEnabled
+        onClose={handleSheetClose}
         containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
         indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
       >
@@ -301,6 +314,7 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
   return (
     <ActionSheet
       gestureEnabled
+      onClose={handleSheetClose}
       containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >

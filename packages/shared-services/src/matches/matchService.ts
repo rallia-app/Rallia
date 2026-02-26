@@ -2878,7 +2878,7 @@ export interface SearchPublicMatchesParams {
   dateRange?: 'all' | 'today' | 'week' | 'weekend';
   timeOfDay?: 'all' | 'morning' | 'afternoon' | 'evening';
   skillLevel?: 'all' | 'beginner' | 'intermediate' | 'advanced';
-  gender?: 'all' | 'male' | 'female';
+  gender?: 'all' | 'male' | 'female' | 'other';
   cost?: 'all' | 'free' | 'paid';
   joinMode?: 'all' | 'direct' | 'request';
   /** Duration filter (in minutes), '120+' includes 120 and custom */

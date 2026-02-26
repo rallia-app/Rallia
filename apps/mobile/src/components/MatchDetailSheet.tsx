@@ -176,11 +176,23 @@ function getRelativeTimeDisplay(
     dateLabel = dateResult.label;
   }
 
-  // Format time range (locale-aware: 12h for English, 24h for French)
+  // Format start time (locale-aware: 12h for English, 24h for French)
   const startResult = formatTimeInTimezone(dateString, startTime, tz, locale);
-  const endResult = formatTimeInTimezone(dateString, endTime, tz, locale);
-  const timeRange = `${startResult.formattedTime} - ${endResult.formattedTime}`;
+
+  // Calculate duration from start and end times
+  const [startH, startM] = startTime.split(':').map(Number);
+  const [endH, endM] = endTime.split(':').map(Number);
+  let durationMin = endH * 60 + endM - (startH * 60 + startM);
+  if (durationMin <= 0) durationMin += 24 * 60; // handle midnight crossing
+  const durationHours = Math.floor(durationMin / 60);
+  const durationRemMin = durationMin % 60;
+  const durationStr =
+    durationRemMin > 0
+      ? `${durationHours}h${durationRemMin.toString().padStart(2, '0')}`
+      : `${durationHours}h`;
+
   const separator = t('common.time.timeSeparator');
+  const timeRange = `${startResult.formattedTime}${separator}${durationStr}`;
 
   return { label: `${dateLabel}${separator}${timeRange}`, isUrgent };
 }
@@ -447,7 +459,6 @@ const ParticipantAvatar: React.FC<ParticipantAvatarProps> = ({
 }) => {
   // Use tier accent colors if provided, otherwise fall back to theme colors
   const hostBorderColor = tierAccent || colors.secondary;
-  const filledBorderColor = tierAccentLight || colors.cardBackground;
   const hostBadgeBgColor = tierAccent || colors.secondary;
 
   return (
@@ -596,8 +607,14 @@ const CheckInButton: React.FC<CheckInButtonProps> = ({
 // =============================================================================
 
 export const MatchDetailSheet: React.FC = () => {
-  const { sheetRef, closeSheet, selectedMatch, updateSelectedMatch, handleSheetDismiss } =
-    useMatchDetailSheet();
+  const {
+    sheetRef,
+    closeSheet,
+    openSheet,
+    selectedMatch,
+    updateSelectedMatch,
+    handleSheetDismiss,
+  } = useMatchDetailSheet();
   const { openSheetForEdit } = useActionsSheet();
   const { openSheet: openInviteSheet } = usePlayerInviteSheet();
   const { openSheet: openFeedbackSheet } = useFeedbackSheet();
@@ -696,6 +713,7 @@ export const MatchDetailSheet: React.FC = () => {
     isCancellingInvite,
     isCheckingIn,
   } = useMatchActions(selectedMatch?.id, {
+    matchData: selectedMatch ?? undefined,
     onJoinSuccess: result => {
       successHaptic();
       closeSheet();
@@ -921,19 +939,27 @@ export const MatchDetailSheet: React.FC = () => {
   }, [closeSheet]);
 
   // Handle register score (from match detail during feedback window)
+  // Dismisses the detail sheet while the score sheet is open, then reopens it after
   const handleRegisterScore = useCallback(() => {
     if (!selectedMatch) return;
     mediumHaptic();
-    SheetManager.show('register-match-score', {
-      payload: {
-        match: selectedMatch,
-        onSuccess: async () => {
-          const refreshed = await getMatchWithDetails(selectedMatch.id);
-          if (refreshed) updateSelectedMatch(refreshed as MatchDetailData);
+    const matchRef = selectedMatch;
+    closeSheet();
+    setTimeout(() => {
+      SheetManager.show('register-match-score', {
+        payload: {
+          match: matchRef,
+          onSuccess: async () => {
+            const refreshed = await getMatchWithDetails(matchRef.id);
+            openSheet((refreshed ?? matchRef) as MatchDetailData);
+          },
+          onDismiss: () => {
+            openSheet(matchRef);
+          },
         },
-      },
-    });
-  }, [selectedMatch, updateSelectedMatch]);
+      });
+    }, 100);
+  }, [selectedMatch, closeSheet, openSheet]);
 
   // Handle share - uses rich message with match details and deep link
   const handleShare = useCallback(async () => {
@@ -1468,32 +1494,22 @@ export const MatchDetailSheet: React.FC = () => {
 
   // Host first - use host participant's profile, fallback to created_by_player for backwards compatibility
   const hostProfile = hostParticipant?.player?.profile ?? creatorProfile;
-  const hostName =
-    hostProfile?.display_name ||
-    (hostProfile?.first_name && hostProfile?.last_name
-      ? `${hostProfile.first_name} ${hostProfile.last_name}`
-      : hostProfile?.first_name) ||
-    creatorName;
+  const hostName = hostProfile?.first_name || hostProfile?.display_name || creatorName;
   participantAvatars.push({
     key: 'host',
     avatarUrl: getProfilePictureUrl(hostProfile?.profile_picture_url),
     playerId: match.created_by,
     isHost: true,
     isEmpty: false,
-    name: hostName.split(' ')[0],
+    name: hostName,
     isCheckedIn: !!hostParticipant?.checked_in_at,
   });
 
   // Other participants (joined, excluding host)
   // Normalize URLs to use current environment's Supabase URL
   otherJoinedParticipants.forEach((p, i) => {
-    const participantFullName =
-      p.player?.profile?.display_name ||
-      (p.player?.profile?.first_name && p.player?.profile?.last_name
-        ? `${p.player.profile.first_name} ${p.player.profile.last_name}`
-        : p.player?.profile?.first_name) ||
-      '';
-    const participantFirstName = participantFullName.split(' ')[0];
+    const participantFirstName =
+      p.player?.profile?.first_name || p.player?.profile?.display_name || '';
     participantAvatars.push({
       key: p.id || `participant-${i}`,
       participantId: p.id,
@@ -2316,7 +2332,7 @@ export const MatchDetailSheet: React.FC = () => {
                 />
               )}
 
-              {/* Gender preference - neutral style for filter info */}
+              {/* Gender preference - primary (cyan) */}
               {match.preferred_opponent_gender && (
                 <Badge
                   label={
@@ -2326,9 +2342,15 @@ export const MatchDetailSheet: React.FC = () => {
                         ? t('match.gender.womenOnly')
                         : t('match.gender.other')
                   }
-                  bgColor={isDark ? neutral[800] : neutral[100]}
-                  textColor={isDark ? neutral[300] : neutral[600]}
-                  icon={match.preferred_opponent_gender === 'male' ? 'male' : 'female'}
+                  bgColor={isDark ? `${primary[400]}30` : `${primary[500]}15`}
+                  textColor={isDark ? primary[400] : primary[500]}
+                  icon={
+                    match.preferred_opponent_gender === 'male'
+                      ? 'male'
+                      : match.preferred_opponent_gender === 'female'
+                        ? 'female'
+                        : 'transgender'
+                  }
                 />
               )}
 
@@ -2491,6 +2513,35 @@ export const MatchDetailSheet: React.FC = () => {
                 </Text>
               </TouchableOpacity>
             )}
+
+          {/* Share Match Button - visible to all users when match hasn't started */}
+          {startTimeDiffMs >= 0 && !isCancelled && !hasMatchEnded && (
+            <TouchableOpacity
+              style={[
+                styles.invitePlayersButton,
+                {
+                  backgroundColor: isDark ? `${secondary[500]}15` : `${secondary[500]}10`,
+                  borderColor: isDark ? secondary[400] : secondary[500],
+                },
+              ]}
+              onPress={handleShare}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="share-social"
+                size={18}
+                color={isDark ? secondary[400] : secondary[500]}
+              />
+              <Text
+                size="sm"
+                weight="medium"
+                color={isDark ? secondary[400] : secondary[500]}
+                style={styles.inviteButtonText}
+              >
+                {t('matchDetail.share')}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {/* Pending Requests Section - only visible to host */}
           {isCreator && pendingRequests.length > 0 && !isCancelled && !hasStartTimePassed && (
@@ -3047,31 +3098,6 @@ export const MatchDetailSheet: React.FC = () => {
         ]}
       >
         <View style={styles.actionButtonsContainer}>{renderActionButtons()}</View>
-        {startTimeDiffMs >= 0 && (
-          <TouchableOpacity
-            style={[
-              styles.shareButton,
-              isCreator && styles.shareButtonCompact,
-              {
-                backgroundColor: isDark ? secondary[500] : secondary[500],
-                shadowColor: secondary[600],
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.25,
-                shadowRadius: 4,
-                elevation: 4,
-              },
-            ]}
-            onPress={handleShare}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="share-social" size={18} color={base.white} />
-            {!isCreator && (
-              <Text size="sm" weight="semibold" color={base.white} numberOfLines={1}>
-                {t('matchDetail.inviteFriends')}
-              </Text>
-            )}
-          </TouchableOpacity>
-        )}
       </View>
 
       {/* Leave Match Confirmation Modal */}
@@ -3590,7 +3616,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacingPixels[8],
     gap: spacingPixels[2],
     borderTopWidth: StyleSheet.hairlineWidth,
-    alignItems: 'center',
+    alignItems: 'stretch',
   },
   actionButtonsContainer: {
     flex: 1,
@@ -3620,30 +3646,12 @@ const styles = StyleSheet.create({
     gap: spacingPixels[2],
     paddingHorizontal: spacingPixels[2],
   },
-  shareButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'stretch',
-    gap: spacingPixels[1.5],
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    flexShrink: 0,
-  },
-  shareButtonCompact: {
-    paddingHorizontal: 0,
-    width: spacingPixels[12],
-    paddingVertical: spacingPixels[4],
-    alignSelf: 'stretch',
-    gap: 0,
-  },
   matchEndedContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacingPixels[3],
+    paddingVertical: spacingPixels[4],
     gap: spacingPixels[2],
   },
   matchEndedText: {

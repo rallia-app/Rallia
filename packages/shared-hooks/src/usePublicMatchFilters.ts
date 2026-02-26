@@ -35,7 +35,7 @@ export type SkillLevelFilter = 'all' | 'beginner' | 'intermediate' | 'advanced';
 /**
  * Available gender preference filter values
  */
-export type GenderFilter = 'all' | 'male' | 'female';
+export type GenderFilter = 'all' | 'male' | 'female' | 'other';
 
 /**
  * Available cost filter values
@@ -231,8 +231,9 @@ export function usePublicMatchFilters(
   // Store default distance for reset
   const [defaultDistance] = useState(initialDistance);
 
-  // Debounce the search query
-  const debouncedSearchQuery = useDebounce(filters.searchQuery, debounceMs);
+  // Normalize whitespace before debouncing so "  park  " and "park" share the same cache key
+  const normalizedSearchQuery = filters.searchQuery.trim().replace(/\s+/g, ' ');
+  const debouncedSearchQuery = useDebounce(normalizedSearchQuery, debounceMs);
 
   // Calculate if any filter is active (not default) - distance is not considered "active" for UI purposes
   const hasActiveFilters = useMemo(() => {

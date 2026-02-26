@@ -14,7 +14,6 @@
 
 import React, { useMemo, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, Animated, Easing } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from './foundation/Text.native';
 import {
@@ -38,7 +37,6 @@ import {
   formatIntuitiveDateInTimezone,
   getProfilePictureUrl,
   deriveMatchStatus,
-  type DerivedMatchStatus,
 } from '@rallia/shared-utils';
 import { TranslationKey } from '@rallia/shared-translations';
 
@@ -238,11 +236,23 @@ function getRelativeTimeDisplay(
     dateLabel = dateResult.label;
   }
 
-  // Format time range (locale-aware: 12h for English, 24h for French)
+  // Format start time (locale-aware: 12h for English, 24h for French)
   const startResult = formatTimeInTimezone(dateString, startTime, tz, locale);
-  const endResult = formatTimeInTimezone(dateString, endTime, tz, locale);
-  const timeRange = `${startResult.formattedTime} - ${endResult.formattedTime}`;
+
+  // Calculate duration from start and end times
+  const [startH, startM] = startTime.split(':').map(Number);
+  const [endH, endM] = endTime.split(':').map(Number);
+  let durationMin = endH * 60 + endM - (startH * 60 + startM);
+  if (durationMin <= 0) durationMin += 24 * 60; // handle midnight crossing
+  const durationHours = Math.floor(durationMin / 60);
+  const durationRemMin = durationMin % 60;
+  const durationStr =
+    durationRemMin > 0
+      ? `${durationHours}h${durationRemMin.toString().padStart(2, '0')}`
+      : `${durationHours}h`;
+
   const separator = t('common.time.timeSeparator');
+  const timeRange = `${startResult.formattedTime}${separator}${durationStr}`;
 
   return { label: `${dateLabel}${separator}${timeRange}`, isUrgent };
 }
@@ -342,40 +352,6 @@ function getCheckInWindowStatus(
 // =============================================================================
 // SUB-COMPONENTS
 // =============================================================================
-
-interface GradientStripProps {
-  isDark: boolean;
-  tier: MatchTier;
-}
-
-/**
- * Smooth gradient accent strip at the top of the card
- * Uses expo-linear-gradient for a true gradient effect
- * Most Wanted tier gets a gold shimmer gradient
- */
-const GradientStrip: React.FC<GradientStripProps> = ({ isDark, tier }) => {
-  const tierColors = TIER_PALETTES[tier][isDark ? 'dark' : 'light'];
-
-  const colors: [string, string, ...string[]] =
-    tier === 'mostWanted'
-      ? [
-          accent[isDark ? 100 : 200],
-          tierColors.accentStart,
-          tierColors.accentEnd,
-          tierColors.accentStart,
-          accent[isDark ? 100 : 200],
-        ]
-      : [tierColors.accentStart, tierColors.accentEnd];
-
-  return (
-    <LinearGradient
-      colors={colors}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 0 }}
-      style={[styles.gradientStrip, tier === 'mostWanted' && styles.gradientStripPremium]}
-    />
-  );
-};
 
 interface PlayerSlotsProps {
   match: MatchWithDetails;
@@ -720,7 +696,7 @@ const CardFooter: React.FC<CardFooterProps> = ({
 
   const ctaPositive = isDark ? primary[400] : primary[500];
   const ctaDestructive = isDark ? secondary[400] : secondary[500];
-  const ctaAccent = isDark ? accent[400] : accent[500];
+  // const ctaAccent = isDark ? accent[400] : accent[500];
   const ctaNeutralBg = isDark ? neutral[700] : neutral[200];
   const ctaNeutralText = colors.text;
 
@@ -1008,32 +984,32 @@ const MatchCard: React.FC<MatchCardProps> = ({
 
   // "Live indicator" interpolations for ongoing matches
   // Ring expands outward and fades
-  const liveRingScale = urgentPulseAnimation.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 2.5],
-  });
+  // const liveRingScale = urgentPulseAnimation.interpolate({
+  //   inputRange: [0, 1],
+  //   outputRange: [1, 2.5],
+  // });
 
-  const liveRingOpacity = urgentPulseAnimation.interpolate({
-    inputRange: [0, 0.3, 1],
-    outputRange: [0.8, 0.4, 0],
-  });
+  // const liveRingOpacity = urgentPulseAnimation.interpolate({
+  //   inputRange: [0, 0.3, 1],
+  //   outputRange: [0.8, 0.4, 0],
+  // });
 
   // Core dot has subtle glow pulse
-  const liveDotOpacity = urgentPulseAnimation.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [1, 0.7, 1],
-  });
+  // const liveDotOpacity = urgentPulseAnimation.interpolate({
+  //   inputRange: [0, 0.5, 1],
+  //   outputRange: [1, 0.7, 1],
+  // });
 
   // "Starting soon" interpolations - subtle bouncing chevron
-  const countdownBounce = urgentPulseAnimation.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0, 3, 0], // Subtle horizontal bounce
-  });
+  // const countdownBounce = urgentPulseAnimation.interpolate({
+  //   inputRange: [0, 0.5, 1],
+  //   outputRange: [0, 3, 0], // Subtle horizontal bounce
+  // });
 
-  const countdownOpacity = urgentPulseAnimation.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0.6, 1, 0.6],
-  });
+  // const countdownOpacity = urgentPulseAnimation.interpolate({
+  //   inputRange: [0, 0.5, 1],
+  //   outputRange: [0.6, 1, 0.6],
+  // });
 
   // Cost display
   const costDisplay = match.is_court_free
@@ -1164,9 +1140,8 @@ const MatchCard: React.FC<MatchCardProps> = ({
           <View style={styles.topRow}>
             <View style={styles.timeContainer}>
               {/* "Live" indicator for ongoing matches (not shown when expired) */}
-              {isOngoing && !isExpired && (
+              {/* {isOngoing && !isExpired && (
                 <View style={styles.liveIndicatorContainer}>
-                  {/* Expanding ring that fades out */}
                   <Animated.View
                     style={[
                       styles.liveRing,
@@ -1177,7 +1152,6 @@ const MatchCard: React.FC<MatchCardProps> = ({
                       },
                     ]}
                   />
-                  {/* Solid core dot */}
                   <Animated.View
                     style={[
                       styles.liveDot,
@@ -1188,9 +1162,9 @@ const MatchCard: React.FC<MatchCardProps> = ({
                     ]}
                   />
                 </View>
-              )}
+              )} */}
               {/* Bouncing chevron for starting soon (not shown when expired) */}
-              {isStartingSoon && !isExpired && (
+              {/* {isStartingSoon && !isExpired && (
                 <Animated.View
                   style={[
                     styles.countdownIndicator,
@@ -1202,7 +1176,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
                 >
                   <Ionicons name="chevron-forward" size={14} color={soonColor} />
                 </Animated.View>
-              )}
+              )} */}
               <Ionicons
                 name={
                   isExpired

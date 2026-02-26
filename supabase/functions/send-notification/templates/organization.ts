@@ -10,6 +10,8 @@ export interface EmailContent {
   html: string;
 }
 
+const SITE_URL = Deno.env.get('SITE_URL') || 'https://rallia.com';
+
 /**
  * Format currency amount from cents
  */
@@ -34,26 +36,9 @@ function getNotificationCategory(
 }
 
 /**
- * Get accent color based on notification category
- */
-function getCategoryColor(category: 'booking' | 'member' | 'payment' | 'system'): string {
-  switch (category) {
-    case 'booking':
-      return '#4DB8A8'; // Teal
-    case 'member':
-      return '#2196F3'; // Blue
-    case 'payment':
-      return '#4CAF50'; // Green
-    case 'system':
-    default:
-      return '#607D8B'; // Blue Grey
-  }
-}
-
-/**
  * Generate booking details card
  */
-function generateBookingCard(payload: Record<string, unknown>, accentColor: string): string {
+function generateBookingCard(payload: Record<string, unknown>): string {
   const courtName = payload.courtName as string | undefined;
   const facilityName = payload.facilityName as string | undefined;
   const bookingDate = payload.bookingDate as string | undefined;
@@ -70,8 +55,8 @@ function generateBookingCard(payload: Record<string, unknown>, accentColor: stri
   if (courtName) {
     rows.push(`
       <tr>
-        <td style="padding: 8px 0; color: #666666; font-size: 14px; width: 120px;">Court</td>
-        <td style="padding: 8px 0; color: #333333; font-size: 14px; font-weight: 500;">${escapeHtml(courtName)}</td>
+        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; width: 120px;">Court</td>
+        <td style="padding: 8px 0; color: #374151; font-size: 14px; font-weight: 500;">${escapeHtml(courtName)}</td>
       </tr>
     `);
   }
@@ -79,8 +64,8 @@ function generateBookingCard(payload: Record<string, unknown>, accentColor: stri
   if (facilityName) {
     rows.push(`
       <tr>
-        <td style="padding: 8px 0; color: #666666; font-size: 14px; width: 120px;">Location</td>
-        <td style="padding: 8px 0; color: #333333; font-size: 14px; font-weight: 500;">📍 ${escapeHtml(facilityName)}</td>
+        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; width: 120px;">Location</td>
+        <td style="padding: 8px 0; color: #374151; font-size: 14px; font-weight: 500;">${escapeHtml(facilityName)}</td>
       </tr>
     `);
   }
@@ -89,8 +74,8 @@ function generateBookingCard(payload: Record<string, unknown>, accentColor: stri
     const timeStr = startTime && endTime ? `${startTime} - ${endTime}` : startTime || '';
     rows.push(`
       <tr>
-        <td style="padding: 8px 0; color: #666666; font-size: 14px; width: 120px;">When</td>
-        <td style="padding: 8px 0; color: #333333; font-size: 14px; font-weight: 500;">📅 ${escapeHtml(bookingDate)}${timeStr ? ` at ${timeStr}` : ''}</td>
+        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; width: 120px;">When</td>
+        <td style="padding: 8px 0; color: #374151; font-size: 14px; font-weight: 500;">${escapeHtml(bookingDate)}${timeStr ? ` at ${timeStr}` : ''}</td>
       </tr>
     `);
   }
@@ -98,8 +83,8 @@ function generateBookingCard(payload: Record<string, unknown>, accentColor: stri
   if (playerName) {
     rows.push(`
       <tr>
-        <td style="padding: 8px 0; color: #666666; font-size: 14px; width: 120px;">Player</td>
-        <td style="padding: 8px 0; color: #333333; font-size: 14px; font-weight: 500;">👤 ${escapeHtml(playerName)}</td>
+        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; width: 120px;">Player</td>
+        <td style="padding: 8px 0; color: #374151; font-size: 14px; font-weight: 500;">${escapeHtml(playerName)}</td>
       </tr>
     `);
   }
@@ -107,18 +92,24 @@ function generateBookingCard(payload: Record<string, unknown>, accentColor: stri
   if (priceCents !== undefined) {
     rows.push(`
       <tr>
-        <td style="padding: 8px 0; color: #666666; font-size: 14px; width: 120px;">Amount</td>
-        <td style="padding: 8px 0; color: #333333; font-size: 14px; font-weight: 500;">💵 ${formatCurrency(priceCents, currency)}</td>
+        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; width: 120px;">Amount</td>
+        <td style="padding: 8px 0; color: #374151; font-size: 14px; font-weight: 500;">${formatCurrency(priceCents, currency)}</td>
       </tr>
     `);
   }
 
   return `
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: ${accentColor}15; border-radius: 8px; margin: 24px 0; border-left: 4px solid ${accentColor};">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
       <tr>
-        <td style="padding: 20px;">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-            ${rows.join('')}
+        <td style="padding: 0 0 24px 0;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #ccfbf1; border: 2px solid #83c5be;">
+            <tr>
+              <td style="padding: 20px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                  ${rows.join('')}
+                </table>
+              </td>
+            </tr>
           </table>
         </td>
       </tr>
@@ -129,7 +120,7 @@ function generateBookingCard(payload: Record<string, unknown>, accentColor: stri
 /**
  * Generate payment details card
  */
-function generatePaymentCard(payload: Record<string, unknown>, accentColor: string): string {
+function generatePaymentCard(payload: Record<string, unknown>): string {
   const amountCents = payload.amountCents as number | undefined;
   const currency = (payload.currency as string) || 'CAD';
   const playerName = payload.playerName as string | undefined;
@@ -141,16 +132,16 @@ function generatePaymentCard(payload: Record<string, unknown>, accentColor: stri
 
   rows.push(`
     <tr>
-      <td style="padding: 8px 0; color: #666666; font-size: 14px; width: 120px;">Amount</td>
-      <td style="padding: 8px 0; color: #333333; font-size: 14px; font-weight: 500;">💵 ${formatCurrency(amountCents, currency)}</td>
+      <td style="padding: 8px 0; color: #6b7280; font-size: 14px; width: 120px;">Amount</td>
+      <td style="padding: 8px 0; color: #374151; font-size: 14px; font-weight: 500;">${formatCurrency(amountCents, currency)}</td>
     </tr>
   `);
 
   if (playerName) {
     rows.push(`
       <tr>
-        <td style="padding: 8px 0; color: #666666; font-size: 14px; width: 120px;">From</td>
-        <td style="padding: 8px 0; color: #333333; font-size: 14px; font-weight: 500;">👤 ${escapeHtml(playerName)}</td>
+        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; width: 120px;">From</td>
+        <td style="padding: 8px 0; color: #374151; font-size: 14px; font-weight: 500;">${escapeHtml(playerName)}</td>
       </tr>
     `);
   }
@@ -158,18 +149,24 @@ function generatePaymentCard(payload: Record<string, unknown>, accentColor: stri
   if (failureReason) {
     rows.push(`
       <tr>
-        <td style="padding: 8px 0; color: #666666; font-size: 14px; width: 120px;">Reason</td>
-        <td style="padding: 8px 0; color: #F44336; font-size: 14px; font-weight: 500;">⚠️ ${escapeHtml(failureReason)}</td>
+        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; width: 120px;">Reason</td>
+        <td style="padding: 8px 0; color: #374151; font-size: 14px; font-weight: 500;">${escapeHtml(failureReason)}</td>
       </tr>
     `);
   }
 
   return `
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: ${accentColor}15; border-radius: 8px; margin: 24px 0; border-left: 4px solid ${accentColor};">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
       <tr>
-        <td style="padding: 20px;">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-            ${rows.join('')}
+        <td style="padding: 0 0 24px 0;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #ccfbf1; border: 2px solid #83c5be;">
+            <tr>
+              <td style="padding: 20px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                  ${rows.join('')}
+                </table>
+              </td>
+            </tr>
           </table>
         </td>
       </tr>
@@ -180,7 +177,7 @@ function generatePaymentCard(payload: Record<string, unknown>, accentColor: stri
 /**
  * Generate action button
  */
-function generateActionButton(type: OrgNotificationType, accentColor: string): string {
+function generateActionButton(type: OrgNotificationType): string {
   let buttonText = 'View Details';
   let deepLink = 'rallia://dashboard';
 
@@ -218,10 +215,10 @@ function generateActionButton(type: OrgNotificationType, accentColor: string): s
   }
 
   return `
-    <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top: 24px;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0">
       <tr>
-        <td style="border-radius: 8px; background-color: ${accentColor};">
-          <a href="${deepLink}" style="display: inline-block; padding: 14px 32px; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px;">
+        <td style="background-color: #006d77; border-radius: 10px;">
+          <a href="${deepLink}" style="display: inline-block; padding: 16px 40px; font-family: Arial, Helvetica, sans-serif; font-size: 16px; font-weight: 600; color: #ffffff; text-decoration: none; letter-spacing: -0.01em;">
             ${buttonText}
           </a>
         </td>
@@ -252,8 +249,8 @@ export function renderOrgEmail(
   organization: OrganizationInfo
 ): EmailContent {
   const { title, body, type, payload } = notification;
+  const currentYear = new Date().getFullYear();
   const category = getNotificationCategory(type as OrgNotificationType);
-  const accentColor = getCategoryColor(category);
 
   // Generate subject with organization name
   const subject = `[${organization.name}] ${title}`;
@@ -261,80 +258,102 @@ export function renderOrgEmail(
   // Determine which details card to show
   let detailsCard = '';
   if (category === 'booking') {
-    detailsCard = generateBookingCard(payload, accentColor);
+    detailsCard = generateBookingCard(payload);
   } else if (category === 'payment') {
-    detailsCard = generatePaymentCard(payload, accentColor);
+    detailsCard = generatePaymentCard(payload);
   }
 
   const html = `
 <!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${escapeHtml(title)}</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-    <tr>
-      <td align="center" style="padding: 40px 20px;">
-        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-          <!-- Header with organization branding -->
-          <tr>
-            <td style="background-color: ${accentColor}; padding: 24px 40px;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-                <tr>
-                  <td>
-                    <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">
-                      ${escapeHtml(organization.name)}
-                    </h1>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          
-          <!-- Content -->
-          <tr>
-            <td style="padding: 40px;">
-              <h2 style="margin: 0 0 16px 0; color: #333333; font-size: 22px; font-weight: 600;">
-                ${escapeHtml(title)}
-              </h2>
-              ${
-                body
-                  ? `
-              <p style="margin: 0 0 16px 0; color: #333333; font-size: 16px; line-height: 1.6;">
-                ${escapeHtml(body)}
-              </p>
-              `
-                  : ''
-              }
-              
-              ${detailsCard}
-              
-              ${generateActionButton(type as OrgNotificationType, accentColor)}
-            </td>
-          </tr>
-          
-          <!-- Footer -->
-          <tr>
-            <td style="padding: 24px 40px; background-color: #f5f5f5; border-top: 1px solid #e5e5e5;">
-              <p style="margin: 0; color: #666666; font-size: 12px; text-align: center;">
-                You received this email because you are a member of ${escapeHtml(organization.name)}.
-                <br>
-                <a href="rallia://dashboard/settings/notifications" style="color: ${accentColor}; text-decoration: none;">Manage notification preferences</a>
-                ${organization.website ? `<br><a href="${organization.website}" style="color: ${accentColor}; text-decoration: none;">${organization.website}</a>` : ''}
-              </p>
-              <p style="margin: 16px 0 0 0; color: #999999; font-size: 11px; text-align: center;">
-                Powered by Rallia
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${escapeHtml(title)}</title>
+    <!--[if mso]>
+      <style type="text/css">
+        body, table, td { font-family: Arial, sans-serif !important; }
+      </style>
+    <![endif]-->
+  </head>
+  <body style="margin: 0; padding: 0;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f0fdfa; font-family: Arial, Helvetica, sans-serif;">
+      <tr>
+        <td align="center" style="padding: 40px 20px;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="background-color: #ffffff;">
+            <!-- Header -->
+            <tr>
+              <td align="center" style="padding: 40px 40px 20px 40px; background-color: #a8dad6;">
+                <img src="${SITE_URL}/logo-dark.png" alt="Rallia" width="140" height="55" style="display: block; border: 0; max-width: 140px; height: auto;" />
+                <p style="margin: 12px 0 0 0; padding: 0; font-size: 14px; font-weight: bold; color: #006d77; letter-spacing: 0.05em;">
+                  ${escapeHtml(organization.name)}
+                </p>
+              </td>
+            </tr>
+
+            <!-- Content -->
+            <tr>
+              <td style="padding: 40px 40px 30px 40px;">
+                <h2 style="margin: 0; padding: 0 0 16px 0; font-family: Arial, Helvetica, sans-serif; font-size: 24px; font-weight: bold; color: #006d77; letter-spacing: -0.025em; line-height: 1.2;">
+                  ${escapeHtml(title)}
+                </h2>
+                ${
+                  body
+                    ? `
+                <p style="margin: 0; padding: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #374151;">
+                  ${escapeHtml(body)}
+                </p>
+                `
+                    : ''
+                }
+
+                ${detailsCard}
+
+                ${generateActionButton(type as OrgNotificationType)}
+
+                <!-- Divider -->
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-top: 24px;">
+                  <tr>
+                    <td style="padding: 24px 0; border-top: 1px solid #e5e7eb;">&nbsp;</td>
+                  </tr>
+                </table>
+
+                <p style="margin: 0; padding: 0; font-size: 13px; line-height: 1.5; color: #9ca3af;">
+                  You received this email because you are a member of ${escapeHtml(organization.name)}.
+                  <a href="rallia://dashboard/settings/notifications" style="color: #006d77; text-decoration: none;">Manage notification preferences</a>
+                  ${organization.website ? `<br><a href="${organization.website}" style="color: #006d77; text-decoration: none;">${organization.website}</a>` : ''}
+                </p>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td align="center" style="padding: 30px 40px 40px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb;">
+                <p style="margin: 0; padding: 0 0 8px 0; font-size: 14px; font-weight: bold; color: #006d77;">Need help?</p>
+                <p style="margin: 0; padding: 0; font-size: 13px; line-height: 1.5; color: #6b7280;">
+                  If you're having trouble, please contact our support team.
+                </p>
+                <p style="margin: 0; padding: 16px 0 0 0; font-size: 12px; line-height: 1.5; color: #9ca3af;">
+                  &copy; ${currentYear} Rallia. All rights reserved.
+                </p>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Spacer -->
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+            <tr>
+              <td align="center" style="padding: 20px 0;">
+                <p style="margin: 0; padding: 0; font-size: 12px; line-height: 1.5; color: #9ca3af;">
+                  Powered by Rallia
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
 </html>
   `.trim();
 

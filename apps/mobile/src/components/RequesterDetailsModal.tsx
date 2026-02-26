@@ -31,7 +31,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { lightHaptic, getProfilePictureUrl, formatRelativeTime } from '@rallia/shared-utils';
 import { useTheme } from '@rallia/shared-hooks';
-import { useTranslation, type TranslationKey } from '../hooks';
+import { useTranslation } from '../hooks';
 import type { MatchParticipantWithPlayer } from '@rallia/shared-types';
 import type { PlayerWithProfile } from '@rallia/shared-types';
 
@@ -189,7 +189,9 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
       ? t('common.gender.male')
       : gender === 'female'
         ? t('common.gender.female')
-        : null;
+        : gender === 'other'
+          ? t('common.gender.other')
+          : null;
 
   // Format playing hand display
   const playingHandDisplay =
@@ -327,7 +329,13 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                   {genderDisplay && (
                     <View style={[styles.detailItem, { borderColor: colors.border }]}>
                       <Ionicons
-                        name={gender === 'male' ? 'male' : 'female'}
+                        name={
+                          gender === 'male'
+                            ? 'male'
+                            : gender === 'female'
+                              ? 'female'
+                              : 'transgender'
+                        }
                         size={18}
                         color={colors.textMuted}
                       />

@@ -129,10 +129,7 @@ const DEFAULT_PERMISSIONS: Record<AdminRole, AdminPermissions> = {
  * @returns Admin status object with role, permissions, and loading state
  */
 export function useAdminStatus(options?: UseAdminStatusOptions): AdminStatus {
-  const supabase = useMemo(
-    () => options?.client ?? sharedSupabase,
-    [options?.client]
-  );
+  const supabase = useMemo(() => options?.client ?? sharedSupabase, [options?.client]);
 
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminId, setAdminId] = useState<string | null>(null);
@@ -226,9 +223,16 @@ export function useAdminStatus(options?: UseAdminStatusOptions): AdminStatus {
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+    } = supabase.auth.onAuthStateChange(event => {
+      if (event === 'SIGNED_IN') {
         fetchAdminStatus();
+      } else if (event === 'SIGNED_OUT') {
+        setIsAdmin(false);
+        setAdminId(null);
+        setRole(null);
+        setPermissions(null);
+        setError(null);
+        setLoading(false);
       }
     });
 
@@ -279,10 +283,7 @@ export function hasPermission(
  * @param requiredRole - Minimum required role
  * @returns Whether user role meets requirement
  */
-export function hasMinimumRole(
-  userRole: AdminRole | null,
-  requiredRole: AdminRole
-): boolean {
+export function hasMinimumRole(userRole: AdminRole | null, requiredRole: AdminRole): boolean {
   if (!userRole) return false;
 
   const roleHierarchy: Record<AdminRole, number> = {
