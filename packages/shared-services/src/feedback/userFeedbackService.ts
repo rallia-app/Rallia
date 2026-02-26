@@ -2,8 +2,6 @@
  * User Feedback Service
  */
 import { supabase } from '../supabase';
-import * as Application from 'expo-application';
-import { Platform } from 'react-native';
 
 export type UserFeedbackCategory = 'bug' | 'feature' | 'improvement' | 'other';
 
@@ -37,24 +35,16 @@ export interface CreateUserFeedbackParams {
   subject: string;
   message: string;
   screenshotUrls?: string[];
-}
-
-function getDeviceInfo(): Record<string, unknown> {
-  return { platform: Platform.OS, platformVersion: Platform.Version };
-}
-
-function getAppVersion(): string | null {
-  try {
-    return Application.nativeApplicationVersion || null;
-  } catch {
-    return null;
-  }
+  /** Platform-specific device info (caller should provide) */
+  deviceInfo?: Record<string, unknown>;
+  /** App version string (caller should provide) */
+  appVersion?: string;
 }
 
 export async function submitUserFeedback(
   params: CreateUserFeedbackParams
 ): Promise<UserFeedbackSubmission> {
-  const { playerId, category, subject, message, screenshotUrls } = params;
+  const { playerId, category, subject, message, screenshotUrls, deviceInfo, appVersion } = params;
   const { data, error } = await supabase
     .from('feedback')
     .insert({
@@ -62,8 +52,8 @@ export async function submitUserFeedback(
       category,
       subject,
       message,
-      app_version: getAppVersion(),
-      device_info: getDeviceInfo(),
+      app_version: appVersion || null,
+      device_info: deviceInfo || null,
       screenshot_urls: screenshotUrls || [],
       status: 'new',
     })

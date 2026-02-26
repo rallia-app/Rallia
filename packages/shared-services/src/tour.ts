@@ -2,11 +2,10 @@
  * Tour Service - Persistence layer for tour/walkthrough completion status
  *
  * This service handles storing and retrieving tour completion status
- * using AsyncStorage. It's designed to work with the TourContext
+ * using a storage adapter. It's designed to work with the TourContext
  * to track which tours users have completed.
  */
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Logger } from './logger';
 
 // =============================================================================
@@ -31,6 +30,57 @@ export type TourId =
  */
 export type TourStatus = Partial<Record<TourId, boolean>>;
 
+/**
+ * Storage adapter interface for tour persistence.
+ * Allows using different storage backends (AsyncStorage, localStorage, etc.)
+ */
+export interface TourStorageAdapter {
+  getItem(key: string): Promise<string | null>;
+  setItem(key: string, value: string): Promise<void>;
+  multiGet(keys: readonly string[]): Promise<ReadonlyArray<[string, string | null]>>;
+  multiSet(pairs: ReadonlyArray<[string, string]>): Promise<void>;
+}
+
+/**
+ * In-memory storage adapter (fallback for web or testing)
+ */
+const memoryStorage: Map<string, string> = new Map();
+
+export const inMemoryStorageAdapter: TourStorageAdapter = {
+  async getItem(key: string): Promise<string | null> {
+    return memoryStorage.get(key) ?? null;
+  },
+  async setItem(key: string, value: string): Promise<void> {
+    memoryStorage.set(key, value);
+  },
+  async multiGet(keys: string[]): Promise<[string, string | null][]> {
+    return keys.map(key => [key, memoryStorage.get(key) ?? null]);
+  },
+  async multiSet(pairs: [string, string][]): Promise<void> {
+    pairs.forEach(([key, value]) => memoryStorage.set(key, value));
+  },
+};
+
+/**
+ * Current storage adapter. Defaults to in-memory, but should be set
+ * by the mobile app to use AsyncStorage.
+ */
+let storageAdapter: TourStorageAdapter = inMemoryStorageAdapter;
+
+/**
+ * Set the storage adapter for tour persistence.
+ * Call this early in app initialization with your platform-specific storage.
+ * 
+ * @example Mobile (with AsyncStorage):
+ * ```ts
+ * import AsyncStorage from '@react-native-async-storage/async-storage';
+ * setTourStorageAdapter(AsyncStorage);
+ * ```
+ */
+export function setTourStorageAdapter(adapter: TourStorageAdapter): void {
+  storageAdapter = adapter;
+}
+
 // =============================================================================
 // CONSTANTS
 // =============================================================================
@@ -50,7 +100,7 @@ export const tourService = {
    */
   async isTourCompleted(tourId: TourId): Promise<boolean> {
     try {
-      const value = await AsyncStorage.getItem(`${STORAGE_PREFIX}${tourId}`);
+      const value = await storageAdapter.getItem(`${STORAGE_PREFIX}${tourId}`);
       return value === 'true';
     } catch (error) {
       Logger.error('Failed to check tour completion status', error as Error, { tourId });
@@ -63,7 +113,7 @@ export const tourService = {
    */
   async setTourCompleted(tourId: TourId, completed: boolean): Promise<void> {
     try {
-      await AsyncStorage.setItem(`${STORAGE_PREFIX}${tourId}`, completed ? 'true' : 'false');
+      await storageAdapter.setItem(`${STORAGE_PREFIX}${tourId}`, completed ? 'true' : 'false');
       Logger.debug(`Tour ${tourId} marked as ${completed ? 'completed' : 'not completed'}`);
     } catch (error) {
       Logger.error('Failed to set tour completion status', error as Error, { tourId, completed });
@@ -88,7 +138,7 @@ export const tourService = {
       ];
 
       const keys = tourIds.map(id => `${STORAGE_PREFIX}${id}`);
-      const results = await AsyncStorage.multiGet(keys);
+      const results = await storageAdapter.multiGet(keys);
 
       const status: TourStatus = {};
       results.forEach(([_key, value], index) => {
@@ -121,7 +171,7 @@ export const tourService = {
 
       const pairs: [string, string][] = tourIds.map(id => [`${STORAGE_PREFIX}${id}`, 'false']);
 
-      await AsyncStorage.multiSet(pairs);
+      await storageAdapter.multiSet(pairs);
       Logger.debug('All tours reset');
     } catch (error) {
       Logger.error('Failed to reset all tours', error as Error);
