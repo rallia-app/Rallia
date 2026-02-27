@@ -20,7 +20,7 @@ import {
   countRecentCancellationEvents,
 } from '../reputation/reputationService';
 import { calculateCancellationPenalty } from '../reputation/reputationPenalties';
-import { createMatchChat } from '../chat/chatService';
+import { createMatchChat, getMatchChat, removeConversationParticipant } from '../chat/chatService';
 import type {
   Match,
   TablesInsert,
@@ -1132,6 +1132,24 @@ async function createMatchChatIfFull(matchId: string, triggeredBy: string): Prom
 }
 
 /**
+ * Helper to remove a player from the match chat when they leave or are kicked.
+ * Fire-and-forget — errors are logged but don't block the caller.
+ */
+async function removePlayerFromMatchChat(matchId: string, playerId: string): Promise<void> {
+  try {
+    const conversation = await getMatchChat(matchId);
+    if (!conversation) return;
+
+    await removeConversationParticipant(conversation.id, playerId);
+    console.log(
+      `[removePlayerFromMatchChat] Removed player ${playerId} from chat for match ${matchId}`
+    );
+  } catch (error) {
+    console.error('[removePlayerFromMatchChat] Error:', error);
+  }
+}
+
+/**
  * Join match result with status info
  */
 export interface JoinMatchResult {
@@ -1616,6 +1634,11 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
       });
     }
   }
+
+  // Remove the player from the match chat (fire and forget)
+  removePlayerFromMatchChat(matchId, playerId).catch(err => {
+    console.error('[leaveMatch] Failed to remove player from match chat:', err);
+  });
 }
 
 /**
@@ -2046,6 +2069,11 @@ export async function kickParticipant(
       startTime
     ).catch(err => {
       console.error('Failed to send kicked notification:', err);
+    });
+
+    // Remove the kicked player from the match chat (fire and forget)
+    removePlayerFromMatchChat(matchId, participantRecord.player_id).catch(err => {
+      console.error('[kickParticipant] Failed to remove player from match chat:', err);
     });
   }
 
