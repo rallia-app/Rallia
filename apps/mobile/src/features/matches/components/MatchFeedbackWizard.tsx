@@ -6,16 +6,9 @@
  * Steps 1-N: Individual opponent feedback (one per opponent)
  */
 
-import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-  runOnJS,
-} from 'react-native-reanimated';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 import { Text } from '@rallia/shared-components';
@@ -40,8 +33,6 @@ import type {
 import { useTranslation, type TranslationKey } from '../../../hooks/useTranslation';
 import { MatchOutcomeStep, OpponentFeedbackStep } from './feedback-steps';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const SWIPE_THRESHOLD = 50;
 const BASE_WHITE = '#ffffff';
 
 // =============================================================================
@@ -228,29 +219,20 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
   });
 
   // Track if outcome was already submitted when the wizard FIRST opened
-  // This ref captures the initial state so that submitting outcome during this session
-  // doesn't cause the outcome step to disappear
-  const initialOutcomeSubmittedRef = useRef<boolean | null>(null);
+  // Uses the React "setState during render" pattern to freeze the initial value
+  const [initialOutcomeSubmitted, setInitialOutcomeSubmitted] = useState<boolean | null>(null);
+  if (participant && initialOutcomeSubmitted === null) {
+    setInitialOutcomeSubmitted(participant.match_outcome === 'played');
+  }
 
   // Track the initial list of opponents when the wizard FIRST opened
-  // This prevents opponents from disappearing when feedback is submitted
-  const initialOpponentsRef = useRef<typeof unratedOpponents | null>(null);
-
-  // Capture initial state when participant data first loads
-  if (participant && initialOutcomeSubmittedRef.current === null) {
-    initialOutcomeSubmittedRef.current = participant.match_outcome === 'played';
+  const [initialOpponents, setInitialOpponents] = useState<typeof unratedOpponents | null>(null);
+  if (unratedOpponents.length > 0 && initialOpponents === null) {
+    setInitialOpponents(unratedOpponents);
   }
 
-  // Capture initial opponents when they first load
-  if (unratedOpponents.length > 0 && initialOpponentsRef.current === null) {
-    initialOpponentsRef.current = unratedOpponents;
-  }
-
-  // Use the initial value (default to false if not yet loaded)
-  const outcomeAlreadySubmitted = initialOutcomeSubmittedRef.current ?? false;
-
-  // Use the initial opponents list (or current if not yet captured)
-  const opponents = initialOpponentsRef.current ?? unratedOpponents;
+  const outcomeAlreadySubmitted = initialOutcomeSubmitted ?? false;
+  const opponents = initialOpponents ?? unratedOpponents;
 
   // Helper: whether we're currently on the outcome step
   const isOnOutcomeStep = !outcomeAlreadySubmitted && currentStep === 0;
@@ -266,23 +248,11 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
   // Total steps: outcome step (if not already submitted) + opponents count
   const totalSteps = (outcomeAlreadySubmitted ? 0 : 1) + opponents.length;
 
-  // Animation values
-  const translateX = useSharedValue(0);
-  const gestureTranslateX = useSharedValue(0);
-
-  // Animate step changes
-  useEffect(() => {
-    translateX.value = withSpring(-(currentStep * SCREEN_WIDTH), {
-      damping: 80,
-      stiffness: 600,
-    });
-  }, [currentStep, translateX]);
-
   // Navigation
-  const goToNextStep = useCallback(() => {
+  const goToNextStep = () => {
     lightHaptic();
     setCurrentStep(prev => Math.min(prev + 1, totalSteps - 1));
-  }, [totalSteps]);
+  };
 
   const goToPrevStep = useCallback(() => {
     lightHaptic();
@@ -448,24 +418,6 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
     currentStep,
   ]);
 
-  // Swipe gesture
-  const panGesture = Gesture.Pan()
-    .onUpdate(e => {
-      gestureTranslateX.value = e.translationX;
-    })
-    .onEnd(e => {
-      if (e.translationX > SWIPE_THRESHOLD && currentStep > 0) {
-        runOnJS(goToPrevStep)();
-      } else if (e.translationX < -SWIPE_THRESHOLD && currentStep < totalSteps - 1) {
-        // Don't allow swiping forward - must submit/skip
-      }
-      gestureTranslateX.value = withTiming(0);
-    });
-
-  const animatedStepStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value + gestureTranslateX.value }],
-  }));
-
   // Loading state while fetching opponents, participant data, and match context
   if (isLoadingOpponents || isLoadingParticipant || isLoadingMatchContext) {
     return (
@@ -525,61 +477,51 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
         }
       />
 
-      {/* Steps */}
+      {/* Current Step */}
       <View style={styles.stepsViewport}>
-        <GestureDetector gesture={panGesture}>
-          <Animated.View
-            style={[styles.stepsContainer, { width: SCREEN_WIDTH * totalSteps }, animatedStepStyle]}
-          >
-            {/* Step 0: Outcome (only if not already submitted) */}
-            {!outcomeAlreadySubmitted && (
-              <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
-                <MatchOutcomeStep
-                  outcome={outcome}
-                  cancellationReason={cancellationReason}
-                  cancellationNotes={cancellationNotes}
-                  onOutcomeChange={handleOutcomeChange}
-                  opponents={opponents}
-                  noShowPlayerIds={noShowPlayerIds}
-                  onNoShowPlayerIdsChange={setNoShowPlayerIds}
-                  matchContext={matchContext}
-                  colors={colors}
-                  t={t}
-                  locale={locale}
-                  isDark={isDark}
-                />
-              </View>
-            )}
-
-            {/* Opponent Feedback Steps */}
-            {opponents.map((opponent, index) => {
-              const opponentIndex = index;
-              const feedback = opponentFeedback[opponentIndex] || {
-                showedUp: true,
-                wasLate: false,
-                starRating: undefined,
-                comments: '',
-              };
-
-              return (
-                <View key={opponent.playerId} style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
-                  <OpponentFeedbackStep
-                    opponent={opponent}
-                    feedback={feedback}
-                    onFeedbackChange={newFeedback =>
-                      handleOpponentFeedbackChange(opponentIndex, newFeedback)
-                    }
-                    onReportSubmit={handleReportSubmit}
-                    isSubmittingReport={isSubmittingReport}
-                    colors={colors}
-                    t={t}
-                    isDark={isDark}
-                  />
-                </View>
-              );
-            })}
-          </Animated.View>
-        </GestureDetector>
+        {isOnOutcomeStep ? (
+          <MatchOutcomeStep
+            outcome={outcome}
+            cancellationReason={cancellationReason}
+            cancellationNotes={cancellationNotes}
+            onOutcomeChange={handleOutcomeChange}
+            opponents={opponents}
+            noShowPlayerIds={noShowPlayerIds}
+            onNoShowPlayerIdsChange={setNoShowPlayerIds}
+            matchContext={matchContext}
+            colors={colors}
+            t={t}
+            locale={locale}
+            isDark={isDark}
+          />
+        ) : (
+          (() => {
+            const opponentIndex = getOpponentIndex(currentStep);
+            const opponent = opponents[opponentIndex];
+            if (!opponent) return null;
+            const feedback = opponentFeedback[opponentIndex] || {
+              showedUp: true,
+              wasLate: false,
+              starRating: undefined,
+              comments: '',
+            };
+            return (
+              <OpponentFeedbackStep
+                key={opponent.playerId}
+                opponent={opponent}
+                feedback={feedback}
+                onFeedbackChange={newFeedback =>
+                  handleOpponentFeedbackChange(opponentIndex, newFeedback)
+                }
+                onReportSubmit={handleReportSubmit}
+                isSubmittingReport={isSubmittingReport}
+                colors={colors}
+                t={t}
+                isDark={isDark}
+              />
+            );
+          })()
+        )}
       </View>
 
       {/* Navigation buttons */}
@@ -683,15 +625,6 @@ const styles = StyleSheet.create({
   },
   stepsViewport: {
     flex: 1,
-    overflow: 'hidden',
-  },
-  stepsContainer: {
-    flexDirection: 'row',
-    flex: 1,
-  },
-  stepWrapper: {
-    flex: 1,
-    height: '100%',
   },
   footer: {
     padding: spacingPixels[4],
