@@ -17,12 +17,11 @@ export type ReputationEventType =
   // Match-related
   | 'match_completed'
   | 'match_no_show'
-  | 'match_ghosted'
   | 'match_on_time'
   | 'match_late'
   | 'match_cancelled_early'
   | 'match_cancelled_late'
-  | 'match_repeat_opponent'
+  | 'match_left_late'
   // Peer reviews
   | 'review_received_5star'
   | 'review_received_4star'
@@ -37,7 +36,6 @@ export type ReputationEventType =
   | 'suspension_lifted'
   // Community
   | 'peer_rating_given'
-  | 'first_match_bonus'
   // Feedback
   | 'feedback_submitted';
 
@@ -89,7 +87,6 @@ export interface PlayerReputation {
   positive_events: number;
   negative_events: number;
   matches_completed: number;
-  min_events_for_public: number;
   is_public: boolean;
   last_decay_calculation: string | null;
   calculated_at: string;

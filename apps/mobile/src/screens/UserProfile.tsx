@@ -13,7 +13,7 @@ import { SheetManager } from 'react-native-actions-sheet';
 import { useAppNavigation } from '../navigation/hooks';
 import { Text, Skeleton, SkeletonAvatar, useToast } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
-import { useProfile, usePlayer, usePlayerReputation } from '@rallia/shared-hooks';
+import { useProfile, usePlayer } from '@rallia/shared-hooks';
 import { replaceImage } from '../services/imageUpload';
 import {
   useImagePicker,
@@ -101,9 +101,6 @@ const UserProfile = () => {
     cameraLabel: t('profile.takePhoto'),
     galleryLabel: t('profile.chooseFromGallery'),
   });
-
-  // Player reputation data
-  usePlayerReputation(player?.id);
 
   // Check authentication on mount and fetch section data once. Profile/player come from
   // context (fetched by providers). We only refetch after mutations (onSave in sheets, etc.).

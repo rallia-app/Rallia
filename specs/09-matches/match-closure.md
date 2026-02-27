@@ -287,15 +287,20 @@ A SQL function `get_matches_ready_for_closure(cutoff_hours, batch_limit)` handle
 - Handles midnight-spanning matches (when `end_time < start_time`, end is next day)
 - Excludes matches where `closed_at IS NOT NULL` or `cancelled_at IS NOT NULL`
 
+**Edge Function Architecture:**
+
+Pure business logic (majority rule, benefit-of-doubt, feedback aggregation) is extracted into `closure-logic.ts` for unit testability. The main `index.ts` handles DB I/O and orchestration, importing pure functions from `closure-logic.ts`.
+
 **Edge Function Flow:**
 
-1. Authenticate via `x-cron-secret` header
+1. Authenticate via Bearer token with `SUPABASE_ANON_KEY` (skipped in local dev with `--no-verify-jwt`)
 2. Call `get_matches_ready_for_closure()` RPC to get eligible matches
 3. For each match:
    - Fetch all participants with their `match_outcome`
    - Check for mutual cancellation (majority have `match_outcome = 'mutual_cancel'`)
    - If mutual cancel: set `mutually_cancelled = true`, skip reputation events
    - If not: aggregate feedback for each participant using majority rule
+   - **Duplicate protection:** skip players who already have `match_completed` or `match_no_show` events for this match (idempotency guard against re-processing)
    - Create reputation events with `base_impact` from `reputation_config` table
    - Update `match_participant` with aggregated fields
    - Set `match.closed_at` to current timestamp
@@ -345,7 +350,7 @@ When mutual cancellation is detected:
 - No reputation impact for any participant
 - Cancellation reason is aggregated from `match_participant.cancellation_reason` (most common reason selected)
 
-**Reason Aggregation:**
+**Reason Aggregation:** _(not yet implemented)_
 
 If multiple players provided cancellation reasons:
 

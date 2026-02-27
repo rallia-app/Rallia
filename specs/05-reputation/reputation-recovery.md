@@ -32,16 +32,15 @@ The most powerful recovery mechanism is **time decay**. Old events gradually los
 
 If a player behaves well in a match, they can earn:
 
-| Good Behavior        | Impact  | Notes                           |
-| -------------------- | ------- | ------------------------------- |
-| Show up              | **+12** | Most important - just be there! |
-| Be on time           | **+3**  | Arrive within 10 minutes        |
-| Get 5-star rating    | **+10** | Be pleasant and respectful      |
-| Get 4-star rating    | **+5**  | Good experience                 |
-| Play repeat opponent | **+2**  | Build trust over time           |
+| Good Behavior     | Impact  | Notes                           |
+| ----------------- | ------- | ------------------------------- |
+| Show up           | **+12** | Most important - just be there! |
+| Be on time        | **+3**  | Arrive within 10 minutes        |
+| Get 5-star rating | **+10** | Be pleasant and respectful      |
+| Get 4-star rating | **+5**  | Good experience                 |
 
-**Maximum positive differential per match:** +27 points
-(show + on_time + 5star + repeat)
+**Maximum positive differential per match:** +25 points
+(show + on_time + 5star)
 
 **Typical good match:** +20 points
 (show + on_time + 4star)

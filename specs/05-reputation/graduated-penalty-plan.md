@@ -6,7 +6,7 @@ Currently, the reputation penalty for late cancellations/leaves is binary (0 or 
 
 - **Graduated** by timing (closer to match = harsher)
 - **Role-aware** (creator ~1.5x participant)
-- **Context-sensitive** (no penalty without a reserved court, 50% for private matches)
+- **Context-sensitive** (no penalty without a reserved court)
 - **History-aware** (first offense gets leniency, repeat offenders get escalation)
 - **Distinct from no-show** (last-minute cancel capped below no-show severity)
 
@@ -29,11 +29,6 @@ Currently, the reputation penalty for late cancellations/leaves is binary (0 or 
 
 ## Modifiers
 
-### Visibility modifier
-
-- **Public** (`visibility = 'public'`): full penalty (1x)
-- **Private** (`visibility = 'private'`): 50% penalty (0.5x)
-
 ### History modifier (based on late cancel/leave events in last 30 days)
 
 | Recent offenses (30 days) | Multiplier                    |
@@ -43,14 +38,14 @@ Currently, the reputation penalty for late cancellations/leaves is binary (0 or 
 | 2                         | 1.5x                          |
 | 3+                        | 2.0x                          |
 
-### Modifier stacking
+### Formula
 
-All modifiers multiply: `final = round(basePenalty × visibilityMod × historyMod)`
+`final = round(basePenalty × historyMod)`
 
 **Examples:**
 
-- First-time creator cancels a **private** match **3h** before → `-35 × 0.5 × 0.5 = -9`
-- 3rd-offense participant leaves a **public** match **1h** before → `-28 × 1.0 × 1.5 = -42`
+- First-time creator cancels **3h** before → `-35 × 0.5 = -18`
+- 3rd-offense participant leaves **1h** before → `-28 × 1.5 = -42`
 
 ---
 
@@ -107,10 +102,9 @@ The current penalty calculation uses naive date construction (`new Date(\`${matc
 2. **Creators get a heavier penalty** (~1.5x) than participants, since cancelling kills the entire match
 3. **No penalty for cancelling an empty match** — if no other players have joined, there's no victim
 4. **No penalty without a reserved court** — if the court isn't confirmed, the match is still tentative
-5. **Private matches get half the penalty** — friends can sort things out themselves
-6. **First-time offenders get leniency** (50% penalty), while **repeat offenders face escalation** (up to 2x)
-7. **1-hour cooling-off window** — if you just joined or created the match, you can back out without penalty
-8. **Host-edit protection** — if the host changed match details in the last 24 hours, participants can leave without penalty (they're reacting to changes)
-9. Cancelling late is still **less severe than not showing up at all**, preserving the incentive to at least notify others
-10. **Timezone bug fix** — penalty timing calculations now correctly account for the match's timezone
-11. Creator cancellations and participant leaves are now **tracked as separate event types** for better analytics
+5. **First-time offenders get leniency** (50% penalty), while **repeat offenders face escalation** (up to 2x)
+6. **1-hour cooling-off window** — if you just joined or created the match, you can back out without penalty
+7. **Host-edit protection** — if the host changed match details in the last 24 hours, participants can leave without penalty (they're reacting to changes)
+8. Cancelling late is still **less severe than not showing up at all**, preserving the incentive to at least notify others
+9. **Timezone bug fix** — penalty timing calculations now correctly account for the match's timezone
+10. Creator cancellations and participant leaves are now **tracked as separate event types** for better analytics

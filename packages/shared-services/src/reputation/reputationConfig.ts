@@ -20,12 +20,11 @@ export const DEFAULT_EVENT_IMPACTS: Record<ReputationEventType, number> = {
   // Match-related
   match_completed: 12,
   match_no_show: -50,
-  match_ghosted: -20,
   match_on_time: 3,
   match_late: -10,
   match_cancelled_early: 0,
-  match_cancelled_late: -25,
-  match_repeat_opponent: 3,
+  match_cancelled_late: -35,
+  match_left_late: -22,
 
   // Peer reviews
   review_received_5star: 10,
@@ -44,7 +43,6 @@ export const DEFAULT_EVENT_IMPACTS: Record<ReputationEventType, number> = {
 
   // Community
   peer_rating_given: 1,
-  first_match_bonus: 10,
 };
 
 // =============================================================================

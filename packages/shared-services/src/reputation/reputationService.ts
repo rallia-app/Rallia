@@ -53,8 +53,8 @@ async function getReputationConfig(): Promise<Map<ReputationEventType, Reputatio
 
   if (error) {
     console.error('[reputationService] Failed to fetch config:', error);
-    // Return empty map, will use defaults
-    return new Map();
+    // Fall back to stale cache if available, otherwise empty map (will use defaults)
+    return configCache ?? new Map();
   }
 
   configCache = new Map((data as ReputationConfig[]).map(config => [config.event_type, config]));
@@ -315,6 +315,7 @@ export async function recalculateReputation(
   const { data, error } = await supabase.rpc('recalculate_player_reputation', {
     target_player_id: playerId,
     apply_decay: applyDecay,
+    min_events_for_public: MIN_EVENTS_FOR_PUBLIC,
   });
 
   if (error) {
@@ -369,77 +370,42 @@ export async function batchRecalculateWithDecay(batchSize = 100): Promise<BatchR
 }
 
 // =============================================================================
-// HELPER FUNCTIONS
+// CANCELLATION HISTORY
 // =============================================================================
 
 /**
- * Check if two players have played together before.
- * Used to award 'match_repeat_opponent' events.
+ * Count recent late cancellation/leave events for a player.
+ * Used by cancelMatch() and leaveMatch() to feed the history modifier.
  *
- * @param playerId1 - First player ID
- * @param playerId2 - Second player ID
- * @param excludeMatchId - Match ID to exclude from the check
+ * @param playerId - The player to check
+ * @param days - Look-back window in days (default 30)
+ * @returns Number of match_cancelled_late or match_left_late events in the window
  */
-export async function havePlayedTogether(
-  playerId1: string,
-  playerId2: string,
-  excludeMatchId?: string
-): Promise<boolean> {
-  // Query for matches where both players participated and match was completed
-  const query = supabase
-    .from('match_participant')
-    .select(
-      `
-      match_id,
-      match:match_id!inner (
-        id,
-        match_participant!inner (
-          player_id
-        )
-      )
-    `
-    )
-    .eq('player_id', playerId1)
-    .eq('status', 'confirmed');
+export async function countRecentCancellationEvents(
+  playerId: string,
+  days: number = 30
+): Promise<number> {
+  const since = new Date();
+  since.setDate(since.getDate() - days);
 
-  const { data, error } = await query;
+  const { count, error } = await supabase
+    .from('reputation_event')
+    .select('id', { count: 'exact', head: true })
+    .eq('player_id', playerId)
+    .in('event_type', ['match_cancelled_late', 'match_left_late'])
+    .gte('event_occurred_at', since.toISOString());
 
   if (error) {
-    console.error('[reputationService] Error checking if players played together:', error);
-    return false;
+    console.error('[reputationService] Failed to count recent cancellation events:', error);
+    return 0;
   }
 
-  if (!data) return false;
-
-  // Define the expected shape of the match relation
-  type MatchWithParticipants = {
-    id: string;
-    match_participant: { player_id: string }[];
-  };
-
-  // Check if any of these matches also have playerId2
-  for (const record of data) {
-    if (excludeMatchId && record.match_id === excludeMatchId) {
-      continue;
-    }
-
-    // Supabase can return the relation as array or single object
-    const matchData = record.match;
-    const match: MatchWithParticipants | null = Array.isArray(matchData)
-      ? matchData[0]
-      : (matchData as MatchWithParticipants | null);
-
-    if (!match) continue;
-
-    const hasPlayer2 = match.match_participant?.some(p => p.player_id === playerId2);
-
-    if (hasPlayer2) {
-      return true;
-    }
-  }
-
-  return false;
+  return count ?? 0;
 }
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
 
 /**
  * Initialize reputation for a new player.
@@ -448,24 +414,20 @@ export async function havePlayedTogether(
  * @param playerId - The player ID
  */
 export async function initializePlayerReputation(playerId: string): Promise<PlayerReputation> {
-  const existing = await getPlayerReputation(playerId);
-
-  if (existing) {
-    return existing;
-  }
-
   const { data, error } = await supabase
     .from('player_reputation')
-    .insert({
-      player_id: playerId,
-      reputation_score: BASE_REPUTATION_SCORE,
-      reputation_tier: 'unknown',
-      total_events: 0,
-      positive_events: 0,
-      negative_events: 0,
-      matches_completed: 0,
-      min_events_for_public: MIN_EVENTS_FOR_PUBLIC,
-    })
+    .upsert(
+      {
+        player_id: playerId,
+        reputation_score: BASE_REPUTATION_SCORE,
+        reputation_tier: 'unknown',
+        total_events: 0,
+        positive_events: 0,
+        negative_events: 0,
+        matches_completed: 0,
+      },
+      { onConflict: 'player_id', ignoreDuplicates: true }
+    )
     .select()
     .single();
 

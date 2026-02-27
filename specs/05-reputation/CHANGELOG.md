@@ -41,9 +41,9 @@ This document summarizes the changes between the original MVP specification and 
 | first_match_bonus     | +10 | +5  |
 | feedback_submitted    | +2  | +1  |
 | report_dismissed      | +5  | +3  |
-| suspension_lifted     | +10 | +5  |
+| suspension_lifted     | +10 | 0   |
 
-**Negative events unchanged** (no-show: -50, late cancel: -25, etc.)
+**Negative events unchanged** (no-show: -50, etc.) — except `match_cancelled_late` which was later updated to -35 by the graduated penalty system.
 
 ---
 
@@ -167,8 +167,8 @@ The reputation system evolved from a simple percentage-based calculation to a so
 - `match_on_time` (+3) - Arrived on time
 - `match_late` (-10) - Arrived 10+ minutes late
 - `match_cancelled_early` (0) - Cancelled 24+ hours ahead
-- `match_cancelled_late` (-25) - Last-minute cancellation
-- `match_repeat_opponent` (+2) - ⭐ NEW: Played with same opponent again
+- `match_cancelled_late` (-35) - Host cancelled late (graduated)
+- `match_left_late` (-22) - Participant left late (graduated)
 
 **Review Events:**
 
@@ -184,12 +184,12 @@ The reputation system evolved from a simple percentage-based calculation to a so
 - `report_upheld` (-15)
 - `report_dismissed` (+3)
 - `warning_issued` (-10)
-- `suspension_lifted` (+5)
+- `suspension_lifted` (0)
 
 **Community Events:** ⭐ NEW
 
-- `first_match_bonus` (+5)
 - `feedback_submitted` (+1)
+- `peer_rating_given` (+1)
 
 ---
 
@@ -274,24 +274,24 @@ Final Score = clamp(Base Score + sum(weighted_impacts), 0, 100)
 
 ### Original vs Implemented Values
 
-| Action                 | Original | Implemented | Change                    |
-| ---------------------- | -------- | ----------- | ------------------------- |
-| Show up                | +25%     | +12         | Reduced ~50%              |
-| No-show                | -50%     | -50         | Same                      |
-| On time                | +5%      | +3          | Reduced ~40%              |
-| Late (10+ min)         | -10%     | -10         | Same                      |
-| Last-min cancel        | -25%     | -25         | Same                      |
-| Early cancel           | 0%       | 0           | Same                      |
-| 5-star rating          | +20%     | +10         | Reduced 50%               |
-| 4-star rating          | +10%     | +5          | Reduced 50%               |
-| 3-star rating          | 0%       | 0           | Same                      |
-| 2-star rating          | -5%      | -5          | Same                      |
-| 1-star rating          | -10%     | -10         | Same                      |
-| **Feedback submitted** | N/A      | **+1**      | ⭐ NEW (reduced from +2)  |
-| **Repeat opponent**    | N/A      | **+2**      | ⭐ NEW (reduced from +3)  |
-| **First match**        | N/A      | **+5**      | ⭐ NEW (reduced from +10) |
-| **Report upheld**      | N/A      | **-15**     | ⭐ NEW                    |
-| **Report dismissed**   | N/A      | **+3**      | ⭐ NEW (reduced from +5)  |
+| Action                 | Original | Implemented | Change                   |
+| ---------------------- | -------- | ----------- | ------------------------ |
+| Show up                | +25%     | +12         | Reduced ~50%             |
+| No-show                | -50%     | -50         | Same                     |
+| On time                | +5%      | +3          | Reduced ~40%             |
+| Late (10+ min)         | -10%     | -10         | Same                     |
+| Host cancel late       | -25%     | -35         | Now graduated by timing  |
+| Participant leave late | N/A      | -22         | ⭐ NEW (graduated)       |
+| Early cancel           | 0%       | 0           | Same                     |
+| 5-star rating          | +20%     | +10         | Reduced 50%              |
+| 4-star rating          | +10%     | +5          | Reduced 50%              |
+| 3-star rating          | 0%       | 0           | Same                     |
+| 2-star rating          | -5%      | -5          | Same                     |
+| 1-star rating          | -10%     | -10         | Same                     |
+| **Feedback submitted** | N/A      | **+1**      | ⭐ NEW (reduced from +2) |
+| **Peer rating given**  | N/A      | **+1**      | ⭐ NEW                   |
+| **Report upheld**      | N/A      | **-15**     | ⭐ NEW                   |
+| **Report dismissed**   | N/A      | **+3**      | ⭐ NEW (reduced from +5) |
 
 ---
 
@@ -449,7 +449,7 @@ If reputation system is being added to existing app:
 | **Progression**  | Single badge → 5-tier system                  |
 | **Motivation**   | Binary → Progressive recognition              |
 | **Recovery**     | Difficult → Natural recovery over time        |
-| **Events**       | 4 types → 17 types                            |
+| **Events**       | 4 types → 20 types                            |
 | **Admin Tools**  | None → Full event history & analytics         |
 
 ---

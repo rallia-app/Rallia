@@ -65,7 +65,7 @@ import {
   useRequireOnboarding,
   type TranslationKey,
 } from '../hooks';
-import { useTheme, usePlayer, useMatchActions } from '@rallia/shared-hooks';
+import { useTheme, usePlayer, useMatchActions, usePlayerReputation } from '@rallia/shared-hooks';
 import { getMatchChat, getMatchWithDetails } from '@rallia/shared-services';
 import { SheetManager } from 'react-native-actions-sheet';
 import { shareMatch } from '../utils';
@@ -285,14 +285,17 @@ function getParticipantInfo(match: MatchDetailData): {
 /**
  * Check if leaving this match will affect the player's reputation.
  *
- * Per the spec, a reputation penalty (-25 points) applies only when ALL conditions are met:
+ * Graduated penalty applies when ALL conditions are met:
  * 1. Match is full (all spots taken)
- * 2. Match was created more than 24 hours before start time (planned match)
- * 3. Match was NOT edited within 24 hours of start time (no last-minute host changes)
- * 4. Player is leaving within 24 hours of start time
+ * 2. Court is reserved (court_status = 'reserved')
+ * 3. Match was created more than 24 hours before start time (planned match)
+ * 4. Match was NOT explicitly edited by host within 24 hours of NOW (no recent host changes)
+ * 5. Player is leaving within 24 hours of start time
+ *
+ * Note: cooling-off (joined <1h ago) is checked server-side only.
  *
  * @param match - The match data
- * @returns true if leaving will incur a reputation penalty
+ * @returns true if leaving will likely incur a reputation penalty
  */
 function willLeaveAffectReputation(match: MatchDetailData): boolean {
   const participantInfo = getParticipantInfo(match);
@@ -302,40 +305,40 @@ function willLeaveAffectReputation(match: MatchDetailData): boolean {
     return false;
   }
 
-  // Calculate match start datetime
-  const matchStartDateTime = new Date(`${match.match_date}T${match.start_time}`);
-  const now = new Date();
-
-  // Condition 4: Must be within 24 hours of start time
-  const hoursUntilMatch = (matchStartDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-  if (hoursUntilMatch >= 24 || hoursUntilMatch < 0) {
-    // Not within 24h window, or match already started
+  // Condition 2: Court must be reserved
+  if (match.court_status !== 'reserved') {
     return false;
   }
 
-  // Condition 2: Match must have been created more than 24 hours before start
+  // Use timezone-aware calculation
+  const tz = match.timezone || 'UTC';
+  const msUntilMatch = getTimeDifferenceFromNow(match.match_date, match.start_time, tz);
+  const hoursUntilMatch = msUntilMatch / (1000 * 60 * 60);
+
+  // Condition 5: Must be within 24 hours of start time
+  if (hoursUntilMatch >= 24) {
+    return false;
+  }
+
+  // Condition 3: Match must have been created more than 24 hours before start
   if (match.created_at) {
     const createdAt = new Date(match.created_at);
-    const hoursFromCreationToStart =
-      (matchStartDateTime.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+    const matchStartMs = Date.now() + msUntilMatch;
+    const hoursFromCreationToStart = (matchStartMs - createdAt.getTime()) / (1000 * 60 * 60);
     if (hoursFromCreationToStart < 24) {
-      // Spontaneous/last-minute match - no penalty
       return false;
     }
   }
 
-  // Condition 3: Match must NOT have been edited within 24 hours of start
-  if (match.updated_at) {
-    const updatedAt = new Date(match.updated_at);
-    const hoursFromUpdateToStart =
-      (matchStartDateTime.getTime() - updatedAt.getTime()) / (1000 * 60 * 60);
-    if (hoursFromUpdateToStart < 24) {
-      // Host made last-minute changes - no penalty for leaving
+  // Condition 4: Match must NOT have been explicitly edited by host within 24 hours of NOW
+  if (match.host_edited_at) {
+    const hostEditedAt = new Date(match.host_edited_at);
+    const hoursSinceEdit = (Date.now() - hostEditedAt.getTime()) / (1000 * 60 * 60);
+    if (hoursSinceEdit < 24) {
       return false;
     }
   }
 
-  // All conditions met - leaving will affect reputation
   return true;
 }
 
@@ -360,39 +363,49 @@ function isWithin24HoursOfStart(match: MatchDetailData): boolean {
 /**
  * Check if cancelling this match will affect the creator's reputation.
  *
- * Per the spec, a reputation penalty (-25 points) applies only when BOTH conditions are met:
- * 1. Match was created more than 24 hours before start time (planned match)
- * 2. Creator is cancelling within 24 hours of start time
+ * Graduated penalty applies when ALL conditions are met:
+ * 1. Court is reserved (court_status = 'reserved')
+ * 2. Match was created more than 24 hours before start time (planned match)
+ * 3. There are other joined participants
+ * 4. Creator is cancelling within 24 hours of start time
  *
- * Note: Unlike leaving, the match fullness is NOT a factor for cancellation penalties.
+ * Note: cooling-off (created <1h ago) is checked server-side only.
  *
  * @param match - The match data
- * @returns true if cancelling will incur a reputation penalty
+ * @returns true if cancelling will likely incur a reputation penalty
  */
 function willCancelAffectReputation(match: MatchDetailData): boolean {
-  // Calculate match start datetime
-  const matchStartDateTime = new Date(`${match.match_date}T${match.start_time}`);
-  const now = new Date();
-
-  // Condition 2: Must be within 24 hours of start time
-  const hoursUntilMatch = (matchStartDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-  if (hoursUntilMatch >= 24 || hoursUntilMatch < 0) {
-    // Not within 24h window, or match already started
+  // Condition 1: Court must be reserved
+  if (match.court_status !== 'reserved') {
     return false;
   }
 
-  // Condition 1: Match must have been created more than 24 hours before start
+  // Condition 3: Must have other joined participants
+  const participantInfo = getParticipantInfo(match);
+  if (participantInfo.current <= 1) {
+    return false;
+  }
+
+  // Use timezone-aware calculation
+  const tz = match.timezone || 'UTC';
+  const msUntilMatch = getTimeDifferenceFromNow(match.match_date, match.start_time, tz);
+  const hoursUntilMatch = msUntilMatch / (1000 * 60 * 60);
+
+  // Condition 4: Must be within 24 hours of start time
+  if (hoursUntilMatch >= 24) {
+    return false;
+  }
+
+  // Condition 2: Match must have been created more than 24 hours before start
   if (match.created_at) {
     const createdAt = new Date(match.created_at);
-    const hoursFromCreationToStart =
-      (matchStartDateTime.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+    const matchStartMs = Date.now() + msUntilMatch;
+    const hoursFromCreationToStart = (matchStartMs - createdAt.getTime()) / (1000 * 60 * 60);
     if (hoursFromCreationToStart < 24) {
-      // Spontaneous/last-minute match - no penalty
       return false;
     }
   }
 
-  // All conditions met - cancelling will affect reputation
   return true;
 }
 
@@ -455,7 +468,7 @@ const ParticipantAvatar: React.FC<ParticipantAvatarProps> = ({
   colors,
   isDark,
   tierAccent,
-  tierAccentLight,
+  tierAccentLight: _tierAccentLight,
 }) => {
   // Use tier accent colors if provided, otherwise fall back to theme colors
   const hostBorderColor = tierAccent || colors.secondary;
@@ -627,6 +640,9 @@ export const MatchDetailSheet: React.FC = () => {
   const toast = useToast();
   const playerId = player?.id;
   const navigation = useAppNavigation();
+  const { display: creatorReputationDisplay } = usePlayerReputation(
+    selectedMatch?.created_by_player?.id
+  );
 
   // Navigate to player profile or open auth sheet if not signed in / onboarding incomplete.
   const handleParticipantProfilePress = useCallback(
@@ -1353,7 +1369,7 @@ export const MatchDetailSheet: React.FC = () => {
   const participantInfo = getParticipantInfo(match);
 
   // Determine match tier and get tier-specific accent colors
-  const creatorReputationScore = match.created_by_player?.reputation_score;
+  const creatorReputationScore = creatorReputationDisplay.score;
   const tier = getMatchTier(match.court_status, creatorReputationScore);
 
   // All tiers use primary accent colors (tier differentiation is via ribbon badge on cards)

@@ -512,7 +512,7 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
 
   // Determine match tier based on court status and creator reputation
   // Override with 'expired' tier if match is expired
-  const creatorReputationScore = match.created_by_player?.reputation_score;
+  const creatorReputationScore = match.created_by_player?.player_reputation?.reputation_score;
   const baseTier = getMatchTier(match.court_status, creatorReputationScore);
   const tier: MatchTier = isExpired ? 'expired' : baseTier;
   const isMostWanted = tier === 'mostWanted';
