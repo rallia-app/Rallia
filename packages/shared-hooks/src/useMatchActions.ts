@@ -4,7 +4,8 @@
  * Provides join, leave, and cancel operations with cache invalidation.
  */
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRef, useEffect } from 'react';
+import { useMutation, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import {
   joinMatch,
   leaveMatch,
@@ -19,13 +20,20 @@ import {
   type JoinMatchResult,
   type CheckInResult,
 } from '@rallia/shared-services';
-import type { Match, MatchParticipant } from '@rallia/shared-types';
+import type { Match, MatchParticipant, MatchWithDetails } from '@rallia/shared-types';
 import { matchKeys } from './useCreateMatch';
 
 /**
  * Options for the useMatchActions hook
  */
 export interface UseMatchActionsOptions {
+  /**
+   * Full match data for optimistic cache updates on join/leave.
+   * When provided, the "My Games" cache is updated immediately on success
+   * instead of waiting for a background refetch.
+   */
+  matchData?: MatchWithDetails;
+
   /**
    * Callback when join succeeds
    */
@@ -165,6 +173,7 @@ export interface UseMatchActionsOptions {
  */
 export function useMatchActions(matchId: string | undefined, options: UseMatchActionsOptions = {}) {
   const {
+    matchData,
     onJoinSuccess,
     onJoinError,
     onLeaveSuccess,
@@ -188,6 +197,62 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
   } = options;
 
   const queryClient = useQueryClient();
+
+  // Keep ref to latest matchData so mutation callbacks always see current value
+  const matchDataRef = useRef(matchData);
+  useEffect(() => {
+    matchDataRef.current = matchData;
+  }, [matchData]);
+
+  /** Page structure used by player match infinite queries */
+  type MatchPage = { matches: MatchWithDetails[]; nextOffset: number | null; hasMore: boolean };
+
+  /**
+   * Optimistically add a match to all active player match list caches.
+   * This ensures "My Games" updates deterministically on join success
+   * without waiting for a background refetch.
+   */
+  const optimisticallyAddToPlayerMatches = (match: MatchWithDetails) => {
+    queryClient.setQueriesData<InfiniteData<MatchPage>>(
+      { queryKey: [...matchKeys.lists(), 'player'] },
+      oldData => {
+        if (!oldData?.pages?.length) return oldData;
+
+        // Don't add if already present
+        const exists = oldData.pages.some(page => page.matches.some(m => m.id === match.id));
+        if (exists) return oldData;
+
+        // Prepend to first page
+        return {
+          ...oldData,
+          pages: [
+            { ...oldData.pages[0], matches: [match, ...oldData.pages[0].matches] },
+            ...oldData.pages.slice(1),
+          ],
+        };
+      }
+    );
+  };
+
+  /**
+   * Optimistically remove a match from all active player match list caches.
+   * Used on leave so "My Games" reflects the change immediately.
+   */
+  const optimisticallyRemoveFromPlayerMatches = (removeMatchId: string) => {
+    queryClient.setQueriesData<InfiniteData<MatchPage>>(
+      { queryKey: [...matchKeys.lists(), 'player'] },
+      oldData => {
+        if (!oldData?.pages?.length) return oldData;
+        return {
+          ...oldData,
+          pages: oldData.pages.map(page => ({
+            ...page,
+            matches: page.matches.filter(m => m.id !== removeMatchId),
+          })),
+        };
+      }
+    );
+  };
 
   /**
    * Invalidate and refetch all relevant match queries after an action.
@@ -218,8 +283,25 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
       return joinMatch(matchId, playerId);
     },
     onSuccess: async result => {
-      // Wait for cache invalidation before calling success callback
-      await invalidateMatchQueries();
+      // Optimistic cache update: add match to player match lists immediately
+      // so "My Games" reflects the join without waiting for a refetch.
+      const currentMatchData = matchDataRef.current;
+      if (currentMatchData && matchId) {
+        optimisticallyAddToPlayerMatches({
+          ...currentMatchData,
+          // Cast to satisfy MatchParticipantWithPlayer[]; the background refetch
+          // will replace this with the full participant data including player profile.
+          participants: [
+            ...(currentMatchData.participants || []),
+            result.participant,
+          ] as MatchWithDetails['participants'],
+        });
+      }
+
+      // Fire background invalidation for server reconciliation (non-blocking).
+      // This ensures caches eventually reflect the authoritative server state.
+      invalidateMatchQueries();
+
       onJoinSuccess?.(result);
     },
     onError: error => {
@@ -234,8 +316,14 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
       return leaveMatch(matchId, playerId);
     },
     onSuccess: async () => {
-      // Wait for cache invalidation before calling success callback
-      await invalidateMatchQueries();
+      // Optimistic cache update: remove match from player match lists immediately
+      if (matchId) {
+        optimisticallyRemoveFromPlayerMatches(matchId);
+      }
+
+      // Fire background invalidation for server reconciliation (non-blocking)
+      invalidateMatchQueries();
+
       onLeaveSuccess?.();
     },
     onError: error => {

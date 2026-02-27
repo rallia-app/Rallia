@@ -252,7 +252,17 @@ function getTranslatedBody(
     : normalizedPayload;
 
   const t = createTranslator(locale);
-  const translationKey = `notifications.messages.${type}.body`;
+
+  // Use body_full variant when game is full (spotsLeft === 0)
+  let bodySuffix = 'body';
+  if (type === 'match_player_joined') {
+    const spots = (payloadWithFormattedValues as Record<string, unknown>)?.spotsLeft;
+    if (spots === '0' || spots === 0) {
+      bodySuffix = 'body_full';
+    }
+  }
+
+  const translationKey = `notifications.messages.${type}.${bodySuffix}`;
   const translated = t(
     translationKey,
     payloadWithFormattedValues as Record<string, string | number>

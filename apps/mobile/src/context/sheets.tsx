@@ -262,6 +262,7 @@ declare module 'react-native-actions-sheet' {
       payload: {
         match: import('@rallia/shared-types').MatchWithDetails;
         onSuccess?: () => void;
+        onDismiss?: () => void;
       };
     }>;
     'court-selection': SheetDefinition<{

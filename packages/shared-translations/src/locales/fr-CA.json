@@ -41,7 +41,8 @@
     "gender": {
       "label": "Genre",
       "male": "Homme",
-      "female": "Femme"
+      "female": "Femme",
+      "other": "Autre"
     },
     "playingHand": {
       "label": "Main de jeu",
@@ -206,7 +207,7 @@
     "messages": {
       "match_invitation": {
         "title": "C'est parti!",
-        "body": "{playerName} veut jouer au {sportName} avec vous le {matchDate}{startTime}"
+        "body": "{playerName} veut jouer au {sportName} avec vous le {matchDate}{startTime} à {locationName}"
       },
       "match_join_request": {
         "title": "Nouvelle demande",
@@ -217,36 +218,41 @@
         "body": "Votre partie de {sportName} du {matchDate} à {locationName} est confirmée. À bientôt!"
       },
       "match_join_rejected": {
-        "title": "Demande refusée",
-        "body": "Votre demande pour la partie de {sportName} n'a pas été acceptée. Découvrez d'autres parties à proximité!"
+        "title": "Partie complète",
+        "body": "Votre demande pour la partie de {sportName} du {matchDate} n'a pas été acceptée. Trouvez d'autres parties à proximité!"
       },
       "match_player_joined": {
         "title": "Nouveau joueur!",
-        "body": "{playerName} a rejoint votre partie de {sportName}. {spotsLeft} place(s) restante(s)!"
+        "body": "{playerName} a rejoint votre partie de {sportName} — {spotsLeft} restante(s)!",
+        "body_full": "{playerName} a rejoint votre partie de {sportName}. La partie est complète!"
       },
       "match_cancelled": {
         "title": "Partie annulée",
-        "body": "La partie de {sportName} du {matchDate} à {locationName} a été annulée. On espère vous voir bientôt sur le terrain!"
+        "body": "La partie de {sportName} du {matchDate} à {locationName} a été annulée. On espère vous revoir bientôt!"
       },
       "match_updated": {
         "title": "Partie modifiée",
-        "body": "Votre partie de {sportName} du {matchDate} a été mise à jour. Appuyez pour voir les changements."
+        "body": "Votre partie de {sportName} du {matchDate} a été mise à jour. Ouvrez la partie pour voir les changements."
       },
       "match_starting_soon": {
         "title": "Préparez-vous!",
         "body": "Votre partie de {sportName} à {locationName} commence {timeUntil}. C'est l'heure de s'échauffer!"
       },
       "match_completed": {
-        "title": "Belle partie!",
-        "body": "Votre partie de {sportName} est terminée. Comment ça s'est passé? Partagez votre avis!"
+        "title": "Partie terminée",
+        "body": "Votre partie de {sportName} est terminée! Comment ça s'est passé? Évaluez votre expérience."
+      },
+      "match_new_available": {
+        "title": "Nouvelle partie",
+        "body": "Une partie de {sportName} le {matchDate} cherche des joueurs. Inscrivez-vous avant qu'il ne soit trop tard!"
       },
       "player_kicked": {
         "title": "Retiré de la partie",
-        "body": "Vous avez été retiré de la partie de {sportName} du {matchDate}. Découvrez d'autres parties à proximité!"
+        "body": "Vous avez été retiré de la partie de {sportName} du {matchDate}. Trouvez d'autres parties à proximité!"
       },
       "player_left": {
         "title": "Joueur parti",
-        "body": "{playerName} a quitté votre partie de {sportName}. {spotsLeft} place(s) maintenant disponible(s)."
+        "body": "{playerName} a quitté votre partie de {sportName} — {spotsLeft} maintenant disponible(s)."
       },
       "new_message": {
         "title": "Message de {senderName}",
@@ -285,11 +291,11 @@
         "body": "Évaluez votre partie de {sportName} avec {opponentNames}. Votre avis aide la communauté!"
       },
       "feedback_reminder": {
-        "title": "N'oubliez pas d'évaluer votre partie",
-        "body": "Les commentaires pour votre partie de {sportName} ferment dans 24 heures. Partagez votre expérience avec {opponentNames}!"
+        "title": "Évaluez votre partie",
+        "body": "Les commentaires pour votre partie de {sportName} avec {opponentNames} ferment dans 24 heures. Ne manquez pas ça!"
       },
       "score_confirmation": {
-        "title": "Confirmer le score de la partie",
+        "title": "Confirmer le score",
         "body": "Veuillez confirmer le score final de votre partie de {sportName} du {matchDate}."
       }
     }
@@ -1308,7 +1314,7 @@
     "sport": "Sport",
     "level": "Niveau",
     "joinMatch": "Rejoindre la partie",
-    "leaveMatch": "Quitter la partie",
+    "leaveMatch": "Quitter",
     "cancelMatch": "Annuler",
     "matchDetails": "Détails de la partie"
   },
@@ -1319,11 +1325,13 @@
     "cancelSuccess": "Partie annulée",
     "leaveConfirmTitle": "Quitter cette partie?",
     "leaveConfirmMessage": "Vous serez retiré de cette partie.",
-    "leaveReputationWarning": "Quitter cette partie affectera votre réputation (-25 points). Les autres joueurs comptent sur vous.",
+    "leaveReputationWarning": "Quitter cette partie pourrait affecter votre réputation. Plus c'est proche de l'heure du match, plus l'impact est grand. Les autres joueurs comptent sur vous.",
+    "leaveWaitlistConfirmTitle": "Quitter la liste d'attente?",
+    "leaveWaitlistConfirmMessage": "Vous serez retiré de la liste d'attente. Vous pouvez toujours rejoindre plus tard.",
     "cancelConfirmTitle": "Annuler cette partie?",
     "cancelConfirmMessage": "Cela annulera la partie pour tout le monde.",
     "cancelWarning": "{count} autre(s) joueur(s) seront notifiés",
-    "cancelReputationWarning": "Annuler cette partie affectera votre réputation (-25 points).",
+    "cancelReputationWarning": "Annuler cette partie pourrait affecter votre réputation. Plus c'est proche de l'heure du match, plus l'impact est grand.",
     "acceptRequest": "Accepter",
     "rejectRequest": "Refuser",
     "acceptSuccess": "Joueur accepté",
@@ -1331,7 +1339,7 @@
     "rejectConfirmTitle": "Refuser la demande?",
     "rejectConfirmMessage": "Ce joueur ne pourra plus demander à rejoindre cette partie.",
     "pendingRequests": "Demandes en attente",
-    "cancelRequest": "Annuler la demande",
+    "cancelRequest": "Annuler",
     "cancelRequestSuccess": "Votre demande a été annulée",
     "cancelRequestConfirmTitle": "Annuler la demande?",
     "cancelRequestConfirmMessage": "Votre demande pour rejoindre cette partie sera retirée.",
@@ -1340,7 +1348,7 @@
     "requestPending": "Votre demande est en attente d'approbation par l'hôte",
     "waitlistedInfo": "Vous êtes sur la liste d'attente. Nous vous notifierons si une place se libère.",
     "spotOpenedUp": "Une place s'est libérée! Vous pouvez rejoindre cette partie maintenant.",
-    "joinWaitlist": "Rejoindre la liste d'attente",
+    "joinWaitlist": "Rejoindre liste d'attente",
     "leaveWaitlist": "Quitter la liste d'attente",
     "waitlistSuccess": "Vous avez été ajouté à la liste d'attente!",
     "leaveWaitlistSuccess": "Vous avez quitté la liste d'attente",
@@ -2774,6 +2782,7 @@
       "genderAny": "Tous",
       "genderMale": "Homme",
       "genderFemale": "Femme",
+      "genderOther": "Autre",
       "minRatingScore": "Niveau minimum",
       "minRatingScoreDescription": "Seuls les joueurs à ce niveau ou plus élevé peuvent participer",
       "yourRating": "Vous",
@@ -3172,7 +3181,8 @@
         "label": "Genre",
         "all": "Tous",
         "male": "Homme",
-        "female": "Femme"
+        "female": "Femme",
+        "other": "Autre"
       },
       "cost": {
         "label": "Coût",

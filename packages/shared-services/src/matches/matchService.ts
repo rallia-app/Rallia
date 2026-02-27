@@ -17,9 +17,9 @@ import {
 } from '../notifications/notificationFactory';
 import {
   createReputationEvent,
-  createReputationEvents,
-  havePlayedTogether,
+  countRecentCancellationEvents,
 } from '../reputation/reputationService';
+import { calculateCancellationPenalty } from '../reputation/reputationPenalties';
 import { createMatchChat } from '../chat/chatService';
 import type {
   Match,
@@ -186,7 +186,7 @@ export async function getMatchWithDetails(matchId: string) {
         gender,
         playing_hand,
         max_travel_distance,
-        reputation_score,
+        player_reputation (reputation_score),
         notification_match_requests,
         notification_messages,
         notification_reminders,
@@ -211,7 +211,7 @@ export async function getMatchWithDetails(matchId: string) {
           gender,
           playing_hand,
           max_travel_distance,
-          reputation_score,
+          player_reputation (reputation_score),
           notification_match_requests,
           notification_messages,
           notification_reminders,
@@ -418,7 +418,7 @@ export async function getMatchesWithDetails(
         gender,
         playing_hand,
         max_travel_distance,
-        reputation_score,
+        player_reputation (reputation_score),
         notification_match_requests,
         notification_messages,
         notification_reminders,
@@ -443,7 +443,7 @@ export async function getMatchesWithDetails(
           gender,
           playing_hand,
           max_travel_distance,
-          reputation_score,
+          player_reputation (reputation_score),
           notification_match_requests,
           notification_messages,
           notification_reminders,
@@ -792,6 +792,9 @@ export async function updateMatch(
   if (updates.joinMode !== undefined) updateData.join_mode = updates.joinMode;
   if (updates.notes !== undefined) updateData.notes = emptyToNull(updates.notes);
 
+  // Track when the host explicitly edits the match (used for leave-penalty exception)
+  updateData.host_edited_at = new Date().toISOString();
+
   const { data, error } = await supabase
     .from('match')
     .update(updateData)
@@ -870,7 +873,9 @@ export async function cancelMatch(matchId: string, userId?: string): Promise<Mat
   // Include created_at for reputation penalty calculation
   const { data: match, error: fetchError } = await supabase
     .from('match')
-    .select('created_by, cancelled_at, created_at, match_date, start_time, end_time, timezone')
+    .select(
+      'created_by, cancelled_at, created_at, match_date, start_time, end_time, timezone, court_status'
+    )
     .eq('id', matchId)
     .single();
 
@@ -890,7 +895,8 @@ export async function cancelMatch(matchId: string, userId?: string): Promise<Mat
 
   // Check if match has already ended (can't cancel completed matches)
   // A match is considered completed if its end_time has passed
-  const { getMatchEndTimeDifferenceFromNow } = await import('@rallia/shared-utils');
+  const { getMatchEndTimeDifferenceFromNow, getTimeDifferenceFromNow } =
+    await import('@rallia/shared-utils');
   const endTimeDiff = getMatchEndTimeDifferenceFromNow(
     match.match_date,
     match.start_time,
@@ -916,35 +922,74 @@ export async function cancelMatch(matchId: string, userId?: string): Promise<Mat
   }
 
   // Create reputation event for cancellation (if userId is provided = host cancelling)
-  // Per the spec, late cancellation penalty applies when BOTH:
-  // 1. Cancelling within 24 hours of start time
-  // 2. Match was created more than 24 hours before start (not a spontaneous match)
   if (userId) {
-    const matchStartDateTime = new Date(`${match.match_date}T${match.start_time}`);
-    const now = new Date();
-    const hoursUntilMatch = (matchStartDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-    const isWithin24HoursOfStart = hoursUntilMatch > 0 && hoursUntilMatch < 24;
+    // Use timezone-aware calculation for hours until match
+    const msUntilMatch = getTimeDifferenceFromNow(
+      match.match_date,
+      match.start_time,
+      match.timezone || 'UTC'
+    );
+    const hoursUntilMatch = msUntilMatch / (1000 * 60 * 60);
 
-    // Check if match was created more than 24h before start (planned match vs spontaneous)
-    let isPlannedMatch = true; // Default to true if created_at is missing
-    if (match.created_at) {
-      const createdAt = new Date(match.created_at);
+    // Determine if this is an early (no penalty) or late (graduated penalty) cancellation
+    let isLateCancellation = false;
+
+    // Cooling off: if match was created <1h ago, no penalty
+    const createdAt = match.created_at ? new Date(match.created_at) : null;
+    const hoursSinceCreation = createdAt
+      ? (Date.now() - createdAt.getTime()) / (1000 * 60 * 60)
+      : Infinity;
+    const isCoolingOff = hoursSinceCreation < 1;
+
+    // Check if any other participants are joined (no penalty if solo)
+    const { data: joinedParticipants } = await supabase
+      .from('match_participant')
+      .select('player_id')
+      .eq('match_id', matchId)
+      .eq('status', 'joined')
+      .neq('player_id', userId);
+    const hasOtherParticipants = joinedParticipants && joinedParticipants.length > 0;
+
+    // Court must be reserved for penalty to apply
+    const courtReserved = match.court_status === 'reserved';
+
+    // Must be a planned match (created 24h+ before start)
+    const matchStartMs = getTimeDifferenceFromNow(
+      match.match_date,
+      match.start_time,
+      match.timezone || 'UTC'
+    );
+    let isPlannedMatch = true;
+    if (createdAt) {
       const hoursFromCreationToStart =
-        (matchStartDateTime.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+        (Date.now() + matchStartMs - createdAt.getTime()) / (1000 * 60 * 60);
       isPlannedMatch = hoursFromCreationToStart >= 24;
     }
 
-    // Late cancellation penalty only applies if within 24h of start AND was a planned match
-    const isLateCancellation = isWithin24HoursOfStart && isPlannedMatch;
+    // Must be within 24h of start
+    const isWithin24h = hoursUntilMatch < 24;
 
-    // Create reputation event for the host
-    createReputationEvent(
-      userId,
-      isLateCancellation ? 'match_cancelled_late' : 'match_cancelled_early',
-      { matchId }
-    ).catch(err => {
-      console.error('[cancelMatch] Failed to create reputation event:', err);
-    });
+    if (!isCoolingOff && hasOtherParticipants && courtReserved && isPlannedMatch && isWithin24h) {
+      isLateCancellation = true;
+    }
+
+    if (isLateCancellation) {
+      // Graduated penalty: count recent offenses, compute penalty
+      const recentOffenses = await countRecentCancellationEvents(userId);
+      const penalty = calculateCancellationPenalty(hoursUntilMatch, 'creator', { recentOffenses });
+
+      createReputationEvent(userId, 'match_cancelled_late', {
+        matchId,
+        customImpact: penalty,
+        metadata: { hoursUntilMatch, courtStatus: match.court_status, recentOffenses },
+      }).catch(err => {
+        console.error('[cancelMatch] Failed to create reputation event:', err);
+      });
+    } else {
+      createReputationEvent(userId, 'match_cancelled_early', { matchId }).catch(err => {
+        console.error('[cancelMatch] Failed to create reputation event:', err);
+      });
+    }
   }
 
   // Notify all joined participants about the cancellation
@@ -1235,6 +1280,7 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
       .update({
         status: participantStatus,
         updated_at: new Date().toISOString(),
+        ...(participantStatus === 'joined' ? { joined_at: new Date().toISOString() } : {}),
       })
       .eq('match_id', matchId)
       .eq('player_id', playerId)
@@ -1254,6 +1300,7 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
         player_id: playerId,
         status: participantStatus,
         is_host: false,
+        ...(participantStatus === 'joined' ? { joined_at: new Date().toISOString() } : {}),
       })
       .select()
       .single();
@@ -1399,16 +1446,18 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
       `
       created_by,
       created_at,
-      updated_at,
+      host_edited_at,
       match_date,
       start_time,
       timezone,
       format,
+      court_status,
       sport:sport_id (name),
       participants:match_participant (
         player_id,
         status,
-        is_host
+        is_host,
+        joined_at
       )
     `
     )
@@ -1457,84 +1506,115 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
   // ========================================
   // CREATE REPUTATION EVENT IF APPLICABLE
   // ========================================
-  // Check if leaving warrants a reputation penalty per the spec:
-  // Penalty applies when: full match + created >24h before start + not edited <24h before start + leaving <24h before start
-  if (isMatchFull) {
-    const matchStartDateTime = new Date(`${match.match_date}T${match.start_time}`);
-    const now = new Date();
-    const hoursUntilMatch = (matchStartDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+  // Graduated penalty for leaving a full match late.
+  // Waitlisted players should never incur a penalty for leaving.
+  const wasJoinedParticipant = joinedParticipants.some(
+    (p: { player_id: string }) => p.player_id === playerId
+  );
+  if (wasJoinedParticipant && isMatchFull) {
+    const { getTimeDifferenceFromNow } = await import('@rallia/shared-utils');
+    const msUntilMatch = getTimeDifferenceFromNow(
+      match.match_date,
+      match.start_time,
+      match.timezone || 'UTC'
+    );
+    const hoursUntilMatch = msUntilMatch / (1000 * 60 * 60);
 
-    // Condition: Must be within 24 hours of start time
-    if (hoursUntilMatch > 0 && hoursUntilMatch < 24) {
+    // Only apply penalty within 24h of start
+    if (hoursUntilMatch < 24) {
       let shouldCreatePenalty = true;
 
-      // Condition: Match must have been created more than 24 hours before start
-      if (match.created_at) {
-        const createdAt = new Date(match.created_at);
-        const hoursFromCreationToStart =
-          (matchStartDateTime.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-        if (hoursFromCreationToStart < 24) {
-          // Spontaneous/last-minute match - no penalty
+      // Cooling off: if player joined <1h ago, no penalty
+      const playerParticipant = joinedParticipants.find(
+        (p: { player_id: string }) => p.player_id === playerId
+      ) as { player_id: string; joined_at?: string } | undefined;
+      if (playerParticipant?.joined_at) {
+        const hoursSinceJoin =
+          (Date.now() - new Date(playerParticipant.joined_at).getTime()) / (1000 * 60 * 60);
+        if (hoursSinceJoin < 1) {
           shouldCreatePenalty = false;
         }
       }
 
-      // Condition: Match must NOT have been edited within 24 hours of start
-      if (shouldCreatePenalty && match.updated_at) {
-        const updatedAt = new Date(match.updated_at);
-        const hoursFromUpdateToStart =
-          (matchStartDateTime.getTime() - updatedAt.getTime()) / (1000 * 60 * 60);
-        if (hoursFromUpdateToStart < 24) {
-          // Host made last-minute changes - no penalty for leaving
+      // Court must be reserved for penalty to apply
+      if (shouldCreatePenalty && match.court_status !== 'reserved') {
+        shouldCreatePenalty = false;
+      }
+
+      // Spontaneous match exception: created <24h before start
+      if (shouldCreatePenalty && match.created_at) {
+        const createdAt = new Date(match.created_at);
+        const matchStartMs = Date.now() + msUntilMatch;
+        const hoursFromCreationToStart = (matchStartMs - createdAt.getTime()) / (1000 * 60 * 60);
+        if (hoursFromCreationToStart < 24) {
+          shouldCreatePenalty = false;
+        }
+      }
+
+      // Host-edit exception: if host explicitly edited match <24h before NOW (player is reacting to recent changes)
+      if (shouldCreatePenalty && match.host_edited_at) {
+        const hostEditedAt = new Date(match.host_edited_at);
+        const hoursSinceEdit = (Date.now() - hostEditedAt.getTime()) / (1000 * 60 * 60);
+        if (hoursSinceEdit < 24) {
           shouldCreatePenalty = false;
         }
       }
 
       if (shouldCreatePenalty) {
-        // Create reputation event for leaving late (same type as host cancelling late per spec)
-        createReputationEvent(playerId, 'match_cancelled_late', { matchId }).catch(err => {
+        const recentOffenses = await countRecentCancellationEvents(playerId);
+        const penalty = calculateCancellationPenalty(hoursUntilMatch, 'participant', {
+          recentOffenses,
+        });
+
+        createReputationEvent(playerId, 'match_left_late', {
+          matchId,
+          customImpact: penalty,
+          metadata: { hoursUntilMatch, recentOffenses },
+        }).catch(err => {
           console.error('[leaveMatch] Failed to create reputation event:', err);
         });
       }
     }
   }
 
-  // Send notifications to host and remaining participants
-  // Get player name for notification
-  const { data: profileData } = await supabase
-    .from('profile')
-    .select('first_name, last_name, display_name')
-    .eq('id', playerId)
-    .single();
+  // Only notify other participants when a joined player leaves (not waitlisted players)
+  if (wasJoinedParticipant) {
+    // Get player name for notification
+    const { data: profileData } = await supabase
+      .from('profile')
+      .select('first_name, last_name, display_name')
+      .eq('id', playerId)
+      .single();
 
-  const playerName =
-    profileData?.first_name && profileData?.last_name
-      ? `${profileData.first_name} ${profileData.last_name}`
-      : profileData?.first_name || 'A player';
-  const sportName = (match.sport as { name?: string } | null)?.name;
+    const playerName =
+      profileData?.first_name && profileData?.last_name
+        ? `${profileData.first_name} ${profileData.last_name}`
+        : profileData?.first_name || 'A player';
+    const sportName = (match.sport as { name?: string } | null)?.name;
 
-  // Get all remaining joined participants (excluding the player who left)
-  // Note: The creator is now a participant, so they'll be included in this list if they're joined
-  const remainingParticipants =
-    match.participants?.filter(
-      (p: { player_id: string; status: string }) =>
-        p.status === 'joined' && p.player_id !== playerId
-    ) ?? [];
+    // Get all remaining joined participants (excluding the player who left)
+    // Note: The creator is now a participant, so they'll be included in this list if they're joined
+    const remainingParticipants =
+      match.participants?.filter(
+        (p: { player_id: string; status: string }) =>
+          p.status === 'joined' && p.player_id !== playerId
+      ) ?? [];
 
-  // Recipients are the remaining joined participants (creator is already included if they're a participant)
-  const userIdsToNotify = remainingParticipants.map((p: { player_id: string }) => p.player_id);
+    // Recipients are the remaining joined participants (creator is already included if they're a participant)
+    const userIdsToNotify = remainingParticipants.map((p: { player_id: string }) => p.player_id);
 
-  // Remove duplicates
-  const uniqueUserIds = [...new Set(userIdsToNotify)];
+    // Remove duplicates
+    const uniqueUserIds = [...new Set(userIdsToNotify)];
 
-  if (uniqueUserIds.length > 0) {
-    // Calculate spots left after the player left
-    const spotsLeft = totalCapacity - remainingParticipants.length;
+    if (uniqueUserIds.length > 0) {
+      // Calculate spots left after the player left
+      const spotsLeft = totalCapacity - remainingParticipants.length;
 
-    // Notify all users (fire and forget - don't block on notification)
-    notifyPlayerLeft(uniqueUserIds, matchId, playerName, sportName, spotsLeft).catch(err => {
-      console.error('Failed to send player left notifications:', err);
-    });
+      // Notify all users (fire and forget - don't block on notification)
+      notifyPlayerLeft(uniqueUserIds, matchId, playerName, sportName, spotsLeft).catch(err => {
+        console.error('Failed to send player left notifications:', err);
+      });
+    }
   }
 }
 
@@ -1659,6 +1739,7 @@ export async function acceptJoinRequest(
     .update({
       status: 'joined',
       updated_at: new Date().toISOString(),
+      joined_at: new Date().toISOString(),
     })
     .eq('id', participantId)
     .select()
@@ -2319,7 +2400,7 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
         gender,
         playing_hand,
         max_travel_distance,
-        reputation_score,
+        player_reputation (reputation_score),
         notification_match_requests,
         notification_messages,
         notification_reminders,
@@ -2344,7 +2425,7 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
           gender,
           playing_hand,
           max_travel_distance,
-          reputation_score,
+          player_reputation (reputation_score),
           notification_match_requests,
           notification_messages,
           notification_reminders,
@@ -2645,7 +2726,7 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
         gender,
         playing_hand,
         max_travel_distance,
-        reputation_score,
+        player_reputation (reputation_score),
         notification_match_requests,
         notification_messages,
         notification_reminders,
@@ -2670,7 +2751,7 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
           gender,
           playing_hand,
           max_travel_distance,
-          reputation_score,
+          player_reputation (reputation_score),
           notification_match_requests,
           notification_messages,
           notification_reminders,
@@ -2878,7 +2959,7 @@ export interface SearchPublicMatchesParams {
   dateRange?: 'all' | 'today' | 'week' | 'weekend';
   timeOfDay?: 'all' | 'morning' | 'afternoon' | 'evening';
   skillLevel?: 'all' | 'beginner' | 'intermediate' | 'advanced';
-  gender?: 'all' | 'male' | 'female';
+  gender?: 'all' | 'male' | 'female' | 'other';
   cost?: 'all' | 'free' | 'paid';
   joinMode?: 'all' | 'direct' | 'request';
   /** Duration filter (in minutes), '120+' includes 120 and custom */
@@ -2999,7 +3080,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
         gender,
         playing_hand,
         max_travel_distance,
-        reputation_score,
+        player_reputation (reputation_score),
         notification_match_requests,
         notification_messages,
         notification_reminders,
@@ -3024,7 +3105,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
           gender,
           playing_hand,
           max_travel_distance,
-          reputation_score,
+          player_reputation (reputation_score),
           notification_match_requests,
           notification_messages,
           notification_reminders,
@@ -3414,155 +3495,6 @@ export async function invitePlayersToMatch(
   return { invited, alreadyInMatch, failed };
 }
 
-// =============================================================================
-// REPUTATION EVENTS
-// =============================================================================
-
-/**
- * Result of awarding match completion reputation
- */
-export interface AwardMatchCompletionResult {
-  /** Player IDs that received reputation events */
-  awarded: string[];
-  /** Player IDs that already had reputation events for this match */
-  skipped: string[];
-  /** Player IDs that had errors */
-  failed: string[];
-}
-
-/**
- * Award match completion reputation events to all participants.
- * This should be called when a match is confirmed as completed (either via UI
- * confirmation or by a scheduled job after match end time).
- *
- * Awards:
- * - 'match_completed' to all participants
- * - 'first_match_bonus' if it's the player's first match
- * - 'match_repeat_opponent' if players have played together before
- *
- * @param matchId - The match ID
- * @returns Result with awarded, skipped, and failed player IDs
- */
-export async function awardMatchCompletionReputation(
-  matchId: string
-): Promise<AwardMatchCompletionResult> {
-  // Fetch match with participants
-  const { data: match, error: matchError } = await supabase
-    .from('match')
-    .select(
-      `
-      id,
-      created_by,
-      cancelled_at,
-      participants:match_participant (
-        player_id,
-        status
-      )
-    `
-    )
-    .eq('id', matchId)
-    .single();
-
-  if (matchError || !match) {
-    throw new Error('Match not found');
-  }
-
-  // Only award for non-cancelled matches
-  if (match.cancelled_at) {
-    return { awarded: [], skipped: [], failed: [] };
-  }
-
-  // Get all players who participated (joined participants, which now includes the creator)
-  const participantPlayerIds = (match.participants ?? [])
-    .filter((p: { status: string }) => p.status === 'joined')
-    .map((p: { player_id: string }) => p.player_id);
-
-  // Creator is now included as a joined participant with is_host=true
-  const uniquePlayerIds = [...new Set(participantPlayerIds)];
-
-  if (uniquePlayerIds.length === 0) {
-    return { awarded: [], skipped: [], failed: [] };
-  }
-
-  // Check if reputation events already exist for this match (avoid duplicates)
-  const { data: existingEvents } = await supabase
-    .from('reputation_event')
-    .select('player_id')
-    .eq('match_id', matchId)
-    .eq('event_type', 'match_completed');
-
-  const playersWithEvents = new Set(
-    (existingEvents ?? []).map((e: { player_id: string }) => e.player_id)
-  );
-
-  const skipped = uniquePlayerIds.filter(id => playersWithEvents.has(id));
-  const toAward = uniquePlayerIds.filter(id => !playersWithEvents.has(id));
-
-  if (toAward.length === 0) {
-    return { awarded: [], skipped, failed: [] };
-  }
-
-  const awarded: string[] = [];
-  const failed: string[] = [];
-
-  // Prepare events for each player
-  for (const playerId of toAward) {
-    try {
-      const eventsToCreate: Array<{
-        playerId: string;
-        eventType: 'match_completed' | 'first_match_bonus' | 'match_repeat_opponent';
-        options?: { matchId?: string; causedByPlayerId?: string };
-      }> = [
-        {
-          playerId,
-          eventType: 'match_completed',
-          options: { matchId },
-        },
-      ];
-
-      // Check if this is the player's first match completion
-      const { data: existingCompletions } = await supabase
-        .from('reputation_event')
-        .select('id')
-        .eq('player_id', playerId)
-        .eq('event_type', 'match_completed')
-        .limit(1);
-
-      if (!existingCompletions || existingCompletions.length === 0) {
-        eventsToCreate.push({
-          playerId,
-          eventType: 'first_match_bonus',
-          options: { matchId },
-        });
-      }
-
-      // Check for repeat opponents
-      const otherPlayerIds = uniquePlayerIds.filter(id => id !== playerId);
-      for (const opponentId of otherPlayerIds) {
-        const hasPlayedBefore = await havePlayedTogether(playerId, opponentId, matchId);
-        if (hasPlayedBefore) {
-          eventsToCreate.push({
-            playerId,
-            eventType: 'match_repeat_opponent',
-            options: { matchId, causedByPlayerId: opponentId },
-          });
-          // Only award once per match (not per opponent)
-          break;
-        }
-      }
-
-      // Create all events for this player
-      await createReputationEvents(eventsToCreate);
-      awarded.push(playerId);
-    } catch (err) {
-      console.error(`[awardMatchCompletionReputation] Failed for player ${playerId}:`, err);
-      failed.push(playerId);
-    }
-  }
-
-  return { awarded, skipped, failed };
-}
-
 /**
  * Check-in radius in meters
  */
@@ -3768,7 +3700,7 @@ export async function getMatchNeedingFeedback(
         gender,
         playing_hand,
         max_travel_distance,
-        reputation_score,
+        player_reputation (reputation_score),
         notification_match_requests,
         notification_messages,
         notification_reminders,
@@ -3794,7 +3726,7 @@ export async function getMatchNeedingFeedback(
           gender,
           playing_hand,
           max_travel_distance,
-          reputation_score,
+          player_reputation (reputation_score),
           notification_match_requests,
           notification_messages,
           notification_reminders,
@@ -3957,8 +3889,6 @@ export const matchService = {
   checkInToMatch,
   // Invitations
   invitePlayersToMatch,
-  // Reputation
-  awardMatchCompletionReputation,
   // Feedback
   getMatchNeedingFeedback,
 };
