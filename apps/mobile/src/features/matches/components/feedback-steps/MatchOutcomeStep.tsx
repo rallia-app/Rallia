@@ -5,7 +5,7 @@
  * or was mutually cancelled.
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
@@ -430,6 +430,9 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
   locale,
   isDark,
 }) => {
+  const scrollViewRef = useRef<ScrollView>(null);
+  const reasonsSectionY = useRef<number>(0);
+
   const handleOutcomeChange = useCallback(
     (newOutcome: MatchOutcomeEnum) => {
       onOutcomeChange(newOutcome, null, '');
@@ -439,6 +442,14 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
       } else if (newOutcome === 'opponent_no_show' && opponents.length === 1) {
         // Auto-select the only opponent for singles matches
         onNoShowPlayerIdsChange([opponents[0].playerId]);
+      }
+
+      // Auto-scroll to reveal the sub-section when cancellation or no-show is selected
+      if (newOutcome === 'mutual_cancel' || newOutcome === 'opponent_no_show') {
+        // Small delay to let the section render before scrolling
+        setTimeout(() => {
+          scrollViewRef.current?.scrollTo({ y: reasonsSectionY.current, animated: true });
+        }, 100);
       }
     },
     [onOutcomeChange, onNoShowPlayerIdsChange, opponents]
@@ -471,6 +482,7 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
 
   return (
     <ScrollView
+      ref={scrollViewRef}
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
@@ -498,7 +510,13 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
       </View>
 
       {/* Outcome Options */}
-      <View style={styles.optionsContainer}>
+      <View
+        style={styles.optionsContainer}
+        onLayout={e => {
+          const { y, height } = e.nativeEvent.layout;
+          reasonsSectionY.current = y + height;
+        }}
+      >
         <OptionCard
           icon="checkmark-circle-outline"
           title={t('matchFeedback.outcomeStep.matchPlayed')}
