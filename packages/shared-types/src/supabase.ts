@@ -5581,7 +5581,7 @@ export type Database = {
       program_type_enum: 'program' | 'lesson';
       proof_status_enum: 'pending' | 'approved' | 'rejected';
       proof_type_enum: 'external_link' | 'file';
-      rating_certification_method_enum: 'external_rating' | 'proof' | 'referrals';
+      rating_certification_method_enum: 'admin' | 'external_rating' | 'proof' | 'referrals';
       rating_request_status_enum: 'pending' | 'completed' | 'declined' | 'expired' | 'cancelled';
       rating_source_type:
         | 'self_reported'
@@ -5935,7 +5935,7 @@ export const Constants = {
       program_type_enum: ['program', 'lesson'],
       proof_status_enum: ['pending', 'approved', 'rejected'],
       proof_type_enum: ['external_link', 'file'],
-      rating_certification_method_enum: ['external_rating', 'proof', 'referrals'],
+      rating_certification_method_enum: ['admin', 'external_rating', 'proof', 'referrals'],
       rating_request_status_enum: ['pending', 'completed', 'declined', 'expired', 'cancelled'],
       rating_source_type: [
         'self_reported',

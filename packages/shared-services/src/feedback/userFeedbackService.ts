@@ -12,12 +12,35 @@ export const USER_FEEDBACK_CATEGORY_LABELS: Record<UserFeedbackCategory, string>
   other: 'Other',
 };
 
+/** App module/feature area for feedback categorization */
+export type UserFeedbackModule =
+  | 'match_features'
+  | 'profile_settings'
+  | 'messaging'
+  | 'rating_system'
+  | 'player_directory'
+  | 'notifications'
+  | 'performance'
+  | 'other';
+
+export const USER_FEEDBACK_MODULE_LABELS: Record<UserFeedbackModule, string> = {
+  match_features: 'Match Features',
+  profile_settings: 'Profile & Settings',
+  messaging: 'Messaging',
+  rating_system: 'Rating System',
+  player_directory: 'Player Directory',
+  notifications: 'Notifications',
+  performance: 'Performance',
+  other: 'Other',
+};
+
 export type UserFeedbackStatus = 'new' | 'reviewed' | 'in_progress' | 'resolved' | 'closed';
 
 export interface UserFeedbackSubmission {
   id: string;
   player_id: string | null;
   category: UserFeedbackCategory;
+  module: UserFeedbackModule;
   subject: string;
   message: string;
   app_version: string | null;
@@ -32,6 +55,7 @@ export interface UserFeedbackSubmission {
 export interface CreateUserFeedbackParams {
   playerId?: string;
   category: UserFeedbackCategory;
+  module: UserFeedbackModule;
   subject: string;
   message: string;
   screenshotUrls?: string[];
@@ -44,12 +68,14 @@ export interface CreateUserFeedbackParams {
 export async function submitUserFeedback(
   params: CreateUserFeedbackParams
 ): Promise<UserFeedbackSubmission> {
-  const { playerId, category, subject, message, screenshotUrls, deviceInfo, appVersion } = params;
+  const { playerId, category, module, subject, message, screenshotUrls, deviceInfo, appVersion } =
+    params;
   const { data, error } = await supabase
     .from('feedback')
     .insert({
       player_id: playerId || null,
       category,
+      module,
       subject,
       message,
       app_version: appVersion || null,

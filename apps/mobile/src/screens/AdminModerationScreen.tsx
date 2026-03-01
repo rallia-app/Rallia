@@ -8,7 +8,7 @@
  * - User must have admin role with 'support' or higher level
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -20,6 +20,7 @@ import {
   Modal,
   Pressable,
   TextInput,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,13 +35,16 @@ import {
   hasMinimumRole,
   type PlayerReport,
   type PlayerBan,
-  type ReportStatus,
-  type ReportType,
   type BanType,
 } from '@rallia/shared-hooks';
 import { moderationService, type CreateBanParams } from '@rallia/shared-services';
 import { useTranslation, type TranslationKey } from '../hooks';
 import type { RootStackParamList } from '../navigation/types';
+import {
+  ModerationFiltersBar,
+  type ModerationFilters,
+  DEFAULT_MODERATION_FILTERS,
+} from '../components/ModerationFiltersBar';
 import {
   lightTheme,
   darkTheme,
@@ -56,10 +60,10 @@ import { lightHaptic } from '@rallia/shared-utils';
 
 // Spacing aliases for this screen (mapping semantic names to spacingPixels keys)
 const spacing = {
-  xs: spacingPixels[1],   // 4px
-  sm: spacingPixels[2],   // 8px
-  md: spacingPixels[4],   // 16px
-  lg: spacingPixels[6],   // 24px
+  xs: spacingPixels[1], // 4px
+  sm: spacingPixels[2], // 8px
+  md: spacingPixels[4], // 16px
+  lg: spacingPixels[6], // 24px
 };
 
 // Font size alias for 'md' which doesn't exist in fontSizePixels
@@ -81,30 +85,48 @@ interface TabButtonProps {
   label: string;
   active: boolean;
   count?: number;
+  icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
   colors: ReturnType<typeof useColors>;
+  isDark: boolean;
 }
 
-const TabButton: React.FC<TabButtonProps> = ({ label, active, count, onPress, colors }) => (
+const TabButton: React.FC<TabButtonProps> = ({
+  label,
+  active,
+  count,
+  icon,
+  onPress,
+  colors,
+  isDark,
+}) => (
   <TouchableOpacity
     style={[
-      styles.tabButton,
-      {
-        borderBottomColor: active ? colors.accent : 'transparent',
-        borderBottomWidth: active ? 2 : 0,
-      },
+      styles.tab,
+      active && [
+        styles.activeTab,
+        { backgroundColor: isDark ? colors.cardBackground : BASE_WHITE },
+      ],
     ]}
     onPress={onPress}
     activeOpacity={0.7}
   >
-    <Text style={[styles.tabLabel, { color: active ? colors.accent : colors.textSecondary }]}>
+    <Ionicons
+      name={icon}
+      size={18}
+      color={active ? colors.accent : colors.textMuted}
+      style={styles.tabIcon}
+    />
+    <Text
+      size="sm"
+      weight={active ? 'semibold' : 'medium'}
+      style={[styles.tabLabel, { color: active ? colors.accent : colors.textMuted }]}
+    >
       {label}
     </Text>
     {count !== undefined && count > 0 && (
-      <View style={[styles.tabBadge, { backgroundColor: colors.errorBg }]}>
-        <Text style={[styles.tabBadgeText, { color: colors.errorText }]}>
-          {count > 99 ? '99+' : count}
-        </Text>
+      <View style={[styles.tabBadge, { backgroundColor: active ? colors.accent : neutral[400] }]}>
+        <Text style={styles.tabBadgeText}>{count > 99 ? '99+' : count}</Text>
       </View>
     )}
   </TouchableOpacity>
@@ -182,11 +204,38 @@ const ReportCard: React.FC<ReportCardProps> = ({
             <Text style={[styles.metaLabel, { color: colors.textMuted }]}>
               {t('admin.moderation.reporter')}:
             </Text>
-            <Text style={[styles.metaValue, { color: colors.text }]}>
-              {report.reporter_name}
-            </Text>
+            <Text style={[styles.metaValue, { color: colors.text }]}>{report.reporter_name}</Text>
           </View>
         </View>
+
+        {/* Evidence Images */}
+        {report.evidence_urls && report.evidence_urls.length > 0 && (
+          <View style={styles.evidenceSection}>
+            <View style={styles.evidenceLabelRow}>
+              <Ionicons name="image-outline" size={14} color={colors.textMuted} />
+              <Text style={[styles.evidenceLabel, { color: colors.textMuted }]}>
+                {t('admin.moderation.evidence' as TranslationKey)} ({report.evidence_urls.length})
+              </Text>
+            </View>
+            <View style={styles.evidenceGrid}>
+              {report.evidence_urls.map((url, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[styles.evidenceImageContainer, { borderColor: colors.border }]}
+                  onPress={() => {
+                    // TODO: Open full-screen image viewer
+                    Alert.alert(t('admin.moderation.evidenceImage' as TranslationKey), url, [
+                      { text: 'OK' },
+                    ]);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Image source={{ uri: url }} style={styles.evidenceImage} resizeMode="cover" />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
       </View>
 
       {/* Actions */}
@@ -259,9 +308,7 @@ const BanCard: React.FC<BanCardProps> = ({ ban, colors, onRevoke, t }) => {
             />
           </View>
           <View style={styles.cardTitles}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>
-              {ban.player_name}
-            </Text>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>{ban.player_name}</Text>
             <Text style={[styles.cardSubtitle, { color: colors.textMuted }]}>
               {t(`admin.moderation.banType.${ban.ban_type}`)}
             </Text>
@@ -368,6 +415,8 @@ function useColors() {
 const AdminModerationScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { t } = useTranslation();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const colors = useColors();
   const toast = useToast();
   const { isAdmin, role } = useAdminStatus();
@@ -380,17 +429,20 @@ const AdminModerationScreen: React.FC = () => {
   const [banType, setBanType] = useState<BanType>('temporary');
   const [banDuration, setBanDuration] = useState('7'); // days
 
+  // Filter state
+  const [filters, setFilters] = useState<ModerationFilters>(DEFAULT_MODERATION_FILTERS);
+
   // Reports hook
   const {
     reports,
     counts,
     isLoading: reportsLoading,
     isLoadingMore: reportsLoadingMore,
-    hasMore: reportsHasMore,
     refetch: refetchReports,
     loadMore: loadMoreReports,
     dismissReport,
     reviewReport,
+    setFilters: setReportFilters,
   } = useReports({ pageSize: 20 });
 
   // Bans hook
@@ -399,15 +451,45 @@ const AdminModerationScreen: React.FC = () => {
     activeBansCount,
     isLoading: bansLoading,
     isLoadingMore: bansLoadingMore,
-    hasMore: bansHasMore,
     refetch: refetchBans,
     loadMore: loadMoreBans,
     createBan,
     revokeBan,
-  } = useBans({ pageSize: 20, filters: { isActive: false } });
+  } = useBans({ pageSize: 20, filters: { isActive: true } });
 
   // Access check
   const hasAccess = isAdmin && hasMinimumRole(role, 'support');
+
+  // Handle filter change from ModerationFiltersBar
+  const handleFiltersChange = useCallback((newFilters: ModerationFilters) => {
+    setFilters(newFilters);
+  }, []);
+
+  // Clear all filters
+  const handleClearFilters = useCallback(() => {
+    setFilters(DEFAULT_MODERATION_FILTERS);
+    setReportFilters({});
+  }, [setReportFilters]);
+
+  // Auto-apply server-side filters when filter state changes
+  useEffect(() => {
+    setReportFilters({
+      status: filters.status || undefined,
+      reportType: filters.reportType || undefined,
+      priority: filters.priority || undefined,
+    });
+  }, [filters.status, filters.reportType, filters.priority, setReportFilters]);
+
+  // Filter reports by search query (client-side)
+  const filteredReports = useMemo(() => {
+    if (!filters.searchQuery.trim()) return reports;
+    const query = filters.searchQuery.toLowerCase().trim();
+    return reports.filter(
+      report =>
+        report.reporter_name?.toLowerCase().includes(query) ||
+        report.reported_player_name?.toLowerCase().includes(query)
+    );
+  }, [reports, filters.searchQuery]);
 
   // Tab switch
   const handleTabChange = useCallback((tab: TabType) => {
@@ -602,54 +684,74 @@ const AdminModerationScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Stats Summary */}
-      <View style={[styles.statsContainer, { backgroundColor: colors.cardBackground }]}>
-        <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: colors.errorText }]}>{counts.pending}</Text>
-          <Text style={[styles.statLabel, { color: colors.textMuted }]}>
+      {/* Stats Summary - Modern Quick Stats */}
+      <View style={styles.quickStatsRow}>
+        <View style={[styles.quickStat, { backgroundColor: `${status.warning.light}30` }]}>
+          <Ionicons name="alert-circle" size={24} color={status.warning.DEFAULT} />
+          <Text style={[styles.quickStatValue, { color: status.warning.DEFAULT }]}>
+            {counts.pending}
+          </Text>
+          <Text style={[styles.quickStatLabel, { color: colors.textMuted }]}>
             {t('admin.moderation.pending')}
           </Text>
         </View>
-        <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-        <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: colors.warningText }]}>
+
+        <View style={[styles.quickStat, { backgroundColor: `${status.success.light}30` }]}>
+          <Ionicons name="time" size={24} color={status.success.DEFAULT} />
+          <Text style={[styles.quickStatValue, { color: status.success.DEFAULT }]}>
             {counts.under_review}
           </Text>
-          <Text style={[styles.statLabel, { color: colors.textMuted }]}>
+          <Text style={[styles.quickStatLabel, { color: colors.textMuted }]}>
             {t('admin.moderation.underReview')}
           </Text>
         </View>
-        <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-        <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: colors.accent }]}>{activeBansCount}</Text>
-          <Text style={[styles.statLabel, { color: colors.textMuted }]}>
+
+        <View style={[styles.quickStat, { backgroundColor: `${status.error.light}30` }]}>
+          <Ionicons name="ban" size={24} color={status.error.DEFAULT} />
+          <Text style={[styles.quickStatValue, { color: status.error.DEFAULT }]}>
+            {activeBansCount}
+          </Text>
+          <Text style={[styles.quickStatLabel, { color: colors.textMuted }]}>
             {t('admin.moderation.activeBans')}
           </Text>
         </View>
       </View>
 
       {/* Tabs */}
-      <View style={[styles.tabsContainer, { borderBottomColor: colors.border }]}>
+      <View style={[styles.tabsContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
         <TabButton
           label={t('admin.moderation.reports')}
           active={activeTab === 'reports'}
           count={counts.pending}
+          icon="flag-outline"
           onPress={() => handleTabChange('reports')}
           colors={colors}
+          isDark={isDark}
         />
         <TabButton
           label={t('admin.moderation.bans')}
           active={activeTab === 'bans'}
           count={activeBansCount}
+          icon="ban-outline"
           onPress={() => handleTabChange('bans')}
           colors={colors}
+          isDark={isDark}
         />
       </View>
+
+      {/* Filters Section (only for reports tab) */}
+      {activeTab === 'reports' && (
+        <ModerationFiltersBar
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+          onReset={handleClearFilters}
+        />
+      )}
 
       {/* Content */}
       {activeTab === 'reports' ? (
         <FlatList
-          data={reports}
+          data={filteredReports}
           renderItem={renderReportItem}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.listContent}
@@ -860,57 +962,72 @@ const styles = StyleSheet.create({
   refreshButton: {
     padding: spacing.xs,
   },
-  statsContainer: {
+  // Modern Quick Stats styles (matching Moderation & Safety screen)
+  quickStatsRow: {
     flexDirection: 'row',
-    padding: spacing.md,
+    gap: spacingPixels[2],
     marginHorizontal: spacing.md,
     marginTop: spacing.md,
-    borderRadius: radiusPixels.lg,
   },
-  statItem: {
+  quickStat: {
     flex: 1,
     alignItems: 'center',
+    padding: spacingPixels[3],
+    borderRadius: radiusPixels.md,
   },
-  statValue: {
-    fontSize: fontSizePixels['2xl'],
-    fontWeight: fontWeightNumeric.bold,
+  quickStatValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginTop: spacingPixels[1],
   },
-  statLabel: {
-    fontSize: fontSizePixels.xs,
-    marginTop: spacing.xs,
-  },
-  statDivider: {
-    width: 1,
-    marginVertical: spacing.xs,
+  quickStatLabel: {
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: 2,
   },
   tabsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: spacing.md,
-    borderBottomWidth: 1,
+    marginHorizontal: spacing.md,
     marginTop: spacing.md,
+    marginBottom: spacing.sm,
+    borderRadius: 12,
+    padding: 4,
   },
-  tabButton: {
+  tab: {
     flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.md,
-    gap: spacing.xs,
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  activeTab: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  tabIcon: {
+    marginRight: 6,
   },
   tabLabel: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeightNumeric.medium,
+    fontSize: fontSizePixels.sm,
   },
   tabBadge: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    borderRadius: radiusPixels.full,
-    minWidth: 20,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.xs,
+    paddingHorizontal: spacing.xs,
   },
   tabBadgeText: {
-    fontSize: fontSizePixels.xs,
-    fontWeight: fontWeightNumeric.semibold,
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '600',
+    color: BASE_WHITE,
   },
   listContent: {
     padding: spacing.md,
@@ -985,6 +1102,38 @@ const styles = StyleSheet.create({
   metaValue: {
     fontSize: fontSizePixels.xs,
     flex: 1,
+  },
+  evidenceSection: {
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: neutral[200],
+  },
+  evidenceLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: spacing.sm,
+  },
+  evidenceLabel: {
+    fontSize: fontSizePixels.xs,
+    fontWeight: fontWeightNumeric.medium,
+  },
+  evidenceGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  evidenceImageContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: radiusPixels.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+  },
+  evidenceImage: {
+    width: '100%',
+    height: '100%',
   },
   cardActions: {
     flexDirection: 'row',

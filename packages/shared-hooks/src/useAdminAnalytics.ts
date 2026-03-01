@@ -15,11 +15,13 @@ import {
   getKPISummary,
   getRealtimeUserStats,
   getMatchStatistics,
+  getMatchesTodayCount,
   getSportStatistics,
   getOnboardingFunnel,
   getMetricTrend,
   getWidgetTrends,
   buildDashboardWidgets,
+  getPendingReportsCount,
   type KPISummary,
   type RealtimeUserStats,
   type MatchStatistics,
@@ -181,9 +183,7 @@ function setCache<T>(key: string, data: T): void {
 /**
  * Main hook for admin analytics dashboard
  */
-export function useAdminAnalytics(
-  options: UseAdminAnalyticsOptions = {}
-): UseAdminAnalyticsResult {
+export function useAdminAnalytics(options: UseAdminAnalyticsOptions = {}): UseAdminAnalyticsResult {
   const {
     autoFetch = true,
     cacheDuration = 5 * 60 * 1000,
@@ -202,47 +202,50 @@ export function useAdminAnalytics(
   const currentTrendDays = useRef(trendDays);
 
   // Fetch trends data
-  const fetchTrends = useCallback(async (days: number) => {
-    const cacheKey = `widget-trends-${days}`;
-    const cached = getCached<Record<string, MetricTrendPoint[]>>(cacheKey, cacheDuration);
-    
-    if (cached) {
-      setTrends(cached);
-      return cached;
-    }
+  const fetchTrends = useCallback(
+    async (days: number) => {
+      const cacheKey = `widget-trends-${days}`;
+      const cached = getCached<Record<string, MetricTrendPoint[]>>(cacheKey, cacheDuration);
 
-    try {
-      setTrendsLoading(true);
-      const trendData = await getWidgetTrends(days);
-      
-      if (isMounted.current) {
-        setTrends(trendData);
-        setCache(cacheKey, trendData);
+      if (cached) {
+        setTrends(cached);
+        return cached;
       }
-      return trendData;
-    } catch (err) {
-      console.error('Error fetching trends:', err);
-      return {};
-    } finally {
-      if (isMounted.current) {
-        setTrendsLoading(false);
+
+      try {
+        setTrendsLoading(true);
+        const trendData = await getWidgetTrends(days);
+
+        if (isMounted.current) {
+          setTrends(trendData);
+          setCache(cacheKey, trendData);
+        }
+        return trendData;
+      } catch (err) {
+        console.error('Error fetching trends:', err);
+        return {};
+      } finally {
+        if (isMounted.current) {
+          setTrendsLoading(false);
+        }
       }
-    }
-  }, [cacheDuration]);
+    },
+    [cacheDuration]
+  );
 
   const fetchData = useCallback(async () => {
     // Check cache first
     const cached = getCached<KPISummary>('kpi-summary', cacheDuration);
     let trendData: Record<string, MetricTrendPoint[]> = {};
-    
+
     if (cached) {
       setKpi(cached);
-      
+
       // Fetch trends if enabled
       if (includeTrends) {
         trendData = await fetchTrends(currentTrendDays.current);
       }
-      
+
       setWidgets(buildDashboardWidgets(cached, trendData));
       setLastUpdated(new Date(cache.get('kpi-summary')?.timestamp || Date.now()));
       return;
@@ -253,7 +256,7 @@ export function useAdminAnalytics(
       setError(null);
 
       const data = await getKPISummary();
-      
+
       // Fetch trends in parallel if enabled
       if (includeTrends) {
         trendData = await fetchTrends(currentTrendDays.current);
@@ -284,18 +287,21 @@ export function useAdminAnalytics(
     await fetchData();
   }, [fetchData]);
 
-  const refetchTrends = useCallback(async (days: number) => {
-    currentTrendDays.current = days;
-    // Clear trend cache for the new day range
-    cache.delete(`widget-trends-${days}`);
-    
-    const trendData = await fetchTrends(days);
-    
-    // Rebuild widgets with new trend data
-    if (kpi && isMounted.current) {
-      setWidgets(buildDashboardWidgets(kpi, trendData));
-    }
-  }, [fetchTrends, kpi]);
+  const refetchTrends = useCallback(
+    async (days: number) => {
+      currentTrendDays.current = days;
+      // Clear trend cache for the new day range
+      cache.delete(`widget-trends-${days}`);
+
+      const trendData = await fetchTrends(days);
+
+      // Rebuild widgets with new trend data
+      if (kpi && isMounted.current) {
+        setWidgets(buildDashboardWidgets(kpi, trendData));
+      }
+    },
+    [fetchTrends, kpi]
+  );
 
   useEffect(() => {
     isMounted.current = true;
@@ -563,6 +569,93 @@ export function useMetricTrend(options: UseMetricTrendOptions): UseMetricTrendRe
 
   return {
     trend,
+    loading,
+    error,
+    refetch: fetchData,
+  };
+}
+
+// =============================================================================
+// ADMIN DASHBOARD STATS HOOK
+// =============================================================================
+
+export interface AdminDashboardStats {
+  activeUsers: number;
+  matchesToday: number;
+  pendingReports: number;
+}
+
+export interface UseAdminDashboardStatsResult {
+  /** Dashboard stats */
+  stats: AdminDashboardStats;
+  /** Loading state */
+  loading: boolean;
+  /** Error state */
+  error: Error | null;
+  /** Refetch data */
+  refetch: () => Promise<void>;
+}
+
+/**
+ * Hook to fetch admin dashboard quick stats
+ * Fetches: active users today, matches today, and pending reports
+ */
+export function useAdminDashboardStats(enabled: boolean = true): UseAdminDashboardStatsResult {
+  const [stats, setStats] = useState<AdminDashboardStats>({
+    activeUsers: 0,
+    matchesToday: 0,
+    pendingReports: 0,
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const isMounted = useRef(true);
+
+  const fetchData = useCallback(async () => {
+    if (!enabled) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Fetch all stats in parallel
+      const [userStats, matchesCount, reportCounts] = await Promise.all([
+        getRealtimeUserStats(),
+        getMatchesTodayCount(),
+        getPendingReportsCount(),
+      ]);
+
+      if (isMounted.current) {
+        setStats({
+          activeUsers: userStats.activeToday,
+          matchesToday: matchesCount,
+          pendingReports: reportCounts.pending + reportCounts.under_review,
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching dashboard stats:', err);
+      if (isMounted.current) {
+        setError(err as Error);
+      }
+    } finally {
+      if (isMounted.current) {
+        setLoading(false);
+      }
+    }
+  }, [enabled]);
+
+  useEffect(() => {
+    isMounted.current = true;
+    if (enabled) {
+      fetchData();
+    }
+    return () => {
+      isMounted.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled]);
+
+  return {
+    stats,
     loading,
     error,
     refetch: fetchData,

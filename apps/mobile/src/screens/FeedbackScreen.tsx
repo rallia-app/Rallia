@@ -21,7 +21,13 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Application from 'expo-application';
 import { Text, useToast } from '@rallia/shared-components';
 import { useTheme } from '@rallia/shared-hooks';
-import { submitUserFeedback, UserFeedbackCategory, Logger } from '@rallia/shared-services';
+import {
+  submitUserFeedback,
+  UserFeedbackCategory,
+  UserFeedbackModule,
+  USER_FEEDBACK_MODULE_LABELS,
+  Logger,
+} from '@rallia/shared-services';
 import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
 import { useAuth, useTranslation, type TranslationKey, useImagePicker } from '../hooks';
 import { useAppNavigation } from '../navigation/hooks';
@@ -57,6 +63,22 @@ const CATEGORY_OPTIONS: CategoryOption[] = [
   { value: 'other', icon: 'chatbox-ellipses-outline' },
 ];
 
+interface ModuleOption {
+  value: UserFeedbackModule;
+  icon: keyof typeof Ionicons.glyphMap;
+}
+
+const MODULE_OPTIONS: ModuleOption[] = [
+  { value: 'match_features', icon: 'people-outline' },
+  { value: 'profile_settings', icon: 'person-circle-outline' },
+  { value: 'messaging', icon: 'chatbubble-outline' },
+  { value: 'rating_system', icon: 'star-outline' },
+  { value: 'player_directory', icon: 'search-outline' },
+  { value: 'notifications', icon: 'notifications-outline' },
+  { value: 'performance', icon: 'speedometer-outline' },
+  { value: 'other', icon: 'ellipsis-horizontal-outline' },
+];
+
 const FeedbackScreen: React.FC = () => {
   const navigation = useAppNavigation();
   const toast = useToast();
@@ -68,6 +90,7 @@ const FeedbackScreen: React.FC = () => {
 
   // Form state
   const [category, setCategory] = useState<UserFeedbackCategory>('feature');
+  const [module, setModule] = useState<UserFeedbackModule>('other');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [screenshots, setScreenshots] = useState<string[]>([]);
@@ -115,11 +138,14 @@ const FeedbackScreen: React.FC = () => {
   const isFormValid = subjectValid && messageValid;
 
   // Character count colors
-  const getCharCountColor = useCallback((current: number, min: number, max: number) => {
-    if (current < min) return status.warning.DEFAULT;
-    if (current > max * 0.9) return status.warning.DEFAULT;
-    return colors.textMuted;
-  }, [colors.textMuted]);
+  const getCharCountColor = useCallback(
+    (current: number, min: number, max: number) => {
+      if (current < min) return status.warning.DEFAULT;
+      if (current > max * 0.9) return status.warning.DEFAULT;
+      return colors.textMuted;
+    },
+    [colors.textMuted]
+  );
 
   const handleCategorySelect = (cat: UserFeedbackCategory) => {
     lightHaptic();
@@ -128,6 +154,11 @@ const FeedbackScreen: React.FC = () => {
     if (cat !== 'bug' && screenshots.length > 0) {
       setScreenshots([]);
     }
+  };
+
+  const handleModuleSelect = (mod: UserFeedbackModule) => {
+    lightHaptic();
+    setModule(mod);
   };
 
   const handleAddScreenshot = async () => {
@@ -141,12 +172,16 @@ const FeedbackScreen: React.FC = () => {
   const handlePickFromGallery = async () => {
     setShowImageSourceModal(false);
     setIsUploadingImage(true);
-    
+
     try {
       const result = await pickFromGallery();
       if (result.uri) {
         // Upload to Supabase Storage
-        const uploadResult = await uploadImage(result.uri, 'feedback-screenshots', session?.user?.id);
+        const uploadResult = await uploadImage(
+          result.uri,
+          'feedback-screenshots',
+          session?.user?.id
+        );
         if (uploadResult.url) {
           setScreenshots(prev => [...prev, uploadResult.url!]);
           lightHaptic();
@@ -165,12 +200,16 @@ const FeedbackScreen: React.FC = () => {
   const handlePickFromCamera = async () => {
     setShowImageSourceModal(false);
     setIsUploadingImage(true);
-    
+
     try {
       const result = await pickFromCamera();
       if (result.uri) {
         // Upload to Supabase Storage
-        const uploadResult = await uploadImage(result.uri, 'feedback-screenshots', session?.user?.id);
+        const uploadResult = await uploadImage(
+          result.uri,
+          'feedback-screenshots',
+          session?.user?.id
+        );
         if (uploadResult.url) {
           setScreenshots(prev => [...prev, uploadResult.url!]);
           lightHaptic();
@@ -201,6 +240,7 @@ const FeedbackScreen: React.FC = () => {
       const result = await submitUserFeedback({
         playerId: session?.user?.id,
         category,
+        module,
         subject: subject.trim(),
         message: message.trim(),
         screenshotUrls: category === 'bug' ? screenshots : undefined,
@@ -214,7 +254,11 @@ const FeedbackScreen: React.FC = () => {
       successHaptic();
       setSubmittedFeedbackId(result.id);
       setShowSuccessModal(true);
-      Logger.logUserAction('feedback_submitted', { category, screenshotCount: screenshots.length });
+      Logger.logUserAction('feedback_submitted', {
+        category,
+        module,
+        screenshotCount: screenshots.length,
+      });
     } catch (error) {
       Logger.error('Failed to submit feedback', error as Error);
       toast.error(t('feedback.submitError' as TranslationKey));
@@ -234,6 +278,7 @@ const FeedbackScreen: React.FC = () => {
     setMessage('');
     setScreenshots([]);
     setCategory('feature');
+    setModule('other');
     setSubmittedFeedbackId(null);
   };
 
@@ -258,11 +303,20 @@ const FeedbackScreen: React.FC = () => {
 
           {/* Category Selection */}
           <View style={styles.section}>
-            <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.sectionLabel}>
+            <Text
+              size="sm"
+              weight="medium"
+              color={colors.textSecondary}
+              style={styles.sectionLabel}
+            >
               {t('feedback.categoryLabel' as TranslationKey)}
             </Text>
-            <View style={styles.categoryGrid}>
-              {CATEGORY_OPTIONS.map((option) => {
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoryScrollContent}
+            >
+              {CATEGORY_OPTIONS.map(option => {
                 const isActive = category === option.value;
                 return (
                   <TouchableOpacity
@@ -270,12 +324,8 @@ const FeedbackScreen: React.FC = () => {
                     style={[
                       styles.categoryButton,
                       {
-                        backgroundColor: isActive
-                          ? colors.categoryActive
-                          : colors.categoryInactive,
-                        borderColor: isActive
-                          ? colors.categoryActive
-                          : colors.border,
+                        backgroundColor: isActive ? colors.categoryActive : colors.categoryInactive,
+                        borderColor: isActive ? colors.categoryActive : colors.border,
                       },
                     ]}
                     onPress={() => handleCategorySelect(option.value)}
@@ -296,12 +346,65 @@ const FeedbackScreen: React.FC = () => {
                   </TouchableOpacity>
                 );
               })}
+            </ScrollView>
+          </View>
+
+          {/* Module/Feature Area Selection */}
+          <View style={styles.section}>
+            <Text
+              size="sm"
+              weight="medium"
+              color={colors.textSecondary}
+              style={styles.sectionLabel}
+            >
+              {t('feedback.moduleLabel' as TranslationKey)}
+            </Text>
+            <Text size="xs" color={colors.textMuted} style={styles.moduleHint}>
+              {t('feedback.moduleHint' as TranslationKey)}
+            </Text>
+            <View style={styles.moduleGrid}>
+              {MODULE_OPTIONS.map(option => {
+                const isActive = module === option.value;
+                return (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.moduleButton,
+                      {
+                        backgroundColor: isActive ? colors.categoryActive : colors.categoryInactive,
+                        borderColor: isActive ? colors.categoryActive : colors.border,
+                      },
+                    ]}
+                    onPress={() => handleModuleSelect(option.value)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={option.icon}
+                      size={18}
+                      color={isActive ? colors.categoryTextActive : colors.categoryTextInactive}
+                    />
+                    <Text
+                      size="xs"
+                      weight={isActive ? 'semibold' : 'medium'}
+                      color={isActive ? colors.categoryTextActive : colors.categoryTextInactive}
+                      numberOfLines={1}
+                    >
+                      {USER_FEEDBACK_MODULE_LABELS[option.value]}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
 
           {/* Subject Input */}
           <View style={styles.section}>
-            <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.sectionLabel}>
+            <Text
+              size="sm"
+              weight="medium"
+              color={colors.textSecondary}
+              style={styles.sectionLabel}
+            >
               {t('feedback.subjectLabel' as TranslationKey)} *
             </Text>
             <TextInput
@@ -326,9 +429,9 @@ const FeedbackScreen: React.FC = () => {
                   {t('feedback.minCharsHint' as TranslationKey, { min: MIN_SUBJECT_LENGTH })}
                 </Text>
               )}
-              <Text 
-                size="xs" 
-                color={getCharCountColor(subject.length, MIN_SUBJECT_LENGTH, MAX_SUBJECT_LENGTH)} 
+              <Text
+                size="xs"
+                color={getCharCountColor(subject.length, MIN_SUBJECT_LENGTH, MAX_SUBJECT_LENGTH)}
                 style={styles.charCount}
               >
                 {subject.length}/{MAX_SUBJECT_LENGTH}
@@ -338,7 +441,12 @@ const FeedbackScreen: React.FC = () => {
 
           {/* Message Input */}
           <View style={styles.section}>
-            <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.sectionLabel}>
+            <Text
+              size="sm"
+              weight="medium"
+              color={colors.textSecondary}
+              style={styles.sectionLabel}
+            >
               {t('feedback.messageLabel' as TranslationKey)} *
             </Text>
             <TextInput
@@ -366,9 +474,9 @@ const FeedbackScreen: React.FC = () => {
                   {t('feedback.minCharsHint' as TranslationKey, { min: MIN_MESSAGE_LENGTH })}
                 </Text>
               )}
-              <Text 
-                size="xs" 
-                color={getCharCountColor(message.length, MIN_MESSAGE_LENGTH, MAX_MESSAGE_LENGTH)} 
+              <Text
+                size="xs"
+                color={getCharCountColor(message.length, MIN_MESSAGE_LENGTH, MAX_MESSAGE_LENGTH)}
                 style={styles.charCount}
               >
                 {message.length}/{MAX_MESSAGE_LENGTH}
@@ -379,13 +487,18 @@ const FeedbackScreen: React.FC = () => {
           {/* Screenshot Section - Only for Bug Reports */}
           {category === 'bug' && (
             <View style={styles.section}>
-              <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.sectionLabel}>
+              <Text
+                size="sm"
+                weight="medium"
+                color={colors.textSecondary}
+                style={styles.sectionLabel}
+              >
                 {t('feedback.screenshotsLabel' as TranslationKey)}
               </Text>
               <Text size="xs" color={colors.textMuted} style={styles.screenshotHint}>
                 {t('feedback.screenshotsHint' as TranslationKey, { max: MAX_SCREENSHOTS })}
               </Text>
-              
+
               <View style={styles.screenshotGrid}>
                 {/* Existing Screenshots */}
                 {screenshots.map((uri, index) => (
@@ -400,7 +513,7 @@ const FeedbackScreen: React.FC = () => {
                     </TouchableOpacity>
                   </View>
                 ))}
-                
+
                 {/* Add Screenshot Button */}
                 {screenshots.length < MAX_SCREENSHOTS && (
                   <TouchableOpacity
@@ -435,10 +548,9 @@ const FeedbackScreen: React.FC = () => {
           <View style={[styles.noticeBox, { backgroundColor: colors.inputBackground }]}>
             <Ionicons name="information-circle-outline" size={18} color={colors.textMuted} />
             <Text size="xs" color={colors.textMuted} style={styles.noticeText}>
-              {session?.user 
+              {session?.user
                 ? t('feedback.identifiedNotice' as TranslationKey)
-                : t('feedback.anonymousNotice' as TranslationKey)
-              }
+                : t('feedback.anonymousNotice' as TranslationKey)}
             </Text>
           </View>
 
@@ -447,9 +559,8 @@ const FeedbackScreen: React.FC = () => {
             style={[
               styles.submitButton,
               {
-                backgroundColor: isFormValid && !isSubmitting
-                  ? colors.buttonPrimary
-                  : colors.buttonDisabled,
+                backgroundColor:
+                  isFormValid && !isSubmitting ? colors.buttonPrimary : colors.buttonDisabled,
               },
             ]}
             onPress={handleSubmit}
@@ -558,7 +669,7 @@ const FeedbackScreen: React.FC = () => {
             <Text size="lg" weight="semibold" color={colors.text} style={styles.imageSourceTitle}>
               {t('feedback.selectImageSource' as TranslationKey)}
             </Text>
-            
+
             <TouchableOpacity
               style={[styles.imageSourceOption, { borderBottomColor: colors.border }]}
               onPress={handlePickFromCamera}
@@ -569,7 +680,7 @@ const FeedbackScreen: React.FC = () => {
                 {t('profile.takePhoto')}
               </Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={styles.imageSourceOption}
               onPress={handlePickFromGallery}
@@ -580,7 +691,7 @@ const FeedbackScreen: React.FC = () => {
                 {t('profile.chooseFromGallery')}
               </Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={[styles.imageSourceCancel, { backgroundColor: colors.inputBackground }]}
               onPress={() => setShowImageSourceModal(false)}
@@ -621,10 +732,10 @@ const styles = StyleSheet.create({
   sectionLabel: {
     marginBottom: spacingPixels[2],
   },
-  categoryGrid: {
+  categoryScrollContent: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: spacingPixels[2],
+    paddingRight: spacingPixels[1],
   },
   categoryButton: {
     flexDirection: 'row',
@@ -634,6 +745,26 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
     gap: spacingPixels[1.5],
+  },
+  moduleHint: {
+    marginBottom: spacingPixels[2],
+  },
+  moduleGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacingPixels[2],
+  },
+  moduleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[2],
+    borderRadius: radiusPixels.md,
+    borderWidth: 1,
+    gap: spacingPixels[1.5],
+    minWidth: '45%',
+    flexGrow: 1,
+    flexBasis: '45%',
   },
   input: {
     borderWidth: 1,

@@ -25,11 +25,13 @@ export * from './chat';
 // Reports - explicit exports to avoid conflicts with admin/moderationService
 export {
   createReport as createUserReport,
+  getMyReports as getUserReports,
   REPORT_REASON_LABELS,
 } from './reports';
 export type {
   CreateReportParams as CreateUserReportParams,
   ReportReason,
+  PlayerReportType,
 } from './reports';
 // Bookings - client-safe exports (types, validation, status, policy)
 // For server-side functions (createBooking, cancelBooking), use web app's lib/bookings

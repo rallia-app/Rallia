@@ -400,7 +400,7 @@ const PlayerProfile = () => {
         const ratingScoreId = ratingScore?.id || rating.currentRatingScoreId || '';
 
         // Determine badge status based on counts:
-        // - certified (green): 3+ references OR 2+ current-level proofs
+        // - certified (green): badge_status is 'certified' OR 3+ references OR 2+ current-level proofs
         // - disputed (red): badge_status is 'disputed'
         // - self_declared (yellow): default when criteria not met
         // NOTE: Only CURRENT-LEVEL proofs count for certification
@@ -413,7 +413,11 @@ const PlayerProfile = () => {
         let badgeStatus: BadgeStatus = 'self_declared';
         if (rawBadgeStatus === 'disputed') {
           badgeStatus = 'disputed';
-        } else if (referralsCount >= 3 || currentLevelProofsCount >= 2) {
+        } else if (
+          rawBadgeStatus === 'certified' ||
+          referralsCount >= 3 ||
+          currentLevelProofsCount >= 2
+        ) {
           badgeStatus = 'certified';
         }
 

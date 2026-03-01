@@ -132,57 +132,58 @@ const AdminUsersScreen: React.FC = () => {
   );
 
   // Admin users hook
-  const {
-    users,
-    totalCount,
-    loading,
-    error,
-    hasMore,
-    loadMore,
-    refetch,
-    setFilters,
-  } = useAdminUsers({
-    filters: {
-      status: selectedStatus,
-      searchQuery: searchQuery.trim() || undefined,
-    },
-    pageSize: 20,
-  });
+  const { users, totalCount, loading, error, hasMore, loadMore, refetch, setFilters } =
+    useAdminUsers({
+      filters: {
+        status: selectedStatus,
+        searchQuery: searchQuery.trim() || undefined,
+      },
+      pageSize: 20,
+    });
 
   // Access check
   const hasAccess = isAdmin && hasMinimumRole(role, 'support');
 
   // Handle search
-  const handleSearch = useCallback((text: string) => {
-    setSearchQuery(text);
-    // Debounced search handled by setting filters
-    const timer = setTimeout(() => {
-      setFilters({
-        status: selectedStatus,
-        searchQuery: text.trim() || undefined,
-      });
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [selectedStatus, setFilters]);
+  const handleSearch = useCallback(
+    (text: string) => {
+      setSearchQuery(text);
+      // Debounced search handled by setting filters
+      const timer = setTimeout(() => {
+        setFilters({
+          status: selectedStatus,
+          searchQuery: text.trim() || undefined,
+        });
+      }, 300);
+      return () => clearTimeout(timer);
+    },
+    [selectedStatus, setFilters]
+  );
 
   // Handle filter change
-  const handleFilterChange = useCallback((newStatus: FilterStatus) => {
-    lightHaptic();
-    setSelectedStatus(newStatus);
-    setFilters({
-      status: newStatus,
-      searchQuery: searchQuery.trim() || undefined,
-    });
-    setShowFilters(false);
-    Logger.logUserAction('admin_users_filter_changed', { status: newStatus });
-  }, [searchQuery, setFilters]);
+  const handleFilterChange = useCallback(
+    (newStatus: FilterStatus) => {
+      lightHaptic();
+      setSelectedStatus(newStatus);
+      setFilters({
+        status: newStatus,
+        searchQuery: searchQuery.trim() || undefined,
+      });
+      setShowFilters(false);
+      Logger.logUserAction('admin_users_filter_changed', { status: newStatus });
+    },
+    [searchQuery, setFilters]
+  );
 
   // Handle user press
-  const handleUserPress = useCallback((user: AdminUserInfo) => {
-    lightHaptic();
-    Logger.logUserAction('admin_user_detail_pressed', { userId: user.id });
-    navigation.navigate('AdminUserDetail', { userId: user.id });
-  }, [navigation]);
+  const handleUserPress = useCallback(
+    (user: AdminUserInfo) => {
+      lightHaptic();
+      Logger.logUserAction('admin_user_detail_pressed', { userId: user.id });
+      navigation.navigate('AdminUserDetail', { userId: user.id });
+    },
+    [navigation]
+  );
 
   // Handle load more
   const handleLoadMore = useCallback(() => {
@@ -197,43 +198,46 @@ const AdminUsersScreen: React.FC = () => {
   }, [refetch]);
 
   // Handle export
-  const handleExport = useCallback(async (format: 'csv' | 'pdf') => {
-    if (exporting || users.length === 0) return;
-    
-    lightHaptic();
-    setExporting(true);
-    setShowExportMenu(false);
-    
-    try {
-      // Map users to export format
-      const exportData = users.map(user => ({
-        id: user.id,
-        email: user.email || '',
-        first_name: user.first_name,
-        last_name: user.last_name,
-        created_at: user.created_at,
-        last_active: user.last_sign_in_at,
-        status: user.active_ban ? 'banned' : user.is_active ? 'active' : 'inactive',
-        email_verified: !!user.email,
-      }));
-      
-      let success: boolean;
-      if (format === 'pdf') {
-        success = await exportService.exportUsersToPDF(exportData);
-      } else {
-        success = await exportService.exportUsers(exportData);
+  const handleExport = useCallback(
+    async (format: 'csv' | 'pdf') => {
+      if (exporting || users.length === 0) return;
+
+      lightHaptic();
+      setExporting(true);
+      setShowExportMenu(false);
+
+      try {
+        // Map users to export format
+        const exportData = users.map(user => ({
+          id: user.id,
+          email: user.email || '',
+          first_name: user.first_name,
+          last_name: user.last_name,
+          created_at: user.created_at,
+          last_active: user.last_sign_in_at,
+          status: user.active_ban ? 'banned' : user.is_active ? 'active' : 'inactive',
+          email_verified: !!user.email,
+        }));
+
+        let success: boolean;
+        if (format === 'pdf') {
+          success = await exportService.exportUsersToPDF(exportData);
+        } else {
+          success = await exportService.exportUsers(exportData);
+        }
+
+        if (success) {
+          toast.success(t('admin.users.exportSuccess'));
+        }
+      } catch (error) {
+        Logger.error('Failed to export users', error as Error);
+        toast.error(t('admin.users.exportError'));
+      } finally {
+        setExporting(false);
       }
-      
-      if (success) {
-        toast.success(t('admin.users.exportSuccess'));
-      }
-    } catch (error) {
-      Logger.error('Failed to export users', error as Error);
-      toast.error(t('admin.users.exportError'));
-    } finally {
-      setExporting(false);
-    }
-  }, [exporting, users, toast, t]);
+    },
+    [exporting, users, toast, t]
+  );
 
   // Show export menu
   const handleExportPress = useCallback(() => {
@@ -243,50 +247,59 @@ const AdminUsersScreen: React.FC = () => {
   }, [exporting, users.length]);
 
   // Get user display name
-  const getUserDisplayName = useCallback((user: AdminUserInfo): string => {
-    if (user.display_name) return user.display_name;
-    if (user.first_name || user.last_name) {
-      return `${user.first_name || ''} ${user.last_name || ''}`.trim();
-    }
-    return t('admin.users.anonymous' as TranslationKey);
-  }, [t]);
+  const getUserDisplayName = useCallback(
+    (user: AdminUserInfo): string => {
+      if (user.display_name) return user.display_name;
+      if (user.first_name || user.last_name) {
+        return `${user.first_name || ''} ${user.last_name || ''}`.trim();
+      }
+      return t('admin.users.anonymous' as TranslationKey);
+    },
+    [t]
+  );
 
   // Get user status badge
-  const getStatusBadge = useCallback((user: AdminUserInfo) => {
-    if (user.active_ban) {
+  const getStatusBadge = useCallback(
+    (user: AdminUserInfo) => {
+      if (user.active_ban) {
+        return {
+          text: t('admin.users.status.banned' as TranslationKey),
+          bg: colors.errorBg,
+          textColor: colors.errorText,
+          icon: 'ban-outline' as keyof typeof Ionicons.glyphMap,
+        };
+      }
+      if (!user.is_active) {
+        return {
+          text: t('admin.users.status.inactive' as TranslationKey),
+          bg: colors.warningBg,
+          textColor: colors.warningText,
+          icon: 'time-outline' as keyof typeof Ionicons.glyphMap,
+        };
+      }
       return {
-        text: t('admin.users.status.banned' as TranslationKey),
-        bg: colors.errorBg,
-        textColor: colors.errorText,
-        icon: 'ban-outline' as keyof typeof Ionicons.glyphMap,
+        text: t('admin.users.status.active' as TranslationKey),
+        bg: colors.successBg,
+        textColor: colors.successText,
+        icon: 'checkmark-circle-outline' as keyof typeof Ionicons.glyphMap,
       };
-    }
-    if (!user.is_active) {
-      return {
-        text: t('admin.users.status.inactive' as TranslationKey),
-        bg: colors.warningBg,
-        textColor: colors.warningText,
-        icon: 'time-outline' as keyof typeof Ionicons.glyphMap,
-      };
-    }
-    return {
-      text: t('admin.users.status.active' as TranslationKey),
-      bg: colors.successBg,
-      textColor: colors.successText,
-      icon: 'checkmark-circle-outline' as keyof typeof Ionicons.glyphMap,
-    };
-  }, [colors, t]);
+    },
+    [colors, t]
+  );
 
   // Format date
-  const formatDate = useCallback((dateString: string | null): string => {
-    if (!dateString) return t('common.never' as TranslationKey);
-    const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  }, [t]);
+  const formatDate = useCallback(
+    (dateString: string | null): string => {
+      if (!dateString) return t('common.never' as TranslationKey);
+      const date = new Date(dateString);
+      return date.toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    },
+    [t]
+  );
 
   // Render user card
   const renderUserCard = useCallback(
@@ -296,7 +309,10 @@ const AdminUsersScreen: React.FC = () => {
 
       return (
         <TouchableOpacity
-          style={[styles.userCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+          style={[
+            styles.userCard,
+            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+          ]}
           onPress={() => handleUserPress(item)}
           activeOpacity={0.7}
         >
@@ -337,7 +353,12 @@ const AdminUsersScreen: React.FC = () => {
             <View style={styles.userActions}>
               <View style={[styles.statusBadge, { backgroundColor: statusBadge.bg }]}>
                 <Ionicons name={statusBadge.icon} size={12} color={statusBadge.textColor} />
-                <Text size="xs" weight="medium" color={statusBadge.textColor} style={styles.statusText}>
+                <Text
+                  size="xs"
+                  weight="medium"
+                  color={statusBadge.textColor}
+                  style={styles.statusText}
+                >
                   {statusBadge.text}
                 </Text>
               </View>
@@ -408,7 +429,10 @@ const AdminUsersScreen: React.FC = () => {
   // Access denied view
   if (!hasAccess) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['bottom']}
+      >
         <View style={styles.accessDenied}>
           <Ionicons name="lock-closed-outline" size={64} color={colors.errorText} />
           <Text size="lg" weight="semibold" color={colors.text} style={styles.accessDeniedTitle}>
@@ -425,7 +449,10 @@ const AdminUsersScreen: React.FC = () => {
   // Error view
   if (error && !users.length) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['bottom']}
+      >
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle-outline" size={64} color={colors.errorText} />
           <Text size="lg" weight="semibold" color={colors.text} style={styles.errorTitle}>
@@ -450,7 +477,10 @@ const AdminUsersScreen: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['bottom']}
+    >
       {/* Header with Search */}
       <View style={styles.header}>
         {/* Search Input */}
@@ -493,10 +523,7 @@ const AdminUsersScreen: React.FC = () => {
 
         {/* Export Button */}
         <TouchableOpacity
-          style={[
-            styles.filterButton,
-            { backgroundColor: colors.inputBackground },
-          ]}
+          style={[styles.filterButton, { backgroundColor: colors.inputBackground }]}
           onPress={handleExportPress}
           disabled={exporting || users.length === 0}
           activeOpacity={0.7}
@@ -551,7 +578,7 @@ const AdminUsersScreen: React.FC = () => {
       {/* Results Count */}
       <View style={styles.resultsHeader}>
         <Text size="sm" color={colors.textMuted}>
-          {t('admin.users.resultsCount' as TranslationKey, { count: totalCount })}
+          {t('admin.users.resultsCount' as TranslationKey, { count: totalCount ?? 0 })}
         </Text>
       </View>
 
@@ -582,20 +609,12 @@ const AdminUsersScreen: React.FC = () => {
         animationType="fade"
         onRequestClose={() => setShowExportMenu(false)}
       >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setShowExportMenu(false)}
-        >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowExportMenu(false)}>
           <View style={[styles.exportMenu, { backgroundColor: colors.cardBackground }]}>
-            <Text
-              size="lg"
-              weight="semibold"
-              color={colors.text}
-              style={styles.exportMenuTitle}
-            >
+            <Text size="lg" weight="semibold" color={colors.text} style={styles.exportMenuTitle}>
               {t('admin.export.selectFormat' as TranslationKey)}
             </Text>
-            
+
             <TouchableOpacity
               style={[styles.exportOption, { borderBottomColor: colors.border }]}
               onPress={() => handleExport('csv')}
@@ -611,7 +630,7 @@ const AdminUsersScreen: React.FC = () => {
                 </Text>
               </View>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={styles.exportOption}
               onPress={() => handleExport('pdf')}
@@ -627,7 +646,7 @@ const AdminUsersScreen: React.FC = () => {
                 </Text>
               </View>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={[styles.cancelButton, { backgroundColor: colors.inputBackground }]}
               onPress={() => setShowExportMenu(false)}

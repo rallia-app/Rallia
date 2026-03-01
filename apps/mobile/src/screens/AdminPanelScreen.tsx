@@ -10,20 +10,20 @@
  */
 
 import React, { useMemo, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text } from '@rallia/shared-components';
 import { Logger } from '@rallia/shared-services';
-import { useTheme, useAdminStatus, hasMinimumRole, type AdminRole } from '@rallia/shared-hooks';
+import {
+  useTheme,
+  useAdminStatus,
+  hasMinimumRole,
+  useAdminDashboardStats,
+  type AdminRole,
+} from '@rallia/shared-hooks';
 import { useAdminPush } from '../hooks/useAdminPush';
 import { useTranslation } from '../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
@@ -68,6 +68,9 @@ const AdminPanelScreen: React.FC = () => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const { isAdmin, role, loading, error, adminId } = useAdminStatus();
+
+  // Fetch dashboard stats (active users, matches today, pending reports)
+  const { stats: dashboardStats, loading: statsLoading } = useAdminDashboardStats(isAdmin);
 
   // Handle notification press - navigate to relevant screen
   const handleNotificationPressed = useCallback(
@@ -346,11 +349,11 @@ const AdminPanelScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Quick Stats - Phase 3 will populate with real data */}
+        {/* Quick Stats - Connected to real database */}
         <View style={styles.statsGrid}>
           <View style={[styles.statCard, { backgroundColor: colors.cardBackground }]}>
             <Text size="2xl" weight="bold" color={colors.accent}>
-              --
+              {statsLoading ? '...' : dashboardStats.activeUsers}
             </Text>
             <Text size="sm" color={colors.textSecondary}>
               {t('admin.stats.activeUsers')}
@@ -358,7 +361,7 @@ const AdminPanelScreen: React.FC = () => {
           </View>
           <View style={[styles.statCard, { backgroundColor: colors.cardBackground }]}>
             <Text size="2xl" weight="bold" color={colors.successText}>
-              --
+              {statsLoading ? '...' : dashboardStats.matchesToday}
             </Text>
             <Text size="sm" color={colors.textSecondary}>
               {t('admin.stats.matchesToday')}
@@ -366,7 +369,7 @@ const AdminPanelScreen: React.FC = () => {
           </View>
           <View style={[styles.statCard, { backgroundColor: colors.cardBackground }]}>
             <Text size="2xl" weight="bold" color={colors.warningText}>
-              --
+              {statsLoading ? '...' : dashboardStats.pendingReports}
             </Text>
             <Text size="sm" color={colors.textSecondary}>
               {t('admin.stats.pendingReports')}
@@ -376,7 +379,12 @@ const AdminPanelScreen: React.FC = () => {
 
         {/* Admin Sections */}
         <View style={styles.sectionsContainer}>
-          <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.sectionHeader}>
+          <Text
+            size="sm"
+            weight="semibold"
+            color={colors.textSecondary}
+            style={styles.sectionHeader}
+          >
             {t('admin.dashboard.sections')}
           </Text>
           {visibleSections.map(section => (

@@ -78,19 +78,14 @@ function useModerationAnalytics() {
     setError(null);
 
     try {
-      const [
-        reportVolume,
-        reportTypes,
-        resolutionMetrics,
-        banStatistics,
-        feedbackSentiment,
-      ] = await Promise.all([
-        getReportVolume(),
-        getReportTypes(),
-        getResolutionMetrics(),
-        getBanStatistics(),
-        getFeedbackSentiment(),
-      ]);
+      const [reportVolume, reportTypes, resolutionMetrics, banStatistics, feedbackSentiment] =
+        await Promise.all([
+          getReportVolume(),
+          getReportTypes(),
+          getResolutionMetrics(),
+          getBanStatistics(),
+          getFeedbackSentiment(),
+        ]);
 
       setData({
         reportVolume,
@@ -153,10 +148,7 @@ function GaugeMetric({
     <View style={styles.gaugeContainer}>
       <View style={styles.gaugeTrack}>
         <View
-          style={[
-            styles.gaugeFill,
-            { width: `${percentage}%`, backgroundColor: gaugeColor },
-          ]}
+          style={[styles.gaugeFill, { width: `${percentage}%`, backgroundColor: gaugeColor }]}
         />
       </View>
       <View style={styles.gaugeLabels}>
@@ -191,9 +183,8 @@ export default function AdminModerationAnalyticsScreen() {
   const reportVolumeChartData = useMemo(() => {
     if (!data?.reportVolume) return [];
 
-    return data.reportVolume.map((point) => ({
-      label:
-        point.date.length > 5 ? point.date.slice(5).replace('-', '/') : point.date,
+    return data.reportVolume.map(point => ({
+      label: point.date.length > 5 ? point.date.slice(5).replace('-', '/') : point.date,
       value: point.reportCount,
       frontColor: status.warning.DEFAULT,
     }));
@@ -208,9 +199,9 @@ export default function AdminModerationAnalyticsScreen() {
       low: primary[400],
     };
 
-    return data.reportTypes.map((type) => ({
+    return data.reportTypes.map(type => ({
       value: type.percentage,
-      color: priorityColors[type.priority],
+      color: priorityColors[type.priority] || priorityColors.low,
       text: `${type.percentage}%`,
     }));
   }, [data]);
@@ -218,7 +209,7 @@ export default function AdminModerationAnalyticsScreen() {
   const feedbackChartData = useMemo(() => {
     if (!data?.feedbackSentiment) return [];
 
-    return data.feedbackSentiment.map((item) => ({
+    return data.feedbackSentiment.map(item => ({
       label: item.category.length > 10 ? item.category.slice(0, 10) + '...' : item.category,
       stacks: [
         { value: item.bugReports, color: status.error.DEFAULT },
@@ -263,10 +254,7 @@ export default function AdminModerationAnalyticsScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: borderColor }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={textColor} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
@@ -274,7 +262,8 @@ export default function AdminModerationAnalyticsScreen() {
             {t('admin.analytics.sections.moderation' as TranslationKey) || 'Moderation & Safety'}
           </Text>
           <Text style={[styles.headerSubtitle, { color: subtextColor }]}>
-            {t('admin.analytics.sections.moderationDesc' as TranslationKey) || 'Reports & safety metrics'}
+            {t('admin.analytics.sections.moderationDesc' as TranslationKey) ||
+              'Reports & safety metrics'}
           </Text>
         </View>
       </View>
@@ -297,9 +286,7 @@ export default function AdminModerationAnalyticsScreen() {
             <Text style={[styles.quickStatValue, { color: status.warning.DEFAULT }]}>
               {data?.resolutionMetrics?.openReports || 0}
             </Text>
-            <Text style={[styles.quickStatLabel, { color: subtextColor }]}>
-              Open Reports
-            </Text>
+            <Text style={[styles.quickStatLabel, { color: subtextColor }]}>Open Reports</Text>
           </View>
 
           <View style={[styles.quickStat, { backgroundColor: status.error.light + '30' }]}>
@@ -307,9 +294,7 @@ export default function AdminModerationAnalyticsScreen() {
             <Text style={[styles.quickStatValue, { color: status.error.DEFAULT }]}>
               {data?.banStatistics?.activeBans || 0}
             </Text>
-            <Text style={[styles.quickStatLabel, { color: subtextColor }]}>
-              Active Bans
-            </Text>
+            <Text style={[styles.quickStatLabel, { color: subtextColor }]}>Active Bans</Text>
           </View>
 
           <View style={[styles.quickStat, { backgroundColor: status.success.light + '30' }]}>
@@ -317,9 +302,7 @@ export default function AdminModerationAnalyticsScreen() {
             <Text style={[styles.quickStatValue, { color: status.success.DEFAULT }]}>
               {data?.resolutionMetrics?.withinSlaPercent.toFixed(0) || 0}%
             </Text>
-            <Text style={[styles.quickStatLabel, { color: subtextColor }]}>
-              Within SLA
-            </Text>
+            <Text style={[styles.quickStatLabel, { color: subtextColor }]}>Within SLA</Text>
           </View>
         </View>
 
@@ -327,9 +310,7 @@ export default function AdminModerationAnalyticsScreen() {
         <View style={[styles.card, { backgroundColor: cardBgColor }]}>
           <View style={styles.cardHeader}>
             <Ionicons name="trending-up" size={20} color={primary[500]} />
-            <Text style={[styles.cardTitle, { color: textColor }]}>
-              Report Volume Trend
-            </Text>
+            <Text style={[styles.cardTitle, { color: textColor }]}>Report Volume Trend</Text>
           </View>
 
           <View style={styles.chartContainer}>
@@ -351,9 +332,7 @@ export default function AdminModerationAnalyticsScreen() {
                 barBorderRadius={4}
               />
             ) : (
-              <Text style={[styles.noDataText, { color: subtextColor }]}>
-                No data available
-              </Text>
+              <Text style={[styles.noDataText, { color: subtextColor }]}>No data available</Text>
             )}
           </View>
 
@@ -373,9 +352,7 @@ export default function AdminModerationAnalyticsScreen() {
         <View style={[styles.card, { backgroundColor: cardBgColor }]}>
           <View style={styles.cardHeader}>
             <Ionicons name="pie-chart" size={20} color={primary[500]} />
-            <Text style={[styles.cardTitle, { color: textColor }]}>
-              Report Types
-            </Text>
+            <Text style={[styles.cardTitle, { color: textColor }]}>Report Types</Text>
           </View>
 
           <View style={styles.pieChartContainer}>
@@ -390,16 +367,17 @@ export default function AdminModerationAnalyticsScreen() {
                   centerLabelComponent={() => (
                     <View style={styles.pieCenterLabel}>
                       <Text style={[styles.pieCenterValue, { color: textColor }]}>
-                        {data?.reportTypes?.reduce((sum: number, rt: ReportTypeDistribution) => sum + rt.count, 0) || 0}
+                        {data?.reportTypes?.reduce(
+                          (sum: number, rt: ReportTypeDistribution) => sum + rt.count,
+                          0
+                        ) || 0}
                       </Text>
-                      <Text style={[styles.pieCenterSubtext, { color: subtextColor }]}>
-                        Total
-                      </Text>
+                      <Text style={[styles.pieCenterSubtext, { color: subtextColor }]}>Total</Text>
                     </View>
                   )}
                 />
                 <View style={styles.reportTypeLegend}>
-                  {data?.reportTypes?.map((type) => (
+                  {data?.reportTypes?.map(type => (
                     <View key={type.type} style={styles.reportTypeLegendItem}>
                       <View
                         style={[
@@ -427,7 +405,7 @@ export default function AdminModerationAnalyticsScreen() {
                             },
                           ]}
                         >
-                          {type.priority.toUpperCase()}
+                          {(type.priority || 'low').toUpperCase()}
                         </Text>
                       </View>
                       <View style={styles.reportTypeInfo}>
@@ -443,9 +421,7 @@ export default function AdminModerationAnalyticsScreen() {
                 </View>
               </>
             ) : (
-              <Text style={[styles.noDataText, { color: subtextColor }]}>
-                No data available
-              </Text>
+              <Text style={[styles.noDataText, { color: subtextColor }]}>No data available</Text>
             )}
           </View>
         </View>
@@ -454,9 +430,7 @@ export default function AdminModerationAnalyticsScreen() {
         <View style={[styles.card, { backgroundColor: cardBgColor }]}>
           <View style={styles.cardHeader}>
             <Ionicons name="speedometer" size={20} color={primary[500]} />
-            <Text style={[styles.cardTitle, { color: textColor }]}>
-              Resolution Metrics
-            </Text>
+            <Text style={[styles.cardTitle, { color: textColor }]}>Resolution Metrics</Text>
           </View>
 
           <View style={styles.gaugesContainer}>
@@ -501,54 +475,52 @@ export default function AdminModerationAnalyticsScreen() {
         <View style={[styles.card, { backgroundColor: cardBgColor }]}>
           <View style={styles.cardHeader}>
             <Ionicons name="ban" size={20} color={status.error.DEFAULT} />
-            <Text style={[styles.cardTitle, { color: textColor }]}>
-              Ban Statistics
-            </Text>
+            <Text style={[styles.cardTitle, { color: textColor }]}>Ban Statistics</Text>
           </View>
 
           <View style={styles.banStatsGrid}>
-            <View style={[styles.banStatBox, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}>
+            <View
+              style={[styles.banStatBox, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}
+            >
               <View style={styles.banStatHeader}>
                 <Ionicons name="time" size={16} color={status.warning.DEFAULT} />
-                <Text style={[styles.banStatLabel, { color: subtextColor }]}>
-                  Temporary
-                </Text>
+                <Text style={[styles.banStatLabel, { color: subtextColor }]}>Temporary</Text>
               </View>
               <Text style={[styles.banStatValue, { color: status.warning.DEFAULT }]}>
                 {data?.banStatistics?.temporaryBans || 0}
               </Text>
             </View>
 
-            <View style={[styles.banStatBox, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}>
+            <View
+              style={[styles.banStatBox, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}
+            >
               <View style={styles.banStatHeader}>
                 <Ionicons name="close-circle" size={16} color={status.error.DEFAULT} />
-                <Text style={[styles.banStatLabel, { color: subtextColor }]}>
-                  Permanent
-                </Text>
+                <Text style={[styles.banStatLabel, { color: subtextColor }]}>Permanent</Text>
               </View>
               <Text style={[styles.banStatValue, { color: status.error.DEFAULT }]}>
                 {data?.banStatistics?.permanentBans || 0}
               </Text>
             </View>
 
-            <View style={[styles.banStatBox, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}>
+            <View
+              style={[styles.banStatBox, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}
+            >
               <View style={styles.banStatHeader}>
                 <Ionicons name="refresh" size={16} color={secondary[500]} />
-                <Text style={[styles.banStatLabel, { color: subtextColor }]}>
-                  Recidivism
-                </Text>
+                <Text style={[styles.banStatLabel, { color: subtextColor }]}>Recidivism</Text>
               </View>
               <Text style={[styles.banStatValue, { color: secondary[500] }]}>
                 {data?.banStatistics?.recidivismRate.toFixed(1) || 0}%
               </Text>
             </View>
 
-            <View style={[styles.banStatBox, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}>
+            <View
+              style={[styles.banStatBox, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}
+            >
               <View style={styles.banStatHeader}>
                 <Ionicons name="trending-up" size={16} color={subtextColor} />
-                <Text style={[styles.banStatLabel, { color: subtextColor }]}>
-                  This Month
-                </Text>
+                <Text style={[styles.banStatLabel, { color: subtextColor }]}>This Month</Text>
               </View>
               <View style={styles.banMonthStats}>
                 <Text style={[styles.banMonthItem, { color: textColor }]}>
@@ -569,9 +541,7 @@ export default function AdminModerationAnalyticsScreen() {
         <View style={[styles.card, { backgroundColor: cardBgColor }]}>
           <View style={styles.cardHeader}>
             <Ionicons name="chatbubbles" size={20} color={primary[500]} />
-            <Text style={[styles.cardTitle, { color: textColor }]}>
-              User Feedback
-            </Text>
+            <Text style={[styles.cardTitle, { color: textColor }]}>User Feedback</Text>
           </View>
 
           <View style={styles.chartContainer}>
@@ -593,9 +563,7 @@ export default function AdminModerationAnalyticsScreen() {
                 barBorderRadius={4}
               />
             ) : (
-              <Text style={[styles.noDataText, { color: subtextColor }]}>
-                No data available
-              </Text>
+              <Text style={[styles.noDataText, { color: subtextColor }]}>No data available</Text>
             )}
           </View>
 
@@ -604,14 +572,10 @@ export default function AdminModerationAnalyticsScreen() {
               <View
                 style={[styles.lineChartLegendDot, { backgroundColor: status.error.DEFAULT }]}
               />
-              <Text style={[styles.lineChartLegendText, { color: subtextColor }]}>
-                Bug Reports
-              </Text>
+              <Text style={[styles.lineChartLegendText, { color: subtextColor }]}>Bug Reports</Text>
             </View>
             <View style={styles.lineChartLegendItem}>
-              <View
-                style={[styles.lineChartLegendDot, { backgroundColor: primary[400] }]}
-              />
+              <View style={[styles.lineChartLegendDot, { backgroundColor: primary[400] }]} />
               <Text style={[styles.lineChartLegendText, { color: subtextColor }]}>
                 Feature Requests
               </Text>
@@ -620,16 +584,16 @@ export default function AdminModerationAnalyticsScreen() {
 
           {/* Feedback status breakdown */}
           <View style={[styles.feedbackStatusSection, { borderTopColor: borderColor }]}>
-            <Text style={[styles.feedbackStatusTitle, { color: textColor }]}>
-              Status Breakdown
-            </Text>
-            {data?.feedbackSentiment?.map((item) => (
+            <Text style={[styles.feedbackStatusTitle, { color: textColor }]}>Status Breakdown</Text>
+            {data?.feedbackSentiment?.map(item => (
               <View key={item.category} style={styles.feedbackStatusRow}>
                 <Text style={[styles.feedbackCategory, { color: subtextColor }]}>
                   {item.category}
                 </Text>
                 <View style={styles.feedbackStatusBadges}>
-                  <View style={[styles.statusBadge, { backgroundColor: status.warning.light + '30' }]}>
+                  <View
+                    style={[styles.statusBadge, { backgroundColor: status.warning.light + '30' }]}
+                  >
                     <Text style={[styles.statusBadgeText, { color: status.warning.DEFAULT }]}>
                       {item.status.open} open
                     </Text>
@@ -639,7 +603,9 @@ export default function AdminModerationAnalyticsScreen() {
                       {item.status.inProgress} in progress
                     </Text>
                   </View>
-                  <View style={[styles.statusBadge, { backgroundColor: status.success.light + '30' }]}>
+                  <View
+                    style={[styles.statusBadge, { backgroundColor: status.success.light + '30' }]}
+                  >
                     <Text style={[styles.statusBadgeText, { color: status.success.DEFAULT }]}>
                       {item.status.resolved} resolved
                     </Text>
@@ -652,9 +618,7 @@ export default function AdminModerationAnalyticsScreen() {
 
         {/* Action Items */}
         <View style={[styles.actionCard, { backgroundColor: status.warning.light + '15' }]}>
-          <Text style={[styles.actionTitle, { color: status.warning.DEFAULT }]}>
-            Action Items
-          </Text>
+          <Text style={[styles.actionTitle, { color: status.warning.DEFAULT }]}>Action Items</Text>
 
           {(data?.resolutionMetrics?.openReports || 0) > 0 && (
             <View style={styles.actionItem}>
@@ -929,7 +893,9 @@ const styles = StyleSheet.create({
   },
   banStatBox: {
     flex: 1,
-    minWidth: (screenWidth - spacingPixels[4] * 2 - spacingPixels[4] * 2 - spacingPixels[2]) / 2 - spacingPixels[2],
+    minWidth:
+      (screenWidth - spacingPixels[4] * 2 - spacingPixels[4] * 2 - spacingPixels[2]) / 2 -
+      spacingPixels[2],
     borderRadius: radiusPixels.md,
     padding: spacingPixels[3],
   },
