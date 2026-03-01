@@ -23,7 +23,7 @@ import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text, Skeleton, SkeletonAvatar } from '@rallia/shared-components';
 import { supabase, Logger, isPlayerOnline } from '@rallia/shared-services';
-import { useGetOrCreateDirectConversation } from '@rallia/shared-hooks';
+import { useGetOrCreateDirectConversation, usePlayerReputation } from '@rallia/shared-hooks';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
 import { useSport } from '../context';
 import { SportIcon } from '../components/SportIcon';
@@ -113,6 +113,7 @@ const PlayerProfile = () => {
   const { t, locale } = useTranslation();
   const { selectedSport } = useSport();
   const getOrCreateDirectConversation = useGetOrCreateDirectConversation();
+  const { display: reputationDisplay } = usePlayerReputation(playerId);
 
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -1265,14 +1266,16 @@ const PlayerProfile = () => {
                 style={[
                   styles.reputationFill,
                   {
-                    backgroundColor: colors.primary,
-                    width: `${player?.reputation_score || 0}%`,
+                    backgroundColor: reputationDisplay.tierColor,
+                    width: `${reputationDisplay.score}%`,
                   },
                 ]}
               />
             </View>
             <Text style={[styles.reputationScore, { color: colors.text }]}>
-              {player?.reputation_score || 0}%
+              {reputationDisplay.isVisible
+                ? `${reputationDisplay.score}% — ${reputationDisplay.tierLabel}`
+                : reputationDisplay.tierLabel}
             </Text>
           </View>
         </View>

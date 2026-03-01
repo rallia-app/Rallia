@@ -315,6 +315,8 @@ export const ActionsBottomSheet: React.FC = () => {
     clearEditMatch,
     shouldOpenMatchCreation,
     clearMatchCreationFlag,
+    initialBookingForWizard,
+    clearInitialBookingFlag,
   } = useActionsSheet();
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
   const { theme } = useTheme();
@@ -625,6 +627,8 @@ export const ActionsBottomSheet: React.FC = () => {
           onBackToLanding={handleWizardClose}
           onSuccess={handleWizardSuccess}
           editMatch={editMatchData}
+          initialBookingForWizard={initialBookingForWizard}
+          onConsumeInitialBooking={clearInitialBookingFlag}
         />
       );
     }
@@ -648,6 +652,8 @@ export const ActionsBottomSheet: React.FC = () => {
               onClose={closeSheet}
               onBackToLanding={handleWizardClose}
               onSuccess={handleWizardSuccess}
+              initialBookingForWizard={initialBookingForWizard}
+              onConsumeInitialBooking={clearInitialBookingFlag}
             />
           </Animated.View>
         )}

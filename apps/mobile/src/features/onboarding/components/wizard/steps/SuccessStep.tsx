@@ -128,6 +128,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
           autoPlay
           loop={false}
           speed={0.8}
+          resizeMode="cover"
           style={StyleSheet.absoluteFill}
         />
       </View>

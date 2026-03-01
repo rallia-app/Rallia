@@ -639,6 +639,8 @@ export interface PlayerWithProfile extends Player {
   sportRatingLabel?: string;
   /** Rating numeric value for the match's sport (populated at runtime for match queries) */
   sportRatingValue?: number;
+  /** Reputation data joined from player_reputation table */
+  player_reputation?: { reputation_score: number } | null;
 }
 
 /** Player sport with sport details */

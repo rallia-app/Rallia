@@ -149,7 +149,7 @@ export function ReportSubmittedSuccessModal({
   ]);
 
   const iconAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: iconScale.value }, { rotate: `${iconRotate.value}deg` }],
+    transform: [{ scale: iconScale.value }, { rotate: `${iconRotate.value}deg` }] as const,
   }));
 
   const pulseAnimatedStyle = useAnimatedStyle(() => ({

@@ -5,7 +5,7 @@
  * These are the CSS variable values used in globals.css .dark class.
  */
 
-import { darkMode, neutral, base, status } from '../tokens/colors';
+import { primary, darkMode, neutral, base, status } from '../tokens/colors';
 
 /**
  * Dark theme semantic tokens
@@ -25,8 +25,8 @@ export const darkTheme = {
   popoverForeground: neutral[50],
 
   // Primary colors (buttons, links, etc.)
-  primary: neutral[200],
-  primaryForeground: neutral[900],
+  primary: primary[500],
+  primaryForeground: base.white,
 
   // Secondary colors (secondary buttons, less emphasis)
   secondary: neutral[800],
@@ -47,17 +47,17 @@ export const darkTheme = {
   // Border and input colors
   border: 'rgba(255, 255, 255, 0.1)',
   input: 'rgba(255, 255, 255, 0.15)',
-  ring: neutral[500],
+  ring: primary[500],
 
   // Sidebar specific
   sidebar: neutral[900],
   sidebarForeground: neutral[50],
-  sidebarPrimary: '#7c3aed', // violet-600
-  sidebarPrimaryForeground: neutral[50],
+  sidebarPrimary: primary[500],
+  sidebarPrimaryForeground: base.white,
   sidebarAccent: neutral[800],
   sidebarAccentForeground: neutral[50],
   sidebarBorder: 'rgba(255, 255, 255, 0.1)',
-  sidebarRing: neutral[500],
+  sidebarRing: primary[500],
 
   // Theme palette colors (for direct use) - dark mode adjusted
   palette: {
@@ -67,8 +67,8 @@ export const darkTheme = {
   },
 
   // Background variations
-  backgroundSecondary: darkMode.primary[900],
-  foregroundSecondary: darkMode.primary[500],
+  backgroundSecondary: neutral[900],
+  foregroundSecondary: primary[500],
 } as const;
 
 /**
@@ -82,8 +82,8 @@ export const darkThemeCSSValues = {
   '--card-foreground': 'oklch(0.985 0 0)',
   '--popover': 'oklch(0.205 0 0)',
   '--popover-foreground': 'oklch(0.985 0 0)',
-  '--primary': 'oklch(0.922 0 0)',
-  '--primary-foreground': 'oklch(0.205 0 0)',
+  '--primary': 'oklch(0.704 0.123 182.503)', // teal-500
+  '--primary-foreground': 'oklch(1 0 0)',
   '--secondary': 'oklch(0.269 0 0)',
   '--secondary-foreground': 'oklch(0.985 0 0)',
   '--muted': 'oklch(0.269 0 0)',
@@ -93,21 +93,21 @@ export const darkThemeCSSValues = {
   '--destructive': 'oklch(0.704 0.191 22.216)',
   '--border': 'oklch(1 0 0 / 10%)',
   '--input': 'oklch(1 0 0 / 15%)',
-  '--ring': 'oklch(0.556 0 0)',
+  '--ring': 'oklch(0.704 0.123 182.503)', // teal-500
 
   // Sidebar
   '--sidebar': 'oklch(0.205 0 0)',
   '--sidebar-foreground': 'oklch(0.985 0 0)',
-  '--sidebar-primary': 'oklch(0.488 0.243 264.376)',
-  '--sidebar-primary-foreground': 'oklch(0.985 0 0)',
+  '--sidebar-primary': 'oklch(0.704 0.123 182.503)', // teal-500
+  '--sidebar-primary-foreground': 'oklch(1 0 0)',
   '--sidebar-accent': 'oklch(0.269 0 0)',
   '--sidebar-accent-foreground': 'oklch(0.985 0 0)',
   '--sidebar-border': 'oklch(1 0 0 / 10%)',
-  '--sidebar-ring': 'oklch(0.556 0 0)',
+  '--sidebar-ring': 'oklch(0.704 0.123 182.503)', // teal-500
 
   // Theme-specific background
-  '--background-secondary': darkMode.primary[900],
-  '--foreground-secondary': darkMode.primary[500],
+  '--background-secondary': neutral[900],
+  '--foreground-secondary': primary[500],
 
   // Primary scale (dark mode adjusted)
   '--primary-50': darkMode.primary[50],

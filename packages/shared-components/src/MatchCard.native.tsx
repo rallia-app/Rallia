@@ -12,9 +12,8 @@
  * - Consistent CTA button colors based on action type
  */
 
-import React, { useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, Animated, Easing } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from './foundation/Text.native';
 import {
@@ -28,6 +27,7 @@ import {
   neutral,
   base,
   duration,
+  status,
 } from '@rallia/design-system';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import {
@@ -37,7 +37,6 @@ import {
   formatIntuitiveDateInTimezone,
   getProfilePictureUrl,
   deriveMatchStatus,
-  type DerivedMatchStatus,
 } from '@rallia/shared-utils';
 import { TranslationKey } from '@rallia/shared-translations';
 
@@ -81,56 +80,56 @@ function getMatchTier(courtStatus: string | null, creatorReputationScore?: numbe
  * - regular: primary (teal) - standard matches
  */
 const TIER_PALETTES = {
-  // Most Wanted - accent palette (amber/gold - premium, highly desirable)
+  // Most Wanted - accent gradient strip, primary background
   mostWanted: {
     light: {
-      background: accent[50], // Light amber background
-      accentStart: accent[500], // #f59e0b - amber
-      accentEnd: accent[400], // #fbbf24 - lighter amber
+      background: primary[50],
+      accentStart: accent[500],
+      accentEnd: accent[400],
     },
     dark: {
-      background: '#3d2b10', // Lighter dark gold background for better visibility
-      accentStart: accent[400], // #fbbf24
-      accentEnd: accent[300], // #fcd34d
+      background: primary[950],
+      accentStart: accent[400],
+      accentEnd: accent[300],
     },
   },
-  // Ready to Play - secondary palette (coral/red tones)
+  // Ready to Play - secondary gradient strip, primary background
   readyToPlay: {
     light: {
-      background: secondary[50], // Light coral background
-      accentStart: secondary[500], // #ed6a6d
-      accentEnd: secondary[400], // #f1888a
+      background: primary[50],
+      accentStart: secondary[500],
+      accentEnd: secondary[400],
     },
     dark: {
-      background: secondary[900], // Lighter dark coral background for better visibility
-      accentStart: secondary[400], // #f1888a
-      accentEnd: secondary[300], // #f4a6a7
+      background: primary[950],
+      accentStart: secondary[400],
+      accentEnd: secondary[300],
     },
   },
-  // Regular - primary palette (teal/mint - fresh, standard)
+  // Regular - primary palette
   regular: {
     light: {
-      background: primary[50], // Light teal background
-      accentStart: primary[500], // #14b8a6
-      accentEnd: primary[400], // #2dd4bf
+      background: primary[50],
+      accentStart: primary[500],
+      accentEnd: primary[400],
     },
     dark: {
-      background: primary[950], // Very dark teal background
-      accentStart: primary[400], // #2dd4bf
-      accentEnd: primary[300], // #5eead4
+      background: primary[950],
+      accentStart: primary[400],
+      accentEnd: primary[300],
     },
   },
   // Expired - neutral/gray palette (disabled, past matches)
   expired: {
     light: {
-      background: neutral[100], // Light gray background
-      accentStart: neutral[400], // Gray accent
-      accentEnd: neutral[300], // Lighter gray
+      background: neutral[100],
+      accentStart: neutral[400],
+      accentEnd: neutral[300],
     },
     dark: {
-      background: neutral[900], // Dark gray background
-      accentStart: neutral[500], // Gray accent
-      accentEnd: neutral[400], // Slightly lighter gray
+      background: neutral[900],
+      accentStart: neutral[500],
+      accentEnd: neutral[400],
     },
   },
 } as const;
@@ -147,26 +146,6 @@ const GRADIENT_STRIP_HEIGHT = 4;
 const SLOT_SIZE = 32;
 const CHIP_BG_ALPHA_LIGHT = '15';
 const CHIP_BG_ALPHA_DARK = '30';
-
-/**
- * Most Wanted colors using design system accent scale
- * These colors are used for the animated gold border on premium matches
- * (court booked + high reputation creator)
- */
-const MOST_WANTED_COLORS = {
-  light: {
-    border: accent[400], // #fbbf24 - main border color
-    glow: accent[300], // #fcd34d - outer glow
-    shimmer: accent[100], // #fef3c7 - inner highlight
-    shadow: accent[500], // #f59e0b - shadow color
-  },
-  dark: {
-    border: accent[500], // #f59e0b - main border color
-    glow: accent[400], // #fbbf24 - outer glow
-    shimmer: accent[200], // #fde68a - inner highlight
-    shadow: accent[600], // #d97706 - shadow color
-  },
-} as const;
 
 // =============================================================================
 // TYPES
@@ -189,6 +168,8 @@ export interface MatchCardProps {
   locale: string;
   /** Current user's player ID (to determine owner/participant status) */
   currentPlayerId?: string;
+  /** Optional sport icon element rendered as a watermark background */
+  sportIcon?: React.ReactNode;
 }
 
 interface ThemeColors {
@@ -255,11 +236,23 @@ function getRelativeTimeDisplay(
     dateLabel = dateResult.label;
   }
 
-  // Format time range (locale-aware: 12h for English, 24h for French)
+  // Format start time (locale-aware: 12h for English, 24h for French)
   const startResult = formatTimeInTimezone(dateString, startTime, tz, locale);
-  const endResult = formatTimeInTimezone(dateString, endTime, tz, locale);
-  const timeRange = `${startResult.formattedTime} - ${endResult.formattedTime}`;
+
+  // Calculate duration from start and end times
+  const [startH, startM] = startTime.split(':').map(Number);
+  const [endH, endM] = endTime.split(':').map(Number);
+  let durationMin = endH * 60 + endM - (startH * 60 + startM);
+  if (durationMin <= 0) durationMin += 24 * 60; // handle midnight crossing
+  const durationHours = Math.floor(durationMin / 60);
+  const durationRemMin = durationMin % 60;
+  const durationStr =
+    durationRemMin > 0
+      ? `${durationHours}h${durationRemMin.toString().padStart(2, '0')}`
+      : `${durationHours}h`;
+
   const separator = t('common.time.timeSeparator');
+  const timeRange = `${startResult.formattedTime}${separator}${durationStr}`;
 
   return { label: `${dateLabel}${separator}${timeRange}`, isUrgent };
 }
@@ -359,36 +352,6 @@ function getCheckInWindowStatus(
 // =============================================================================
 // SUB-COMPONENTS
 // =============================================================================
-
-interface GradientStripProps {
-  isDark: boolean;
-  tier: MatchTier;
-}
-
-/**
- * Smooth gradient accent strip at the top of the card
- * Uses expo-linear-gradient for a true gradient effect
- * Most Wanted tier gets a gold shimmer gradient
- */
-const GradientStrip: React.FC<GradientStripProps> = ({ isDark, tier }) => {
-  const tierColors = TIER_PALETTES[tier][isDark ? 'dark' : 'light'];
-  const mwColors = MOST_WANTED_COLORS[isDark ? 'dark' : 'light'];
-
-  // Most Wanted cards get a gold shimmer gradient
-  const colors: [string, string, ...string[]] =
-    tier === 'mostWanted'
-      ? [mwColors.shimmer, mwColors.border, mwColors.glow, mwColors.border, mwColors.shimmer]
-      : [tierColors.accentStart, tierColors.accentEnd];
-
-  return (
-    <LinearGradient
-      colors={colors}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 0 }}
-      style={[styles.gradientStrip, tier === 'mostWanted' && styles.gradientStripPremium]}
-    />
-  );
-};
 
 interface PlayerSlotsProps {
   match: MatchWithDetails;
@@ -490,13 +453,13 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({
                       backgroundColor: slot.avatarUrl
                         ? colors.tierAccent
                         : colors.avatarPlaceholder,
-                      borderWidth: slot.isHost ? 2.5 : 2,
-                      borderColor: slot.isHost ? colors.tierAccent : colors.tierAccentLight, // Subtle tier accent for filled avatars
-                      shadowColor: slot.isHost ? colors.tierAccent : colors.tierAccentLight,
+                      borderWidth: 2.5,
+                      borderColor: colors.tierAccent,
+                      shadowColor: colors.tierAccent,
                       shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: slot.isHost ? 0.3 : 0.15,
+                      shadowOpacity: 0.3,
                       shadowRadius: 4,
-                      elevation: slot.isHost ? 3 : 2,
+                      elevation: 3,
                     }
                   : {
                       backgroundColor: colors.slotEmpty,
@@ -733,7 +696,7 @@ const CardFooter: React.FC<CardFooterProps> = ({
 
   const ctaPositive = isDark ? primary[400] : primary[500];
   const ctaDestructive = isDark ? secondary[400] : secondary[500];
-  const ctaAccent = isDark ? accent[400] : accent[500];
+  // const ctaAccent = isDark ? accent[400] : accent[500];
   const ctaNeutralBg = isDark ? neutral[700] : neutral[200];
   const ctaNeutralText = colors.text;
 
@@ -800,15 +763,15 @@ const CardFooter: React.FC<CardFooterProps> = ({
   } else if (isOwner) {
     // Owner (match not ended) → Edit
     ctaLabel = t('match.cta.edit');
-    ctaBgColor = ctaAccent;
-    ctaTextColor = base.white;
+    ctaBgColor = ctaNeutralBg;
+    ctaTextColor = ctaNeutralText;
     ctaIcon = 'create-outline';
   } else if (isWaitlisted) {
-    // On Waitlist → neutral background with secondary emphasis
+    // On Waitlist → info/blue style to match the waitlisted banner in MatchDetailSheet
     ctaLabel = t('match.cta.waitlisted');
-    ctaBgColor = ctaNeutralBg;
-    ctaTextColor = ctaDestructive;
-    ctaBorderColor = ctaDestructive;
+    ctaBgColor = `${status.info.DEFAULT}15`;
+    ctaTextColor = status.info.DEFAULT;
+    ctaBorderColor = status.info.DEFAULT;
     ctaIcon = 'list-outline';
   } else if (hasJoined) {
     // Leave → danger red
@@ -817,13 +780,13 @@ const CardFooter: React.FC<CardFooterProps> = ({
     ctaTextColor = base.white;
     ctaIcon = 'log-out-outline';
   } else if (hasPendingRequest) {
-    // Pending → neutral background with secondary emphasis (disabled)
+    // Pending → warning/amber style to match the pending approval banner in MatchDetailSheet
     ctaLabel = t('match.cta.pending');
-    ctaBgColor = ctaNeutralBg;
-    ctaTextColor = ctaDestructive;
-    ctaBorderColor = ctaDestructive;
+    ctaBgColor = `${status.warning.DEFAULT}15`;
+    ctaTextColor = status.warning.DEFAULT;
+    ctaBorderColor = status.warning.DEFAULT;
     ctaDisabled = true;
-    ctaIcon = 'close-outline';
+    ctaIcon = 'time-outline';
   } else if (isInvited && !isFull && !isRequestMode) {
     // Invited (pending status) to direct-join match with spots → Accept Invitation (success green)
     ctaLabel = t('match.cta.acceptInvitation');
@@ -886,6 +849,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
   t,
   locale,
   currentPlayerId,
+  sportIcon,
 }) => {
   // Compute participant info early to check for expired state
   const participantInfo = getParticipantInfo(match);
@@ -908,116 +872,31 @@ const MatchCard: React.FC<MatchCardProps> = ({
 
   // Determine match tier based on court status and creator reputation
   // Override with 'expired' tier if match is expired
-  const creatorReputationScore = match.created_by_player?.reputation_score;
+  const creatorReputationScore = match.created_by_player?.player_reputation?.reputation_score;
   const baseTier = getMatchTier(match.court_status, creatorReputationScore);
   const tier: MatchTier = isExpired ? 'expired' : baseTier;
   const isMostWanted = tier === 'mostWanted';
-
-  // Get most wanted colors from design system (for animated glow)
-  const mwColors = MOST_WANTED_COLORS[isDark ? 'dark' : 'light'];
-
-  // Animated glow effect for most wanted cards - smooth, polished breathing effect
-  const glowAnimation = useMemo(() => new Animated.Value(0), []);
+  const isReadyToPlay = tier === 'readyToPlay';
 
   // Animated pulse effect for urgent matches
   const urgentPulseAnimation = useMemo(() => new Animated.Value(0), []);
 
-  useEffect(() => {
-    if (isMostWanted) {
-      // Main glow pulse - slower, smoother breathing effect using design system duration
-      const mainGlow = Animated.loop(
-        Animated.sequence([
-          Animated.timing(glowAnimation, {
-            toValue: 1,
-            duration: duration.verySlow * 3, // 2400ms for smooth breathing
-            easing: Easing.bezier(0.4, 0, 0.2, 1), // Smooth ease-in-out
-            useNativeDriver: false,
-          }),
-          Animated.timing(glowAnimation, {
-            toValue: 0,
-            duration: duration.verySlow * 3,
-            easing: Easing.bezier(0.4, 0, 0.2, 1),
-            useNativeDriver: false,
-          }),
-        ])
-      );
-
-      mainGlow.start();
-      return () => {
-        mainGlow.stop();
-      };
-    }
-  }, [isMostWanted, glowAnimation]);
-
-  // Interpolate shadow for outer glow effect using design system accent colors
-  const animatedShadowOpacity = glowAnimation.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0.2, 0.5, 0.2],
-  });
-
-  const animatedShadowRadius = glowAnimation.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [16, 28, 16],
-  });
-
-  // Main border color - smooth transition through gold spectrum using design system accent
-  const animatedBorderColor = glowAnimation.interpolate({
-    inputRange: [0, 0.25, 0.5, 0.75, 1],
-    outputRange: [
-      accent[600], // Deep gold
-      accent[500], // Mid gold
-      accent[400], // Bright gold
-      accent[300], // Light gold
-      accent[400], // Back to bright
-    ],
-  });
-
-  // Outer glow border - more subtle, wider
-  const animatedOuterGlowOpacity = glowAnimation.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0.3, 0.7, 0.3],
-  });
-
-  // Inner glow border - subtle highlight
-  const animatedInnerGlowOpacity = glowAnimation.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0.4, 0.8, 0.4],
-  });
-
   // Theme colors with tier-aware accent colors
   const themeColors = isDark ? darkTheme : lightTheme;
 
-  // Get tier-specific accent colors
-  const getTierAccentColors = useCallback(
-    (matchTier: MatchTier) => {
-      switch (matchTier) {
-        case 'mostWanted':
-          return {
-            accent: isDark ? accent[400] : accent[500],
-            accentLight: isDark ? accent[700] : accent[200],
-          };
-        case 'readyToPlay':
-          return {
-            accent: isDark ? secondary[400] : secondary[500],
-            accentLight: isDark ? secondary[700] : secondary[200],
-          };
-        case 'expired':
-          return {
-            accent: isDark ? neutral[500] : neutral[400],
-            accentLight: isDark ? neutral[700] : neutral[300],
-          };
-        case 'regular':
-        default:
-          return {
-            accent: isDark ? primary[400] : primary[500],
-            accentLight: isDark ? primary[700] : primary[200],
-          };
-      }
-    },
-    [isDark]
-  );
-
-  const tierAccentColors = getTierAccentColors(tier);
+  // All tiers use primary accent colors (except expired which uses neutral)
+  const tierAccentColors = useMemo(() => {
+    if (tier === 'expired') {
+      return {
+        accent: isDark ? neutral[500] : neutral[400],
+        accentLight: isDark ? neutral[700] : neutral[300],
+      };
+    }
+    return {
+      accent: isDark ? primary[400] : primary[500],
+      accentLight: isDark ? primary[700] : primary[200],
+    };
+  }, [isDark, tier]);
 
   const colors: ThemeColors = useMemo(
     () => ({
@@ -1105,32 +984,32 @@ const MatchCard: React.FC<MatchCardProps> = ({
 
   // "Live indicator" interpolations for ongoing matches
   // Ring expands outward and fades
-  const liveRingScale = urgentPulseAnimation.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 2.5],
-  });
+  // const liveRingScale = urgentPulseAnimation.interpolate({
+  //   inputRange: [0, 1],
+  //   outputRange: [1, 2.5],
+  // });
 
-  const liveRingOpacity = urgentPulseAnimation.interpolate({
-    inputRange: [0, 0.3, 1],
-    outputRange: [0.8, 0.4, 0],
-  });
+  // const liveRingOpacity = urgentPulseAnimation.interpolate({
+  //   inputRange: [0, 0.3, 1],
+  //   outputRange: [0.8, 0.4, 0],
+  // });
 
   // Core dot has subtle glow pulse
-  const liveDotOpacity = urgentPulseAnimation.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [1, 0.7, 1],
-  });
+  // const liveDotOpacity = urgentPulseAnimation.interpolate({
+  //   inputRange: [0, 0.5, 1],
+  //   outputRange: [1, 0.7, 1],
+  // });
 
   // "Starting soon" interpolations - subtle bouncing chevron
-  const countdownBounce = urgentPulseAnimation.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0, 3, 0], // Subtle horizontal bounce
-  });
+  // const countdownBounce = urgentPulseAnimation.interpolate({
+  //   inputRange: [0, 0.5, 1],
+  //   outputRange: [0, 3, 0], // Subtle horizontal bounce
+  // });
 
-  const countdownOpacity = urgentPulseAnimation.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0.6, 1, 0.6],
-  });
+  // const countdownOpacity = urgentPulseAnimation.interpolate({
+  //   inputRange: [0, 0.5, 1],
+  //   outputRange: [0.6, 1, 0.6],
+  // });
 
   // Cost display
   const costDisplay = match.is_court_free
@@ -1139,7 +1018,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
       ? `~$${Math.ceil(match.estimated_cost / participantInfo.total)}`
       : null;
 
-  // Build badges array
+  // Build badges array (new order per spec)
   const badges: Array<{
     key: string;
     label: string;
@@ -1148,7 +1027,29 @@ const MatchCard: React.FC<MatchCardProps> = ({
     icon?: keyof typeof Ionicons.glyphMap;
   }> = [];
 
-  // Court booked badge (when court is already reserved) - shown first
+  // 1. Min Rating (coral/secondary)
+  if (match.min_rating_score) {
+    badges.push({
+      key: 'rating',
+      label: match.min_rating_score.label,
+      bgColor: chipColors.secondary.bgColor,
+      textColor: chipColors.secondary.textColor,
+      icon: 'analytics',
+    });
+  }
+
+  // 2. Most Wanted Player badge (only for mostWanted tier)
+  if (tier === 'mostWanted') {
+    badges.push({
+      key: 'mostWantedPlayer',
+      label: t('match.tier.mostWantedPlayer' as TranslationKey),
+      bgColor: chipColors.accent.bgColor,
+      textColor: chipColors.accent.textColor,
+      icon: 'star',
+    });
+  }
+
+  // 3. Court Booked badge (for mostWanted and readyToPlay)
   if (tier === 'mostWanted' || tier === 'readyToPlay') {
     badges.push({
       key: 'courtBooked',
@@ -1159,76 +1060,59 @@ const MatchCard: React.FC<MatchCardProps> = ({
     });
   }
 
-  // Join mode badge (request-based)
-  if (match.join_mode === 'request') {
-    badges.push({
-      key: 'joinMode',
-      label: t('match.joinMode.request'),
-      bgColor: chipColors.secondary.bgColor,
-      textColor: chipColors.secondary.textColor,
-      icon: 'hand-left-outline',
-    });
-  }
-
-  // Player expectation badge (only show for competitive or casual, not "both")
+  // 4. Player expectation (cyan/primary)
   if (match.player_expectation && match.player_expectation !== 'both') {
     const isCompetitive = match.player_expectation === 'competitive';
     badges.push({
       key: 'playerExpectation',
       label: isCompetitive ? t('matchDetail.competitive') : t('matchDetail.casual'),
-      bgColor: isCompetitive ? chipColors.accent.bgColor : chipColors.primary.bgColor,
-      textColor: isCompetitive ? chipColors.accent.textColor : chipColors.primary.textColor,
+      bgColor: chipColors.primary.bgColor,
+      textColor: chipColors.primary.textColor,
       icon: isCompetitive ? 'trophy' : 'happy',
     });
   }
 
-  // Cost badge (uses tier accent for consistency)
+  // 5. Cost (cyan/primary)
   if (costDisplay) {
     badges.push({
       key: 'cost',
       label: costDisplay,
-      bgColor: match.is_court_free ? chipColors.primary.bgColor : chipColors.tier.bgColor,
-      textColor: match.is_court_free ? chipColors.primary.textColor : chipColors.tier.textColor,
+      bgColor: chipColors.primary.bgColor,
+      textColor: chipColors.primary.textColor,
       icon: match.is_court_free ? 'checkmark-circle' : 'cash-outline',
     });
   }
 
-  // Min rating badge (uses tier accent for consistency)
-  if (match.min_rating_score) {
-    badges.push({
-      key: 'rating',
-      label: match.min_rating_score.label,
-      bgColor: chipColors.tier.bgColor,
-      textColor: chipColors.tier.textColor,
-      icon: 'analytics',
-    });
-  }
-
-  // Wrap in Animated.View for premium glow effect (Most Wanted only)
-  const CardWrapper = isMostWanted ? Animated.View : View;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const cardWrapperStyle: any = isMostWanted
-    ? [
-        styles.premiumCardWrapper,
-        {
-          shadowOpacity: animatedShadowOpacity,
-          shadowRadius: animatedShadowRadius,
-          shadowColor: mwColors.shadow,
-        },
-      ]
-    : undefined;
-
   // Get dynamic border color based on tier
   const tierPaletteColors = TIER_PALETTES[tier][isDark ? 'dark' : 'light'];
-  // Most Wanted uses animated border, others use tier accent colors
-  const dynamicBorderColor = isMostWanted
-    ? mwColors.border
-    : isDark
-      ? `${tierPaletteColors.accentStart}40` // 25% opacity accent border in dark mode
-      : `${tierPaletteColors.accentStart}20`; // 12% opacity accent border in light mode
+  const dynamicBorderColor = isDark ? `${primary[400]}40` : `${primary[500]}20`;
+
+  // Tier ribbon badge config
+  const tierRibbon = isMostWanted
+    ? {
+        label: t('match.tier.mostWanted' as TranslationKey),
+        icon: 'star' as keyof typeof Ionicons.glyphMap,
+        bg: isDark ? accent[400] : accent[500],
+      }
+    : isReadyToPlay
+      ? {
+          label: t('match.tier.readyToPlay' as TranslationKey),
+          icon: 'checkmark-circle' as keyof typeof Ionicons.glyphMap,
+          bg: isDark ? status.warning.light : status.warning.DEFAULT,
+        }
+      : null;
 
   return (
-    <CardWrapper style={cardWrapperStyle}>
+    <View>
+      {/* Tier ribbon badge - outside TouchableOpacity to avoid overflow:hidden clipping */}
+      {tierRibbon && (
+        <View style={[styles.tierRibbon, { backgroundColor: tierRibbon.bg }]}>
+          <Ionicons name={tierRibbon.icon} size={10} color={base.white} style={styles.badgeIcon} />
+          <Text size="xs" weight="bold" color={base.white}>
+            {tierRibbon.label}
+          </Text>
+        </View>
+      )}
       <TouchableOpacity
         style={[
           styles.card,
@@ -1237,56 +1121,18 @@ const MatchCard: React.FC<MatchCardProps> = ({
             borderColor: dynamicBorderColor,
             opacity: isExpired ? 0.7 : 1,
           },
-          isMostWanted && styles.premiumCard,
         ]}
         onPress={onPress}
         activeOpacity={0.85}
         accessibilityRole="button"
         accessibilityLabel={`Match ${timeLabel} at ${locationDisplay}${isMostWanted ? ' - Most Wanted' : ''}`}
       >
-        {/* Multi-layer animated gold border for Most Wanted cards using design system accent */}
-        {isMostWanted && (
-          <>
-            {/* Outer glow layer - widest, most subtle */}
-            <Animated.View
-              style={[
-                styles.premiumBorderOverlay,
-                styles.premiumBorderOuter,
-                {
-                  borderColor: mwColors.glow,
-                  opacity: animatedOuterGlowOpacity,
-                },
-              ]}
-              pointerEvents="none"
-            />
-            {/* Main border layer - animated color transition */}
-            <Animated.View
-              style={[
-                styles.premiumBorderOverlay,
-                styles.premiumBorderMain,
-                {
-                  borderColor: animatedBorderColor,
-                },
-              ]}
-              pointerEvents="none"
-            />
-            {/* Inner glow layer - subtle highlight */}
-            <Animated.View
-              style={[
-                styles.premiumBorderOverlay,
-                styles.premiumBorderInner,
-                {
-                  borderColor: mwColors.shimmer,
-                  opacity: animatedInnerGlowOpacity,
-                },
-              ]}
-              pointerEvents="none"
-            />
-          </>
+        {/* Sport watermark background */}
+        {sportIcon && (
+          <View style={styles.sportWatermark} pointerEvents="none">
+            {sportIcon}
+          </View>
         )}
-
-        {/* Gradient accent strip - uses tier colors */}
-        <GradientStrip isDark={isDark} tier={tier} />
 
         {/* Main content */}
         <View style={styles.content}>
@@ -1294,9 +1140,8 @@ const MatchCard: React.FC<MatchCardProps> = ({
           <View style={styles.topRow}>
             <View style={styles.timeContainer}>
               {/* "Live" indicator for ongoing matches (not shown when expired) */}
-              {isOngoing && !isExpired && (
+              {/* {isOngoing && !isExpired && (
                 <View style={styles.liveIndicatorContainer}>
-                  {/* Expanding ring that fades out */}
                   <Animated.View
                     style={[
                       styles.liveRing,
@@ -1307,7 +1152,6 @@ const MatchCard: React.FC<MatchCardProps> = ({
                       },
                     ]}
                   />
-                  {/* Solid core dot */}
                   <Animated.View
                     style={[
                       styles.liveDot,
@@ -1318,9 +1162,9 @@ const MatchCard: React.FC<MatchCardProps> = ({
                     ]}
                   />
                 </View>
-              )}
+              )} */}
               {/* Bouncing chevron for starting soon (not shown when expired) */}
-              {isStartingSoon && !isExpired && (
+              {/* {isStartingSoon && !isExpired && (
                 <Animated.View
                   style={[
                     styles.countdownIndicator,
@@ -1332,7 +1176,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
                 >
                   <Ionicons name="chevron-forward" size={14} color={soonColor} />
                 </Animated.View>
-              )}
+              )} */}
               <Ionicons
                 name={
                   isExpired
@@ -1421,7 +1265,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
           />
         </View>
       </TouchableOpacity>
-    </CardWrapper>
+    </View>
   );
 };
 
@@ -1444,43 +1288,35 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
 
-  // Premium "Most Wanted" card styles
-  premiumCardWrapper: {
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 8,
-  },
-  premiumCard: {
-    borderWidth: 2,
-    // Add subtle inner glow effect with background
-  },
-  premiumBorderOverlay: {
+  // Tier ribbon badge (top-right corner)
+  tierRibbon: {
     position: 'absolute',
-    borderRadius: radiusPixels.xl,
-    zIndex: 10,
+    top: spacingPixels[3],
+    right: 8,
+    borderRadius: radiusPixels.full,
+    paddingHorizontal: spacingPixels[2.5],
+    paddingVertical: spacingPixels[1],
+    zIndex: 20,
+    elevation: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
-  premiumBorderOuter: {
-    top: -3,
-    left: -3,
-    right: -3,
-    bottom: -3,
-    borderWidth: 3,
-    zIndex: 8,
-  },
-  premiumBorderMain: {
+
+  // Sport watermark
+  sportWatermark: {
+    position: 'absolute',
     top: 0,
+    bottom: 0,
     left: 0,
     right: 0,
-    bottom: 0,
-    borderWidth: 2.5,
-    zIndex: 11,
-  },
-  premiumBorderInner: {
-    top: 1,
-    left: 1,
-    right: 1,
-    bottom: 1,
-    borderWidth: 1.5,
-    zIndex: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    opacity: 0.12,
+    zIndex: 0,
   },
 
   // Gradient strip

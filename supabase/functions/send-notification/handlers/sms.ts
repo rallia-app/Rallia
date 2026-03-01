@@ -138,7 +138,7 @@ function getPrioritizedContent(notification: NotificationRecord): {
     case 'match_starting_soon':
       return {
         prefix: `${sportPrefix}`,
-        core: `Game ${timeUntil || 'starting soon'}`,
+        core: `Starts ${timeUntil || 'soon'}`,
         extra: locationName ? `at ${locationName}` : undefined,
       };
 

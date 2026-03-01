@@ -65,7 +65,7 @@ import {
   useRequireOnboarding,
   type TranslationKey,
 } from '../hooks';
-import { useTheme, usePlayer, useMatchActions } from '@rallia/shared-hooks';
+import { useTheme, usePlayer, useMatchActions, usePlayerReputation } from '@rallia/shared-hooks';
 import { getMatchChat, getMatchWithDetails } from '@rallia/shared-services';
 import { SheetManager } from 'react-native-actions-sheet';
 import { shareMatch } from '../utils';
@@ -176,11 +176,23 @@ function getRelativeTimeDisplay(
     dateLabel = dateResult.label;
   }
 
-  // Format time range (locale-aware: 12h for English, 24h for French)
+  // Format start time (locale-aware: 12h for English, 24h for French)
   const startResult = formatTimeInTimezone(dateString, startTime, tz, locale);
-  const endResult = formatTimeInTimezone(dateString, endTime, tz, locale);
-  const timeRange = `${startResult.formattedTime} - ${endResult.formattedTime}`;
+
+  // Calculate duration from start and end times
+  const [startH, startM] = startTime.split(':').map(Number);
+  const [endH, endM] = endTime.split(':').map(Number);
+  let durationMin = endH * 60 + endM - (startH * 60 + startM);
+  if (durationMin <= 0) durationMin += 24 * 60; // handle midnight crossing
+  const durationHours = Math.floor(durationMin / 60);
+  const durationRemMin = durationMin % 60;
+  const durationStr =
+    durationRemMin > 0
+      ? `${durationHours}h${durationRemMin.toString().padStart(2, '0')}`
+      : `${durationHours}h`;
+
   const separator = t('common.time.timeSeparator');
+  const timeRange = `${startResult.formattedTime}${separator}${durationStr}`;
 
   return { label: `${dateLabel}${separator}${timeRange}`, isUrgent };
 }
@@ -273,14 +285,17 @@ function getParticipantInfo(match: MatchDetailData): {
 /**
  * Check if leaving this match will affect the player's reputation.
  *
- * Per the spec, a reputation penalty (-25 points) applies only when ALL conditions are met:
+ * Graduated penalty applies when ALL conditions are met:
  * 1. Match is full (all spots taken)
- * 2. Match was created more than 24 hours before start time (planned match)
- * 3. Match was NOT edited within 24 hours of start time (no last-minute host changes)
- * 4. Player is leaving within 24 hours of start time
+ * 2. Court is reserved (court_status = 'reserved')
+ * 3. Match was created more than 24 hours before start time (planned match)
+ * 4. Match was NOT explicitly edited by host within 24 hours of NOW (no recent host changes)
+ * 5. Player is leaving within 24 hours of start time
+ *
+ * Note: cooling-off (joined <1h ago) is checked server-side only.
  *
  * @param match - The match data
- * @returns true if leaving will incur a reputation penalty
+ * @returns true if leaving will likely incur a reputation penalty
  */
 function willLeaveAffectReputation(match: MatchDetailData): boolean {
   const participantInfo = getParticipantInfo(match);
@@ -290,40 +305,40 @@ function willLeaveAffectReputation(match: MatchDetailData): boolean {
     return false;
   }
 
-  // Calculate match start datetime
-  const matchStartDateTime = new Date(`${match.match_date}T${match.start_time}`);
-  const now = new Date();
-
-  // Condition 4: Must be within 24 hours of start time
-  const hoursUntilMatch = (matchStartDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-  if (hoursUntilMatch >= 24 || hoursUntilMatch < 0) {
-    // Not within 24h window, or match already started
+  // Condition 2: Court must be reserved
+  if (match.court_status !== 'reserved') {
     return false;
   }
 
-  // Condition 2: Match must have been created more than 24 hours before start
+  // Use timezone-aware calculation
+  const tz = match.timezone || 'UTC';
+  const msUntilMatch = getTimeDifferenceFromNow(match.match_date, match.start_time, tz);
+  const hoursUntilMatch = msUntilMatch / (1000 * 60 * 60);
+
+  // Condition 5: Must be within 24 hours of start time
+  if (hoursUntilMatch >= 24) {
+    return false;
+  }
+
+  // Condition 3: Match must have been created more than 24 hours before start
   if (match.created_at) {
     const createdAt = new Date(match.created_at);
-    const hoursFromCreationToStart =
-      (matchStartDateTime.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+    const matchStartMs = Date.now() + msUntilMatch;
+    const hoursFromCreationToStart = (matchStartMs - createdAt.getTime()) / (1000 * 60 * 60);
     if (hoursFromCreationToStart < 24) {
-      // Spontaneous/last-minute match - no penalty
       return false;
     }
   }
 
-  // Condition 3: Match must NOT have been edited within 24 hours of start
-  if (match.updated_at) {
-    const updatedAt = new Date(match.updated_at);
-    const hoursFromUpdateToStart =
-      (matchStartDateTime.getTime() - updatedAt.getTime()) / (1000 * 60 * 60);
-    if (hoursFromUpdateToStart < 24) {
-      // Host made last-minute changes - no penalty for leaving
+  // Condition 4: Match must NOT have been explicitly edited by host within 24 hours of NOW
+  if (match.host_edited_at) {
+    const hostEditedAt = new Date(match.host_edited_at);
+    const hoursSinceEdit = (Date.now() - hostEditedAt.getTime()) / (1000 * 60 * 60);
+    if (hoursSinceEdit < 24) {
       return false;
     }
   }
 
-  // All conditions met - leaving will affect reputation
   return true;
 }
 
@@ -348,39 +363,49 @@ function isWithin24HoursOfStart(match: MatchDetailData): boolean {
 /**
  * Check if cancelling this match will affect the creator's reputation.
  *
- * Per the spec, a reputation penalty (-25 points) applies only when BOTH conditions are met:
- * 1. Match was created more than 24 hours before start time (planned match)
- * 2. Creator is cancelling within 24 hours of start time
+ * Graduated penalty applies when ALL conditions are met:
+ * 1. Court is reserved (court_status = 'reserved')
+ * 2. Match was created more than 24 hours before start time (planned match)
+ * 3. There are other joined participants
+ * 4. Creator is cancelling within 24 hours of start time
  *
- * Note: Unlike leaving, the match fullness is NOT a factor for cancellation penalties.
+ * Note: cooling-off (created <1h ago) is checked server-side only.
  *
  * @param match - The match data
- * @returns true if cancelling will incur a reputation penalty
+ * @returns true if cancelling will likely incur a reputation penalty
  */
 function willCancelAffectReputation(match: MatchDetailData): boolean {
-  // Calculate match start datetime
-  const matchStartDateTime = new Date(`${match.match_date}T${match.start_time}`);
-  const now = new Date();
-
-  // Condition 2: Must be within 24 hours of start time
-  const hoursUntilMatch = (matchStartDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-  if (hoursUntilMatch >= 24 || hoursUntilMatch < 0) {
-    // Not within 24h window, or match already started
+  // Condition 1: Court must be reserved
+  if (match.court_status !== 'reserved') {
     return false;
   }
 
-  // Condition 1: Match must have been created more than 24 hours before start
+  // Condition 3: Must have other joined participants
+  const participantInfo = getParticipantInfo(match);
+  if (participantInfo.current <= 1) {
+    return false;
+  }
+
+  // Use timezone-aware calculation
+  const tz = match.timezone || 'UTC';
+  const msUntilMatch = getTimeDifferenceFromNow(match.match_date, match.start_time, tz);
+  const hoursUntilMatch = msUntilMatch / (1000 * 60 * 60);
+
+  // Condition 4: Must be within 24 hours of start time
+  if (hoursUntilMatch >= 24) {
+    return false;
+  }
+
+  // Condition 2: Match must have been created more than 24 hours before start
   if (match.created_at) {
     const createdAt = new Date(match.created_at);
-    const hoursFromCreationToStart =
-      (matchStartDateTime.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+    const matchStartMs = Date.now() + msUntilMatch;
+    const hoursFromCreationToStart = (matchStartMs - createdAt.getTime()) / (1000 * 60 * 60);
     if (hoursFromCreationToStart < 24) {
-      // Spontaneous/last-minute match - no penalty
       return false;
     }
   }
 
-  // All conditions met - cancelling will affect reputation
   return true;
 }
 
@@ -443,11 +468,10 @@ const ParticipantAvatar: React.FC<ParticipantAvatarProps> = ({
   colors,
   isDark,
   tierAccent,
-  tierAccentLight,
+  tierAccentLight: _tierAccentLight,
 }) => {
   // Use tier accent colors if provided, otherwise fall back to theme colors
   const hostBorderColor = tierAccent || colors.secondary;
-  const filledBorderColor = tierAccentLight || colors.cardBackground;
   const hostBadgeBgColor = tierAccent || colors.secondary;
 
   return (
@@ -463,13 +487,13 @@ const ParticipantAvatar: React.FC<ParticipantAvatarProps> = ({
               }
             : {
                 backgroundColor: avatarUrl ? hostBorderColor : colors.avatarPlaceholder,
-                borderWidth: isHost ? 2.5 : 2,
-                borderColor: isHost ? hostBorderColor : filledBorderColor,
-                shadowColor: isHost ? hostBorderColor : filledBorderColor,
+                borderWidth: 2.5,
+                borderColor: hostBorderColor,
+                shadowColor: hostBorderColor,
                 shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: isHost ? 0.3 : 0.15,
+                shadowOpacity: 0.3,
                 shadowRadius: 4,
-                elevation: isHost ? 3 : 2,
+                elevation: 3,
               },
         ]}
       >
@@ -596,8 +620,14 @@ const CheckInButton: React.FC<CheckInButtonProps> = ({
 // =============================================================================
 
 export const MatchDetailSheet: React.FC = () => {
-  const { sheetRef, closeSheet, selectedMatch, updateSelectedMatch, handleSheetDismiss } =
-    useMatchDetailSheet();
+  const {
+    sheetRef,
+    closeSheet,
+    openSheet,
+    selectedMatch,
+    updateSelectedMatch,
+    handleSheetDismiss,
+  } = useMatchDetailSheet();
   const { openSheetForEdit } = useActionsSheet();
   const { openSheet: openInviteSheet } = usePlayerInviteSheet();
   const { openSheet: openFeedbackSheet } = useFeedbackSheet();
@@ -610,6 +640,9 @@ export const MatchDetailSheet: React.FC = () => {
   const toast = useToast();
   const playerId = player?.id;
   const navigation = useAppNavigation();
+  const { display: creatorReputationDisplay } = usePlayerReputation(
+    selectedMatch?.created_by_player?.id
+  );
 
   // Navigate to player profile or open auth sheet if not signed in / onboarding incomplete.
   const handleParticipantProfilePress = useCallback(
@@ -696,6 +729,7 @@ export const MatchDetailSheet: React.FC = () => {
     isCancellingInvite,
     isCheckingIn,
   } = useMatchActions(selectedMatch?.id, {
+    matchData: selectedMatch ?? undefined,
     onJoinSuccess: result => {
       successHaptic();
       closeSheet();
@@ -921,19 +955,27 @@ export const MatchDetailSheet: React.FC = () => {
   }, [closeSheet]);
 
   // Handle register score (from match detail during feedback window)
+  // Dismisses the detail sheet while the score sheet is open, then reopens it after
   const handleRegisterScore = useCallback(() => {
     if (!selectedMatch) return;
     mediumHaptic();
-    SheetManager.show('register-match-score', {
-      payload: {
-        match: selectedMatch,
-        onSuccess: async () => {
-          const refreshed = await getMatchWithDetails(selectedMatch.id);
-          if (refreshed) updateSelectedMatch(refreshed as MatchDetailData);
+    const matchRef = selectedMatch;
+    closeSheet();
+    setTimeout(() => {
+      SheetManager.show('register-match-score', {
+        payload: {
+          match: matchRef,
+          onSuccess: async () => {
+            const refreshed = await getMatchWithDetails(matchRef.id);
+            openSheet((refreshed ?? matchRef) as MatchDetailData);
+          },
+          onDismiss: () => {
+            openSheet(matchRef);
+          },
         },
-      },
-    });
-  }, [selectedMatch, updateSelectedMatch]);
+      });
+    }, 100);
+  }, [selectedMatch, closeSheet, openSheet]);
 
   // Handle share - uses rich message with match details and deep link
   const handleShare = useCallback(async () => {
@@ -1327,33 +1369,12 @@ export const MatchDetailSheet: React.FC = () => {
   const participantInfo = getParticipantInfo(match);
 
   // Determine match tier and get tier-specific accent colors
-  const creatorReputationScore = match.created_by_player?.reputation_score;
+  const creatorReputationScore = creatorReputationDisplay.score;
   const tier = getMatchTier(match.court_status, creatorReputationScore);
 
-  // Tier-aware accent colors
-  const tierAccent = (() => {
-    switch (tier) {
-      case 'mostWanted':
-        return isDark ? accent[400] : accent[500];
-      case 'readyToPlay':
-        return isDark ? secondary[400] : secondary[500];
-      case 'regular':
-      default:
-        return isDark ? primary[400] : primary[500];
-    }
-  })();
-
-  const tierAccentLight = (() => {
-    switch (tier) {
-      case 'mostWanted':
-        return isDark ? accent[700] : accent[200];
-      case 'readyToPlay':
-        return isDark ? secondary[700] : secondary[200];
-      case 'regular':
-      default:
-        return isDark ? primary[700] : primary[200];
-    }
-  })();
+  // All tiers use primary accent colors (tier differentiation is via ribbon badge on cards)
+  const tierAccent = isDark ? primary[400] : primary[500];
+  const tierAccentLight = isDark ? primary[700] : primary[200];
 
   // Live/urgent indicator colors
   const liveColor = isDark ? secondary[400] : secondary[500];
@@ -1489,32 +1510,22 @@ export const MatchDetailSheet: React.FC = () => {
 
   // Host first - use host participant's profile, fallback to created_by_player for backwards compatibility
   const hostProfile = hostParticipant?.player?.profile ?? creatorProfile;
-  const hostName =
-    hostProfile?.display_name ||
-    (hostProfile?.first_name && hostProfile?.last_name
-      ? `${hostProfile.first_name} ${hostProfile.last_name}`
-      : hostProfile?.first_name) ||
-    creatorName;
+  const hostName = hostProfile?.first_name || hostProfile?.display_name || creatorName;
   participantAvatars.push({
     key: 'host',
     avatarUrl: getProfilePictureUrl(hostProfile?.profile_picture_url),
     playerId: match.created_by,
     isHost: true,
     isEmpty: false,
-    name: hostName.split(' ')[0],
+    name: hostName,
     isCheckedIn: !!hostParticipant?.checked_in_at,
   });
 
   // Other participants (joined, excluding host)
   // Normalize URLs to use current environment's Supabase URL
   otherJoinedParticipants.forEach((p, i) => {
-    const participantFullName =
-      p.player?.profile?.display_name ||
-      (p.player?.profile?.first_name && p.player?.profile?.last_name
-        ? `${p.player.profile.first_name} ${p.player.profile.last_name}`
-        : p.player?.profile?.first_name) ||
-      '';
-    const participantFirstName = participantFullName.split(' ')[0];
+    const participantFirstName =
+      p.player?.profile?.first_name || p.player?.profile?.display_name || '';
     participantAvatars.push({
       key: p.id || `participant-${i}`,
       participantId: p.id,
@@ -1960,7 +1971,7 @@ export const MatchDetailSheet: React.FC = () => {
           themeColors={warningThemeColors}
           isDark={isDark}
           loading={isCancellingRequest}
-          leftIcon={<Ionicons name="close-outline" size={18} color={ctaDestructive} />}
+          leftIcon={<Ionicons name="close-circle-outline" size={18} color={ctaDestructive} />}
         >
           {t('matchActions.cancelRequest')}
         </Button>
@@ -2303,17 +2314,27 @@ export const MatchDetailSheet: React.FC = () => {
               </Text>
             </View>
             <View style={styles.badgesGrid}>
-              {/* Court Booked badge - uses secondary (coral) for important callout */}
+              {/* Min rating - secondary (coral) */}
+              {match.min_rating_score && match.min_rating_score.label && (
+                <Badge
+                  label={match.min_rating_score.label}
+                  bgColor={isDark ? `${secondary[400]}30` : `${secondary[500]}15`}
+                  textColor={isDark ? secondary[400] : secondary[500]}
+                  icon="analytics"
+                />
+              )}
+
+              {/* Court Booked badge - accent (gold) */}
               {(tier === 'mostWanted' || tier === 'readyToPlay') && (
                 <Badge
                   label={t('match.courtStatus.courtBooked')}
-                  bgColor={isDark ? `${secondary[400]}25` : `${secondary[500]}15`}
-                  textColor={isDark ? secondary[400] : secondary[600]}
+                  bgColor={isDark ? `${accent[400]}30` : `${accent[500]}15`}
+                  textColor={isDark ? accent[400] : accent[500]}
                   icon="checkmark-circle"
                 />
               )}
 
-              {/* Player expectation - competitive uses accent (amber), casual uses primary (teal) */}
+              {/* Player expectation - primary (cyan) */}
               {match.player_expectation && match.player_expectation !== 'both' && (
                 <Badge
                   label={
@@ -2321,39 +2342,13 @@ export const MatchDetailSheet: React.FC = () => {
                       ? t('matchDetail.competitive')
                       : t('matchDetail.casual')
                   }
-                  bgColor={
-                    match.player_expectation === 'competitive'
-                      ? isDark
-                        ? `${accent[400]}25`
-                        : `${accent[500]}15`
-                      : isDark
-                        ? `${primary[400]}25`
-                        : `${primary[500]}15`
-                  }
-                  textColor={
-                    match.player_expectation === 'competitive'
-                      ? isDark
-                        ? accent[400]
-                        : accent[600]
-                      : isDark
-                        ? primary[400]
-                        : primary[600]
-                  }
+                  bgColor={isDark ? `${primary[400]}30` : `${primary[500]}15`}
+                  textColor={isDark ? primary[400] : primary[500]}
                   icon={match.player_expectation === 'competitive' ? 'trophy' : 'happy'}
                 />
               )}
 
-              {/* Min rating - uses primary (teal) for level info */}
-              {match.min_rating_score && match.min_rating_score.label && (
-                <Badge
-                  label={match.min_rating_score.label}
-                  bgColor={isDark ? `${primary[400]}25` : `${primary[500]}15`}
-                  textColor={isDark ? primary[400] : primary[600]}
-                  icon="analytics"
-                />
-              )}
-
-              {/* Gender preference - neutral style for filter info */}
+              {/* Gender preference - primary (cyan) */}
               {match.preferred_opponent_gender && (
                 <Badge
                   label={
@@ -2363,18 +2358,24 @@ export const MatchDetailSheet: React.FC = () => {
                         ? t('match.gender.womenOnly')
                         : t('match.gender.other')
                   }
-                  bgColor={isDark ? neutral[800] : neutral[100]}
-                  textColor={isDark ? neutral[300] : neutral[600]}
-                  icon={match.preferred_opponent_gender === 'male' ? 'male' : 'female'}
+                  bgColor={isDark ? `${primary[400]}30` : `${primary[500]}15`}
+                  textColor={isDark ? primary[400] : primary[500]}
+                  icon={
+                    match.preferred_opponent_gender === 'male'
+                      ? 'male'
+                      : match.preferred_opponent_gender === 'female'
+                        ? 'female'
+                        : 'transgender'
+                  }
                 />
               )}
 
-              {/* Join mode - neutral style for filter info */}
+              {/* Join mode - primary (cyan) */}
               {match.join_mode === 'request' && (
                 <Badge
                   label={t('match.joinMode.request')}
-                  bgColor={isDark ? neutral[800] : neutral[100]}
-                  textColor={isDark ? neutral[300] : neutral[600]}
+                  bgColor={isDark ? `${primary[400]}30` : `${primary[500]}15`}
+                  textColor={isDark ? primary[400] : primary[500]}
                   icon="hand-left"
                 />
               )}
@@ -2528,6 +2529,35 @@ export const MatchDetailSheet: React.FC = () => {
                 </Text>
               </TouchableOpacity>
             )}
+
+          {/* Share Match Button - visible to all users when match hasn't started */}
+          {startTimeDiffMs >= 0 && !isCancelled && !hasMatchEnded && (
+            <TouchableOpacity
+              style={[
+                styles.invitePlayersButton,
+                {
+                  backgroundColor: isDark ? `${secondary[500]}15` : `${secondary[500]}10`,
+                  borderColor: isDark ? secondary[400] : secondary[500],
+                },
+              ]}
+              onPress={handleShare}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="share-social"
+                size={18}
+                color={isDark ? secondary[400] : secondary[500]}
+              />
+              <Text
+                size="sm"
+                weight="medium"
+                color={isDark ? secondary[400] : secondary[500]}
+                style={styles.inviteButtonText}
+              >
+                {t('matchDetail.share')}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {/* Pending Requests Section - only visible to host */}
           {isCreator && pendingRequests.length > 0 && !isCancelled && !hasStartTimePassed && (
@@ -3084,48 +3114,31 @@ export const MatchDetailSheet: React.FC = () => {
         ]}
       >
         <View style={styles.actionButtonsContainer}>{renderActionButtons()}</View>
-        {startTimeDiffMs >= 0 && (
-          <TouchableOpacity
-            style={[
-              styles.shareButton,
-              isCreator && styles.shareButtonCompact,
-              {
-                backgroundColor: isDark ? secondary[500] : secondary[500],
-                shadowColor: secondary[600],
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.25,
-                shadowRadius: 4,
-                elevation: 4,
-              },
-            ]}
-            onPress={handleShare}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="share-social" size={18} color={base.white} />
-            {!isCreator && (
-              <Text size="sm" weight="semibold" color={base.white} numberOfLines={1}>
-                {t('matchDetail.inviteFriends')}
-              </Text>
-            )}
-          </TouchableOpacity>
-        )}
       </View>
 
-      {/* Leave Match Confirmation Modal */}
+      {/* Leave Match / Leave Waitlist Confirmation Modal */}
       <ConfirmationModal
         visible={showLeaveModal}
         onClose={() => setShowLeaveModal(false)}
         onConfirm={handleConfirmLeave}
-        title={t('matchActions.leaveConfirmTitle')}
-        message={t('matchActions.leaveConfirmMessage')}
+        title={
+          isWaitlisted
+            ? t('matchActions.leaveWaitlistConfirmTitle')
+            : t('matchActions.leaveConfirmTitle')
+        }
+        message={
+          isWaitlisted
+            ? t('matchActions.leaveWaitlistConfirmMessage')
+            : t('matchActions.leaveConfirmMessage')
+        }
         additionalInfo={
-          selectedMatch && willLeaveAffectReputation(selectedMatch)
+          !isWaitlisted && selectedMatch && willLeaveAffectReputation(selectedMatch)
             ? t('matchActions.leaveReputationWarning')
             : undefined
         }
-        confirmLabel={t('matches.leaveMatch')}
+        confirmLabel={isWaitlisted ? t('matchActions.leaveWaitlist') : t('matches.leaveMatch')}
         cancelLabel={t('common.cancel')}
-        destructive
+        destructive={!isWaitlisted}
         isLoading={isLeaving}
       />
 
@@ -3627,7 +3640,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacingPixels[8],
     gap: spacingPixels[2],
     borderTopWidth: StyleSheet.hairlineWidth,
-    alignItems: 'center',
+    alignItems: 'stretch',
   },
   actionButtonsContainer: {
     flex: 1,
@@ -3657,30 +3670,12 @@ const styles = StyleSheet.create({
     gap: spacingPixels[2],
     paddingHorizontal: spacingPixels[2],
   },
-  shareButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'stretch',
-    gap: spacingPixels[1.5],
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    flexShrink: 0,
-  },
-  shareButtonCompact: {
-    paddingHorizontal: 0,
-    width: spacingPixels[12],
-    paddingVertical: spacingPixels[4],
-    alignSelf: 'stretch',
-    gap: 0,
-  },
   matchEndedContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacingPixels[3],
+    paddingVertical: spacingPixels[4],
     gap: spacingPixels[2],
   },
   matchEndedText: {

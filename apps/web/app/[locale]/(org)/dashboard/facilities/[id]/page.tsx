@@ -70,10 +70,18 @@ export default async function FacilityDetailPage({ params }: PageProps) {
       city,
       country,
       postal_code,
+      latitude,
+      longitude,
       timezone,
       is_active,
       membership_required,
+      facility_type,
+      data_provider_id,
+      external_provider_id,
       organization_id,
+      facility_sport (
+        sport_id
+      ),
       court (
         id,
         name,
@@ -167,7 +175,27 @@ export default async function FacilityDetailPage({ params }: PageProps) {
             )}
           </div>
         </div>
-        {canEdit && <FacilityEditButton facilityId={id} />}
+        {canEdit && (
+          <FacilityEditButton
+            facility={{
+              id,
+              name: facility.name,
+              description: facility.description,
+              facility_type: facility.facility_type,
+              address: facility.address,
+              city: facility.city,
+              postal_code: facility.postal_code,
+              country: facility.country,
+              latitude: facility.latitude,
+              longitude: facility.longitude,
+              timezone: facility.timezone,
+              membership_required: facility.membership_required,
+              data_provider_id: facility.data_provider_id,
+              external_provider_id: facility.external_provider_id,
+              facility_sport: Array.isArray(facility.facility_sport) ? facility.facility_sport : [],
+            }}
+          />
+        )}
       </div>
 
       {/* Stats Cards */}

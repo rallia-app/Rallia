@@ -52,7 +52,8 @@
     "gender": {
       "label": "Gender",
       "male": "Male",
-      "female": "Female"
+      "female": "Female",
+      "other": "Other"
     },
     "playingHand": {
       "label": "Playing Hand",
@@ -150,7 +151,7 @@
     "delete": "Delete",
     "timeAgo": "{time} ago",
     "signInRequired": "Sign In Required",
-    "signInPrompt": "Please sign in to view your notifications",
+    "signInPrompt": "Sign in to view your notifications",
     "onboardingRequired": "Complete Your Profile",
     "onboardingPrompt": "Finish setting up your profile to receive and view notifications",
     "completeOnboarding": "Complete Profile",
@@ -207,7 +208,7 @@
     "messages": {
       "match_invitation": {
         "title": "Game On!",
-        "body": "{playerName} wants to play {sportName} with you on {matchDate}{startTime}"
+        "body": "{playerName} wants to play {sportName} with you on {matchDate}{startTime} at {locationName}"
       },
       "match_join_request": {
         "title": "New Player Request",
@@ -218,36 +219,41 @@
         "body": "Your {sportName} game on {matchDate} at {locationName} is confirmed. See you there!"
       },
       "match_join_rejected": {
-        "title": "Request Declined",
-        "body": "Your request to join the {sportName} game wasn't accepted this time. Check out other games nearby!"
+        "title": "Game Full",
+        "body": "Your request to join the {sportName} game on {matchDate} wasn't accepted this time. Find other games nearby!"
       },
       "match_player_joined": {
         "title": "Player Joined!",
-        "body": "{playerName} joined your {sportName} game. {spotsLeft} spot(s) left!"
+        "body": "{playerName} joined your {sportName} game — {spotsLeft} left!",
+        "body_full": "{playerName} joined your {sportName} game. The game is full!"
       },
       "match_cancelled": {
         "title": "Game Cancelled",
-        "body": "The {sportName} game on {matchDate} at {locationName} has been cancelled. We hope to see you on the court soon!"
+        "body": "The {sportName} game on {matchDate} at {locationName} has been cancelled. We hope to see you playing soon!"
       },
       "match_updated": {
         "title": "Game Updated",
-        "body": "Your {sportName} game on {matchDate} has new details. Tap to review the changes."
+        "body": "Your {sportName} game on {matchDate} has been updated. Open the game to review the changes."
       },
       "match_starting_soon": {
         "title": "Get Ready!",
         "body": "Your {sportName} game at {locationName} starts {timeUntil}. Time to warm up!"
       },
       "match_completed": {
-        "title": "Great Game!",
-        "body": "Your {sportName} game is complete. How did it go? Share your feedback!"
+        "title": "Game Complete",
+        "body": "Your {sportName} game is done! How did it go? Rate your experience."
+      },
+      "match_new_available": {
+        "title": "New Game Nearby",
+        "body": "A {sportName} game on {matchDate} is looking for players. Join before it fills up!"
       },
       "player_kicked": {
         "title": "Removed from Game",
-        "body": "You've been removed from the {sportName} game on {matchDate}. Check out other games nearby!"
+        "body": "You've been removed from the {sportName} game on {matchDate}. Find other games nearby!"
       },
       "player_left": {
         "title": "Player Left",
-        "body": "{playerName} left your {sportName} game. {spotsLeft} spot(s) now available."
+        "body": "{playerName} left your {sportName} game — {spotsLeft} now available."
       },
       "new_message": {
         "title": "Message from {senderName}",
@@ -286,11 +292,11 @@
         "body": "Rate your {sportName} game with {opponentNames}. Your feedback helps the community!"
       },
       "feedback_reminder": {
-        "title": "Don't Forget to Rate Your Game",
-        "body": "Your {sportName} game feedback closes in 24 hours. Rate your experience with {opponentNames}!"
+        "title": "Rate Your Game",
+        "body": "Feedback for your {sportName} game with {opponentNames} closes in 24 hours. Don't miss it!"
       },
       "score_confirmation": {
-        "title": "Confirm Match Score",
+        "title": "Confirm Game Score",
         "body": "Please confirm the final score for your {sportName} game on {matchDate}."
       }
     }
@@ -1320,11 +1326,13 @@
     "cancelSuccess": "Game cancelled",
     "leaveConfirmTitle": "Leave this game?",
     "leaveConfirmMessage": "You'll be removed from this game.",
-    "leaveReputationWarning": "Leaving this game will affect your reputation (-25 points). Other players are counting on you.",
+    "leaveReputationWarning": "Leaving this game may affect your reputation. The closer to game time, the bigger the impact. Other players are counting on you.",
+    "leaveWaitlistConfirmTitle": "Leave the waitlist?",
+    "leaveWaitlistConfirmMessage": "You'll be removed from the waitlist. You can always join again later.",
     "cancelConfirmTitle": "Cancel this game?",
     "cancelConfirmMessage": "This will cancel the game for everyone.",
     "cancelWarning": "{count} other player(s) will be notified",
-    "cancelReputationWarning": "Cancelling this game will affect your reputation (-25 points).",
+    "cancelReputationWarning": "Cancelling this game may affect your reputation. The closer to game time, the bigger the impact.",
     "acceptRequest": "Accept",
     "rejectRequest": "Decline",
     "acceptSuccess": "Player accepted",
@@ -1391,9 +1399,9 @@
     "unknown": "Something unexpected happened. Please try again.",
     "requestTimeout": "This is taking too long. Please try again.",
     "permissionsDenied": "Permission denied",
-    "userNotAuthenticated": "Please sign in to continue",
+    "userNotAuthenticated": "Sign in to continue",
     "noPrimarySport": "Please set up a sport first.",
-    "mustBeLoggedIn": "Please sign in to create a game."
+    "mustBeLoggedIn": "Sign in to create a game."
   },
   "chat": {
     "empty": {
@@ -2306,6 +2314,11 @@
       "readyToPlay": "Ready to Play",
       "courtBooked": "Court Booked"
     },
+    "tier": {
+      "mostWanted": "Most Wanted",
+      "readyToPlay": "Ready to Play",
+      "mostWantedPlayer": "Top Player"
+    },
     "cta": {
       "join": "Join game",
       "askToJoin": "Request to join",
@@ -2777,6 +2790,7 @@
       "genderAny": "Any",
       "genderMale": "Male",
       "genderFemale": "Female",
+      "genderOther": "Other",
       "minRatingScore": "Minimum Skill Level",
       "minRatingScoreDescription": "Only players at this level or higher can join",
       "yourRating": "You",
@@ -2840,7 +2854,7 @@
       "openReservation": "Open Reservation",
       "confirmBooking": "Confirm Booking",
       "didYouBook": "Did you book the court?",
-      "iBookedThisCourt": "I booked this court",
+      "iBookedThisCourt": "I booked it!",
       "notYet": "Not yet",
       "courtBooked": "Court booked!",
       "courtBookedDescription": "The court is marked as booked for this game.",
@@ -2850,7 +2864,7 @@
       "tapToBook": "Tap a slot to book",
       "externalBooking": "You'll be redirected to the booking site",
       "bookingConfirmTitle": "Booking Confirmation",
-      "bookingConfirmMessage": "Did you book a court?",
+      "bookingConfirmMessage": "Did you book the court?",
       "viewMoreSlots": "View more slots",
       "selectCourt": "Select a Court",
       "courtAvailable": "court available",
@@ -2879,7 +2893,7 @@
   "home": {
     "welcomeBack": "Welcome back! 👋",
     "yourMatches": "Your Games",
-    "signInPrompt": "Please sign in to create and access your games",
+    "signInPrompt": "Sign in to create and manage your games",
     "onboardingPrompt": "Complete your profile to create and access your games",
     "completeProfile": "Complete Profile",
     "user": "User",
@@ -3175,7 +3189,8 @@
         "label": "Gender",
         "all": "Any",
         "male": "Male",
-        "female": "Female"
+        "female": "Female",
+        "other": "Other"
       },
       "cost": {
         "label": "Cost",
@@ -3531,8 +3546,12 @@
       "timezone": "Timezone",
       "description": "Description",
       "membershipRequired": "Membership Required",
+      "facilityType": "Facility Type",
+      "dataProvider": "Data Provider",
+      "externalProviderId": "External Provider ID",
       "editButton": "Edit Facility",
       "courtsSection": "Courts",
+      "courtsSummary": "{count} {count, plural, one {court} other {courts}} at this facility",
       "manageCourts": "Manage Courts",
       "viewAllCourts": "View All Courts",
       "stats": {
@@ -3681,6 +3700,13 @@
       "latitudePlaceholder": "e.g. 45.5017",
       "longitudeLabel": "Longitude",
       "longitudePlaceholder": "e.g. -73.5673",
+      "facilityTypeLabel": "Facility Type",
+      "selectFacilityType": "Select facility type",
+      "dataProviderLabel": "Data Provider",
+      "selectDataProvider": "Select data provider",
+      "loadingDataProviders": "Loading data providers...",
+      "externalProviderIdLabel": "External Provider ID",
+      "externalProviderIdPlaceholder": "External ID from data provider (e.g., siteId)",
       "membershipRequiredLabel": "Membership Required",
       "membershipRequiredHint": "Require users to be members to book courts at this facility.",
       "searchPlace": "Search Google Places",
@@ -3691,7 +3717,31 @@
       "cancelButton": "Cancel",
       "saving": "Saving...",
       "saveButton": "Save Changes",
-      "error": "Failed to update facility. Please try again."
+      "error": "Failed to update facility. Please try again.",
+      "organizationLabel": "Organization",
+      "selectOrganization": "Select organization",
+      "loadingOrganizations": "Loading organizations...",
+      "organizationChangeWarning": "Changing the organization will move this facility and all its courts/contacts to the selected organization."
+    },
+    "facilityTypes": {
+      "park": "Park",
+      "club": "Club",
+      "community_club": "Community Club",
+      "indoor_center": "Indoor Center",
+      "private": "Private",
+      "municipal": "Municipal",
+      "university": "University",
+      "school": "School",
+      "community_center": "Community Center",
+      "other": "Other"
+    },
+    "delete": {
+      "button": "Delete Facility",
+      "title": "Delete Facility",
+      "description": "Are you sure you want to permanently delete \"{name}\"? This will delete all courts, contacts, images, and files.",
+      "cancel": "Cancel",
+      "confirm": "Delete Facility",
+      "deleting": "Deleting..."
     }
   },
   "courts": {
@@ -4297,6 +4347,14 @@
         "public": "Public",
         "private": "Private"
       },
+      "filters": {
+        "searchPlaceholder": "Search organizations...",
+        "nature": "Nature",
+        "status": "Status",
+        "allNatures": "All natures",
+        "allStatuses": "All statuses",
+        "clearFilters": "Clear filters"
+      },
       "pagination": {
         "showing": "Showing {start} to {end} of {total} organizations",
         "page": "Page {current} of {total}"
@@ -4474,6 +4532,7 @@
           "website": "Website",
           "address": "Address",
           "description": "Description",
+          "dataProvider": "Data Provider",
           "createdAt": "Created At",
           "updatedAt": "Updated At"
         },
@@ -4494,7 +4553,72 @@
         "surfaceType": "Surface Type",
         "lighting": "Lighting",
         "indoor": "Indoor",
-        "error": "Failed to load organization"
+        "error": "Failed to load organization",
+        "addFacility": "Add Facility",
+        "searchFacilitiesPlaceholder": "Search facilities...",
+        "allSports": "All Sports",
+        "clearFilters": "Clear Filters",
+        "facilitiesFiltered": "{filtered} of {total} {total, plural, one {Facility} other {Facilities}}",
+        "noMatchingFacilities": "No facilities match your search",
+        "backToOrganizations": "Back to Organizations",
+        "facilityDetail": {
+          "title": "Facility Detail",
+          "backToOrganization": "Back to Organization",
+          "metadata": "Facility Information"
+        }
+      },
+      "createDialog": {
+        "title": "Create Organization",
+        "description": "Create a new organization with basic information.",
+        "fields": {
+          "name": "Organization Name",
+          "namePlaceholder": "Enter organization name",
+          "nature": "Nature",
+          "type": "Organization Type",
+          "selectType": "Select type (optional)",
+          "email": "Email",
+          "emailPlaceholder": "org@example.com",
+          "phone": "Phone",
+          "phonePlaceholder": "+1 (555) 000-0000",
+          "website": "Website",
+          "websitePlaceholder": "https://example.com",
+          "description": "Description",
+          "descriptionPlaceholder": "Enter organization description...",
+          "isActive": "Active",
+          "isActiveHint": "Organization is visible and operational",
+          "dataProvider": "Data Provider",
+          "selectDataProvider": "Select Data Provider",
+          "dataProviderHint": "Select a data provider for court availability fetching.",
+          "address": "Address",
+          "addressPlaceholder": "Enter address",
+          "city": "City",
+          "cityPlaceholder": "Enter city",
+          "country": "Country",
+          "selectCountry": "Select Country",
+          "postalCode": "Postal Code",
+          "postalCodePlaceholder": "Enter postal code"
+        },
+        "natures": {
+          "public": "Public",
+          "private": "Private"
+        },
+        "types": {
+          "club": "Club",
+          "municipality": "Municipality",
+          "city": "City",
+          "association": "Association"
+        },
+        "actions": {
+          "create": "Create Organization",
+          "creating": "Creating...",
+          "update": "Update Organization",
+          "updating": "Updating...",
+          "cancel": "Cancel"
+        },
+        "editTitle": "Edit Organization",
+        "editDescription": "Update organization details.",
+        "error": "Failed to create organization",
+        "updateError": "Failed to update organization"
       },
       "update": {
         "title": "Update Organization",
@@ -6217,7 +6341,7 @@
       "matches": "Matches"
     },
     "about": "About",
-    "locationContact": "Location & Contact",
+    "locationContact": "Location",
     "courts": "Courts",
     "noCourts": "No courts available for this sport",
     "contact": "Contact",
@@ -6237,8 +6361,12 @@
       "community_club": "Community Club",
       "other": "Other"
     },
+    "facilityType": "Type",
+    "access": "Access",
+    "addressLabel": "Address",
+    "distance": "Distance",
     "membersOnly": "Members Only",
-    "publicAccess": "Public Access",
+    "publicAccess": "Public",
     "distanceAway": "{distance} away",
     "copied": "Copied to clipboard",
     "copyAddress": "Copy address",
@@ -6248,7 +6376,7 @@
     "hideCourts": "Hide courts",
     "noAvailability": {
       "title": "No Availability",
-      "description": "No time slots are available for the selected dates. Try checking back later.",
+      "description": "This facility doesn't have any available time slots right now.",
       "tryLater": "Check back later for new openings",
       "tryDifferentDate": "Try a different date"
     },
@@ -6262,7 +6390,17 @@
     "indoor": "Indoor",
     "outdoor": "Outdoor",
     "lighted": "Lighted",
+    "surfaceType": {
+      "hard": "Hard Court",
+      "clay": "Clay",
+      "grass": "Grass",
+      "synthetic": "Synthetic",
+      "carpet": "Carpet",
+      "concrete": "Concrete",
+      "asphalt": "Asphalt"
+    },
     "openInMaps": "Open in Maps",
+    "facilityImages": "Facility images",
     "noMatches": {
       "title": "No Upcoming Matches",
       "description": "No public matches are scheduled at this facility."
@@ -6285,7 +6423,6 @@
     "lastSpot": "Last spot!",
     "noSlotsForFilter": "No slots available for this time period",
     "showAllSlots": "Show all slots",
-    "checkExternalBooking": "Check External Booking",
     "matchFilters": {
       "all": "All",
       "open": "Open",
@@ -6307,6 +6444,7 @@
   "booking": {
     "selectSlot": "Select Time Slot",
     "selectCourt": "Select Court",
+    "selectCourtFirst": "Please select a court first",
     "confirmBooking": "Confirm Booking",
     "bookNow": "Book Now",
     "price": "Price",
@@ -6318,9 +6456,16 @@
     "paidCourtsUnavailable": "{count} paid court(s) unavailable for online booking",
     "available": "Available",
     "duration": "{hours}h",
+    "error": {
+      "generic": "Booking failed. Please try again."
+    },
     "success": {
       "title": "Booking Confirmed",
-      "description": "Your court has been booked successfully."
+      "description": "Your court has been booked successfully.",
+      "stepTitle": "Booking confirmed!",
+      "createGamePrompt": "Create a game from this booking?",
+      "createGame": "Create game",
+      "done": "Done"
     },
     "external": {
       "title": "External Booking",
@@ -6601,6 +6746,10 @@
       "success": "Booking cancelled successfully",
       "error": "Failed to cancel booking. Please try again."
     },
+    "yourBookings": "Your Bookings",
+    "signInPrompt": "Sign in to book courts and manage your reservations",
+    "onboardingPrompt": "Complete your profile to book courts and manage your reservations",
+    "completeProfile": "Complete Profile",
     "facilitiesSection": {
       "title": "My Bookings",
       "viewAll": "View All",

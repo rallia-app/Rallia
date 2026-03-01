@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Skeleton, useToast } from '@rallia/shared-components';
+import { Text, Heading, Skeleton, useToast, Button } from '@rallia/shared-components';
 import { SearchBar } from '../../matches/components';
 import {
   useFacilitySearch,
@@ -23,6 +23,7 @@ import {
   usePlayer,
   useDebounce,
   useUpcomingBookings,
+  useProfile,
   DEFAULT_FACILITY_FILTERS,
   type FacilityFilters,
 } from '@rallia/shared-hooks';
@@ -35,12 +36,13 @@ import {
   type TranslationOptions,
 } from '../../../hooks';
 import { useAuth } from '../../../hooks';
-import { useSport, useUserHomeLocation } from '../../../context';
+import { useSport, useUserHomeLocation, useActionsSheet } from '../../../context';
 import { useCourtsNavigation } from '../../../navigation/hooks';
 import { useAppNavigation } from '../../../navigation/hooks';
 import { Logger } from '@rallia/shared-services';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { FacilityCard, FacilityFiltersBar } from '../components';
+import { SportIcon } from '../../../components/SportIcon';
 import { lightHaptic } from '@rallia/shared-utils';
 import { MyBookingCard } from '../../bookings/components';
 
@@ -183,6 +185,12 @@ export default function FacilitiesDirectory() {
   const navigation = useCourtsNavigation();
   const rootNavigation = useAppNavigation();
   const { session } = useAuth();
+  const { profile } = useProfile();
+  const showFavoriteButton = !!session?.user && !!profile?.onboarding_completed;
+  const { openSheet } = useActionsSheet();
+
+  // User is fully onboarded only if authenticated AND onboarding is complete
+  const isOnboarded = !!session?.user && !!profile?.onboarding_completed;
 
   // Location and preferences
   const { location, locationMode, setLocationMode, hasHomeLocation, hasBothLocationOptions } =
@@ -335,17 +343,97 @@ export default function FacilitiesDirectory() {
         onPress={() => handleFacilityPress(item)}
         onToggleFavorite={handleToggleFavorite}
         isMaxFavoritesReached={isMaxReached}
+        showFavoriteButton={showFavoriteButton}
         colors={colors}
         t={t}
       />
     ),
-    [isFavorite, handleFacilityPress, handleToggleFavorite, isMaxReached, colors, t]
+    [
+      isFavorite,
+      handleFacilityPress,
+      handleToggleFavorite,
+      isMaxReached,
+      showFavoriteButton,
+      colors,
+      t,
+    ]
   );
 
   // Render My Bookings section
   const renderMyBookingsSection = useCallback(() => {
-    if (!session?.user?.id) return null;
+    // Not signed in: show sign-in prompt (aligned with Home screen design)
+    if (!session) {
+      return (
+        <View
+          style={[
+            styles.myBookingsMatchesSection,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <SportIcon
+            sportName={selectedSport?.name ?? 'tennis'}
+            size={32}
+            color={colors.text}
+            style={styles.myBookingsMatchesSectionIcon}
+          />
+          <Heading level={3}>{t('myBookings.yourBookings')}</Heading>
+          <Text size="sm" color={colors.textMuted} style={styles.myBookingsMatchesSectionSubtitle}>
+            {t('myBookings.signInPrompt')}
+          </Text>
+          <Button
+            variant="primary"
+            onPress={() => {
+              lightHaptic();
+              openSheet();
+            }}
+            style={styles.myBookingsMatchesSectionButton}
+          >
+            {t('auth.signIn')}
+          </Button>
+        </View>
+      );
+    }
 
+    // Signed in but not onboarded: show complete profile prompt (aligned with Home screen design)
+    if (!isOnboarded) {
+      return (
+        <View
+          style={[
+            styles.myBookingsMatchesSection,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <SportIcon
+            sportName={selectedSport?.name ?? 'tennis'}
+            size={32}
+            color={colors.text}
+            style={styles.myBookingsMatchesSectionIcon}
+          />
+          <Heading level={3}>{t('myBookings.yourBookings')}</Heading>
+          <Text size="sm" color={colors.textMuted} style={styles.myBookingsMatchesSectionSubtitle}>
+            {t('myBookings.onboardingPrompt')}
+          </Text>
+          <Button
+            variant="primary"
+            onPress={() => {
+              lightHaptic();
+              openSheet();
+            }}
+            style={styles.myBookingsMatchesSectionButton}
+          >
+            {t('myBookings.completeProfile')}
+          </Button>
+        </View>
+      );
+    }
+
+    // Onboarded: show bookings list
     const skeletonBg = isDark ? '#262626' : '#E1E9EE';
     const skeletonHighlight = isDark ? '#404040' : '#F2F8FC';
 
@@ -482,7 +570,18 @@ export default function FacilitiesDirectory() {
         )}
       </View>
     );
-  }, [session?.user?.id, bookingsLoading, upcomingBookings, colors, isDark, t, rootNavigation]);
+  }, [
+    session,
+    isOnboarded,
+    openSheet,
+    selectedSport,
+    bookingsLoading,
+    upcomingBookings,
+    colors,
+    isDark,
+    t,
+    rootNavigation,
+  ]);
 
   // Render results count (used inside list header)
   const renderResultsInfo = useCallback(() => {
@@ -763,5 +862,24 @@ const styles = StyleSheet.create({
   myBookingsEmptyText: {
     marginTop: spacingPixels[2],
     textAlign: 'center',
+  },
+  myBookingsMatchesSection: {
+    padding: spacingPixels[5],
+    margin: spacingPixels[4],
+    marginTop: spacingPixels[5],
+    borderRadius: radiusPixels.xl,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+  },
+  myBookingsMatchesSectionIcon: {
+    marginBottom: spacingPixels[2],
+  },
+  myBookingsMatchesSectionSubtitle: {
+    textAlign: 'center',
+    marginBottom: spacingPixels[4],
+  },
+  myBookingsMatchesSectionButton: {
+    marginTop: spacingPixels[2],
   },
 });

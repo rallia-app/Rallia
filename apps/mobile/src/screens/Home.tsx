@@ -48,7 +48,7 @@ import {
 import type { NearbyMatch } from '@rallia/shared-hooks';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import { Logger } from '@rallia/shared-services';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
 import { SportIcon } from '../components/SportIcon';
 import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
 
@@ -209,6 +209,13 @@ const Home = () => {
         t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
         locale={locale}
         currentPlayerId={player?.id}
+        sportIcon={
+          <SportIcon
+            sportName={item.sport?.name ?? 'tennis'}
+            size={100}
+            color={isDark ? neutral[600] : neutral[400]}
+          />
+        }
         onPress={() => {
           Logger.logUserAction('match_pressed', { matchId: item.id });
           openMatchDetail(item);
