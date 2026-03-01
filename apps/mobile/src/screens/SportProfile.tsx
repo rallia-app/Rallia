@@ -396,13 +396,13 @@ const SportProfile = () => {
           }
 
           // Determine certification status based on counts:
-          // - certified (green): 3+ references OR 2+ current-level proofs
+          // - certified (green): badge_status is 'certified' OR 3+ references OR 2+ current-level proofs
           // - disputed (red): badge_status is 'disputed'
           // - self_declared (yellow): default when criteria not met
           // NOTE: Only CURRENT-LEVEL proofs count for certification
           if (badgeStatus === 'disputed') {
             setCertificationStatus('disputed');
-          } else if (referralsCount >= 3 || currentLevelCount >= 2) {
+          } else if (badgeStatus === 'certified' || referralsCount >= 3 || currentLevelCount >= 2) {
             setCertificationStatus('certified');
           } else {
             setCertificationStatus('self_declared');

@@ -25,16 +25,17 @@ Unlike a simple formula, the reputation system uses an **event-driven architectu
 
 ## What Reputation Measures
 
-| Factor                 | Included | Event Types                                                                        |
-| ---------------------- | -------- | ---------------------------------------------------------------------------------- |
-| Match completion       | ✅ Yes   | `match_completed` (+12)                                                            |
-| Showing up             | ✅ Yes   | `match_no_show` (-50)                                                              |
-| Punctuality            | ✅ Yes   | `match_on_time` (+3), `match_late` (-10)                                           |
-| Cancellation timing    | ✅ Yes   | `match_cancelled_early` (0), `match_cancelled_late` (-35), `match_left_late` (-22) |
-| Opponent satisfaction  | ✅ Yes   | `review_received_5star` (+10) through `review_received_1star` (-10)                |
-| Feedback contribution  | ✅ Yes   | `feedback_submitted` (+1), `peer_rating_given` (+1)                                |
-| Reports & moderation   | ✅ Yes   | `report_upheld` (-15), `report_dismissed` (+3)                                     |
-| Skill level difference | ❌ No    | Explicitly excluded                                                                |
+| Factor                 | Included | Event Types                                                         |
+| ---------------------- | -------- | ------------------------------------------------------------------- |
+| Match completion       | ✅ Yes   | `match_completed` (+12)                                             |
+| Showing up             | ✅ Yes   | `match_no_show` (-50)                                               |
+| Punctuality            | ✅ Yes   | `match_on_time` (+3), `match_late` (-10)                            |
+| Cancellation timing    | ✅ Yes   | `match_cancelled_early` (0), `match_cancelled_late` (-25)           |
+| Opponent satisfaction  | ✅ Yes   | `review_received_5star` (+10) through `review_received_1star` (-10) |
+| Repeat play            | ✅ Yes   | `match_repeat_opponent` (+2)                                        |
+| Community contribution | ✅ Yes   | `first_match_bonus` (+5)                                            |
+| Reports & moderation   | ✅ Yes   | `report_upheld` (-15), `report_dismissed` (+3)                      |
+| Skill level difference | ❌ No    | Explicitly excluded                                                 |
 
 > **Important:** Skill level mismatch is explicitly excluded from reputation, even though it can be frustrating. This must be communicated clearly to players.
 
