@@ -1,59 +1,22 @@
 /**
  * Report Issue Sheet
  *
- * A bottom sheet component for reporting issues with an opponent.
+ * An action sheet component for reporting issues with an opponent.
  * Opens from within the opponent feedback step without losing feedback state.
+ * Uses react-native-actions-sheet for consistent sheet behavior.
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  Modal,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, selectionHaptic } from '@rallia/shared-utils';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import type { MatchReportReasonEnum } from '@rallia/shared-types';
 import { REPORT_REASON_ICONS } from '@rallia/shared-types';
+import { useThemeStyles, useTranslation } from '../../../../hooks';
 import type { TranslationKey } from '../../../../hooks/useTranslation';
-
-// =============================================================================
-// TYPES
-// =============================================================================
-
-interface ReportIssueSheetProps {
-  /** Whether the sheet is visible */
-  visible: boolean;
-  /** Opponent name for header */
-  opponentName: string;
-  /** Callback when sheet is closed */
-  onClose: () => void;
-  /** Callback when report is submitted */
-  onSubmit: (reason: MatchReportReasonEnum, details?: string) => void;
-  /** Whether submission is in progress */
-  isSubmitting: boolean;
-  /** Theme colors */
-  colors: {
-    text: string;
-    textSecondary: string;
-    textMuted: string;
-    border: string;
-    buttonActive: string;
-    buttonInactive: string;
-    buttonTextActive: string;
-    cardBackground: string;
-    background: string;
-  };
-  /** Translation function */
-  t: (key: TranslationKey) => string;
-}
 
 // =============================================================================
 // CONSTANTS
@@ -79,7 +42,13 @@ interface ReasonCardProps {
   label: string;
   selected: boolean;
   onPress: () => void;
-  colors: ReportIssueSheetProps['colors'];
+  colors: {
+    buttonActive: string;
+    buttonInactive: string;
+    border: string;
+    textMuted: string;
+    text: string;
+  };
 }
 
 const ReasonCard: React.FC<ReasonCardProps> = ({ reason, label, selected, onPress, colors }) => {
@@ -122,51 +91,46 @@ const ReasonCard: React.FC<ReasonCardProps> = ({ reason, label, selected, onPres
 // MAIN COMPONENT
 // =============================================================================
 
-export const ReportIssueSheet: React.FC<ReportIssueSheetProps> = ({
-  visible,
-  opponentName,
-  onClose,
-  onSubmit,
-  isSubmitting,
-  colors,
-  t,
-}) => {
+export function ReportIssueActionSheet({ payload }: SheetProps<'report-issue'>) {
+  const opponentName = payload?.opponentName ?? '';
+  const onSubmit = payload?.onSubmit;
+  const isSubmitting = payload?.isSubmitting ?? false;
+
+  const { colors } = useThemeStyles();
+  const { t } = useTranslation();
+
   const [selectedReason, setSelectedReason] = useState<MatchReportReasonEnum | null>(null);
   const [details, setDetails] = useState('');
 
-  // Reset state when sheet opens
   const handleClose = useCallback(() => {
     lightHaptic();
     setSelectedReason(null);
     setDetails('');
-    onClose();
-  }, [onClose]);
+    SheetManager.hide('report-issue');
+  }, []);
 
-  // Handle submit
   const handleSubmit = useCallback(() => {
     if (!selectedReason) return;
-    onSubmit(selectedReason, details.trim() || undefined);
+    onSubmit?.(selectedReason, details.trim() || undefined);
   }, [selectedReason, details, onSubmit]);
 
-  // Can submit if reason is selected
   const canSubmit = useMemo(() => selectedReason !== null, [selectedReason]);
 
-  // Title with opponent name
   const title = t('matchFeedback.report.title').replace('{name}', opponentName);
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={handleClose}
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
-      <KeyboardAvoidingView
-        style={[styles.container, { backgroundColor: colors.cardBackground }]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <View style={styles.modalContent}>
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerSpacer} />
+          <Text size="lg" weight="semibold" color={colors.text}>
+            {title}
+          </Text>
           <TouchableOpacity
             onPress={handleClose}
             style={styles.closeButton}
@@ -174,14 +138,15 @@ export const ReportIssueSheet: React.FC<ReportIssueSheetProps> = ({
           >
             <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
-          <Text size="lg" weight="semibold" color={colors.text}>
-            {title}
-          </Text>
-          <View style={styles.headerSpacer} />
         </View>
 
-        {/* Content */}
-        <View style={styles.content}>
+        {/* Scrollable content */}
+        <ScrollView
+          style={styles.contentContainer}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Reason Selection */}
           <View style={styles.section}>
             <Text
@@ -216,7 +181,7 @@ export const ReportIssueSheet: React.FC<ReportIssueSheetProps> = ({
             >
               {t('matchFeedback.report.detailsLabel')}
             </Text>
-            <BottomSheetTextInput
+            <TextInput
               style={[
                 styles.detailsInput,
                 {
@@ -237,7 +202,7 @@ export const ReportIssueSheet: React.FC<ReportIssueSheetProps> = ({
               {details.length}/500
             </Text>
           </View>
-        </View>
+        </ScrollView>
 
         {/* Footer */}
         <View style={[styles.footer, { borderTopColor: colors.border }]}>
@@ -266,17 +231,28 @@ export const ReportIssueSheet: React.FC<ReportIssueSheetProps> = ({
             )}
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
-    </Modal>
+      </View>
+    </ActionSheet>
   );
-};
+}
 
 // =============================================================================
 // STYLES
 // =============================================================================
 
 const styles = StyleSheet.create({
-  container: {
+  sheetBackground: {
+    flex: 1,
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
+  },
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
+  },
+  modalContent: {
     flex: 1,
   },
   header: {
@@ -290,13 +266,17 @@ const styles = StyleSheet.create({
   closeButton: {
     padding: spacingPixels[1],
     width: 40,
+    alignItems: 'flex-end',
   },
   headerSpacer: {
     width: 40,
   },
-  content: {
+  contentContainer: {
     flex: 1,
+  },
+  scrollContent: {
     padding: spacingPixels[4],
+    paddingBottom: spacingPixels[4],
   },
   section: {
     marginBottom: spacingPixels[6],
@@ -334,7 +314,7 @@ const styles = StyleSheet.create({
   footer: {
     padding: spacingPixels[4],
     borderTopWidth: 1,
-    paddingBottom: spacingPixels[4],
+    paddingBottom: spacingPixels[8],
   },
   submitButton: {
     flexDirection: 'row',
@@ -346,4 +326,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ReportIssueSheet;
+export default ReportIssueActionSheet;

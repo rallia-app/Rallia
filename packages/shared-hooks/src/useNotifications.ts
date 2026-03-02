@@ -115,9 +115,13 @@ export function useMarkAsRead(userId: string | undefined) {
   return useMutation<Notification, Error, string, MarkAsReadMutationContext>({
     mutationFn: markAsRead,
     onMutate: async notificationId => {
-      // Cancel any outgoing refetches for this user's notifications
+      // Cancel any outgoing refetches for notifications and unread count
+      // to prevent in-flight refetches from overwriting optimistic updates
       await queryClient.cancelQueries({
         queryKey: notificationKeys.lists(),
+      });
+      await queryClient.cancelQueries({
+        queryKey: notificationKeys.unreadCount(userId ?? ''),
       });
 
       // Get all notification list queries for this user and update them
@@ -187,7 +191,12 @@ export function useMarkAsRead(userId: string | undefined) {
         );
       }
     },
-    // No onSettled - rely purely on optimistic updates without background refetch
+    onSettled: () => {
+      // Re-sync unread count with the server after mutation
+      queryClient.invalidateQueries({
+        queryKey: notificationKeys.unreadCount(userId ?? ''),
+      });
+    },
   });
 }
 
@@ -203,9 +212,12 @@ export function useMarkAllAsRead(userId: string | undefined) {
       return markAllAsRead(userId);
     },
     onMutate: async () => {
-      // Cancel any outgoing refetches
+      // Cancel any outgoing refetches for notifications and unread count
       await queryClient.cancelQueries({
         queryKey: notificationKeys.lists(),
+      });
+      await queryClient.cancelQueries({
+        queryKey: notificationKeys.unreadCount(userId ?? ''),
       });
 
       // Get all notification list queries and update them
@@ -260,7 +272,11 @@ export function useMarkAllAsRead(userId: string | undefined) {
         );
       }
     },
-    // No onSettled - rely purely on optimistic updates without background refetch
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: notificationKeys.unreadCount(userId ?? ''),
+      });
+    },
   });
 }
 
@@ -273,9 +289,12 @@ export function useDeleteNotification(userId: string | undefined) {
   return useMutation<void, Error, string, DeleteMutationContext>({
     mutationFn: deleteNotification,
     onMutate: async notificationId => {
-      // Cancel any outgoing refetches
+      // Cancel any outgoing refetches for notifications and unread count
       await queryClient.cancelQueries({
         queryKey: notificationKeys.lists(),
+      });
+      await queryClient.cancelQueries({
+        queryKey: notificationKeys.unreadCount(userId ?? ''),
       });
 
       // Get all notification list queries
@@ -343,7 +362,11 @@ export function useDeleteNotification(userId: string | undefined) {
         );
       }
     },
-    // No onSettled - rely purely on optimistic updates without background refetch
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: notificationKeys.unreadCount(userId ?? ''),
+      });
+    },
   });
 }
 

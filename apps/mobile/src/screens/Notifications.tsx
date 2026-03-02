@@ -50,6 +50,9 @@ const MATCH_NOTIFICATION_TYPES: ExtendedNotificationTypeEnum[] = [
   'match_new_available',
   'player_kicked',
   'player_left',
+  'score_confirmation',
+  'feedback_request',
+  'feedback_reminder',
 ];
 
 const BASE_WHITE = '#ffffff';
@@ -255,7 +258,7 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
             <Text
               size="sm"
               color={cardColors.textSecondary}
-              numberOfLines={2}
+              numberOfLines={3}
               style={styles.bodyText}
             >
               {notification.body}

@@ -166,33 +166,24 @@ export default function PlayerMatches() {
   const [activeTab, setActiveTab] = useState<TimeFilter>('upcoming');
 
   // Filter state
-  const {
-    upcomingFilter,
-    pastFilter,
-    toggleUpcomingFilter,
-    togglePastFilter,
-    resetUpcomingFilter,
-    resetPastFilter,
-  } = usePlayerMatchFilters();
+  const { upcomingFilter, pastFilter, toggleUpcomingFilter, togglePastFilter } =
+    usePlayerMatchFilters();
 
   // Get current filter based on active tab
   const currentStatusFilter = activeTab === 'upcoming' ? upcomingFilter : pastFilter;
 
-  // Handle tab change - reset filters when switching tabs
+  // Handle tab change - preserve filter state when switching tabs
   const handleTabChange = useCallback(
     (tab: TimeFilter) => {
       if (tab !== activeTab) {
         setActiveTab(tab);
-        // Reset the filter for the tab we're leaving
-        if (activeTab === 'upcoming') {
-          resetUpcomingFilter();
-        } else {
-          resetPastFilter();
-        }
       }
     },
-    [activeTab, resetUpcomingFilter, resetPastFilter]
+    [activeTab]
   );
+
+  // Track manual pull-to-refresh so RefreshControl doesn't trigger on tab switch or background refetch
+  const isManualRefresh = useRef(false);
 
   // Deep link handling - use ref to avoid cascading renders from setState in effect
   const pendingMatchIdRef = useRef<string | null>(null);
@@ -249,6 +240,23 @@ export default function PlayerMatches() {
     limit: 20,
     enabled: !!session?.user?.id,
   });
+
+  // Track whether initial load has completed to avoid showing full-screen spinner on tab switch
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // Mark initial load as done once first fetch completes
+  useEffect(() => {
+    if (isInitialLoad && !isLoading) {
+      queueMicrotask(() => setIsInitialLoad(false));
+    }
+  }, [isInitialLoad, isLoading]);
+
+  // Clear manual refresh flag when refetching completes
+  useEffect(() => {
+    if (!isRefetching) {
+      isManualRefresh.current = false;
+    }
+  }, [isRefetching]);
 
   // Group matches by date
   const sections = useMemo(
@@ -316,26 +324,20 @@ export default function PlayerMatches() {
           return 'person-outline';
         case 'confirmed':
           return 'checkmark-circle-outline';
-        case 'pending':
+        case 'waiting':
           return 'hourglass-outline';
-        case 'requested':
-          return 'paper-plane-outline';
-        case 'waitlisted':
-          return 'list-outline';
         case 'needs_players':
           return 'people-outline';
-        case 'ready_to_play':
-          return 'checkmark-done-outline';
         case 'feedback_needed':
           return 'chatbubble-outline';
-        case 'played':
+        case 'completed':
           return 'trophy-outline';
-        case 'as_participant':
-          return 'people-outline';
-        case 'expired':
+        case 'unfilled':
           return 'time-outline';
         case 'cancelled':
           return 'close-circle-outline';
+        case 'private':
+          return 'lock-closed-outline';
         default:
           return 'search-outline';
       }
@@ -355,7 +357,7 @@ export default function PlayerMatches() {
         title: t(`playerMatches.emptyFiltered.title`),
         description: t(`playerMatches.emptyFiltered.description`, {
           filter: t(
-            `playerMatches.filters.${currentStatusFilter === 'needs_players' ? 'needsPlayers' : currentStatusFilter === 'ready_to_play' ? 'readyToPlay' : currentStatusFilter === 'feedback_needed' ? 'feedbackNeeded' : currentStatusFilter === 'as_participant' ? 'asParticipant' : currentStatusFilter}`
+            `playerMatches.filters.${currentStatusFilter === 'needs_players' ? 'needsPlayers' : currentStatusFilter === 'feedback_needed' ? 'feedbackNeeded' : currentStatusFilter}` as TranslationKey
           ),
         }),
       };
@@ -463,7 +465,7 @@ export default function PlayerMatches() {
       {renderFilterChips()}
 
       {/* Content */}
-      {isLoading ? (
+      {isLoading && isInitialLoad ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -485,7 +487,10 @@ export default function PlayerMatches() {
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
-              onRefresh={refetch}
+              onRefresh={() => {
+                isManualRefresh.current = true;
+                refetch();
+              }}
               tintColor={colors.primary}
               colors={[colors.primary]}
             />

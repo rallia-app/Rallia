@@ -11,6 +11,7 @@ import type {
   ExtendedNotificationTypeEnum,
   NotificationPriorityEnum,
   Notification,
+  MatchFormatEnum,
 } from '@rallia/shared-types';
 
 /**
@@ -57,7 +58,7 @@ export interface FeedbackNotificationPayload {
   playerName?: string;
   opponentNames?: string; // Pre-formatted: "John" or "John, Jane, and Mike"
   matchDate?: string;
-  format?: 'singles' | 'doubles';
+  format?: MatchFormatEnum;
 }
 
 /**
@@ -396,8 +397,8 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   payment: 'Payment Update',
   support: 'Message from Rallia',
   system: 'Rallia Update',
-  feedback_request: 'How Was Your Game?',
-  feedback_reminder: "Don't Forget to Rate Your Game",
+  feedback_request: 'How was your game?',
+  feedback_reminder: 'You have a match to close out',
   score_confirmation: 'Confirm Match Score',
 
   // Organization staff notifications
@@ -464,9 +465,9 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   support: 'Our support team has sent you a message. Tap to read.',
   system: 'We have an update for you. Tap to learn more.',
   feedback_request:
-    'Rate your {sportName} game with {opponentNames}. Your feedback helps the community!',
+    "Submit your score and rate your {sportName} match with {opponentNames} while it's fresh!",
   feedback_reminder:
-    'Your {sportName} game feedback closes in 24 hours. Rate your experience with {opponentNames}!',
+    'Your {sportName} score and rating with {opponentNames} are still pending — complete them before the window closes.',
   score_confirmation:
     '{playerName} submitted the score for your {sportName} game. Please confirm or dispute.',
 
@@ -1051,7 +1052,7 @@ export async function notifyFeedbackRequest(
   sportName: string,
   opponentNames?: string,
   matchDate?: string,
-  format?: 'singles' | 'doubles'
+  format?: MatchFormatEnum
 ): Promise<Notification> {
   return createNotification({
     type: 'feedback_request',
@@ -1071,7 +1072,7 @@ export async function notifyFeedbackReminder(
   sportName: string,
   opponentNames?: string,
   matchDate?: string,
-  format?: 'singles' | 'doubles'
+  format?: MatchFormatEnum
 ): Promise<Notification> {
   return createNotification({
     type: 'feedback_reminder',
@@ -1079,6 +1080,26 @@ export async function notifyFeedbackReminder(
     targetId: matchId,
     payload: { matchId, sportName, opponentNames, matchDate, format },
   });
+}
+
+/**
+ * Notify opponents that a match score was submitted and needs confirmation
+ */
+export async function notifyScoreConfirmation(
+  opponentUserIds: string[],
+  matchId: string,
+  playerName: string,
+  sportName?: string,
+  matchDate?: string
+): Promise<Notification[]> {
+  return createNotifications(
+    opponentUserIds.map(userId => ({
+      type: 'score_confirmation' as const,
+      userId,
+      targetId: matchId,
+      payload: { matchId, playerName, sportName, matchDate },
+    }))
+  );
 }
 
 /**
@@ -1121,6 +1142,7 @@ export const notificationFactory = {
   matchCompleted: notifyMatchCompleted,
   feedbackRequest: notifyFeedbackRequest,
   feedbackReminder: notifyFeedbackReminder,
+  scoreConfirmation: notifyScoreConfirmation,
   reminder: notifyReminder,
 
   // Social

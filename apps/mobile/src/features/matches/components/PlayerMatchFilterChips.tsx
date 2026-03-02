@@ -45,25 +45,19 @@ interface FilterOption<T> {
 
 const UPCOMING_OPTIONS: FilterOption<UpcomingMatchFilter>[] = [
   { value: 'all', labelKey: 'playerMatches.filters.all' },
-  { value: 'hosting', labelKey: 'playerMatches.filters.hosting', icon: 'person-outline' },
   {
     value: 'confirmed',
     labelKey: 'playerMatches.filters.confirmed',
     icon: 'checkmark-circle-outline',
   },
-  { value: 'pending', labelKey: 'playerMatches.filters.pending', icon: 'hourglass-outline' },
-  { value: 'requested', labelKey: 'playerMatches.filters.requested', icon: 'paper-plane-outline' },
-  { value: 'waitlisted', labelKey: 'playerMatches.filters.waitlisted', icon: 'list-outline' },
+  { value: 'hosting', labelKey: 'playerMatches.filters.hosting', icon: 'person-outline' },
   {
     value: 'needs_players',
     labelKey: 'playerMatches.filters.needsPlayers',
     icon: 'people-outline',
   },
-  {
-    value: 'ready_to_play',
-    labelKey: 'playerMatches.filters.readyToPlay',
-    icon: 'checkmark-done-outline',
-  },
+  { value: 'waiting', labelKey: 'playerMatches.filters.waiting', icon: 'hourglass-outline' },
+  { value: 'private', labelKey: 'playerMatches.filters.private', icon: 'lock-closed-outline' },
 ];
 
 const PAST_OPTIONS: FilterOption<PastMatchFilter>[] = [
@@ -73,15 +67,11 @@ const PAST_OPTIONS: FilterOption<PastMatchFilter>[] = [
     labelKey: 'playerMatches.filters.feedbackNeeded',
     icon: 'chatbubble-outline',
   },
-  { value: 'played', labelKey: 'playerMatches.filters.played', icon: 'trophy-outline' },
+  { value: 'completed', labelKey: 'playerMatches.filters.completed', icon: 'trophy-outline' },
   { value: 'hosted', labelKey: 'playerMatches.filters.hosted', icon: 'person-outline' },
-  {
-    value: 'as_participant',
-    labelKey: 'playerMatches.filters.asParticipant',
-    icon: 'people-outline',
-  },
-  { value: 'expired', labelKey: 'playerMatches.filters.expired', icon: 'time-outline' },
   { value: 'cancelled', labelKey: 'playerMatches.filters.cancelled', icon: 'close-circle-outline' },
+  { value: 'unfilled', labelKey: 'playerMatches.filters.unfilled', icon: 'time-outline' },
+  { value: 'private', labelKey: 'playerMatches.filters.private', icon: 'lock-closed-outline' },
 ];
 
 // =============================================================================

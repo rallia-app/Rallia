@@ -104,6 +104,7 @@ export default function MatchesTab({ facilityId }: MatchesTabProps) {
     setDistance,
     setDuration,
     setCourtStatus,
+    setMatchTier,
     setSpecificDate,
     resetFilters,
     clearSearch,
@@ -291,6 +292,7 @@ export default function MatchesTab({ facilityId }: MatchesTabProps) {
           distance={filters.distance}
           duration={filters.duration}
           courtStatus={filters.courtStatus}
+          matchTier={filters.matchTier}
           specificDate={filters.specificDate}
           onFormatChange={setFormat}
           onMatchTypeChange={setMatchType}
@@ -303,6 +305,7 @@ export default function MatchesTab({ facilityId }: MatchesTabProps) {
           onDistanceChange={setDistance}
           onDurationChange={setDuration}
           onCourtStatusChange={setCourtStatus}
+          onMatchTierChange={setMatchTier}
           onSpecificDateChange={setSpecificDate}
           onReset={resetFilters}
           hasActiveFilters={hasActiveFilters}

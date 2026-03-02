@@ -11,7 +11,8 @@
   },
   "peerDependencies": {
     "react": "*",
-    "react-native": "*"
+    "react-native": "*",
+    "react-native-svg": "*"
   },
   "dependencies": {
     "@rallia/shared-constants": "*",

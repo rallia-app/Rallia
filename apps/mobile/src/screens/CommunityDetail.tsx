@@ -33,7 +33,6 @@ import {
   useTranslation,
   useNavigateToPlayerProfile,
   useRequireOnboarding,
-  type TranslationKey,
 } from '../hooks';
 import { useSport } from '../context';
 import { SportIcon } from '../components/SportIcon';
@@ -58,7 +57,7 @@ import type { GroupWithMembers } from '@rallia/shared-services';
 import { SheetManager } from 'react-native-actions-sheet';
 import type { RootStackParamList } from '../navigation/types';
 import { primary } from '@rallia/design-system';
-import { AddCommunityMemberModal, EditCommunityModal } from '../features/communities';
+
 import { AddScoreIntroModal, AddScoreModal, type MatchType } from '../features/matches';
 
 const HEADER_HEIGHT = 140;
@@ -98,7 +97,7 @@ export default function CommunityDetailScreen() {
 
   // Add Score flow state
   const [showAddScoreIntro, setShowAddScoreIntro] = useState(false);
-  const [showMatchTypeModal, setShowMatchTypeModal] = useState(false);
+
   const [showAddScoreModal, setShowAddScoreModal] = useState(false);
   const [selectedMatchType, setSelectedMatchType] = useState<MatchType>('single');
   const [hasSeenAddScoreIntro, setHasSeenAddScoreIntro] = useState<boolean | null>(null);
@@ -1800,8 +1799,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: primary[500],
     overflow: 'hidden',
   },
   memberAvatarImage: {

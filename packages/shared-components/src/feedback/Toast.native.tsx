@@ -3,14 +3,8 @@
  * Works on both iOS and Android with animated entry/exit
  */
 
-import React, { useEffect, useRef, useCallback } from 'react';
-import {
-  StyleSheet,
-  Animated,
-  TouchableOpacity,
-  Platform,
-  ViewStyle,
-} from 'react-native';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
+import { StyleSheet, Animated, TouchableOpacity, Platform, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '../foundation/Text.native';
 import { spacing } from '../theme';
@@ -58,8 +52,8 @@ export function Toast({
   style,
 }: ToastProps) {
   const insets = useSafeAreaInsets();
-  const translateY = useRef(new Animated.Value(position === 'top' ? -100 : 100)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
+  const [translateY] = useState(() => new Animated.Value(position === 'top' ? -100 : 100));
+  const [opacity] = useState(() => new Animated.Value(0));
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const colors = TOAST_COLORS[type];
@@ -99,7 +93,7 @@ export function Toast({
   useEffect(() => {
     if (visible) {
       showToast();
-      
+
       if (duration > 0) {
         timeoutRef.current = setTimeout(() => {
           hideToast();
@@ -140,22 +134,23 @@ export function Toast({
         style,
       ]}
     >
-      <TouchableOpacity
-        style={styles.content}
-        onPress={hideToast}
-        activeOpacity={0.9}
-      >
+      <TouchableOpacity style={styles.content} onPress={hideToast} activeOpacity={0.9}>
         <Text style={[styles.icon, { color: colors.text }]}>{colors.icon}</Text>
         <Text style={[styles.message, { color: colors.text }]} numberOfLines={2}>
           {message}
         </Text>
         {actionText && onAction && (
           <TouchableOpacity onPress={handleAction} style={styles.actionButton}>
-            <Text style={[styles.actionText, { color: colors.text }]}>
-              {actionText}
-            </Text>
+            <Text style={[styles.actionText, { color: colors.text }]}>{actionText}</Text>
           </TouchableOpacity>
         )}
+        <TouchableOpacity
+          onPress={hideToast}
+          style={styles.closeButton}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Text style={[styles.closeIcon, { color: colors.text }]}>✕</Text>
+        </TouchableOpacity>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -165,7 +160,7 @@ export function Toast({
 // TOAST CONTEXT & PROVIDER
 // ============================================================================
 
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext } from 'react';
 
 interface ToastConfig {
   message: string;
@@ -200,21 +195,33 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     setVisible(false);
   }, []);
 
-  const success = useCallback((message: string, options?: Partial<ToastConfig>) => {
-    showToast({ message, type: 'success', ...options });
-  }, [showToast]);
+  const success = useCallback(
+    (message: string, options?: Partial<ToastConfig>) => {
+      showToast({ message, type: 'success', ...options });
+    },
+    [showToast]
+  );
 
-  const error = useCallback((message: string, options?: Partial<ToastConfig>) => {
-    showToast({ message, type: 'error', ...options });
-  }, [showToast]);
+  const error = useCallback(
+    (message: string, options?: Partial<ToastConfig>) => {
+      showToast({ message, type: 'error', ...options });
+    },
+    [showToast]
+  );
 
-  const warning = useCallback((message: string, options?: Partial<ToastConfig>) => {
-    showToast({ message, type: 'warning', ...options });
-  }, [showToast]);
+  const warning = useCallback(
+    (message: string, options?: Partial<ToastConfig>) => {
+      showToast({ message, type: 'warning', ...options });
+    },
+    [showToast]
+  );
 
-  const info = useCallback((message: string, options?: Partial<ToastConfig>) => {
-    showToast({ message, type: 'info', ...options });
-  }, [showToast]);
+  const info = useCallback(
+    (message: string, options?: Partial<ToastConfig>) => {
+      showToast({ message, type: 'info', ...options });
+    },
+    [showToast]
+  );
 
   return (
     <ToastContext.Provider value={{ showToast, hideToast, success, error, warning, info }}>
@@ -292,6 +299,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     textDecorationLine: 'underline',
+  },
+  closeButton: {
+    marginLeft: spacing[2],
+    padding: spacing[1],
+  },
+  closeIcon: {
+    fontSize: 14,
+    fontWeight: '600',
+    opacity: 0.8,
   },
 });
 

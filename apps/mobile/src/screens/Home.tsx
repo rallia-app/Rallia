@@ -27,7 +27,6 @@ import {
   useThemeStyles,
   useTranslation,
   useEffectiveLocation,
-  type TranslationKey,
   useTourSequence,
 } from '../hooks';
 import {
@@ -70,7 +69,7 @@ const Home = () => {
   const appNavigation = useAppNavigation();
 
   // Home screen tour - triggers after main navigation tour is completed
-  const { shouldShowTour: _shouldShowHomeTour } = useTourSequence({
+  useTourSequence({
     screenId: 'home',
     isReady: !authLoading,
     delay: 800,
@@ -148,6 +147,7 @@ const Home = () => {
   });
 
   const flatListRef = useRef<FlatList>(null);
+  const isManualRefresh = useRef(false);
   useScrollToTop(flatListRef);
 
   const [showWelcome, setShowWelcome] = useState(true);
@@ -155,6 +155,13 @@ const Home = () => {
 
   // Extract display name from profile
   const displayName = profile?.display_name || null;
+
+  // Clear manual refresh flag when refetching completes
+  useEffect(() => {
+    if (!isRefetching) {
+      isManualRefresh.current = false;
+    }
+  }, [isRefetching]);
 
   // Log errors from match fetching
   useEffect(() => {
@@ -764,8 +771,9 @@ const Home = () => {
           onEndReachedThreshold={0.3}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching}
+              refreshing={isRefetching && isManualRefresh.current}
               onRefresh={() => {
+                isManualRefresh.current = true;
                 refetch();
                 if (session?.user?.id) {
                   refetchMyMatches();

@@ -15,6 +15,7 @@ import {
   cancelJoinRequest,
   kickParticipant,
   cancelInvitation,
+  declineInvitation,
   resendInvitation,
   checkInToMatch,
   type JoinMatchResult,
@@ -115,6 +116,16 @@ export interface UseMatchActionsOptions {
   onCancelInviteError?: (error: Error) => void;
 
   /**
+   * Callback when decline invitation succeeds (invitee declining a pending invitation)
+   */
+  onDeclineInviteSuccess?: (participant: MatchParticipant) => void;
+
+  /**
+   * Callback when decline invitation fails
+   */
+  onDeclineInviteError?: (error: Error) => void;
+
+  /**
    * Callback when resend invitation succeeds (host resending an invitation)
    */
   onResendInviteSuccess?: (participant: MatchParticipant) => void;
@@ -190,6 +201,8 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
     onKickError,
     onCancelInviteSuccess,
     onCancelInviteError,
+    onDeclineInviteSuccess,
+    onDeclineInviteError,
     onResendInviteSuccess,
     onResendInviteError,
     onCheckInSuccess,
@@ -443,6 +456,21 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
     },
   });
 
+  // Decline Invitation Mutation - for invitees declining a pending invitation
+  const declineInviteMutation = useMutation<MatchParticipant, Error, string>({
+    mutationFn: async (playerId: string) => {
+      if (!matchId) throw new Error('Match ID is required');
+      return declineInvitation(matchId, playerId);
+    },
+    onSuccess: async participant => {
+      await invalidateMatchQueries();
+      onDeclineInviteSuccess?.(participant);
+    },
+    onError: error => {
+      onDeclineInviteError?.(error);
+    },
+  });
+
   // Resend Invitation Mutation - for host resending an invitation
   const resendInviteMutation = useMutation<
     MatchParticipant,
@@ -575,6 +603,16 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
     isCancellingInvite: cancelInviteMutation.isPending,
     cancelInviteError: cancelInviteMutation.error,
 
+    // Decline invitation actions (invitee only)
+    /**
+     * Decline a pending invitation (invitee only)
+     * @param playerId - The player's ID
+     */
+    declineInvite: declineInviteMutation.mutate,
+    declineInviteAsync: declineInviteMutation.mutateAsync,
+    isDecliningInvite: declineInviteMutation.isPending,
+    declineInviteError: declineInviteMutation.error,
+
     // Resend invitation actions (host only)
     /**
      * Resend an invitation (host only)
@@ -613,6 +651,7 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
       cancelRequestMutation.isPending ||
       kickMutation.isPending ||
       cancelInviteMutation.isPending ||
+      declineInviteMutation.isPending ||
       resendInviteMutation.isPending ||
       checkInMutation.isPending,
 
@@ -629,6 +668,7 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
       cancelRequestMutation.reset();
       kickMutation.reset();
       cancelInviteMutation.reset();
+      declineInviteMutation.reset();
       resendInviteMutation.reset();
       checkInMutation.reset();
     },

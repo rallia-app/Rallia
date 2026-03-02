@@ -3,3 +3,4 @@
  */
 
 export * from './deriveMatchStatus';
+export * from './matchTier';

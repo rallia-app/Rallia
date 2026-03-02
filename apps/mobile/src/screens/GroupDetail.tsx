@@ -31,7 +31,6 @@ import {
   useTranslation,
   useNavigateToPlayerProfile,
   useRequireOnboarding,
-  type TranslationKey,
 } from '../hooks';
 import { useSport } from '../context';
 import { SportIcon } from '../components/SportIcon';
@@ -1549,8 +1548,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: primary[500],
   },
   memberAvatarImage: {
     width: 28,

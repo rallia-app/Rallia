@@ -20,6 +20,7 @@ import {
 } from '@rallia/design-system';
 import { selectionHaptic } from '@rallia/shared-utils';
 import { useTheme, useMatch } from '@rallia/shared-hooks';
+import type { MatchParticipantWithPlayer } from '@rallia/shared-types';
 import { useMatchDetailSheet } from '../context/MatchDetailSheetContext';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import { useTranslation } from '../hooks';
@@ -82,6 +83,18 @@ export function PlayerInviteActionSheet({ payload }: SheetProps<'player-invite'>
     SheetManager.hide('player-invite');
   }, [refetchMatch, selectedMatch, updateSelectedMatch]);
 
+  // Optimistic update: immediately add new participants to the match detail sheet
+  const handleInviteSuccess = useCallback(
+    (newParticipants: MatchParticipantWithPlayer[]) => {
+      if (!selectedMatch || newParticipants.length === 0) return;
+      updateSelectedMatch({
+        ...selectedMatch,
+        participants: [...(selectedMatch.participants ?? []), ...newParticipants],
+      } as MatchDetailData);
+    },
+    [selectedMatch, updateSelectedMatch]
+  );
+
   // Handle close button press
   const handleClose = useCallback(() => {
     selectionHaptic();
@@ -119,6 +132,7 @@ export function PlayerInviteActionSheet({ payload }: SheetProps<'player-invite'>
           hostId={hostId}
           excludePlayerIds={excludePlayerIds}
           onComplete={handleComplete}
+          onInviteSuccess={handleInviteSuccess}
           colors={colors}
           t={t}
           isDark={isDark}

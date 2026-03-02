@@ -56,11 +56,12 @@ export type MatchJoinModeEnum = DbEnum<'match_join_mode_enum'>;
 export type CostSplitTypeEnum = DbEnum<'cost_split_type_enum'>;
 export type LocationTypeEnum = DbEnum<'location_type_enum'>;
 
+// Match Participant
+export type MatchParticipantStatusEnum = DbEnum<'match_participant_status_enum'>;
+
 // Match Feedback (enums for feedback wizard)
 export type MatchOutcomeEnum = DbEnum<'match_outcome_enum'>;
-// Note: cancellation_reason_enum will be available after running migration and regenerating types
-// Until then, use this manual type definition:
-export type CancellationReasonEnum = 'weather' | 'court_unavailable' | 'emergency' | 'other';
+export type CancellationReasonEnum = DbEnum<'cancellation_reason_enum'>;
 
 // Match Report (enums for moderation)
 export type MatchReportReasonEnum = DbEnum<'match_report_reason_enum'>;
@@ -84,6 +85,7 @@ export type PeriodEnum = DbEnum<'period_enum'>;
 // Rating
 export type RatingCertificationMethodEnum = DbEnum<'rating_certification_method_enum'>;
 export type RatingRequestStatusEnum = DbEnum<'rating_request_status_enum'>;
+export type BadgeStatusEnum = DbEnum<'badge_status_enum'>;
 
 // Rating System Code
 export type RatingSystemCodeEnum = DbEnum<'rating_system_code_enum'>;
@@ -98,57 +100,13 @@ export type NotificationTypeEnum = DbEnum<'notification_type_enum'>;
 export type DeliveryChannelEnum = DbEnum<'delivery_channel_enum'>;
 export type DeliveryStatusEnum = DbEnum<'delivery_status_enum'>;
 
-// Extended notification types (added by migration, available after supabase types regeneration)
-// These are the full set of notification types supported by the system
-export type ExtendedNotificationTypeEnum =
-  | NotificationTypeEnum
-  | 'match_join_request'
-  | 'match_join_accepted'
-  | 'match_join_rejected'
-  | 'match_player_joined'
-  | 'match_cancelled'
-  | 'match_updated'
-  | 'match_starting_soon'
-  | 'match_completed'
-  | 'match_new_available'
-  | 'player_kicked'
-  | 'player_left'
-  | 'new_message'
-  | 'friend_request'
-  | 'rating_verified'
-  | 'feedback_request'
-  | 'feedback_reminder'
-  | 'score_confirmation'
-  // Organization staff notifications
-  | 'booking_created'
-  | 'booking_cancelled_by_player'
-  | 'booking_modified'
-  | 'new_member_joined'
-  | 'member_left'
-  | 'member_role_changed'
-  | 'payment_received'
-  | 'payment_failed'
-  | 'refund_processed'
-  | 'daily_summary'
-  | 'weekly_report'
-  // Organization member notifications
-  | 'booking_confirmed'
-  | 'booking_reminder'
-  | 'booking_cancelled_by_org'
-  | 'membership_approved'
-  | 'org_announcement'
-  // Program notifications
-  | 'program_registration_confirmed'
-  | 'program_registration_cancelled'
-  | 'program_session_reminder'
-  | 'program_session_cancelled'
-  | 'program_waitlist_promoted'
-  | 'program_payment_due'
-  | 'program_payment_received';
+// All notification types are now in the DB enum — keep alias for backwards compat
+/** @deprecated Use NotificationTypeEnum directly — all values are now in the DB enum */
+export type ExtendedNotificationTypeEnum = NotificationTypeEnum;
 
 // Organization notification types (subset for org-specific features)
-export type OrgNotificationTypeEnum =
-  // Staff notifications
+export type OrgNotificationTypeEnum = Extract<
+  NotificationTypeEnum,
   | 'booking_created'
   | 'booking_cancelled_by_player'
   | 'booking_modified'
@@ -160,29 +118,26 @@ export type OrgNotificationTypeEnum =
   | 'refund_processed'
   | 'daily_summary'
   | 'weekly_report'
-  // Member notifications
   | 'booking_confirmed'
   | 'booking_reminder'
   | 'booking_cancelled_by_org'
   | 'membership_approved'
   | 'org_announcement'
-  // Program notifications (staff)
   | 'program_registration_confirmed'
   | 'program_registration_cancelled'
   | 'program_session_reminder'
   | 'program_session_cancelled'
   | 'program_waitlist_promoted'
   | 'program_payment_due'
-  | 'program_payment_received';
+  | 'program_payment_received'
+>;
 
-// Extended delivery status (added by migration)
-export type ExtendedDeliveryStatusEnum =
-  | DeliveryStatusEnum
-  | 'skipped_preference'
-  | 'skipped_missing_contact';
+// Delivery status — all values now in DB enum
+/** @deprecated Use DeliveryStatusEnum directly */
+export type ExtendedDeliveryStatusEnum = DeliveryStatusEnum;
 
-// Notification priority (added by migration)
-export type NotificationPriorityEnum = 'low' | 'normal' | 'high' | 'urgent';
+// Notification priority
+export type NotificationPriorityEnum = DbEnum<'notification_priority_enum'>;
 
 // Invitations
 export type InviteSourceEnum = DbEnum<'invite_source_enum'>;
@@ -198,19 +153,13 @@ export type PlayAttributeEnum = DbEnum<'play_attribute_enum'>;
 // Skill Level
 export type SkillLevel = DbEnum<'skill_level'>;
 
-// Programs & Lessons (added by migration, available after supabase types regeneration)
-// Manual type definitions until types are regenerated
-export type ProgramTypeEnum = 'program' | 'lesson';
-export type ProgramStatusEnum = 'draft' | 'published' | 'cancelled' | 'completed';
-export type RegistrationStatusEnum = 'pending' | 'confirmed' | 'cancelled' | 'refunded';
-export type PaymentPlanEnum = 'full' | 'installment';
-export type RegistrationPaymentStatusEnum =
-  | 'pending'
-  | 'succeeded'
-  | 'failed'
-  | 'refunded'
-  | 'cancelled';
-export type BookingTypeEnum = 'player' | 'program_session' | 'maintenance';
+// Programs & Lessons
+export type ProgramTypeEnum = DbEnum<'program_type_enum'>;
+export type ProgramStatusEnum = DbEnum<'program_status_enum'>;
+export type RegistrationStatusEnum = DbEnum<'registration_status_enum'>;
+export type PaymentPlanEnum = DbEnum<'payment_plan_enum'>;
+export type RegistrationPaymentStatusEnum = DbEnum<'registration_payment_status_enum'>;
+export type BookingTypeEnum = DbEnum<'booking_type_enum'>;
 
 // Match (non-suffixed variants)
 export type MatchType = DbEnum<'match_type_enum'>;
@@ -265,171 +214,24 @@ export type FacilityFile = TableRow<'facility_file'>;
 export type Court = TableRow<'court'>;
 export type CourtSport = TableRow<'court_sport'>;
 
-// Programs & Lessons (manual definitions until supabase types regenerated)
-export interface InstructorProfile {
-  id: string;
-  organization_id: string;
-  organization_member_id: string | null;
-  display_name: string;
-  bio: string | null;
-  avatar_url: string | null;
-  email: string | null;
-  phone: string | null;
-  hourly_rate_cents: number | null;
-  currency: string;
-  certifications: Record<string, unknown>[];
-  specializations: string[];
-  is_external: boolean;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
+// Programs & Lessons
+export type InstructorProfile = TableRow<'instructor_profile'>;
+export type Program = TableRow<'program'>;
+export type ProgramSession = TableRow<'program_session'>;
+export type ProgramSessionCourt = TableRow<'program_session_court'>;
+export type ProgramInstructor = TableRow<'program_instructor'>;
+export type ProgramRegistration = TableRow<'program_registration'>;
+export type RegistrationPayment = TableRow<'registration_payment'>;
+export type ProgramWaitlist = TableRow<'program_waitlist'>;
+export type SessionAttendance = TableRow<'session_attendance'>;
 
-export interface Program {
-  id: string;
-  organization_id: string;
-  facility_id: string | null;
-  sport_id: string | null;
-  type: ProgramTypeEnum;
-  status: ProgramStatusEnum;
-  name: string;
-  description: string | null;
-  start_date: string;
-  end_date: string | null;
-  registration_opens_at: string | null;
-  registration_deadline: string | null;
-  min_participants: number;
-  max_participants: number | null;
-  current_participants: number;
-  price_cents: number;
-  currency: string;
-  allow_installments: boolean;
-  installment_count: number;
-  deposit_cents: number | null;
-  auto_block_courts: boolean;
-  waitlist_enabled: boolean;
-  waitlist_limit: number | null;
-  age_min: number | null;
-  age_max: number | null;
-  skill_level_min: string | null;
-  skill_level_max: string | null;
-  cancellation_policy: ProgramCancellationPolicy;
-  cover_image_url: string | null;
-  metadata: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
-  published_at: string | null;
-  cancelled_at: string | null;
-}
-
+/** Typed JSON shape for Program.cancellation_policy */
 export interface ProgramCancellationPolicy {
   full_refund_days_before_start: number;
   partial_refund_days_before_start: number;
   partial_refund_percent: number;
   no_refund_after_start: boolean;
   prorate_by_sessions_attended: boolean;
-}
-
-export interface ProgramSession {
-  id: string;
-  program_id: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  location_override: string | null;
-  notes: string | null;
-  is_cancelled: boolean;
-  cancelled_at: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ProgramSessionCourt {
-  id: string;
-  session_id: string;
-  court_id: string;
-  booking_id: string | null;
-  created_at: string;
-}
-
-export interface ProgramInstructor {
-  id: string;
-  program_id: string;
-  instructor_id: string;
-  is_primary: boolean;
-  created_at: string;
-}
-
-export interface ProgramRegistration {
-  id: string;
-  program_id: string;
-  player_id: string;
-  registered_by: string;
-  status: RegistrationStatusEnum;
-  payment_plan: PaymentPlanEnum;
-  total_amount_cents: number;
-  paid_amount_cents: number;
-  refund_amount_cents: number;
-  currency: string;
-  stripe_customer_id: string | null;
-  notes: string | null;
-  emergency_contact_name: string | null;
-  emergency_contact_phone: string | null;
-  registered_at: string;
-  confirmed_at: string | null;
-  cancelled_at: string | null;
-  refunded_at: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface RegistrationPayment {
-  id: string;
-  registration_id: string;
-  amount_cents: number;
-  currency: string;
-  installment_number: number;
-  total_installments: number;
-  stripe_payment_intent_id: string | null;
-  stripe_customer_id: string | null;
-  stripe_charge_id: string | null;
-  status: RegistrationPaymentStatusEnum;
-  due_date: string;
-  paid_at: string | null;
-  failed_at: string | null;
-  failure_reason: string | null;
-  refund_amount_cents: number;
-  refunded_at: string | null;
-  retry_count: number;
-  next_retry_at: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ProgramWaitlist {
-  id: string;
-  program_id: string;
-  player_id: string;
-  added_by: string;
-  position: number;
-  promoted_at: string | null;
-  promotion_expires_at: string | null;
-  registration_id: string | null;
-  notification_sent_at: string | null;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface SessionAttendance {
-  id: string;
-  session_id: string;
-  registration_id: string;
-  attended: boolean | null;
-  marked_at: string | null;
-  marked_by: string | null;
-  notes: string | null;
-  created_at: string;
 }
 
 // Match
@@ -440,108 +242,34 @@ export type MatchSet = TableRow<'match_set'>;
 export type MatchFeedback = TableRow<'match_feedback'>;
 export type MatchReport = TableRow<'match_report'>;
 
-/** Match result with nested set scores (from getMatchWithDetails when result is selected with sets) */
+/** Match result with nested set scores and confirmations (from getMatchWithDetails) */
 export interface MatchResultWithSets extends MatchResult {
   sets?: MatchSet[];
+  confirmations?: Array<{ player_id: string; action: 'confirmed' | 'disputed' }>;
 }
 
 // Notification
 export type Notification = TableRow<'notification'>;
 export type DeliveryAttempt = TableRow<'delivery_attempt'>;
 
-// Notification Preference (manual definition until supabase types regenerated)
-// This table stores user preferences for notification delivery per type/channel
-export interface NotificationPreference {
-  id: string;
-  user_id: string;
-  notification_type: ExtendedNotificationTypeEnum;
-  channel: DeliveryChannelEnum;
-  enabled: boolean;
-  created_at: string;
-  updated_at: string;
-}
+// Notification Preference
+export type NotificationPreference = TableRow<'notification_preference'>;
+export type NotificationPreferenceInsert = TableInsert<'notification_preference'>;
+export type NotificationPreferenceUpdate = TableUpdate<'notification_preference'>;
 
-export interface NotificationPreferenceInsert {
-  id?: string;
-  user_id: string;
-  notification_type: ExtendedNotificationTypeEnum;
-  channel: DeliveryChannelEnum;
-  enabled: boolean;
-  created_at?: string;
-  updated_at?: string;
-}
+// Organization Notification Preference
+export type OrganizationNotificationPreference = TableRow<'organization_notification_preference'>;
+export type OrganizationNotificationPreferenceInsert =
+  TableInsert<'organization_notification_preference'>;
+export type OrganizationNotificationPreferenceUpdate =
+  TableUpdate<'organization_notification_preference'>;
 
-export interface NotificationPreferenceUpdate {
-  id?: string;
-  user_id?: string;
-  notification_type?: ExtendedNotificationTypeEnum;
-  channel?: DeliveryChannelEnum;
-  enabled?: boolean;
-  updated_at?: string;
-}
-
-// Organization Notification Preference (manual definition until supabase types regenerated)
-export interface OrganizationNotificationPreference {
-  id: string;
-  organization_id: string;
-  notification_type: ExtendedNotificationTypeEnum;
-  channel: DeliveryChannelEnum;
-  enabled: boolean;
-  recipient_roles: RoleEnum[] | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface OrganizationNotificationPreferenceInsert {
-  id?: string;
-  organization_id: string;
-  notification_type: ExtendedNotificationTypeEnum;
-  channel: DeliveryChannelEnum;
-  enabled?: boolean;
-  recipient_roles?: RoleEnum[] | null;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface OrganizationNotificationPreferenceUpdate {
-  id?: string;
-  organization_id?: string;
-  notification_type?: ExtendedNotificationTypeEnum;
-  channel?: DeliveryChannelEnum;
-  enabled?: boolean;
-  recipient_roles?: RoleEnum[] | null;
-  updated_at?: string;
-}
-
-// Organization Notification Recipient (manual definition until supabase types regenerated)
-export interface OrganizationNotificationRecipient {
-  id: string;
-  organization_id: string;
-  notification_type: ExtendedNotificationTypeEnum;
-  user_id: string;
-  enabled: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface OrganizationNotificationRecipientInsert {
-  id?: string;
-  organization_id: string;
-  notification_type: ExtendedNotificationTypeEnum;
-  user_id: string;
-  enabled?: boolean;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface OrganizationNotificationRecipientUpdate {
-  id?: string;
-  organization_id?: string;
-  notification_type?: ExtendedNotificationTypeEnum;
-  user_id?: string;
-  enabled?: boolean;
-  updated_at?: string;
-}
+// Organization Notification Recipient
+export type OrganizationNotificationRecipient = TableRow<'organization_notification_recipient'>;
+export type OrganizationNotificationRecipientInsert =
+  TableInsert<'organization_notification_recipient'>;
+export type OrganizationNotificationRecipientUpdate =
+  TableUpdate<'organization_notification_recipient'>;
 
 // Files
 export type File = TableRow<'file'>;
@@ -589,6 +317,15 @@ export type DeliveryAttemptInsert = TableInsert<'delivery_attempt'>;
 export type FileInsert = TableInsert<'file'>;
 export type InvitationInsert = TableInsert<'invitation'>;
 export type WaitlistSignupInsert = TableInsert<'waitlist_signup'>;
+export type InstructorProfileInsert = TableInsert<'instructor_profile'>;
+export type ProgramInsert = TableInsert<'program'>;
+export type ProgramSessionInsert = TableInsert<'program_session'>;
+export type ProgramSessionCourtInsert = TableInsert<'program_session_court'>;
+export type ProgramInstructorInsert = TableInsert<'program_instructor'>;
+export type ProgramRegistrationInsert = TableInsert<'program_registration'>;
+export type RegistrationPaymentInsert = TableInsert<'registration_payment'>;
+export type ProgramWaitlistInsert = TableInsert<'program_waitlist'>;
+export type SessionAttendanceInsert = TableInsert<'session_attendance'>;
 
 // ============================================
 // UPDATE TYPES
@@ -627,6 +364,15 @@ export type DeliveryAttemptUpdate = TableUpdate<'delivery_attempt'>;
 export type FileUpdate = TableUpdate<'file'>;
 export type InvitationUpdate = TableUpdate<'invitation'>;
 export type WaitlistSignupUpdate = TableUpdate<'waitlist_signup'>;
+export type InstructorProfileUpdate = TableUpdate<'instructor_profile'>;
+export type ProgramUpdate = TableUpdate<'program'>;
+export type ProgramSessionUpdate = TableUpdate<'program_session'>;
+export type ProgramSessionCourtUpdate = TableUpdate<'program_session_court'>;
+export type ProgramInstructorUpdate = TableUpdate<'program_instructor'>;
+export type ProgramRegistrationUpdate = TableUpdate<'program_registration'>;
+export type RegistrationPaymentUpdate = TableUpdate<'registration_payment'>;
+export type ProgramWaitlistUpdate = TableUpdate<'program_waitlist'>;
+export type SessionAttendanceUpdate = TableUpdate<'session_attendance'>;
 
 // ============================================
 // COMPOSITE TYPES (with FK relationships)
@@ -639,6 +385,8 @@ export interface PlayerWithProfile extends Player {
   sportRatingLabel?: string;
   /** Rating numeric value for the match's sport (populated at runtime for match queries) */
   sportRatingValue?: number;
+  /** Certification status for the match's sport rating (populated at runtime for match queries) */
+  sportCertificationStatus?: BadgeStatusEnum;
   /** Reputation data joined from player_reputation table */
   player_reputation?: { reputation_score: number } | null;
 }
@@ -684,17 +432,7 @@ export interface FacilityWithDetails extends Facility {
 }
 
 /** Data provider configuration (e.g., Loisir Montreal) */
-export interface DataProvider {
-  id: string;
-  name: string;
-  provider_type: string;
-  api_base_url: string;
-  api_config: Record<string, unknown>;
-  booking_url_template: string | null;
-  is_active: boolean;
-  created_at?: string;
-  updated_at?: string;
-}
+export type DataProvider = TableRow<'data_provider'>;
 
 /** Facility search result from nearby search */
 export interface FacilitySearchResult {

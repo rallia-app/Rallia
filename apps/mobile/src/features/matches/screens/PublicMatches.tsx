@@ -103,6 +103,7 @@ export default function PublicMatches() {
     setDistance,
     setDuration,
     setCourtStatus,
+    setMatchTier,
     setSpecificDate,
     resetFilters,
     clearSearch,
@@ -289,6 +290,7 @@ export default function PublicMatches() {
           distance={filters.distance}
           duration={filters.duration}
           courtStatus={filters.courtStatus}
+          matchTier={filters.matchTier}
           specificDate={filters.specificDate}
           onFormatChange={setFormat}
           onMatchTypeChange={setMatchType}
@@ -301,6 +303,7 @@ export default function PublicMatches() {
           onDistanceChange={setDistance}
           onDurationChange={setDuration}
           onCourtStatusChange={setCourtStatus}
+          onMatchTierChange={setMatchTier}
           onSpecificDateChange={setSpecificDate}
           onReset={resetFilters}
           hasActiveFilters={hasActiveFilters}
