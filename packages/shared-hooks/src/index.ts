@@ -7,6 +7,9 @@
  * - For Web: use `next-themes` instead
  */
 
+// Storage adapter for platform-agnostic persistence
+export * from './storage';
+
 export * from './useAuth';
 export * from './useDebounce';
 export * from './useProfile'; // Also exports ProfileProvider and ProfileContextType
@@ -47,6 +50,13 @@ export * from './useFavoriteStatus';
 export * from './useSharedLists';
 export * from './usePlayPreferences';
 export * from './useFavoriteFacilities';
+export * from './useAdminStatus';
+export * from './useAdminUsers';
+export * from './useAdminAnalytics';
+export * from './useAnalyticsTimeRange';
+export * from './useAdminAudit';
+export * from './useModeration';
+// useAdminPush moved to apps/mobile/src/hooks/ (native-only hook)
 export * from './useBooking';
 export * from './usePlayerBookingFilters';
 

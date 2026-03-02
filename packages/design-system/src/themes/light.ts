@@ -25,8 +25,8 @@ export const lightTheme = {
   popoverForeground: neutral[950],
 
   // Primary colors (buttons, links, etc.)
-  primary: neutral[900],
-  primaryForeground: neutral[50],
+  primary: primary[600],
+  primaryForeground: base.white,
 
   // Secondary colors (secondary buttons, less emphasis)
   secondary: neutral[100],
@@ -47,17 +47,17 @@ export const lightTheme = {
   // Border and input colors
   border: neutral[200],
   input: neutral[200],
-  ring: neutral[400],
+  ring: primary[600],
 
   // Sidebar specific
   sidebar: neutral[50],
   sidebarForeground: neutral[950],
-  sidebarPrimary: neutral[900],
-  sidebarPrimaryForeground: neutral[50],
+  sidebarPrimary: primary[600],
+  sidebarPrimaryForeground: base.white,
   sidebarAccent: neutral[100],
   sidebarAccentForeground: neutral[900],
   sidebarBorder: neutral[200],
-  sidebarRing: neutral[400],
+  sidebarRing: primary[600],
 
   // Theme palette colors (for direct use)
   palette: {
@@ -82,8 +82,8 @@ export const lightThemeCSSValues = {
   '--card-foreground': 'oklch(0.145 0 0)',
   '--popover': 'oklch(1 0 0)',
   '--popover-foreground': 'oklch(0.145 0 0)',
-  '--primary': 'oklch(0.205 0 0)',
-  '--primary-foreground': 'oklch(0.985 0 0)',
+  '--primary': 'oklch(0.600 0.104 184.704)', // teal-600
+  '--primary-foreground': 'oklch(1 0 0)',
   '--secondary': 'oklch(0.97 0 0)',
   '--secondary-foreground': 'oklch(0.205 0 0)',
   '--muted': 'oklch(0.97 0 0)',
@@ -93,17 +93,17 @@ export const lightThemeCSSValues = {
   '--destructive': 'oklch(0.577 0.245 27.325)',
   '--border': 'oklch(0.922 0 0)',
   '--input': 'oklch(0.922 0 0)',
-  '--ring': 'oklch(0.708 0 0)',
+  '--ring': 'oklch(0.600 0.104 184.704)', // teal-600
 
   // Sidebar
   '--sidebar': 'oklch(0.985 0 0)',
   '--sidebar-foreground': 'oklch(0.145 0 0)',
-  '--sidebar-primary': 'oklch(0.205 0 0)',
-  '--sidebar-primary-foreground': 'oklch(0.985 0 0)',
+  '--sidebar-primary': 'oklch(0.600 0.104 184.704)', // teal-600
+  '--sidebar-primary-foreground': 'oklch(1 0 0)',
   '--sidebar-accent': 'oklch(0.97 0 0)',
   '--sidebar-accent-foreground': 'oklch(0.205 0 0)',
   '--sidebar-border': 'oklch(0.922 0 0)',
-  '--sidebar-ring': 'oklch(0.708 0 0)',
+  '--sidebar-ring': 'oklch(0.600 0.104 184.704)', // teal-600
 
   // Theme-specific background
   '--background-secondary': primary[50],

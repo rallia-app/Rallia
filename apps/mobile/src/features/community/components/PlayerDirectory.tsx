@@ -21,6 +21,8 @@ import { Text, SkeletonPlayerCard, Skeleton } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
 import { usePlayerSearch, usePlayer } from '@rallia/shared-hooks';
 import { useTranslation } from '../../../hooks';
+import { useEffectiveLocation } from '../../../hooks/useEffectiveLocation';
+import { useUserHomeLocation } from '../../../context';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import { supabase, Logger } from '@rallia/shared-services';
 import PlayerCard from './PlayerCard';
@@ -84,7 +86,17 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
   }, []);
 
   // Get user's max travel distance preference
-  const { maxTravelDistanceKm } = usePlayer();
+  const { maxTravelDistanceKm, player } = usePlayer();
+
+  // Location for distance sorting
+  const { location, locationMode, setLocationMode, hasHomeLocation, hasBothLocationOptions } =
+    useEffectiveLocation();
+  const { homeLocation } = useUserHomeLocation();
+
+  // Home location label for display
+  const homeLocationLabel = player?.address
+    ? [player.address.split(',')[0].trim(), player.city].filter(Boolean).join(', ')
+    : homeLocation?.postalCode || homeLocation?.formattedAddress?.split(',')[0];
 
   // Check if any filter is active
   const hasActiveFilters = useMemo(() => {
@@ -94,6 +106,7 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
       filters.gender !== 'all' ||
       filters.skillLevel !== 'all' ||
       filters.availability !== 'all' ||
+      filters.day !== 'all' ||
       filters.playStyle !== 'all' ||
       filters.maxDistance !== 'all' ||
       (filters.sortBy && filters.sortBy !== 'name_asc')
@@ -108,6 +121,7 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
       gender: filters.gender,
       skillLevel: filters.skillLevel,
       availability: filters.availability,
+      day: filters.day,
       playStyle: filters.playStyle,
       maxDistance: filters.maxDistance,
       sortBy: filters.sortBy,
@@ -294,6 +308,8 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     favoritePlayerIds,
     blockedPlayerIds,
     enabled: !!sportId,
+    latitude: location?.latitude,
+    longitude: location?.longitude,
   });
 
   // Sort players based on selected sort option
@@ -329,11 +345,10 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
           return ratingA - ratingB;
         });
       case 'distance':
-        // Distance not available in current data - fallback to name
         return sorted.sort((a, b) => {
-          const nameA = a.display_name || a.first_name || '';
-          const nameB = b.display_name || b.first_name || '';
-          return nameA.localeCompare(nameB);
+          const distA = a.distance_meters ?? Infinity;
+          const distB = b.distance_meters ?? Infinity;
+          return distA - distB;
         });
       case 'recently_active':
         // Last active not available in current data - fallback to name
@@ -444,6 +459,11 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
         onFiltersChange={handleFiltersChange}
         onReset={handleResetFilters}
         isAuthenticated={!!currentUserId}
+        showLocationSelector={hasBothLocationOptions}
+        locationMode={locationMode}
+        onLocationModeChange={setLocationMode}
+        hasHomeLocation={hasHomeLocation}
+        homeLocationLabel={homeLocationLabel}
       />
     </View>
   );

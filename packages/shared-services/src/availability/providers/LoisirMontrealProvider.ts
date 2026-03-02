@@ -69,7 +69,7 @@ export class LoisirMontrealProvider extends BaseAvailabilityProvider {
     // }
 
     const searchPath = this.getConfigValue('searchPath', '/public/search');
-    const defaultLimit = this.getConfigValue('defaultLimit', 50);
+    const defaultLimit = this.getConfigValue('defaultLimit', 500);
 
     // Build the URL with cache-busting timestamp
     const url = `${this.config.apiBaseUrl}${searchPath}?_=${Date.now()}`;
@@ -97,7 +97,7 @@ export class LoisirMontrealProvider extends BaseAvailabilityProvider {
       searchString: params.searchString ?? null,
       limit: params.limit ?? defaultLimit,
       offset: params.offset ?? 0,
-      sortColumn: 'startDateTime',
+      sortColumn: 'facility.name',
       isSortOrderAsc: true,
     };
 

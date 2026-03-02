@@ -458,6 +458,64 @@ export async function getCommunityMembershipStatus(
 }
 
 /**
+ * Check if a player can access community features
+ * Uses the check_community_access RPC to determine access eligibility
+ */
+export async function checkCommunityAccess(
+  communityId: string,
+  playerId?: string
+): Promise<{
+  canAccess: boolean;
+  isMember: boolean;
+  membershipStatus: string | null;
+  membershipRole: string | null;
+  isPublic: boolean;
+  hasActiveModerator: boolean;
+  accessReason: string;
+}> {
+  interface CheckCommunityAccessResponse {
+    can_access: boolean;
+    is_member: boolean;
+    membership_status: string | null;
+    membership_role: string | null;
+    is_public: boolean;
+    has_active_moderator: boolean;
+    access_reason: string;
+  }
+
+  const { data, error } = await supabase
+    .rpc('check_community_access', { 
+      p_community_id: communityId, 
+      p_player_id: playerId || null 
+    })
+    .single<CheckCommunityAccessResponse>();
+
+  if (error) {
+    console.error('Error checking community access:', error);
+    // Default to no access on error
+    return {
+      canAccess: false,
+      isMember: false,
+      membershipStatus: null,
+      membershipRole: null,
+      isPublic: false,
+      hasActiveModerator: false,
+      accessReason: 'Error checking access',
+    };
+  }
+
+  return {
+    canAccess: data.can_access,
+    isMember: data.is_member,
+    membershipStatus: data.membership_status,
+    membershipRole: data.membership_role,
+    isPublic: data.is_public,
+    hasActiveModerator: data.has_active_moderator,
+    accessReason: data.access_reason,
+  };
+}
+
+/**
  * Leave a community
  */
 export async function leaveCommunity(communityId: string, playerId: string): Promise<void> {

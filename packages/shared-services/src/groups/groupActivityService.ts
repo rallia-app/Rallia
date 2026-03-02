@@ -78,6 +78,11 @@ export async function getGroupActivity(
 
   if (error) {
     console.error('Error fetching group activity:', error);
+    // Return empty array if table doesn't exist (PGRST205) to prevent crashes
+    if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+      console.warn('group_activity table does not exist - returning empty array');
+      return [];
+    }
     throw new Error(error.message);
   }
 

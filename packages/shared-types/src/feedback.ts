@@ -106,6 +106,8 @@ export interface OpponentForFeedback {
   avatarUrl?: string | null;
   /** Whether this opponent already has feedback from this reviewer */
   hasExistingFeedback: boolean;
+  /** Whether this opponent already has a report from this reviewer */
+  hasExistingReport: boolean;
 }
 
 /**

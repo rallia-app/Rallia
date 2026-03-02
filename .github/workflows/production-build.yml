@@ -1,0 +1,192 @@
+name: Production Build & Submit
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_notes:
+        description: 'Release notes for this build'
+        required: false
+        default: ''
+
+concurrency:
+  group: production-build
+  cancel-in-progress: false
+
+jobs:
+  production-build:
+    name: EAS Production Build & Submit
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: '16'
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build production
+        id: build
+        continue-on-error: true
+        run: |
+          cd apps/mobile
+          eas build --platform all --profile production --non-interactive --json \
+            | tee build-result.json
+
+      - name: Submit to app stores
+        id: submit
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        run: |
+          cd apps/mobile
+          eas submit --platform all --non-interactive
+
+      - name: Notify Discord
+        if: always()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          BUILD_FILE="apps/mobile/build-result.json"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          SHORT_SHA="${GITHUB_SHA::7}"
+          RELEASE_NOTES="${{ github.event.inputs.release_notes }}"
+
+          if [ "${{ steps.build.outcome }}" = "success" ]; then
+            if [ "${{ steps.submit.outcome }}" = "success" ]; then
+              COLOR=3066993
+              TITLE="Production Build & Submit Completed"
+            else
+              COLOR=15105570
+              TITLE="Production Build OK — Submit Failed"
+            fi
+          else
+            COLOR=15158332
+            TITLE="Production Build Failed"
+          fi
+
+          DESCRIPTION=""
+          VERSION_STR=""
+
+          if [ -f "$BUILD_FILE" ] && jq empty "$BUILD_FILE" 2>/dev/null; then
+            OWNER_NAME=$(jq -r '.[0].project.ownerAccount.name // empty' "$BUILD_FILE")
+            PROJECT_SLUG=$(jq -r '.[0].project.slug // empty' "$BUILD_FILE")
+
+            IOS_ID=$(jq -r '.[] | select(.platform == "IOS") | .id // empty' "$BUILD_FILE")
+            IOS_STATUS=$(jq -r '.[] | select(.platform == "IOS") | .status // empty' "$BUILD_FILE")
+            IOS_APP_VERSION=$(jq -r '.[] | select(.platform == "IOS") | .appVersion // empty' "$BUILD_FILE")
+            IOS_BUILD_NUMBER=$(jq -r '.[] | select(.platform == "IOS") | .appBuildVersion // empty' "$BUILD_FILE")
+            IOS_CREATED=$(jq -r '.[] | select(.platform == "IOS") | .createdAt // empty' "$BUILD_FILE")
+            IOS_COMPLETED=$(jq -r '.[] | select(.platform == "IOS") | .completedAt // empty' "$BUILD_FILE")
+
+            ANDROID_ID=$(jq -r '.[] | select(.platform == "ANDROID") | .id // empty' "$BUILD_FILE")
+            ANDROID_STATUS=$(jq -r '.[] | select(.platform == "ANDROID") | .status // empty' "$BUILD_FILE")
+            ANDROID_APP_VERSION=$(jq -r '.[] | select(.platform == "ANDROID") | .appVersion // empty' "$BUILD_FILE")
+            ANDROID_BUILD_NUMBER=$(jq -r '.[] | select(.platform == "ANDROID") | .appBuildVersion // empty' "$BUILD_FILE")
+            ANDROID_CREATED=$(jq -r '.[] | select(.platform == "ANDROID") | .createdAt // empty' "$BUILD_FILE")
+            ANDROID_COMPLETED=$(jq -r '.[] | select(.platform == "ANDROID") | .completedAt // empty' "$BUILD_FILE")
+
+            IOS_URL=""
+            ANDROID_URL=""
+            if [ -n "$OWNER_NAME" ] && [ -n "$PROJECT_SLUG" ]; then
+              if [ -n "$IOS_ID" ]; then
+                IOS_URL="https://expo.dev/accounts/${OWNER_NAME}/projects/${PROJECT_SLUG}/builds/${IOS_ID}"
+              fi
+              if [ -n "$ANDROID_ID" ]; then
+                ANDROID_URL="https://expo.dev/accounts/${OWNER_NAME}/projects/${PROJECT_SLUG}/builds/${ANDROID_ID}"
+              fi
+            fi
+
+            if [ -n "$IOS_APP_VERSION" ]; then
+              VERSION_STR="v${IOS_APP_VERSION}"
+              if [ -n "$IOS_BUILD_NUMBER" ]; then
+                VERSION_STR="${VERSION_STR} (${IOS_BUILD_NUMBER})"
+              fi
+            fi
+
+            if [ -n "$VERSION_STR" ]; then
+              DESCRIPTION="**Version:** ${VERSION_STR}"
+            fi
+
+            calc_duration() {
+              local start="$1" end="$2"
+              if [ -n "$start" ] && [ -n "$end" ]; then
+                local start_s end_s diff_s mins secs
+                start_s=$(date -d "$start" +%s 2>/dev/null) || return
+                end_s=$(date -d "$end" +%s 2>/dev/null) || return
+                diff_s=$((end_s - start_s))
+                mins=$((diff_s / 60))
+                secs=$((diff_s % 60))
+                echo "${mins}m ${secs}s"
+              fi
+            }
+
+            ios_icon() {
+              if [ "$IOS_STATUS" = "FINISHED" ]; then echo "✅"; else echo "❌"; fi
+            }
+            android_icon() {
+              if [ "$ANDROID_STATUS" = "FINISHED" ]; then echo "✅"; else echo "❌"; fi
+            }
+
+            IOS_FIELD=""
+            if [ -n "$IOS_URL" ]; then
+              IOS_DURATION=$(calc_duration "$IOS_CREATED" "$IOS_COMPLETED")
+              IOS_VALUE="$(ios_icon) **${IOS_STATUS:-Unknown}**"
+              if [ -n "$IOS_DURATION" ]; then
+                IOS_VALUE="${IOS_VALUE} (${IOS_DURATION})"
+              fi
+              IOS_VALUE="${IOS_VALUE}\n[Build Details](${IOS_URL})"
+              IOS_FIELD="{\"name\": \"iOS\", \"value\": \"${IOS_VALUE}\", \"inline\": true}"
+            fi
+
+            ANDROID_FIELD=""
+            if [ -n "$ANDROID_URL" ]; then
+              ANDROID_DURATION=$(calc_duration "$ANDROID_CREATED" "$ANDROID_COMPLETED")
+              ANDROID_VALUE="$(android_icon) **${ANDROID_STATUS:-Unknown}**"
+              if [ -n "$ANDROID_DURATION" ]; then
+                ANDROID_VALUE="${ANDROID_VALUE} (${ANDROID_DURATION})"
+              fi
+              ANDROID_VALUE="${ANDROID_VALUE}\n[Build Details](${ANDROID_URL})"
+              ANDROID_FIELD="{\"name\": \"Android\", \"value\": \"${ANDROID_VALUE}\", \"inline\": true}"
+            fi
+          fi
+
+          FIELDS="["
+          if [ -n "$IOS_FIELD" ]; then
+            FIELDS="${FIELDS}${IOS_FIELD},"
+          fi
+          if [ -n "$ANDROID_FIELD" ]; then
+            FIELDS="${FIELDS}${ANDROID_FIELD},"
+          fi
+          FIELDS="${FIELDS}{\"name\": \"Commit\", \"value\": \"\`${SHORT_SHA}\`\", \"inline\": true},"
+          FIELDS="${FIELDS}{\"name\": \"Workflow\", \"value\": \"[View Logs](${RUN_URL})\", \"inline\": true}"
+          if [ -n "$RELEASE_NOTES" ]; then
+            NOTES_ESCAPED=$(echo "$RELEASE_NOTES" | jq -Rs '.')
+            FIELDS="${FIELDS},{\"name\": \"Release Notes\", \"value\": ${NOTES_ESCAPED}, \"inline\": false}"
+          fi
+          FIELDS="${FIELDS}]"
+
+          TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          PAYLOAD=$(jq -n \
+            --arg title "$TITLE" \
+            --argjson color "$COLOR" \
+            --arg timestamp "$TIMESTAMP" \
+            --arg description "$DESCRIPTION" \
+            --argjson fields "$FIELDS" \
+            '{embeds: [{title: $title, description: $description, color: $color, fields: $fields, timestamp: $timestamp, footer: {text: "Rallia Production Build"}}]}')
+
+          curl -sf -H "Content-Type: application/json" -d "$PAYLOAD" "$DISCORD_WEBHOOK_URL"

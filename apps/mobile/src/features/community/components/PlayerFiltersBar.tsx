@@ -6,7 +6,7 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, TouchableOpacity, Modal, Animated } from 'react-native';
-import { Text } from '@rallia/shared-components';
+import { Text, LocationSelector, type LocationMode } from '@rallia/shared-components';
 import { useTheme } from '@rallia/shared-hooks';
 import { useTranslation, type TranslationKey } from '../../../hooks';
 import {
@@ -28,6 +28,7 @@ import { lightHaptic, selectionHaptic } from '../../../utils/haptics';
 
 export type GenderFilter = 'all' | 'male' | 'female' | 'other';
 export type AvailabilityFilter = 'all' | 'morning' | 'afternoon' | 'evening';
+export type DayFilter = 'all' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 export type PlayStyleFilter =
   | 'all'
   | 'counterpuncher'
@@ -88,6 +89,7 @@ export interface PlayerFilters {
   skillLevel: NtrpFilter | DuprFilter;
   maxDistance: DistanceFilter;
   availability: AvailabilityFilter;
+  day: DayFilter;
   playStyle: PlayStyleFilter;
   sortBy: SortOption;
 }
@@ -99,6 +101,7 @@ export const DEFAULT_PLAYER_FILTERS: PlayerFilters = {
   skillLevel: 'all',
   maxDistance: 'all',
   availability: 'all',
+  day: 'all',
   playStyle: 'all',
   sortBy: 'name_asc',
 };
@@ -109,6 +112,7 @@ export const DEFAULT_PLAYER_FILTERS: PlayerFilters = {
 
 const GENDER_OPTIONS: GenderFilter[] = ['all', 'male', 'female', 'other'];
 const AVAILABILITY_OPTIONS: AvailabilityFilter[] = ['all', 'morning', 'afternoon', 'evening'];
+const DAY_OPTIONS: DayFilter[] = ['all', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const PLAY_STYLE_OPTIONS: PlayStyleFilter[] = [
   'all',
   'counterpuncher',
@@ -180,6 +184,17 @@ const AVAILABILITY_LABEL_KEYS: Record<AvailabilityFilter, TranslationKey> = {
   morning: 'playerDirectory.filters.availabilityMorning',
   afternoon: 'playerDirectory.filters.availabilityAfternoon',
   evening: 'playerDirectory.filters.availabilityEvening',
+};
+
+const DAY_LABEL_KEYS: Record<DayFilter, string> = {
+  all: 'playerDirectory.filters.dayAll',
+  monday: 'playerDirectory.filters.dayMonday',
+  tuesday: 'playerDirectory.filters.dayTuesday',
+  wednesday: 'playerDirectory.filters.dayWednesday',
+  thursday: 'playerDirectory.filters.dayThursday',
+  friday: 'playerDirectory.filters.dayFriday',
+  saturday: 'playerDirectory.filters.daySaturday',
+  sunday: 'playerDirectory.filters.daySunday',
 };
 
 const PLAY_STYLE_LABEL_KEYS: Record<PlayStyleFilter, TranslationKey> = {
@@ -432,6 +447,11 @@ interface PlayerFiltersBarProps {
   onFiltersChange: (filters: PlayerFilters) => void;
   onReset?: () => void;
   isAuthenticated?: boolean; // Whether the user is signed in (hides favorites/blocked filters for guests)
+  showLocationSelector?: boolean;
+  locationMode?: LocationMode;
+  onLocationModeChange?: (mode: LocationMode) => void;
+  hasHomeLocation?: boolean;
+  homeLocationLabel?: string;
 }
 
 export function PlayerFiltersBar({
@@ -440,6 +460,11 @@ export function PlayerFiltersBar({
   onFiltersChange,
   onReset,
   isAuthenticated = false,
+  showLocationSelector,
+  locationMode,
+  onLocationModeChange,
+  hasHomeLocation,
+  homeLocationLabel,
 }: PlayerFiltersBarProps) {
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -450,6 +475,7 @@ export function PlayerFiltersBar({
   const [showSkillDropdown, setShowSkillDropdown] = useState(false);
   const [showDistanceDropdown, setShowDistanceDropdown] = useState(false);
   const [showAvailabilityDropdown, setShowAvailabilityDropdown] = useState(false);
+  const [showDayDropdown, setShowDayDropdown] = useState(false);
   const [showStyleDropdown, setShowStyleDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
 
@@ -471,6 +497,7 @@ export function PlayerFiltersBar({
       filters.skillLevel !== 'all' ||
       filters.maxDistance !== 'all' ||
       filters.availability !== 'all' ||
+      filters.day !== 'all' ||
       filters.playStyle !== 'all' ||
       (filters.sortBy && filters.sortBy !== 'name_asc')
     );
@@ -525,6 +552,13 @@ export function PlayerFiltersBar({
     [filters, onFiltersChange]
   );
 
+  const handleDayChange = useCallback(
+    (value: DayFilter) => {
+      onFiltersChange({ ...filters, day: value });
+    },
+    [filters, onFiltersChange]
+  );
+
   const handleStyleChange = useCallback(
     (value: PlayStyleFilter) => {
       onFiltersChange({ ...filters, playStyle: value });
@@ -558,6 +592,7 @@ export function PlayerFiltersBar({
     (v: AvailabilityFilter) => t(AVAILABILITY_LABEL_KEYS[v]),
     [t]
   );
+  const getDayLabel = useCallback((v: DayFilter) => t(DAY_LABEL_KEYS[v] as any), [t]);
   const getStyleLabel = useCallback((v: PlayStyleFilter) => t(PLAY_STYLE_LABEL_KEYS[v]), [t]);
   const getSortLabel = useCallback((v: SortOption) => t(SORT_LABEL_KEYS[v]), [t]);
 
@@ -575,6 +610,10 @@ export function PlayerFiltersBar({
     filters.availability === 'all'
       ? t('playerDirectory.filters.availability')
       : t(AVAILABILITY_LABEL_KEYS[filters.availability]);
+  const dayDisplay =
+    filters.day === 'all'
+      ? t('playerDirectory.filters.day' as any)
+      : t(DAY_LABEL_KEYS[filters.day] as any);
   const styleDisplay =
     filters.playStyle === 'all'
       ? t('playerDirectory.filters.playStyle')
@@ -588,6 +627,20 @@ export function PlayerFiltersBar({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        {/* Location Selector - if both GPS and home are available */}
+        {showLocationSelector && hasHomeLocation && onLocationModeChange && locationMode && (
+          <View style={styles.locationSelectorWrapper}>
+            <LocationSelector
+              selectedMode={locationMode}
+              onSelectMode={onLocationModeChange}
+              hasHomeLocation={hasHomeLocation}
+              homeLocationLabel={homeLocationLabel}
+              isDark={isDark}
+              t={t as (key: string) => string}
+            />
+          </View>
+        )}
+
         {/* Favorites Toggle - Only show for authenticated users */}
         {isAuthenticated && (
           <FilterChip
@@ -644,6 +697,16 @@ export function PlayerFiltersBar({
                   ? 'moon-outline'
                   : undefined
           }
+        />
+
+        {/* Day Filter */}
+        <FilterChip
+          label={t('playerDirectory.filters.day' as any)}
+          value={dayDisplay}
+          isActive={filters.day !== 'all'}
+          onPress={() => setShowDayDropdown(true)}
+          isDark={isDark}
+          icon="calendar-outline"
         />
 
         {/* Play Style Filter */}
@@ -749,6 +812,17 @@ export function PlayerFiltersBar({
       />
 
       <FilterDropdown
+        visible={showDayDropdown}
+        title={t('playerDirectory.filters.selectDay' as any)}
+        options={DAY_OPTIONS}
+        selectedValue={filters.day}
+        onSelect={handleDayChange}
+        onClose={() => setShowDayDropdown(false)}
+        isDark={isDark}
+        getLabel={getDayLabel}
+      />
+
+      <FilterDropdown
         visible={showStyleDropdown}
         title={t('playerDirectory.filters.selectPlayStyle')}
         options={PLAY_STYLE_OPTIONS}
@@ -785,6 +859,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     gap: spacingPixels[2],
     alignItems: 'center',
+  },
+  locationSelectorWrapper: {
+    marginRight: spacingPixels[1],
   },
   chip: {
     flexDirection: 'row',

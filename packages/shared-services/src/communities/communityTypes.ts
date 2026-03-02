@@ -85,6 +85,27 @@ export interface PendingMemberRequest {
   referrer_name: string | null;
 }
 
+/**
+ * Community access check result
+ * Returned by check_community_access RPC
+ */
+export interface CommunityAccessResult {
+  /** Whether the user can access full community features */
+  can_access: boolean;
+  /** Whether the user is an active member */
+  is_member: boolean;
+  /** User's membership status (active, pending, blocked, removed, or null) */
+  membership_status: 'active' | 'pending' | 'blocked' | 'removed' | null;
+  /** User's role if member */
+  membership_role: 'member' | 'moderator' | null;
+  /** Whether the community is publicly visible */
+  is_public: boolean;
+  /** Whether the community has at least one active moderator */
+  has_active_moderator: boolean;
+  /** Human-readable reason for access status */
+  access_reason: string;
+}
+
 // ============================================================================
 // INPUT TYPES
 // ============================================================================

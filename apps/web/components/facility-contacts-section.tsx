@@ -1,7 +1,6 @@
 'use client';
 
-import { AddContactDialog } from '@/components/add-contact-dialog';
-import { EditContactDialog } from '@/components/edit-contact-dialog';
+import { ContactDialog } from '@/components/contact-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -111,17 +110,17 @@ export function FacilityContactsSection({
     <>
       {canEdit && (
         <>
-          <AddContactDialog
+          <ContactDialog
             open={addDialogOpen}
             onOpenChange={setAddDialogOpen}
             facilityId={facilityId}
           />
           {selectedContact && (
-            <EditContactDialog
+            <ContactDialog
               open={editDialogOpen}
               onOpenChange={setEditDialogOpen}
-              contact={selectedContact}
               facilityId={facilityId}
+              initialData={selectedContact}
             />
           )}
         </>

@@ -52,13 +52,29 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Ensure existing group members have conversation_participant entries
 -- This fixes any groups where members weren't added to the conversation
-INSERT INTO public.conversation_participant (conversation_id, player_id)
-SELECT n.conversation_id, nm.player_id
-FROM public.network n
-JOIN public.network_member nm ON nm.network_id = n.id
-WHERE n.conversation_id IS NOT NULL
-  AND nm.status = 'active'
-ON CONFLICT DO NOTHING;
+-- Only run if conversation_id column exists on network table
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'network' 
+    AND column_name = 'conversation_id'
+  ) THEN
+    EXECUTE $sync$
+      INSERT INTO public.conversation_participant (conversation_id, player_id)
+      SELECT n.conversation_id, nm.player_id
+      FROM public.network n
+      JOIN public.network_member nm ON nm.network_id = n.id
+      WHERE n.conversation_id IS NOT NULL
+        AND nm.status = 'active'
+      ON CONFLICT DO NOTHING;
+    $sync$;
+    RAISE NOTICE 'Synced conversation participants from network members';
+  ELSE
+    RAISE NOTICE 'network.conversation_id does not exist yet - skipping participant sync';
+  END IF;
+END $$;
 
 -- Log completion
 DO $$

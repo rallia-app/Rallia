@@ -263,6 +263,7 @@ export function useAuthWizard(options: UseAuthWizardOptions = {}): UseAuthWizard
     lightHaptic();
     setIsLoading(true);
     setErrorMessage('');
+    setCode(''); // Clear the input field when resending
 
     try {
       const result = await signInWithEmail(email, { data: { locale } });

@@ -2,7 +2,7 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { EditCourtDialog } from '@/components/edit-court-dialog';
+import { CourtDialog } from '@/components/court-dialog';
 import { Link } from '@/i18n/navigation';
 import { ArrowLeft, Edit } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -42,7 +42,12 @@ export function CourtDetailHeader({
   return (
     <>
       {canEdit && (
-        <EditCourtDialog open={editDialogOpen} onOpenChange={setEditDialogOpen} court={court} />
+        <CourtDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          facilityId={facilityId}
+          initialData={court}
+        />
       )}
 
       <div className="flex items-start justify-between">

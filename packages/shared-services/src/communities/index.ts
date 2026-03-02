@@ -27,6 +27,7 @@ export {
   isCommunityMember,
   isCommunityModerator,
   getCommunityMembershipStatus,
+  checkCommunityAccess,
   leaveCommunity,
   addCommunityMember,
   removeCommunityMember,

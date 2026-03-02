@@ -17,6 +17,9 @@ export * from './ui-types';
 // Match feedback types (wizard UI and mutations)
 export * from './feedback';
 
+// Match filter types (canonical definitions)
+export * from './filters';
+
 // Domain constants (display labels, mappings)
 export * from './constants';
 

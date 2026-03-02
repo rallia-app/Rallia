@@ -12,12 +12,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
-import { Logger, tourService } from '@rallia/shared-services';
-import { useTheme } from '@rallia/shared-hooks';
+import { Logger, tourService, supabase } from '@rallia/shared-services';
+import { useTheme, useAdminStatus } from '@rallia/shared-hooks';
 import { useAppNavigation } from '../navigation/hooks';
 import { useLocale } from '../context';
 import { useAuth, useTranslation } from '../hooks';
-import type { Locale } from '@rallia/shared-translations';
+import type { Locale, TranslationKey } from '@rallia/shared-translations';
 import { useProfile } from '@rallia/shared-hooks';
 import {
   lightTheme,
@@ -48,6 +48,7 @@ const SettingsScreen: React.FC = () => {
 
   const { isAuthenticated, loading: authLoading, signOut } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
+  const { isAdmin, role: adminRole } = useAdminStatus();
 
   // User is fully onboarded only if authenticated AND onboarding is complete
   const isOnboarded = isAuthenticated && profile?.onboarding_completed;
@@ -122,6 +123,66 @@ const SettingsScreen: React.FC = () => {
     lightHaptic();
     navigation.navigate('Permissions');
     Logger.logUserAction('permissions_pressed');
+  };
+
+  const handleFeedback = () => {
+    lightHaptic();
+    navigation.navigate('Feedback');
+    Logger.logUserAction('feedback_pressed');
+  };
+
+  const handleAdminPanel = () => {
+    lightHaptic();
+    navigation.navigate('AdminPanel');
+    Logger.logUserAction('admin_panel_pressed');
+  };
+
+  // DEBUG: Make current user an admin (for testing only)
+  const [makingAdmin, setMakingAdmin] = useState(false);
+  const handleMakeAdmin = async () => {
+    if (!profile?.id) {
+      toast.error('No user profile found');
+      return;
+    }
+
+    Alert.alert('Make Admin (DEBUG)', 'This will make you a super_admin. Continue?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Make Admin',
+        onPress: async () => {
+          try {
+            setMakingAdmin(true);
+            // Check if already admin
+            const { data: existing } = await supabase
+              .from('admin')
+              .select('id')
+              .eq('id', profile.id)
+              .single();
+
+            if (existing) {
+              toast.info('You are already an admin!');
+              return;
+            }
+
+            // Insert admin record (id references profile.id)
+            const { error } = await supabase.from('admin').insert({
+              id: profile.id,
+              role: 'super_admin',
+            });
+
+            if (error) throw error;
+
+            toast.success('You are now a super_admin! Restart the app to see Admin Panel.');
+            Logger.logUserAction('debug_make_admin', { userId: profile.id });
+          } catch (error) {
+            console.error('Failed to make admin:', error);
+            toast.error('Failed to make admin: ' + (error as Error).message);
+          } finally {
+            setMakingAdmin(false);
+          }
+        },
+      },
+    ]);
   };
 
   const handleResetTour = () => {
@@ -259,13 +320,98 @@ const SettingsScreen: React.FC = () => {
             onPress={handlePermissions}
           />
           {isOnboarded && (
-            <SettingsItem
-              icon="refresh-outline"
-              title={t('tour.settings.restartTour')}
-              onPress={handleResetTour}
-            />
+            <>
+              <SettingsItem
+                icon="refresh-outline"
+                title={t('tour.settings.restartTour')}
+                onPress={handleResetTour}
+              />
+              <SettingsItem
+                icon="chatbox-ellipses-outline"
+                title={t('settings.feedback')}
+                onPress={handleFeedback}
+              />
+            </>
           )}
+          <SettingsItem
+            icon="document-text-outline"
+            title={t('settings.termsOfService')}
+            onPress={() => Linking.openURL('https://rallia.ca/terms')}
+          />
+          <SettingsItem
+            icon="lock-closed-outline"
+            title={t('settings.privacyPolicy')}
+            onPress={() => Linking.openURL('https://rallia.ca/privacy')}
+          />
         </View>
+
+        {/* Admin Panel - Only visible to admin users */}
+        {isAuthenticated && isAdmin && (
+          <View style={[styles.settingsGroup, { backgroundColor: colors.cardBackground }]}>
+            <TouchableOpacity
+              style={[
+                styles.adminPanelButton,
+                { backgroundColor: colors.cardBackground, borderBottomColor: colors.border },
+              ]}
+              onPress={handleAdminPanel}
+              activeOpacity={0.7}
+            >
+              <View style={styles.settingsItemLeft}>
+                <View
+                  style={[
+                    styles.adminIconContainer,
+                    {
+                      backgroundColor: isDark
+                        ? `${status.warning.DEFAULT}20`
+                        : `${status.warning.light}15`,
+                    },
+                  ]}
+                >
+                  <Ionicons name="construct" size={18} color={status.warning.DEFAULT} />
+                </View>
+                <View style={styles.adminTextContainer}>
+                  <Text size="base" weight="semibold" color={colors.text}>
+                    {t('admin.panelButton')}
+                  </Text>
+                  {adminRole && (
+                    <Text size="xs" color={colors.textSecondary}>
+                      {t(`admin.roles.${adminRole}` as TranslationKey)}
+                    </Text>
+                  )}
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.iconMuted} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* DEBUG: Make Admin Button - Only in development */}
+        {isAuthenticated && !isAdmin && __DEV__ && (
+          <View style={[styles.settingsGroup, { backgroundColor: colors.cardBackground }]}>
+            <TouchableOpacity
+              style={[
+                styles.debugButton,
+                {
+                  backgroundColor: isDark ? `${status.error.DEFAULT}20` : `${status.error.light}15`,
+                },
+              ]}
+              onPress={handleMakeAdmin}
+              disabled={makingAdmin}
+              activeOpacity={0.7}
+            >
+              {makingAdmin ? (
+                <ActivityIndicator size="small" color={status.error.DEFAULT} />
+              ) : (
+                <>
+                  <Ionicons name="bug" size={20} color={status.error.DEFAULT} />
+                  <Text size="base" weight="semibold" color={status.error.DEFAULT}>
+                    DEBUG: Make Me Admin
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Preferred Language */}
         <View style={[styles.preferenceSection, { backgroundColor: colors.background }]}>
@@ -493,6 +639,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacingPixels[3],
   },
+  adminPanelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacingPixels[5],
+    paddingVertical: spacingPixels[4],
+    borderBottomWidth: 1,
+  },
+  adminIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: radiusPixels.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  adminTextContainer: {
+    gap: spacingPixels[0.5],
+  },
   preferenceSection: {
     paddingHorizontal: spacingPixels[5],
     paddingVertical: spacingPixels[5],
@@ -542,6 +706,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacingPixels[3.5],
+    borderRadius: radiusPixels.lg,
+    gap: spacingPixels[2],
+  },
+  debugButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     gap: spacingPixels[2],
   },

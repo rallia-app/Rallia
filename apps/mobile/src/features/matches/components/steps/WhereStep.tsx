@@ -20,8 +20,8 @@ import {
 } from 'react-native';
 import { UseFormReturn, useWatch } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
-import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { Text } from '@rallia/shared-components';
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { Text, LocationSelector } from '@rallia/shared-components';
 import { SearchBar } from '../../../../components/SearchBar';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
@@ -44,8 +44,11 @@ import type {
   MatchWithDetails,
 } from '@rallia/shared-types';
 import { SheetManager } from 'react-native-actions-sheet';
+import { ConfirmationModal } from '../../../../components/ConfirmationModal';
 import type { TranslationKey, TranslationOptions } from '../../../../hooks/useTranslation';
-import { useUserLocation } from '../../../../hooks/useUserLocation';
+import { useEffectiveLocation } from '../../../../hooks/useEffectiveLocation';
+import { useUserHomeLocation } from '../../../../context';
+import { usePlayer } from '@rallia/shared-hooks';
 
 // =============================================================================
 // TYPES
@@ -76,6 +79,8 @@ interface WhereStepProps {
   t: (key: TranslationKey, options?: TranslationOptions) => string;
   isDark: boolean;
   sportId: string | undefined;
+  /** Sport name for filtering provider availability (e.g., "tennis") */
+  sportName?: string;
   /** Device timezone (fallback when facility doesn't have one) */
   deviceTimezone: string;
   /** Callback when user confirms booking a slot - auto-fills date/time/duration */
@@ -281,6 +286,8 @@ interface FacilityItemProps {
   isDark: boolean;
   /** Whether this is the user's preferred facility */
   isPreferred?: boolean;
+  /** Sport name for filtering provider availability (e.g., "tennis") */
+  sportName?: string;
 }
 
 const FacilityItem: React.FC<FacilityItemProps> = ({
@@ -291,6 +298,7 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
   t,
   isDark,
   isPreferred = false,
+  sportName,
 }) => {
   // Fetch availability using the unified system (local-first, then external provider)
   const { slotsByDate, isLoading } = useCourtAvailability({
@@ -300,6 +308,7 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
     externalProviderId: facility.external_provider_id,
     bookingUrlTemplate: facility.booking_url_template,
     facilityTimezone: facility.timezone,
+    sportName,
   });
 
   // Determine if slot is actionable (has booking URL or is a local slot)
@@ -608,6 +617,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   t,
   isDark,
   sportId,
+  sportName,
   deviceTimezone,
   onSlotBooked,
   preferredFacilityId,
@@ -629,7 +639,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   const [selectedFacility, setSelectedFacility] = useState<FacilitySearchResult | null>(null);
   const [bookedCourtNumber, setBookedCourtNumber] = useState<number | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
-  const addressFieldRef = useRef<View>(null);
   const facilitySearchRef = useRef<View>(null);
   const placeSearchRef = useRef<View>(null);
 
@@ -678,14 +687,31 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     slot: FormattedSlot;
     selectedCourt?: CourtOption;
   } | null>(null);
+  // Booking confirmation modal visibility (shown when returning from external booking)
+  const [showBookingConfirmation, setShowBookingConfirmation] = useState(false);
   // Court selection state (when multiple courts available at same time)
   const [courtSelectionData, setCourtSelectionData] = useState<{
     facility: FacilitySearchResult;
     slot: FormattedSlot;
   } | null>(null);
 
-  // Get user location (needed for fetching facility details)
-  const { location, loading: locationLoading, error: locationError } = useUserLocation();
+  // Get effective user location (respects user's home/current preference)
+  const {
+    location,
+    isLoading: locationLoading,
+    locationMode,
+    setLocationMode,
+    hasHomeLocation,
+    hasBothLocationOptions,
+  } = useEffectiveLocation();
+  const locationError = !location && !locationLoading ? 'no_location' : null;
+
+  // Home location label for LocationSelector display
+  const { homeLocation } = useUserHomeLocation();
+  const { player } = usePlayer();
+  const homeLocationLabel = player?.address
+    ? [player.address.split(',')[0].trim(), player.city].filter(Boolean).join(', ')
+    : homeLocation?.postalCode || homeLocation?.formattedAddress?.split(',')[0];
 
   // Track if edit mode initialization has been done
   const hasInitializedFromEdit = useRef(false);
@@ -823,7 +849,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
           payload: {
             courts: slot.courtOptions ?? [],
             timeLabel: slot.time ?? '',
-            onSelect: (court: unknown) => handleCourtSelect(court as CourtOption),
+            onSelect: (court: unknown) => handleCourtSelect(court as CourtOption, facility, slot),
             onCancel: handleCourtSelectionCancel,
           },
         });
@@ -850,12 +876,9 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   );
 
   // Handle court selection from modal (external slots only - local slots use court-booking sheet)
+  // Takes facility/slot directly to avoid stale closure over courtSelectionData state
   const handleCourtSelect = useCallback(
-    async (court: CourtOption) => {
-      if (!courtSelectionData) return;
-
-      const { facility, slot } = courtSelectionData;
-
+    async (court: CourtOption, facility: FacilitySearchResult, slot: FormattedSlot) => {
       // External slots: Open booking URL
       if (!court.bookingUrl) {
         setCourtSelectionData(null);
@@ -875,7 +898,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
 
       setCourtSelectionData(null);
     },
-    [courtSelectionData]
+    []
   );
 
   // Handle court selection cancel
@@ -945,20 +968,20 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       successHaptic();
     }
     setPendingBookingSlot(null);
+    setShowBookingConfirmation(false);
   }, [pendingBookingSlot, setValue, deviceTimezone, onSlotBooked]);
 
   // Handle booking cancel
   const handleBookingCancel = useCallback(() => {
     setPendingBookingSlot(null);
+    setShowBookingConfirmation(false);
   }, []);
 
   // Listen for app returning to foreground after external booking
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (nextAppState === 'active' && pendingBookingSlot) {
-        SheetManager.show('booking-confirmation', {
-          payload: { onConfirm: handleBookingConfirm, onCancel: handleBookingCancel },
-        });
+        setShowBookingConfirmation(true);
       }
     });
 
@@ -1197,17 +1220,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       );
     }
 
-    if (locationError) {
-      return (
-        <View style={styles.emptyState}>
-          <Ionicons name="location-outline" size={32} color={colors.textMuted} />
-          <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('matchCreation.fields.locationAccessNeeded')}
-          </Text>
-        </View>
-      );
-    }
-
     if (facilitiesError) {
       return (
         <View style={styles.emptyState}>
@@ -1246,7 +1258,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   }, [
     isLoadingFacilities,
     locationLoading,
-    locationError,
     facilitiesError,
     searchQuery,
     facilities.length,
@@ -1256,7 +1267,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   ]);
 
   return (
-    <BottomSheetScrollView
+    <ScrollView
       ref={scrollViewRef}
       style={styles.container}
       contentContainerStyle={[
@@ -1333,16 +1344,29 @@ export const WhereStep: React.FC<WhereStepProps> = ({
             />
           ) : (
             <>
-              {/* Search input */}
-              <View ref={facilitySearchRef}>
-                <SearchBar
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  placeholder={t('matchCreation.fields.facilityPlaceholder')}
-                  colors={colors}
-                  InputComponent={BottomSheetTextInput}
-                  onFocus={() => setFocusedField('facility')}
-                />
+              {/* Search input with location selector */}
+              <View ref={facilitySearchRef} style={styles.searchRow}>
+                <View style={styles.searchBarFlex}>
+                  <SearchBar
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholder={t('matchCreation.fields.facilityPlaceholder')}
+                    colors={colors}
+                    InputComponent={BottomSheetTextInput}
+                    onFocus={() => setFocusedField('facility')}
+                    containerStyle={styles.compactSearchContainer}
+                  />
+                </View>
+                {hasBothLocationOptions && (
+                  <LocationSelector
+                    selectedMode={locationMode}
+                    onSelectMode={setLocationMode}
+                    hasHomeLocation={hasHomeLocation}
+                    homeLocationLabel={homeLocationLabel}
+                    isDark={isDark}
+                    t={t}
+                  />
+                )}
               </View>
 
               {/* Facility list */}
@@ -1358,6 +1382,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                       t={t}
                       isDark={isDark}
                       isPreferred={facility.id === preferredFacilityId}
+                      sportName={sportName}
                     />
                   ))}
                   {isFetchingNextPage && (
@@ -1470,32 +1495,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({
               )}
             </>
           )}
-
-          {/* Manual address edit (when place is selected) */}
-          {hasSelectedPlace && (
-            <View ref={addressFieldRef} style={styles.addressEditContainer}>
-              <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-                {t('matchCreation.fields.locationAddress')}
-              </Text>
-              <BottomSheetTextInput
-                style={[
-                  styles.textInput,
-                  {
-                    borderColor: colors.border,
-                    backgroundColor: colors.buttonInactive,
-                    color: colors.text,
-                  },
-                ]}
-                value={locationAddress ?? ''}
-                onChangeText={text => setValue('locationAddress', text, { shouldDirty: true })}
-                placeholder={t('matchCreation.fields.locationAddressPlaceholder')}
-                placeholderTextColor={colors.textMuted}
-                multiline
-                numberOfLines={2}
-                onFocus={() => setFocusedField('address')}
-              />
-            </View>
-          )}
         </View>
       )}
 
@@ -1513,7 +1512,18 @@ export const WhereStep: React.FC<WhereStepProps> = ({
           </Text>
         </View>
       )}
-    </BottomSheetScrollView>
+
+      {/* Booking confirmation modal (shown when returning from external booking site) */}
+      <ConfirmationModal
+        visible={showBookingConfirmation}
+        onClose={handleBookingCancel}
+        onConfirm={handleBookingConfirm}
+        title={t('matchCreation.booking.bookingConfirmTitle')}
+        message={t('matchCreation.booking.bookingConfirmMessage')}
+        confirmLabel={t('matchCreation.booking.iBookedThisCourt')}
+        cancelLabel={t('matchCreation.booking.notYet')}
+      />
+    </ScrollView>
   );
 };
 
@@ -1561,6 +1571,17 @@ const styles = StyleSheet.create({
   },
   locationTextContainer: {
     flex: 1,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+  },
+  searchBarFlex: {
+    flex: 1,
+  },
+  compactSearchContainer: {
+    paddingVertical: spacingPixels[2],
   },
   facilityListContainer: {
     marginTop: spacingPixels[3],
@@ -1732,9 +1753,6 @@ const styles = StyleSheet.create({
     gap: spacingPixels[2],
     marginTop: spacingPixels[2],
     paddingHorizontal: spacingPixels[1],
-  },
-  addressEditContainer: {
-    marginTop: spacingPixels[4],
   },
 });
 

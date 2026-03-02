@@ -51,6 +51,7 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [addAsModerator, setAddAsModerator] = useState(false);
+  const [addedMemberIds, setAddedMemberIds] = useState<string[]>([]);
   const debouncedSearch = useDebounce(searchQuery, 300);
 
   // Mutations
@@ -64,6 +65,7 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
     setSearchQuery('');
     setSearchResults([]);
     setAddAsModerator(false);
+    setAddedMemberIds([]);
     SheetManager.hide('add-community-member');
   }, []);
 
@@ -83,9 +85,8 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
             first_name,
             last_name,
             display_name,
-            city,
             profile_picture_url,
-            player!inner(id)
+            player!inner(id, city)
           `
           )
           .neq('id', playerId)
@@ -99,7 +100,7 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
           first_name: p.first_name,
           last_name: p.last_name,
           display_name: p.display_name,
-          city: p.city,
+          city: (p.player as { city?: string | null })?.city ?? null,
           profile_picture_url: p.profile_picture_url,
         }));
         setSuggestedPlayers(players);
@@ -133,9 +134,8 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
             first_name,
             last_name,
             display_name,
-            city,
             profile_picture_url,
-            player!inner(id)
+            player!inner(id, city)
           `
           )
           .neq('id', playerId || '')
@@ -151,7 +151,7 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
           first_name: p.first_name,
           last_name: p.last_name,
           display_name: p.display_name,
-          city: p.city,
+          city: (p.player as { city?: string | null })?.city ?? null,
           profile_picture_url: p.profile_picture_url,
         }));
         setSearchResults(players);
@@ -166,11 +166,12 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
     searchPlayers();
   }, [debouncedSearch, playerId]);
 
-  // Filter out current members from results
+  // Filter out current members and recently added members from results
   const filteredResults = useMemo(() => {
     const sourceList = searchQuery.length >= 2 ? searchResults : suggestedPlayers;
-    return sourceList.filter(player => !currentMemberIds.includes(player.id));
-  }, [searchResults, suggestedPlayers, currentMemberIds, searchQuery]);
+    const excludedIds = [...currentMemberIds, ...addedMemberIds];
+    return sourceList.filter(player => !excludedIds.includes(player.id));
+  }, [searchResults, suggestedPlayers, currentMemberIds, addedMemberIds, searchQuery]);
 
   const handleAddOrReferMember = useCallback(
     async (memberPlayerId: string) => {
@@ -202,6 +203,8 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
           successHaptic();
           toast.success(t('community.membershipRequestSubmitted'));
         }
+        // Immediately remove the player from the list
+        setAddedMemberIds(prev => [...prev, memberPlayerId]);
         onSuccess?.();
       } catch (error) {
         const errorMessage =
@@ -358,6 +361,7 @@ export const AddCommunityMemberModal = AddCommunityMemberActionSheet;
 
 const styles = StyleSheet.create({
   sheetBackground: {
+    flex: 1,
     borderTopLeftRadius: radiusPixels['2xl'],
     borderTopRightRadius: radiusPixels['2xl'],
   },

@@ -162,12 +162,10 @@ export default function DatePickerBar({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: spacingPixels[2],
-  },
+  container: {},
   scrollContent: {
     paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[2],
+    paddingBottom: spacingPixels[2],
     gap: spacingPixels[2],
   },
   dateItem: {

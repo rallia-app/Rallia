@@ -36,7 +36,7 @@ export async function getGroupMatches(
         match_date,
         start_time,
         player_expectation,
-        status,
+        cancelled_at,
         format,
         created_by,
         sport:sport_id (
@@ -141,7 +141,7 @@ export async function getGroupMatches(
         match_date: match.match_date as string,
         start_time: match.start_time as string,
         player_expectation: match.player_expectation as 'practice' | 'competitive' | 'both',
-        status: match.status as string,
+        cancelled_at: (match.cancelled_at as string) || null,
         format: match.format as 'singles' | 'doubles',
         created_by: match.created_by as string,
         sport: match.sport as GroupMatch['match']['sport'],

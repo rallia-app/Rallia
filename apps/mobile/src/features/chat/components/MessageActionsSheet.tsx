@@ -73,19 +73,24 @@ function MessageActionsSheetComponent({ payload }: SheetProps<'message-actions'>
 
   const handleShowEmojiPicker = useCallback(() => {
     setShowEmojiPicker(true);
-    SheetManager.hide('message-actions');
+    // Don't hide the sheet - just show emoji picker on top
+    // The sheet content will be hidden when showEmojiPicker is true
   }, []);
 
   const handleEmojiSelect = useCallback(
     (emoji: string) => {
       setShowEmojiPicker(false);
       onReact?.(emoji);
+      // Close the sheet after selecting an emoji
+      SheetManager.hide('message-actions');
     },
     [onReact]
   );
 
   const handleCloseEmojiPicker = useCallback(() => {
     setShowEmojiPicker(false);
+    // Close the entire sheet when emoji picker is dismissed
+    SheetManager.hide('message-actions');
   }, []);
 
   const actions: ActionItem[] = [
@@ -132,12 +137,18 @@ function MessageActionsSheetComponent({ payload }: SheetProps<'message-actions'>
   return (
     <>
       <ActionSheet
-        gestureEnabled
+        gestureEnabled={!showEmojiPicker}
         containerStyle={[
           styles.sheetBackground,
           { backgroundColor: isDark ? colors.card : '#FFFFFF' },
+          // Hide sheet content when emoji picker is shown
+          showEmojiPicker && { height: 0, opacity: 0 },
         ]}
-        indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+        indicatorStyle={[
+          styles.handleIndicator, 
+          { backgroundColor: colors.border },
+          showEmojiPicker && { opacity: 0 },
+        ]}
       >
         <View style={styles.sheet}>
           {/* Message Preview */}

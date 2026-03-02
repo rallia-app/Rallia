@@ -110,7 +110,37 @@ export function generateMatchShareMessage(match: MatchDetailData, options: Share
   const inviteText = t('matchDetail.shareInvite', { sport: sportName });
   const dateTimeStr = time ? t('matchDetail.shareDateTime', { date, time }) : date;
 
-  return `${inviteText}\n\n` + `📅 ${dateTimeStr}\n` + `📍 ${location}\n\n` + `${deepLink}`;
+  // Build extra detail lines
+  const extraLines: string[] = [];
+
+  if (match.format) {
+    const formatLabel = t(`match.format.${match.format}` as TranslationKey);
+    extraLines.push(`👥 ${t('matchDetail.shareFormat', { format: formatLabel })}`);
+  }
+
+  if (match.duration) {
+    const durationLabel =
+      match.duration === 'custom' && match.custom_duration_minutes
+        ? `${match.custom_duration_minutes} min`
+        : t(`matchCreation.duration.${match.duration}` as TranslationKey);
+    extraLines.push(`⏱ ${t('matchDetail.shareDuration', { duration: durationLabel })}`);
+  }
+
+  if (match.min_rating_score) {
+    extraLines.push(
+      `🏅 ${t('matchDetail.shareMinLevel', { level: match.min_rating_score.label })}`
+    );
+  }
+
+  const extraBlock = extraLines.length > 0 ? `\n${extraLines.join('\n')}` : '';
+
+  return (
+    `${inviteText}\n\n` +
+    `📅 ${dateTimeStr}\n` +
+    `📍 ${location}` +
+    `${extraBlock}\n\n` +
+    `${deepLink}`
+  );
 }
 
 /**

@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
   Keyboard,
 } from 'react-native';
+import { ConfirmationModal } from '../../../components/ConfirmationModal';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -63,6 +64,15 @@ const TOTAL_STEPS = 3;
 // TYPES
 // =============================================================================
 
+/** Initial booking data when opening wizard from facility "Create game" */
+export interface InitialBookingForWizard {
+  facility: unknown;
+  slot: unknown;
+  facilityId: string;
+  courtId: string;
+  courtNumber: number | null;
+}
+
 interface MatchCreationWizardProps {
   /** Callback when wizard should be closed (closes entire sheet) */
   onClose: () => void;
@@ -72,6 +82,10 @@ interface MatchCreationWizardProps {
   onSuccess?: (matchId: string) => void;
   /** If provided, wizard is in edit mode with pre-filled data */
   editMatch?: MatchDetailData;
+  /** When set, wizard pre-fills steps 1–2 from this booking and starts at step 3 */
+  initialBookingForWizard?: InitialBookingForWizard | null;
+  /** Called after applying initialBookingForWizard so context can clear it */
+  onConsumeInitialBooking?: () => void;
 }
 
 interface ThemeColors {
@@ -236,11 +250,30 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
 // MAIN WIZARD COMPONENT
 // =============================================================================
 
+// Helpers for initial booking slot data (mirror WhereStep logic)
+function formatTime24(date: Date): string {
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+function calculateDurationMinutes(start: Date, end: Date): number {
+  return Math.round((end.getTime() - start.getTime()) / (1000 * 60));
+}
+function mapDurationToFormValue(minutes: number): '30' | '60' | '90' | '120' | 'custom' {
+  const standardDurations = [30, 60, 90, 120] as const;
+  for (const d of standardDurations) {
+    if (minutes === d) return String(d) as '30' | '60' | '90' | '120';
+  }
+  return 'custom';
+}
+
 export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   onClose,
   onBackToLanding,
   onSuccess,
   editMatch,
+  initialBookingForWizard,
+  onConsumeInitialBooking,
 }) => {
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
@@ -254,10 +287,24 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
 
   // State
   const [currentStep, setCurrentStep] = useState(1);
+  // Track highest step visited for lazy mounting (avoids mounting all steps on initial render)
+  const [highestStepVisited, setHighestStepVisited] = useState(1);
 
   // Track last saved state to detect unsaved changes
   const lastSavedStep = useRef<number | null>(null);
   const hasUnsavedChanges = useRef(false);
+
+  // Confirmation modal states (replace native Alert.alert)
+  const [showGenderMismatchModal, setShowGenderMismatchModal] = useState(false);
+  const [genderMismatchCount, setGenderMismatchCount] = useState(0);
+  const [showConfirmChangesModal, setShowConfirmChangesModal] = useState(false);
+  const [confirmChangesInfo, setConfirmChangesInfo] = useState({
+    changesList: '',
+    participantCount: 0,
+  });
+  const [showDiscardEditModal, setShowDiscardEditModal] = useState(false);
+  const [showResumeDraftModal, setShowResumeDraftModal] = useState(false);
+  const pendingMatchData = useRef<MatchFormSchemaData | null>(null);
 
   // Theme colors
   const themeColors = isDark ? darkTheme : lightTheme;
@@ -423,6 +470,73 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     });
   }, [playerPreferences, preferencesLoading, isEditMode, hasDraft, isDraftForSport, sportId, form]);
 
+  // Helper to format date as YYYY-MM-DD in local time
+  const formatDateLocal = useCallback((date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
+
+  // Apply initial booking data when opening from facility "Create game"
+  const hasAppliedInitialBooking = useRef(false);
+  useEffect(() => {
+    if (!initialBookingForWizard) {
+      hasAppliedInitialBooking.current = false;
+      return;
+    }
+    if (!onConsumeInitialBooking || isEditMode || hasAppliedInitialBooking.current) {
+      return;
+    }
+    const { facility, slot, facilityId, courtId } = initialBookingForWizard;
+    const slotTyped = slot as { datetime: Date; endDateTime: Date };
+    const facilityTyped = facility as {
+      name: string;
+      address?: string;
+      city?: string;
+      timezone?: string;
+    };
+    const facilityTimezone = facilityTyped.timezone || timezone;
+    const matchDate = formatDateLocal(slotTyped.datetime);
+    const startTime = formatTime24(slotTyped.datetime);
+    const endTime = formatTime24(slotTyped.endDateTime);
+    const durationMins = calculateDurationMinutes(slotTyped.datetime, slotTyped.endDateTime);
+    const duration = mapDurationToFormValue(durationMins);
+
+    form.setValue('locationType', 'facility', { shouldDirty: true });
+    form.setValue('facilityId', facilityId, { shouldDirty: true });
+    form.setValue('courtId', courtId, { shouldDirty: true });
+    form.setValue('courtStatus', 'booked', { shouldDirty: true });
+    form.setValue('locationName', facilityTyped.name, { shouldDirty: true });
+    const fullAddress = [facilityTyped.address, facilityTyped.city].filter(Boolean).join(', ');
+    form.setValue('locationAddress', fullAddress || undefined, { shouldDirty: true });
+    form.setValue('matchDate', matchDate, { shouldDirty: true });
+    form.setValue('startTime', startTime, { shouldDirty: true });
+    form.setValue('endTime', endTime, { shouldDirty: true });
+    form.setValue('duration', duration, { shouldDirty: true });
+    form.setValue('customDurationMinutes', durationMins, { shouldDirty: true });
+    form.setValue('timezone', facilityTimezone, { shouldDirty: true });
+
+    setBookedSlotData({
+      matchDate,
+      startTime,
+      endTime,
+      duration,
+      customDurationMinutes: durationMins,
+      timezone: facilityTimezone,
+    });
+    setCurrentStep(3);
+    hasAppliedInitialBooking.current = true;
+    onConsumeInitialBooking();
+  }, [
+    initialBookingForWizard,
+    onConsumeInitialBooking,
+    isEditMode,
+    form,
+    timezone,
+    formatDateLocal,
+  ]);
+
   // Delayed success state for smoother UX
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMatchId, setSuccessMatchId] = useState<string | null>(null);
@@ -490,28 +604,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     // Now we know the loading is complete
     if (hasDraft && draft && isDraftForSport(sportId)) {
       hasCheckedDraft.current = true;
-      Alert.alert(t('matchCreation.resumeDraft'), t('matchCreation.resumeDraftMessage'), [
-        {
-          text: t('matchCreation.discardDraft'),
-          style: 'destructive',
-          onPress: () => {
-            clearDraft();
-            resetForm();
-            lastSavedStep.current = null;
-            hasUnsavedChanges.current = false;
-          },
-        },
-        {
-          text: t('matchCreation.resumeDraft'),
-          onPress: () => {
-            loadFromDraft(draft.data);
-            setCurrentStep(draft.currentStep);
-            // Mark draft as already saved at this step
-            lastSavedStep.current = draft.currentStep;
-            hasUnsavedChanges.current = false;
-          },
-        },
-      ]);
+      setShowResumeDraftModal(true);
     } else {
       // No draft exists (loading complete, no draft found), mark as checked
       hasCheckedDraft.current = true;
@@ -525,14 +618,6 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       hasUnsavedChanges.current = true;
     }
   }, [isDirty, values]);
-
-  // Helper to format date as YYYY-MM-DD in local time
-  const formatDateLocal = useCallback((date: Date): string => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }, []);
 
   // Clear booked slot data when location type changes away from facility or facility is cleared
   // This unlocks the WhenFormatStep when user changes location type after booking a slot
@@ -622,7 +707,9 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     }
 
     if (currentStep < TOTAL_STEPS) {
-      setCurrentStep(prev => prev + 1);
+      const nextStep = currentStep + 1;
+      setCurrentStep(nextStep);
+      setHighestStepVisited(prev => Math.max(prev, nextStep));
     }
   }, [currentStep, validateStep, values, sportId, saveDraft, isEditMode, t, toast]);
 
@@ -635,7 +722,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     }
   }, [currentStep]);
 
-  // Handle slot booking from WhereStep - auto-fills date/time/duration in WhenStep
+  // Handle slot booking from WhereStep - auto-fills date/time/duration in WhenStep and jumps to step 3
   const handleSlotBooked = useCallback(
     (slotData: {
       matchDate: string;
@@ -660,6 +747,8 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       }
       form.setValue('timezone', slotData.timezone, { shouldDirty: true });
 
+      // Land on Preferences step (step 3) so user only fills out game preferences
+      setCurrentStep(3);
       successHaptic();
     },
     [form]
@@ -671,22 +760,25 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
 
     const changes: string[] = [];
 
+    // Normalize nullable values for comparison (null, undefined, '' are all equivalent)
+    const norm = (v: string | number | boolean | null | undefined) => v ?? '';
+
     // Date/Time changes
     if (values.matchDate !== editMatch.match_date) changes.push('date');
     if (values.startTime !== editMatch.start_time) changes.push('time');
     if (values.duration !== editMatch.duration) changes.push('duration');
 
     // Location changes
-    if (values.locationType !== editMatch.location_type) changes.push('location');
-    if (values.facilityId !== editMatch.facility_id) changes.push('location');
-    if (values.locationName !== editMatch.location_name) changes.push('location');
+    if (values.locationType !== (editMatch.location_type || 'tbd')) changes.push('location');
+    if (norm(values.facilityId) !== norm(editMatch.facility_id)) changes.push('location');
+    if (norm(values.locationName) !== norm(editMatch.location_name)) changes.push('location');
 
     // Format changes
     if (values.format !== editMatch.format) changes.push('format');
 
     // Cost changes
-    if (values.isCourtFree !== editMatch.is_court_free) changes.push('cost');
-    if (values.estimatedCost !== editMatch.estimated_cost) changes.push('cost');
+    if (values.isCourtFree !== (editMatch.is_court_free ?? true)) changes.push('cost');
+    if ((values.estimatedCost ?? 0) !== (editMatch.estimated_cost ?? 0)) changes.push('cost');
     if (
       values.costSplitType !==
       (editMatch.cost_split_type === 'host_pays'
@@ -822,24 +914,9 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
 
             if (genderWarning) {
               // Show confirmation for gender mismatch
-              Alert.alert(
-                t('matchCreation.validation.genderMismatchTitle'),
-                t('matchCreation.validation.genderMismatchMessage').replace(
-                  '{count}',
-                  String(genderWarning.affectedParticipantIds.length)
-                ),
-                [
-                  {
-                    text: t('common.cancel'),
-                    style: 'cancel',
-                  },
-                  {
-                    text: t('matchCreation.validation.updateAnyway'),
-                    style: 'destructive',
-                    onPress: () => performUpdate(matchData),
-                  },
-                ]
-              );
+              pendingMatchData.current = matchData;
+              setGenderMismatchCount(genderWarning.affectedParticipantIds.length);
+              setShowGenderMismatchModal(true);
               return;
             }
           }
@@ -870,22 +947,9 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
           const changesList = changeDescriptions.join(', ');
 
           // Show confirmation dialog
-          Alert.alert(
-            t('matchCreation.validation.confirmChangesTitle'),
-            t('matchCreation.validation.confirmChangesMessage')
-              .replace('{changes}', changesList)
-              .replace('{count}', String(joinedParticipants.length)),
-            [
-              {
-                text: t('common.cancel'),
-                style: 'cancel',
-              },
-              {
-                text: t('matchCreation.validation.confirmUpdate'),
-                onPress: () => performUpdate(matchData),
-              },
-            ]
-          );
+          pendingMatchData.current = matchData;
+          setConfirmChangesInfo({ changesList, participantCount: joinedParticipants.length });
+          setShowConfirmChangesModal(true);
           return;
         }
       }
@@ -916,14 +980,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     // In edit mode, just ask if they want to discard changes (no draft saving)
     if (isEditMode) {
       if (isDirty) {
-        Alert.alert(t('matchCreation.discardChanges'), t('matchCreation.discardEditMessage'), [
-          { text: t('matchCreation.keepEditing'), style: 'cancel' },
-          {
-            text: t('matchCreation.discardChanges'),
-            style: 'destructive',
-            onPress: onClose,
-          },
-        ]);
+        setShowDiscardEditModal(true);
       } else {
         onClose();
       }
@@ -1138,6 +1195,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                       setShowInviteStep(false);
                       resetForm();
                       setCurrentStep(1);
+                      setHighestStepVisited(1);
                     }}
                   >
                     <Text size="base" weight="regular" color={colors.textSecondary}>
@@ -1205,6 +1263,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
               t={t}
               isDark={isDark}
               sportId={selectedSport?.id}
+              sportName={selectedSport?.name}
               deviceTimezone={timezone}
               onSlotBooked={handleSlotBooked}
               preferredFacilityId={preferredFacilityId}
@@ -1212,29 +1271,33 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
             />
           </View>
 
-          {/* Step 2: When */}
+          {/* Step 2: When (lazy mounted) */}
           <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
-            <WhenFormatStep
-              form={form}
-              colors={colors}
-              t={t}
-              isDark={isDark}
-              locale={locale}
-              isLocked={bookedSlotData !== null}
-            />
+            {highestStepVisited >= 2 && (
+              <WhenFormatStep
+                form={form}
+                colors={colors}
+                t={t}
+                isDark={isDark}
+                locale={locale}
+                isLocked={bookedSlotData !== null}
+              />
+            )}
           </View>
 
-          {/* Step 3: Preferences */}
+          {/* Step 3: Preferences (lazy mounted) */}
           <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
-            <PreferencesStep
-              form={form}
-              colors={colors}
-              t={t}
-              isDark={isDark}
-              sportName={selectedSport?.name}
-              sportId={selectedSport?.id}
-              userId={session?.user?.id}
-            />
+            {highestStepVisited >= 3 && (
+              <PreferencesStep
+                form={form}
+                colors={colors}
+                t={t}
+                isDark={isDark}
+                sportName={selectedSport?.name}
+                sportId={selectedSport?.id}
+                userId={session?.user?.id}
+              />
+            )}
           </View>
         </Animated.View>
       </View>
@@ -1280,6 +1343,96 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
           </TouchableOpacity>
         )}
       </View>
+
+      {/* Gender mismatch confirmation */}
+      <ConfirmationModal
+        visible={showGenderMismatchModal}
+        onClose={() => {
+          setShowGenderMismatchModal(false);
+          pendingMatchData.current = null;
+        }}
+        onConfirm={() => {
+          setShowGenderMismatchModal(false);
+          if (pendingMatchData.current) {
+            performUpdate(pendingMatchData.current);
+            pendingMatchData.current = null;
+          }
+        }}
+        title={t('matchCreation.validation.genderMismatchTitle')}
+        message={t('matchCreation.validation.genderMismatchMessage').replace(
+          '{count}',
+          String(genderMismatchCount)
+        )}
+        confirmLabel={t('matchCreation.validation.updateAnyway')}
+        cancelLabel={t('common.cancel')}
+        destructive
+      />
+
+      {/* Confirm impactful changes */}
+      <ConfirmationModal
+        visible={showConfirmChangesModal}
+        onClose={() => {
+          setShowConfirmChangesModal(false);
+          pendingMatchData.current = null;
+        }}
+        onConfirm={() => {
+          setShowConfirmChangesModal(false);
+          if (pendingMatchData.current) {
+            performUpdate(pendingMatchData.current);
+            pendingMatchData.current = null;
+          }
+        }}
+        title={t('matchCreation.validation.confirmChangesTitle')}
+        message={t('matchCreation.validation.confirmChangesMessage')
+          .replace('{changes}', confirmChangesInfo.changesList)
+          .replace('{count}', String(confirmChangesInfo.participantCount))}
+        confirmLabel={t('matchCreation.validation.confirmUpdate')}
+        cancelLabel={t('common.cancel')}
+      />
+
+      {/* Discard edit changes confirmation */}
+      <ConfirmationModal
+        visible={showDiscardEditModal}
+        onClose={() => setShowDiscardEditModal(false)}
+        onConfirm={() => {
+          setShowDiscardEditModal(false);
+          onClose();
+        }}
+        title={t('matchCreation.discardChanges')}
+        message={t('matchCreation.discardEditMessage')}
+        confirmLabel={t('matchCreation.discardChanges')}
+        cancelLabel={t('matchCreation.keepEditing')}
+        destructive
+      />
+
+      {/* Resume draft confirmation */}
+      <ConfirmationModal
+        visible={showResumeDraftModal}
+        onClose={() => {
+          // "Discard" = dismiss the draft
+          setShowResumeDraftModal(false);
+          clearDraft();
+          resetForm();
+          lastSavedStep.current = null;
+          hasUnsavedChanges.current = false;
+        }}
+        onConfirm={() => {
+          // "Resume" = load the draft
+          setShowResumeDraftModal(false);
+          if (draft) {
+            loadFromDraft(draft.data);
+            setCurrentStep(draft.currentStep);
+            setHighestStepVisited(draft.currentStep);
+            lastSavedStep.current = draft.currentStep;
+            hasUnsavedChanges.current = false;
+          }
+        }}
+        title={t('matchCreation.resumeDraft')}
+        message={t('matchCreation.resumeDraftMessage')}
+        confirmLabel={t('matchCreation.resumeDraft')}
+        cancelLabel={t('matchCreation.discardDraft')}
+        destructive={false}
+      />
     </View>
   );
 };

@@ -1,15 +1,16 @@
 /**
- * useGroupMemberManagement Hook
+ * useGroupMemberManagement Hook (Refactored)
  * Handles member CRUD operations for group chat
  * - Add members
  * - Remove members
  * - Promote to admin
  * - Demote to member
  * - Leave group
+ * 
+ * Refactored to use modals instead of Alert.alert for better UX
  */
 
 import { useState, useCallback } from 'react';
-import { Alert } from 'react-native';
 import {
   addConversationParticipant,
   removeConversationParticipant,
@@ -26,6 +27,21 @@ interface NetworkInfo {
   cover_image_url: string | null;
   description: string | null;
   member_count: number;
+  type?: 'community' | 'player_group' | string | null;
+}
+
+export interface SelectedMemberInfo {
+  playerId: string;
+  name: string;
+  profilePictureUrl: string | null;
+  isAdmin: boolean;
+}
+
+export interface SelectedMemberInfo {
+  playerId: string;
+  name: string;
+  profilePictureUrl: string | null;
+  isAdmin: boolean;
 }
 
 interface UseGroupMemberManagementProps {
@@ -38,16 +54,54 @@ interface UseGroupMemberManagementProps {
   onLeaveGroup: () => void;
 }
 
+export interface ConfirmationConfig {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  destructive: boolean;
+  onConfirm: () => void;
+}
+
 interface UseGroupMemberManagementReturn {
+  // State
   isUpdating: boolean;
   showAddMemberModal: boolean;
   setShowAddMemberModal: (show: boolean) => void;
+  
+  // Member options modal state
+  showMemberOptionsModal: boolean;
+  selectedMember: SelectedMemberInfo | null;
+  closeMemberOptionsModal: () => void;
+  
+  // Confirmation modal state
+  showConfirmationModal: boolean;
+  confirmationConfig: ConfirmationConfig | null;
+  closeConfirmationModal: () => void;
+  
+  // Action handlers
   handleAddMember: () => void;
   handleMembersAdded: (memberIds: string[]) => Promise<void>;
-  handleRemoveMember: (memberId: string) => void;
-  handlePromoteMember: (memberId: string) => void;
-  handleDemoteMember: (memberId: string) => void;
-  handleMemberLongPress: (memberId: string, isMemberAdmin: boolean) => void;
+  handleMemberPress: (member: SelectedMemberInfo) => void;
+  
+  // Member option actions (called from options modal)
+  handleViewProfile: () => void;
+  handleRemoveMember: () => void;
+  handlePromoteMember: () => void;
+  handleDemoteMember: () => void;
+  handleLeaveGroup: () => void;
+  
+  // Build options for current selected member
+  getMemberOptions: () => Array<{
+    id: string;
+    label: string;
+    icon: string;
+    onPress: () => void;
+    destructive?: boolean;
+  }>;
+  
+  // Error handling
+  error: string | null;
+  clearError: () => void;
 }
 
 export function useGroupMemberManagement({
@@ -61,6 +115,27 @@ export function useGroupMemberManagement({
 }: UseGroupMemberManagementProps): UseGroupMemberManagementReturn {
   const [isUpdating, setIsUpdating] = useState(false);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Member options modal state
+  const [showMemberOptionsModal, setShowMemberOptionsModal] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<SelectedMemberInfo | null>(null);
+  
+  // Confirmation modal state
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [confirmationConfig, setConfirmationConfig] = useState<ConfirmationConfig | null>(null);
+
+  const clearError = useCallback(() => setError(null), []);
+
+  const closeMemberOptionsModal = useCallback(() => {
+    setShowMemberOptionsModal(false);
+    setSelectedMember(null);
+  }, []);
+
+  const closeConfirmationModal = useCallback(() => {
+    setShowConfirmationModal(false);
+    setConfirmationConfig(null);
+  }, []);
 
   // Handle add member
   const handleAddMember = useCallback(() => {
@@ -72,222 +147,280 @@ export function useGroupMemberManagement({
     setIsUpdating(true);
     try {
       for (const memberId of memberIds) {
-        // Add to conversation
         await addConversationParticipant(conversationId, memberId);
         
-        // For network-linked groups, also add to the network
         if (networkInfo?.id && playerId) {
           try {
             await addGroupMember(networkInfo.id, playerId, memberId);
           } catch (networkError) {
-            // Member might already be in network, that's OK
             console.log('Member may already be in network:', networkError);
           }
         }
       }
       await onRefetch();
-    } catch (error) {
-      console.error('Error adding members:', error);
-      Alert.alert('Error', 'Failed to add some members');
+    } catch (err) {
+      console.error('Error adding members:', err);
+      setError('Failed to add some members');
     } finally {
       setIsUpdating(false);
     }
   }, [conversationId, onRefetch, networkInfo, playerId]);
 
-  // Handle remove member
-  const handleRemoveMember = useCallback(async (memberId: string) => {
-    if (memberId === playerId) {
-      Alert.alert(
-        'Leave Group',
-        'Are you sure you want to leave this group?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Leave',
-            style: 'destructive',
-            onPress: async () => {
+  // Handle member press - show options modal
+  const handleMemberPress = useCallback((member: SelectedMemberInfo) => {
+    setSelectedMember(member);
+    setShowMemberOptionsModal(true);
+  }, []);
+
+  // View profile action
+  const handleViewProfile = useCallback(() => {
+    // This will be handled by the screen - just close the modal
+    closeMemberOptionsModal();
+  }, [closeMemberOptionsModal]);
+
+  // Leave group action (for self)
+  const handleLeaveGroupAction = useCallback(() => {
+    closeMemberOptionsModal();
+    setConfirmationConfig({
+      title: 'Leave Group',
+      message: 'Are you sure you want to leave this group?',
+      confirmLabel: 'Leave',
+      destructive: true,
+      onConfirm: async () => {
+        setIsUpdating(true);
+        try {
+          if (playerId) {
+            await removeConversationParticipant(conversationId, playerId);
+            
+            if (networkInfo?.id) {
               try {
-                // Remove from conversation
-                await removeConversationParticipant(conversationId, memberId);
-                
-                // For network-linked groups, also leave the network
-                if (networkInfo?.id) {
-                  try {
-                    await leaveGroup(networkInfo.id, memberId);
-                  } catch (networkError) {
-                    console.log('Error leaving network (may not be a member):', networkError);
-                  }
-                }
-                
-                onLeaveGroup();
-              } catch (error) {
-                console.error('Error leaving group:', error);
-                Alert.alert('Error', 'Failed to leave group');
+                await leaveGroup(networkInfo.id, playerId);
+              } catch (networkError) {
+                console.log('Error leaving network (may not be a member):', networkError);
               }
-            },
-          },
-        ]
-      );
-      return;
-    }
-
-    if (!isAdmin) {
-      Alert.alert('Permission Denied', 'Only group admin can remove members');
-      return;
-    }
-
-    Alert.alert(
-      'Remove Member',
-      'Are you sure you want to remove this member?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            setIsUpdating(true);
-            try {
-              // Remove from conversation
-              await removeConversationParticipant(conversationId, memberId);
-              
-              // For network-linked groups, also remove from the network
-              if (networkInfo?.id && playerId) {
-                try {
-                  await removeGroupMember(networkInfo.id, playerId, memberId);
-                } catch (networkError) {
-                  console.log('Error removing from network:', networkError);
-                }
-              }
-              
-              await onRefetch();
-            } catch (error) {
-              console.error('Error removing member:', error);
-              Alert.alert('Error', 'Failed to remove member');
-            } finally {
-              setIsUpdating(false);
             }
-          },
-        },
-      ]
-    );
-  }, [conversationId, playerId, isAdmin, onRefetch, onLeaveGroup, networkInfo]);
+          }
+          closeConfirmationModal();
+          onLeaveGroup();
+        } catch (err) {
+          console.error('Error leaving group:', err);
+          setError('Failed to leave group');
+          closeConfirmationModal();
+        } finally {
+          setIsUpdating(false);
+        }
+      },
+    });
+    setShowConfirmationModal(true);
+  }, [conversationId, playerId, networkInfo, onLeaveGroup, closeMemberOptionsModal, closeConfirmationModal]);
 
-  // Handle promote member to admin (only for network-linked groups)
-  const handlePromoteMember = useCallback(async (memberId: string) => {
-    if (!networkInfo?.id || !playerId) {
-      Alert.alert('Error', 'Cannot promote members in this group');
-      return;
-    }
-
-    Alert.alert(
-      'Promote to Admin',
-      'Are you sure you want to make this member an admin?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Promote',
-          onPress: async () => {
-            setIsUpdating(true);
+  // Remove member action
+  const handleRemoveMemberAction = useCallback(() => {
+    if (!selectedMember) return;
+    
+    const memberName = selectedMember.name;
+    const memberId = selectedMember.playerId;
+    
+    closeMemberOptionsModal();
+    setConfirmationConfig({
+      title: 'Remove Member',
+      message: `Are you sure you want to remove ${memberName} from this group?`,
+      confirmLabel: 'Remove',
+      destructive: true,
+      onConfirm: async () => {
+        setIsUpdating(true);
+        try {
+          await removeConversationParticipant(conversationId, memberId);
+          
+          if (networkInfo?.id && playerId) {
             try {
-              await promoteMember(networkInfo.id, playerId, memberId);
-              // Refresh moderator list
-              await onRefetchNetworkInfo();
-            } catch (error) {
-              console.error('Error promoting member:', error);
-              Alert.alert('Error', 'Failed to promote member');
-            } finally {
-              setIsUpdating(false);
+              await removeGroupMember(networkInfo.id, playerId, memberId);
+            } catch (networkError) {
+              console.log('Error removing from network:', networkError);
             }
-          },
-        },
-      ]
-    );
-  }, [networkInfo, playerId, onRefetchNetworkInfo]);
+          }
+          
+          await onRefetch();
+          closeConfirmationModal();
+        } catch (err) {
+          console.error('Error removing member:', err);
+          setError('Failed to remove member');
+          closeConfirmationModal();
+        } finally {
+          setIsUpdating(false);
+        }
+      },
+    });
+    setShowConfirmationModal(true);
+  }, [selectedMember, conversationId, playerId, networkInfo, onRefetch, closeMemberOptionsModal, closeConfirmationModal]);
 
-  // Handle demote member to regular member (only for network-linked groups)
-  const handleDemoteMember = useCallback(async (memberId: string) => {
-    if (!networkInfo?.id || !playerId) {
-      Alert.alert('Error', 'Cannot demote members in this group');
-      return;
-    }
+  // Promote member action
+  const handlePromoteMemberAction = useCallback(() => {
+    if (!selectedMember || !networkInfo?.id || !playerId) return;
+    
+    const memberName = selectedMember.name;
+    const memberId = selectedMember.playerId;
+    
+    closeMemberOptionsModal();
+    setConfirmationConfig({
+      title: 'Promote to Admin',
+      message: `Are you sure you want to make ${memberName} an admin?`,
+      confirmLabel: 'Promote',
+      destructive: false,
+      onConfirm: async () => {
+        setIsUpdating(true);
+        try {
+          await promoteMember(networkInfo.id, playerId, memberId);
+          await onRefetchNetworkInfo();
+          closeConfirmationModal();
+        } catch (err) {
+          console.error('Error promoting member:', err);
+          setError('Failed to promote member');
+          closeConfirmationModal();
+        } finally {
+          setIsUpdating(false);
+        }
+      },
+    });
+    setShowConfirmationModal(true);
+  }, [selectedMember, networkInfo, playerId, onRefetchNetworkInfo, closeMemberOptionsModal, closeConfirmationModal]);
 
-    Alert.alert(
-      'Demote to Member',
-      'Are you sure you want to remove admin privileges from this member?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Demote',
-          style: 'destructive',
-          onPress: async () => {
-            setIsUpdating(true);
-            try {
-              await demoteMember(networkInfo.id, playerId, memberId);
-              // Refresh moderator list
-              await onRefetchNetworkInfo();
-            } catch (error) {
-              console.error('Error demoting member:', error);
-              Alert.alert('Error', 'Failed to demote member. You may be the last admin.');
-            } finally {
-              setIsUpdating(false);
-            }
-          },
-        },
-      ]
-    );
-  }, [networkInfo, playerId, onRefetchNetworkInfo]);
+  // Demote member action
+  const handleDemoteMemberAction = useCallback(() => {
+    if (!selectedMember || !networkInfo?.id || !playerId) return;
+    
+    const memberName = selectedMember.name;
+    const memberId = selectedMember.playerId;
+    
+    closeMemberOptionsModal();
+    setConfirmationConfig({
+      title: 'Demote to Member',
+      message: `Are you sure you want to remove admin privileges from ${memberName}?`,
+      confirmLabel: 'Demote',
+      destructive: true,
+      onConfirm: async () => {
+        setIsUpdating(true);
+        try {
+          await demoteMember(networkInfo.id, playerId, memberId);
+          await onRefetchNetworkInfo();
+          closeConfirmationModal();
+        } catch (err) {
+          console.error('Error demoting member:', err);
+          setError('Failed to demote member. You may be the last admin.');
+          closeConfirmationModal();
+        } finally {
+          setIsUpdating(false);
+        }
+      },
+    });
+    setShowConfirmationModal(true);
+  }, [selectedMember, networkInfo, playerId, onRefetchNetworkInfo, closeMemberOptionsModal, closeConfirmationModal]);
 
-  // Show member options (promote/demote/remove)
-  const handleMemberLongPress = useCallback((memberId: string, isMemberAdmin: boolean) => {
-    if (memberId === playerId) return; // Can't manage yourself
-    if (!isAdmin) return; // Only admins can manage members
+  // Build options for the selected member
+  const getMemberOptions = useCallback(() => {
+    if (!selectedMember) return [];
+    
+    const options: Array<{
+      id: string;
+      label: string;
+      icon: string;
+      onPress: () => void;
+      destructive?: boolean;
+    }> = [];
 
-    const options: Array<{ text: string; onPress?: () => void; style?: 'cancel' | 'destructive' }> = [];
+    // Always show view profile option
+    options.push({
+      id: 'view-profile',
+      label: 'View Profile',
+      icon: 'person-outline',
+      onPress: handleViewProfile,
+    });
 
-    // For network-linked groups, show promote/demote options
-    if (networkInfo?.id) {
-      if (isMemberAdmin) {
-        options.push({
-          text: 'Demote to Member',
-          style: 'destructive',
-          onPress: () => handleDemoteMember(memberId),
-        });
+    const isSelf = selectedMember.playerId === playerId;
+    
+    if (isSelf) {
+      // Self - show leave option
+      options.push({
+        id: 'leave',
+        label: 'Leave Group',
+        icon: 'exit-outline',
+        onPress: handleLeaveGroupAction,
+        destructive: true,
+      });
+    } else if (isAdmin) {
+      // Admin can manage other members
+      if (networkInfo?.id) {
+        // For network-linked groups, show promote/demote
+        if (selectedMember.isAdmin) {
+          options.push({
+            id: 'demote',
+            label: 'Demote to Member',
+            icon: 'arrow-down-circle-outline',
+            onPress: handleDemoteMemberAction,
+            destructive: true,
+          });
+        } else {
+          options.push({
+            id: 'promote',
+            label: 'Promote to Admin',
+            icon: 'arrow-up-circle-outline',
+            onPress: handlePromoteMemberAction,
+          });
+          options.push({
+            id: 'remove',
+            label: 'Remove from Group',
+            icon: 'person-remove-outline',
+            onPress: handleRemoveMemberAction,
+            destructive: true,
+          });
+        }
       } else {
-        options.push({
-          text: 'Promote to Admin',
-          onPress: () => handlePromoteMember(memberId),
-        });
-        options.push({
-          text: 'Remove from Group',
-          style: 'destructive',
-          onPress: () => handleRemoveMember(memberId),
-        });
-      }
-    } else {
-      // For simple groups, only show remove option (non-admins only)
-      if (!isMemberAdmin) {
-        options.push({
-          text: 'Remove from Group',
-          style: 'destructive',
-          onPress: () => handleRemoveMember(memberId),
-        });
+        // For simple groups, only show remove (for non-admins)
+        if (!selectedMember.isAdmin) {
+          options.push({
+            id: 'remove',
+            label: 'Remove from Group',
+            icon: 'person-remove-outline',
+            onPress: handleRemoveMemberAction,
+            destructive: true,
+          });
+        }
       }
     }
 
-    options.push({ text: 'Cancel', style: 'cancel' });
-
-    Alert.alert('Manage Member', 'Choose an action', options);
-  }, [playerId, isAdmin, networkInfo, handlePromoteMember, handleDemoteMember, handleRemoveMember]);
+    return options;
+  }, [
+    selectedMember,
+    playerId,
+    isAdmin,
+    networkInfo,
+    handleViewProfile,
+    handleLeaveGroupAction,
+    handleRemoveMemberAction,
+    handlePromoteMemberAction,
+    handleDemoteMemberAction,
+  ]);
 
   return {
     isUpdating,
     showAddMemberModal,
     setShowAddMemberModal,
+    showMemberOptionsModal,
+    selectedMember,
+    closeMemberOptionsModal,
+    showConfirmationModal,
+    confirmationConfig,
+    closeConfirmationModal,
     handleAddMember,
     handleMembersAdded,
-    handleRemoveMember,
-    handlePromoteMember,
-    handleDemoteMember,
-    handleMemberLongPress,
+    handleMemberPress,
+    handleViewProfile,
+    handleRemoveMember: handleRemoveMemberAction,
+    handlePromoteMember: handlePromoteMemberAction,
+    handleDemoteMember: handleDemoteMemberAction,
+    handleLeaveGroup: handleLeaveGroupAction,
+    getMemberOptions,
+    error,
+    clearError,
   };
 }

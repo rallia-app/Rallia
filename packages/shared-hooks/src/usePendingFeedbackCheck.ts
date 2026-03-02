@@ -126,6 +126,7 @@ export function usePendingFeedbackCheck(options: UsePendingFeedbackCheckOptions)
           fullName: fullName || displayName,
           avatarUrl: profile?.profile_picture_url,
           hasExistingFeedback: false, // We'll let the FeedbackSheet wizard check this
+          hasExistingReport: false,
         });
       }
     }

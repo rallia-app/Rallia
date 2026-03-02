@@ -14,17 +14,21 @@
  */
 
 import * as React from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import {
   View,
   StyleSheet,
   TouchableOpacity,
+  TouchableWithoutFeedback,
+  Modal,
   Image,
   Linking,
   Platform,
-  Animated,
+  Animated as RNAnimated,
   Easing,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import MapView, { Marker } from 'react-native-maps';
 import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
@@ -48,12 +52,15 @@ import {
   selectionHaptic,
   successHaptic,
   errorHaptic,
+  warningHaptic,
   formatTimeInTimezone,
   getTimeDifferenceFromNow,
   getMatchEndTimeDifferenceFromNow,
   formatIntuitiveDateInTimezone,
   getProfilePictureUrl,
   deriveMatchStatus,
+  getMatchTier,
+  HIGH_REPUTATION_THRESHOLD,
 } from '@rallia/shared-utils';
 import { useMatchDetailSheet } from '../context/MatchDetailSheetContext';
 import { useActionsSheet } from '../context/ActionsSheetContext';
@@ -65,44 +72,35 @@ import {
   useRequireOnboarding,
   type TranslationKey,
 } from '../hooks';
-import { useTheme, usePlayer, useMatchActions } from '@rallia/shared-hooks';
-import { getMatchChat, getMatchWithDetails } from '@rallia/shared-services';
+import {
+  useTheme,
+  usePlayer,
+  useMatchActions,
+  usePlayerReputation,
+  useConfirmMatchScore,
+  useDisputeMatchScore,
+} from '@rallia/shared-hooks';
+import {
+  getMatchChat,
+  getMatchWithDetails,
+  TIER_COLORS,
+  getTierForScore,
+  getTierConfig,
+  MIN_EVENTS_FOR_PUBLIC,
+} from '@rallia/shared-services';
 import { SheetManager } from 'react-native-actions-sheet';
 import { shareMatch } from '../utils';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import { ConfirmationModal } from './ConfirmationModal';
-import { RequesterDetailsModal } from './RequesterDetailsModal';
+import { SportIcon } from './SportIcon';
 import { useAppNavigation } from '../navigation';
-import type {
-  PlayerWithProfile,
-  MatchParticipantWithPlayer,
-  OpponentForFeedback,
-} from '@rallia/shared-types';
+import type { PlayerWithProfile, OpponentForFeedback } from '@rallia/shared-types';
 
 // Use base.white from design system for consistency
 
 // =============================================================================
 // TYPES & CONSTANTS
 // =============================================================================
-
-type MatchTier = 'mostWanted' | 'readyToPlay' | 'regular';
-
-/**
- * Threshold for "high reputation" creator (percentage 0-100)
- */
-const HIGH_REPUTATION_THRESHOLD = 90;
-
-/**
- * Determine match tier based on court status and creator reputation
- */
-function getMatchTier(courtStatus: string | null, creatorReputationScore?: number): MatchTier {
-  const isCourtBooked = courtStatus === 'reserved';
-  const isHighReputation = (creatorReputationScore ?? 0) >= HIGH_REPUTATION_THRESHOLD;
-
-  if (isCourtBooked && isHighReputation) return 'mostWanted';
-  if (isCourtBooked) return 'readyToPlay';
-  return 'regular';
-}
 
 /**
  * Tier-based color palettes for accent strips and backgrounds
@@ -150,14 +148,14 @@ interface ThemeColors {
  * Get time display for match date/time
  * Uses the same format as the cards: "Today • 14:00 - 16:00"
  */
-function getRelativeTimeDisplay(
+function getDateTimeParts(
   dateString: string,
   startTime: string,
   endTime: string,
   timezone: string,
   locale: string,
   t: (key: TranslationKey, options?: Record<string, string | number | boolean>) => string
-): { label: string; isUrgent: boolean } {
+): { dateLabel: string; startTimeLabel: string; durationLabel: string; isUrgent: boolean } {
   const tz = timezone || 'UTC';
 
   // Calculate time difference to determine if urgent (within 3 hours)
@@ -176,13 +174,42 @@ function getRelativeTimeDisplay(
     dateLabel = dateResult.label;
   }
 
-  // Format time range (locale-aware: 12h for English, 24h for French)
+  // Format start time (locale-aware: 12h for English, 24h for French)
   const startResult = formatTimeInTimezone(dateString, startTime, tz, locale);
-  const endResult = formatTimeInTimezone(dateString, endTime, tz, locale);
-  const timeRange = `${startResult.formattedTime} - ${endResult.formattedTime}`;
-  const separator = t('common.time.timeSeparator');
 
-  return { label: `${dateLabel}${separator}${timeRange}`, isUrgent };
+  // Calculate duration from start and end times
+  const [startH, startM] = startTime.split(':').map(Number);
+  const [endH, endM] = endTime.split(':').map(Number);
+  let durationMin = endH * 60 + endM - (startH * 60 + startM);
+  if (durationMin <= 0) durationMin += 24 * 60; // handle midnight crossing
+  const durationHours = Math.floor(durationMin / 60);
+  const durationRemMin = durationMin % 60;
+  const durationLabel =
+    durationRemMin > 0
+      ? `${durationHours}h${durationRemMin.toString().padStart(2, '0')}`
+      : `${durationHours}h`;
+
+  return { dateLabel, startTimeLabel: startResult.formattedTime, durationLabel, isUrgent };
+}
+
+/**
+ * Format milliseconds into a clean countdown with seconds.
+ * >= 1h  → "1:30:05"
+ * < 1h   → "12:45"
+ * < 1m   → "0:32"
+ */
+function formatCountdown(ms: number): string {
+  if (ms <= 0) return '0:00';
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const ss = seconds.toString().padStart(2, '0');
+  if (hours > 0) {
+    const mm = minutes.toString().padStart(2, '0');
+    return `${hours}:${mm}:${ss}`;
+  }
+  return `${minutes}:${ss}`;
 }
 
 /**
@@ -273,14 +300,17 @@ function getParticipantInfo(match: MatchDetailData): {
 /**
  * Check if leaving this match will affect the player's reputation.
  *
- * Per the spec, a reputation penalty (-25 points) applies only when ALL conditions are met:
+ * Graduated penalty applies when ALL conditions are met:
  * 1. Match is full (all spots taken)
- * 2. Match was created more than 24 hours before start time (planned match)
- * 3. Match was NOT edited within 24 hours of start time (no last-minute host changes)
- * 4. Player is leaving within 24 hours of start time
+ * 2. Court is reserved (court_status = 'reserved')
+ * 3. Match was created more than 24 hours before start time (planned match)
+ * 4. Match was NOT explicitly edited by host within 24 hours of NOW (no recent host changes)
+ * 5. Player is leaving within 24 hours of start time
+ *
+ * Note: cooling-off (joined <1h ago) is checked server-side only.
  *
  * @param match - The match data
- * @returns true if leaving will incur a reputation penalty
+ * @returns true if leaving will likely incur a reputation penalty
  */
 function willLeaveAffectReputation(match: MatchDetailData): boolean {
   const participantInfo = getParticipantInfo(match);
@@ -290,40 +320,40 @@ function willLeaveAffectReputation(match: MatchDetailData): boolean {
     return false;
   }
 
-  // Calculate match start datetime
-  const matchStartDateTime = new Date(`${match.match_date}T${match.start_time}`);
-  const now = new Date();
-
-  // Condition 4: Must be within 24 hours of start time
-  const hoursUntilMatch = (matchStartDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-  if (hoursUntilMatch >= 24 || hoursUntilMatch < 0) {
-    // Not within 24h window, or match already started
+  // Condition 2: Court must be reserved
+  if (match.court_status !== 'reserved') {
     return false;
   }
 
-  // Condition 2: Match must have been created more than 24 hours before start
+  // Use timezone-aware calculation
+  const tz = match.timezone || 'UTC';
+  const msUntilMatch = getTimeDifferenceFromNow(match.match_date, match.start_time, tz);
+  const hoursUntilMatch = msUntilMatch / (1000 * 60 * 60);
+
+  // Condition 5: Must be within 24 hours of start time
+  if (hoursUntilMatch >= 24) {
+    return false;
+  }
+
+  // Condition 3: Match must have been created more than 24 hours before start
   if (match.created_at) {
     const createdAt = new Date(match.created_at);
-    const hoursFromCreationToStart =
-      (matchStartDateTime.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+    const matchStartMs = Date.now() + msUntilMatch;
+    const hoursFromCreationToStart = (matchStartMs - createdAt.getTime()) / (1000 * 60 * 60);
     if (hoursFromCreationToStart < 24) {
-      // Spontaneous/last-minute match - no penalty
       return false;
     }
   }
 
-  // Condition 3: Match must NOT have been edited within 24 hours of start
-  if (match.updated_at) {
-    const updatedAt = new Date(match.updated_at);
-    const hoursFromUpdateToStart =
-      (matchStartDateTime.getTime() - updatedAt.getTime()) / (1000 * 60 * 60);
-    if (hoursFromUpdateToStart < 24) {
-      // Host made last-minute changes - no penalty for leaving
+  // Condition 4: Match must NOT have been explicitly edited by host within 24 hours of NOW
+  if (match.host_edited_at) {
+    const hostEditedAt = new Date(match.host_edited_at);
+    const hoursSinceEdit = (Date.now() - hostEditedAt.getTime()) / (1000 * 60 * 60);
+    if (hoursSinceEdit < 24) {
       return false;
     }
   }
 
-  // All conditions met - leaving will affect reputation
   return true;
 }
 
@@ -348,63 +378,55 @@ function isWithin24HoursOfStart(match: MatchDetailData): boolean {
 /**
  * Check if cancelling this match will affect the creator's reputation.
  *
- * Per the spec, a reputation penalty (-25 points) applies only when BOTH conditions are met:
- * 1. Match was created more than 24 hours before start time (planned match)
- * 2. Creator is cancelling within 24 hours of start time
+ * Graduated penalty applies when ALL conditions are met:
+ * 1. Court is reserved (court_status = 'reserved')
+ * 2. Match was created more than 24 hours before start time (planned match)
+ * 3. There are other joined participants
+ * 4. Creator is cancelling within 24 hours of start time
  *
- * Note: Unlike leaving, the match fullness is NOT a factor for cancellation penalties.
+ * Note: cooling-off (created <1h ago) is checked server-side only.
  *
  * @param match - The match data
- * @returns true if cancelling will incur a reputation penalty
+ * @returns true if cancelling will likely incur a reputation penalty
  */
 function willCancelAffectReputation(match: MatchDetailData): boolean {
-  // Calculate match start datetime
-  const matchStartDateTime = new Date(`${match.match_date}T${match.start_time}`);
-  const now = new Date();
-
-  // Condition 2: Must be within 24 hours of start time
-  const hoursUntilMatch = (matchStartDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-  if (hoursUntilMatch >= 24 || hoursUntilMatch < 0) {
-    // Not within 24h window, or match already started
+  // Condition 1: Court must be reserved
+  if (match.court_status !== 'reserved') {
     return false;
   }
 
-  // Condition 1: Match must have been created more than 24 hours before start
+  // Condition 3: Must have other joined participants
+  const participantInfo = getParticipantInfo(match);
+  if (participantInfo.current <= 1) {
+    return false;
+  }
+
+  // Use timezone-aware calculation
+  const tz = match.timezone || 'UTC';
+  const msUntilMatch = getTimeDifferenceFromNow(match.match_date, match.start_time, tz);
+  const hoursUntilMatch = msUntilMatch / (1000 * 60 * 60);
+
+  // Condition 4: Must be within 24 hours of start time
+  if (hoursUntilMatch >= 24) {
+    return false;
+  }
+
+  // Condition 2: Match must have been created more than 24 hours before start
   if (match.created_at) {
     const createdAt = new Date(match.created_at);
-    const hoursFromCreationToStart =
-      (matchStartDateTime.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+    const matchStartMs = Date.now() + msUntilMatch;
+    const hoursFromCreationToStart = (matchStartMs - createdAt.getTime()) / (1000 * 60 * 60);
     if (hoursFromCreationToStart < 24) {
-      // Spontaneous/last-minute match - no penalty
       return false;
     }
   }
 
-  // All conditions met - cancelling will affect reputation
   return true;
 }
 
 // =============================================================================
 // SUB-COMPONENTS
 // =============================================================================
-
-interface InfoRowProps {
-  icon?: keyof typeof Ionicons.glyphMap;
-  iconColor?: string;
-  children: React.ReactNode;
-  colors: ThemeColors;
-}
-
-const InfoRow: React.FC<InfoRowProps> = ({ icon, iconColor, children, colors }) => (
-  <View style={styles.infoRow}>
-    {icon != null && (
-      <View style={styles.infoIconContainer}>
-        <Ionicons name={icon} size={20} color={iconColor || colors.iconMuted} />
-      </View>
-    )}
-    <View style={styles.infoContent}>{children}</View>
-  </View>
-);
 
 interface BadgeProps {
   label: string;
@@ -427,6 +449,8 @@ interface ParticipantAvatarProps {
   isHost?: boolean;
   isEmpty?: boolean;
   isCheckedIn?: boolean;
+  isMostWanted?: boolean;
+  certificationStatus?: 'self_declared' | 'certified' | 'disputed';
   colors: ThemeColors;
   isDark: boolean;
   /** Tier accent color for host badge and filled avatar borders */
@@ -435,20 +459,77 @@ interface ParticipantAvatarProps {
   tierAccentLight?: string;
 }
 
+const MOST_WANTED_COLOR = '#5B21B6'; // violet-800 (matching platinum tier)
+const CERTIFICATION_BADGE_COLORS: Record<
+  'self_declared' | 'certified' | 'disputed',
+  { bg: string; icon: string }
+> = {
+  self_declared: { bg: '#FFC107', icon: 'help-circle' },
+  certified: { bg: '#4CAF50', icon: 'checkmark-circle' },
+  disputed: { bg: '#F44336', icon: 'alert-circle' },
+};
+
+// Badge positions stacked on the left side, following the avatar circle curve.
+// Avatar is 44x44, badge is 14x14. Bottom-left is the anchor; badges stack upward.
+// Ordered bottom-to-top so index 0 = bottom-left, index 1 = above, index 2 = highest.
+const BADGE_STACK: Array<{ top: number; left: number }> = [
+  { top: 38, left: 4 }, // bottom (curve toward center)
+  { top: 27, left: -5 }, // lower-left (curving outward)
+  { top: 12, left: -7 }, // mid-left (widest point)
+  { top: -1, left: 0 }, // upper-left (curve inward)
+];
+
+const BADGE_SIZE = 18;
+
 const ParticipantAvatar: React.FC<ParticipantAvatarProps> = ({
   avatarUrl,
   isHost,
   isEmpty,
   isCheckedIn,
+  isMostWanted,
+  certificationStatus,
   colors,
   isDark,
   tierAccent,
-  tierAccentLight,
+  tierAccentLight: _tierAccentLight,
 }) => {
   // Use tier accent colors if provided, otherwise fall back to theme colors
   const hostBorderColor = tierAccent || colors.secondary;
-  const filledBorderColor = tierAccentLight || colors.cardBackground;
-  const hostBadgeBgColor = tierAccent || colors.secondary;
+  // Build badge list in display order (top to bottom along left edge)
+  const badges: Array<{ key: string; icon: string; size: number; bg: string }> = [];
+  if (isHost) {
+    badges.push({
+      key: 'host',
+      icon: 'star',
+      size: 10,
+      bg: tierAccent || colors.secondary,
+    });
+  }
+  if (isMostWanted && !isEmpty) {
+    badges.push({
+      key: 'mostWanted',
+      icon: 'ribbon',
+      size: 10,
+      bg: MOST_WANTED_COLOR,
+    });
+  }
+  if (certificationStatus && certificationStatus !== 'self_declared' && !isEmpty) {
+    const certColors = CERTIFICATION_BADGE_COLORS[certificationStatus];
+    badges.push({
+      key: 'certification',
+      icon: certColors.icon,
+      size: 10,
+      bg: certColors.bg,
+    });
+  }
+  if (isCheckedIn) {
+    badges.push({
+      key: 'checkedIn',
+      icon: 'checkmark-outline',
+      size: 10,
+      bg: status.success.DEFAULT,
+    });
+  }
 
   return (
     <View style={styles.participantAvatarWrapper}>
@@ -459,17 +540,18 @@ const ParticipantAvatar: React.FC<ParticipantAvatarProps> = ({
             ? {
                 backgroundColor: colors.slotEmpty,
                 borderWidth: 2,
+                borderStyle: 'dashed',
                 borderColor: colors.slotEmptyBorder,
               }
             : {
                 backgroundColor: avatarUrl ? hostBorderColor : colors.avatarPlaceholder,
-                borderWidth: isHost ? 2.5 : 2,
-                borderColor: isHost ? hostBorderColor : filledBorderColor,
-                shadowColor: isHost ? hostBorderColor : filledBorderColor,
+                borderWidth: 1.5,
+                borderColor: primary[500],
+                shadowColor: hostBorderColor,
                 shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: isHost ? 0.3 : 0.15,
+                shadowOpacity: 0.3,
                 shadowRadius: 4,
-                elevation: isHost ? 3 : 2,
+                elevation: 3,
               },
         ]}
       >
@@ -481,16 +563,25 @@ const ParticipantAvatar: React.FC<ParticipantAvatarProps> = ({
           <Ionicons name="add-outline" size={20} color={colors.slotEmptyBorder} />
         )}
       </View>
-      {isHost && (
-        <View style={[styles.hostBadge, { backgroundColor: hostBadgeBgColor }]}>
-          <Ionicons name="star" size={8} color={base.white} />
-        </View>
-      )}
-      {isCheckedIn && (
-        <View style={[styles.checkedInBadge, { backgroundColor: status.success.DEFAULT }]}>
-          <Ionicons name="checkmark-outline" size={8} color={base.white} />
-        </View>
-      )}
+      {badges.map((badge, index) => {
+        const pos = BADGE_STACK[index];
+        if (!pos) return null;
+        return (
+          <View
+            key={badge.key}
+            style={[
+              styles.avatarBadge,
+              { top: pos.top, left: pos.left, backgroundColor: badge.bg },
+            ]}
+          >
+            <Ionicons
+              name={badge.icon as ComponentProps<typeof Ionicons>['name']}
+              size={badge.size}
+              color={base.white}
+            />
+          </View>
+        );
+      })}
     </View>
   );
 };
@@ -596,7 +687,14 @@ const CheckInButton: React.FC<CheckInButtonProps> = ({
 // =============================================================================
 
 export const MatchDetailSheet: React.FC = () => {
-  const { sheetRef, closeSheet, selectedMatch, updateSelectedMatch } = useMatchDetailSheet();
+  const {
+    sheetRef,
+    closeSheet,
+    openSheet,
+    selectedMatch,
+    updateSelectedMatch,
+    handleSheetDismiss,
+  } = useMatchDetailSheet();
   const { openSheetForEdit } = useActionsSheet();
   const { openSheet: openInviteSheet } = usePlayerInviteSheet();
   const { openSheet: openFeedbackSheet } = useFeedbackSheet();
@@ -609,15 +707,51 @@ export const MatchDetailSheet: React.FC = () => {
   const toast = useToast();
   const playerId = player?.id;
   const navigation = useAppNavigation();
+  const { display: _creatorReputationDisplay } = usePlayerReputation(
+    selectedMatch?.created_by_player?.id
+  );
+  const creatorReputationDisplay = _creatorReputationDisplay;
+
+  // Ref to hold the match that should reopen after navigating back from PlayerProfile
+  const pendingReopenRef = useRef<MatchDetailData | null>(null);
+
+  // Listen for navigation state changes to reopen the sheet when returning from PlayerProfile or ChatConversation
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('state', () => {
+      if (!pendingReopenRef.current) return;
+
+      const rootState = navigation.getState();
+      const isOverlayScreenVisible = rootState.routes.some(
+        r => r.name === 'PlayerProfile' || r.name === 'ChatConversation'
+      );
+
+      if (!isOverlayScreenVisible) {
+        const matchToReopen = pendingReopenRef.current;
+        pendingReopenRef.current = null;
+        // Delay so the back animation completes before the sheet presents
+        setTimeout(() => {
+          openSheet(matchToReopen);
+        }, 300);
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, openSheet]);
 
   // Navigate to player profile or open auth sheet if not signed in / onboarding incomplete.
+  // Saves the current match so the sheet reopens automatically when navigating back.
   const handleParticipantProfilePress = useCallback(
     (targetPlayerId: string) => {
+      lightHaptic();
+      pendingReopenRef.current = selectedMatch;
       closeSheet();
-      if (!guardAction()) return;
+      if (!guardAction()) {
+        pendingReopenRef.current = null;
+        return;
+      }
       navigation.navigate('PlayerProfile', { playerId: targetPlayerId });
     },
-    [closeSheet, guardAction, navigation]
+    [closeSheet, guardAction, navigation, selectedMatch]
   );
 
   // Confirmation modal states
@@ -630,8 +764,14 @@ export const MatchDetailSheet: React.FC = () => {
   const [kickingParticipantId, setKickingParticipantId] = useState<string | null>(null);
   const [showCancelInviteModal, setShowCancelInviteModal] = useState(false);
   const [cancellingInvitationId, setCancellingInvitationId] = useState<string | null>(null);
+  const [showDeclineInviteModal, setShowDeclineInviteModal] = useState(false);
   const [resendingInvitationId, setResendingInvitationId] = useState<string | null>(null);
   const [acceptingRequestId, setAcceptingRequestId] = useState<string | null>(null);
+
+  // Score confirm/dispute
+  const confirmMutation = useConfirmMatchScore();
+  const disputeMutation = useDisputeMatchScore();
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
 
   // Collapse/expand state for pending requests
   const [showAllRequests, setShowAllRequests] = useState(false);
@@ -639,11 +779,7 @@ export const MatchDetailSheet: React.FC = () => {
   // Collapse/expand state for invitations
   const [showAllInvitations, setShowAllInvitations] = useState(false);
 
-  // Requester details modal state
-  const [selectedRequester, setSelectedRequester] = useState<MatchParticipantWithPlayer | null>(
-    null
-  );
-  const [showRequesterModal, setShowRequesterModal] = useState(false);
+  const [showBadgeInfo, setShowBadgeInfo] = useState(false);
 
   // Match conversation state (for chat button)
   const [matchConversationId, setMatchConversationId] = useState<string | null>(null);
@@ -671,7 +807,7 @@ export const MatchDetailSheet: React.FC = () => {
   }, [selectedMatch?.id]);
 
   // Animated pulse effect for live/urgent time indicators
-  const urgentPulseAnimation = useMemo(() => new Animated.Value(0), []);
+  const urgentPulseAnimation = useMemo(() => new RNAnimated.Value(0), []);
 
   // Match actions hook
   const {
@@ -683,6 +819,7 @@ export const MatchDetailSheet: React.FC = () => {
     cancelRequest,
     kickParticipant,
     cancelInvite,
+    declineInvite,
     resendInvite,
     checkIn,
     isJoining,
@@ -693,8 +830,10 @@ export const MatchDetailSheet: React.FC = () => {
     isCancellingRequest,
     isKicking,
     isCancellingInvite,
+    isDecliningInvite,
     isCheckingIn,
   } = useMatchActions(selectedMatch?.id, {
+    matchData: selectedMatch ?? undefined,
     onJoinSuccess: result => {
       successHaptic();
       closeSheet();
@@ -826,6 +965,17 @@ export const MatchDetailSheet: React.FC = () => {
       setCancellingInvitationId(null);
       toast.error(error.message);
     },
+    onDeclineInviteSuccess: () => {
+      successHaptic();
+      setShowDeclineInviteModal(false);
+      closeSheet();
+      toast.success(t('matchActions.declineInviteSuccess'));
+    },
+    onDeclineInviteError: error => {
+      errorHaptic();
+      setShowDeclineInviteModal(false);
+      toast.error(error.message);
+    },
     onResendInviteSuccess: participant => {
       successHaptic();
       setResendingInvitationId(null);
@@ -884,7 +1034,7 @@ export const MatchDetailSheet: React.FC = () => {
       textMuted: themeColors.mutedForeground,
       border: themeColors.border,
       primary: isDark ? primary[400] : primary[600],
-      primaryLight: isDark ? primary[900] : primary[50],
+      primaryLight: isDark ? primary[900] : primary[100],
       secondary: isDark ? secondary[400] : secondary[500],
       secondaryLight: isDark ? secondary[900] : secondary[50],
       statusOpen: status.success.DEFAULT,
@@ -920,19 +1070,27 @@ export const MatchDetailSheet: React.FC = () => {
   }, [closeSheet]);
 
   // Handle register score (from match detail during feedback window)
+  // Dismisses the detail sheet while the score sheet is open, then reopens it after
   const handleRegisterScore = useCallback(() => {
     if (!selectedMatch) return;
     mediumHaptic();
-    SheetManager.show('register-match-score', {
-      payload: {
-        match: selectedMatch,
-        onSuccess: async () => {
-          const refreshed = await getMatchWithDetails(selectedMatch.id);
-          if (refreshed) updateSelectedMatch(refreshed as MatchDetailData);
+    const matchRef = selectedMatch;
+    closeSheet();
+    setTimeout(() => {
+      SheetManager.show('register-match-score', {
+        payload: {
+          match: matchRef,
+          onSuccess: async () => {
+            const refreshed = await getMatchWithDetails(matchRef.id);
+            openSheet((refreshed ?? matchRef) as MatchDetailData);
+          },
+          onDismiss: () => {
+            openSheet(matchRef);
+          },
         },
-      },
-    });
-  }, [selectedMatch, updateSelectedMatch]);
+      });
+    }, 100);
+  }, [selectedMatch, closeSheet, openSheet]);
 
   // Handle share - uses rich message with match details and deep link
   const handleShare = useCallback(async () => {
@@ -945,6 +1103,94 @@ export const MatchDetailSheet: React.FC = () => {
     }
   }, [selectedMatch, t, locale]);
 
+  // Handle confirming a score
+  const handleConfirmScore = useCallback(async () => {
+    if (!selectedMatch?.result || !playerId) return;
+    const raw = Array.isArray(selectedMatch.result)
+      ? selectedMatch.result[0]
+      : selectedMatch.result;
+    const resObj = raw as { id: string };
+    mediumHaptic();
+    try {
+      await confirmMutation.mutateAsync({ matchResultId: resObj.id, playerId });
+      successHaptic();
+      toast.success(t('matchDetail.scoreConfirmed'));
+      const refreshed = await getMatchWithDetails(selectedMatch.id);
+      if (refreshed) updateSelectedMatch(refreshed as MatchDetailData);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('already processed')) {
+        // Score was already confirmed/verified — refresh the UI silently
+        warningHaptic();
+        toast.info(t('matchDetail.scoreAlreadyProcessed'));
+        const refreshed = await getMatchWithDetails(selectedMatch.id);
+        if (refreshed) updateSelectedMatch(refreshed as MatchDetailData);
+      } else {
+        errorHaptic();
+        toast.error(t('matchDetail.confirmScoreError'));
+      }
+    }
+  }, [playerId, selectedMatch, confirmMutation, toast, t, updateSelectedMatch]);
+
+  // Handle disputing a score - opens confirmation modal
+  const handleDisputeScore = useCallback(() => {
+    mediumHaptic();
+    setShowDisputeModal(true);
+  }, []);
+
+  // Confirm dispute score
+  const handleConfirmDispute = useCallback(async () => {
+    if (!selectedMatch?.result || !playerId) return;
+    const raw = Array.isArray(selectedMatch.result)
+      ? selectedMatch.result[0]
+      : selectedMatch.result;
+    const resObj = raw as { id: string };
+    try {
+      await disputeMutation.mutateAsync({
+        matchResultId: resObj.id,
+        playerId,
+      });
+      successHaptic();
+      setShowDisputeModal(false);
+      toast.warning(t('matchDetail.scoreDisputedSuccess'));
+      const refreshed = await getMatchWithDetails(selectedMatch.id);
+      if (refreshed) updateSelectedMatch(refreshed as MatchDetailData);
+    } catch {
+      errorHaptic();
+      toast.error(t('matchDetail.disputeScoreError'));
+    }
+  }, [playerId, selectedMatch, disputeMutation, toast, t, updateSelectedMatch]);
+
+  // Handle opening feedback sheet for the current player
+  const handleOpenFeedback = useCallback(() => {
+    if (!selectedMatch || !playerId) return;
+    const participant = selectedMatch.participants?.find(
+      p => p.player_id === playerId && p.status === 'joined'
+    );
+    if (!participant) return;
+    mediumHaptic();
+    const opponents: OpponentForFeedback[] = (selectedMatch.participants ?? [])
+      .filter(p => p.player_id !== playerId && p.status === 'joined')
+      .map(p => {
+        const profile = p.player?.profile;
+        const firstName = profile?.first_name || '';
+        const lastName = profile?.last_name || '';
+        const displayName = profile?.display_name;
+        const name = displayName || firstName || 'Player';
+        const fullName = displayName || `${firstName} ${lastName}`.trim() || 'Player';
+        return {
+          participantId: p.id,
+          playerId: p.player_id,
+          name,
+          fullName,
+          avatarUrl: profile?.profile_picture_url || null,
+          hasExistingFeedback: false,
+          hasExistingReport: false,
+        };
+      });
+    openFeedbackSheet(selectedMatch.id, playerId, participant.id, opponents);
+  }, [selectedMatch, playerId, openFeedbackSheet]);
+
   // Handle opening the match chat conversation
   const handleOpenChat = useCallback(() => {
     if (!matchConversationId || !selectedMatch) return;
@@ -956,6 +1202,7 @@ export const MatchDetailSheet: React.FC = () => {
     }
 
     lightHaptic();
+    pendingReopenRef.current = selectedMatch;
     closeSheet();
 
     // Generate chat title from match info (sport name + date)
@@ -1089,41 +1336,6 @@ export const MatchDetailSheet: React.FC = () => {
     openInviteSheet(selectedMatch.id, selectedMatch.sport_id, playerId, existingParticipantIds);
   }, [selectedMatch, playerId, openInviteSheet]);
 
-  // Handle view requester details - opens modal instead of navigating
-  const handleViewRequesterDetails = useCallback((participant: MatchParticipantWithPlayer) => {
-    lightHaptic();
-    setSelectedRequester(participant);
-    setShowRequesterModal(true);
-  }, []);
-
-  // Handle close requester modal
-  const handleCloseRequesterModal = useCallback(() => {
-    setShowRequesterModal(false);
-    // Clear selected requester after animation
-    setTimeout(() => {
-      setSelectedRequester(null);
-    }, 300);
-  }, []);
-
-  // Handle accept from requester modal
-  const handleAcceptFromModal = useCallback(
-    (participantId: string) => {
-      handleAcceptRequest(participantId);
-      handleCloseRequesterModal();
-    },
-    [handleAcceptRequest, handleCloseRequesterModal]
-  );
-
-  // Handle reject from requester modal
-  const handleRejectFromModal = useCallback(
-    (participantId: string) => {
-      setRejectingParticipantId(participantId);
-      handleCloseRequesterModal();
-      setShowRejectModal(true);
-    },
-    [handleCloseRequesterModal]
-  );
-
   // Handle kick participant - opens confirmation modal (host only)
   const handleKickParticipant = useCallback(
     (participantId: string) => {
@@ -1169,14 +1381,27 @@ export const MatchDetailSheet: React.FC = () => {
     [selectedMatch, playerId, resendInvite]
   );
 
+  // Handle decline invitation - opens confirmation modal (invitee only)
+  const handleDeclineInvite = useCallback(() => {
+    if (!selectedMatch) return;
+    mediumHaptic();
+    setShowDeclineInviteModal(true);
+  }, [selectedMatch]);
+
+  // Confirm decline invitation
+  const handleConfirmDeclineInvite = useCallback(() => {
+    if (!playerId) return;
+    declineInvite(playerId);
+  }, [playerId, declineInvite]);
+
   // Handle open in maps
   const handleOpenMaps = useCallback(() => {
     if (!selectedMatch) return;
     selectionHaptic();
 
     const address = selectedMatch.facility?.address || selectedMatch.location_address;
-    const lat = selectedMatch.facility?.latitude;
-    const lng = selectedMatch.facility?.longitude;
+    const lat = selectedMatch.facility?.latitude ?? selectedMatch.custom_latitude;
+    const lng = selectedMatch.facility?.longitude ?? selectedMatch.custom_longitude;
 
     let url: string;
     if (lat && lng) {
@@ -1234,7 +1459,7 @@ export const MatchDetailSheet: React.FC = () => {
 
   const isUrgentForAnimation = useMemo(() => {
     if (!selectedMatch) return false;
-    const { isUrgent } = getRelativeTimeDisplay(
+    const { isUrgent } = getDateTimeParts(
       selectedMatch.match_date,
       selectedMatch.start_time,
       selectedMatch.end_time,
@@ -1252,15 +1477,15 @@ export const MatchDetailSheet: React.FC = () => {
   React.useEffect(() => {
     if (isOngoingForAnimation || isStartingSoonForAnimation) {
       const animationDuration = isOngoingForAnimation ? duration.extraSlow : duration.verySlow;
-      const pulseAnim = Animated.loop(
-        Animated.sequence([
-          Animated.timing(urgentPulseAnimation, {
+      const pulseAnim = RNAnimated.loop(
+        RNAnimated.sequence([
+          RNAnimated.timing(urgentPulseAnimation, {
             toValue: 1,
             duration: animationDuration,
             easing: Easing.bezier(0.4, 0, 0.2, 1),
             useNativeDriver: true,
           }),
-          Animated.timing(urgentPulseAnimation, {
+          RNAnimated.timing(urgentPulseAnimation, {
             toValue: 0,
             duration: animationDuration,
             easing: Easing.bezier(0.4, 0, 0.2, 1),
@@ -1302,6 +1527,53 @@ export const MatchDetailSheet: React.FC = () => {
     outputRange: [0.6, 1, 0.6],
   });
 
+  // Score confirmation progress (how many joined players have confirmed)
+  // Must be before early return to satisfy React hooks rules
+  const scoreConfirmProgress = useMemo(() => {
+    if (!selectedMatch) return null;
+    const result = selectedMatch.result;
+    if (!result) return null;
+    const raw = Array.isArray(result) ? result[0] : result;
+    const resObj = raw as {
+      id: string;
+      is_verified?: boolean | null;
+      submitted_by?: string | null;
+      confirmations?: Array<{ player_id: string; action: string }> | null;
+    };
+    const joinedPlayers = selectedMatch.participants?.filter(p => p.status === 'joined') ?? [];
+    const total = joinedPlayers.length;
+    if (total === 0) return null;
+    if (resObj.is_verified) return { confirmed: total, total };
+    // Count: submitter (1) + individual confirmations (only 'confirmed', not 'disputed')
+    const individualConfirmations =
+      resObj.confirmations?.filter(c => c.action === 'confirmed').length ?? 0;
+    const confirmed = (resObj.submitted_by ? 1 : 0) + individualConfirmations;
+    return { confirmed, total };
+  }, [selectedMatch]);
+
+  // Live countdown that ticks every second when match is starting soon
+  // Must be before early return to satisfy React hooks rules
+  const [countdownMs, setCountdownMs] = useState(0);
+
+  useEffect(() => {
+    if (!selectedMatch || !isStartingSoonForAnimation) {
+      return;
+    }
+    const compute = () =>
+      getTimeDifferenceFromNow(
+        selectedMatch.match_date,
+        selectedMatch.start_time,
+        selectedMatch.timezone
+      );
+    // Fire immediately at 0ms, then every second
+    const interval = setInterval(() => setCountdownMs(compute()), 1000);
+    const immediate = setTimeout(() => setCountdownMs(compute()), 0);
+    return () => {
+      clearInterval(interval);
+      clearTimeout(immediate);
+    };
+  }, [isStartingSoonForAnimation, selectedMatch]);
+
   // Render nothing if no match is selected
   if (!selectedMatch) {
     return (
@@ -1312,6 +1584,7 @@ export const MatchDetailSheet: React.FC = () => {
         enableDynamicSizing={false}
         backdropComponent={renderBackdrop}
         enablePanDownToClose
+        onDismiss={handleSheetDismiss}
         handleIndicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
         backgroundStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
       >
@@ -1324,40 +1597,23 @@ export const MatchDetailSheet: React.FC = () => {
   const match = selectedMatch;
   const participantInfo = getParticipantInfo(match);
 
-  // Determine match tier and get tier-specific accent colors
-  const creatorReputationScore = match.created_by_player?.reputation_score;
-  const tier = getMatchTier(match.court_status, creatorReputationScore);
+  // Determine match tier: check all joined participants
+  const joinedForTier = match.participants?.filter(p => p.status === 'joined') ?? [];
+  const participantsForTier = joinedForTier.map(p => ({
+    repScore: p.player?.player_reputation?.reputation_score,
+    certStatus: (p.player as PlayerWithProfile | undefined)?.sportCertificationStatus,
+  }));
+  const tier = getMatchTier(match.court_status, participantsForTier, match.format);
 
-  // Tier-aware accent colors
-  const tierAccent = (() => {
-    switch (tier) {
-      case 'mostWanted':
-        return isDark ? accent[400] : accent[500];
-      case 'readyToPlay':
-        return isDark ? secondary[400] : secondary[500];
-      case 'regular':
-      default:
-        return isDark ? primary[400] : primary[500];
-    }
-  })();
-
-  const tierAccentLight = (() => {
-    switch (tier) {
-      case 'mostWanted':
-        return isDark ? accent[700] : accent[200];
-      case 'readyToPlay':
-        return isDark ? secondary[700] : secondary[200];
-      case 'regular':
-      default:
-        return isDark ? primary[700] : primary[200];
-    }
-  })();
+  // All tiers use primary accent colors (tier differentiation is via ribbon badge on cards)
+  const tierAccent = isDark ? primary[400] : primary[500];
+  const tierAccentLight = isDark ? primary[700] : primary[200];
 
   // Live/urgent indicator colors
   const liveColor = isDark ? secondary[400] : secondary[500];
   const soonColor = isDark ? accent[400] : accent[500];
 
-  const { label: timeLabel, isUrgent } = getRelativeTimeDisplay(
+  const { dateLabel, startTimeLabel, durationLabel, isUrgent } = getDateTimeParts(
     match.match_date,
     match.start_time,
     match.end_time,
@@ -1407,6 +1663,17 @@ export const MatchDetailSheet: React.FC = () => {
   const hasMatchEnded = derivedStatus === 'completed';
   const hasResult = !!match.result;
 
+  // Extract result object for score confirmation checks
+  const resultObj = match.result
+    ? ((Array.isArray(match.result) ? match.result[0] : match.result) as {
+        id: string;
+        is_verified?: boolean | null;
+        disputed?: boolean | null;
+        submitted_by?: string | null;
+        confirmations?: Array<{ player_id: string; action: string }> | null;
+      })
+    : null;
+
   // Check if match is expired (started or ended but not full)
   const isExpired = (isInProgress || hasMatchEnded) && !isFull;
 
@@ -1415,6 +1682,21 @@ export const MatchDetailSheet: React.FC = () => {
   // - isUrgent (< 3 hours) but not in_progress = starting soon
   const isOngoing = derivedStatus === 'in_progress';
   const isStartingSoon = isUrgent && !isOngoing;
+
+  // countdownLabel is computed from countdownMs state (hook lives before early return)
+  const countdownLabel =
+    isStartingSoon && countdownMs > 0
+      ? t('matchDetail.startsIn', { time: formatCountdown(countdownMs) })
+      : null;
+
+  // Format label for header
+  const formatLabel =
+    match.format === 'doubles'
+      ? t('match.format.doubles' as TranslationKey)
+      : t('match.format.singles' as TranslationKey);
+
+  // Sport display name for header
+  const sportDisplayName = match.sport?.display_name || match.sport?.name;
 
   // Check if start time has passed
   const startTimeDiffMs = getTimeDifferenceFromNow(
@@ -1440,11 +1722,28 @@ export const MatchDetailSheet: React.FC = () => {
     p => p.player_id === playerId && p.status === 'joined'
   );
   const playerHasCompletedFeedback = currentPlayerParticipant?.feedback_completed ?? false;
-  const playerNeedsFeedback =
+
+  const playerNeedsFeedbackOrScore =
     hasMatchEnded &&
     isWithinFeedbackWindow &&
     currentPlayerParticipant &&
-    !playerHasCompletedFeedback;
+    (!playerHasCompletedFeedback || !hasResult);
+
+  // Check if current player needs to confirm/dispute a score submitted by someone else
+  // Excludes players who have already responded (confirmed or disputed)
+  const playerAlreadyResponded = !!resultObj?.confirmations?.some(c => c.player_id === playerId);
+  const scoreNeedsConfirmation =
+    !!resultObj &&
+    !resultObj.is_verified &&
+    !resultObj.disputed &&
+    !!resultObj.submitted_by &&
+    resultObj.submitted_by !== playerId &&
+    !playerAlreadyResponded &&
+    !!currentPlayerParticipant;
+
+  // Both score confirmation and feedback are pending
+  const needsScoreConfirmAndFeedback =
+    scoreNeedsConfirmation && isWithinFeedbackWindow && !playerHasCompletedFeedback;
 
   // Check-in window status (10 min before start until end, only for full games)
   const isWithinCheckInWindow = getCheckInWindowStatus(
@@ -1478,7 +1777,23 @@ export const MatchDetailSheet: React.FC = () => {
     isEmpty: boolean;
     name?: string;
     isCheckedIn?: boolean;
+    isMostWanted?: boolean;
+    certificationStatus?: 'self_declared' | 'certified' | 'disputed';
   }> = [];
+
+  // Helper to get the certification status for a player's rating
+  const getCertificationStatus = (
+    player: PlayerWithProfile | undefined | null
+  ): 'self_declared' | 'certified' | 'disputed' | undefined => {
+    return (player as PlayerWithProfile | undefined)?.sportCertificationStatus;
+  };
+
+  // Helper to check if a player has platinum-tier reputation (90%+)
+  const getIsMostWanted = (player: PlayerWithProfile | undefined | null): boolean => {
+    const score =
+      (player as PlayerWithProfile | undefined)?.player_reputation?.reputation_score ?? 0;
+    return score >= HIGH_REPUTATION_THRESHOLD;
+  };
 
   // Get joined participants and identify host using is_host flag
   const joinedParticipants = match.participants?.filter(p => p.status === 'joined') ?? [];
@@ -1487,32 +1802,25 @@ export const MatchDetailSheet: React.FC = () => {
 
   // Host first - use host participant's profile, fallback to created_by_player for backwards compatibility
   const hostProfile = hostParticipant?.player?.profile ?? creatorProfile;
-  const hostName =
-    hostProfile?.display_name ||
-    (hostProfile?.first_name && hostProfile?.last_name
-      ? `${hostProfile.first_name} ${hostProfile.last_name}`
-      : hostProfile?.first_name) ||
-    creatorName;
+  const hostName = hostProfile?.first_name || hostProfile?.display_name || creatorName;
+  const hostPlayer = hostParticipant?.player ?? match.created_by_player;
   participantAvatars.push({
     key: 'host',
     avatarUrl: getProfilePictureUrl(hostProfile?.profile_picture_url),
     playerId: match.created_by,
     isHost: true,
     isEmpty: false,
-    name: hostName.split(' ')[0],
+    name: hostName,
     isCheckedIn: !!hostParticipant?.checked_in_at,
+    isMostWanted: getIsMostWanted(hostPlayer),
+    certificationStatus: getCertificationStatus(hostPlayer),
   });
 
   // Other participants (joined, excluding host)
   // Normalize URLs to use current environment's Supabase URL
   otherJoinedParticipants.forEach((p, i) => {
-    const participantFullName =
-      p.player?.profile?.display_name ||
-      (p.player?.profile?.first_name && p.player?.profile?.last_name
-        ? `${p.player.profile.first_name} ${p.player.profile.last_name}`
-        : p.player?.profile?.first_name) ||
-      '';
-    const participantFirstName = participantFullName.split(' ')[0];
+    const participantFirstName =
+      p.player?.profile?.first_name || p.player?.profile?.display_name || '';
     participantAvatars.push({
       key: p.id || `participant-${i}`,
       participantId: p.id,
@@ -1522,6 +1830,8 @@ export const MatchDetailSheet: React.FC = () => {
       isEmpty: false,
       name: participantFirstName,
       isCheckedIn: !!p.checked_in_at,
+      isMostWanted: getIsMostWanted(p.player),
+      certificationStatus: getCertificationStatus(p.player),
     });
   });
 
@@ -1552,6 +1862,14 @@ export const MatchDetailSheet: React.FC = () => {
         // Display value if available, otherwise fall back to label
         const ratingDisplay =
           ratingValue !== undefined && ratingValue !== null ? ratingValue.toFixed(1) : ratingLabel;
+        // Compute reputation tier from joined data (RLS ensures is_public=true)
+        const repScore = playerWithRating?.player_reputation?.reputation_score;
+        const repTier = repScore != null ? getTierForScore(repScore, MIN_EVENTS_FOR_PUBLIC) : null;
+        const repTierConfig = repTier && repTier !== 'unknown' ? getTierConfig(repTier) : null;
+        const repTierPalette =
+          repTier && repTier !== 'unknown'
+            ? TIER_COLORS[repTier as keyof typeof TIER_COLORS]
+            : null;
         return {
           id: p.id,
           playerId: p.player_id,
@@ -1560,7 +1878,9 @@ export const MatchDetailSheet: React.FC = () => {
           ratingLabel,
           ratingValue,
           ratingDisplay,
-          participant: p as MatchParticipantWithPlayer, // Store full participant for modal
+          certificationStatus: playerWithRating?.sportCertificationStatus,
+          repTierConfig,
+          repTierPalette,
         };
       }) ?? [];
 
@@ -1604,11 +1924,11 @@ export const MatchDetailSheet: React.FC = () => {
   const allInvitations = [...pendingInvitations, ...declinedInvitations];
 
   // Cost display
-  const costDisplay = match.is_court_free
-    ? t('matchDetail.free')
-    : match.estimated_cost
-      ? `$${Math.ceil(match.estimated_cost / participantInfo.total)} ${t('matchDetail.perPerson')}`
-      : null;
+  const isCourtFree = !!match.is_court_free;
+  const hasCostData = isCourtFree || !!match.estimated_cost;
+  const totalCost = match.estimated_cost ?? 0;
+  const perPlayerCost =
+    participantInfo.total > 0 ? Math.ceil(totalCost / participantInfo.total) : 0;
 
   // Location display
   const facilityName = match.facility?.name || match.location_name;
@@ -1702,40 +2022,77 @@ export const MatchDetailSheet: React.FC = () => {
       );
     }
 
-    // Match has results → Show "Match completed" unless current player still needs to give feedback
+    // Match has results → Show confirm/dispute, feedback, or "completed"
     if (hasResult && match.result) {
-      if (isWithinFeedbackWindow && playerNeedsFeedback && currentPlayerParticipant) {
+      // Non-submitter with unverified, undisputed score → show confirm/dispute buttons
+      if (scoreNeedsConfirmation) {
+        return (
+          <>
+            <Button
+              variant="primary"
+              onPress={handleDisputeScore}
+              style={styles.actionButton}
+              themeColors={warningThemeColors}
+              isDark={isDark}
+              loading={disputeMutation.isPending}
+              leftIcon={<Ionicons name="flag-outline" size={18} color={ctaDestructive} />}
+            >
+              {t('matchDetail.disputeScore')}
+            </Button>
+            <Button
+              variant="primary"
+              onPress={handleConfirmScore}
+              style={styles.actionButton}
+              themeColors={successThemeColors}
+              isDark={isDark}
+              loading={confirmMutation.isPending}
+              leftIcon={<Ionicons name="checkmark-circle-outline" size={18} color={base.white} />}
+            >
+              {t('matchDetail.confirmScore')}
+            </Button>
+          </>
+        );
+      }
+      // Player already responded (confirmed/disputed) but score not fully resolved (waiting for others in doubles)
+      if (playerAlreadyResponded && !resultObj?.is_verified && !resultObj?.disputed) {
+        if (isWithinFeedbackWindow && !playerHasCompletedFeedback && currentPlayerParticipant) {
+          // Still needs feedback - show feedback button
+          return (
+            <Button
+              variant="primary"
+              onPress={handleOpenFeedback}
+              style={styles.actionButton}
+              themeColors={successThemeColors}
+              isDark={isDark}
+              leftIcon={
+                <Ionicons name="chatbubble-ellipses-outline" size={18} color={base.white} />
+              }
+            >
+              {t('matchDetail.provideFeedbackOnly')}
+            </Button>
+          );
+        }
+        // All done — show "match completed" status
+        return (
+          <View style={styles.matchEndedContainer}>
+            <Ionicons name="trophy-outline" size={20} color={colors.textMuted} />
+            <Text size="sm" weight="medium" color={colors.textMuted} style={styles.matchEndedText}>
+              {t('matchDetail.matchCompleted')}
+            </Text>
+          </View>
+        );
+      }
+      if (isWithinFeedbackWindow && !playerHasCompletedFeedback && currentPlayerParticipant) {
         return (
           <Button
             variant="primary"
-            onPress={() => {
-              mediumHaptic();
-              const opponents: OpponentForFeedback[] = (match.participants ?? [])
-                .filter(p => p.player_id !== playerId && p.status === 'joined')
-                .map(p => {
-                  const profile = p.player?.profile;
-                  const firstName = profile?.first_name || '';
-                  const lastName = profile?.last_name || '';
-                  const displayName = profile?.display_name;
-                  const name = displayName || firstName || 'Player';
-                  const fullName = displayName || `${firstName} ${lastName}`.trim() || 'Player';
-                  return {
-                    participantId: p.id,
-                    playerId: p.player_id,
-                    name,
-                    fullName,
-                    avatarUrl: profile?.profile_picture_url || null,
-                    hasExistingFeedback: false,
-                  };
-                });
-              openFeedbackSheet(match.id, playerId!, currentPlayerParticipant.id, opponents);
-            }}
+            onPress={handleOpenFeedback}
             style={styles.actionButton}
             themeColors={successThemeColors}
             isDark={isDark}
-            leftIcon={<Ionicons name="star-outline" size={18} color={base.white} />}
+            leftIcon={<Ionicons name="chatbubble-ellipses-outline" size={18} color={base.white} />}
           >
-            {t('matchDetail.provideFeedback')}
+            {t('matchDetail.provideFeedbackOnly')}
           </Button>
         );
       }
@@ -1761,98 +2118,46 @@ export const MatchDetailSheet: React.FC = () => {
       );
     }
 
-    // Match has ended - show feedback CTA or completion status based on conditions
+    // Match has ended - show feedback/score CTAs or completion status based on conditions
     if (hasMatchEnded) {
       // Within 48h window
       if (isWithinFeedbackWindow) {
-        // No result yet + participant + full → Show Register score (and optionally Provide Feedback)
-        if (!hasResult && currentPlayerParticipant && isFull) {
+        // Participant with pending actions → Show appropriate CTA button(s)
+        if (playerNeedsFeedbackOrScore && currentPlayerParticipant && isFull) {
           return (
             <>
-              <Button
-                variant="primary"
-                onPress={handleRegisterScore}
-                style={styles.actionButton}
-                themeColors={successThemeColors}
-                isDark={isDark}
-                leftIcon={<Ionicons name="trophy-outline" size={18} color={base.white} />}
-              >
-                {t('matchDetail.registerScore')}
-              </Button>
-              {playerNeedsFeedback && (
+              {/* Save score button (when score is missing) */}
+              {!hasResult && (
                 <Button
                   variant="primary"
-                  onPress={() => {
-                    mediumHaptic();
-                    const opponents: OpponentForFeedback[] = (match.participants ?? [])
-                      .filter(p => p.player_id !== playerId && p.status === 'joined')
-                      .map(p => {
-                        const profile = p.player?.profile;
-                        const firstName = profile?.first_name || '';
-                        const lastName = profile?.last_name || '';
-                        const displayName = profile?.display_name;
-                        const name = displayName || firstName || 'Player';
-                        const fullName =
-                          displayName || `${firstName} ${lastName}`.trim() || 'Player';
-                        return {
-                          participantId: p.id,
-                          playerId: p.player_id,
-                          name,
-                          fullName,
-                          avatarUrl: profile?.profile_picture_url || null,
-                          hasExistingFeedback: false,
-                        };
-                      });
-                    openFeedbackSheet(match.id, playerId!, currentPlayerParticipant.id, opponents);
-                  }}
+                  onPress={handleRegisterScore}
                   style={styles.actionButton}
                   themeColors={successThemeColors}
                   isDark={isDark}
-                  leftIcon={<Ionicons name="star-outline" size={18} color={base.white} />}
+                  leftIcon={<Ionicons name="trophy-outline" size={18} color={base.white} />}
                 >
-                  {t('matchDetail.provideFeedback')}
+                  {t('matchDetail.provideScoreOnly')}
+                </Button>
+              )}
+              {/* Register feedback button (when feedback is missing) */}
+              {!playerHasCompletedFeedback && (
+                <Button
+                  variant="primary"
+                  onPress={handleOpenFeedback}
+                  style={styles.actionButton}
+                  themeColors={successThemeColors}
+                  isDark={isDark}
+                  leftIcon={
+                    <Ionicons name="chatbubble-ellipses-outline" size={18} color={base.white} />
+                  }
+                >
+                  {t('matchDetail.provideFeedbackOnly')}
                 </Button>
               )}
             </>
           );
         }
-        // Current player needs to provide feedback (but can't register score) → Show CTA button
-        if (playerNeedsFeedback && currentPlayerParticipant) {
-          return (
-            <Button
-              variant="primary"
-              onPress={() => {
-                mediumHaptic();
-                const opponents: OpponentForFeedback[] = (match.participants ?? [])
-                  .filter(p => p.player_id !== playerId && p.status === 'joined')
-                  .map(p => {
-                    const profile = p.player?.profile;
-                    const firstName = profile?.first_name || '';
-                    const lastName = profile?.last_name || '';
-                    const displayName = profile?.display_name;
-                    const name = displayName || firstName || 'Player';
-                    const fullName = displayName || `${firstName} ${lastName}`.trim() || 'Player';
-                    return {
-                      participantId: p.id,
-                      playerId: p.player_id,
-                      name,
-                      fullName,
-                      avatarUrl: profile?.profile_picture_url || null,
-                      hasExistingFeedback: false,
-                    };
-                  });
-                openFeedbackSheet(match.id, playerId!, currentPlayerParticipant.id, opponents);
-              }}
-              style={styles.actionButton}
-              themeColors={successThemeColors}
-              isDark={isDark}
-              leftIcon={<Ionicons name="star-outline" size={18} color={base.white} />}
-            >
-              {t('matchDetail.provideFeedback')}
-            </Button>
-          );
-        }
-        // Feedback completed or not a participant → Show "completed" message
+        // Feedback/score completed or not a participant → Show "completed" message
         return (
           <View style={styles.matchEndedContainer}>
             <Ionicons name="checkmark-circle-outline" size={20} color={colors.textMuted} />
@@ -1955,46 +2260,78 @@ export const MatchDetailSheet: React.FC = () => {
           variant="primary"
           onPress={handleCancelRequest}
           style={styles.actionButton}
-          themeColors={warningThemeColors}
+          themeColors={destructiveThemeColors}
           isDark={isDark}
           loading={isCancellingRequest}
-          leftIcon={<Ionicons name="close-outline" size={18} color={ctaDestructive} />}
+          leftIcon={<Ionicons name="close-circle-outline" size={18} color={base.white} />}
         >
           {t('matchActions.cancelRequest')}
         </Button>
       );
     }
 
-    // User is invited (pending status) to direct-join match with spots: Accept Invitation button (success green)
-    // For request-mode or full matches, invited users see regular CTAs (Ask to Join / Join Waitlist)
-    if (isInvited && !isFull && match.join_mode !== 'request') {
+    // User is invited (pending status): show Accept/Join + Decline buttons
+    if (isInvited) {
+      // Determine primary CTA based on match state
+      let primaryLabel: string;
+      let primaryIcon: string;
+      if (isFull) {
+        primaryLabel = t('matchActions.joinWaitlist');
+        primaryIcon = 'list-outline';
+      } else if (match.join_mode === 'request') {
+        primaryLabel = t('matchDetail.requestToJoin');
+        primaryIcon = 'hand-left-outline';
+      } else {
+        primaryLabel = t('match.cta.acceptInvitation');
+        primaryIcon = 'checkmark-circle-outline';
+      }
+
       return (
-        <Button
-          variant="primary"
-          onPress={handleJoinMatch}
-          style={styles.actionButton}
-          themeColors={successThemeColors}
-          isDark={isDark}
-          loading={isJoining}
-          disabled={isJoining}
-          leftIcon={<Ionicons name="checkmark-circle-outline" size={18} color={base.white} />}
-        >
-          {t('match.cta.acceptInvitation')}
-        </Button>
+        <>
+          <Button
+            variant="primary"
+            onPress={handleDeclineInvite}
+            style={styles.cancelButton}
+            themeColors={destructiveThemeColors}
+            isDark={isDark}
+            loading={isDecliningInvite}
+            leftIcon={<Ionicons name="close-circle-outline" size={18} color={base.white} />}
+          >
+            {t('matchActions.declineInvite')}
+          </Button>
+          <Button
+            variant="primary"
+            onPress={handleJoinMatch}
+            style={styles.actionButton}
+            themeColors={successThemeColors}
+            isDark={isDark}
+            loading={isJoining}
+            disabled={isJoining}
+            leftIcon={
+              <Ionicons
+                name={primaryIcon as keyof typeof Ionicons.glyphMap}
+                size={18}
+                color={base.white}
+              />
+            }
+          >
+            {primaryLabel}
+          </Button>
+        </>
       );
     }
 
-    // Waitlisted user: Show Leave Waitlist only if match is still full (warning accent)
+    // Waitlisted user: Show Leave Waitlist only if match is still full (destructive red)
     if (isWaitlisted && isFull) {
       return (
         <Button
           variant="primary"
           onPress={handleLeaveMatch}
           style={styles.actionButton}
-          themeColors={warningThemeColors}
+          themeColors={destructiveThemeColors}
           isDark={isDark}
           loading={isLeaving}
-          leftIcon={<Ionicons name="exit-outline" size={18} color={ctaDestructive} />}
+          leftIcon={<Ionicons name="exit-outline" size={18} color={base.white} />}
         >
           {t('matchActions.leaveWaitlist')}
         </Button>
@@ -2119,11 +2456,22 @@ export const MatchDetailSheet: React.FC = () => {
   };
 
   // Check if location is tappable (has coordinates or address)
+  // Support both facility coordinates and custom location coordinates
   const hasLocationData = !!(
     match.facility?.latitude ||
+    match.custom_latitude ||
     match.facility?.address ||
     match.location_address
   );
+
+  const hasCoordinates = !!(
+    (match.facility?.latitude && match.facility?.longitude) ||
+    (match.custom_latitude && match.custom_longitude)
+  );
+
+  // Resolved coordinates: prefer facility, fall back to custom location
+  const resolvedLatitude = match.facility?.latitude ?? match.custom_latitude;
+  const resolvedLongitude = match.facility?.longitude ?? match.custom_longitude;
 
   return (
     <BottomSheetModal
@@ -2133,93 +2481,46 @@ export const MatchDetailSheet: React.FC = () => {
       enableDynamicSizing={false}
       backdropComponent={renderBackdrop}
       enablePanDownToClose
+      onDismiss={handleSheetDismiss}
       handleIndicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
       backgroundStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
     >
-      {/* Header with close button */}
+      {/* Header with sport name, format, and close button */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={styles.headerTop}>
+          <View style={styles.headerRight}>
+            {/* Spacer to balance close button for centering */}
+            <View style={styles.closeButton}>
+              <View style={{ width: 24 }} />
+            </View>
+          </View>
           <View style={styles.headerTitleSection}>
-            {/* Match Date/Time - same format as cards with live/urgent indicators */}
-            <View style={styles.dateRow}>
-              {/* "Live" indicator for ongoing matches (not shown when expired) */}
-              {isOngoing && !isExpired && (
-                <View style={styles.liveIndicatorContainer}>
-                  {/* Expanding ring that fades out */}
-                  <Animated.View
-                    style={[
-                      styles.liveRing,
-                      {
-                        backgroundColor: liveColor,
-                        transform: [{ scale: liveRingScale }],
-                        opacity: liveRingOpacity,
-                      },
-                    ]}
-                  />
-                  {/* Solid core dot */}
-                  <Animated.View
-                    style={[
-                      styles.liveDot,
-                      {
-                        backgroundColor: liveColor,
-                        opacity: liveDotOpacity,
-                      },
-                    ]}
-                  />
-                </View>
-              )}
-              {/* Bouncing chevron for starting soon (not shown when expired) */}
-              {isStartingSoon && !isExpired && (
-                <Animated.View
+            {sportDisplayName ? (
+              <View style={styles.headerTitleRow}>
+                <SportIcon
+                  sportName={match.sport?.name || 'tennis'}
+                  size={20}
+                  color={colors.primary}
+                />
+                <Text size="xl" weight="bold" color={colors.text}>
+                  {sportDisplayName}
+                </Text>
+                <View
                   style={[
-                    styles.countdownIndicator,
-                    {
-                      transform: [{ translateX: countdownBounce }],
-                      opacity: countdownOpacity,
-                    },
+                    styles.headerFormatBadge,
+                    { backgroundColor: isDark ? `${primary[400]}30` : `${primary[500]}15` },
                   ]}
                 >
-                  <Ionicons name="chevron-forward" size={16} color={soonColor} />
-                </Animated.View>
-              )}
-              <Ionicons
-                name={
-                  isExpired
-                    ? 'close-circle-outline'
-                    : isOngoing
-                      ? 'radio'
-                      : isStartingSoon
-                        ? 'time'
-                        : 'calendar-outline'
-                }
-                size={20}
-                color={
-                  isExpired
-                    ? colors.textMuted
-                    : isOngoing
-                      ? liveColor
-                      : isStartingSoon
-                        ? soonColor
-                        : tierAccent
-                }
-                style={styles.calendarIcon}
-              />
-              <Text
-                size="xl"
-                weight="bold"
-                color={
-                  isExpired
-                    ? colors.textMuted
-                    : isOngoing
-                      ? liveColor
-                      : isStartingSoon
-                        ? soonColor
-                        : colors.text
-                }
-              >
-                {timeLabel}
+                  <Text size="xs" weight="semibold" color={isDark ? primary[400] : primary[500]}>
+                    {formatLabel}
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <Text size="xl" weight="bold" color={colors.text} style={{ textAlign: 'center' }}>
+                {t('matchDetail.title')}
               </Text>
-            </View>
+            )}
           </View>
           <View style={styles.headerRight}>
             <TouchableOpacity
@@ -2290,27 +2591,609 @@ export const MatchDetailSheet: React.FC = () => {
           </View>
         )}
 
+        {/* Invited Banner - shown to invited users */}
+        {isInvited && !isCreator && (
+          <View
+            style={[
+              styles.pendingBanner,
+              {
+                backgroundColor: (isDark ? primary[400] : primary[500]) + '15',
+                borderColor: isDark ? primary[400] : primary[500],
+              },
+            ]}
+          >
+            <Ionicons name="mail-outline" size={18} color={isDark ? primary[400] : primary[500]} />
+            <Text
+              size="sm"
+              weight="medium"
+              color={isDark ? primary[400] : primary[500]}
+              style={styles.pendingBannerText}
+            >
+              {t('matchDetail.invitedBanner')}
+            </Text>
+          </View>
+        )}
+
+        {/* Date & Time Section */}
+        <Animated.View
+          entering={FadeInDown.delay(50).springify()}
+          style={[styles.section, { borderBottomColor: colors.border }]}
+        >
+          <View style={styles.sectionHeader}>
+            <Ionicons
+              name={
+                isExpired
+                  ? 'close-circle-outline'
+                  : isOngoing
+                    ? 'radio'
+                    : isStartingSoon
+                      ? 'time'
+                      : 'calendar-outline'
+              }
+              size={20}
+              color={
+                isExpired
+                  ? colors.textMuted
+                  : isOngoing
+                    ? liveColor
+                    : isStartingSoon
+                      ? soonColor
+                      : colors.iconMuted
+              }
+            />
+            <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
+              {t('matchDetail.dateAndTime')}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.dateTimeCard,
+              {
+                backgroundColor:
+                  isOngoing && !isExpired
+                    ? isDark
+                      ? `${secondary[500]}14`
+                      : `${secondary[500]}0A`
+                    : isStartingSoon && !isExpired
+                      ? isDark
+                        ? `${accent[500]}14`
+                        : `${accent[500]}0A`
+                      : isExpired || isCancelled
+                        ? isDark
+                          ? `${neutral[500]}14`
+                          : `${neutral[500]}0A`
+                        : isDark
+                          ? `${primary[500]}14`
+                          : `${primary[500]}0A`,
+                borderColor:
+                  isOngoing && !isExpired
+                    ? isDark
+                      ? `${secondary[500]}40`
+                      : `${secondary[500]}26`
+                    : isStartingSoon && !isExpired
+                      ? isDark
+                        ? `${accent[500]}40`
+                        : `${accent[500]}26`
+                      : isExpired || isCancelled
+                        ? isDark
+                          ? `${neutral[500]}40`
+                          : `${neutral[500]}26`
+                        : isDark
+                          ? `${primary[500]}40`
+                          : `${primary[500]}26`,
+              },
+            ]}
+          >
+            {/* Status badge */}
+            {isOngoing && !isExpired && (
+              <View
+                style={[
+                  styles.dateTimeBadge,
+                  { backgroundColor: isDark ? `${secondary[500]}30` : `${secondary[500]}18` },
+                ]}
+              >
+                <View style={styles.liveIndicatorContainer}>
+                  <RNAnimated.View
+                    style={[
+                      styles.liveRing,
+                      {
+                        backgroundColor: liveColor,
+                        transform: [{ scale: liveRingScale }],
+                        opacity: liveRingOpacity,
+                      },
+                    ]}
+                  />
+                  <RNAnimated.View
+                    style={[
+                      styles.liveDot,
+                      {
+                        backgroundColor: liveColor,
+                        opacity: liveDotOpacity,
+                      },
+                    ]}
+                  />
+                </View>
+                <Text size="sm" weight="bold" color={liveColor}>
+                  {t('matchDetail.live')}
+                </Text>
+              </View>
+            )}
+            {isStartingSoon && !isExpired && (
+              <View
+                style={[
+                  styles.dateTimeBadge,
+                  { backgroundColor: isDark ? `${accent[500]}30` : `${accent[500]}18` },
+                ]}
+              >
+                <RNAnimated.View
+                  style={{
+                    transform: [{ translateX: countdownBounce }],
+                    opacity: countdownOpacity,
+                  }}
+                >
+                  <Ionicons name="chevron-forward" size={14} color={soonColor} />
+                </RNAnimated.View>
+                <Text size="sm" weight="bold" color={soonColor}>
+                  {countdownLabel || t('matchDetail.startingSoon')}
+                </Text>
+              </View>
+            )}
+            {/* Three-column layout */}
+            <View style={styles.dateTimeMain}>
+              <View style={styles.dateTimeColumn}>
+                <Text size="xs" weight="semibold" color={colors.textMuted}>
+                  {t('matches.date')}
+                </Text>
+                <Text
+                  size="lg"
+                  weight="bold"
+                  color={
+                    isExpired || isCancelled
+                      ? colors.textMuted
+                      : isOngoing
+                        ? liveColor
+                        : isStartingSoon
+                          ? soonColor
+                          : colors.textSecondary
+                  }
+                  style={styles.dateTimeValue}
+                >
+                  {dateLabel}
+                </Text>
+              </View>
+              <View style={styles.dateTimeDivider}>
+                <View
+                  style={[
+                    styles.dateTimeDividerLine,
+                    { backgroundColor: isDark ? neutral[600] : neutral[300] },
+                  ]}
+                />
+              </View>
+              <View style={styles.dateTimeColumn}>
+                <Text size="xs" weight="semibold" color={colors.textMuted}>
+                  {t('matchDetail.startTime')}
+                </Text>
+                <Text
+                  size="lg"
+                  weight="bold"
+                  color={
+                    isExpired || isCancelled
+                      ? colors.textMuted
+                      : isOngoing
+                        ? liveColor
+                        : isStartingSoon
+                          ? soonColor
+                          : colors.textSecondary
+                  }
+                  style={styles.dateTimeValue}
+                >
+                  {startTimeLabel}
+                </Text>
+              </View>
+              <View style={styles.dateTimeDivider}>
+                <View
+                  style={[
+                    styles.dateTimeDividerLine,
+                    { backgroundColor: isDark ? neutral[600] : neutral[300] },
+                  ]}
+                />
+              </View>
+              <View style={styles.dateTimeColumn}>
+                <Text size="xs" weight="semibold" color={colors.textMuted}>
+                  {t('matchDetail.duration')}
+                </Text>
+                <Text
+                  size="lg"
+                  weight="bold"
+                  color={
+                    isExpired || isCancelled
+                      ? colors.textMuted
+                      : isOngoing
+                        ? liveColor
+                        : isStartingSoon
+                          ? soonColor
+                          : colors.textSecondary
+                  }
+                  style={styles.dateTimeValue}
+                >
+                  {durationLabel}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </Animated.View>
+
+        {/* Score Section - promoted to top for completed matches */}
+        {hasResult &&
+          match.result &&
+          (() => {
+            const rawResult = Array.isArray(match.result) ? match.result[0] : match.result;
+            const result = rawResult as {
+              team1_score?: number | null;
+              team2_score?: number | null;
+              winning_team?: number | null;
+              is_verified?: boolean | null;
+              disputed?: boolean | null;
+              submitted_by?: string | null;
+              sets?: Array<{ set_number: number; team1_score: number; team2_score: number }>;
+            };
+            const team1Sets = result.team1_score ?? 0;
+            const team2Sets = result.team2_score ?? 0;
+            const setsList = result.sets;
+            const isVerified = result.is_verified === true;
+            const isDisputed = result.disputed === true;
+            // Determine which side the current user is on:
+            // - Use team_number if available (currently unused by RPCs)
+            // - Fall back to submitted_by convention (submitter = team 1)
+            const currentUserTeamNumber = currentPlayerParticipant?.team_number;
+            const isCurrentUserTeam1 =
+              currentUserTeamNumber != null
+                ? currentUserTeamNumber === 1
+                : !!(playerId && result.submitted_by && playerId === result.submitted_by);
+            const isParticipantInMatch = !!currentPlayerParticipant;
+            const isSingles = match.format === 'singles';
+            const leftScore = isCurrentUserTeam1 ? team1Sets : team2Sets;
+            const rightScore = isCurrentUserTeam1 ? team2Sets : team1Sets;
+
+            // Build team labels using participant first names
+            // Singles: "Name" vs "Name" (current user on left if participant)
+            // Doubles: "Name & Name" vs "Name & Name"
+            const getName = (p: (typeof joinedParticipants)[number]) =>
+              p.player?.profile?.first_name || p.player?.profile?.display_name || '';
+            let leftLabel: string;
+            let rightLabel: string;
+            if (isSingles) {
+              if (isParticipantInMatch) {
+                const me = joinedParticipants.find(p => p.player_id === playerId);
+                const opponent = joinedParticipants.find(p => p.player_id !== playerId);
+                leftLabel = (me && getName(me)) || t('matchDetail.team1');
+                rightLabel = (opponent && getName(opponent)) || t('matchDetail.team2');
+              } else {
+                const [p1, p2] = joinedParticipants;
+                leftLabel = (p1 && getName(p1)) || t('matchDetail.team1');
+                rightLabel = (p2 && getName(p2)) || t('matchDetail.team2');
+              }
+            } else {
+              // Doubles: group by team_number if available, otherwise fall back to generic labels
+              const hasTeamNumbers = joinedParticipants.some(p => p.team_number != null);
+              if (hasTeamNumbers) {
+                const getTeamNames = (teamNum: number) =>
+                  joinedParticipants
+                    .filter(p => p.team_number === teamNum)
+                    .map(getName)
+                    .filter(Boolean);
+                const leftTeamNum = isParticipantInMatch ? (isCurrentUserTeam1 ? 1 : 2) : 1;
+                const rightTeamNum = leftTeamNum === 1 ? 2 : 1;
+                const leftNames = getTeamNames(leftTeamNum);
+                const rightNames = getTeamNames(rightTeamNum);
+                leftLabel = leftNames.length > 0 ? leftNames.join(' & ') : t('matchDetail.team1');
+                rightLabel =
+                  rightNames.length > 0 ? rightNames.join(' & ') : t('matchDetail.team2');
+              } else {
+                leftLabel = t('matchDetail.team1');
+                rightLabel = t('matchDetail.team2');
+              }
+            }
+
+            const winningTeam = result.winning_team;
+            const currentUserWon = isParticipantInMatch
+              ? (isCurrentUserTeam1 && winningTeam === 1) ||
+                (!isCurrentUserTeam1 && winningTeam === 2)
+              : null;
+            const currentUserLost = isParticipantInMatch
+              ? (isCurrentUserTeam1 && winningTeam === 2) ||
+                (!isCurrentUserTeam1 && winningTeam === 1)
+              : null;
+
+            const winColor = status.success.DEFAULT;
+            const loseColor = isDark ? secondary[400] : secondary[500];
+            const drawColor = isDark ? accent[400] : accent[500];
+            const leftScoreColor = isParticipantInMatch
+              ? currentUserWon
+                ? winColor
+                : currentUserLost
+                  ? loseColor
+                  : drawColor
+              : colors.text;
+            const rightScoreColor = isParticipantInMatch
+              ? currentUserLost
+                ? winColor
+                : currentUserWon
+                  ? loseColor
+                  : drawColor
+              : colors.text;
+
+            const scoreboardBg = isParticipantInMatch
+              ? currentUserWon
+                ? isDark
+                  ? 'rgba(5, 150, 105, 0.12)'
+                  : 'rgba(5, 150, 105, 0.06)'
+                : currentUserLost
+                  ? isDark
+                    ? 'rgba(237, 106, 109, 0.12)'
+                    : 'rgba(237, 106, 109, 0.06)'
+                  : isDark
+                    ? 'rgba(245, 158, 11, 0.12)'
+                    : 'rgba(245, 158, 11, 0.06)'
+              : isDark
+                ? neutral[800]
+                : neutral[50];
+            const scoreboardBorder = isParticipantInMatch
+              ? currentUserWon
+                ? isDark
+                  ? 'rgba(5, 150, 105, 0.25)'
+                  : 'rgba(5, 150, 105, 0.15)'
+                : currentUserLost
+                  ? isDark
+                    ? 'rgba(237, 106, 109, 0.25)'
+                    : 'rgba(237, 106, 109, 0.15)'
+                  : isDark
+                    ? 'rgba(245, 158, 11, 0.25)'
+                    : 'rgba(245, 158, 11, 0.15)'
+              : colors.border;
+
+            const trophyColor = isParticipantInMatch
+              ? currentUserWon
+                ? isDark
+                  ? accent[400]
+                  : accent[500]
+                : colors.iconMuted
+              : colors.iconMuted;
+            const trophyIcon = isParticipantInMatch && currentUserWon ? 'trophy' : 'trophy-outline';
+
+            const statusBadgeBg = isDisputed
+              ? isDark
+                ? 'rgba(237, 106, 109, 0.15)'
+                : 'rgba(237, 106, 109, 0.1)'
+              : isVerified
+                ? isDark
+                  ? 'rgba(5, 150, 105, 0.15)'
+                  : 'rgba(5, 150, 105, 0.1)'
+                : isDark
+                  ? 'rgba(245, 158, 11, 0.15)'
+                  : 'rgba(245, 158, 11, 0.1)';
+            const statusBadgeTextColor = isDisputed
+              ? isDark
+                ? secondary[300]
+                : secondary[600]
+              : isVerified
+                ? isDark
+                  ? status.success.light
+                  : status.success.dark
+                : isDark
+                  ? accent[300]
+                  : accent[600];
+            const statusIcon: keyof typeof Ionicons.glyphMap = isDisputed
+              ? 'warning-outline'
+              : isVerified
+                ? 'checkmark-circle'
+                : 'time-outline';
+            const statusKey = isDisputed
+              ? 'matchDetail.scoreDisputed'
+              : isVerified
+                ? 'matchDetail.scoreVerified'
+                : 'matchDetail.scorePendingConfirmation';
+
+            // Number of players still needing to confirm (for singular/plural translation)
+            const remaining = scoreConfirmProgress
+              ? scoreConfirmProgress.total - scoreConfirmProgress.confirmed
+              : match.format === 'doubles'
+                ? 3
+                : 1;
+
+            return (
+              <Animated.View
+                entering={FadeInDown.delay(50).springify()}
+                style={[styles.section, { borderBottomColor: colors.border }]}
+              >
+                <View style={styles.sectionHeader}>
+                  <Ionicons name={trophyIcon} size={20} color={trophyColor} />
+                  <Text
+                    size="base"
+                    weight="semibold"
+                    color={colors.text}
+                    style={styles.sectionTitle}
+                  >
+                    {t('matchDetail.registerScore')}
+                  </Text>
+                </View>
+
+                <View style={styles.scoreboardCardWrapper}>
+                  <View
+                    style={[
+                      styles.scoreboardCardBg,
+                      { backgroundColor: scoreboardBg, borderColor: scoreboardBorder },
+                    ]}
+                  />
+                  <View style={styles.scoreboardCardContent}>
+                    <View style={styles.scoreboardMain}>
+                      <View style={styles.scoreboardTeam}>
+                        <Text size="sm" weight="semibold" color={colors.textMuted}>
+                          {leftLabel}
+                        </Text>
+                        <Text
+                          size={30}
+                          weight="bold"
+                          color={leftScoreColor}
+                          style={styles.scoreboardTeamScore}
+                        >
+                          {leftScore}
+                        </Text>
+                      </View>
+                      <View style={styles.scoreboardDivider}>
+                        <View
+                          style={[
+                            styles.scoreboardDividerLine,
+                            { backgroundColor: isDark ? neutral[600] : neutral[300] },
+                          ]}
+                        />
+                      </View>
+                      <View style={styles.scoreboardTeam}>
+                        <Text size="sm" weight="semibold" color={colors.textMuted}>
+                          {rightLabel}
+                        </Text>
+                        <Text
+                          size={30}
+                          weight="bold"
+                          color={rightScoreColor}
+                          style={styles.scoreboardTeamScore}
+                        >
+                          {rightScore}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {setsList && setsList.length > 0 && (
+                      <View style={styles.scoreboardSets}>
+                        {setsList
+                          .sort((a, b) => a.set_number - b.set_number)
+                          .map(s => {
+                            const s1 =
+                              isParticipantInMatch && !isCurrentUserTeam1
+                                ? s.team2_score
+                                : s.team1_score;
+                            const s2 =
+                              isParticipantInMatch && !isCurrentUserTeam1
+                                ? s.team1_score
+                                : s.team2_score;
+                            const leftWonSet = s1 > s2;
+                            const pillBg = leftWonSet
+                              ? isDark
+                                ? 'rgba(5, 150, 105, 0.15)'
+                                : 'rgba(5, 150, 105, 0.1)'
+                              : isDark
+                                ? 'rgba(237, 106, 109, 0.15)'
+                                : 'rgba(237, 106, 109, 0.1)';
+                            const pillBorder = leftWonSet
+                              ? isDark
+                                ? 'rgba(5, 150, 105, 0.3)'
+                                : 'rgba(5, 150, 105, 0.2)'
+                              : isDark
+                                ? 'rgba(237, 106, 109, 0.3)'
+                                : 'rgba(237, 106, 109, 0.2)';
+                            const pillTextColor = leftWonSet
+                              ? isDark
+                                ? status.success.light
+                                : status.success.dark
+                              : isDark
+                                ? secondary[300]
+                                : secondary[600];
+                            return (
+                              <View
+                                key={s.set_number}
+                                style={[
+                                  styles.scoreboardSetPill,
+                                  { backgroundColor: pillBg, borderColor: pillBorder },
+                                ]}
+                              >
+                                <Text size="xs" weight="semibold" color={pillTextColor}>
+                                  {`${s1}-${s2}`}
+                                </Text>
+                              </View>
+                            );
+                          })}
+                      </View>
+                    )}
+
+                    {/* Status badge + confirmation progress */}
+                    <View style={styles.scoreboardStatusRow}>
+                      <View
+                        style={[styles.scoreboardStatusBadge, { backgroundColor: statusBadgeBg }]}
+                      >
+                        <Ionicons name={statusIcon} size={14} color={statusBadgeTextColor} />
+                        <Text
+                          size="xs"
+                          weight="semibold"
+                          color={statusBadgeTextColor}
+                          style={styles.scoreboardStatusText}
+                        >
+                          {t(statusKey, { count: remaining })}
+                        </Text>
+                      </View>
+                      {scoreConfirmProgress && !isVerified && !isDisputed && (
+                        <Text size="xs" weight="medium" color={colors.textMuted}>
+                          {t('matchDetail.scoreConfirmProgress', {
+                            confirmed: scoreConfirmProgress.confirmed,
+                            total: scoreConfirmProgress.total,
+                            count: scoreConfirmProgress.confirmed,
+                          })}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                </View>
+              </Animated.View>
+            );
+          })()}
+
         {/* Match Info Grid - Moved up for context */}
         {hasAnyBadges && (
-          <View style={[styles.section, { borderBottomColor: colors.border }]}>
+          <Animated.View
+            entering={FadeInDown.delay(100).springify()}
+            style={[styles.section, { borderBottomColor: colors.border }]}
+          >
             <View style={styles.sectionHeader}>
               <Ionicons name="information-circle-outline" size={20} color={colors.iconMuted} />
               <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
-                {t('matchDetail.title')}
+                {t('matchDetail.preferences')}
               </Text>
             </View>
             <View style={styles.badgesGrid}>
-              {/* Court Booked badge - uses secondary (coral) for important callout */}
+              {/* Min rating - secondary (coral) */}
+              {match.min_rating_score && match.min_rating_score.label && (
+                <Badge
+                  label={match.min_rating_score.label}
+                  bgColor={isDark ? `${secondary[400]}30` : `${secondary[500]}15`}
+                  textColor={isDark ? secondary[400] : secondary[500]}
+                  icon="analytics"
+                />
+              )}
+
+              {/* Top Player badge - accent (lightest shade) */}
+              {(tier === 'topPlayer' || tier === 'mostWanted') && (
+                <Badge
+                  label={t(
+                    (match.format === 'doubles'
+                      ? 'match.tier.topPlayerPlural'
+                      : 'match.tier.topPlayer') as TranslationKey
+                  )}
+                  bgColor={isDark ? `${accent[400]}30` : `${accent[500]}15`}
+                  textColor={isDark ? accent[400] : accent[500]}
+                  icon="star"
+                />
+              )}
+
+              {/* Court Booked badge - accent (medium shade) */}
               {(tier === 'mostWanted' || tier === 'readyToPlay') && (
                 <Badge
                   label={t('match.courtStatus.courtBooked')}
-                  bgColor={isDark ? `${secondary[400]}25` : `${secondary[500]}15`}
-                  textColor={isDark ? secondary[400] : secondary[600]}
+                  bgColor={isDark ? `${accent[500]}30` : `${accent[600]}15`}
+                  textColor={isDark ? accent[500] : accent[600]}
                   icon="checkmark-circle"
                 />
               )}
 
-              {/* Player expectation - competitive uses accent (amber), casual uses primary (teal) */}
+              {/* Player expectation - primary (cyan) */}
               {match.player_expectation && match.player_expectation !== 'both' && (
                 <Badge
                   label={
@@ -2318,39 +3201,13 @@ export const MatchDetailSheet: React.FC = () => {
                       ? t('matchDetail.competitive')
                       : t('matchDetail.casual')
                   }
-                  bgColor={
-                    match.player_expectation === 'competitive'
-                      ? isDark
-                        ? `${accent[400]}25`
-                        : `${accent[500]}15`
-                      : isDark
-                        ? `${primary[400]}25`
-                        : `${primary[500]}15`
-                  }
-                  textColor={
-                    match.player_expectation === 'competitive'
-                      ? isDark
-                        ? accent[400]
-                        : accent[600]
-                      : isDark
-                        ? primary[400]
-                        : primary[600]
-                  }
+                  bgColor={isDark ? `${primary[400]}30` : `${primary[500]}15`}
+                  textColor={isDark ? primary[400] : primary[500]}
                   icon={match.player_expectation === 'competitive' ? 'trophy' : 'happy'}
                 />
               )}
 
-              {/* Min rating - uses primary (teal) for level info */}
-              {match.min_rating_score && match.min_rating_score.label && (
-                <Badge
-                  label={match.min_rating_score.label}
-                  bgColor={isDark ? `${primary[400]}25` : `${primary[500]}15`}
-                  textColor={isDark ? primary[400] : primary[600]}
-                  icon="analytics"
-                />
-              )}
-
-              {/* Gender preference - neutral style for filter info */}
+              {/* Gender preference - primary (cyan) */}
               {match.preferred_opponent_gender && (
                 <Badge
                   label={
@@ -2360,18 +3217,24 @@ export const MatchDetailSheet: React.FC = () => {
                         ? t('match.gender.womenOnly')
                         : t('match.gender.other')
                   }
-                  bgColor={isDark ? neutral[800] : neutral[100]}
-                  textColor={isDark ? neutral[300] : neutral[600]}
-                  icon={match.preferred_opponent_gender === 'male' ? 'male' : 'female'}
+                  bgColor={isDark ? `${primary[400]}30` : `${primary[500]}15`}
+                  textColor={isDark ? primary[400] : primary[500]}
+                  icon={
+                    match.preferred_opponent_gender === 'male'
+                      ? 'male'
+                      : match.preferred_opponent_gender === 'female'
+                        ? 'female'
+                        : 'transgender'
+                  }
                 />
               )}
 
-              {/* Join mode - neutral style for filter info */}
+              {/* Join mode - primary (cyan) */}
               {match.join_mode === 'request' && (
                 <Badge
                   label={t('match.joinMode.request')}
-                  bgColor={isDark ? neutral[800] : neutral[100]}
-                  textColor={isDark ? neutral[300] : neutral[600]}
+                  bgColor={isDark ? `${primary[400]}30` : `${primary[500]}15`}
+                  textColor={isDark ? primary[400] : primary[500]}
                   icon="hand-left"
                 />
               )}
@@ -2387,7 +3250,7 @@ export const MatchDetailSheet: React.FC = () => {
                   bgColor={
                     match.visibility === 'public'
                       ? isDark
-                        ? `${primary[400]}25`
+                        ? `${primary[400]}30`
                         : `${primary[500]}15`
                       : isDark
                         ? `${neutral[600]}40`
@@ -2397,7 +3260,7 @@ export const MatchDetailSheet: React.FC = () => {
                     match.visibility === 'public'
                       ? isDark
                         ? primary[400]
-                        : primary[600]
+                        : primary[500]
                       : isDark
                         ? neutral[300]
                         : neutral[600]
@@ -2406,17 +3269,30 @@ export const MatchDetailSheet: React.FC = () => {
                 />
               )}
             </View>
-          </View>
+          </Animated.View>
         )}
 
         {/* Participants Section - with host inline (marked with star) */}
-        <View style={[styles.section, { borderBottomColor: colors.border }]}>
+        <Animated.View
+          entering={FadeInDown.delay(150).springify()}
+          style={[styles.section, { borderBottomColor: colors.border }]}
+        >
           <View style={styles.sectionHeader}>
             <View style={styles.sectionHeaderTitleRow}>
               <Ionicons name="people-outline" size={20} color={colors.iconMuted} />
               <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
-                {t('matchDetail.participants')} ({participantInfo.current}/{participantInfo.total})
+                {t('matchDetail.participants')}
               </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  lightHaptic();
+                  setShowBadgeInfo(true);
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={styles.badgeInfoButton}
+              >
+                <Ionicons name="information-circle-outline" size={18} color={colors.iconMuted} />
+              </TouchableOpacity>
             </View>
             {currentPlayerParticipant && matchConversationId && (
               <TouchableOpacity
@@ -2425,13 +3301,21 @@ export const MatchDetailSheet: React.FC = () => {
                 activeOpacity={0.7}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Ionicons name="chatbubble-outline" size={22} color={colors.primary} />
+                <Ionicons name="chatbubble-outline" size={18} color={colors.primary} />
+                <Text size="sm" weight="medium" color={colors.primary}>
+                  {t('matchDetail.chat')}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.primary} />
               </TouchableOpacity>
             )}
           </View>
           <View style={styles.participantsRow}>
-            {participantAvatars.map((p, _index) => (
-              <View key={p.key} style={styles.participantWithLabel}>
+            {participantAvatars.map((p, index) => (
+              <Animated.View
+                key={p.key}
+                entering={FadeInDown.delay(100 + index * 60).springify()}
+                style={styles.participantWithLabel}
+              >
                 <View style={styles.participantAvatarWithAction}>
                   <TouchableOpacity
                     onPress={() => {
@@ -2439,7 +3323,7 @@ export const MatchDetailSheet: React.FC = () => {
                         handleParticipantProfilePress(p.playerId);
                       }
                     }}
-                    activeOpacity={p.isEmpty ? 1 : 0.7}
+                    activeOpacity={p.isEmpty ? 1 : 0.85}
                     disabled={p.isEmpty}
                   >
                     <ParticipantAvatar
@@ -2447,6 +3331,8 @@ export const MatchDetailSheet: React.FC = () => {
                       isHost={p.isHost}
                       isEmpty={p.isEmpty}
                       isCheckedIn={p.isCheckedIn}
+                      isMostWanted={p.isMostWanted}
+                      certificationStatus={p.certificationStatus}
                       colors={colors}
                       isDark={isDark}
                       tierAccent={tierAccent}
@@ -2471,7 +3357,7 @@ export const MatchDetailSheet: React.FC = () => {
                         activeOpacity={0.7}
                         hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
                       >
-                        <Ionicons name="close-outline" size={10} color={base.white} />
+                        <Ionicons name="close-outline" size={12} color={base.white} />
                       </TouchableOpacity>
                     )}
                 </View>
@@ -2486,16 +3372,9 @@ export const MatchDetailSheet: React.FC = () => {
                     {p.name}
                   </Text>
                 )}
-              </View>
+              </Animated.View>
             ))}
           </View>
-          {participantInfo.spotsLeft > 0 && (
-            <Text size="sm" weight="medium" color={colors.statusOpen} style={styles.spotsText}>
-              {participantInfo.spotsLeft === 1
-                ? t('match.slots.oneLeft')
-                : t('match.slots.left', { count: participantInfo.spotsLeft })}
-            </Text>
-          )}
 
           {/* Invite Players Button - only visible to host when spots available and match not ended or in progress */}
           {isCreator &&
@@ -2525,6 +3404,35 @@ export const MatchDetailSheet: React.FC = () => {
                 </Text>
               </TouchableOpacity>
             )}
+
+          {/* Share Match Button - visible to all users when match hasn't started */}
+          {startTimeDiffMs >= 0 && !isCancelled && !hasMatchEnded && (
+            <TouchableOpacity
+              style={[
+                styles.invitePlayersButton,
+                {
+                  backgroundColor: isDark ? `${secondary[500]}15` : `${secondary[500]}10`,
+                  borderColor: isDark ? secondary[400] : secondary[500],
+                },
+              ]}
+              onPress={handleShare}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="share-social"
+                size={18}
+                color={isDark ? secondary[400] : secondary[500]}
+              />
+              <Text
+                size="sm"
+                weight="medium"
+                color={isDark ? secondary[400] : secondary[500]}
+                style={styles.inviteButtonText}
+              >
+                {t('matchDetail.share')}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {/* Pending Requests Section - only visible to host */}
           {isCreator && pendingRequests.length > 0 && !isCancelled && !hasStartTimePassed && (
@@ -2578,28 +3486,40 @@ export const MatchDetailSheet: React.FC = () => {
                   style={[
                     styles.pendingRequestInfo,
                     {
-                      backgroundColor: themeColors.muted,
+                      backgroundColor: isDark ? neutral[800] : neutral[50],
                       borderWidth: 1,
                       borderColor: colors.border,
-                      borderRadius: radiusPixels.md,
-                      paddingHorizontal: spacingPixels[3],
-                      paddingVertical: spacingPixels[2.5],
+                      borderRadius: radiusPixels.xl,
+                      padding: spacingPixels[3],
                     },
                   ]}
                 >
                   <View style={styles.pendingRequestContent}>
-                    <View
-                      style={[styles.pendingRequestAvatar, { backgroundColor: colors.primary }]}
+                    <TouchableOpacity
+                      onPress={() =>
+                        request.playerId && handleParticipantProfilePress(request.playerId)
+                      }
+                      activeOpacity={0.7}
                     >
-                      {request.avatarUrl ? (
-                        <Image
-                          source={{ uri: request.avatarUrl }}
-                          style={styles.pendingRequestAvatarImage}
-                        />
-                      ) : (
-                        <Ionicons name="person-outline" size={16} color={base.white} />
-                      )}
-                    </View>
+                      <View
+                        style={[
+                          styles.pendingRequestAvatar,
+                          {
+                            backgroundColor: colors.primary,
+                            borderColor: isDark ? primary[400] : primary[500],
+                          },
+                        ]}
+                      >
+                        {request.avatarUrl ? (
+                          <Image
+                            source={{ uri: request.avatarUrl }}
+                            style={styles.pendingRequestAvatarImage}
+                          />
+                        ) : (
+                          <Ionicons name="person-outline" size={16} color={base.white} />
+                        )}
+                      </View>
+                    </TouchableOpacity>
                     <View style={styles.pendingRequestNameContainer}>
                       <Text
                         size="sm"
@@ -2610,37 +3530,82 @@ export const MatchDetailSheet: React.FC = () => {
                       >
                         {request.name}
                       </Text>
-                      {request.ratingDisplay && (
+                      {request.ratingDisplay &&
+                        (() => {
+                          const reqCertColors =
+                            request.certificationStatus &&
+                            request.certificationStatus !== 'self_declared'
+                              ? CERTIFICATION_BADGE_COLORS[request.certificationStatus]
+                              : null;
+                          const reqBadgeBg = reqCertColors
+                            ? `${reqCertColors.bg}25`
+                            : isDark
+                              ? `${primary[400]}30`
+                              : `${primary[500]}15`;
+                          const reqBadgeText = reqCertColors
+                            ? reqCertColors.bg
+                            : isDark
+                              ? primary[400]
+                              : primary[500];
+                          const reqBadgeIcon = reqCertColors
+                            ? (reqCertColors.icon as keyof typeof Ionicons.glyphMap)
+                            : 'analytics';
+                          return (
+                            <View
+                              style={[
+                                styles.pendingRequestRatingBadge,
+                                { backgroundColor: reqBadgeBg },
+                              ]}
+                            >
+                              <Ionicons
+                                name={reqBadgeIcon}
+                                size={10}
+                                color={reqBadgeText}
+                                style={styles.pendingRequestRatingIcon}
+                              />
+                              <Text size="xs" weight="medium" color={reqBadgeText}>
+                                {request.ratingDisplay}
+                              </Text>
+                            </View>
+                          );
+                        })()}
+                      {request.repTierPalette && request.repTierConfig && (
                         <View
                           style={[
                             styles.pendingRequestRatingBadge,
-                            { backgroundColor: colors.primaryLight },
+                            {
+                              backgroundColor: isDark
+                                ? request.repTierPalette.text
+                                : request.repTierPalette.background,
+                            },
                           ]}
                         >
                           <Ionicons
-                            name="analytics"
+                            name={request.repTierConfig.icon as keyof typeof Ionicons.glyphMap}
                             size={10}
-                            color={colors.primary}
+                            color={
+                              isDark
+                                ? request.repTierPalette.background
+                                : request.repTierPalette.text
+                            }
                             style={styles.pendingRequestRatingIcon}
                           />
-                          <Text size="xs" weight="medium" color={colors.primary}>
-                            {request.ratingDisplay}
+                          <Text
+                            size="xs"
+                            weight="medium"
+                            color={
+                              isDark
+                                ? request.repTierPalette.background
+                                : request.repTierPalette.text
+                            }
+                          >
+                            {request.repTierConfig.label}
                           </Text>
                         </View>
                       )}
                     </View>
                   </View>
                   <View style={styles.pendingRequestActions}>
-                    <TouchableOpacity
-                      style={[styles.viewDetailsButton, { backgroundColor: colors.primaryLight }]}
-                      onPress={() =>
-                        request.participant && handleViewRequesterDetails(request.participant)
-                      }
-                      activeOpacity={0.7}
-                      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                    >
-                      <Ionicons name="eye-outline" size={18} color={colors.primary} />
-                    </TouchableOpacity>
                     <TouchableOpacity
                       style={[
                         styles.requestActionButton,
@@ -2660,7 +3625,7 @@ export const MatchDetailSheet: React.FC = () => {
                       }
                       activeOpacity={0.7}
                     >
-                      <Ionicons name="checkmark-outline" size={18} color={base.white} />
+                      <Ionicons name="checkmark-outline" size={16} color={base.white} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[
@@ -2672,7 +3637,7 @@ export const MatchDetailSheet: React.FC = () => {
                       disabled={isAccepting || isRejecting}
                       activeOpacity={0.7}
                     >
-                      <Ionicons name="close-outline" size={18} color={base.white} />
+                      <Ionicons name="close-outline" size={16} color={base.white} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -2732,28 +3697,41 @@ export const MatchDetailSheet: React.FC = () => {
                       style={[
                         styles.pendingRequestInfo,
                         {
-                          backgroundColor: themeColors.muted,
+                          backgroundColor: isDark ? neutral[800] : neutral[50],
                           borderWidth: 1,
                           borderColor: colors.border,
-                          borderRadius: radiusPixels.md,
-                          paddingHorizontal: spacingPixels[3],
-                          paddingVertical: spacingPixels[2.5],
+                          borderRadius: radiusPixels.xl,
+                          padding: spacingPixels[3],
                         },
                       ]}
                     >
                       <View style={styles.pendingRequestContent}>
-                        <View
-                          style={[styles.pendingRequestAvatar, { backgroundColor: colors.primary }]}
+                        <TouchableOpacity
+                          onPress={() =>
+                            invitation.playerId &&
+                            handleParticipantProfilePress(invitation.playerId)
+                          }
+                          activeOpacity={0.7}
                         >
-                          {invitation.avatarUrl ? (
-                            <Image
-                              source={{ uri: invitation.avatarUrl }}
-                              style={styles.pendingRequestAvatarImage}
-                            />
-                          ) : (
-                            <Ionicons name="person-outline" size={16} color={base.white} />
-                          )}
-                        </View>
+                          <View
+                            style={[
+                              styles.pendingRequestAvatar,
+                              {
+                                backgroundColor: colors.primary,
+                                borderColor: isDark ? primary[400] : primary[500],
+                              },
+                            ]}
+                          >
+                            {invitation.avatarUrl ? (
+                              <Image
+                                source={{ uri: invitation.avatarUrl }}
+                                style={styles.pendingRequestAvatarImage}
+                              />
+                            ) : (
+                              <Ionicons name="person-outline" size={16} color={base.white} />
+                            )}
+                          </View>
+                        </TouchableOpacity>
                         <View style={styles.pendingRequestNameContainer}>
                           <Text
                             size="sm"
@@ -2795,7 +3773,9 @@ export const MatchDetailSheet: React.FC = () => {
                                     isCancellingInvite ||
                                     isInProgress
                                       ? neutral[400]
-                                      : colors.primary,
+                                      : isDark
+                                        ? primary[400]
+                                        : primary[500],
                                 },
                               ]}
                               onPress={() => invitation.id && handleResendInvite(invitation.id)}
@@ -2806,7 +3786,7 @@ export const MatchDetailSheet: React.FC = () => {
                               }
                               activeOpacity={0.7}
                             >
-                              <Ionicons name="refresh" size={18} color={base.white} />
+                              <Ionicons name="refresh" size={16} color={base.white} />
                             </TouchableOpacity>
                             {/* Cancel button for pending invitations */}
                             <TouchableOpacity
@@ -2820,7 +3800,7 @@ export const MatchDetailSheet: React.FC = () => {
                               }
                               activeOpacity={0.7}
                             >
-                              <Ionicons name="close-outline" size={18} color={base.white} />
+                              <Ionicons name="close-outline" size={16} color={base.white} />
                             </TouchableOpacity>
                           </>
                         ) : (
@@ -2834,7 +3814,9 @@ export const MatchDetailSheet: React.FC = () => {
                                   isCancellingInvite ||
                                   isInProgress
                                     ? neutral[400]
-                                    : colors.primary,
+                                    : isDark
+                                      ? primary[400]
+                                      : primary[500],
                               },
                             ]}
                             onPress={() => invitation.id && handleResendInvite(invitation.id)}
@@ -2845,7 +3827,7 @@ export const MatchDetailSheet: React.FC = () => {
                             }
                             activeOpacity={0.7}
                           >
-                            <Ionicons name="refresh" size={18} color={base.white} />
+                            <Ionicons name="refresh" size={16} color={base.white} />
                           </TouchableOpacity>
                         )}
                       </View>
@@ -2880,14 +3862,129 @@ export const MatchDetailSheet: React.FC = () => {
               )}
             </View>
           )}
-        </View>
+        </Animated.View>
+
+        {/* Hosted By Section - Shows host info with reputation */}
+        <Animated.View
+          entering={FadeInDown.delay(200).springify()}
+          style={[styles.section, { borderBottomColor: colors.border }]}
+        >
+          <View style={styles.sectionHeader}>
+            <Ionicons name="person-circle-outline" size={20} color={colors.iconMuted} />
+            <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
+              {t('matchDetail.hostedBy')}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[
+              styles.hostedByCard,
+              { backgroundColor: isDark ? neutral[800] : neutral[50], borderColor: colors.border },
+            ]}
+            onPress={() => match.created_by && handleParticipantProfilePress(match.created_by)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.hostedByRow}>
+              <View style={[styles.hostedByAvatar, { borderColor: tierAccent }]}>
+                {getProfilePictureUrl(creatorProfile?.profile_picture_url) ? (
+                  <Image
+                    source={{ uri: getProfilePictureUrl(creatorProfile?.profile_picture_url)! }}
+                    style={styles.hostedByAvatarImage}
+                  />
+                ) : (
+                  <View
+                    style={[
+                      styles.hostedByAvatarPlaceholder,
+                      { backgroundColor: colors.avatarPlaceholder },
+                    ]}
+                  >
+                    <Ionicons
+                      name="person-outline"
+                      size={20}
+                      color={isDark ? neutral[400] : neutral[500]}
+                    />
+                  </View>
+                )}
+              </View>
+              <View style={styles.hostedByInfo}>
+                <Text size="base" weight="semibold" color={colors.text}>
+                  {creatorName}
+                </Text>
+                <View style={styles.hostedByReputationRow}>
+                  {(() => {
+                    const creatorPlayer = match.created_by_player as PlayerWithProfile | undefined;
+                    const ratingValue = creatorPlayer?.sportRatingValue;
+                    const ratingLabel = creatorPlayer?.sportRatingLabel;
+                    const ratingDisplay =
+                      ratingValue !== undefined && ratingValue !== null
+                        ? ratingValue.toFixed(1)
+                        : ratingLabel;
+                    if (!ratingDisplay) return null;
+                    const certStatus = creatorPlayer?.sportCertificationStatus;
+                    const certBadgeColors =
+                      certStatus && certStatus !== 'self_declared'
+                        ? CERTIFICATION_BADGE_COLORS[certStatus]
+                        : null;
+                    const badgeBg = certBadgeColors
+                      ? `${certBadgeColors.bg}25`
+                      : isDark
+                        ? `${primary[400]}30`
+                        : `${primary[500]}15`;
+                    const badgeTextColor = certBadgeColors
+                      ? certBadgeColors.bg
+                      : isDark
+                        ? primary[400]
+                        : primary[500];
+                    const badgeIcon = certBadgeColors
+                      ? (certBadgeColors.icon as keyof typeof Ionicons.glyphMap)
+                      : 'analytics';
+                    return (
+                      <View style={[styles.hostedByRatingBadge, { backgroundColor: badgeBg }]}>
+                        <Ionicons name={badgeIcon} size={12} color={badgeTextColor} />
+                        <Text size="xs" weight="semibold" color={badgeTextColor}>
+                          {ratingDisplay}
+                        </Text>
+                      </View>
+                    );
+                  })()}
+                  {creatorReputationDisplay.isVisible &&
+                    (() => {
+                      const tierKey = creatorReputationDisplay.tier as keyof typeof TIER_COLORS;
+                      const tierPalette = TIER_COLORS[tierKey] ?? TIER_COLORS.unknown;
+                      return (
+                        <View
+                          style={[
+                            styles.hostedByTierBadge,
+                            { backgroundColor: isDark ? tierPalette.text : tierPalette.background },
+                          ]}
+                        >
+                          <Ionicons
+                            name={
+                              creatorReputationDisplay.tierIcon as keyof typeof Ionicons.glyphMap
+                            }
+                            size={12}
+                            color={isDark ? tierPalette.background : tierPalette.text}
+                          />
+                          <Text
+                            size="xs"
+                            weight="semibold"
+                            color={isDark ? tierPalette.background : tierPalette.text}
+                          >
+                            {creatorReputationDisplay.tierLabel}
+                          </Text>
+                        </View>
+                      );
+                    })()}
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.iconMuted} />
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
 
         {/* Location Section - Tappable to open maps */}
-        <TouchableOpacity
+        <Animated.View
+          entering={FadeInDown.delay(250).springify()}
           style={[styles.section, { borderBottomColor: colors.border }]}
-          onPress={hasLocationData ? handleOpenMaps : undefined}
-          activeOpacity={hasLocationData ? 0.7 : 1}
-          disabled={!hasLocationData}
         >
           <View style={styles.sectionHeader}>
             <Ionicons name="location-outline" size={20} color={colors.iconMuted} />
@@ -2895,178 +3992,241 @@ export const MatchDetailSheet: React.FC = () => {
               {t('matchDetail.location')}
             </Text>
           </View>
-          <View style={styles.locationRow}>
-            <View style={[styles.infoRow, { flex: 1, minWidth: 0 }]}>
-              <View style={styles.infoContent}>
-                <Text size="base" weight="semibold" color={colors.text}>
-                  {facilityName || t('matchDetail.locationTBD')}
-                  {courtName && ` - ${courtName}`}
-                </Text>
-                {address && (
-                  <Text size="sm" color={colors.textMuted} style={styles.addressText}>
-                    {address}
+          <TouchableOpacity
+            style={[
+              styles.locationCard,
+              { backgroundColor: isDark ? neutral[800] : neutral[50], borderColor: colors.border },
+            ]}
+            onPress={hasLocationData ? handleOpenMaps : undefined}
+            activeOpacity={hasLocationData ? 0.7 : 1}
+            disabled={!hasLocationData}
+          >
+            <View style={styles.locationRow}>
+              <View
+                style={{ flexDirection: 'row', alignItems: 'flex-start', flex: 1, minWidth: 0 }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text size="base" weight="semibold" color={colors.text}>
+                    {facilityName || t('matchDetail.locationTBD')}
+                    {courtName && ` - ${courtName}`}
                   </Text>
-                )}
-                {distanceDisplay && (
-                  <Text
-                    size="sm"
-                    weight="medium"
-                    color={colors.primary}
-                    style={styles.distanceText}
-                  >
-                    {distanceDisplay} {t('matchDetail.away')}
-                  </Text>
-                )}
+                  {address && (
+                    <Text size="sm" color={colors.textMuted} style={styles.addressText}>
+                      {address}
+                    </Text>
+                  )}
+                  {distanceDisplay && (
+                    <Text
+                      size="sm"
+                      weight="medium"
+                      color={colors.primary}
+                      style={styles.distanceText}
+                    >
+                      {distanceDisplay} {t('matchDetail.away')}
+                    </Text>
+                  )}
+                </View>
               </View>
+              {hasLocationData && (
+                <View style={styles.locationChevron}>
+                  <Ionicons name="chevron-forward" size={20} color={colors.iconMuted} />
+                </View>
+              )}
             </View>
-            {hasLocationData && (
-              <View style={styles.locationChevron}>
-                <Ionicons name="chevron-forward" size={20} color={colors.iconMuted} />
+            {hasCoordinates && (
+              <View style={[styles.mapContainer, { borderColor: colors.border }]}>
+                <MapView
+                  style={styles.mapView}
+                  initialRegion={{
+                    latitude: resolvedLatitude!,
+                    longitude: resolvedLongitude!,
+                    latitudeDelta: 0.005,
+                    longitudeDelta: 0.005,
+                  }}
+                  scrollEnabled={false}
+                  zoomEnabled={false}
+                  rotateEnabled={false}
+                  pitchEnabled={false}
+                  toolbarEnabled={false}
+                  moveOnMarkerPress={false}
+                  pointerEvents="none"
+                  userInterfaceStyle={isDark ? 'dark' : 'light'}
+                  liteMode={Platform.OS === 'android'}
+                >
+                  <Marker
+                    coordinate={{
+                      latitude: resolvedLatitude!,
+                      longitude: resolvedLongitude!,
+                    }}
+                  >
+                    <View
+                      style={[
+                        styles.glassMarkerContainer,
+                        { shadowColor: isDark ? primary[400] : primary[600] },
+                      ]}
+                    >
+                      {/* Glow ring */}
+                      <View
+                        style={[
+                          styles.glassMarkerGlow,
+                          { backgroundColor: isDark ? `${primary[400]}30` : `${primary[500]}20` },
+                        ]}
+                      >
+                        {/* Glass body */}
+                        <View
+                          style={[
+                            styles.glassMarkerBody,
+                            {
+                              backgroundColor: isDark ? `${primary[400]}B3` : `${primary[500]}CC`,
+                              borderColor: isDark ? `${base.white}30` : `${base.white}60`,
+                            },
+                          ]}
+                        >
+                          {/* Specular highlight */}
+                          <View
+                            style={[
+                              styles.glassMarkerHighlight,
+                              { backgroundColor: isDark ? `${base.white}15` : `${base.white}30` },
+                            ]}
+                          />
+                          <SportIcon
+                            sportName={match.sport?.name || 'tennis'}
+                            size={16}
+                            color={base.white}
+                          />
+                        </View>
+                      </View>
+                      {/* Bottom dot */}
+                      <View
+                        style={[
+                          styles.glassMarkerDot,
+                          {
+                            backgroundColor: isDark ? primary[300] : primary[500],
+                            shadowColor: isDark ? primary[300] : primary[500],
+                          },
+                        ]}
+                      />
+                    </View>
+                  </Marker>
+                </MapView>
               </View>
             )}
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </Animated.View>
 
         {/* Cost Section */}
-        {costDisplay && (
-          <View style={[styles.section, { borderBottomColor: colors.border }]}>
+        {hasCostData && (
+          <Animated.View
+            entering={FadeInDown.delay(300).springify()}
+            style={[styles.section, { borderBottomColor: colors.border }]}
+          >
             <View style={styles.sectionHeader}>
-              <Ionicons
-                name={match.is_court_free ? 'checkmark-circle-outline' : 'cash-outline'}
-                size={20}
-                color={match.is_court_free ? status.success.DEFAULT : colors.iconMuted}
-              />
+              <Ionicons name="wallet-outline" size={20} color={colors.iconMuted} />
               <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
                 {t('matchDetail.estimatedCost')}
               </Text>
             </View>
-            <InfoRow colors={colors}>
-              <View>
-                <Text size="sm" color={colors.textMuted}>
-                  {t('matchDetail.courtEstimatedCost')}
-                </Text>
-                <Text
-                  size="base"
-                  weight="semibold"
-                  color={match.is_court_free ? status.success.DEFAULT : colors.text}
-                >
-                  {costDisplay}
-                </Text>
-              </View>
-            </InfoRow>
-          </View>
-        )}
-
-        {/* Score Section - when match has a result */}
-        {hasResult &&
-          match.result &&
-          (() => {
-            const rawResult = Array.isArray(match.result) ? match.result[0] : match.result;
-            const result = rawResult as {
-              team1_score?: number | null;
-              team2_score?: number | null;
-              is_verified?: boolean | null;
-              disputed?: boolean | null;
-              submitted_by?: string | null;
-              sets?: Array<{ set_number: number; team1_score: number; team2_score: number }>;
-            };
-            const team1Sets = result.team1_score ?? 0;
-            const team2Sets = result.team2_score ?? 0;
-            const setsList = result.sets;
-            const isVerified = result.is_verified === true;
-            const isDisputed = result.disputed === true;
-            const statusKey = isDisputed
-              ? 'matchDetail.scoreDisputed'
-              : isVerified
-                ? 'matchDetail.scoreVerified'
-                : 'matchDetail.scorePendingConfirmation';
-            const statusIcon = isDisputed
-              ? 'warning-outline'
-              : isVerified
-                ? 'checkmark-circle-outline'
-                : 'time-outline';
-            const isCurrentUserTeam1 = !!(
-              playerId &&
-              result.submitted_by &&
-              playerId === result.submitted_by
-            );
-            const useYourTeamLabels = !!playerId && !!result.submitted_by;
-            const isSingles = match.format === 'singles';
-            const yourScore = isCurrentUserTeam1 ? team1Sets : team2Sets;
-            const oppScore = isCurrentUserTeam1 ? team2Sets : team1Sets;
-            const leftLabel = useYourTeamLabels
-              ? isSingles
-                ? t('matchDetail.you')
-                : t('matchDetail.yourTeam')
-              : t('matchDetail.team1');
-            const rightLabel = useYourTeamLabels
-              ? isSingles
-                ? t('matchDetail.opponent')
-                : t('matchDetail.opponents')
-              : t('matchDetail.team2');
-            return (
-              <View style={[styles.section, { borderBottomColor: colors.border }]}>
-                <View style={styles.sectionHeader}>
-                  <Ionicons name="trophy-outline" size={20} color={colors.iconMuted} />
+            {isCourtFree ? (
+              <View
+                style={[
+                  styles.costCard,
+                  {
+                    backgroundColor: isDark ? 'rgba(5, 150, 105, 0.12)' : 'rgba(5, 150, 105, 0.06)',
+                    borderColor: isDark ? 'rgba(5, 150, 105, 0.25)' : 'rgba(5, 150, 105, 0.15)',
+                  },
+                ]}
+              >
+                <View style={styles.costFreeContent}>
+                  <Ionicons name="checkmark-circle" size={22} color={status.success.DEFAULT} />
                   <Text
-                    size="base"
-                    weight="semibold"
-                    color={colors.text}
-                    style={styles.sectionTitle}
+                    size="lg"
+                    weight="bold"
+                    color={isDark ? status.success.light : status.success.dark}
+                    style={styles.costFreeText}
                   >
-                    {t('matchDetail.registerScore')}
+                    {t('matchDetail.free')}
                   </Text>
                 </View>
-                <View style={styles.scoreSectionContent}>
-                  <View style={styles.scoreSectionRow}>
-                    <Text size="sm" weight="medium" color={colors.textMuted}>
-                      {leftLabel}
+              </View>
+            ) : (
+              <View
+                style={[
+                  styles.costCard,
+                  {
+                    backgroundColor: isDark ? `${primary[500]}14` : `${primary[500]}0A`,
+                    borderColor: isDark ? `${primary[500]}40` : `${primary[500]}26`,
+                  },
+                ]}
+              >
+                <View style={styles.costCardMain}>
+                  {/* Total cost */}
+                  <View style={styles.costCardColumn}>
+                    <Text size="sm" weight="semibold" color={colors.textMuted}>
+                      {t('matchDetail.totalCost')}
                     </Text>
-                    <Text size="lg" weight="bold" color={colors.text}>
-                      {useYourTeamLabels
-                        ? `${yourScore} – ${oppScore}`
-                        : `${team1Sets} – ${team2Sets}`}
-                    </Text>
-                    <Text size="sm" weight="medium" color={colors.textMuted}>
-                      {rightLabel}
+                    <Text
+                      size="xl"
+                      weight="bold"
+                      color={colors.textSecondary}
+                      style={styles.costAmount}
+                    >
+                      ${totalCost}
                     </Text>
                   </View>
-                  {setsList && setsList.length > 0 && (
-                    <Text size="sm" color={colors.textMuted} style={styles.scoreSetsText}>
-                      {setsList
-                        .sort((a, b) => a.set_number - b.set_number)
-                        .map(s =>
-                          useYourTeamLabels && !isCurrentUserTeam1
-                            ? `${s.team2_score}-${s.team1_score}`
-                            : `${s.team1_score}-${s.team2_score}`
-                        )
-                        .join(', ')}
+
+                  {/* Divider */}
+                  <View style={styles.costCardDivider}>
+                    <View
+                      style={[
+                        styles.costCardDividerLine,
+                        { backgroundColor: isDark ? neutral[600] : neutral[300] },
+                      ]}
+                    />
+                  </View>
+
+                  {/* Per player cost */}
+                  <View style={styles.costCardColumn}>
+                    <Text size="sm" weight="semibold" color={colors.textMuted}>
+                      {t('matchDetail.perPlayerCost')}
                     </Text>
-                  )}
-                  <View style={styles.scoreSectionStatusRow}>
-                    <Ionicons name={statusIcon} size={18} color={colors.textMuted} />
-                    <Text size="sm" color={colors.textMuted} style={styles.scoreSectionStatusText}>
-                      {t(statusKey)}
+                    <Text size={30} weight="bold" color={colors.primary} style={styles.costAmount}>
+                      ${perPlayerCost}
                     </Text>
                   </View>
                 </View>
               </View>
-            );
-          })()}
+            )}
+          </Animated.View>
+        )}
+
+        {/* Score Section removed from here - now rendered above preferences when hasResult */}
 
         {/* Notes Section */}
         {match.notes && (
-          <View style={[styles.section, { borderBottomColor: colors.border }]}>
+          <Animated.View
+            entering={FadeInDown.delay(350).springify()}
+            style={[styles.section, { borderBottomColor: colors.border }]}
+          >
             <View style={styles.sectionHeader}>
               <Ionicons name="document-text-outline" size={20} color={colors.iconMuted} />
               <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
                 {t('matchDetail.notes')}
               </Text>
             </View>
-            <Text size="sm" color={colors.textMuted} style={styles.notesText}>
-              "{match.notes}"
-            </Text>
-          </View>
+            <View
+              style={[
+                styles.notesBlockquote,
+                {
+                  borderLeftColor: isDark ? primary[400] : primary[300],
+                  backgroundColor: isDark ? `${primary[500]}08` : `${primary[500]}05`,
+                },
+              ]}
+            >
+              <Text size="sm" color={colors.textMuted} style={styles.notesText}>
+                {match.notes}
+              </Text>
+            </View>
+          </Animated.View>
         )}
       </BottomSheetScrollView>
 
@@ -3078,51 +4238,67 @@ export const MatchDetailSheet: React.FC = () => {
             backgroundColor: colors.cardBackground,
             borderTopColor: colors.border,
           },
+          needsScoreConfirmAndFeedback && { flexDirection: 'column' },
         ]}
       >
-        <View style={styles.actionButtonsContainer}>{renderActionButtons()}</View>
-        {startTimeDiffMs >= 0 && (
-          <TouchableOpacity
-            style={[
-              styles.shareButton,
-              isCreator && styles.shareButtonCompact,
-              {
-                backgroundColor: isDark ? secondary[500] : secondary[500],
-                shadowColor: secondary[600],
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.25,
-                shadowRadius: 4,
-                elevation: 4,
-              },
-            ]}
-            onPress={handleShare}
-            activeOpacity={0.8}
+        {/* Feedback row when both score confirmation and feedback are pending */}
+        {needsScoreConfirmAndFeedback && (
+          <Button
+            variant="primary"
+            onPress={handleOpenFeedback}
+            style={styles.actionButtonFullWidth}
+            themeColors={{
+              primary: isDark ? primary[500] : primary[600],
+              primaryForeground: base.white,
+              buttonActive: isDark ? primary[500] : primary[600],
+              buttonInactive: neutral[300],
+              buttonTextActive: base.white,
+              buttonTextInactive: neutral[500],
+              text: colors.text,
+              textMuted: colors.textMuted,
+              border: colors.border,
+              background: colors.cardBackground,
+            }}
+            isDark={isDark}
+            leftIcon={<Ionicons name="chatbubble-ellipses-outline" size={18} color={base.white} />}
           >
-            <Ionicons name="share-social" size={18} color={base.white} />
-            {!isCreator && (
-              <Text size="sm" weight="semibold" color={base.white} numberOfLines={1}>
-                {t('matchDetail.inviteFriends')}
-              </Text>
-            )}
-          </TouchableOpacity>
+            {t('matchDetail.provideFeedbackOnly')}
+          </Button>
         )}
+        <View
+          style={[
+            styles.actionButtonsContainer,
+            needsScoreConfirmAndFeedback && styles.actionButtonsContainerColumn,
+          ]}
+        >
+          {/* Cap at 2 CTA buttons to prevent layout overflow */}
+          {React.Children.toArray(renderActionButtons()).slice(0, 2)}
+        </View>
       </View>
 
-      {/* Leave Match Confirmation Modal */}
+      {/* Leave Match / Leave Waitlist Confirmation Modal */}
       <ConfirmationModal
         visible={showLeaveModal}
         onClose={() => setShowLeaveModal(false)}
         onConfirm={handleConfirmLeave}
-        title={t('matchActions.leaveConfirmTitle')}
-        message={t('matchActions.leaveConfirmMessage')}
+        title={
+          isWaitlisted
+            ? t('matchActions.leaveWaitlistConfirmTitle')
+            : t('matchActions.leaveConfirmTitle')
+        }
+        message={
+          isWaitlisted
+            ? t('matchActions.leaveWaitlistConfirmMessage')
+            : t('matchActions.leaveConfirmMessage')
+        }
         additionalInfo={
-          selectedMatch && willLeaveAffectReputation(selectedMatch)
+          !isWaitlisted && selectedMatch && willLeaveAffectReputation(selectedMatch)
             ? t('matchActions.leaveReputationWarning')
             : undefined
         }
-        confirmLabel={t('matches.leaveMatch')}
+        confirmLabel={isWaitlisted ? t('matchActions.leaveWaitlist') : t('matches.leaveMatch')}
         cancelLabel={t('common.cancel')}
-        destructive
+        destructive={!isWaitlisted}
         isLoading={isLeaving}
       />
 
@@ -3186,18 +4362,6 @@ export const MatchDetailSheet: React.FC = () => {
         isLoading={isCancellingRequest}
       />
 
-      {/* Requester Details Modal */}
-      <RequesterDetailsModal
-        visible={showRequesterModal}
-        onClose={handleCloseRequesterModal}
-        participant={selectedRequester}
-        onAccept={handleAcceptFromModal}
-        onReject={handleRejectFromModal}
-        isLoading={isAccepting || isRejecting}
-        isMatchFull={isFull}
-        isMatchInProgress={isInProgress}
-      />
-
       {/* Kick Participant Confirmation Modal */}
       <ConfirmationModal
         visible={showKickModal}
@@ -3229,6 +4393,181 @@ export const MatchDetailSheet: React.FC = () => {
         destructive
         isLoading={isCancellingInvite}
       />
+
+      {/* Decline Invitation Confirmation Modal */}
+      <ConfirmationModal
+        visible={showDeclineInviteModal}
+        onClose={() => setShowDeclineInviteModal(false)}
+        onConfirm={handleConfirmDeclineInvite}
+        title={t('matchActions.declineInviteConfirmTitle')}
+        message={t('matchActions.declineInviteConfirmMessage')}
+        confirmLabel={t('matchActions.declineInvite')}
+        cancelLabel={t('common.goBack')}
+        destructive
+        isLoading={isDecliningInvite}
+      />
+
+      {/* Dispute Score Confirmation Modal */}
+      <ConfirmationModal
+        visible={showDisputeModal}
+        onClose={() => setShowDisputeModal(false)}
+        onConfirm={handleConfirmDispute}
+        title={t('matchDetail.disputeConfirmTitle')}
+        message={t('matchDetail.disputeConfirmMessage')}
+        confirmLabel={t('matchDetail.disputeScore')}
+        cancelLabel={t('common.cancel')}
+        destructive
+        isLoading={disputeMutation.isPending}
+      />
+
+      {/* Badge Info Modal */}
+      <Modal
+        visible={showBadgeInfo}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          lightHaptic();
+          setShowBadgeInfo(false);
+        }}
+        statusBarTranslucent
+      >
+        <TouchableWithoutFeedback
+          onPress={() => {
+            lightHaptic();
+            setShowBadgeInfo(false);
+          }}
+        >
+          <View style={styles.badgeInfoBackdrop}>
+            <TouchableWithoutFeedback>
+              <View style={[styles.badgeInfoModal, { backgroundColor: colors.cardBackground }]}>
+                <Text
+                  size="lg"
+                  weight="semibold"
+                  style={[styles.badgeInfoTitle, { color: colors.text }]}
+                >
+                  {t('matchDetail.badgeInfoTitle')}
+                </Text>
+
+                <View style={styles.badgeInfoRow}>
+                  <View
+                    style={[
+                      styles.badgeInfoIcon,
+                      { backgroundColor: isDark ? primary[400] : primary[500] },
+                    ]}
+                  >
+                    <Ionicons name="star" size={10} color={base.white} />
+                  </View>
+                  <View style={styles.badgeInfoTextContainer}>
+                    <Text size="sm" weight="semibold" style={{ color: colors.text }}>
+                      {t('matchDetail.badgeHost')}
+                    </Text>
+                    <Text size="xs" lineHeight="tight" style={{ color: colors.textMuted }}>
+                      {t('matchDetail.badgeHostDesc')}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.badgeInfoRow}>
+                  <View style={[styles.badgeInfoIcon, { backgroundColor: MOST_WANTED_COLOR }]}>
+                    <Ionicons name="ribbon" size={10} color={base.white} />
+                  </View>
+                  <View style={styles.badgeInfoTextContainer}>
+                    <Text size="sm" weight="semibold" style={{ color: colors.text }}>
+                      {t('matchDetail.badgeMostWanted')}
+                    </Text>
+                    <Text size="xs" lineHeight="tight" style={{ color: colors.textMuted }}>
+                      {t('matchDetail.badgeMostWantedDesc')}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.badgeInfoRow}>
+                  <View
+                    style={[
+                      styles.badgeInfoIcon,
+                      { backgroundColor: CERTIFICATION_BADGE_COLORS.certified.bg },
+                    ]}
+                  >
+                    <Ionicons
+                      name={
+                        CERTIFICATION_BADGE_COLORS.certified.icon as keyof typeof Ionicons.glyphMap
+                      }
+                      size={10}
+                      color={base.white}
+                    />
+                  </View>
+                  <View style={styles.badgeInfoTextContainer}>
+                    <Text size="sm" weight="semibold" style={{ color: colors.text }}>
+                      {t('matchDetail.badgeCertified')}
+                    </Text>
+                    <Text size="xs" lineHeight="tight" style={{ color: colors.textMuted }}>
+                      {t('matchDetail.badgeCertifiedDesc')}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.badgeInfoRow}>
+                  <View
+                    style={[
+                      styles.badgeInfoIcon,
+                      { backgroundColor: CERTIFICATION_BADGE_COLORS.disputed.bg },
+                    ]}
+                  >
+                    <Ionicons
+                      name={
+                        CERTIFICATION_BADGE_COLORS.disputed.icon as keyof typeof Ionicons.glyphMap
+                      }
+                      size={10}
+                      color={base.white}
+                    />
+                  </View>
+                  <View style={styles.badgeInfoTextContainer}>
+                    <Text size="sm" weight="semibold" style={{ color: colors.text }}>
+                      {t('matchDetail.badgeDisputed')}
+                    </Text>
+                    <Text size="xs" lineHeight="tight" style={{ color: colors.textMuted }}>
+                      {t('matchDetail.badgeDisputedDesc')}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={[styles.badgeInfoRow, { marginBottom: 0 }]}>
+                  <View style={[styles.badgeInfoIcon, { backgroundColor: status.success.DEFAULT }]}>
+                    <Ionicons name="checkmark-outline" size={10} color={base.white} />
+                  </View>
+                  <View style={styles.badgeInfoTextContainer}>
+                    <Text size="sm" weight="semibold" style={{ color: colors.text }}>
+                      {t('matchDetail.badgeCheckedIn')}
+                    </Text>
+                    <Text size="xs" lineHeight="tight" style={{ color: colors.textMuted }}>
+                      {t('matchDetail.badgeCheckedInDesc')}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.badgeInfoButtonContainer}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      lightHaptic();
+                      setShowBadgeInfo(false);
+                    }}
+                    style={[styles.badgeInfoCloseButton, { borderColor: colors.border }]}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      size="base"
+                      weight="medium"
+                      style={{ color: colors.text, textAlign: 'center' }}
+                    >
+                      {t('common.close')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </BottomSheetModal>
   );
 };
@@ -3284,7 +4623,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: spacingPixels[5],
-    marginTop: spacingPixels[3],
+    marginTop: spacingPixels[4],
     marginBottom: spacingPixels[1],
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[3],
@@ -3314,13 +4653,6 @@ const styles = StyleSheet.create({
   headerTitleSection: {
     flex: 1,
     marginRight: spacingPixels[3],
-  },
-  dateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  calendarIcon: {
-    marginRight: spacingPixels[2],
   },
   headerRight: {
     flexDirection: 'row',
@@ -3352,23 +4684,13 @@ const styles = StyleSheet.create({
     marginLeft: spacingPixels[2],
   },
   participantsSectionChatButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
     padding: spacingPixels[1],
     marginLeft: spacingPixels[2],
   },
 
-  // Info rows
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  infoIconContainer: {
-    width: spacingPixels[8],
-    alignItems: 'center',
-    paddingTop: spacingPixels[0.5],
-  },
-  infoContent: {
-    flex: 1,
-  },
   addressText: {
     marginTop: spacingPixels[1],
   },
@@ -3394,41 +4716,26 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   participantAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
   participantAvatarImage: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
   },
-  hostBadge: {
+  avatarBadge: {
     position: 'absolute',
-    bottom: -2,
-    left: -2,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: BADGE_SIZE,
+    height: BADGE_SIZE,
+    borderRadius: BADGE_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: base.white,
-  },
-  checkedInBadge: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: base.white,
+    zIndex: 1,
   },
   participantAvatarWithAction: {
     position: 'relative',
@@ -3443,19 +4750,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  spotsText: {
-    marginTop: spacingPixels[3],
-  },
   invitePlayersButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: spacingPixels[3],
-    paddingVertical: spacingPixels[2.5],
+    paddingVertical: spacingPixels[2],
     paddingHorizontal: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
-    gap: spacingPixels[2],
+    gap: spacingPixels[1],
   },
   inviteButtonText: {
     // No additional styles needed
@@ -3502,9 +4806,10 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   pendingRequestAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacingPixels[2],
@@ -3552,16 +4857,9 @@ const styles = StyleSheet.create({
     marginLeft: spacingPixels[2],
   },
   requestActionButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  viewDetailsButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -3577,6 +4875,11 @@ const styles = StyleSheet.create({
   },
 
   // Location row (tappable)
+  locationCard: {
+    borderRadius: radiusPixels.xl,
+    borderWidth: 1,
+    padding: spacingPixels[3],
+  },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -3585,6 +4888,16 @@ const styles = StyleSheet.create({
     marginLeft: spacingPixels[2],
     marginRight: spacingPixels[1],
     flexShrink: 0,
+  },
+  mapContainer: {
+    marginTop: spacingPixels[3],
+    borderRadius: radiusPixels.xl,
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  mapView: {
+    width: '100%',
+    height: 150,
   },
 
   // Badges
@@ -3624,13 +4937,27 @@ const styles = StyleSheet.create({
     paddingBottom: spacingPixels[8],
     gap: spacingPixels[2],
     borderTopWidth: StyleSheet.hairlineWidth,
-    alignItems: 'center',
+    alignItems: 'stretch',
   },
   actionButtonsContainer: {
     flex: 1,
     flexDirection: 'row',
     gap: spacingPixels[2],
     minWidth: 0, // Allow shrinking
+  },
+  actionButtonsContainerColumn: {
+    flex: 0,
+    flexDirection: 'row',
+    width: '100%',
+  },
+  actionButtonFullWidth: {
+    width: '100%',
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[1],
   },
   // Footer buttons: same pattern as MatchCreationWizard nextButton – paddingVertical, no fixed height, so content is not clipped
   actionButton: {
@@ -3641,7 +4968,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacingPixels[2],
+    gap: spacingPixels[1],
   },
   cancelButton: {
     flex: 1,
@@ -3654,67 +4981,342 @@ const styles = StyleSheet.create({
     gap: spacingPixels[2],
     paddingHorizontal: spacingPixels[2],
   },
-  shareButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'stretch',
-    gap: spacingPixels[1.5],
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    flexShrink: 0,
-  },
-  shareButtonCompact: {
-    paddingHorizontal: 0,
-    width: spacingPixels[12],
-    paddingVertical: spacingPixels[4],
-    alignSelf: 'stretch',
-    gap: 0,
-  },
   matchEndedContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacingPixels[3],
+    paddingVertical: spacingPixels[4],
     gap: spacingPixels[2],
   },
   matchEndedText: {
     textAlign: 'center',
   },
-  scoreRow: {
+  // Cost section – breakdown card
+  costCard: {
+    borderRadius: radiusPixels.xl,
+    borderWidth: 1,
+    paddingVertical: spacingPixels[4],
+    paddingHorizontal: spacingPixels[4],
+    alignItems: 'center',
+  },
+  costCardMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[5],
+  },
+  costCardColumn: {
+    alignItems: 'center',
+    minWidth: 72,
+  },
+  costAmount: {
+    marginTop: spacingPixels[1],
+    lineHeight: 40,
+  },
+  costCardDivider: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacingPixels[4],
+  },
+  costCardDividerLine: {
+    width: 20,
+    height: 2,
+    borderRadius: 1,
+  },
+  costFreeContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacingPixels[2],
   },
-  scoreStatusRow: {
-    flexDirection: 'row',
+  costFreeText: {
+    textAlign: 'center',
+  },
+  // Date & time section – breakdown card
+  dateTimeCard: {
+    borderRadius: radiusPixels.xl,
+    borderWidth: 1,
+    paddingVertical: spacingPixels[4],
+    paddingHorizontal: spacingPixels[4],
     alignItems: 'center',
+    gap: spacingPixels[3],
   },
-  // Score section (in scroll view) – aligned with other section content
-  scoreSectionContent: {
-    marginTop: 0,
-  },
-  scoreSectionRow: {
+  dateTimeMain: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacingPixels[3],
-    marginBottom: spacingPixels[2],
+    gap: spacingPixels[5],
   },
-  scoreSetsText: {
+  dateTimeColumn: {
+    alignItems: 'center',
+    minWidth: 60,
+  },
+  dateTimeValue: {
     marginTop: spacingPixels[1],
-    marginBottom: spacingPixels[2],
   },
-  scoreSectionStatusRow: {
+  dateTimeDivider: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+  },
+  dateTimeDividerLine: {
+    width: 1,
+    height: 32,
+    borderRadius: 0.5,
+  },
+  dateTimeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacingPixels[2],
+    gap: spacingPixels[1.5],
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[1],
+    borderRadius: radiusPixels.full,
   },
-  scoreSectionStatusText: {
-    marginLeft: spacingPixels[2],
+  // Score section – scoreboard card
+  scoreboardCardWrapper: {
+    position: 'relative',
+  },
+  scoreboardCardBg: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: radiusPixels.xl,
+    borderWidth: 1,
+  },
+  scoreboardCardContent: {
+    paddingVertical: spacingPixels[4],
+    paddingHorizontal: spacingPixels[4],
+    alignItems: 'center',
+  },
+  scoreboardMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[5],
+  },
+  scoreboardTeam: {
+    alignItems: 'center',
+    minWidth: 72,
+  },
+  scoreboardTeamScore: {
+    marginTop: spacingPixels[1],
+    lineHeight: 40,
+  },
+  scoreboardDivider: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacingPixels[5],
+  },
+  scoreboardDividerLine: {
+    width: 20,
+    height: 2,
+    borderRadius: 1,
+  },
+  scoreboardSets: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
+    marginTop: spacingPixels[3],
+  },
+  scoreboardSetPill: {
+    paddingHorizontal: spacingPixels[2.5],
+    paddingVertical: spacingPixels[1],
+    borderRadius: radiusPixels.full,
+    borderWidth: 1,
+  },
+  scoreboardStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacingPixels[3],
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[1.5],
+    borderRadius: radiusPixels.full,
+  },
+  scoreboardStatusText: {
+    marginLeft: spacingPixels[1.5],
+  },
+  // Badge info modal (follows ConfirmationModal design)
+  badgeInfoButton: {
+    marginLeft: spacingPixels[1],
+  },
+  badgeInfoBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[5],
+  },
+  badgeInfoModal: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: radiusPixels.xl,
+    paddingTop: spacingPixels[6],
+    paddingHorizontal: spacingPixels[5],
+    paddingBottom: spacingPixels[4],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  badgeInfoTitle: {
+    textAlign: 'center',
+    marginBottom: spacingPixels[4],
+  },
+  badgeInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacingPixels[3],
+  },
+  badgeInfoIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacingPixels[3],
+  },
+  badgeInfoTextContainer: {
+    flex: 1,
+  },
+  badgeInfoButtonContainer: {
+    marginTop: spacingPixels[4],
+  },
+  badgeInfoCloseButton: {
+    paddingVertical: spacingPixels[3],
+    borderRadius: radiusPixels.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    borderWidth: 1,
+  },
+  // Header sport + format row
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
+  },
+  headerFormatBadge: {
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: spacingPixels[0.5],
+    borderRadius: radiusPixels.full,
+  },
+  // Hosted By section
+  hostedByCard: {
+    borderRadius: radiusPixels.xl,
+    borderWidth: 1,
+    padding: spacingPixels[3],
+  },
+  hostedByRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+  },
+  hostedByAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    overflow: 'hidden',
+  },
+  hostedByAvatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  hostedByAvatarPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hostedByInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  hostedByRatingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[0.5],
+    paddingHorizontal: spacingPixels[1.5],
+    paddingVertical: spacingPixels[0.5],
+    borderRadius: radiusPixels.full,
+  },
+  hostedByReputationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    marginTop: spacingPixels[0.5],
+  },
+  hostedByTierBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[0.5],
+    paddingHorizontal: spacingPixels[1.5],
+    paddingVertical: spacingPixels[0.5],
+    borderRadius: radiusPixels.full,
+  },
+  // Participant pressable (for avatar scale feel)
+  participantPressable: {
+    // TouchableOpacity handles opacity; this provides a subtle transform base
+  },
+  // Score confirmation progress row
+  scoreboardStatusRow: {
+    alignItems: 'center',
+    marginTop: spacingPixels[3],
+    gap: spacingPixels[1.5],
+  },
+  // Custom map marker
+  glassMarkerContainer: {
+    alignItems: 'center',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  glassMarkerGlow: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  glassMarkerBody: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  glassMarkerHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 16,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+  },
+  glassMarkerDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginTop: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.6,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  // Notes blockquote
+  notesBlockquote: {
+    borderLeftWidth: 3,
+    borderRadius: radiusPixels.md,
+    paddingLeft: spacingPixels[3],
+    paddingVertical: spacingPixels[2.5],
+    paddingRight: spacingPixels[3],
   },
 });
 

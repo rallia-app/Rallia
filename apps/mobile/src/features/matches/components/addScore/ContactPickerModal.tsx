@@ -4,7 +4,7 @@
  * Used in Add Score flow to add opponents from contacts
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -32,6 +32,9 @@ interface DeviceContact {
   email: string | null;
 }
 
+// Empty array constant to avoid recreating on every render
+const EMPTY_ARRAY: string[] = [];
+
 interface ContactPickerModalProps {
   visible: boolean;
   onClose: () => void;
@@ -44,8 +47,14 @@ export function ContactPickerModal({
   visible,
   onClose,
   onSelectContact,
-  excludeIds = [],
+  excludeIds,
 }: ContactPickerModalProps) {
+  // Memoize excludeIds to prevent infinite loop from array reference changes
+  const stableExcludeIds = useMemo(
+    () => excludeIds || EMPTY_ARRAY,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(excludeIds)]
+  );
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const [contacts, setContacts] = useState<DeviceContact[]>([]);
@@ -53,6 +62,9 @@ export function ContactPickerModal({
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [permissionStatus, setPermissionStatus] = useState<Contacts.PermissionStatus | null>(null);
+  
+  // Track if we've loaded contacts for this modal session
+  const hasLoadedRef = useRef(false);
 
   // Request permission and load contacts
   const loadContacts = useCallback(async () => {
@@ -89,7 +101,7 @@ export function ContactPickerModal({
           email: contact.emails?.[0]?.email || null,
         }))
         // Filter out already selected contacts
-        .filter(contact => !excludeIds.includes(`contact-${contact.id}`));
+        .filter(contact => !stableExcludeIds.includes(`contact-${contact.id}`));
 
       setContacts(transformedContacts);
       setFilteredContacts(transformedContacts);
@@ -99,13 +111,17 @@ export function ContactPickerModal({
     } finally {
       setIsLoading(false);
     }
-  }, [excludeIds, t]);
+  }, [stableExcludeIds, t]);
 
   // Load contacts when modal opens
   useEffect(() => {
-    if (visible) {
+    if (visible && !hasLoadedRef.current) {
+      hasLoadedRef.current = true;
       loadContacts();
       setSearchQuery('');
+    } else if (!visible) {
+      // Reset the flag when modal closes so contacts reload on next open
+      hasLoadedRef.current = false;
     }
   }, [visible, loadContacts]);
 

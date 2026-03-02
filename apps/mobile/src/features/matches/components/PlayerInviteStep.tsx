@@ -26,6 +26,7 @@ import {
 } from '@rallia/shared-utils';
 import { usePlayerSearch, useInviteToMatch } from '@rallia/shared-hooks';
 import type { PlayerSearchResult } from '@rallia/shared-services';
+import type { MatchParticipantWithPlayer } from '@rallia/shared-types';
 import type { TranslationKey, TranslationOptions } from '../../../hooks/useTranslation';
 import { SearchBar } from '../../../components/SearchBar';
 import { InviteFromListsStep } from '../../shared-lists/components/InviteFromListsStep';
@@ -61,6 +62,8 @@ interface PlayerInviteStepProps {
   isDark: boolean;
   /** Player IDs to exclude from search (e.g., existing participants) */
   excludePlayerIds?: string[];
+  /** Callback with optimistic participant data after successful invitation */
+  onInviteSuccess?: (participants: MatchParticipantWithPlayer[]) => void;
   /** When true, show a close (X) icon in the top right that calls onComplete (e.g. in wizard; sheet has its own X) */
   showCloseButton?: boolean;
 }
@@ -256,6 +259,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
   t,
   isDark,
   excludePlayerIds,
+  onInviteSuccess,
   showCloseButton = false,
 }) => {
   const toast = useToast();
@@ -314,6 +318,26 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
         setInvitedPlayerIds(prev => [...prev, ...newInvitedIds]);
       }
       toast.success(t('matchCreation.invite.invitationsSentCount', { count }));
+      // Optimistic update: build participant entries with player data for parent UI
+      if (onInviteSuccess && invited.length > 0) {
+        const playerMap = new Map(selectedPlayers.map(p => [p.id, p]));
+        const optimisticParticipants = invited.map(participant => {
+          const searchData = playerMap.get(participant.player_id);
+          return {
+            ...participant,
+            player: {
+              id: participant.player_id,
+              profile: {
+                first_name: searchData?.first_name ?? '',
+                last_name: searchData?.last_name ?? '',
+                display_name: searchData?.display_name ?? null,
+                profile_picture_url: searchData?.profile_picture_url ?? null,
+              },
+            },
+          } as MatchParticipantWithPlayer;
+        });
+        onInviteSuccess(optimisticParticipants);
+      }
       setSelectedPlayers([]);
     },
     onError: error => {
@@ -404,8 +428,8 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
     if (searchError) {
       return (
         <View style={styles.emptyState}>
-          <Ionicons name="alert-circle-outline" size={32} color={colors.textMuted} />
-          <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
+          <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
             {t('matchCreation.invite.searchError')}
           </Text>
         </View>
@@ -415,8 +439,8 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
     if (searchQuery && players.length === 0) {
       return (
         <View style={styles.emptyState}>
-          <Ionicons name="search-outline" size={32} color={colors.textMuted} />
-          <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
+          <Ionicons name="search-outline" size={48} color={colors.textMuted} />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
             {t('matchCreation.invite.noPlayersFound')}
           </Text>
         </View>
@@ -426,9 +450,12 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
     if (!searchQuery && players.length === 0) {
       return (
         <View style={styles.emptyState}>
-          <Ionicons name="people-outline" size={32} color={colors.textMuted} />
-          <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
+          <Ionicons name="people-outline" size={48} color={colors.textMuted} />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
             {t('matchCreation.invite.noPlayersAvailable')}
+          </Text>
+          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+            {t('matchCreation.invite.noPlayersAvailableDescription')}
           </Text>
         </View>
       );
@@ -760,10 +787,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacingPixels[8],
-    gap: spacingPixels[2],
   },
   emptyStateText: {
+    marginTop: spacingPixels[2],
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: spacingPixels[3],
     textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: spacingPixels[2],
+    paddingHorizontal: spacingPixels[4],
   },
   footerLoader: {
     alignItems: 'center',

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
+import { useScrollToTop } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -26,7 +27,6 @@ import {
   useThemeStyles,
   useTranslation,
   useEffectiveLocation,
-  type TranslationKey,
   useTourSequence,
 } from '../hooks';
 import {
@@ -47,7 +47,7 @@ import {
 import type { NearbyMatch } from '@rallia/shared-hooks';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import { Logger } from '@rallia/shared-services';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
 import { SportIcon } from '../components/SportIcon';
 import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
 
@@ -69,7 +69,7 @@ const Home = () => {
   const appNavigation = useAppNavigation();
 
   // Home screen tour - triggers after main navigation tour is completed
-  const { shouldShowTour: _shouldShowHomeTour } = useTourSequence({
+  useTourSequence({
     screenId: 'home',
     isReady: !authLoading,
     delay: 800,
@@ -146,11 +146,22 @@ const Home = () => {
     enabled: !!session?.user?.id,
   });
 
+  const flatListRef = useRef<FlatList>(null);
+  const isManualRefresh = useRef(false);
+  useScrollToTop(flatListRef);
+
   const [showWelcome, setShowWelcome] = useState(true);
   const welcomeOpacity = useState(new Animated.Value(1))[0];
 
   // Extract display name from profile
   const displayName = profile?.display_name || null;
+
+  // Clear manual refresh flag when refetching completes
+  useEffect(() => {
+    if (!isRefetching) {
+      isManualRefresh.current = false;
+    }
+  }, [isRefetching]);
 
   // Log errors from match fetching
   useEffect(() => {
@@ -205,6 +216,13 @@ const Home = () => {
         t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
         locale={locale}
         currentPlayerId={player?.id}
+        sportIcon={
+          <SportIcon
+            sportName={item.sport?.name ?? 'tennis'}
+            size={100}
+            color={isDark ? neutral[600] : neutral[400]}
+          />
+        }
         onPress={() => {
           Logger.logUserAction('match_pressed', { matchId: item.id });
           openMatchDetail(item);
@@ -700,12 +718,14 @@ const Home = () => {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         <FlatList
+          ref={flatListRef}
           data={[]}
           renderItem={renderMatchCard}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          ListHeaderComponent={renderListHeader}
+          automaticallyAdjustContentInsets={false}
+          ListHeaderComponent={renderListHeader()}
           ListEmptyComponent={null}
         />
       </SafeAreaView>
@@ -737,20 +757,23 @@ const Home = () => {
         </View>
       ) : (
         <FlatList
+          ref={flatListRef}
           data={matches}
           renderItem={renderMatchCard}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          ListHeaderComponent={renderListHeader}
-          ListEmptyComponent={renderEmptyComponent}
-          ListFooterComponent={renderFooter}
+          automaticallyAdjustContentInsets={false}
+          ListHeaderComponent={renderListHeader()}
+          ListEmptyComponent={renderEmptyComponent()}
+          ListFooterComponent={renderFooter()}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.3}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching}
+              refreshing={isRefetching && isManualRefresh.current}
               onRefresh={() => {
+                isManualRefresh.current = true;
                 refetch();
                 if (session?.user?.id) {
                   refetchMyMatches();

@@ -17,10 +17,10 @@ import {
 } from '../notifications/notificationFactory';
 import {
   createReputationEvent,
-  createReputationEvents,
-  havePlayedTogether,
+  countRecentCancellationEvents,
 } from '../reputation/reputationService';
-import { createMatchChat } from '../chat/chatService';
+import { calculateCancellationPenalty } from '../reputation/reputationPenalties';
+import { createMatchChat, getMatchChat, removeConversationParticipant } from '../chat/chatService';
 import type {
   Match,
   TablesInsert,
@@ -29,6 +29,30 @@ import type {
   MatchParticipant,
   Profile,
   PlayerWithProfile,
+  MatchFormatEnum,
+  MatchTypeEnum,
+  MatchDurationEnum,
+  LocationTypeEnum,
+  CourtStatusEnum,
+  CostSplitTypeEnum,
+  MatchVisibilityEnum,
+  MatchJoinModeEnum,
+  GenderEnum,
+  BadgeStatusEnum,
+  MatchParticipantStatusEnum,
+  UpcomingMatchFilter,
+  PastMatchFilter,
+  FormatFilter,
+  MatchTypeFilter,
+  DateRangeFilter,
+  TimeOfDayFilter,
+  SkillLevelFilter,
+  GenderFilter,
+  CostFilter,
+  JoinModeFilter,
+  DurationFilter,
+  CourtStatusFilter,
+  MatchTierFilter,
 } from '@rallia/shared-types';
 import { calculateDistanceMeters } from '@rallia/shared-utils';
 
@@ -36,6 +60,11 @@ import { calculateDistanceMeters } from '@rallia/shared-utils';
  * Input data for creating a match
  * Maps from form data to database insert structure
  */
+/** Form-level court status values (mapped to DB CourtStatusEnum in createMatch) */
+export type FormCourtStatus = 'booked' | 'to_book' | 'tbd';
+/** Form-level cost split values (mapped to DB CostSplitTypeEnum in createMatch) */
+export type FormCostSplitType = 'equal' | 'creator_pays' | 'custom';
+
 export interface CreateMatchInput {
   // Required fields
   sportId: string;
@@ -46,13 +75,13 @@ export interface CreateMatchInput {
   timezone: string; // IANA timezone (e.g., "America/New_York")
 
   // Match format
-  format?: 'singles' | 'doubles';
-  playerExpectation?: 'casual' | 'competitive' | 'both';
-  duration?: '30' | '60' | '90' | '120' | 'custom';
+  format?: MatchFormatEnum;
+  playerExpectation?: MatchTypeEnum;
+  duration?: MatchDurationEnum;
   customDurationMinutes?: number;
 
   // Location
-  locationType?: 'facility' | 'custom' | 'tbd';
+  locationType?: LocationTypeEnum;
   facilityId?: string;
   courtId?: string;
   locationName?: string;
@@ -60,23 +89,23 @@ export interface CreateMatchInput {
   customLatitude?: number;
   customLongitude?: number;
 
-  // Court & cost
-  courtStatus?: 'booked' | 'to_book' | 'tbd';
+  // Court & cost (form-level values, mapped to DB enums in createMatch)
+  courtStatus?: FormCourtStatus;
   isCourtFree?: boolean;
-  costSplitType?: 'equal' | 'creator_pays' | 'custom';
+  costSplitType?: FormCostSplitType;
   estimatedCost?: number;
 
   // Opponent preferences
   minRatingScoreId?: string;
-  preferredOpponentGender?: 'male' | 'female' | 'other' | 'any';
+  preferredOpponentGender?: GenderEnum | 'any';
 
   // Visibility & access
-  visibility?: 'public' | 'private';
+  visibility?: MatchVisibilityEnum;
   /** When private: whether the match is visible in groups the creator is part of */
   visibleInGroups?: boolean;
   /** When private: whether the match is visible in communities the creator is part of */
   visibleInCommunities?: boolean;
-  joinMode?: 'direct' | 'request';
+  joinMode?: MatchJoinModeEnum;
 
   // Additional info
   notes?: string;
@@ -94,15 +123,15 @@ function emptyToNull(value: string | null | undefined): string | null {
  * Create a new match
  */
 export async function createMatch(input: CreateMatchInput): Promise<Match> {
-  // Map costSplitType to database enum values
-  const costSplitMap: Record<string, 'host_pays' | 'split_equal' | 'custom'> = {
+  // Map form costSplitType to database enum values
+  const costSplitMap: Record<FormCostSplitType, CostSplitTypeEnum> = {
     creator_pays: 'host_pays',
     equal: 'split_equal',
     custom: 'custom',
   };
 
-  // Map courtStatus to database enum values (null if tbd)
-  const courtStatusMap: Record<string, 'reserved' | 'to_reserve' | null> = {
+  // Map form courtStatus to database enum values (null if tbd)
+  const courtStatusMap: Record<FormCourtStatus, CourtStatusEnum | null> = {
     booked: 'reserved',
     to_book: 'to_reserve',
     tbd: null,
@@ -186,7 +215,7 @@ export async function getMatchWithDetails(matchId: string) {
         gender,
         playing_hand,
         max_travel_distance,
-        reputation_score,
+        player_reputation (reputation_score),
         notification_match_requests,
         notification_messages,
         notification_reminders,
@@ -211,7 +240,7 @@ export async function getMatchWithDetails(matchId: string) {
           gender,
           playing_hand,
           max_travel_distance,
-          reputation_score,
+          player_reputation (reputation_score),
           notification_match_requests,
           notification_messages,
           notification_reminders,
@@ -237,6 +266,10 @@ export async function getMatchWithDetails(matchId: string) {
           set_number,
           team1_score,
           team2_score
+        ),
+        confirmations:score_confirmation (
+          player_id,
+          action
         )
       )
     `
@@ -289,7 +322,10 @@ export async function getMatchWithDetails(matchId: string) {
 
   // Fetch player ratings for the match's sport (for displaying in request cards)
   const sportId = data.sport_id;
-  const ratingsMap: Record<string, { label: string; value: number | null }> = {}; // playerId -> rating info
+  const ratingsMap: Record<
+    string,
+    { label: string; value: number | null; badgeStatus?: BadgeStatusEnum }
+  > = {}; // playerId -> rating info
 
   if (profileIds.length > 0 && sportId) {
     const { data: ratingsData, error: ratingsError } = await supabase
@@ -297,6 +333,7 @@ export async function getMatchWithDetails(matchId: string) {
       .select(
         `
         player_id,
+        badge_status,
         rating_score!player_rating_scores_rating_score_id_fkey!inner (
           label,
           value,
@@ -315,6 +352,7 @@ export async function getMatchWithDetails(matchId: string) {
     if (!ratingsError && ratingsData) {
       type RatingResult = {
         player_id: string;
+        badge_status?: BadgeStatusEnum;
         rating_score: { label: string; value: number | null; rating_system: { sport_id: string } };
       };
       (ratingsData as unknown as RatingResult[]).forEach(rating => {
@@ -325,13 +363,14 @@ export async function getMatchWithDetails(matchId: string) {
           ratingsMap[rating.player_id] = {
             label: ratingScore.label,
             value: ratingScore.value,
+            badgeStatus: rating.badge_status,
           };
         }
       });
     }
   }
 
-  // Attach profiles and ratings to players
+  // Attach profiles, ratings, and certification to players
   if (data.created_by_player?.id && profilesMap[data.created_by_player.id]) {
     data.created_by_player.profile = profilesMap[data.created_by_player.id];
     const creatorRating = ratingsMap[data.created_by_player.id];
@@ -339,6 +378,9 @@ export async function getMatchWithDetails(matchId: string) {
       data.created_by_player.sportRatingLabel = creatorRating.label;
       if (creatorRating.value !== null) {
         data.created_by_player.sportRatingValue = creatorRating.value;
+      }
+      if (creatorRating.badgeStatus) {
+        data.created_by_player.sportCertificationStatus = creatorRating.badgeStatus;
       }
     }
   }
@@ -359,6 +401,7 @@ export async function getMatchWithDetails(matchId: string) {
           playerObj as MatchParticipantWithPlayer['player'] & {
             sportRatingLabel?: string;
             sportRatingValue?: number;
+            sportCertificationStatus?: BadgeStatusEnum;
           }
         ).sportRatingLabel = participantRating.label;
         if (participantRating.value !== null) {
@@ -366,8 +409,16 @@ export async function getMatchWithDetails(matchId: string) {
             playerObj as MatchParticipantWithPlayer['player'] & {
               sportRatingLabel?: string;
               sportRatingValue?: number;
+              sportCertificationStatus?: BadgeStatusEnum;
             }
           ).sportRatingValue = participantRating.value;
+        }
+        if (participantRating.badgeStatus) {
+          (
+            playerObj as MatchParticipantWithPlayer['player'] & {
+              sportCertificationStatus?: BadgeStatusEnum;
+            }
+          ).sportCertificationStatus = participantRating.badgeStatus;
         }
       }
       // Ensure player is always an object, not array
@@ -418,7 +469,7 @@ export async function getMatchesWithDetails(
         gender,
         playing_hand,
         max_travel_distance,
-        reputation_score,
+        player_reputation (reputation_score),
         notification_match_requests,
         notification_messages,
         notification_reminders,
@@ -443,7 +494,7 @@ export async function getMatchesWithDetails(
           gender,
           playing_hand,
           max_travel_distance,
-          reputation_score,
+          player_reputation (reputation_score),
           notification_match_requests,
           notification_messages,
           notification_reminders,
@@ -792,6 +843,9 @@ export async function updateMatch(
   if (updates.joinMode !== undefined) updateData.join_mode = updates.joinMode;
   if (updates.notes !== undefined) updateData.notes = emptyToNull(updates.notes);
 
+  // Track when the host explicitly edits the match (used for leave-penalty exception)
+  updateData.host_edited_at = new Date().toISOString();
+
   const { data, error } = await supabase
     .from('match')
     .update(updateData)
@@ -870,7 +924,9 @@ export async function cancelMatch(matchId: string, userId?: string): Promise<Mat
   // Include created_at for reputation penalty calculation
   const { data: match, error: fetchError } = await supabase
     .from('match')
-    .select('created_by, cancelled_at, created_at, match_date, start_time, end_time, timezone')
+    .select(
+      'created_by, cancelled_at, created_at, match_date, start_time, end_time, timezone, court_status'
+    )
     .eq('id', matchId)
     .single();
 
@@ -888,17 +944,15 @@ export async function cancelMatch(matchId: string, userId?: string): Promise<Mat
     throw new Error('Match is already cancelled');
   }
 
-  // Check if match has already ended (can't cancel completed matches)
-  // A match is considered completed if its end_time has passed
-  const { getMatchEndTimeDifferenceFromNow } = await import('@rallia/shared-utils');
-  const endTimeDiff = getMatchEndTimeDifferenceFromNow(
+  // Check if match has already started (can't cancel once it's in progress or completed)
+  const { getTimeDifferenceFromNow } = await import('@rallia/shared-utils');
+  const msUntilStart = getTimeDifferenceFromNow(
     match.match_date,
     match.start_time,
-    match.end_time,
     match.timezone || 'UTC'
   );
-  if (endTimeDiff < 0) {
-    throw new Error('Cannot cancel a completed match');
+  if (msUntilStart <= 0) {
+    throw new Error('Cannot cancel a match that has already started');
   }
 
   // Perform the cancellation - set cancelled_at timestamp
@@ -916,35 +970,74 @@ export async function cancelMatch(matchId: string, userId?: string): Promise<Mat
   }
 
   // Create reputation event for cancellation (if userId is provided = host cancelling)
-  // Per the spec, late cancellation penalty applies when BOTH:
-  // 1. Cancelling within 24 hours of start time
-  // 2. Match was created more than 24 hours before start (not a spontaneous match)
   if (userId) {
-    const matchStartDateTime = new Date(`${match.match_date}T${match.start_time}`);
-    const now = new Date();
-    const hoursUntilMatch = (matchStartDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-    const isWithin24HoursOfStart = hoursUntilMatch > 0 && hoursUntilMatch < 24;
+    // Use timezone-aware calculation for hours until match
+    const msUntilMatch = getTimeDifferenceFromNow(
+      match.match_date,
+      match.start_time,
+      match.timezone || 'UTC'
+    );
+    const hoursUntilMatch = msUntilMatch / (1000 * 60 * 60);
 
-    // Check if match was created more than 24h before start (planned match vs spontaneous)
-    let isPlannedMatch = true; // Default to true if created_at is missing
-    if (match.created_at) {
-      const createdAt = new Date(match.created_at);
+    // Determine if this is an early (no penalty) or late (graduated penalty) cancellation
+    let isLateCancellation = false;
+
+    // Cooling off: if match was created <1h ago, no penalty
+    const createdAt = match.created_at ? new Date(match.created_at) : null;
+    const hoursSinceCreation = createdAt
+      ? (Date.now() - createdAt.getTime()) / (1000 * 60 * 60)
+      : Infinity;
+    const isCoolingOff = hoursSinceCreation < 1;
+
+    // Check if any other participants are joined (no penalty if solo)
+    const { data: joinedParticipants } = await supabase
+      .from('match_participant')
+      .select('player_id')
+      .eq('match_id', matchId)
+      .eq('status', 'joined')
+      .neq('player_id', userId);
+    const hasOtherParticipants = joinedParticipants && joinedParticipants.length > 0;
+
+    // Court must be reserved for penalty to apply
+    const courtReserved = match.court_status === 'reserved';
+
+    // Must be a planned match (created 24h+ before start)
+    const matchStartMs = getTimeDifferenceFromNow(
+      match.match_date,
+      match.start_time,
+      match.timezone || 'UTC'
+    );
+    let isPlannedMatch = true;
+    if (createdAt) {
       const hoursFromCreationToStart =
-        (matchStartDateTime.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+        (Date.now() + matchStartMs - createdAt.getTime()) / (1000 * 60 * 60);
       isPlannedMatch = hoursFromCreationToStart >= 24;
     }
 
-    // Late cancellation penalty only applies if within 24h of start AND was a planned match
-    const isLateCancellation = isWithin24HoursOfStart && isPlannedMatch;
+    // Must be within 24h of start
+    const isWithin24h = hoursUntilMatch < 24;
 
-    // Create reputation event for the host
-    createReputationEvent(
-      userId,
-      isLateCancellation ? 'match_cancelled_late' : 'match_cancelled_early',
-      { matchId }
-    ).catch(err => {
-      console.error('[cancelMatch] Failed to create reputation event:', err);
-    });
+    if (!isCoolingOff && hasOtherParticipants && courtReserved && isPlannedMatch && isWithin24h) {
+      isLateCancellation = true;
+    }
+
+    if (isLateCancellation) {
+      // Graduated penalty: count recent offenses, compute penalty
+      const recentOffenses = await countRecentCancellationEvents(userId);
+      const penalty = calculateCancellationPenalty(hoursUntilMatch, 'creator', { recentOffenses });
+
+      createReputationEvent(userId, 'match_cancelled_late', {
+        matchId,
+        customImpact: penalty,
+        metadata: { hoursUntilMatch, courtStatus: match.court_status, recentOffenses },
+      }).catch(err => {
+        console.error('[cancelMatch] Failed to create reputation event:', err);
+      });
+    } else {
+      createReputationEvent(userId, 'match_cancelled_early', { matchId }).catch(err => {
+        console.error('[cancelMatch] Failed to create reputation event:', err);
+      });
+    }
   }
 
   // Notify all joined participants about the cancellation
@@ -1087,11 +1180,29 @@ async function createMatchChatIfFull(matchId: string, triggeredBy: string): Prom
 }
 
 /**
+ * Helper to remove a player from the match chat when they leave or are kicked.
+ * Fire-and-forget — errors are logged but don't block the caller.
+ */
+async function removePlayerFromMatchChat(matchId: string, playerId: string): Promise<void> {
+  try {
+    const conversation = await getMatchChat(matchId);
+    if (!conversation) return;
+
+    await removeConversationParticipant(conversation.id, playerId);
+    console.log(
+      `[removePlayerFromMatchChat] Removed player ${playerId} from chat for match ${matchId}`
+    );
+  } catch (error) {
+    console.error('[removePlayerFromMatchChat] Error:', error);
+  }
+}
+
+/**
  * Join match result with status info
  */
 export interface JoinMatchResult {
   participant: MatchParticipant;
-  status: 'joined' | 'requested' | 'waitlisted';
+  status: Extract<MatchParticipantStatusEnum, 'joined' | 'requested' | 'waitlisted'>;
 }
 
 /**
@@ -1213,7 +1324,7 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
   const availableSpots = totalSpots - joinedParticipants;
 
   // Determine status based on join mode and availability
-  let participantStatus: 'joined' | 'requested' | 'waitlisted';
+  let participantStatus: Extract<MatchParticipantStatusEnum, 'joined' | 'requested' | 'waitlisted'>;
 
   if (availableSpots <= 0) {
     // Match is full - add to waitlist
@@ -1235,6 +1346,7 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
       .update({
         status: participantStatus,
         updated_at: new Date().toISOString(),
+        ...(participantStatus === 'joined' ? { joined_at: new Date().toISOString() } : {}),
       })
       .eq('match_id', matchId)
       .eq('player_id', playerId)
@@ -1254,6 +1366,7 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
         player_id: playerId,
         status: participantStatus,
         is_host: false,
+        ...(participantStatus === 'joined' ? { joined_at: new Date().toISOString() } : {}),
       })
       .select()
       .single();
@@ -1399,16 +1512,18 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
       `
       created_by,
       created_at,
-      updated_at,
+      host_edited_at,
       match_date,
       start_time,
       timezone,
       format,
+      court_status,
       sport:sport_id (name),
       participants:match_participant (
         player_id,
         status,
-        is_host
+        is_host,
+        joined_at
       )
     `
     )
@@ -1457,85 +1572,121 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
   // ========================================
   // CREATE REPUTATION EVENT IF APPLICABLE
   // ========================================
-  // Check if leaving warrants a reputation penalty per the spec:
-  // Penalty applies when: full match + created >24h before start + not edited <24h before start + leaving <24h before start
-  if (isMatchFull) {
-    const matchStartDateTime = new Date(`${match.match_date}T${match.start_time}`);
-    const now = new Date();
-    const hoursUntilMatch = (matchStartDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+  // Graduated penalty for leaving a full match late.
+  // Waitlisted players should never incur a penalty for leaving.
+  const wasJoinedParticipant = joinedParticipants.some(
+    (p: { player_id: string }) => p.player_id === playerId
+  );
+  if (wasJoinedParticipant && isMatchFull) {
+    const { getTimeDifferenceFromNow } = await import('@rallia/shared-utils');
+    const msUntilMatch = getTimeDifferenceFromNow(
+      match.match_date,
+      match.start_time,
+      match.timezone || 'UTC'
+    );
+    const hoursUntilMatch = msUntilMatch / (1000 * 60 * 60);
 
-    // Condition: Must be within 24 hours of start time
-    if (hoursUntilMatch > 0 && hoursUntilMatch < 24) {
+    // Only apply penalty within 24h of start
+    if (hoursUntilMatch < 24) {
       let shouldCreatePenalty = true;
 
-      // Condition: Match must have been created more than 24 hours before start
-      if (match.created_at) {
-        const createdAt = new Date(match.created_at);
-        const hoursFromCreationToStart =
-          (matchStartDateTime.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-        if (hoursFromCreationToStart < 24) {
-          // Spontaneous/last-minute match - no penalty
+      // Cooling off: if player joined <1h ago, no penalty
+      const playerParticipant = joinedParticipants.find(
+        (p: { player_id: string }) => p.player_id === playerId
+      ) as { player_id: string; joined_at?: string } | undefined;
+      if (playerParticipant?.joined_at) {
+        const hoursSinceJoin =
+          (Date.now() - new Date(playerParticipant.joined_at).getTime()) / (1000 * 60 * 60);
+        if (hoursSinceJoin < 1) {
           shouldCreatePenalty = false;
         }
       }
 
-      // Condition: Match must NOT have been edited within 24 hours of start
-      if (shouldCreatePenalty && match.updated_at) {
-        const updatedAt = new Date(match.updated_at);
-        const hoursFromUpdateToStart =
-          (matchStartDateTime.getTime() - updatedAt.getTime()) / (1000 * 60 * 60);
-        if (hoursFromUpdateToStart < 24) {
-          // Host made last-minute changes - no penalty for leaving
+      // Court must be reserved for penalty to apply
+      if (shouldCreatePenalty && match.court_status !== 'reserved') {
+        shouldCreatePenalty = false;
+      }
+
+      // Spontaneous match exception: created <24h before start
+      if (shouldCreatePenalty && match.created_at) {
+        const createdAt = new Date(match.created_at);
+        const matchStartMs = Date.now() + msUntilMatch;
+        const hoursFromCreationToStart = (matchStartMs - createdAt.getTime()) / (1000 * 60 * 60);
+        if (hoursFromCreationToStart < 24) {
+          shouldCreatePenalty = false;
+        }
+      }
+
+      // Host-edit exception: if host explicitly edited match <24h before NOW (player is reacting to recent changes)
+      if (shouldCreatePenalty && match.host_edited_at) {
+        const hostEditedAt = new Date(match.host_edited_at);
+        const hoursSinceEdit = (Date.now() - hostEditedAt.getTime()) / (1000 * 60 * 60);
+        if (hoursSinceEdit < 24) {
           shouldCreatePenalty = false;
         }
       }
 
       if (shouldCreatePenalty) {
-        // Create reputation event for leaving late (same type as host cancelling late per spec)
-        createReputationEvent(playerId, 'match_cancelled_late', { matchId }).catch(err => {
+        const recentOffenses = await countRecentCancellationEvents(playerId);
+        const penalty = calculateCancellationPenalty(hoursUntilMatch, 'participant', {
+          recentOffenses,
+        });
+
+        createReputationEvent(playerId, 'match_left_late', {
+          matchId,
+          customImpact: penalty,
+          metadata: { hoursUntilMatch, recentOffenses },
+        }).catch(err => {
           console.error('[leaveMatch] Failed to create reputation event:', err);
         });
       }
     }
   }
 
-  // Send notifications to host and remaining participants
-  // Get player name for notification
-  const { data: profileData } = await supabase
-    .from('profile')
-    .select('first_name, last_name, display_name')
-    .eq('id', playerId)
-    .single();
+  // Only notify other participants when a joined player leaves (not waitlisted players)
+  if (wasJoinedParticipant) {
+    // Get player name for notification
+    const { data: profileData } = await supabase
+      .from('profile')
+      .select('first_name, last_name, display_name')
+      .eq('id', playerId)
+      .single();
 
-  const playerName =
-    profileData?.first_name && profileData?.last_name
-      ? `${profileData.first_name} ${profileData.last_name}`
-      : profileData?.first_name || 'A player';
-  const sportName = (match.sport as { name?: string } | null)?.name;
+    const playerName =
+      profileData?.first_name && profileData?.last_name
+        ? `${profileData.first_name} ${profileData.last_name}`
+        : profileData?.first_name || 'A player';
+    const sportName = (match.sport as { name?: string } | null)?.name;
 
-  // Get all remaining joined participants (excluding the player who left)
-  // Note: The creator is now a participant, so they'll be included in this list if they're joined
-  const remainingParticipants =
-    match.participants?.filter(
-      (p: { player_id: string; status: string }) =>
-        p.status === 'joined' && p.player_id !== playerId
-    ) ?? [];
+    // Get all remaining joined participants (excluding the player who left)
+    // Note: The creator is now a participant, so they'll be included in this list if they're joined
+    const remainingParticipants =
+      match.participants?.filter(
+        (p: { player_id: string; status: string }) =>
+          p.status === 'joined' && p.player_id !== playerId
+      ) ?? [];
 
-  // Recipients are the remaining joined participants (creator is already included if they're a participant)
-  const userIdsToNotify = remainingParticipants.map((p: { player_id: string }) => p.player_id);
+    // Recipients are the remaining joined participants (creator is already included if they're a participant)
+    const userIdsToNotify = remainingParticipants.map((p: { player_id: string }) => p.player_id);
 
-  // Remove duplicates
-  const uniqueUserIds = [...new Set(userIdsToNotify)];
+    // Remove duplicates
+    const uniqueUserIds = [...new Set(userIdsToNotify)];
 
-  if (uniqueUserIds.length > 0) {
-    // Calculate spots left after the player left
-    const spotsLeft = totalCapacity - remainingParticipants.length;
+    if (uniqueUserIds.length > 0) {
+      // Calculate spots left after the player left
+      const spotsLeft = totalCapacity - remainingParticipants.length;
 
-    // Notify all users (fire and forget - don't block on notification)
-    notifyPlayerLeft(uniqueUserIds, matchId, playerName, sportName, spotsLeft).catch(err => {
-      console.error('Failed to send player left notifications:', err);
-    });
+      // Notify all users (fire and forget - don't block on notification)
+      notifyPlayerLeft(uniqueUserIds, matchId, playerName, sportName, spotsLeft).catch(err => {
+        console.error('Failed to send player left notifications:', err);
+      });
+    }
   }
+
+  // Remove the player from the match chat (fire and forget)
+  removePlayerFromMatchChat(matchId, playerId).catch(err => {
+    console.error('[leaveMatch] Failed to remove player from match chat:', err);
+  });
 }
 
 /**
@@ -1659,6 +1810,7 @@ export async function acceptJoinRequest(
     .update({
       status: 'joined',
       updated_at: new Date().toISOString(),
+      joined_at: new Date().toISOString(),
     })
     .eq('id', participantId)
     .select()
@@ -1966,6 +2118,11 @@ export async function kickParticipant(
     ).catch(err => {
       console.error('Failed to send kicked notification:', err);
     });
+
+    // Remove the kicked player from the match chat (fire and forget)
+    removePlayerFromMatchChat(matchId, participantRecord.player_id).catch(err => {
+      console.error('[kickParticipant] Failed to remove player from match chat:', err);
+    });
   }
 
   return updatedParticipant as MatchParticipant;
@@ -2063,6 +2220,53 @@ export async function cancelInvitation(
   }
 
   // No notification sent to invitee (per requirements)
+
+  return updatedParticipant as MatchParticipant;
+}
+
+/**
+ * Decline an invitation to a match (invitee only).
+ * Updates the participant status from 'pending' to 'declined'.
+ *
+ * @param matchId - The match ID
+ * @param playerId - The ID of the player declining the invitation
+ * @throws Error if participant not found or not in 'pending' status
+ */
+export async function declineInvitation(
+  matchId: string,
+  playerId: string
+): Promise<MatchParticipant> {
+  // Find the player's pending invitation
+  const { data: participant, error: participantError } = await supabase
+    .from('match_participant')
+    .select('id, status, player_id')
+    .eq('match_id', matchId)
+    .eq('player_id', playerId)
+    .single();
+
+  if (participantError || !participant) {
+    throw new Error('Invitation not found');
+  }
+
+  // Verify the participant has 'pending' status
+  if (participant.status !== 'pending') {
+    throw new Error('No pending invitation to decline');
+  }
+
+  // Update the participant status to 'declined'
+  const { data: updatedParticipant, error: updateError } = await supabase
+    .from('match_participant')
+    .update({
+      status: 'declined',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', participant.id)
+    .select()
+    .single();
+
+  if (updateError) {
+    throw new Error(`Failed to decline invitation: ${updateError.message}`);
+  }
 
   return updatedParticipant as MatchParticipant;
 }
@@ -2319,7 +2523,7 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
         gender,
         playing_hand,
         max_travel_distance,
-        reputation_score,
+        player_reputation (reputation_score),
         notification_match_requests,
         notification_messages,
         notification_reminders,
@@ -2344,7 +2548,7 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
           gender,
           playing_hand,
           max_travel_distance,
-          reputation_score,
+          player_reputation (reputation_score),
           notification_match_requests,
           notification_messages,
           notification_reminders,
@@ -2370,6 +2574,10 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
           set_number,
           team1_score,
           team2_score
+        ),
+        confirmations:score_confirmation (
+          player_id,
+          action
         )
       )
     `
@@ -2423,7 +2631,10 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
 
   // Fetch player ratings for the match's sport (for displaying in request cards)
   // All matches in this result are for the same sport (params.sportId)
-  const ratingsMap: Record<string, { label: string; value: number | null }> = {}; // playerId -> rating info
+  const ratingsMap: Record<
+    string,
+    { label: string; value: number | null; badgeStatus?: BadgeStatusEnum }
+  > = {}; // playerId -> rating info
 
   if (profileIds.length > 0 && sportId) {
     const { data: ratingsData, error: ratingsError } = await supabase
@@ -2431,6 +2642,7 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
       .select(
         `
         player_id,
+        badge_status,
         rating_score!player_rating_scores_rating_score_id_fkey!inner (
           label,
           value,
@@ -2445,6 +2657,7 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
     if (!ratingsError && ratingsData) {
       type RatingResult = {
         player_id: string;
+        badge_status?: BadgeStatusEnum;
         rating_score: { label: string; value: number | null; rating_system: { sport_id: string } };
       };
       (ratingsData as unknown as RatingResult[]).forEach(rating => {
@@ -2455,6 +2668,7 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
           ratingsMap[rating.player_id] = {
             label: ratingScore.label,
             value: ratingScore.value,
+            badgeStatus: rating.badge_status,
           };
         }
       });
@@ -2472,6 +2686,10 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
         (match.created_by_player as PlayerWithProfile).sportRatingLabel = creatorRating.label;
         if (creatorRating.value !== null) {
           (match.created_by_player as PlayerWithProfile).sportRatingValue = creatorRating.value;
+        }
+        if (creatorRating.badgeStatus) {
+          (match.created_by_player as PlayerWithProfile).sportCertificationStatus =
+            creatorRating.badgeStatus;
         }
       }
     }
@@ -2491,6 +2709,10 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
           (playerObj as PlayerWithProfile).sportRatingLabel = participantRating.label;
           if (participantRating.value !== null) {
             (playerObj as PlayerWithProfile).sportRatingValue = participantRating.value;
+          }
+          if (participantRating.badgeStatus) {
+            (playerObj as PlayerWithProfile).sportCertificationStatus =
+              participantRating.badgeStatus;
           }
         }
         // Ensure player is always an object, not array
@@ -2554,38 +2776,13 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
 /**
  * Parameters for fetching player's matches
  */
-/**
- * Status filter values for upcoming matches
- */
-export type UpcomingStatusFilter =
-  | 'all'
-  | 'hosting'
-  | 'confirmed'
-  | 'pending'
-  | 'requested'
-  | 'waitlisted'
-  | 'needs_players'
-  | 'ready_to_play';
-
-/**
- * Status filter values for past matches
- */
-export type PastStatusFilter =
-  | 'all'
-  | 'feedback_needed'
-  | 'played'
-  | 'hosted'
-  | 'as_participant'
-  | 'expired'
-  | 'cancelled';
-
 export interface GetPlayerMatchesParams {
   userId: string;
   timeFilter: 'upcoming' | 'past';
   /** Optional sport ID to filter matches by */
   sportId?: string;
   /** Optional status filter for filtering matches by participant status, role, or match state */
-  statusFilter?: UpcomingStatusFilter | PastStatusFilter;
+  statusFilter?: UpcomingMatchFilter | PastMatchFilter;
   limit?: number;
   offset?: number;
 }
@@ -2645,7 +2842,7 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
         gender,
         playing_hand,
         max_travel_distance,
-        reputation_score,
+        player_reputation (reputation_score),
         notification_match_requests,
         notification_messages,
         notification_reminders,
@@ -2670,7 +2867,7 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
           gender,
           playing_hand,
           max_travel_distance,
-          reputation_score,
+          player_reputation (reputation_score),
           notification_match_requests,
           notification_messages,
           notification_reminders,
@@ -2696,6 +2893,10 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
           set_number,
           team1_score,
           team2_score
+        ),
+        confirmations:score_confirmation (
+          player_id,
+          action
         )
       )
     `
@@ -2756,7 +2957,7 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
   // Build a map of sportId -> playerId -> rating info
   const sportRatingsMap: Record<
     string,
-    Record<string, { label: string; value: number | null }>
+    Record<string, { label: string; value: number | null; badgeStatus?: BadgeStatusEnum }>
   > = {};
 
   if (profileIds.length > 0) {
@@ -2771,6 +2972,7 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
         .select(
           `
         player_id,
+        badge_status,
         rating_score!player_rating_scores_rating_score_id_fkey!inner (
           label,
           value,
@@ -2789,6 +2991,7 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
       if (!ratingsError && ratingsData) {
         type RatingResult = {
           player_id: string;
+          badge_status?: BadgeStatusEnum;
           rating_score: {
             label: string;
             value: number | null;
@@ -2805,6 +3008,7 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
             sportRatingsMap[ratingSystem.sport_id][rating.player_id] = {
               label: ratingScore.label,
               value: ratingScore.value,
+              badgeStatus: rating.badge_status,
             };
           }
         });
@@ -2825,6 +3029,10 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
         if (creatorRating.value !== null) {
           (match.created_by_player as PlayerWithProfile).sportRatingValue = creatorRating.value;
         }
+        if (creatorRating.badgeStatus) {
+          (match.created_by_player as PlayerWithProfile).sportCertificationStatus =
+            creatorRating.badgeStatus;
+        }
       }
     }
 
@@ -2843,6 +3051,10 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
           (playerObj as PlayerWithProfile).sportRatingLabel = participantRating.label;
           if (participantRating.value !== null) {
             (playerObj as PlayerWithProfile).sportRatingValue = participantRating.value;
+          }
+          if (participantRating.badgeStatus) {
+            (playerObj as PlayerWithProfile).sportCertificationStatus =
+              participantRating.badgeStatus;
           }
         }
         // Ensure player is always an object, not array
@@ -2873,18 +3085,20 @@ export interface SearchPublicMatchesParams {
   maxDistanceKm: number | 'all' | null;
   sportId: string;
   searchQuery?: string;
-  format?: 'all' | 'singles' | 'doubles';
-  matchType?: 'all' | 'casual' | 'competitive';
-  dateRange?: 'all' | 'today' | 'week' | 'weekend';
-  timeOfDay?: 'all' | 'morning' | 'afternoon' | 'evening';
-  skillLevel?: 'all' | 'beginner' | 'intermediate' | 'advanced';
-  gender?: 'all' | 'male' | 'female';
-  cost?: 'all' | 'free' | 'paid';
-  joinMode?: 'all' | 'direct' | 'request';
+  format?: FormatFilter;
+  matchType?: MatchTypeFilter;
+  dateRange?: DateRangeFilter;
+  timeOfDay?: TimeOfDayFilter;
+  skillLevel?: SkillLevelFilter;
+  gender?: GenderFilter;
+  cost?: CostFilter;
+  joinMode?: JoinModeFilter;
   /** Duration filter (in minutes), '120+' includes 120 and custom */
-  duration?: 'all' | '30' | '60' | '90' | '120+';
+  duration?: DurationFilter;
   /** Court status filter */
-  courtStatus?: 'all' | 'reserved' | 'to_reserve';
+  courtStatus?: CourtStatusFilter;
+  /** Match tier filter */
+  matchTier?: MatchTierFilter;
   /** Specific date filter (ISO date string YYYY-MM-DD), overrides dateRange when set */
   specificDate?: string | null;
   /** The viewing user's gender for eligibility filtering */
@@ -2927,6 +3141,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     joinMode = 'all',
     duration = 'all',
     courtStatus = 'all',
+    matchTier = 'all',
     specificDate,
     userGender,
     facilityId,
@@ -2959,6 +3174,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     p_offset: offset,
     p_user_gender: userGender || null, // Pass user's gender for eligibility filtering
     p_facility_id: facilityId || null, // Filter by specific facility
+    p_match_tier: matchTier === 'all' ? null : matchTier,
   });
 
   if (rpcError) {
@@ -2999,7 +3215,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
         gender,
         playing_hand,
         max_travel_distance,
-        reputation_score,
+        player_reputation (reputation_score),
         notification_match_requests,
         notification_messages,
         notification_reminders,
@@ -3024,7 +3240,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
           gender,
           playing_hand,
           max_travel_distance,
-          reputation_score,
+          player_reputation (reputation_score),
           notification_match_requests,
           notification_messages,
           notification_reminders,
@@ -3050,6 +3266,10 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
           set_number,
           team1_score,
           team2_score
+        ),
+        confirmations:score_confirmation (
+          player_id,
+          action
         )
       )
     `
@@ -3103,7 +3323,10 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
 
   // Fetch player ratings for the match's sport (for displaying in request cards)
   // All matches in this result are for the same sport (params.sportId)
-  const publicRatingsMap: Record<string, { label: string; value: number | null }> = {}; // playerId -> rating info
+  const publicRatingsMap: Record<
+    string,
+    { label: string; value: number | null; badgeStatus?: BadgeStatusEnum }
+  > = {}; // playerId -> rating info
 
   if (profileIds.length > 0 && sportId) {
     const { data: ratingsData, error: ratingsError } = await supabase
@@ -3111,6 +3334,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
       .select(
         `
         player_id,
+        badge_status,
         rating_score!player_rating_scores_rating_score_id_fkey!inner (
           label,
           value,
@@ -3125,6 +3349,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     if (!ratingsError && ratingsData) {
       type RatingResult = {
         player_id: string;
+        badge_status?: BadgeStatusEnum;
         rating_score: { label: string; value: number | null; rating_system: { sport_id: string } };
       };
       (ratingsData as unknown as RatingResult[]).forEach(rating => {
@@ -3135,6 +3360,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
           publicRatingsMap[rating.player_id] = {
             label: ratingScore.label,
             value: ratingScore.value,
+            badgeStatus: rating.badge_status,
           };
         }
       });
@@ -3152,6 +3378,10 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
         (match.created_by_player as PlayerWithProfile).sportRatingLabel = creatorRating.label;
         if (creatorRating.value !== null) {
           (match.created_by_player as PlayerWithProfile).sportRatingValue = creatorRating.value;
+        }
+        if (creatorRating.badgeStatus) {
+          (match.created_by_player as PlayerWithProfile).sportCertificationStatus =
+            creatorRating.badgeStatus;
         }
       }
     }
@@ -3171,6 +3401,10 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
           (playerObj as PlayerWithProfile).sportRatingLabel = participantRating.label;
           if (participantRating.value !== null) {
             (playerObj as PlayerWithProfile).sportRatingValue = participantRating.value;
+          }
+          if (participantRating.badgeStatus) {
+            (playerObj as PlayerWithProfile).sportCertificationStatus =
+              participantRating.badgeStatus;
           }
         }
         // Ensure player is always an object, not array
@@ -3414,155 +3648,6 @@ export async function invitePlayersToMatch(
   return { invited, alreadyInMatch, failed };
 }
 
-// =============================================================================
-// REPUTATION EVENTS
-// =============================================================================
-
-/**
- * Result of awarding match completion reputation
- */
-export interface AwardMatchCompletionResult {
-  /** Player IDs that received reputation events */
-  awarded: string[];
-  /** Player IDs that already had reputation events for this match */
-  skipped: string[];
-  /** Player IDs that had errors */
-  failed: string[];
-}
-
-/**
- * Award match completion reputation events to all participants.
- * This should be called when a match is confirmed as completed (either via UI
- * confirmation or by a scheduled job after match end time).
- *
- * Awards:
- * - 'match_completed' to all participants
- * - 'first_match_bonus' if it's the player's first match
- * - 'match_repeat_opponent' if players have played together before
- *
- * @param matchId - The match ID
- * @returns Result with awarded, skipped, and failed player IDs
- */
-export async function awardMatchCompletionReputation(
-  matchId: string
-): Promise<AwardMatchCompletionResult> {
-  // Fetch match with participants
-  const { data: match, error: matchError } = await supabase
-    .from('match')
-    .select(
-      `
-      id,
-      created_by,
-      cancelled_at,
-      participants:match_participant (
-        player_id,
-        status
-      )
-    `
-    )
-    .eq('id', matchId)
-    .single();
-
-  if (matchError || !match) {
-    throw new Error('Match not found');
-  }
-
-  // Only award for non-cancelled matches
-  if (match.cancelled_at) {
-    return { awarded: [], skipped: [], failed: [] };
-  }
-
-  // Get all players who participated (joined participants, which now includes the creator)
-  const participantPlayerIds = (match.participants ?? [])
-    .filter((p: { status: string }) => p.status === 'joined')
-    .map((p: { player_id: string }) => p.player_id);
-
-  // Creator is now included as a joined participant with is_host=true
-  const uniquePlayerIds = [...new Set(participantPlayerIds)];
-
-  if (uniquePlayerIds.length === 0) {
-    return { awarded: [], skipped: [], failed: [] };
-  }
-
-  // Check if reputation events already exist for this match (avoid duplicates)
-  const { data: existingEvents } = await supabase
-    .from('reputation_event')
-    .select('player_id')
-    .eq('match_id', matchId)
-    .eq('event_type', 'match_completed');
-
-  const playersWithEvents = new Set(
-    (existingEvents ?? []).map((e: { player_id: string }) => e.player_id)
-  );
-
-  const skipped = uniquePlayerIds.filter(id => playersWithEvents.has(id));
-  const toAward = uniquePlayerIds.filter(id => !playersWithEvents.has(id));
-
-  if (toAward.length === 0) {
-    return { awarded: [], skipped, failed: [] };
-  }
-
-  const awarded: string[] = [];
-  const failed: string[] = [];
-
-  // Prepare events for each player
-  for (const playerId of toAward) {
-    try {
-      const eventsToCreate: Array<{
-        playerId: string;
-        eventType: 'match_completed' | 'first_match_bonus' | 'match_repeat_opponent';
-        options?: { matchId?: string; causedByPlayerId?: string };
-      }> = [
-        {
-          playerId,
-          eventType: 'match_completed',
-          options: { matchId },
-        },
-      ];
-
-      // Check if this is the player's first match completion
-      const { data: existingCompletions } = await supabase
-        .from('reputation_event')
-        .select('id')
-        .eq('player_id', playerId)
-        .eq('event_type', 'match_completed')
-        .limit(1);
-
-      if (!existingCompletions || existingCompletions.length === 0) {
-        eventsToCreate.push({
-          playerId,
-          eventType: 'first_match_bonus',
-          options: { matchId },
-        });
-      }
-
-      // Check for repeat opponents
-      const otherPlayerIds = uniquePlayerIds.filter(id => id !== playerId);
-      for (const opponentId of otherPlayerIds) {
-        const hasPlayedBefore = await havePlayedTogether(playerId, opponentId, matchId);
-        if (hasPlayedBefore) {
-          eventsToCreate.push({
-            playerId,
-            eventType: 'match_repeat_opponent',
-            options: { matchId, causedByPlayerId: opponentId },
-          });
-          // Only award once per match (not per opponent)
-          break;
-        }
-      }
-
-      // Create all events for this player
-      await createReputationEvents(eventsToCreate);
-      awarded.push(playerId);
-    } catch (err) {
-      console.error(`[awardMatchCompletionReputation] Failed for player ${playerId}:`, err);
-      failed.push(playerId);
-    }
-  }
-
-  return { awarded, skipped, failed };
-}
-
 /**
  * Check-in radius in meters
  */
@@ -3768,7 +3853,7 @@ export async function getMatchNeedingFeedback(
         gender,
         playing_hand,
         max_travel_distance,
-        reputation_score,
+        player_reputation (reputation_score),
         notification_match_requests,
         notification_messages,
         notification_reminders,
@@ -3794,7 +3879,7 @@ export async function getMatchNeedingFeedback(
           gender,
           playing_hand,
           max_travel_distance,
-          reputation_score,
+          player_reputation (reputation_score),
           notification_match_requests,
           notification_messages,
           notification_reminders,
@@ -3957,8 +4042,6 @@ export const matchService = {
   checkInToMatch,
   // Invitations
   invitePlayersToMatch,
-  // Reputation
-  awardMatchCompletionReputation,
   // Feedback
   getMatchNeedingFeedback,
 };

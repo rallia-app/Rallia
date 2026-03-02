@@ -27,6 +27,7 @@
     "search": "Search",
     "filter": "Filter",
     "sort": "Sort",
+    "all": "All",
     "memberCount": "{count} members",
     "memberCount_one": "{count} member",
     "time": {
@@ -51,7 +52,8 @@
     "gender": {
       "label": "Gender",
       "male": "Male",
-      "female": "Female"
+      "female": "Female",
+      "other": "Other"
     },
     "playingHand": {
       "label": "Playing Hand",
@@ -132,6 +134,7 @@
     "notifications": "Notifications",
     "notificationPreferences": "Notification Preferences",
     "permissions": "Permissions",
+    "feedback": "Feedback",
     "ratingProofs": "Rating Proofs",
     "publicMatches": "Public Games",
     "playerMatches": "My Games",
@@ -148,7 +151,7 @@
     "delete": "Delete",
     "timeAgo": "{time} ago",
     "signInRequired": "Sign In Required",
-    "signInPrompt": "Please sign in to view your notifications",
+    "signInPrompt": "Sign in to view your notifications",
     "onboardingRequired": "Complete Your Profile",
     "onboardingPrompt": "Finish setting up your profile to receive and view notifications",
     "completeOnboarding": "Complete Profile",
@@ -205,7 +208,7 @@
     "messages": {
       "match_invitation": {
         "title": "Game On!",
-        "body": "{playerName} wants to play {sportName} with you on {matchDate}{startTime}"
+        "body": "{playerName} wants to play {sportName} with you on {matchDate}{startTime} at {locationName}"
       },
       "match_join_request": {
         "title": "New Player Request",
@@ -216,36 +219,41 @@
         "body": "Your {sportName} game on {matchDate} at {locationName} is confirmed. See you there!"
       },
       "match_join_rejected": {
-        "title": "Request Declined",
-        "body": "Your request to join the {sportName} game wasn't accepted this time. Check out other games nearby!"
+        "title": "Game Full",
+        "body": "Your request to join the {sportName} game on {matchDate} wasn't accepted this time. Find other games nearby!"
       },
       "match_player_joined": {
         "title": "Player Joined!",
-        "body": "{playerName} joined your {sportName} game. {spotsLeft} spot(s) left!"
+        "body": "{playerName} joined your {sportName} game — {spotsLeft} left!",
+        "body_full": "{playerName} joined your {sportName} game. The game is full!"
       },
       "match_cancelled": {
         "title": "Game Cancelled",
-        "body": "The {sportName} game on {matchDate} at {locationName} has been cancelled. We hope to see you on the court soon!"
+        "body": "The {sportName} game on {matchDate} at {locationName} has been cancelled. We hope to see you playing soon!"
       },
       "match_updated": {
         "title": "Game Updated",
-        "body": "Your {sportName} game on {matchDate} has new details. Tap to review the changes."
+        "body": "Your {sportName} game on {matchDate} has been updated. Open the game to review the changes."
       },
       "match_starting_soon": {
         "title": "Get Ready!",
         "body": "Your {sportName} game at {locationName} starts {timeUntil}. Time to warm up!"
       },
       "match_completed": {
-        "title": "Great Game!",
-        "body": "Your {sportName} game is complete. How did it go? Share your feedback!"
+        "title": "Game Complete",
+        "body": "Your {sportName} game is done! How did it go? Rate your experience."
+      },
+      "match_new_available": {
+        "title": "New Game Nearby",
+        "body": "A {sportName} game on {matchDate} is looking for players. Join before it fills up!"
       },
       "player_kicked": {
         "title": "Removed from Game",
-        "body": "You've been removed from the {sportName} game on {matchDate}. Check out other games nearby!"
+        "body": "You've been removed from the {sportName} game on {matchDate}. Find other games nearby!"
       },
       "player_left": {
         "title": "Player Left",
-        "body": "{playerName} left your {sportName} game. {spotsLeft} spot(s) now available."
+        "body": "{playerName} left your {sportName} game — {spotsLeft} now available."
       },
       "new_message": {
         "title": "Message from {senderName}",
@@ -280,16 +288,16 @@
         "body": "We have an update for you. Tap to learn more."
       },
       "feedback_request": {
-        "title": "How Was Your Game?",
-        "body": "Rate your {sportName} game with {opponentNames}. Your feedback helps the community!"
+        "title": "How was your game?",
+        "body": "Submit your score and rate your {sportName} match with {opponentNames} while it's fresh!"
       },
       "feedback_reminder": {
-        "title": "Don't Forget to Rate Your Game",
-        "body": "Your {sportName} game feedback closes in 24 hours. Rate your experience with {opponentNames}!"
+        "title": "You have a match to close out",
+        "body": "Your {sportName} score and rating with {opponentNames} are still pending — complete them before the window closes."
       },
       "score_confirmation": {
-        "title": "Confirm Match Score",
-        "body": "Please confirm the final score for your {sportName} game on {matchDate}."
+        "title": "Confirm Game Score",
+        "body": "{playerName} submitted a score for your {sportName} game. Please confirm or dispute."
       }
     }
   },
@@ -398,6 +406,7 @@
       }
     },
     "permissions": "Permissions",
+    "feedback": "Feedback & Suggestions",
     "language": "Language",
     "languageAuto": "Auto",
     "languageDescription": "Choose your preferred language for the app",
@@ -1317,11 +1326,13 @@
     "cancelSuccess": "Game cancelled",
     "leaveConfirmTitle": "Leave this game?",
     "leaveConfirmMessage": "You'll be removed from this game.",
-    "leaveReputationWarning": "Leaving this game will affect your reputation (-25 points). Other players are counting on you.",
+    "leaveReputationWarning": "Leaving this game may affect your reputation. The closer to game time, the bigger the impact. Other players are counting on you.",
+    "leaveWaitlistConfirmTitle": "Leave the waitlist?",
+    "leaveWaitlistConfirmMessage": "You'll be removed from the waitlist. You can always join again later.",
     "cancelConfirmTitle": "Cancel this game?",
     "cancelConfirmMessage": "This will cancel the game for everyone.",
     "cancelWarning": "{count} other player(s) will be notified",
-    "cancelReputationWarning": "Cancelling this game will affect your reputation (-25 points).",
+    "cancelReputationWarning": "Cancelling this game may affect your reputation. The closer to game time, the bigger the impact.",
     "acceptRequest": "Accept",
     "rejectRequest": "Decline",
     "acceptSuccess": "Player accepted",
@@ -1356,6 +1367,10 @@
     "cancelInviteConfirmTitle": "Cancel Invitation?",
     "cancelInviteConfirmMessage": "This will revoke the invitation. The player will no longer be able to join through this invite.",
     "cancelInviteSuccess": "Invitation cancelled",
+    "declineInvite": "Decline",
+    "declineInviteConfirmTitle": "Decline Invitation?",
+    "declineInviteConfirmMessage": "You won't be able to join this game through this invitation.",
+    "declineInviteSuccess": "Invitation declined",
     "resendInviteSuccess": "Invitation resent",
     "showMoreInvitations": "+{count} more invitations",
     "participantStatus": {
@@ -1388,9 +1403,9 @@
     "unknown": "Something unexpected happened. Please try again.",
     "requestTimeout": "This is taking too long. Please try again.",
     "permissionsDenied": "Permission denied",
-    "userNotAuthenticated": "Please sign in to continue",
+    "userNotAuthenticated": "Sign in to continue",
     "noPrimarySport": "Please set up a sport first.",
-    "mustBeLoggedIn": "Please sign in to create a game."
+    "mustBeLoggedIn": "Sign in to create a game."
   },
   "chat": {
     "empty": {
@@ -1477,11 +1492,18 @@
       "pleaseSelectReason": "Please select a reason for your report",
       "submitted": "Report Submitted",
       "thankYou": "Thank you for your report. Our team will review it shortly.",
+      "communityThanks": "You're helping keep our sports community fair and respectful. Game on!",
       "failedToSubmit": "Failed to submit report",
       "warningText": "Reports are taken seriously. Please only report genuine violations.",
       "selectReason": "Select a reason",
       "additionalDetails": "Additional details (optional)",
-      "provideContext": "Provide more context about this report..."
+      "provideContext": "Provide more context about this report...",
+      "addEvidence": "Add Evidence (Optional)",
+      "evidenceHint": "Screenshots can help our team review this report faster.",
+      "addPhoto": "Add Photo",
+      "maxPhotos": "{{current}}/{{max}} photos",
+      "maxImages": "You can add up to 3 images",
+      "uploadingImages": "Uploading images..."
     },
     "selectMembers": "Select Members",
     "pleaseSelectMember": "Please select at least one member for the group.",
@@ -1543,6 +1565,7 @@
       "replyingTo": "Replying to {name}"
     },
     "groupChat": {
+      "admin": "Admin",
       "groupMemberCount": "Group · {count} members",
       "groupMemberCount_one": "Group · {count} member",
       "addGroupDescription": "Add group description",
@@ -1633,6 +1656,12 @@
       "removeModerator": "Remove Moderator",
       "viewAll": "View all"
     },
+    "removeFromCommunity": "Remove from Community",
+    "removeMember": "Remove Member",
+    "removeMemberConfirm": "Are you sure you want to remove {name} from this community?",
+    "memberRemoved": "Member removed from community",
+    "failedToRemoveMember": "Failed to remove member",
+    "thisMember": "this member",
     "pendingRequests": {
       "title": "Pending Requests",
       "count": "{count} pending request(s)",
@@ -1687,7 +1716,8 @@
       "last7DaysActivities": "Last 7 days activities",
       "activities": "ACTIVITIES",
       "newMembers": "{count} new members",
-      "gamesCreated": "{count, plural, one {{count} game created} other {{count} games created}}",
+      "gamesCreated": "{count} games created",
+      "gamesCreated_one": "{count} game created",
       "newMessages": "{count} new messages in\ncommunity chat",
       "about": "About",
       "viewAll": "View all",
@@ -1965,7 +1995,8 @@
       "noActivity": "No activity yet",
       "activities": "ACTIVITIES",
       "newMembers": "{count} new members",
-      "gamesCreated": "{count, plural, one {{count} game created} other {{count} games created}}",
+      "gamesCreated": "{count} games created",
+      "gamesCreated_one": "{count} game created",
       "newMessages": "{count} new messages in\ncommunity chat"
     },
     "home": {
@@ -2028,8 +2059,8 @@
       "wasAddedBy": "{actorName} was added by {addedByName}",
       "joinedTheGroup": "{actorName} joined the group",
       "leftTheGroup": "{actorName} left the group",
-      "promotedMember": "{actorName} promoted a member to moderator",
-      "demotedMember": "{actorName} demoted a moderator to member",
+      "promotedMember": "{actorName} was promoted to moderator",
+      "demotedMember": "{actorName} was demoted to member",
       "createdGame": "{actorName} created a new game",
       "sentMessage": "{actorName} sent a message",
       "updatedGroup": "{actorName} updated the group",
@@ -2057,6 +2088,7 @@
     "selectSport": "Select a sport",
     "selectSportDescription": "Choose a sport from the header to view players",
     "chooseSport": "Choose a sport from the header to view players",
+    "nearby": "Nearby",
     "failedToLoad": "Failed to load players",
     "checkConnection": "Please check your connection and try again",
     "filters": {
@@ -2232,7 +2264,8 @@
       "completed": "Completed",
       "cancelled": "Cancelled",
       "confirmed": "Confirmed",
-      "inProgress": "In Progress"
+      "inProgress": "In Progress",
+      "unfilled": "Unfilled"
     },
     "participantStatus": {
       "pending": "Pending",
@@ -2286,6 +2319,12 @@
       "readyToPlay": "Ready to Play",
       "courtBooked": "Court Booked"
     },
+    "tier": {
+      "mostWanted": "Must-Play",
+      "readyToPlay": "Ready to Play",
+      "topPlayer": "Coveted Player",
+      "topPlayerPlural": "Coveted Players"
+    },
     "cta": {
       "join": "Join game",
       "askToJoin": "Request to join",
@@ -2304,6 +2343,8 @@
   },
   "matchDetail": {
     "title": "Game details",
+    "preferences": "Preferences",
+    "chat": "Chat",
     "host": "Host",
     "hostedBy": "Hosted by",
     "participants": "Players",
@@ -2317,7 +2358,10 @@
     "matchEnded": "This game has ended",
     "matchCompleted": "This game is completed",
     "matchClosed": "This game is closed",
-    "provideFeedback": "Feedback",
+    "provideFeedback": "Feedback & Score",
+    "provideFeedbackAndConfirm": "Feedback & Confirm",
+    "provideFeedbackOnly": "Give feedback",
+    "provideScoreOnly": "Save score",
     "checkIn": "Check in",
     "checkedIn": "Checked in",
     "checkInSuccess": "You have successfully checked in!",
@@ -2335,10 +2379,15 @@
     "shareMessage": "Check out this game on Rallia!",
     "shareInvite": "Join me for {sport}!",
     "shareDateTime": "{date} at {time}",
+    "shareFormat": "Format: {format}",
+    "shareDuration": "Duration: {duration}",
+    "shareMinLevel": "Minimum level: {level}",
     "distance": "Distance",
     "away": "away",
     "free": "Free",
     "perPerson": "per person",
+    "totalCost": "Total",
+    "perPlayerCost": "Per player",
     "location": "Location",
     "locationTBD": "Location TBD",
     "open": "Open",
@@ -2355,7 +2404,43 @@
     "opponent": "Opponent",
     "scoreVerified": "Score verified",
     "scorePendingConfirmation": "Waiting for opponent to confirm",
-    "scoreDisputed": "Score disputed"
+    "scorePendingConfirmation_one": "Waiting for opponent to confirm",
+    "scorePendingConfirmation_other": "Waiting for opponents to confirm",
+    "scoreDisputed": "Score disputed",
+    "badgeInfoTitle": "Player Badges",
+    "badgeHost": "Host",
+    "badgeHostDesc": "The player who created this match",
+    "badgeMostWanted": "Most Wanted",
+    "badgeMostWantedDesc": "Platinum-tier reputation (90%+)",
+    "badgeSelfDeclared": "Not Certified",
+    "badgeSelfDeclaredDesc": "Self-declared rating, not yet verified",
+    "badgeCertified": "Certified",
+    "badgeCertifiedDesc": "Rating certified by references or proofs",
+    "badgeDisputed": "Contested",
+    "badgeDisputedDesc": "Peer evaluations suggest a different level",
+    "badgeCheckedIn": "Checked In",
+    "badgeCheckedInDesc": "Player has confirmed their presence at the venue",
+    "confirmScore": "Confirm Score",
+    "disputeScore": "Dispute",
+    "disputeConfirmTitle": "Dispute Score?",
+    "disputeConfirmMessage": "Are you sure you want to dispute this score? This action cannot be undone.",
+    "scoreConfirmed": "Score confirmed successfully",
+    "scoreDisputedSuccess": "Score disputed. Contact your opponent to resolve.",
+    "confirmScoreError": "Failed to confirm score",
+    "scoreAlreadyProcessed": "This score has already been confirmed",
+    "disputeScoreError": "Failed to dispute score",
+    "dateAndTime": "Date & time",
+    "duration": "Duration",
+    "startTime": "Start",
+    "live": "Live",
+    "startingSoon": "Starting soon",
+    "startsIn": "Starts in {time}",
+    "invitedBanner": "You've been invited to this game",
+    "reliability": "Reliability",
+    "scoreConfirmProgress": "{confirmed}/{total} confirmed",
+    "scoreConfirmProgress_one": "{confirmed}/{total} player confirmed",
+    "scoreConfirmProgress_other": "{confirmed}/{total} players confirmed",
+    "yourScoreConfirmed": "Your confirmation received"
   },
   "registerMatchScore": {
     "title": "Register score",
@@ -2373,6 +2458,7 @@
     "team1Won": "Team 1 won",
     "team2Won": "Team 2 won",
     "sets": "Set scores",
+    "games": "Game scores",
     "teamYou": "You",
     "teamOpponent": "Opponent",
     "teamYourTeam": "Your team",
@@ -2380,15 +2466,23 @@
     "teamYouAndPartner": "You & {name}",
     "teamOpponentsNames": "{name1} & {name2}",
     "setN": "Set {number}",
+    "gameN": "Game {number}",
     "addSet": "Add set",
+    "addGame": "Add game",
     "removeSet": "Remove set",
+    "removeGame": "Remove game",
     "next": "Next",
     "submit": "Submit score",
+    "tennisScoreHint": "Games per set (typically 0–7)",
+    "pickleballScoreHint": "Points per game (typically to 11 or 15)",
     "error": {
       "enterScores": "Please enter at least one set score.",
+      "enterGames": "Please enter at least one game score.",
       "invalidParticipants": "This match does not have the right number of participants.",
       "noWinner": "Scores must determine a winner (one team must win more sets).",
-      "selectPartner": "Please select your partner."
+      "selectPartner": "Please select your partner.",
+      "tennisScoreRange": "Tennis set scores are typically 0–7.",
+      "pickleballScoreRange": "Pickleball game scores are typically 0–25."
     }
   },
   "matchFeedback": {
@@ -2400,7 +2494,8 @@
     },
     "matchContext": {
       "vsPlayer": "vs {name}",
-      "vsPlayers": "vs {names}"
+      "vsPlayers": "vs {names}",
+      "conjunction": "and"
     },
     "outcomeStep": {
       "title": "How did the match go?",
@@ -2455,7 +2550,8 @@
       "detailsPlaceholder": "Describe what happened...",
       "submit": "Submit Report",
       "success": "Report submitted"
-    }
+    },
+    "success": "Feedback submitted successfully!"
   },
   "addScore": {
     "title": "Add Score",
@@ -2476,6 +2572,7 @@
     "sportNotFound": "Could not find sport: {sport}",
     "scoreSubmitted": "Score Submitted!",
     "scoreSubmittedMessage": "Your score has been submitted. Your opponent has 24 hours to confirm.",
+    "confirmationWindowNote": "You'll be notified once your opponent confirms or if they dispute the score.",
     "failedToSubmit": "Failed to submit score. Please try again.",
     "findOpponent": {
       "title": "Find your opponent",
@@ -2753,6 +2850,7 @@
       "genderAny": "Any",
       "genderMale": "Male",
       "genderFemale": "Female",
+      "genderOther": "Other",
       "minRatingScore": "Minimum Skill Level",
       "minRatingScoreDescription": "Only players at this level or higher can join",
       "yourRating": "You",
@@ -2816,7 +2914,7 @@
       "openReservation": "Open Reservation",
       "confirmBooking": "Confirm Booking",
       "didYouBook": "Did you book the court?",
-      "iBookedThisCourt": "I booked this court",
+      "iBookedThisCourt": "I booked it!",
       "notYet": "Not yet",
       "courtBooked": "Court booked!",
       "courtBookedDescription": "The court is marked as booked for this game.",
@@ -2826,7 +2924,7 @@
       "tapToBook": "Tap a slot to book",
       "externalBooking": "You'll be redirected to the booking site",
       "bookingConfirmTitle": "Booking Confirmation",
-      "bookingConfirmMessage": "Did you book a court?",
+      "bookingConfirmMessage": "Did you book the court?",
       "viewMoreSlots": "View more slots",
       "selectCourt": "Select a Court",
       "courtAvailable": "court available",
@@ -2843,6 +2941,7 @@
       "searchError": "Couldn't search players",
       "noPlayersFound": "No players found",
       "noPlayersAvailable": "No players available",
+      "noPlayersAvailableDescription": "You can resend invitations to already invited players from the game details",
       "selectPlayers": "Select players to invite",
       "sendInvitations": "Send Invitations ({count})",
       "skip": "Skip",
@@ -2855,7 +2954,7 @@
   "home": {
     "welcomeBack": "Welcome back! 👋",
     "yourMatches": "Your Games",
-    "signInPrompt": "Please sign in to create and access your games",
+    "signInPrompt": "Sign in to create and manage your games",
     "onboardingPrompt": "Complete your profile to create and access your games",
     "completeProfile": "Complete Profile",
     "user": "User",
@@ -2883,7 +2982,7 @@
       "homeNotSet": "Set your home location in settings"
     },
     "header": {
-      "ctaButton": "Join Waitlist"
+      "ctaButton": "Become a Beta Tester"
     },
     "hero": {
       "badge": "Coming Early 2026",
@@ -3075,17 +3174,14 @@
       "all": "All",
       "hosting": "Hosting",
       "confirmed": "Confirmed",
-      "pending": "Pending",
-      "requested": "Requested",
-      "waitlisted": "Waitlisted",
-      "needsPlayers": "Needs Players",
-      "readyToPlay": "Ready",
+      "waiting": "Waiting",
+      "needsPlayers": "Open Spots",
       "feedbackNeeded": "Feedback",
-      "played": "Played",
+      "completed": "Completed",
       "hosted": "Hosted",
-      "asParticipant": "Joined",
-      "expired": "Expired",
-      "cancelled": "Cancelled"
+      "unfilled": "Unfilled",
+      "cancelled": "Cancelled",
+      "private": "Private"
     },
     "time": {
       "today": "Today",
@@ -3151,7 +3247,8 @@
         "label": "Gender",
         "all": "Any",
         "male": "Male",
-        "female": "Female"
+        "female": "Female",
+        "other": "Other"
       },
       "cost": {
         "label": "Cost",
@@ -3182,6 +3279,13 @@
         "all": "Any",
         "reserved": "Reserved",
         "to_reserve": "To book"
+      },
+      "tier": {
+        "label": "Tier",
+        "all": "All tiers",
+        "mostWanted": "Must-Play",
+        "covetedPlayers": "Coveted Players",
+        "courtBooked": "Court Booked"
       },
       "specificDate": {
         "label": "Date",
@@ -3319,7 +3423,7 @@
     "title": "Rallia",
     "description": "The platform that will connect tennis and pickleball players for better games, every time.",
     "quickLinks": "Quick Links",
-    "joinWaitlist": "Join Waitlist",
+    "joinBeta": "Become a Beta Tester",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
     "rights": "All rights reserved.",
@@ -3507,8 +3611,12 @@
       "timezone": "Timezone",
       "description": "Description",
       "membershipRequired": "Membership Required",
+      "facilityType": "Facility Type",
+      "dataProvider": "Data Provider",
+      "externalProviderId": "External Provider ID",
       "editButton": "Edit Facility",
       "courtsSection": "Courts",
+      "courtsSummary": "{count} {count, plural, one {court} other {courts}} at this facility",
       "manageCourts": "Manage Courts",
       "viewAllCourts": "View All Courts",
       "stats": {
@@ -3657,6 +3765,13 @@
       "latitudePlaceholder": "e.g. 45.5017",
       "longitudeLabel": "Longitude",
       "longitudePlaceholder": "e.g. -73.5673",
+      "facilityTypeLabel": "Facility Type",
+      "selectFacilityType": "Select facility type",
+      "dataProviderLabel": "Data Provider",
+      "selectDataProvider": "Select data provider",
+      "loadingDataProviders": "Loading data providers...",
+      "externalProviderIdLabel": "External Provider ID",
+      "externalProviderIdPlaceholder": "External ID from data provider (e.g., siteId)",
       "membershipRequiredLabel": "Membership Required",
       "membershipRequiredHint": "Require users to be members to book courts at this facility.",
       "searchPlace": "Search Google Places",
@@ -3667,7 +3782,31 @@
       "cancelButton": "Cancel",
       "saving": "Saving...",
       "saveButton": "Save Changes",
-      "error": "Failed to update facility. Please try again."
+      "error": "Failed to update facility. Please try again.",
+      "organizationLabel": "Organization",
+      "selectOrganization": "Select organization",
+      "loadingOrganizations": "Loading organizations...",
+      "organizationChangeWarning": "Changing the organization will move this facility and all its courts/contacts to the selected organization."
+    },
+    "facilityTypes": {
+      "park": "Park",
+      "club": "Club",
+      "community_club": "Community Club",
+      "indoor_center": "Indoor Center",
+      "private": "Private",
+      "municipal": "Municipal",
+      "university": "University",
+      "school": "School",
+      "community_center": "Community Center",
+      "other": "Other"
+    },
+    "delete": {
+      "button": "Delete Facility",
+      "title": "Delete Facility",
+      "description": "Are you sure you want to permanently delete \"{name}\"? This will delete all courts, contacts, images, and files.",
+      "cancel": "Cancel",
+      "confirm": "Delete Facility",
+      "deleting": "Deleting..."
     }
   },
   "courts": {
@@ -4036,23 +4175,32 @@
     }
   },
   "admin": {
-    "signIn": {
-      "title": "Admin Sign In",
-      "description": "Sign in to access the administration dashboard",
-      "restricted": "Restricted to Rallia employees and authorized administrators",
-      "titleMeta": "Admin Sign In - Rallia",
-      "descriptionMeta": "Sign in to access the Rallia administration dashboard."
+    "title": "Admin Panel",
+    "panelButton": "Admin Panel",
+    "comingSoon": "Coming Soon",
+    "phase1Notice": "Phase 1 - Some features are still in development",
+    "roles": {
+      "super_admin": "Super Admin",
+      "moderator": "Moderator",
+      "support": "Support",
+      "analyst": "Analyst"
     },
-    "sidebar": {
-      "brand": "Rallia Admin",
-      "dashboard": "Dashboard",
-      "organizations": "Organizations",
-      "users": "Users",
-      "analytics": "Analytics",
-      "settings": "Settings"
+    "stats": {
+      "activeUsers": "Active Users",
+      "matchesToday": "Games Today",
+      "pendingReports": "Pending Reports"
+    },
+    "errors": {
+      "loadFailed": "Failed to load data",
+      "accessDenied": "Access Denied",
+      "noPermission": "You do not have permission to access this area",
+      "unexpectedError": "An unexpected error occurred",
+      "invalidCallback": "Invalid callback parameters"
     },
     "dashboard": {
       "title": "Admin Dashboard",
+      "roleLabel": "Your Role",
+      "sections": "Quick Actions",
       "description": "Manage organizations, users, and settings.",
       "titleMeta": "Admin Dashboard - Rallia",
       "descriptionMeta": "Administration dashboard for Rallia employees.",
@@ -4068,6 +4216,172 @@
         "title": "Analytics",
         "description": "Analytics and insights"
       }
+    },
+    "export": {
+      "selectFormat": "Select Export Format",
+      "csvDescription": "Export as CSV file for spreadsheet applications",
+      "pdfDescription": "Export as PDF document for printing and sharing"
+    },
+    "audit": {
+      "title": "Activity Log",
+      "subtitle": "Monitor all admin actions and system events",
+      "exportSuccess": "Activity log exported successfully",
+      "exportError": "Failed to export activity log",
+      "justNow": "Just now",
+      "minutesAgo": "{count} minute ago",
+      "minutesAgo_other": "{count} minutes ago",
+      "hoursAgo": "{count} hour ago",
+      "hoursAgo_other": "{count} hours ago",
+      "daysAgo": "{count} day ago",
+      "daysAgo_other": "{count} days ago",
+      "last7Days": "Last 7 Days",
+      "totalActions": "Total Actions",
+      "info": "Info",
+      "warnings": "Warnings",
+      "critical": "Critical",
+      "filterByAction": "Filter by Action",
+      "filterByEntity": "Filter by Entity",
+      "filterBySeverity": "Filter by Severity",
+      "noLogs": "No activity logs found",
+      "tryDifferentFilters": "Try adjusting your filters",
+      "noActivityYet": "No activity recorded yet",
+      "clearFilters": "Clear Filters",
+      "action": "Action"
+    },
+    "sections": {
+      "users": {
+        "title": "User Management",
+        "description": "View, edit, and manage user accounts"
+      },
+      "analytics": {
+        "title": "Analytics",
+        "description": "View platform statistics and KPIs"
+      },
+      "moderation": {
+        "title": "Moderation",
+        "description": "Review reports and manage content"
+      },
+      "notifications": {
+        "title": "Push Notifications",
+        "description": "Send announcements to users"
+      },
+      "audit": {
+        "title": "Audit Trail",
+        "description": "View admin activity logs"
+      },
+      "settings": {
+        "title": "Admin Settings",
+        "description": "Configure admin preferences"
+      }
+    },
+    "activityLog": {
+      "title": "Activity Log",
+      "empty": "No activity to display",
+      "loadMore": "Load More"
+    },
+    "moderation": {
+      "title": "Moderation",
+      "empty": "No reports to review",
+      "pending": "Pending",
+      "underReview": "Under Review",
+      "activeBans": "Active Bans",
+      "reports": "Reports",
+      "bans": "Bans",
+      "noReports": "No reports found",
+      "noBans": "No active bans",
+      "noDescription": "No description provided",
+      "reportedPlayer": "Reported Player",
+      "reporter": "Reporter",
+      "evidence": "Evidence",
+      "evidenceImage": "Evidence Image",
+      "review": "Review",
+      "ban": "Ban",
+      "dismiss": "Dismiss",
+      "filters": "Filters",
+      "clearFilters": "Clear",
+      "searchPlaceholder": "Search by player name...",
+      "filterStatus": "Status",
+      "filterType": "Report Type",
+      "filterPriority": "Priority",
+      "status": {
+        "pending": "Pending",
+        "under_review": "Under Review",
+        "dismissed": "Dismissed",
+        "action_taken": "Action Taken",
+        "escalated": "Escalated"
+      },
+      "reportType": {
+        "harassment": "Harassment",
+        "cheating": "Cheating",
+        "inappropriate_content": "Inappropriate Content",
+        "spam": "Spam",
+        "impersonation": "Impersonation",
+        "no_show": "No Show",
+        "unsportsmanlike": "Unsportsmanlike",
+        "other": "Other"
+      },
+      "priority": {
+        "urgent": "Urgent",
+        "high": "High",
+        "normal": "Normal",
+        "low": "Low"
+      },
+      "banType": {
+        "temporary": "Temporary",
+        "permanent": "Permanent"
+      },
+      "active": "Active",
+      "revoked": "Revoked",
+      "noReason": "No reason provided",
+      "bannedOn": "Banned on",
+      "expiresOn": "Expires on",
+      "revokeBan": "Revoke Ban",
+      "revokeTitle": "Revoke Ban",
+      "revokeConfirm": "Are you sure you want to revoke this ban?",
+      "revokeSuccess": "Ban revoked successfully",
+      "revokeError": "Failed to revoke ban",
+      "dismissTitle": "Dismiss Report",
+      "dismissConfirm": "Are you sure you want to dismiss this report?",
+      "dismissSuccess": "Report dismissed successfully",
+      "dismissError": "Failed to dismiss report",
+      "reviewStarted": "Review started",
+      "banSuccess": "User banned successfully",
+      "banError": "Failed to ban user",
+      "createBan": "Create Ban",
+      "banningPlayer": "Banning Player",
+      "banTypeLabel": "Ban Type",
+      "durationDays": "Duration (Days)",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "Enter reason for ban...",
+      "confirmBan": "Confirm Ban"
+    },
+    "alerts": {
+      "title": "Alerts",
+      "dismissTitle": "Dismiss Alert",
+      "dismissMessage": "Are you sure you want to dismiss this alert?",
+      "markAllReadTitle": "Mark All as Read",
+      "markAllReadMessage": "Are you sure you want to mark all alerts as read?",
+      "critical": "Critical",
+      "warning": "Warning",
+      "info": "Info",
+      "unread": "Unread",
+      "noAlerts": "No Alerts",
+      "allClear": "All clear! No alerts to display."
+    },
+    "signIn": {
+      "title": "Admin Sign In",
+      "description": "Sign in to access the administration dashboard",
+      "restricted": "Restricted to Rallia employees and authorized administrators",
+      "titleMeta": "Admin Sign In - Rallia",
+      "descriptionMeta": "Sign in to access the Rallia administration dashboard."
+    },
+    "sidebar": {
+      "brand": "Rallia Admin",
+      "dashboard": "Dashboard",
+      "organizations": "Organizations",
+      "users": "Users",
+      "analytics": "Analytics",
+      "settings": "Settings"
     },
     "organizations": {
       "title": "Organizations",
@@ -4097,6 +4411,14 @@
       "nature": {
         "public": "Public",
         "private": "Private"
+      },
+      "filters": {
+        "searchPlaceholder": "Search organizations...",
+        "nature": "Nature",
+        "status": "Status",
+        "allNatures": "All natures",
+        "allStatuses": "All statuses",
+        "clearFilters": "Clear filters"
       },
       "pagination": {
         "showing": "Showing {start} to {end} of {total} organizations",
@@ -4275,6 +4597,7 @@
           "website": "Website",
           "address": "Address",
           "description": "Description",
+          "dataProvider": "Data Provider",
           "createdAt": "Created At",
           "updatedAt": "Updated At"
         },
@@ -4295,7 +4618,72 @@
         "surfaceType": "Surface Type",
         "lighting": "Lighting",
         "indoor": "Indoor",
-        "error": "Failed to load organization"
+        "error": "Failed to load organization",
+        "addFacility": "Add Facility",
+        "searchFacilitiesPlaceholder": "Search facilities...",
+        "allSports": "All Sports",
+        "clearFilters": "Clear Filters",
+        "facilitiesFiltered": "{filtered} of {total} {total, plural, one {Facility} other {Facilities}}",
+        "noMatchingFacilities": "No facilities match your search",
+        "backToOrganizations": "Back to Organizations",
+        "facilityDetail": {
+          "title": "Facility Detail",
+          "backToOrganization": "Back to Organization",
+          "metadata": "Facility Information"
+        }
+      },
+      "createDialog": {
+        "title": "Create Organization",
+        "description": "Create a new organization with basic information.",
+        "fields": {
+          "name": "Organization Name",
+          "namePlaceholder": "Enter organization name",
+          "nature": "Nature",
+          "type": "Organization Type",
+          "selectType": "Select type (optional)",
+          "email": "Email",
+          "emailPlaceholder": "org@example.com",
+          "phone": "Phone",
+          "phonePlaceholder": "+1 (555) 000-0000",
+          "website": "Website",
+          "websitePlaceholder": "https://example.com",
+          "description": "Description",
+          "descriptionPlaceholder": "Enter organization description...",
+          "isActive": "Active",
+          "isActiveHint": "Organization is visible and operational",
+          "dataProvider": "Data Provider",
+          "selectDataProvider": "Select Data Provider",
+          "dataProviderHint": "Select a data provider for court availability fetching.",
+          "address": "Address",
+          "addressPlaceholder": "Enter address",
+          "city": "City",
+          "cityPlaceholder": "Enter city",
+          "country": "Country",
+          "selectCountry": "Select Country",
+          "postalCode": "Postal Code",
+          "postalCodePlaceholder": "Enter postal code"
+        },
+        "natures": {
+          "public": "Public",
+          "private": "Private"
+        },
+        "types": {
+          "club": "Club",
+          "municipality": "Municipality",
+          "city": "City",
+          "association": "Association"
+        },
+        "actions": {
+          "create": "Create Organization",
+          "creating": "Creating...",
+          "update": "Update Organization",
+          "updating": "Updating...",
+          "cancel": "Cancel"
+        },
+        "editTitle": "Edit Organization",
+        "editDescription": "Update organization details.",
+        "error": "Failed to create organization",
+        "updateError": "Failed to update organization"
       },
       "update": {
         "title": "Update Organization",
@@ -4439,6 +4827,34 @@
       "titleMeta": "Users - Admin - Rallia",
       "descriptionMeta": "Manage all users including admins, organization members, and players.",
       "comingSoon": "User management interface coming soon.",
+      "searchPlaceholder": "Search users...",
+      "filterBy": "Filter by",
+      "all": "All Users",
+      "verified": "Verified Only",
+      "unverified": "Unverified Only",
+      "banned": "Banned Users",
+      "anonymous": "Anonymous User",
+      "noEmail": "No email",
+      "sports": "sports",
+      "matches": "matches",
+      "noSearchResults": "No users found matching your search",
+      "noUsers": "No users found",
+      "tryDifferentSearch": "Try a different search term",
+      "noUsersDescription": "Users will appear here once they sign up",
+      "resultsCount_one": "{count} user found",
+      "resultsCount_other": "{count} users found",
+      "exportSuccess": "User data exported successfully",
+      "exportError": "Failed to export user data",
+      "skillLevel": "Skill Level",
+      "rating": "Rating",
+      "created": "Created",
+      "participants": "participants",
+      "filters": {
+        "all": "All",
+        "active": "Active",
+        "inactive": "Inactive",
+        "banned": "Banned"
+      },
       "tabs": {
         "admins": "Admins",
         "organizationMembers": "Organization Members",
@@ -4457,7 +4873,107 @@
       },
       "status": {
         "active": "Active",
-        "inactive": "Inactive"
+        "inactive": "Inactive",
+        "banned": "Banned"
+      },
+      "banType": {
+        "permanent": "Permanent",
+        "temporary": "Temporary"
+      },
+      "banStatus": {
+        "lifted": "Lifted"
+      },
+      "bannedAt": "Banned At",
+      "expiresAt": "Expires At",
+      "sections": {
+        "userInfo": "User Information",
+        "accountInfo": "Account Information",
+        "sportProfiles": "Sport Profiles",
+        "recentMatches": "Recent Matches",
+        "banHistory": "Ban History"
+      },
+      "info": {
+        "email": "Email",
+        "phone": "Phone",
+        "location": "Location",
+        "gender": "Gender",
+        "birthDate": "Birth Date",
+        "playingHand": "Playing Hand",
+        "lastLogin": "Last Login",
+        "createdAt": "Created At",
+        "updatedAt": "Updated At",
+        "onboardingCompleted": "Onboarding Completed"
+      },
+      "certification": {
+        "certified": "Certified",
+        "selfDeclared": "Self-Declared",
+        "disputed": "Disputed",
+        "via": "Certified via",
+        "certify": "Certify",
+        "invalidate": "Invalidate",
+        "dispute": "Dispute",
+        "reset": "Reset",
+        "certifyTitle": "Certify Rating",
+        "certifyConfirm": "Are you sure you want to certify this user's {sport} rating?",
+        "certifySuccess": "Rating has been certified",
+        "certifyFailed": "Failed to certify rating",
+        "invalidateTitle": "Invalidate Rating",
+        "invalidateConfirm": "Are you sure you want to invalidate this user's {sport} rating certification?",
+        "invalidateSuccess": "Rating certification has been invalidated",
+        "invalidateFailed": "Failed to invalidate rating certification",
+        "disputeTitle": "Dispute Rating",
+        "disputeConfirm": "Are you sure you want to mark this user's {sport} rating as disputed?",
+        "disputeSuccess": "Rating has been marked as disputed",
+        "disputeFailed": "Failed to dispute rating",
+        "resetTitle": "Reset Rating Status",
+        "resetConfirm": "Are you sure you want to reset this user's {sport} rating to self-declared?",
+        "resetSuccess": "Rating status has been reset to self-declared",
+        "resetFailed": "Failed to reset rating status"
+      },
+      "noRating": "No rating set",
+      "detail": {
+        "title": "User Details",
+        "noUser": "No user found"
+      },
+      "edit": {
+        "title": "Edit User",
+        "description": "Modify user profile information",
+        "noChanges": "No changes to save",
+        "saveSuccess": "User updated successfully",
+        "saveFailed": "Failed to update user",
+        "firstName": "First Name",
+        "firstNamePlaceholder": "Enter first name",
+        "lastName": "Last Name",
+        "lastNamePlaceholder": "Enter last name",
+        "displayName": "Display Name",
+        "displayNamePlaceholder": "Enter display name",
+        "email": "Email",
+        "emailPlaceholder": "Enter email address",
+        "phone": "Phone",
+        "phonePlaceholder": "Enter phone number",
+        "bio": "Bio",
+        "bioPlaceholder": "Enter bio",
+        "city": "City",
+        "cityPlaceholder": "Enter city",
+        "country": "Country",
+        "countryPlaceholder": "Enter country",
+        "gender": "Gender",
+        "genderPlaceholder": "Enter gender",
+        "dateOfBirth": "Date of Birth"
+      },
+      "actions": {
+        "viewProfile": "View Profile",
+        "edit": "Edit",
+        "banUser": "Ban User",
+        "banConfirm": "Are you sure you want to ban {name}?",
+        "ban": "Ban",
+        "banSuccess": "User has been banned",
+        "banFailed": "Failed to ban user",
+        "unbanUser": "Unban User",
+        "unbanConfirm": "Are you sure you want to unban {name}?",
+        "unban": "Unban",
+        "unbanSuccess": "User has been unbanned",
+        "unbanFailed": "Failed to unban user"
       },
       "roles": {
         "super_admin": "Super Admin",
@@ -4507,19 +5023,483 @@
       "description": "Analytics and insights.",
       "titleMeta": "Analytics - Admin - Rallia",
       "descriptionMeta": "Analytics and insights.",
-      "comingSoon": "Analytics dashboard coming soon."
+      "comingSoon": "Analytics dashboard coming soon.",
+      "lastUpdated": "Last updated",
+      "overview": "Overview",
+      "players": "Players",
+      "matches": "Matches",
+      "completed": "Completed",
+      "views": "views",
+      "sportStatistics": "Sport Statistics",
+      "onboardingFunnel": "Onboarding Funnel",
+      "matchStatistics": "Match Statistics",
+      "scheduled": "Scheduled",
+      "cancelled": "Cancelled",
+      "avgParticipants": "Avg. Participants",
+      "completionRate": "Completion Rate",
+      "quickActions": "Quick Actions",
+      "viewUsers": "View Users",
+      "adminPanel": "Admin Panel",
+      "errorLoading": "Error loading analytics data",
+      "noData": "No data available",
+      "timeRange": {
+        "7d": "7 Days",
+        "30d": "30 Days",
+        "90d": "90 Days",
+        "ytd": "Year to Date",
+        "all": "All Time",
+        "custom": "Custom"
+      },
+      "sections": {
+        "users": "User Analytics",
+        "usersDesc": "User growth & activity",
+        "usersFullDesc": "Monitor user growth, retention, and activity patterns across the platform.",
+        "matches": "Match Analytics",
+        "matchesDesc": "Match statistics",
+        "matchesFullDesc": "Track match creation, completion rates, and scheduling trends.",
+        "onboarding": "Onboarding Analytics",
+        "onboardingDesc": "User journey funnel",
+        "onboardingFullDesc": "Analyze the user journey funnel and identify drop-off points.",
+        "engagement": "Engagement Analytics",
+        "engagementDesc": "User behavior",
+        "engagementFullDesc": "Understand user behavior, session metrics, and feature adoption.",
+        "messaging": "Messaging Analytics",
+        "messagingDesc": "Communication",
+        "messagingFullDesc": "Review communication patterns, message volume, and chat health.",
+        "rating": "Rating & Reputation",
+        "ratingDesc": "Ratings & reputation",
+        "ratingFullDesc": "Explore player ratings, certification progress, and reputation trends.",
+        "moderation": "Moderation & Safety",
+        "moderationDesc": "Safety & reports",
+        "moderationFullDesc": "Monitor reports, bans, and platform safety metrics.",
+        "community": "Community Analytics",
+        "communityDesc": "Networks & groups",
+        "communityFullDesc": "Analyze network growth, group activity, and community engagement.",
+        "sports": "Sport Analytics",
+        "sportsDesc": "Sport analytics",
+        "sportsFullDesc": "Compare sport popularity, facility usage, and growth trends.",
+        "settings": "Admin Panel",
+        "settingsDesc": "System settings",
+        "settingsFullDesc": "Access system settings, user management, and admin configuration."
+      },
+      "widgets": {
+        "total_players": "Total Players",
+        "active_today": "Active Today",
+        "new_this_week": "New This Week",
+        "total_matches": "Total Matches",
+        "completed_matches": "Completed Matches",
+        "total_users": "Total Users",
+        "active_users": "Active Users",
+        "new_users": "New Users",
+        "completion_rate": "Completion Rate"
+      },
+      "onboarding": {
+        "welcome": "Welcome",
+        "sport_selection": "Sport Selection",
+        "postal_code": "Postal Code",
+        "profile_setup": "Profile Setup",
+        "personal_info": "Personal Info",
+        "personal_inf": "Personal Info",
+        "skill_level": "Skill Level",
+        "availability": "Availability",
+        "location": "Location",
+        "complete": "Complete"
+      },
+      "trends": {
+        "positive": "Trending up",
+        "negative": "Trending down",
+        "neutral": "Stable"
+      },
+      "charts": {
+        "barChart": {
+          "defaultTitle": "Distribution",
+          "noData": "No data available"
+        },
+        "lineChart": {
+          "defaultTitle": "Trend",
+          "noData": "No data available"
+        },
+        "pieChart": {
+          "defaultTitle": "Distribution",
+          "noData": "No data available",
+          "total": "Total"
+        },
+        "funnelChart": {
+          "defaultTitle": "Conversion Funnel",
+          "overallConversion": "Overall Conversion",
+          "totalDropoff": "Total Dropoff",
+          "dropped": "dropped"
+        }
+      },
+      "funnelSteps": {
+        "account_created": "Account Created",
+        "email_verified": "Email Verified",
+        "profile_completed": "Profile Completed",
+        "sport_added": "Sport Added",
+        "first_match": "First Match"
+      },
+      "retention": {
+        "title": "User Retention",
+        "cohortWeek": "Cohort Week",
+        "weekNumber": "Week",
+        "retainedUsers": "Retained Users",
+        "retentionRate": "Retention Rate"
+      },
+      "sportDistribution": {
+        "title": "Sport Distribution",
+        "noSports": "No sports data available"
+      },
+      "userGrowth": {
+        "title": "User Growth",
+        "newUsers": "New Users",
+        "cumulativeUsers": "Cumulative Users",
+        "growthRate": "Growth Rate"
+      },
+      "matchAnalytics": {
+        "title": "Match Analytics",
+        "matchesCreated": "Matches Created",
+        "matchesCompleted": "Matches Completed",
+        "avgParticipants": "Avg. Participants",
+        "cancellationRate": "Cancellation Rate"
+      },
+      "screens": {
+        "onboarding": {
+          "title": "Onboarding Analytics",
+          "subtitle": "Deep analysis of user acquisition funnel",
+          "timeByStep": "Time Spent by Step",
+          "cohortTrends": "Cohort Completion Trends",
+          "averageTime": "Average Time",
+          "insights": "Insights",
+          "insightDropoff": "Highest drop-off at step",
+          "insightAvgTime": "Average completion time",
+          "insightConversion": "Overall conversion rate"
+        },
+        "users": {
+          "title": "User Analytics",
+          "subtitle": "User growth, retention, and segments",
+          "growthOverTime": "User Growth Over Time",
+          "retentionMatrix": "Retention Matrix",
+          "sportDistribution": "Sport Distribution",
+          "totalUsers": "Total Users",
+          "activeThisWeek": "Active This Week",
+          "avgRetention": "Avg Retention",
+          "insights": "Insights",
+          "insightGrowth": "User growth trend",
+          "insightRetention": "Week 1 retention",
+          "insightPopularSport": "Most popular sport"
+        },
+        "matches": {
+          "title": "Match Analytics",
+          "subtitle": "Match lifecycle and completion analysis",
+          "lifecycleFunnel": "Match Lifecycle Funnel",
+          "creationTrend": "Match Creation Trend",
+          "completionTrend": "Completion Trend",
+          "formatDistribution": "Format Distribution",
+          "cancellationReasons": "Cancellation Reasons",
+          "totalMatches": "Total Matches",
+          "completionRate": "Completion Rate",
+          "avgPerDay": "Avg/Day",
+          "insights": "Insights",
+          "insightCompletion": "Completion rate",
+          "insightPopularFormat": "Most popular format",
+          "insightCancellation": "Top cancellation reason"
+        },
+        "engagement": {
+          "title": "Engagement Analytics",
+          "subtitle": "User behavior & feature adoption",
+          "avgSessions": "Avg Daily Sessions",
+          "avgDuration": "Avg Duration",
+          "screensPerSession": "Screens/Session",
+          "bounceRate": "Bounce Rate",
+          "sessionsTrend": "Daily Sessions",
+          "sessionsTrendDesc": "Number of user sessions per day",
+          "durationTrend": "Session Duration",
+          "durationTrendDesc": "Average session duration in minutes",
+          "featureAdoption": "Feature Adoption",
+          "featureAdoptionDesc": "Percentage of users using each feature",
+          "topScreens": "Top Screens",
+          "topScreensDesc": "Most viewed screens by total views",
+          "screenDetails": "Screen Details",
+          "screenDetailsDesc": "Detailed screen performance metrics"
+        },
+        "messaging": {
+          "title": "Messaging Analytics",
+          "subtitle": "Communication patterns & engagement",
+          "totalMessages": "Total Messages",
+          "activeConversations": "Active Convos",
+          "responseRate": "Response Rate",
+          "avgResponseTime": "Avg Response",
+          "volumeTrend": "Message Volume",
+          "volumeTrendDesc": "Daily message count across all conversations",
+          "messageTypes": "Message Types",
+          "messageTypesDesc": "Distribution by conversation type",
+          "conversationHealth": "Conversation Health",
+          "conversationHealthDesc": "Key conversation metrics and health indicators",
+          "engagementDist": "User Engagement",
+          "engagementDistDesc": "Distribution of users by message count",
+          "matchChatAdoption": "Match Chat Adoption",
+          "matchChatAdoptionDesc": "How often match participants use chat"
+        },
+        "rating": {
+          "title": "Rating & Reputation",
+          "subtitle": "Skill verification & trust system",
+          "ratingDistribution": "Rating Distribution",
+          "ratingDistributionDesc": "Player ratings per sport level",
+          "certificationFunnel": "Certification Progress",
+          "certificationFunnelDesc": "User journey through rating verification",
+          "reputationDistribution": "Reputation Distribution",
+          "reputationDistributionDesc": "Player reputation tiers",
+          "reputationEvents": "Reputation Events",
+          "reputationEventsDesc": "Positive vs negative events over time",
+          "peerRatingActivity": "Peer Rating Activity",
+          "peerRatingActivityDesc": "Peer rating requests and completions",
+          "requestsSent": "Requests Sent",
+          "requestsCompleted": "Completed",
+          "completionRate": "Completion Rate",
+          "avgRatingDiff": "Avg Rating Diff",
+          "referenceSupportRate": "Reference Support Rate",
+          "positiveEvents": "Positive Events",
+          "negativeEvents": "Negative Events",
+          "insightCertification": "{{percentage}}% of users have submitted rating proof",
+          "insightReputation": "{{percentage}}% of users have Good or better reputation",
+          "insightPeerRating": "Peer rating completion rate: {{rate}}%"
+        },
+        "moderation": {
+          "title": "Moderation & Safety",
+          "subtitle": "Platform safety & report management",
+          "openReports": "Open Reports",
+          "activeBans": "Active Bans",
+          "withinSla": "Within SLA",
+          "reportVolume": "Report Volume Trend",
+          "reportVolumeDesc": "Reports submitted vs resolved over time",
+          "reportsSubmitted": "Reports Submitted",
+          "reportsResolved": "Resolved",
+          "reportTypes": "Report Types",
+          "reportTypesDesc": "Distribution by report category and priority",
+          "totalReports": "Total",
+          "resolutionMetrics": "Resolution Metrics",
+          "resolutionMetricsDesc": "Response time and SLA compliance",
+          "avgResolutionTime": "Avg Resolution Time",
+          "hours": " hrs",
+          "withinSlaTarget": "Within SLA Target",
+          "escalationRate": "Escalation Rate",
+          "slaTarget": "SLA Target: {{hours}} hours",
+          "banStatistics": "Ban Statistics",
+          "banStatisticsDesc": "Active bans and recidivism tracking",
+          "temporaryBans": "Temporary",
+          "permanentBans": "Permanent",
+          "recidivism": "Recidivism",
+          "thisMonth": "This Month",
+          "feedbackSentiment": "User Feedback",
+          "feedbackSentimentDesc": "Bug reports and feature requests by category",
+          "bugReports": "Bug Reports",
+          "featureRequests": "Feature Requests",
+          "statusBreakdown": "Status Breakdown",
+          "open": "open",
+          "inProgress": "in progress",
+          "resolved": "resolved",
+          "actionItems": "Action Items",
+          "actionOpenReports": "{{count}} reports pending review",
+          "actionHighEscalation": "High escalation rate ({{rate}}%) - Review moderation guidelines",
+          "actionRecidivism": "Recidivism rate at {{rate}}% - Consider ban policy review",
+          "actionAllGood": "All moderation metrics are within healthy ranges"
+        },
+        "community": {
+          "title": "Community Analytics",
+          "subtitle": "Network growth, activity & match integration",
+          "overview": "Overview",
+          "totalNetworks": "Total Networks",
+          "activeNetworks": "Active Networks",
+          "avgMembers": "Avg Members",
+          "networkPostRate": "Network Post Rate",
+          "networkGrowth": "Network Growth",
+          "sizeDistribution": "Network Size Distribution",
+          "networkTypes": "Network Types",
+          "networks": "Networks",
+          "topNetworks": "Most Active Networks",
+          "activityScore": "Activity Score (0-100)",
+          "matchIntegration": "Match Integration",
+          "matchesPosted": "Matches Posted to Networks",
+          "postRate": "Network Post Rate",
+          "networkOriginated": "Network-Originated Matches",
+          "avgParticipants": "Avg Participants from Network",
+          "networkActivity": "Network Activity Details"
+        },
+        "sports": {
+          "title": "Sport Analytics",
+          "subtitle": "Sport popularity, growth & facility distribution",
+          "overview": "Overview",
+          "totalSports": "Sports",
+          "totalPlayers": "Total Players",
+          "totalMatches": "Total Matches",
+          "facilities": "Facilities",
+          "avgGrowth": "Avg Growth",
+          "multiSport": "Multi-Sport",
+          "fastestGrowing": "Fastest Growing",
+          "popularity": "Sport Popularity",
+          "players": "Players",
+          "matchesBySport": "Matches by Sport",
+          "activityComparison": "Activity Comparison",
+          "growthTrends": "Monthly Match Trend",
+          "growthRates": "Sport Growth Rates",
+          "growthRate": "Growth Rate (%)",
+          "positiveGrowth": "Positive",
+          "negativeGrowth": "Negative",
+          "highGrowth": "High (20%+)",
+          "mediumGrowth": "Medium (10-20%)",
+          "lowGrowth": "Low (<10%)",
+          "userGrowth": "Tennis User Growth",
+          "facilityUtilization": "Facility Utilization",
+          "utilizationPercent": "Utilization %",
+          "facilitiesBySport": "Facilities by Sport",
+          "sportDetails": "Sport Details",
+          "facilityDetails": "Facility Details",
+          "activityDetails": "Activity Details",
+          "topCities": "Top Cities by Facilities"
+        }
+      },
+      "sports": {
+        "title": "Sport Analytics",
+        "subtitle": "Sport popularity, growth & facility distribution",
+        "overview": "Overview",
+        "totalSports": "Sports",
+        "totalPlayers": "Total Players",
+        "totalMatches": "Total Matches",
+        "facilities": "Facilities",
+        "avgGrowth": "Avg Growth",
+        "multiSport": "Multi-Sport",
+        "fastestGrowing": "Fastest Growing",
+        "popularity": "Sport Popularity",
+        "players": "Players",
+        "matchesBySport": "Matches by Sport",
+        "activityComparison": "Activity Comparison",
+        "growthTrends": "Monthly Match Trend",
+        "growthRates": "Sport Growth Rates",
+        "growthRate": "Growth Rate (%)",
+        "positiveGrowth": "Positive",
+        "negativeGrowth": "Negative",
+        "highGrowth": "High (20%+)",
+        "mediumGrowth": "Medium (10-20%)",
+        "lowGrowth": "Low (<10%)",
+        "userGrowth": "Tennis User Growth",
+        "facilityUtilization": "Facility Utilization",
+        "utilizationPercent": "Utilization %",
+        "facilitiesBySport": "Facilities by Sport",
+        "sportDetails": "Sport Details",
+        "facilityDetails": "Facility Details",
+        "activityDetails": "Activity Details",
+        "topCities": "Top Cities by Facilities"
+      },
+      "community": {
+        "title": "Community Analytics",
+        "subtitle": "Network growth, activity & match integration",
+        "overview": "Overview",
+        "totalNetworks": "Total Networks",
+        "activeNetworks": "Active Networks",
+        "avgMembers": "Avg Members",
+        "networkPostRate": "Network Post Rate",
+        "networkGrowth": "Network Growth",
+        "sizeDistribution": "Network Size Distribution",
+        "networkTypes": "Network Types",
+        "networks": "Networks",
+        "topNetworks": "Most Active Networks",
+        "activityScore": "Activity Score (0-100)",
+        "matchIntegration": "Match Integration",
+        "matchesPosted": "Matches Posted to Networks",
+        "postRate": "Network Post Rate",
+        "networkOriginated": "Network-Originated Matches",
+        "avgParticipants": "Avg Participants from Network",
+        "networkActivity": "Network Activity Details"
+      },
+      "rating": {
+        "title": "Rating & Reputation",
+        "subtitle": "Skill verification & trust system",
+        "ratingDistribution": "Rating Distribution",
+        "ratingDistributionDesc": "Player ratings per sport level",
+        "certificationFunnel": "Certification Funnel",
+        "certificationFunnelDesc": "User journey through rating verification",
+        "reputationDistribution": "Reputation Distribution",
+        "reputationDistributionDesc": "Player reputation tiers",
+        "reputationEvents": "Reputation Events",
+        "reputationEventsDesc": "Positive vs negative events over time",
+        "peerRatingActivity": "Peer Rating Activity",
+        "peerRatingActivityDesc": "Peer rating requests and completions",
+        "requestsSent": "Requests Sent",
+        "requestsCompleted": "Completed",
+        "completionRate": "Completion Rate",
+        "avgRatingDiff": "Avg Rating Diff",
+        "referenceSupportRate": "Reference Support Rate",
+        "positiveEvents": "Positive Events",
+        "negativeEvents": "Negative Events",
+        "totalUsers": "Total Users",
+        "noDataAvailable": "No data available",
+        "keyInsights": "Key Insights",
+        "insightCertification": "{percentage}% of users have submitted rating proof",
+        "insightReputation": "{percentage}% of users have Good or better reputation",
+        "insightPeerRating": "Peer rating completion rate: {rate}%"
+      },
+      "lifecycle": {
+        "created": "Created",
+        "confirmed": "Confirmed",
+        "in_progress": "In Progress",
+        "completed": "Completed"
+      },
+      "formats": {
+        "singles": "Singles",
+        "doubles": "Doubles",
+        "mixed_doubles": "Mixed Doubles",
+        "group": "Group"
+      },
+      "cancellationReasons": {
+        "weather": "Weather",
+        "no_show": "No Show",
+        "scheduling": "Scheduling",
+        "injury": "Injury",
+        "other": "Other"
+      }
     },
     "settings": {
       "title": "Settings",
       "description": "Manage settings and configuration.",
       "titleMeta": "Settings - Admin - Rallia",
       "descriptionMeta": "Manage settings.",
-      "comingSoon": "Settings interface coming soon."
-    },
-    "errors": {
-      "accessDenied": "Access denied. Admin access required.",
-      "unexpectedError": "An unexpected error occurred",
-      "invalidCallback": "Invalid callback parameters"
+      "comingSoon": "Settings interface coming soon.",
+      "alertTypes": {
+        "criticalAction": "Critical Actions",
+        "userReport": "User Reports",
+        "systemAlert": "System Alerts",
+        "newAdmin": "New Admin",
+        "securityAlert": "Security Alerts"
+      },
+      "saveSuccess": "Settings saved successfully",
+      "saveError": "Failed to save settings",
+      "clearAlertsTitle": "Clear All Alerts",
+      "clearAlertsMessage": "Are you sure you want to clear all alerts? This action cannot be undone.",
+      "alertsCleared": "All alerts cleared",
+      "notificationPreferences": "Notification Preferences",
+      "alertType": "Alert Type",
+      "enabled": "Enabled",
+      "email": "Email",
+      "push": "Push",
+      "emailDigest": "Email Digest",
+      "emailDigestDescription": "Receive a summary of admin activities by email",
+      "digestOptions": {
+        "none": "None",
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "never": "Never"
+      },
+      "dataManagement": "Data Management",
+      "exportAuditLog": "Export Audit Log",
+      "exportAuditLogDescription": "Download all admin activity logs",
+      "exportUsers": "Export Users",
+      "exportUsersDescription": "Download user data as CSV",
+      "clearAlerts": "Clear Alerts",
+      "clearAlertsDescription": "Remove all read alerts",
+      "systemInfo": "System Info",
+      "version": "Version",
+      "environment": "Environment",
+      "adminRole": "Admin Role"
     }
   },
   "sportSelectionOverlay": {
@@ -5426,7 +6406,7 @@
       "matches": "Matches"
     },
     "about": "About",
-    "locationContact": "Location & Contact",
+    "locationContact": "Location",
     "courts": "Courts",
     "noCourts": "No courts available for this sport",
     "contact": "Contact",
@@ -5446,8 +6426,12 @@
       "community_club": "Community Club",
       "other": "Other"
     },
+    "facilityType": "Type",
+    "access": "Access",
+    "addressLabel": "Address",
+    "distance": "Distance",
     "membersOnly": "Members Only",
-    "publicAccess": "Public Access",
+    "publicAccess": "Public",
     "distanceAway": "{distance} away",
     "copied": "Copied to clipboard",
     "copyAddress": "Copy address",
@@ -5457,7 +6441,7 @@
     "hideCourts": "Hide courts",
     "noAvailability": {
       "title": "No Availability",
-      "description": "No time slots are available for the selected dates. Try checking back later.",
+      "description": "This facility doesn't have any available time slots right now.",
       "tryLater": "Check back later for new openings",
       "tryDifferentDate": "Try a different date"
     },
@@ -5471,7 +6455,17 @@
     "indoor": "Indoor",
     "outdoor": "Outdoor",
     "lighted": "Lighted",
+    "surfaceType": {
+      "hard": "Hard Court",
+      "clay": "Clay",
+      "grass": "Grass",
+      "synthetic": "Synthetic",
+      "carpet": "Carpet",
+      "concrete": "Concrete",
+      "asphalt": "Asphalt"
+    },
     "openInMaps": "Open in Maps",
+    "facilityImages": "Facility images",
     "noMatches": {
       "title": "No Upcoming Matches",
       "description": "No public matches are scheduled at this facility."
@@ -5494,7 +6488,6 @@
     "lastSpot": "Last spot!",
     "noSlotsForFilter": "No slots available for this time period",
     "showAllSlots": "Show all slots",
-    "checkExternalBooking": "Check External Booking",
     "matchFilters": {
       "all": "All",
       "open": "Open",
@@ -5516,6 +6509,7 @@
   "booking": {
     "selectSlot": "Select Time Slot",
     "selectCourt": "Select Court",
+    "selectCourtFirst": "Please select a court first",
     "confirmBooking": "Confirm Booking",
     "bookNow": "Book Now",
     "price": "Price",
@@ -5527,9 +6521,16 @@
     "paidCourtsUnavailable": "{count} paid court(s) unavailable for online booking",
     "available": "Available",
     "duration": "{hours}h",
+    "error": {
+      "generic": "Booking failed. Please try again."
+    },
     "success": {
       "title": "Booking Confirmed",
-      "description": "Your court has been booked successfully."
+      "description": "Your court has been booked successfully.",
+      "stepTitle": "Booking confirmed!",
+      "createGamePrompt": "Create a game from this booking?",
+      "createGame": "Create game",
+      "done": "Done"
     },
     "external": {
       "title": "External Booking",
@@ -5810,6 +6811,10 @@
       "success": "Booking cancelled successfully",
       "error": "Failed to cancel booking. Please try again."
     },
+    "yourBookings": "Your Bookings",
+    "signInPrompt": "Sign in to book courts and manage your reservations",
+    "onboardingPrompt": "Complete your profile to book courts and manage your reservations",
+    "completeProfile": "Complete Profile",
     "facilitiesSection": {
       "title": "My Bookings",
       "viewAll": "View All",
@@ -5896,5 +6901,53 @@
       "fast": "Quick signup",
       "premium": "Free premium access"
     }
+  },
+  "matchPage": {
+    "title": "Match Details",
+    "at": "at",
+    "minutes": "min",
+    "notFound": "Match not found",
+    "notFoundDescription": "This match may have been cancelled or the link is invalid.",
+    "downloadTitle": "Join this match",
+    "downloadDescription": "Download Rallia to join this match and find players near you.",
+    "appStore": "Download on the App Store",
+    "googlePlay": "Get it on Google Play",
+    "format": {
+      "singles": "Singles",
+      "doubles": "Doubles"
+    }
+  },
+  "feedback": {
+    "title": "Feedback",
+    "description": "Help us improve Rallia! Share your thoughts, report bugs, or suggest new features.",
+    "categoryLabel": "Category",
+    "categories": {
+      "bug": "Bug Report",
+      "feature": "Feature Request",
+      "improvement": "Improvement",
+      "other": "Other"
+    },
+    "moduleLabel": "Which area?",
+    "moduleHint": "Select the app feature your feedback is about",
+    "subjectLabel": "Subject",
+    "subjectPlaceholder": "Brief summary of your feedback",
+    "messageLabel": "Message",
+    "messagePlaceholder": "Tell us more details...",
+    "minCharsHint": "Minimum {{min}} characters",
+    "screenshotsLabel": "Screenshots",
+    "screenshotsHint": "Add up to {{max}} screenshots (optional)",
+    "addScreenshot": "Add Screenshot",
+    "identifiedNotice": "Your feedback will be submitted with your account info so we can follow up if needed.",
+    "anonymousNotice": "Your feedback will be submitted anonymously.",
+    "submitButton": "Submit Feedback",
+    "submitError": "Failed to submit feedback. Please try again.",
+    "screenshotUploadError": "Failed to upload screenshot. Please try again.",
+    "maxScreenshotsReached": "Maximum {{max}} screenshots allowed",
+    "successTitle": "Thank You!",
+    "successMessage": "Your feedback has been submitted successfully. We appreciate your input!",
+    "referenceId": "Reference ID",
+    "selectImageSource": "Select Image Source",
+    "submitAnother": "Submit Another",
+    "backToSettings": "Back to Settings"
   }
 }

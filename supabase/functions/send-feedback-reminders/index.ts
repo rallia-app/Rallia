@@ -71,12 +71,16 @@ interface ProcessingResult {
 // CONFIGURATION
 // =============================================================================
 
-// Time windows for notifications (in hours)
-const INITIAL_NOTIFICATION_HOURS = 1;
-const REMINDER_NOTIFICATION_HOURS = 24;
-
-// Buffer window in minutes (to ensure we don't miss matches between cron runs)
+// Buffer in minutes added to each edge of the window to avoid missing matches between cron runs
 const BUFFER_MINUTES = 5;
+
+// Initial notification: games that ended 1–2 hours ago (with buffer)
+const INITIAL_WINDOW_START_MINUTES = 2 * 60 + BUFFER_MINUTES; // 125 min ago
+const INITIAL_WINDOW_END_MINUTES = 1 * 60 - BUFFER_MINUTES; // 55 min ago
+
+// Reminder notification: games that ended 24–25 hours ago (with buffer)
+const REMINDER_WINDOW_START_MINUTES = 25 * 60 + BUFFER_MINUTES; // 1505 min ago
+const REMINDER_WINDOW_END_MINUTES = 24 * 60 - BUFFER_MINUTES; // 1435 min ago
 
 // Batch size for processing
 const BATCH_SIZE = 100;
@@ -114,7 +118,7 @@ function formatOpponentNames(names: string[], locale: string = 'en-US'): string 
  * Get display name for an opponent
  */
 function getOpponentDisplayName(opponent: OpponentInfo): string {
-  return opponent.display_name || opponent.first_name || 'Player';
+  return opponent.first_name || opponent.display_name || 'Player';
 }
 
 /**
@@ -192,21 +196,21 @@ async function buildNotificationInput(
   let body: string;
 
   if (notificationType === 'feedback_request') {
-    title = 'How Was Your Game?';
-    body = `Rate your ${sportName} game with ${formattedOpponentNames}. Your feedback helps the community!`;
+    title = 'How was your game?';
+    body = `Submit your score and rate your ${sportName} match with ${formattedOpponentNames} while it's fresh!`;
   } else {
-    title = "Don't Forget to Rate Your Game";
-    body = `Your ${sportName} game feedback closes in 24 hours. Rate your experience with ${formattedOpponentNames}!`;
+    title = 'You have a match to close out';
+    body = `Your ${sportName} score and rating with ${formattedOpponentNames} are still pending — complete them before the window closes.`;
   }
 
   // French translations if needed
   if (locale.startsWith('fr')) {
     if (notificationType === 'feedback_request') {
       title = 'Comment était votre partie?';
-      body = `Évaluez votre partie de ${sportName} avec ${formattedOpponentNames}. Vos commentaires aident la communauté!`;
+      body = `Soumettez votre score et évaluez votre partie de ${sportName} avec ${formattedOpponentNames} pendant que c'est frais!`;
     } else {
-      title = "N'oubliez pas d'évaluer votre partie";
-      body = `Les commentaires pour votre partie de ${sportName} ferment dans 24 heures. Partagez votre expérience avec ${formattedOpponentNames}!`;
+      title = 'Une partie à clôturer';
+      body = `Votre score et évaluation de ${sportName} avec ${formattedOpponentNames} sont toujours en attente — clôturez-les avant la fermeture.`;
     }
   }
 
@@ -233,13 +237,9 @@ async function buildNotificationInput(
 async function getParticipantsForInitialNotification(): Promise<ParticipantForNotification[]> {
   const now = new Date();
 
-  // Window: 1 hour ago +/- buffer
-  const cutoffEnd = new Date(
-    now.getTime() - (INITIAL_NOTIFICATION_HOURS * 60 - BUFFER_MINUTES) * 60 * 1000
-  );
-  const cutoffStart = new Date(
-    now.getTime() - (INITIAL_NOTIFICATION_HOURS * 60 + BUFFER_MINUTES) * 60 * 1000
-  );
+  // Games that ended 1–2 hours ago (with 5 min buffer on each side)
+  const cutoffStart = new Date(now.getTime() - INITIAL_WINDOW_START_MINUTES * 60 * 1000);
+  const cutoffEnd = new Date(now.getTime() - INITIAL_WINDOW_END_MINUTES * 60 * 1000);
 
   const { data, error } = await supabase.rpc('get_participants_for_initial_feedback_notification', {
     p_cutoff_start: cutoffStart.toISOString(),
@@ -260,13 +260,9 @@ async function getParticipantsForInitialNotification(): Promise<ParticipantForNo
 async function getParticipantsForReminder(): Promise<ParticipantForNotification[]> {
   const now = new Date();
 
-  // Window: 24 hours ago +/- buffer
-  const cutoffEnd = new Date(
-    now.getTime() - (REMINDER_NOTIFICATION_HOURS * 60 - BUFFER_MINUTES) * 60 * 1000
-  );
-  const cutoffStart = new Date(
-    now.getTime() - (REMINDER_NOTIFICATION_HOURS * 60 + BUFFER_MINUTES) * 60 * 1000
-  );
+  // Games that ended 24–25 hours ago (with 5 min buffer on each side)
+  const cutoffStart = new Date(now.getTime() - REMINDER_WINDOW_START_MINUTES * 60 * 1000);
+  const cutoffEnd = new Date(now.getTime() - REMINDER_WINDOW_END_MINUTES * 60 * 1000);
 
   const { data, error } = await supabase.rpc('get_participants_for_feedback_reminder', {
     p_cutoff_start: cutoffStart.toISOString(),

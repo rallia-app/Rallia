@@ -19,8 +19,8 @@ import { EditCommunityActionSheet } from '../features/communities/components/Edi
 import { MatchTypeActionSheet } from '../features/matches/components/MatchTypeModal';
 import { ScoreConfirmationActionSheet } from '../features/matches/components/ScoreConfirmationModal';
 import { RegisterMatchScoreActionSheet } from '../features/matches/components/RegisterMatchScoreSheet';
-import { BookingConfirmationActionSheet } from '../features/matches/components/BookingConfirmationSheet';
 import { CourtSelectionActionSheet } from '../features/matches/components/CourtSelectionSheet';
+import { ReportIssueActionSheet } from '../features/matches/components/feedback-steps/ReportIssueSheet';
 // Facilities components
 import { ExternalBookingActionSheet } from '../features/facilities/components/ExternalBookingSheet';
 import { CourtBookingActionSheet } from '../features/facilities/components/CourtBookingSheet';
@@ -224,6 +224,7 @@ declare module 'react-native-actions-sheet' {
         group: unknown;
         currentUserId: string;
         isModerator: boolean;
+        type?: 'group' | 'community';
         onMemberRemoved?: () => void;
         onPlayerPress?: (playerId: string) => void;
       };
@@ -262,12 +263,7 @@ declare module 'react-native-actions-sheet' {
       payload: {
         match: import('@rallia/shared-types').MatchWithDetails;
         onSuccess?: () => void;
-      };
-    }>;
-    'booking-confirmation': SheetDefinition<{
-      payload: {
-        onConfirm?: () => void;
-        onCancel?: () => void;
+        onDismiss?: () => void;
       };
     }>;
     'court-selection': SheetDefinition<{
@@ -276,6 +272,16 @@ declare module 'react-native-actions-sheet' {
         timeLabel: string;
         onSelect?: (court: unknown) => void;
         onCancel?: () => void;
+      };
+    }>;
+    'report-issue': SheetDefinition<{
+      payload: {
+        opponentName: string;
+        onSubmit?: (
+          reason: import('@rallia/shared-types').MatchReportReasonEnum,
+          details?: string
+        ) => void;
+        isSubmitting?: boolean;
       };
     }>;
     'external-booking': SheetDefinition<{
@@ -289,8 +295,16 @@ declare module 'react-native-actions-sheet' {
         facility: unknown;
         slot: unknown;
         courts: unknown[];
-        /** Callback when booking is successfully completed */
+        /** Callback when booking is successfully completed (e.g. from wizard WhereStep) */
         onSuccess?: (data: {
+          facilityId: string;
+          courtId: string;
+          courtNumber: number | null;
+        }) => void;
+        /** Callback when user taps "Create game" from success step (e.g. from facility screen) */
+        onCreateGameFromBooking?: (data: {
+          facility: unknown;
+          slot: unknown;
           facilityId: string;
           courtId: string;
           courtNumber: number | null;
@@ -546,8 +560,8 @@ export const Sheets = () => {
         'match-type': MatchTypeActionSheet,
         'score-confirmation': ScoreConfirmationActionSheet,
         'register-match-score': RegisterMatchScoreActionSheet,
-        'booking-confirmation': BookingConfirmationActionSheet,
         'court-selection': CourtSelectionActionSheet,
+        'report-issue': ReportIssueActionSheet,
         'external-booking': ExternalBookingActionSheet,
         'court-booking': CourtBookingActionSheet,
         'image-picker': ImagePickerActionSheet,

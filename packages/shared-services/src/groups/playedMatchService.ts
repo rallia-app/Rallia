@@ -6,6 +6,7 @@
 import { supabase } from '../supabase';
 import type { CreatePlayedMatchInput, PendingScoreConfirmation } from './groupTypes';
 import { postMatchToGroup } from './groupMatchService';
+import { notifyScoreConfirmation } from '../notifications/notificationFactory';
 
 // ============================================================================
 // INTERNAL HELPERS
@@ -159,7 +160,7 @@ export async function createPlayedMatch(
           join_mode: 'direct',
           is_court_free: true,
           cost_split_type: 'split_equal',
-          status: 'completed', // Match is already played with results
+          closed_at: new Date().toISOString(), // Mark as closed since match is already played
         })
         .select('id')
         .single();
@@ -171,8 +172,22 @@ export async function createPlayedMatch(
 
       matchId = match.id;
 
-      // 3. Create match participants for Team 1
-      const team1Participants = team1PlayerIds.map((playerId, index) => ({
+      // 3. Deduplicate player IDs to prevent constraint violations
+      // This handles edge cases where a player might appear in both teams
+      const allPlayerIds = new Set<string>();
+      const uniqueTeam1PlayerIds = team1PlayerIds.filter(id => {
+        if (allPlayerIds.has(id)) return false;
+        allPlayerIds.add(id);
+        return true;
+      });
+      const uniqueTeam2PlayerIds = team2PlayerIds.filter(id => {
+        if (allPlayerIds.has(id)) return false;
+        allPlayerIds.add(id);
+        return true;
+      });
+
+      // 4. Create match participants for Team 1
+      const team1Participants = uniqueTeam1PlayerIds.map((playerId, index) => ({
         match_id: matchId,
         player_id: playerId,
         team_number: 1,
@@ -180,8 +195,8 @@ export async function createPlayedMatch(
         status: 'joined' as const,
       }));
 
-      // 4. Create match participants for Team 2
-      const team2Participants = team2PlayerIds.map(playerId => ({
+      // 5. Create match participants for Team 2
+      const team2Participants = uniqueTeam2PlayerIds.map(playerId => ({
         match_id: matchId,
         player_id: playerId,
         team_number: 2,
@@ -189,9 +204,13 @@ export async function createPlayedMatch(
         status: 'joined' as const,
       }));
 
+      // 6. Insert participants - use upsert to handle any edge case duplicates
       const { error: participantsError } = await supabase
         .from('match_participant')
-        .insert([...team1Participants, ...team2Participants]);
+        .upsert([...team1Participants, ...team2Participants], {
+          onConflict: 'match_id,player_id',
+          ignoreDuplicates: true,
+        });
 
       if (participantsError) {
         console.error('Error creating participants:', participantsError);
@@ -201,12 +220,16 @@ export async function createPlayedMatch(
       }
     }
 
-    // 5. Create match result (only for competitive matches)
-    if (expectation === 'competitive' && sets.length > 0) {
-      // Calculate total scores (sets won)
-      let team1Total = 0;
-      let team2Total = 0;
+    // 7. Create match result
+    // For competitive matches: include scores
+    // For friendly matches: create result without scores (marks match as completed)
+    const isCompetitive = expectation === 'competitive' && sets.length > 0;
 
+    // Calculate total scores for competitive matches
+    let team1Total = 0;
+    let team2Total = 0;
+
+    if (isCompetitive) {
       sets.forEach(set => {
         if (set.team1Score !== null && set.team2Score !== null) {
           if (set.team1Score > set.team2Score) {
@@ -216,60 +239,60 @@ export async function createPlayedMatch(
           }
         }
       });
+    }
 
-      // Calculate confirmation deadline (24 hours from now)
-      const confirmationDeadline = new Date();
-      confirmationDeadline.setHours(confirmationDeadline.getHours() + 24);
+    // Calculate confirmation deadline (24 hours from now)
+    const confirmationDeadline = new Date();
+    confirmationDeadline.setHours(confirmationDeadline.getHours() + 24);
 
-      const { data: resultData, error: resultError } = await supabase
-        .from('match_result')
-        .insert({
-          match_id: matchId,
-          winning_team: winnerId === 'team1' ? 1 : 2,
-          team1_score: team1Total,
-          team2_score: team2Total,
-          is_verified: false, // Opponent needs to confirm
-          submitted_by: createdBy,
-          confirmation_deadline: confirmationDeadline.toISOString(),
-        })
-        .select('id')
-        .single();
+    const { data: resultData, error: resultError } = await supabase
+      .from('match_result')
+      .insert({
+        match_id: matchId,
+        winning_team: isCompetitive ? (winnerId === 'team1' ? 1 : 2) : null,
+        team1_score: isCompetitive ? team1Total : null,
+        team2_score: isCompetitive ? team2Total : null,
+        is_verified: false, // Opponent needs to confirm
+        submitted_by: createdBy,
+        confirmation_deadline: confirmationDeadline.toISOString(),
+      })
+      .select('id')
+      .single();
 
-      if (resultError) {
-        console.error('Error creating match result:', resultError);
-        // Don't fail the whole operation, result can be added later
-      } else {
-        // 5b. Insert individual set scores
-        if (resultData && sets.length > 0) {
-          const setsToInsert = sets.map((set, index) => ({
-            match_result_id: resultData.id,
-            set_number: index + 1,
-            team1_score: set.team1Score,
-            team2_score: set.team2Score,
-          }));
+    if (resultError) {
+      console.error('Error creating match result:', resultError);
+      // Don't fail the whole operation, result can be added later
+    } else {
+      // 7b. Insert individual set scores for competitive matches
+      if (resultData && isCompetitive && sets.length > 0) {
+        const setsToInsert = sets.map((set, index) => ({
+          match_result_id: resultData.id,
+          set_number: index + 1,
+          team1_score: set.team1Score,
+          team2_score: set.team2Score,
+        }));
 
-          const { error: setsError } = await supabase.from('match_set').insert(setsToInsert);
+        const { error: setsError } = await supabase.from('match_set').insert(setsToInsert);
 
-          if (setsError) {
-            console.error('Error creating match sets:', setsError);
-            // Don't fail - sets can be added later
-          }
+        if (setsError) {
+          console.error('Error creating match sets:', setsError);
+          // Don't fail - sets can be added later
         }
+      }
 
-        // Send notifications to opponents about pending score confirmation
-        // Only for new matches, as existing match participants are already aware
-        if (isNewMatch) {
-          try {
-            await notifyOpponentsOfPendingScore(matchId, createdBy, team2PlayerIds);
-          } catch (notifyError) {
-            console.error('Error sending notifications:', notifyError);
-            // Don't fail - notification failure shouldn't break the flow
-          }
+      // Send notifications to opponents about pending score confirmation
+      // Only for new matches, as existing match participants are already aware
+      if (isNewMatch) {
+        try {
+          await notifyOpponentsOfPendingScore(matchId, createdBy, team2PlayerIds);
+        } catch (notifyError) {
+          console.error('Error sending notifications:', notifyError);
+          // Don't fail - notification failure shouldn't break the flow
         }
       }
     }
 
-    // 6. Post to group if networkId provided
+    // 8. Post to group if networkId provided
     if (networkId) {
       try {
         await postMatchToGroup(matchId, networkId, createdBy);
@@ -332,8 +355,9 @@ export async function getPendingScoreConfirmations(
 export interface SubmitMatchResultForMatchParams {
   matchId: string;
   submittedByPlayerId: string;
-  winningTeam: 1 | 2;
+  winningTeam: 1 | 2 | null;
   sets: Array<{ team1_score: number; team2_score: number }>;
+  partnerId?: string;
 }
 
 /**
@@ -344,7 +368,7 @@ export interface SubmitMatchResultForMatchParams {
 export async function submitMatchResultForMatch(
   params: SubmitMatchResultForMatchParams
 ): Promise<string> {
-  const { matchId, submittedByPlayerId, winningTeam, sets } = params;
+  const { matchId, submittedByPlayerId, winningTeam, sets, partnerId } = params;
   const p_sets = sets.map(s => ({
     team1_score: s.team1_score,
     team2_score: s.team2_score,
@@ -355,11 +379,30 @@ export async function submitMatchResultForMatch(
     p_submitted_by: submittedByPlayerId,
     p_winning_team: winningTeam,
     p_sets,
+    p_partner_id: partnerId ?? null,
   });
 
   if (error) {
     console.error('Error submitting match result:', error);
     throw new Error(error.message);
+  }
+
+  // Notify non-submitter participants about pending score confirmation
+  const { data: otherParticipants } = await supabase
+    .from('match_participant')
+    .select('player_id')
+    .eq('match_id', matchId)
+    .eq('status', 'joined')
+    .neq('player_id', submittedByPlayerId);
+
+  const opponentIds = otherParticipants?.map(p => p.player_id) ?? [];
+  if (opponentIds.length > 0) {
+    try {
+      await notifyOpponentsOfPendingScore(matchId, submittedByPlayerId, opponentIds);
+    } catch (notifyError) {
+      console.error('Error sending score notifications:', notifyError);
+      // Don't fail - notification failure shouldn't break the flow
+    }
   }
 
   return data as string;
@@ -405,40 +448,30 @@ export async function disputeMatchScore(
 }
 
 /**
- * Send notification to opponent(s) about pending score confirmation
+ * Send notification to opponent(s) about pending score confirmation.
+ * Uses the notification factory for i18n, user preferences, and multi-channel delivery.
  */
 export async function notifyOpponentsOfPendingScore(
   matchId: string,
   submittedBy: string,
   opponentIds: string[]
 ): Promise<void> {
-  // Get submitter's profile for notification message
-  const { data: submitterProfile } = await supabase
-    .from('profile')
-    .select('first_name, last_name, display_name')
-    .eq('id', submittedBy)
-    .single();
+  // Fetch submitter name and match context in parallel
+  const [profileResult, matchResult] = await Promise.all([
+    supabase
+      .from('profile')
+      .select('first_name, last_name, display_name')
+      .eq('id', submittedBy)
+      .single(),
+    supabase.from('match').select('sport:sport_id (name), match_date').eq('id', matchId).single(),
+  ]);
 
+  const submitterProfile = profileResult.data;
   const submitterName =
-    submitterProfile?.display_name ||
-    `${submitterProfile?.first_name || ''} ${submitterProfile?.last_name || ''}`.trim() ||
-    'A player';
+    submitterProfile?.first_name || submitterProfile?.display_name || 'A player';
 
-  // Create notifications for each opponent using the correct schema columns
-  // Schema: user_id, type, target_id, title, body, payload, read_at, expires_at
-  const notifications = opponentIds.map(opponentId => ({
-    user_id: opponentId,
-    type: 'score_confirmation' as const,
-    target_id: matchId,
-    title: 'Score Confirmation Required',
-    body: `${submitterName} submitted a match score. Please confirm or dispute within 24 hours.`,
-    payload: { match_id: matchId, submitted_by: submittedBy },
-  }));
+  const sportName = (matchResult.data?.sport as { name?: string } | null)?.name?.toLowerCase();
+  const matchDate = matchResult.data?.match_date ?? undefined;
 
-  const { error } = await supabase.from('notification').insert(notifications);
-
-  if (error) {
-    console.error('Error sending score confirmation notifications:', error);
-    // Don't throw - notification failure shouldn't break the flow
-  }
+  await notifyScoreConfirmation(opponentIds, matchId, submitterName, sportName, matchDate);
 }

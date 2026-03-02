@@ -205,10 +205,11 @@ export async function addGroupMember(
     throw new Error('Player is already a member of this group');
   }
 
-  // Check group capacity
+  // Check group capacity (default to 10 if max_members is null)
   const group = await getGroupInternal(groupId);
-  if (group && group.member_count >= group.max_members) {
-    throw new Error(`Group has reached maximum capacity of ${group.max_members} members`);
+  const maxMembers = group?.max_members ?? 10;
+  if (group && group.member_count >= maxMembers) {
+    throw new Error(`Group has reached maximum capacity of ${maxMembers} members`);
   }
 
   const { data, error } = await supabase
@@ -331,14 +332,7 @@ export async function promoteMember(
     throw new Error(error.message);
   }
 
-  // Log the promotion activity
-  await logActivityInternal(
-    groupId,
-    'member_promoted',
-    moderatorId,
-    playerIdToPromote,
-    { promoted_by: moderatorId }
-  );
+  // Activity logging is handled by database trigger (log_member_role_change_activity)
 
   return data as GroupMember;
 }
@@ -377,14 +371,7 @@ export async function demoteMember(
     throw new Error(error.message);
   }
 
-  // Log the demotion activity
-  await logActivityInternal(
-    groupId,
-    'member_demoted',
-    moderatorId,
-    playerIdToDemote,
-    { demoted_by: moderatorId }
-  );
+  // Activity logging is handled by database trigger (log_member_role_change_activity)
 
   return data as GroupMember;
 }

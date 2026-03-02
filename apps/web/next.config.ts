@@ -15,6 +15,14 @@ const nextConfig: NextConfig = {
     '@rallia/shared-types',
     '@rallia/shared-utils',
   ],
+  async headers() {
+    return [
+      {
+        source: '/.well-known/:path*',
+        headers: [{ key: 'Content-Type', value: 'application/json' }],
+      },
+    ];
+  },
   images: {
     // Disable optimization in dev to allow local Supabase (private IP)
     unoptimized: isDev,

@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useTranslations } from 'next-intl';
-import { useRef, useState, useEffect } from 'react';
+import { useState } from 'react';
 
 type SkillLevel = 'beginner' | 'intermediate' | 'advanced' | 'elite';
 
@@ -34,12 +34,6 @@ export function BetaSignupForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [validationError, setValidationError] = useState<string | null>(null);
-
-  const firstInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    firstInputRef.current?.focus();
-  }, []);
 
   const validateForm = (): boolean => {
     if (!playsTennis && !playsPickleball) {
@@ -158,7 +152,6 @@ export function BetaSignupForm() {
             <div className="flex flex-col gap-2">
               <Label htmlFor="fullName">{t('fullNameLabel')}</Label>
               <Input
-                ref={firstInputRef}
                 id="fullName"
                 name="fullName"
                 type="text"

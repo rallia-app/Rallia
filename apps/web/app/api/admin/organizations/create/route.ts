@@ -124,7 +124,7 @@ async function uploadFacilityImages(
   facilityId: string,
   facilityIndex: number,
   imageCount: number,
-  formData: FormData,
+  formData: globalThis.FormData,
   uploaderId: string
 ): Promise<FacilityFileEntry[]> {
   if (imageCount === 0) return [];
@@ -386,7 +386,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse form data
-    const formData = await request.formData();
+    const formData = await request.formData() as unknown as globalThis.FormData;
     const organizationJson = formData.get('organization');
     const facilitiesJson = formData.get('facility');
 

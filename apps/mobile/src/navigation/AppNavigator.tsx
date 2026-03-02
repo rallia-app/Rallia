@@ -74,10 +74,32 @@ import GroupChatInfo from '../screens/GroupChatInfo';
 import PlayedMatchDetail from '../screens/PlayedMatchDetail';
 import Communities from '../screens/Communities';
 import CommunityDetail from '../screens/CommunityDetail';
+import FeedbackScreen from '../screens/FeedbackScreen';
+import AdminPanelScreen from '../screens/AdminPanelScreen';
+import AdminDashboardScreen from '../screens/AdminDashboardScreen';
+import AdminUsersScreen from '../screens/AdminUsersScreen';
+import AdminUserDetailScreen from '../screens/AdminUserDetailScreen';
+import AdminActivityLogScreen from '../screens/AdminActivityLogScreen';
+import AdminAlertsScreen from '../screens/AdminAlertsScreen';
+import AdminSettingsScreen from '../screens/AdminSettingsScreen';
+import AdminModerationScreen from '../screens/AdminModerationScreen';
+// Phase 2 Analytics Sub-Views
+import AdminOnboardingAnalyticsScreen from '../screens/admin/AdminOnboardingAnalyticsScreen';
+import AdminUserAnalyticsScreen from '../screens/admin/AdminUserAnalyticsScreen';
+import AdminMatchAnalyticsScreen from '../screens/admin/AdminMatchAnalyticsScreen';
+// Phase 3 Analytics Sub-Views
+import AdminEngagementAnalyticsScreen from '../screens/admin/AdminEngagementAnalyticsScreen';
+import AdminMessagingAnalyticsScreen from '../screens/admin/AdminMessagingAnalyticsScreen';
+// Phase 4 Analytics Sub-Views
+import AdminRatingAnalyticsScreen from '../screens/admin/AdminRatingAnalyticsScreen';
+import AdminModerationAnalyticsScreen from '../screens/admin/AdminModerationAnalyticsScreen';
+// Phase 5 Analytics Sub-Views
+import AdminCommunityAnalyticsScreen from '../screens/admin/AdminCommunityAnalyticsScreen';
+import AdminSportAnalyticsScreen from '../screens/admin/AdminSportAnalyticsScreen';
+import MapScreen from '../screens/Map';
 
 // Components
 import { ThemeLogo } from '../components/ThemeLogo';
-import { MatchDetailSheet } from '../components/MatchDetailSheet';
 
 // Types
 import type {
@@ -642,17 +664,12 @@ function ActionsPlaceholder() {
 }
 
 /**
- * Main screen wrapper: tabs + MatchDetailSheet.
- * MatchDetailSheet is rendered inside the navigation tree so it can use useNavigation()
- * for Chat and PlayerProfile without ref-based helpers.
+ * Main screen wrapper: bottom tabs.
+ * MatchDetailSheet, ActionsBottomSheet and FeedbackSheet are rendered
+ * at the top level inside NavigationContainer in App.tsx.
  */
 function MainWithSheets() {
-  return (
-    <>
-      <BottomTabs />
-      <MatchDetailSheet />
-    </>
-  );
+  return <BottomTabs />;
 }
 
 // =============================================================================
@@ -828,6 +845,9 @@ type TabName = keyof BottomTabParamList;
 /**
  * Listener that resets a tab's nested stack to its root screen when the tab loses focus.
  * This ensures users always see the home screen when switching back to a tab.
+ *
+ * Only resets on actual tab switches — NOT when a parent stack screen (e.g. PlayerProfile)
+ * is pushed on top, which also triggers blur but should preserve the nested stack.
  */
 const resetStackOnBlur = ({
   navigation,
@@ -835,7 +855,13 @@ const resetStackOnBlur = ({
 }: BottomTabScreenProps<BottomTabParamList, TabName>) => ({
   blur: () => {
     const state = navigation.getState();
-    const tabRoute = state.routes.find(r => r.key === route.key);
+    const tabIndex = state.routes.findIndex(r => r.key === route.key);
+
+    // If this tab is still the active tab, blur was caused by a parent navigator
+    // pushing a screen (e.g. PlayerProfile) — don't reset the stack.
+    if (state.index === tabIndex) return;
+
+    const tabRoute = state.routes[tabIndex];
     if (tabRoute?.state && typeof tabRoute.state.index === 'number' && tabRoute.state.index > 0) {
       navigation.dispatch({
         ...StackActions.popToTop(),
@@ -1052,6 +1078,147 @@ export default function AppNavigator() {
           headerTitle: t('screens.permissions'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
+      />
+
+      <RootStack.Screen
+        name="Feedback"
+        component={FeedbackScreen}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('screens.feedback'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="AdminPanel"
+        component={AdminPanelScreen}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('admin.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="AdminDashboard"
+        component={AdminDashboardScreen}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('admin.analytics.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="AdminUsers"
+        component={AdminUsersScreen}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('admin.users.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="AdminUserDetail"
+        component={AdminUserDetailScreen}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('admin.users.detail.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="AdminActivityLog"
+        component={AdminActivityLogScreen}
+        options={{ headerShown: false }}
+      />
+
+      <RootStack.Screen
+        name="AdminAlerts"
+        component={AdminAlertsScreen}
+        options={{ headerShown: false }}
+      />
+
+      <RootStack.Screen
+        name="AdminSettings"
+        component={AdminSettingsScreen}
+        options={{ headerShown: false }}
+      />
+
+      <RootStack.Screen
+        name="AdminModeration"
+        component={AdminModerationScreen}
+        options={{ headerShown: false }}
+      />
+
+      {/* Phase 2 Analytics Sub-Views */}
+      <RootStack.Screen
+        name="AdminOnboardingAnalytics"
+        component={AdminOnboardingAnalyticsScreen}
+        options={{ headerShown: false }}
+      />
+
+      <RootStack.Screen
+        name="AdminUserAnalytics"
+        component={AdminUserAnalyticsScreen}
+        options={{ headerShown: false }}
+      />
+
+      <RootStack.Screen
+        name="AdminMatchAnalytics"
+        component={AdminMatchAnalyticsScreen}
+        options={{ headerShown: false }}
+      />
+
+      {/* Phase 3 Analytics Sub-Views */}
+      <RootStack.Screen
+        name="AdminEngagementAnalytics"
+        component={AdminEngagementAnalyticsScreen}
+        options={{ headerShown: false }}
+      />
+
+      <RootStack.Screen
+        name="AdminMessagingAnalytics"
+        component={AdminMessagingAnalyticsScreen}
+        options={{ headerShown: false }}
+      />
+
+      {/* Phase 4 Analytics Sub-Views */}
+      <RootStack.Screen
+        name="AdminRatingAnalytics"
+        component={AdminRatingAnalyticsScreen}
+        options={{ headerShown: false }}
+      />
+
+      <RootStack.Screen
+        name="AdminModerationAnalytics"
+        component={AdminModerationAnalyticsScreen}
+        options={{ headerShown: false }}
+      />
+
+      {/* Phase 5 Analytics Sub-Views */}
+      <RootStack.Screen
+        name="AdminCommunityAnalytics"
+        component={AdminCommunityAnalyticsScreen}
+        options={{ headerShown: false }}
+      />
+
+      <RootStack.Screen
+        name="AdminSportAnalytics"
+        component={AdminSportAnalyticsScreen}
+        options={{ headerShown: false }}
+      />
+
+      <RootStack.Screen
+        name="Map"
+        component={MapScreen}
+        options={{
+          headerShown: false,
+          presentation: 'fullScreenModal' as const,
+        }}
       />
 
       <RootStack.Screen

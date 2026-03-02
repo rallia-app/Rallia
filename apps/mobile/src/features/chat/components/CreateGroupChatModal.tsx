@@ -69,9 +69,9 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
     setAllPlayers([]);
   }, []);
 
-  const handleClose = useCallback(() => {
+  const handleClose = useCallback(async () => {
     resetModal();
-    SheetManager.hide('create-group-chat');
+    await SheetManager.hide('create-group-chat');
   }, [resetModal]);
 
   // Step 1: Member selection
@@ -300,8 +300,8 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
           .insert({ conversation_id: conversation.id, player_id: member.id });
       }
 
-      // Success - return the conversation ID
-      handleClose();
+      // Success - close modal first, then return the conversation ID
+      await handleClose();
       onSuccess?.(conversation.id);
     } catch (err) {
       console.error('Error creating group:', err);

@@ -15,6 +15,7 @@ import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AppNavigator from './src/navigation/AppNavigator';
 import { navigationRef } from './src/navigation';
+import { linking } from './src/navigation/linking';
 import { ActionsBottomSheet } from './src/components/ActionsBottomSheet';
 import { FeedbackSheet } from './src/components/FeedbackSheet';
 import { SplashOverlay } from './src/components/SplashOverlay';
@@ -25,6 +26,7 @@ import {
   PlayerProvider,
   useNotificationRealtime,
   usePendingFeedbackCheck,
+  useUpdateLastSeen,
 } from '@rallia/shared-hooks';
 import { WelcomeTourModal } from './src/components/WelcomeTourModal';
 import { TourCompleteModal } from './src/components/TourCompleteModal';
@@ -114,6 +116,10 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
   const { setPendingMatchId } = useDeepLink();
   const { isSplashComplete } = useOverlay();
   const userId = user?.id;
+
+  // Track user activity app-wide by updating last_seen_at
+  // This updates immediately on mount and every 2 minutes while the app is active
+  useUpdateLastSeen(userId);
 
   // Handle incoming deep link URL
   const handleDeepLink = useCallback(
@@ -271,7 +277,7 @@ function AppContent() {
   return (
     <>
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
-      <NavigationContainer ref={navigationRef}>
+      <NavigationContainer ref={navigationRef} linking={linking}>
         <SheetProvider>
           <Sheets />
           <AppNavigator />

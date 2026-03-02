@@ -313,6 +313,8 @@ export interface UnifiedAvailabilityParams {
   dataProviderId?: string | null;
   /** External facility ID (e.g., Loisir Montreal siteId) */
   externalProviderId?: string | null;
+  /** Search string to filter results by sport (e.g., "tennis", "pickleball") */
+  searchString?: string;
 }
 
 /**
@@ -333,7 +335,7 @@ export interface UnifiedAvailabilityParams {
 export async function fetchUnifiedAvailability(
   params: UnifiedAvailabilityParams
 ): Promise<AvailabilityResult> {
-  const { facilityId, dates, dataProviderId, externalProviderId } = params;
+  const { facilityId, dates, dataProviderId, externalProviderId, searchString } = params;
 
   try {
     // 1. Check for local templates (cached for 5 minutes)
@@ -349,6 +351,7 @@ export async function fetchUnifiedAvailability(
       return fetchAvailability(dataProviderId, {
         dates,
         siteId: parseInt(externalProviderId, 10),
+        searchString,
       });
     }
 

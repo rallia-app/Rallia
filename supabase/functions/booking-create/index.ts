@@ -121,7 +121,8 @@ async function validateBookingSlot(
 
   if (courtError) return { valid: false, error: 'Court not found' };
 
-  if (court.availability_status !== 'available') {
+  // NULL availability_status means "available" (default)
+  if (court.availability_status && court.availability_status !== 'available') {
     const statusMessages: Record<string, string> = {
       maintenance: 'This court is currently under maintenance',
       closed: 'This court is closed',
@@ -289,10 +290,16 @@ Deno.serve(async req => {
     });
 
     if (slotsError) {
-      return new Response(JSON.stringify({ error: 'Failed to check availability' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      });
+      console.error('get_available_slots RPC error:', slotsError);
+      return new Response(
+        JSON.stringify({
+          error: `Failed to check availability: ${slotsError.message}`,
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
 
     const normStart = normalizeTimeForComparison(startTime);

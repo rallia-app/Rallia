@@ -7,12 +7,18 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+} from 'react-native-reanimated';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
 import { useStripe } from '@stripe/stripe-react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
 import {
   courtAvailabilityKeys,
   useCreateBooking,
@@ -23,12 +29,9 @@ import type { Court } from '@rallia/shared-types';
 import type { FacilityWithDetails } from '@rallia/shared-services';
 import { Logger } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation, type TranslationKey } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import { useSport } from '../../../context';
 import { SportIcon } from '../../../components/SportIcon';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../../navigation/types';
 
 /**
  * Extended theme colors for the booking sheet
@@ -80,38 +83,21 @@ function convertTo24Hour(time12h: string): string {
   return `${hours.toString().padStart(2, '0')}:${minutes}:00`;
 }
 
-/**
- * "View My Bookings" text link shown after successful booking
- */
-function ViewMyBookingsLink() {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { t } = useTranslation();
-  const { colors } = useThemeStyles();
-
-  return (
-    <TouchableOpacity
-      style={styles.viewMyBookingsLink}
-      onPress={() => {
-        lightHaptic();
-        SheetManager.hide('court-booking');
-        navigation.navigate('MyBookings');
-      }}
-      activeOpacity={0.7}
-    >
-      <Text size="sm" weight="medium" color={colors.primary}>
-        {t('myBookings.viewMyBookings')}
-      </Text>
-      <Ionicons name="chevron-forward" size={14} color={colors.primary} />
-    </TouchableOpacity>
-  );
-}
-
 export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>) {
   const facility = payload?.facility as FacilityWithDetails;
   const slot = payload?.slot as FormattedSlot;
-  const courts = (payload?.courts ?? []) as Court[];
+  const courts = useMemo(() => (payload?.courts ?? []) as Court[], [payload?.courts]);
   const onSuccess = payload?.onSuccess as
     | ((data: { facilityId: string; courtId: string; courtNumber: number | null }) => void)
+    | undefined;
+  const onCreateGameFromBooking = payload?.onCreateGameFromBooking as
+    | ((data: {
+        facility: FacilityWithDetails;
+        slot: FormattedSlot;
+        facilityId: string;
+        courtId: string;
+        courtNumber: number | null;
+      }) => void)
     | undefined;
 
   const { colors, isDark } = useThemeStyles();
@@ -131,6 +117,17 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
   // State
   const [isLoading, setIsLoading] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
+  // Hold booking result for success step "Create game" action
+  const [lastBookingResult, setLastBookingResult] = useState<{
+    facilityId: string;
+    courtId: string;
+    courtNumber: number | null;
+  } | null>(null);
+
+  // Success step animation (match MatchCreationWizard)
+  const formOpacity = useSharedValue(1);
+  const successOpacity = useSharedValue(0);
+  const successScale = useSharedValue(0.8);
 
   // Extended theme colors matching MatchDetailSheet pattern
   const themeColors = useMemo<ThemeColors>(
@@ -151,7 +148,53 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
   const handleClose = useCallback(() => {
     selectionHaptic();
     SheetManager.hide('court-booking');
+    setBookingSuccess(false);
+    setLastBookingResult(null);
   }, []);
+
+  // Success step: "Create game" – call onSuccess or onCreateGameFromBooking then close
+  const handleCreateGame = useCallback(() => {
+    if (!lastBookingResult) return;
+    lightHaptic();
+    if (onSuccess) {
+      onSuccess(lastBookingResult);
+    } else if (onCreateGameFromBooking && facility && slot) {
+      onCreateGameFromBooking({
+        facility,
+        slot,
+        ...lastBookingResult,
+      });
+    }
+    SheetManager.hide('court-booking');
+    setBookingSuccess(false);
+    setLastBookingResult(null);
+  }, [lastBookingResult, onSuccess, onCreateGameFromBooking, facility, slot]);
+
+  // Success step: "Done" – just close
+  const handleDone = useCallback(() => {
+    selectionHaptic();
+    SheetManager.hide('court-booking');
+    setBookingSuccess(false);
+    setLastBookingResult(null);
+  }, []);
+
+  // Trigger success animation when bookingSuccess becomes true
+  useEffect(() => {
+    if (bookingSuccess) {
+      formOpacity.value = withTiming(0, { duration: 150 });
+      successOpacity.value = withTiming(1, { duration: 300 });
+      successScale.value = withSpring(1, { damping: 80, stiffness: 400 });
+    } else {
+      formOpacity.value = withTiming(1);
+      successOpacity.value = withTiming(0);
+      successScale.value = 0.8;
+    }
+  }, [bookingSuccess, formOpacity, successOpacity, successScale]);
+
+  const successAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: successOpacity.value,
+    transform: [{ scale: successScale.value }],
+  }));
 
   // Get available court options from the slot (memoized to prevent hook dependency issues)
   const courtOptions: CourtOption[] = useMemo(() => slot.courtOptions || [], [slot.courtOptions]);
@@ -318,30 +361,26 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
         }
       }
 
-      // Success!
+      // Success! Show success step (onSuccess called when user taps "Create game")
+      setLastBookingResult({
+        facilityId: facility.id,
+        courtId: selectedCourt.id,
+        courtNumber: selectedCourt.court_number ?? null,
+      });
       setBookingSuccess(true);
       toast.success(t('booking.success.title'));
 
-      // Call onSuccess callback with booking data
-      if (onSuccess) {
-        onSuccess({
-          facilityId: facility.id,
-          courtId: selectedCourt.id,
-          courtNumber: selectedCourt.court_number ?? null,
-        });
-      }
-
-      // Also invalidate the specific facility availability
+      // Invalidate the specific facility availability
       queryClient.invalidateQueries({ queryKey: courtAvailabilityKeys.facility(facility.id) });
-
-      // Close sheet after delay (gives user time to see "View My Bookings" link)
-      setTimeout(() => {
-        SheetManager.hide('court-booking');
-        setBookingSuccess(false);
-      }, 3000);
     } catch (error) {
       Logger.error('Mobile booking failed', error as Error);
-      toast.error((error as Error).message || 'Booking failed');
+      const errorMessage = (error as Error).message || t('booking.error.generic');
+      // Close the sheet first so the toast is visible (ActionSheet modal covers toasts)
+      SheetManager.hide('court-booking');
+      // Small delay to ensure the sheet is dismissed before showing the toast
+      setTimeout(() => {
+        toast.error(errorMessage);
+      }, 300);
     } finally {
       setIsLoading(false);
     }
@@ -373,6 +412,62 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
   const isFree = displayPrice === 0 || displayPrice === undefined;
 
   if (!facility || !slot) return null;
+
+  // Success step (matches MatchCreationWizard success step layout and styles)
+  if (bookingSuccess) {
+    return (
+      <ActionSheet
+        gestureEnabled
+        containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
+        indicatorStyle={[styles.handleIndicator, { backgroundColor: themeColors.border }]}
+      >
+        <View style={styles.modalContent}>
+          <Animated.View style={[styles.successContainer, successAnimatedStyle]}>
+            <TouchableOpacity
+              onPress={handleDone}
+              style={[
+                styles.successCloseButton,
+                { backgroundColor: isDark ? neutral[800] : neutral[100] },
+              ]}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="close-outline" size={20} color={themeColors.textMuted} />
+            </TouchableOpacity>
+            <View style={[styles.successIcon, { backgroundColor: themeColors.primary }]}>
+              <Ionicons name="checkmark-circle" size={48} color="#ffffff" />
+            </View>
+            <Text size="xl" weight="bold" color={themeColors.text} style={styles.successTitle}>
+              {t('booking.success.stepTitle')}
+            </Text>
+            <Text size="base" color={themeColors.textMuted} style={styles.successDescription}>
+              {t('booking.success.createGamePrompt')}
+            </Text>
+            <View style={styles.successButtons}>
+              <TouchableOpacity
+                style={[styles.successButton, { backgroundColor: themeColors.primary }]}
+                onPress={handleCreateGame}
+              >
+                <Text size="base" weight="semibold" color="#ffffff">
+                  {t('booking.success.createGame')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.successButton,
+                  { backgroundColor: isDark ? neutral[800] : neutral[200] },
+                ]}
+                onPress={handleDone}
+              >
+                <Text size="base" weight="semibold" color={themeColors.text}>
+                  {t('booking.success.done')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </View>
+      </ActionSheet>
+    );
+  }
 
   return (
     <ActionSheet
@@ -601,7 +696,6 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
               </>
             )}
           </TouchableOpacity>
-          {bookingSuccess && <ViewMyBookingsLink />}
         </View>
       </View>
     </ActionSheet>
@@ -614,7 +708,6 @@ export default CourtBookingActionSheet;
 const styles = StyleSheet.create({
   // Sheet base styles
   sheetBackground: {
-    flex: 1,
     borderTopLeftRadius: radiusPixels['2xl'],
     borderTopRightRadius: radiusPixels['2xl'],
   },
@@ -645,7 +738,9 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   headerCenter: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   closeButton: {
     padding: spacingPixels[1],
@@ -734,11 +829,51 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.lg,
     gap: spacingPixels[2],
   },
-  viewMyBookingsLink: {
-    flexDirection: 'row',
+
+  // Success step (match MatchCreationWizard success step)
+  successContainer: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacingPixels[2],
-    gap: 4,
+    padding: spacingPixels[6],
+    paddingBottom: spacingPixels[4],
+    position: 'relative',
+  },
+  successCloseButton: {
+    position: 'absolute',
+    top: spacingPixels[4],
+    right: spacingPixels[4],
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  successIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: radiusPixels.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacingPixels[4],
+  },
+  successTitle: {
+    textAlign: 'center',
+    marginBottom: spacingPixels[2],
+  },
+  successDescription: {
+    textAlign: 'center',
+    marginBottom: spacingPixels[6],
+  },
+  successButtons: {
+    gap: spacingPixels[3],
+    width: '100%',
+  },
+  successButton: {
+    flexDirection: 'row',
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

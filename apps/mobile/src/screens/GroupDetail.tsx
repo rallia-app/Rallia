@@ -31,7 +31,6 @@ import {
   useTranslation,
   useNavigateToPlayerProfile,
   useRequireOnboarding,
-  type TranslationKey,
 } from '../hooks';
 import { useSport } from '../context';
 import { SportIcon } from '../components/SportIcon';
@@ -1354,7 +1353,7 @@ export default function GroupDetailScreen() {
 
           {/* Action Buttons Row */}
           <View style={styles.actionButtonsRow}>
-            {group.member_count < group.max_members && (
+            {group.member_count < (group.max_members ?? 10) && (
               <TouchableOpacity
                 style={[styles.addMemberButton, { borderColor: colors.primary, flex: 1 }]}
                 onPress={() =>
@@ -1549,8 +1548,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: primary[500],
   },
   memberAvatarImage: {
     width: 28,

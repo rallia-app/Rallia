@@ -17,6 +17,7 @@ import {
   isCommunityMember,
   isCommunityModerator,
   getCommunityMembershipStatus,
+  checkCommunityAccess,
   // Membership operations
   requestToJoinCommunity,
   requestToJoinCommunityByInviteCode,
@@ -62,6 +63,8 @@ export const communityKeys = {
     [...communityKeys.detail(communityId), 'member', playerId] as const,
   membershipStatus: (communityId: string, playerId: string) =>
     [...communityKeys.detail(communityId), 'status', playerId] as const,
+  access: (communityId: string, playerId?: string) =>
+    [...communityKeys.detail(communityId), 'access', playerId] as const,
   pendingRequests: (communityId: string) =>
     [...communityKeys.detail(communityId), 'pending'] as const,
 };
@@ -152,6 +155,18 @@ export function useCommunityMembershipStatus(
     queryKey: communityKeys.membershipStatus(communityId || '', playerId || ''),
     queryFn: () => getCommunityMembershipStatus(communityId!, playerId!),
     enabled: !!communityId && !!playerId,
+  });
+}
+
+/**
+ * Check if a player can access a community's full features
+ * Returns access status, membership info, and reason if denied
+ */
+export function useCommunityAccess(communityId: string | undefined, playerId: string | undefined) {
+  return useQuery({
+    queryKey: communityKeys.access(communityId || '', playerId),
+    queryFn: () => checkCommunityAccess(communityId!, playerId),
+    enabled: !!communityId,
   });
 }
 
@@ -458,8 +473,10 @@ export function usePromoteCommunityMember() {
       playerId: string;
       promoterId: string;
     }) => promoteCommunityMember(communityId, playerId, promoterId),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: communityKeys.withMembers(variables.communityId) });
+    onSuccess: async (_, variables) => {
+      await queryClient.invalidateQueries({ queryKey: communityKeys.withMembers(variables.communityId) });
+      // Force refetch activity to show the promotion/demotion immediately
+      await queryClient.refetchQueries({ queryKey: ['groups', 'activity', variables.communityId] });
     },
   });
 }
@@ -480,8 +497,10 @@ export function useDemoteCommunityMember() {
       playerId: string;
       demoterId: string;
     }) => demoteCommunityMember(communityId, playerId, demoterId),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: communityKeys.withMembers(variables.communityId) });
+    onSuccess: async (_, variables) => {
+      await queryClient.invalidateQueries({ queryKey: communityKeys.withMembers(variables.communityId) });
+      // Force refetch activity to show the promotion/demotion immediately
+      await queryClient.refetchQueries({ queryKey: ['groups', 'activity', variables.communityId] });
     },
   });
 }

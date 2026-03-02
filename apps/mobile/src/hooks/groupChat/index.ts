@@ -4,5 +4,5 @@
  */
 
 export { useGroupChatInfo } from './useGroupChatInfo';
-export { useGroupMemberManagement } from './useGroupMemberManagement';
+export { useGroupMemberManagement, type SelectedMemberInfo, type ConfirmationConfig } from './useGroupMemberManagement';
 export { useGroupEditActions } from './useGroupEditActions';

@@ -9,6 +9,7 @@ import type {
   FacilitiesPage,
   Facility,
   FacilityContact,
+  FacilityImage,
   Court,
 } from '@rallia/shared-types';
 
@@ -86,6 +87,8 @@ export interface FacilityWithDetails extends FacilitySearchResult {
   contacts: FacilityContact[];
   /** Whether the organization can accept payments (Stripe charges_enabled) */
   paymentsEnabled: boolean;
+  /** Facility images ordered by display_order */
+  images?: FacilityImage[];
 }
 
 /**
@@ -335,6 +338,18 @@ export async function getFacilityWithDetails(
     .in('contact_type', ['general', 'reservation'])
     .order('is_primary', { ascending: false });
 
+  // Fetch facility images (ordered by display_order, primary first)
+  const { data: imagesData, error: imagesError } = await supabase
+    .from('facility_image')
+    .select('*')
+    .eq('facility_id', facilityId)
+    .order('is_primary', { ascending: false })
+    .order('display_order', { ascending: true });
+
+  if (imagesError) {
+    console.error('❌ Error fetching facility images:', imagesError);
+  }
+
   // Fetch Stripe account status for the organization
   const facility = facilityData as Facility;
   const organizationId = facility.organization_id;
@@ -350,9 +365,10 @@ export async function getFacilityWithDetails(
     paymentsEnabled = stripeAccount?.charges_enabled === true;
   }
 
-  // Handle any court errors gracefully - return empty array
+  // Handle any errors gracefully - return empty arrays
   const courts = courtsError ? [] : (courtsData as unknown as Court[]) || [];
   const contacts = contactsError ? [] : (contactsData as FacilityContact[]) || [];
+  const images = imagesError || !imagesData ? [] : (imagesData as FacilityImage[]);
 
   return {
     ...facilitySearchResult,
@@ -360,6 +376,7 @@ export async function getFacilityWithDetails(
     courts,
     contacts,
     paymentsEnabled,
+    images,
   };
 }
 

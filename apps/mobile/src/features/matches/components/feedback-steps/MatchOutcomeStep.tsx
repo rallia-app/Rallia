@@ -5,7 +5,7 @@
  * or was mutually cancelled.
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
@@ -262,6 +262,15 @@ const MatchContextCard: React.FC<MatchContextCardProps> = ({
     : matchContext.city || undefined;
 
   // Build opponent string using i18next interpolation
+  // For multiple names, format as "A, B and C" (English) or "A, B et C" (French)
+  const formatNamesList = (names: string[]): string => {
+    if (names.length <= 1) return names[0] ?? '';
+    const allButLast = names.slice(0, -1).join(', ');
+    const last = names[names.length - 1];
+    const conjunction = t('matchFeedback.matchContext.conjunction');
+    return `${allButLast} ${conjunction} ${last}`;
+  };
+
   const opponentDisplay =
     matchContext.opponentNames.length > 0
       ? matchContext.opponentNames.length === 1
@@ -269,7 +278,7 @@ const MatchContextCard: React.FC<MatchContextCardProps> = ({
             name: matchContext.opponentNames[0],
           })
         : t('matchFeedback.matchContext.vsPlayers', {
-            names: matchContext.opponentNames.join(', '),
+            names: formatNamesList(matchContext.opponentNames),
           })
       : undefined;
 
@@ -430,6 +439,9 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
   locale,
   isDark,
 }) => {
+  const scrollViewRef = useRef<ScrollView>(null);
+  const reasonsSectionY = useRef<number>(0);
+
   const handleOutcomeChange = useCallback(
     (newOutcome: MatchOutcomeEnum) => {
       onOutcomeChange(newOutcome, null, '');
@@ -439,6 +451,14 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
       } else if (newOutcome === 'opponent_no_show' && opponents.length === 1) {
         // Auto-select the only opponent for singles matches
         onNoShowPlayerIdsChange([opponents[0].playerId]);
+      }
+
+      // Auto-scroll to reveal the sub-section when cancellation or no-show is selected
+      if (newOutcome === 'mutual_cancel' || newOutcome === 'opponent_no_show') {
+        // Small delay to let the section render before scrolling
+        setTimeout(() => {
+          scrollViewRef.current?.scrollTo({ y: reasonsSectionY.current, animated: true });
+        }, 100);
       }
     },
     [onOutcomeChange, onNoShowPlayerIdsChange, opponents]
@@ -471,6 +491,7 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
 
   return (
     <ScrollView
+      ref={scrollViewRef}
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
@@ -498,7 +519,13 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
       </View>
 
       {/* Outcome Options */}
-      <View style={styles.optionsContainer}>
+      <View
+        style={styles.optionsContainer}
+        onLayout={e => {
+          const { y, height } = e.nativeEvent.layout;
+          reasonsSectionY.current = y + height;
+        }}
+      >
         <OptionCard
           icon="checkmark-circle-outline"
           title={t('matchFeedback.outcomeStep.matchPlayed')}
@@ -660,9 +687,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[1],
+    flexShrink: 1,
+    maxWidth: '100%',
   },
   matchContextDetailText: {
     marginLeft: 2,
+    flexShrink: 1,
   },
   header: {
     marginBottom: spacingPixels[6],

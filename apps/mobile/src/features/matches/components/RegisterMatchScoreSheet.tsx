@@ -3,11 +3,11 @@
  *
  * Single-step form for registering the match score (from match detail during
  * the 48h feedback window). For doubles: select your partner then enter set
- * scores. Winner is derived from the scores (team that won more sets).
+ * scores. Winner is derived from the scores (team that won more sets/games).
  *
- * Possible scores (per set/game):
- * - Tennis: games per set, typically 0–7 (6 to win, 7 if tiebreak 7-6).
- * - Pickleball: points per game, typically to 11, 15, or 21 (win by 2).
+ * Sport-specific behaviour:
+ * - Tennis: "Set 1, Set 2…", scores typically 0–7, warns if >7.
+ * - Pickleball: "Game 1, Game 2…", scores typically 0–25, warns if >25.
  * Inputs allow 0–99; focus auto-advances after one digit for faster entry.
  */
 
@@ -33,7 +33,7 @@ import {
   neutral,
 } from '@rallia/design-system';
 import { lightHaptic, selectionHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation, type TranslationKey } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import { usePlayer } from '@rallia/shared-hooks';
 import { submitMatchResultForMatch } from '@rallia/shared-services';
 import type { MatchWithDetails, MatchParticipantWithPlayer } from '@rallia/shared-types';
@@ -60,6 +60,27 @@ interface ThemeColors {
   progressInactive: string;
 }
 
+/** Check if a sport slug corresponds to pickleball. */
+function isPickleball(sportSlug: string | undefined | null): boolean {
+  return sportSlug === 'pickleball';
+}
+
+/**
+ * Validate a single score value against sport-specific ranges.
+ * Returns a warning translation key if the score seems unusual, null otherwise.
+ * Tennis: scores > 7 are unusual (max is 7 in a tiebreak set).
+ * Pickleball: scores > 25 are unusual (typically to 11 or 15, rarely 21).
+ */
+function getScoreWarning(score: number | null, isPickleballSport: boolean): string | null {
+  if (score === null) return null;
+  if (isPickleballSport) {
+    if (score > 25) return 'registerMatchScore.error.pickleballScoreRange';
+  } else {
+    if (score > 7) return 'registerMatchScore.error.tennisScoreRange';
+  }
+  return null;
+}
+
 /** Derive winning team (1 or 2) from set scores: team that won more sets wins the match. */
 function deriveWinningTeamFromSets(sets: SetScore[]): 1 | 2 | null {
   let team1Wins = 0;
@@ -81,6 +102,7 @@ function deriveWinningTeamFromSets(sets: SetScore[]): 1 | 2 | null {
 export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-match-score'>) {
   const match = payload?.match as MatchWithDetails | null | undefined;
   const onSuccess = payload?.onSuccess;
+  const onDismiss = payload?.onDismiss;
 
   const { isDark } = useThemeStyles();
   const { t } = useTranslation();
@@ -109,8 +131,11 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
   const [sets, setSets] = useState<SetScore[]>([{ team1Score: null, team2Score: null }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scoreWarning, setScoreWarning] = useState<string | null>(null);
 
   const isDoubles = match?.format === 'doubles';
+  const sportSlug = match?.sport?.slug;
+  const isPickleballSport = isPickleball(sportSlug);
   const joinedParticipants = useMemo(
     () => (match?.participants ?? []).filter(p => p.status === 'joined'),
     [match?.participants]
@@ -128,18 +153,14 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
   const canSubmit = useMemo(() => {
     if (validSets.length === 0) return false;
     if (isDoubles && !partnerId) return false;
-    return winningTeam !== null;
-  }, [validSets.length, isDoubles, partnerId, winningTeam]);
+    return true;
+  }, [validSets.length, isDoubles, partnerId]);
 
   const getParticipantName = useCallback((p: MatchParticipantWithPlayer) => {
     const playerObj = Array.isArray(p.player) ? p.player[0] : p.player;
     const profile = playerObj?.profile;
     if (!profile) return 'Player';
-    return (
-      profile.display_name ||
-      `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() ||
-      'Player'
-    );
+    return profile.first_name || profile.display_name || 'Player';
   }, []);
 
   /** Labels for the two sides of the score (team 1 = you/your team, team 2 = opponent(s)) */
@@ -173,6 +194,16 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
       team2Label: opponentName ?? t('registerMatchScore.teamOpponent'),
     };
   }, [isDoubles, partnerId, otherParticipants, getParticipantName, t]);
+
+  // Track whether submit succeeded so onClose can skip onDismiss (onSuccess already reopens the detail sheet)
+  const didSubmitRef = useRef(false);
+
+  const handleSheetClose = useCallback(() => {
+    if (!didSubmitRef.current) {
+      onDismiss?.();
+    }
+    didSubmitRef.current = false;
+  }, [onDismiss]);
 
   const handleClose = useCallback(() => {
     Keyboard.dismiss();
@@ -217,6 +248,9 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
         )
       );
       setError(null);
+      // Check for sport-specific score range warning
+      const warning = getScoreWarning(numValue, isPickleballSport);
+      setScoreWarning(warning);
       // Auto-advance: one digit in left input → focus right input
       if (team === 'team1' && value.length === 1) {
         setTimeout(() => rightInputRefs.current[setIndex]?.focus(), 0);
@@ -226,16 +260,18 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
         setTimeout(() => leftInputRefs.current[setIndex]?.focus(), 0);
       }
     },
-    []
+    [isPickleballSport]
   );
 
   const handleSubmit = useCallback(async () => {
     if (!match || !playerId || validSets.length === 0) {
-      setError(t('registerMatchScore.error.enterScores'));
-      return;
-    }
-    if (winningTeam === null) {
-      setError(t('registerMatchScore.error.noWinner'));
+      setError(
+        t(
+          isPickleballSport
+            ? 'registerMatchScore.error.enterGames'
+            : 'registerMatchScore.error.enterScores'
+        )
+      );
       return;
     }
     if (isDoubles && !partnerId) {
@@ -255,8 +291,10 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
           team1_score: s.team1Score!,
           team2_score: s.team2Score!,
         })),
+        partnerId: isDoubles ? (partnerId ?? undefined) : undefined,
       });
       successHaptic();
+      didSubmitRef.current = true;
       SheetManager.hide('register-match-score');
       onSuccess?.();
     } catch (err) {
@@ -265,7 +303,17 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
     } finally {
       setIsSubmitting(false);
     }
-  }, [match, playerId, winningTeam, validSets, isDoubles, partnerId, onSuccess, t]);
+  }, [
+    match,
+    playerId,
+    winningTeam,
+    validSets,
+    isDoubles,
+    partnerId,
+    onSuccess,
+    t,
+    isPickleballSport,
+  ]);
 
   if (!match) return null;
 
@@ -274,6 +322,7 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
     return (
       <ActionSheet
         gestureEnabled
+        onClose={handleSheetClose}
         containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
         indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
       >
@@ -301,6 +350,7 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
   return (
     <ActionSheet
       gestureEnabled
+      onClose={handleSheetClose}
       containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
@@ -390,7 +440,14 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
           )}
 
           <Text size="sm" weight="semibold" color={colors.textMuted} style={styles.sectionLabel}>
-            {t('registerMatchScore.sets')}
+            {t(isPickleballSport ? 'registerMatchScore.games' : 'registerMatchScore.sets')}
+          </Text>
+          <Text size="xs" color={colors.textMuted} style={styles.scoreHint}>
+            {t(
+              isPickleballSport
+                ? 'registerMatchScore.pickleballScoreHint'
+                : 'registerMatchScore.tennisScoreHint'
+            )}
           </Text>
 
           {sets.map((set, idx) => (
@@ -408,14 +465,20 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
                   color={colors.textMuted}
                   style={styles.setCardLabel}
                 >
-                  {t('registerMatchScore.setN', { number: idx + 1 })}
+                  {t(isPickleballSport ? 'registerMatchScore.gameN' : 'registerMatchScore.setN', {
+                    number: idx + 1,
+                  })}
                 </Text>
                 {sets.length > 1 && idx > 0 && (
                   <TouchableOpacity
                     onPress={() => handleRemoveSet(idx)}
                     style={styles.removeSetButton}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    accessibilityLabel={t('registerMatchScore.removeSet')}
+                    accessibilityLabel={t(
+                      isPickleballSport
+                        ? 'registerMatchScore.removeGame'
+                        : 'registerMatchScore.removeSet'
+                    )}
                     accessibilityRole="button"
                   >
                     <Ionicons name="trash-outline" size={20} color={colors.textMuted} />
@@ -515,10 +578,19 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
                 color={colors.buttonActive}
                 style={styles.addSetLabel}
               >
-                {t('registerMatchScore.addSet')}
+                {t(isPickleballSport ? 'registerMatchScore.addGame' : 'registerMatchScore.addSet')}
               </Text>
             </TouchableOpacity>
           )}
+
+          {scoreWarning && !error ? (
+            <View style={styles.warningRow}>
+              <Ionicons name="warning-outline" size={18} color="#F59E0B" />
+              <Text size="sm" color="#F59E0B">
+                {t(scoreWarning as Parameters<typeof t>[0])}
+              </Text>
+            </View>
+          ) : null}
 
           {error ? (
             <View style={styles.errorRow}>
@@ -704,6 +776,16 @@ const styles = StyleSheet.create({
   },
   addSetLabel: {
     marginLeft: spacingPixels[1],
+  },
+  scoreHint: {
+    marginBottom: spacingPixels[3],
+    marginTop: -spacingPixels[1],
+  },
+  warningRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    marginTop: spacingPixels[3],
   },
   errorRow: {
     flexDirection: 'row',

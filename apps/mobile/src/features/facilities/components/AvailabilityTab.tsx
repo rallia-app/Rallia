@@ -21,6 +21,7 @@ import type { FacilityWithDetails } from '@rallia/shared-services';
 import { lightHaptic } from '@rallia/shared-utils';
 
 import { useRequireOnboarding, type TranslationKey, type TranslationOptions } from '../../../hooks';
+import { useActionsSheet } from '../../../context';
 import { SheetManager } from 'react-native-actions-sheet';
 import AvailabilitySlotCard from './AvailabilitySlotCard';
 import DatePickerBar from './DatePickerBar';
@@ -300,9 +301,6 @@ function EmptyState({ facility, colors, isDark, t }: EmptyStateProps) {
   const handleExternalBooking = useCallback(() => {
     if (facility.booking_url_template) {
       lightHaptic();
-      // Open external booking URL - URL construction for future use
-      // const url = facility.booking_url_template.replace('{date}', '').replace('{time}', '');
-      // Linking.openURL(url); // Would need to import Linking
     }
   }, [facility.booking_url_template]);
 
@@ -345,27 +343,7 @@ function EmptyState({ facility, colors, isDark, t }: EmptyStateProps) {
               {t('facilityDetail.noAvailability.tryLater')}
             </Text>
           </View>
-          <View style={styles.suggestionItem}>
-            <Ionicons name="calendar-outline" size={18} color={colors.primary} />
-            <Text size="sm" color={colors.text}>
-              {t('facilityDetail.noAvailability.tryDifferentDate')}
-            </Text>
-          </View>
         </View>
-
-        {/* External booking CTA */}
-        {hasExternalBooking && (
-          <TouchableOpacity
-            style={[styles.externalCTA, { backgroundColor: primary[500] }]}
-            onPress={handleExternalBooking}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="open-outline" size={18} color="#fff" />
-            <Text size="sm" weight="semibold" color="#fff">
-              {t('facilityDetail.checkExternalBooking')}
-            </Text>
-          </TouchableOpacity>
-        )}
       </View>
     </View>
   );
@@ -386,13 +364,14 @@ export default function AvailabilityTab({
 }: AvailabilityTabProps) {
   // Guard for auth and onboarding
   const { guardAction } = useRequireOnboarding();
+  const { openSheetForMatchCreationFromBooking } = useActionsSheet();
 
   // Selected date and time filter
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
 
   // Selected slot for booking
-  const [selectedSlot, setSelectedSlot] = useState<FormattedSlot | null>(null);
+  const [, setSelectedSlot] = useState<FormattedSlot | null>(null);
 
   // Check if payments are enabled for this facility
   const paymentsEnabled = facility.paymentsEnabled ?? false;
@@ -419,11 +398,18 @@ export default function AvailabilityTab({
 
     const { courtIdSet, externalIdSet } = sportCourtIds;
 
-    // If no courts support this sport, return empty
-    if (courtIdSet.size === 0) return [];
+    // If no local courts support this sport, return all external (non-local) slots as-is
+    // External providers already return sport-scoped availability
+    if (courtIdSet.size === 0) {
+      return slots.filter(slot => !slot.isLocalSlot);
+    }
 
     return slots
       .map(slot => {
+        // For external slots (from third-party providers), include them as-is
+        // They are already sport-scoped by the external provider's API
+        if (!slot.isLocalSlot) return slot;
+
         // Filter court options to only sport-supported courts
         const filteredOptions = slot.courtOptions.filter(opt => {
           if (opt.courtId && courtIdSet.has(opt.courtId)) return true;
@@ -504,7 +490,18 @@ export default function AvailabilityTab({
 
       if (slot.isLocalSlot) {
         SheetManager.show('court-booking', {
-          payload: { facility, slot, courts },
+          payload: {
+            facility,
+            slot,
+            courts,
+            onCreateGameFromBooking: (data: {
+              facility: unknown;
+              slot: unknown;
+              facilityId: string;
+              courtId: string;
+              courtNumber: number | null;
+            }) => openSheetForMatchCreationFromBooking(data),
+          },
         });
       } else {
         SheetManager.show('external-booking', {
@@ -512,7 +509,7 @@ export default function AvailabilityTab({
         });
       }
     },
-    [guardAction, isSlotDisabled, facility, courts]
+    [guardAction, isSlotDisabled, facility, courts, openSheetForMatchCreationFromBooking]
   );
 
   // Group slots by date (using sport-filtered slots)
@@ -713,7 +710,7 @@ export default function AvailabilityTab({
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacingPixels[3],
+    gap: spacingPixels[4],
     paddingBottom: spacingPixels[4],
   },
   // Filter chips
@@ -801,7 +798,8 @@ const styles = StyleSheet.create({
   },
   // Empty state
   emptyContainer: {
-    padding: spacingPixels[4],
+    paddingHorizontal: spacingPixels[4],
+    paddingBottom: spacingPixels[4],
   },
   emptyCard: {
     padding: spacingPixels[8],

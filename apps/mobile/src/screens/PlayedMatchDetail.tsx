@@ -12,6 +12,7 @@ import type { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
+import type { MatchFormatEnum, MatchTypeEnum } from '@rallia/shared-types';
 import { useThemeStyles, useNavigateToPlayerProfile } from '../hooks';
 import { SportIcon } from '../components/SportIcon';
 import { getSafeAreaEdges } from '../utils';
@@ -47,9 +48,9 @@ interface GroupMatch {
     sport_id: string;
     match_date: string;
     start_time: string;
-    player_expectation: 'practice' | 'competitive' | 'both';
-    status: string;
-    format: 'singles' | 'doubles';
+    player_expectation: MatchTypeEnum;
+    cancelled_at: string | null;
+    format: MatchFormatEnum;
     created_by: string;
     sport?: {
       id: string;
@@ -343,8 +344,8 @@ export default function PlayedMatchDetailScreen() {
             <Text style={[styles.detailValue, { color: colors.textMuted }]}>
               {matchData?.player_expectation === 'competitive'
                 ? 'Competitive'
-                : matchData?.player_expectation === 'practice'
-                  ? 'Practice'
+                : matchData?.player_expectation === 'casual'
+                  ? 'Casual'
                   : 'Both'}
             </Text>
           </View>
@@ -466,8 +467,8 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: primary[500],
   },
   avatarSmall: {
     width: '100%',

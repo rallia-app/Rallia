@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Text, LocationSelector, type LocationMode } from '@rallia/shared-components';
-import { useTheme, DISTANCE_OPTIONS } from '@rallia/shared-hooks';
+import { useTheme, DISTANCE_OPTIONS, MATCH_TIER_OPTIONS } from '@rallia/shared-hooks';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import {
@@ -43,6 +43,7 @@ import type {
   DistanceFilter,
   DurationFilter,
   CourtStatusFilter,
+  MatchTierFilter,
   SpecificDateFilter,
 } from '@rallia/shared-hooks';
 
@@ -62,6 +63,7 @@ interface MatchFiltersBarProps {
   distance: DistanceFilter;
   duration: DurationFilter;
   courtStatus: CourtStatusFilter;
+  matchTier: MatchTierFilter;
   specificDate: SpecificDateFilter;
   onFormatChange: (format: FormatFilter) => void;
   onMatchTypeChange: (matchType: MatchTypeFilter) => void;
@@ -74,6 +76,7 @@ interface MatchFiltersBarProps {
   onDistanceChange: (distance: DistanceFilter) => void;
   onDurationChange: (duration: DurationFilter) => void;
   onCourtStatusChange: (courtStatus: CourtStatusFilter) => void;
+  onMatchTierChange: (matchTier: MatchTierFilter) => void;
   onSpecificDateChange: (specificDate: SpecificDateFilter) => void;
   onReset?: () => void;
   hasActiveFilters?: boolean;
@@ -89,7 +92,7 @@ const FORMAT_OPTIONS: FormatFilter[] = ['all', 'singles', 'doubles'];
 const MATCH_TYPE_OPTIONS: MatchTypeFilter[] = ['all', 'casual', 'competitive'];
 const TIME_OF_DAY_OPTIONS: TimeOfDayFilter[] = ['all', 'morning', 'afternoon', 'evening'];
 const SKILL_LEVEL_OPTIONS: SkillLevelFilter[] = ['all', 'beginner', 'intermediate', 'advanced'];
-const GENDER_OPTIONS: GenderFilter[] = ['all', 'male', 'female'];
+const GENDER_OPTIONS: GenderFilter[] = ['all', 'male', 'female', 'other'];
 const COST_OPTIONS: CostFilter[] = ['all', 'free', 'paid'];
 const JOIN_MODE_OPTIONS: JoinModeFilter[] = ['all', 'direct', 'request'];
 const DURATION_OPTIONS_LIST: DurationFilter[] = ['all', '30', '60', '90', '120+'];
@@ -346,6 +349,7 @@ export default function MatchFiltersBar({
   distance,
   duration,
   courtStatus,
+  matchTier,
   specificDate,
   onFormatChange,
   onMatchTypeChange,
@@ -358,6 +362,7 @@ export default function MatchFiltersBar({
   onDistanceChange,
   onDurationChange,
   onCourtStatusChange,
+  onMatchTierChange,
   onSpecificDateChange,
   onReset,
   hasActiveFilters = false,
@@ -384,6 +389,7 @@ export default function MatchFiltersBar({
   const [showDistanceDropdown, setShowDistanceDropdown] = useState(false);
   const [showDurationDropdown, setShowDurationDropdown] = useState(false);
   const [showCourtStatusDropdown, setShowCourtStatusDropdown] = useState(false);
+  const [showMatchTierDropdown, setShowMatchTierDropdown] = useState(false);
 
   // Date picker state
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -451,6 +457,10 @@ export default function MatchFiltersBar({
     (v: CourtStatusFilter) => t(`publicMatches.filters.courtStatus.${v}`),
     [t]
   );
+  const getMatchTierLabel = useCallback(
+    (v: MatchTierFilter) => t(`publicMatches.filters.tier.${v}` as TranslationKey),
+    [t]
+  );
   const getDistanceLabel = useCallback(
     (v: DistanceFilter) => {
       if (v === 'all') return t('publicMatches.filters.distance.all');
@@ -466,6 +476,16 @@ export default function MatchFiltersBar({
       morning: 'sunny-outline',
       afternoon: 'partly-sunny-outline',
       evening: 'moon-outline',
+    };
+    return icons[v];
+  }, []);
+
+  const getMatchTierIcon = useCallback((v: MatchTierFilter) => {
+    const icons: Record<MatchTierFilter, keyof typeof Ionicons.glyphMap | undefined> = {
+      all: undefined,
+      mostWanted: 'flame-outline',
+      covetedPlayers: 'star-outline',
+      courtBooked: 'checkmark-circle-outline',
     };
     return icons[v];
   }, []);
@@ -506,6 +526,8 @@ export default function MatchFiltersBar({
     courtStatus === 'all'
       ? t('publicMatches.filters.courtStatus.label')
       : getCourtStatusLabel(courtStatus);
+  const matchTierDisplay =
+    matchTier === 'all' ? t('publicMatches.filters.tier.label') : getMatchTierLabel(matchTier);
 
   // Date display - combines dateRange and specificDate
   const getDateDisplay = useCallback(() => {
@@ -619,6 +641,135 @@ export default function MatchFiltersBar({
   // Current date selection for the dropdown
   const currentDateSelection = specificDate ? 'pick_date' : dateRange;
 
+  // =============================================================================
+  // SORTED FILTER CHIPS — active filters float to front
+  // =============================================================================
+
+  const filterChips = useMemo(() => {
+    const chips: {
+      key: string;
+      value: string;
+      isActive: boolean;
+      onPress: () => void;
+      icon?: keyof typeof Ionicons.glyphMap;
+    }[] = [
+      {
+        key: 'matchTier',
+        value: matchTierDisplay,
+        isActive: matchTier !== 'all',
+        onPress: () => setShowMatchTierDropdown(true),
+        icon: getMatchTierIcon(matchTier),
+      },
+      {
+        key: 'date',
+        value: getDateDisplay(),
+        isActive: dateRange !== 'all' || specificDate !== null,
+        onPress: handleDateChipPress,
+        icon: specificDate ? 'calendar' : undefined,
+      },
+      {
+        key: 'timeOfDay',
+        value: timeOfDayDisplay,
+        isActive: timeOfDay !== 'all',
+        onPress: () => setShowTimeDropdown(true),
+        icon: getTimeOfDayIcon(timeOfDay),
+      },
+      {
+        key: 'format',
+        value: formatDisplay,
+        isActive: format !== 'all',
+        onPress: () => setShowFormatDropdown(true),
+      },
+      {
+        key: 'matchType',
+        value: matchTypeDisplay,
+        isActive: matchType !== 'all',
+        onPress: () => setShowMatchTypeDropdown(true),
+      },
+      {
+        key: 'duration',
+        value: durationDisplay,
+        isActive: duration !== 'all',
+        onPress: () => setShowDurationDropdown(true),
+        icon: duration !== 'all' ? 'timer-outline' : undefined,
+      },
+      {
+        key: 'distance',
+        value: distanceDisplay,
+        isActive: distance !== 'all',
+        onPress: () => setShowDistanceDropdown(true),
+      },
+      {
+        key: 'skillLevel',
+        value: skillLevelDisplay,
+        isActive: skillLevel !== 'all',
+        onPress: () => setShowSkillDropdown(true),
+      },
+      {
+        key: 'gender',
+        value: genderDisplay,
+        isActive: gender !== 'all',
+        onPress: () => setShowGenderDropdown(true),
+      },
+      {
+        key: 'cost',
+        value: costDisplay,
+        isActive: cost !== 'all',
+        onPress: () => setShowCostDropdown(true),
+        icon: getCostIcon(cost),
+      },
+      {
+        key: 'courtStatus',
+        value: courtStatusDisplay,
+        isActive: courtStatus !== 'all',
+        onPress: () => setShowCourtStatusDropdown(true),
+      },
+      {
+        key: 'joinMode',
+        value: joinModeDisplay,
+        isActive: joinMode !== 'all',
+        onPress: () => setShowJoinModeDropdown(true),
+      },
+    ];
+
+    // Stable sort: active filters first, preserve relative order within each group
+    return [...chips].sort((a, b) => {
+      if (a.isActive && !b.isActive) return -1;
+      if (!a.isActive && b.isActive) return 1;
+      return 0;
+    });
+  }, [
+    getDateDisplay,
+    dateRange,
+    specificDate,
+    handleDateChipPress,
+    timeOfDayDisplay,
+    timeOfDay,
+    getTimeOfDayIcon,
+    formatDisplay,
+    format,
+    matchTypeDisplay,
+    matchType,
+    durationDisplay,
+    duration,
+    distanceDisplay,
+    distance,
+    skillLevelDisplay,
+    skillLevel,
+    genderDisplay,
+    gender,
+    costDisplay,
+    cost,
+    getCostIcon,
+    courtStatusDisplay,
+    courtStatus,
+    matchTierDisplay,
+    matchTier,
+    getMatchTierIcon,
+    joinModeDisplay,
+    joinMode,
+  ]);
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -640,99 +791,7 @@ export default function MatchFiltersBar({
           </View>
         )}
 
-        {/* Date Filter */}
-        <FilterChip
-          value={getDateDisplay()}
-          isActive={dateRange !== 'all' || specificDate !== null}
-          onPress={handleDateChipPress}
-          isDark={isDark}
-          icon={specificDate ? 'calendar' : undefined}
-        />
-
-        {/* Time of Day Filter */}
-        <FilterChip
-          value={timeOfDayDisplay}
-          isActive={timeOfDay !== 'all'}
-          onPress={() => setShowTimeDropdown(true)}
-          isDark={isDark}
-          icon={getTimeOfDayIcon(timeOfDay)}
-        />
-
-        {/* Format Filter */}
-        <FilterChip
-          value={formatDisplay}
-          isActive={format !== 'all'}
-          onPress={() => setShowFormatDropdown(true)}
-          isDark={isDark}
-        />
-
-        {/* Match Type Filter */}
-        <FilterChip
-          value={matchTypeDisplay}
-          isActive={matchType !== 'all'}
-          onPress={() => setShowMatchTypeDropdown(true)}
-          isDark={isDark}
-        />
-
-        {/* Duration Filter */}
-        <FilterChip
-          value={durationDisplay}
-          isActive={duration !== 'all'}
-          onPress={() => setShowDurationDropdown(true)}
-          isDark={isDark}
-          icon={duration !== 'all' ? 'timer-outline' : undefined}
-        />
-
-        {/* Distance Filter */}
-        <FilterChip
-          value={distanceDisplay}
-          isActive={distance !== 'all'}
-          onPress={() => setShowDistanceDropdown(true)}
-          isDark={isDark}
-        />
-
-        {/* Skill Level Filter */}
-        <FilterChip
-          value={skillLevelDisplay}
-          isActive={skillLevel !== 'all'}
-          onPress={() => setShowSkillDropdown(true)}
-          isDark={isDark}
-        />
-
-        {/* Gender Filter */}
-        <FilterChip
-          value={genderDisplay}
-          isActive={gender !== 'all'}
-          onPress={() => setShowGenderDropdown(true)}
-          isDark={isDark}
-        />
-
-        {/* Cost Filter */}
-        <FilterChip
-          value={costDisplay}
-          isActive={cost !== 'all'}
-          onPress={() => setShowCostDropdown(true)}
-          isDark={isDark}
-          icon={getCostIcon(cost)}
-        />
-
-        {/* Court Status Filter */}
-        <FilterChip
-          value={courtStatusDisplay}
-          isActive={courtStatus !== 'all'}
-          onPress={() => setShowCourtStatusDropdown(true)}
-          isDark={isDark}
-        />
-
-        {/* Join Mode Filter */}
-        <FilterChip
-          value={joinModeDisplay}
-          isActive={joinMode !== 'all'}
-          onPress={() => setShowJoinModeDropdown(true)}
-          isDark={isDark}
-        />
-
-        {/* Reset Button */}
+        {/* Reset Button — shown after location selector, before filter chips */}
         {hasActiveFilters && onReset && (
           <TouchableOpacity
             style={[
@@ -755,6 +814,18 @@ export default function MatchFiltersBar({
             </Text>
           </TouchableOpacity>
         )}
+
+        {/* Filter Chips — sorted with active filters first */}
+        {filterChips.map(chip => (
+          <FilterChip
+            key={chip.key}
+            value={chip.value}
+            isActive={chip.isActive}
+            onPress={chip.onPress}
+            isDark={isDark}
+            icon={chip.icon}
+          />
+        ))}
       </ScrollView>
 
       {/* =================================================================== */}
@@ -882,6 +953,19 @@ export default function MatchFiltersBar({
         onClose={() => setShowCourtStatusDropdown(false)}
         isDark={isDark}
         getLabel={getCourtStatusLabel}
+      />
+
+      {/* Match Tier Dropdown */}
+      <FilterDropdown
+        visible={showMatchTierDropdown}
+        title={t('publicMatches.filters.tier.label')}
+        options={MATCH_TIER_OPTIONS as MatchTierFilter[]}
+        selectedValue={matchTier}
+        onSelect={onMatchTierChange}
+        onClose={() => setShowMatchTierDropdown(false)}
+        isDark={isDark}
+        getLabel={getMatchTierLabel}
+        getIcon={getMatchTierIcon}
       />
 
       {/* Join Mode Dropdown */}

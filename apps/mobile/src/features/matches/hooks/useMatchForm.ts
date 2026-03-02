@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useMemo, useEffect, useRef } from 'react';
-import { useForm, UseFormReturn } from 'react-hook-form';
+import { useForm, useWatch, UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   matchFormSchema,
@@ -14,6 +14,14 @@ import {
   type Step2FormData,
   type Step3FormData,
   type MatchWithDetails,
+  type MatchFormatEnum,
+  type LocationTypeEnum,
+  type MatchVisibilityEnum,
+  type MatchJoinModeEnum,
+  type GenderEnum,
+  type CourtStatusEnum,
+  type CostSplitTypeEnum,
+  type MatchTypeEnum,
 } from '@rallia/shared-types';
 
 /**
@@ -142,22 +150,22 @@ export function matchToFormData(
   match: MatchWithDetails,
   timezone: string
 ): Partial<MatchFormSchemaData> {
-  // Map court_status database values to form values
-  const courtStatusMap: Record<string, 'booked' | 'to_book' | 'tbd' | undefined> = {
+  // Map DB court_status values to form values
+  const courtStatusMap: Record<CourtStatusEnum, MatchFormSchemaData['courtStatus']> = {
     reserved: 'booked',
     to_reserve: 'to_book',
   };
 
-  // Map cost_split_type database values to form values
-  const costSplitMap: Record<string, 'equal' | 'creator_pays' | 'custom'> = {
+  // Map DB cost_split_type values to form values
+  const costSplitMap: Record<CostSplitTypeEnum, MatchFormSchemaData['costSplitType']> = {
     host_pays: 'creator_pays',
     split_equal: 'equal',
     custom: 'custom',
   };
 
-  // Map player_expectation database values to form values
+  // Map DB player_expectation values to form values
   // Handle both legacy 'practice' and new 'casual' values for backward compatibility
-  const playerExpectationMap: Record<string, 'casual' | 'competitive' | 'both'> = {
+  const playerExpectationMap: Record<string, MatchTypeEnum> = {
     casual: 'casual',
     practice: 'casual', // Legacy value mapping
     competitive: 'competitive',
@@ -187,11 +195,11 @@ export function matchToFormData(
     timezone: match.timezone || timezone,
     duration,
     customDurationMinutes: customMinutes,
-    format: (match.format as 'singles' | 'doubles') || 'singles',
+    format: (match.format as MatchFormatEnum) || 'singles',
     playerExpectation: match.player_expectation
       ? playerExpectationMap[match.player_expectation] || 'both'
       : 'both',
-    locationType: (match.location_type as 'facility' | 'custom' | 'tbd') || 'tbd',
+    locationType: (match.location_type as LocationTypeEnum) || 'tbd',
     facilityId: match.facility_id || undefined,
     courtId: match.court_id || undefined,
     locationName: match.location_name || undefined,
@@ -204,16 +212,11 @@ export function matchToFormData(
     costSplitType: match.cost_split_type ? costSplitMap[match.cost_split_type] || 'equal' : 'equal',
     estimatedCost: match.estimated_cost ?? undefined,
     minRatingScoreId: match.min_rating_score_id || undefined,
-    preferredOpponentGender: match.preferred_opponent_gender as
-      | 'male'
-      | 'female'
-      | 'other'
-      | 'any'
-      | undefined,
-    visibility: (match.visibility as 'public' | 'private') || 'public',
+    preferredOpponentGender: match.preferred_opponent_gender as GenderEnum | 'any' | undefined,
+    visibility: (match.visibility as MatchVisibilityEnum) || 'public',
     visibleInGroups: match.visible_in_groups ?? true,
     visibleInCommunities: match.visible_in_communities ?? true,
-    joinMode: (match.join_mode as 'direct' | 'request') || 'direct',
+    joinMode: (match.join_mode as MatchJoinModeEnum) || 'direct',
     notes: match.notes || undefined,
   };
 }
@@ -274,7 +277,12 @@ export function useMatchForm(options: UseMatchFormOptions): UseMatchFormReturn {
   const defaultValues = useMemo(() => {
     const defaults = getDefaultValues(sportId, timezone);
     if (initialValues) {
-      return { ...defaults, ...initialValues, sportId, timezone };
+      return {
+        ...defaults,
+        ...initialValues,
+        sportId,
+        timezone: initialValues.timezone || timezone,
+      };
     }
     return defaults;
   }, [sportId, timezone, initialValues]);
@@ -286,8 +294,8 @@ export function useMatchForm(options: UseMatchFormOptions): UseMatchFormReturn {
     mode: 'onChange',
   });
 
-  const { watch, trigger, formState, reset, setValue } = form;
-  const values = watch();
+  const { trigger, formState, reset, setValue } = form;
+  const values = useWatch({ control: form.control }) as MatchFormSchemaData;
 
   // Reset form when sportId changes (handles sport switching)
   // Use a ref to track the previous sportId and only reset on actual changes

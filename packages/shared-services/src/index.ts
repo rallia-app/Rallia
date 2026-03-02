@@ -22,12 +22,24 @@ export * from './match-share';
 export * from './groups';
 export * from './communities';
 export * from './chat';
-export * from './reports';
+// Reports - explicit exports to avoid conflicts with admin/moderationService
+export {
+  createReport as createUserReport,
+  getMyReports as getUserReports,
+  REPORT_REASON_LABELS,
+} from './reports';
+export type {
+  CreateReportParams as CreateUserReportParams,
+  ReportReason,
+  PlayerReportType,
+} from './reports';
 // Bookings - client-safe exports (types, validation, status, policy)
 // For server-side functions (createBooking, cancelBooking), use web app's lib/bookings
 export * from './bookings';
 export * from './programs';
 export * from './tour';
+export * from './feedback';
+export * from './admin';
 
 // Export default DatabaseService
 export { default } from './database';

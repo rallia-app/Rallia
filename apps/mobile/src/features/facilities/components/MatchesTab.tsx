@@ -8,6 +8,7 @@ import React, { useCallback, useMemo } from 'react';
 import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MatchCard, Text } from '@rallia/shared-components';
+import { SportIcon } from '../../../components/SportIcon';
 import {
   useTheme,
   usePlayer,
@@ -18,9 +19,8 @@ import {
 import { useThemeStyles, useTranslation, useEffectiveLocation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { useMatchDetailSheet, useSport } from '../../../context';
-import { SportIcon } from '../../../components/SportIcon';
 import { Logger } from '@rallia/shared-services';
-import { spacingPixels } from '@rallia/design-system';
+import { spacingPixels, neutral } from '@rallia/design-system';
 import { SearchBar, MatchFiltersBar } from '../../matches/components';
 
 // =============================================================================
@@ -104,6 +104,7 @@ export default function MatchesTab({ facilityId }: MatchesTabProps) {
     setDistance,
     setDuration,
     setCourtStatus,
+    setMatchTier,
     setSpecificDate,
     resetFilters,
     clearSearch,
@@ -169,6 +170,13 @@ export default function MatchesTab({ facilityId }: MatchesTabProps) {
         t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
         locale={locale}
         currentPlayerId={player?.id}
+        sportIcon={
+          <SportIcon
+            sportName={item.sport?.name ?? 'tennis'}
+            size={100}
+            color={isDark ? neutral[600] : neutral[400]}
+          />
+        }
         onPress={() => {
           Logger.logUserAction('facility_match_pressed', { matchId: item.id });
           openMatchDetail(item);
@@ -284,6 +292,7 @@ export default function MatchesTab({ facilityId }: MatchesTabProps) {
           distance={filters.distance}
           duration={filters.duration}
           courtStatus={filters.courtStatus}
+          matchTier={filters.matchTier}
           specificDate={filters.specificDate}
           onFormatChange={setFormat}
           onMatchTypeChange={setMatchType}
@@ -296,6 +305,7 @@ export default function MatchesTab({ facilityId }: MatchesTabProps) {
           onDistanceChange={setDistance}
           onDurationChange={setDuration}
           onCourtStatusChange={setCourtStatus}
+          onMatchTierChange={setMatchTier}
           onSpecificDateChange={setSpecificDate}
           onReset={resetFilters}
           hasActiveFilters={hasActiveFilters}
@@ -362,7 +372,7 @@ const styles = StyleSheet.create({
     marginTop: spacingPixels[2],
   },
   headerContainer: {
-    paddingTop: spacingPixels[3],
+    // Top spacing comes from FacilityDetail contentWithTopPadding
   },
   searchRow: {
     flexDirection: 'row',
@@ -380,7 +390,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     flexGrow: 1,
-    paddingBottom: spacingPixels[5],
+    paddingBottom: spacingPixels[6],
   },
   emptyListContent: {
     justifyContent: 'center',

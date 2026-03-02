@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { Separator } from '@/components/ui/separator';
 import { Mail } from 'lucide-react';
+import { Link } from '@/i18n/navigation';
 
 export async function Footer() {
   const t = await getTranslations('footer');
@@ -31,12 +32,12 @@ export async function Footer() {
             <h4 className="font-semibold mb-4">{t('quickLinks')}</h4>
             <ul className="space-y-3 text-sm">
               <li>
-                <a
-                  href="#waitlist"
+                <Link
+                  href="/beta"
                   className="text-gray-600 dark:text-gray-400 hover:text-foreground transition-colors"
                 >
-                  {t('joinWaitlist')}
-                </a>
+                  {t('joinBeta')}
+                </Link>
               </li>
             </ul>
           </div>

@@ -1,16 +1,16 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { EditFacilityDialog } from '@/components/edit-facility-dialog';
+import { FacilityDialog, type FacilityInitialData } from '@/components/facility-dialog';
 import { Edit } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
 interface FacilityEditButtonProps {
-  facilityId: string;
+  facility: FacilityInitialData;
 }
 
-export function FacilityEditButton({ facilityId }: FacilityEditButtonProps) {
+export function FacilityEditButton({ facility }: FacilityEditButtonProps) {
   const t = useTranslations('facilities');
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -20,7 +20,7 @@ export function FacilityEditButton({ facilityId }: FacilityEditButtonProps) {
         <Edit className="mr-2 size-4" />
         {t('detail.editButton')}
       </Button>
-      <EditFacilityDialog open={dialogOpen} onOpenChange={setDialogOpen} facilityId={facilityId} />
+      <FacilityDialog open={dialogOpen} onOpenChange={setDialogOpen} initialData={facility} />
     </>
   );
 }

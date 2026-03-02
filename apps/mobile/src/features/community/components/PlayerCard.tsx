@@ -13,6 +13,7 @@ import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import { isPlayerOnline } from '@rallia/shared-services';
+import { useTranslation } from '../../../hooks';
 
 interface ThemeColors {
   background: string;
@@ -30,9 +31,22 @@ interface PlayerCardProps {
   onPress: (player: PlayerSearchResult) => void;
 }
 
+function formatDistance(meters: number | null, nearbyLabel: string): string {
+  if (meters === null || meters === undefined) return '';
+  if (meters < 100) {
+    return nearbyLabel;
+  }
+  if (meters < 1000) {
+    return `${Math.round(meters)} m`;
+  }
+  return `${(meters / 1000).toFixed(1)} km`;
+}
+
 const PlayerCard: React.FC<PlayerCardProps> = ({ player, colors, onPress }) => {
+  const { t } = useTranslation();
   const displayName =
     player.display_name || `${player.first_name} ${player.last_name || ''}`.trim();
+  const distanceText = formatDistance(player.distance_meters, t('playerDirectory.nearby'));
   const [isOnline, setIsOnline] = useState(false);
   // Animation value - using useMemo for stable instance
   const scaleAnim = useMemo(() => new Animated.Value(1), []);
@@ -98,7 +112,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, colors, onPress }) => {
             {displayName}
           </Text>
 
-          {player.city && (
+          {(player.city || distanceText) && (
             <View style={styles.locationRow}>
               <Ionicons name="location-outline" size={14} color={colors.textMuted} />
               <Text
@@ -107,7 +121,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, colors, onPress }) => {
                 style={styles.locationText}
                 numberOfLines={1}
               >
-                {player.city}
+                {[player.city, distanceText].filter(Boolean).join(' · ')}
               </Text>
             </View>
           )}

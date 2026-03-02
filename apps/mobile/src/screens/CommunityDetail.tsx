@@ -33,7 +33,6 @@ import {
   useTranslation,
   useNavigateToPlayerProfile,
   useRequireOnboarding,
-  type TranslationKey,
 } from '../hooks';
 import { useSport } from '../context';
 import { SportIcon } from '../components/SportIcon';
@@ -58,7 +57,7 @@ import type { GroupWithMembers } from '@rallia/shared-services';
 import { SheetManager } from 'react-native-actions-sheet';
 import type { RootStackParamList } from '../navigation/types';
 import { primary } from '@rallia/design-system';
-import { AddCommunityMemberModal, EditCommunityModal } from '../features/communities';
+
 import { AddScoreIntroModal, AddScoreModal, type MatchType } from '../features/matches';
 
 const HEADER_HEIGHT = 140;
@@ -98,7 +97,7 @@ export default function CommunityDetailScreen() {
 
   // Add Score flow state
   const [showAddScoreIntro, setShowAddScoreIntro] = useState(false);
-  const [showMatchTypeModal, setShowMatchTypeModal] = useState(false);
+
   const [showAddScoreModal, setShowAddScoreModal] = useState(false);
   const [selectedMatchType, setSelectedMatchType] = useState<MatchType>('single');
   const [hasSeenAddScoreIntro, setHasSeenAddScoreIntro] = useState<boolean | null>(null);
@@ -1190,6 +1189,16 @@ export default function CommunityDetailScreen() {
                       icon = 'exit';
                       iconColor = '#FF3B30';
                       break;
+                    case 'member_promoted':
+                      message = `${actorName} was promoted to moderator`;
+                      icon = 'arrow-up-circle';
+                      iconColor = '#34C759';
+                      break;
+                    case 'member_demoted':
+                      message = `${actorName} was demoted to member`;
+                      icon = 'arrow-down-circle';
+                      iconColor = '#FF9500';
+                      break;
                     case 'game_created':
                       message = `${actorName} created a new game`;
                       icon = 'sport'; // Rendered as SportIcon below
@@ -1407,6 +1416,7 @@ export default function CommunityDetailScreen() {
                   group: community as unknown as GroupWithMembers,
                   currentUserId: playerId ?? '',
                   isModerator: isModerator ?? false,
+                  type: 'community',
                   onMemberRemoved: () => refetch(),
                   onPlayerPress: (memberId: string) => {
                     SheetManager.hide('member-list');
@@ -1789,8 +1799,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: primary[500],
     overflow: 'hidden',
   },
   memberAvatarImage: {

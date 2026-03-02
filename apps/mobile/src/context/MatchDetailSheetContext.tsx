@@ -29,6 +29,8 @@ import { getMatchWithDetails } from '@rallia/shared-services';
 export interface MatchDetailData extends MatchWithDetails {
   /** Distance in meters from the user's location, returned by the search_matches_nearby RPC */
   distance_meters?: number | null;
+  /** Timestamp when the host last edited the match */
+  host_edited_at: string | null;
 }
 
 interface MatchDetailSheetContextType {
@@ -46,6 +48,9 @@ interface MatchDetailSheetContextType {
 
   /** Update the selected match */
   updateSelectedMatch: (match: MatchDetailData) => void;
+
+  /** Callback for BottomSheetModal onDismiss — clears selectedMatch after animation completes */
+  handleSheetDismiss: () => void;
 }
 
 // =============================================================================
@@ -91,14 +96,19 @@ export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> =
   }, []);
 
   /**
-   * Close the sheet and clear the selected match
+   * Close the sheet. Selected match is cleared via handleSheetDismiss
+   * which fires after the dismiss animation completes.
    */
   const closeSheet = useCallback(() => {
     sheetRef.current?.dismiss();
-    // Clear selected match after a delay to allow dismiss animation
-    setTimeout(() => {
-      setSelectedMatch(null);
-    }, 300);
+  }, []);
+
+  /**
+   * Called by BottomSheetModal's onDismiss — clears selectedMatch
+   * only after the dismiss animation has fully completed.
+   */
+  const handleSheetDismiss = useCallback(() => {
+    setSelectedMatch(null);
   }, []);
 
   /**
@@ -114,6 +124,7 @@ export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> =
     selectedMatch,
     sheetRef,
     updateSelectedMatch,
+    handleSheetDismiss,
   };
 
   return (

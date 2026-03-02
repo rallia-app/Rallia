@@ -21,7 +21,9 @@ export const playerKeys = {
     filters: PlayerFilters,
     favoritePlayerIds: string[],
     blockedPlayerIds: string[],
-    excludePlayerIds: string[]
+    excludePlayerIds: string[],
+    latitude?: number,
+    longitude?: number
   ) =>
     [
       ...playerKeys.search(),
@@ -32,6 +34,8 @@ export const playerKeys = {
       JSON.stringify(favoritePlayerIds),
       JSON.stringify(blockedPlayerIds),
       JSON.stringify(excludePlayerIds),
+      latitude ?? null,
+      longitude ?? null,
     ] as const,
 };
 
@@ -59,6 +63,10 @@ interface UsePlayerSearchOptions {
   debounceMs?: number;
   /** Enable/disable the query */
   enabled?: boolean;
+  /** User's current latitude (for distance calculation) */
+  latitude?: number;
+  /** User's current longitude (for distance calculation) */
+  longitude?: number;
 }
 
 interface UsePlayerSearchReturn {
@@ -111,6 +119,8 @@ export function usePlayerSearch(options: UsePlayerSearchOptions): UsePlayerSearc
     pageSize = DEFAULT_PAGE_SIZE,
     debounceMs = 300,
     enabled = true,
+    latitude,
+    longitude,
   } = options;
 
   // Debounce the search query
@@ -127,7 +137,9 @@ export function usePlayerSearch(options: UsePlayerSearchOptions): UsePlayerSearc
       filters,
       favoritePlayerIds,
       blockedPlayerIds,
-      excludePlayerIds
+      excludePlayerIds,
+      latitude,
+      longitude
     ),
     queryFn: async ({ pageParam }) => {
       if (!sportId) {
@@ -144,6 +156,8 @@ export function usePlayerSearch(options: UsePlayerSearchOptions): UsePlayerSearc
         filters,
         favoritePlayerIds,
         blockedPlayerIds,
+        latitude,
+        longitude,
       });
     },
     getNextPageParam: lastPage => lastPage.nextOffset,

@@ -6,8 +6,8 @@
  */
 
 import React, { useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
+import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
@@ -107,60 +107,49 @@ export function CourtSelectionActionSheet({ payload }: SheetProps<'court-selecti
   return (
     <ActionSheet
       gestureEnabled
-      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
+      containerStyle={[styles.sheetContainer, { backgroundColor: colors.cardBackground }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerContent}>
-            {/* Icon */}
-            <View style={[styles.iconContainer, { backgroundColor: `${colors.buttonActive}15` }]}>
-              <Ionicons name="calendar-outline" size={24} color={colors.buttonActive} />
-            </View>
-
-            {/* Title */}
-            <View style={styles.titleContainer}>
-              <Text size="lg" weight="semibold" color={colors.text}>
-                {t('matchCreation.booking.selectCourt')}
-              </Text>
-              <Text size="sm" color={colors.textMuted}>
-                {timeLabel} • {courts.length}{' '}
-                {courts.length === 1
-                  ? t('matchCreation.booking.courtAvailable')
-                  : t('matchCreation.booking.courtsAvailable')}
-              </Text>
-            </View>
-          </View>
-
-          {/* Close button */}
-          <TouchableOpacity
-            onPress={handleCancel}
-            style={[styles.closeButton, { backgroundColor: colors.buttonInactive }]}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
-          </TouchableOpacity>
+      {/* Header */}
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={styles.headerCenter}>
+          <Text size="lg" weight="semibold" color={colors.text}>
+            {t('matchCreation.booking.selectCourt')}
+          </Text>
+          <Text size="sm" color={colors.textMuted}>
+            {timeLabel} • {courts.length}{' '}
+            {courts.length === 1
+              ? t('matchCreation.booking.courtAvailable')
+              : t('matchCreation.booking.courtsAvailable')}
+          </Text>
         </View>
-
-        {/* Court list */}
-        <ScrollView
-          style={styles.courtList}
-          contentContainerStyle={styles.courtListContent}
-          showsVerticalScrollIndicator={false}
+        <TouchableOpacity
+          onPress={handleCancel}
+          style={styles.closeButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          {courts.map((court, index) => (
-            <CourtItem
-              key={`${court.facilityScheduleId}-${index}`}
-              court={court}
-              onPress={() => handleSelect(court)}
-              colors={colors}
-              t={t}
-            />
-          ))}
-        </ScrollView>
+          <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
 
-        {/* Cancel Button */}
+      {/* Court list */}
+      <ScrollView
+        contentContainerStyle={styles.courtListContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {courts.map((court, index) => (
+          <CourtItem
+            key={`${court.facilityScheduleId}-${index}`}
+            court={court}
+            onPress={() => handleSelect(court)}
+            colors={colors}
+            t={t}
+          />
+        ))}
+      </ScrollView>
+
+      {/* Footer */}
+      <View style={[styles.footer, { borderTopColor: colors.border }]}>
         <TouchableOpacity
           style={[styles.cancelButton, { backgroundColor: colors.buttonInactive }]}
           onPress={handleCancel}
@@ -183,8 +172,7 @@ export const CourtSelectionSheet = CourtSelectionActionSheet;
 // =============================================================================
 
 const styles = StyleSheet.create({
-  sheetBackground: {
-    flex: 1,
+  sheetContainer: {
     borderTopLeftRadius: radiusPixels['2xl'],
     borderTopRightRadius: radiusPixels['2xl'],
   },
@@ -194,45 +182,24 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     alignSelf: 'center',
   },
-  container: {
-    flex: 1,
-  },
   header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    padding: spacingPixels[5],
-    paddingBottom: spacingPixels[4],
-  },
-  headerContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[3],
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: radiusPixels.full,
     alignItems: 'center',
     justifyContent: 'center',
+    padding: spacingPixels[4],
+    borderBottomWidth: 1,
+    position: 'relative',
   },
-  titleContainer: {
-    flex: 1,
+  headerCenter: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: radiusPixels.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: spacingPixels[2],
-  },
-  courtList: {
-    flex: 1,
+    padding: spacingPixels[1],
+    position: 'absolute',
+    right: spacingPixels[4],
   },
   courtListContent: {
-    paddingHorizontal: spacingPixels[4],
+    padding: spacingPixels[4],
   },
   courtItem: {
     flexDirection: 'row',
@@ -253,8 +220,11 @@ const styles = StyleSheet.create({
   courtInfo: {
     flex: 1,
   },
+  footer: {
+    padding: spacingPixels[4],
+    borderTopWidth: 1,
+  },
   cancelButton: {
-    margin: spacingPixels[4],
     paddingVertical: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     alignItems: 'center',

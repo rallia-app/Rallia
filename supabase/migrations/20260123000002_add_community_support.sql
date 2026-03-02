@@ -110,6 +110,25 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- RLS POLICIES: Update for public community visibility
 -- =============================================================================
 
+-- First, ensure is_network_member function exists (it may have been skipped by earlier migrations)
+CREATE OR REPLACE FUNCTION is_network_member(network_id_param UUID, user_id_param UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.network_member
+    WHERE network_id = network_id_param
+    AND player_id = user_id_param
+    AND status = 'active'
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION is_network_member(UUID, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION is_network_member(UUID, UUID) TO anon;
+
 -- Drop existing network SELECT policy and recreate with community support
 DROP POLICY IF EXISTS "network_select_policy" ON public.network;
 DROP POLICY IF EXISTS "Users can view networks they are members of" ON public.network;
