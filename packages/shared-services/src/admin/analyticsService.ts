@@ -127,7 +127,12 @@ export async function getRealtimeUserStats(): Promise<RealtimeUserStats> {
  */
 async function getFallbackUserStats(): Promise<RealtimeUserStats> {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date();
+    const todayStart = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    ).toISOString();
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -140,7 +145,7 @@ async function getFallbackUserStats(): Promise<RealtimeUserStats> {
     const { count: newToday } = await supabase
       .from('profile')
       .select('id', { count: 'exact', head: true })
-      .gte('created_at', today);
+      .gte('created_at', todayStart);
 
     // New users this week
     const { count: newWeek } = await supabase
@@ -148,16 +153,28 @@ async function getFallbackUserStats(): Promise<RealtimeUserStats> {
       .select('id', { count: 'exact', head: true })
       .gte('created_at', weekAgo);
 
-    // Active users (approximate using profile updated_at as proxy)
-    const { count: activeMonth } = await supabase
-      .from('profile')
+    // Active users today (using player.last_seen_at)
+    const { count: activeToday } = await supabase
+      .from('player')
       .select('id', { count: 'exact', head: true })
-      .gte('updated_at', monthAgo);
+      .gte('last_seen_at', todayStart);
+
+    // Active users this week
+    const { count: activeWeek } = await supabase
+      .from('player')
+      .select('id', { count: 'exact', head: true })
+      .gte('last_seen_at', weekAgo);
+
+    // Active users this month
+    const { count: activeMonth } = await supabase
+      .from('player')
+      .select('id', { count: 'exact', head: true })
+      .gte('last_seen_at', monthAgo);
 
     return {
       totalUsers: totalUsers || 0,
-      activeToday: Math.round((activeMonth || 0) / 30),
-      activeWeek: Math.round((activeMonth || 0) / 4),
+      activeToday: activeToday || 0,
+      activeWeek: activeWeek || 0,
       activeMonth: activeMonth || 0,
       newToday: newToday || 0,
       newWeek: newWeek || 0,
@@ -259,6 +276,43 @@ async function getFallbackMatchStats(
       cancelledMatches: 0,
       avgParticipants: 0,
     };
+  }
+}
+
+/**
+ * Get count of matches scheduled for today
+ */
+export async function getMatchesTodayCount(): Promise<number> {
+  try {
+    // Get today's date boundaries in UTC
+    const today = new Date();
+    const startOfDay = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    ).toISOString();
+    const endOfDay = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate() + 1
+    ).toISOString();
+
+    const { count, error } = await supabase
+      .from('match')
+      .select('id', { count: 'exact', head: true })
+      .gte('match_date', startOfDay)
+      .lt('match_date', endOfDay)
+      .is('cancelled_at', null);
+
+    if (error) {
+      console.error('Error fetching matches today:', error);
+      return 0;
+    }
+
+    return count || 0;
+  } catch (error) {
+    console.error('Error in getMatchesTodayCount:', error);
+    return 0;
   }
 }
 
@@ -1881,29 +1935,29 @@ export async function getReportVolume(startDate?: Date, endDate?: Date): Promise
 
     if (error) {
       console.error('Error in getReportVolume:', error);
-      return getDefaultReportVolume();
+      return []; // Return empty array, not fake data
     }
 
     if (data && data.length > 0) {
       return data.map(
         (row: {
-          report_date: string;
-          report_count: number;
-          resolved_count: number;
+          date: string;
+          reports_created: number; // RPC column name
+          reports_resolved: number; // RPC column name
           resolution_rate: number;
         }) => ({
-          date: row.report_date,
-          reportCount: Number(row.report_count) || 0,
-          resolvedCount: Number(row.resolved_count) || 0,
+          date: row.date,
+          reportCount: Number(row.reports_created) || 0,
+          resolvedCount: Number(row.reports_resolved) || 0,
           resolutionRate: Number(row.resolution_rate) || 0,
         })
       );
     }
 
-    return getDefaultReportVolume();
+    return []; // Return empty array when no data
   } catch (error) {
     console.error('Error in getReportVolume:', error);
-    return getDefaultReportVolume();
+    return [];
   }
 }
 
@@ -1939,43 +1993,46 @@ export async function getReportTypes(): Promise<ReportTypeDistribution[]> {
 
     if (error) {
       console.error('Error in getReportTypes:', error);
-      return getDefaultReportTypes();
+      return []; // Return empty array on error, not fake data
     }
 
     if (data && data.length > 0) {
+      // Import priority derivation from report type
+      const { getReportTypePriority } = await import('../reports/reportService');
+
       return data.map(
         (row: {
           report_type: string;
-          report_count: number;
+          count: number; // RPC returns 'count', not 'report_count'
           percentage: number;
-          priority: string;
         }) => ({
-          type: row.report_type,
-          count: Number(row.report_count) || 0,
+          type: row.report_type || 'Unknown',
+          count: Number(row.count) || 0,
           percentage: Number(row.percentage) || 0,
-          priority: row.priority as ReportTypeDistribution['priority'],
+          // Derive priority from report type instead of relying on DB value
+          priority: getReportTypePriority(row.report_type),
         })
       );
     }
 
-    return getDefaultReportTypes();
+    return []; // Return empty array when no data, not fake defaults
   } catch (error) {
     console.error('Error in getReportTypes:', error);
-    return getDefaultReportTypes();
+    return [];
   }
 }
 
 /**
- * Default report types data
+ * Default report types data (matches getReportTypePriority mapping)
  */
 function getDefaultReportTypes(): ReportTypeDistribution[] {
   return [
-    { type: 'No-Show', count: 145, percentage: 35, priority: 'medium' },
-    { type: 'Harassment', count: 82, percentage: 20, priority: 'high' },
-    { type: 'Cheating', count: 62, percentage: 15, priority: 'high' },
-    { type: 'Inappropriate Behavior', count: 54, percentage: 13, priority: 'medium' },
-    { type: 'Spam', count: 41, percentage: 10, priority: 'low' },
-    { type: 'Other', count: 29, percentage: 7, priority: 'low' },
+    { type: 'no_show', count: 145, percentage: 35, priority: 'low' },
+    { type: 'harassment', count: 82, percentage: 20, priority: 'high' },
+    { type: 'cheating', count: 62, percentage: 15, priority: 'medium' },
+    { type: 'inappropriate_content', count: 54, percentage: 13, priority: 'medium' },
+    { type: 'spam', count: 41, percentage: 10, priority: 'low' },
+    { type: 'other', count: 29, percentage: 7, priority: 'low' },
   ];
 }
 
@@ -1983,29 +2040,38 @@ function getDefaultReportTypes(): ReportTypeDistribution[] {
  * Get resolution metrics
  */
 export async function getResolutionMetrics(): Promise<ResolutionMetrics> {
+  const emptyMetrics: ResolutionMetrics = {
+    avgResolutionTimeHours: 0,
+    withinSlaPercent: 0,
+    escalationRate: 0,
+    openReports: 0,
+    slaTargetHours: 24,
+  };
+
   try {
     const { data, error } = await supabase.rpc('get_resolution_metrics');
 
     if (error) {
       console.error('Error in getResolutionMetrics:', error);
-      return getDefaultResolutionMetrics();
+      return emptyMetrics;
     }
 
     if (data && data.length > 0) {
       const row = data[0];
       return {
-        avgResolutionTimeHours: Number(row.avg_resolution_time_hours) || 0,
-        withinSlaPercent: Number(row.within_sla_percent) || 0,
+        // Map RPC column names to service interface
+        avgResolutionTimeHours: Number(row.avg_resolution_hours) || 0,
+        withinSlaPercent: Number(row.resolved_within_sla_rate) || 0,
         escalationRate: Number(row.escalation_rate) || 0,
-        openReports: Number(row.open_reports) || 0,
-        slaTargetHours: Number(row.sla_target_hours) || 24,
+        openReports: Number(row.pending_reports) || 0,
+        slaTargetHours: 24, // Hardcoded SLA target
       };
     }
 
-    return getDefaultResolutionMetrics();
+    return emptyMetrics;
   } catch (error) {
     console.error('Error in getResolutionMetrics:', error);
-    return getDefaultResolutionMetrics();
+    return emptyMetrics;
   }
 }
 
@@ -2026,30 +2092,40 @@ function getDefaultResolutionMetrics(): ResolutionMetrics {
  * Get ban statistics
  */
 export async function getBanStatistics(): Promise<BanStatistics> {
+  const emptyStats: BanStatistics = {
+    activeBans: 0,
+    temporaryBans: 0,
+    permanentBans: 0,
+    recidivismRate: 0,
+    bansThisMonth: 0,
+    unbansThisMonth: 0,
+  };
+
   try {
     const { data, error } = await supabase.rpc('get_ban_statistics');
 
     if (error) {
       console.error('Error in getBanStatistics:', error);
-      return getDefaultBanStatistics();
+      return emptyStats;
     }
 
     if (data && data.length > 0) {
       const row = data[0];
       return {
-        activeBans: Number(row.active_bans) || 0,
+        // Map RPC column names to service interface
+        activeBans: Number(row.total_active_bans) || 0,
         temporaryBans: Number(row.temporary_bans) || 0,
         permanentBans: Number(row.permanent_bans) || 0,
         recidivismRate: Number(row.recidivism_rate) || 0,
         bansThisMonth: Number(row.bans_this_month) || 0,
-        unbansThisMonth: Number(row.unbans_this_month) || 0,
+        unbansThisMonth: 0, // Not tracked in RPC
       };
     }
 
-    return getDefaultBanStatistics();
+    return emptyStats;
   } catch (error) {
     console.error('Error in getBanStatistics:', error);
-    return getDefaultBanStatistics();
+    return emptyStats;
   }
 }
 
@@ -2068,15 +2144,27 @@ function getDefaultBanStatistics(): BanStatistics {
 }
 
 /**
- * Get feedback sentiment analysis
+ * Get feedback sentiment analysis (grouped by app module)
  */
 export async function getFeedbackSentiment(): Promise<FeedbackSentiment[]> {
+  // Module key to display name mapping
+  const moduleDisplayNames: Record<string, string> = {
+    match_features: 'Match Features',
+    profile_settings: 'Profile & Settings',
+    messaging: 'Messaging',
+    rating_system: 'Rating System',
+    player_directory: 'Player Directory',
+    notifications: 'Notifications',
+    performance: 'Performance',
+    other: 'Other',
+  };
+
   try {
     const { data, error } = await supabase.rpc('get_feedback_sentiment');
 
     if (error) {
       console.error('Error in getFeedbackSentiment:', error);
-      return getDefaultFeedbackSentiment();
+      return []; // Return empty array, not fake data
     }
 
     if (data && data.length > 0) {
@@ -2089,7 +2177,8 @@ export async function getFeedbackSentiment(): Promise<FeedbackSentiment[]> {
           in_progress_count: number;
           resolved_count: number;
         }) => ({
-          category: row.category,
+          // Convert module key to human-readable display name
+          category: moduleDisplayNames[row.category] || row.category,
           bugReports: Number(row.bug_reports) || 0,
           featureRequests: Number(row.feature_requests) || 0,
           status: {
@@ -2101,10 +2190,10 @@ export async function getFeedbackSentiment(): Promise<FeedbackSentiment[]> {
       );
     }
 
-    return getDefaultFeedbackSentiment();
+    return []; // Return empty array when no data
   } catch (error) {
     console.error('Error in getFeedbackSentiment:', error);
-    return getDefaultFeedbackSentiment();
+    return [];
   }
 }
 

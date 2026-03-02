@@ -109,6 +109,12 @@ export interface AdminSportProfile {
   rating_label: string | null;
   is_verified: boolean;
   created_at: string;
+  // Rating certification fields
+  player_rating_score_id: string | null;
+  is_certified: boolean;
+  badge_status: 'self_declared' | 'certified' | 'disputed';
+  certified_at: string | null;
+  certified_via: 'admin' | 'external_rating' | 'proof' | 'referrals' | null;
 }
 
 /** Match summary for admin view */
@@ -324,27 +330,56 @@ export async function fetchAdminUserDetail(userId: string): Promise<AdminUserDet
       return null;
     }
 
-    // Get sport profiles
-    const { data: sportProfiles } = await supabase
-      .from('player_sport')
-      .select(
-        `
+    // Extract player.id from profile (player_sport and player_rating_score use player.id, not profile.id)
+    const playerData = Array.isArray(profile.player) ? profile.player[0] : profile.player;
+    const playerId = playerData?.id;
+
+    // Get sport profiles (using player.id, not profile.id)
+    const { data: sportProfiles } = playerId
+      ? await supabase
+          .from('player_sport')
+          .select(
+            `
         id,
         sport_id,
         is_primary,
         is_active,
         created_at,
-        sport:sport(name),
-        player_rating_score:player_rating_score(rating_score:rating_score(value, label))
+        sport:sport(name)
       `
-      )
-      .eq('player_id', userId);
+          )
+          .eq('player_id', playerId)
+      : { data: null };
 
-    // Get recent matches (last 10)
-    const { data: matches } = await supabase
-      .from('match_participant')
-      .select(
-        `
+    // Get player ratings (separate query - no direct FK to player_sport)
+    const { data: playerRatings } = playerId
+      ? await supabase
+          .from('player_rating_score')
+          .select(
+            `
+        id,
+        is_certified,
+        badge_status,
+        certified_at,
+        certified_via,
+        rating_score:rating_score_id (
+          value,
+          label,
+          rating_system:rating_system_id (
+            sport_id
+          )
+        )
+      `
+          )
+          .eq('player_id', playerId)
+      : { data: null };
+
+    // Get recent matches (last 10) - using playerId
+    const { data: matches } = playerId
+      ? await supabase
+          .from('match_participant')
+          .select(
+            `
         match:match(
           id,
           sport_id,
@@ -354,21 +389,26 @@ export async function fetchAdminUserDetail(userId: string): Promise<AdminUserDet
           sport:sport(name)
         )
       `
-      )
-      .eq('player_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(10);
+          )
+          .eq('player_id', playerId)
+          .order('created_at', { ascending: false })
+          .limit(10)
+      : { data: null };
 
-    // Get stats
-    const { count: sportsCount } = await supabase
-      .from('player_sport')
-      .select('id', { count: 'exact', head: true })
-      .eq('player_id', userId);
+    // Get stats - using playerId
+    const { count: sportsCount } = playerId
+      ? await supabase
+          .from('player_sport')
+          .select('id', { count: 'exact', head: true })
+          .eq('player_id', playerId)
+      : { count: 0 };
 
-    const { count: matchesCount } = await supabase
-      .from('match_participant')
-      .select('id', { count: 'exact', head: true })
-      .eq('player_id', userId);
+    const { count: matchesCount } = playerId
+      ? await supabase
+          .from('match_participant')
+          .select('id', { count: 'exact', head: true })
+          .eq('player_id', playerId)
+      : { count: 0 };
 
     // Get active ban (if any) from player_ban table
     const activeBan = await getActivePlayerBan(userId);
@@ -380,8 +420,7 @@ export async function fetchAdminUserDetail(userId: string): Promise<AdminUserDet
       ? new Date(profile.last_active_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
       : false;
 
-    // Transform data - gender is in player table
-    const playerData = Array.isArray(profile.player) ? profile.player[0] : profile.player;
+    // playerData already extracted above for player_id
 
     return {
       id: profile.id,
@@ -407,11 +446,16 @@ export async function fetchAdminUserDetail(userId: string): Promise<AdminUserDet
       playing_hand: playerData?.playing_hand || null,
       sport_profiles: (sportProfiles || []).map(sp => {
         const sportData = Array.isArray(sp.sport) ? sp.sport[0] : sp.sport;
-        // Get rating from player_rating_score if available
-        const ratingData = Array.isArray(sp.player_rating_score)
-          ? sp.player_rating_score[0]
-          : sp.player_rating_score;
-        const ratingScore = ratingData?.rating_score;
+
+        // Find matching rating from playerRatings by sport_id
+        const matchingRating = (playerRatings || []).find(pr => {
+          const rScore = Array.isArray(pr.rating_score) ? pr.rating_score[0] : pr.rating_score;
+          const rSystem = rScore?.rating_system;
+          const ratingSystem = Array.isArray(rSystem) ? rSystem[0] : rSystem;
+          return ratingSystem?.sport_id === sp.sport_id;
+        });
+
+        const ratingScore = matchingRating?.rating_score;
         const ratingInfo = Array.isArray(ratingScore) ? ratingScore[0] : ratingScore;
 
         return {
@@ -422,6 +466,20 @@ export async function fetchAdminUserDetail(userId: string): Promise<AdminUserDet
           rating_label: ratingInfo?.label || null,
           is_verified: sp.is_active ?? true,
           created_at: sp.created_at,
+          // Rating certification fields
+          player_rating_score_id: matchingRating?.id || null,
+          is_certified: matchingRating?.is_certified ?? false,
+          badge_status:
+            (matchingRating?.badge_status as 'self_declared' | 'certified' | 'disputed') ||
+            'self_declared',
+          certified_at: matchingRating?.certified_at || null,
+          certified_via:
+            (matchingRating?.certified_via as
+              | 'admin'
+              | 'external_rating'
+              | 'proof'
+              | 'referrals'
+              | null) || null,
         };
       }),
       recent_matches: (matches || [])
@@ -645,7 +703,9 @@ export async function logAdminAction(
     | 'export'
     | 'login'
     | 'logout'
-    | 'settings_change',
+    | 'settings_change'
+    | 'certify_rating'
+    | 'invalidate_rating',
   entityType:
     | 'player'
     | 'profile'
@@ -656,7 +716,8 @@ export async function logAdminAction(
     | 'conversation'
     | 'network'
     | 'admin'
-    | 'system',
+    | 'system'
+    | 'player_rating_score',
   entityId?: string | null,
   oldData?: Record<string, unknown> | null,
   newData?: Record<string, unknown> | null,
@@ -849,6 +910,116 @@ export async function updatePlayerProfile(
   }
 }
 
+/** Parameters for certifying a rating */
+export interface CertifyRatingParams {
+  playerRatingScoreId: string;
+  adminId: string;
+  action: 'certify' | 'invalidate' | 'dispute';
+}
+
+/**
+ * Certify or invalidate a player's rating
+ * Only admins with moderator+ role can perform this action
+ */
+export async function adminCertifyRating(
+  params: CertifyRatingParams
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { playerRatingScoreId, adminId, action } = params;
+
+    // Get current rating data for audit log
+    const { data: currentRating, error: fetchError } = await supabase
+      .from('player_rating_score')
+      .select(
+        `
+        id,
+        player_id,
+        is_certified,
+        badge_status,
+        certified_at,
+        certified_via,
+        rating_score:rating_score_id(label)
+      `
+      )
+      .eq('id', playerRatingScoreId)
+      .single();
+
+    if (fetchError || !currentRating) {
+      return { success: false, error: 'Rating not found' };
+    }
+
+    // Extract rating label safely
+    const ratingScoreData = currentRating.rating_score as unknown;
+    let ratingLabel = 'Unknown';
+    if (Array.isArray(ratingScoreData) && ratingScoreData[0]) {
+      ratingLabel = (ratingScoreData[0] as { label?: string })?.label || 'Unknown';
+    } else if (ratingScoreData && typeof ratingScoreData === 'object') {
+      ratingLabel = (ratingScoreData as { label?: string })?.label || 'Unknown';
+    }
+
+    // Prepare update based on action
+    let updateData;
+    if (action === 'certify') {
+      updateData = {
+        is_certified: true,
+        badge_status: 'certified',
+        certified_at: new Date().toISOString(),
+        certified_via: 'admin',
+      };
+    } else if (action === 'dispute') {
+      updateData = {
+        is_certified: false,
+        badge_status: 'disputed',
+        certified_at: null,
+        certified_via: null,
+      };
+    } else {
+      // invalidate - reset to self_declared
+      updateData = {
+        is_certified: false,
+        badge_status: 'self_declared',
+        certified_at: null,
+        certified_via: null,
+      };
+    }
+
+    // Update the rating
+    const { error: updateError } = await supabase
+      .from('player_rating_score')
+      .update(updateData)
+      .eq('id', playerRatingScoreId);
+
+    if (updateError) {
+      console.error('Error updating rating certification:', updateError);
+      return { success: false, error: updateError.message };
+    }
+
+    // Log the admin action
+    await logAdminAction(
+      adminId,
+      'update',
+      'player',
+      currentRating.player_id,
+      {
+        is_certified: currentRating.is_certified,
+        badge_status: currentRating.badge_status,
+        certified_via: currentRating.certified_via,
+      },
+      updateData,
+      {
+        player_rating_score_id: playerRatingScoreId,
+        ratingLabel,
+        certificationAction: action,
+      }
+    );
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error in adminCertifyRating:', error);
+    return { success: false, error: (error as Error).message };
+  }
+}
+
 export default {
   fetchAdminUsers,
   fetchAdminUserDetail,
@@ -859,4 +1030,5 @@ export default {
   logAdminAction,
   getAuditLog,
   updatePlayerProfile,
+  adminCertifyRating,
 };

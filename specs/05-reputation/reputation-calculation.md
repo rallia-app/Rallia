@@ -33,15 +33,15 @@ Final Score = clamp(Base Score + sum(weighted_impacts), 0, 100)
 
 ### Match-Related Events
 
-| Event Type              | Default | When Triggered                                    |
-| ----------------------- | ------- | ------------------------------------------------- |
-| `match_completed`       | **+12** | Player showed up and played the match             |
-| `match_no_show`         | **-50** | Player didn't show up at all                      |
-| `match_on_time`         | **+3**  | Player arrived on time (within 10 minutes)        |
-| `match_late`            | **-10** | Player arrived more than 10 minutes late          |
-| `match_cancelled_early` | **0**   | Player cancelled with adequate notice (24+ hours) |
-| `match_cancelled_late`  | **-35** | Host cancelled late (graduated, see below)        |
-| `match_left_late`       | **-22** | Participant left late (graduated, see below)      |
+| Event Type              | Impact  | When Triggered                                        |
+| ----------------------- | ------- | ----------------------------------------------------- |
+| `match_completed`       | **+12** | Player showed up and played the match                 |
+| `match_no_show`         | **-50** | Player didn't show up at all                          |
+| `match_on_time`         | **+3**  | Player arrived on time (within 10 minutes)            |
+| `match_late`            | **-10** | Player arrived more than 10 minutes late              |
+| `match_cancelled_early` | **0**   | Player cancelled with adequate notice (24+ hours)     |
+| `match_cancelled_late`  | **-25** | Player cancelled within 24 hours of match             |
+| `match_repeat_opponent` | **+2**  | Player played with same opponent again (trust signal) |
 
 ### Review-Related Events
 
@@ -59,16 +59,16 @@ Final Score = clamp(Base Score + sum(weighted_impacts), 0, 100)
 | ------------------- | ------- | --------------------------------------------------- |
 | `report_received`   | **0**   | Someone reported this player (pending review)       |
 | `report_upheld`     | **-15** | Admin confirmed the report was valid                |
-| `report_dismissed`  | **+5**  | Admin dismissed the report (false accusation bonus) |
+| `report_dismissed`  | **+3**  | Admin dismissed the report (false accusation bonus) |
 | `warning_issued`    | **-10** | Admin issued warning for behavior                   |
-| `suspension_lifted` | **0**   | Player's suspension was lifted (tracked, no impact) |
+| `suspension_lifted` | **+5**  | Player's suspension was lifted (second chance)      |
 
 ### Community Events
 
-| Event Type           | Impact | When Triggered                            |
-| -------------------- | ------ | ----------------------------------------- |
-| `feedback_submitted` | **+1** | Player submitted feedback for an opponent |
-| `peer_rating_given`  | **+1** | Player gave a peer rating                 |
+| Event Type           | Impact | When Triggered                                    |
+| -------------------- | ------ | ------------------------------------------------- |
+| `feedback_submitted` | **+1** | Player submitted feedback for an opponent         |
+| `first_match_bonus`  | **+5** | Bonus for completing first match (welcome reward) |
 
 ## Time Decay
 
@@ -138,34 +138,17 @@ After: max(0, 90 - 50) = 40%
 
 **Note:** A single no-show can drop a player from Platinum (90%) to Bronze (40%)
 
-### Example 3: Late Cancellation (Graduated)
+### Example 3: Late Cancellation
 
 ```
 Before: 75%
 
-Scenario: First-time creator cancels 3 hours before match (court reserved)
-- Base penalty (2–6h bracket, creator): -35
-- History modifier (0 prior offenses): ×0.5
-- Final: round(-35 × 0.5) = -18
-- match_cancelled_late: -18
+Events created:
+- match_cancelled_late: -25
+  (Player cancelled 12 hours before match)
 
-Differential: -18
-After: max(0, 75 - 18) = 57%
-```
-
-### Example 3b: Repeat Offender Leaves Late
-
-```
-Before: 80%
-
-Scenario: Participant with 2 recent offenses leaves 1 hour before match
-- Base penalty (0–2h bracket, participant): -28
-- History modifier (2 offenses): ×1.5
-- Final: round(-28 × 1.5) = -42
-- match_left_late: -42
-
-Differential: -42
-After: max(0, 80 - 42) = 38%
+Differential: -25
+After: max(0, 75 - 25) = 50%
 ```
 
 ### Example 4: Typical Good Match
@@ -199,6 +182,23 @@ If recalculated today:
 - Player's effective score improves over time
 ```
 
+### Example 6: Repeat Opponent (Trust Signal)
+
+```
+Before: 88%
+
+Events created:
+- match_completed: +12
+- match_on_time: +3
+- review_received_5star: +10
+- match_repeat_opponent: +2 (played together before)
+
+Differential: +27
+After: min(100, 88 + 27) = 100%
+```
+
+**Note:** System detects repeat matchups and rewards both players
+
 ## Initial Calculation (First 10 Events)
 
 New players start with **unknown** reputation until 10 reputation events have been recorded.
@@ -213,10 +213,10 @@ Example:
 - Match 1: completed (+12), on_time (+3), 5star (+10) = +25
 - Match 2: completed (+12), on_time (+3), 4star (+5) = +20
 - Match 3: completed (+12), late (-10), 3star (0) = +2
-- Additional event: feedback_submitted (+1) = +1
+- Additional events: first_match_bonus (+5) = +5
 
-Total differential: +48
-Final Score: min(100, 100 + 48) = 100%
+Total differential: +52
+Final Score: min(100, 100 + 52) = 100%
 Result: Platinum tier (90-100%)
 ```
 
@@ -229,10 +229,10 @@ Example with 10 events:
 - Event 1-3: Match 1: completed (+12), on_time (+3), 4star (+5) = +20
 - Event 4: no_show (-50) = -50
 - Event 5-7: Match 2: completed (+12), late (-10), 2star (-5) = -3
-- Event 8-10: Additional events (feedback_submitted, etc.) = +3
+- Event 8-10: Additional events (repeat_opponent, etc.) = +8
 
-Total differential: -20
-Final Score: max(0, 100 - 20) = 80%
+Total differential: -25
+Final Score: max(0, 100 - 25) = 75%
 
 Note: Even with some negative events, positive events can offset them.
 ```
@@ -301,46 +301,23 @@ After a match ends, the post-match feedback form collects:
 3. **Rate your experience** (1-5 stars)
    - Creates corresponding `review_received_Xstar` event
 
-### From Cancellations / Leaves
+4. **Automatic detection:**
+   - System checks if these players played together before
+   - If yes → Creates `match_repeat_opponent` event for both players
 
-Late cancellation and leave penalties are **graduated** by timing, **role-aware**, **context-sensitive**, and **history-aware**.
+### From Cancellations
 
-#### Graduated Penalty Scale (public match with reserved court, normal history)
+When a match is cancelled:
 
-| Hours before match | Creator (`match_cancelled_late`) | Participant (`match_left_late`) |
-| ------------------ | -------------------------------- | ------------------------------- |
-| 24h+               | 0                                | 0                               |
-| 12–24h             | -10                              | -7                              |
-| 6–12h              | -20                              | -13                             |
-| 2–6h               | -35                              | -22                             |
-| 0–2h               | -45                              | -28                             |
-| After start        | -45                              | -33                             |
+```javascript
+const hoursUntilMatch = calculateHours(match.start_time);
 
-All values capped below `match_no_show` (-50) to preserve the distinction that cancelling is still better than ghosting.
-
-#### History Modifier (last 30 days)
-
-| Recent offenses | Multiplier      |
-| --------------- | --------------- |
-| 0 (first time)  | 0.5× (leniency) |
-| 1               | 1.0× (normal)   |
-| 2               | 1.5×            |
-| 3+              | 2.0×            |
-
-Formula: `final = round(basePenalty × historyMod)`
-
-#### Conditions for Penalty
-
-All of the following must be true for a penalty to apply:
-
-1. **Past cooling off** — player joined/created >1h ago
-2. **Court is reserved** — `match.court_status = 'reserved'` (not `'to_reserve'`)
-3. **Planned match** — created 24h+ before start time
-4. **Within 24h of start** — hoursUntilMatch < 24
-5. For participants: match is full and player was joined (not waitlisted)
-6. For participants: host didn't edit the match within 24h of the player leaving
-
-If none of these conditions are met, a `match_cancelled_early` (0 impact) event is logged instead.
+if (hoursUntilMatch < 24) {
+  createEvent('match_cancelled_late', { impact: -25 });
+} else {
+  createEvent('match_cancelled_early', { impact: 0 });
+}
+```
 
 ### From Moderation Actions
 

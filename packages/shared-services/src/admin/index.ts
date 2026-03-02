@@ -1,6 +1,6 @@
 /**
  * Admin Services - Barrel Export
- * 
+ *
  * Note: Some exports are explicitly handled to avoid conflicts with overlapping
  * function names across different services.
  */
@@ -19,6 +19,7 @@ export type {
   AdminMatchSummary,
   EditableProfileFields,
   AdminAuditLogEntry,
+  CertifyRatingParams,
 } from './adminService';
 
 // Admin Service - Functions
@@ -30,6 +31,7 @@ export {
   getActivePlayerBan,
   getPlayerBanHistory,
   updatePlayerProfile,
+  adminCertifyRating,
 } from './adminService';
 
 // Analytics Service - Types
@@ -78,6 +80,7 @@ export type {
 export {
   getRealtimeUserStats,
   getMatchStatistics,
+  getMatchesTodayCount,
   getOnboardingFunnel,
   getSportStatistics,
   getMetricTrend,

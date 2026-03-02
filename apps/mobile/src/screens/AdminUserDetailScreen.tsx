@@ -30,8 +30,15 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text } from '@rallia/shared-components';
-import { Logger, banUser, unbanUser, updatePlayerProfile } from '@rallia/shared-services';
+import {
+  Logger,
+  banUser,
+  unbanUser,
+  updatePlayerProfile,
+  adminCertifyRating,
+} from '@rallia/shared-services';
 import type { EditableProfileFields } from '@rallia/shared-services';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 import {
   useTheme,
   useAdminUserDetail,
@@ -81,6 +88,14 @@ const AdminUserDetailScreen: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedProfile, setEditedProfile] = useState<Partial<EditableProfileFields>>({});
   const [saveLoading, setSaveLoading] = useState(false);
+  const [certifyingRatingId, setCertifyingRatingId] = useState<string | null>(null);
+
+  // Certification modal state
+  const [showCertificationModal, setShowCertificationModal] = useState(false);
+  const [certificationAction, setCertificationAction] = useState<
+    'certify' | 'invalidate' | 'dispute'
+  >('certify');
+  const [selectedProfile, setSelectedProfile] = useState<AdminSportProfile | null>(null);
 
   // Fetch user detail
   const { user, loading, error, refetch } = useAdminUserDetail(userId);
@@ -114,6 +129,14 @@ const AdminUserDetailScreen: React.FC = () => {
   const canBan = isAdmin && hasMinimumRole(role, 'moderator');
   const canEdit = isAdmin && hasMinimumRole(role, 'moderator');
 
+  // Capitalize sport name helper (defined early for use in callbacks)
+  const capitalizeSportName = useCallback((name: string) => {
+    return name
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  }, []);
+
   // Start edit mode
   const handleStartEdit = useCallback(() => {
     if (!user || !canEdit) return;
@@ -146,16 +169,20 @@ const AdminUserDetailScreen: React.FC = () => {
 
     // Filter out unchanged fields
     const changes: Partial<EditableProfileFields> = {};
-    if (editedProfile.first_name !== (user.first_name || '')) changes.first_name = editedProfile.first_name;
-    if (editedProfile.last_name !== (user.last_name || '')) changes.last_name = editedProfile.last_name;
-    if (editedProfile.display_name !== (user.display_name || '')) changes.display_name = editedProfile.display_name;
+    if (editedProfile.first_name !== (user.first_name || ''))
+      changes.first_name = editedProfile.first_name;
+    if (editedProfile.last_name !== (user.last_name || ''))
+      changes.last_name = editedProfile.last_name;
+    if (editedProfile.display_name !== (user.display_name || ''))
+      changes.display_name = editedProfile.display_name;
     if (editedProfile.email !== (user.email || '')) changes.email = editedProfile.email;
     if (editedProfile.phone !== (user.phone_number || '')) changes.phone = editedProfile.phone;
     if (editedProfile.bio) changes.bio = editedProfile.bio; // bio can be set even if not visible
     if (editedProfile.city !== (user.city || '')) changes.city = editedProfile.city;
     if (editedProfile.country !== (user.country || '')) changes.country = editedProfile.country;
     if (editedProfile.gender !== (user.gender || '')) changes.gender = editedProfile.gender;
-    if (editedProfile.birth_date !== (user.date_of_birth || '')) changes.birth_date = editedProfile.birth_date;
+    if (editedProfile.birth_date !== (user.date_of_birth || ''))
+      changes.birth_date = editedProfile.birth_date;
 
     if (Object.keys(changes).length === 0) {
       Alert.alert(
@@ -169,23 +196,17 @@ const AdminUserDetailScreen: React.FC = () => {
       mediumHaptic();
       setSaveLoading(true);
       await updatePlayerProfile(user.id, session.user.id, changes as EditableProfileFields);
-      Logger.logUserAction('admin_profile_edited', { 
-        userId: user.id, 
-        fields: Object.keys(changes) 
+      Logger.logUserAction('admin_profile_edited', {
+        userId: user.id,
+        fields: Object.keys(changes),
       });
       await refetch();
       setIsEditing(false);
       setEditedProfile({});
-      Alert.alert(
-        t('common.done'),
-        t('admin.users.edit.saveSuccess' as TranslationKey)
-      );
+      Alert.alert(t('common.done'), t('admin.users.edit.saveSuccess' as TranslationKey));
     } catch (err) {
       console.error('Failed to save profile:', err);
-      Alert.alert(
-        t('common.error'),
-        t('admin.users.edit.saveFailed' as TranslationKey)
-      );
+      Alert.alert(t('common.error'), t('admin.users.edit.saveFailed' as TranslationKey));
     } finally {
       setSaveLoading(false);
     }
@@ -197,31 +218,37 @@ const AdminUserDetailScreen: React.FC = () => {
   }, []);
 
   // Get user display name
-  const getUserDisplayName = useCallback((userInfo: AdminUserDetail | null): string => {
-    if (!userInfo) return '';
-    if (userInfo.display_name) return userInfo.display_name;
-    if (userInfo.first_name || userInfo.last_name) {
-      return `${userInfo.first_name || ''} ${userInfo.last_name || ''}`.trim();
-    }
-    return t('admin.users.anonymous' as TranslationKey);
-  }, [t]);
+  const getUserDisplayName = useCallback(
+    (userInfo: AdminUserDetail | null): string => {
+      if (!userInfo) return '';
+      if (userInfo.display_name) return userInfo.display_name;
+      if (userInfo.first_name || userInfo.last_name) {
+        return `${userInfo.first_name || ''} ${userInfo.last_name || ''}`.trim();
+      }
+      return t('admin.users.anonymous' as TranslationKey);
+    },
+    [t]
+  );
 
   // Format date
-  const formatDate = useCallback((dateString: string | null): string => {
-    if (!dateString) return t('common.never' as TranslationKey);
-    const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }, [t]);
+  const formatDate = useCallback(
+    (dateString: string | null): string => {
+      if (!dateString) return t('common.never' as TranslationKey);
+      const date = new Date(dateString);
+      return date.toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    },
+    [t]
+  );
 
   // Handle ban user
   const handleBanUser = useCallback(async () => {
-    if (!user || !session?.user?.id || !canBan) return;
+    if (!user || !session?.user?.id || !canBan || !user.player_id) return;
 
     Alert.alert(
       t('admin.users.actions.banUser' as TranslationKey),
@@ -236,23 +263,17 @@ const AdminUserDetailScreen: React.FC = () => {
               mediumHaptic();
               setActionLoading(true);
               await banUser({
-                playerId: user.id,
+                playerId: user.player_id!,
                 adminId: session.user.id,
                 reason: 'Banned by admin', // TODO: Add reason input modal
                 banType: 'permanent',
               });
               Logger.logUserAction('admin_user_banned', { userId: user.id });
               await refetch();
-              Alert.alert(
-                t('common.done'),
-                t('admin.users.actions.banSuccess' as TranslationKey)
-              );
+              Alert.alert(t('common.done'), t('admin.users.actions.banSuccess' as TranslationKey));
             } catch (err) {
               console.error('Failed to ban user:', err);
-              Alert.alert(
-                t('common.error'),
-                t('admin.users.actions.banFailed' as TranslationKey)
-              );
+              Alert.alert(t('common.error'), t('admin.users.actions.banFailed' as TranslationKey));
             } finally {
               setActionLoading(false);
             }
@@ -303,8 +324,63 @@ const AdminUserDetailScreen: React.FC = () => {
   const handleViewProfile = useCallback(() => {
     if (!user) return;
     lightHaptic();
-    navigation.navigate('UserProfile', { userId: user.id });
+    navigation.navigate('PlayerProfile', { playerId: user.id });
   }, [user, navigation]);
+
+  // Handle rating certification/invalidation - opens modal
+  const handleCertifyRating = useCallback(
+    (profile: AdminSportProfile, action: 'certify' | 'invalidate' | 'dispute') => {
+      if (!session?.user?.id || !canEdit || !profile.player_rating_score_id) return;
+
+      lightHaptic();
+      setSelectedProfile(profile);
+      setCertificationAction(action);
+      setShowCertificationModal(true);
+    },
+    [session, canEdit]
+  );
+
+  // Handle certification modal confirm
+  const handleConfirmCertification = useCallback(async () => {
+    if (!session?.user?.id || !selectedProfile?.player_rating_score_id) return;
+
+    const successKey =
+      certificationAction === 'certify'
+        ? 'admin.users.certification.certifySuccess'
+        : certificationAction === 'dispute'
+          ? 'admin.users.certification.disputeSuccess'
+          : 'admin.users.certification.resetSuccess';
+    const failedKey =
+      certificationAction === 'certify'
+        ? 'admin.users.certification.certifyFailed'
+        : certificationAction === 'dispute'
+          ? 'admin.users.certification.disputeFailed'
+          : 'admin.users.certification.resetFailed';
+
+    try {
+      mediumHaptic();
+      setCertifyingRatingId(selectedProfile.player_rating_score_id);
+      const result = await adminCertifyRating({
+        playerRatingScoreId: selectedProfile.player_rating_score_id,
+        adminId: session.user.id,
+        action: certificationAction,
+      });
+
+      if (result.success) {
+        await refetch();
+        setShowCertificationModal(false);
+        Alert.alert(t('common.done'), t(successKey as TranslationKey));
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (err) {
+      console.error('Failed to update rating certification:', err);
+      setShowCertificationModal(false);
+      Alert.alert(t('common.error'), t(failedKey as TranslationKey));
+    } finally {
+      setCertifyingRatingId(null);
+    }
+  }, [session, selectedProfile, certificationAction, t, refetch]);
 
   // Render status badge
   const renderStatusBadge = () => {
@@ -385,7 +461,7 @@ const AdminUserDetailScreen: React.FC = () => {
           multiline && styles.editFieldMultiline,
         ]}
         value={editedProfile[field] || ''}
-        onChangeText={(value) => updateEditField(field, value)}
+        onChangeText={value => updateEditField(field, value)}
         placeholder={placeholder}
         placeholderTextColor={colors.textMuted}
         multiline={multiline}
@@ -396,48 +472,213 @@ const AdminUserDetailScreen: React.FC = () => {
     </View>
   );
 
+  // Get certification colors matching SportProfile.tsx exactly
+  const getCertificationColors = (badgeStatus: 'self_declared' | 'certified' | 'disputed') => {
+    switch (badgeStatus) {
+      case 'certified':
+        return {
+          background: '#E8F5E9',
+          border: '#4CAF50',
+          text: '#4CAF50',
+          icon: 'checkmark-circle' as const,
+        };
+      case 'disputed':
+        return {
+          background: '#FFEBEE',
+          border: '#F44336',
+          text: '#F44336',
+          icon: 'alert-circle' as const,
+        };
+      case 'self_declared':
+      default:
+        return {
+          background: '#FFF8E1',
+          border: '#FFC107',
+          text: '#F57C00',
+          icon: 'help-circle' as const,
+        };
+    }
+  };
+
+  // Get sport icon based on sport name
+  const getSportIcon = (sportName: string): keyof typeof Ionicons.glyphMap => {
+    const name = sportName.toLowerCase();
+    if (name.includes('tennis')) return 'tennisball';
+    if (name.includes('pickleball')) return 'tennisball-outline';
+    if (name.includes('badminton')) return 'swap-vertical';
+    if (name.includes('squash')) return 'square-outline';
+    return 'fitness';
+  };
+
   // Render sport profile card
-  const renderSportProfile = (profile: AdminSportProfile) => (
-    <View
-      key={profile.id}
-      style={[styles.sportCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
-    >
-      <View style={styles.sportHeader}>
-        <Text size="base" weight="semibold" color={colors.text}>
-          {profile.sport_name}
-        </Text>
-        {profile.is_verified && (
-          <View style={[styles.verifiedBadge, { backgroundColor: colors.successBg }]}>
-            <Ionicons name="checkmark-circle" size={12} color={colors.successText} />
-            <Text size="xs" color={colors.successText}>
-              {t('common.verified')}
+  const renderSportProfile = (profile: AdminSportProfile) => {
+    const certColors = getCertificationColors(profile.badge_status || 'self_declared');
+    const isLoading = certifyingRatingId === profile.player_rating_score_id;
+    const hasRating = profile.player_rating_score_id !== null;
+    const ratingDisplay =
+      profile.rating_label || (profile.skill_level !== null ? String(profile.skill_level) : null);
+    const sportName = capitalizeSportName(profile.sport_name);
+
+    return (
+      <View
+        key={profile.id}
+        style={[
+          styles.sportCard,
+          { backgroundColor: colors.cardBackground, borderColor: colors.border },
+        ]}
+      >
+        {/* Sport Name Header with Icon */}
+        <View style={styles.sportHeader}>
+          <View style={styles.sportTitleRow}>
+            <View style={[styles.sportIconContainer, { backgroundColor: colors.accent + '20' }]}>
+              <Ionicons name={getSportIcon(profile.sport_name)} size={20} color={colors.accent} />
+            </View>
+            <Text size="lg" weight="bold" color={colors.text}>
+              {sportName}
+            </Text>
+          </View>
+          {profile.is_verified && (
+            <View style={[styles.activeIndicator, { backgroundColor: '#4CAF50' }]} />
+          )}
+        </View>
+
+        {/* Rating Section */}
+        {hasRating && ratingDisplay && (
+          <View style={styles.ratingSection}>
+            {/* Rating Badge - Small pill style */}
+            <View
+              style={[
+                styles.ratingPillBadge,
+                {
+                  backgroundColor: certColors.background,
+                  borderColor: certColors.border,
+                },
+              ]}
+            >
+              <Ionicons name="star" size={14} color={certColors.text} />
+              <Text size="sm" weight="bold" color={certColors.text}>
+                {ratingDisplay}
+              </Text>
+            </View>
+
+            {/* Certification Status Badge */}
+            <View
+              style={[
+                styles.certificationStatusBadge,
+                {
+                  backgroundColor: certColors.background,
+                  borderColor: certColors.border,
+                },
+              ]}
+            >
+              <Ionicons name={certColors.icon} size={14} color={certColors.text} />
+              <Text size="sm" weight="semibold" color={certColors.text}>
+                {profile.badge_status === 'certified'
+                  ? t('admin.users.certification.certified' as TranslationKey)
+                  : profile.badge_status === 'disputed'
+                    ? t('admin.users.certification.disputed' as TranslationKey)
+                    : t('admin.users.certification.selfDeclared' as TranslationKey)}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Certified Via Info */}
+        {hasRating && profile.certified_via && (
+          <Text size="xs" color={colors.textMuted} style={{ marginBottom: spacingPixels[2] }}>
+            {t('admin.users.certification.via' as TranslationKey)}: {profile.certified_via}
+          </Text>
+        )}
+
+        {/* No Rating State */}
+        {!hasRating && (
+          <View style={[styles.noRatingContainer, { backgroundColor: colors.background }]}>
+            <Ionicons name="remove-circle-outline" size={24} color={colors.textMuted} />
+            <Text size="sm" color={colors.textMuted}>
+              {t('admin.users.noRating' as TranslationKey)}
             </Text>
           </View>
         )}
-      </View>
-      <View style={styles.sportDetails}>
-        {profile.skill_level !== null && (
-          <Text size="sm" color={colors.textSecondary}>
-            {t('admin.users.skillLevel' as TranslationKey)}: {profile.skill_level}
-          </Text>
+
+        {/* Meta Info */}
+        <View style={styles.sportMetaRow}>
+          <View style={styles.metaItem}>
+            <Ionicons name="calendar-outline" size={12} color={colors.textMuted} />
+            <Text size="xs" color={colors.textMuted}>
+              {formatDate(profile.created_at)}
+            </Text>
+          </View>
+          {profile.skill_level !== null && (
+            <View style={styles.metaItem}>
+              <Ionicons name="trending-up" size={12} color={colors.textMuted} />
+              <Text size="xs" color={colors.textMuted}>
+                {t('admin.users.skillLevel' as TranslationKey)}: {profile.skill_level}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Admin certification actions - All three buttons */}
+        {canEdit && hasRating && (
+          <View style={styles.certificationActions}>
+            {isLoading ? (
+              <ActivityIndicator size="small" color={colors.accent} />
+            ) : (
+              <>
+                {/* Certify Button - show when not certified */}
+                {profile.badge_status !== 'certified' && (
+                  <TouchableOpacity
+                    style={[styles.certActionButton, styles.certifyActionButton]}
+                    onPress={() => handleCertifyRating(profile, 'certify')}
+                  >
+                    <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
+                    <Text size="xs" weight="semibold" color="#4CAF50">
+                      {t('admin.users.certification.certify' as TranslationKey)}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Dispute Button - show when not disputed */}
+                {profile.badge_status !== 'disputed' && (
+                  <TouchableOpacity
+                    style={[styles.certActionButton, styles.disputeActionButton]}
+                    onPress={() => handleCertifyRating(profile, 'dispute')}
+                  >
+                    <Ionicons name="warning" size={18} color="#F44336" />
+                    <Text size="xs" weight="semibold" color="#F44336">
+                      {t('admin.users.certification.dispute' as TranslationKey)}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Reset/Invalidate Button - show when certified or disputed */}
+                {(profile.badge_status === 'certified' || profile.badge_status === 'disputed') && (
+                  <TouchableOpacity
+                    style={[styles.certActionButton, styles.resetActionButton]}
+                    onPress={() => handleCertifyRating(profile, 'invalidate')}
+                  >
+                    <Ionicons name="refresh" size={18} color="#FF9800" />
+                    <Text size="xs" weight="semibold" color="#FF9800">
+                      {t('admin.users.certification.reset' as TranslationKey)}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </View>
         )}
-        {profile.rating_label && (
-          <Text size="sm" color={colors.textSecondary}>
-            {t('admin.users.rating' as TranslationKey)}: {profile.rating_label}
-          </Text>
-        )}
       </View>
-      <Text size="xs" color={colors.textMuted}>
-        {t('admin.users.created' as TranslationKey)}: {formatDate(profile.created_at)}
-      </Text>
-    </View>
-  );
+    );
+  };
 
   // Render match summary card
   const renderMatchSummary = (match: AdminMatchSummary) => (
     <View
       key={match.id}
-      style={[styles.matchCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+      style={[
+        styles.matchCard,
+        { backgroundColor: colors.cardBackground, borderColor: colors.border },
+      ]}
     >
       <View style={styles.matchHeader}>
         <Text size="sm" weight="semibold" color={colors.text}>
@@ -451,8 +692,8 @@ const AdminUserDetailScreen: React.FC = () => {
                 match.status === 'completed'
                   ? colors.successBg
                   : match.status === 'cancelled'
-                  ? colors.errorBg
-                  : colors.accentLight,
+                    ? colors.errorBg
+                    : colors.accentLight,
             },
           ]}
         >
@@ -462,8 +703,8 @@ const AdminUserDetailScreen: React.FC = () => {
               match.status === 'completed'
                 ? colors.successText
                 : match.status === 'cancelled'
-                ? colors.errorText
-                : colors.accent
+                  ? colors.errorText
+                  : colors.accent
             }
           >
             {match.status}
@@ -471,7 +712,8 @@ const AdminUserDetailScreen: React.FC = () => {
         </View>
       </View>
       <Text size="xs" color={colors.textMuted}>
-        {match.match_type} • {match.participant_count} {t('admin.users.participants' as TranslationKey)}
+        {match.match_type} • {match.participant_count}{' '}
+        {t('admin.users.participants' as TranslationKey)}
       </Text>
       <Text size="xs" color={colors.textMuted}>
         {formatDate(match.scheduled_at)}
@@ -531,7 +773,10 @@ const AdminUserDetailScreen: React.FC = () => {
   // Access denied view
   if (!hasAccess) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['bottom']}
+      >
         <View style={styles.centerContent}>
           <Ionicons name="lock-closed-outline" size={64} color={colors.errorText} />
           <Text size="lg" weight="semibold" color={colors.text} style={styles.centerTitle}>
@@ -548,7 +793,10 @@ const AdminUserDetailScreen: React.FC = () => {
   // Loading view
   if (loading && !user) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['bottom']}
+      >
         <View style={styles.centerContent}>
           <ActivityIndicator size="large" color={colors.accent} />
           <Text size="sm" color={colors.textMuted} style={styles.centerTitle}>
@@ -562,7 +810,10 @@ const AdminUserDetailScreen: React.FC = () => {
   // Error view
   if (error && !user) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['bottom']}
+      >
         <View style={styles.centerContent}>
           <Ionicons name="alert-circle-outline" size={64} color={colors.errorText} />
           <Text size="lg" weight="semibold" color={colors.text} style={styles.centerTitle}>
@@ -589,7 +840,10 @@ const AdminUserDetailScreen: React.FC = () => {
   if (!user) return null;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['bottom']}
+    >
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -599,7 +853,12 @@ const AdminUserDetailScreen: React.FC = () => {
         }
       >
         {/* Profile Header */}
-        <View style={[styles.profileHeader, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.profileHeader,
+            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+          ]}
+        >
           <Image
             source={{ uri: user.profile_picture_url || DEFAULT_AVATAR }}
             style={styles.profileAvatar}
@@ -654,7 +913,11 @@ const AdminUserDetailScreen: React.FC = () => {
                     <ActivityIndicator size="small" color={colors.successText} />
                   ) : (
                     <>
-                      <Ionicons name="checkmark-circle-outline" size={20} color={colors.successText} />
+                      <Ionicons
+                        name="checkmark-circle-outline"
+                        size={20}
+                        color={colors.successText}
+                      />
                       <Text size="sm" weight="medium" color={colors.successText}>
                         {t('admin.users.actions.unban' as TranslationKey)}
                       </Text>
@@ -686,7 +949,12 @@ const AdminUserDetailScreen: React.FC = () => {
 
         {/* Edit Mode */}
         {isEditing ? (
-          <View style={[styles.section, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.section,
+              { backgroundColor: colors.cardBackground, borderColor: colors.border },
+            ]}
+          >
             <View style={styles.editHeader}>
               <Text size="base" weight="semibold" color={colors.text}>
                 {t('admin.users.edit.title' as TranslationKey)}
@@ -695,17 +963,68 @@ const AdminUserDetailScreen: React.FC = () => {
                 {t('admin.users.edit.description' as TranslationKey)}
               </Text>
             </View>
-            
-            {renderEditableField('person-outline', t('admin.users.edit.firstName' as TranslationKey), 'first_name', t('admin.users.edit.firstNamePlaceholder' as TranslationKey))}
-            {renderEditableField('person-outline', t('admin.users.edit.lastName' as TranslationKey), 'last_name', t('admin.users.edit.lastNamePlaceholder' as TranslationKey))}
-            {renderEditableField('at-outline', t('admin.users.edit.displayName' as TranslationKey), 'display_name', t('admin.users.edit.displayNamePlaceholder' as TranslationKey))}
-            {renderEditableField('mail-outline', t('admin.users.edit.email' as TranslationKey), 'email', t('admin.users.edit.emailPlaceholder' as TranslationKey))}
-            {renderEditableField('call-outline', t('admin.users.edit.phone' as TranslationKey), 'phone', t('admin.users.edit.phonePlaceholder' as TranslationKey))}
-            {renderEditableField('document-text-outline', t('admin.users.edit.bio' as TranslationKey), 'bio', t('admin.users.edit.bioPlaceholder' as TranslationKey), true)}
-            {renderEditableField('location-outline', t('admin.users.edit.city' as TranslationKey), 'city', t('admin.users.edit.cityPlaceholder' as TranslationKey))}
-            {renderEditableField('globe-outline', t('admin.users.edit.country' as TranslationKey), 'country', t('admin.users.edit.countryPlaceholder' as TranslationKey))}
-            {renderEditableField('male-female-outline', t('admin.users.edit.gender' as TranslationKey), 'gender', t('admin.users.edit.genderPlaceholder' as TranslationKey))}
-            {renderEditableField('calendar-outline', t('admin.users.edit.dateOfBirth' as TranslationKey), 'birth_date', 'YYYY-MM-DD')}
+
+            {renderEditableField(
+              'person-outline',
+              t('admin.users.edit.firstName' as TranslationKey),
+              'first_name',
+              t('admin.users.edit.firstNamePlaceholder' as TranslationKey)
+            )}
+            {renderEditableField(
+              'person-outline',
+              t('admin.users.edit.lastName' as TranslationKey),
+              'last_name',
+              t('admin.users.edit.lastNamePlaceholder' as TranslationKey)
+            )}
+            {renderEditableField(
+              'at-outline',
+              t('admin.users.edit.displayName' as TranslationKey),
+              'display_name',
+              t('admin.users.edit.displayNamePlaceholder' as TranslationKey)
+            )}
+            {renderEditableField(
+              'mail-outline',
+              t('admin.users.edit.email' as TranslationKey),
+              'email',
+              t('admin.users.edit.emailPlaceholder' as TranslationKey)
+            )}
+            {renderEditableField(
+              'call-outline',
+              t('admin.users.edit.phone' as TranslationKey),
+              'phone',
+              t('admin.users.edit.phonePlaceholder' as TranslationKey)
+            )}
+            {renderEditableField(
+              'document-text-outline',
+              t('admin.users.edit.bio' as TranslationKey),
+              'bio',
+              t('admin.users.edit.bioPlaceholder' as TranslationKey),
+              true
+            )}
+            {renderEditableField(
+              'location-outline',
+              t('admin.users.edit.city' as TranslationKey),
+              'city',
+              t('admin.users.edit.cityPlaceholder' as TranslationKey)
+            )}
+            {renderEditableField(
+              'globe-outline',
+              t('admin.users.edit.country' as TranslationKey),
+              'country',
+              t('admin.users.edit.countryPlaceholder' as TranslationKey)
+            )}
+            {renderEditableField(
+              'male-female-outline',
+              t('admin.users.edit.gender' as TranslationKey),
+              'gender',
+              t('admin.users.edit.genderPlaceholder' as TranslationKey)
+            )}
+            {renderEditableField(
+              'calendar-outline',
+              t('admin.users.edit.dateOfBirth' as TranslationKey),
+              'birth_date',
+              'YYYY-MM-DD'
+            )}
 
             <View style={styles.editActions}>
               <TouchableOpacity
@@ -719,7 +1038,7 @@ const AdminUserDetailScreen: React.FC = () => {
                   {t('common.cancel')}
                 </Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={[styles.editActionButton, { backgroundColor: colors.accent }]}
                 onPress={handleSaveProfile}
@@ -741,38 +1060,88 @@ const AdminUserDetailScreen: React.FC = () => {
           </View>
         ) : (
           /* User Information Section */
-          <View style={[styles.section, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.section,
+              { backgroundColor: colors.cardBackground, borderColor: colors.border },
+            ]}
+          >
             <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
               {t('admin.users.sections.userInfo' as TranslationKey)}
             </Text>
-            {renderInfoRow('mail-outline', t('admin.users.info.email' as TranslationKey), user.email)}
-            {renderInfoRow('call-outline', t('admin.users.info.phone' as TranslationKey), user.phone_number)}
-            {renderInfoRow('location-outline', t('admin.users.info.location' as TranslationKey), 
-              user.city && user.country ? `${user.city}, ${user.country}` : user.city || user.country)}
-            {renderInfoRow('male-female-outline', t('admin.users.info.gender' as TranslationKey), user.gender)}
-            {renderInfoRow('calendar-outline', t('admin.users.info.birthDate' as TranslationKey), 
-              user.date_of_birth ? formatDate(user.date_of_birth) : null)}
-            {renderInfoRow('hand-left-outline', t('admin.users.info.playingHand' as TranslationKey), user.playing_hand)}
+            {renderInfoRow(
+              'mail-outline',
+              t('admin.users.info.email' as TranslationKey),
+              user.email
+            )}
+            {renderInfoRow(
+              'call-outline',
+              t('admin.users.info.phone' as TranslationKey),
+              user.phone_number
+            )}
+            {renderInfoRow(
+              'location-outline',
+              t('admin.users.info.location' as TranslationKey),
+              user.city && user.country
+                ? `${user.city}, ${user.country}`
+                : user.city || user.country
+            )}
+            {renderInfoRow(
+              'male-female-outline',
+              t('admin.users.info.gender' as TranslationKey),
+              user.gender
+            )}
+            {renderInfoRow(
+              'calendar-outline',
+              t('admin.users.info.birthDate' as TranslationKey),
+              user.date_of_birth ? formatDate(user.date_of_birth) : null
+            )}
+            {renderInfoRow(
+              'hand-left-outline',
+              t('admin.users.info.playingHand' as TranslationKey),
+              user.playing_hand
+            )}
           </View>
         )}
 
         {/* Account Information Section */}
-        <View style={[styles.section, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.section,
+            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+          ]}
+        >
           <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
             {t('admin.users.sections.accountInfo' as TranslationKey)}
           </Text>
-          {renderInfoRow('log-in-outline', t('admin.users.info.lastLogin' as TranslationKey), formatDate(user.last_sign_in_at))}
-          {renderInfoRow('time-outline', t('admin.users.info.createdAt' as TranslationKey), formatDate(user.created_at))}
-          {renderInfoRow('create-outline', t('admin.users.info.updatedAt' as TranslationKey), formatDate(user.updated_at))}
-          {renderInfoRow('checkmark-done-outline', t('admin.users.info.onboardingCompleted' as TranslationKey), 
-            user.onboarding_completed ? t('common.yes') : t('common.no'))}
+          {renderInfoRow(
+            'log-in-outline',
+            t('admin.users.info.lastLogin' as TranslationKey),
+            formatDate(user.last_sign_in_at)
+          )}
+          {renderInfoRow(
+            'time-outline',
+            t('admin.users.info.createdAt' as TranslationKey),
+            formatDate(user.created_at)
+          )}
+          {renderInfoRow(
+            'create-outline',
+            t('admin.users.info.updatedAt' as TranslationKey),
+            formatDate(user.updated_at)
+          )}
+          {renderInfoRow(
+            'checkmark-done-outline',
+            t('admin.users.info.onboardingCompleted' as TranslationKey),
+            user.onboarding_completed ? t('common.yes') : t('common.no')
+          )}
         </View>
 
         {/* Sport Profiles Section */}
         {user.sport_profiles && user.sport_profiles.length > 0 && (
           <View style={styles.sectionContainer}>
             <Text size="base" weight="semibold" color={colors.text} style={styles.sectionHeader}>
-              {t('admin.users.sections.sportProfiles' as TranslationKey)} ({user.sport_profiles.length})
+              {t('admin.users.sections.sportProfiles' as TranslationKey)} (
+              {user.sport_profiles.length})
             </Text>
             {user.sport_profiles.map(renderSportProfile)}
           </View>
@@ -782,7 +1151,8 @@ const AdminUserDetailScreen: React.FC = () => {
         {user.recent_matches && user.recent_matches.length > 0 && (
           <View style={styles.sectionContainer}>
             <Text size="base" weight="semibold" color={colors.text} style={styles.sectionHeader}>
-              {t('admin.users.sections.recentMatches' as TranslationKey)} ({user.recent_matches.length})
+              {t('admin.users.sections.recentMatches' as TranslationKey)} (
+              {user.recent_matches.length})
             </Text>
             {user.recent_matches.map(renderMatchSummary)}
           </View>
@@ -801,6 +1171,38 @@ const AdminUserDetailScreen: React.FC = () => {
         {/* Footer Spacing */}
         <View style={styles.footerSpacer} />
       </ScrollView>
+
+      {/* Certification Confirmation Modal */}
+      <ConfirmationModal
+        visible={showCertificationModal}
+        onClose={() => setShowCertificationModal(false)}
+        onConfirm={handleConfirmCertification}
+        title={t(
+          certificationAction === 'certify'
+            ? 'admin.users.certification.certifyTitle'
+            : certificationAction === 'dispute'
+              ? 'admin.users.certification.disputeTitle'
+              : ('admin.users.certification.resetTitle' as TranslationKey)
+        )}
+        message={t(
+          certificationAction === 'certify'
+            ? 'admin.users.certification.certifyConfirm'
+            : certificationAction === 'dispute'
+              ? 'admin.users.certification.disputeConfirm'
+              : ('admin.users.certification.resetConfirm' as TranslationKey),
+          { sport: selectedProfile ? capitalizeSportName(selectedProfile.sport_name) : '' }
+        )}
+        confirmLabel={t(
+          certificationAction === 'certify'
+            ? 'admin.users.certification.certify'
+            : certificationAction === 'dispute'
+              ? 'admin.users.certification.dispute'
+              : ('admin.users.certification.reset' as TranslationKey)
+        )}
+        cancelLabel={t('common.cancel')}
+        destructive={certificationAction === 'dispute'}
+        isLoading={certifyingRatingId !== null}
+      />
     </SafeAreaView>
   );
 };
@@ -927,19 +1329,101 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: spacingPixels[2],
+    marginBottom: spacingPixels[3],
   },
-  verifiedBadge: {
+  sportTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacingPixels[2],
-    paddingVertical: spacingPixels[0.5],
+    gap: spacingPixels[2],
+  },
+  sportIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: radiusPixels.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeIndicator: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  ratingSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacingPixels[2],
+    marginBottom: spacingPixels[3],
+  },
+  ratingPillBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[2],
     borderRadius: radiusPixels.full,
+    borderWidth: 1,
+    gap: spacingPixels[1.5],
+  },
+  certificationStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[2],
+    borderRadius: radiusPixels.full,
+    borderWidth: 1,
+    gap: spacingPixels[1.5],
+  },
+  noRatingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.md,
+    marginBottom: spacingPixels[3],
+  },
+  sportMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[4],
+    marginBottom: spacingPixels[2],
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacingPixels[1],
   },
-  sportDetails: {
+  certificationActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacingPixels[2],
+    marginTop: spacingPixels[3],
+    paddingTop: spacingPixels[3],
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(0,0,0,0.1)',
+  },
+  certActionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[2],
+    borderRadius: radiusPixels.md,
+    borderWidth: 1.5,
     gap: spacingPixels[1],
-    marginBottom: spacingPixels[2],
+  },
+  certifyActionButton: {
+    backgroundColor: '#E8F5E9',
+    borderColor: '#4CAF50',
+  },
+  disputeActionButton: {
+    backgroundColor: '#FFEBEE',
+    borderColor: '#F44336',
+  },
+  resetActionButton: {
+    backgroundColor: '#FFF3E0',
+    borderColor: '#FF9800',
   },
   matchCard: {
     padding: spacingPixels[3],
