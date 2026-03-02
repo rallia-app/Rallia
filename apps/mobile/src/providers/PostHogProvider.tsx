@@ -17,7 +17,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       }}
       autocapture={{
         captureTouches: true,
-        captureScreens: true,
+        captureScreens: false,
       }}
     >
       {children}

@@ -19,5 +19,5 @@ export const config = {
   // Match all pathnames except for
   // - API routes, _next, _vercel
   // - Files with extensions (like favicon.ico)
-  matcher: ['/((?!api|_next|_vercel|.*\\..*).*)'],
+  matcher: ['/((?!ingest|api|_next|_vercel|.*\\..*).*)'],
 };
