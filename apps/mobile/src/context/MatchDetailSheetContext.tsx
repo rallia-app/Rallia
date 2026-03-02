@@ -30,7 +30,7 @@ export interface MatchDetailData extends MatchWithDetails {
   /** Distance in meters from the user's location, returned by the search_matches_nearby RPC */
   distance_meters?: number | null;
   /** Timestamp when the host last edited the match */
-  host_edited_at?: string | null;
+  host_edited_at: string | null;
 }
 
 interface MatchDetailSheetContextType {

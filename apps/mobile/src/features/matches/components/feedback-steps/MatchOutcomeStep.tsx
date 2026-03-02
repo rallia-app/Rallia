@@ -262,6 +262,15 @@ const MatchContextCard: React.FC<MatchContextCardProps> = ({
     : matchContext.city || undefined;
 
   // Build opponent string using i18next interpolation
+  // For multiple names, format as "A, B and C" (English) or "A, B et C" (French)
+  const formatNamesList = (names: string[]): string => {
+    if (names.length <= 1) return names[0] ?? '';
+    const allButLast = names.slice(0, -1).join(', ');
+    const last = names[names.length - 1];
+    const conjunction = t('matchFeedback.matchContext.conjunction');
+    return `${allButLast} ${conjunction} ${last}`;
+  };
+
   const opponentDisplay =
     matchContext.opponentNames.length > 0
       ? matchContext.opponentNames.length === 1
@@ -269,7 +278,7 @@ const MatchContextCard: React.FC<MatchContextCardProps> = ({
             name: matchContext.opponentNames[0],
           })
         : t('matchFeedback.matchContext.vsPlayers', {
-            names: matchContext.opponentNames.join(', '),
+            names: formatNamesList(matchContext.opponentNames),
           })
       : undefined;
 
@@ -678,9 +687,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[1],
+    flexShrink: 1,
+    maxWidth: '100%',
   },
   matchContextDetailText: {
     marginLeft: 2,
+    flexShrink: 1,
   },
   header: {
     marginBottom: spacingPixels[6],

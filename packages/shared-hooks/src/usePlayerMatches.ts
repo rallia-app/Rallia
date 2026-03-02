@@ -6,9 +6,14 @@
 
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { getPlayerMatchesWithDetails } from '@rallia/shared-services';
-import type { MatchWithDetails } from '@rallia/shared-types';
+import type { MatchWithDetails, UpcomingMatchFilter, PastMatchFilter } from '@rallia/shared-types';
 import { useMemo, useCallback } from 'react';
 import { matchKeys } from './useCreateMatch';
+
+/** @deprecated Use UpcomingMatchFilter from @rallia/shared-types */
+export type UpcomingStatusFilter = UpcomingMatchFilter;
+/** @deprecated Use PastMatchFilter from @rallia/shared-types */
+export type PastStatusFilter = PastMatchFilter;
 
 /** Default page size for infinite queries */
 const DEFAULT_PAGE_SIZE = 20;
@@ -21,31 +26,6 @@ interface PlayerMatchesPage {
   nextOffset: number | null;
   hasMore: boolean;
 }
-
-/**
- * Status filter values for upcoming matches
- */
-export type UpcomingStatusFilter =
-  | 'all'
-  | 'hosting'
-  | 'confirmed'
-  | 'pending'
-  | 'requested'
-  | 'waitlisted'
-  | 'needs_players'
-  | 'ready_to_play';
-
-/**
- * Status filter values for past matches
- */
-export type PastStatusFilter =
-  | 'all'
-  | 'feedback_needed'
-  | 'played'
-  | 'hosted'
-  | 'as_participant'
-  | 'expired'
-  | 'cancelled';
 
 /**
  * Options for the usePlayerMatches hook

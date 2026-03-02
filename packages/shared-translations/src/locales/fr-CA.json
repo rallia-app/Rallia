@@ -288,15 +288,15 @@
       },
       "feedback_request": {
         "title": "Comment était votre partie?",
-        "body": "Évaluez votre partie de {sportName} avec {opponentNames}. Votre avis aide la communauté!"
+        "body": "Soumettez votre score et évaluez votre partie de {sportName} avec {opponentNames} pendant que c'est frais!"
       },
       "feedback_reminder": {
-        "title": "Évaluez votre partie",
-        "body": "Les commentaires pour votre partie de {sportName} avec {opponentNames} ferment dans 24 heures. Ne manquez pas ça!"
+        "title": "Une partie à clôturer",
+        "body": "Votre score et évaluation de {sportName} avec {opponentNames} sont toujours en attente — clôturez-les avant la fermeture."
       },
       "score_confirmation": {
         "title": "Confirmer le score",
-        "body": "Veuillez confirmer le score final de votre partie de {sportName} du {matchDate}."
+        "body": "{playerName} a soumis un score pour votre partie de {sportName}. Veuillez confirmer ou contester."
       }
     }
   },
@@ -1366,6 +1366,10 @@
     "cancelInviteConfirmTitle": "Annuler l'invitation?",
     "cancelInviteConfirmMessage": "L'invitation sera révoquée. Le joueur ne pourra plus rejoindre via cette invitation.",
     "cancelInviteSuccess": "Invitation annulée",
+    "declineInvite": "Refuser",
+    "declineInviteConfirmTitle": "Refuser l'invitation?",
+    "declineInviteConfirmMessage": "Vous ne pourrez pas rejoindre cette partie via cette invitation.",
+    "declineInviteSuccess": "Invitation refusée",
     "resendInviteSuccess": "Invitation renvoyée",
     "showMoreInvitations": "+{count} autres invitations",
     "participantStatus": {
@@ -2252,7 +2256,8 @@
       "completed": "Terminé",
       "cancelled": "Annulé",
       "confirmed": "Confirmé",
-      "inProgress": "En cours"
+      "inProgress": "En cours",
+      "unfilled": "Incomplet"
     },
     "participantStatus": {
       "pending": "En attente",
@@ -2307,14 +2312,15 @@
       "courtBooked": "Terrain Réservé"
     },
     "tier": {
-      "mostWanted": "Très Convoité",
+      "mostWanted": "Incontournable",
       "readyToPlay": "Prêt à Jouer",
-      "mostWantedPlayer": "Joueur Convoité"
+      "topPlayer": "Joueur Convoité",
+      "topPlayerPlural": "Joueurs Convoités"
     },
     "cta": {
       "join": "Rejoindre la partie",
       "askToJoin": "Demander à rejoindre",
-      "acceptInvitation": "Accepter l'invitation",
+      "acceptInvitation": "Accepter invitation",
       "full": "Complet",
       "view": "Voir détails",
       "viewResults": "Voir résultats",
@@ -2329,6 +2335,8 @@
   },
   "matchDetail": {
     "title": "Détails de la partie",
+    "preferences": "Préférences",
+    "chat": "Chat",
     "host": "Hôte",
     "hostedBy": "Organisé par",
     "participants": "Joueurs",
@@ -2342,7 +2350,10 @@
     "matchEnded": "Cette partie est terminée",
     "matchCompleted": "Cette partie est terminée",
     "matchClosed": "Cette partie est fermée",
-    "provideFeedback": "Avis",
+    "provideFeedback": "Avis et score",
+    "provideFeedbackAndConfirm": "Avis et confirmer",
+    "provideFeedbackOnly": "Donner avis",
+    "provideScoreOnly": "Enregistrer score",
     "checkIn": "Confirmer présence",
     "checkedIn": "Présence confirmée",
     "checkInSuccess": "Votre présence a été confirmée!",
@@ -2367,6 +2378,8 @@
     "away": "de distance",
     "free": "Gratuit",
     "perPerson": "par personne",
+    "totalCost": "Total",
+    "perPlayerCost": "Par joueur",
     "location": "Lieu",
     "locationTBD": "Lieu à déterminer",
     "open": "Ouvert",
@@ -2383,7 +2396,43 @@
     "opponent": "Adversaire",
     "scoreVerified": "Score vérifié",
     "scorePendingConfirmation": "En attente de la confirmation de l'adversaire",
-    "scoreDisputed": "Score contesté"
+    "scorePendingConfirmation_one": "En attente de la confirmation de l'adversaire",
+    "scorePendingConfirmation_other": "En attente de la confirmation des adversaires",
+    "scoreDisputed": "Score contesté",
+    "badgeInfoTitle": "Badges des joueurs",
+    "badgeHost": "Hôte",
+    "badgeHostDesc": "Le joueur qui a créé cette partie",
+    "badgeMostWanted": "Most Wanted",
+    "badgeMostWantedDesc": "Réputation de niveau Platine (90%+)",
+    "badgeSelfDeclared": "Non certifié",
+    "badgeSelfDeclaredDesc": "Classement auto-déclaré, non encore vérifié",
+    "badgeCertified": "Certifié",
+    "badgeCertifiedDesc": "Classement certifié par des références ou preuves",
+    "badgeDisputed": "Contesté",
+    "badgeDisputedDesc": "Les évaluations par les pairs suggèrent un niveau différent",
+    "badgeCheckedIn": "Présent",
+    "badgeCheckedInDesc": "Le joueur a confirmé sa présence sur le lieu",
+    "confirmScore": "Confirmer score",
+    "disputeScore": "Contester",
+    "disputeConfirmTitle": "Contester le score ?",
+    "disputeConfirmMessage": "Êtes-vous sûr de vouloir contester ce score ? Cette action est irréversible.",
+    "scoreConfirmed": "Score confirmé avec succès",
+    "scoreDisputedSuccess": "Score contesté. Contactez votre adversaire pour résoudre.",
+    "confirmScoreError": "Échec de la confirmation du score",
+    "scoreAlreadyProcessed": "Ce score a déjà été confirmé",
+    "disputeScoreError": "Échec de la contestation du score",
+    "dateAndTime": "Date et heure",
+    "duration": "Durée",
+    "startTime": "Début",
+    "live": "En cours",
+    "startingSoon": "Bientôt",
+    "startsIn": "Dans {time}",
+    "invitedBanner": "Vous avez été invité(e) à cette partie",
+    "reliability": "Fiabilité",
+    "scoreConfirmProgress": "{confirmed}/{total} confirmés",
+    "scoreConfirmProgress_one": "{confirmed}/{total} joueur confirmé",
+    "scoreConfirmProgress_other": "{confirmed}/{total} joueurs confirmés",
+    "yourScoreConfirmed": "Votre confirmation reçue"
   },
   "registerMatchScore": {
     "title": "Enregistrer le score",
@@ -2401,6 +2450,7 @@
     "team1Won": "Équipe 1 a gagné",
     "team2Won": "Équipe 2 a gagné",
     "sets": "Scores des sets",
+    "games": "Scores des manches",
     "teamYou": "Vous",
     "teamOpponent": "Adversaire",
     "teamYourTeam": "Votre équipe",
@@ -2408,15 +2458,23 @@
     "teamYouAndPartner": "Vous & {name}",
     "teamOpponentsNames": "{name1} & {name2}",
     "setN": "Set {number}",
+    "gameN": "Manche {number}",
     "addSet": "Ajouter un set",
+    "addGame": "Ajouter une manche",
     "removeSet": "Retirer le set",
+    "removeGame": "Retirer la manche",
     "next": "Suivant",
     "submit": "Envoyer le score",
+    "tennisScoreHint": "Jeux par set (typiquement 0–7)",
+    "pickleballScoreHint": "Points par manche (typiquement à 11 ou 15)",
     "error": {
       "enterScores": "Veuillez entrer au moins un score de set.",
+      "enterGames": "Veuillez entrer au moins un score de manche.",
       "invalidParticipants": "Ce match n'a pas le bon nombre de participants.",
       "noWinner": "Les scores doivent déterminer un gagnant (une équipe doit gagner plus de sets).",
-      "selectPartner": "Veuillez sélectionner votre partenaire."
+      "selectPartner": "Veuillez sélectionner votre partenaire.",
+      "tennisScoreRange": "Les scores de set au tennis sont typiquement de 0 à 7.",
+      "pickleballScoreRange": "Les scores de manche au pickleball sont typiquement de 0 à 25."
     }
   },
   "matchFeedback": {
@@ -2427,8 +2485,9 @@
       "feedback": "Évaluation"
     },
     "matchContext": {
-      "vsPlayer": "contre {name}",
-      "vsPlayers": "contre {names}"
+      "vsPlayer": "avec {name}",
+      "vsPlayers": "avec {names}",
+      "conjunction": "et"
     },
     "outcomeStep": {
       "title": "Comment s'est passé le match?",
@@ -2483,7 +2542,8 @@
       "detailsPlaceholder": "Décrivez ce qui s'est passé...",
       "submit": "Envoyer le signalement",
       "success": "Signalement envoyé"
-    }
+    },
+    "success": "Évaluation soumise avec succès !"
   },
   "addScore": {
     "title": "Ajouter un score",
@@ -2873,6 +2933,7 @@
       "searchError": "Impossible de rechercher des joueurs",
       "noPlayersFound": "Aucun joueur trouvé",
       "noPlayersAvailable": "Aucun joueur disponible",
+      "noPlayersAvailableDescription": "Vous pouvez renvoyer des invitations aux joueurs déjà invités depuis les détails de la partie",
       "selectPlayers": "Sélectionner des joueurs",
       "sendInvitations": "Envoyer les invitations ({count})",
       "skip": "Passer",
@@ -3105,17 +3166,14 @@
       "all": "Tous",
       "hosting": "Organisées",
       "confirmed": "Confirmées",
-      "pending": "En attente",
-      "requested": "Demandées",
-      "waitlisted": "Liste d'attente",
-      "needsPlayers": "Incomplet",
-      "readyToPlay": "Prêt",
+      "waiting": "En attente",
+      "needsPlayers": "Places libres",
       "feedbackNeeded": "Évaluation",
-      "played": "Jouées",
+      "completed": "Complétées",
       "hosted": "Organisées",
-      "asParticipant": "Participé",
-      "expired": "Expirées",
-      "cancelled": "Annulées"
+      "unfilled": "Incomplètes",
+      "cancelled": "Annulées",
+      "private": "Privées"
     },
     "time": {
       "today": "Aujourd'hui",
@@ -3213,6 +3271,13 @@
         "all": "Tous",
         "reserved": "Réservé",
         "to_reserve": "À réserver"
+      },
+      "tier": {
+        "label": "Catégorie",
+        "all": "Toutes",
+        "mostWanted": "Incontournable",
+        "covetedPlayers": "Joueurs convoités",
+        "courtBooked": "Terrain réservé"
       },
       "specificDate": {
         "label": "Date",

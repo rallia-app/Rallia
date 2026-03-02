@@ -6,69 +6,48 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { useDebounce } from './useDebounce';
+import type {
+  FormatFilter,
+  MatchTypeFilter,
+  DateRangeFilter,
+  TimeOfDayFilter,
+  SkillLevelFilter,
+  GenderFilter,
+  CostFilter,
+  JoinModeFilter,
+  DistanceFilter,
+  DurationFilter,
+  CourtStatusFilter,
+  MatchTierFilter,
+  SpecificDateFilter,
+} from '@rallia/shared-types';
+
+// Re-export filter types for consumers that import from this hook
+export type {
+  FormatFilter,
+  MatchTypeFilter,
+  DateRangeFilter,
+  TimeOfDayFilter,
+  SkillLevelFilter,
+  GenderFilter,
+  CostFilter,
+  JoinModeFilter,
+  DistanceFilter,
+  DurationFilter,
+  CourtStatusFilter,
+  MatchTierFilter,
+  SpecificDateFilter,
+};
 
 /**
- * Available format filter values
+ * All available match tier options
  */
-export type FormatFilter = 'all' | 'singles' | 'doubles';
-
-/**
- * Available match type filter values
- */
-export type MatchTypeFilter = 'all' | 'casual' | 'competitive';
-
-/**
- * Available date range filter values
- */
-export type DateRangeFilter = 'all' | 'today' | 'week' | 'weekend';
-
-/**
- * Available time of day filter values
- */
-export type TimeOfDayFilter = 'all' | 'morning' | 'afternoon' | 'evening';
-
-/**
- * Available skill level filter values
- */
-export type SkillLevelFilter = 'all' | 'beginner' | 'intermediate' | 'advanced';
-
-/**
- * Available gender preference filter values
- */
-export type GenderFilter = 'all' | 'male' | 'female' | 'other';
-
-/**
- * Available cost filter values
- */
-export type CostFilter = 'all' | 'free' | 'paid';
-
-/**
- * Available join mode filter values
- */
-export type JoinModeFilter = 'all' | 'direct' | 'request';
-
-/**
- * Available distance filter values (in km)
- * 'all' means no distance filter - fetch all location types
- */
-export type DistanceFilter = 'all' | 2 | 5 | 10;
-
-/**
- * Available duration filter values (in minutes)
- * '120+' includes 120 minutes and custom durations
- */
-export type DurationFilter = 'all' | '30' | '60' | '90' | '120+';
-
-/**
- * Available court status filter values
- */
-export type CourtStatusFilter = 'all' | 'reserved' | 'to_reserve';
-
-/**
- * Specific date filter - ISO date string (YYYY-MM-DD) or null
- * When set, overrides the dateRange filter
- */
-export type SpecificDateFilter = string | null;
+export const MATCH_TIER_OPTIONS: MatchTierFilter[] = [
+  'all',
+  'mostWanted',
+  'covetedPlayers',
+  'courtBooked',
+];
 
 /**
  * All available distance options (numeric values only for iteration)
@@ -136,6 +115,7 @@ export interface PublicMatchFilters {
   distance: DistanceFilter;
   duration: DurationFilter;
   courtStatus: CourtStatusFilter;
+  matchTier: MatchTierFilter;
   specificDate: SpecificDateFilter;
 }
 
@@ -185,6 +165,8 @@ export interface UsePublicMatchFiltersReturn {
   setDuration: (duration: DurationFilter) => void;
   /** Set the court status filter */
   setCourtStatus: (courtStatus: CourtStatusFilter) => void;
+  /** Set the match tier filter */
+  setMatchTier: (matchTier: MatchTierFilter) => void;
   /** Set the specific date filter */
   setSpecificDate: (specificDate: SpecificDateFilter) => void;
   /** Reset all filters to defaults */
@@ -219,6 +201,7 @@ export function usePublicMatchFilters(
     distance: initialDistance,
     duration: 'all',
     courtStatus: 'all',
+    matchTier: 'all',
     specificDate: null,
   };
 
@@ -249,6 +232,7 @@ export function usePublicMatchFilters(
       filters.joinMode !== 'all' ||
       filters.duration !== 'all' ||
       filters.courtStatus !== 'all' ||
+      filters.matchTier !== 'all' ||
       filters.specificDate !== null
     );
   }, [filters]);
@@ -266,6 +250,7 @@ export function usePublicMatchFilters(
     if (filters.joinMode !== 'all') count++;
     if (filters.duration !== 'all') count++;
     if (filters.courtStatus !== 'all') count++;
+    if (filters.matchTier !== 'all') count++;
     if (filters.specificDate !== null) count++;
     return count;
   }, [filters]);
@@ -319,6 +304,10 @@ export function usePublicMatchFilters(
     setFilters(prev => ({ ...prev, courtStatus }));
   }, []);
 
+  const setMatchTier = useCallback((matchTier: MatchTierFilter) => {
+    setFilters(prev => ({ ...prev, matchTier }));
+  }, []);
+
   const setSpecificDate = useCallback((specificDate: SpecificDateFilter) => {
     setFilters(prev => ({ ...prev, specificDate }));
   }, []);
@@ -338,6 +327,7 @@ export function usePublicMatchFilters(
       distance: defaultDistance,
       duration: 'all',
       courtStatus: 'all',
+      matchTier: 'all',
       specificDate: null,
     });
   }, [defaultDistance]);
@@ -364,6 +354,7 @@ export function usePublicMatchFilters(
     setDistance,
     setDuration,
     setCourtStatus,
+    setMatchTier,
     setSpecificDate,
     resetFilters,
     clearSearch,

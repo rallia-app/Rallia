@@ -42,6 +42,9 @@ const MATCH_NOTIFICATION_TYPES = [
   'match_completed',
   'player_kicked',
   'player_left',
+  'score_confirmation',
+  'feedback_request',
+  'feedback_reminder',
 ] as const;
 
 /**

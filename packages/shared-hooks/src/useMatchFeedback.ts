@@ -207,7 +207,8 @@ export function useMatchFeedback(
       if (!reviewerId) throw new Error('Reporter ID is required');
       return submitMatchReport({ ...input, matchId, reporterId: reviewerId });
     },
-    onSuccess: result => {
+    onSuccess: async result => {
+      await invalidateFeedbackQueries();
       onReportSuccess?.(result);
     },
     onError: error => {

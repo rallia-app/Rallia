@@ -292,6 +292,19 @@ export async function getOpponentsForFeedback(
 
   const ratedOpponentIds = new Set(existingFeedback?.map(f => f.opponent_id) || []);
 
+  // Get existing reports from this reviewer
+  const { data: existingReports, error: reportsError } = await supabase
+    .from('match_report')
+    .select('reported_id')
+    .eq('match_id', matchId)
+    .eq('reporter_id', reviewerId);
+
+  if (reportsError) {
+    console.error('[feedbackService] Failed to get existing reports:', reportsError);
+  }
+
+  const reportedOpponentIds = new Set(existingReports?.map(r => r.reported_id) || []);
+
   // Map to OpponentForFeedback format
   return (participants as unknown as ParticipantWithProfile[]).map(p => {
     const profile = p.player?.profile;
@@ -299,7 +312,7 @@ export async function getOpponentsForFeedback(
     const lastName = profile?.last_name || '';
     const displayName = profile?.display_name;
 
-    const name = displayName || firstName || 'Player';
+    const name = firstName || displayName || 'Player';
     const fullName = displayName || `${firstName} ${lastName}`.trim() || 'Player';
 
     return {
@@ -309,6 +322,7 @@ export async function getOpponentsForFeedback(
       fullName,
       avatarUrl: profile?.profile_picture_url || null,
       hasExistingFeedback: ratedOpponentIds.has(p.player_id),
+      hasExistingReport: reportedOpponentIds.has(p.player_id),
     };
   });
 }
@@ -428,7 +442,7 @@ export async function getMatchContextForFeedback(
     .filter(p => p.player_id !== reviewerId && p.status === 'joined')
     .map(p => {
       const profile = p.player?.profile;
-      return profile?.display_name || profile?.first_name || 'Player';
+      return profile?.first_name || profile?.display_name || 'Player';
     });
 
   return {

@@ -11,7 +11,7 @@ import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-nat
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
-import { Text } from '@rallia/shared-components';
+import { Text, useToast } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -129,6 +129,7 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
 }) => {
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
+  const toast = useToast();
   const isDark = theme === 'dark';
 
   // State
@@ -145,6 +146,9 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
   const [opponentFeedback, setOpponentFeedback] = useState<
     Record<number, OpponentFeedbackFormState>
   >({});
+
+  // Optimistic tracking of reported player IDs (hides report button immediately)
+  const [reportedPlayerIds, setReportedPlayerIds] = useState<Set<string>>(new Set());
 
   // Theme colors
   const themeColors = isDark ? darkTheme : lightTheme;
@@ -181,6 +185,7 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
       if (result.feedbackCompleted) {
         // Cancelled - close immediately
         successHaptic();
+        toast.success(t('matchFeedback.success'));
         onComplete?.();
         onClose();
       } else {
@@ -197,6 +202,7 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
       if (result.allOpponentsRated || currentStep >= totalSteps - 1) {
         // All done - close immediately
         successHaptic();
+        toast.success(t('matchFeedback.success'));
         onComplete?.();
         onClose();
       } else {
@@ -209,8 +215,12 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
       console.error('[MatchFeedbackWizard] Feedback error:', error);
     },
     onReportSuccess: () => {
-      // Report submitted successfully - toast is shown by the component
-      console.log('[MatchFeedbackWizard] Report submitted successfully');
+      // Optimistically hide the report button for the current opponent
+      const opponentIndex = getOpponentIndex(currentStep);
+      const opponent = opponents[opponentIndex];
+      if (opponent) {
+        setReportedPlayerIds(prev => new Set(prev).add(opponent.playerId));
+      }
     },
     onReportError: error => {
       warningHaptic();
@@ -333,7 +343,7 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
   }, [submitFeedback, opponents, currentStep, opponentFeedback, getOpponentIndex]);
 
   // Handle skip
-  const handleSkip = useCallback(() => {
+  const handleSkip = () => {
     if (currentStep >= totalSteps - 1) {
       // Last opponent - close the wizard
       onClose();
@@ -341,7 +351,7 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
       // Move to next opponent
       goToNextStep();
     }
-  }, [currentStep, totalSteps, goToNextStep, onClose]);
+  };
 
   // Handle report submission for current opponent
   const handleReportSubmit = useCallback(
@@ -513,7 +523,11 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
                 onFeedbackChange={newFeedback =>
                   handleOpponentFeedbackChange(opponentIndex, newFeedback)
                 }
-                onReportSubmit={handleReportSubmit}
+                onReportSubmit={
+                  opponent.hasExistingReport || reportedPlayerIds.has(opponent.playerId)
+                    ? undefined
+                    : handleReportSubmit
+                }
                 isSubmittingReport={isSubmittingReport}
                 colors={colors}
                 t={t}

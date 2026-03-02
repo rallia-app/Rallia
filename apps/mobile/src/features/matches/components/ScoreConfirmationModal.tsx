@@ -54,7 +54,14 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
       toast.success('The match score has been confirmed.');
       handleClose();
     } catch (error) {
-      toast.error('Failed to confirm score. Please try again.');
+      const msg = error instanceof Error ? error.message : '';
+      if (msg.includes('already processed')) {
+        warningHaptic();
+        toast.info('This score has already been confirmed.');
+        handleClose();
+      } else {
+        toast.error('Failed to confirm score. Please try again.');
+      }
     }
   }, [confirmation, playerId, confirmMutation, handleClose, toast]);
 

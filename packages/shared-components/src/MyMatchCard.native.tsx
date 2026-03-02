@@ -3,7 +3,7 @@
  *
  * A minimal, reminder-focused card showing only essential info:
  * - Three-tier visual hierarchy based on match desirability:
- *   - Most Wanted: Court booked + high reputation creator (90%+) → gold/amber
+ *   - Must-Play: Court booked + high reputation creator (90%+) → gold/amber
  *   - Ready to Play: Court booked only → secondary/coral tones
  *   - Regular: Default → primary/teal tones
  * - Date/time prominently displayed with urgent animation
@@ -34,38 +34,14 @@ import {
   formatIntuitiveDateInTimezone,
   getProfilePictureUrl,
   deriveMatchStatus,
+  type MatchTier,
+  getMatchTier,
 } from '@rallia/shared-utils';
 import { TranslationKey } from '@rallia/shared-translations';
 
 // =============================================================================
 // TIER-BASED GRADIENT PALETTES (using design system tokens)
 // =============================================================================
-
-/**
- * Match tier determines visual styling based on desirability:
- * - mostWanted: Court booked + high reputation creator (90%+) → accent/gold
- * - readyToPlay: Court booked only → secondary/coral
- * - regular: Default → primary/teal
- * - expired: Match started but not full (disabled appearance) → neutral/gray
- */
-type MatchTier = 'mostWanted' | 'readyToPlay' | 'regular' | 'expired';
-
-/**
- * Threshold for "high reputation" creator (percentage 0-100)
- */
-const HIGH_REPUTATION_THRESHOLD = 90;
-
-/**
- * Determine match tier based on court status and creator reputation
- */
-function getMatchTier(courtStatus: string | null, creatorReputationScore?: number): MatchTier {
-  const isCourtBooked = courtStatus === 'reserved';
-  const isHighReputation = (creatorReputationScore ?? 0) >= HIGH_REPUTATION_THRESHOLD;
-
-  if (isCourtBooked && isHighReputation) return 'mostWanted';
-  if (isCourtBooked) return 'readyToPlay';
-  return 'regular';
-}
 
 /**
  * Tier-based color palettes for accent strips and backgrounds
@@ -82,6 +58,10 @@ const TIER_PALETTES = {
     dark: { background: primary[950] },
   },
   readyToPlay: {
+    light: { background: primary[50] },
+    dark: { background: primary[950] },
+  },
+  topPlayer: {
     light: { background: primary[50] },
     dark: { background: primary[950] },
   },
@@ -427,8 +407,8 @@ const ParticipantAvatars: React.FC<ParticipantAvatarsProps> = ({ match, colors, 
                 index > 0 && { marginLeft: -8 },
                 {
                   backgroundColor: avatar.url ? colors.tierAccent : colors.avatarPlaceholder,
-                  borderWidth: 2.5,
-                  borderColor: colors.tierAccent,
+                  borderWidth: 2,
+                  borderColor: primary[500],
                   shadowColor: colors.tierAccent,
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.3,
@@ -445,7 +425,7 @@ const ParticipantAvatars: React.FC<ParticipantAvatarsProps> = ({ match, colors, 
             </View>
             {isHost && (
               <View style={[styles.hostBadge, { backgroundColor: colors.tierAccent }]}>
-                <Ionicons name="star" size={5} color={base.white} />
+                <Ionicons name="star" size={7} color={base.white} />
               </View>
             )}
           </View>
@@ -459,7 +439,8 @@ const ParticipantAvatars: React.FC<ParticipantAvatarsProps> = ({ match, colors, 
             {
               marginLeft: -8,
               backgroundColor: colors.tierAccent,
-              borderColor: colors.tierAccentLight,
+              borderWidth: 2,
+              borderColor: primary[500],
               shadowColor: colors.tierAccent,
               shadowOffset: { width: 0, height: 2 },
               shadowOpacity: 0.2,
@@ -510,10 +491,14 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
   // Check if match is expired (started or ended but not full)
   const isExpired = (isInProgress || hasMatchEnded) && !isFull;
 
-  // Determine match tier based on court status and creator reputation
-  // Override with 'expired' tier if match is expired
-  const creatorReputationScore = match.created_by_player?.player_reputation?.reputation_score;
-  const baseTier = getMatchTier(match.court_status, creatorReputationScore);
+  // Determine match tier based on court status and participant composition
+  const participantsForTier = participants.map(p => ({
+    repScore: p.player?.player_reputation?.reputation_score,
+    certStatus: (p.player as unknown as Record<string, unknown>)?.sportCertificationStatus as
+      | string
+      | undefined,
+  }));
+  const baseTier = getMatchTier(match.court_status, participantsForTier, match.format);
   const tier: MatchTier = isExpired ? 'expired' : baseTier;
   const isMostWanted = tier === 'mostWanted';
 
@@ -656,7 +641,7 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
 
   // Build accessibility label with status indicators
   let accessibilityLabel = `Match ${dayLabel} at ${timeLabel}`;
-  if (isMostWanted) accessibilityLabel += ' - Most Wanted';
+  if (isMostWanted) accessibilityLabel += ' - Must-Play';
   if (isInvited) accessibilityLabel += ' - You are invited';
   if (showPendingBadge)
     accessibilityLabel += ` - ${pendingRequestCount} pending join request${pendingRequestCount > 1 ? 's' : ''}`;
@@ -934,8 +919,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: base.white,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,

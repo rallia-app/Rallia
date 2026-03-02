@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
   Keyboard,
 } from 'react-native';
+import { ConfirmationModal } from '../../../components/ConfirmationModal';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -293,6 +294,18 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   const lastSavedStep = useRef<number | null>(null);
   const hasUnsavedChanges = useRef(false);
 
+  // Confirmation modal states (replace native Alert.alert)
+  const [showGenderMismatchModal, setShowGenderMismatchModal] = useState(false);
+  const [genderMismatchCount, setGenderMismatchCount] = useState(0);
+  const [showConfirmChangesModal, setShowConfirmChangesModal] = useState(false);
+  const [confirmChangesInfo, setConfirmChangesInfo] = useState({
+    changesList: '',
+    participantCount: 0,
+  });
+  const [showDiscardEditModal, setShowDiscardEditModal] = useState(false);
+  const [showResumeDraftModal, setShowResumeDraftModal] = useState(false);
+  const pendingMatchData = useRef<MatchFormSchemaData | null>(null);
+
   // Theme colors
   const themeColors = isDark ? darkTheme : lightTheme;
   const colors: ThemeColors = {
@@ -475,7 +488,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     if (!onConsumeInitialBooking || isEditMode || hasAppliedInitialBooking.current) {
       return;
     }
-    const { facility, slot, facilityId, courtId, courtNumber } = initialBookingForWizard;
+    const { facility, slot, facilityId, courtId } = initialBookingForWizard;
     const slotTyped = slot as { datetime: Date; endDateTime: Date };
     const facilityTyped = facility as {
       name: string;
@@ -591,29 +604,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     // Now we know the loading is complete
     if (hasDraft && draft && isDraftForSport(sportId)) {
       hasCheckedDraft.current = true;
-      Alert.alert(t('matchCreation.resumeDraft'), t('matchCreation.resumeDraftMessage'), [
-        {
-          text: t('matchCreation.discardDraft'),
-          style: 'destructive',
-          onPress: () => {
-            clearDraft();
-            resetForm();
-            lastSavedStep.current = null;
-            hasUnsavedChanges.current = false;
-          },
-        },
-        {
-          text: t('matchCreation.resumeDraft'),
-          onPress: () => {
-            loadFromDraft(draft.data);
-            setCurrentStep(draft.currentStep);
-            setHighestStepVisited(draft.currentStep);
-            // Mark draft as already saved at this step
-            lastSavedStep.current = draft.currentStep;
-            hasUnsavedChanges.current = false;
-          },
-        },
-      ]);
+      setShowResumeDraftModal(true);
     } else {
       // No draft exists (loading complete, no draft found), mark as checked
       hasCheckedDraft.current = true;
@@ -769,22 +760,25 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
 
     const changes: string[] = [];
 
+    // Normalize nullable values for comparison (null, undefined, '' are all equivalent)
+    const norm = (v: string | number | boolean | null | undefined) => v ?? '';
+
     // Date/Time changes
     if (values.matchDate !== editMatch.match_date) changes.push('date');
     if (values.startTime !== editMatch.start_time) changes.push('time');
     if (values.duration !== editMatch.duration) changes.push('duration');
 
     // Location changes
-    if (values.locationType !== editMatch.location_type) changes.push('location');
-    if (values.facilityId !== editMatch.facility_id) changes.push('location');
-    if (values.locationName !== editMatch.location_name) changes.push('location');
+    if (values.locationType !== (editMatch.location_type || 'tbd')) changes.push('location');
+    if (norm(values.facilityId) !== norm(editMatch.facility_id)) changes.push('location');
+    if (norm(values.locationName) !== norm(editMatch.location_name)) changes.push('location');
 
     // Format changes
     if (values.format !== editMatch.format) changes.push('format');
 
     // Cost changes
-    if (values.isCourtFree !== editMatch.is_court_free) changes.push('cost');
-    if (values.estimatedCost !== editMatch.estimated_cost) changes.push('cost');
+    if (values.isCourtFree !== (editMatch.is_court_free ?? true)) changes.push('cost');
+    if ((values.estimatedCost ?? 0) !== (editMatch.estimated_cost ?? 0)) changes.push('cost');
     if (
       values.costSplitType !==
       (editMatch.cost_split_type === 'host_pays'
@@ -920,24 +914,9 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
 
             if (genderWarning) {
               // Show confirmation for gender mismatch
-              Alert.alert(
-                t('matchCreation.validation.genderMismatchTitle'),
-                t('matchCreation.validation.genderMismatchMessage').replace(
-                  '{count}',
-                  String(genderWarning.affectedParticipantIds.length)
-                ),
-                [
-                  {
-                    text: t('common.cancel'),
-                    style: 'cancel',
-                  },
-                  {
-                    text: t('matchCreation.validation.updateAnyway'),
-                    style: 'destructive',
-                    onPress: () => performUpdate(matchData),
-                  },
-                ]
-              );
+              pendingMatchData.current = matchData;
+              setGenderMismatchCount(genderWarning.affectedParticipantIds.length);
+              setShowGenderMismatchModal(true);
               return;
             }
           }
@@ -968,22 +947,9 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
           const changesList = changeDescriptions.join(', ');
 
           // Show confirmation dialog
-          Alert.alert(
-            t('matchCreation.validation.confirmChangesTitle'),
-            t('matchCreation.validation.confirmChangesMessage')
-              .replace('{changes}', changesList)
-              .replace('{count}', String(joinedParticipants.length)),
-            [
-              {
-                text: t('common.cancel'),
-                style: 'cancel',
-              },
-              {
-                text: t('matchCreation.validation.confirmUpdate'),
-                onPress: () => performUpdate(matchData),
-              },
-            ]
-          );
+          pendingMatchData.current = matchData;
+          setConfirmChangesInfo({ changesList, participantCount: joinedParticipants.length });
+          setShowConfirmChangesModal(true);
           return;
         }
       }
@@ -1014,14 +980,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     // In edit mode, just ask if they want to discard changes (no draft saving)
     if (isEditMode) {
       if (isDirty) {
-        Alert.alert(t('matchCreation.discardChanges'), t('matchCreation.discardEditMessage'), [
-          { text: t('matchCreation.keepEditing'), style: 'cancel' },
-          {
-            text: t('matchCreation.discardChanges'),
-            style: 'destructive',
-            onPress: onClose,
-          },
-        ]);
+        setShowDiscardEditModal(true);
       } else {
         onClose();
       }
@@ -1384,6 +1343,96 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
           </TouchableOpacity>
         )}
       </View>
+
+      {/* Gender mismatch confirmation */}
+      <ConfirmationModal
+        visible={showGenderMismatchModal}
+        onClose={() => {
+          setShowGenderMismatchModal(false);
+          pendingMatchData.current = null;
+        }}
+        onConfirm={() => {
+          setShowGenderMismatchModal(false);
+          if (pendingMatchData.current) {
+            performUpdate(pendingMatchData.current);
+            pendingMatchData.current = null;
+          }
+        }}
+        title={t('matchCreation.validation.genderMismatchTitle')}
+        message={t('matchCreation.validation.genderMismatchMessage').replace(
+          '{count}',
+          String(genderMismatchCount)
+        )}
+        confirmLabel={t('matchCreation.validation.updateAnyway')}
+        cancelLabel={t('common.cancel')}
+        destructive
+      />
+
+      {/* Confirm impactful changes */}
+      <ConfirmationModal
+        visible={showConfirmChangesModal}
+        onClose={() => {
+          setShowConfirmChangesModal(false);
+          pendingMatchData.current = null;
+        }}
+        onConfirm={() => {
+          setShowConfirmChangesModal(false);
+          if (pendingMatchData.current) {
+            performUpdate(pendingMatchData.current);
+            pendingMatchData.current = null;
+          }
+        }}
+        title={t('matchCreation.validation.confirmChangesTitle')}
+        message={t('matchCreation.validation.confirmChangesMessage')
+          .replace('{changes}', confirmChangesInfo.changesList)
+          .replace('{count}', String(confirmChangesInfo.participantCount))}
+        confirmLabel={t('matchCreation.validation.confirmUpdate')}
+        cancelLabel={t('common.cancel')}
+      />
+
+      {/* Discard edit changes confirmation */}
+      <ConfirmationModal
+        visible={showDiscardEditModal}
+        onClose={() => setShowDiscardEditModal(false)}
+        onConfirm={() => {
+          setShowDiscardEditModal(false);
+          onClose();
+        }}
+        title={t('matchCreation.discardChanges')}
+        message={t('matchCreation.discardEditMessage')}
+        confirmLabel={t('matchCreation.discardChanges')}
+        cancelLabel={t('matchCreation.keepEditing')}
+        destructive
+      />
+
+      {/* Resume draft confirmation */}
+      <ConfirmationModal
+        visible={showResumeDraftModal}
+        onClose={() => {
+          // "Discard" = dismiss the draft
+          setShowResumeDraftModal(false);
+          clearDraft();
+          resetForm();
+          lastSavedStep.current = null;
+          hasUnsavedChanges.current = false;
+        }}
+        onConfirm={() => {
+          // "Resume" = load the draft
+          setShowResumeDraftModal(false);
+          if (draft) {
+            loadFromDraft(draft.data);
+            setCurrentStep(draft.currentStep);
+            setHighestStepVisited(draft.currentStep);
+            lastSavedStep.current = draft.currentStep;
+            hasUnsavedChanges.current = false;
+          }
+        }}
+        title={t('matchCreation.resumeDraft')}
+        message={t('matchCreation.resumeDraftMessage')}
+        confirmLabel={t('matchCreation.resumeDraft')}
+        cancelLabel={t('matchCreation.discardDraft')}
+        destructive={false}
+      />
     </View>
   );
 };
