@@ -29,5 +29,9 @@ export default async function OrgLayout({ children }: { children: React.ReactNod
     redirect('/onboarding');
   }
 
-  return <OrgLayoutWrapper hasOrg={hasOrg}>{children}</OrgLayoutWrapper>;
+  return (
+    <OrgLayoutWrapper hasOrg={hasOrg} userId={user.id} userEmail={user.email ?? ''}>
+      {children}
+    </OrgLayoutWrapper>
+  );
 }

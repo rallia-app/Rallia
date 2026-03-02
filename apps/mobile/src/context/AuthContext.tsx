@@ -23,6 +23,7 @@ import React, {
   PropsWithChildren,
 } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
+import { usePostHog } from 'posthog-react-native';
 import { supabase } from '../lib/supabase';
 import type { Session, AuthError, Provider, User } from '@supabase/supabase-js';
 import { Logger } from '@rallia/shared-services';
@@ -168,6 +169,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const posthog = usePostHog();
 
   // Track previous session to detect expiry
   const previousSessionRef = useRef<Session | null>(null);
@@ -416,6 +418,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       // Clear any existing session expired flag
       setSessionExpired(false);
 
+      // Reset PostHog identity so next session starts anonymous
+      posthog?.reset();
+
       const { error } = await supabase.auth.signOut();
       if (error) {
         Logger.error('Error signing out', error);
@@ -429,7 +434,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         error: error instanceof Error ? error : new Error('Unknown error'),
       };
     }
-  }, []);
+  }, [posthog]);
 
   const value: AuthContextType = {
     // State

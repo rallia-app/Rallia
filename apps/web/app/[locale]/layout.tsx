@@ -1,3 +1,5 @@
+import { PostHogPageview } from '@/components/posthog-pageview';
+import { PostHogProvider } from '@/components/posthog-provider';
 import { ThemeProvider } from '@/components/theme-provider';
 import { routing } from '@/i18n/routing';
 import { getTranslations, type Locale as SharedLocale } from '@rallia/shared-translations';
@@ -5,6 +7,7 @@ import type { Metadata } from 'next';
 import { Locale, NextIntlClientProvider } from 'next-intl';
 import { Inter, Outfit, Poppins, Space_Grotesk } from 'next/font/google';
 import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 import './globals.css';
 
 import { Analytics } from '@vercel/analytics/next';
@@ -124,16 +127,21 @@ export default async function LocaleLayout({
         className={`${outfit.variable} ${poppins.variable} ${spaceGrotesk.variable} ${inter.variable} antialiased flex min-h-screen flex-col bg-[var(--primary-50)] dark:bg-[var(--primary-900)]`}
       >
         <Analytics />
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <NextIntlClientProvider locale={locale} messages={messages}>
-            {children}
-          </NextIntlClientProvider>
-        </ThemeProvider>
+        <PostHogProvider>
+          <Suspense>
+            <PostHogPageview />
+          </Suspense>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <NextIntlClientProvider locale={locale} messages={messages}>
+              {children}
+            </NextIntlClientProvider>
+          </ThemeProvider>
+        </PostHogProvider>
       </body>
     </html>
   );

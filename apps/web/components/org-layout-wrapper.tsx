@@ -1,9 +1,10 @@
 'use client';
 
 import { OrgSidebar } from '@/components/org-sidebar';
-import { SidebarProvider, useSidebar } from '@/components/sidebar-context';
 import { OrganizationProvider } from '@/components/organization-context';
+import { PostHogIdentify } from '@/components/posthog-identify';
 import { QueryProvider } from '@/components/query-provider';
+import { SidebarProvider, useSidebar } from '@/components/sidebar-context';
 import { usePathname } from '@/i18n/navigation';
 import { TooltipProvider } from './ui/tooltip';
 
@@ -37,9 +38,13 @@ function LayoutContent({
 export function OrgLayoutWrapper({
   children,
   hasOrg,
+  userId,
+  userEmail,
 }: {
   children: React.ReactNode;
   hasOrg: boolean;
+  userId: string;
+  userEmail: string;
 }) {
   const pathname = usePathname();
   const isOnboardingPage = pathname?.includes('/onboarding');
@@ -51,6 +56,7 @@ export function OrgLayoutWrapper({
     <QueryProvider>
       <SidebarProvider>
         <OrganizationProvider>
+          <PostHogIdentify userId={userId} email={userEmail} />
           <TooltipProvider delayDuration={100}>
             <LayoutContent showSidebar={showSidebar}>{children}</LayoutContent>
           </TooltipProvider>
