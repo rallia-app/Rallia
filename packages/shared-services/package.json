@@ -12,8 +12,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.83.0",
-    "base64-arraybuffer": "^1.0.2",
-    "resend": "^4.0.1"
+    "base64-arraybuffer": "^1.0.2"
   },
   "peerDependencies": {
     "expo-file-system": "*",
