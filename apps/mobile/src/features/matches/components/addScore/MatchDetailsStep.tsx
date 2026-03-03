@@ -92,7 +92,7 @@ export function MatchDetailsStep({ onContinue }: MatchDetailsStepProps) {
           <DateTimePicker
             value={matchDate}
             mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            display="spinner"
             onChange={handleDateChange}
             maximumDate={new Date()}
             themeVariant={isDark ? 'dark' : 'light'}
