@@ -1,10 +1,6 @@
 /**
  * PlayerMatches Screen
  * Displays the user's matches with tabbed Upcoming/Past views and date-sectioned lists.
- *
- * Also handles deep linking from push notifications:
- * - When a match-related notification is tapped, this screen opens
- * - The screen checks for a pending match ID and opens the detail sheet
  */
 
 import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
@@ -20,11 +16,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { MatchCard, Text } from '@rallia/shared-components';
 import { SportIcon } from '../../../components/SportIcon';
-import { useTheme, usePlayerMatches, useMatch, usePlayerMatchFilters } from '@rallia/shared-hooks';
+import { useTheme, usePlayerMatches, usePlayerMatchFilters } from '@rallia/shared-hooks';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import { useAuth, useThemeStyles, useTranslation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
-import { useMatchDetailSheet, useDeepLink, useSport } from '../../../context';
+import { useMatchDetailSheet, useSport } from '../../../context';
 import { Logger } from '@rallia/shared-services';
 import { PlayerMatchFilterChips } from '../components';
 import { spacingPixels, neutral } from '@rallia/design-system';
@@ -158,7 +154,6 @@ export default function PlayerMatches() {
   const { t, locale } = useTranslation();
   const { colors } = useThemeStyles();
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
-  const { consumePendingMatchId } = useDeepLink();
   const { selectedSport } = useSport();
   const isDark = theme === 'dark';
 
@@ -184,42 +179,6 @@ export default function PlayerMatches() {
 
   // Track manual pull-to-refresh so RefreshControl doesn't trigger on tab switch or background refetch
   const isManualRefresh = useRef(false);
-
-  // Deep link handling - use ref to avoid cascading renders from setState in effect
-  const pendingMatchIdRef = useRef<string | null>(null);
-  const [pendingMatchId, setPendingMatchId] = useState<string | null>(null);
-
-  // Fetch match data when we have a pending deep link
-  const { match: deepLinkMatch, isLoading: isLoadingDeepLinkMatch } = useMatch(
-    pendingMatchId ?? undefined,
-    { enabled: !!pendingMatchId }
-  );
-
-  // Check for pending deep link on mount - deferred to avoid cascading renders
-  useEffect(() => {
-    const matchId = consumePendingMatchId();
-    if (matchId) {
-      Logger.logUserAction('deep_link_match_opening', { matchId });
-      pendingMatchIdRef.current = matchId;
-      // Use queueMicrotask to defer state update and avoid cascading render warning
-      queueMicrotask(() => {
-        setPendingMatchId(matchId);
-      });
-    }
-  }, [consumePendingMatchId]);
-
-  // Open match detail sheet when deep link match data is loaded
-  useEffect(() => {
-    if (deepLinkMatch && !isLoadingDeepLinkMatch && pendingMatchIdRef.current) {
-      Logger.logUserAction('deep_link_match_opened', { matchId: pendingMatchIdRef.current });
-      openMatchDetail(deepLinkMatch);
-      // Clear the pending match ID after opening
-      pendingMatchIdRef.current = null;
-      queueMicrotask(() => {
-        setPendingMatchId(null);
-      });
-    }
-  }, [deepLinkMatch, isLoadingDeepLinkMatch, openMatchDetail]);
 
   // Theme colors
 

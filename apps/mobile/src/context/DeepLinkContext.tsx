@@ -37,6 +37,9 @@ interface DeepLinkContextType {
 
   /** Clear any pending deep link (e.g., on navigation away) */
   clearPendingDeepLink: () => void;
+
+  /** The current pending match (reactive — triggers re-renders when set) */
+  pendingMatchId: string | null;
 }
 
 // =============================================================================
@@ -116,6 +119,7 @@ export const DeepLinkProvider: React.FC<DeepLinkProviderProps> = ({ children }) 
     consumePendingMatchId,
     hasPendingMatch,
     clearPendingDeepLink,
+    pendingMatchId: pendingMatch?.matchId ?? null,
   };
 
   return <DeepLinkContext.Provider value={contextValue}>{children}</DeepLinkContext.Provider>;
