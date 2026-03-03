@@ -46,6 +46,7 @@ export default async function FacilitiesPage() {
       timezone,
       is_active,
       membership_required,
+      is_first_come_first_serve,
       facility_type,
       data_provider_id,
       external_provider_id,

@@ -38,6 +38,7 @@ interface Facility {
   timezone: string | null;
   is_active: boolean;
   membership_required: boolean;
+  is_first_come_first_serve: boolean;
   facility_type: string | null;
   data_provider_id: string | null;
   external_provider_id: string | null;
@@ -226,6 +227,7 @@ export function FacilitiesList({ facilities, organizationId }: FacilitiesListPro
       longitude: f.longitude,
       timezone: f.timezone,
       membership_required: f.membership_required,
+      is_first_come_first_serve: f.is_first_come_first_serve,
       data_provider_id: f.data_provider_id,
       external_provider_id: f.external_provider_id,
       facility_sport: f.facility_sport || [],
