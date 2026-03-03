@@ -1064,6 +1064,7 @@ export type Database = {
           facility_type: Database['public']['Enums']['facility_type_enum'] | null;
           id: string;
           is_active: boolean;
+          is_first_come_first_serve: boolean;
           latitude: number | null;
           location: unknown;
           longitude: number | null;
@@ -1088,6 +1089,7 @@ export type Database = {
           facility_type?: Database['public']['Enums']['facility_type_enum'] | null;
           id?: string;
           is_active?: boolean;
+          is_first_come_first_serve?: boolean;
           latitude?: number | null;
           location?: unknown;
           longitude?: number | null;
@@ -1112,6 +1114,7 @@ export type Database = {
           facility_type?: Database['public']['Enums']['facility_type_enum'] | null;
           id?: string;
           is_active?: boolean;
+          is_first_come_first_serve?: boolean;
           latitude?: number | null;
           location?: unknown;
           longitude?: number | null;
@@ -1343,6 +1346,7 @@ export type Database = {
           device_info: Json | null;
           id: string;
           message: string;
+          module: string;
           player_id: string | null;
           screenshot_urls: string[] | null;
           status: string;
@@ -1357,6 +1361,7 @@ export type Database = {
           device_info?: Json | null;
           id?: string;
           message: string;
+          module?: string;
           player_id?: string | null;
           screenshot_urls?: string[] | null;
           status?: string;
@@ -1371,6 +1376,7 @@ export type Database = {
           device_info?: Json | null;
           id?: string;
           message?: string;
+          module?: string;
           player_id?: string | null;
           screenshot_urls?: string[] | null;
           status?: string;
@@ -5754,13 +5760,19 @@ export type Database = {
           users_count: number;
         }[];
       };
+      get_feedback_module_display_name: {
+        Args: { module_key: string };
+        Returns: string;
+      };
       get_feedback_sentiment: {
         Args: never;
         Returns: {
+          bug_reports: number;
           category: string;
-          count: number;
-          percentage: number;
-          status_breakdown: Json;
+          feature_requests: number;
+          in_progress_count: number;
+          open_count: number;
+          resolved_count: number;
         }[];
       };
       get_group_activity: {

@@ -379,6 +379,29 @@ export default function InfoTab({
 
   return (
     <View style={styles.container}>
+      {/* First come first serve banner */}
+      {facilityData?.is_first_come_first_serve && (
+        <View
+          style={[
+            styles.fcfsBanner,
+            {
+              backgroundColor: (isDark ? accent[400] : accent[500]) + '15',
+              borderColor: isDark ? accent[400] : accent[500],
+            },
+          ]}
+        >
+          <Ionicons name="walk-outline" size={18} color={isDark ? accent[400] : accent[500]} />
+          <Text
+            size="sm"
+            weight="medium"
+            color={isDark ? accent[400] : accent[500]}
+            style={styles.fcfsBannerText}
+          >
+            {t('facilityDetail.firstComeFirstServe')}
+          </Text>
+        </View>
+      )}
+
       {/* About Section */}
       {(description || facilityType || membershipRequired !== undefined) && (
         <View style={styles.section}>
@@ -542,6 +565,19 @@ const styles = StyleSheet.create({
   container: {
     gap: spacingPixels[5],
     paddingBottom: spacingPixels[4],
+  },
+  fcfsBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: spacingPixels[4],
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
+    borderRadius: radiusPixels.md,
+    borderWidth: 1,
+  },
+  fcfsBannerText: {
+    marginLeft: spacingPixels[2],
+    flex: 1,
   },
 
   // Section
