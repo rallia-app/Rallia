@@ -6,10 +6,18 @@
 import { Resend } from 'resend';
 import type { NotificationRecord, DeliveryResult, OrganizationInfo } from '../types.ts';
 import { renderOrgEmail } from '../templates/organization.ts';
+import {
+  wrapInLayout,
+  renderCtaButton,
+  renderDetailCard,
+  renderDividerAndDisclaimer,
+  escapeHtml,
+  EMAIL_TOKENS,
+} from '../../_shared/email-layout.ts';
+import { t } from '../../_shared/email-translations.ts';
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'noreply@rallia.com';
-const SITE_URL = Deno.env.get('SITE_URL') || 'https://rallia.com';
 
 /**
  * Sport-specific emoji for email subjects
@@ -38,8 +46,6 @@ function generateEmailSubject(notification: NotificationRecord): string {
   const sportName = (payload as Record<string, unknown>)?.sportName as string | undefined;
   const emoji = getSportEmoji(sportName);
 
-  // Add sport context to match-related emails
-  // Keep sport name lowercase as per user preference
   if (type.startsWith('match_') || type === 'feedback_request' || type === 'reminder') {
     if (sportName) {
       const normalizedSport = sportName.toLowerCase().trim();
@@ -55,7 +61,8 @@ function generateEmailSubject(notification: NotificationRecord): string {
  */
 export async function sendEmail(
   notification: NotificationRecord,
-  recipientEmail: string
+  recipientEmail: string,
+  locale: string = 'en-US'
 ): Promise<DeliveryResult> {
   if (!RESEND_API_KEY) {
     return {
@@ -66,7 +73,7 @@ export async function sendEmail(
   }
 
   try {
-    const htmlContent = generateEmailHtml(notification);
+    const htmlContent = generateEmailHtml(notification, locale);
     const subject = generateEmailSubject(notification);
 
     const resend = new Resend(RESEND_API_KEY);
@@ -103,208 +110,114 @@ export async function sendEmail(
 /**
  * Generate match details card for match-related emails
  */
-function generateMatchDetailsCard(payload: Record<string, unknown>): string {
+function generateMatchDetailsCard(
+  payload: Record<string, unknown>,
+  locale: string
+): string {
   const sportName = payload.sportName as string | undefined;
   const matchDate = payload.matchDate as string | undefined;
   const startTime = payload.startTime as string | undefined;
   const locationName = payload.locationName as string | undefined;
   const playerName = payload.playerName as string | undefined;
 
-  // Don't show card if no details available
   if (!matchDate && !locationName && !playerName) {
     return '';
   }
 
   const emoji = getSportEmoji(sportName);
-  const detailRows: string[] = [];
+  const rows: Array<{ label: string; value: string }> = [];
 
   if (sportName) {
-    detailRows.push(`
-      <tr>
-        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; width: 100px;">Sport</td>
-        <td style="padding: 8px 0; color: #374151; font-size: 14px; font-weight: 500;">${emoji} ${escapeHtml(sportName)}</td>
-      </tr>
-    `);
+    rows.push({ label: t(locale, 'match.sport'), value: `${emoji} ${escapeHtml(sportName)}` });
   }
 
   if (matchDate) {
     const dateLabel = startTime ? `${matchDate} at ${startTime}` : matchDate;
-    detailRows.push(`
-      <tr>
-        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; width: 100px;">When</td>
-        <td style="padding: 8px 0; color: #374151; font-size: 14px; font-weight: 500;">${escapeHtml(dateLabel)}</td>
-      </tr>
-    `);
+    rows.push({ label: t(locale, 'match.when'), value: escapeHtml(dateLabel) });
   }
 
   if (locationName) {
-    detailRows.push(`
-      <tr>
-        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; width: 100px;">Where</td>
-        <td style="padding: 8px 0; color: #374151; font-size: 14px; font-weight: 500;">${escapeHtml(locationName)}</td>
-      </tr>
-    `);
+    rows.push({ label: t(locale, 'match.where'), value: escapeHtml(locationName) });
   }
 
   if (playerName) {
-    detailRows.push(`
-      <tr>
-        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; width: 100px;">With</td>
-        <td style="padding: 8px 0; color: #374151; font-size: 14px; font-weight: 500;">${escapeHtml(playerName)}</td>
-      </tr>
-    `);
+    rows.push({ label: t(locale, 'match.with'), value: escapeHtml(playerName) });
   }
 
-  return `
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-      <tr>
-        <td style="padding: 0 0 24px 0;">
-          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #ccfbf1; border: 2px solid #83c5be;">
-            <tr>
-              <td style="padding: 20px;">
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                  ${detailRows.join('')}
-                </table>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  `;
+  return renderDetailCard(rows);
 }
 
 /**
  * Generate HTML email content from notification
  */
-function generateEmailHtml(notification: NotificationRecord): string {
+function generateEmailHtml(notification: NotificationRecord, locale: string): string {
   const { title, body, type, payload } = notification;
-  const currentYear = new Date().getFullYear();
+  const T = EMAIL_TOKENS;
 
-  // Determine if we should show the match details card
   const isMatchRelated =
     type.startsWith('match_') || type === 'feedback_request' || type === 'reminder';
   const matchDetailsCard = isMatchRelated
-    ? generateMatchDetailsCard(payload as Record<string, unknown>)
+    ? generateMatchDetailsCard(payload as Record<string, unknown>, locale)
     : '';
 
-  return `
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${escapeHtml(title)}</title>
-    <!--[if mso]>
-      <style type="text/css">
-        body, table, td { font-family: Arial, sans-serif !important; }
-      </style>
-    <![endif]-->
-  </head>
-  <body style="margin: 0; padding: 0;">
-    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f0fdfa; font-family: Arial, Helvetica, sans-serif;">
-      <tr>
-        <td align="center" style="padding: 40px 20px;">
-          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="background-color: #ffffff;">
-            <!-- Header -->
-            <tr>
-              <td align="center" style="padding: 40px 40px 20px 40px; background-color: #a8dad6;">
-                <img src="${SITE_URL}/logo-dark.png" alt="Rallia" width="140" height="55" style="display: block; border: 0; max-width: 140px; height: auto;" />
-              </td>
-            </tr>
+  const bodyHtml = body
+    ? `
+                <p style="margin: 0; padding: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: ${T.neutral900};">
+                  ${escapeHtml(body)}
+                </p>`
+    : '';
 
-            <!-- Content -->
-            <tr>
-              <td style="padding: 40px 40px 30px 40px;">
-                <h2 style="margin: 0; padding: 0 0 16px 0; font-family: Arial, Helvetica, sans-serif; font-size: 24px; font-weight: bold; color: #006d77; letter-spacing: -0.025em; line-height: 1.2;">
+  const content = `
+                <h2 style="margin: 0; padding: 0 0 16px 0; font-family: Poppins, Arial, Helvetica, sans-serif; font-size: 24px; font-weight: bold; color: ${T.primary600}; letter-spacing: -0.025em; line-height: 1.2;">
                   ${escapeHtml(title)}
                 </h2>
-                ${
-                  body
-                    ? `
-                <p style="margin: 0; padding: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #374151;">
-                  ${escapeHtml(body)}
-                </p>
-                `
-                    : ''
-                }
+                ${bodyHtml}
 
                 ${matchDetailsCard}
 
-                ${generateActionButton(type, payload)}
+                ${generateActionButton(type, payload, locale)}
 
-                <!-- Divider -->
-                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-top: 24px;">
-                  <tr>
-                    <td style="padding: 24px 0; border-top: 1px solid #e5e7eb;">&nbsp;</td>
-                  </tr>
-                </table>
+                ${renderDividerAndDisclaimer(t(locale, 'match.disclaimer'))}`;
 
-                <p style="margin: 0; padding: 0; font-size: 13px; line-height: 1.5; color: #9ca3af;">
-                  If you didn't expect this notification, you can safely ignore this email.
-                </p>
-              </td>
-            </tr>
+  const manageLink = `<a href="rallia://settings/notifications" style="color: ${T.primary600}; text-decoration: none;">${t(locale, 'match.managePreferences')}</a>`;
+  const footerNote = `${t(locale, 'match.footerNote')}<br>${manageLink}`;
 
-            <!-- Footer -->
-            <tr>
-              <td align="center" style="padding: 30px 40px 40px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb;">
-                <p style="margin: 0; padding: 0 0 8px 0; font-size: 14px; font-weight: bold; color: #006d77;">Need help?</p>
-                <p style="margin: 0; padding: 0; font-size: 13px; line-height: 1.5; color: #6b7280;">
-                  If you're having trouble, please contact our support team.
-                </p>
-                <p style="margin: 0; padding: 16px 0 0 0; font-size: 12px; line-height: 1.5; color: #9ca3af;">
-                  &copy; ${currentYear} Rallia. All rights reserved.
-                </p>
-              </td>
-            </tr>
-          </table>
-
-          <!-- Spacer -->
-          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-            <tr>
-              <td align="center" style="padding: 20px 0;">
-                <p style="margin: 0; padding: 0; font-size: 12px; line-height: 1.5; color: #9ca3af;">
-                  You're receiving this email because of your notification preferences on Rallia.
-                  <br>
-                  <a href="rallia://settings/notifications" style="color: #006d77; text-decoration: none;">Manage preferences</a>
-                </p>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>
-  `.trim();
+  return wrapInLayout({
+    title: escapeHtml(title),
+    content,
+    footerNote,
+    locale,
+  });
 }
 
 /**
  * Generate action button based on notification type
  */
-function generateActionButton(type: string, payload: Record<string, unknown>): string {
-  // Determine button text and deep link based on notification type
-  let buttonText = 'Open Rallia';
+function generateActionButton(
+  type: string,
+  payload: Record<string, unknown>,
+  locale: string
+): string {
+  let buttonKey = 'match.button.openRallia';
   let deepLink = 'rallia://';
 
   switch (type) {
     case 'match_invitation':
-      buttonText = 'View Invitation';
+      buttonKey = 'match.button.viewInvitation';
       if (payload.matchId) deepLink = `rallia://match/${payload.matchId}`;
       break;
     case 'match_join_request':
-      buttonText = 'Review Request';
+      buttonKey = 'match.button.reviewRequest';
       if (payload.matchId) deepLink = `rallia://match/${payload.matchId}/requests`;
       break;
     case 'match_join_rejected':
     case 'match_cancelled':
     case 'player_kicked':
-      buttonText = 'Browse Games';
+      buttonKey = 'match.button.browseGames';
       deepLink = 'rallia://discover';
       break;
     case 'match_completed':
-      buttonText = 'Rate Your Game';
+      buttonKey = 'match.button.rateGame';
       if (payload.matchId) deepLink = `rallia://match/${payload.matchId}/feedback`;
       break;
     case 'match_join_accepted':
@@ -312,60 +225,36 @@ function generateActionButton(type: string, payload: Record<string, unknown>): s
     case 'match_updated':
     case 'match_starting_soon':
     case 'player_left':
-      buttonText = 'View Game';
+      buttonKey = 'match.button.viewGame';
       if (payload.matchId) deepLink = `rallia://match/${payload.matchId}`;
       break;
     case 'feedback_request':
-      buttonText = 'Rate Your Game';
+      buttonKey = 'match.button.rateGame';
       if (payload.matchId) deepLink = `rallia://match/${payload.matchId}/feedback`;
       break;
     case 'reminder':
-      buttonText = 'View Game Details';
+      buttonKey = 'match.button.viewGameDetails';
       if (payload.matchId) deepLink = `rallia://match/${payload.matchId}`;
       break;
     case 'new_message':
     case 'chat':
-      buttonText = 'View Message';
+      buttonKey = 'match.button.viewMessage';
       if (payload.conversationId) deepLink = `rallia://chat/${payload.conversationId}`;
       break;
     case 'friend_request':
-      buttonText = 'View Profile';
+      buttonKey = 'match.button.viewProfile';
       if (payload.playerId) deepLink = `rallia://player/${payload.playerId}`;
       break;
     case 'rating_verified':
-      buttonText = 'View Rating';
+      buttonKey = 'match.button.viewRating';
       deepLink = 'rallia://profile/ratings';
       break;
     default:
-      buttonText = 'Open Rallia';
+      buttonKey = 'match.button.openRallia';
       deepLink = 'rallia://';
   }
 
-  return `
-    <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-      <tr>
-        <td style="background-color: #006d77; border-radius: 10px;">
-          <a href="${deepLink}" style="display: inline-block; padding: 16px 40px; font-family: Arial, Helvetica, sans-serif; font-size: 16px; font-weight: 600; color: #ffffff; text-decoration: none; letter-spacing: -0.01em;">
-            ${buttonText}
-          </a>
-        </td>
-      </tr>
-    </table>
-  `;
-}
-
-/**
- * Escape HTML special characters
- */
-function escapeHtml(text: string): string {
-  const htmlEscapes: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-  };
-  return text.replace(/[&<>"']/g, char => htmlEscapes[char] || char);
+  return renderCtaButton(t(locale, buttonKey), deepLink);
 }
 
 /**
@@ -374,7 +263,8 @@ function escapeHtml(text: string): string {
 export async function sendOrgEmail(
   notification: NotificationRecord,
   recipientEmail: string,
-  organization: OrganizationInfo
+  organization: OrganizationInfo,
+  locale: string = 'en-US'
 ): Promise<DeliveryResult> {
   if (!RESEND_API_KEY) {
     return {
@@ -385,8 +275,7 @@ export async function sendOrgEmail(
   }
 
   try {
-    // Use organization email template
-    const { subject, html } = renderOrgEmail(notification, organization);
+    const { subject, html } = renderOrgEmail(notification, organization, locale);
 
     // Use organization's email as sender if available, otherwise fall back to default
     const fromEmail = organization.email || FROM_EMAIL;
