@@ -41,6 +41,7 @@ import {
   ActionsSheetProvider,
   SportProvider,
   MatchDetailSheetProvider,
+  useMatchDetailSheet,
   PlayerInviteSheetProvider,
   FeedbackSheetProvider,
   useFeedbackSheet,
@@ -58,6 +59,8 @@ import { StripeProvider } from '@stripe/stripe-react-native';
 import { SheetProvider } from 'react-native-actions-sheet';
 import { Sheets } from './src/context/sheets';
 import { useToast } from '@rallia/shared-components';
+import { getMatchWithDetails } from '@rallia/shared-services';
+import type { MatchDetailData } from './src/context/MatchDetailSheetContext';
 
 // Import NativeWind global styles
 import './global.css';
@@ -269,6 +272,39 @@ function PendingFeedbackHandler() {
   return null;
 }
 
+/**
+ * DeepLinkHandler - Reacts to pending deep link match IDs and opens the match detail sheet.
+ * Must be inside both DeepLinkProvider and MatchDetailSheetProvider.
+ */
+function DeepLinkHandler() {
+  const { pendingMatchId, clearPendingDeepLink } = useDeepLink();
+  const { openSheet } = useMatchDetailSheet();
+  const { isSplashComplete } = useOverlay();
+
+  useEffect(() => {
+    if (!pendingMatchId || !isSplashComplete) return;
+
+    let cancelled = false;
+
+    getMatchWithDetails(pendingMatchId).then(match => {
+      if (cancelled) return;
+      clearPendingDeepLink();
+      if (match) {
+        Logger.logUserAction('deep_link_match_opened', { matchId: pendingMatchId });
+        openSheet(match as MatchDetailData);
+      } else {
+        Logger.warn('Deep link match not found', { matchId: pendingMatchId });
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pendingMatchId, isSplashComplete, openSheet, clearPendingDeepLink]);
+
+  return null;
+}
+
 function AppContent() {
   const { theme } = useTheme();
   const { setSplashComplete, isSplashComplete, permissionsHandled } = useOverlay();
@@ -290,6 +326,8 @@ function AppContent() {
         <FeedbackSheet />
       </NavigationContainer>
 
+      {/* Deep Link Handler - opens match detail sheet when a deep link is received */}
+      <DeepLinkHandler />
       {/* Pending Feedback Handler - auto-opens FeedbackSheet on app launch if needed */}
       <PendingFeedbackHandler />
       {/* Session Expiry Handler - shows toast when session expires */}
