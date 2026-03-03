@@ -4,6 +4,7 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
+    "lint": "eslint",
     "type-check": "tsc --noEmit",
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",
@@ -21,6 +22,7 @@
     "@rallia/shared-types": "*"
   },
   "devDependencies": {
+    "@rallia/eslint-config": "*",
     "@babel/preset-react": "^7.28.5",
     "@babel/preset-typescript": "^7.28.5",
     "metro-react-native-babel-preset": "^0.77.0",

@@ -16,6 +16,7 @@
     "export": "expo export --platform all",
     "export:production": "expo export --platform all",
     "analyze": "npm run export:production && node analyze-bundle.js",
+    "lint": "eslint",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf node_modules .expo dist"
   },
@@ -99,6 +100,7 @@
     "@react-native/babel-preset": "^0.84.1",
     "@tailwindcss/postcss": "4.1.16",
     "@types/react": "^19.2.0",
+    "@rallia/eslint-config": "*",
     "postcss": "^8.5.8",
     "prettier-plugin-tailwindcss": "^0.5.14",
     "react-native-svg-transformer": "^1.5.2",
