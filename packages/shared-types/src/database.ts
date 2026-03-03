@@ -453,6 +453,8 @@ export interface FacilitySearchResult {
   timezone: string | null;
   /** Sport IDs this facility supports (from the requested sport IDs) */
   sport_ids?: string[];
+  /** Whether this facility is first-come-first-serve (no reservation needed) */
+  is_first_come_first_serve?: boolean;
 }
 
 /** Paginated facilities response */

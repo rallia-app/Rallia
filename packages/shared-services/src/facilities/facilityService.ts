@@ -115,6 +115,7 @@ export async function getFacilityById(
       data_provider_id,
       external_provider_id,
       timezone,
+      is_first_come_first_serve,
       organization:organization_id (
         data_provider_id
       ),
@@ -203,6 +204,7 @@ export async function getFacilityById(
     external_provider_id: facility.external_provider_id,
     timezone: facility.timezone,
     sport_ids: [sportId],
+    is_first_come_first_serve: facility.is_first_come_first_serve ?? false,
   };
 }
 

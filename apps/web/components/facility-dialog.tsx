@@ -63,6 +63,7 @@ export interface FacilityInitialData {
   longitude: number | null;
   timezone: string | null;
   membership_required: boolean;
+  is_first_come_first_serve: boolean;
   data_provider_id: string | null;
   external_provider_id: string | null;
   facility_sport: Array<{ sport_id: string }>;
@@ -123,6 +124,7 @@ export function FacilityDialog({
   const [longitude, setLongitude] = useState('');
   const [timezone, setTimezone] = useState('');
   const [membershipRequired, setMembershipRequired] = useState(false);
+  const [isFirstComeFirstServe, setIsFirstComeFirstServe] = useState(false);
   const [dataProviderId, setDataProviderId] = useState('');
   const [externalProviderId, setExternalProviderId] = useState('');
 
@@ -195,6 +197,7 @@ export function FacilityDialog({
       setLongitude(initialData.longitude != null ? String(initialData.longitude) : '');
       setTimezone(initialData.timezone || '');
       setMembershipRequired(initialData.membership_required || false);
+      setIsFirstComeFirstServe(initialData.is_first_come_first_serve || false);
       setDataProviderId(initialData.data_provider_id || '');
       setExternalProviderId(initialData.external_provider_id || '');
 
@@ -221,6 +224,7 @@ export function FacilityDialog({
     setLongitude('');
     setTimezone('');
     setMembershipRequired(false);
+    setIsFirstComeFirstServe(false);
     setDataProviderId('');
     setExternalProviderId('');
     setSelectedSports([]);
@@ -308,6 +312,7 @@ export function FacilityDialog({
           longitude: longitude ? parseFloat(longitude) : null,
           timezone: timezone || null,
           membership_required: membershipRequired,
+          is_first_come_first_serve: isFirstComeFirstServe,
           data_provider_id: dataProviderId || null,
           external_provider_id: externalProviderId || null,
           updated_at: new Date().toISOString(),
@@ -381,6 +386,7 @@ export function FacilityDialog({
             longitude: longitude ? parseFloat(longitude) : null,
             timezone: timezone || null,
             membership_required: membershipRequired,
+            is_first_come_first_serve: isFirstComeFirstServe,
             data_provider_id: dataProviderId || null,
             external_provider_id: externalProviderId || null,
             is_active: true,
@@ -696,6 +702,23 @@ export function FacilityDialog({
                 {t('edit.membershipRequiredLabel')}
               </Label>
               <p className="text-sm text-muted-foreground">{t('edit.membershipRequiredHint')}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="facility-isFirstComeFirstServe"
+              checked={isFirstComeFirstServe}
+              onChange={e => setIsFirstComeFirstServe(e.target.checked)}
+              className="size-4 rounded border-gray-300"
+              disabled={saving}
+            />
+            <div>
+              <Label htmlFor="facility-isFirstComeFirstServe" className="cursor-pointer">
+                {t('edit.isFirstComeFirstServeLabel')}
+              </Label>
+              <p className="text-sm text-muted-foreground">{t('edit.isFirstComeFirstServeHint')}</p>
             </div>
           </div>
 
