@@ -208,7 +208,7 @@
     "messages": {
       "match_invitation": {
         "title": "C'est parti!",
-        "body": "{playerName} veut jouer au {sportName} avec vous le {matchDate}{startTime} à {locationName}"
+        "body": "{playerName} veut jouer au {sportName} avec vous le {matchDate}{startTime}{locationName}"
       },
       "match_join_request": {
         "title": "Nouvelle demande",
