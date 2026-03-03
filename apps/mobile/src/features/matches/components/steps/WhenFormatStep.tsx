@@ -407,7 +407,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
           <DateTimePicker
             value={dateValue}
             mode="date"
-            display="default"
+            display="spinner"
             onChange={handleDateChange}
             minimumDate={getTodayAtMidnight()}
           />
@@ -454,7 +454,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
           <DateTimePicker
             value={timeValue}
             mode="time"
-            display="default"
+            display="spinner"
             onChange={handleTimeChange}
             minuteInterval={15}
           />
