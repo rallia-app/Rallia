@@ -2298,6 +2298,10 @@ export async function resendInvitation(
       start_time,
       end_time,
       timezone,
+      location_name,
+      facility:facility_id (
+        name
+      ),
       sport:sport (
         id,
         name,
@@ -2405,6 +2409,12 @@ export async function resendInvitation(
   const sport = Array.isArray(sportData) ? sportData[0] : sportData;
   const sportName = sport?.display_name || sport?.name || 'a match';
 
+  // Derive location name from facility or custom location
+  const facilityData = match.facility as { name?: string } | { name?: string }[] | null;
+  const facilityObj = Array.isArray(facilityData) ? facilityData[0] : facilityData;
+  const locationName =
+    facilityObj?.name || (match as { location_name?: string | null }).location_name || undefined;
+
   // Send invitation notification (fire and forget)
   const participantRecord = match.participants?.find(
     (p: { id: string }) => p.id === participantId
@@ -2420,7 +2430,8 @@ export async function resendInvitation(
       inviterName,
       sportName,
       match.match_date,
-      startTime
+      startTime,
+      locationName
     ).catch(err => {
       console.error('Failed to send invitation notification:', err);
     });
@@ -3483,6 +3494,10 @@ export async function invitePlayersToMatch(
       start_time,
       end_time,
       timezone,
+      location_name,
+      facility:facility_id (
+        name
+      ),
       sport:sport_id (
         id,
         name,
@@ -3538,6 +3553,12 @@ export async function invitePlayersToMatch(
   const sportData = match.sport;
   const sport = Array.isArray(sportData) ? sportData[0] : sportData;
   const sportName = sport?.display_name || sport?.name || 'a match';
+
+  // Derive location name from facility or custom location
+  const facilityData = match.facility as { name?: string } | { name?: string }[] | null;
+  const facilityObj = Array.isArray(facilityData) ? facilityData[0] : facilityData;
+  const locationName =
+    facilityObj?.name || (match as { location_name?: string | null }).location_name || undefined;
 
   // Build a map of existing participants with their status
   const existingParticipants = new Map<string, { id: string; status: string }>();
@@ -3639,7 +3660,8 @@ export async function invitePlayersToMatch(
       inviterName,
       sportName,
       match.match_date,
-      startTime
+      startTime,
+      locationName
     ).catch(err => {
       console.error('[invitePlayersToMatch] Notification error:', err);
     });
