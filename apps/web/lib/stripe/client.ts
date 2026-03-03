@@ -26,7 +26,7 @@ export function getStripeClient(secretKey?: string): Stripe {
   }
 
   stripeInstance = new Stripe(key, {
-    apiVersion: '2025-02-24.acacia',
+    apiVersion: '2026-02-25.clover',
     typescript: true,
     appInfo: {
       name: 'Rallia',
@@ -44,7 +44,7 @@ export function getStripeClient(secretKey?: string): Stripe {
  */
 export function createStripeClient(secretKey: string): Stripe {
   return new Stripe(secretKey, {
-    apiVersion: '2025-02-24.acacia',
+    apiVersion: '2026-02-25.clover',
     typescript: true,
     appInfo: {
       name: 'Rallia',
