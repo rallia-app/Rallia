@@ -10,6 +10,7 @@
     "test:coverage": "jest --coverage"
   },
   "peerDependencies": {
+    "@react-navigation/native": "*",
     "react": "*",
     "react-native": "*",
     "react-native-svg": "*"
