@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Rallia - Verification Code</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
     <!--[if mso]>
       <style type="text/css">
         body,
@@ -15,33 +19,32 @@
     <![endif]-->
   </head>
   <body style="padding: 0">
-    <!-- Wrapper table carries background and font; many clients replace/ignore body -->
     <table
       role="presentation"
       cellspacing="0"
       cellpadding="0"
       border="0"
       width="100%"
-      style="background-color: #f0fdfa; font-family: Arial, Helvetica, sans-serif"
+      style="background-color: #f0fdfa; font-family: Inter, Arial, Helvetica, sans-serif"
     >
       <tr>
         <td align="center" style="padding: 40px 20px">
-          <!-- Main Container: fixed width for Outlook, max-width for others -->
           <table
             role="presentation"
             cellspacing="0"
             cellpadding="0"
             border="0"
             width="600"
-            style="background-color: #ffffff"
+            style="background-color: #ffffff; border-radius: 12px; overflow: hidden"
           >
-            <!-- Header: solid background (no gradient) for broad client support -->
+            <!-- Header -->
             <tr>
               <td
                 align="center"
                 style="
                   padding: 40px 40px 20px 40px;
-                  background-color: #a8dad6;
+                  background-color: #0d9488;
+                  border-radius: 12px 12px 0 0;
                 "
               >
                 <img
@@ -60,10 +63,10 @@
                 <h2
                   style="
                     padding: 0 0 16px 0;
-                    font-family: Arial, Helvetica, sans-serif;
+                    font-family: Poppins, Arial, Helvetica, sans-serif;
                     font-size: 24px;
                     font-weight: bold;
-                    color: #006d77;
+                    color: #0d9488;
                     letter-spacing: -0.025em;
                     line-height: 1.2;
                   "
@@ -76,13 +79,13 @@
                     padding: 0 0 32px 0;
                     font-size: 16px;
                     line-height: 1.6;
-                    color: #374151;
+                    color: #171717;
                   "
                 >
                   {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Utilisez le code ci-dessous pour vous connecter à votre compte.{{ else }}Use the verification code below to sign in to your account.{{ end }}
                 </p>
 
-                <!-- OTP Code Box: solid background instead of gradient -->
+                <!-- OTP Code Box -->
                 <table
                   role="presentation"
                   cellspacing="0"
@@ -98,8 +101,8 @@
                         cellpadding="0"
                         border="0"
                         style="
-                          background-color: #ccfbf1;
-                          border: 2px solid #83c5be;
+                          background-color: #f0fdfa;
+                          border: 1px solid #ccfbf1;
                         "
                       >
                         <tr>
@@ -109,7 +112,7 @@
                                 padding: 0 0 8px 0;
                                 font-size: 14px;
                                 font-weight: bold;
-                                color: #006d77;
+                                color: #0d9488;
                                 text-transform: uppercase;
                                 letter-spacing: 0.05em;
                               "
@@ -119,10 +122,10 @@
                             <p
                               style="
                                 padding: 0;
-                                font-family: Arial, Helvetica, sans-serif;
+                                font-family: Poppins, Arial, Helvetica, sans-serif;
                                 font-size: 36px;
                                 font-weight: bold;
-                                color: #006d77;
+                                color: #0d9488;
                                 letter-spacing: 0.2em;
                                 line-height: 1.2;
                               "
@@ -141,7 +144,7 @@
                     padding: 0 0 24px 0;
                     font-size: 14px;
                     line-height: 1.6;
-                    color: #6b7280;
+                    color: #525252;
                   "
                 >
                   {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Entrez ce code dans le formulaire de connexion pour vérifier votre courriel. Ce code expire dans 10 minutes.{{ else }}Enter this code in the sign-in form to verify your email address. This code will expire in 10 minutes.{{ end }}
@@ -156,7 +159,7 @@
                   width="100%"
                 >
                   <tr>
-                    <td style="padding: 24px 0; border-top: 1px solid #e5e7eb">
+                    <td style="padding: 24px 0; border-top: 1px solid #e5e5e5">
                       &nbsp;
                     </td>
                   </tr>
@@ -167,7 +170,7 @@
                     padding: 0;
                     font-size: 13px;
                     line-height: 1.5;
-                    color: #9ca3af;
+                    color: #737373;
                   "
                 >
                   {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer ce courriel. Votre compte reste sécurisé.{{ else }}If you didn't request this code, you can safely ignore this email. Your account remains secure.{{ end }}
@@ -181,8 +184,9 @@
                 align="center"
                 style="
                   padding: 30px 40px 40px 40px;
-                  background-color: #f9fafb;
-                  border-top: 1px solid #e5e7eb;
+                  background-color: #fafafa;
+                  border-top: 1px solid #e5e5e5;
+                  border-radius: 0 0 12px 12px;
                 "
               >
                 <p
@@ -190,7 +194,7 @@
                     padding: 0 0 8px 0;
                     font-size: 14px;
                     font-weight: bold;
-                    color: #006d77;
+                    color: #0d9488;
                   "
                 >
                   {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Besoin d'aide ?{{ else }}Need help?{{ end }}
@@ -200,7 +204,7 @@
                     padding: 0;
                     font-size: 13px;
                     line-height: 1.5;
-                    color: #6b7280;
+                    color: #525252;
                   "
                 >
                   {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}En cas de problème pour vous connecter, contactez notre équipe de soutien.{{ else }}If you're having trouble signing in, please contact our support team.{{ end }}
@@ -210,10 +214,10 @@
                     padding: 16px 0 0 0;
                     font-size: 12px;
                     line-height: 1.5;
-                    color: #9ca3af;
+                    color: #737373;
                   "
                 >
-                  © 2024 Rallia. {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Tous droits réservés.{{ else }}All rights reserved.{{ end }}
+                  &copy; Rallia. {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Tous droits réservés.{{ else }}All rights reserved.{{ end }}
                 </p>
               </td>
             </tr>
@@ -234,10 +238,10 @@
                     padding: 0;
                     font-size: 12px;
                     line-height: 1.5;
-                    color: #9ca3af;
+                    color: #737373;
                   "
                 >
-                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Vous recevez ce courriel car vous vous êtes inscrit à une application propulsée par Supabase ⚡️{{ else }}You're receiving this email because you signed up for an application powered by Supabase ⚡️{{ end }}
+                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Vous recevez ce courriel car vous vous êtes inscrit sur Rallia.{{ else }}You're receiving this email because you signed up for Rallia.{{ end }}
                 </p>
               </td>
             </tr>

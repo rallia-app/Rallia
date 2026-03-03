@@ -138,7 +138,7 @@ async function getUserContactInfo(userId: string): Promise<UserContactInfo | nul
   // Get profile for email and phone
   const { data: profile, error: profileError } = await supabase
     .from('profile')
-    .select('email, phone, phone_verified')
+    .select('email, phone, phone_verified, preferred_locale')
     .eq('id', userId)
     .single();
 
@@ -164,6 +164,7 @@ async function getUserContactInfo(userId: string): Promise<UserContactInfo | nul
     phone_verified: profile?.phone_verified ?? false,
     expo_push_token: player?.expo_push_token ?? null,
     push_notifications_enabled: player?.push_notifications_enabled ?? false,
+    preferred_locale: profile?.preferred_locale ?? 'en-US',
   };
 }
 
@@ -231,9 +232,9 @@ async function sendViaChannel(
     case 'email':
       // Use org-branded email template if this is an org notification
       if (organization && isOrgNotification(notification.type)) {
-        return sendOrgEmail(notification, contact.email!, organization);
+        return sendOrgEmail(notification, contact.email!, organization, contact.preferred_locale);
       }
-      return sendEmail(notification, contact.email!);
+      return sendEmail(notification, contact.email!, contact.preferred_locale);
 
     case 'push':
       return sendPush(notification, contact.expo_push_token!);

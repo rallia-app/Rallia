@@ -21,7 +21,34 @@ export class InvitationHandler {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch inviter profile to get name
+    // Determine locale: invitation metadata > inviter profile > en-US
+    let locale = 'en-US';
+    if (record.metadata && typeof record.metadata === 'object' && 'locale' in record.metadata) {
+      locale = String(record.metadata.locale);
+    } else {
+      // Fall back to inviter's preferred locale
+      const { data: inviterProfile } = await supabase
+        .from('profile')
+        .select('first_name, last_name, display_name, preferred_locale')
+        .eq('id', record.inviter_id)
+        .single();
+
+      if (inviterProfile?.preferred_locale) {
+        locale = inviterProfile.preferred_locale;
+      }
+
+      // Use fetched profile for name too (avoid a second query)
+      const inviterName =
+        inviterProfile?.display_name ||
+        (inviterProfile?.first_name && inviterProfile?.last_name
+          ? `${inviterProfile.first_name} ${inviterProfile.last_name}`
+          : inviterProfile?.first_name) ||
+        'a team member';
+
+      return this.buildContent(record, inviterName, locale, supabase);
+    }
+
+    // If locale was in metadata, we still need inviter name
     const { data: inviterProfile, error: inviterError } = await supabase
       .from('profile')
       .select('first_name, last_name, display_name')
@@ -40,6 +67,15 @@ export class InvitationHandler {
         : inviterProfile?.first_name) ||
       'a team member';
 
+    return this.buildContent(record, inviterName, locale, supabase);
+  }
+
+  private async buildContent(
+    record: InvitationRecord,
+    inviterName: string,
+    locale: string,
+    supabase: ReturnType<typeof createClient>
+  ): Promise<EmailContent> {
     // Fetch organization info if this is an organization invitation
     let organizationName: string | undefined;
     let orgRole: string | undefined;
@@ -52,12 +88,10 @@ export class InvitationHandler {
 
       if (orgError) {
         console.error('Error fetching organization:', orgError);
-        // Continue without organization name - not critical
       } else {
         organizationName = organization?.name;
       }
 
-      // Extract org_role from metadata if present
       if (record.metadata && typeof record.metadata === 'object' && 'org_role' in record.metadata) {
         orgRole = String(record.metadata.org_role);
       }
@@ -69,26 +103,24 @@ export class InvitationHandler {
       Deno.env.get('NEXT_PUBLIC_SITE_URL') ||
       'https://www.rallia.ca';
 
-    // For organization invitations, use organization sign-in path
     let rolePath = 'sign-in';
     if (record.role === 'admin') {
       rolePath = 'admin/sign-in';
     } else if (record.role === 'organization_member' && record.organization_id) {
-      rolePath = 'sign-in'; // Organization members sign in through regular sign-in
+      rolePath = 'sign-in';
     }
 
     const signUpUrl = `${baseUrl}/${rolePath}?token=${record.token}`;
 
-    // Format expiration date
-    const expiresAt = new Date(record.expires_at).toLocaleDateString('en-US', {
+    // Format expiration date using locale-aware formatting
+    const expiresAt = new Intl.DateTimeFormat(locale, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-    });
+    }).format(new Date(record.expires_at));
 
-    // Build processed payload
     const payload: InvitationEmailPayload = {
       type: 'invitation',
       email: record.email!,
@@ -101,6 +133,6 @@ export class InvitationHandler {
       orgRole,
     };
 
-    return renderInvitationEmail(payload);
+    return renderInvitationEmail(payload, locale);
   }
 }
