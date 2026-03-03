@@ -4,9 +4,11 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
+    "lint": "eslint",
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {
+    "@rallia/eslint-config": "*",
     "typescript": "^5.9.3"
   }
 }

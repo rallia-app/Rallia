@@ -7,6 +7,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "lint": "eslint",
     "type-check": "tsc --noEmit",
     "test": "jest"
   },
@@ -19,6 +20,7 @@
     "react-native": "*"
   },
   "devDependencies": {
+    "@rallia/eslint-config": "*",
     "typescript": "^5.9.3"
   }
 }
