@@ -10,6 +10,7 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
+  ScrollView,
   ActivityIndicator,
   AppState,
   Linking,

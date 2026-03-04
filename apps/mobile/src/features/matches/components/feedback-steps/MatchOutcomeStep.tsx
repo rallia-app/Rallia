@@ -439,7 +439,7 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
   locale,
   isDark,
 }) => {
-  const scrollViewRef = useRef<BottomSheetScrollView>(null);
+  const scrollViewRef = useRef<any>(null);
   const reasonsSectionY = useRef<number>(0);
 
   const handleOutcomeChange = useCallback(
