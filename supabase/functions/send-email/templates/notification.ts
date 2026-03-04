@@ -4,12 +4,19 @@ import type { EmailContent, NotificationEmailPayload } from '../types.ts';
 
 export function renderNotificationEmail(
   payload: NotificationEmailPayload,
-  locale: string = 'en-US'
+  locale: string = 'en-US',
+  siteUrl?: string,
 ): EmailContent {
   // Map notification types to translated subject prefixes
   const subjectPrefixKey = `notification.prefix.${payload.notificationType}`;
   const subjectPrefix = t(locale, subjectPrefixKey);
   const subject = `${subjectPrefix}: ${payload.title}`;
+
+  // Build preheader from body, truncated to 100 chars
+  const preheaderBody = payload.body
+    ? payload.body.replace(/<[^>]*>/g, '').slice(0, 100)
+    : payload.title;
+  const preheader = t(locale, 'preheader.notification', { body: preheaderBody });
 
   const bodyHtml = payload.body
     ? `<div style="padding: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: ${EMAIL_TOKENS.neutral900};">${payload.body}</div>`
@@ -27,6 +34,9 @@ export function renderNotificationEmail(
     content,
     footerNote: t(locale, 'notification.footerNote'),
     locale,
+    preheader,
+    showUnsubscribe: true,
+    ...(siteUrl && { siteUrl }),
   });
 
   return { subject, html };
