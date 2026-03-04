@@ -2718,6 +2718,42 @@
     "community": "Community",
     "communityDescription": "Public network for players"
   },
+  "referral": {
+    "wizardTitle": "Invite Players",
+    "step": "Step {current} of {total}",
+    "stepNames": {
+      "shareLink": "Share Link",
+      "inviteContacts": "Invite Contacts"
+    },
+    "shareLinkDescription": "Share your personal referral link with friends to invite them to Rallia.",
+    "code": "Code",
+    "qrCode": "QR Code",
+    "yourCode": "Your Referral Code",
+    "scanToJoin": "Scan to join Rallia",
+    "generatingCode": "Generating your referral code...",
+    "shareInvite": "Share Invite",
+    "shareTitle": "Join me on Rallia!",
+    "shareMessage": "Hey! Join me on Rallia to find sports matches and play together! {link}",
+    "yourStats": "Your Referral Stats",
+    "invited": "Invited",
+    "signedUp": "Signed Up",
+    "welcomeTitle": "Welcome to Rallia!",
+    "welcomeDescription": "You've been invited to join Rallia. Setting things up for you...",
+    "contacts": {
+      "accessRequired": "Contacts Access Required",
+      "grantAccess": "Allow access to your contacts to invite friends to Rallia via SMS.",
+      "loading": "Loading contacts...",
+      "search": "Search contacts...",
+      "noResults": "No contacts found",
+      "noContacts": "No Contacts Available",
+      "noContactsDescription": "Your address book appears to be empty.",
+      "selectAtLeastOne": "Select at least one contact to invite",
+      "sendInvites": "Send Invites",
+      "invitesSent": "{count} invite(s) sent!",
+      "failedToLoad": "Failed to load contacts",
+      "failedToSend": "Failed to send invites"
+    }
+  },
   "matchCreation": {
     "title": "Create a game",
     "forSport": "Creating game for {sport}",

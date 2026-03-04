@@ -2718,6 +2718,42 @@
     "community": "Communauté",
     "communityDescription": "Réseau public pour joueurs"
   },
+  "referral": {
+    "wizardTitle": "Inviter des joueurs",
+    "step": "Étape {current} de {total}",
+    "stepNames": {
+      "shareLink": "Partager le lien",
+      "inviteContacts": "Inviter des contacts"
+    },
+    "shareLinkDescription": "Partagez votre lien de parrainage personnel avec vos amis pour les inviter sur Rallia.",
+    "code": "Code",
+    "qrCode": "Code QR",
+    "yourCode": "Votre code de parrainage",
+    "scanToJoin": "Scannez pour rejoindre Rallia",
+    "generatingCode": "Génération de votre code de parrainage...",
+    "shareInvite": "Partager l'invitation",
+    "shareTitle": "Rejoins-moi sur Rallia!",
+    "shareMessage": "Salut! Rejoins-moi sur Rallia pour trouver des matchs sportifs et jouer ensemble! {link}",
+    "yourStats": "Vos statistiques de parrainage",
+    "invited": "Invités",
+    "signedUp": "Inscrits",
+    "welcomeTitle": "Bienvenue sur Rallia!",
+    "welcomeDescription": "Vous avez été invité à rejoindre Rallia. Préparation en cours...",
+    "contacts": {
+      "accessRequired": "Accès aux contacts requis",
+      "grantAccess": "Autorisez l'accès à vos contacts pour inviter des amis sur Rallia par SMS.",
+      "loading": "Chargement des contacts...",
+      "search": "Rechercher des contacts...",
+      "noResults": "Aucun contact trouvé",
+      "noContacts": "Aucun contact disponible",
+      "noContactsDescription": "Votre carnet d'adresses semble être vide.",
+      "selectAtLeastOne": "Sélectionnez au moins un contact à inviter",
+      "sendInvites": "Envoyer les invitations",
+      "invitesSent": "{count} invitation(s) envoyée(s)!",
+      "failedToLoad": "Échec du chargement des contacts",
+      "failedToSend": "Échec de l'envoi des invitations"
+    }
+  },
   "matchCreation": {
     "title": "Créer une partie",
     "forSport": "Création de partie pour {sport}",
