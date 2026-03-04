@@ -61,6 +61,7 @@ export default async function AdminFacilityDetailPage({ params }: PageProps) {
       timezone,
       is_active,
       membership_required,
+      is_first_come_first_serve,
       facility_type,
       data_provider_id,
       external_provider_id,
@@ -157,6 +158,7 @@ export default async function AdminFacilityDetailPage({ params }: PageProps) {
           longitude: facility.longitude,
           timezone: facility.timezone,
           membership_required: facility.membership_required,
+          is_first_come_first_serve: facility.is_first_come_first_serve,
           data_provider_id: facility.data_provider_id,
           external_provider_id: facility.external_provider_id,
           facility_sport: Array.isArray(facility.facility_sport) ? facility.facility_sport : [],
@@ -239,6 +241,18 @@ export default async function AdminFacilityDetailPage({ params }: PageProps) {
                     {t('detail.membershipRequired')}
                   </p>
                   <p className="text-sm">{facility.membership_required ? 'Yes' : 'No'}</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-muted rounded-md shrink-0">
+                  <Globe className="size-4 text-muted-foreground" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                    {t('detail.isFirstComeFirstServe')}
+                  </p>
+                  <p className="text-sm">{facility.is_first_come_first_serve ? 'Yes' : 'No'}</p>
                 </div>
               </div>
 

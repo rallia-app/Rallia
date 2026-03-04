@@ -208,7 +208,7 @@
     "messages": {
       "match_invitation": {
         "title": "C'est parti!",
-        "body": "{playerName} veut jouer au {sportName} avec vous le {matchDate}{startTime} à {locationName}"
+        "body": "{playerName} veut jouer au {sportName} avec vous le {matchDate}{startTime}{locationName}"
       },
       "match_join_request": {
         "title": "Nouvelle demande",
@@ -2920,6 +2920,7 @@
       "courtBookedDescription": "Le terrain est marqué comme réservé pour cette partie.",
       "availableSlots": "Créneaux disponibles",
       "noSlotsAvailable": "Aucun créneau à venir disponible",
+      "firstComeFirstServe": "Premier arrivé, premier servi — sans réservation",
       "loadingSlots": "Chargement des disponibilités...",
       "tapToBook": "Appuyez sur un créneau pour réserver",
       "externalBooking": "Vous serez redirigé vers le site de réservation",
@@ -3611,6 +3612,7 @@
       "timezone": "Fuseau horaire",
       "description": "Description",
       "membershipRequired": "Adhésion requise",
+      "isFirstComeFirstServe": "Premier arrivé, premier servi",
       "facilityType": "Type de site",
       "dataProvider": "Fournisseur de données",
       "externalProviderId": "ID du fournisseur externe",
@@ -3763,6 +3765,8 @@
       "externalProviderIdPlaceholder": "ID externe du fournisseur de données (ex. siteId)",
       "membershipRequiredLabel": "Adhésion requise",
       "membershipRequiredHint": "Exiger une adhésion pour réserver des terrains dans ce site de jeu",
+      "isFirstComeFirstServeLabel": "Premier arrivé, premier servi",
+      "isFirstComeFirstServeHint": "Aucune réservation requise — les terrains sont accessibles sans rendez-vous.",
       "searchPlace": "Rechercher sur Google Places",
       "searchPlaceHint": "Entrez au moins 3 caractères et cliquez sur le bouton de recherche pour remplir automatiquement les champs d'adresse.",
       "sportsLabel": "Sports",
@@ -6450,6 +6454,7 @@
     "loadingAvailability": "Chargement des créneaux disponibles...",
     "courtsAvailable": "{count} terrains disponibles",
     "paymentsNotAvailable": "Cette site de jeu n'a pas encore configuré les paiements en ligne. Veuillez les contacter directement pour réserver des créneaux payants.",
+    "firstComeFirstServe": "Cet établissement fonctionne selon le principe du premier arrivé, premier servi — aucune réservation requise.",
     "paidSlotsDisabled": "Certains terrains payants ne sont pas disponibles pour la réservation en ligne. Contactez le site de jeu directement.",
     "contactFacilityToBook": "Contacter le site de jeu pour réserver",
     "unavailable": "Indisponible",

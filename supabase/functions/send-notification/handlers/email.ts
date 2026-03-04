@@ -1,8 +1,9 @@
 /**
  * Email Handler for Notification Delivery
- * Uses Resend API to send email notifications
+ * Uses Resend SDK to send email notifications
  */
 
+import { Resend } from 'resend';
 import type { NotificationRecord, DeliveryResult, OrganizationInfo } from '../types.ts';
 import { renderOrgEmail } from '../templates/organization.ts';
 
@@ -68,28 +69,20 @@ export async function sendEmail(
     const htmlContent = generateEmailHtml(notification);
     const subject = generateEmailSubject(notification);
 
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-      },
-      body: JSON.stringify({
-        from: FROM_EMAIL,
-        to: recipientEmail,
-        subject,
-        html: htmlContent,
-      }),
+    const resend = new Resend(RESEND_API_KEY);
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: recipientEmail,
+      subject,
+      html: htmlContent,
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
+    if (error) {
       return {
         channel: 'email',
         status: 'failed',
-        errorMessage: data?.message || data?.error || 'Failed to send email',
-        providerResponse: data,
+        errorMessage: error.message,
+        providerResponse: error,
       };
     }
 
@@ -398,28 +391,20 @@ export async function sendOrgEmail(
     // Use organization's email as sender if available, otherwise fall back to default
     const fromEmail = organization.email || FROM_EMAIL;
 
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-      },
-      body: JSON.stringify({
-        from: fromEmail,
-        to: recipientEmail,
-        subject,
-        html,
-      }),
+    const resend = new Resend(RESEND_API_KEY);
+    const { data, error } = await resend.emails.send({
+      from: fromEmail,
+      to: recipientEmail,
+      subject,
+      html,
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
+    if (error) {
       return {
         channel: 'email',
         status: 'failed',
-        errorMessage: data?.message || data?.error || 'Failed to send email',
-        providerResponse: data,
+        errorMessage: error.message,
+        providerResponse: error,
       };
     }
 

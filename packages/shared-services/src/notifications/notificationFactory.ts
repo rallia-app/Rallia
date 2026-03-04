@@ -249,6 +249,10 @@ function getTranslatedBody(
           (normalizedPayload as Record<string, unknown>).startTime as string | undefined,
           locale
         ),
+        locationName: formatLocationNameWithPrefix(
+          (normalizedPayload as Record<string, unknown>).locationName as string | undefined,
+          locale
+        ),
       }
     : normalizedPayload;
 
@@ -538,8 +542,8 @@ function getOrdinalSuffix(day: number): string {
 
 /**
  * Format date in locale-aware format
- * English: "January 5th 2025"
- * French: "5 Janvier 2025"
+ * English: "January 5th"
+ * French: "5 janvier"
  */
 function formatDateForNotification(dateStr: string | undefined, locale: Locale): string {
   if (!dateStr) return '';
@@ -562,27 +566,25 @@ function formatDateForNotification(dateStr: string | undefined, locale: Locale):
     }
 
     if (locale.startsWith('fr')) {
-      // French format: "5 Janvier 2025"
+      // French format: "5 janvier"
       const formatter = new Intl.DateTimeFormat('fr-CA', {
         day: 'numeric',
         month: 'long',
-        year: 'numeric',
         timeZone: 'UTC', // Use UTC to avoid timezone shifts
       });
       return formatter.format(date);
     } else {
-      // English format: "January 5th 2025"
+      // English format: "January 5th"
       // Use UTC date components to avoid timezone shifts
-      const utcYear = date.getUTCFullYear();
       const utcMonth = date.getUTCMonth();
       const utcDay = date.getUTCDate();
 
-      const month = new Date(Date.UTC(utcYear, utcMonth, 1)).toLocaleDateString('en-US', {
+      const month = new Date(Date.UTC(2000, utcMonth, 1)).toLocaleDateString('en-US', {
         month: 'long',
         timeZone: 'UTC',
       });
       const ordinal = getOrdinalSuffix(utcDay);
-      return `${month} ${utcDay}${ordinal} ${utcYear}`;
+      return `${month} ${utcDay}${ordinal}`;
     }
   } catch (error) {
     // If formatting fails, return original string
@@ -606,6 +608,18 @@ function formatStartTimeWithPrefix(startTime: string | undefined, locale: Locale
     return ` à ${timeOnly}`;
   }
   return ` at ${timeOnly}`;
+}
+
+/**
+ * Format locationName with locale-aware prefix for translation
+ * Returns empty string when locationName is absent so the template renders cleanly.
+ */
+function formatLocationNameWithPrefix(locationName: string | undefined, locale: Locale): string {
+  if (!locationName) return '';
+  if (locale.startsWith('fr')) {
+    return ` à ${locationName}`;
+  }
+  return ` at ${locationName}`;
 }
 
 /**

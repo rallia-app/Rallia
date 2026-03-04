@@ -1,3 +1,4 @@
+import { Resend } from 'resend';
 import { ZodError } from 'zod';
 import { getHandler } from './registry.ts';
 import { EmailRequestSchema } from './schemas.ts';
@@ -76,39 +77,25 @@ Deno.serve(async req => {
       throw new Error('FROM_EMAIL environment variable is required');
     }
 
-    console.log('Sending email via Resend API...');
-    // Send email via Resend API
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-      },
-      body: JSON.stringify({
-        from: FROM_EMAIL,
-        to: recipient,
-        subject,
-        html,
-      }),
+    console.log('Sending email via Resend SDK...');
+    const resend = new Resend(RESEND_API_KEY);
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL!,
+      to: recipient,
+      subject,
+      html,
     });
 
-    const data = await res.json();
-    console.log('Resend API response status:', res.status);
-    console.log('Resend API response:', JSON.stringify(data, null, 2));
-
-    // Handle Resend API errors
-    if (!res.ok) {
-      const errorMessage = data?.message || data?.error || 'Failed to send email';
-      console.error('Resend API error:', errorMessage);
-      console.error('Full error response:', JSON.stringify(data, null, 2));
+    if (error) {
+      console.error('Resend API error:', error.message);
 
       const errorResponse: EmailResponse = {
         success: false,
-        error: errorMessage,
+        error: error.message,
       };
 
       return new Response(JSON.stringify(errorResponse), {
-        status: res.status,
+        status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }

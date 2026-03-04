@@ -23,7 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Text, LocationSelector } from '@rallia/shared-components';
 import { SearchBar } from '../../../../components/SearchBar';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
 import {
   getOrCreateCourt,
@@ -367,11 +367,29 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
           )}
         </View>
 
+        {/* First come first serve alert */}
+        {facility.is_first_come_first_serve && (
+          <View
+            style={[
+              styles.fcfsAlert,
+              {
+                backgroundColor: (isDark ? accent[400] : accent[500]) + '15',
+                borderColor: isDark ? accent[400] : accent[500],
+              },
+            ]}
+          >
+            <Ionicons name="walk-outline" size={14} color={isDark ? accent[400] : accent[500]} />
+            <Text size="xs" weight="medium" color={isDark ? accent[400] : accent[500]}>
+              {t('matchCreation.booking.firstComeFirstServe')}
+            </Text>
+          </View>
+        )}
+
         {/* Skeleton slots while loading */}
-        {isLoading && <SkeletonSlots colors={colors} />}
+        {isLoading && !facility.is_first_come_first_serve && <SkeletonSlots colors={colors} />}
 
         {/* Date-sectioned slots with horizontal scroll */}
-        {slotsByDate.length > 0 && !isLoading && (
+        {slotsByDate.length > 0 && !isLoading && !facility.is_first_come_first_serve && (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -453,7 +471,7 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
         )}
 
         {/* Empty state when no slots available - only show if we fetched but got no results */}
-        {slotsByDate.length === 0 && !isLoading && (
+        {slotsByDate.length === 0 && !isLoading && !facility.is_first_come_first_serve && (
           <View style={styles.emptySlots}>
             <Ionicons name="calendar-clear-outline" size={14} color={colors.textMuted} />
             <Text size="xs" color={colors.textMuted}>
@@ -1674,6 +1692,16 @@ const styles = StyleSheet.create({
     gap: spacingPixels[1],
     marginTop: spacingPixels[2],
     paddingVertical: spacingPixels[1],
+  },
+  fcfsAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1.5],
+    marginTop: spacingPixels[2],
+    paddingHorizontal: spacingPixels[2.5],
+    paddingVertical: spacingPixels[1.5],
+    borderRadius: radiusPixels.md,
+    borderWidth: 1,
   },
   placeItemIcon: {
     width: 32,

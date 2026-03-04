@@ -14,9 +14,11 @@
     "./tailwind.preset": "./tailwind.preset.js"
   },
   "scripts": {
+    "lint": "eslint",
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {
+    "@rallia/eslint-config": "*",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {

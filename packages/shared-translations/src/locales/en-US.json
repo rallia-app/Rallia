@@ -208,7 +208,7 @@
     "messages": {
       "match_invitation": {
         "title": "Game On!",
-        "body": "{playerName} wants to play {sportName} with you on {matchDate}{startTime} at {locationName}"
+        "body": "{playerName} wants to play {sportName} with you on {matchDate}{startTime}{locationName}"
       },
       "match_join_request": {
         "title": "New Player Request",
@@ -2920,6 +2920,7 @@
       "courtBookedDescription": "The court is marked as booked for this game.",
       "availableSlots": "Available slots",
       "noSlotsAvailable": "No upcoming slots available",
+      "firstComeFirstServe": "First come, first served — no reservation",
       "loadingSlots": "Loading availability...",
       "tapToBook": "Tap a slot to book",
       "externalBooking": "You'll be redirected to the booking site",
@@ -3611,6 +3612,7 @@
       "timezone": "Timezone",
       "description": "Description",
       "membershipRequired": "Membership Required",
+      "isFirstComeFirstServe": "First Come, First Served",
       "facilityType": "Facility Type",
       "dataProvider": "Data Provider",
       "externalProviderId": "External Provider ID",
@@ -3774,6 +3776,8 @@
       "externalProviderIdPlaceholder": "External ID from data provider (e.g., siteId)",
       "membershipRequiredLabel": "Membership Required",
       "membershipRequiredHint": "Require users to be members to book courts at this facility.",
+      "isFirstComeFirstServeLabel": "First Come, First Served",
+      "isFirstComeFirstServeHint": "No reservation required — courts are available on a walk-in basis.",
       "searchPlace": "Search Google Places",
       "searchPlaceHint": "Enter at least 3 characters and click the search button to auto-fill address fields.",
       "sportsLabel": "Sports",
@@ -6448,6 +6452,7 @@
     "loadingAvailability": "Loading available time slots...",
     "courtsAvailable": "{count} courts available",
     "paymentsNotAvailable": "This facility hasn't set up online payments yet. Please contact them directly to book paid slots.",
+    "firstComeFirstServe": "This facility operates on a first-come, first-served basis — no reservation required.",
     "paidSlotsDisabled": "Some paid courts are unavailable for online booking. Contact the facility directly.",
     "contactFacilityToBook": "Contact facility to book",
     "unavailable": "Unavailable",
