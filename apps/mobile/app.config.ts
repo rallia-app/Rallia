@@ -42,6 +42,10 @@ export default ({ config: _config }: ConfigContext): ExpoConfig => {
     },
   ]);
 
+  // Determine app environment: production, preview, or development
+  // This can be set via EXPO_PUBLIC_APP_ENV during EAS build
+  const appEnv = process.env.EXPO_PUBLIC_APP_ENV || 'development';
+
   return {
     ...baseConfig,
     android: {
@@ -55,5 +59,10 @@ export default ({ config: _config }: ConfigContext): ExpoConfig => {
       },
     },
     plugins: dynamicPlugins,
+    extra: {
+      ...baseConfig.extra,
+      appEnv,
+      eas: baseConfig.extra?.eas,
+    },
   };
 };
