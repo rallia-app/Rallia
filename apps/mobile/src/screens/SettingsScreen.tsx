@@ -9,6 +9,7 @@ import {
   Alert,
   Linking,
 } from 'react-native';
+import Constants from 'expo-constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
@@ -31,6 +32,9 @@ import {
 
 const BASE_WHITE = '#ffffff';
 import { lightHaptic, warningHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
+
+// Get app environment from config (defaults to 'development' for local dev)
+const appEnv = Constants.expoConfig?.extra?.appEnv || 'development';
 
 const SettingsScreen: React.FC = () => {
   const navigation = useAppNavigation();
@@ -385,8 +389,8 @@ const SettingsScreen: React.FC = () => {
           </View>
         )}
 
-        {/* DEBUG: Make Admin Button - Only in development */}
-        {isAuthenticated && !isAdmin && __DEV__ && (
+        {/* DEBUG: Make Admin Button - Only in non-production builds */}
+        {isAuthenticated && !isAdmin && appEnv !== 'production' && (
           <View style={[styles.settingsGroup, { backgroundColor: colors.cardBackground }]}>
             <TouchableOpacity
               style={[
