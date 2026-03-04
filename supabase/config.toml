@@ -387,6 +387,9 @@ verify_jwt = false
 [functions.process-program-payments]
 verify_jwt = false
 
+[functions.email-preview]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327
