@@ -125,6 +125,7 @@ export interface UserContactInfo {
   phone_verified: boolean;
   expo_push_token: string | null;
   push_notifications_enabled: boolean;
+  preferred_locale: string;
 }
 
 /**

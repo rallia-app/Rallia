@@ -23,12 +23,17 @@ export interface MatchNotificationPayload {
   startTime?: string;
   sportName?: string;
   locationName?: string;
+  locationAddress?: string;
+  latitude?: number;
+  longitude?: number;
   playerName?: string;
+  playerAvatarUrl?: string;
   hostName?: string;
   spotsLeft?: number | string;
   totalSpots?: number;
   timeUntil?: string;
   updatedFields?: string[];
+  matchDurationMinutes?: number;
 }
 
 export interface PlayerNotificationPayload {
@@ -767,6 +772,15 @@ export async function createNotifications(
 // Type-safe helper functions for common notification types
 // ============================================================================
 
+/** Optional enrichment fields for match notifications */
+export interface MatchNotificationExtras {
+  locationAddress?: string;
+  latitude?: number;
+  longitude?: number;
+  playerAvatarUrl?: string;
+  matchDurationMinutes?: number;
+}
+
 /**
  * Notify a host that someone wants to join their match
  */
@@ -775,13 +789,14 @@ export async function notifyMatchJoinRequest(
   matchId: string,
   playerName: string,
   sportName?: string,
-  matchDate?: string
+  matchDate?: string,
+  extras?: MatchNotificationExtras
 ): Promise<Notification> {
   return createNotification({
     type: 'match_join_request',
     userId: hostUserId,
     targetId: matchId,
-    payload: { matchId, playerName, sportName, matchDate },
+    payload: { matchId, playerName, sportName, matchDate, ...extras },
   });
 }
 
@@ -795,13 +810,14 @@ export async function notifyJoinRequestAccepted(
   startTime?: string,
   sportName?: string,
   locationName?: string,
-  hostName?: string
+  hostName?: string,
+  extras?: MatchNotificationExtras
 ): Promise<Notification> {
   return createNotification({
     type: 'match_join_accepted',
     userId: playerUserId,
     targetId: matchId,
-    payload: { matchId, matchDate, startTime, sportName, locationName, hostName },
+    payload: { matchId, matchDate, startTime, sportName, locationName, hostName, ...extras },
   });
 }
 
@@ -833,7 +849,8 @@ export async function notifyPlayerJoined(
   sportName?: string,
   matchDate?: string,
   locationName?: string,
-  spotsLeft?: number
+  spotsLeft?: number,
+  extras?: MatchNotificationExtras
 ): Promise<Notification[]> {
   // Title and body will be generated from translations in createNotifications
   // based on each user's preferred locale
@@ -849,6 +866,7 @@ export async function notifyPlayerJoined(
         matchDate,
         locationName,
         spotsLeft: spotsLeft !== undefined ? String(spotsLeft) : undefined,
+        ...extras,
       },
     }))
   );
@@ -927,14 +945,15 @@ export async function notifyMatchStartingSoon(
   matchId: string,
   sportName: string,
   locationName?: string,
-  timeUntil?: string
+  timeUntil?: string,
+  extras?: MatchNotificationExtras
 ): Promise<Notification[]> {
   return createNotifications(
     participantUserIds.map(userId => ({
       type: 'match_starting_soon' as const,
       userId,
       targetId: matchId,
-      payload: { matchId, sportName, locationName, timeUntil },
+      payload: { matchId, sportName, locationName, timeUntil, ...extras },
     }))
   );
 }
@@ -995,13 +1014,14 @@ export async function notifyMatchInvitation(
   sportName: string,
   matchDate: string,
   startTime?: string,
-  locationName?: string
+  locationName?: string,
+  extras?: MatchNotificationExtras
 ): Promise<Notification> {
   return createNotification({
     type: 'match_invitation',
     userId: playerUserId,
     targetId: matchId,
-    payload: { matchId, playerName: inviterName, sportName, matchDate, startTime, locationName },
+    payload: { matchId, playerName: inviterName, sportName, matchDate, startTime, locationName, ...extras },
   });
 }
 
@@ -1124,13 +1144,14 @@ export async function notifyReminder(
   matchId: string,
   sportName: string,
   matchDate: string,
-  locationName?: string
+  locationName?: string,
+  extras?: MatchNotificationExtras
 ): Promise<Notification> {
   return createNotification({
     type: 'reminder',
     userId: playerUserId,
     targetId: matchId,
-    payload: { matchId, sportName, matchDate, locationName },
+    payload: { matchId, sportName, matchDate, locationName, ...extras },
   });
 }
 

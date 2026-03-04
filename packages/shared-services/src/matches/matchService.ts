@@ -1381,10 +1381,10 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
     participant = newParticipant as MatchParticipant;
   }
 
-  // Get player name for notifications (player.id = profile.id)
+  // Get player name and avatar for notifications (player.id = profile.id)
   const { data: profileData } = await supabase
     .from('profile')
-    .select('first_name, last_name, display_name')
+    .select('first_name, last_name, display_name, profile_picture_url')
     .eq('id', playerId)
     .single();
 
@@ -1393,6 +1393,7 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
     profileData?.first_name && profileData?.last_name
       ? `${profileData.first_name} ${profileData.last_name}`
       : profileData?.first_name || 'A player';
+  const playerAvatarUrl = profileData?.profile_picture_url ?? undefined;
 
   // Send notification to host if this is a join request
   if (participantStatus === 'requested') {
@@ -1403,7 +1404,8 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
       matchId,
       playerName,
       sportName,
-      match.match_date
+      match.match_date,
+      { playerAvatarUrl }
     ).catch(err => {
       console.error('Failed to send join request notification:', err);
     });
@@ -1434,6 +1436,9 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
           sport:sport_id (name),
           location_type,
           location_name,
+          location_address,
+          custom_latitude,
+          custom_longitude,
           match_date,
           start_time
         `
@@ -1475,7 +1480,13 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
         sportName,
         formattedDate,
         locationName,
-        spotsLeft
+        spotsLeft,
+        {
+          playerAvatarUrl,
+          locationAddress: matchDetails?.location_address ?? undefined,
+          latitude: matchDetails?.custom_latitude ?? undefined,
+          longitude: matchDetails?.custom_longitude ?? undefined,
+        }
       ).catch(err => {
         console.error('Failed to send player joined notifications:', err);
       });

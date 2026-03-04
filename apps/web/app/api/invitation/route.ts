@@ -47,6 +47,13 @@ export async function POST(Request: NextRequest) {
     // Generate invitation token
     const token = generateUrlSafeToken();
 
+    // Fetch inviter's locale for the invitation email
+    const { data: inviterProfile } = await supabase
+      .from('profile')
+      .select('preferred_locale')
+      .eq('id', user.id)
+      .single();
+
     // Create invitation in database
     const { data: invitation, error: invitationError } = await supabase
       .from('invitation')
@@ -57,6 +64,7 @@ export async function POST(Request: NextRequest) {
         admin_role: data.adminRole,
         token,
         inviter_id: user.id,
+        metadata: { locale: inviterProfile?.preferred_locale || 'en-US' },
         expires_at: data.expiresAt
           ? new Date(data.expiresAt).toISOString()
           : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),

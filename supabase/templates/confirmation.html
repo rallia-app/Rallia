@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Rallia - Verification Code</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
     <!--[if mso]>
       <style type="text/css">
         body,
@@ -13,39 +17,70 @@
         }
       </style>
     <![endif]-->
+    <style type="text/css">
+      @media (prefers-color-scheme: dark) {
+        .email-body { background-color: #1a1a1a !important; }
+        .email-container { background-color: #262626 !important; }
+        .email-header { background-color: #0f766e !important; }
+        .email-content { background-color: #262626 !important; }
+        .email-footer { background-color: #1f1f1f !important; border-top-color: #404040 !important; }
+        .email-text { color: #e5e5e5 !important; }
+        .email-muted { color: #a3a3a3 !important; }
+        .email-otp-box { background-color: #1a2e2b !important; border-color: #2d4a46 !important; }
+        .email-divider { border-top-color: #404040 !important; }
+        .email-content h2 { color: #5eead4 !important; }
+        .email-content p { color: #e5e5e5 !important; }
+        .email-content a { color: #5eead4 !important; }
+        .email-footer p { color: #a3a3a3 !important; }
+        .email-footer a { color: #5eead4 !important; }
+      }
+      [data-ogsc] .email-body { background-color: #1a1a1a !important; }
+      [data-ogsc] .email-container { background-color: #262626 !important; }
+      [data-ogsc] .email-header { background-color: #0f766e !important; }
+      [data-ogsc] .email-footer { background-color: #1f1f1f !important; }
+      [data-ogsc] .email-text { color: #e5e5e5 !important; }
+      [data-ogsc] .email-muted { color: #a3a3a3 !important; }
+      [data-ogsc] .email-content h2 { color: #5eead4 !important; }
+      [data-ogsc] .email-content p { color: #e5e5e5 !important; }
+      [data-ogsc] .email-footer p { color: #a3a3a3 !important; }
+    </style>
   </head>
-  <body style="padding: 0">
-    <!-- Wrapper table carries background and font; many clients replace/ignore body -->
+  <body style="margin: 0; padding: 0">
+    <!-- Preheader -->
+    <span style="display:none;font-size:1px;color:#ffffff;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Votre code de vérification Rallia est à l'intérieur{{ else }}Your Rallia verification code is inside{{ end }}</span>
     <table
       role="presentation"
       cellspacing="0"
       cellpadding="0"
       border="0"
       width="100%"
-      style="background-color: #f0fdfa; font-family: Arial, Helvetica, sans-serif"
+      class="email-body"
+      style="background-color: #f0fdfa; font-family: Inter, Arial, Helvetica, sans-serif"
     >
       <tr>
         <td align="center" style="padding: 40px 20px">
-          <!-- Main Container -->
           <table
             role="presentation"
             cellspacing="0"
             cellpadding="0"
             border="0"
             width="600"
-            style="background-color: #ffffff"
+            class="email-container"
+            style="background-color: #ffffff; border-radius: 12px; overflow: hidden"
           >
-            <!-- Header: solid background for broad client support -->
+            <!-- Header -->
             <tr>
               <td
                 align="center"
+                class="email-header"
                 style="
                   padding: 40px 40px 20px 40px;
-                  background-color: #a8dad6;
+                  background-color: #0d9488;
+                  border-radius: 12px 12px 0 0;
                 "
               >
                 <img
-                  src="{{ .SiteURL }}/logo-dark.png"
+                  src="{{ .SiteURL }}/logo-light.png"
                   alt="Rallia"
                   width="140"
                   height="55"
@@ -56,14 +91,14 @@
 
             <!-- Content -->
             <tr>
-              <td style="padding: 40px 40px 30px 40px">
+              <td class="email-content" style="padding: 40px 40px 30px 40px">
                 <h2
                   style="
                     padding: 0 0 16px 0;
-                    font-family: Arial, Helvetica, sans-serif;
+                    font-family: Poppins, Arial, Helvetica, sans-serif;
                     font-size: 24px;
                     font-weight: bold;
-                    color: #006d77;
+                    color: #0d9488;
                     letter-spacing: -0.025em;
                     line-height: 1.2;
                   "
@@ -72,17 +107,18 @@
                 </h2>
 
                 <p
+                  class="email-text"
                   style="
                     padding: 0 0 32px 0;
                     font-size: 16px;
                     line-height: 1.6;
-                    color: #374151;
+                    color: #171717;
                   "
                 >
                   {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Bienvenue sur Rallia ! Utilisez le code ci-dessous pour terminer votre connexion et commencer.{{ else }}Welcome to Rallia! Use the verification code below to complete your sign-in and get started.{{ end }}
                 </p>
 
-                <!-- OTP Code Box: solid background instead of gradient -->
+                <!-- OTP Code Box -->
                 <table
                   role="presentation"
                   cellspacing="0"
@@ -97,9 +133,11 @@
                         cellspacing="0"
                         cellpadding="0"
                         border="0"
+                        class="email-otp-box"
                         style="
-                          background-color: #ccfbf1;
-                          border: 2px solid #83c5be;
+                          background-color: #f0fdfa;
+                          border: 1px solid #ccfbf1;
+                          border-radius: 8px;
                         "
                       >
                         <tr>
@@ -109,7 +147,7 @@
                                 padding: 0 0 8px 0;
                                 font-size: 14px;
                                 font-weight: bold;
-                                color: #006d77;
+                                color: #0d9488;
                                 text-transform: uppercase;
                                 letter-spacing: 0.05em;
                               "
@@ -119,10 +157,10 @@
                             <p
                               style="
                                 padding: 0;
-                                font-family: Arial, Helvetica, sans-serif;
+                                font-family: Poppins, Arial, Helvetica, sans-serif;
                                 font-size: 36px;
                                 font-weight: bold;
-                                color: #006d77;
+                                color: #0d9488;
                                 letter-spacing: 0.2em;
                                 line-height: 1.2;
                               "
@@ -137,11 +175,12 @@
                 </table>
 
                 <p
+                  class="email-muted"
                   style="
                     padding: 0 0 24px 0;
                     font-size: 14px;
                     line-height: 1.6;
-                    color: #6b7280;
+                    color: #525252;
                   "
                 >
                   {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Entrez ce code dans le formulaire de connexion pour vérifier votre courriel. Ce code expire dans 10 minutes.{{ else }}Enter this code in the sign-in form to verify your email address. This code will expire in 10 minutes.{{ end }}
@@ -156,18 +195,18 @@
                   width="100%"
                 >
                   <tr>
-                    <td style="padding: 24px 0; border-top: 1px solid #e5e7eb">
-                      &nbsp;
-                    </td>
+                    <td class="email-divider" style="padding: 16px 0; border-top: 1px solid #e5e5e5"></td>
                   </tr>
                 </table>
 
                 <p
+                  class="email-muted"
                   style="
                     padding: 0;
                     font-size: 13px;
                     line-height: 1.5;
-                    color: #9ca3af;
+                    color: #737373;
+                    text-align: center;
                   "
                 >
                   {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer ce courriel. Votre compte reste sécurisé.{{ else }}If you didn't request this code, you can safely ignore this email. Your account remains secure.{{ end }}
@@ -179,10 +218,12 @@
             <tr>
               <td
                 align="center"
+                class="email-footer"
                 style="
                   padding: 30px 40px 40px 40px;
-                  background-color: #f9fafb;
-                  border-top: 1px solid #e5e7eb;
+                  background-color: #fafafa;
+                  border-top: 1px solid #e5e5e5;
+                  border-radius: 0 0 12px 12px;
                 "
               >
                 <p
@@ -190,30 +231,54 @@
                     padding: 0 0 8px 0;
                     font-size: 14px;
                     font-weight: bold;
-                    color: #006d77;
+                    color: #0d9488;
                   "
                 >
                   {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Besoin d'aide ?{{ else }}Need help?{{ end }}
                 </p>
                 <p
+                  class="email-muted"
                   style="
                     padding: 0;
                     font-size: 13px;
                     line-height: 1.5;
-                    color: #6b7280;
+                    color: #525252;
                   "
                 >
-                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}En cas de problème pour vous connecter, contactez notre équipe de soutien.{{ else }}If you're having trouble signing in, please contact our support team.{{ end }}
+                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}En cas de problème, contactez-nous à <a href="mailto:contact@rallia.ca" style="color: #0d9488; text-decoration: none;">contact@rallia.ca</a>{{ else }}If you're having trouble, contact us at <a href="mailto:contact@rallia.ca" style="color: #0d9488; text-decoration: none;">contact@rallia.ca</a>{{ end }}
                 </p>
+                <!-- App Store Badges -->
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                  <tr>
+                    <td align="center" style="padding: 16px 0 0 0;">
+                      <p style="margin: 0; padding: 0 0 12px 0; font-size: 13px; font-weight: 600; color: #0d9488;">{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Téléchargez l'application{{ else }}Download the app{{ end }}</p>
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                        <tr>
+                          <td style="padding: 0 6px 0 0;">
+                            <a href="https://apps.apple.com/app/rallia/idXXXXXXXXXX" style="text-decoration: none;">
+                              <img src="{{ .SiteURL }}/app-store-badge.svg" alt="{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Télécharger dans l'App Store{{ else }}Download on the App Store{{ end }}" width="120" height="40" style="display: block; border: 0;" />
+                            </a>
+                          </td>
+                          <td style="padding: 0 0 0 6px;">
+                            <a href="https://play.google.com/store/apps/details?id=com.rallia.app" style="text-decoration: none;">
+                              <img src="{{ .SiteURL }}/google-play-badge.svg" alt="{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Disponible sur Google Play{{ else }}Get it on Google Play{{ end }}" width="135" height="40" style="display: block; border: 0;" />
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
                 <p
+                  class="email-muted"
                   style="
                     padding: 16px 0 0 0;
                     font-size: 12px;
                     line-height: 1.5;
-                    color: #9ca3af;
+                    color: #737373;
                   "
                 >
-                  © 2024 Rallia. {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Tous droits réservés.{{ else }}All rights reserved.{{ end }}
+                  &copy; Rallia. {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Tous droits réservés.{{ else }}All rights reserved.{{ end }}
                 </p>
               </td>
             </tr>
@@ -230,14 +295,15 @@
             <tr>
               <td align="center" style="padding: 20px 0">
                 <p
+                  class="email-muted"
                   style="
                     padding: 0;
                     font-size: 12px;
                     line-height: 1.5;
-                    color: #9ca3af;
+                    color: #737373;
                   "
                 >
-                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Vous recevez ce courriel car vous vous êtes inscrit à une application propulsée par Supabase ⚡️{{ else }}You're receiving this email because you signed up for an application powered by Supabase ⚡️{{ end }}
+                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Vous recevez ce courriel car vous vous êtes inscrit sur Rallia.{{ else }}You're receiving this email because you signed up for Rallia.{{ end }}
                 </p>
               </td>
             </tr>

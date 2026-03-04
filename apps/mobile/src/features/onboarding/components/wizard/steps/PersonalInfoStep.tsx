@@ -613,7 +613,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
         <DateTimePicker
           value={dateValue}
           mode="date"
-          display="default"
+          display="spinner"
           onChange={handleDateChange}
           maximumDate={minimumDateOfBirth}
           minimumDate={minimumDateSelectable}
