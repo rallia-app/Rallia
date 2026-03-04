@@ -14,7 +14,7 @@
 
 ## Wizard Structure
 
-Match creation uses a **3-step wizard** with horizontal slide animations, progress indicator, and swipe gestures:
+Match creation uses a **3-step wizard** with horizontal slide animations, progress indicator, and button-based navigation (swipe disabled for better Android scroll behavior):
 
 1. **Step 1: Where** - Location selection
 2. **Step 2: When** - Date, time, duration, timezone
@@ -220,11 +220,61 @@ flowchart TD
 
 ## Edit Mode
 
-- Wizard can be opened with existing match data
-- Pre-fills all fields from match
-- Validates changes against existing participants
-- Shows confirmation dialogs for impactful changes (date/time, location, format, cost)
-- No draft saving in edit mode
+The wizard can be opened with existing match data to edit a match. All fields from the match are pre-filled into the form. Draft saving is disabled in edit mode.
+
+### Authorization
+
+Only the match creator can edit their match (enforced by RLS policy: `auth.uid() = created_by`).
+
+### When Can a Match Be Edited?
+
+| Match State   | Editable? |
+| ------------- | --------- |
+| `scheduled`   | ✅ Yes    |
+| `in_progress` | ❌ No     |
+| `expired`     | ❌ No     |
+| `completed`   | ❌ No     |
+| `closed`      | ❌ No     |
+| `cancelled`   | ❌ No     |
+
+### Updatable Fields
+
+All creation fields can be updated: date, time, duration, timezone, location (type, facility, court, custom address/coordinates), format, player expectation, court status, cost settings, opponent preferences (gender, rating), visibility, join mode, and notes.
+
+### Blocking Rules
+
+Only **one hard blocker** exists:
+
+| Rule                                   | Condition                                         | Error Code              |
+| -------------------------------------- | ------------------------------------------------- | ----------------------- |
+| Cannot change doubles → singles format | 2 or more participants with `joined` status exist | `FORMAT_CHANGE_BLOCKED` |
+
+### Warnings (Non-Blocking)
+
+| Warning         | Trigger                                                                                      | Behavior                                                |
+| --------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| Gender mismatch | Changing `preferredOpponentGender` to a specific gender when joined participants don't match | Confirmation modal shown; creator can proceed or cancel |
+
+### Impactful Change Confirmation
+
+When **joined participants exist** (excluding the creator) and any of the following fields change, a confirmation dialog is shown listing the changes before proceeding:
+
+| Change Category | Fields                                          |
+| --------------- | ----------------------------------------------- |
+| Date/Time       | `matchDate`, `startTime`, `duration`            |
+| Location        | `locationType`, `facilityId`, `locationName`    |
+| Format          | `format`                                        |
+| Cost            | `isCourtFree`, `estimatedCost`, `costSplitType` |
+
+This is a **client-side UX safeguard** only — the server does not enforce this confirmation.
+
+### `host_edited_at` Timestamp
+
+Every match update sets `host_edited_at` to the current timestamp. This allows participants to leave without reputation penalty after a host edit (see [Match Lifecycle — Late Cancellation Penalties](./match-lifecycle.md#late-cancellation-penalties)).
+
+### Notifications on Update
+
+When a match is updated, all `joined` participants (**excluding the creator**) are notified if any "notifiable" fields changed. See [Match Lifecycle — Notifications Summary](./match-lifecycle.md#notifications-summary) for the full list of notifiable fields.
 
 ## Slot Booking Integration
 
@@ -291,10 +341,10 @@ Each step validates its fields before allowing progression:
 
 When editing matches with participants:
 
-- Server-side validation checks if changes are allowed
-- Blocks updates that would invalidate existing participants
-- Shows warnings for gender mismatches
-- Confirms impactful changes (date/time, location, format, cost)
+- **Server-side validation** via `validateMatchUpdate()` checks blocking rules (format change) and warnings (gender mismatch)
+- Blocks doubles → singles if 2+ joined participants (`FORMAT_CHANGE_BLOCKED`)
+- Shows warning modal for gender mismatches (non-blocking, creator can proceed)
+- Shows confirmation dialog for impactful changes (date/time, location, format, cost) when joined participants exist
 
 ## Match Templates (Future)
 
