@@ -310,30 +310,48 @@ Contextual banners shown at top of sheet:
 
 ### Action Buttons
 
-The footer shows context-appropriate actions:
+The footer shows context-appropriate actions. The rendering order determines priority — the first matching condition wins:
 
-| User Role         | Match State  | Primary Action      | Secondary    |
-| ----------------- | ------------ | ------------------- | ------------ |
-| Creator           | Active       | Edit                | Cancel Match |
-| Participant       | Active       | Leave Match         | —            |
-| Pending requester | Active       | Cancel Request      | —            |
-| Waitlisted        | Full         | Leave Waitlist      | —            |
-| Waitlisted        | Spot open    | Join Now / Request  | —            |
-| Non-participant   | Open spots   | Join Now            | —            |
-| Non-participant   | Request mode | Request to Join     | —            |
-| Non-participant   | Full         | Join Waitlist       | —            |
-| Anyone            | In Progress  | "Match in progress" | —            |
-| Participant       | Completed    | Give Feedback       | —            |
-| Anyone            | Completed    | "Match completed"   | —            |
-| Anyone            | Closed       | View Results        | —            |
-| Anyone            | Cancelled    | "Match cancelled"   | —            |
+| Priority | User Role / Condition                    | Match State            | Action Displayed                      |
+| -------- | ---------------------------------------- | ---------------------- | ------------------------------------- |
+| 1        | Anyone                                   | Cancelled              | "Match cancelled" (status message)    |
+| 2        | Participant (score needs confirmation)   | Completed (has result) | Dispute Score + Confirm Score         |
+| 3        | Participant (already responded to score) | Completed (has result) | Provide Feedback (if not completed)   |
+| 4        | Participant (result exists, all done)    | Completed (has result) | "Match completed" (status message)    |
+| 5        | Anyone                                   | Expired (not full)     | "Match expired" (status message)      |
+| 6        | Participant (no score yet)               | Completed (within 48h) | Submit Score + Provide Feedback       |
+| 7        | Participant (feedback done)              | Completed (within 48h) | "Match completed" (status message)    |
+| 8        | Anyone                                   | Completed (past 48h)   | "Match closed" (status message)       |
+| 9        | Participant (needs check-in)             | Check-in window        | Check In                              |
+| 10       | Anyone                                   | In Progress            | "Match in progress" (status message)  |
+| 11       | Creator / Participant (checked in)       | Scheduled              | "You are checked-in" (status message) |
+| 12       | Creator                                  | Scheduled              | Edit + Cancel Match                   |
+| 13       | Pending requester                        | Scheduled              | Cancel Request                        |
+| 14       | Invited (match full)                     | Scheduled              | Decline + Join Waitlist               |
+| 15       | Invited (request mode)                   | Scheduled              | Decline + Request to Join             |
+| 16       | Invited (direct mode)                    | Scheduled              | Decline + Accept Invitation           |
+| 17       | Waitlisted (match full)                  | Scheduled              | Leave Waitlist                        |
+| 18       | Waitlisted (spot opened, request mode)   | Scheduled              | Request to Join                       |
+| 19       | Waitlisted (spot opened, direct mode)    | Scheduled              | Join Now                              |
+| 20       | Participant (checked in)                 | Scheduled              | "You are checked-in" (status message) |
+| 21       | Participant (joined)                     | Scheduled              | Leave Match                           |
+| 22       | Non-participant (match full)             | Scheduled              | Join Waitlist                         |
+| 23       | Non-participant (request mode)           | Scheduled              | Request to Join                       |
+| 24       | Non-participant (direct mode)            | Scheduled              | Join Now                              |
 
-**Share Button**: Always visible, allows sharing match details.
+**Share Button**: Visible to everyone before match starts (not cancelled). Allows sharing match details via native share sheet.
+
+**Check-in Window**: 10 minutes before start_time to end_time, only for full matches with a confirmed location (facility or custom). Requires device location permission.
+
+**Score Actions** (Completed matches only):
+
+- **Submit Score**: Shown when no score has been submitted yet (`!hasResult`) and within 48h feedback window
+- **Confirm/Dispute Score**: Shown to participants who did not submit the score, when the score is unverified and undisputed
 
 **Feedback Button** (Completed matches only):
 
-- Shown to participants when match status is `completed` AND `feedback_completed = false`
-- Hidden when `feedback_completed = true` or match is `closed`
+- Shown to participants when match status is `completed` AND `feedback_completed = false` AND within 48h window
+- Hidden when `feedback_completed = true` or match is `closed` (past 48h)
 - Opens the Feedback Wizard modal
 - See [Match Closure](./match-closure.md) for the feedback wizard flow
 
@@ -407,14 +425,16 @@ The `useMatchActions` hook provides all match operations:
 | Action         | Method                                     | Description                      |
 | -------------- | ------------------------------------------ | -------------------------------- |
 | Join           | `joinMatch(playerId)`                      | Join directly or request to join |
-| Leave          | `leaveMatch(playerId)`                     | Leave the match                  |
+| Leave          | `leaveMatch(playerId)`                     | Leave the match or waitlist      |
 | Cancel         | `cancelMatch(playerId)`                    | Cancel match (host only)         |
 | Accept Request | `acceptRequest({participantId, hostId})`   | Accept join request              |
 | Reject Request | `rejectRequest({participantId, hostId})`   | Reject join request              |
 | Cancel Request | `cancelRequest(playerId)`                  | Cancel own join request          |
 | Kick           | `kickParticipant({participantId, hostId})` | Remove participant               |
 | Cancel Invite  | `cancelInvite({participantId, hostId})`    | Cancel pending invitation        |
+| Decline Invite | `declineInvite(playerId)`                  | Decline pending invitation       |
 | Resend Invite  | `resendInvite({participantId, hostId})`    | Resend invitation                |
+| Check In       | `checkIn({playerId, latitude, longitude})` | Check in at match location       |
 
 ### Pagination
 
