@@ -989,7 +989,7 @@ export default function MatchFiltersBar({
         <DateTimePicker
           value={tempDate}
           mode="date"
-          display="default"
+          display="spinner"
           onChange={handleDateChange}
           minimumDate={getTodayAtMidnight()}
         />

@@ -6,8 +6,8 @@
  */
 
 import React, { useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
@@ -213,7 +213,7 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
   const avatarUrl = opponent.avatarUrl ? getProfilePictureUrl(opponent.avatarUrl) : null;
 
   return (
-    <ScrollView
+    <BottomSheetScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
@@ -330,7 +330,7 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
           </Text>
         </TouchableOpacity>
       )}
-    </ScrollView>
+    </BottomSheetScrollView>
   );
 };
 

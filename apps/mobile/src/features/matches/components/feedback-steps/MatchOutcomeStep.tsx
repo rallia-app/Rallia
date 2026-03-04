@@ -7,7 +7,7 @@
 
 import React, { useCallback, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { SportIcon } from '../../../../components/SportIcon';
@@ -439,7 +439,7 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
   locale,
   isDark,
 }) => {
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<any>(null);
   const reasonsSectionY = useRef<number>(0);
 
   const handleOutcomeChange = useCallback(
@@ -490,7 +490,7 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
   );
 
   return (
-    <ScrollView
+    <BottomSheetScrollView
       ref={scrollViewRef}
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
@@ -637,7 +637,7 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
           )}
         </View>
       )}
-    </ScrollView>
+    </BottomSheetScrollView>
   );
 };
 
