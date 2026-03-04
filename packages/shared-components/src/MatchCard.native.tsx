@@ -1625,12 +1625,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[2.5],
     paddingVertical: spacingPixels[1],
     borderRadius: radiusPixels.full,
-    // Subtle shadow for badge depth
+    // iOS-only subtle shadow for badge depth
+    // Note: elevation is omitted because Android renders a gray background
+    // behind semi-transparent badge colors when elevation is set
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 2,
-    elevation: 1,
   },
   badgeIcon: {
     marginRight: spacingPixels[1],
