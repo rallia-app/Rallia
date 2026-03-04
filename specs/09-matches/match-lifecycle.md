@@ -6,58 +6,64 @@ Complete flow from match creation to completion, including participant managemen
 
 ## Match States
 
-Match states are **derived** from match attributes (not stored in database). Status is computed based on:
+Match status is **derived** at runtime from match attributes — there is no stored status column. The derivation uses two layers:
+
+1. **`deriveMatchStatus()`** — a pure function in `shared-utils` that computes the **core status** from time and cancellation fields
+2. **UI-level overlays** — the match detail UI combines the core status with **match fullness** and **time-since-end** to display finer-grained states like "expired" and "closed"
+
+### Core Status Derivation (`deriveMatchStatus`)
+
+Inputs:
 
 - `cancelled_at`: If set, match is cancelled
-- `start_time` / `end_time`: Time-based state transitions
-- `match_date` / `timezone`: For accurate time calculations
-- Participant count: Number of `joined` participants vs. match capacity (format: singles=2, doubles=4)
+- `match_date` / `start_time` / `end_time` / `timezone`: For time calculations
+- `result`: If present (truthy), match is completed
+
+**Priority order:**
+
+1. `cancelled` — `cancelled_at IS NOT NULL`
+2. `completed` — `result IS NOT NULL` OR `end_time` has passed
+3. `in_progress` — `start_time` has passed but `end_time` hasn't
+4. `scheduled` — default (match hasn't started)
+
+```typescript
+type DerivedMatchStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+```
+
+**Note:** The core derivation does **not** check match fullness. Fullness is evaluated separately in the UI to determine display states.
+
+### UI Display States
+
+The UI combines the core status with additional checks:
 
 ```mermaid
 stateDiagram-v2
     [*] --> Scheduled: Match created
     Scheduled --> InProgress: start_time passes AND match is full
     Scheduled --> Expired: start_time passes AND match is NOT full
-    Scheduled --> Cancelled: Creator cancels
+    Scheduled --> Cancelled: Creator cancels (before start_time)
     InProgress --> Completed: end_time passes
-    InProgress --> Cancelled: Creator cancels
     Completed --> Closed: 48 hours pass since end_time
-    Expired --> Cancelled: Creator cancels
     Completed --> [*]
     Cancelled --> [*]
     Closed --> [*]
     Expired --> [*]
 ```
 
-**Key Rule:** Only matches that are **full at start_time** can transition to `in_progress`, `completed`, or `closed`. Matches that are not full at start_time become `expired` and remain in that terminal state. Since match composition cannot change after start_time, a match that is full at start_time remains full throughout.
+| Display State | Core Status                  | Additional Condition                     | Description                              |
+| ------------- | ---------------------------- | ---------------------------------------- | ---------------------------------------- |
+| `scheduled`   | `scheduled`                  | —                                        | Match hasn't started yet                 |
+| `in_progress` | `in_progress`                | Match is full                            | Match is currently happening             |
+| `expired`     | `in_progress` or `completed` | Match is NOT full                        | Start time passed but not enough players |
+| `completed`   | `completed`                  | Match is full AND within 48h of end_time | Match ended, feedback window open        |
+| `closed`      | `completed`                  | Match is full AND 48h+ since end_time    | Match archived, feedback window expired  |
+| `cancelled`   | `cancelled`                  | —                                        | Match was cancelled by creator           |
 
-### State Definitions
+**Key behaviors:**
 
-| State         | Condition                                                              | Description                                                      |
-| ------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `scheduled`   | Default                                                                | Match hasn't started yet (start_time hasn't passed)              |
-| `in_progress` | start_time passed AND end_time hasn't AND match was full at start_time | Match is currently happening                                     |
-| `expired`     | start_time passed AND match was NOT full at start_time                 | Match start time passed but not enough players joined (terminal) |
-| `completed`   | end_time passed AND match was full at start_time                       | Match ended successfully                                         |
-| `closed`      | 48 hours have passed since end_time AND match was full at start_time   | Match is archived (48h after end_time)                           |
-| `cancelled`   | cancelled_at IS NOT NULL                                               | Match was cancelled by creator                                   |
-
-**Important:** `in_progress`, `completed`, and `closed` states can only occur if the match is **full at start_time**. If a match is not full when start_time passes, it becomes `expired` and remains in that terminal state.
-
-**Priority Order:**
-
-1. `cancelled` (if cancelled_at is set)
-2. `expired` (if start_time passed AND match was NOT full at start_time) - **terminal state**
-3. `closed` (if 48 hours have passed since end_time AND match was full at start_time)
-4. `completed` (if end_time passed AND match was full at start_time)
-5. `in_progress` (if start_time passed AND end_time hasn't AND match was full at start_time)
-6. `scheduled` (default)
-
-**State Determination Logic:**
-
-- First check if match was full **at start_time** (snapshot at that moment)
-- If NOT full at start_time → `expired` (terminal, no further transitions)
-- If full at start_time → can progress through `in_progress` → `completed` → `closed`
+- **Expired** is derived as `(in_progress || completed) && !isFull` — if a match wasn't full when start_time passed, it shows as expired regardless of time progression
+- **Closed** is derived by checking whether the 48h feedback window has elapsed after end_time. The automated `close-matches` edge function also sets `closed_at` on the match record at this point
+- Only **full** matches progress through `in_progress` → `completed` → `closed`
 
 ### Match Fullness Calculation
 
@@ -144,7 +150,8 @@ Matches support two join modes that determine how players can participate:
 
 ### Inviting Players
 
-- Host can invite players at any time (before match starts)
+- Host can invite players before match starts (while match is `scheduled`)
+- **Restriction:** Cannot invite when match is full (all spots taken) — invitations are only available when there are open spots
 - Invited players receive `pending` status
 - Host can cancel invitations (→ `cancelled` status)
 - Host can resend invitations (for `pending` or `declined` players)
@@ -167,8 +174,35 @@ Matches support two join modes that determine how players can participate:
 2. Status → `requested`
 3. Host receives notification
 4. Host can:
-   - Accept → Status → `joined`
-   - Refuse → Status → `refused`
+   - Accept → Status → `joined` (see [Accepting a Join Request](#accepting-a-join-request))
+   - Refuse → Status → `refused` (see [Refusing a Join Request](#refusing-a-join-request))
+
+### Accepting a Join Request
+
+Only the match host can accept. The following validations are enforced:
+
+1. Match is not cancelled (`cancelled_at` is null)
+2. Match is not completed (`end_time` has not passed)
+3. Caller is the match host (`created_by`)
+4. Participant exists and has `requested` status
+5. Match has available capacity (joined count < total spots)
+
+**Note:** The backend checks `end_time`, not `start_time` — meaning a host can accept a request for an in-progress match as long as it hasn't ended. The UI disables the accept button once the match is in progress, but the backend does not enforce this.
+
+On success:
+
+- Participant status → `joined`, `joined_at` timestamp recorded
+- Player notified (`match_join_accepted` notification, fire-and-forget)
+- If the match is now full, a group chat is created for all joined participants + host
+
+### Refusing a Join Request
+
+Only the match host can refuse. Same validation checks as accepting (cancelled, completed, host authorization, participant exists, `requested` status) — except there is no capacity check (refusing doesn't require an open spot).
+
+On success:
+
+- Participant status → `refused`
+- Player notified (`match_join_rejected` notification, fire-and-forget)
 
 ### Accepting Invitations
 
@@ -184,9 +218,10 @@ Matches support two join modes that determine how players can participate:
 
 ### Player Leaves Match
 
-- Player with `joined` status can leave at any time (before match starts)
+- Player with `joined` status can leave before the match starts (`scheduled` state)
+- Leave button is hidden once match is `in_progress` (**enforced in UI only** — the backend `leaveMatch` service does not check match status)
 - Status → `left`
-- Creator notified
+- All remaining `joined` participants notified (including creator)
 - Spot becomes available (waitlisted players can join)
 
 ### Player Cancels Request
@@ -198,7 +233,7 @@ Matches support two join modes that determine how players can participate:
 ### Host Kicks Participant
 
 - Host can remove `joined` participants
-- **Restriction:** Cannot kick within 24 hours of start_time
+- **Restriction:** Cannot kick within 24 hours of start_time (enforced in UI only — the backend checks that the match hasn't ended but does not enforce the 24h window)
 - Status → `kicked`
 - Player notified
 - Spot becomes available
@@ -208,6 +243,7 @@ Matches support two join modes that determine how players can participate:
 ### Match Cancellation
 
 - Only creator can cancel entire match
+- **Cannot cancel after start_time** — once a match's start time has passed, cancellation is blocked
 - Sets `cancelled_at` timestamp
 - Match state → `cancelled`
 - All participants notified
@@ -217,30 +253,63 @@ Matches support two join modes that determine how players can participate:
 
 ### Late Cancellation Penalties
 
-Reputation penalties (`match_cancelled_late`, -25 impact) apply based on whether the match was planned in advance or created spontaneously.
+Reputation penalties apply using **graduated brackets** based on proximity to match start time. Creators receive harsher penalties than participants (~1.5×). All penalties are capped below `match_no_show` (-50) to preserve the distinction that cancelling is still better than ghosting.
 
-#### For Creators Cancelling Within 24h of Start Time
+#### Preconditions for Penalties
 
-| Condition                                    | Penalty Applied?                           |
-| -------------------------------------------- | ------------------------------------------ |
-| Match created **more than 24h** before start | **YES** (-25) - Others planned around it   |
-| Match created **less than 24h** before start | **NO** - Spontaneous match, no commitments |
+All of the following must be true for a penalty to apply:
+
+1. **Court is reserved** (`court_status === 'reserved'`)
+2. **Other participants have joined** (not just the host)
+3. **Cooling-off period expired** — if match was created less than 1 hour ago, no penalty
+4. **Planned match** — match was created more than 24 hours before start time
+5. **Within 24 hours of start** — cancellations 24h+ before start incur no penalty
+
+#### Graduated Penalty Brackets
+
+| Time Before Start | Creator Penalty | Participant Penalty |
+| ----------------- | --------------- | ------------------- |
+| 24+ hours         | 0               | 0                   |
+| 12–24 hours       | -10             | -7                  |
+| 6–12 hours        | -20             | -13                 |
+| 2–6 hours         | -35             | -22                 |
+| 0–2 hours         | -45             | -28                 |
+
+**Note:** The code also defines an "after start" bracket (creator: -45, participant: -33), but this is unreachable for normal cancellations since cancellation is blocked after start_time. It exists as a safety net for system-level cancellations.
+
+#### History Multiplier
+
+Penalties are adjusted based on the player's recent cancellation history (last 30 days):
+
+| Recent Offenses (30 days) | Multiplier |
+| ------------------------- | ---------- |
+| 0 (first offense)         | 0.5×       |
+| 1                         | 1.0×       |
+| 2                         | 1.5×       |
+| 3+                        | 2.0×       |
+
+After applying the multiplier, the final penalty is floored at -49 (one less than no-show) to ensure cancelling is always better than not showing up.
 
 #### For Participants Leaving Within 24h of Start Time
 
-| Condition                                                    | Penalty Applied?                                |
-| ------------------------------------------------------------ | ----------------------------------------------- |
-| Match is **full** AND created **more than 24h** before start | **YES** (-25) - Committed spot on planned match |
-| Match is **not full**                                        | **NO** - No one is stranded                     |
-| Match created **less than 24h** before start                 | **NO** - Last-minute match, flexible commitment |
+| Condition                                                    | Penalty Applied?                                      |
+| ------------------------------------------------------------ | ----------------------------------------------------- |
+| Match is **full** AND created **more than 24h** before start | **YES** (graduated) - Committed spot on planned match |
+| Match is **not full**                                        | **NO** - No one is stranded                           |
+| Match created **less than 24h** before start                 | **NO** - Last-minute match, flexible commitment       |
 
-**Rationale:** This protects against last-minute bailouts on planned matches while allowing flexibility for spontaneous, last-minute matches. Players who make others commit and then bail are penalized, but impromptu matches remain low-commitment.
+**Rationale:** This protects against last-minute bailouts on planned matches while allowing flexibility for spontaneous, last-minute matches. Players who make others commit and then bail are penalized, but impromptu matches remain low-commitment. The graduated system ensures that cancelling 23 hours before is much less punishing than cancelling 1 hour before.
 
 **Implementation Notes:**
 
 - The `created_at` timestamp on the match record is used to determine if the match was planned (>24h before start) or spontaneous (<24h before start)
 - If a match's date/time is edited, the `last_modified_at` timestamp is also considered
 - Penalty events are created immediately when the participant leaves or creator cancels
+- Penalty calculation lives in `shared-services/src/reputation/reputationPenalties.ts`
+
+#### `host_edited_at` — Penalty Exception for Host Edits
+
+Every time a match creator updates a match, the `host_edited_at` field is set to the current timestamp. When a participant leaves within 24h of start time, the system checks `host_edited_at`: if the host recently edited the match (e.g., changed date/time/location), the leaving participant is **exempt from the late cancellation penalty**. This ensures players are not penalized for leaving a match whose conditions changed after they committed.
 
 ## Match Progression
 
@@ -255,7 +324,7 @@ Reputation penalties (`match_cancelled_late`, -25 impact) apply based on whether
 
 - Match is happening (between start_time and end_time)
 - Match is full (was full at start_time, composition cannot change)
-- No join/leave actions allowed
+- No join/leave actions allowed (**enforced in UI only** — the backend `leaveMatch` and `joinMatch` services do not check match status; the UI hides the buttons)
 - No editing allowed
 - Limited UI actions (view only)
 - **Check-in available** (see Check-In section)
@@ -317,16 +386,22 @@ Players can check-in to confirm their physical presence at the match location.
 
 ### Availability
 
-- Available **from 10 minutes before start_time to end_time**
-- The 10-minute pre-match window coincides with the check-in reminder notification
-- Optional - not required to complete the match
+Check-in requires **all** of the following conditions:
+
+- **Time window:** Within 10 minutes before start_time to end_time
+- **Match is full:** All spots must be filled (check-in is not available for non-full matches)
+- **Location is set:** Match must have a confirmed location (`facility` or `custom` — not `tbd`)
+- **Location permission granted:** Device location permission must be active for geolocation verification
+- **Player is a `joined` participant** who hasn't already checked in
+
+The 10-minute pre-match window coincides with the check-in reminder notification. Check-in is optional — not required to complete the match.
 
 ### How It Works
 
 1. Player receives check-in reminder (10 minutes before start)
 2. Player opens match detail during the check-in window
 3. System verifies player's location against match coordinates
-4. If within acceptable radius (e.g., 100m), `checked_in_at` timestamp is recorded on the participant record
+4. If within acceptable radius (100m), `checked_in_at` timestamp is recorded on the participant record
 5. Check-in status visible to all participants
 
 ### Data Model
@@ -352,12 +427,7 @@ Match creators can share matches to groups and communities within Rallia:
 
 ### Social Media Sharing
 
-Both creators and participants can share match details to external platforms:
-
-| Who         | Can Share                    |
-| ----------- | ---------------------------- |
-| Creator     | Any time before match starts |
-| Participant | Any time before match starts |
+Anyone can share match details to external platforms, any time before the match starts.
 
 **How It Works:**
 
@@ -402,18 +472,44 @@ When match is sent to multiple players:
 
 ## Notifications Summary
 
-| Event                        | Creator Notified     | Participant Notified        |
-| ---------------------------- | -------------------- | --------------------------- |
-| Player joins (direct)        | ✅ Yes               | ✅ Confirmation             |
-| Player requests to join      | ✅ Yes               | ✅ Confirmation             |
-| Request accepted             | ✅ Confirmation      | ✅ Yes                      |
-| Request refused              | ✅ Confirmation      | ✅ Yes                      |
-| Invitation declined (single) | ✅ Yes               | N/A                         |
-| Invitation declined (multi)  | ❌ No (check status) | N/A                         |
-| Player leaves                | ✅ Yes               | ✅ Confirmation             |
-| Player kicked                | ✅ Confirmation      | ✅ Yes                      |
-| Match cancelled              | N/A                  | ✅ Yes (all participants)   |
-| Spot opens (waitlist)        | N/A                  | ✅ Yes (waitlisted players) |
+| Event                        | Creator Notified       | Participant Notified                          |
+| ---------------------------- | ---------------------- | --------------------------------------------- |
+| Player joins (direct)        | ✅ Yes                 | ✅ Confirmation                               |
+| Player requests to join      | ✅ Yes                 | ✅ Confirmation                               |
+| Request accepted             | ❌ No (host initiated) | ✅ Yes (`match_join_accepted`)                |
+| Request refused              | ❌ No (host initiated) | ✅ Yes (`match_join_rejected`)                |
+| Invitation declined (single) | ✅ Yes                 | N/A                                           |
+| Invitation declined (multi)  | ❌ No (check status)   | N/A                                           |
+| Player leaves                | ✅ Yes                 | ✅ Confirmation                               |
+| Player kicked                | ✅ Confirmation        | ✅ Yes                                        |
+| Match cancelled              | N/A                    | ✅ Yes (all participants)                     |
+| Spot opens (waitlist)        | N/A                    | ✅ Yes (waitlisted players)                   |
+| **Match updated**            | N/A                    | ✅ Yes (joined, if notifiable fields changed) |
+
+### Match Updated Notification Details
+
+When the creator updates a match, a `match_updated` notification is sent to all `joined` participants **excluding the creator**. The notification is only triggered when at least one "notifiable" field changes.
+
+**Notifiable fields** (trigger notification):
+
+| Category | Fields                                                                               |
+| -------- | ------------------------------------------------------------------------------------ |
+| Time     | `matchDate`, `startTime`, `endTime`, `duration`, `customDurationMinutes`, `timezone` |
+| Location | `locationType`, `facilityId`, `courtId`, `locationName`, `locationAddress`           |
+| Cost     | `isCourtFree`, `estimatedCost`, `costSplitType`                                      |
+| Format   | `format`, `playerExpectation`                                                        |
+
+**Non-notifiable fields** (no notification sent):
+
+- `visibility`, `visibleInGroups`, `visibleInCommunities`
+- `joinMode`
+- `preferredOpponentGender`, `minRatingScoreId`
+- `notes`
+- `courtStatus`
+
+**Notification payload** includes: `matchId`, list of updated fields, `sportName`, `matchDate`, `startTime`. Each notification is localized to the recipient's `preferred_locale`.
+
+**Delivery:** Fire-and-forget after the DB update succeeds (does not block the update response). Delivered via push and/or email based on user notification preferences.
 
 ## Schedule Conflicts
 
@@ -451,8 +547,9 @@ Match chat is available for coordinating match details (meeting point, equipment
 ### Availability
 
 - **Only `joined` participants** can access match chat
-- Chat becomes available immediately when a player's status becomes `joined`
+- Chat is **created** when the match becomes **full** (all spots filled) — a group chat is initialized for all `joined` participants including the host
 - Players with `pending`, `requested`, or `waitlisted` status cannot access chat
+- If a player leaves a full match and then someone else joins (re-filling the match), the new player is added to the existing chat
 - Chat remains accessible until match is `closed`
 
 ### Content
