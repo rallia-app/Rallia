@@ -1,7 +1,6 @@
 import {
   wrapInLayout,
   renderCtaButton,
-  renderLinkFallbackBox,
   renderDividerAndDisclaimer,
   escapeHtml,
   EMAIL_TOKENS,
@@ -11,7 +10,8 @@ import type { EmailContent, InvitationEmailPayload } from '../types.ts';
 
 export function renderInvitationEmail(
   payload: InvitationEmailPayload,
-  locale: string = 'en-US'
+  locale: string = 'en-US',
+  siteUrl?: string,
 ): EmailContent {
   const T = EMAIL_TOKENS;
 
@@ -40,6 +40,11 @@ export function renderInvitationEmail(
     });
   }
 
+  // Build preheader text
+  const preheader = t(locale, 'preheader.invitation', {
+    networkName: payload.organizationName || 'Rallia',
+  });
+
   const content = `
                 <h2 style="margin: 0; padding: 0 0 16px 0; font-family: Poppins, Arial, Helvetica, sans-serif; font-size: 24px; font-weight: bold; color: ${T.primary600}; letter-spacing: -0.025em; line-height: 1.2;">
                   ${t(locale, 'invitation.heading')}
@@ -55,9 +60,7 @@ export function renderInvitationEmail(
 
                 ${renderCtaButton(t(locale, 'invitation.ctaButton'), payload.signUpUrl)}
 
-                ${renderLinkFallbackBox(t(locale, 'invitation.copyLinkLabel'), payload.signUpUrl)}
-
-                <p style="margin: 0; padding: 0 0 24px 0; font-size: 14px; line-height: 1.6; color: ${T.neutral600};">
+                <p style="margin: 0; padding: 0 0 24px 0; font-size: 14px; line-height: 1.6; color: ${T.neutral600}; text-align: center;">
                   ${t(locale, 'invitation.expiresAt')} <strong style="color: ${T.neutral900};">${payload.expiresAt}</strong>.
                 </p>
 
@@ -68,6 +71,8 @@ export function renderInvitationEmail(
     content,
     footerNote: t(locale, 'invitation.footerNote'),
     locale,
+    preheader,
+    ...(siteUrl && { siteUrl }),
   });
 
   return {

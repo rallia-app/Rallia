@@ -226,7 +226,7 @@ async function sendViaChannel(
   channel: DeliveryChannel,
   notification: NotificationRecord,
   contact: UserContactInfo,
-  organization?: OrganizationInfo | null
+  organization?: OrganizationInfo | null,
 ): Promise<DeliveryResult> {
   switch (channel) {
     case 'email':
