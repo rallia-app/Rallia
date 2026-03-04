@@ -10,7 +10,6 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   AppState,
   Linking,
@@ -20,7 +19,11 @@ import {
 } from 'react-native';
 import { UseFormReturn, useWatch } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import {
+  BottomSheetTextInput,
+  BottomSheetScrollView,
+  type BottomSheetScrollViewMethods,
+} from '@gorhom/bottom-sheet';
 import { Text, LocationSelector } from '@rallia/shared-components';
 import { SearchBar } from '../../../../components/SearchBar';
 import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
@@ -656,7 +659,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFacility, setSelectedFacility] = useState<FacilitySearchResult | null>(null);
   const [bookedCourtNumber, setBookedCourtNumber] = useState<number | null>(null);
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<BottomSheetScrollViewMethods>(null);
   const facilitySearchRef = useRef<View>(null);
   const placeSearchRef = useRef<View>(null);
 
@@ -1285,7 +1288,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   ]);
 
   return (
-    <ScrollView
+    <BottomSheetScrollView
       ref={scrollViewRef}
       style={styles.container}
       contentContainerStyle={[
@@ -1541,7 +1544,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         confirmLabel={t('matchCreation.booking.iBookedThisCourt')}
         cancelLabel={t('matchCreation.booking.notYet')}
       />
-    </ScrollView>
+    </BottomSheetScrollView>
   );
 };
 
