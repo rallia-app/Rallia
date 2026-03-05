@@ -7,6 +7,7 @@ GRANT EXECUTE ON FUNCTION get_reputation_summary(UUID) TO anon;
 -- This is needed because match detail queries join player_reputation via
 -- PostgREST, and without this policy the join returns null for anon users,
 -- hiding the "most wanted" ribbon badge on participant avatars.
+DROP POLICY IF EXISTS "player_reputation_read_public_anon" ON player_reputation;
 CREATE POLICY "player_reputation_read_public_anon" ON player_reputation
     FOR SELECT
     TO anon
