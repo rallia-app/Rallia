@@ -48,6 +48,45 @@ const getCertificationColors = (status: 'self_declared' | 'certified' | 'dispute
   }
 };
 
+/**
+ * Maps score value to a skill level translation key based on sport
+ */
+const getSkillLevelTranslationKey = (
+  sportName: string,
+  scoreValue: number
+): TranslationKey | null => {
+  // Tennis (NTRP) mapping
+  const tennisMapping: Record<number, TranslationKey> = {
+    1.5: 'onboarding.ratingStep.skillLevels.beginner1',
+    2.0: 'onboarding.ratingStep.skillLevels.beginner2',
+    2.5: 'onboarding.ratingStep.skillLevels.beginner3',
+    3.0: 'onboarding.ratingStep.skillLevels.intermediate1',
+    3.5: 'onboarding.ratingStep.skillLevels.intermediate2',
+    4.0: 'onboarding.ratingStep.skillLevels.intermediate3',
+    4.5: 'onboarding.ratingStep.skillLevels.advanced1',
+    5.0: 'onboarding.ratingStep.skillLevels.advanced2',
+    5.5: 'onboarding.ratingStep.skillLevels.advanced3',
+    6.0: 'onboarding.ratingStep.skillLevels.professional',
+  };
+
+  // Pickleball (DUPR) mapping
+  const pickleballMapping: Record<number, TranslationKey> = {
+    1.0: 'onboarding.ratingStep.skillLevels.beginner1',
+    2.0: 'onboarding.ratingStep.skillLevels.beginner2',
+    2.5: 'onboarding.ratingStep.skillLevels.beginner3',
+    3.0: 'onboarding.ratingStep.skillLevels.intermediate1',
+    3.5: 'onboarding.ratingStep.skillLevels.intermediate2',
+    4.0: 'onboarding.ratingStep.skillLevels.intermediate3',
+    4.5: 'onboarding.ratingStep.skillLevels.advanced1',
+    5.0: 'onboarding.ratingStep.skillLevels.advanced2',
+    5.5: 'onboarding.ratingStep.skillLevels.advanced3',
+    6.0: 'onboarding.ratingStep.skillLevels.professional',
+  };
+
+  const mapping = sportName.toLowerCase() === 'tennis' ? tennisMapping : pickleballMapping;
+  return mapping[scoreValue] || null;
+};
+
 import { mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import { SheetManager } from 'react-native-actions-sheet';
@@ -329,14 +368,20 @@ const SportProfile = () => {
             };
           } | null;
           const ratingSystem = ratingScore?.rating_system;
+          // Get skill level translation with number
+          const scoreVal = ratingScore?.value || 0;
+          const skillLevelKey = getSkillLevelTranslationKey(sportName, scoreVal);
+          const translatedSkillLevel = skillLevelKey
+            ? t(skillLevelKey)
+            : ratingScore?.skill_level
+              ? ratingScore.skill_level.charAt(0).toUpperCase() + ratingScore.skill_level.slice(1)
+              : '';
           const newRatingInfo = {
             ratingScoreId: ratingScore?.id || ratingData.rating_score_id || '',
             ratingTypeName: ratingSystem?.code || ratingSystem?.name || '',
             displayLabel: ratingScore?.label || '',
-            scoreValue: ratingScore?.value || 0,
-            skillLevel: ratingScore?.skill_level
-              ? ratingScore.skill_level.charAt(0).toUpperCase() + ratingScore.skill_level.slice(1)
-              : '',
+            scoreValue: scoreVal,
+            skillLevel: translatedSkillLevel,
             isVerified: ratingData.is_certified || false,
             verifiedAt: ratingData.certified_at || null,
             minValue: ratingSystem?.min_value || 0,
@@ -499,14 +544,14 @@ const SportProfile = () => {
           newRatingScoreId: ratingScoreId,
         });
 
+        // Only update rating_score_id - let DB trigger handle certification logic
+        // The trigger will check if proofs exist at higher/equal levels and preserve certification
         const updateResult = await withTimeout(
           (async () =>
             supabase
               .from('player_rating_score')
               .update({
                 rating_score_id: ratingScoreId,
-                is_certified: false, // Reset certification when rating changes
-                badge_status: 'self_declared', // Reset badge status
                 updated_at: new Date().toISOString(),
               })
               .eq('id', existingSelfReportedRating.id))(),

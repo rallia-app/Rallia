@@ -86,15 +86,23 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
 
   const handleDateChange = (_event: unknown, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
+      // Android: native dialog dismisses automatically
       setShowDatePicker(false);
-    }
-
-    if (selectedDate) {
-      setDateOfBirth(selectedDate);
-      if (Platform.OS === 'ios') {
-        setShowDatePicker(false);
+      if (selectedDate) {
+        setDateOfBirth(selectedDate);
       }
+    } else if (selectedDate) {
+      // iOS: update value, modal stays open until Done pressed
+      setDateOfBirth(selectedDate);
     }
+  };
+
+  const handleDatePickerDone = () => {
+    setShowDatePicker(false);
+  };
+
+  const handleDatePickerCancel = () => {
+    setShowDatePicker(false);
   };
 
   const formatDate = (date: Date | null): string => {
@@ -514,25 +522,28 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
             )}
           </View>
 
-          {/* Date Picker - iOS Modal */}
+          {/* iOS Date Picker Modal */}
           {showDatePicker && Platform.OS === 'ios' && (
             <Modal
               transparent
               animationType="fade"
               visible={showDatePicker}
-              onRequestClose={() => setShowDatePicker(false)}
+              onRequestClose={handleDatePickerCancel}
             >
               <Pressable
                 style={[
                   styles.modalOverlay,
                   { backgroundColor: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)' },
                 ]}
-                onPress={() => setShowDatePicker(false)}
+                onPress={handleDatePickerCancel}
               >
-                <View style={[styles.datePickerContainer, { backgroundColor: colors.card }]}>
+                <Pressable
+                  style={[styles.datePickerContainer, { backgroundColor: colors.card }]}
+                  onPress={e => e.stopPropagation()}
+                >
                   <View style={[styles.datePickerHeader, { borderBottomColor: colors.border }]}>
                     <TouchableOpacity
-                      onPress={() => setShowDatePicker(false)}
+                      onPress={handleDatePickerCancel}
                       style={styles.pickerHeaderButton}
                     >
                       <Text size="base" color={colors.textMuted}>
@@ -543,7 +554,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
                       {t('profile.fields.dateOfBirth')}
                     </Text>
                     <TouchableOpacity
-                      onPress={() => setShowDatePicker(false)}
+                      onPress={handleDatePickerDone}
                       style={styles.pickerHeaderButton}
                     >
                       <Text size="base" weight="semibold" color={colors.buttonActive}>
@@ -559,14 +570,14 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
                     maximumDate={new Date()}
                     minimumDate={new Date(1900, 0, 1)}
                     themeVariant={isDark ? 'dark' : 'light'}
-                    style={styles.iosPicker}
+                    style={styles.datePicker}
                   />
-                </View>
+                </Pressable>
               </Pressable>
             </Modal>
           )}
 
-          {/* Date Picker - Android */}
+          {/* Android Date Picker - Native dialog */}
           {showDatePicker && Platform.OS === 'android' && (
             <DateTimePicker
               value={dateOfBirth || new Date(2000, 0, 1)}
@@ -803,7 +814,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[2],
     minWidth: 60,
   },
-  iosPicker: {
+  datePicker: {
     height: 200,
   },
 });

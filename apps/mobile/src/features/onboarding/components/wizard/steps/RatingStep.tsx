@@ -194,8 +194,8 @@ export const RatingStep: React.FC<RatingStepProps> = ({
 
   const getRatingUrl = () => {
     return isTennis
-      ? 'https://www.usta.com/en/home/improve/national-tennis-rating-program.html'
-      : 'https://mydupr.com/';
+      ? 'https://www.usta.com/content/dam/usta/pdfs/10013_experience_player_ntrp_characteristics1%20(2).pdf'
+      : 'https://www.dupr.com/post/understanding-all-pickleball-ratings';
   };
 
   return (
@@ -225,6 +225,21 @@ export const RatingStep: React.FC<RatingStepProps> = ({
         <Text size="sm" weight="semibold" color={colors.buttonTextActive}>
           {badgeText}
         </Text>
+        {isTennis ? (
+          <TennisIcon
+            width={16}
+            height={16}
+            fill={colors.buttonTextActive}
+            style={styles.badgeIcon}
+          />
+        ) : (
+          <PickleballIcon
+            width={16}
+            height={16}
+            fill={colors.buttonTextActive}
+            style={styles.badgeIcon}
+          />
+        )}
       </View>
 
       {/* Learn More Link */}
@@ -341,11 +356,16 @@ const styles = StyleSheet.create({
     marginBottom: spacingPixels[3],
   },
   sportBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[1.5],
     borderRadius: radiusPixels.full,
     alignSelf: 'center',
     marginBottom: spacingPixels[4],
+  },
+  badgeIcon: {
+    marginLeft: spacingPixels[1.5],
   },
   subtitle: {
     textAlign: 'center',

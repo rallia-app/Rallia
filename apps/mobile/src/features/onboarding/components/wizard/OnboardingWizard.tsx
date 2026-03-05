@@ -374,7 +374,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       const bothSports = hasTennis && hasPickleball;
       if (bothSports) {
         const counts = computeFavoriteSportCounts(formData);
-        return counts.tennisCount < 2 || counts.pickleballCount < 2;
+        return counts.tennisCount < 3 || counts.pickleballCount < 3;
       }
       return formData.favoriteFacilities.length < 3;
     }
@@ -729,7 +729,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         const bothSportsSelected = hasTennis && hasPickleball;
         if (bothSportsSelected) {
           const counts = computeFavoriteSportCounts(formData);
-          if (counts.tennisCount < 2 || counts.pickleballCount < 2) {
+          if (counts.tennisCount < 3 || counts.pickleballCount < 3) {
             Alert.alert(t('alerts.error'), t('onboarding.favoriteSitesStep.selectMinimumPerSport'));
             warningHaptic();
             return false;
