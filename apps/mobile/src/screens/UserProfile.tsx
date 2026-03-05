@@ -758,7 +758,7 @@ const UserProfile = () => {
                         username: profile?.display_name || '',
                         bio: profile?.bio || '',
                         preferredPlayingHand: player?.playing_hand || '',
-                        maximumTravelDistance: player?.max_travel_distance || 5,
+                        maximumTravelDistance: player?.max_travel_distance || 15,
                       },
                       onSave: () => {
                         refetchProfile();
@@ -975,9 +975,23 @@ const UserProfile = () => {
         >
           <WalkthroughableView style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
-                {t('profile.sections.sports')}
-              </Text>
+              <View style={styles.sectionTitleRow}>
+                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                  {t('profile.sections.sports')}
+                </Text>
+                {sports.filter(s => !s.isActive).length > 0 && (
+                  <View style={styles.sportsHintInline}>
+                    <Ionicons
+                      name="information-circle-outline"
+                      size={16}
+                      color={colors.textMuted}
+                    />
+                    <Text style={[styles.sportsHintText, { color: colors.textMuted }]}>
+                      {t('profile.sportsHint')}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
 
             {loadingSports ? (
@@ -1088,6 +1102,40 @@ const UserProfile = () => {
                     <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
                   </TouchableOpacity>
                 ))}
+                {/* Add more sports card - shown when user has < 2 active sports and inactive sports exist */}
+                {sports.filter(s => s.isActive).length < 2 &&
+                  sports.filter(s => !s.isActive).length > 0 && (
+                    <TouchableOpacity
+                      style={[
+                        styles.sportCard,
+                        styles.addMoreSportsCard,
+                        { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                      ]}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        const firstInactiveSport = sports.find(s => !s.isActive);
+                        if (firstInactiveSport) {
+                          navigation.navigate('SportProfile', {
+                            sportId: firstInactiveSport.id,
+                            sportName: firstInactiveSport.display_name as 'tennis' | 'pickleball',
+                          });
+                        }
+                      }}
+                    >
+                      <View style={styles.addMoreSportsContent}>
+                        <Ionicons name="add-circle-outline" size={24} color={primary[500]} />
+                        <View style={styles.addMoreSportsText}>
+                          <Text style={[styles.addMoreSportsTitle, { color: colors.text }]}>
+                            {t('profile.addMoreSports')}
+                          </Text>
+                          <Text style={[styles.addMoreSportsHint, { color: colors.textMuted }]}>
+                            {t('profile.addMoreSportsHint')}
+                          </Text>
+                        </View>
+                      </View>
+                      <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                    </TouchableOpacity>
+                  )}
                 {sports.length === 0 && (
                   <Text style={[styles.noDataText, { color: colors.textMuted }]}>
                     {t('profile.status.noSports')}
@@ -1387,6 +1435,20 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacingPixels[2],
+  },
+  sportsHintInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+  },
+  sportsHintText: {
+    fontSize: fontSizePixels.xs,
+  },
   editIconButton: {
     padding: spacingPixels[1],
   },
@@ -1463,6 +1525,27 @@ const styles = StyleSheet.create({
   },
   sportCardInactive: {
     opacity: 0.7,
+  },
+  addMoreSportsCard: {
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  addMoreSportsContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    flex: 1,
+  },
+  addMoreSportsText: {
+    flex: 1,
+  },
+  addMoreSportsTitle: {
+    fontSize: fontSizePixels.base,
+    fontWeight: fontWeightNumeric.semibold,
+  },
+  addMoreSportsHint: {
+    fontSize: fontSizePixels.xs,
+    marginTop: spacingPixels[0.5],
   },
   sportCardLeft: {
     flexDirection: 'row',

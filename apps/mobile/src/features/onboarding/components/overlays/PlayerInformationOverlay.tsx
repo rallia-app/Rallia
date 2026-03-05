@@ -30,7 +30,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
     initialData?.preferredPlayingHand || ''
   );
   const [maximumTravelDistance, setMaximumTravelDistance] = useState<number>(
-    initialData?.maximumTravelDistance || 5
+    initialData?.maximumTravelDistance || 15
   );
   const [isSaving, setIsSaving] = useState(false);
 

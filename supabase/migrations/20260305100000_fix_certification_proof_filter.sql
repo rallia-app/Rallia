@@ -1,0 +1,167 @@
+-- Migration: Fix certification proof filter
+-- Description: Removes the `status = 'approved'` filter from certification logic.
+--              Proofs with is_active = true should count for certification regardless of review status.
+--              This matches the original behavior before the 20260304100000 migration.
+-- Created: 2026-03-05
+
+-- ============================================================================
+-- 1. FUNCTION: Count valid proofs for certification (considers higher-level proofs)
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION count_valid_proofs_for_level(
+    p_player_rating_score_id UUID,
+    p_target_rating_score_id UUID
+)
+RETURNS INTEGER AS $$
+DECLARE
+    v_count INTEGER;
+    v_target_value NUMERIC;
+    v_rating_system_id UUID;
+BEGIN
+    -- Get the target rating value and system
+    SELECT rs.value, rs.rating_system_id 
+    INTO v_target_value, v_rating_system_id
+    FROM rating_score rs
+    WHERE rs.id = p_target_rating_score_id;
+    
+    -- Count proofs that are at the target level OR HIGHER within the same rating system
+    -- A proof at level 4.0 should certify levels 3.5, 3.0, etc.
+    SELECT COUNT(*) INTO v_count
+    FROM rating_proof rp
+    JOIN rating_score rs ON rp.rating_score_id = rs.id
+    WHERE rp.player_rating_score_id = p_player_rating_score_id
+    AND rs.rating_system_id = v_rating_system_id
+    AND rs.value >= v_target_value  -- Proof at higher or equal level
+    AND rp.is_active = true;
+    -- Removed: AND rp.status = 'approved' (active proofs count regardless of review status)
+    
+    RETURN v_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- 2. UPDATED FUNCTION: Check and update certification with level hierarchy
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION check_and_update_certification()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_referrals_count INTEGER;
+    v_valid_proofs_count INTEGER;
+    v_should_certify BOOLEAN := false;
+    v_rating_value NUMERIC;
+    v_sport_name TEXT;
+    v_min_for_referral NUMERIC;
+    v_rating_system_id UUID;
+BEGIN
+    -- Get current referrals count
+    v_referrals_count := NEW.referrals_count;
+    
+    -- Get rating info
+    SELECT rs.value, rs.rating_system_id, s.name, rsys.min_for_referral
+    INTO v_rating_value, v_rating_system_id, v_sport_name, v_min_for_referral
+    FROM rating_score rs
+    JOIN rating_system rsys ON rs.rating_system_id = rsys.id
+    JOIN sport s ON rsys.sport_id = s.id
+    WHERE rs.id = NEW.rating_score_id;
+    
+    -- Count valid proofs (including those at higher levels)
+    -- A proof at level 4.0 certifies levels 4.0, 3.5, 3.0, etc.
+    SELECT COUNT(*) INTO v_valid_proofs_count
+    FROM rating_proof rp
+    JOIN rating_score rs ON rp.rating_score_id = rs.id
+    WHERE rp.player_rating_score_id = NEW.id
+    AND rs.rating_system_id = v_rating_system_id
+    AND rs.value >= v_rating_value  -- Proof at current level or higher
+    AND rp.is_active = true;
+    -- Removed: AND rp.status = 'approved' (active proofs count regardless of review status)
+    
+    -- Check certification conditions:
+    -- 1. At least 2 valid proofs (at current level or higher)
+    -- 2. At least 3 references from certified players
+    IF v_valid_proofs_count >= 2 THEN
+        v_should_certify := true;
+    ELSIF v_referrals_count >= 3 THEN
+        v_should_certify := true;
+    END IF;
+    
+    -- Update certification status based on whether criteria are met
+    IF v_should_certify THEN
+        -- Certify the player
+        IF NOT NEW.is_certified THEN
+            NEW.certified_at := NOW();
+        END IF;
+        NEW.is_certified := true;
+        NEW.badge_status := 'certified';
+        
+        -- Determine certification method
+        IF v_valid_proofs_count >= 2 THEN
+            NEW.certified_via := 'proof';
+        ELSE
+            NEW.certified_via := 'referral';
+        END IF;
+    ELSE
+        -- No longer meets certification criteria
+        NEW.is_certified := false;
+        NEW.certified_at := NULL;
+        NEW.badge_status := 'self_declared';
+        NEW.certified_via := NULL;
+    END IF;
+    
+    -- Check for disputed status (if certified but evaluation average is significantly lower)
+    IF NEW.is_certified AND NEW.peer_evaluation_average IS NOT NULL THEN
+        -- If evaluation average is 0.5+ lower than claimed rating, mark as disputed
+        IF v_rating_value - NEW.peer_evaluation_average >= 0.5 THEN
+            NEW.badge_status := 'disputed';
+        ELSIF NEW.badge_status = 'disputed' THEN
+            -- If no longer disputed, restore to certified
+            NEW.badge_status := 'certified';
+        END IF;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- 3. UPDATED FUNCTION: Get proof counts with valid proofs for current level
+-- ============================================================================
+
+DROP FUNCTION IF EXISTS get_proof_counts(UUID);
+
+CREATE OR REPLACE FUNCTION get_proof_counts(p_player_rating_score_id UUID)
+RETURNS TABLE (
+    total_proofs_count INTEGER,
+    current_level_proofs_count INTEGER,
+    valid_proofs_for_certification INTEGER
+) AS $$
+DECLARE
+    v_current_rating_score_id UUID;
+    v_current_rating_value NUMERIC;
+    v_rating_system_id UUID;
+BEGIN
+    -- Get the current rating info
+    SELECT prs.rating_score_id, rs.value, rs.rating_system_id 
+    INTO v_current_rating_score_id, v_current_rating_value, v_rating_system_id
+    FROM player_rating_score prs
+    JOIN rating_score rs ON prs.rating_score_id = rs.id
+    WHERE prs.id = p_player_rating_score_id;
+    
+    RETURN QUERY
+    SELECT 
+        COUNT(*)::INTEGER AS total_proofs_count,
+        COUNT(*) FILTER (WHERE rp.rating_score_id = v_current_rating_score_id)::INTEGER AS current_level_proofs_count,
+        COUNT(*) FILTER (
+            WHERE rs.rating_system_id = v_rating_system_id 
+            AND rs.value >= v_current_rating_value
+        )::INTEGER AS valid_proofs_for_certification
+    FROM rating_proof rp
+    JOIN rating_score rs ON rp.rating_score_id = rs.id
+    WHERE rp.player_rating_score_id = p_player_rating_score_id
+    AND rp.is_active = true;
+    -- Removed: AND rp.status = 'approved'
+END;
+$$ LANGUAGE plpgsql;
+
+-- Grant execute permission
+GRANT EXECUTE ON FUNCTION get_proof_counts(UUID) TO authenticated;
