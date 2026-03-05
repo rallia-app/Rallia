@@ -22,10 +22,12 @@ CREATE INDEX IF NOT EXISTS idx_score_confirmation_match_result
 -- RLS
 ALTER TABLE score_confirmation ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Players can view their own confirmations" ON score_confirmation;
 CREATE POLICY "Players can view their own confirmations"
   ON score_confirmation FOR SELECT
   USING (player_id = auth.uid());
 
+DROP POLICY IF EXISTS "Players can insert their own confirmations" ON score_confirmation;
 CREATE POLICY "Players can insert their own confirmations"
   ON score_confirmation FOR INSERT
   WITH CHECK (player_id = auth.uid());
