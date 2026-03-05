@@ -301,12 +301,19 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
 
   const handleDateChange = (_event: unknown, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
+      // Android: native dialog dismisses automatically, validate and save immediately
       setShowDatePicker(false);
       if (selectedDate) {
-        onUpdateFormData({ dateOfBirth: selectedDate });
+        const error = validateDateOfBirth(selectedDate);
+        if (error) {
+          setFieldErrors(prev => ({ ...prev, dateOfBirth: error }));
+        } else {
+          onUpdateFormData({ dateOfBirth: selectedDate });
+          clearFieldError('dateOfBirth');
+        }
       }
     } else if (selectedDate) {
-      // iOS: just update temp value, commit on Done
+      // iOS: update temp value, commit on Done
       setTempDate(selectedDate);
     }
   };
@@ -577,7 +584,10 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
             ]}
             onPress={handleDateCancel}
           >
-            <View style={[styles.datePickerContainer, { backgroundColor: colors.cardBackground }]}>
+            <Pressable
+              style={[styles.datePickerContainer, { backgroundColor: colors.cardBackground }]}
+              onPress={e => e.stopPropagation()}
+            >
               <View style={[styles.datePickerHeader, { borderBottomColor: colors.border }]}>
                 <TouchableOpacity onPress={handleDateCancel} style={styles.pickerHeaderButton}>
                   <Text size="base" color={colors.textMuted}>
@@ -601,14 +611,14 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
                 maximumDate={minimumDateOfBirth}
                 minimumDate={minimumDateSelectable}
                 themeVariant={isDark ? 'dark' : 'light'}
-                style={styles.iosPicker}
+                style={styles.datePicker}
               />
-            </View>
+            </Pressable>
           </Pressable>
         </Modal>
       )}
 
-      {/* Android Date Picker */}
+      {/* Android Date Picker - Native dialog */}
       {showDatePicker && Platform.OS === 'android' && (
         <DateTimePicker
           value={dateValue}
@@ -805,7 +815,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[2],
     minWidth: 60,
   },
-  iosPicker: {
+  datePicker: {
     height: 200,
   },
 });

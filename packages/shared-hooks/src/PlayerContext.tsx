@@ -24,7 +24,7 @@ import type { Player } from '@rallia/shared-types';
 // =============================================================================
 
 /** Default max travel distance in km if not set by user */
-const DEFAULT_MAX_TRAVEL_DISTANCE_KM = 25;
+const DEFAULT_MAX_TRAVEL_DISTANCE_KM = 15;
 
 // =============================================================================
 // TYPES

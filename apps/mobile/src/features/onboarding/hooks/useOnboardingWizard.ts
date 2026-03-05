@@ -214,7 +214,7 @@ function isStepComplete(stepId: OnboardingStepId, formData: OnboardingFormData):
         formData.selectedSportNames.includes('pickleball');
       if (bothSports) {
         const counts = computeFavoriteSportCounts(formData);
-        return counts.tennisCount >= 2 && counts.pickleballCount >= 2;
+        return counts.tennisCount >= 3 && counts.pickleballCount >= 3;
       }
       return formData.favoriteFacilities.length >= 3;
     }

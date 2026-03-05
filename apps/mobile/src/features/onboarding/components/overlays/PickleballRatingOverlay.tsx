@@ -272,7 +272,9 @@ export function PickleballRatingActionSheet({ payload }: SheetProps<'pickleball-
             {mode === 'edit' ? (
               <Text
                 style={[styles.link, { color: colors.primary }]}
-                onPress={() => Linking.openURL('https://mydupr.com/')}
+                onPress={() =>
+                  Linking.openURL('https://www.dupr.com/post/understanding-all-pickleball-ratings')
+                }
               >
                 {t('onboarding.ratingOverlay.learnMoreDupr')}
               </Text>
