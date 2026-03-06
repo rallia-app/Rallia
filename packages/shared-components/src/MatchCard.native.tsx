@@ -1109,7 +1109,9 @@ const MatchCard: React.FC<MatchCardProps> = ({
   const costDisplay = match.is_court_free
     ? t('match.cost.free')
     : match.estimated_cost
-      ? `~$${Math.ceil(match.estimated_cost / participantInfo.total)}`
+      ? t('match.cost.perPlayer', {
+          amount: `$${Math.ceil(match.estimated_cost / participantInfo.total)}`,
+        })
       : null;
 
   // Build badges array (new order per spec)

@@ -298,6 +298,7 @@ export default function FacilitiesDirectory() {
   // Handle facility press
   const handleFacilityPress = useCallback(
     (facility: FacilitySearchResult) => {
+      lightHaptic();
       Logger.logUserAction('facility_pressed', { facilityId: facility.id });
       navigation.navigate('FacilityDetail', { facilityId: facility.id });
     },
@@ -344,6 +345,8 @@ export default function FacilitiesDirectory() {
         onToggleFavorite={handleToggleFavorite}
         isMaxFavoritesReached={isMaxReached}
         showFavoriteButton={showFavoriteButton}
+        sportName={selectedSport?.name}
+        isDark={isDark}
         colors={colors}
         t={t}
       />
@@ -354,6 +357,8 @@ export default function FacilitiesDirectory() {
       handleToggleFavorite,
       isMaxReached,
       showFavoriteButton,
+      selectedSport?.name,
+      isDark,
       colors,
       t,
     ]
@@ -607,7 +612,7 @@ export default function FacilitiesDirectory() {
   const renderListHeader = useCallback(() => {
     return (
       <>
-        {renderMyBookingsSection()}
+        {/* {renderMyBookingsSection()} */}
         <View style={[styles.header, { backgroundColor: colors.background }]}>
           <Text size="xl" weight="bold" color={colors.text}>
             {t('facilitiesTab.title')}

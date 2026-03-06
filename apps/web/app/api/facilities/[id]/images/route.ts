@@ -1,12 +1,55 @@
+import { isAdmin } from '@/lib/supabase/check-admin';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+
+async function authorize(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  facilityId: string
+) {
+  // Get the facility first to know which org it belongs to
+  const { data: facility } = await supabase
+    .from('facility')
+    .select('organization_id')
+    .eq('id', facilityId)
+    .single();
+
+  if (!facility) {
+    return { error: 'Facility not found', status: 404 } as const;
+  }
+
+  // Platform admins have full access
+  const userIsAdmin = await isAdmin(userId);
+  if (userIsAdmin) {
+    return { facility } as const;
+  }
+
+  // Otherwise check org membership
+  const { data: membership } = await supabase
+    .from('organization_member')
+    .select('organization_id, role')
+    .eq('user_id', userId)
+    .eq('organization_id', facility.organization_id)
+    .is('left_at', null)
+    .limit(1)
+    .single();
+
+  if (!membership) {
+    return { error: 'Unauthorized', status: 401 } as const;
+  }
+
+  if (!['owner', 'admin'].includes(membership.role)) {
+    return { error: 'Forbidden', status: 403 } as const;
+  }
+
+  return { facility } as const;
+}
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const supabase = await createClient();
 
-    // Get authenticated user
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -15,32 +58,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Verify user has access to this facility
-    const { data: membership } = await supabase
-      .from('organization_member')
-      .select('organization_id, role')
-      .eq('user_id', user.id)
-      .is('left_at', null)
-      .single();
-
-    if (!membership) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: facility } = await supabase
-      .from('facility')
-      .select('organization_id')
-      .eq('id', id)
-      .eq('organization_id', membership.organization_id)
-      .single();
-
-    if (!facility) {
-      return NextResponse.json({ error: 'Facility not found' }, { status: 404 });
-    }
-
-    // Check permissions (owner or admin)
-    if (!['owner', 'admin'].includes(membership.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const auth = await authorize(supabase, user.id, id);
+    if ('error' in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     const formData = await request.formData();
@@ -157,7 +177,6 @@ export async function DELETE(
     const { id } = await params;
     const supabase = await createClient();
 
-    // Get authenticated user
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -166,32 +185,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Verify user has access to this facility
-    const { data: membership } = await supabase
-      .from('organization_member')
-      .select('organization_id, role')
-      .eq('user_id', user.id)
-      .is('left_at', null)
-      .single();
-
-    if (!membership) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: facility } = await supabase
-      .from('facility')
-      .select('organization_id')
-      .eq('id', id)
-      .eq('organization_id', membership.organization_id)
-      .single();
-
-    if (!facility) {
-      return NextResponse.json({ error: 'Facility not found' }, { status: 404 });
-    }
-
-    // Check permissions
-    if (!['owner', 'admin'].includes(membership.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const auth = await authorize(supabase, user.id, id);
+    if ('error' in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     const { searchParams } = new URL(request.url);
@@ -257,7 +253,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const { id } = await params;
     const supabase = await createClient();
 
-    // Get authenticated user
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -266,32 +261,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Verify user has access to this facility
-    const { data: membership } = await supabase
-      .from('organization_member')
-      .select('organization_id, role')
-      .eq('user_id', user.id)
-      .is('left_at', null)
-      .single();
-
-    if (!membership) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: facility } = await supabase
-      .from('facility')
-      .select('organization_id')
-      .eq('id', id)
-      .eq('organization_id', membership.organization_id)
-      .single();
-
-    if (!facility) {
-      return NextResponse.json({ error: 'Facility not found' }, { status: 404 });
-    }
-
-    // Check permissions
-    if (!['owner', 'admin'].includes(membership.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const auth = await authorize(supabase, user.id, id);
+    if ('error' in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     const body = await request.json();
