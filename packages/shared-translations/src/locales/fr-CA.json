@@ -172,6 +172,7 @@
       "match_cancelled": "Partie annulée",
       "match_updated": "Partie mise à jour",
       "match_starting_soon": "Partie imminente",
+      "match_check_in_available": "Enregistrement disponible",
       "match_completed": "Partie terminée",
       "match_new_available": "Nouvelle partie dans un groupe",
       "player_kicked": "Retiré de la partie",
@@ -239,6 +240,10 @@
       "match_starting_soon": {
         "title": "Préparez-vous!",
         "body": "Votre partie de {sportName} à {locationName} commence {timeUntil}. C'est l'heure de s'échauffer!"
+      },
+      "match_check_in_available": {
+        "title": "Votre partie de {sportName} est sur le point de commencer!",
+        "body": "Enregistrez-vous une fois arrivé(e) au terrain pour confirmer votre présence."
       },
       "match_completed": {
         "title": "Partie terminée",

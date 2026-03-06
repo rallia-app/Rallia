@@ -172,6 +172,7 @@
       "match_cancelled": "Game Cancelled",
       "match_updated": "Game Updated",
       "match_starting_soon": "Game Starting Soon",
+      "match_check_in_available": "Check-in Available",
       "match_completed": "Game Completed",
       "match_new_available": "New game in group",
       "player_kicked": "Removed from Game",
@@ -239,6 +240,10 @@
       "match_starting_soon": {
         "title": "Get Ready!",
         "body": "Your {sportName} game at {locationName} starts {timeUntil}. Time to warm up!"
+      },
+      "match_check_in_available": {
+        "title": "Your {sportName} game is about to start!",
+        "body": "Check-in once you arrive at the court to confirm your presence."
       },
       "match_completed": {
         "title": "Game Complete",
