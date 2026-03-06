@@ -16,7 +16,9 @@ import {
   Pressable,
   Keyboard,
   ActivityIndicator,
+  LayoutAnimation,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {
   BottomSheetTextInput,
@@ -39,6 +41,7 @@ import type { TranslationKey } from '@rallia/shared-translations';
 import type { Locale } from '@rallia/shared-translations';
 import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
 import { useLocale } from '../../../../../context';
+import { PENDING_REFERRAL_KEY_EXPORT } from '../../../../../screens/InviteReferralScreen';
 
 interface ThemeColors {
   background: string;
@@ -95,6 +98,11 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDate, setTempDate] = useState<Date>(formData.dateOfBirth || new Date(2000, 0, 1));
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // Referral code state
+  const [showReferralCode, setShowReferralCode] = useState(false);
+  const [referralCode, setReferralCode] = useState('');
+  const [referralSaved, setReferralSaved] = useState(false);
 
   // Field validation errors
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -295,6 +303,22 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
       setFieldErrors(prev => ({ ...prev, phoneNumber: error }));
     }
   };
+
+  const handleReferralCodeSubmit = useCallback(async () => {
+    const code = referralCode.trim().toUpperCase();
+    if (!code) return;
+    try {
+      await AsyncStorage.setItem(PENDING_REFERRAL_KEY_EXPORT, code);
+      setReferralSaved(true);
+    } catch {
+      // Silently fail — attribution will be attempted later
+    }
+  }, [referralCode]);
+
+  const toggleReferralSection = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setShowReferralCode(prev => !prev);
+  }, []);
 
   // Get the current date value for the picker
   const dateValue = formData.dateOfBirth || new Date(2000, 0, 1);
@@ -693,6 +717,78 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
           </Text>
         )}
       </View>
+
+      {/* Referral Code (optional collapsible) */}
+      <View style={styles.inputContainer}>
+        <TouchableOpacity
+          onPress={toggleReferralSection}
+          style={styles.referralToggle}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name={showReferralCode ? 'chevron-down-outline' : 'chevron-forward-outline'}
+            size={18}
+            color={colors.buttonActive}
+          />
+          <Text size="sm" weight="medium" color={colors.buttonActive}>
+            {t('referral.haveReferralCode')}
+          </Text>
+        </TouchableOpacity>
+        {showReferralCode && (
+          <View style={styles.referralInputRow}>
+            <BottomSheetTextInput
+              placeholder={t('referral.enterCode')}
+              placeholderTextColor={colors.textMuted}
+              value={referralCode}
+              onChangeText={setReferralCode}
+              autoCapitalize="characters"
+              maxLength={12}
+              editable={!referralSaved}
+              style={[
+                styles.input,
+                {
+                  flex: 1,
+                  backgroundColor: colors.inputBackground,
+                  borderColor: referralSaved ? colors.buttonActive : colors.inputBorder,
+                  color: colors.text,
+                },
+              ]}
+            />
+            {referralSaved ? (
+              <View style={styles.referralCheckIcon}>
+                <Ionicons name="checkmark-circle" size={24} color={colors.buttonActive} />
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={handleReferralCodeSubmit}
+                disabled={!referralCode.trim()}
+                style={[
+                  styles.referralApplyButton,
+                  {
+                    backgroundColor: referralCode.trim()
+                      ? colors.buttonActive
+                      : colors.buttonInactive,
+                  },
+                ]}
+                activeOpacity={0.8}
+              >
+                <Text
+                  size="sm"
+                  weight="semibold"
+                  color={referralCode.trim() ? '#FFFFFF' : colors.textMuted}
+                >
+                  {t('common.submit')}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+        {referralSaved && (
+          <Text size="xs" color={colors.buttonActive} style={styles.errorText}>
+            {t('referral.codeApplied')}
+          </Text>
+        )}
+      </View>
     </BottomSheetScrollView>
   );
 };
@@ -807,6 +903,26 @@ const styles = StyleSheet.create({
   },
   iosPicker: {
     height: 200,
+  },
+  referralToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    paddingVertical: spacingPixels[1],
+  },
+  referralInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    marginTop: spacingPixels[2],
+  },
+  referralApplyButton: {
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
+    borderRadius: radiusPixels.lg,
+  },
+  referralCheckIcon: {
+    paddingHorizontal: spacingPixels[2],
   },
 });
 

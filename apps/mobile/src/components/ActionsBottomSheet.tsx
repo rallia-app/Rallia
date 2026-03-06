@@ -142,7 +142,13 @@ interface ActionsContentProps {
   t: (key: TranslationKey) => string;
 }
 
-const ActionsContent: React.FC<ActionsContentProps> = ({ onClose, onCreateMatch, onInvitePlayers, colors, t }) => {
+const ActionsContent: React.FC<ActionsContentProps> = ({
+  onClose,
+  onCreateMatch,
+  onInvitePlayers,
+  colors,
+  t,
+}) => {
   const [showNetworkModal, setShowNetworkModal] = useState(false);
 
   const handleCreateShareList = () => {
@@ -208,13 +214,13 @@ const ActionsContent: React.FC<ActionsContentProps> = ({ onClose, onCreateMatch,
           colors={colors}
         />
 
-        <ActionItem
+        {/* <ActionItem
           icon="trophy-outline"
           title={t('actions.createEvent')}
           description={t('actions.createEventDescription')}
           onPress={handleCreateEvent}
           colors={colors}
-        />
+        /> */}
       </View>
 
       {/* Network Type Selection Modal */}
@@ -679,10 +685,7 @@ export const ActionsBottomSheet: React.FC = () => {
         {/* Invite players wizard */}
         {showInviteWizard && (
           <Animated.View style={[styles.slidePanel, styles.wizardPanel, wizardAnimatedStyle]}>
-            <InvitePlayersWizard
-              onClose={closeSheet}
-              onBackToLanding={handleInviteWizardClose}
-            />
+            <InvitePlayersWizard onClose={closeSheet} onBackToLanding={handleInviteWizardClose} />
           </Animated.View>
         )}
       </View>
@@ -691,7 +694,11 @@ export const ActionsBottomSheet: React.FC = () => {
 
   // Determine if we should use wizard mode (full height, no scroll)
   const isWizardMode =
-    showWizard || showInviteWizard || isEditMode || contentMode === 'auth' || contentMode === 'onboarding';
+    showWizard ||
+    showInviteWizard ||
+    isEditMode ||
+    contentMode === 'auth' ||
+    contentMode === 'onboarding';
 
   return (
     <BottomSheetModal

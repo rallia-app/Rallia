@@ -1,11 +1,10 @@
 /**
- * ShareLinkStep - Step 1 of Invite Players Wizard
+ * ShareLinkStep - Invite Players content
  *
- * Displays the player's personal referral link with options to:
- * - Copy referral link
- * - Toggle between code view and QR code view
- * - Share via device share sheet
- * - View referral stats (invited / signed up counts)
+ * Three tabs:
+ * - Code: referral code display + copy + share + stats
+ * - QR Code: scannable QR code
+ * - Contacts: device contacts picker with SMS compose
  */
 
 import React, { useState, useCallback } from 'react';
@@ -15,13 +14,16 @@ import {
   TouchableOpacity,
   Share,
   ActivityIndicator,
-  Image,
+  ScrollView,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
+import QRCode from 'react-native-qrcode-svg';
+import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { lightHaptic } from '@rallia/shared-utils';
 import type { TranslationKey } from '../../../../hooks';
+import { InviteContactsStep } from './InviteContactsStep';
 
 // ============================================================================
 // TYPES
@@ -41,16 +43,76 @@ interface ThemeColors {
   progressInactive: string;
 }
 
+type TabId = 'code' | 'qr' | 'contacts';
+
 interface ShareLinkStepProps {
   code: string | undefined;
   codeLoading: boolean;
   referralLink: string | undefined;
-  stats: { total_invited: number; total_converted: number } | undefined;
+  stats: { total_clicked: number; total_converted: number } | undefined;
   statsLoading: boolean;
+  activeTab: TabId;
+  onTabChange: (tab: TabId) => void;
   colors: ThemeColors;
   isDark: boolean;
   t: (key: TranslationKey) => string;
 }
+
+// ============================================================================
+// TAB BAR
+// ============================================================================
+
+interface TabBarProps {
+  activeTab: TabId;
+  onTabChange: (tab: TabId) => void;
+  colors: ThemeColors;
+  isDark: boolean;
+  t: (key: TranslationKey) => string;
+}
+
+const TABS: Array<{ id: TabId; icon: string; labelKey: TranslationKey }> = [
+  { id: 'code', icon: 'code-slash-outline', labelKey: 'referral.code' },
+  { id: 'qr', icon: 'qr-code-outline', labelKey: 'referral.qrCode' },
+  { id: 'contacts', icon: 'people-outline', labelKey: 'referral.stepNames.inviteContacts' },
+];
+
+const TabBar: React.FC<TabBarProps> = ({ activeTab, onTabChange, colors, isDark, t }) => (
+  <View style={[styles.tabBar, { backgroundColor: colors.buttonInactive }]}>
+    {TABS.map(tab => {
+      const isActive = activeTab === tab.id;
+      return (
+        <TouchableOpacity
+          key={tab.id}
+          style={[
+            styles.tab,
+            isActive && [styles.activeTab, { backgroundColor: colors.cardBackground }],
+          ]}
+          onPress={() => {
+            lightHaptic();
+            onTabChange(tab.id);
+          }}
+          activeOpacity={0.8}
+        >
+          <Ionicons
+            name={tab.icon as any}
+            size={18}
+            color={isActive ? colors.buttonActive : colors.textMuted}
+          />
+          <Text
+            size="xs"
+            weight={isActive ? 'semibold' : 'medium'}
+            style={{
+              color: isActive ? colors.buttonActive : colors.textMuted,
+              marginLeft: 4,
+            }}
+          >
+            {t(tab.labelKey)}
+          </Text>
+        </TouchableOpacity>
+      );
+    })}
+  </View>
+);
 
 // ============================================================================
 // COMPONENT
@@ -62,17 +124,14 @@ export const ShareLinkStep: React.FC<ShareLinkStepProps> = ({
   referralLink,
   stats,
   statsLoading,
+  activeTab,
+  onTabChange,
   colors,
   isDark,
   t,
 }) => {
   const toast = useToast();
   const [copied, setCopied] = useState(false);
-  const [showQRCode, setShowQRCode] = useState(false);
-
-  const qrCodeUrl = referralLink
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(referralLink)}&bgcolor=${isDark ? '1C1C1E' : 'F2F2F7'}`
-    : '';
 
   const handleCopyLink = useCallback(async () => {
     if (!referralLink) return;
@@ -121,145 +180,145 @@ export const ShareLinkStep: React.FC<ShareLinkStepProps> = ({
     );
   }
 
-  return (
-    <View style={styles.container}>
-      {/* Description */}
-      <Text size="sm" color={colors.textSecondary} style={styles.description}>
-        {t('referral.shareLinkDescription')}
-      </Text>
-
-      {/* Toggle between Code and QR */}
-      <View style={styles.toggleContainer}>
-        <TouchableOpacity
-          style={[
-            styles.toggleButton,
-            { borderColor: colors.border },
-            !showQRCode && { backgroundColor: colors.buttonActive },
-            { borderTopLeftRadius: 8, borderBottomLeftRadius: 8 },
-          ]}
-          onPress={() => setShowQRCode(false)}
-        >
-          <Text
-            size="sm"
-            weight="medium"
-            color={!showQRCode ? '#FFFFFF' : colors.textSecondary}
-          >
-            {t('referral.code')}
+  // Contacts tab renders its own full-screen layout (with FlatList + footer)
+  if (activeTab === 'contacts') {
+    return (
+      <View style={styles.flex}>
+        <View style={styles.tabBarWrapper}>
+          <Text size="sm" color={colors.textSecondary} style={styles.description}>
+            {t('referral.contacts.description')}
           </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.toggleButton,
-            { borderColor: colors.border },
-            showQRCode && { backgroundColor: colors.buttonActive },
-            { borderTopRightRadius: 8, borderBottomRightRadius: 8 },
-          ]}
-          onPress={() => setShowQRCode(true)}
-        >
-          <Text
-            size="sm"
-            weight="medium"
-            color={showQRCode ? '#FFFFFF' : colors.textSecondary}
-          >
-            {t('referral.qrCode')}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {showQRCode ? (
-        <View
-          style={[styles.qrContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}
-        >
-          <Image source={{ uri: qrCodeUrl }} style={styles.qrImage} resizeMode="contain" />
-          <Text size="xs" color={colors.textMuted} style={styles.qrHint}>
-            {t('referral.scanToJoin')}
-          </Text>
+          <TabBar
+            activeTab={activeTab}
+            onTabChange={onTabChange}
+            colors={colors}
+            isDark={isDark}
+            t={t}
+          />
         </View>
-      ) : (
-        <View
-          style={[styles.codeContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}
-        >
-          <Text size="xs" color={colors.textMuted} style={styles.codeLabel}>
-            {t('referral.yourCode')}
+        <InviteContactsStep referralLink={referralLink} colors={colors} isDark={isDark} t={t} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.flex}>
+      <ScrollView
+        style={styles.flex}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.container}>
+          {/* Description */}
+          <Text size="sm" color={colors.textSecondary} style={styles.description}>
+            {t('referral.shareLinkDescription')}
           </Text>
-          <TouchableOpacity onPress={handleCopyCode} activeOpacity={0.7}>
-            <Text
-              weight="bold"
-              size="xl"
-              color={colors.buttonActive}
-              style={styles.codeText}
+
+          {/* Tab Bar */}
+          <TabBar
+            activeTab={activeTab}
+            onTabChange={onTabChange}
+            colors={colors}
+            isDark={isDark}
+            t={t}
+          />
+
+          {/* Tab Content */}
+          {activeTab === 'qr' ? (
+            <View style={[styles.qrContainer, { backgroundColor: colors.buttonInactive }]}>
+              {referralLink && (
+                <QRCode
+                  value={referralLink}
+                  size={180}
+                  backgroundColor={colors.buttonInactive}
+                  color={colors.text}
+                />
+              )}
+              <Text size="xs" color={colors.textMuted} style={styles.qrHint}>
+                {t('referral.scanToJoin')}
+              </Text>
+            </View>
+          ) : (
+            <View style={[styles.codeContainer, { backgroundColor: colors.buttonInactive }]}>
+              <Text size="xs" color={colors.textMuted} style={styles.codeLabel}>
+                {t('referral.yourCode')}
+              </Text>
+              <TouchableOpacity onPress={handleCopyCode} activeOpacity={0.7}>
+                <Text weight="bold" size="xl" color={colors.buttonActive} style={styles.codeText}>
+                  {code}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Link Display */}
+          <View
+            style={[
+              styles.linkContainer,
+              { backgroundColor: colors.buttonInactive, borderColor: colors.border },
+            ]}
+          >
+            <Text numberOfLines={1} size="sm" color={colors.text} style={styles.linkText}>
+              {referralLink}
+            </Text>
+            <TouchableOpacity
+              onPress={handleCopyLink}
+              style={[
+                styles.copyButton,
+                { backgroundColor: copied ? colors.buttonActive : colors.border },
+              ]}
             >
-              {code}
+              <Ionicons
+                name={copied ? 'checkmark' : 'copy-outline'}
+                size={18}
+                color={copied ? '#FFFFFF' : colors.text}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Share Button */}
+          <TouchableOpacity
+            style={[styles.shareButton, { backgroundColor: colors.buttonActive }]}
+            onPress={handleShare}
+          >
+            <Ionicons name="share-outline" size={20} color="#FFFFFF" />
+            <Text weight="semibold" color="#FFFFFF" style={styles.shareButtonText}>
+              {t('referral.shareInvite')}
             </Text>
           </TouchableOpacity>
-        </View>
-      )}
 
-      {/* Link Display */}
-      <View
-        style={[
-          styles.linkContainer,
-          { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', borderColor: colors.border },
-        ]}
-      >
-        <Text numberOfLines={1} size="sm" color={colors.text} style={styles.linkText}>
-          {referralLink}
-        </Text>
-        <TouchableOpacity
-          onPress={handleCopyLink}
-          style={[
-            styles.copyButton,
-            { backgroundColor: copied ? colors.buttonActive : isDark ? '#3A3A3C' : '#E5E5EA' },
-          ]}
-        >
-          <Ionicons
-            name={copied ? 'checkmark' : 'copy-outline'}
-            size={18}
-            color={copied ? '#FFFFFF' : colors.text}
-          />
-        </TouchableOpacity>
-      </View>
-
-      {/* Share Button */}
-      <TouchableOpacity
-        style={[styles.shareButton, { backgroundColor: colors.buttonActive }]}
-        onPress={handleShare}
-      >
-        <Ionicons name="share-outline" size={20} color="#FFFFFF" />
-        <Text weight="semibold" color="#FFFFFF" style={styles.shareButtonText}>
-          {t('referral.shareInvite')}
-        </Text>
-      </TouchableOpacity>
-
-      {/* Referral Stats */}
-      <View style={[styles.statsContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
-        <Text size="sm" weight="semibold" color={colors.text} style={styles.statsTitle}>
-          {t('referral.yourStats')}
-        </Text>
-        {statsLoading ? (
-          <ActivityIndicator size="small" color={colors.buttonActive} />
-        ) : (
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text size="xl" weight="bold" color={colors.buttonActive}>
-                {stats?.total_invited ?? 0}
-              </Text>
-              <Text size="xs" color={colors.textMuted}>
-                {t('referral.invited')}
-              </Text>
-            </View>
-            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.statItem}>
-              <Text size="xl" weight="bold" color={colors.buttonActive}>
-                {stats?.total_converted ?? 0}
-              </Text>
-              <Text size="xs" color={colors.textMuted}>
-                {t('referral.signedUp')}
-              </Text>
-            </View>
+          {/* Referral Stats */}
+          <View style={[styles.statsContainer, { backgroundColor: colors.buttonInactive }]}>
+            <Text size="sm" weight="semibold" color={colors.text} style={styles.statsTitle}>
+              {t('referral.yourStats')}
+            </Text>
+            {statsLoading ? (
+              <ActivityIndicator size="small" color={colors.buttonActive} />
+            ) : (
+              <View style={styles.statsRow}>
+                <View style={styles.statItem}>
+                  <Text size="xl" weight="bold" color={colors.buttonActive}>
+                    {stats?.total_clicked ?? 0}
+                  </Text>
+                  <Text size="xs" color={colors.textMuted}>
+                    {t('referral.clicked')}
+                  </Text>
+                </View>
+                <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+                <View style={styles.statItem}>
+                  <Text size="xl" weight="bold" color={colors.buttonActive}>
+                    {stats?.total_converted ?? 0}
+                  </Text>
+                  <Text size="xs" color={colors.textMuted}>
+                    {t('referral.signedUp')}
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
-        )}
-      </View>
+        </View>
+      </ScrollView>
     </View>
   );
 };
@@ -269,10 +328,17 @@ export const ShareLinkStep: React.FC<ShareLinkStepProps> = ({
 // ============================================================================
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
   container: {
     flex: 1,
     paddingHorizontal: spacingPixels[6],
     paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[6],
   },
   loadingContainer: {
     flex: 1,
@@ -286,27 +352,36 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacingPixels[6],
   },
-  toggleContainer: {
+  tabBar: {
     flexDirection: 'row',
-    alignSelf: 'center',
     marginBottom: spacingPixels[4],
+    borderRadius: 12,
+    padding: 4,
   },
-  toggleButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 8,
-    backgroundColor: 'transparent',
-    borderWidth: 1,
+  tabBarWrapper: {
+    paddingHorizontal: spacingPixels[6],
+    paddingTop: spacingPixels[4],
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  activeTab: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   qrContainer: {
     alignItems: 'center',
     padding: 20,
     borderRadius: radiusPixels.lg,
     marginBottom: spacingPixels[4],
-  },
-  qrImage: {
-    width: 180,
-    height: 180,
-    borderRadius: 8,
   },
   qrHint: {
     marginTop: spacingPixels[2],

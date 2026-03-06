@@ -2723,7 +2723,7 @@
     "step": "Étape {current} de {total}",
     "stepNames": {
       "shareLink": "Partager le lien",
-      "inviteContacts": "Inviter des contacts"
+      "inviteContacts": "Contacts"
     },
     "shareLinkDescription": "Partagez votre lien de parrainage personnel avec vos amis pour les inviter sur Rallia.",
     "code": "Code",
@@ -2735,11 +2735,16 @@
     "shareTitle": "Rejoins-moi sur Rallia!",
     "shareMessage": "Salut! Rejoins-moi sur Rallia pour trouver des matchs sportifs et jouer ensemble! {link}",
     "yourStats": "Vos statistiques de parrainage",
-    "invited": "Invités",
+    "clicked": "Cliqué",
     "signedUp": "Inscrits",
+    "haveReferralCode": "Vous avez un code de parrainage?",
+    "enterCode": "Entrer le code de parrainage",
+    "codeApplied": "Code de parrainage appliqué!",
+    "invalidCode": "Code de parrainage invalide",
     "welcomeTitle": "Bienvenue sur Rallia!",
     "welcomeDescription": "Vous avez été invité à rejoindre Rallia. Préparation en cours...",
     "contacts": {
+      "description": "Sélectionnez des contacts de votre téléphone pour les inviter par SMS.",
       "accessRequired": "Accès aux contacts requis",
       "grantAccess": "Autorisez l'accès à vos contacts pour inviter des amis sur Rallia par SMS.",
       "loading": "Chargement des contacts...",
@@ -6992,5 +6997,17 @@
     "selectImageSource": "Sélectionner la source de l'image",
     "submitAnother": "Soumettre un autre",
     "backToSettings": "Retour aux paramètres"
+  },
+  "invitePage": {
+    "title": "Vous êtes invité(e) sur Rallia !",
+    "invitedBy": "{name} vous a invité(e) à rejoindre Rallia !",
+    "invitedByGeneric": "Vous avez été invité(e) à rejoindre Rallia !",
+    "description": "Téléchargez Rallia pour trouver des matchs sportifs et jouer avec vos amis.",
+    "scanQr": "Scannez le code QR avec votre téléphone pour télécharger l'appli",
+    "appStore": "Télécharger sur l'App Store",
+    "googlePlay": "Disponible sur Google Play",
+    "notFound": "Invitation introuvable",
+    "notFoundDescription": "Ce lien d'invitation est peut-être invalide ou expiré.",
+    "redirecting": "Redirection vers le magasin d'applications..."
   }
 }

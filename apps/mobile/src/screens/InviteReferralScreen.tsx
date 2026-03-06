@@ -10,16 +10,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { useTheme, useReferral } from '@rallia/shared-hooks';
-import {
-  lightTheme,
-  darkTheme,
-  spacingPixels,
-  radiusPixels,
-  primary,
-  neutral,
-} from '@rallia/design-system';
-import { useAuth, useTranslation } from '../hooks';
+import { useTheme } from '@rallia/shared-hooks';
+import { lightTheme, darkTheme, spacingPixels, primary } from '@rallia/design-system';
+import { useTranslation } from '../hooks';
 import type { RootStackScreenProps } from '../navigation/types';
 
 const PENDING_REFERRAL_KEY = 'pending_referral_code';
@@ -31,11 +24,7 @@ export const InviteReferralScreen: React.FC<RootStackScreenProps<'InviteReferral
   const { referralCode } = route.params;
   const { theme } = useTheme();
   const { t } = useTranslation();
-  const { session } = useAuth();
   const isDark = theme === 'dark';
-  const playerId = session?.user?.id;
-
-  const { attributeReferral } = useReferral(playerId);
 
   const themeColors = isDark ? darkTheme : lightTheme;
   const colors = useMemo(
@@ -50,16 +39,10 @@ export const InviteReferralScreen: React.FC<RootStackScreenProps<'InviteReferral
 
   const handleReferral = useCallback(async () => {
     try {
-      // Store the referral code for post-signup attribution
+      // Store the referral code for post-signup attribution only
       await AsyncStorage.setItem(PENDING_REFERRAL_KEY, referralCode);
-
-      // If already authenticated, attribute immediately
-      if (playerId) {
-        await attributeReferral({ referralCode, newPlayerId: playerId });
-        await AsyncStorage.removeItem(PENDING_REFERRAL_KEY);
-      }
     } catch (error) {
-      console.error('Failed to handle referral:', error);
+      console.error('Failed to store referral code:', error);
     }
 
     // Navigate to home regardless
@@ -67,7 +50,7 @@ export const InviteReferralScreen: React.FC<RootStackScreenProps<'InviteReferral
       index: 0,
       routes: [{ name: 'Main' }],
     });
-  }, [referralCode, playerId, attributeReferral, navigation]);
+  }, [referralCode, navigation]);
 
   useEffect(() => {
     handleReferral();
@@ -83,11 +66,7 @@ export const InviteReferralScreen: React.FC<RootStackScreenProps<'InviteReferral
         <Text size="base" color={colors.textMuted} style={styles.description}>
           {t('referral.welcomeDescription')}
         </Text>
-        <ActivityIndicator
-          size="large"
-          color={colors.primary}
-          style={styles.loader}
-        />
+        <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
       </View>
     </SafeAreaView>
   );

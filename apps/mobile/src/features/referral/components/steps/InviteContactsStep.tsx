@@ -1,8 +1,8 @@
 /**
- * InviteContactsStep - Step 2 of Invite Players Wizard
+ * InviteContactsStep - Contacts tab of Invite Players
  *
  * Device contacts picker with search, multi-select, and SMS compose.
- * Follows ImportContactsModal pattern for contacts access.
+ * Simplified: no invite tracking or existing-player checking.
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -13,8 +13,8 @@ import {
   ActivityIndicator,
   Linking,
   FlatList,
-  Platform,
 } from 'react-native';
+import * as SMS from 'expo-sms';
 import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
@@ -51,13 +51,6 @@ interface DeviceContact {
 
 interface InviteContactsStepProps {
   referralLink: string | undefined;
-  playerId: string;
-  onRecordInvites: (input: {
-    referrerId: string;
-    channel: 'contacts';
-    contacts: Array<{ name?: string; phone?: string; email?: string }>;
-  }) => Promise<unknown>;
-  isRecording: boolean;
   colors: ThemeColors;
   isDark: boolean;
   t: (key: TranslationKey) => string;
@@ -69,9 +62,6 @@ interface InviteContactsStepProps {
 
 export const InviteContactsStep: React.FC<InviteContactsStepProps> = ({
   referralLink,
-  playerId,
-  onRecordInvites,
-  isRecording,
   colors,
   isDark,
   t,
@@ -155,13 +145,15 @@ export const InviteContactsStep: React.FC<InviteContactsStepProps> = ({
 
   const toggleSelectAll = useCallback(() => {
     lightHaptic();
-    const allSelected = filteredContacts.every(c => c.selected);
+    const allSelected = filteredContacts.length > 0 && filteredContacts.every(c => c.selected);
     const filteredIds = new Set(filteredContacts.map(c => c.id));
 
     setContacts(prev =>
       prev.map(c => (filteredIds.has(c.id) ? { ...c, selected: !allSelected } : c))
     );
-    setFilteredContacts(prev => prev.map(c => ({ ...c, selected: !allSelected })));
+    setFilteredContacts(prev =>
+      prev.map(c => (filteredIds.has(c.id) ? { ...c, selected: !allSelected } : c))
+    );
   }, [filteredContacts]);
 
   const selectedCount = contacts.filter(c => c.selected).length;
@@ -174,40 +166,25 @@ export const InviteContactsStep: React.FC<InviteContactsStepProps> = ({
     }
 
     try {
-      // Record the invites
-      await onRecordInvites({
-        referrerId: playerId,
-        channel: 'contacts',
-        contacts: selected.map(c => ({
-          name: c.name,
-          phone: c.phone || undefined,
-          email: c.email || undefined,
-        })),
-      });
+      // Compose SMS via expo-sms
+      const phones = selected.map(c => c.phone).filter((p): p is string => p != null);
 
-      // Build SMS compose URL with phone numbers
-      const phoneNumbers = selected
-        .map(c => c.phone)
-        .filter(Boolean)
-        .join(',');
-
-      if (phoneNumbers && referralLink) {
+      if (phones.length > 0 && referralLink) {
         const message = t('referral.shareMessage').replace('{link}', referralLink);
-        const smsUrl = Platform.OS === 'ios'
-          ? `sms:${phoneNumbers}&body=${encodeURIComponent(message)}`
-          : `sms:${phoneNumbers}?body=${encodeURIComponent(message)}`;
-
-        await Linking.openURL(smsUrl);
+        const isAvailable = await SMS.isAvailableAsync();
+        if (isAvailable) {
+          await SMS.sendSMSAsync(phones, message);
+        }
       }
 
-      toast.success(
-        t('referral.contacts.invitesSent').replace('{count}', String(selected.length))
-      );
+      // Deselect all after sending
+      setContacts(prev => prev.map(c => ({ ...c, selected: false })));
+      setFilteredContacts(prev => prev.map(c => ({ ...c, selected: false })));
     } catch (error) {
       console.error('Failed to send invites:', error);
       toast.error(t('referral.contacts.failedToSend'));
     }
-  }, [contacts, playerId, referralLink, onRecordInvites, toast, t]);
+  }, [contacts, referralLink, toast, t]);
 
   const renderContact = useCallback(
     ({ item }: { item: DeviceContact }) => (
@@ -225,7 +202,13 @@ export const InviteContactsStep: React.FC<InviteContactsStepProps> = ({
           {item.selected && <Ionicons name="checkmark-outline" size={14} color="#fff" />}
         </View>
         <View style={styles.contactInfo}>
-          <Text size="base" weight="medium" color={colors.text} numberOfLines={1}>
+          <Text
+            size="base"
+            weight="medium"
+            color={colors.text}
+            numberOfLines={1}
+            style={styles.contactName}
+          >
             {item.name}
           </Text>
           <Text size="sm" color={colors.textSecondary} numberOfLines={1}>
@@ -340,19 +323,15 @@ export const InviteContactsStep: React.FC<InviteContactsStepProps> = ({
           style={[
             styles.sendButton,
             { backgroundColor: colors.buttonActive },
-            (isRecording || selectedCount === 0) && { opacity: 0.5 },
+            selectedCount === 0 && { opacity: 0.5 },
           ]}
           onPress={handleSendInvites}
-          disabled={isRecording || selectedCount === 0}
+          disabled={selectedCount === 0}
         >
-          {isRecording ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Text size="lg" weight="semibold" color="#FFFFFF">
-              {t('referral.contacts.sendInvites')}
-              {selectedCount > 0 ? ` (${selectedCount})` : ''}
-            </Text>
-          )}
+          <Text size="lg" weight="semibold" color="#FFFFFF">
+            {t('referral.contacts.sendInvites')}
+            {selectedCount > 0 ? ` (${selectedCount})` : ''}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -438,9 +417,13 @@ const styles = StyleSheet.create({
   contactInfo: {
     flex: 1,
   },
+  contactName: {
+    flexShrink: 1,
+  },
   footer: {
     padding: spacingPixels[4],
     borderTopWidth: 1,
+    paddingBottom: spacingPixels[8],
   },
   sendButton: {
     flexDirection: 'row',

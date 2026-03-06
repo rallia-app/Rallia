@@ -61,6 +61,7 @@ import { Sheets } from './src/context/sheets';
 import { useToast } from '@rallia/shared-components';
 import { getMatchWithDetails } from '@rallia/shared-services';
 import type { MatchDetailData } from './src/context/MatchDetailSheetContext';
+import { attemptFirstLaunchAttribution } from './src/utils/referralAttribution';
 
 // Import NativeWind global styles
 import './global.css';
@@ -172,6 +173,15 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
       syncLocaleToDatabase(userId);
     }
   }, [userId, isLocaleReady, syncLocaleToDatabase]);
+
+  // Attempt automatic referral attribution on first launch
+  // Android: Parse referral_code from Play Install Referrer
+  // iOS: Match device fingerprint against web invite page visits
+  useEffect(() => {
+    if (userId) {
+      attemptFirstLaunchAttribution(userId).catch(() => {});
+    }
+  }, [userId]);
 
   return (
     <UserLocationProvider>
