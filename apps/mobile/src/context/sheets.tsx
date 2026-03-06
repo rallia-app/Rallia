@@ -54,6 +54,7 @@ import { ExternalLinkProofActionSheet } from '../features/ratings/components/Ext
 import { ImageProofActionSheet } from '../features/ratings/components/ImageProofOverlay';
 import { VideoProofActionSheet } from '../features/ratings/components/VideoProofOverlay';
 import { DocumentProofActionSheet } from '../features/ratings/components/DocumentProofOverlay';
+import { EditProofActionSheet } from '../features/ratings/components/EditProofOverlay';
 
 import type {
   SharedContactList,
@@ -510,6 +511,12 @@ declare module 'react-native-actions-sheet' {
         playerRatingScoreId: string;
       };
     }>;
+    'edit-proof': SheetDefinition<{
+      payload: {
+        proof: import('@rallia/shared-types').RatingProofWithFile;
+        onSuccess?: () => void;
+      };
+    }>;
     'booking-detail': SheetDefinition<{
       payload: {
         booking: import('@rallia/shared-services').BookingWithDetails;
@@ -572,6 +579,7 @@ export const Sheets = () => {
         'image-proof': ImageProofActionSheet,
         'video-proof': VideoProofActionSheet,
         'document-proof': DocumentProofActionSheet,
+        'edit-proof': EditProofActionSheet,
         // Booking sheets
         'booking-detail': BookingDetailActionSheet,
       }}

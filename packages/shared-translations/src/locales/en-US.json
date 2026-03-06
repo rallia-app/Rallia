@@ -23,6 +23,7 @@
     "yes": "Yes",
     "no": "No",
     "ok": "OK",
+    "gotIt": "Got it",
     "close": "Close",
     "search": "Search",
     "filter": "Filter",
@@ -689,8 +690,10 @@
       "sports": "MY SPORTS",
       "availabilities": "MY AVAILABILITIES",
       "rating": "MY RATING",
+      "reputation": "MY REPUTATION",
       "preferences": "MY PREFERENCES",
-      "location": "MY LOCATION"
+      "location": "MY LOCATION",
+      "portfolio": "MY PORTFOLIO"
     },
     "fields": {
       "firstName": "First Name",
@@ -728,7 +731,10 @@
       "noBio": "No bio yet",
       "noSports": "No sports available",
       "noRating": "No rating yet",
-      "noRatingSubtext": "Set up your rating to start playing"
+      "noRatingSubtext": "Set up your rating to start playing",
+      "activeNow": "Active now",
+      "lastSeen": "Last seen",
+      "offline": "Offline"
     },
     "sportsHint": "You can activate additional sports anytime",
     "addMoreSports": "Add more sports",
@@ -776,7 +782,11 @@
         "proofs": "Upload {count}+ approved rating proofs",
         "minimumLevel": "Minimum level required: {level}",
         "currentReferences": "{current}/{required} references",
-        "currentProofs": "{current}/{required} proofs"
+        "currentProofs": "{current}/{required} proofs",
+        "levelProofInfoTitle": "What is a Level Proof?",
+        "levelProofInfoMessage": "A level proof is anything that allows someone who has never played against you to form a fair and convincing assessment of your actual skill level.",
+        "referencesInfoTitle": "What is a Reference?",
+        "referencesInfoMessage": "A reference is a recommendation from a certified player at your level or higher who has played with you and can vouch for your skill level. References help other players trust your rating."
       },
       "referenceRequest": {
         "title": "Request Reference",
@@ -812,6 +822,7 @@
     "ratingProofs": {
       "title": "Rating Proofs",
       "myProofs": "My Rating Proofs",
+      "infoMessage": "Please provide fair and convincing proof. Any false evidence may be reported by other users and lead to a decrease in your reputation.",
       "addProof": "Add Rating Proof",
       "addFirstProof": "Add Your First Proof",
       "chooseProofType": "Choose how you want to verify your rating",
@@ -873,12 +884,27 @@
         "error": "Upload failed. Please try again.",
         "fileTooLarge": "File size exceeds the maximum allowed",
         "invalidFormat": "Unsupported file format",
-        "selectFile": "Select a file to upload"
+        "selectFile": "Select a file to upload",
+        "maxSize": "Max file size: {{size}} MB",
+        "progress": "Uploading... {{percent}}%"
       },
       "delete": {
         "title": "Delete Proof",
         "confirm": "Are you sure you want to delete this proof? This action cannot be undone.",
         "success": "Proof deleted successfully"
+      },
+      "edit": {
+        "title": "Edit Proof",
+        "saveChanges": "Save Changes",
+        "save": "Save Changes",
+        "saving": "Saving...",
+        "success": "Proof updated successfully",
+        "error": "Failed to update proof",
+        "proofFile": "Proof File",
+        "replaceFile": "Replace File",
+        "newFile": "NEW",
+        "currentFile": "CURRENT",
+        "statusResetInfo": "Replacing the file will reset the proof status to pending for review."
       },
       "view": {
         "openInBrowser": "Open in Browser",
@@ -923,6 +949,33 @@
         "failedToOpenLink": "Failed to open link",
         "unknownProofType": "Unknown proof type"
       }
+    },
+    "portfolio": {
+      "emptyTitle": "No proofs yet",
+      "emptyDescription": "Your rating proofs will appear here as a gallery",
+      "emptyDescriptionOther": "This player hasn't uploaded any proofs yet",
+      "videos": "Videos",
+      "photos": "Photos",
+      "documents": "Documents",
+      "links": "External Links",
+      "all": "All",
+      "noProofsForSport": "No proofs for this sport",
+      "approveTitle": "Approve Proof",
+      "approveMessage": "Are you sure you want to approve \"{{title}}\"?",
+      "approve": "Approve",
+      "approvedSuccess": "Proof approved successfully",
+      "declineTitle": "Decline Proof",
+      "declineMessage": "Are you sure you want to decline \"{{title}}\"?",
+      "decline": "Decline",
+      "declinedSuccess": "Proof declined",
+      "endorsedSuccess": "Endorsement recorded",
+      "alreadyEndorsed": "You've already voted on this proof",
+      "changeEndorsementMessage": "You've already voted on \"{{title}}\". Do you want to change your vote?",
+      "proofCertified": "Proof certified! Endorsement threshold reached.",
+      "endorsementThresholdInfo": "Proofs are certified when {{threshold}} players endorse them",
+      "pendingCount": "{{count}} pending",
+      "youEndorsed": "Endorsed",
+      "youDeclined": "Declined"
     },
     "genderValues": {
       "male": "Male",
