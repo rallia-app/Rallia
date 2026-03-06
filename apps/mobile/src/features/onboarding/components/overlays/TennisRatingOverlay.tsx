@@ -274,7 +274,7 @@ export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>
                 style={[styles.link, { color: colors.primary }]}
                 onPress={() =>
                   Linking.openURL(
-                    'https://www.usta.com/en/home/improve/national-tennis-rating-program.html'
+                    'https://www.usta.com/content/dam/usta/pdfs/10013_experience_player_ntrp_characteristics1%20(2).pdf'
                   )
                 }
               >

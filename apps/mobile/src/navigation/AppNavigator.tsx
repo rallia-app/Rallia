@@ -1286,6 +1286,7 @@ export default function AppNavigator() {
         }}
       />
 
+      {/* My Bookings screens commented out for now
       <RootStack.Screen
         name="MyBookings"
         component={MyBookingsScreen}
@@ -1305,6 +1306,7 @@ export default function AppNavigator() {
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />
+      */}
 
       <RootStack.Screen
         name="InviteReferral"

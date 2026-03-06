@@ -17,7 +17,7 @@ import {
   Platform,
   useWindowDimensions,
 } from 'react-native';
-import { Image } from 'expo-image';
+import { OptimizedImage } from '../../../components/OptimizedImage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Skeleton, useToast } from '@rallia/shared-components';
@@ -386,7 +386,7 @@ export default function FacilityDetail() {
               const uri = img.url || img.thumbnail_url;
               return (
                 <View key={img.id} style={[styles.headerImageSlide, { width: headerImageWidth }]}>
-                  <Image
+                  <OptimizedImage
                     source={{ uri: uri! }}
                     style={[styles.headerImage, { width: headerImageWidth, height: 170 }]}
                     contentFit="cover"

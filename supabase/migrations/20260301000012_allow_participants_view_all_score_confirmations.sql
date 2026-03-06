@@ -6,6 +6,7 @@
 DROP POLICY IF EXISTS "Players can view their own confirmations" ON score_confirmation;
 
 -- Create a broader policy: participants can see all confirmations for matches they're in
+DROP POLICY IF EXISTS "Participants can view match score confirmations" ON score_confirmation;
 CREATE POLICY "Participants can view match score confirmations"
   ON score_confirmation FOR SELECT
   USING (

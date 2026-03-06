@@ -4035,80 +4035,89 @@ export const MatchDetailSheet: React.FC = () => {
             </View>
             {hasCoordinates && (
               <View style={[styles.mapContainer, { borderColor: colors.border }]}>
-                <MapView
-                  style={styles.mapView}
-                  initialRegion={{
-                    latitude: resolvedLatitude!,
-                    longitude: resolvedLongitude!,
-                    latitudeDelta: 0.005,
-                    longitudeDelta: 0.005,
-                  }}
-                  scrollEnabled={false}
-                  zoomEnabled={false}
-                  rotateEnabled={false}
-                  pitchEnabled={false}
-                  toolbarEnabled={false}
-                  moveOnMarkerPress={false}
-                  pointerEvents="none"
-                  userInterfaceStyle={isDark ? 'dark' : 'light'}
-                  liteMode={Platform.OS === 'android'}
-                >
-                  <Marker
-                    coordinate={{
+                {Platform.OS === 'android' ? (
+                  <Image
+                    source={{
+                      uri: `https://maps.googleapis.com/maps/api/staticmap?center=${resolvedLatitude},${resolvedLongitude}&zoom=16&size=600x300&scale=2&markers=color:0x${(isDark ? primary[400] : primary[500]).replace('#', '')}%7C${resolvedLatitude},${resolvedLongitude}&style=feature:all%7Celement:geometry%7Ccolor:${isDark ? '0x242f3e' : '0xf5f5f5'}&key=${process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || ''}`,
+                    }}
+                    style={styles.mapView}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <MapView
+                    style={styles.mapView}
+                    initialRegion={{
                       latitude: resolvedLatitude!,
                       longitude: resolvedLongitude!,
+                      latitudeDelta: 0.005,
+                      longitudeDelta: 0.005,
                     }}
+                    scrollEnabled={false}
+                    zoomEnabled={false}
+                    rotateEnabled={false}
+                    pitchEnabled={false}
+                    toolbarEnabled={false}
+                    moveOnMarkerPress={false}
+                    pointerEvents="none"
+                    userInterfaceStyle={isDark ? 'dark' : 'light'}
                   >
-                    <View
-                      style={[
-                        styles.glassMarkerContainer,
-                        { shadowColor: isDark ? primary[400] : primary[600] },
-                      ]}
+                    <Marker
+                      coordinate={{
+                        latitude: resolvedLatitude!,
+                        longitude: resolvedLongitude!,
+                      }}
                     >
-                      {/* Glow ring */}
                       <View
                         style={[
-                          styles.glassMarkerGlow,
-                          { backgroundColor: isDark ? `${primary[400]}30` : `${primary[500]}20` },
+                          styles.glassMarkerContainer,
+                          { shadowColor: isDark ? primary[400] : primary[600] },
                         ]}
                       >
-                        {/* Glass body */}
+                        {/* Glow ring */}
                         <View
                           style={[
-                            styles.glassMarkerBody,
-                            {
-                              backgroundColor: isDark ? `${primary[400]}B3` : `${primary[500]}CC`,
-                              borderColor: isDark ? `${base.white}30` : `${base.white}60`,
-                            },
+                            styles.glassMarkerGlow,
+                            { backgroundColor: isDark ? `${primary[400]}30` : `${primary[500]}20` },
                           ]}
                         >
-                          {/* Specular highlight */}
+                          {/* Glass body */}
                           <View
                             style={[
-                              styles.glassMarkerHighlight,
-                              { backgroundColor: isDark ? `${base.white}15` : `${base.white}30` },
+                              styles.glassMarkerBody,
+                              {
+                                backgroundColor: isDark ? `${primary[400]}B3` : `${primary[500]}CC`,
+                                borderColor: isDark ? `${base.white}30` : `${base.white}60`,
+                              },
                             ]}
-                          />
-                          <SportIcon
-                            sportName={match.sport?.name || 'tennis'}
-                            size={16}
-                            color={base.white}
-                          />
+                          >
+                            {/* Specular highlight */}
+                            <View
+                              style={[
+                                styles.glassMarkerHighlight,
+                                { backgroundColor: isDark ? `${base.white}15` : `${base.white}30` },
+                              ]}
+                            />
+                            <SportIcon
+                              sportName={match.sport?.name || 'tennis'}
+                              size={16}
+                              color={base.white}
+                            />
+                          </View>
                         </View>
+                        {/* Bottom dot */}
+                        <View
+                          style={[
+                            styles.glassMarkerDot,
+                            {
+                              backgroundColor: isDark ? primary[300] : primary[500],
+                              shadowColor: isDark ? primary[300] : primary[500],
+                            },
+                          ]}
+                        />
                       </View>
-                      {/* Bottom dot */}
-                      <View
-                        style={[
-                          styles.glassMarkerDot,
-                          {
-                            backgroundColor: isDark ? primary[300] : primary[500],
-                            shadowColor: isDark ? primary[300] : primary[500],
-                          },
-                        ]}
-                      />
-                    </View>
-                  </Marker>
-                </MapView>
+                    </Marker>
+                  </MapView>
+                )}
               </View>
             )}
           </TouchableOpacity>
@@ -4187,7 +4196,11 @@ export const MatchDetailSheet: React.FC = () => {
                   {/* Per player cost */}
                   <View style={styles.costCardColumn}>
                     <Text size="sm" weight="semibold" color={colors.textMuted}>
-                      {t('matchDetail.perPlayerCost')}
+                      {isCreator
+                        ? match.format === 'singles'
+                          ? t('matchDetail.perPlayerCostOrganizer')
+                          : t('matchDetail.perPlayerCostOrganizerDoubles')
+                        : t('matchDetail.perPlayerCostPlayer')}
                     </Text>
                     <Text size={30} weight="bold" color={colors.primary} style={styles.costAmount}>
                       ${perPlayerCost}
@@ -4473,10 +4486,10 @@ export const MatchDetailSheet: React.FC = () => {
                   </View>
                   <View style={styles.badgeInfoTextContainer}>
                     <Text size="sm" weight="semibold" style={{ color: colors.text }}>
-                      {t('matchDetail.badgeMostWanted')}
+                      {t('matchDetail.badgeHighReputation')}
                     </Text>
                     <Text size="xs" lineHeight="tight" style={{ color: colors.textMuted }}>
-                      {t('matchDetail.badgeMostWantedDesc')}
+                      {t('matchDetail.badgeHighReputationDesc')}
                     </Text>
                   </View>
                 </View>

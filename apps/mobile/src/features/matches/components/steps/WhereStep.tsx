@@ -27,7 +27,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import { Text, LocationSelector } from '@rallia/shared-components';
 import { SearchBar } from '../../../../components/SearchBar';
-import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, accent, secondary } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
 import {
   getOrCreateCourt,
@@ -39,6 +39,7 @@ import {
   usePreferredFacility,
   usePlacesAutocomplete,
   useCourtAvailability,
+  useFavoriteFacilities,
 } from '@rallia/shared-hooks';
 import type { FormattedSlot, CourtOption } from '@rallia/shared-hooks';
 import type {
@@ -290,6 +291,8 @@ interface FacilityItemProps {
   isDark: boolean;
   /** Whether this is the user's preferred facility */
   isPreferred?: boolean;
+  /** Whether this facility is in the user's favorites */
+  isFavorite?: boolean;
   /** Sport name for filtering provider availability (e.g., "tennis") */
   sportName?: string;
 }
@@ -302,6 +305,7 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
   t,
   isDark,
   isPreferred = false,
+  isFavorite = false,
   sportName,
 }) => {
   // Fetch availability using the unified system (local-first, then external provider)
@@ -344,7 +348,27 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
         <View style={styles.facilityHeader}>
           <View style={styles.facilityNameContainer}>
             <View style={styles.facilityNameRow}>
-              <Text size="base" weight="medium" color={colors.text} numberOfLines={1}>
+              {isFavorite && !isPreferred && (
+                <View
+                  style={[
+                    styles.favoriteIconBadge,
+                    { backgroundColor: `${isDark ? secondary[400] : secondary[500]}20` },
+                  ]}
+                >
+                  <Ionicons
+                    name="heart"
+                    size={10}
+                    color={isDark ? secondary[400] : secondary[500]}
+                  />
+                </View>
+              )}
+              <Text
+                size="base"
+                weight="medium"
+                color={colors.text}
+                numberOfLines={1}
+                style={{ flexShrink: 1 }}
+              >
                 {facility.name}
               </Text>
               {isPreferred && (
@@ -1064,18 +1088,28 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     enabled: locationType === 'facility' && !selectedFacility && !!preferredFacilityId,
   });
 
-  // Merge facilities list with preferred facility first, deduplicating
+  // Favorites management
+  const { favorites, isFavorite: isFavoriteFacility } = useFavoriteFacilities(player?.id ?? null);
+
+  // Merge facilities list with preferred facility first, then favorites, deduplicating
   const facilities = React.useMemo(() => {
-    if (!preferredFacility) {
-      return searchFacilities;
+    let merged = searchFacilities;
+
+    // Insert preferred facility at the top if available
+    if (preferredFacility) {
+      merged = [preferredFacility, ...merged.filter(f => f.id !== preferredFacility.id)];
     }
 
-    // Filter out the preferred facility from search results to avoid duplicates
-    const filteredFacilities = searchFacilities.filter(f => f.id !== preferredFacility.id);
+    // Sort favorites first (after preferred), preserving distance order within each group
+    const favoriteIds = new Set(favorites.map(f => f.facilityId));
+    const preferredId = preferredFacility?.id;
 
-    // Return preferred facility first, followed by other facilities
-    return [preferredFacility, ...filteredFacilities];
-  }, [preferredFacility, searchFacilities]);
+    const preferred = merged.filter(f => f.id === preferredId);
+    const favs = merged.filter(f => f.id !== preferredId && favoriteIds.has(f.id));
+    const rest = merged.filter(f => f.id !== preferredId && !favoriteIds.has(f.id));
+
+    return [...preferred, ...favs, ...rest];
+  }, [preferredFacility, searchFacilities, favorites]);
 
   // Places autocomplete hook for custom location search
   const {
@@ -1404,6 +1438,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                       t={t}
                       isDark={isDark}
                       isPreferred={facility.id === preferredFacilityId}
+                      isFavorite={isFavoriteFacility(facility.id)}
                       sportName={sportName}
                     />
                   ))}
@@ -1627,12 +1662,19 @@ const styles = StyleSheet.create({
   facilityNameContainer: {
     flex: 1,
     marginRight: spacingPixels[2],
+    gap: spacingPixels[2],
   },
   facilityNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
     gap: spacingPixels[2],
+  },
+  favoriteIconBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   preferredBadge: {
     flexDirection: 'row',
