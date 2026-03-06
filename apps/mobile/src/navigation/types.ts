@@ -49,6 +49,7 @@ export type RootStackParamList = {
   PlayedMatchDetail: { match: unknown }; // Played match detail view
   MyBookings: undefined; // My Bookings screen (court bookings management)
   BookingDetail: { bookingId: string }; // Booking detail screen (deep link / notification target)
+  InviteReferral: { referralCode: string }; // Referral deep link handler
 
   // Admin screens - accessible only to users with admin role
   AdminPanel: undefined; // Admin dashboard entry point

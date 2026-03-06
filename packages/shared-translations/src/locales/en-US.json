@@ -2721,6 +2721,47 @@
     "community": "Community",
     "communityDescription": "Public network for players"
   },
+  "referral": {
+    "wizardTitle": "Invite Players",
+    "step": "Step {current} of {total}",
+    "stepNames": {
+      "shareLink": "Share Link",
+      "inviteContacts": "Contacts"
+    },
+    "shareLinkDescription": "Share your personal referral link with friends to invite them to Rallia.",
+    "code": "Code",
+    "qrCode": "QR Code",
+    "yourCode": "Your Referral Code",
+    "scanToJoin": "Scan to join Rallia",
+    "generatingCode": "Generating your referral code...",
+    "shareInvite": "Share Invite",
+    "shareTitle": "Join me on Rallia!",
+    "shareMessage": "Hey! Join me on Rallia to find sports matches and play together! {link}",
+    "yourStats": "Your Referral Stats",
+    "clicked": "Clicked",
+    "signedUp": "Signed Up",
+    "haveReferralCode": "Have a referral code?",
+    "enterCode": "Enter referral code",
+    "codeApplied": "Referral code applied!",
+    "invalidCode": "Invalid referral code",
+    "welcomeTitle": "Welcome to Rallia!",
+    "welcomeDescription": "You've been invited to join Rallia. Setting things up for you...",
+    "contacts": {
+      "description": "Select contacts from your phone to invite them via SMS.",
+      "accessRequired": "Contacts Access Required",
+      "grantAccess": "Allow access to your contacts to invite friends to Rallia via SMS.",
+      "loading": "Loading contacts...",
+      "search": "Search contacts...",
+      "noResults": "No contacts found",
+      "noContacts": "No Contacts Available",
+      "noContactsDescription": "Your address book appears to be empty.",
+      "selectAtLeastOne": "Select at least one contact to invite",
+      "sendInvites": "Send Invites",
+      "invitesSent": "{count} invite(s) sent!",
+      "failedToLoad": "Failed to load contacts",
+      "failedToSend": "Failed to send invites"
+    }
+  },
   "matchCreation": {
     "title": "Create a game",
     "forSport": "Creating game for {sport}",
@@ -6970,5 +7011,17 @@
     "selectImageSource": "Select Image Source",
     "submitAnother": "Submit Another",
     "backToSettings": "Back to Settings"
+  },
+  "invitePage": {
+    "title": "You're invited to Rallia!",
+    "invitedBy": "{name} invited you to join Rallia!",
+    "invitedByGeneric": "You've been invited to join Rallia!",
+    "description": "Download Rallia to find sports matches and play with friends.",
+    "scanQr": "Scan the QR code with your phone to download the app",
+    "appStore": "Download on the App Store",
+    "googlePlay": "Get it on Google Play",
+    "notFound": "Invite not found",
+    "notFoundDescription": "This invite link may be invalid or expired.",
+    "redirecting": "Redirecting to the app store..."
   }
 }

@@ -83,6 +83,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
       ChatConversation: 'conversation/:conversationId',
       GroupDetail: 'group/:groupId',
       CommunityDetail: 'community/:communityId',
+      InviteReferral: 'invite/:referralCode',
 
       // Admin screens - protected by useAdminDeepLinkGuard
       AdminPanel: 'admin',
@@ -156,6 +157,9 @@ export function generateDeepLink(
       break;
     case 'PlayerProfile':
       path = `player/${params?.playerId || ''}`;
+      break;
+    case 'InviteReferral':
+      path = `invite/${params?.referralCode || ''}`;
       break;
     default:
       path = route.toLowerCase();

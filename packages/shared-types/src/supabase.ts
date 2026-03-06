@@ -4141,6 +4141,8 @@ export type Database = {
           phone_verified: boolean | null;
           preferred_locale: Database['public']['Enums']['locale_enum'] | null;
           profile_picture_url: string | null;
+          referral_code: string | null;
+          referred_by: string | null;
           updated_at: string | null;
         };
         Insert: {
@@ -4161,6 +4163,8 @@ export type Database = {
           phone_verified?: boolean | null;
           preferred_locale?: Database['public']['Enums']['locale_enum'] | null;
           profile_picture_url?: string | null;
+          referral_code?: string | null;
+          referred_by?: string | null;
           updated_at?: string | null;
         };
         Update: {
@@ -4181,9 +4185,19 @@ export type Database = {
           phone_verified?: boolean | null;
           preferred_locale?: Database['public']['Enums']['locale_enum'] | null;
           profile_picture_url?: string | null;
+          referral_code?: string | null;
+          referred_by?: string | null;
           updated_at?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: 'profile_referred_by_fkey';
+            columns: ['referred_by'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       program: {
         Row: {
@@ -4920,6 +4934,131 @@ export type Database = {
           },
         ];
       };
+      referral_fingerprint: {
+        Row: {
+          created_at: string;
+          device_fingerprint: string;
+          expires_at: string;
+          id: string;
+          ip_address: string | null;
+          matched_at: string | null;
+          matched_player_id: string | null;
+          referral_code: string;
+          user_agent: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          device_fingerprint: string;
+          expires_at?: string;
+          id?: string;
+          ip_address?: string | null;
+          matched_at?: string | null;
+          matched_player_id?: string | null;
+          referral_code: string;
+          user_agent?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          device_fingerprint?: string;
+          expires_at?: string;
+          id?: string;
+          ip_address?: string | null;
+          matched_at?: string | null;
+          matched_player_id?: string | null;
+          referral_code?: string;
+          user_agent?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'referral_fingerprint_matched_player_id_fkey';
+            columns: ['matched_player_id'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      referral_invite: {
+        Row: {
+          channel: string;
+          converted_player_id: string | null;
+          created_at: string;
+          id: string;
+          recipient_email: string | null;
+          recipient_name: string | null;
+          recipient_phone: string | null;
+          referrer_id: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          channel: string;
+          converted_player_id?: string | null;
+          created_at?: string;
+          id?: string;
+          recipient_email?: string | null;
+          recipient_name?: string | null;
+          recipient_phone?: string | null;
+          referrer_id: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          channel?: string;
+          converted_player_id?: string | null;
+          created_at?: string;
+          id?: string;
+          recipient_email?: string | null;
+          recipient_name?: string | null;
+          recipient_phone?: string | null;
+          referrer_id?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'referral_invite_converted_player_id_fkey';
+            columns: ['converted_player_id'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'referral_invite_referrer_id_fkey';
+            columns: ['referrer_id'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      referral_link_click: {
+        Row: {
+          created_at: string;
+          device_fingerprint: string;
+          id: string;
+          ip_address: string | null;
+          referral_code: string;
+          user_agent: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          device_fingerprint: string;
+          id?: string;
+          ip_address?: string | null;
+          referral_code: string;
+          user_agent?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          device_fingerprint?: string;
+          id?: string;
+          ip_address?: string | null;
+          referral_code?: string;
+          user_agent?: string | null;
+        };
+        Relationships: [];
+      };
       registration_payment: {
         Row: {
           amount_cents: number;
@@ -5512,6 +5651,19 @@ export type Database = {
         };
         Returns: boolean;
       };
+      attribute_referral:
+        | {
+            Args: { p_new_player_id: string; p_referral_code: string };
+            Returns: Json;
+          }
+        | {
+            Args: {
+              p_new_player_email?: string;
+              p_new_player_id: string;
+              p_referral_code: string;
+            };
+            Returns: Json;
+          };
       auto_confirm_expired_scores: { Args: never; Returns: number };
       calculate_reputation_tier: {
         Args: { min_events?: number; score: number; total_events: number };
@@ -5529,6 +5681,10 @@ export type Database = {
           membership_status: string;
         }[];
       };
+      check_existing_players_by_email: {
+        Args: { p_emails: string[] };
+        Returns: string[];
+      };
       check_peer_verification_threshold: {
         Args: { p_player_id: string; p_sport_id: string; p_threshold?: number };
         Returns: {
@@ -5544,6 +5700,13 @@ export type Database = {
       };
       count_current_level_proofs: {
         Args: { p_player_rating_score_id: string };
+        Returns: number;
+      };
+      count_valid_proofs_for_level: {
+        Args: {
+          p_player_rating_score_id: string;
+          p_target_rating_score_id: string;
+        };
         Returns: number;
       };
       debug_check_conversation_participant: {
@@ -5568,6 +5731,7 @@ export type Database = {
       expire_old_reference_requests: { Args: never; Returns: number };
       generate_daily_analytics_snapshot: { Args: never; Returns: undefined };
       generate_unique_invite_code: { Args: never; Returns: string };
+      generate_unique_referral_code: { Args: never; Returns: string };
       generate_weekly_matches_for_all_players: {
         Args: { p_target_match_count_per_player?: number };
         Returns: {
@@ -5929,6 +6093,10 @@ export type Database = {
         Args: { group_id: string };
         Returns: string;
       };
+      get_or_create_player_referral_code: {
+        Args: { p_player_id: string };
+        Returns: string;
+      };
       get_org_notification_recipients: {
         Args: {
           p_channel?: Database['public']['Enums']['delivery_channel_enum'];
@@ -6057,6 +6225,10 @@ export type Database = {
           last_seen: string;
         }[];
       };
+      get_player_referral_stats: {
+        Args: { p_player_id: string };
+        Returns: Json;
+      };
       get_player_reports: {
         Args: {
           p_limit?: number;
@@ -6125,6 +6297,7 @@ export type Database = {
         Returns: {
           current_level_proofs_count: number;
           total_proofs_count: number;
+          valid_proofs_for_certification: number;
         }[];
       };
       get_public_communities: {
@@ -6526,6 +6699,24 @@ export type Database = {
             };
             Returns: string;
           };
+      log_referral_click: {
+        Args: {
+          p_device_fingerprint: string;
+          p_ip_address?: string;
+          p_referral_code: string;
+          p_user_agent?: string;
+        };
+        Returns: undefined;
+      };
+      log_referral_fingerprint: {
+        Args: {
+          p_device_fingerprint: string;
+          p_ip_address?: string;
+          p_referral_code: string;
+          p_user_agent?: string;
+        };
+        Returns: undefined;
+      };
       mark_alert_read: {
         Args: { p_admin_id: string; p_alert_id: string };
         Returns: boolean;
@@ -6537,6 +6728,14 @@ export type Database = {
       mark_initial_feedback_notifications_sent: {
         Args: { p_participant_ids: string[] };
         Returns: number;
+      };
+      match_referral_fingerprint: {
+        Args: {
+          p_device_fingerprint: string;
+          p_ip_address: string;
+          p_player_id: string;
+        };
+        Returns: string;
       };
       parse_match_duration_to_minutes: {
         Args: { p_duration: string };
@@ -6568,6 +6767,10 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      reevaluate_certification_for_player_rating: {
+        Args: { p_player_rating_score_id: string };
+        Returns: undefined;
       };
       refer_player_to_community: {
         Args: {
@@ -6643,15 +6846,19 @@ export type Database = {
           address: string;
           booking_url_template: string;
           city: string;
+          court_count: number;
           data_provider_id: string;
           data_provider_type: string;
           distance_meters: number;
           external_provider_id: string;
           facility_type: string;
           id: string;
+          is_first_come_first_serve: boolean;
+          membership_required: boolean;
           name: string;
           sport_ids: string[];
           timezone: string;
+          upcoming_match_count: number;
         }[];
       };
       search_facilities_nearby_count: {
@@ -6684,64 +6891,35 @@ export type Database = {
           match_id: string;
         }[];
       };
-      search_public_matches:
-        | {
-            Args: {
-              p_cost?: string;
-              p_court_status?: string;
-              p_date_range?: string;
-              p_duration?: string;
-              p_facility_id?: string;
-              p_format?: string;
-              p_gender?: string;
-              p_join_mode?: string;
-              p_latitude: number;
-              p_limit?: number;
-              p_longitude: number;
-              p_match_type?: string;
-              p_max_distance_km: number;
-              p_offset?: number;
-              p_search_query?: string;
-              p_skill_level?: string;
-              p_specific_date?: string;
-              p_sport_id: string;
-              p_time_of_day?: string;
-              p_user_gender?: string;
-            };
-            Returns: {
-              distance_meters: number;
-              match_id: string;
-            }[];
-          }
-        | {
-            Args: {
-              p_cost?: string;
-              p_court_status?: string;
-              p_date_range?: string;
-              p_duration?: string;
-              p_facility_id?: string;
-              p_format?: string;
-              p_gender?: string;
-              p_join_mode?: string;
-              p_latitude: number;
-              p_limit?: number;
-              p_longitude: number;
-              p_match_tier?: string;
-              p_match_type?: string;
-              p_max_distance_km: number;
-              p_offset?: number;
-              p_search_query?: string;
-              p_skill_level?: string;
-              p_specific_date?: string;
-              p_sport_id: string;
-              p_time_of_day?: string;
-              p_user_gender?: string;
-            };
-            Returns: {
-              distance_meters: number;
-              match_id: string;
-            }[];
-          };
+      search_public_matches: {
+        Args: {
+          p_cost?: string;
+          p_court_status?: string;
+          p_date_range?: string;
+          p_duration?: string;
+          p_facility_id?: string;
+          p_format?: string;
+          p_gender?: string;
+          p_join_mode?: string;
+          p_latitude: number;
+          p_limit?: number;
+          p_longitude: number;
+          p_match_tier?: string;
+          p_match_type?: string;
+          p_max_distance_km: number;
+          p_offset?: number;
+          p_search_query?: string;
+          p_skill_level?: string;
+          p_specific_date?: string;
+          p_sport_id: string;
+          p_time_of_day?: string;
+          p_user_gender?: string;
+        };
+        Returns: {
+          distance_meters: number;
+          match_id: string;
+        }[];
+      };
       seed_org_notification_defaults: {
         Args: { p_organization_id: string };
         Returns: undefined;

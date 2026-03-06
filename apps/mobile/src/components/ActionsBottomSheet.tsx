@@ -52,6 +52,7 @@ import { SportIcon } from './SportIcon';
 import { useTheme } from '@rallia/shared-hooks';
 import { getMatchWithDetails } from '@rallia/shared-services';
 import { MatchCreationWizard } from '../features/matches';
+import { InvitePlayersWizard } from '../features/referral';
 import { AuthWizard } from '../features/auth';
 import { OnboardingWizard } from '../features/onboarding/components/wizard';
 import { navigateFromOutside, navigateToCommunityScreen } from '../navigation';
@@ -136,17 +137,19 @@ const ActionItem: React.FC<ActionItemProps> = ({ icon, title, description, onPre
 interface ActionsContentProps {
   onClose: () => void;
   onCreateMatch: () => void;
+  onInvitePlayers: () => void;
   colors: ThemeColors;
   t: (key: TranslationKey) => string;
 }
 
-const ActionsContent: React.FC<ActionsContentProps> = ({ onClose, onCreateMatch, colors, t }) => {
+const ActionsContent: React.FC<ActionsContentProps> = ({
+  onClose,
+  onCreateMatch,
+  onInvitePlayers,
+  colors,
+  t,
+}) => {
   const [showNetworkModal, setShowNetworkModal] = useState(false);
-
-  const handleInvitePlayers = () => {
-    // TODO: Navigate to invite players flow
-    onClose();
-  };
 
   const handleCreateShareList = () => {
     onClose();
@@ -191,7 +194,7 @@ const ActionsContent: React.FC<ActionsContentProps> = ({ onClose, onCreateMatch,
           icon="person-add-outline"
           title={t('actions.invitePlayers')}
           description={t('actions.invitePlayersDescription')}
-          onPress={handleInvitePlayers}
+          onPress={onInvitePlayers}
           colors={colors}
         />
 
@@ -211,13 +214,13 @@ const ActionsContent: React.FC<ActionsContentProps> = ({ onClose, onCreateMatch,
           colors={colors}
         />
 
-        <ActionItem
+        {/* <ActionItem
           icon="trophy-outline"
           title={t('actions.createEvent')}
           description={t('actions.createEventDescription')}
           onPress={handleCreateEvent}
           colors={colors}
-        />
+        /> */}
       </View>
 
       {/* Network Type Selection Modal */}
@@ -323,8 +326,9 @@ export const ActionsBottomSheet: React.FC = () => {
   const { t } = useTranslation();
   const isDark = theme === 'dark';
 
-  // Wizard state for match creation (local, only for slide animation)
+  // Wizard state for match creation and invite players (local, only for slide animation)
   const [showWizard, setShowWizard] = useState(false);
+  const [showInviteWizard, setShowInviteWizard] = useState(false);
 
   // If we have editMatchData, we're in edit mode - show wizard immediately
   const isEditMode = !!editMatchData;
@@ -431,6 +435,23 @@ export const ActionsBottomSheet: React.FC = () => {
     slideProgress.value = withSpring(1, { damping: 80, stiffness: 600, overshootClamping: false });
   }, [slideProgress]);
 
+  // Handle invite players - show invite wizard with slide animation
+  const handleInvitePlayers = useCallback(() => {
+    lightHaptic();
+    setShowInviteWizard(true);
+    // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
+    slideProgress.value = withSpring(1, { damping: 80, stiffness: 600, overshootClamping: false });
+  }, [slideProgress]);
+
+  // Handle invite wizard close - slide back to actions list
+  const handleInviteWizardClose = useCallback(() => {
+    // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
+    slideProgress.value = withSpring(0, { damping: 80, stiffness: 600, overshootClamping: false });
+    setTimeout(() => {
+      setShowInviteWizard(false);
+    }, 300);
+  }, [slideProgress]);
+
   // Handle wizard close - slide back to actions list
   const handleWizardClose = useCallback(() => {
     // If in edit mode, close the sheet entirely
@@ -483,6 +504,7 @@ export const ActionsBottomSheet: React.FC = () => {
   // Handle sheet dismiss - just reset local wizard state
   const handleSheetDismiss = useCallback(() => {
     setShowWizard(false);
+    setShowInviteWizard(false);
     // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
     slideProgress.value = 0;
     clearEditMatch();
@@ -493,6 +515,7 @@ export const ActionsBottomSheet: React.FC = () => {
   useEffect(() => {
     const isWizardActive =
       showWizard ||
+      showInviteWizard ||
       contentMode === 'auth' ||
       contentMode === 'onboarding' ||
       contentMode === 'loading';
@@ -526,7 +549,7 @@ export const ActionsBottomSheet: React.FC = () => {
       keyboardWillHideListener.remove();
       keyboardDidHideListener.remove();
     };
-  }, [showWizard, contentMode, sheetRef]);
+  }, [showWizard, showInviteWizard, contentMode, sheetRef]);
 
   // Animated styles for content sliding
   const actionsAnimatedStyle = useAnimatedStyle(() => ({
@@ -640,6 +663,7 @@ export const ActionsBottomSheet: React.FC = () => {
           <ActionsContent
             onClose={closeSheet}
             onCreateMatch={handleCreateMatch}
+            onInvitePlayers={handleInvitePlayers}
             colors={colors}
             t={t}
           />
@@ -657,13 +681,24 @@ export const ActionsBottomSheet: React.FC = () => {
             />
           </Animated.View>
         )}
+
+        {/* Invite players wizard */}
+        {showInviteWizard && (
+          <Animated.View style={[styles.slidePanel, styles.wizardPanel, wizardAnimatedStyle]}>
+            <InvitePlayersWizard onClose={closeSheet} onBackToLanding={handleInviteWizardClose} />
+          </Animated.View>
+        )}
       </View>
     );
   };
 
   // Determine if we should use wizard mode (full height, no scroll)
   const isWizardMode =
-    showWizard || isEditMode || contentMode === 'auth' || contentMode === 'onboarding';
+    showWizard ||
+    showInviteWizard ||
+    isEditMode ||
+    contentMode === 'auth' ||
+    contentMode === 'onboarding';
 
   return (
     <BottomSheetModal
