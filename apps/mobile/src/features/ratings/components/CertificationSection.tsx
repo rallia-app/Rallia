@@ -9,13 +9,14 @@
  * - Request reference button (if viewing own profile)
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Card } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
 import { CertificationBadge, type BadgeStatus } from './CertificationBadge';
+import { InfoModal } from '../../../components/InfoModal';
 
 export interface CertificationSectionProps {
   /**
@@ -112,6 +113,7 @@ export const CertificationSection: React.FC<CertificationSectionProps> = ({
 }) => {
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
+  const [showProofInfoModal, setShowProofInfoModal] = useState(false);
 
   const isCertified = badgeStatus === 'certified';
   const referencesProgress = Math.min(referencesCount / requiredReferences, 1);
@@ -207,6 +209,12 @@ export const CertificationSection: React.FC<CertificationSectionProps> = ({
                   required: requiredProofs,
                 })}
               </Text>
+              <TouchableOpacity
+                onPress={() => setShowProofInfoModal(true)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
+              </TouchableOpacity>
               {proofsProgress >= 1 && (
                 <Ionicons name="checkmark-circle" size={16} color={colors.success} />
               )}
@@ -329,6 +337,16 @@ export const CertificationSection: React.FC<CertificationSectionProps> = ({
           </>
         )}
       </View>
+
+      {/* Info Modal for Level Proofs */}
+      <InfoModal
+        visible={showProofInfoModal}
+        onClose={() => setShowProofInfoModal(false)}
+        title={t('profile.certification.requirements.levelProofInfoTitle')}
+        message={t('profile.certification.requirements.levelProofInfoMessage')}
+        closeLabel={t('common.gotIt')}
+        iconName="document-text"
+      />
     </Card>
   );
 };

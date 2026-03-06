@@ -91,6 +91,7 @@ import { mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import { SheetManager } from 'react-native-actions-sheet';
 import { CertificationSection } from '../features/ratings/components';
+import { InfoModal } from '../components/InfoModal';
 
 type SportProfileRouteProp = RouteProp<RootStackParamList, 'SportProfile'>;
 
@@ -148,6 +149,8 @@ const SportProfile = () => {
   >('self_declared');
   const [peerEvaluationAverage, setPeerEvaluationAverage] = useState<number | undefined>(undefined);
   const [peerEvaluationCount, setPeerEvaluationCount] = useState<number>(0);
+  const [showProofInfoModal, setShowProofInfoModal] = useState(false);
+  const [showReferencesInfoModal, setShowReferencesInfoModal] = useState(false);
   const [preferences, setPreferences] = useState<PreferencesInfo>({
     matchDuration: null,
     matchType: null,
@@ -1275,50 +1278,80 @@ const SportProfile = () => {
 
                   {/* Action Buttons */}
                   <View style={styles.actionButtons}>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onPress={() => {}}
-                      style={styles.actionButton}
-                      isDark={isDark}
-                      themeColors={{
-                        primary: colors.primary,
-                        primaryForeground: colors.primaryForeground,
-                        buttonActive: colors.buttonActive,
-                        buttonInactive: colors.buttonInactive,
-                        buttonTextActive: colors.buttonTextActive,
-                        buttonTextInactive: colors.buttonTextInactive,
-                        text: colors.text,
-                        textMuted: colors.textMuted,
-                        border: colors.border,
-                        background: colors.background,
-                      }}
-                      leftIcon={<Ionicons name="people-outline" size={16} color={colors.primary} />}
-                    >
-                      {t('profile.rating.references', { count: referencesCount })}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onPress={handleManageProofs}
-                      style={styles.actionButton}
-                      isDark={isDark}
-                      themeColors={{
-                        primary: colors.primary,
-                        primaryForeground: colors.primaryForeground,
-                        buttonActive: colors.buttonActive,
-                        buttonInactive: colors.buttonInactive,
-                        buttonTextActive: colors.buttonTextActive,
-                        buttonTextInactive: colors.buttonTextInactive,
-                        text: colors.text,
-                        textMuted: colors.textMuted,
-                        border: colors.border,
-                        background: colors.background,
-                      }}
-                      leftIcon={<Ionicons name="document-text" size={16} color={colors.primary} />}
-                    >
-                      {t('profile.rating.ratingProof', { count: totalProofsCount })}
-                    </Button>
+                    <View style={styles.buttonWithInfoRow}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onPress={() => {}}
+                        style={styles.actionButtonFlex}
+                        isDark={isDark}
+                        themeColors={{
+                          primary: colors.primary,
+                          primaryForeground: colors.primaryForeground,
+                          buttonActive: colors.buttonActive,
+                          buttonInactive: colors.buttonInactive,
+                          buttonTextActive: colors.buttonTextActive,
+                          buttonTextInactive: colors.buttonTextInactive,
+                          text: colors.text,
+                          textMuted: colors.textMuted,
+                          border: colors.border,
+                          background: colors.background,
+                        }}
+                        leftIcon={
+                          <Ionicons name="people-outline" size={16} color={colors.primary} />
+                        }
+                      >
+                        {t('profile.rating.references', { count: referencesCount })}
+                      </Button>
+                      <TouchableOpacity
+                        onPress={() => setShowReferencesInfoModal(true)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        style={styles.infoIconButton}
+                      >
+                        <Ionicons
+                          name="information-circle-outline"
+                          size={20}
+                          color={colors.primary}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.buttonWithInfoRow}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onPress={handleManageProofs}
+                        style={styles.actionButtonFlex}
+                        isDark={isDark}
+                        themeColors={{
+                          primary: colors.primary,
+                          primaryForeground: colors.primaryForeground,
+                          buttonActive: colors.buttonActive,
+                          buttonInactive: colors.buttonInactive,
+                          buttonTextActive: colors.buttonTextActive,
+                          buttonTextInactive: colors.buttonTextInactive,
+                          text: colors.text,
+                          textMuted: colors.textMuted,
+                          border: colors.border,
+                          background: colors.background,
+                        }}
+                        leftIcon={
+                          <Ionicons name="document-text" size={16} color={colors.primary} />
+                        }
+                      >
+                        {t('profile.rating.ratingProof', { count: totalProofsCount })}
+                      </Button>
+                      <TouchableOpacity
+                        onPress={() => setShowProofInfoModal(true)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        style={styles.infoIconButton}
+                      >
+                        <Ionicons
+                          name="information-circle-outline"
+                          size={20}
+                          color={colors.primary}
+                        />
+                      </TouchableOpacity>
+                    </View>
                   </View>
 
                   {/* Certification Status Section */}
@@ -1521,6 +1554,24 @@ const SportProfile = () => {
         {/* Bottom Spacing */}
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Info Modals */}
+      <InfoModal
+        visible={showProofInfoModal}
+        onClose={() => setShowProofInfoModal(false)}
+        title={t('profile.certification.requirements.levelProofInfoTitle')}
+        message={t('profile.certification.requirements.levelProofInfoMessage')}
+        closeLabel={t('common.gotIt')}
+        iconName="document-text"
+      />
+      <InfoModal
+        visible={showReferencesInfoModal}
+        onClose={() => setShowReferencesInfoModal(false)}
+        title={t('profile.certification.requirements.referencesInfoTitle')}
+        message={t('profile.certification.requirements.referencesInfoMessage')}
+        closeLabel={t('common.gotIt')}
+        iconName="people"
+      />
     </SafeAreaView>
   );
 };
@@ -1693,6 +1744,18 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     width: '100%',
+  },
+  actionButtonFlex: {
+    flex: 1,
+  },
+  buttonWithInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    width: '100%',
+  },
+  infoIconButton: {
+    padding: spacingPixels[1],
   },
   requestButtons: {
     gap: spacingPixels[2.5],

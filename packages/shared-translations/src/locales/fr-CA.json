@@ -23,6 +23,7 @@
     "yes": "Oui",
     "no": "Non",
     "ok": "OK",
+    "gotIt": "Compris",
     "close": "Fermer",
     "search": "Rechercher",
     "filter": "Filtrer",
@@ -689,8 +690,10 @@
       "sports": "MES SPORTS",
       "availabilities": "MES DISPONIBILITÉS",
       "rating": "MON CLASSEMENT",
+      "reputation": "MA RÉPUTATION",
       "preferences": "MES PRÉFÉRENCES",
-      "location": "MA LOCALISATION"
+      "location": "MA LOCALISATION",
+      "portfolio": "MON PORTFOLIO"
     },
     "fields": {
       "firstName": "Prénom",
@@ -728,7 +731,10 @@
       "noBio": "Pas encore de bio",
       "noSports": "Aucun sport disponible",
       "noRating": "Aucun classement pour le moment",
-      "noRatingSubtext": "Configurez votre classement pour commencer à jouer"
+      "noRatingSubtext": "Configurez votre classement pour commencer à jouer",
+      "activeNow": "En ligne",
+      "lastSeen": "Vu il y a",
+      "offline": "Hors ligne"
     },
     "sportsHint": "Vous pouvez activer d'autres sports à tout moment",
     "addMoreSports": "Ajouter d'autres sports",
@@ -776,7 +782,11 @@
         "proofs": "Téléversez {count}+ preuves de classement approuvées",
         "minimumLevel": "Niveau minimum requis: {level}",
         "currentReferences": "{current}/{required} références",
-        "currentProofs": "{current}/{required} preuves"
+        "currentProofs": "{current}/{required} preuves",
+        "levelProofInfoTitle": "Qu'est-ce qu'une preuve de niveau?",
+        "levelProofInfoMessage": "Une preuve de niveau est tout élément qui permet à quelqu'un qui n'a jamais joué contre vous de se faire une évaluation juste et convaincante de votre niveau de jeu réel.",
+        "referencesInfoTitle": "Qu'est-ce qu'une référence?",
+        "referencesInfoMessage": "Une référence est une recommandation d'un joueur certifié à votre niveau ou supérieur qui a joué avec vous et peut attester de votre niveau. Les références aident les autres joueurs à faire confiance à votre classement."
       },
       "referenceRequest": {
         "title": "Demander une référence",
@@ -812,6 +822,7 @@
     "ratingProofs": {
       "title": "Preuves de classement",
       "myProofs": "Mes preuves de classement",
+      "infoMessage": "Veuillez fournir des preuves justes et convaincantes. Toute fausse preuve pourra être signalée par d'autres utilisateurs et entraîner une diminution de votre réputation.",
       "addProof": "Ajouter une preuve",
       "addFirstProof": "Ajouter votre première preuve",
       "chooseProofType": "Choisissez comment vérifier votre classement",
@@ -873,12 +884,27 @@
         "error": "Échec du téléversement. Veuillez réessayer.",
         "fileTooLarge": "La taille du fichier dépasse le maximum autorisé",
         "invalidFormat": "Format de fichier non supporté",
-        "selectFile": "Sélectionnez un fichier à téléverser"
+        "selectFile": "Sélectionnez un fichier à téléverser",
+        "maxSize": "Taille max: {{size}} Mo",
+        "progress": "Téléversement... {{percent}}%"
       },
       "delete": {
         "title": "Supprimer la preuve",
         "confirm": "Êtes-vous sûr de vouloir supprimer cette preuve? Cette action est irréversible.",
         "success": "Preuve supprimée avec succès"
+      },
+      "edit": {
+        "title": "Modifier la preuve",
+        "saveChanges": "Enregistrer",
+        "save": "Enregistrer",
+        "saving": "Enregistrement...",
+        "success": "Preuve mise à jour avec succès",
+        "error": "Échec de la mise à jour de la preuve",
+        "proofFile": "Fichier de preuve",
+        "replaceFile": "Remplacer le fichier",
+        "newFile": "NOUVEAU",
+        "currentFile": "ACTUEL",
+        "statusResetInfo": "Remplacer le fichier réinitialisera le statut de la preuve à en attente de vérification."
       },
       "view": {
         "openInBrowser": "Ouvrir dans le navigateur",
@@ -923,6 +949,33 @@
         "failedToOpenLink": "Échec de l'ouverture du lien",
         "unknownProofType": "Type de preuve inconnu"
       }
+    },
+    "portfolio": {
+      "emptyTitle": "Aucune preuve",
+      "emptyDescription": "Vos preuves de classement apparaîtront ici en galerie",
+      "emptyDescriptionOther": "Ce joueur n'a pas encore téléchargé de preuves",
+      "videos": "Vidéos",
+      "photos": "Photos",
+      "documents": "Documents",
+      "links": "Liens externes",
+      "all": "Tout",
+      "noProofsForSport": "Aucune preuve pour ce sport",
+      "approveTitle": "Approuver la preuve",
+      "approveMessage": "Êtes-vous sûr de vouloir approuver « {{title}} » ?",
+      "approve": "Approuver",
+      "approvedSuccess": "Preuve approuvée avec succès",
+      "declineTitle": "Refuser la preuve",
+      "declineMessage": "Êtes-vous sûr de vouloir refuser « {{title}} » ?",
+      "decline": "Refuser",
+      "declinedSuccess": "Preuve refusée",
+      "endorsedSuccess": "Approbation enregistrée",
+      "alreadyEndorsed": "Vous avez déjà voté sur cette preuve",
+      "changeEndorsementMessage": "Vous avez déjà voté sur « {{title}} ». Voulez-vous changer votre vote ?",
+      "proofCertified": "Preuve certifiée ! Seuil d'approbations atteint.",
+      "endorsementThresholdInfo": "Les preuves sont certifiées lorsque {{threshold}} joueurs les approuvent",
+      "pendingCount": "{{count}} en attente",
+      "youEndorsed": "Approuvé",
+      "youDeclined": "Refusé"
     },
     "genderValues": {
       "male": "Homme",
@@ -7013,17 +7066,5 @@
     "selectImageSource": "Sélectionner la source de l'image",
     "submitAnother": "Soumettre un autre",
     "backToSettings": "Retour aux paramètres"
-  },
-  "invitePage": {
-    "title": "Vous êtes invité(e) sur Rallia !",
-    "invitedBy": "{name} vous a invité(e) à rejoindre Rallia !",
-    "invitedByGeneric": "Vous avez été invité(e) à rejoindre Rallia !",
-    "description": "Téléchargez Rallia pour trouver des matchs sportifs et jouer avec vos amis.",
-    "scanQr": "Scannez le code QR avec votre téléphone pour télécharger l'appli",
-    "appStore": "Télécharger sur l'App Store",
-    "googlePlay": "Disponible sur Google Play",
-    "notFound": "Invitation introuvable",
-    "notFoundDescription": "Ce lien d'invitation est peut-être invalide ou expiré.",
-    "redirecting": "Redirection vers le magasin d'applications..."
   }
 }
