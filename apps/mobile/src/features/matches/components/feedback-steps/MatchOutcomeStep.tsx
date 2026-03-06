@@ -11,7 +11,7 @@ import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-shee
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { SportIcon } from '../../../../components/SportIcon';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
 import { lightHaptic, selectionHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 import type {
   MatchOutcomeEnum,
@@ -198,6 +198,7 @@ const ReasonCard: React.FC<ReasonCardProps> = ({ icon, label, selected, onPress,
 
 interface MatchContextCardProps {
   matchContext: MatchContextForFeedback;
+  opponents: OpponentForFeedback[];
   colors: MatchOutcomeStepProps['colors'];
   t: (key: TranslationKey, options?: Record<string, string | number>) => string;
   locale: string;
@@ -246,6 +247,7 @@ const capitalizeFirst = (str: string): string => {
 
 const MatchContextCard: React.FC<MatchContextCardProps> = ({
   matchContext,
+  opponents,
   colors,
   t,
   locale,
@@ -300,7 +302,7 @@ const MatchContextCard: React.FC<MatchContextCardProps> = ({
         },
       ]}
     >
-      {/* Sport icon and name */}
+      {/* Sport icon, name, and participant avatars (top right) */}
       <View style={styles.matchContextHeader}>
         <View style={[styles.sportIconContainer, { backgroundColor: `${colors.buttonActive}20` }]}>
           <SportIcon sportName={matchContext.sportSlug} size={20} color={colors.buttonActive} />
@@ -321,6 +323,57 @@ const MatchContextCard: React.FC<MatchContextCardProps> = ({
             </Text>
           )}
         </View>
+        {opponents.length > 0 &&
+          (() => {
+            const isSingles = opponents.length === 1;
+            const size = isSingles ? 40 : 32;
+            const iconSize = isSingles ? 20 : 16;
+            return (
+              <View style={styles.matchContextAvatars}>
+                {opponents.map((opponent, index) => {
+                  const avatarUrl = getProfilePictureUrl(opponent.avatarUrl);
+                  return (
+                    <View
+                      key={opponent.playerId}
+                      style={[styles.matchContextAvatarWrapper, index > 0 && { marginLeft: -8 }]}
+                    >
+                      {avatarUrl ? (
+                        <Image
+                          source={{ uri: avatarUrl }}
+                          style={{
+                            width: size,
+                            height: size,
+                            borderRadius: size / 2,
+                            borderWidth: 1.5,
+                            borderColor: primary[500],
+                          }}
+                        />
+                      ) : (
+                        <View
+                          style={{
+                            width: size,
+                            height: size,
+                            borderRadius: size / 2,
+                            borderWidth: 1.5,
+                            borderColor: primary[500],
+                            backgroundColor: colors.border,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Ionicons
+                            name="person-outline"
+                            size={iconSize}
+                            color={colors.textMuted}
+                          />
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            );
+          })()}
       </View>
 
       {/* Date, time, and location details */}
@@ -501,6 +554,7 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
       {matchContext && (
         <MatchContextCard
           matchContext={matchContext}
+          opponents={opponents}
           colors={colors}
           t={t}
           locale={locale}
@@ -662,7 +716,7 @@ const styles = StyleSheet.create({
   },
   matchContextHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: spacingPixels[3],
     marginBottom: spacingPixels[3],
   },
@@ -676,6 +730,14 @@ const styles = StyleSheet.create({
   matchContextHeaderText: {
     flex: 1,
     gap: spacingPixels[0.5] ?? 2,
+  },
+  matchContextAvatars: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: spacingPixels[2],
+  },
+  matchContextAvatarWrapper: {
+    zIndex: 1,
   },
   matchContextDetails: {
     flexDirection: 'row',

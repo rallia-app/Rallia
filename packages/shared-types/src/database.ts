@@ -455,6 +455,12 @@ export interface FacilitySearchResult {
   sport_ids?: string[];
   /** Whether this facility is first-come-first-serve (no reservation needed) */
   is_first_come_first_serve?: boolean;
+  /** Whether this facility requires a membership to access */
+  membership_required?: boolean;
+  /** Number of active courts for the requested sport(s) */
+  court_count?: number;
+  /** Number of upcoming public matches at this facility for the requested sport(s) */
+  upcoming_match_count?: number;
 }
 
 /** Paginated facilities response */

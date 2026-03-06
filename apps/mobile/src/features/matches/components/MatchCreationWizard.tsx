@@ -747,8 +747,6 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       }
       form.setValue('timezone', slotData.timezone, { shouldDirty: true });
 
-      // Land on Preferences step (step 3) so user only fills out game preferences
-      setCurrentStep(3);
       successHaptic();
     },
     [form]
