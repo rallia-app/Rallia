@@ -4187,7 +4187,11 @@ export const MatchDetailSheet: React.FC = () => {
                   {/* Per player cost */}
                   <View style={styles.costCardColumn}>
                     <Text size="sm" weight="semibold" color={colors.textMuted}>
-                      {t('matchDetail.perPlayerCost')}
+                      {isCreator
+                        ? match.format === 'singles'
+                          ? t('matchDetail.perPlayerCostOrganizer')
+                          : t('matchDetail.perPlayerCostOrganizerDoubles')
+                        : t('matchDetail.perPlayerCostPlayer')}
                     </Text>
                     <Text size={30} weight="bold" color={colors.primary} style={styles.costAmount}>
                       ${perPlayerCost}
@@ -4473,10 +4477,10 @@ export const MatchDetailSheet: React.FC = () => {
                   </View>
                   <View style={styles.badgeInfoTextContainer}>
                     <Text size="sm" weight="semibold" style={{ color: colors.text }}>
-                      {t('matchDetail.badgeMostWanted')}
+                      {t('matchDetail.badgeHighReputation')}
                     </Text>
                     <Text size="xs" lineHeight="tight" style={{ color: colors.textMuted }}>
-                      {t('matchDetail.badgeMostWantedDesc')}
+                      {t('matchDetail.badgeHighReputationDesc')}
                     </Text>
                   </View>
                 </View>

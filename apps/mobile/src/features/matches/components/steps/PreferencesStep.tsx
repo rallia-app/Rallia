@@ -609,12 +609,16 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                 {(() => {
                   const playerCount = format === 'doubles' ? 4 : 2;
                   const perPerson = Math.ceil(estimatedCost / playerCount);
-                  return (
-                    t('matchCreation.fields.estimatedCostHelper', {
+                  const otherPlayers = playerCount - 1;
+                  if (format === 'singles') {
+                    return t('matchCreation.fields.estimatedCostHelperSingles', {
                       amount: perPerson,
-                      count: playerCount,
-                    }) || `Per person: ~$${perPerson} (estimated for ${playerCount} players)`
-                  );
+                    });
+                  }
+                  return t('matchCreation.fields.estimatedCostHelperDoubles', {
+                    amount: perPerson,
+                    count: otherPlayers,
+                  });
                 })()}
               </Text>
             )}
@@ -629,7 +633,11 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
               <OptionCard
                 icon="people-outline"
                 title={t('matchCreation.fields.costSplitEqual')}
-                description={t('matchCreation.fields.costSplitEqualDescription')}
+                description={
+                  format === 'singles'
+                    ? t('matchCreation.fields.costSplitEqualDescriptionSingles')
+                    : t('matchCreation.fields.costSplitEqualDescriptionDoubles')
+                }
                 selected={costSplitType === 'equal'}
                 onPress={() =>
                   setValue('costSplitType', 'equal', { shouldValidate: true, shouldDirty: true })
