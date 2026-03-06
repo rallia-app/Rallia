@@ -114,6 +114,7 @@ import PublicMatches from '../features/matches/screens/PublicMatches';
 import PlayerMatches from '../features/matches/screens/PlayerMatches';
 import { FacilitiesDirectory, FacilityDetail } from '../features/facilities';
 import { MyBookingsScreen, BookingDetailScreen } from '../features/bookings';
+import { InviteReferralScreen } from '../screens/InviteReferralScreen';
 
 // =============================================================================
 // TYPED NAVIGATORS
@@ -1306,6 +1307,12 @@ export default function AppNavigator() {
         })}
       />
       */}
+
+      <RootStack.Screen
+        name="InviteReferral"
+        component={InviteReferralScreen}
+        options={{ headerShown: false }}
+      />
     </RootStack.Navigator>
   );
 }
