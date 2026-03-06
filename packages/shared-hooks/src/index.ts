@@ -59,6 +59,7 @@ export * from './useModeration';
 // useAdminPush moved to apps/mobile/src/hooks/ (native-only hook)
 export * from './useBooking';
 export * from './usePlayerBookingFilters';
+export * from './useReferral';
 
 // Platform-specific exports - Metro resolves .native.ts for React Native builds
 // Web bundlers will use the stub .ts files which throw helpful errors at runtime

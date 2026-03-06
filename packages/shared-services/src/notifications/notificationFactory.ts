@@ -11,6 +11,7 @@ import type {
   ExtendedNotificationTypeEnum,
   NotificationPriorityEnum,
   Notification,
+  MatchFormatEnum,
 } from '@rallia/shared-types';
 
 /**
@@ -22,12 +23,17 @@ export interface MatchNotificationPayload {
   startTime?: string;
   sportName?: string;
   locationName?: string;
+  locationAddress?: string;
+  latitude?: number;
+  longitude?: number;
   playerName?: string;
+  playerAvatarUrl?: string;
   hostName?: string;
   spotsLeft?: number | string;
   totalSpots?: number;
   timeUntil?: string;
   updatedFields?: string[];
+  matchDurationMinutes?: number;
 }
 
 export interface PlayerNotificationPayload {
@@ -57,7 +63,7 @@ export interface FeedbackNotificationPayload {
   playerName?: string;
   opponentNames?: string; // Pre-formatted: "John" or "John, Jane, and Mike"
   matchDate?: string;
-  format?: 'singles' | 'doubles';
+  format?: MatchFormatEnum;
 }
 
 /**
@@ -248,6 +254,10 @@ function getTranslatedBody(
           (normalizedPayload as Record<string, unknown>).startTime as string | undefined,
           locale
         ),
+        locationName: formatLocationNameWithPrefix(
+          (normalizedPayload as Record<string, unknown>).locationName as string | undefined,
+          locale
+        ),
       }
     : normalizedPayload;
 
@@ -396,8 +406,8 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   payment: 'Payment Update',
   support: 'Message from Rallia',
   system: 'Rallia Update',
-  feedback_request: 'How Was Your Game?',
-  feedback_reminder: "Don't Forget to Rate Your Game",
+  feedback_request: 'How was your game?',
+  feedback_reminder: 'You have a match to close out',
   score_confirmation: 'Confirm Match Score',
 
   // Organization staff notifications
@@ -464,9 +474,9 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   support: 'Our support team has sent you a message. Tap to read.',
   system: 'We have an update for you. Tap to learn more.',
   feedback_request:
-    'Rate your {sportName} game with {opponentNames}. Your feedback helps the community!',
+    "Submit your score and rate your {sportName} match with {opponentNames} while it's fresh!",
   feedback_reminder:
-    'Your {sportName} game feedback closes in 24 hours. Rate your experience with {opponentNames}!',
+    'Your {sportName} score and rating with {opponentNames} are still pending — complete them before the window closes.',
   score_confirmation:
     '{playerName} submitted the score for your {sportName} game. Please confirm or dispute.',
 
@@ -537,8 +547,8 @@ function getOrdinalSuffix(day: number): string {
 
 /**
  * Format date in locale-aware format
- * English: "January 5th 2025"
- * French: "5 Janvier 2025"
+ * English: "January 5th"
+ * French: "5 janvier"
  */
 function formatDateForNotification(dateStr: string | undefined, locale: Locale): string {
   if (!dateStr) return '';
@@ -561,27 +571,25 @@ function formatDateForNotification(dateStr: string | undefined, locale: Locale):
     }
 
     if (locale.startsWith('fr')) {
-      // French format: "5 Janvier 2025"
+      // French format: "5 janvier"
       const formatter = new Intl.DateTimeFormat('fr-CA', {
         day: 'numeric',
         month: 'long',
-        year: 'numeric',
         timeZone: 'UTC', // Use UTC to avoid timezone shifts
       });
       return formatter.format(date);
     } else {
-      // English format: "January 5th 2025"
+      // English format: "January 5th"
       // Use UTC date components to avoid timezone shifts
-      const utcYear = date.getUTCFullYear();
       const utcMonth = date.getUTCMonth();
       const utcDay = date.getUTCDate();
 
-      const month = new Date(Date.UTC(utcYear, utcMonth, 1)).toLocaleDateString('en-US', {
+      const month = new Date(Date.UTC(2000, utcMonth, 1)).toLocaleDateString('en-US', {
         month: 'long',
         timeZone: 'UTC',
       });
       const ordinal = getOrdinalSuffix(utcDay);
-      return `${month} ${utcDay}${ordinal} ${utcYear}`;
+      return `${month} ${utcDay}${ordinal}`;
     }
   } catch (error) {
     // If formatting fails, return original string
@@ -605,6 +613,18 @@ function formatStartTimeWithPrefix(startTime: string | undefined, locale: Locale
     return ` à ${timeOnly}`;
   }
   return ` at ${timeOnly}`;
+}
+
+/**
+ * Format locationName with locale-aware prefix for translation
+ * Returns empty string when locationName is absent so the template renders cleanly.
+ */
+function formatLocationNameWithPrefix(locationName: string | undefined, locale: Locale): string {
+  if (!locationName) return '';
+  if (locale.startsWith('fr')) {
+    return ` à ${locationName}`;
+  }
+  return ` at ${locationName}`;
 }
 
 /**
@@ -752,6 +772,15 @@ export async function createNotifications(
 // Type-safe helper functions for common notification types
 // ============================================================================
 
+/** Optional enrichment fields for match notifications */
+export interface MatchNotificationExtras {
+  locationAddress?: string;
+  latitude?: number;
+  longitude?: number;
+  playerAvatarUrl?: string;
+  matchDurationMinutes?: number;
+}
+
 /**
  * Notify a host that someone wants to join their match
  */
@@ -760,13 +789,14 @@ export async function notifyMatchJoinRequest(
   matchId: string,
   playerName: string,
   sportName?: string,
-  matchDate?: string
+  matchDate?: string,
+  extras?: MatchNotificationExtras
 ): Promise<Notification> {
   return createNotification({
     type: 'match_join_request',
     userId: hostUserId,
     targetId: matchId,
-    payload: { matchId, playerName, sportName, matchDate },
+    payload: { matchId, playerName, sportName, matchDate, ...extras },
   });
 }
 
@@ -780,13 +810,14 @@ export async function notifyJoinRequestAccepted(
   startTime?: string,
   sportName?: string,
   locationName?: string,
-  hostName?: string
+  hostName?: string,
+  extras?: MatchNotificationExtras
 ): Promise<Notification> {
   return createNotification({
     type: 'match_join_accepted',
     userId: playerUserId,
     targetId: matchId,
-    payload: { matchId, matchDate, startTime, sportName, locationName, hostName },
+    payload: { matchId, matchDate, startTime, sportName, locationName, hostName, ...extras },
   });
 }
 
@@ -818,7 +849,8 @@ export async function notifyPlayerJoined(
   sportName?: string,
   matchDate?: string,
   locationName?: string,
-  spotsLeft?: number
+  spotsLeft?: number,
+  extras?: MatchNotificationExtras
 ): Promise<Notification[]> {
   // Title and body will be generated from translations in createNotifications
   // based on each user's preferred locale
@@ -834,6 +866,7 @@ export async function notifyPlayerJoined(
         matchDate,
         locationName,
         spotsLeft: spotsLeft !== undefined ? String(spotsLeft) : undefined,
+        ...extras,
       },
     }))
   );
@@ -912,14 +945,15 @@ export async function notifyMatchStartingSoon(
   matchId: string,
   sportName: string,
   locationName?: string,
-  timeUntil?: string
+  timeUntil?: string,
+  extras?: MatchNotificationExtras
 ): Promise<Notification[]> {
   return createNotifications(
     participantUserIds.map(userId => ({
       type: 'match_starting_soon' as const,
       userId,
       targetId: matchId,
-      payload: { matchId, sportName, locationName, timeUntil },
+      payload: { matchId, sportName, locationName, timeUntil, ...extras },
     }))
   );
 }
@@ -980,13 +1014,14 @@ export async function notifyMatchInvitation(
   sportName: string,
   matchDate: string,
   startTime?: string,
-  locationName?: string
+  locationName?: string,
+  extras?: MatchNotificationExtras
 ): Promise<Notification> {
   return createNotification({
     type: 'match_invitation',
     userId: playerUserId,
     targetId: matchId,
-    payload: { matchId, playerName: inviterName, sportName, matchDate, startTime, locationName },
+    payload: { matchId, playerName: inviterName, sportName, matchDate, startTime, locationName, ...extras },
   });
 }
 
@@ -1051,7 +1086,7 @@ export async function notifyFeedbackRequest(
   sportName: string,
   opponentNames?: string,
   matchDate?: string,
-  format?: 'singles' | 'doubles'
+  format?: MatchFormatEnum
 ): Promise<Notification> {
   return createNotification({
     type: 'feedback_request',
@@ -1071,7 +1106,7 @@ export async function notifyFeedbackReminder(
   sportName: string,
   opponentNames?: string,
   matchDate?: string,
-  format?: 'singles' | 'doubles'
+  format?: MatchFormatEnum
 ): Promise<Notification> {
   return createNotification({
     type: 'feedback_reminder',
@@ -1082,6 +1117,26 @@ export async function notifyFeedbackReminder(
 }
 
 /**
+ * Notify opponents that a match score was submitted and needs confirmation
+ */
+export async function notifyScoreConfirmation(
+  opponentUserIds: string[],
+  matchId: string,
+  playerName: string,
+  sportName?: string,
+  matchDate?: string
+): Promise<Notification[]> {
+  return createNotifications(
+    opponentUserIds.map(userId => ({
+      type: 'score_confirmation' as const,
+      userId,
+      targetId: matchId,
+      payload: { matchId, playerName, sportName, matchDate },
+    }))
+  );
+}
+
+/**
  * Notify a player about a match reminder
  */
 export async function notifyReminder(
@@ -1089,13 +1144,14 @@ export async function notifyReminder(
   matchId: string,
   sportName: string,
   matchDate: string,
-  locationName?: string
+  locationName?: string,
+  extras?: MatchNotificationExtras
 ): Promise<Notification> {
   return createNotification({
     type: 'reminder',
     userId: playerUserId,
     targetId: matchId,
-    payload: { matchId, sportName, matchDate, locationName },
+    payload: { matchId, sportName, matchDate, locationName, ...extras },
   });
 }
 
@@ -1121,6 +1177,7 @@ export const notificationFactory = {
   matchCompleted: notifyMatchCompleted,
   feedbackRequest: notifyFeedbackRequest,
   feedbackReminder: notifyFeedbackReminder,
+  scoreConfirmation: notifyScoreConfirmation,
   reminder: notifyReminder,
 
   // Social

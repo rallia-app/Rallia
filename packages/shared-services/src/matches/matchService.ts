@@ -20,7 +20,7 @@ import {
   countRecentCancellationEvents,
 } from '../reputation/reputationService';
 import { calculateCancellationPenalty } from '../reputation/reputationPenalties';
-import { createMatchChat } from '../chat/chatService';
+import { createMatchChat, getMatchChat, removeConversationParticipant } from '../chat/chatService';
 import type {
   Match,
   TablesInsert,
@@ -29,6 +29,30 @@ import type {
   MatchParticipant,
   Profile,
   PlayerWithProfile,
+  MatchFormatEnum,
+  MatchTypeEnum,
+  MatchDurationEnum,
+  LocationTypeEnum,
+  CourtStatusEnum,
+  CostSplitTypeEnum,
+  MatchVisibilityEnum,
+  MatchJoinModeEnum,
+  GenderEnum,
+  BadgeStatusEnum,
+  MatchParticipantStatusEnum,
+  UpcomingMatchFilter,
+  PastMatchFilter,
+  FormatFilter,
+  MatchTypeFilter,
+  DateRangeFilter,
+  TimeOfDayFilter,
+  SkillLevelFilter,
+  GenderFilter,
+  CostFilter,
+  JoinModeFilter,
+  DurationFilter,
+  CourtStatusFilter,
+  MatchTierFilter,
 } from '@rallia/shared-types';
 import { calculateDistanceMeters } from '@rallia/shared-utils';
 
@@ -36,6 +60,11 @@ import { calculateDistanceMeters } from '@rallia/shared-utils';
  * Input data for creating a match
  * Maps from form data to database insert structure
  */
+/** Form-level court status values (mapped to DB CourtStatusEnum in createMatch) */
+export type FormCourtStatus = 'booked' | 'to_book' | 'tbd';
+/** Form-level cost split values (mapped to DB CostSplitTypeEnum in createMatch) */
+export type FormCostSplitType = 'equal' | 'creator_pays' | 'custom';
+
 export interface CreateMatchInput {
   // Required fields
   sportId: string;
@@ -46,13 +75,13 @@ export interface CreateMatchInput {
   timezone: string; // IANA timezone (e.g., "America/New_York")
 
   // Match format
-  format?: 'singles' | 'doubles';
-  playerExpectation?: 'casual' | 'competitive' | 'both';
-  duration?: '30' | '60' | '90' | '120' | 'custom';
+  format?: MatchFormatEnum;
+  playerExpectation?: MatchTypeEnum;
+  duration?: MatchDurationEnum;
   customDurationMinutes?: number;
 
   // Location
-  locationType?: 'facility' | 'custom' | 'tbd';
+  locationType?: LocationTypeEnum;
   facilityId?: string;
   courtId?: string;
   locationName?: string;
@@ -60,23 +89,23 @@ export interface CreateMatchInput {
   customLatitude?: number;
   customLongitude?: number;
 
-  // Court & cost
-  courtStatus?: 'booked' | 'to_book' | 'tbd';
+  // Court & cost (form-level values, mapped to DB enums in createMatch)
+  courtStatus?: FormCourtStatus;
   isCourtFree?: boolean;
-  costSplitType?: 'equal' | 'creator_pays' | 'custom';
+  costSplitType?: FormCostSplitType;
   estimatedCost?: number;
 
   // Opponent preferences
   minRatingScoreId?: string;
-  preferredOpponentGender?: 'male' | 'female' | 'other' | 'any';
+  preferredOpponentGender?: GenderEnum | 'any';
 
   // Visibility & access
-  visibility?: 'public' | 'private';
+  visibility?: MatchVisibilityEnum;
   /** When private: whether the match is visible in groups the creator is part of */
   visibleInGroups?: boolean;
   /** When private: whether the match is visible in communities the creator is part of */
   visibleInCommunities?: boolean;
-  joinMode?: 'direct' | 'request';
+  joinMode?: MatchJoinModeEnum;
 
   // Additional info
   notes?: string;
@@ -94,15 +123,15 @@ function emptyToNull(value: string | null | undefined): string | null {
  * Create a new match
  */
 export async function createMatch(input: CreateMatchInput): Promise<Match> {
-  // Map costSplitType to database enum values
-  const costSplitMap: Record<string, 'host_pays' | 'split_equal' | 'custom'> = {
+  // Map form costSplitType to database enum values
+  const costSplitMap: Record<FormCostSplitType, CostSplitTypeEnum> = {
     creator_pays: 'host_pays',
     equal: 'split_equal',
     custom: 'custom',
   };
 
-  // Map courtStatus to database enum values (null if tbd)
-  const courtStatusMap: Record<string, 'reserved' | 'to_reserve' | null> = {
+  // Map form courtStatus to database enum values (null if tbd)
+  const courtStatusMap: Record<FormCourtStatus, CourtStatusEnum | null> = {
     booked: 'reserved',
     to_book: 'to_reserve',
     tbd: null,
@@ -237,6 +266,10 @@ export async function getMatchWithDetails(matchId: string) {
           set_number,
           team1_score,
           team2_score
+        ),
+        confirmations:score_confirmation (
+          player_id,
+          action
         )
       )
     `
@@ -289,7 +322,10 @@ export async function getMatchWithDetails(matchId: string) {
 
   // Fetch player ratings for the match's sport (for displaying in request cards)
   const sportId = data.sport_id;
-  const ratingsMap: Record<string, { label: string; value: number | null }> = {}; // playerId -> rating info
+  const ratingsMap: Record<
+    string,
+    { label: string; value: number | null; badgeStatus?: BadgeStatusEnum }
+  > = {}; // playerId -> rating info
 
   if (profileIds.length > 0 && sportId) {
     const { data: ratingsData, error: ratingsError } = await supabase
@@ -297,6 +333,7 @@ export async function getMatchWithDetails(matchId: string) {
       .select(
         `
         player_id,
+        badge_status,
         rating_score!player_rating_scores_rating_score_id_fkey!inner (
           label,
           value,
@@ -315,6 +352,7 @@ export async function getMatchWithDetails(matchId: string) {
     if (!ratingsError && ratingsData) {
       type RatingResult = {
         player_id: string;
+        badge_status?: BadgeStatusEnum;
         rating_score: { label: string; value: number | null; rating_system: { sport_id: string } };
       };
       (ratingsData as unknown as RatingResult[]).forEach(rating => {
@@ -325,13 +363,14 @@ export async function getMatchWithDetails(matchId: string) {
           ratingsMap[rating.player_id] = {
             label: ratingScore.label,
             value: ratingScore.value,
+            badgeStatus: rating.badge_status,
           };
         }
       });
     }
   }
 
-  // Attach profiles and ratings to players
+  // Attach profiles, ratings, and certification to players
   if (data.created_by_player?.id && profilesMap[data.created_by_player.id]) {
     data.created_by_player.profile = profilesMap[data.created_by_player.id];
     const creatorRating = ratingsMap[data.created_by_player.id];
@@ -339,6 +378,9 @@ export async function getMatchWithDetails(matchId: string) {
       data.created_by_player.sportRatingLabel = creatorRating.label;
       if (creatorRating.value !== null) {
         data.created_by_player.sportRatingValue = creatorRating.value;
+      }
+      if (creatorRating.badgeStatus) {
+        data.created_by_player.sportCertificationStatus = creatorRating.badgeStatus;
       }
     }
   }
@@ -359,6 +401,7 @@ export async function getMatchWithDetails(matchId: string) {
           playerObj as MatchParticipantWithPlayer['player'] & {
             sportRatingLabel?: string;
             sportRatingValue?: number;
+            sportCertificationStatus?: BadgeStatusEnum;
           }
         ).sportRatingLabel = participantRating.label;
         if (participantRating.value !== null) {
@@ -366,8 +409,16 @@ export async function getMatchWithDetails(matchId: string) {
             playerObj as MatchParticipantWithPlayer['player'] & {
               sportRatingLabel?: string;
               sportRatingValue?: number;
+              sportCertificationStatus?: BadgeStatusEnum;
             }
           ).sportRatingValue = participantRating.value;
+        }
+        if (participantRating.badgeStatus) {
+          (
+            playerObj as MatchParticipantWithPlayer['player'] & {
+              sportCertificationStatus?: BadgeStatusEnum;
+            }
+          ).sportCertificationStatus = participantRating.badgeStatus;
         }
       }
       // Ensure player is always an object, not array
@@ -893,18 +944,15 @@ export async function cancelMatch(matchId: string, userId?: string): Promise<Mat
     throw new Error('Match is already cancelled');
   }
 
-  // Check if match has already ended (can't cancel completed matches)
-  // A match is considered completed if its end_time has passed
-  const { getMatchEndTimeDifferenceFromNow, getTimeDifferenceFromNow } =
-    await import('@rallia/shared-utils');
-  const endTimeDiff = getMatchEndTimeDifferenceFromNow(
+  // Check if match has already started (can't cancel once it's in progress or completed)
+  const { getTimeDifferenceFromNow } = await import('@rallia/shared-utils');
+  const msUntilStart = getTimeDifferenceFromNow(
     match.match_date,
     match.start_time,
-    match.end_time,
     match.timezone || 'UTC'
   );
-  if (endTimeDiff < 0) {
-    throw new Error('Cannot cancel a completed match');
+  if (msUntilStart <= 0) {
+    throw new Error('Cannot cancel a match that has already started');
   }
 
   // Perform the cancellation - set cancelled_at timestamp
@@ -1132,11 +1180,29 @@ async function createMatchChatIfFull(matchId: string, triggeredBy: string): Prom
 }
 
 /**
+ * Helper to remove a player from the match chat when they leave or are kicked.
+ * Fire-and-forget — errors are logged but don't block the caller.
+ */
+async function removePlayerFromMatchChat(matchId: string, playerId: string): Promise<void> {
+  try {
+    const conversation = await getMatchChat(matchId);
+    if (!conversation) return;
+
+    await removeConversationParticipant(conversation.id, playerId);
+    console.log(
+      `[removePlayerFromMatchChat] Removed player ${playerId} from chat for match ${matchId}`
+    );
+  } catch (error) {
+    console.error('[removePlayerFromMatchChat] Error:', error);
+  }
+}
+
+/**
  * Join match result with status info
  */
 export interface JoinMatchResult {
   participant: MatchParticipant;
-  status: 'joined' | 'requested' | 'waitlisted';
+  status: Extract<MatchParticipantStatusEnum, 'joined' | 'requested' | 'waitlisted'>;
 }
 
 /**
@@ -1258,7 +1324,7 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
   const availableSpots = totalSpots - joinedParticipants;
 
   // Determine status based on join mode and availability
-  let participantStatus: 'joined' | 'requested' | 'waitlisted';
+  let participantStatus: Extract<MatchParticipantStatusEnum, 'joined' | 'requested' | 'waitlisted'>;
 
   if (availableSpots <= 0) {
     // Match is full - add to waitlist
@@ -1315,10 +1381,10 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
     participant = newParticipant as MatchParticipant;
   }
 
-  // Get player name for notifications (player.id = profile.id)
+  // Get player name and avatar for notifications (player.id = profile.id)
   const { data: profileData } = await supabase
     .from('profile')
-    .select('first_name, last_name, display_name')
+    .select('first_name, last_name, display_name, profile_picture_url')
     .eq('id', playerId)
     .single();
 
@@ -1327,6 +1393,7 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
     profileData?.first_name && profileData?.last_name
       ? `${profileData.first_name} ${profileData.last_name}`
       : profileData?.first_name || 'A player';
+  const playerAvatarUrl = profileData?.profile_picture_url ?? undefined;
 
   // Send notification to host if this is a join request
   if (participantStatus === 'requested') {
@@ -1337,7 +1404,8 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
       matchId,
       playerName,
       sportName,
-      match.match_date
+      match.match_date,
+      { playerAvatarUrl }
     ).catch(err => {
       console.error('Failed to send join request notification:', err);
     });
@@ -1368,6 +1436,9 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
           sport:sport_id (name),
           location_type,
           location_name,
+          location_address,
+          custom_latitude,
+          custom_longitude,
           match_date,
           start_time
         `
@@ -1409,7 +1480,13 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
         sportName,
         formattedDate,
         locationName,
-        spotsLeft
+        spotsLeft,
+        {
+          playerAvatarUrl,
+          locationAddress: matchDetails?.location_address ?? undefined,
+          latitude: matchDetails?.custom_latitude ?? undefined,
+          longitude: matchDetails?.custom_longitude ?? undefined,
+        }
       ).catch(err => {
         console.error('Failed to send player joined notifications:', err);
       });
@@ -1616,6 +1693,11 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
       });
     }
   }
+
+  // Remove the player from the match chat (fire and forget)
+  removePlayerFromMatchChat(matchId, playerId).catch(err => {
+    console.error('[leaveMatch] Failed to remove player from match chat:', err);
+  });
 }
 
 /**
@@ -2047,6 +2129,11 @@ export async function kickParticipant(
     ).catch(err => {
       console.error('Failed to send kicked notification:', err);
     });
+
+    // Remove the kicked player from the match chat (fire and forget)
+    removePlayerFromMatchChat(matchId, participantRecord.player_id).catch(err => {
+      console.error('[kickParticipant] Failed to remove player from match chat:', err);
+    });
   }
 
   return updatedParticipant as MatchParticipant;
@@ -2149,6 +2236,53 @@ export async function cancelInvitation(
 }
 
 /**
+ * Decline an invitation to a match (invitee only).
+ * Updates the participant status from 'pending' to 'declined'.
+ *
+ * @param matchId - The match ID
+ * @param playerId - The ID of the player declining the invitation
+ * @throws Error if participant not found or not in 'pending' status
+ */
+export async function declineInvitation(
+  matchId: string,
+  playerId: string
+): Promise<MatchParticipant> {
+  // Find the player's pending invitation
+  const { data: participant, error: participantError } = await supabase
+    .from('match_participant')
+    .select('id, status, player_id')
+    .eq('match_id', matchId)
+    .eq('player_id', playerId)
+    .single();
+
+  if (participantError || !participant) {
+    throw new Error('Invitation not found');
+  }
+
+  // Verify the participant has 'pending' status
+  if (participant.status !== 'pending') {
+    throw new Error('No pending invitation to decline');
+  }
+
+  // Update the participant status to 'declined'
+  const { data: updatedParticipant, error: updateError } = await supabase
+    .from('match_participant')
+    .update({
+      status: 'declined',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', participant.id)
+    .select()
+    .single();
+
+  if (updateError) {
+    throw new Error(`Failed to decline invitation: ${updateError.message}`);
+  }
+
+  return updatedParticipant as MatchParticipant;
+}
+
+/**
  * Resend an invitation for a match (host only).
  * - For 'pending' invitations: resends the notification
  * - For 'declined' invitations: updates status to 'pending' and sends notification
@@ -2175,6 +2309,10 @@ export async function resendInvitation(
       start_time,
       end_time,
       timezone,
+      location_name,
+      facility:facility_id (
+        name
+      ),
       sport:sport (
         id,
         name,
@@ -2282,6 +2420,12 @@ export async function resendInvitation(
   const sport = Array.isArray(sportData) ? sportData[0] : sportData;
   const sportName = sport?.display_name || sport?.name || 'a match';
 
+  // Derive location name from facility or custom location
+  const facilityData = match.facility as { name?: string } | { name?: string }[] | null;
+  const facilityObj = Array.isArray(facilityData) ? facilityData[0] : facilityData;
+  const locationName =
+    facilityObj?.name || (match as { location_name?: string | null }).location_name || undefined;
+
   // Send invitation notification (fire and forget)
   const participantRecord = match.participants?.find(
     (p: { id: string }) => p.id === participantId
@@ -2297,7 +2441,8 @@ export async function resendInvitation(
       inviterName,
       sportName,
       match.match_date,
-      startTime
+      startTime,
+      locationName
     ).catch(err => {
       console.error('Failed to send invitation notification:', err);
     });
@@ -2451,6 +2596,10 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
           set_number,
           team1_score,
           team2_score
+        ),
+        confirmations:score_confirmation (
+          player_id,
+          action
         )
       )
     `
@@ -2504,7 +2653,10 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
 
   // Fetch player ratings for the match's sport (for displaying in request cards)
   // All matches in this result are for the same sport (params.sportId)
-  const ratingsMap: Record<string, { label: string; value: number | null }> = {}; // playerId -> rating info
+  const ratingsMap: Record<
+    string,
+    { label: string; value: number | null; badgeStatus?: BadgeStatusEnum }
+  > = {}; // playerId -> rating info
 
   if (profileIds.length > 0 && sportId) {
     const { data: ratingsData, error: ratingsError } = await supabase
@@ -2512,6 +2664,7 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
       .select(
         `
         player_id,
+        badge_status,
         rating_score!player_rating_scores_rating_score_id_fkey!inner (
           label,
           value,
@@ -2526,6 +2679,7 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
     if (!ratingsError && ratingsData) {
       type RatingResult = {
         player_id: string;
+        badge_status?: BadgeStatusEnum;
         rating_score: { label: string; value: number | null; rating_system: { sport_id: string } };
       };
       (ratingsData as unknown as RatingResult[]).forEach(rating => {
@@ -2536,6 +2690,7 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
           ratingsMap[rating.player_id] = {
             label: ratingScore.label,
             value: ratingScore.value,
+            badgeStatus: rating.badge_status,
           };
         }
       });
@@ -2553,6 +2708,10 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
         (match.created_by_player as PlayerWithProfile).sportRatingLabel = creatorRating.label;
         if (creatorRating.value !== null) {
           (match.created_by_player as PlayerWithProfile).sportRatingValue = creatorRating.value;
+        }
+        if (creatorRating.badgeStatus) {
+          (match.created_by_player as PlayerWithProfile).sportCertificationStatus =
+            creatorRating.badgeStatus;
         }
       }
     }
@@ -2572,6 +2731,10 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
           (playerObj as PlayerWithProfile).sportRatingLabel = participantRating.label;
           if (participantRating.value !== null) {
             (playerObj as PlayerWithProfile).sportRatingValue = participantRating.value;
+          }
+          if (participantRating.badgeStatus) {
+            (playerObj as PlayerWithProfile).sportCertificationStatus =
+              participantRating.badgeStatus;
           }
         }
         // Ensure player is always an object, not array
@@ -2635,38 +2798,13 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
 /**
  * Parameters for fetching player's matches
  */
-/**
- * Status filter values for upcoming matches
- */
-export type UpcomingStatusFilter =
-  | 'all'
-  | 'hosting'
-  | 'confirmed'
-  | 'pending'
-  | 'requested'
-  | 'waitlisted'
-  | 'needs_players'
-  | 'ready_to_play';
-
-/**
- * Status filter values for past matches
- */
-export type PastStatusFilter =
-  | 'all'
-  | 'feedback_needed'
-  | 'played'
-  | 'hosted'
-  | 'as_participant'
-  | 'expired'
-  | 'cancelled';
-
 export interface GetPlayerMatchesParams {
   userId: string;
   timeFilter: 'upcoming' | 'past';
   /** Optional sport ID to filter matches by */
   sportId?: string;
   /** Optional status filter for filtering matches by participant status, role, or match state */
-  statusFilter?: UpcomingStatusFilter | PastStatusFilter;
+  statusFilter?: UpcomingMatchFilter | PastMatchFilter;
   limit?: number;
   offset?: number;
 }
@@ -2777,6 +2915,10 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
           set_number,
           team1_score,
           team2_score
+        ),
+        confirmations:score_confirmation (
+          player_id,
+          action
         )
       )
     `
@@ -2837,7 +2979,7 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
   // Build a map of sportId -> playerId -> rating info
   const sportRatingsMap: Record<
     string,
-    Record<string, { label: string; value: number | null }>
+    Record<string, { label: string; value: number | null; badgeStatus?: BadgeStatusEnum }>
   > = {};
 
   if (profileIds.length > 0) {
@@ -2852,6 +2994,7 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
         .select(
           `
         player_id,
+        badge_status,
         rating_score!player_rating_scores_rating_score_id_fkey!inner (
           label,
           value,
@@ -2870,6 +3013,7 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
       if (!ratingsError && ratingsData) {
         type RatingResult = {
           player_id: string;
+          badge_status?: BadgeStatusEnum;
           rating_score: {
             label: string;
             value: number | null;
@@ -2886,6 +3030,7 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
             sportRatingsMap[ratingSystem.sport_id][rating.player_id] = {
               label: ratingScore.label,
               value: ratingScore.value,
+              badgeStatus: rating.badge_status,
             };
           }
         });
@@ -2906,6 +3051,10 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
         if (creatorRating.value !== null) {
           (match.created_by_player as PlayerWithProfile).sportRatingValue = creatorRating.value;
         }
+        if (creatorRating.badgeStatus) {
+          (match.created_by_player as PlayerWithProfile).sportCertificationStatus =
+            creatorRating.badgeStatus;
+        }
       }
     }
 
@@ -2924,6 +3073,10 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
           (playerObj as PlayerWithProfile).sportRatingLabel = participantRating.label;
           if (participantRating.value !== null) {
             (playerObj as PlayerWithProfile).sportRatingValue = participantRating.value;
+          }
+          if (participantRating.badgeStatus) {
+            (playerObj as PlayerWithProfile).sportCertificationStatus =
+              participantRating.badgeStatus;
           }
         }
         // Ensure player is always an object, not array
@@ -2954,18 +3107,20 @@ export interface SearchPublicMatchesParams {
   maxDistanceKm: number | 'all' | null;
   sportId: string;
   searchQuery?: string;
-  format?: 'all' | 'singles' | 'doubles';
-  matchType?: 'all' | 'casual' | 'competitive';
-  dateRange?: 'all' | 'today' | 'week' | 'weekend';
-  timeOfDay?: 'all' | 'morning' | 'afternoon' | 'evening';
-  skillLevel?: 'all' | 'beginner' | 'intermediate' | 'advanced';
-  gender?: 'all' | 'male' | 'female' | 'other';
-  cost?: 'all' | 'free' | 'paid';
-  joinMode?: 'all' | 'direct' | 'request';
+  format?: FormatFilter;
+  matchType?: MatchTypeFilter;
+  dateRange?: DateRangeFilter;
+  timeOfDay?: TimeOfDayFilter;
+  skillLevel?: SkillLevelFilter;
+  gender?: GenderFilter;
+  cost?: CostFilter;
+  joinMode?: JoinModeFilter;
   /** Duration filter (in minutes), '120+' includes 120 and custom */
-  duration?: 'all' | '30' | '60' | '90' | '120+';
+  duration?: DurationFilter;
   /** Court status filter */
-  courtStatus?: 'all' | 'reserved' | 'to_reserve';
+  courtStatus?: CourtStatusFilter;
+  /** Match tier filter */
+  matchTier?: MatchTierFilter;
   /** Specific date filter (ISO date string YYYY-MM-DD), overrides dateRange when set */
   specificDate?: string | null;
   /** The viewing user's gender for eligibility filtering */
@@ -3008,6 +3163,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     joinMode = 'all',
     duration = 'all',
     courtStatus = 'all',
+    matchTier = 'all',
     specificDate,
     userGender,
     facilityId,
@@ -3040,6 +3196,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     p_offset: offset,
     p_user_gender: userGender || null, // Pass user's gender for eligibility filtering
     p_facility_id: facilityId || null, // Filter by specific facility
+    p_match_tier: matchTier === 'all' ? null : matchTier,
   });
 
   if (rpcError) {
@@ -3131,6 +3288,10 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
           set_number,
           team1_score,
           team2_score
+        ),
+        confirmations:score_confirmation (
+          player_id,
+          action
         )
       )
     `
@@ -3184,7 +3345,10 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
 
   // Fetch player ratings for the match's sport (for displaying in request cards)
   // All matches in this result are for the same sport (params.sportId)
-  const publicRatingsMap: Record<string, { label: string; value: number | null }> = {}; // playerId -> rating info
+  const publicRatingsMap: Record<
+    string,
+    { label: string; value: number | null; badgeStatus?: BadgeStatusEnum }
+  > = {}; // playerId -> rating info
 
   if (profileIds.length > 0 && sportId) {
     const { data: ratingsData, error: ratingsError } = await supabase
@@ -3192,6 +3356,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
       .select(
         `
         player_id,
+        badge_status,
         rating_score!player_rating_scores_rating_score_id_fkey!inner (
           label,
           value,
@@ -3206,6 +3371,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     if (!ratingsError && ratingsData) {
       type RatingResult = {
         player_id: string;
+        badge_status?: BadgeStatusEnum;
         rating_score: { label: string; value: number | null; rating_system: { sport_id: string } };
       };
       (ratingsData as unknown as RatingResult[]).forEach(rating => {
@@ -3216,6 +3382,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
           publicRatingsMap[rating.player_id] = {
             label: ratingScore.label,
             value: ratingScore.value,
+            badgeStatus: rating.badge_status,
           };
         }
       });
@@ -3233,6 +3400,10 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
         (match.created_by_player as PlayerWithProfile).sportRatingLabel = creatorRating.label;
         if (creatorRating.value !== null) {
           (match.created_by_player as PlayerWithProfile).sportRatingValue = creatorRating.value;
+        }
+        if (creatorRating.badgeStatus) {
+          (match.created_by_player as PlayerWithProfile).sportCertificationStatus =
+            creatorRating.badgeStatus;
         }
       }
     }
@@ -3252,6 +3423,10 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
           (playerObj as PlayerWithProfile).sportRatingLabel = participantRating.label;
           if (participantRating.value !== null) {
             (playerObj as PlayerWithProfile).sportRatingValue = participantRating.value;
+          }
+          if (participantRating.badgeStatus) {
+            (playerObj as PlayerWithProfile).sportCertificationStatus =
+              participantRating.badgeStatus;
           }
         }
         // Ensure player is always an object, not array
@@ -3330,6 +3505,10 @@ export async function invitePlayersToMatch(
       start_time,
       end_time,
       timezone,
+      location_name,
+      facility:facility_id (
+        name
+      ),
       sport:sport_id (
         id,
         name,
@@ -3385,6 +3564,12 @@ export async function invitePlayersToMatch(
   const sportData = match.sport;
   const sport = Array.isArray(sportData) ? sportData[0] : sportData;
   const sportName = sport?.display_name || sport?.name || 'a match';
+
+  // Derive location name from facility or custom location
+  const facilityData = match.facility as { name?: string } | { name?: string }[] | null;
+  const facilityObj = Array.isArray(facilityData) ? facilityData[0] : facilityData;
+  const locationName =
+    facilityObj?.name || (match as { location_name?: string | null }).location_name || undefined;
 
   // Build a map of existing participants with their status
   const existingParticipants = new Map<string, { id: string; status: string }>();
@@ -3486,7 +3671,8 @@ export async function invitePlayersToMatch(
       inviterName,
       sportName,
       match.match_date,
-      startTime
+      startTime,
+      locationName
     ).catch(err => {
       console.error('[invitePlayersToMatch] Notification error:', err);
     });

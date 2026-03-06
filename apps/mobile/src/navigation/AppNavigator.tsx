@@ -114,6 +114,7 @@ import PublicMatches from '../features/matches/screens/PublicMatches';
 import PlayerMatches from '../features/matches/screens/PlayerMatches';
 import { FacilitiesDirectory, FacilityDetail } from '../features/facilities';
 import { MyBookingsScreen, BookingDetailScreen } from '../features/bookings';
+import { InviteReferralScreen } from '../screens/InviteReferralScreen';
 
 // =============================================================================
 // TYPED NAVIGATORS
@@ -845,6 +846,9 @@ type TabName = keyof BottomTabParamList;
 /**
  * Listener that resets a tab's nested stack to its root screen when the tab loses focus.
  * This ensures users always see the home screen when switching back to a tab.
+ *
+ * Only resets on actual tab switches — NOT when a parent stack screen (e.g. PlayerProfile)
+ * is pushed on top, which also triggers blur but should preserve the nested stack.
  */
 const resetStackOnBlur = ({
   navigation,
@@ -852,7 +856,13 @@ const resetStackOnBlur = ({
 }: BottomTabScreenProps<BottomTabParamList, TabName>) => ({
   blur: () => {
     const state = navigation.getState();
-    const tabRoute = state.routes.find(r => r.key === route.key);
+    const tabIndex = state.routes.findIndex(r => r.key === route.key);
+
+    // If this tab is still the active tab, blur was caused by a parent navigator
+    // pushing a screen (e.g. PlayerProfile) — don't reset the stack.
+    if (state.index === tabIndex) return;
+
+    const tabRoute = state.routes[tabIndex];
     if (tabRoute?.state && typeof tabRoute.state.index === 'number' && tabRoute.state.index > 0) {
       navigation.dispatch({
         ...StackActions.popToTop(),
@@ -1276,6 +1286,7 @@ export default function AppNavigator() {
         }}
       />
 
+      {/* My Bookings screens commented out for now
       <RootStack.Screen
         name="MyBookings"
         component={MyBookingsScreen}
@@ -1294,6 +1305,13 @@ export default function AppNavigator() {
           headerTitle: t('myBookings.detail.title'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
+      />
+      */}
+
+      <RootStack.Screen
+        name="InviteReferral"
+        component={InviteReferralScreen}
+        options={{ headerShown: false }}
       />
     </RootStack.Navigator>
   );

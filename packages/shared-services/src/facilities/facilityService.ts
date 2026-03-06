@@ -115,6 +115,7 @@ export async function getFacilityById(
       data_provider_id,
       external_provider_id,
       timezone,
+      is_first_come_first_serve,
       organization:organization_id (
         data_provider_id
       ),
@@ -203,6 +204,7 @@ export async function getFacilityById(
     external_provider_id: facility.external_provider_id,
     timezone: facility.timezone,
     sport_ids: [sportId],
+    is_first_come_first_serve: facility.is_first_come_first_serve ?? false,
   };
 }
 
@@ -368,7 +370,22 @@ export async function getFacilityWithDetails(
   // Handle any errors gracefully - return empty arrays
   const courts = courtsError ? [] : (courtsData as unknown as Court[]) || [];
   const contacts = contactsError ? [] : (contactsData as FacilityContact[]) || [];
-  const images = imagesError || !imagesData ? [] : (imagesData as FacilityImage[]);
+  // Rewrite image URLs using the client's Supabase URL so they resolve correctly
+  // regardless of which host stored them (e.g. 127.0.0.1 vs LAN IP)
+  const images =
+    imagesError || !imagesData
+      ? []
+      : (imagesData as FacilityImage[]).map(img => {
+          if (img.storage_key) {
+            const bucketId = 'facility-images';
+            const path = img.storage_key.startsWith(`${bucketId}/`)
+              ? img.storage_key.slice(bucketId.length + 1)
+              : img.storage_key;
+            const { data } = supabase.storage.from(bucketId).getPublicUrl(path);
+            return { ...img, url: data.publicUrl };
+          }
+          return img;
+        });
 
   return {
     ...facilitySearchResult,

@@ -20,6 +20,7 @@ import { MatchTypeActionSheet } from '../features/matches/components/MatchTypeMo
 import { ScoreConfirmationActionSheet } from '../features/matches/components/ScoreConfirmationModal';
 import { RegisterMatchScoreActionSheet } from '../features/matches/components/RegisterMatchScoreSheet';
 import { CourtSelectionActionSheet } from '../features/matches/components/CourtSelectionSheet';
+import { ReportIssueActionSheet } from '../features/matches/components/feedback-steps/ReportIssueSheet';
 // Facilities components
 import { ExternalBookingActionSheet } from '../features/facilities/components/ExternalBookingSheet';
 import { CourtBookingActionSheet } from '../features/facilities/components/CourtBookingSheet';
@@ -272,6 +273,16 @@ declare module 'react-native-actions-sheet' {
         timeLabel: string;
         onSelect?: (court: unknown) => void;
         onCancel?: () => void;
+      };
+    }>;
+    'report-issue': SheetDefinition<{
+      payload: {
+        opponentName: string;
+        onSubmit?: (
+          reason: import('@rallia/shared-types').MatchReportReasonEnum,
+          details?: string
+        ) => void;
+        isSubmitting?: boolean;
       };
     }>;
     'external-booking': SheetDefinition<{
@@ -557,6 +568,7 @@ export const Sheets = () => {
         'score-confirmation': ScoreConfirmationActionSheet,
         'register-match-score': RegisterMatchScoreActionSheet,
         'court-selection': CourtSelectionActionSheet,
+        'report-issue': ReportIssueActionSheet,
         'external-booking': ExternalBookingActionSheet,
         'court-booking': CourtBookingActionSheet,
         'image-picker': ImagePickerActionSheet,

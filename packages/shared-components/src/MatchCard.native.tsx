@@ -3,7 +3,7 @@
  *
  * A high-energy, athletic card design with:
  * - Three-tier visual hierarchy based on match desirability:
- *   - Most Wanted: Court booked + high reputation creator (90%+) → gold/amber with animated glow
+ *   - Must-Play: Court booked + high reputation creator (90%+) → gold/amber with animated glow
  *   - Ready to Play: Court booked only → secondary/coral tones
  *   - Regular: Default → primary/teal tones
  * - Color bleed effect from accent strip
@@ -14,6 +14,7 @@
 
 import React, { useMemo, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, Animated, Easing } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from './foundation/Text.native';
 import {
@@ -37,38 +38,15 @@ import {
   formatIntuitiveDateInTimezone,
   getProfilePictureUrl,
   deriveMatchStatus,
+  lightHaptic,
+  type MatchTier,
+  getMatchTier,
 } from '@rallia/shared-utils';
 import { TranslationKey } from '@rallia/shared-translations';
 
 // =============================================================================
 // TIER-BASED GRADIENT PALETTES (using design system tokens)
 // =============================================================================
-
-/**
- * Match tier determines visual styling based on desirability:
- * - mostWanted: Court booked + high reputation creator (90%+) → accent/gold
- * - readyToPlay: Court booked only → secondary/coral
- * - regular: Default → primary/teal
- * - expired: Match started but not full (disabled appearance) → neutral/gray
- */
-type MatchTier = 'mostWanted' | 'readyToPlay' | 'regular' | 'expired';
-
-/**
- * Threshold for "high reputation" creator (percentage 0-100)
- */
-const HIGH_REPUTATION_THRESHOLD = 90;
-
-/**
- * Determine match tier based on court status and creator reputation
- */
-function getMatchTier(courtStatus: string | null, creatorReputationScore?: number): MatchTier {
-  const isCourtBooked = courtStatus === 'reserved';
-  const isHighReputation = (creatorReputationScore ?? 0) >= HIGH_REPUTATION_THRESHOLD;
-
-  if (isCourtBooked && isHighReputation) return 'mostWanted';
-  if (isCourtBooked) return 'readyToPlay';
-  return 'regular';
-}
 
 /**
  * Tier-based color palettes for accent strips and backgrounds
@@ -80,8 +58,34 @@ function getMatchTier(courtStatus: string | null, creatorReputationScore?: numbe
  * - regular: primary (teal) - standard matches
  */
 const TIER_PALETTES = {
-  // Most Wanted - accent gradient strip, primary background
+  // Must-Play - accent gradient strip (richest shade), primary background
   mostWanted: {
+    light: {
+      background: primary[50],
+      accentStart: accent[700],
+      accentEnd: accent[600],
+    },
+    dark: {
+      background: primary[950],
+      accentStart: accent[600],
+      accentEnd: accent[500],
+    },
+  },
+  // Ready to Play - accent gradient strip (medium shade), primary background
+  readyToPlay: {
+    light: {
+      background: primary[50],
+      accentStart: accent[600],
+      accentEnd: accent[500],
+    },
+    dark: {
+      background: primary[950],
+      accentStart: accent[500],
+      accentEnd: accent[400],
+    },
+  },
+  // Top Player - accent gradient strip (lightest shade), primary background
+  topPlayer: {
     light: {
       background: primary[50],
       accentStart: accent[500],
@@ -91,19 +95,6 @@ const TIER_PALETTES = {
       background: primary[950],
       accentStart: accent[400],
       accentEnd: accent[300],
-    },
-  },
-  // Ready to Play - secondary gradient strip, primary background
-  readyToPlay: {
-    light: {
-      background: primary[50],
-      accentStart: secondary[500],
-      accentEnd: secondary[400],
-    },
-    dark: {
-      background: primary[950],
-      accentStart: secondary[400],
-      accentEnd: secondary[300],
     },
   },
   // Regular - primary palette
@@ -361,6 +352,8 @@ interface PlayerSlotsProps {
   t: (key: TranslationKey, options?: TranslationOptions) => string;
   /** Current user's player ID to check if they're invited */
   currentPlayerId?: string;
+  /** Match tier for tier-aware avatar border coloring */
+  tier: MatchTier;
 }
 
 /**
@@ -373,7 +366,18 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({
   isDark,
   t,
   currentPlayerId,
+  tier,
 }) => {
+  // Tier-aware avatar border color
+  const avatarBorderColor = (() => {
+    switch (tier) {
+      case 'expired':
+        return isDark ? neutral[500] : neutral[400];
+      default:
+        return isDark ? primary[400] : primary[500];
+    }
+  })();
+
   // Only include joined participants
   const joinedParticipants = match.participants?.filter(p => p.status === 'joined') ?? [];
 
@@ -432,13 +436,6 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({
     });
   }
 
-  const spotsText =
-    participantInfo.spotsLeft === 0
-      ? t('match.slots.full')
-      : participantInfo.spotsLeft === 1
-        ? t('match.slots.oneLeft')
-        : t('match.slots.left', { count: participantInfo.spotsLeft });
-
   return (
     <View style={styles.slotsContainer}>
       <View style={styles.slotsRow}>
@@ -453,9 +450,9 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({
                       backgroundColor: slot.avatarUrl
                         ? colors.tierAccent
                         : colors.avatarPlaceholder,
-                      borderWidth: 2.5,
-                      borderColor: colors.tierAccent,
-                      shadowColor: colors.tierAccent,
+                      borderWidth: 2,
+                      borderColor: avatarBorderColor,
+                      shadowColor: avatarBorderColor,
                       shadowOffset: { width: 0, height: 2 },
                       shadowOpacity: 0.3,
                       shadowRadius: 4,
@@ -464,12 +461,8 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({
                   : {
                       backgroundColor: colors.slotEmpty,
                       borderWidth: 2,
+                      borderStyle: 'dashed',
                       borderColor: colors.slotEmptyBorder,
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.1,
-                      shadowRadius: 2,
-                      elevation: 1,
                     },
               ]}
             >
@@ -477,28 +470,29 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({
                 slot.avatarUrl ? (
                   <Image source={{ uri: slot.avatarUrl }} style={styles.slotAvatar} />
                 ) : (
-                  <Ionicons name="person" size={14} color={isDark ? neutral[400] : neutral[500]} />
+                  <Ionicons
+                    name="person-outline"
+                    size={14}
+                    color={isDark ? neutral[400] : neutral[500]}
+                  />
                 )
               ) : (
-                <Ionicons name="add" size={16} color={colors.slotEmptyBorder} />
+                <Ionicons name="add-outline" size={16} color={colors.slotEmptyBorder} />
               )}
             </View>
             {slot.isHost && (
-              <View style={[styles.hostIndicator, { backgroundColor: colors.tierAccent }]}>
-                <Ionicons name="star" size={6} color={base.white} />
+              <View
+                style={[
+                  styles.hostIndicator,
+                  { backgroundColor: isDark ? primary[400] : primary[500] },
+                ]}
+              >
+                <Ionicons name="star" size={8} color={base.white} />
               </View>
             )}
           </View>
         ))}
       </View>
-      <Text
-        size="xs"
-        weight="medium"
-        color={participantInfo.spotsLeft > 0 ? colors.primary : colors.textMuted}
-        style={styles.spotsText}
-      >
-        {spotsText}
-      </Text>
       {/* Invited indicator for players with pending status */}
       {isInvited && (
         <View
@@ -669,11 +663,22 @@ const CardFooter: React.FC<CardFooterProps> = ({
       )
     : undefined;
   const playerHasCompletedFeedback = currentPlayerParticipant?.feedback_completed ?? false;
+  const hasScore = !!match.result;
+
+  // Check if the current player still needs to confirm/dispute the score
+  // (score exists but not verified/disputed, player hasn't responded yet, player isn't the submitter)
+  const scoreNeedsPlayerConfirmation =
+    hasScore &&
+    !match.result?.is_verified &&
+    !match.result?.disputed &&
+    match.result?.submitted_by !== currentPlayerId &&
+    !match.result?.confirmations?.some(c => c.player_id === currentPlayerId);
+
   const playerNeedsFeedback =
     hasMatchEnded &&
     isWithinFeedbackWindow &&
     currentPlayerParticipant &&
-    !playerHasCompletedFeedback;
+    (!playerHasCompletedFeedback || !hasScore || scoreNeedsPlayerConfirmation);
 
   // Check-in window status (10 min before start until end, only for full games)
   const isWithinCheckInWindow = getCheckInWindowStatus(
@@ -736,11 +741,33 @@ const CardFooter: React.FC<CardFooterProps> = ({
     ctaDisabled = true;
     ctaIcon = 'checkmark-circle';
   } else if (playerNeedsFeedback) {
-    // Feedback CTA (when match ended and player needs feedback)
-    ctaLabel = t('matchDetail.provideFeedback');
+    // Feedback CTA - label and icon vary based on what's still needed
+    const needsFeedback = !playerHasCompletedFeedback;
+    const needsScore = !hasScore;
+    const needsScoreConfirmation = !!scoreNeedsPlayerConfirmation;
+    if (needsFeedback && needsScore) {
+      // No score submitted yet → need both feedback and score
+      ctaLabel = t('matchDetail.provideFeedback');
+      ctaIcon = 'star-outline';
+    } else if (needsFeedback && needsScoreConfirmation) {
+      // Score submitted by someone else, needs confirmation + feedback
+      ctaLabel = t('matchDetail.provideFeedbackAndConfirm' as TranslationKey);
+      ctaIcon = 'star-outline';
+    } else if (needsFeedback) {
+      // Score is settled, just needs feedback
+      ctaLabel = t('matchDetail.provideFeedbackOnly');
+      ctaIcon = 'chatbubble-ellipses-outline';
+    } else if (needsScoreConfirmation) {
+      // Feedback done, but score needs confirmation
+      ctaLabel = t('matchDetail.confirmScore');
+      ctaIcon = 'checkmark-circle-outline';
+    } else {
+      // Feedback done, no score submitted yet → need to register score
+      ctaLabel = t('matchDetail.provideScoreOnly');
+      ctaIcon = 'trophy-outline';
+    }
     ctaBgColor = ctaPositive;
     ctaTextColor = base.white;
-    ctaIcon = 'star-outline';
   } else if (isCancelled) {
     // Match is cancelled → Cancelled (danger red, disabled)
     ctaLabel = t('match.cta.cancelled');
@@ -749,36 +776,36 @@ const CardFooter: React.FC<CardFooterProps> = ({
     ctaDisabled = true;
     ctaIcon = 'close-circle-outline';
   } else if (hasResult) {
-    // Match with results → View Results (neutral)
+    // Match with results → View Results (primary tint)
     ctaLabel = t('match.cta.viewResults');
-    ctaBgColor = ctaNeutralBg;
-    ctaTextColor = ctaNeutralText;
-    ctaIcon = 'eye-outline';
+    ctaBgColor = `${ctaPositive}${isDark ? '30' : '15'}`;
+    ctaTextColor = ctaPositive;
+    ctaIcon = 'trophy-outline';
   } else if (hasMatchStarted) {
-    // Match has started but no results yet → View (neutral, no actions allowed)
+    // Match has started but no results yet → View (primary tint)
     ctaLabel = t('match.cta.view');
-    ctaBgColor = ctaNeutralBg;
-    ctaTextColor = ctaNeutralText;
+    ctaBgColor = `${ctaPositive}${isDark ? '30' : '15'}`;
+    ctaTextColor = ctaPositive;
     ctaIcon = 'eye-outline';
   } else if (isOwner) {
     // Owner (match not ended) → Edit
     ctaLabel = t('match.cta.edit');
-    ctaBgColor = ctaNeutralBg;
-    ctaTextColor = ctaNeutralText;
+    ctaBgColor = `${ctaPositive}${isDark ? '30' : '15'}`;
+    ctaTextColor = ctaPositive;
     ctaIcon = 'create-outline';
-  } else if (isWaitlisted) {
-    // On Waitlist → info/blue style to match the waitlisted banner in MatchDetailSheet
+  } else if (isWaitlisted && isFull) {
+    // On Waitlist (match still full) → info/blue style to match the waitlisted banner in MatchDetailSheet
     ctaLabel = t('match.cta.waitlisted');
     ctaBgColor = `${status.info.DEFAULT}15`;
     ctaTextColor = status.info.DEFAULT;
     ctaBorderColor = status.info.DEFAULT;
     ctaIcon = 'list-outline';
   } else if (hasJoined) {
-    // Leave → danger red
-    ctaLabel = t('match.cta.leave');
-    ctaBgColor = ctaDestructive;
-    ctaTextColor = base.white;
-    ctaIcon = 'log-out-outline';
+    // Joined → subtle primary tint to encourage staying (leave is available in detail sheet)
+    ctaLabel = t('match.cta.view');
+    ctaBgColor = `${ctaPositive}${isDark ? '30' : '15'}`;
+    ctaTextColor = ctaPositive;
+    ctaIcon = 'eye-outline';
   } else if (hasPendingRequest) {
     // Pending → warning/amber style to match the pending approval banner in MatchDetailSheet
     ctaLabel = t('match.cta.pending');
@@ -813,27 +840,70 @@ const CardFooter: React.FC<CardFooterProps> = ({
     ctaIcon = 'add-circle-outline';
   }
 
+  // CTA mount bounce for actionable states (Join, Check-in, Feedback, etc.)
+  const ctaScaleAnimation = useMemo(() => new Animated.Value(1), []);
+  const isActionableCta = !ctaDisabled && ctaBgColor === ctaPositive;
+
+  useEffect(() => {
+    if (isActionableCta) {
+      ctaScaleAnimation.setValue(0.92);
+      Animated.spring(ctaScaleAnimation, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 12,
+        bounciness: 8,
+      }).start();
+    } else {
+      ctaScaleAnimation.setValue(1);
+    }
+  }, [isActionableCta, ctaScaleAnimation]);
+
+  const handleCtaPressIn = () => {
+    Animated.spring(ctaScaleAnimation, {
+      toValue: 0.95,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 0,
+    }).start();
+  };
+
+  const handleCtaPressOut = () => {
+    Animated.spring(ctaScaleAnimation, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 4,
+    }).start();
+  };
+
   return (
     <View style={[styles.footer, { borderTopColor: colors.border }]}>
-      {/* CTA Button */}
-      <TouchableOpacity
-        style={[
-          styles.ctaButton,
-          { backgroundColor: ctaBgColor },
-          ctaBorderColor && { borderWidth: 1, borderColor: ctaBorderColor },
-          ctaDisabled && styles.ctaButtonDisabled,
-        ]}
-        onPress={onPress}
-        activeOpacity={ctaDisabled ? 1 : 0.8}
-        disabled={ctaDisabled}
-      >
-        {ctaIcon && (
-          <Ionicons name={ctaIcon} size={14} color={ctaTextColor} style={styles.ctaIconLeft} />
-        )}
-        <Text size="sm" weight="bold" color={ctaTextColor}>
-          {ctaLabel}
-        </Text>
-      </TouchableOpacity>
+      {/* CTA Button with bounce animation for actionable states */}
+      <Animated.View style={{ flex: 1, transform: [{ scale: ctaScaleAnimation }] }}>
+        <TouchableOpacity
+          style={[
+            styles.ctaButton,
+            { backgroundColor: ctaBgColor },
+            ctaBorderColor && { borderWidth: 1, borderColor: ctaBorderColor },
+            ctaDisabled && styles.ctaButtonDisabled,
+          ]}
+          onPress={() => {
+            lightHaptic();
+            onPress?.();
+          }}
+          onPressIn={handleCtaPressIn}
+          onPressOut={handleCtaPressOut}
+          activeOpacity={1}
+          disabled={ctaDisabled}
+        >
+          {ctaIcon && (
+            <Ionicons name={ctaIcon} size={14} color={ctaTextColor} style={styles.ctaIconLeft} />
+          )}
+          <Text size="sm" weight="bold" color={ctaTextColor}>
+            {ctaLabel}
+          </Text>
+        </TouchableOpacity>
+      </Animated.View>
     </View>
   );
 };
@@ -872,14 +942,43 @@ const MatchCard: React.FC<MatchCardProps> = ({
 
   // Determine match tier based on court status and creator reputation
   // Override with 'expired' tier if match is expired
-  const creatorReputationScore = match.created_by_player?.player_reputation?.reputation_score;
-  const baseTier = getMatchTier(match.court_status, creatorReputationScore);
+  // Build participant list for tier calculation: all joined participants
+  const joinedForTier = match.participants?.filter(p => p.status === 'joined') ?? [];
+  const participants = joinedForTier.map(p => ({
+    repScore: p.player?.player_reputation?.reputation_score,
+    certStatus: (p.player as unknown as Record<string, unknown>)?.sportCertificationStatus as
+      | string
+      | undefined,
+  }));
+  const baseTier = getMatchTier(match.court_status, participants, match.format);
   const tier: MatchTier = isExpired ? 'expired' : baseTier;
   const isMostWanted = tier === 'mostWanted';
   const isReadyToPlay = tier === 'readyToPlay';
+  const isTopPlayer = tier === 'topPlayer';
 
   // Animated pulse effect for urgent matches
   const urgentPulseAnimation = useMemo(() => new Animated.Value(0), []);
+
+  // Card press animation - scale down for premium tactile feel
+  const cardScaleAnimation = useMemo(() => new Animated.Value(1), []);
+
+  const handlePressIn = () => {
+    Animated.spring(cardScaleAnimation, {
+      toValue: 0.975,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 0,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(cardScaleAnimation, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 4,
+    }).start();
+  };
 
   // Theme colors with tier-aware accent colors
   const themeColors = isDark ? darkTheme : lightTheme;
@@ -911,7 +1010,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
       secondary: isDark ? secondary[400] : secondary[500],
       secondaryLight: isDark ? secondary[900] : secondary[50],
       slotEmpty: isDark ? neutral[800] : neutral[100],
-      slotEmptyBorder: isDark ? neutral[500] : neutral[400], // Better contrast for empty slots
+      slotEmptyBorder: isDark ? neutral[600] : neutral[300],
       avatarPlaceholder: isDark ? neutral[700] : neutral[200],
       // Tier-aware accent colors for consistent theming
       tierAccent: tierAccentColors.accent,
@@ -983,39 +1082,36 @@ const MatchCard: React.FC<MatchCardProps> = ({
   }, [isOngoing, isStartingSoon, urgentPulseAnimation]);
 
   // "Live indicator" interpolations for ongoing matches
-  // Ring expands outward and fades
-  // const liveRingScale = urgentPulseAnimation.interpolate({
-  //   inputRange: [0, 1],
-  //   outputRange: [1, 2.5],
-  // });
+  // Ring expands outward and fades (toned down for polish)
+  const liveRingScale = urgentPulseAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.8],
+  });
 
-  // const liveRingOpacity = urgentPulseAnimation.interpolate({
-  //   inputRange: [0, 0.3, 1],
-  //   outputRange: [0.8, 0.4, 0],
-  // });
+  const liveRingOpacity = urgentPulseAnimation.interpolate({
+    inputRange: [0, 0.3, 1],
+    outputRange: [0.6, 0.3, 0],
+  });
 
   // Core dot has subtle glow pulse
-  // const liveDotOpacity = urgentPulseAnimation.interpolate({
-  //   inputRange: [0, 0.5, 1],
-  //   outputRange: [1, 0.7, 1],
-  // });
+  const liveDotOpacity = urgentPulseAnimation.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [1, 0.7, 1],
+  });
 
-  // "Starting soon" interpolations - subtle bouncing chevron
-  // const countdownBounce = urgentPulseAnimation.interpolate({
-  //   inputRange: [0, 0.5, 1],
-  //   outputRange: [0, 3, 0], // Subtle horizontal bounce
-  // });
-
-  // const countdownOpacity = urgentPulseAnimation.interpolate({
-  //   inputRange: [0, 0.5, 1],
-  //   outputRange: [0.6, 1, 0.6],
-  // });
+  // "Starting soon" interpolations - pulsing opacity on time icon
+  const countdownOpacity = urgentPulseAnimation.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0.5, 1, 0.5],
+  });
 
   // Cost display
   const costDisplay = match.is_court_free
     ? t('match.cost.free')
     : match.estimated_cost
-      ? `~$${Math.ceil(match.estimated_cost / participantInfo.total)}`
+      ? t('match.cost.perPlayer', {
+          amount: `$${Math.ceil(match.estimated_cost / participantInfo.total)}`,
+        })
       : null;
 
   // Build badges array (new order per spec)
@@ -1038,24 +1134,29 @@ const MatchCard: React.FC<MatchCardProps> = ({
     });
   }
 
-  // 2. Most Wanted Player badge (only for mostWanted tier)
+  // 2. Top Player + Court Booked badges (only in badge list for mostWanted,
+  //    since standalone tiers already show in the corner ribbon)
   if (tier === 'mostWanted') {
+    const topPlayerAccent = isDark ? accent[400] : accent[500];
+    const topPlayerChip = getChipColors(topPlayerAccent);
     badges.push({
-      key: 'mostWantedPlayer',
-      label: t('match.tier.mostWantedPlayer' as TranslationKey),
-      bgColor: chipColors.accent.bgColor,
-      textColor: chipColors.accent.textColor,
+      key: 'topPlayer',
+      label: t(
+        (match.format === 'doubles'
+          ? 'match.tier.topPlayerPlural'
+          : 'match.tier.topPlayer') as TranslationKey
+      ),
+      bgColor: topPlayerChip.bgColor,
+      textColor: topPlayerChip.textColor,
       icon: 'star',
     });
-  }
-
-  // 3. Court Booked badge (for mostWanted and readyToPlay)
-  if (tier === 'mostWanted' || tier === 'readyToPlay') {
+    const courtBookedAccent = isDark ? accent[500] : accent[600];
+    const courtBookedChip = getChipColors(courtBookedAccent);
     badges.push({
       key: 'courtBooked',
       label: t('match.courtStatus.courtBooked'),
-      bgColor: chipColors.accent.bgColor,
-      textColor: chipColors.accent.textColor,
+      bgColor: courtBookedChip.bgColor,
+      textColor: courtBookedChip.textColor,
       icon: 'checkmark-circle',
     });
   }
@@ -1085,29 +1186,41 @@ const MatchCard: React.FC<MatchCardProps> = ({
 
   // Get dynamic border color based on tier
   const tierPaletteColors = TIER_PALETTES[tier][isDark ? 'dark' : 'light'];
-  const dynamicBorderColor = isDark ? `${primary[400]}40` : `${primary[500]}20`;
+  const dynamicBorderColor = isExpired
+    ? isDark
+      ? `${neutral[500]}40`
+      : `${neutral[400]}20`
+    : isDark
+      ? `${primary[400]}40`
+      : `${primary[500]}20`;
 
-  // Tier ribbon badge config
+  // Tier ribbon badge config (3 accent shades: lightest → richest)
   const tierRibbon = isMostWanted
     ? {
         label: t('match.tier.mostWanted' as TranslationKey),
-        icon: 'star' as keyof typeof Ionicons.glyphMap,
-        bg: isDark ? accent[400] : accent[500],
+        bg: isDark ? accent[600] : accent[700],
       }
     : isReadyToPlay
       ? {
-          label: t('match.tier.readyToPlay' as TranslationKey),
-          icon: 'checkmark-circle' as keyof typeof Ionicons.glyphMap,
-          bg: isDark ? status.warning.light : status.warning.DEFAULT,
+          label: t('match.courtStatus.courtBooked'),
+          bg: isDark ? accent[500] : accent[600],
         }
-      : null;
+      : isTopPlayer
+        ? {
+            label: t(
+              (match.format === 'doubles'
+                ? 'match.tier.topPlayerPlural'
+                : 'match.tier.topPlayer') as TranslationKey
+            ),
+            bg: isDark ? accent[400] : accent[500],
+          }
+        : null;
 
   return (
-    <View>
+    <Animated.View style={{ transform: [{ scale: cardScaleAnimation }] }}>
       {/* Tier ribbon badge - outside TouchableOpacity to avoid overflow:hidden clipping */}
       {tierRibbon && (
         <View style={[styles.tierRibbon, { backgroundColor: tierRibbon.bg }]}>
-          <Ionicons name={tierRibbon.icon} size={10} color={base.white} style={styles.badgeIcon} />
           <Text size="xs" weight="bold" color={base.white}>
             {tierRibbon.label}
           </Text>
@@ -1119,13 +1232,17 @@ const MatchCard: React.FC<MatchCardProps> = ({
           {
             backgroundColor: tierPaletteColors.background,
             borderColor: dynamicBorderColor,
-            opacity: isExpired ? 0.7 : 1,
           },
         ]}
-        onPress={onPress}
-        activeOpacity={0.85}
+        onPress={() => {
+          lightHaptic();
+          onPress?.();
+        }}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        activeOpacity={1}
         accessibilityRole="button"
-        accessibilityLabel={`Match ${timeLabel} at ${locationDisplay}${isMostWanted ? ' - Most Wanted' : ''}`}
+        accessibilityLabel={`Match ${timeLabel} at ${locationDisplay}${isMostWanted ? ' - Must-Play' : isTopPlayer ? (match.format === 'doubles' ? ' - Coveted Players' : ' - Coveted Player') : isReadyToPlay ? ' - Court Booked' : ''}`}
       >
         {/* Sport watermark background */}
         {sportIcon && (
@@ -1139,8 +1256,8 @@ const MatchCard: React.FC<MatchCardProps> = ({
           {/* Time & Status row */}
           <View style={styles.topRow}>
             <View style={styles.timeContainer}>
-              {/* "Live" indicator for ongoing matches (not shown when expired) */}
-              {/* {isOngoing && !isExpired && (
+              {/* Animated indicators replace static icons for live/starting-soon states */}
+              {isOngoing && !isExpired ? (
                 <View style={styles.liveIndicatorContainer}>
                   <Animated.View
                     style={[
@@ -1162,42 +1279,17 @@ const MatchCard: React.FC<MatchCardProps> = ({
                     ]}
                   />
                 </View>
-              )} */}
-              {/* Bouncing chevron for starting soon (not shown when expired) */}
-              {/* {isStartingSoon && !isExpired && (
-                <Animated.View
-                  style={[
-                    styles.countdownIndicator,
-                    {
-                      transform: [{ translateX: countdownBounce }],
-                      opacity: countdownOpacity,
-                    },
-                  ]}
-                >
-                  <Ionicons name="chevron-forward" size={14} color={soonColor} />
+              ) : isStartingSoon && !isExpired ? (
+                <Animated.View style={{ opacity: countdownOpacity }}>
+                  <Ionicons name="time" size={16} color={soonColor} />
                 </Animated.View>
-              )} */}
-              <Ionicons
-                name={
-                  isExpired
-                    ? 'close-circle-outline'
-                    : isOngoing
-                      ? 'radio'
-                      : isStartingSoon
-                        ? 'time'
-                        : 'calendar-outline'
-                }
-                size={16}
-                color={
-                  isExpired
-                    ? colors.textMuted
-                    : isOngoing
-                      ? liveColor
-                      : isStartingSoon
-                        ? soonColor
-                        : colors.tierAccent
-                }
-              />
+              ) : (
+                <Ionicons
+                  name={isExpired ? 'close-circle-outline' : 'calendar-outline'}
+                  size={16}
+                  color={isExpired ? colors.textMuted : colors.tierAccent}
+                />
+              )}
               <Text
                 size="base"
                 weight="bold"
@@ -1236,11 +1328,18 @@ const MatchCard: React.FC<MatchCardProps> = ({
             isDark={isDark}
             t={t}
             currentPlayerId={currentPlayerId}
+            tier={tier}
           />
 
-          {/* Badges row */}
+          {/* Badges row - horizontal scroll for consistent card height */}
           {badges.length > 0 && (
-            <View style={styles.badgesContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              nestedScrollEnabled
+              style={styles.badgesScroll}
+              contentContainerStyle={styles.badgesContentContainer}
+            >
               {badges.map(badge => (
                 <Badge
                   key={badge.key}
@@ -1250,7 +1349,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
                   icon={badge.icon}
                 />
               ))}
-            </View>
+            </ScrollView>
           )}
 
           {/* Footer with CTA */}
@@ -1264,8 +1363,41 @@ const MatchCard: React.FC<MatchCardProps> = ({
             currentPlayerId={currentPlayerId}
           />
         </View>
+
+        {/* Scrim + banner AFTER content so they render on top in the paint order */}
+        {isExpired && (
+          <View
+            style={[
+              styles.expiredScrim,
+              { backgroundColor: isDark ? 'rgba(0, 0, 0, 0.25)' : 'rgba(255, 255, 255, 0.45)' },
+            ]}
+            pointerEvents="none"
+          />
+        )}
+        {isExpired && (
+          <View style={styles.expiredBannerContainer} pointerEvents="none">
+            <View
+              style={[
+                styles.expiredBanner,
+                {
+                  backgroundColor: isDark ? `${status.error.light}E0` : `${status.error.DEFAULT}E0`,
+                },
+              ]}
+            >
+              <Ionicons
+                name="close-circle"
+                size={14}
+                color={base.white}
+                style={styles.expiredBannerIcon}
+              />
+              <Text size="sm" weight="bold" color={base.white}>
+                {t('match.status.unfilled')}
+              </Text>
+            </View>
+          </View>
+        )}
       </TouchableOpacity>
-    </View>
+    </Animated.View>
   );
 };
 
@@ -1304,6 +1436,35 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
+  },
+
+  // Semi-transparent scrim to dim card content for expired matches
+  expiredScrim: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 10,
+  },
+
+  // Expired pill banner
+  expiredBannerContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 11,
+  },
+  expiredBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[2],
+    borderRadius: radiusPixels.full,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  expiredBannerIcon: {
+    marginRight: spacingPixels[1],
   },
 
   // Sport watermark
@@ -1377,11 +1538,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  // "Starting soon" countdown indicator
-  countdownIndicator: {
-    marginRight: spacingPixels[0.5],
-  },
-
   // Status badge
   statusBadge: {
     paddingHorizontal: spacingPixels[2.5],
@@ -1437,17 +1593,12 @@ const styles = StyleSheet.create({
     borderRadius: 7,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: base.white,
     zIndex: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3,
     elevation: 4,
-  },
-  spotsText: {
-    marginLeft: spacingPixels[2],
   },
   invitedBadge: {
     flexDirection: 'row',
@@ -1463,11 +1614,12 @@ const styles = StyleSheet.create({
   },
 
   // Badges
-  badgesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacingPixels[1.5],
+  badgesScroll: {
     marginBottom: spacingPixels[3],
+  },
+  badgesContentContainer: {
+    flexDirection: 'row',
+    gap: spacingPixels[1.5],
   },
   badge: {
     flexDirection: 'row',
@@ -1475,12 +1627,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[2.5],
     paddingVertical: spacingPixels[1],
     borderRadius: radiusPixels.full,
-    // Subtle shadow for badge depth
+    // iOS-only subtle shadow for badge depth
+    // Note: elevation is omitted because Android renders a gray background
+    // behind semi-transparent badge colors when elevation is set
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 2,
-    elevation: 1,
   },
   badgeIcon: {
     marginRight: spacingPixels[1],

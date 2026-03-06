@@ -6,49 +6,21 @@
  */
 
 import { useState, useCallback, useMemo } from 'react';
+import type { UpcomingMatchFilter, PastMatchFilter, PlayerMatchFilter } from '@rallia/shared-types';
 
-/**
- * Available filter values for upcoming matches
- */
-export type UpcomingMatchFilter =
-  | 'all'
-  | 'hosting'
-  | 'confirmed'
-  | 'pending'
-  | 'requested'
-  | 'waitlisted'
-  | 'needs_players'
-  | 'ready_to_play';
-
-/**
- * Available filter values for past matches
- */
-export type PastMatchFilter =
-  | 'all'
-  | 'feedback_needed'
-  | 'played'
-  | 'hosted'
-  | 'as_participant'
-  | 'expired'
-  | 'cancelled';
-
-/**
- * Union type for all player match filters
- */
-export type PlayerMatchFilter = UpcomingMatchFilter | PastMatchFilter;
+// Re-export filter types for consumers that import from this hook
+export type { UpcomingMatchFilter, PastMatchFilter, PlayerMatchFilter };
 
 /**
  * All available upcoming filter options (for UI iteration)
  */
 export const UPCOMING_FILTER_OPTIONS: UpcomingMatchFilter[] = [
   'all',
-  'hosting',
   'confirmed',
-  'pending',
-  'requested',
-  'waitlisted',
+  'hosting',
   'needs_players',
-  'ready_to_play',
+  'waiting',
+  'private',
 ];
 
 /**
@@ -57,11 +29,11 @@ export const UPCOMING_FILTER_OPTIONS: UpcomingMatchFilter[] = [
 export const PAST_FILTER_OPTIONS: PastMatchFilter[] = [
   'all',
   'feedback_needed',
-  'played',
+  'completed',
   'hosted',
-  'as_participant',
-  'expired',
   'cancelled',
+  'unfilled',
+  'private',
 ];
 
 /**

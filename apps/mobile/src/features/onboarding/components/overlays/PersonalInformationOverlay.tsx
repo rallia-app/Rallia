@@ -582,7 +582,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
             <DateTimePicker
               value={dateOfBirth || new Date(2000, 0, 1)}
               mode="date"
-              display="default"
+              display="spinner"
               onChange={handleDateChange}
               maximumDate={new Date()}
               minimumDate={new Date(1900, 0, 1)}

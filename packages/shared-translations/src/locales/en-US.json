@@ -209,7 +209,7 @@
     "messages": {
       "match_invitation": {
         "title": "Game On!",
-        "body": "{playerName} wants to play {sportName} with you on {matchDate}{startTime} at {locationName}"
+        "body": "{playerName} wants to play {sportName} with you on {matchDate}{startTime}{locationName}"
       },
       "match_join_request": {
         "title": "New Player Request",
@@ -289,16 +289,16 @@
         "body": "We have an update for you. Tap to learn more."
       },
       "feedback_request": {
-        "title": "How Was Your Game?",
-        "body": "Rate your {sportName} game with {opponentNames}. Your feedback helps the community!"
+        "title": "How was your game?",
+        "body": "Submit your score and rate your {sportName} match with {opponentNames} while it's fresh!"
       },
       "feedback_reminder": {
-        "title": "Rate Your Game",
-        "body": "Feedback for your {sportName} game with {opponentNames} closes in 24 hours. Don't miss it!"
+        "title": "You have a match to close out",
+        "body": "Your {sportName} score and rating with {opponentNames} are still pending — complete them before the window closes."
       },
       "score_confirmation": {
         "title": "Confirm Game Score",
-        "body": "Please confirm the final score for your {sportName} game on {matchDate}."
+        "body": "{playerName} submitted a score for your {sportName} game. Please confirm or dispute."
       }
     }
   },
@@ -1421,6 +1421,10 @@
     "cancelInviteConfirmTitle": "Cancel Invitation?",
     "cancelInviteConfirmMessage": "This will revoke the invitation. The player will no longer be able to join through this invite.",
     "cancelInviteSuccess": "Invitation cancelled",
+    "declineInvite": "Decline",
+    "declineInviteConfirmTitle": "Decline Invitation?",
+    "declineInviteConfirmMessage": "You won't be able to join this game through this invitation.",
+    "declineInviteSuccess": "Invitation declined",
     "resendInviteSuccess": "Invitation resent",
     "showMoreInvitations": "+{count} more invitations",
     "participantStatus": {
@@ -2314,7 +2318,8 @@
       "completed": "Completed",
       "cancelled": "Cancelled",
       "confirmed": "Confirmed",
-      "inProgress": "In Progress"
+      "inProgress": "In Progress",
+      "unfilled": "Unfilled"
     },
     "participantStatus": {
       "pending": "Pending",
@@ -2338,7 +2343,7 @@
     },
     "cost": {
       "free": "Free",
-      "perPlayer": "{amount}/player"
+      "perPlayer": "~{amount}/player"
     },
     "participants": "{count} players",
     "participantsNeeded": "{count} needed",
@@ -2369,9 +2374,10 @@
       "courtBooked": "Court Booked"
     },
     "tier": {
-      "mostWanted": "Most Wanted",
+      "mostWanted": "Must-Play",
       "readyToPlay": "Ready to Play",
-      "mostWantedPlayer": "Top Player"
+      "topPlayer": "Coveted Player",
+      "topPlayerPlural": "Coveted Players"
     },
     "cta": {
       "join": "Join game",
@@ -2391,12 +2397,14 @@
   },
   "matchDetail": {
     "title": "Game details",
+    "preferences": "Preferences",
+    "chat": "Chat",
     "host": "Host",
     "hostedBy": "Hosted by",
     "participants": "Players",
     "openSpots": "Open spots",
     "court": "Court",
-    "estimatedCost": "Estimated cost",
+    "estimatedCost": "Court Cost",
     "courtEstimatedCost": "Court estimated cost",
     "notes": "Notes",
     "joinNow": "Join game",
@@ -2404,7 +2412,10 @@
     "matchEnded": "This game has ended",
     "matchCompleted": "This game is completed",
     "matchClosed": "This game is closed",
-    "provideFeedback": "Feedback",
+    "provideFeedback": "Feedback & Score",
+    "provideFeedbackAndConfirm": "Feedback & Confirm",
+    "provideFeedbackOnly": "Give feedback",
+    "provideScoreOnly": "Save score",
     "checkIn": "Check in",
     "checkedIn": "Checked in",
     "checkInSuccess": "You have successfully checked in!",
@@ -2429,6 +2440,10 @@
     "away": "away",
     "free": "Free",
     "perPerson": "per person",
+    "totalCost": "Court cost",
+    "perPlayerCostOrganizer": "They owe you",
+    "perPlayerCostOrganizerDoubles": "Per player",
+    "perPlayerCostPlayer": "You owe",
     "location": "Location",
     "locationTBD": "Location TBD",
     "open": "Open",
@@ -2445,7 +2460,43 @@
     "opponent": "Opponent",
     "scoreVerified": "Score verified",
     "scorePendingConfirmation": "Waiting for opponent to confirm",
-    "scoreDisputed": "Score disputed"
+    "scorePendingConfirmation_one": "Waiting for opponent to confirm",
+    "scorePendingConfirmation_other": "Waiting for opponents to confirm",
+    "scoreDisputed": "Score disputed",
+    "badgeInfoTitle": "Player Badges",
+    "badgeHost": "Host",
+    "badgeHostDesc": "The player who created this match",
+    "badgeHighReputation": "High Reputation",
+    "badgeHighReputationDesc": "Platinum-tier reputation (90%+)",
+    "badgeSelfDeclared": "Not Certified",
+    "badgeSelfDeclaredDesc": "Self-declared rating, not yet verified",
+    "badgeCertified": "Certified",
+    "badgeCertifiedDesc": "Rating certified by references or proofs",
+    "badgeDisputed": "Contested",
+    "badgeDisputedDesc": "Peer evaluations suggest a different level",
+    "badgeCheckedIn": "Checked In",
+    "badgeCheckedInDesc": "Player has confirmed their presence at the venue",
+    "confirmScore": "Confirm Score",
+    "disputeScore": "Dispute",
+    "disputeConfirmTitle": "Dispute Score?",
+    "disputeConfirmMessage": "Are you sure you want to dispute this score? This action cannot be undone.",
+    "scoreConfirmed": "Score confirmed successfully",
+    "scoreDisputedSuccess": "Score disputed. Contact your opponent to resolve.",
+    "confirmScoreError": "Failed to confirm score",
+    "scoreAlreadyProcessed": "This score has already been confirmed",
+    "disputeScoreError": "Failed to dispute score",
+    "dateAndTime": "Date & time",
+    "duration": "Duration",
+    "startTime": "Start",
+    "live": "Live",
+    "startingSoon": "Starting soon",
+    "startsIn": "Starts in {time}",
+    "invitedBanner": "You've been invited to this game",
+    "reliability": "Reliability",
+    "scoreConfirmProgress": "{confirmed}/{total} confirmed",
+    "scoreConfirmProgress_one": "{confirmed}/{total} player confirmed",
+    "scoreConfirmProgress_other": "{confirmed}/{total} players confirmed",
+    "yourScoreConfirmed": "Your confirmation received"
   },
   "registerMatchScore": {
     "title": "Register score",
@@ -2463,6 +2514,7 @@
     "team1Won": "Team 1 won",
     "team2Won": "Team 2 won",
     "sets": "Set scores",
+    "games": "Game scores",
     "teamYou": "You",
     "teamOpponent": "Opponent",
     "teamYourTeam": "Your team",
@@ -2470,15 +2522,23 @@
     "teamYouAndPartner": "You & {name}",
     "teamOpponentsNames": "{name1} & {name2}",
     "setN": "Set {number}",
+    "gameN": "Game {number}",
     "addSet": "Add set",
+    "addGame": "Add game",
     "removeSet": "Remove set",
+    "removeGame": "Remove game",
     "next": "Next",
     "submit": "Submit score",
+    "tennisScoreHint": "Games per set (typically 0–7)",
+    "pickleballScoreHint": "Points per game (typically to 11 or 15)",
     "error": {
       "enterScores": "Please enter at least one set score.",
+      "enterGames": "Please enter at least one game score.",
       "invalidParticipants": "This match does not have the right number of participants.",
       "noWinner": "Scores must determine a winner (one team must win more sets).",
-      "selectPartner": "Please select your partner."
+      "selectPartner": "Please select your partner.",
+      "tennisScoreRange": "Tennis set scores are typically 0–7.",
+      "pickleballScoreRange": "Pickleball game scores are typically 0–25."
     }
   },
   "matchFeedback": {
@@ -2490,7 +2550,8 @@
     },
     "matchContext": {
       "vsPlayer": "vs {name}",
-      "vsPlayers": "vs {names}"
+      "vsPlayers": "vs {names}",
+      "conjunction": "and"
     },
     "outcomeStep": {
       "title": "How did the match go?",
@@ -2545,7 +2606,8 @@
       "detailsPlaceholder": "Describe what happened...",
       "submit": "Submit Report",
       "success": "Report submitted"
-    }
+    },
+    "success": "Feedback submitted successfully!"
   },
   "addScore": {
     "title": "Add Score",
@@ -2712,6 +2774,47 @@
     "community": "Community",
     "communityDescription": "Public network for players"
   },
+  "referral": {
+    "wizardTitle": "Invite Players",
+    "step": "Step {current} of {total}",
+    "stepNames": {
+      "shareLink": "Share Link",
+      "inviteContacts": "Contacts"
+    },
+    "shareLinkDescription": "Share your personal referral link with friends to invite them to Rallia.",
+    "code": "Code",
+    "qrCode": "QR Code",
+    "yourCode": "Your Referral Code",
+    "scanToJoin": "Scan to join Rallia",
+    "generatingCode": "Generating your referral code...",
+    "shareInvite": "Share Invite",
+    "shareTitle": "Join me on Rallia!",
+    "shareMessage": "Hey! Join me on Rallia to find sports matches and play together! {link}",
+    "yourStats": "Your Referral Stats",
+    "clicked": "Clicked",
+    "signedUp": "Signed Up",
+    "haveReferralCode": "Have a referral code?",
+    "enterCode": "Enter referral code",
+    "codeApplied": "Referral code applied!",
+    "invalidCode": "Invalid referral code",
+    "welcomeTitle": "Welcome to Rallia!",
+    "welcomeDescription": "You've been invited to join Rallia. Setting things up for you...",
+    "contacts": {
+      "description": "Select contacts from your phone to invite them via SMS.",
+      "accessRequired": "Contacts Access Required",
+      "grantAccess": "Allow access to your contacts to invite friends to Rallia via SMS.",
+      "loading": "Loading contacts...",
+      "search": "Search contacts...",
+      "noResults": "No contacts found",
+      "noContacts": "No Contacts Available",
+      "noContactsDescription": "Your address book appears to be empty.",
+      "selectAtLeastOne": "Select at least one contact to invite",
+      "sendInvites": "Send Invites",
+      "invitesSent": "{count} invite(s) sent!",
+      "failedToLoad": "Failed to load contacts",
+      "failedToSend": "Failed to send invites"
+    }
+  },
   "matchCreation": {
     "title": "Create a game",
     "forSport": "Creating game for {sport}",
@@ -2815,9 +2918,11 @@
       "isCourtFreeNo": "No, there's a cost",
       "costSplitType": "Cost Split",
       "costSplitEqual": "Split Equally",
-      "costSplitEqualDescription": "Split cost equally among all players",
+      "costSplitEqualDescription": "Each player pays their share to the organizer",
+      "costSplitEqualDescriptionSingles": "Your opponent pays you half the court cost",
+      "costSplitEqualDescriptionDoubles": "Each player pays you their share of the court cost",
       "costSplitCreator": "Creator Pays",
-      "costSplitCreatorDescription": "You cover the full cost",
+      "costSplitCreatorDescription": "You cover the full court cost",
       "costSplitCustom": "Custom Split",
       "estimatedCost": "Estimated Cost",
       "estimatedCostTotal": "Total Cost",
@@ -2825,7 +2930,8 @@
       "estimatedCostTotalCreator": "How much will you pay?",
       "estimatedCostPlaceholder": "Enter amount",
       "estimatedCostPlaceholderTotal": "Enter total cost",
-      "estimatedCostHelper": "Per person: ~${amount} (estimated for {count} players)",
+      "estimatedCostHelperSingles": "Your opponent owes you ~${amount}",
+      "estimatedCostHelperDoubles": "Each player owes you ~${amount} ({count} players)",
       "visibility": "Visibility",
       "visibilityPublic": "Public",
       "visibilityPublicDescription": "Anyone can find and join",
@@ -2914,6 +3020,7 @@
       "courtBookedDescription": "The court is marked as booked for this game.",
       "availableSlots": "Available slots",
       "noSlotsAvailable": "No upcoming slots available",
+      "firstComeFirstServe": "First come, first served — no reservation",
       "loadingSlots": "Loading availability...",
       "tapToBook": "Tap a slot to book",
       "externalBooking": "You'll be redirected to the booking site",
@@ -2935,6 +3042,7 @@
       "searchError": "Couldn't search players",
       "noPlayersFound": "No players found",
       "noPlayersAvailable": "No players available",
+      "noPlayersAvailableDescription": "You can resend invitations to already invited players from the game details",
       "selectPlayers": "Select players to invite",
       "sendInvitations": "Send Invitations ({count})",
       "skip": "Skip",
@@ -3167,17 +3275,14 @@
       "all": "All",
       "hosting": "Hosting",
       "confirmed": "Confirmed",
-      "pending": "Pending",
-      "requested": "Requested",
-      "waitlisted": "Waitlisted",
-      "needsPlayers": "Needs Players",
-      "readyToPlay": "Ready",
+      "waiting": "Waiting",
+      "needsPlayers": "Open Spots",
       "feedbackNeeded": "Feedback",
-      "played": "Played",
+      "completed": "Completed",
       "hosted": "Hosted",
-      "asParticipant": "Joined",
-      "expired": "Expired",
-      "cancelled": "Cancelled"
+      "unfilled": "Unfilled",
+      "cancelled": "Cancelled",
+      "private": "Private"
     },
     "time": {
       "today": "Today",
@@ -3275,6 +3380,13 @@
         "all": "Any",
         "reserved": "Reserved",
         "to_reserve": "To book"
+      },
+      "tier": {
+        "label": "Tier",
+        "all": "All tiers",
+        "mostWanted": "Must-Play",
+        "covetedPlayers": "Coveted Players",
+        "courtBooked": "Court Booked"
       },
       "specificDate": {
         "label": "Date",
@@ -3600,6 +3712,7 @@
       "timezone": "Timezone",
       "description": "Description",
       "membershipRequired": "Membership Required",
+      "isFirstComeFirstServe": "First Come, First Served",
       "facilityType": "Facility Type",
       "dataProvider": "Data Provider",
       "externalProviderId": "External Provider ID",
@@ -3763,6 +3876,8 @@
       "externalProviderIdPlaceholder": "External ID from data provider (e.g., siteId)",
       "membershipRequiredLabel": "Membership Required",
       "membershipRequiredHint": "Require users to be members to book courts at this facility.",
+      "isFirstComeFirstServeLabel": "First Come, First Served",
+      "isFirstComeFirstServeHint": "No reservation required — courts are available on a walk-in basis.",
       "searchPlace": "Search Google Places",
       "searchPlaceHint": "Enter at least 3 characters and click the search button to auto-fill address fields.",
       "sportsLabel": "Sports",
@@ -6383,9 +6498,19 @@
     },
     "favorites": {
       "title": "Favorites",
+      "favorite": "Favorite",
       "addedToFavorites": "Added to favorites",
       "removedFromFavorites": "Removed from favorites",
       "maxReached": "Maximum 3 favorites reached"
+    },
+    "badges": {
+      "firstComeFirstServe": "No reservation needed",
+      "bookable": "Bookable",
+      "membershipRequired": "Membership required",
+      "courtCount": "{count} courts",
+      "courtCountSingular": "1 court",
+      "upcomingMatchCount": "{count} games",
+      "upcomingMatchCountSingular": "1 game"
     }
   },
   "facilityDetail": {
@@ -6437,6 +6562,7 @@
     "loadingAvailability": "Loading available time slots...",
     "courtsAvailable": "{count} courts available",
     "paymentsNotAvailable": "This facility hasn't set up online payments yet. Please contact them directly to book paid slots.",
+    "firstComeFirstServe": "This facility operates on a first-come, first-served basis — no reservation required.",
     "paidSlotsDisabled": "Some paid courts are unavailable for online booking. Contact the facility directly.",
     "contactFacilityToBook": "Contact facility to book",
     "unavailable": "Unavailable",

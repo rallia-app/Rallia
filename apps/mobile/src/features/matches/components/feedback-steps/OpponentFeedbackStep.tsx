@@ -5,13 +5,14 @@
  * Includes attendance toggle, late toggle, star rating, and comments.
  */
 
-import React, { useCallback, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import React, { useCallback } from 'react';
+import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
 import { lightHaptic, getProfilePictureUrl, successHaptic } from '@rallia/shared-utils';
+import { SheetManager } from 'react-native-actions-sheet';
 import { StarRating } from '../../../../components/StarRating';
 import type {
   OpponentForFeedback,
@@ -19,7 +20,6 @@ import type {
   MatchReportReasonEnum,
 } from '@rallia/shared-types';
 import type { TranslationKey } from '../../../../hooks/useTranslation';
-import { ReportIssueSheet } from './ReportIssueSheet';
 
 // =============================================================================
 // TYPES
@@ -143,31 +143,29 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
 }) => {
   const { showedUp, wasLate, starRating, comments } = feedback;
 
-  // Report sheet state
-  const [showReportSheet, setShowReportSheet] = useState(false);
-
-  // Handle report button press
-  const handleReportPress = useCallback(() => {
-    lightHaptic();
-    setShowReportSheet(true);
-  }, []);
-
-  // Handle report sheet close
-  const handleReportClose = useCallback(() => {
-    setShowReportSheet(false);
-  }, []);
-
-  // Handle report submission
+  // Handle report submission (called from action sheet via payload)
   const handleReportSubmit = useCallback(
     (reason: MatchReportReasonEnum, details?: string) => {
       if (onReportSubmit) {
         onReportSubmit(reason, details);
         successHaptic();
-        setShowReportSheet(false);
+        SheetManager.hide('report-issue');
       }
     },
     [onReportSubmit]
   );
+
+  // Handle report button press - opens the report action sheet on top
+  const handleReportPress = useCallback(() => {
+    lightHaptic();
+    SheetManager.show('report-issue', {
+      payload: {
+        opponentName: opponent.name,
+        onSubmit: handleReportSubmit,
+        isSubmitting: isSubmittingReport,
+      },
+    });
+  }, [opponent.name, handleReportSubmit, isSubmittingReport]);
 
   const handleShowedUpChange = useCallback(
     (value: boolean) => {
@@ -215,7 +213,7 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
   const avatarUrl = opponent.avatarUrl ? getProfilePictureUrl(opponent.avatarUrl) : null;
 
   return (
-    <ScrollView
+    <BottomSheetScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
@@ -228,7 +226,8 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
             styles.avatar,
             {
               backgroundColor: avatarUrl ? colors.buttonActive : colors.buttonInactive,
-              borderColor: colors.border,
+              borderWidth: 1.5,
+              borderColor: primary[500],
             },
           ]}
         >
@@ -323,34 +322,15 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
       </View>
 
       {/* Report Link */}
-      <TouchableOpacity
-        style={[styles.reportLink, !onReportSubmit && { opacity: 0.5 }]}
-        disabled={!onReportSubmit}
-        onPress={handleReportPress}
-        activeOpacity={0.7}
-      >
-        <Ionicons name="flag-outline" size={16} color={colors.textMuted} />
-        <Text size="sm" color={colors.textMuted}>
-          {t('matchFeedback.opponentStep.reportIssue')}
-        </Text>
-      </TouchableOpacity>
-
-      {/* Report Issue Sheet */}
       {onReportSubmit && (
-        <ReportIssueSheet
-          visible={showReportSheet}
-          opponentName={opponent.name}
-          onClose={handleReportClose}
-          onSubmit={handleReportSubmit}
-          isSubmitting={isSubmittingReport}
-          colors={{
-            ...colors,
-            background: colors.background || colors.cardBackground,
-          }}
-          t={t}
-        />
+        <TouchableOpacity style={styles.reportLink} onPress={handleReportPress} activeOpacity={0.7}>
+          <Ionicons name="flag-outline" size={16} color={colors.textMuted} />
+          <Text size="sm" color={colors.textMuted}>
+            {t('matchFeedback.opponentStep.reportIssue')}
+          </Text>
+        </TouchableOpacity>
       )}
-    </ScrollView>
+    </BottomSheetScrollView>
   );
 };
 
@@ -376,7 +356,6 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
     marginBottom: spacingPixels[3],
     overflow: 'hidden',
   },

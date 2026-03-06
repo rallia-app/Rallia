@@ -14,7 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const ROOT_DIR = path.resolve(__dirname, '..');
+const ROOT_DIR = path.resolve(__dirname, '../..');
 const VERBOSE = process.argv.includes('--verbose');
 const FIX_MODE = process.argv.includes('--fix');
 const JSON_OUTPUT = process.argv.includes('--json');

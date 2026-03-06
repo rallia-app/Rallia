@@ -20,6 +20,7 @@ import {
 import { ScrollView as GestureScrollView } from 'react-native-gesture-handler';
 import { UseFormReturn } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
@@ -406,7 +407,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
   }, [isLoadingRatings, ratingLayoutsReady, ratingScores, minRatingScoreId, ratingScrollViewWidth]);
 
   return (
-    <ScrollView
+    <BottomSheetScrollView
       ref={scrollViewRef}
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
@@ -608,12 +609,16 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                 {(() => {
                   const playerCount = format === 'doubles' ? 4 : 2;
                   const perPerson = Math.ceil(estimatedCost / playerCount);
-                  return (
-                    t('matchCreation.fields.estimatedCostHelper', {
+                  const otherPlayers = playerCount - 1;
+                  if (format === 'singles') {
+                    return t('matchCreation.fields.estimatedCostHelperSingles', {
                       amount: perPerson,
-                      count: playerCount,
-                    }) || `Per person: ~$${perPerson} (estimated for ${playerCount} players)`
-                  );
+                    });
+                  }
+                  return t('matchCreation.fields.estimatedCostHelperDoubles', {
+                    amount: perPerson,
+                    count: otherPlayers,
+                  });
                 })()}
               </Text>
             )}
@@ -628,7 +633,11 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
               <OptionCard
                 icon="people-outline"
                 title={t('matchCreation.fields.costSplitEqual')}
-                description={t('matchCreation.fields.costSplitEqualDescription')}
+                description={
+                  format === 'singles'
+                    ? t('matchCreation.fields.costSplitEqualDescriptionSingles')
+                    : t('matchCreation.fields.costSplitEqualDescriptionDoubles')
+                }
                 selected={costSplitType === 'equal'}
                 onPress={() =>
                   setValue('costSplitType', 'equal', { shouldValidate: true, shouldDirty: true })
@@ -972,7 +981,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           {notes?.length ?? 0}/500
         </Text>
       </View>
-    </ScrollView>
+    </BottomSheetScrollView>
   );
 };
 

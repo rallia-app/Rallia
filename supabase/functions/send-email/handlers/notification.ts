@@ -15,7 +15,6 @@ export class NotificationHandler {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get user email from auth.users (profiles table doesn't have email)
-    // We need to query auth.users via the admin API
     const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(
       record.user_id
     );
@@ -29,8 +28,21 @@ export class NotificationHandler {
   }
 
   async getContent(record: NotificationRecord): Promise<EmailContent> {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     // Get user email
     const email = await this.getRecipient(record);
+
+    // Fetch preferred locale from profile
+    const { data: profile } = await supabase
+      .from('profile')
+      .select('preferred_locale')
+      .eq('id', record.user_id)
+      .single();
+
+    const locale = profile?.preferred_locale || 'en-US';
 
     // Build processed payload
     const payload: NotificationEmailPayload = {
@@ -42,6 +54,6 @@ export class NotificationHandler {
       payload: record.payload || undefined,
     };
 
-    return renderNotificationEmail(payload);
+    return renderNotificationEmail(payload, locale);
   }
 }

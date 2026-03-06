@@ -5,13 +5,13 @@
  * or was mutually cancelled.
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { SportIcon } from '../../../../components/SportIcon';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
 import { lightHaptic, selectionHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 import type {
   MatchOutcomeEnum,
@@ -198,6 +198,7 @@ const ReasonCard: React.FC<ReasonCardProps> = ({ icon, label, selected, onPress,
 
 interface MatchContextCardProps {
   matchContext: MatchContextForFeedback;
+  opponents: OpponentForFeedback[];
   colors: MatchOutcomeStepProps['colors'];
   t: (key: TranslationKey, options?: Record<string, string | number>) => string;
   locale: string;
@@ -246,6 +247,7 @@ const capitalizeFirst = (str: string): string => {
 
 const MatchContextCard: React.FC<MatchContextCardProps> = ({
   matchContext,
+  opponents,
   colors,
   t,
   locale,
@@ -262,6 +264,15 @@ const MatchContextCard: React.FC<MatchContextCardProps> = ({
     : matchContext.city || undefined;
 
   // Build opponent string using i18next interpolation
+  // For multiple names, format as "A, B and C" (English) or "A, B et C" (French)
+  const formatNamesList = (names: string[]): string => {
+    if (names.length <= 1) return names[0] ?? '';
+    const allButLast = names.slice(0, -1).join(', ');
+    const last = names[names.length - 1];
+    const conjunction = t('matchFeedback.matchContext.conjunction');
+    return `${allButLast} ${conjunction} ${last}`;
+  };
+
   const opponentDisplay =
     matchContext.opponentNames.length > 0
       ? matchContext.opponentNames.length === 1
@@ -269,7 +280,7 @@ const MatchContextCard: React.FC<MatchContextCardProps> = ({
             name: matchContext.opponentNames[0],
           })
         : t('matchFeedback.matchContext.vsPlayers', {
-            names: matchContext.opponentNames.join(', '),
+            names: formatNamesList(matchContext.opponentNames),
           })
       : undefined;
 
@@ -291,7 +302,7 @@ const MatchContextCard: React.FC<MatchContextCardProps> = ({
         },
       ]}
     >
-      {/* Sport icon and name */}
+      {/* Sport icon, name, and participant avatars (top right) */}
       <View style={styles.matchContextHeader}>
         <View style={[styles.sportIconContainer, { backgroundColor: `${colors.buttonActive}20` }]}>
           <SportIcon sportName={matchContext.sportSlug} size={20} color={colors.buttonActive} />
@@ -312,6 +323,57 @@ const MatchContextCard: React.FC<MatchContextCardProps> = ({
             </Text>
           )}
         </View>
+        {opponents.length > 0 &&
+          (() => {
+            const isSingles = opponents.length === 1;
+            const size = isSingles ? 40 : 32;
+            const iconSize = isSingles ? 20 : 16;
+            return (
+              <View style={styles.matchContextAvatars}>
+                {opponents.map((opponent, index) => {
+                  const avatarUrl = getProfilePictureUrl(opponent.avatarUrl);
+                  return (
+                    <View
+                      key={opponent.playerId}
+                      style={[styles.matchContextAvatarWrapper, index > 0 && { marginLeft: -8 }]}
+                    >
+                      {avatarUrl ? (
+                        <Image
+                          source={{ uri: avatarUrl }}
+                          style={{
+                            width: size,
+                            height: size,
+                            borderRadius: size / 2,
+                            borderWidth: 1.5,
+                            borderColor: primary[500],
+                          }}
+                        />
+                      ) : (
+                        <View
+                          style={{
+                            width: size,
+                            height: size,
+                            borderRadius: size / 2,
+                            borderWidth: 1.5,
+                            borderColor: primary[500],
+                            backgroundColor: colors.border,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Ionicons
+                            name="person-outline"
+                            size={iconSize}
+                            color={colors.textMuted}
+                          />
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            );
+          })()}
       </View>
 
       {/* Date, time, and location details */}
@@ -430,6 +492,9 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
   locale,
   isDark,
 }) => {
+  const scrollViewRef = useRef<any>(null);
+  const reasonsSectionY = useRef<number>(0);
+
   const handleOutcomeChange = useCallback(
     (newOutcome: MatchOutcomeEnum) => {
       onOutcomeChange(newOutcome, null, '');
@@ -439,6 +504,14 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
       } else if (newOutcome === 'opponent_no_show' && opponents.length === 1) {
         // Auto-select the only opponent for singles matches
         onNoShowPlayerIdsChange([opponents[0].playerId]);
+      }
+
+      // Auto-scroll to reveal the sub-section when cancellation or no-show is selected
+      if (newOutcome === 'mutual_cancel' || newOutcome === 'opponent_no_show') {
+        // Small delay to let the section render before scrolling
+        setTimeout(() => {
+          scrollViewRef.current?.scrollTo({ y: reasonsSectionY.current, animated: true });
+        }, 100);
       }
     },
     [onOutcomeChange, onNoShowPlayerIdsChange, opponents]
@@ -470,7 +543,8 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
   );
 
   return (
-    <ScrollView
+    <BottomSheetScrollView
+      ref={scrollViewRef}
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
@@ -480,6 +554,7 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
       {matchContext && (
         <MatchContextCard
           matchContext={matchContext}
+          opponents={opponents}
           colors={colors}
           t={t}
           locale={locale}
@@ -498,7 +573,13 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
       </View>
 
       {/* Outcome Options */}
-      <View style={styles.optionsContainer}>
+      <View
+        style={styles.optionsContainer}
+        onLayout={e => {
+          const { y, height } = e.nativeEvent.layout;
+          reasonsSectionY.current = y + height;
+        }}
+      >
         <OptionCard
           icon="checkmark-circle-outline"
           title={t('matchFeedback.outcomeStep.matchPlayed')}
@@ -610,7 +691,7 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
           )}
         </View>
       )}
-    </ScrollView>
+    </BottomSheetScrollView>
   );
 };
 
@@ -635,7 +716,7 @@ const styles = StyleSheet.create({
   },
   matchContextHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: spacingPixels[3],
     marginBottom: spacingPixels[3],
   },
@@ -650,6 +731,14 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacingPixels[0.5] ?? 2,
   },
+  matchContextAvatars: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: spacingPixels[2],
+  },
+  matchContextAvatarWrapper: {
+    zIndex: 1,
+  },
   matchContextDetails: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -660,9 +749,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[1],
+    flexShrink: 1,
+    maxWidth: '100%',
   },
   matchContextDetailText: {
     marginLeft: 2,
+    flexShrink: 1,
   },
   header: {
     marginBottom: spacingPixels[6],

@@ -6,6 +6,8 @@
  * or via a database webhook.
  */
 
+import { Resend } from 'resend';
+
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'noreply@rallia.app';
 const ADMIN_EMAIL = 'apprallia@gmail.com';
@@ -272,44 +274,31 @@ Deno.serve(async req => {
 
     // Validate required fields
     if (!payload.feedback_id || !payload.category || !payload.subject || !payload.message) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Missing required fields' }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
+      return new Response(JSON.stringify({ success: false, error: 'Missing required fields' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     // Render email content
     const { subject, html } = renderFeedbackEmail(payload);
 
-    // Send email via Resend API
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-      },
-      body: JSON.stringify({
-        from: FROM_EMAIL,
-        to: ADMIN_EMAIL,
-        subject,
-        html,
-      }),
+    // Send email via Resend SDK
+    const resend = new Resend(RESEND_API_KEY);
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: ADMIN_EMAIL,
+      subject,
+      html,
     });
 
-    const data = await res.json();
-
-    // Handle Resend API errors
-    if (!res.ok) {
-      const errorMessage = data?.message || data?.error || 'Failed to send email';
-      console.error('Resend API error:', errorMessage, data);
+    if (error) {
+      console.error('Resend API error:', error.message);
 
       return new Response(
-        JSON.stringify({ success: false, error: errorMessage } as EmailResponse),
+        JSON.stringify({ success: false, error: error.message } as EmailResponse),
         {
-          status: res.status,
+          status: 400,
           headers: {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',

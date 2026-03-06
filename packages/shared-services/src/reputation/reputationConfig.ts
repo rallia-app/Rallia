@@ -120,7 +120,7 @@ export const TIER_CONFIGS: Record<ReputationTier, TierConfig> = {
     label: 'Platinum',
     color: TIER_COLORS.platinum.primary,
     backgroundColor: TIER_COLORS.platinum.background,
-    icon: 'award',
+    icon: 'ribbon',
     minScore: 90,
     maxScore: 100,
   },

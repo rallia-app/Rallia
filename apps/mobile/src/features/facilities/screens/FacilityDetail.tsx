@@ -6,7 +6,7 @@
  * - Matches: Public matches at this facility
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -155,6 +155,13 @@ export default function FacilityDetail() {
     t,
     toast,
   ]);
+
+  // Determine visible tabs (hide availability for first-come-first-serve facilities)
+  const isFirstComeFirstServe = facility?.facilityData?.is_first_come_first_serve ?? false;
+  const visibleTabs = useMemo<TabKey[]>(
+    () => (isFirstComeFirstServe ? ['info', 'matches'] : TAB_KEYS),
+    [isFirstComeFirstServe]
+  );
 
   // Handle refresh (only for info and availability tabs - matches tab handles its own refresh)
   const handleRefresh = useCallback(() => {
@@ -492,7 +499,7 @@ export default function FacilityDetail() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       {/* Tab Bar at top */}
       <View style={[styles.tabBar, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
-        {TAB_KEYS.map(tab => {
+        {visibleTabs.map(tab => {
           const isActive = activeTab === tab;
           const tabLabel = t(`facilityDetail.tabs.${tab}` as Parameters<typeof t>[0]);
           const iconName = TAB_ICONS[tab];

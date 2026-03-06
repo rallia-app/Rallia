@@ -34,14 +34,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, mediumHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   OnboardingService,
   SportService,
   Logger,
   DatabaseService,
   supabase,
+  attributeReferral,
 } from '@rallia/shared-services';
 import { useProfile, usePlayer, usePostalCodeGeocode } from '@rallia/shared-hooks';
+import { PENDING_REFERRAL_KEY_EXPORT } from '../../../../screens/InviteReferralScreen';
 import { replaceImage } from '../../../../services/imageUpload';
 import { useImagePicker } from '../../../../hooks';
 import { useSport, useUserHomeLocation } from '../../../../context';
@@ -835,6 +838,23 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
           if (completeError) {
             Logger.warn('Failed to mark onboarding as completed', { error: completeError });
+          }
+
+          // Attribute pending referral if one was stored before signup
+          try {
+            const pendingCode = await AsyncStorage.getItem(PENDING_REFERRAL_KEY_EXPORT);
+            if (pendingCode) {
+              const userId = await DatabaseService.Auth.getCurrentUserId();
+              const {
+                data: { user },
+              } = await supabase.auth.getUser();
+              if (userId) {
+                await attributeReferral(pendingCode, userId, user?.email ?? undefined);
+              }
+              await AsyncStorage.removeItem(PENDING_REFERRAL_KEY_EXPORT);
+            }
+          } catch (referralError) {
+            Logger.warn('Failed to attribute referral', { error: referralError });
           }
 
           // Refetch profile, player, and sports immediately after marking onboarding as completed

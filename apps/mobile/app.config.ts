@@ -48,6 +48,16 @@ export default ({ config: _config }: ConfigContext): ExpoConfig => {
 
   return {
     ...baseConfig,
+    android: {
+      ...baseConfig.android,
+      config: {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...((baseConfig.android as any)?.config || {}),
+        googleMaps: {
+          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+        },
+      },
+    },
     plugins: dynamicPlugins,
     extra: {
       ...baseConfig.extra,

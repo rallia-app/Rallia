@@ -209,7 +209,7 @@
     "messages": {
       "match_invitation": {
         "title": "C'est parti!",
-        "body": "{playerName} veut jouer au {sportName} avec vous le {matchDate}{startTime} à {locationName}"
+        "body": "{playerName} veut jouer au {sportName} avec vous le {matchDate}{startTime}{locationName}"
       },
       "match_join_request": {
         "title": "Nouvelle demande",
@@ -290,15 +290,15 @@
       },
       "feedback_request": {
         "title": "Comment était votre partie?",
-        "body": "Évaluez votre partie de {sportName} avec {opponentNames}. Votre avis aide la communauté!"
+        "body": "Soumettez votre score et évaluez votre partie de {sportName} avec {opponentNames} pendant que c'est frais!"
       },
       "feedback_reminder": {
-        "title": "Évaluez votre partie",
-        "body": "Les commentaires pour votre partie de {sportName} avec {opponentNames} ferment dans 24 heures. Ne manquez pas ça!"
+        "title": "Une partie à clôturer",
+        "body": "Votre score et évaluation de {sportName} avec {opponentNames} sont toujours en attente — clôturez-les avant la fermeture."
       },
       "score_confirmation": {
         "title": "Confirmer le score",
-        "body": "Veuillez confirmer le score final de votre partie de {sportName} du {matchDate}."
+        "body": "{playerName} a soumis un score pour votre partie de {sportName}. Veuillez confirmer ou contester."
       }
     }
   },
@@ -1421,6 +1421,10 @@
     "cancelInviteConfirmTitle": "Annuler l'invitation?",
     "cancelInviteConfirmMessage": "L'invitation sera révoquée. Le joueur ne pourra plus rejoindre via cette invitation.",
     "cancelInviteSuccess": "Invitation annulée",
+    "declineInvite": "Refuser",
+    "declineInviteConfirmTitle": "Refuser l'invitation?",
+    "declineInviteConfirmMessage": "Vous ne pourrez pas rejoindre cette partie via cette invitation.",
+    "declineInviteSuccess": "Invitation refusée",
     "resendInviteSuccess": "Invitation renvoyée",
     "showMoreInvitations": "+{count} autres invitations",
     "participantStatus": {
@@ -2314,7 +2318,8 @@
       "completed": "Terminé",
       "cancelled": "Annulé",
       "confirmed": "Confirmé",
-      "inProgress": "En cours"
+      "inProgress": "En cours",
+      "unfilled": "Incomplet"
     },
     "participantStatus": {
       "pending": "En attente",
@@ -2338,7 +2343,7 @@
     },
     "cost": {
       "free": "Gratuit",
-      "perPlayer": "{amount}/joueur"
+      "perPlayer": "~{amount}/joueur"
     },
     "participants": "{count} joueurs",
     "participantsNeeded": "{count} requis",
@@ -2369,14 +2374,15 @@
       "courtBooked": "Terrain Réservé"
     },
     "tier": {
-      "mostWanted": "Très Convoité",
+      "mostWanted": "Incontournable",
       "readyToPlay": "Prêt à Jouer",
-      "mostWantedPlayer": "Joueur Convoité"
+      "topPlayer": "Joueur Convoité",
+      "topPlayerPlural": "Joueurs Convoités"
     },
     "cta": {
       "join": "Rejoindre la partie",
       "askToJoin": "Demander à rejoindre",
-      "acceptInvitation": "Accepter l'invitation",
+      "acceptInvitation": "Accepter invitation",
       "full": "Complet",
       "view": "Voir détails",
       "viewResults": "Voir résultats",
@@ -2391,12 +2397,14 @@
   },
   "matchDetail": {
     "title": "Détails de la partie",
+    "preferences": "Préférences",
+    "chat": "Chat",
     "host": "Hôte",
     "hostedBy": "Organisé par",
     "participants": "Joueurs",
     "openSpots": "Places disponibles",
     "court": "Terrain",
-    "estimatedCost": "Coût estimé",
+    "estimatedCost": "Coût du terrain",
     "courtEstimatedCost": "Coût estimé du terrain",
     "notes": "Notes",
     "joinNow": "Rejoindre la partie",
@@ -2404,7 +2412,10 @@
     "matchEnded": "Cette partie est terminée",
     "matchCompleted": "Cette partie est terminée",
     "matchClosed": "Cette partie est fermée",
-    "provideFeedback": "Avis",
+    "provideFeedback": "Avis et score",
+    "provideFeedbackAndConfirm": "Avis et confirmer",
+    "provideFeedbackOnly": "Donner avis",
+    "provideScoreOnly": "Enregistrer score",
     "checkIn": "Confirmer présence",
     "checkedIn": "Présence confirmée",
     "checkInSuccess": "Votre présence a été confirmée!",
@@ -2429,6 +2440,10 @@
     "away": "de distance",
     "free": "Gratuit",
     "perPerson": "par personne",
+    "totalCost": "Coût du terrain",
+    "perPlayerCostOrganizer": "Vous est dû",
+    "perPlayerCostOrganizerDoubles": "Par joueur",
+    "perPlayerCostPlayer": "Vous devez",
     "location": "Lieu",
     "locationTBD": "Lieu à déterminer",
     "open": "Ouvert",
@@ -2445,7 +2460,43 @@
     "opponent": "Adversaire",
     "scoreVerified": "Score vérifié",
     "scorePendingConfirmation": "En attente de la confirmation de l'adversaire",
-    "scoreDisputed": "Score contesté"
+    "scorePendingConfirmation_one": "En attente de la confirmation de l'adversaire",
+    "scorePendingConfirmation_other": "En attente de la confirmation des adversaires",
+    "scoreDisputed": "Score contesté",
+    "badgeInfoTitle": "Badges des joueurs",
+    "badgeHost": "Hôte",
+    "badgeHostDesc": "Le joueur qui a créé cette partie",
+    "badgeHighReputation": "Haute réputation",
+    "badgeHighReputationDesc": "Réputation de niveau Platine (90%+)",
+    "badgeSelfDeclared": "Non certifié",
+    "badgeSelfDeclaredDesc": "Classement auto-déclaré, non encore vérifié",
+    "badgeCertified": "Certifié",
+    "badgeCertifiedDesc": "Classement certifié par des références ou preuves",
+    "badgeDisputed": "Contesté",
+    "badgeDisputedDesc": "Les évaluations par les pairs suggèrent un niveau différent",
+    "badgeCheckedIn": "Présent",
+    "badgeCheckedInDesc": "Le joueur a confirmé sa présence sur le lieu",
+    "confirmScore": "Confirmer score",
+    "disputeScore": "Contester",
+    "disputeConfirmTitle": "Contester le score ?",
+    "disputeConfirmMessage": "Êtes-vous sûr de vouloir contester ce score ? Cette action est irréversible.",
+    "scoreConfirmed": "Score confirmé avec succès",
+    "scoreDisputedSuccess": "Score contesté. Contactez votre adversaire pour résoudre.",
+    "confirmScoreError": "Échec de la confirmation du score",
+    "scoreAlreadyProcessed": "Ce score a déjà été confirmé",
+    "disputeScoreError": "Échec de la contestation du score",
+    "dateAndTime": "Date et heure",
+    "duration": "Durée",
+    "startTime": "Début",
+    "live": "En cours",
+    "startingSoon": "Bientôt",
+    "startsIn": "Dans {time}",
+    "invitedBanner": "Vous avez été invité(e) à cette partie",
+    "reliability": "Fiabilité",
+    "scoreConfirmProgress": "{confirmed}/{total} confirmés",
+    "scoreConfirmProgress_one": "{confirmed}/{total} joueur confirmé",
+    "scoreConfirmProgress_other": "{confirmed}/{total} joueurs confirmés",
+    "yourScoreConfirmed": "Votre confirmation reçue"
   },
   "registerMatchScore": {
     "title": "Enregistrer le score",
@@ -2463,6 +2514,7 @@
     "team1Won": "Équipe 1 a gagné",
     "team2Won": "Équipe 2 a gagné",
     "sets": "Scores des sets",
+    "games": "Scores des manches",
     "teamYou": "Vous",
     "teamOpponent": "Adversaire",
     "teamYourTeam": "Votre équipe",
@@ -2470,15 +2522,23 @@
     "teamYouAndPartner": "Vous & {name}",
     "teamOpponentsNames": "{name1} & {name2}",
     "setN": "Set {number}",
+    "gameN": "Manche {number}",
     "addSet": "Ajouter un set",
+    "addGame": "Ajouter une manche",
     "removeSet": "Retirer le set",
+    "removeGame": "Retirer la manche",
     "next": "Suivant",
     "submit": "Envoyer le score",
+    "tennisScoreHint": "Jeux par set (typiquement 0–7)",
+    "pickleballScoreHint": "Points par manche (typiquement à 11 ou 15)",
     "error": {
       "enterScores": "Veuillez entrer au moins un score de set.",
+      "enterGames": "Veuillez entrer au moins un score de manche.",
       "invalidParticipants": "Ce match n'a pas le bon nombre de participants.",
       "noWinner": "Les scores doivent déterminer un gagnant (une équipe doit gagner plus de sets).",
-      "selectPartner": "Veuillez sélectionner votre partenaire."
+      "selectPartner": "Veuillez sélectionner votre partenaire.",
+      "tennisScoreRange": "Les scores de set au tennis sont typiquement de 0 à 7.",
+      "pickleballScoreRange": "Les scores de manche au pickleball sont typiquement de 0 à 25."
     }
   },
   "matchFeedback": {
@@ -2489,8 +2549,9 @@
       "feedback": "Évaluation"
     },
     "matchContext": {
-      "vsPlayer": "contre {name}",
-      "vsPlayers": "contre {names}"
+      "vsPlayer": "avec {name}",
+      "vsPlayers": "avec {names}",
+      "conjunction": "et"
     },
     "outcomeStep": {
       "title": "Comment s'est passé le match?",
@@ -2545,7 +2606,8 @@
       "detailsPlaceholder": "Décrivez ce qui s'est passé...",
       "submit": "Envoyer le signalement",
       "success": "Signalement envoyé"
-    }
+    },
+    "success": "Évaluation soumise avec succès !"
   },
   "addScore": {
     "title": "Ajouter un score",
@@ -2712,6 +2774,47 @@
     "community": "Communauté",
     "communityDescription": "Réseau public pour joueurs"
   },
+  "referral": {
+    "wizardTitle": "Inviter des joueurs",
+    "step": "Étape {current} de {total}",
+    "stepNames": {
+      "shareLink": "Partager le lien",
+      "inviteContacts": "Contacts"
+    },
+    "shareLinkDescription": "Partagez votre lien de parrainage personnel avec vos amis pour les inviter sur Rallia.",
+    "code": "Code",
+    "qrCode": "Code QR",
+    "yourCode": "Votre code de parrainage",
+    "scanToJoin": "Scannez pour rejoindre Rallia",
+    "generatingCode": "Génération de votre code de parrainage...",
+    "shareInvite": "Partager l'invitation",
+    "shareTitle": "Rejoins-moi sur Rallia!",
+    "shareMessage": "Salut! Rejoins-moi sur Rallia pour trouver des matchs sportifs et jouer ensemble! {link}",
+    "yourStats": "Vos statistiques de parrainage",
+    "clicked": "Cliqué",
+    "signedUp": "Inscrits",
+    "haveReferralCode": "Vous avez un code de parrainage?",
+    "enterCode": "Entrer le code de parrainage",
+    "codeApplied": "Code de parrainage appliqué!",
+    "invalidCode": "Code de parrainage invalide",
+    "welcomeTitle": "Bienvenue sur Rallia!",
+    "welcomeDescription": "Vous avez été invité à rejoindre Rallia. Préparation en cours...",
+    "contacts": {
+      "description": "Sélectionnez des contacts de votre téléphone pour les inviter par SMS.",
+      "accessRequired": "Accès aux contacts requis",
+      "grantAccess": "Autorisez l'accès à vos contacts pour inviter des amis sur Rallia par SMS.",
+      "loading": "Chargement des contacts...",
+      "search": "Rechercher des contacts...",
+      "noResults": "Aucun contact trouvé",
+      "noContacts": "Aucun contact disponible",
+      "noContactsDescription": "Votre carnet d'adresses semble être vide.",
+      "selectAtLeastOne": "Sélectionnez au moins un contact à inviter",
+      "sendInvites": "Envoyer les invitations",
+      "invitesSent": "{count} invitation(s) envoyée(s)!",
+      "failedToLoad": "Échec du chargement des contacts",
+      "failedToSend": "Échec de l'envoi des invitations"
+    }
+  },
   "matchCreation": {
     "title": "Créer une partie",
     "forSport": "Création de partie pour {sport}",
@@ -2815,9 +2918,11 @@
       "isCourtFreeNo": "Non, il y a un coût",
       "costSplitType": "Partage des coûts",
       "costSplitEqual": "Partager également",
-      "costSplitEqualDescription": "Partager le coût également entre tous les joueurs",
+      "costSplitEqualDescription": "Chaque joueur paie sa part à l'organisateur",
+      "costSplitEqualDescriptionSingles": "Votre adversaire vous paie la moitié du coût du terrain",
+      "costSplitEqualDescriptionDoubles": "Chaque joueur vous paie sa part du coût du terrain",
       "costSplitCreator": "Le créateur paie",
-      "costSplitCreatorDescription": "Vous couvrez le coût complet",
+      "costSplitCreatorDescription": "Vous couvrez le coût complet du terrain",
       "costSplitCustom": "Partage personnalisé",
       "estimatedCost": "Coût estimé",
       "estimatedCostTotal": "Coût total",
@@ -2825,7 +2930,8 @@
       "estimatedCostTotalCreator": "Combien allez-vous payer?",
       "estimatedCostPlaceholder": "Entrer le montant",
       "estimatedCostPlaceholderTotal": "Entrer le coût total",
-      "estimatedCostHelper": "Par personne: ~${amount} (estimé pour {count} joueurs)",
+      "estimatedCostHelperSingles": "Votre adversaire vous doit ~${amount}",
+      "estimatedCostHelperDoubles": "Chaque joueur vous doit ~${amount} ({count} joueurs)",
       "visibility": "Visibilité",
       "visibilityPublic": "Public",
       "visibilityPublicDescription": "Tout le monde peut trouver et rejoindre",
@@ -2914,6 +3020,7 @@
       "courtBookedDescription": "Le terrain est marqué comme réservé pour cette partie.",
       "availableSlots": "Créneaux disponibles",
       "noSlotsAvailable": "Aucun créneau à venir disponible",
+      "firstComeFirstServe": "Premier arrivé, premier servi — sans réservation",
       "loadingSlots": "Chargement des disponibilités...",
       "tapToBook": "Appuyez sur un créneau pour réserver",
       "externalBooking": "Vous serez redirigé vers le site de réservation",
@@ -2935,6 +3042,7 @@
       "searchError": "Impossible de rechercher des joueurs",
       "noPlayersFound": "Aucun joueur trouvé",
       "noPlayersAvailable": "Aucun joueur disponible",
+      "noPlayersAvailableDescription": "Vous pouvez renvoyer des invitations aux joueurs déjà invités depuis les détails de la partie",
       "selectPlayers": "Sélectionner des joueurs",
       "sendInvitations": "Envoyer les invitations ({count})",
       "skip": "Passer",
@@ -3167,17 +3275,14 @@
       "all": "Tous",
       "hosting": "Organisées",
       "confirmed": "Confirmées",
-      "pending": "En attente",
-      "requested": "Demandées",
-      "waitlisted": "Liste d'attente",
-      "needsPlayers": "Incomplet",
-      "readyToPlay": "Prêt",
+      "waiting": "En attente",
+      "needsPlayers": "Places libres",
       "feedbackNeeded": "Évaluation",
-      "played": "Jouées",
+      "completed": "Complétées",
       "hosted": "Organisées",
-      "asParticipant": "Participé",
-      "expired": "Expirées",
-      "cancelled": "Annulées"
+      "unfilled": "Incomplètes",
+      "cancelled": "Annulées",
+      "private": "Privées"
     },
     "time": {
       "today": "Aujourd'hui",
@@ -3275,6 +3380,13 @@
         "all": "Tous",
         "reserved": "Réservé",
         "to_reserve": "À réserver"
+      },
+      "tier": {
+        "label": "Catégorie",
+        "all": "Toutes",
+        "mostWanted": "Incontournable",
+        "covetedPlayers": "Joueurs convoités",
+        "courtBooked": "Terrain réservé"
       },
       "specificDate": {
         "label": "Date",
@@ -3600,6 +3712,7 @@
       "timezone": "Fuseau horaire",
       "description": "Description",
       "membershipRequired": "Adhésion requise",
+      "isFirstComeFirstServe": "Premier arrivé, premier servi",
       "facilityType": "Type de site",
       "dataProvider": "Fournisseur de données",
       "externalProviderId": "ID du fournisseur externe",
@@ -3752,6 +3865,8 @@
       "externalProviderIdPlaceholder": "ID externe du fournisseur de données (ex. siteId)",
       "membershipRequiredLabel": "Adhésion requise",
       "membershipRequiredHint": "Exiger une adhésion pour réserver des terrains dans ce site de jeu",
+      "isFirstComeFirstServeLabel": "Premier arrivé, premier servi",
+      "isFirstComeFirstServeHint": "Aucune réservation requise — les terrains sont accessibles sans rendez-vous.",
       "searchPlace": "Rechercher sur Google Places",
       "searchPlaceHint": "Entrez au moins 3 caractères et cliquez sur le bouton de recherche pour remplir automatiquement les champs d'adresse.",
       "sportsLabel": "Sports",
@@ -6385,9 +6500,19 @@
     },
     "favorites": {
       "title": "Favoris",
+      "favorite": "Favori",
       "addedToFavorites": "Ajouté aux favoris",
       "removedFromFavorites": "Retiré des favoris",
       "maxReached": "Maximum de 3 favoris atteint"
+    },
+    "badges": {
+      "firstComeFirstServe": "Sans réservation",
+      "bookable": "Réservable",
+      "membershipRequired": "Abonnement requis",
+      "courtCount": "{count} terrains",
+      "courtCountSingular": "1 terrain",
+      "upcomingMatchCount": "{count} parties",
+      "upcomingMatchCountSingular": "1 partie"
     }
   },
   "facilityDetail": {
@@ -6439,6 +6564,7 @@
     "loadingAvailability": "Chargement des créneaux disponibles...",
     "courtsAvailable": "{count} terrains disponibles",
     "paymentsNotAvailable": "Cette site de jeu n'a pas encore configuré les paiements en ligne. Veuillez les contacter directement pour réserver des créneaux payants.",
+    "firstComeFirstServe": "Cet établissement fonctionne selon le principe du premier arrivé, premier servi — aucune réservation requise.",
     "paidSlotsDisabled": "Certains terrains payants ne sont pas disponibles pour la réservation en ligne. Contactez le site de jeu directement.",
     "contactFacilityToBook": "Contacter le site de jeu pour réserver",
     "unavailable": "Indisponible",

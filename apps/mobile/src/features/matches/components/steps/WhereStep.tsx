@@ -20,10 +20,14 @@ import {
 } from 'react-native';
 import { UseFormReturn, useWatch } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import {
+  BottomSheetTextInput,
+  BottomSheetScrollView,
+  type BottomSheetScrollViewMethods,
+} from '@gorhom/bottom-sheet';
 import { Text, LocationSelector } from '@rallia/shared-components';
 import { SearchBar } from '../../../../components/SearchBar';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, accent, secondary } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
 import {
   getOrCreateCourt,
@@ -35,6 +39,7 @@ import {
   usePreferredFacility,
   usePlacesAutocomplete,
   useCourtAvailability,
+  useFavoriteFacilities,
 } from '@rallia/shared-hooks';
 import type { FormattedSlot, CourtOption } from '@rallia/shared-hooks';
 import type {
@@ -286,6 +291,8 @@ interface FacilityItemProps {
   isDark: boolean;
   /** Whether this is the user's preferred facility */
   isPreferred?: boolean;
+  /** Whether this facility is in the user's favorites */
+  isFavorite?: boolean;
   /** Sport name for filtering provider availability (e.g., "tennis") */
   sportName?: string;
 }
@@ -298,6 +305,7 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
   t,
   isDark,
   isPreferred = false,
+  isFavorite = false,
   sportName,
 }) => {
   // Fetch availability using the unified system (local-first, then external provider)
@@ -340,7 +348,27 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
         <View style={styles.facilityHeader}>
           <View style={styles.facilityNameContainer}>
             <View style={styles.facilityNameRow}>
-              <Text size="base" weight="medium" color={colors.text} numberOfLines={1}>
+              {isFavorite && !isPreferred && (
+                <View
+                  style={[
+                    styles.favoriteIconBadge,
+                    { backgroundColor: `${isDark ? secondary[400] : secondary[500]}20` },
+                  ]}
+                >
+                  <Ionicons
+                    name="heart"
+                    size={10}
+                    color={isDark ? secondary[400] : secondary[500]}
+                  />
+                </View>
+              )}
+              <Text
+                size="base"
+                weight="medium"
+                color={colors.text}
+                numberOfLines={1}
+                style={{ flexShrink: 1 }}
+              >
                 {facility.name}
               </Text>
               {isPreferred && (
@@ -367,11 +395,29 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
           )}
         </View>
 
+        {/* First come first serve alert */}
+        {facility.is_first_come_first_serve && (
+          <View
+            style={[
+              styles.fcfsAlert,
+              {
+                backgroundColor: (isDark ? accent[400] : accent[500]) + '15',
+                borderColor: isDark ? accent[400] : accent[500],
+              },
+            ]}
+          >
+            <Ionicons name="walk-outline" size={14} color={isDark ? accent[400] : accent[500]} />
+            <Text size="xs" weight="medium" color={isDark ? accent[400] : accent[500]}>
+              {t('matchCreation.booking.firstComeFirstServe')}
+            </Text>
+          </View>
+        )}
+
         {/* Skeleton slots while loading */}
-        {isLoading && <SkeletonSlots colors={colors} />}
+        {isLoading && !facility.is_first_come_first_serve && <SkeletonSlots colors={colors} />}
 
         {/* Date-sectioned slots with horizontal scroll */}
-        {slotsByDate.length > 0 && !isLoading && (
+        {slotsByDate.length > 0 && !isLoading && !facility.is_first_come_first_serve && (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -453,7 +499,7 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
         )}
 
         {/* Empty state when no slots available - only show if we fetched but got no results */}
-        {slotsByDate.length === 0 && !isLoading && (
+        {slotsByDate.length === 0 && !isLoading && !facility.is_first_come_first_serve && (
           <View style={styles.emptySlots}>
             <Ionicons name="calendar-clear-outline" size={14} color={colors.textMuted} />
             <Text size="xs" color={colors.textMuted}>
@@ -638,7 +684,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFacility, setSelectedFacility] = useState<FacilitySearchResult | null>(null);
   const [bookedCourtNumber, setBookedCourtNumber] = useState<number | null>(null);
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<BottomSheetScrollViewMethods>(null);
   const facilitySearchRef = useRef<View>(null);
   const placeSearchRef = useRef<View>(null);
 
@@ -1042,18 +1088,28 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     enabled: locationType === 'facility' && !selectedFacility && !!preferredFacilityId,
   });
 
-  // Merge facilities list with preferred facility first, deduplicating
+  // Favorites management
+  const { favorites, isFavorite: isFavoriteFacility } = useFavoriteFacilities(player?.id ?? null);
+
+  // Merge facilities list with preferred facility first, then favorites, deduplicating
   const facilities = React.useMemo(() => {
-    if (!preferredFacility) {
-      return searchFacilities;
+    let merged = searchFacilities;
+
+    // Insert preferred facility at the top if available
+    if (preferredFacility) {
+      merged = [preferredFacility, ...merged.filter(f => f.id !== preferredFacility.id)];
     }
 
-    // Filter out the preferred facility from search results to avoid duplicates
-    const filteredFacilities = searchFacilities.filter(f => f.id !== preferredFacility.id);
+    // Sort favorites first (after preferred), preserving distance order within each group
+    const favoriteIds = new Set(favorites.map(f => f.facilityId));
+    const preferredId = preferredFacility?.id;
 
-    // Return preferred facility first, followed by other facilities
-    return [preferredFacility, ...filteredFacilities];
-  }, [preferredFacility, searchFacilities]);
+    const preferred = merged.filter(f => f.id === preferredId);
+    const favs = merged.filter(f => f.id !== preferredId && favoriteIds.has(f.id));
+    const rest = merged.filter(f => f.id !== preferredId && !favoriteIds.has(f.id));
+
+    return [...preferred, ...favs, ...rest];
+  }, [preferredFacility, searchFacilities, favorites]);
 
   // Places autocomplete hook for custom location search
   const {
@@ -1267,7 +1323,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   ]);
 
   return (
-    <ScrollView
+    <BottomSheetScrollView
       ref={scrollViewRef}
       style={styles.container}
       contentContainerStyle={[
@@ -1382,6 +1438,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                       t={t}
                       isDark={isDark}
                       isPreferred={facility.id === preferredFacilityId}
+                      isFavorite={isFavoriteFacility(facility.id)}
                       sportName={sportName}
                     />
                   ))}
@@ -1523,7 +1580,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         confirmLabel={t('matchCreation.booking.iBookedThisCourt')}
         cancelLabel={t('matchCreation.booking.notYet')}
       />
-    </ScrollView>
+    </BottomSheetScrollView>
   );
 };
 
@@ -1605,12 +1662,19 @@ const styles = StyleSheet.create({
   facilityNameContainer: {
     flex: 1,
     marginRight: spacingPixels[2],
+    gap: spacingPixels[2],
   },
   facilityNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
     gap: spacingPixels[2],
+  },
+  favoriteIconBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   preferredBadge: {
     flexDirection: 'row',
@@ -1674,6 +1738,16 @@ const styles = StyleSheet.create({
     gap: spacingPixels[1],
     marginTop: spacingPixels[2],
     paddingVertical: spacingPixels[1],
+  },
+  fcfsAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1.5],
+    marginTop: spacingPixels[2],
+    paddingHorizontal: spacingPixels[2.5],
+    paddingVertical: spacingPixels[1.5],
+    borderRadius: radiusPixels.md,
+    borderWidth: 1,
   },
   placeItemIcon: {
     width: 32,

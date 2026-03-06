@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Text, LocationSelector, type LocationMode } from '@rallia/shared-components';
-import { useTheme, DISTANCE_OPTIONS } from '@rallia/shared-hooks';
+import { useTheme, DISTANCE_OPTIONS, MATCH_TIER_OPTIONS } from '@rallia/shared-hooks';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import {
@@ -43,6 +43,7 @@ import type {
   DistanceFilter,
   DurationFilter,
   CourtStatusFilter,
+  MatchTierFilter,
   SpecificDateFilter,
 } from '@rallia/shared-hooks';
 
@@ -62,6 +63,7 @@ interface MatchFiltersBarProps {
   distance: DistanceFilter;
   duration: DurationFilter;
   courtStatus: CourtStatusFilter;
+  matchTier: MatchTierFilter;
   specificDate: SpecificDateFilter;
   onFormatChange: (format: FormatFilter) => void;
   onMatchTypeChange: (matchType: MatchTypeFilter) => void;
@@ -74,6 +76,7 @@ interface MatchFiltersBarProps {
   onDistanceChange: (distance: DistanceFilter) => void;
   onDurationChange: (duration: DurationFilter) => void;
   onCourtStatusChange: (courtStatus: CourtStatusFilter) => void;
+  onMatchTierChange: (matchTier: MatchTierFilter) => void;
   onSpecificDateChange: (specificDate: SpecificDateFilter) => void;
   onReset?: () => void;
   hasActiveFilters?: boolean;
@@ -346,6 +349,7 @@ export default function MatchFiltersBar({
   distance,
   duration,
   courtStatus,
+  matchTier,
   specificDate,
   onFormatChange,
   onMatchTypeChange,
@@ -358,6 +362,7 @@ export default function MatchFiltersBar({
   onDistanceChange,
   onDurationChange,
   onCourtStatusChange,
+  onMatchTierChange,
   onSpecificDateChange,
   onReset,
   hasActiveFilters = false,
@@ -384,6 +389,7 @@ export default function MatchFiltersBar({
   const [showDistanceDropdown, setShowDistanceDropdown] = useState(false);
   const [showDurationDropdown, setShowDurationDropdown] = useState(false);
   const [showCourtStatusDropdown, setShowCourtStatusDropdown] = useState(false);
+  const [showMatchTierDropdown, setShowMatchTierDropdown] = useState(false);
 
   // Date picker state
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -451,6 +457,10 @@ export default function MatchFiltersBar({
     (v: CourtStatusFilter) => t(`publicMatches.filters.courtStatus.${v}`),
     [t]
   );
+  const getMatchTierLabel = useCallback(
+    (v: MatchTierFilter) => t(`publicMatches.filters.tier.${v}` as TranslationKey),
+    [t]
+  );
   const getDistanceLabel = useCallback(
     (v: DistanceFilter) => {
       if (v === 'all') return t('publicMatches.filters.distance.all');
@@ -466,6 +476,16 @@ export default function MatchFiltersBar({
       morning: 'sunny-outline',
       afternoon: 'partly-sunny-outline',
       evening: 'moon-outline',
+    };
+    return icons[v];
+  }, []);
+
+  const getMatchTierIcon = useCallback((v: MatchTierFilter) => {
+    const icons: Record<MatchTierFilter, keyof typeof Ionicons.glyphMap | undefined> = {
+      all: undefined,
+      mostWanted: 'flame-outline',
+      covetedPlayers: 'star-outline',
+      courtBooked: 'checkmark-circle-outline',
     };
     return icons[v];
   }, []);
@@ -506,6 +526,8 @@ export default function MatchFiltersBar({
     courtStatus === 'all'
       ? t('publicMatches.filters.courtStatus.label')
       : getCourtStatusLabel(courtStatus);
+  const matchTierDisplay =
+    matchTier === 'all' ? t('publicMatches.filters.tier.label') : getMatchTierLabel(matchTier);
 
   // Date display - combines dateRange and specificDate
   const getDateDisplay = useCallback(() => {
@@ -632,6 +654,13 @@ export default function MatchFiltersBar({
       icon?: keyof typeof Ionicons.glyphMap;
     }[] = [
       {
+        key: 'matchTier',
+        value: matchTierDisplay,
+        isActive: matchTier !== 'all',
+        onPress: () => setShowMatchTierDropdown(true),
+        icon: getMatchTierIcon(matchTier),
+      },
+      {
         key: 'date',
         value: getDateDisplay(),
         isActive: dateRange !== 'all' || specificDate !== null,
@@ -734,6 +763,9 @@ export default function MatchFiltersBar({
     getCostIcon,
     courtStatusDisplay,
     courtStatus,
+    matchTierDisplay,
+    matchTier,
+    getMatchTierIcon,
     joinModeDisplay,
     joinMode,
   ]);
@@ -923,6 +955,19 @@ export default function MatchFiltersBar({
         getLabel={getCourtStatusLabel}
       />
 
+      {/* Match Tier Dropdown */}
+      <FilterDropdown
+        visible={showMatchTierDropdown}
+        title={t('publicMatches.filters.tier.label')}
+        options={MATCH_TIER_OPTIONS as MatchTierFilter[]}
+        selectedValue={matchTier}
+        onSelect={onMatchTierChange}
+        onClose={() => setShowMatchTierDropdown(false)}
+        isDark={isDark}
+        getLabel={getMatchTierLabel}
+        getIcon={getMatchTierIcon}
+      />
+
       {/* Join Mode Dropdown */}
       <FilterDropdown
         visible={showJoinModeDropdown}
@@ -944,7 +989,7 @@ export default function MatchFiltersBar({
         <DateTimePicker
           value={tempDate}
           mode="date"
-          display="default"
+          display="spinner"
           onChange={handleDateChange}
           minimumDate={getTodayAtMidnight()}
         />

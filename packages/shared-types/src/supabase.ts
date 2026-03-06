@@ -60,6 +60,269 @@ export type Database = {
           },
         ];
       };
+      admin_alert: {
+        Row: {
+          action_url: string | null;
+          alert_type: string;
+          created_at: string;
+          dismissed_at: string | null;
+          dismissed_by: string | null;
+          expires_at: string | null;
+          id: string;
+          is_dismissed: boolean;
+          is_read: boolean;
+          message: string;
+          metadata: Json | null;
+          read_at: string | null;
+          read_by: string | null;
+          severity: string;
+          source_id: string | null;
+          source_type: string | null;
+          target_roles: string[] | null;
+          title: string;
+        };
+        Insert: {
+          action_url?: string | null;
+          alert_type: string;
+          created_at?: string;
+          dismissed_at?: string | null;
+          dismissed_by?: string | null;
+          expires_at?: string | null;
+          id?: string;
+          is_dismissed?: boolean;
+          is_read?: boolean;
+          message: string;
+          metadata?: Json | null;
+          read_at?: string | null;
+          read_by?: string | null;
+          severity?: string;
+          source_id?: string | null;
+          source_type?: string | null;
+          target_roles?: string[] | null;
+          title: string;
+        };
+        Update: {
+          action_url?: string | null;
+          alert_type?: string;
+          created_at?: string;
+          dismissed_at?: string | null;
+          dismissed_by?: string | null;
+          expires_at?: string | null;
+          id?: string;
+          is_dismissed?: boolean;
+          is_read?: boolean;
+          message?: string;
+          metadata?: Json | null;
+          read_at?: string | null;
+          read_by?: string | null;
+          severity?: string;
+          source_id?: string | null;
+          source_type?: string | null;
+          target_roles?: string[] | null;
+          title?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'admin_alert_dismissed_by_fkey';
+            columns: ['dismissed_by'];
+            isOneToOne: false;
+            referencedRelation: 'admin';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'admin_alert_read_by_fkey';
+            columns: ['read_by'];
+            isOneToOne: false;
+            referencedRelation: 'admin';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      admin_alert_preference: {
+        Row: {
+          admin_id: string;
+          alert_type: string;
+          created_at: string;
+          email_enabled: boolean;
+          id: string;
+          in_app_enabled: boolean;
+          min_severity: string;
+          push_enabled: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          admin_id: string;
+          alert_type: string;
+          created_at?: string;
+          email_enabled?: boolean;
+          id?: string;
+          in_app_enabled?: boolean;
+          min_severity?: string;
+          push_enabled?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          admin_id?: string;
+          alert_type?: string;
+          created_at?: string;
+          email_enabled?: boolean;
+          id?: string;
+          in_app_enabled?: boolean;
+          min_severity?: string;
+          push_enabled?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'admin_alert_preference_admin_id_fkey';
+            columns: ['admin_id'];
+            isOneToOne: false;
+            referencedRelation: 'admin';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      admin_audit_log: {
+        Row: {
+          action_type: Database['public']['Enums']['admin_action_type_enum'];
+          admin_id: string;
+          created_at: string;
+          entity_id: string | null;
+          entity_name: string | null;
+          entity_type: Database['public']['Enums']['admin_entity_type_enum'];
+          id: string;
+          ip_address: unknown;
+          metadata: Json | null;
+          new_data: Json | null;
+          old_data: Json | null;
+          severity: string;
+          user_agent: string | null;
+        };
+        Insert: {
+          action_type: Database['public']['Enums']['admin_action_type_enum'];
+          admin_id: string;
+          created_at?: string;
+          entity_id?: string | null;
+          entity_name?: string | null;
+          entity_type: Database['public']['Enums']['admin_entity_type_enum'];
+          id?: string;
+          ip_address?: unknown;
+          metadata?: Json | null;
+          new_data?: Json | null;
+          old_data?: Json | null;
+          severity?: string;
+          user_agent?: string | null;
+        };
+        Update: {
+          action_type?: Database['public']['Enums']['admin_action_type_enum'];
+          admin_id?: string;
+          created_at?: string;
+          entity_id?: string | null;
+          entity_name?: string | null;
+          entity_type?: Database['public']['Enums']['admin_entity_type_enum'];
+          id?: string;
+          ip_address?: unknown;
+          metadata?: Json | null;
+          new_data?: Json | null;
+          old_data?: Json | null;
+          severity?: string;
+          user_agent?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'admin_audit_log_admin_id_fkey';
+            columns: ['admin_id'];
+            isOneToOne: false;
+            referencedRelation: 'admin';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      admin_device: {
+        Row: {
+          admin_id: string;
+          created_at: string | null;
+          device_name: string | null;
+          id: string;
+          is_active: boolean | null;
+          last_active: string | null;
+          platform: string;
+          push_token: string;
+          updated_at: string | null;
+        };
+        Insert: {
+          admin_id: string;
+          created_at?: string | null;
+          device_name?: string | null;
+          id?: string;
+          is_active?: boolean | null;
+          last_active?: string | null;
+          platform: string;
+          push_token: string;
+          updated_at?: string | null;
+        };
+        Update: {
+          admin_id?: string;
+          created_at?: string | null;
+          device_name?: string | null;
+          id?: string;
+          is_active?: boolean | null;
+          last_active?: string | null;
+          platform?: string;
+          push_token?: string;
+          updated_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'admin_device_admin_id_fkey';
+            columns: ['admin_id'];
+            isOneToOne: false;
+            referencedRelation: 'admin';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      analytics_snapshot: {
+        Row: {
+          created_at: string;
+          id: string;
+          metric_metadata: Json | null;
+          metric_name: string;
+          metric_type: string;
+          metric_value: number;
+          snapshot_date: string;
+          sport_id: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          metric_metadata?: Json | null;
+          metric_name: string;
+          metric_type: string;
+          metric_value?: number;
+          snapshot_date: string;
+          sport_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          metric_metadata?: Json | null;
+          metric_name?: string;
+          metric_type?: string;
+          metric_value?: number;
+          snapshot_date?: string;
+          sport_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'analytics_snapshot_sport_id_fkey';
+            columns: ['sport_id'];
+            isOneToOne: false;
+            referencedRelation: 'sport';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       availability_block: {
         Row: {
           block_date: string;
@@ -801,6 +1064,7 @@ export type Database = {
           facility_type: Database['public']['Enums']['facility_type_enum'] | null;
           id: string;
           is_active: boolean;
+          is_first_come_first_serve: boolean;
           latitude: number | null;
           location: unknown;
           longitude: number | null;
@@ -825,6 +1089,7 @@ export type Database = {
           facility_type?: Database['public']['Enums']['facility_type_enum'] | null;
           id?: string;
           is_active?: boolean;
+          is_first_come_first_serve?: boolean;
           latitude?: number | null;
           location?: unknown;
           longitude?: number | null;
@@ -849,6 +1114,7 @@ export type Database = {
           facility_type?: Database['public']['Enums']['facility_type_enum'] | null;
           id?: string;
           is_active?: boolean;
+          is_first_come_first_serve?: boolean;
           latitude?: number | null;
           location?: unknown;
           longitude?: number | null;
@@ -1071,6 +1337,62 @@ export type Database = {
           },
         ];
       };
+      feedback: {
+        Row: {
+          admin_notes: string | null;
+          app_version: string | null;
+          category: string;
+          created_at: string;
+          device_info: Json | null;
+          id: string;
+          message: string;
+          module: string;
+          player_id: string | null;
+          screenshot_urls: string[] | null;
+          status: string;
+          subject: string;
+          updated_at: string;
+        };
+        Insert: {
+          admin_notes?: string | null;
+          app_version?: string | null;
+          category: string;
+          created_at?: string;
+          device_info?: Json | null;
+          id?: string;
+          message: string;
+          module?: string;
+          player_id?: string | null;
+          screenshot_urls?: string[] | null;
+          status?: string;
+          subject: string;
+          updated_at?: string;
+        };
+        Update: {
+          admin_notes?: string | null;
+          app_version?: string | null;
+          category?: string;
+          created_at?: string;
+          device_info?: Json | null;
+          id?: string;
+          message?: string;
+          module?: string;
+          player_id?: string | null;
+          screenshot_urls?: string[] | null;
+          status?: string;
+          subject?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'feedback_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       file: {
         Row: {
           created_at: string;
@@ -1135,6 +1457,51 @@ export type Database = {
             columns: ['uploaded_by'];
             isOneToOne: false;
             referencedRelation: 'profile';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      group_activity: {
+        Row: {
+          activity_type: string;
+          created_at: string;
+          id: string;
+          metadata: Json | null;
+          network_id: string;
+          player_id: string;
+          related_entity_id: string | null;
+        };
+        Insert: {
+          activity_type: string;
+          created_at?: string;
+          id?: string;
+          metadata?: Json | null;
+          network_id: string;
+          player_id: string;
+          related_entity_id?: string | null;
+        };
+        Update: {
+          activity_type?: string;
+          created_at?: string;
+          id?: string;
+          metadata?: Json | null;
+          network_id?: string;
+          player_id?: string;
+          related_entity_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'group_activity_network_id_fkey';
+            columns: ['network_id'];
+            isOneToOne: false;
+            referencedRelation: 'network';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'group_activity_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
             referencedColumns: ['id'];
           },
         ];
@@ -1324,7 +1691,9 @@ export type Database = {
           estimated_cost: number | null;
           facility_id: string | null;
           format: Database['public']['Enums']['match_format_enum'] | null;
+          host_edited_at: string | null;
           id: string;
+          is_auto_generated: boolean | null;
           is_court_free: boolean | null;
           join_mode: Database['public']['Enums']['match_join_mode_enum'] | null;
           location: unknown;
@@ -1362,7 +1731,9 @@ export type Database = {
           estimated_cost?: number | null;
           facility_id?: string | null;
           format?: Database['public']['Enums']['match_format_enum'] | null;
+          host_edited_at?: string | null;
           id?: string;
+          is_auto_generated?: boolean | null;
           is_court_free?: boolean | null;
           join_mode?: Database['public']['Enums']['match_join_mode_enum'] | null;
           location?: unknown;
@@ -1400,7 +1771,9 @@ export type Database = {
           estimated_cost?: number | null;
           facility_id?: string | null;
           format?: Database['public']['Enums']['match_format_enum'] | null;
+          host_edited_at?: string | null;
           id?: string;
+          is_auto_generated?: boolean | null;
           is_court_free?: boolean | null;
           join_mode?: Database['public']['Enums']['match_join_mode_enum'] | null;
           location?: unknown;
@@ -1582,6 +1955,7 @@ export type Database = {
           id: string;
           initial_feedback_notification_sent_at: string | null;
           is_host: boolean | null;
+          joined_at: string | null;
           match_id: string;
           match_outcome: Database['public']['Enums']['match_outcome_enum'] | null;
           player_id: string;
@@ -1604,6 +1978,7 @@ export type Database = {
           id?: string;
           initial_feedback_notification_sent_at?: string | null;
           is_host?: boolean | null;
+          joined_at?: string | null;
           match_id: string;
           match_outcome?: Database['public']['Enums']['match_outcome_enum'] | null;
           player_id: string;
@@ -1626,6 +2001,7 @@ export type Database = {
           id?: string;
           initial_feedback_notification_sent_at?: string | null;
           is_host?: boolean | null;
+          joined_at?: string | null;
           match_id?: string;
           match_outcome?: Database['public']['Enums']['match_outcome_enum'] | null;
           player_id?: string;
@@ -2078,6 +2454,7 @@ export type Database = {
       };
       network: {
         Row: {
+          archived_at: string | null;
           conversation_id: string | null;
           cover_image_url: string | null;
           created_at: string | null;
@@ -2093,6 +2470,7 @@ export type Database = {
           updated_at: string | null;
         };
         Insert: {
+          archived_at?: string | null;
           conversation_id?: string | null;
           cover_image_url?: string | null;
           created_at?: string | null;
@@ -2108,6 +2486,7 @@ export type Database = {
           updated_at?: string | null;
         };
         Update: {
+          archived_at?: string | null;
           conversation_id?: string | null;
           cover_image_url?: string | null;
           created_at?: string | null;
@@ -2334,6 +2713,53 @@ export type Database = {
             columns: ['user_id'];
             isOneToOne: false;
             referencedRelation: 'profile';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      onboarding_analytics: {
+        Row: {
+          completed: boolean | null;
+          created_at: string;
+          entered_at: string;
+          exited_at: string | null;
+          id: string;
+          metadata: Json | null;
+          player_id: string;
+          screen_name: string;
+          session_id: string | null;
+          time_spent_seconds: number | null;
+        };
+        Insert: {
+          completed?: boolean | null;
+          created_at?: string;
+          entered_at?: string;
+          exited_at?: string | null;
+          id?: string;
+          metadata?: Json | null;
+          player_id: string;
+          screen_name: string;
+          session_id?: string | null;
+          time_spent_seconds?: number | null;
+        };
+        Update: {
+          completed?: boolean | null;
+          created_at?: string;
+          entered_at?: string;
+          exited_at?: string | null;
+          id?: string;
+          metadata?: Json | null;
+          player_id?: string;
+          screen_name?: string;
+          session_id?: string | null;
+          time_spent_seconds?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'onboarding_analytics_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
             referencedColumns: ['id'];
           },
         ];
@@ -2975,6 +3401,79 @@ export type Database = {
           },
         ];
       };
+      player_ban: {
+        Row: {
+          ban_type: Database['public']['Enums']['ban_type_enum'];
+          banned_at: string;
+          banned_by_admin_id: string;
+          created_at: string;
+          expires_at: string | null;
+          id: string;
+          is_active: boolean;
+          lift_reason: string | null;
+          lifted_at: string | null;
+          lifted_by_admin_id: string | null;
+          notes: string | null;
+          player_id: string;
+          reason: string;
+          updated_at: string;
+        };
+        Insert: {
+          ban_type?: Database['public']['Enums']['ban_type_enum'];
+          banned_at?: string;
+          banned_by_admin_id: string;
+          created_at?: string;
+          expires_at?: string | null;
+          id?: string;
+          is_active?: boolean;
+          lift_reason?: string | null;
+          lifted_at?: string | null;
+          lifted_by_admin_id?: string | null;
+          notes?: string | null;
+          player_id: string;
+          reason: string;
+          updated_at?: string;
+        };
+        Update: {
+          ban_type?: Database['public']['Enums']['ban_type_enum'];
+          banned_at?: string;
+          banned_by_admin_id?: string;
+          created_at?: string;
+          expires_at?: string | null;
+          id?: string;
+          is_active?: boolean;
+          lift_reason?: string | null;
+          lifted_at?: string | null;
+          lifted_by_admin_id?: string | null;
+          notes?: string | null;
+          player_id?: string;
+          reason?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'player_ban_banned_by_admin_id_fkey';
+            columns: ['banned_by_admin_id'];
+            isOneToOne: false;
+            referencedRelation: 'admin';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'player_ban_lifted_by_admin_id_fkey';
+            columns: ['lifted_by_admin_id'];
+            isOneToOne: false;
+            referencedRelation: 'admin';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'player_ban_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       player_block: {
         Row: {
           blocked_player_id: string;
@@ -3186,14 +3685,106 @@ export type Database = {
           },
         ];
       };
+      player_report: {
+        Row: {
+          action_taken: string | null;
+          admin_notes: string | null;
+          created_at: string;
+          description: string | null;
+          evidence_urls: string[] | null;
+          id: string;
+          priority: string | null;
+          related_match_id: string | null;
+          report_type: Database['public']['Enums']['report_type_enum'];
+          reported_player_id: string;
+          reporter_id: string;
+          resulting_ban_id: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          status: Database['public']['Enums']['report_status_enum'];
+          updated_at: string;
+        };
+        Insert: {
+          action_taken?: string | null;
+          admin_notes?: string | null;
+          created_at?: string;
+          description?: string | null;
+          evidence_urls?: string[] | null;
+          id?: string;
+          priority?: string | null;
+          related_match_id?: string | null;
+          report_type: Database['public']['Enums']['report_type_enum'];
+          reported_player_id: string;
+          reporter_id: string;
+          resulting_ban_id?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Database['public']['Enums']['report_status_enum'];
+          updated_at?: string;
+        };
+        Update: {
+          action_taken?: string | null;
+          admin_notes?: string | null;
+          created_at?: string;
+          description?: string | null;
+          evidence_urls?: string[] | null;
+          id?: string;
+          priority?: string | null;
+          related_match_id?: string | null;
+          report_type?: Database['public']['Enums']['report_type_enum'];
+          reported_player_id?: string;
+          reporter_id?: string;
+          resulting_ban_id?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Database['public']['Enums']['report_status_enum'];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'player_report_related_match_id_fkey';
+            columns: ['related_match_id'];
+            isOneToOne: false;
+            referencedRelation: 'match';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'player_report_reported_player_id_fkey';
+            columns: ['reported_player_id'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'player_report_reporter_id_fkey';
+            columns: ['reporter_id'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'player_report_resulting_ban_id_fkey';
+            columns: ['resulting_ban_id'];
+            isOneToOne: false;
+            referencedRelation: 'player_ban';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'player_report_reviewed_by_fkey';
+            columns: ['reviewed_by'];
+            isOneToOne: false;
+            referencedRelation: 'admin';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       player_reputation: {
         Row: {
           calculated_at: string;
           created_at: string;
-          is_public: boolean | null;
+          is_public: boolean;
           last_decay_calculation: string | null;
           matches_completed: number;
-          min_events_for_public: number;
           negative_events: number;
           player_id: string;
           positive_events: number;
@@ -3205,10 +3796,9 @@ export type Database = {
         Insert: {
           calculated_at?: string;
           created_at?: string;
-          is_public?: boolean | null;
+          is_public?: boolean;
           last_decay_calculation?: string | null;
           matches_completed?: number;
-          min_events_for_public?: number;
           negative_events?: number;
           player_id: string;
           positive_events?: number;
@@ -3220,10 +3810,9 @@ export type Database = {
         Update: {
           calculated_at?: string;
           created_at?: string;
-          is_public?: boolean | null;
+          is_public?: boolean;
           last_decay_calculation?: string | null;
           matches_completed?: number;
-          min_events_for_public?: number;
           negative_events?: number;
           player_id?: string;
           positive_events?: number;
@@ -3552,6 +4141,8 @@ export type Database = {
           phone_verified: boolean | null;
           preferred_locale: Database['public']['Enums']['locale_enum'] | null;
           profile_picture_url: string | null;
+          referral_code: string | null;
+          referred_by: string | null;
           updated_at: string | null;
         };
         Insert: {
@@ -3572,6 +4163,8 @@ export type Database = {
           phone_verified?: boolean | null;
           preferred_locale?: Database['public']['Enums']['locale_enum'] | null;
           profile_picture_url?: string | null;
+          referral_code?: string | null;
+          referred_by?: string | null;
           updated_at?: string | null;
         };
         Update: {
@@ -3592,9 +4185,19 @@ export type Database = {
           phone_verified?: boolean | null;
           preferred_locale?: Database['public']['Enums']['locale_enum'] | null;
           profile_picture_url?: string | null;
+          referral_code?: string | null;
+          referred_by?: string | null;
           updated_at?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: 'profile_referred_by_fkey';
+            columns: ['referred_by'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       program: {
         Row: {
@@ -4331,6 +4934,131 @@ export type Database = {
           },
         ];
       };
+      referral_fingerprint: {
+        Row: {
+          created_at: string;
+          device_fingerprint: string;
+          expires_at: string;
+          id: string;
+          ip_address: string | null;
+          matched_at: string | null;
+          matched_player_id: string | null;
+          referral_code: string;
+          user_agent: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          device_fingerprint: string;
+          expires_at?: string;
+          id?: string;
+          ip_address?: string | null;
+          matched_at?: string | null;
+          matched_player_id?: string | null;
+          referral_code: string;
+          user_agent?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          device_fingerprint?: string;
+          expires_at?: string;
+          id?: string;
+          ip_address?: string | null;
+          matched_at?: string | null;
+          matched_player_id?: string | null;
+          referral_code?: string;
+          user_agent?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'referral_fingerprint_matched_player_id_fkey';
+            columns: ['matched_player_id'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      referral_invite: {
+        Row: {
+          channel: string;
+          converted_player_id: string | null;
+          created_at: string;
+          id: string;
+          recipient_email: string | null;
+          recipient_name: string | null;
+          recipient_phone: string | null;
+          referrer_id: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          channel: string;
+          converted_player_id?: string | null;
+          created_at?: string;
+          id?: string;
+          recipient_email?: string | null;
+          recipient_name?: string | null;
+          recipient_phone?: string | null;
+          referrer_id: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          channel?: string;
+          converted_player_id?: string | null;
+          created_at?: string;
+          id?: string;
+          recipient_email?: string | null;
+          recipient_name?: string | null;
+          recipient_phone?: string | null;
+          referrer_id?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'referral_invite_converted_player_id_fkey';
+            columns: ['converted_player_id'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'referral_invite_referrer_id_fkey';
+            columns: ['referrer_id'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      referral_link_click: {
+        Row: {
+          created_at: string;
+          device_fingerprint: string;
+          id: string;
+          ip_address: string | null;
+          referral_code: string;
+          user_agent: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          device_fingerprint: string;
+          id?: string;
+          ip_address?: string | null;
+          referral_code: string;
+          user_agent?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          device_fingerprint?: string;
+          id?: string;
+          ip_address?: string | null;
+          referral_code?: string;
+          user_agent?: string | null;
+        };
+        Relationships: [];
+      };
       registration_payment: {
         Row: {
           amount_cents: number;
@@ -4572,6 +5300,99 @@ export type Database = {
           },
         ];
       };
+      score_confirmation: {
+        Row: {
+          action: string;
+          confirmed_at: string;
+          id: string;
+          match_result_id: string;
+          player_id: string;
+          reason: string | null;
+        };
+        Insert: {
+          action?: string;
+          confirmed_at?: string;
+          id?: string;
+          match_result_id: string;
+          player_id: string;
+          reason?: string | null;
+        };
+        Update: {
+          action?: string;
+          confirmed_at?: string;
+          id?: string;
+          match_result_id?: string;
+          player_id?: string;
+          reason?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'score_confirmation_match_result_id_fkey';
+            columns: ['match_result_id'];
+            isOneToOne: false;
+            referencedRelation: 'match_result';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'score_confirmation_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      screen_analytics: {
+        Row: {
+          created_at: string;
+          duration_seconds: number | null;
+          id: string;
+          metadata: Json | null;
+          player_id: string | null;
+          screen_name: string;
+          sport_id: string | null;
+          view_ended_at: string | null;
+          view_started_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          duration_seconds?: number | null;
+          id?: string;
+          metadata?: Json | null;
+          player_id?: string | null;
+          screen_name: string;
+          sport_id?: string | null;
+          view_ended_at?: string | null;
+          view_started_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          duration_seconds?: number | null;
+          id?: string;
+          metadata?: Json | null;
+          player_id?: string | null;
+          screen_name?: string;
+          sport_id?: string | null;
+          view_ended_at?: string | null;
+          view_started_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'screen_analytics_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'screen_analytics_sport_id_fkey';
+            columns: ['sport_id'];
+            isOneToOne: false;
+            referencedRelation: 'sport';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       session_attendance: {
         Row: {
           attended: boolean | null;
@@ -4751,6 +5572,42 @@ export type Database = {
         };
         Relationships: [];
       };
+      verification_code: {
+        Row: {
+          code: string;
+          created_at: string | null;
+          email: string;
+          expires_at: string;
+          id: string;
+          ip_address: string | null;
+          used: boolean | null;
+          used_at: string | null;
+          user_agent: string | null;
+        };
+        Insert: {
+          code: string;
+          created_at?: string | null;
+          email: string;
+          expires_at: string;
+          id?: string;
+          ip_address?: string | null;
+          used?: boolean | null;
+          used_at?: string | null;
+          user_agent?: string | null;
+        };
+        Update: {
+          code?: string;
+          created_at?: string | null;
+          email?: string;
+          expires_at?: string;
+          id?: string;
+          ip_address?: string | null;
+          used?: boolean | null;
+          used_at?: string | null;
+          user_agent?: string | null;
+        };
+        Relationships: [];
+      };
       waitlist_signup: {
         Row: {
           created_at: string | null;
@@ -4794,10 +5651,39 @@ export type Database = {
         };
         Returns: boolean;
       };
+      attribute_referral:
+        | {
+            Args: { p_new_player_id: string; p_referral_code: string };
+            Returns: Json;
+          }
+        | {
+            Args: {
+              p_new_player_email?: string;
+              p_new_player_id: string;
+              p_referral_code: string;
+            };
+            Returns: Json;
+          };
       auto_confirm_expired_scores: { Args: never; Returns: number };
       calculate_reputation_tier: {
         Args: { min_events?: number; score: number; total_events: number };
         Returns: Database['public']['Enums']['reputation_tier'];
+      };
+      check_community_access: {
+        Args: { p_community_id: string; p_player_id?: string };
+        Returns: {
+          access_reason: string;
+          can_access: boolean;
+          has_active_moderator: boolean;
+          is_member: boolean;
+          is_public: boolean;
+          membership_role: string;
+          membership_status: string;
+        }[];
+      };
+      check_existing_players_by_email: {
+        Args: { p_emails: string[] };
+        Returns: string[];
       };
       check_peer_verification_threshold: {
         Args: { p_player_id: string; p_sport_id: string; p_threshold?: number };
@@ -4816,12 +5702,23 @@ export type Database = {
         Args: { p_player_rating_score_id: string };
         Returns: number;
       };
+      count_valid_proofs_for_level: {
+        Args: {
+          p_player_rating_score_id: string;
+          p_target_rating_score_id: string;
+        };
+        Returns: number;
+      };
       debug_check_conversation_participant: {
         Args: { p_conversation_id: string; p_player_id: string };
         Returns: {
           is_participant: boolean;
           participant_count: number;
         }[];
+      };
+      dismiss_alert: {
+        Args: { p_admin_id: string; p_alert_id: string };
+        Returns: boolean;
       };
       dispute_match_score: {
         Args: {
@@ -4832,7 +5729,112 @@ export type Database = {
         Returns: boolean;
       };
       expire_old_reference_requests: { Args: never; Returns: number };
+      generate_daily_analytics_snapshot: { Args: never; Returns: undefined };
       generate_unique_invite_code: { Args: never; Returns: string };
+      generate_unique_referral_code: { Args: never; Returns: string };
+      generate_weekly_matches_for_all_players: {
+        Args: { p_target_match_count_per_player?: number };
+        Returns: {
+          matches_created: number;
+          player_id: string;
+          player_name: string;
+        }[];
+      };
+      generate_weekly_matches_for_player: {
+        Args: { p_player_id: string; p_target_match_count?: number };
+        Returns: {
+          end_time: string;
+          facility_name: string;
+          host_name: string;
+          match_date: string;
+          match_id: string;
+          sport_name: string;
+          start_time: string;
+        }[];
+      };
+      get_active_player_ban: {
+        Args: { p_player_id: string };
+        Returns: {
+          ban_type: Database['public']['Enums']['ban_type_enum'];
+          banned_at: string;
+          banned_by_admin_id: string;
+          expires_at: string;
+          id: string;
+          reason: string;
+        }[];
+      };
+      get_admin_alerts: {
+        Args: { p_admin_id: string; p_include_read?: boolean; p_limit?: number };
+        Returns: {
+          action_url: string;
+          alert_type: string;
+          created_at: string;
+          id: string;
+          is_read: boolean;
+          message: string;
+          metadata: Json;
+          read_at: string;
+          severity: string;
+          source_id: string;
+          source_type: string;
+          title: string;
+        }[];
+      };
+      get_admin_audit_log: {
+        Args: {
+          p_action_type?: string;
+          p_admin_id?: string;
+          p_end_date?: string;
+          p_entity_type?: string;
+          p_limit?: number;
+          p_offset?: number;
+          p_severity?: string;
+          p_start_date?: string;
+        };
+        Returns: {
+          action_type: string;
+          admin_email: string;
+          admin_id: string;
+          admin_name: string;
+          admin_role: string;
+          created_at: string;
+          entity_id: string;
+          entity_name: string;
+          entity_type: string;
+          id: string;
+          metadata: Json;
+          new_data: Json;
+          old_data: Json;
+          severity: string;
+        }[];
+      };
+      get_admin_push_tokens: {
+        Args: { p_alert_type: string; p_severity?: string };
+        Returns: {
+          admin_id: string;
+          platform: string;
+          push_token: string;
+        }[];
+      };
+      get_alert_counts: {
+        Args: { p_admin_id: string };
+        Returns: {
+          critical: number;
+          info: number;
+          total: number;
+          warning: number;
+        }[];
+      };
+      get_audit_log_stats: {
+        Args: { p_days?: number };
+        Returns: {
+          actions_by_admin: Json;
+          actions_by_severity: Json;
+          actions_by_type: Json;
+          daily_counts: Json;
+          total_actions: number;
+        }[];
+      };
       get_available_slots: {
         Args: { p_court_id: string; p_date: string };
         Returns: {
@@ -4853,6 +5855,49 @@ export type Database = {
           out_template_source: string;
         }[];
       };
+      get_ban_statistics: {
+        Args: never;
+        Returns: {
+          bans_this_month: number;
+          permanent_bans: number;
+          recidivism_rate: number;
+          temporary_bans: number;
+          total_active_bans: number;
+        }[];
+      };
+      get_certification_funnel: {
+        Args: never;
+        Returns: {
+          completion_rate: number;
+          step_name: string;
+          users_count: number;
+        }[];
+      };
+      get_compatible_players: {
+        Args: {
+          p_max_results?: number;
+          p_player_id: string;
+          p_rating_tolerance?: number;
+          p_sport_id: string;
+        };
+        Returns: {
+          display_name: string;
+          facility_id: string;
+          facility_name: string;
+          player_id: string;
+          rating_difference: number;
+          rating_value: number;
+        }[];
+      };
+      get_conversation_health: {
+        Args: never;
+        Returns: {
+          active_conversations: number;
+          avg_messages_per_conversation: number;
+          avg_response_time_minutes: number;
+          total_conversations: number;
+        }[];
+      };
       get_effective_templates: {
         Args: { p_court_id: string; p_date: string };
         Returns: {
@@ -4863,11 +5908,95 @@ export type Database = {
           template_source: string;
         }[];
       };
+      get_engagement_distribution: {
+        Args: never;
+        Returns: {
+          engagement_level: string;
+          percentage: number;
+          user_count: number;
+        }[];
+      };
+      get_feature_adoption: {
+        Args: { p_end_date: string; p_start_date: string };
+        Returns: {
+          adoption_rate: number;
+          feature_name: string;
+          users_count: number;
+        }[];
+      };
+      get_feedback_module_display_name: {
+        Args: { module_key: string };
+        Returns: string;
+      };
+      get_feedback_sentiment: {
+        Args: never;
+        Returns: {
+          bug_reports: number;
+          category: string;
+          feature_requests: number;
+          in_progress_count: number;
+          open_count: number;
+          resolved_count: number;
+        }[];
+      };
+      get_group_activity: {
+        Args: { p_limit?: number; p_network_id: string };
+        Returns: {
+          activity_type: string;
+          created_at: string;
+          id: string;
+          metadata: Json;
+          network_id: string;
+          player_avatar_url: string;
+          player_first_name: string;
+          player_id: string;
+          player_last_name: string;
+          related_entity_id: string;
+        }[];
+      };
+      get_latest_metric: {
+        Args: {
+          p_metric_name: string;
+          p_metric_type: string;
+          p_sport_id?: string;
+        };
+        Returns: number;
+      };
+      get_match_analytics: {
+        Args: { p_end_date: string; p_sport_id?: string; p_start_date: string };
+        Returns: {
+          avg_participants: number;
+          cancellation_rate: number;
+          completion_rate: number;
+          date: string;
+          matches_completed: number;
+          matches_created: number;
+        }[];
+      };
+      get_match_chat_adoption: {
+        Args: { p_end_date: string; p_start_date: string };
+        Returns: {
+          avg_messages_per_match: number;
+          chat_adoption_rate: number;
+          matches_with_chat: number;
+          total_matches: number;
+        }[];
+      };
       get_match_duration_types: {
         Args: never;
         Returns: {
           label: string;
           value: string;
+        }[];
+      };
+      get_match_statistics: {
+        Args: { p_days?: number; p_sport_id?: string };
+        Returns: {
+          avg_participants: number;
+          cancelled_matches: number;
+          completed_matches: number;
+          scheduled_matches: number;
+          total_matches: number;
         }[];
       };
       get_match_type_types: {
@@ -4884,6 +6013,74 @@ export type Database = {
           id: string;
         }[];
       };
+      get_message_volume: {
+        Args: { p_end_date: string; p_start_date: string };
+        Returns: {
+          date: string;
+          direct_messages: number;
+          group_messages: number;
+          match_messages: number;
+          total_messages: number;
+        }[];
+      };
+      get_metric_trend: {
+        Args: {
+          p_days?: number;
+          p_metric_name: string;
+          p_metric_type: string;
+          p_sport_id?: string;
+        };
+        Returns: {
+          metric_value: number;
+          snapshot_date: string;
+        }[];
+      };
+      get_network_growth: {
+        Args: { p_end_date: string; p_start_date: string };
+        Returns: {
+          cumulative_networks: number;
+          date: string;
+          members_joined: number;
+          networks_created: number;
+        }[];
+      };
+      get_network_match_integration: {
+        Args: never;
+        Returns: {
+          avg_matches_per_network: number;
+          networks_with_matches: number;
+          total_networks: number;
+          total_shared_matches: number;
+        }[];
+      };
+      get_network_size_distribution: {
+        Args: never;
+        Returns: {
+          network_count: number;
+          percentage: number;
+          size_category: string;
+        }[];
+      };
+      get_onboarding_funnel:
+        | {
+            Args: { p_days?: number };
+            Returns: {
+              avg_time_seconds: number;
+              completion_rate: number;
+              completions: number;
+              screen_name: string;
+              total_views: number;
+            }[];
+          }
+        | {
+            Args: { p_end_date: string; p_start_date: string };
+            Returns: {
+              avg_time_seconds: number;
+              completion_rate: number;
+              step_name: string;
+              users_count: number;
+            }[];
+          };
       get_opponents_for_notification: {
         Args: { p_match_id: string; p_player_id: string };
         Returns: {
@@ -4894,6 +6091,10 @@ export type Database = {
       };
       get_or_create_group_invite_code: {
         Args: { group_id: string };
+        Returns: string;
+      };
+      get_or_create_player_referral_code: {
+        Args: { p_player_id: string };
         Returns: string;
       };
       get_org_notification_recipients: {
@@ -4936,6 +6137,15 @@ export type Database = {
           timezone: string;
         }[];
       };
+      get_peer_rating_activity: {
+        Args: never;
+        Returns: {
+          avg_rating_difference: number;
+          completed_requests: number;
+          completion_rate: number;
+          total_requests: number;
+        }[];
+      };
       get_pending_community_members: {
         Args: { p_community_id: string; p_moderator_id?: string };
         Returns: {
@@ -4947,6 +6157,15 @@ export type Database = {
           player_profile_picture: string;
           referrer_name: string;
           request_type: Database['public']['Enums']['network_member_request_type'];
+        }[];
+      };
+      get_pending_reports_count: {
+        Args: never;
+        Returns: {
+          high_priority: number;
+          pending: number;
+          total: number;
+          under_review: number;
         }[];
       };
       get_pending_score_confirmations: {
@@ -5006,6 +6225,43 @@ export type Database = {
           last_seen: string;
         }[];
       };
+      get_player_referral_stats: {
+        Args: { p_player_id: string };
+        Returns: Json;
+      };
+      get_player_reports: {
+        Args: {
+          p_limit?: number;
+          p_offset?: number;
+          p_priority?: string;
+          p_report_type?: Database['public']['Enums']['report_type_enum'];
+          p_reported_player_id?: string;
+          p_status?: Database['public']['Enums']['report_status_enum'];
+        };
+        Returns: {
+          action_taken: string;
+          admin_notes: string;
+          created_at: string;
+          description: string;
+          evidence_urls: string[];
+          id: string;
+          priority: string;
+          related_match_id: string;
+          report_type: Database['public']['Enums']['report_type_enum'];
+          reported_player_avatar: string;
+          reported_player_id: string;
+          reported_player_name: string;
+          reporter_avatar: string;
+          reporter_id: string;
+          reporter_name: string;
+          resulting_ban_id: string;
+          reviewed_at: string;
+          reviewed_by: string;
+          reviewer_name: string;
+          status: Database['public']['Enums']['report_status_enum'];
+          updated_at: string;
+        }[];
+      };
       get_players_by_play_attributes: {
         Args: {
           p_play_attributes: Database['public']['Enums']['play_attribute_enum'][];
@@ -5041,6 +6297,7 @@ export type Database = {
         Returns: {
           current_level_proofs_count: number;
           total_proofs_count: number;
+          valid_proofs_for_certification: number;
         }[];
       };
       get_public_communities: {
@@ -5056,6 +6313,15 @@ export type Database = {
           membership_role: string;
           membership_status: string;
           name: string;
+        }[];
+      };
+      get_rating_distribution: {
+        Args: { p_sport_id?: string };
+        Returns: {
+          certified_count: number;
+          percentage: number;
+          player_count: number;
+          rating_label: string;
         }[];
       };
       get_rating_scores_by_type: {
@@ -5085,6 +6351,52 @@ export type Database = {
           step: number;
         }[];
       };
+      get_realtime_user_count: {
+        Args: never;
+        Returns: {
+          active_month: number;
+          active_today: number;
+          active_week: number;
+          new_today: number;
+          new_week: number;
+          total_users: number;
+        }[];
+      };
+      get_report_types: {
+        Args: never;
+        Returns: {
+          count: number;
+          percentage: number;
+          report_type: string;
+        }[];
+      };
+      get_report_volume: {
+        Args: { p_end_date: string; p_start_date: string };
+        Returns: {
+          date: string;
+          reports_created: number;
+          reports_resolved: number;
+          resolution_rate: number;
+        }[];
+      };
+      get_reputation_distribution: {
+        Args: never;
+        Returns: {
+          avg_score: number;
+          percentage: number;
+          tier: string;
+          user_count: number;
+        }[];
+      };
+      get_reputation_events: {
+        Args: { p_end_date: string; p_start_date: string };
+        Returns: {
+          date: string;
+          negative_events: number;
+          positive_events: number;
+          total_events: number;
+        }[];
+      };
       get_reputation_summary: {
         Args: { target_player_id: string };
         Returns: {
@@ -5097,6 +6409,124 @@ export type Database = {
           total_events: number;
         }[];
       };
+      get_resolution_metrics: {
+        Args: never;
+        Returns: {
+          avg_resolution_hours: number;
+          escalation_rate: number;
+          pending_reports: number;
+          resolved_within_sla_rate: number;
+        }[];
+      };
+      get_retention_cohort: {
+        Args: { p_cohort_weeks?: number };
+        Returns: {
+          cohort_week: string;
+          retained_users: number;
+          retention_rate: number;
+          week_number: number;
+        }[];
+      };
+      get_screen_analytics: {
+        Args: { p_end_date: string; p_limit?: number; p_start_date: string };
+        Returns: {
+          avg_duration_seconds: number;
+          screen_name: string;
+          unique_users: number;
+          view_count: number;
+        }[];
+      };
+      get_session_metrics: {
+        Args: { p_end_date: string; p_start_date: string };
+        Returns: {
+          avg_screens_per_session: number;
+          avg_session_duration: number;
+          date: string;
+          total_sessions: number;
+          unique_users: number;
+        }[];
+      };
+      get_sport_activity_comparison: {
+        Args: { p_end_date?: string; p_start_date?: string };
+        Returns: {
+          matches_completed: number;
+          sport_id: string;
+          sport_name: string;
+          total_matches: number;
+          unique_players: number;
+        }[];
+      };
+      get_sport_distribution:
+        | {
+            Args: never;
+            Returns: {
+              percentage: number;
+              player_count: number;
+              sport_id: string;
+              sport_name: string;
+            }[];
+          }
+        | {
+            Args: { p_end_date?: string; p_start_date?: string };
+            Returns: {
+              percentage: number;
+              sport_id: string;
+              sport_name: string;
+              user_count: number;
+            }[];
+          };
+      get_sport_facility_data: {
+        Args: { p_sport_id?: string };
+        Returns: {
+          avg_utilization: number;
+          cities_count: number;
+          court_count: number;
+          facility_count: number;
+          peak_hours: string;
+          sport_id: string;
+          sport_name: string;
+        }[];
+      };
+      get_sport_growth_trends: {
+        Args: {
+          p_end_date?: string;
+          p_sport_id?: string;
+          p_start_date?: string;
+        };
+        Returns: {
+          new_matches: number;
+          new_players: number;
+          sport_id: string;
+          sport_name: string;
+          trend_date: string;
+        }[];
+      };
+      get_sport_popularity: {
+        Args: never;
+        Returns: {
+          active_last_30_days: number;
+          growth_percent: number;
+          match_count: number;
+          percentage: number;
+          player_count: number;
+          sport_id: string;
+          sport_name: string;
+        }[];
+      };
+      get_time_slot_starts: {
+        Args: { p_duration_minutes: number; p_period: string };
+        Returns: string[];
+      };
+      get_top_network_activity: {
+        Args: { p_limit?: number };
+        Returns: {
+          activity_count: number;
+          last_activity_at: string;
+          member_count: number;
+          network_id: string;
+          network_name: string;
+        }[];
+      };
       get_user_conversation_ids: {
         Args: { user_id: string };
         Returns: string[];
@@ -5104,6 +6534,15 @@ export type Database = {
       get_user_created_match_ids: {
         Args: { p_player_id: string };
         Returns: string[];
+      };
+      get_user_growth_trend: {
+        Args: { p_end_date: string; p_interval?: string; p_start_date: string };
+        Returns: {
+          cumulative_users: number;
+          growth_rate: number;
+          new_users: number;
+          period: string;
+        }[];
       };
       get_user_participating_match_ids: {
         Args: { p_player_id: string };
@@ -5226,11 +6665,61 @@ export type Database = {
         Args: { network_id_param: string; user_id_param: string };
         Returns: boolean;
       };
+      is_player_banned: { Args: { p_player_id: string }; Returns: boolean };
       is_player_online: { Args: { player_uuid: string }; Returns: boolean };
       is_public_match: { Args: { p_match_id: string }; Returns: boolean };
       join_group_by_invite_code: {
         Args: { p_invite_code: string; p_player_id: string };
         Returns: Json;
+      };
+      log_admin_action:
+        | {
+            Args: {
+              p_action_type: Database['public']['Enums']['admin_action_type_enum'];
+              p_admin_id: string;
+              p_entity_id?: string;
+              p_entity_type: Database['public']['Enums']['admin_entity_type_enum'];
+              p_metadata?: Json;
+              p_new_data?: Json;
+              p_old_data?: Json;
+            };
+            Returns: string;
+          }
+        | {
+            Args: {
+              p_action_type: string;
+              p_admin_id: string;
+              p_entity_id?: string;
+              p_entity_name?: string;
+              p_entity_type: string;
+              p_metadata?: Json;
+              p_new_data?: Json;
+              p_old_data?: Json;
+              p_severity?: string;
+            };
+            Returns: string;
+          };
+      log_referral_click: {
+        Args: {
+          p_device_fingerprint: string;
+          p_ip_address?: string;
+          p_referral_code: string;
+          p_user_agent?: string;
+        };
+        Returns: undefined;
+      };
+      log_referral_fingerprint: {
+        Args: {
+          p_device_fingerprint: string;
+          p_ip_address?: string;
+          p_referral_code: string;
+          p_user_agent?: string;
+        };
+        Returns: undefined;
+      };
+      mark_alert_read: {
+        Args: { p_admin_id: string; p_alert_id: string };
+        Returns: boolean;
       };
       mark_feedback_reminders_sent: {
         Args: { p_participant_ids: string[] };
@@ -5240,15 +6729,30 @@ export type Database = {
         Args: { p_participant_ids: string[] };
         Returns: number;
       };
+      match_referral_fingerprint: {
+        Args: {
+          p_device_fingerprint: string;
+          p_ip_address: string;
+          p_player_id: string;
+        };
+        Returns: string;
+      };
+      parse_match_duration_to_minutes: {
+        Args: { p_duration: string };
+        Returns: number;
+      };
       recalculate_player_reputation: {
-        Args: { apply_decay?: boolean; target_player_id: string };
+        Args: {
+          apply_decay?: boolean;
+          min_events_for_public?: number;
+          target_player_id: string;
+        };
         Returns: {
           calculated_at: string;
           created_at: string;
-          is_public: boolean | null;
+          is_public: boolean;
           last_decay_calculation: string | null;
           matches_completed: number;
-          min_events_for_public: number;
           negative_events: number;
           player_id: string;
           positive_events: number;
@@ -5264,11 +6768,24 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      reevaluate_certification_for_player_rating: {
+        Args: { p_player_rating_score_id: string };
+        Returns: undefined;
+      };
       refer_player_to_community: {
         Args: {
           p_community_id: string;
           p_referred_player_id: string;
           p_referrer_id?: string;
+        };
+        Returns: string;
+      };
+      register_admin_device: {
+        Args: {
+          p_admin_id: string;
+          p_device_name?: string;
+          p_platform: string;
+          p_push_token: string;
         };
         Returns: string;
       };
@@ -5287,6 +6804,17 @@ export type Database = {
       reset_group_invite_code: {
         Args: { p_group_id: string; p_moderator_id: string };
         Returns: string;
+      };
+      review_player_report: {
+        Args: {
+          p_action_taken?: string;
+          p_admin_id: string;
+          p_admin_notes?: string;
+          p_ban_id?: string;
+          p_report_id: string;
+          p_status: Database['public']['Enums']['report_status_enum'];
+        };
+        Returns: boolean;
       };
       search_conversation_messages: {
         Args: { p_conversation_id: string; p_limit?: number; p_query: string };
@@ -5318,14 +6846,19 @@ export type Database = {
           address: string;
           booking_url_template: string;
           city: string;
+          court_count: number;
           data_provider_id: string;
           data_provider_type: string;
           distance_meters: number;
           external_provider_id: string;
           facility_type: string;
           id: string;
+          is_first_come_first_serve: boolean;
+          membership_required: boolean;
           name: string;
+          sport_ids: string[];
           timezone: string;
+          upcoming_match_count: number;
         }[];
       };
       search_facilities_nearby_count: {
@@ -5371,6 +6904,7 @@ export type Database = {
           p_latitude: number;
           p_limit?: number;
           p_longitude: number;
+          p_match_tier?: string;
           p_match_type?: string;
           p_max_distance_km: number;
           p_offset?: number;
@@ -5390,14 +6924,43 @@ export type Database = {
         Args: { p_organization_id: string };
         Returns: undefined;
       };
-      submit_match_result_for_match: {
+      send_admin_broadcast_push: {
         Args: {
-          p_match_id: string;
-          p_sets: Json;
-          p_submitted_by: string;
-          p_winning_team: number;
+          p_admin_ids?: string[];
+          p_alert_type?: string;
+          p_message: string;
+          p_severity?: string;
+          p_title: string;
         };
-        Returns: string;
+        Returns: Json;
+      };
+      submit_match_result_for_match:
+        | {
+            Args: {
+              p_match_id: string;
+              p_sets: Json;
+              p_submitted_by: string;
+              p_winning_team: number;
+            };
+            Returns: string;
+          }
+        | {
+            Args: {
+              p_match_id: string;
+              p_partner_id?: string;
+              p_sets: Json;
+              p_submitted_by: string;
+              p_winning_team: number;
+            };
+            Returns: string;
+          };
+      trigger_weekly_match_generation: {
+        Args: { p_target_match_count?: number };
+        Returns: Json;
+      };
+      unregister_admin_device: {
+        Args: { p_admin_id: string; p_push_token: string };
+        Returns: boolean;
       };
       update_registration_paid_amount: {
         Args: { p_registration_id: string };
@@ -5406,7 +6969,29 @@ export type Database = {
     };
     Enums: {
       account_status: 'active' | 'suspended' | 'deleted' | 'pending_verification';
-      admin_role_enum: 'super_admin' | 'moderator' | 'support';
+      admin_action_type_enum:
+        | 'view'
+        | 'create'
+        | 'update'
+        | 'delete'
+        | 'ban'
+        | 'unban'
+        | 'export'
+        | 'login'
+        | 'logout'
+        | 'settings_change';
+      admin_entity_type_enum:
+        | 'player'
+        | 'profile'
+        | 'match'
+        | 'organization'
+        | 'facility'
+        | 'report'
+        | 'conversation'
+        | 'network'
+        | 'admin'
+        | 'system';
+      admin_role_enum: 'super_admin' | 'moderator' | 'support' | 'analyst';
       app_role_enum: 'player' | 'organization_member' | 'admin';
       availability_block_type_enum:
         | 'manual'
@@ -5422,6 +7007,7 @@ export type Database = {
         | 'under_maintenance'
         | 'closed';
       badge_status_enum: 'self_declared' | 'certified' | 'disputed';
+      ban_type_enum: 'temporary' | 'permanent';
       booking_status:
         | 'pending'
         | 'confirmed'
@@ -5559,7 +7145,14 @@ export type Database = {
         | 'booking_cancelled_by_org'
         | 'membership_approved'
         | 'org_announcement'
-        | 'match_new_available';
+        | 'match_new_available'
+        | 'program_registration_confirmed'
+        | 'program_registration_cancelled'
+        | 'program_session_reminder'
+        | 'program_session_cancelled'
+        | 'program_waitlist_promoted'
+        | 'program_payment_due'
+        | 'program_payment_received';
       organization_nature_enum: 'public' | 'private';
       organization_type: 'club' | 'facility' | 'league' | 'academy' | 'association';
       organization_type_enum: 'club' | 'municipality' | 'city' | 'association';
@@ -5599,6 +7192,16 @@ export type Database = {
       registration_status_enum: 'pending' | 'confirmed' | 'cancelled' | 'refunded';
       report_reason: 'inappropriate_behavior' | 'harassment' | 'spam' | 'cheating' | 'other';
       report_status: 'pending' | 'under_review' | 'resolved' | 'dismissed';
+      report_status_enum: 'pending' | 'under_review' | 'dismissed' | 'action_taken' | 'escalated';
+      report_type_enum:
+        | 'harassment'
+        | 'cheating'
+        | 'inappropriate_content'
+        | 'spam'
+        | 'impersonation'
+        | 'no_show'
+        | 'unsportsmanlike'
+        | 'other';
       reputation_event_type:
         | 'match_completed'
         | 'match_no_show'
@@ -5620,7 +7223,8 @@ export type Database = {
         | 'suspension_lifted'
         | 'peer_rating_given'
         | 'first_match_bonus'
-        | 'feedback_submitted';
+        | 'feedback_submitted'
+        | 'match_left_late';
       reputation_tier: 'unknown' | 'bronze' | 'silver' | 'gold' | 'platinum';
       role_enum: 'admin' | 'staff' | 'player' | 'coach' | 'owner';
       share_channel_enum: 'sms' | 'email' | 'whatsapp' | 'share_sheet' | 'copy_link';
@@ -5766,7 +7370,31 @@ export const Constants = {
   public: {
     Enums: {
       account_status: ['active', 'suspended', 'deleted', 'pending_verification'],
-      admin_role_enum: ['super_admin', 'moderator', 'support'],
+      admin_action_type_enum: [
+        'view',
+        'create',
+        'update',
+        'delete',
+        'ban',
+        'unban',
+        'export',
+        'login',
+        'logout',
+        'settings_change',
+      ],
+      admin_entity_type_enum: [
+        'player',
+        'profile',
+        'match',
+        'organization',
+        'facility',
+        'report',
+        'conversation',
+        'network',
+        'admin',
+        'system',
+      ],
+      admin_role_enum: ['super_admin', 'moderator', 'support', 'analyst'],
       app_role_enum: ['player', 'organization_member', 'admin'],
       availability_block_type_enum: [
         'manual',
@@ -5784,6 +7412,7 @@ export const Constants = {
         'closed',
       ],
       badge_status_enum: ['self_declared', 'certified', 'disputed'],
+      ban_type_enum: ['temporary', 'permanent'],
       booking_status: [
         'pending',
         'confirmed',
@@ -5912,6 +7541,13 @@ export const Constants = {
         'membership_approved',
         'org_announcement',
         'match_new_available',
+        'program_registration_confirmed',
+        'program_registration_cancelled',
+        'program_session_reminder',
+        'program_session_cancelled',
+        'program_waitlist_promoted',
+        'program_payment_due',
+        'program_payment_received',
       ],
       organization_nature_enum: ['public', 'private'],
       organization_type: ['club', 'facility', 'league', 'academy', 'association'],
@@ -5949,6 +7585,17 @@ export const Constants = {
       registration_status_enum: ['pending', 'confirmed', 'cancelled', 'refunded'],
       report_reason: ['inappropriate_behavior', 'harassment', 'spam', 'cheating', 'other'],
       report_status: ['pending', 'under_review', 'resolved', 'dismissed'],
+      report_status_enum: ['pending', 'under_review', 'dismissed', 'action_taken', 'escalated'],
+      report_type_enum: [
+        'harassment',
+        'cheating',
+        'inappropriate_content',
+        'spam',
+        'impersonation',
+        'no_show',
+        'unsportsmanlike',
+        'other',
+      ],
       reputation_event_type: [
         'match_completed',
         'match_no_show',
@@ -5971,6 +7618,7 @@ export const Constants = {
         'peer_rating_given',
         'first_match_bonus',
         'feedback_submitted',
+        'match_left_late',
       ],
       reputation_tier: ['unknown', 'bronze', 'silver', 'gold', 'platinum'],
       role_enum: ['admin', 'staff', 'player', 'coach', 'owner'],

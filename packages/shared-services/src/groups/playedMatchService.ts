@@ -6,6 +6,7 @@
 import { supabase } from '../supabase';
 import type { CreatePlayedMatchInput, PendingScoreConfirmation } from './groupTypes';
 import { postMatchToGroup } from './groupMatchService';
+import { notifyScoreConfirmation } from '../notifications/notificationFactory';
 
 // ============================================================================
 // INTERNAL HELPERS
@@ -354,8 +355,9 @@ export async function getPendingScoreConfirmations(
 export interface SubmitMatchResultForMatchParams {
   matchId: string;
   submittedByPlayerId: string;
-  winningTeam: 1 | 2;
+  winningTeam: 1 | 2 | null;
   sets: Array<{ team1_score: number; team2_score: number }>;
+  partnerId?: string;
 }
 
 /**
@@ -366,7 +368,7 @@ export interface SubmitMatchResultForMatchParams {
 export async function submitMatchResultForMatch(
   params: SubmitMatchResultForMatchParams
 ): Promise<string> {
-  const { matchId, submittedByPlayerId, winningTeam, sets } = params;
+  const { matchId, submittedByPlayerId, winningTeam, sets, partnerId } = params;
   const p_sets = sets.map(s => ({
     team1_score: s.team1_score,
     team2_score: s.team2_score,
@@ -377,11 +379,30 @@ export async function submitMatchResultForMatch(
     p_submitted_by: submittedByPlayerId,
     p_winning_team: winningTeam,
     p_sets,
+    p_partner_id: partnerId ?? null,
   });
 
   if (error) {
     console.error('Error submitting match result:', error);
     throw new Error(error.message);
+  }
+
+  // Notify non-submitter participants about pending score confirmation
+  const { data: otherParticipants } = await supabase
+    .from('match_participant')
+    .select('player_id')
+    .eq('match_id', matchId)
+    .eq('status', 'joined')
+    .neq('player_id', submittedByPlayerId);
+
+  const opponentIds = otherParticipants?.map(p => p.player_id) ?? [];
+  if (opponentIds.length > 0) {
+    try {
+      await notifyOpponentsOfPendingScore(matchId, submittedByPlayerId, opponentIds);
+    } catch (notifyError) {
+      console.error('Error sending score notifications:', notifyError);
+      // Don't fail - notification failure shouldn't break the flow
+    }
   }
 
   return data as string;
@@ -427,40 +448,30 @@ export async function disputeMatchScore(
 }
 
 /**
- * Send notification to opponent(s) about pending score confirmation
+ * Send notification to opponent(s) about pending score confirmation.
+ * Uses the notification factory for i18n, user preferences, and multi-channel delivery.
  */
 export async function notifyOpponentsOfPendingScore(
   matchId: string,
   submittedBy: string,
   opponentIds: string[]
 ): Promise<void> {
-  // Get submitter's profile for notification message
-  const { data: submitterProfile } = await supabase
-    .from('profile')
-    .select('first_name, last_name, display_name')
-    .eq('id', submittedBy)
-    .single();
+  // Fetch submitter name and match context in parallel
+  const [profileResult, matchResult] = await Promise.all([
+    supabase
+      .from('profile')
+      .select('first_name, last_name, display_name')
+      .eq('id', submittedBy)
+      .single(),
+    supabase.from('match').select('sport:sport_id (name), match_date').eq('id', matchId).single(),
+  ]);
 
+  const submitterProfile = profileResult.data;
   const submitterName =
-    submitterProfile?.display_name ||
-    `${submitterProfile?.first_name || ''} ${submitterProfile?.last_name || ''}`.trim() ||
-    'A player';
+    submitterProfile?.first_name || submitterProfile?.display_name || 'A player';
 
-  // Create notifications for each opponent using the correct schema columns
-  // Schema: user_id, type, target_id, title, body, payload, read_at, expires_at
-  const notifications = opponentIds.map(opponentId => ({
-    user_id: opponentId,
-    type: 'score_confirmation' as const,
-    target_id: matchId,
-    title: 'Score Confirmation Required',
-    body: `${submitterName} submitted a match score. Please confirm or dispute within 24 hours.`,
-    payload: { match_id: matchId, submitted_by: submittedBy },
-  }));
+  const sportName = (matchResult.data?.sport as { name?: string } | null)?.name?.toLowerCase();
+  const matchDate = matchResult.data?.match_date ?? undefined;
 
-  const { error } = await supabase.from('notification').insert(notifications);
-
-  if (error) {
-    console.error('Error sending score confirmation notifications:', error);
-    // Don't throw - notification failure shouldn't break the flow
-  }
+  await notifyScoreConfirmation(opponentIds, matchId, submitterName, sportName, matchDate);
 }
