@@ -28,7 +28,12 @@ import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
 import { useSport } from '../context';
 import { SportIcon } from '../components/SportIcon';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
-import { getProfilePictureUrl, lightHaptic, mediumHaptic } from '@rallia/shared-utils';
+import {
+  getProfilePictureUrl,
+  lightHaptic,
+  mediumHaptic,
+  formatRelativeTime,
+} from '@rallia/shared-utils';
 import { formatDateMonthYear } from '../utils/dateFormatting';
 import type { RootStackParamList } from '../navigation/types';
 import type { Profile, Player } from '@rallia/shared-types';
@@ -41,11 +46,8 @@ import {
   neutral,
   status,
 } from '@rallia/design-system';
-import {
-  ProofGallerySection,
-  CertificationBadge,
-  type BadgeStatus,
-} from '../features/ratings/components';
+import { CertificationBadge, type BadgeStatus } from '../features/ratings/components';
+import PlayerPortfolioSection from '../features/profile/PlayerPortfolioSection';
 
 // Types
 type PlayerProfileRouteProp = RouteProp<RootStackParamList, 'PlayerProfile'>;
@@ -109,7 +111,11 @@ const PlayerProfile = () => {
   const route = useRoute<PlayerProfileRouteProp>();
   const navigation = useNavigation<NavigationProp>();
   const { playerId, sportId } = route.params;
-  const { colors } = useThemeStyles();
+  const { colors, isDark } = useThemeStyles();
+
+  // Skeleton loading colors
+  const skeletonBg = isDark ? '#262626' : '#E1E9EE';
+  const skeletonHighlight = isDark ? '#404040' : '#F2F8FC';
   const { t, locale } = useTranslation();
   const { selectedSport } = useSport();
   const getOrCreateDirectConversation = useGetOrCreateDirectConversation();
@@ -1019,6 +1025,22 @@ const PlayerProfile = () => {
             </Text>
           </View>
 
+          {/* Last Seen / Active Status */}
+          <View style={styles.lastSeenContainer}>
+            <Ionicons
+              name={isOnline ? 'ellipse' : 'time-outline'}
+              size={isOnline ? 8 : 14}
+              color={isOnline ? '#22C55E' : colors.textMuted}
+            />
+            <Text style={[styles.lastSeenText, { color: isOnline ? '#22C55E' : colors.textMuted }]}>
+              {isOnline
+                ? t('profile.status.activeNow')
+                : player?.last_seen_at
+                  ? `${t('profile.status.lastSeen')} ${formatRelativeTime(player.last_seen_at)}`
+                  : t('profile.status.offline')}
+            </Text>
+          </View>
+
           {/* Action Buttons */}
           <View style={styles.actionButtons}>
             <TouchableOpacity
@@ -1243,13 +1265,13 @@ const PlayerProfile = () => {
               </View>
             </View>
 
-            {/* Rating Proofs Gallery */}
-            {primarySport.playerRatingScoreId && (
-              <ProofGallerySection
-                playerRatingScoreId={primarySport.playerRatingScoreId}
-                sportName={primarySport.display_name}
-              />
-            )}
+            {/* Portfolio Section - Rating Proofs Gallery with approve/decline */}
+            <PlayerPortfolioSection
+              playerId={playerId}
+              sports={sports.map(s => ({ id: s.id, display_name: s.display_name }))}
+              skeletonBg={skeletonBg}
+              skeletonHighlight={skeletonHighlight}
+            />
           </View>
         )}
 
@@ -1453,9 +1475,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[1],
-    marginBottom: spacingPixels[4],
+    marginBottom: spacingPixels[1],
   },
   joinedText: {
+    fontSize: fontSizePixels.xs,
+  },
+  lastSeenContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    marginBottom: spacingPixels[4],
+  },
+  lastSeenText: {
     fontSize: fontSizePixels.xs,
   },
   actionButtons: {

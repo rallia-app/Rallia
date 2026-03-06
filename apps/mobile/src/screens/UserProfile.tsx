@@ -13,7 +13,7 @@ import { SheetManager } from 'react-native-actions-sheet';
 import { useAppNavigation } from '../navigation/hooks';
 import { Text, Skeleton, SkeletonAvatar, useToast } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
-import { useProfile, usePlayer } from '@rallia/shared-hooks';
+import { useProfile, usePlayer, usePlayerReputation } from '@rallia/shared-hooks';
 import { replaceImage } from '../services/imageUpload';
 import {
   useImagePicker,
@@ -33,8 +33,13 @@ import {
   fontSizePixels,
   fontWeightNumeric,
   primary,
+  neutral,
   shadowsNative,
 } from '@rallia/design-system';
+import PortfolioSection, {
+  type PortfolioProof,
+  type PortfolioSport,
+} from '../features/profile/PortfolioSection';
 
 interface SportWithRating extends Sport {
   isActive: boolean;
@@ -73,6 +78,7 @@ const UserProfile = () => {
   const toast = useToast();
   const { profile, loading: profileLoading, refetch: refetchProfile } = useProfile();
   const { player, loading: playerLoading, refetch: refetchPlayer } = usePlayer();
+  const { display: reputationDisplay } = usePlayerReputation(player?.id);
   const loadingCore = profileLoading || playerLoading;
 
   // Theme-aware skeleton colors (aligned with FacilitiesDirectory for consistent, sleek loading UI)
@@ -83,9 +89,11 @@ const UserProfile = () => {
   const [sports, setSports] = useState<SportWithRating[]>([]);
   const [availabilities, setAvailabilities] = useState<AvailabilityGrid>({});
   const [pendingReferenceRequestsCount, setPendingReferenceRequestsCount] = useState(0);
+  const [portfolioProofs, setPortfolioProofs] = useState<PortfolioProof[]>([]);
   const [loadingSports, setLoadingSports] = useState(true);
   const [loadingAvailabilities, setLoadingAvailabilities] = useState(true);
   const [loadingReferenceRequests, setLoadingReferenceRequests] = useState(true);
+  const [loadingPortfolio, setLoadingPortfolio] = useState(true);
 
   // Profile screen tour - triggers after main navigation tour is completed
   useTourSequence({
@@ -184,6 +192,7 @@ const UserProfile = () => {
     setLoadingSports(true);
     setLoadingAvailabilities(true);
     setLoadingReferenceRequests(true);
+    setLoadingPortfolio(true);
 
     // Sports: all sports + player_sport + ratings, then merge
     const fetchSports = async () => {
@@ -333,7 +342,103 @@ const UserProfile = () => {
       }
     };
 
-    await Promise.all([fetchSports(), fetchAvailabilities(), fetchReferenceRequests()]);
+    // Portfolio - all rating proofs across all sports
+    const fetchPortfolio = async () => {
+      try {
+        // First get all player_rating_scores for this user
+        const ratingsResult = await withTimeout(
+          (async () =>
+            supabase
+              .from('player_rating_score')
+              .select(
+                `
+                id,
+                rating_score!player_rating_scores_rating_score_id_fkey (
+                  rating_system (
+                    sport:sport_id (
+                      id,
+                      display_name
+                    )
+                  )
+                )
+              `
+              )
+              .eq('player_id', user.id))(),
+          15000,
+          'Failed to load ratings for portfolio'
+        );
+
+        if (ratingsResult.error) throw ratingsResult.error;
+
+        const ratingIds = (ratingsResult.data || []).map(r => r.id);
+
+        if (ratingIds.length === 0) {
+          setPortfolioProofs([]);
+          return;
+        }
+
+        // Create maps of rating_score_id to sport name and sport id
+        const sportNameMap = new Map<string, string>();
+        const sportIdMap = new Map<string, string>();
+        (ratingsResult.data || []).forEach(rating => {
+          const ratingScore = rating.rating_score as {
+            rating_system?: {
+              sport?: { id?: string; display_name?: string };
+            };
+          } | null;
+          const sport = ratingScore?.rating_system?.sport;
+          if (sport?.display_name) {
+            sportNameMap.set(rating.id, sport.display_name);
+          }
+          if (sport?.id) {
+            sportIdMap.set(rating.id, sport.id);
+          }
+        });
+
+        // Fetch all proofs for these ratings (exclude rejected)
+        const proofsResult = await withTimeout(
+          (async () =>
+            supabase
+              .from('rating_proof')
+              .select(
+                `
+                *,
+                file:file(*)
+              `
+              )
+              .in('player_rating_score_id', ratingIds)
+              .eq('is_active', true)
+              .neq('status', 'rejected')
+              .order('created_at', { ascending: false }))(),
+          15000,
+          'Failed to load portfolio proofs'
+        );
+
+        if (proofsResult.error) throw proofsResult.error;
+
+        // Map proofs with sport names and IDs
+        const portfolioData = (proofsResult.data || []).map((item: Record<string, unknown>) => ({
+          ...item,
+          file: Array.isArray(item.file) && item.file.length > 0 ? item.file[0] : item.file,
+          sport_name: sportNameMap.get(item.player_rating_score_id as string),
+          sport_id: sportIdMap.get(item.player_rating_score_id as string),
+        })) as PortfolioProof[];
+
+        setPortfolioProofs(portfolioData);
+      } catch (error) {
+        Logger.error('Failed to fetch portfolio', error as Error);
+        toast.error(getNetworkErrorMessage(error));
+      } finally {
+        setLoadingPortfolio(false);
+      }
+    };
+
+    await Promise.all([
+      fetchSports(),
+      fetchAvailabilities(),
+      fetchReferenceRequests(),
+      fetchPortfolio(),
+    ]);
   };
 
   // Convert DB format to UI format for the overlay
@@ -967,6 +1072,19 @@ const UserProfile = () => {
           )}
         </View>
 
+        {/* Portfolio - Gallery of all rating proofs */}
+        <PortfolioSection
+          proofs={portfolioProofs}
+          sports={
+            sports
+              .filter(s => s.isActive)
+              .map(s => ({ id: s.id, display_name: s.display_name })) as PortfolioSport[]
+          }
+          loading={loadingPortfolio}
+          skeletonBg={skeletonBg}
+          skeletonHighlight={skeletonHighlight}
+        />
+
         {/* My Sports - Horizontal Cards with Chevrons - Wrapped with CopilotStep */}
         <CopilotStep
           text={t('tour.profileScreen.sports.description')}
@@ -1267,6 +1385,34 @@ const UserProfile = () => {
           </WalkthroughableView>
         </CopilotStep>
 
+        {/* Reputation Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+              {t('profile.sections.reputation')}
+            </Text>
+          </View>
+
+          <View style={[styles.card, { backgroundColor: colors.card }]}>
+            <View style={styles.reputationBar}>
+              <View
+                style={[
+                  styles.reputationFill,
+                  {
+                    backgroundColor: reputationDisplay.tierColor,
+                    width: `${reputationDisplay.score}%`,
+                  },
+                ]}
+              />
+            </View>
+            <Text style={[styles.reputationScore, { color: colors.text }]}>
+              {reputationDisplay.isVisible
+                ? `${reputationDisplay.score}% — ${reputationDisplay.tierLabel}`
+                : reputationDisplay.tierLabel}
+            </Text>
+          </View>
+        </View>
+
         {/* Reference Requests Section - Only show when loaded; show card if count > 0 */}
         {!loadingReferenceRequests && pendingReferenceRequestsCount > 0 && (
           <View style={styles.section}>
@@ -1409,6 +1555,22 @@ const styles = StyleSheet.create({
   reputationContainer: {
     marginTop: spacingPixels[2],
     marginBottom: spacingPixels[1],
+  },
+  reputationBar: {
+    height: 8,
+    backgroundColor: neutral[200],
+    borderRadius: radiusPixels.full,
+    overflow: 'hidden',
+    marginBottom: spacingPixels[2],
+  },
+  reputationFill: {
+    height: '100%',
+    borderRadius: radiusPixels.full,
+  },
+  reputationScore: {
+    fontSize: fontSizePixels.sm,
+    fontWeight: fontWeightNumeric.semibold,
+    textAlign: 'right',
   },
   joinedContainer: {
     flexDirection: 'row',

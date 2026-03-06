@@ -66,6 +66,20 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
 
   if (!proof) return null;
 
+  // Get effective type - use file.file_type for file-based proofs
+  const getEffectiveType = (): 'external_link' | 'video' | 'image' | 'document' => {
+    if (proof.proof_type === 'external_link') return 'external_link';
+    if (proof.file?.file_type) {
+      const fileType = proof.file.file_type as 'video' | 'image' | 'document';
+      if (['video', 'image', 'document'].includes(fileType)) {
+        return fileType;
+      }
+    }
+    return proof.proof_type;
+  };
+
+  const effectiveType = getEffectiveType();
+
   const handleOpenExternalLink = async () => {
     if (proof.external_url) {
       try {
@@ -83,7 +97,7 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
   };
 
   const renderContent = () => {
-    switch (proof.proof_type) {
+    switch (effectiveType) {
       case 'video':
         if (!proof.file?.url) {
           return (

@@ -375,6 +375,186 @@ export async function uploadRatingProofFile(
 }
 
 /**
+ * Update an existing rating proof (title, description, external_url, or file_id)
+ */
+export async function updateRatingProof(
+  proofId: string,
+  updates: {
+    title?: string;
+    description?: string;
+    external_url?: string;
+    file_id?: string;
+  }
+): Promise<ProofUploadResult> {
+  try {
+    // Build the update object - only include non-empty values
+    const updateData: Record<string, string | null> = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (updates.title !== undefined && updates.title.trim()) {
+      updateData.title = updates.title.trim();
+    }
+
+    if (updates.description !== undefined) {
+      updateData.description = updates.description.trim() || null;
+    }
+
+    if (updates.external_url !== undefined && updates.external_url.trim()) {
+      updateData.external_url = updates.external_url.trim();
+    }
+
+    if (updates.file_id !== undefined) {
+      updateData.file_id = updates.file_id;
+      // Reset status to pending when file is replaced
+      updateData.status = 'pending';
+    }
+
+    const { data, error } = await supabase
+      .from('rating_proof')
+      .update(updateData)
+      .eq('id', proofId)
+      .select('id, external_url')
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    Logger.info('Rating proof updated', { proofId, updates: Object.keys(updateData) });
+
+    return {
+      success: true,
+      url: data.external_url || undefined,
+    };
+  } catch (error) {
+    Logger.error('Failed to update rating proof', error as Error, { proofId });
+    return {
+      success: false,
+      error: (error as Error).message,
+    };
+  }
+}
+
+export interface ReplaceProofFileOptions {
+  proofId: string;
+  fileUri: string;
+  fileType: ProofFileType;
+  originalName: string;
+  mimeType: string;
+  fileSize: number;
+  userId: string;
+  title: string;
+  description?: string;
+  onProgress?: (progress: number) => void;
+}
+
+/**
+ * Replace the file in an existing proof with a new file
+ * This uploads a new file and updates the proof to reference it
+ */
+export async function replaceProofFile(
+  options: ReplaceProofFileOptions
+): Promise<ProofUploadResult> {
+  const {
+    proofId,
+    fileUri,
+    fileType,
+    originalName,
+    mimeType,
+    fileSize,
+    userId,
+    title,
+    description,
+    onProgress,
+  } = options;
+
+  try {
+    Logger.info('Replacing proof file', { proofId, fileType, originalName });
+
+    const storageProvider = getStorageProvider(fileType);
+    let uploadResult: { url: string; storageKey: string; error?: Error };
+
+    // Upload based on file type and storage provider
+    if (storageProvider === 'backblaze' && fileType === 'video') {
+      const bbResult = await uploadVideoToBackblaze(
+        fileUri,
+        userId,
+        originalName,
+        (progress: BackblazeUploadProgress) => {
+          onProgress?.(progress.percentage);
+        }
+      );
+
+      if (bbResult.error) {
+        throw bbResult.error;
+      }
+
+      uploadResult = {
+        url: bbResult.url,
+        storageKey: `backblaze/${bbResult.fileName}`,
+      };
+    } else {
+      uploadResult = await uploadToSupabase(
+        fileUri,
+        fileType,
+        userId,
+        originalName,
+        mimeType,
+        onProgress
+      );
+
+      if (uploadResult.error) {
+        throw uploadResult.error;
+      }
+    }
+
+    // Create new file record
+    const fileResult = await createFileRecord(
+      userId,
+      uploadResult.storageKey,
+      uploadResult.url,
+      originalName,
+      fileType,
+      mimeType,
+      fileSize,
+      storageProvider
+    );
+
+    if (fileResult.error || !fileResult.fileId) {
+      throw fileResult.error || new Error('Failed to create file record');
+    }
+
+    // Update the proof with the new file and reset status to pending
+    const updateResult = await updateRatingProof(proofId, {
+      file_id: fileResult.fileId,
+      title: title,
+      description: description,
+    });
+
+    if (!updateResult.success) {
+      // Clean up the new file on failure
+      await supabase.from('file').delete().eq('id', fileResult.fileId);
+      throw new Error(updateResult.error || 'Failed to update proof');
+    }
+
+    Logger.info('Proof file replaced successfully', { proofId, newFileId: fileResult.fileId });
+
+    return {
+      success: true,
+      fileId: fileResult.fileId,
+      url: uploadResult.url,
+    };
+  } catch (error) {
+    Logger.error('Failed to replace proof file', error as Error, { proofId });
+    return {
+      success: false,
+      error: (error as Error).message,
+    };
+  }
+}
+
+/**
  * Create an external link rating proof (no file upload)
  */
 export async function createExternalLinkProof(

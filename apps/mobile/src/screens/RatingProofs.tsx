@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, Alert, Image, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -36,7 +36,7 @@ const RatingProofs: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute<RatingProofsRouteProp>();
   const { playerRatingScoreId, ratingValue, isOwnProfile } = route.params;
-  const { colors } = useThemeStyles();
+  const { colors, isDark } = useThemeStyles();
   const { t, locale } = useTranslation();
   const toast = useToast();
 
@@ -186,9 +186,13 @@ const RatingProofs: React.FC = () => {
 
   const handleEditProof = (proof: RatingProofWithFile) => {
     lightHaptic();
-    // TODO: Open edit overlay
     Logger.logUserAction('edit_proof_pressed', { proofId: proof.id, playerRatingScoreId });
-    toast.info('Edit proof feature will be implemented next');
+    SheetManager.show('edit-proof', {
+      payload: {
+        proof,
+        onSuccess: handleProofSuccess,
+      },
+    });
   };
 
   const handleDeleteProof = async (proofId: string) => {
@@ -257,6 +261,118 @@ const RatingProofs: React.FC = () => {
       default:
         return { text: 'Pending', color: colors.textMuted };
     }
+  };
+
+  // Handle tapping on proof preview to view full content
+  const handleViewProof = async (proof: RatingProofWithRatingScore) => {
+    lightHaptic();
+    if (proof.proof_type === 'external_link' && proof.external_url) {
+      try {
+        await Linking.openURL(proof.external_url);
+      } catch (error) {
+        Logger.error('Failed to open external URL', error as Error, { url: proof.external_url });
+        toast.error(t('common.error'));
+      }
+    } else if (proof.file?.url) {
+      // For files, navigate to a viewer or open the URL
+      try {
+        await Linking.openURL(proof.file.url);
+      } catch (error) {
+        Logger.error('Failed to open file URL', error as Error, { url: proof.file.url });
+        toast.error(t('common.error'));
+      }
+    }
+  };
+
+  // Render preview thumbnail based on proof type
+  const renderProofPreview = (proof: RatingProofWithRatingScore) => {
+    if (proof.proof_type === 'external_link') {
+      // External link preview
+      return (
+        <TouchableOpacity
+          style={[styles.previewContainer, { backgroundColor: colors.background }]}
+          onPress={() => handleViewProof(proof)}
+          activeOpacity={0.8}
+        >
+          <View style={[styles.linkPreview, { borderColor: colors.border }]}>
+            <Ionicons name="link" size={28} color={colors.primary} />
+            <Text size="sm" color={colors.textMuted} numberOfLines={1} style={styles.linkText}>
+              {proof.external_url}
+            </Text>
+            <Ionicons name="open-outline" size={18} color={colors.textMuted} />
+          </View>
+        </TouchableOpacity>
+      );
+    }
+
+    if (proof.file) {
+      switch (proof.file.file_type) {
+        case 'image':
+          return (
+            <TouchableOpacity
+              style={styles.previewContainer}
+              onPress={() => handleViewProof(proof)}
+              activeOpacity={0.8}
+            >
+              <Image
+                source={{ uri: proof.file.url }}
+                style={styles.previewImage}
+                resizeMode="cover"
+              />
+              <View style={[styles.viewOverlay, { backgroundColor: 'rgba(0,0,0,0.3)' }]}>
+                <Ionicons name="expand-outline" size={24} color="white" />
+              </View>
+            </TouchableOpacity>
+          );
+        case 'video':
+          return (
+            <TouchableOpacity
+              style={styles.previewContainer}
+              onPress={() => handleViewProof(proof)}
+              activeOpacity={0.8}
+            >
+              {proof.file.thumbnail_url ? (
+                <Image
+                  source={{ uri: proof.file.thumbnail_url }}
+                  style={styles.previewImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View
+                  style={[styles.videoPosterPlaceholder, { backgroundColor: colors.background }]}
+                >
+                  <Ionicons name="videocam" size={40} color={colors.textMuted} />
+                </View>
+              )}
+              <View style={[styles.playOverlay, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
+                <View style={[styles.playButton, { backgroundColor: colors.primary }]}>
+                  <Ionicons name="play" size={24} color="white" />
+                </View>
+              </View>
+            </TouchableOpacity>
+          );
+        case 'document':
+          return (
+            <TouchableOpacity
+              style={[styles.previewContainer, { backgroundColor: colors.background }]}
+              onPress={() => handleViewProof(proof)}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.documentPreview, { borderColor: colors.border }]}>
+                <Ionicons name="document-text" size={36} color={colors.primary} />
+                <Text size="sm" color={colors.text} numberOfLines={1} style={styles.documentName}>
+                  {proof.file.original_name || t('profile.ratingProofs.proofTypes.document.title')}
+                </Text>
+                <Ionicons name="open-outline" size={16} color={colors.textMuted} />
+              </View>
+            </TouchableOpacity>
+          );
+        default:
+          return null;
+      }
+    }
+
+    return null;
   };
 
   const renderProofCard = ({ item }: { item: RatingProofWithRatingScore }) => {
@@ -334,6 +450,9 @@ const RatingProofs: React.FC = () => {
             </View>
           )}
         </View>
+
+        {/* Proof Preview */}
+        {renderProofPreview(item)}
 
         {/* Action Icons */}
         {isOwnProfile && (
@@ -425,10 +544,17 @@ const RatingProofs: React.FC = () => {
             <Text size="lg" weight="bold" color={colors.text}>
               My Rating Proofs
             </Text>
-            <TouchableOpacity>
-              <Ionicons name="information-circle-outline" size={24} color={colors.textMuted} />
-            </TouchableOpacity>
           </View>
+
+          {/* Info Box - Only show for own profile */}
+          {isOwnProfile && (
+            <View style={[styles.infoBox, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
+              <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
+              <Text size="sm" style={{ color: colors.textMuted, flex: 1, marginLeft: 8 }}>
+                {t('profile.ratingProofs.infoMessage')}
+              </Text>
+            </View>
+          )}
 
           {/* Proofs List */}
           <FlatList
@@ -458,6 +584,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacingPixels[5],
     paddingVertical: spacingPixels[4],
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: spacingPixels[3],
+    marginHorizontal: spacingPixels[5],
+    marginBottom: spacingPixels[3],
+    borderRadius: radiusPixels.lg,
   },
   loadingContainer: {
     flex: 1,
@@ -538,12 +672,81 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     gap: spacingPixels[4],
+    marginTop: spacingPixels[3],
   },
   iconButton: {
     width: spacingPixels[8],
     height: spacingPixels[8],
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  // Preview styles
+  previewContainer: {
+    width: '100%',
+    height: 140,
+    borderRadius: radiusPixels.md,
+    overflow: 'hidden',
+    marginBottom: spacingPixels[2],
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  viewOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    padding: spacingPixels[2],
+    borderBottomLeftRadius: radiusPixels.md,
+  },
+  playOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoPosterPlaceholder: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  linkPreview: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[4],
+    gap: spacingPixels[3],
+    borderWidth: 1,
+    borderRadius: radiusPixels.md,
+    borderStyle: 'dashed',
+  },
+  linkText: {
+    flex: 1,
+  },
+  documentPreview: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacingPixels[4],
+    gap: spacingPixels[2],
+    borderWidth: 1,
+    borderRadius: radiusPixels.md,
+    borderStyle: 'dashed',
+  },
+  documentName: {
+    maxWidth: '80%',
+    textAlign: 'center',
   },
   emptyContainer: {
     flex: 1,
