@@ -18,6 +18,7 @@ export * from './usePlayerSports';
 export * from './usePlayer';
 export * from './useNotifications';
 export * from './useNotificationRealtime';
+export * from './useBadgeCountSync';
 export * from './useNotificationPreferences';
 export * from './useOrgNotifications';
 export * from './useCreateMatch';

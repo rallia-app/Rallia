@@ -25,6 +25,7 @@ import {
   ProfileProvider,
   PlayerProvider,
   useNotificationRealtime,
+  useBadgeCountSync,
   usePendingFeedbackCheck,
   useUpdateLastSeen,
 } from '@rallia/shared-hooks';
@@ -165,6 +166,9 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
   // Subscribe to realtime notification updates
   // This keeps the notification badge in sync with the database
   useNotificationRealtime(userId);
+
+  // Keep app icon badge count synced with unread notification count
+  useBadgeCountSync(userId);
 
   // Sync locale to database when user logs in or locale becomes ready
   // This ensures server-side notifications use the correct locale
