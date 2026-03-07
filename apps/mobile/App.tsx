@@ -25,10 +25,10 @@ import {
   ProfileProvider,
   PlayerProvider,
   useNotificationRealtime,
-  useBadgeCountSync,
   usePendingFeedbackCheck,
   useUpdateLastSeen,
 } from '@rallia/shared-hooks';
+import { useBadgeCountSync } from '@rallia/shared-hooks/src/useBadgeCountSync';
 import { WelcomeTourModal } from './src/components/WelcomeTourModal';
 import { TourCompleteModal } from './src/components/TourCompleteModal';
 import { ErrorBoundary, ToastProvider, NetworkProvider } from '@rallia/shared-components';
