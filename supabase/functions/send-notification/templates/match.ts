@@ -267,11 +267,16 @@ function generateActionButton(
     case 'match_updated':
     case 'match_starting_soon':
     case 'match_check_in_available':
+    case 'match_new_available':
+    case 'match_spot_opened':
+    case 'nearby_match_available':
+    case 'score_confirmation':
     case 'player_left':
       buttonKey = 'match.button.viewGame';
       if (payload.matchId) deepLink = `rallia://match/${payload.matchId}`;
       break;
     case 'feedback_request':
+    case 'feedback_reminder':
       buttonKey = 'match.button.rateGame';
       if (payload.matchId) deepLink = `rallia://match/${payload.matchId}/feedback`;
       break;
