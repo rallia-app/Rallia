@@ -1,10 +1,13 @@
 # Rating Source and Verification System - Schema Changes
 
 ## Overview
+
 This document explains the database schema changes to support the new rating source and peer verification system.
 
 ## Problem Statement
+
 The original schema mixed **what** (rating systems like NTRP, DUPR) with **how** (verification methods like self-assessment). We need to:
+
 1. Separate rating systems from verification methods
 2. Allow multiple ratings per player per sport with different verification levels
 3. Support peer verification through match reviews
@@ -33,13 +36,14 @@ CREATE TYPE rating_source_type AS ENUM (
 
 #### NEW COLUMNS:
 
-| Column | Type | Purpose |
-|--------|------|---------|
-| `sport_id` | UUID | Which sport the skill rating applies to |
-| `skill_rating_value` | NUMERIC | Peer-assessed skill rating (e.g., 4.5) |
-| `skill_rating_score_id` | UUID | Reference to rating_score table |
+| Column                  | Type    | Purpose                                 |
+| ----------------------- | ------- | --------------------------------------- |
+| `sport_id`              | UUID    | Which sport the skill rating applies to |
+| `skill_rating_value`    | NUMERIC | Peer-assessed skill rating (e.g., 4.5)  |
+| `skill_rating_score_id` | UUID    | Reference to rating_score table         |
 
 #### BEFORE:
+
 ```sql
 CREATE TABLE player_review (
     id UUID PRIMARY KEY,
@@ -52,6 +56,7 @@ CREATE TABLE player_review (
 ```
 
 #### AFTER:
+
 ```sql
 CREATE TABLE player_review (
     id UUID PRIMARY KEY,
@@ -68,6 +73,7 @@ CREATE TABLE player_review (
 ```
 
 **Example Usage:**
+
 ```sql
 -- After a tennis match, opponent rates player
 INSERT INTO player_review (
@@ -87,23 +93,25 @@ INSERT INTO player_review (
 
 #### NEW COLUMNS:
 
-| Column | Type | Default | Purpose |
-|--------|------|---------|---------|
-| `source_type` | rating_source_type | 'self_reported' | How rating was obtained |
-| `verification_method` | TEXT | NULL | Specific method (usta_api, video_review, etc.) |
-| `peer_rating_count` | INTEGER | 0 | Number of peer ratings received |
-| `peer_rating_average` | NUMERIC | NULL | Average of peer ratings |
-| `is_primary` | BOOLEAN | TRUE | Primary rating to display |
+| Column                | Type               | Default         | Purpose                                        |
+| --------------------- | ------------------ | --------------- | ---------------------------------------------- |
+| `source_type`         | rating_source_type | 'self_reported' | How rating was obtained                        |
+| `verification_method` | TEXT               | NULL            | Specific method (usta_api, video_review, etc.) |
+| `peer_rating_count`   | INTEGER            | 0               | Number of peer ratings received                |
+| `peer_rating_average` | NUMERIC            | NULL            | Average of peer ratings                        |
+| `is_primary`          | BOOLEAN            | TRUE            | Primary rating to display                      |
 
 #### UPDATED CONSTRAINT:
 
 **OLD:**
+
 ```sql
 UNIQUE(player_id, rating_score_id)
 -- Only ONE rating per player per rating_score
 ```
 
 **NEW:**
+
 ```sql
 UNIQUE(player_id, rating_score_id, source_type)
 -- Multiple ratings with different sources allowed
@@ -204,6 +212,7 @@ SELECT * FROM check_peer_verification_threshold('player-uuid', 'tennis-sport-id'
 ### 2. `auto_verify_api_ratings()` Trigger
 
 Automatically runs on INSERT/UPDATE to `player_rating_score`:
+
 - If `source_type = 'api_verified'` → set `is_verified = TRUE`
 - Demote other ratings for the same sport to `is_primary = FALSE`
 
@@ -215,7 +224,7 @@ Automatically runs on INSERT/UPDATE to `player_rating_score`:
 
 ```sql
 -- Get player's primary verified rating
-SELECT 
+SELECT
     prs.*,
     rs.display_label,
     r.display_name as rating_type_name
@@ -224,7 +233,7 @@ JOIN rating_score rs ON prs.rating_score_id = rs.id
 JOIN rating r ON rs.rating_id = r.id
 WHERE prs.player_id = 'user-uuid'
   AND prs.is_primary = TRUE
-ORDER BY 
+ORDER BY
     CASE prs.source_type
         WHEN 'api_verified' THEN 1
         WHEN 'admin_verified' THEN 2
@@ -238,7 +247,7 @@ LIMIT 1;
 
 ```sql
 -- Show all ratings with verification status
-SELECT 
+SELECT
     rs.display_label,
     prs.source_type,
     prs.is_verified,
@@ -268,40 +277,40 @@ ORDER BY prs.is_primary DESC, prs.is_verified DESC, prs.created_at DESC;
 
 ```typescript
 // Types for new system
-export type RatingSourceType = 
-    | 'self_reported' 
-    | 'api_verified' 
-    | 'peer_verified' 
-    | 'admin_verified';
+export type RatingSourceType =
+  | 'self_reported'
+  | 'api_verified'
+  | 'peer_verified'
+  | 'admin_verified';
 
 export interface PlayerRatingScore {
-    id: string;
-    player_id: string;
-    rating_score_id: string;
-    source_type: RatingSourceType;
-    is_verified: boolean;
-    verified_at?: string;
-    verified_by?: string;
-    verification_method?: string;
-    peer_rating_count: number;
-    peer_rating_average?: number;
-    is_primary: boolean;
-    created_at: string;
-    updated_at: string;
+  id: string;
+  player_id: string;
+  rating_score_id: string;
+  source_type: RatingSourceType;
+  is_verified: boolean;
+  verified_at?: string;
+  verified_by?: string;
+  verification_method?: string;
+  peer_rating_count: number;
+  peer_rating_average?: number;
+  is_primary: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface PlayerReview {
-    id: string;
-    match_id?: string;
-    reviewer_id: string;
-    reviewed_id: string;
-    rating: number; // 1-5 stars
-    comment?: string;
-    // NEW fields
-    sport_id?: string;
-    skill_rating_value?: number; // NTRP/DUPR value
-    skill_rating_score_id?: string;
-    created_at: string;
+  id: string;
+  match_id?: string;
+  reviewer_id: string;
+  reviewed_id: string;
+  rating: number; // 1-5 stars
+  comment?: string;
+  // NEW fields
+  sport_id?: string;
+  skill_rating_value?: number; // NTRP/DUPR value
+  skill_rating_score_id?: string;
+  created_at: string;
 }
 ```
 
