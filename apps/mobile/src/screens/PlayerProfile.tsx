@@ -21,7 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Text, Skeleton, SkeletonAvatar } from '@rallia/shared-components';
+import { Text, Skeleton, SkeletonAvatar, useToast } from '@rallia/shared-components';
 import { supabase, Logger, isPlayerOnline } from '@rallia/shared-services';
 import { useGetOrCreateDirectConversation, usePlayerReputation } from '@rallia/shared-hooks';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
@@ -81,12 +81,14 @@ interface PlayerSportPreferences {
   playAttributes: string[] | null;
 }
 
-interface FavoriteFacility {
+interface FavoriteFacilityData {
   id: string;
   facility: {
     id: string;
     name: string;
-  } | null;
+    address: string | null;
+    city: string | null;
+  };
 }
 
 type PeriodKey = 'morning' | 'afternoon' | 'evening';
@@ -120,6 +122,7 @@ const PlayerProfile = () => {
   const { selectedSport } = useSport();
   const getOrCreateDirectConversation = useGetOrCreateDirectConversation();
   const { display: reputationDisplay } = usePlayerReputation(playerId);
+  const toast = useToast();
 
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -139,7 +142,62 @@ const PlayerProfile = () => {
   const [blockLoading, setBlockLoading] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
   const [isOnline, setIsOnline] = useState(false);
-  const [favoriteFacilities, setFavoriteFacilities] = useState<FavoriteFacility[]>([]);
+  const [favoriteFacilities, setFavoriteFacilities] = useState<FavoriteFacilityData[]>([]);
+  const [favoriteFacilitiesLoading, setFavoriteFacilitiesLoading] = useState(true);
+  const [referenceLoading, setReferenceLoading] = useState(false);
+
+  // Fetch favorite facilities for the player being viewed (separate from main data fetch)
+  useEffect(() => {
+    const fetchFavoriteFacilities = async () => {
+      setFavoriteFacilitiesLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('player_favorite_facility')
+          .select(
+            `
+            id,
+            facility:facility_id (
+              id,
+              name,
+              address,
+              city
+            )
+          `
+          )
+          .eq('player_id', playerId)
+          .order('display_order', { ascending: true });
+
+        if (error) {
+          Logger.error('Failed to fetch favorite facilities for player', error, { playerId });
+          setFavoriteFacilities([]);
+        } else {
+          // Map data - facility comes as object from Supabase FK join
+          const mapped = (data || [])
+            .map(item => {
+              const facility = item.facility as unknown as
+                | FavoriteFacilityData['facility']
+                | FavoriteFacilityData['facility'][];
+              return {
+                id: item.id,
+                facility: Array.isArray(facility) ? facility[0] : facility,
+              };
+            })
+            .filter(item => item.facility != null) as FavoriteFacilityData[];
+          setFavoriteFacilities(mapped);
+          Logger.info('Fetched favorite facilities for player', { playerId, count: mapped.length });
+        }
+      } catch (err) {
+        Logger.error('Exception fetching favorite facilities', err as Error, { playerId });
+        setFavoriteFacilities([]);
+      } finally {
+        setFavoriteFacilitiesLoading(false);
+      }
+    };
+
+    if (playerId) {
+      fetchFavoriteFacilities();
+    }
+  }, [playerId]);
 
   // Fetch player data on mount
   useEffect(() => {
@@ -483,7 +541,7 @@ const PlayerProfile = () => {
         };
 
         // Fetch play style and attributes from junction tables (like SportProfile does)
-        const [playStyleResult, playAttributesResult, favoritesResult] = await Promise.all([
+        const [playStyleResult, playAttributesResult] = await Promise.all([
           supabase
             .from('player_sport_play_style')
             .select(
@@ -510,19 +568,6 @@ const PlayerProfile = () => {
             `
             )
             .eq('player_sport_id', spData.id),
-          // Fetch favorite facilities for this player
-          supabase
-            .from('player_favorite_facility')
-            .select(
-              `
-              id,
-              facility:facility_id (
-                id,
-                name
-              )
-            `
-            )
-            .eq('player_id', playerId),
         ]);
 
         // Extract play style name
@@ -534,19 +579,6 @@ const PlayerProfile = () => {
           playAttributesResult.data
             ?.map(item => (item.play_attribute as { name?: string } | null)?.name)
             .filter((name): name is string => !!name) || null;
-
-        // Set favorite facilities
-        if (favoritesResult.data) {
-          // Map the data to ensure proper typing (facility comes as array from Supabase)
-          const mappedFacilities = favoritesResult.data.map(
-            (item: { id: string; facility: { id: string; name: string }[] | null }) => ({
-              id: item.id,
-              facility:
-                Array.isArray(item.facility) && item.facility.length > 0 ? item.facility[0] : null,
-            })
-          );
-          setFavoriteFacilities(mappedFacilities);
-        }
 
         setSportPreferences({
           playerSportId: spData.id,
@@ -711,16 +743,37 @@ const PlayerProfile = () => {
   };
 
   const getDayLabel = (day: string): string => {
-    const dayMap: { [key: string]: string } = {
-      monday: 'Mon',
-      tuesday: 'Tue',
-      wednesday: 'Wed',
-      thursday: 'Thu',
-      friday: 'Fri',
-      saturday: 'Sat',
-      sunday: 'Sun',
+    const dayKeys: { [key: string]: string } = {
+      monday: 'playerProfile.availability.days.monday',
+      tuesday: 'playerProfile.availability.days.tuesday',
+      wednesday: 'playerProfile.availability.days.wednesday',
+      thursday: 'playerProfile.availability.days.thursday',
+      friday: 'playerProfile.availability.days.friday',
+      saturday: 'playerProfile.availability.days.saturday',
+      sunday: 'playerProfile.availability.days.sunday',
     };
-    return dayMap[day] || day;
+    return t(dayKeys[day] as TranslationKey) || day;
+  };
+
+  // Translated rating title based on skill value
+  const getTranslatedRatingTitle = (value: number | null | undefined): string => {
+    if (!value) return t('playerProfile.rating.unrated' as TranslationKey);
+    if (value <= 2.0) return t('playerProfile.rating.beginner' as TranslationKey);
+    if (value <= 3.0) return t('playerProfile.rating.intermediate' as TranslationKey);
+    if (value <= 4.0) return t('playerProfile.rating.intermediateAdvanced' as TranslationKey);
+    if (value <= 5.0) return t('playerProfile.rating.advanced' as TranslationKey);
+    return t('playerProfile.rating.professional' as TranslationKey);
+  };
+
+  // Translated rating description based on skill value
+  const getTranslatedRatingDescription = (value: number | null | undefined): string => {
+    if (!value) return t('playerProfile.rating.descriptions.unrated' as TranslationKey);
+    if (value <= 2.0) return t('playerProfile.rating.descriptions.beginner' as TranslationKey);
+    if (value <= 3.0) return t('playerProfile.rating.descriptions.intermediate' as TranslationKey);
+    if (value <= 4.0)
+      return t('playerProfile.rating.descriptions.intermediateAdvanced' as TranslationKey);
+    if (value <= 5.0) return t('playerProfile.rating.descriptions.advanced' as TranslationKey);
+    return t('playerProfile.rating.descriptions.professional' as TranslationKey);
   };
 
   const handleInviteToMatch = () => {
@@ -728,10 +781,106 @@ const PlayerProfile = () => {
     Alert.alert('Invite to Match', 'This feature is coming soon!');
   };
 
-  const handleRequestReference = () => {
-    // TODO: Implement request reference functionality
-    Alert.alert('Request Reference', 'This feature is coming soon!');
-  };
+  const handleRequestReference = useCallback(async () => {
+    if (!currentUserId || referenceLoading) return;
+
+    setReferenceLoading(true);
+    lightHaptic();
+
+    try {
+      // Get the sport to use - prefer route param sportId, fallback to primary/first sport
+      const targetSportId = sportId || sports.find(s => s.isPrimary)?.id || sports[0]?.id;
+      if (!targetSportId) {
+        toast.error(t('playerProfile.referenceRequest.noSportError'));
+        return;
+      }
+
+      // Get the viewed player's rating info for this sport
+      const viewedPlayerSport = sports.find(s => s.id === targetSportId);
+      if (!viewedPlayerSport) {
+        toast.error(t('playerProfile.referenceRequest.noSportError'));
+        return;
+      }
+
+      // Check if viewed player is at same/higher level (they need to be to give a valid reference)
+      // First, fetch current user's ratings with full relationship chain
+      const { data: currentUserRatings, error: ratingError } = await supabase
+        .from('player_rating_score')
+        .select(
+          `
+          id,
+          rating_score:rating_score_id (
+            value,
+            rating_system:rating_system_id (
+              sport_id
+            )
+          )
+        `
+        )
+        .eq('player_id', currentUserId);
+
+      if (ratingError) {
+        throw ratingError;
+      }
+
+      // Find the rating for the target sport
+      const currentUserRating = currentUserRatings?.find(r => {
+        const ratingScore = r.rating_score as { rating_system?: { sport_id?: string } } | null;
+        return ratingScore?.rating_system?.sport_id === targetSportId;
+      });
+
+      if (!currentUserRating) {
+        // Current user has no rating for this sport - cannot request reference
+        toast.warning(t('playerProfile.referenceRequest.noRatingError'));
+        return;
+      }
+
+      const currentUserRatingScoreId = currentUserRating.id;
+      const ratingScoreData = currentUserRating.rating_score as { value?: number } | null;
+      const currentUserRatingValue = ratingScoreData?.value;
+
+      // Check if viewed player is at same/higher level
+      if (viewedPlayerSport.ratingValue != null && currentUserRatingValue != null) {
+        if (viewedPlayerSport.ratingValue < currentUserRatingValue) {
+          toast.warning(t('playerProfile.referenceRequest.playerLevelTooLow'));
+          return;
+        }
+      }
+
+      // Calculate expiration date (14 days from now)
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 14);
+
+      // Insert the reference request
+      const { error: insertError } = await supabase.from('rating_reference_request').insert({
+        player_rating_score_id: currentUserRatingScoreId,
+        requester_id: currentUserId,
+        referee_id: playerId,
+        status: 'pending',
+        expires_at: expiresAt.toISOString(),
+      });
+
+      if (insertError) {
+        // Check for unique constraint violation (already requested)
+        if (insertError.code === '23505') {
+          toast.warning(t('profile.certification.referenceRequest.alreadyRequested'));
+        } else {
+          throw insertError;
+        }
+      } else {
+        Logger.logUserAction('reference_request_sent', {
+          refereeId: playerId,
+          sportId: targetSportId,
+        });
+        toast.success(t('playerProfile.referenceRequest.success'));
+      }
+    } catch (error) {
+      Logger.error('Failed to send reference request', error as Error, { playerId });
+      toast.error(t('playerProfile.referenceRequest.error'));
+    } finally {
+      setReferenceLoading(false);
+    }
+  }, [currentUserId, referenceLoading, sportId, sports, playerId, t, toast]);
 
   const handleStartChat = useCallback(async () => {
     if (!currentUserId || chatLoading) return;
@@ -943,12 +1092,12 @@ const PlayerProfile = () => {
   }
 
   const displayName =
-    profile?.display_name ||
     `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() ||
+    profile?.display_name ||
     'Player';
 
   const username =
-    profile?.display_name?.toLowerCase().replace(/\s/g, '') ||
+    profile?.display_name ||
     `${profile?.first_name?.toLowerCase() || ''}${profile?.last_name?.toLowerCase() || ''}`;
 
   return (
@@ -1021,7 +1170,7 @@ const PlayerProfile = () => {
           <View style={styles.joinedContainer}>
             <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
             <Text style={[styles.joinedText, { color: colors.textMuted }]}>
-              Joined {formatJoinedDate(player?.created_at || null)}
+              {t('playerProfile.joined')} {formatJoinedDate(player?.created_at || null)}
             </Text>
           </View>
 
@@ -1053,7 +1202,7 @@ const PlayerProfile = () => {
                 color={colors.primaryForeground}
               />
               <Text style={[styles.actionButtonText, { color: colors.primaryForeground }]}>
-                Invite to Match
+                {t('playerProfile.inviteToMatch')}
               </Text>
             </TouchableOpacity>
 
@@ -1083,11 +1232,18 @@ const PlayerProfile = () => {
                 { borderColor: colors.border, flex: 0, paddingHorizontal: spacingPixels[4] },
               ]}
               onPress={handleRequestReference}
+              disabled={referenceLoading}
             >
-              <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
-              <Text style={[styles.actionButtonTextSecondary, { color: colors.textSecondary }]}>
-                Request reference
-              </Text>
+              {referenceLoading ? (
+                <ActivityIndicator size="small" color={colors.textSecondary} />
+              ) : (
+                <>
+                  <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
+                  <Text style={[styles.actionButtonTextSecondary, { color: colors.textSecondary }]}>
+                    {t('playerProfile.requestReference')}
+                  </Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -1096,30 +1252,36 @@ const PlayerProfile = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="person-outline" size={18} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Player Information</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              {t('playerProfile.sections.playerInformation')}
+            </Text>
           </View>
 
           <View style={[styles.card, { backgroundColor: colors.card }]}>
             <Text style={[styles.bioText, { color: colors.text }]}>
-              {profile?.bio || 'No bio available.'}
+              {profile?.bio || t('playerProfile.noBio')}
             </Text>
 
             <View style={styles.infoGrid}>
               <View style={styles.infoItem}>
-                <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Gender</Text>
+                <Text style={[styles.infoLabel, { color: colors.textMuted }]}>
+                  {t('playerProfile.fields.gender')}
+                </Text>
                 <Text style={[styles.infoValue, { color: colors.text }]}>
                   {formatGender(player?.gender || null)}
                 </Text>
               </View>
               <View style={styles.infoItem}>
-                <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Playing Hand</Text>
+                <Text style={[styles.infoLabel, { color: colors.textMuted }]}>
+                  {t('playerProfile.fields.playingHand')}
+                </Text>
                 <Text style={[styles.infoValue, { color: colors.text }]}>
                   {formatPlayingHand(player?.playing_hand || null)}
                 </Text>
               </View>
               <View style={styles.infoItem}>
                 <Text style={[styles.infoLabel, { color: colors.textMuted }]}>
-                  Max Travel Distance
+                  {t('playerProfile.fields.maxTravelDistance')}
                 </Text>
                 <Text style={[styles.infoValue, { color: colors.text }]}>
                   {player?.max_travel_distance ? `${player.max_travel_distance} km` : '-'}
@@ -1134,7 +1296,9 @@ const PlayerProfile = () => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Ionicons name="options-outline" size={18} color={colors.primary} />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Preferences</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                {t('playerProfile.sections.preferences')}
+              </Text>
             </View>
 
             <View style={[styles.card, { backgroundColor: colors.card }]}>
@@ -1216,12 +1380,79 @@ const PlayerProfile = () => {
           </View>
         )}
 
+        {/* Preferred Courts Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="tennisball-outline" size={18} color={colors.primary} />
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              {t('playerProfile.sections.preferredCourts' as TranslationKey)}
+            </Text>
+          </View>
+
+          {favoriteFacilitiesLoading ? (
+            <View style={styles.facilitiesSection}>
+              {[1, 2, 3].map(i => (
+                <Skeleton
+                  key={i}
+                  width="100%"
+                  height={70}
+                  borderRadius={radiusPixels.lg}
+                  backgroundColor={skeletonBg}
+                  highlightColor={skeletonHighlight}
+                />
+              ))}
+            </View>
+          ) : favoriteFacilities.length > 0 ? (
+            <View style={styles.facilitiesSection}>
+              {favoriteFacilities.map(fav => (
+                <View
+                  key={fav.id}
+                  style={[
+                    styles.facilityCard,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                  ]}
+                >
+                  <View style={styles.facilityCardContent}>
+                    {/* Facility Name */}
+                    <View style={styles.facilityNameRow}>
+                      <Text style={[styles.facilityName, { color: colors.text }]} numberOfLines={1}>
+                        {fav.facility.name}
+                      </Text>
+                    </View>
+
+                    {/* Address */}
+                    {(fav.facility.address || fav.facility.city) && (
+                      <View style={styles.facilityAddressRow}>
+                        <Ionicons name="location-outline" size={14} color={colors.textMuted} />
+                        <Text
+                          style={[styles.facilityAddress, { color: colors.textMuted }]}
+                          numberOfLines={1}
+                        >
+                          {fav.facility.address || fav.facility.city}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={[styles.card, { backgroundColor: colors.card }]}>
+              <Text style={[styles.noFacilitiesText, { color: colors.textMuted }]}>
+                {t('playerProfile.noPreferredCourts' as TranslationKey)}
+              </Text>
+            </View>
+          )}
+        </View>
+
         {/* Rating Section */}
         {primarySport && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Ionicons name="star-outline" size={18} color={colors.primary} />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Rating</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                {t('playerProfile.sections.rating')}
+              </Text>
             </View>
 
             <View style={[styles.card, { backgroundColor: colors.card }]}>
@@ -1229,12 +1460,12 @@ const PlayerProfile = () => {
                 <View>
                   <Text style={[styles.ratingTitle, { color: colors.text }]}>
                     {primarySport.ratingLabel
-                      ? getRatingTitle(primarySport.ratingValue)
-                      : 'Unrated'}
+                      ? getTranslatedRatingTitle(primarySport.ratingValue)
+                      : t('playerProfile.rating.unrated' as TranslationKey)}
                   </Text>
                   <Text style={[styles.ratingCode, { color: colors.primary }]}>
-                    {primarySport.name === 'tennis' ? 'NTRP' : 'DUPR'}{' '}
-                    {primarySport.ratingLabel || '-'}
+                    {primarySport.ratingLabel ||
+                      (primarySport.name === 'tennis' ? 'NTRP -' : 'DUPR -')}
                   </Text>
                 </View>
                 <CertificationBadge
@@ -1243,7 +1474,7 @@ const PlayerProfile = () => {
                 />
               </View>
               <Text style={[styles.ratingDescription, { color: colors.textMuted }]}>
-                {getRatingDescription(primarySport.ratingValue)}
+                {getTranslatedRatingDescription(primarySport.ratingValue)}
               </Text>
 
               {/* Rating Actions */}
@@ -1279,7 +1510,9 @@ const PlayerProfile = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="shield-checkmark-outline" size={18} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Reputation</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              {t('playerProfile.sections.reputation')}
+            </Text>
           </View>
 
           <View style={[styles.card, { backgroundColor: colors.card }]}>
@@ -1306,72 +1539,88 @@ const PlayerProfile = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="stats-chart-outline" size={18} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Statistics</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              {t('playerProfile.sections.statistics')}
+            </Text>
           </View>
 
           <View style={styles.statsGrid}>
             <View style={[styles.statCard, { backgroundColor: colors.card }]}>
               <Text style={[styles.statValue, { color: colors.primary }]}>{stats.hoursPlayed}</Text>
-              <Text style={[styles.statLabel, { color: colors.textMuted }]}>Hours Played</Text>
+              <Text style={[styles.statLabel, { color: colors.textMuted }]}>
+                {t('playerProfile.stats.hoursPlayed')}
+              </Text>
             </View>
             <View style={[styles.statCard, { backgroundColor: colors.card }]}>
               <Text style={[styles.statValue, { color: colors.primary }]}>{stats.gamesHosted}</Text>
-              <Text style={[styles.statLabel, { color: colors.textMuted }]}>Games Hosted</Text>
+              <Text style={[styles.statLabel, { color: colors.textMuted }]}>
+                {t('playerProfile.stats.gamesHosted')}
+              </Text>
             </View>
             <View style={[styles.statCard, { backgroundColor: colors.card }]}>
               <Text style={[styles.statValue, { color: colors.primary }]}>{stats.weekStreak}</Text>
-              <Text style={[styles.statLabel, { color: colors.textMuted }]}>Week Streak</Text>
+              <Text style={[styles.statLabel, { color: colors.textMuted }]}>
+                {t('playerProfile.stats.weekStreak')}
+              </Text>
             </View>
           </View>
         </View>
 
-        {/* Availabilities Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="time-outline" size={18} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Availabilities</Text>
-          </View>
+        {/* Availabilities Section - Only show if player has made it public */}
+        {player?.privacy_show_availability !== false && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="time-outline" size={18} color={colors.primary} />
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                {t('playerProfile.sections.availabilities')}
+              </Text>
+            </View>
 
-          <View style={[styles.card, { backgroundColor: colors.card }]}>
-            <View style={styles.availabilityGrid}>
-              {/* Day Rows */}
-              {Object.keys(availabilities).map(day => (
-                <View key={day} style={styles.availabilityRow}>
-                  <View style={styles.dayCell}>
-                    <Text size="sm" weight="medium" color={colors.text}>
-                      {getDayLabel(day)}
-                    </Text>
-                  </View>
-                  {(['morning', 'afternoon', 'evening'] as PeriodKey[]).map(period => (
-                    <View key={period} style={styles.slotWrapper}>
-                      <View
-                        style={[
-                          styles.slotCell,
-                          { backgroundColor: colors.inputBackground },
-                          availabilities[day]?.[period] && {
-                            backgroundColor: colors.primary,
-                          },
-                        ]}
-                      >
-                        <Text
-                          size="xs"
-                          weight="semibold"
-                          color={
-                            availabilities[day]?.[period]
-                              ? colors.primaryForeground
-                              : colors.textMuted
-                          }
-                        >
-                          {period === 'morning' ? 'AM' : period === 'afternoon' ? 'PM' : 'EVE'}
-                        </Text>
-                      </View>
+            <View style={[styles.card, { backgroundColor: colors.card }]}>
+              <View style={styles.availabilityGrid}>
+                {/* Day Rows */}
+                {Object.keys(availabilities).map(day => (
+                  <View key={day} style={styles.availabilityRow}>
+                    <View style={styles.dayCell}>
+                      <Text size="sm" weight="medium" color={colors.text}>
+                        {getDayLabel(day)}
+                      </Text>
                     </View>
-                  ))}
-                </View>
-              ))}
+                    {(['morning', 'afternoon', 'evening'] as PeriodKey[]).map(period => (
+                      <View key={period} style={styles.slotWrapper}>
+                        <View
+                          style={[
+                            styles.slotCell,
+                            { backgroundColor: colors.inputBackground },
+                            availabilities[day]?.[period] && {
+                              backgroundColor: colors.primary,
+                            },
+                          ]}
+                        >
+                          <Text
+                            size="xs"
+                            weight="semibold"
+                            color={
+                              availabilities[day]?.[period]
+                                ? colors.primaryForeground
+                                : colors.textMuted
+                            }
+                          >
+                            {period === 'morning'
+                              ? t('playerProfile.availability.am' as TranslationKey)
+                              : period === 'afternoon'
+                                ? t('playerProfile.availability.pm' as TranslationKey)
+                                : t('playerProfile.availability.eve' as TranslationKey)}
+                          </Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                ))}
+              </View>
             </View>
           </View>
-        </View>
+        )}
 
         {/* Bottom Spacing */}
         <View style={{ height: 40 }} />
@@ -1379,26 +1628,6 @@ const PlayerProfile = () => {
     </SafeAreaView>
   );
 };
-
-// Helper functions for rating display
-function getRatingTitle(value: number | null | undefined): string {
-  if (!value) return 'Unrated';
-  if (value <= 2.0) return 'Beginner';
-  if (value <= 3.0) return 'Intermediate';
-  if (value <= 4.0) return 'Intermediate/Advanced';
-  if (value <= 5.0) return 'Advanced';
-  return 'Professional';
-}
-
-function getRatingDescription(value: number | null | undefined): string {
-  if (!value) return 'This player has not been rated yet.';
-  if (value <= 2.0) return 'New to the sport, learning basic strokes and rules.';
-  if (value <= 3.0) return 'Developing consistency in shots and starting to play competitively.';
-  if (value <= 4.0)
-    return 'Intermediate player that can rally with decent consistency and control the direction of their shots.';
-  if (value <= 5.0) return 'Advanced player with strong shot variety and tactical awareness.';
-  return 'Tournament-level player with exceptional skills.';
-}
 
 const styles = StyleSheet.create({
   container: {
@@ -1621,6 +1850,43 @@ const styles = StyleSheet.create({
     fontSize: fontSizePixels.sm,
     fontWeight: fontWeightNumeric.semibold,
     textAlign: 'right',
+  },
+  facilitiesSection: {
+    gap: spacingPixels[3],
+  },
+  facilityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+  },
+  facilityCardContent: {
+    flex: 1,
+  },
+  facilityNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacingPixels[1],
+  },
+  facilityName: {
+    fontSize: fontSizePixels.base,
+    fontWeight: fontWeightNumeric.semibold,
+    flex: 1,
+  },
+  facilityAddressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+  },
+  facilityAddress: {
+    fontSize: fontSizePixels.sm,
+    flex: 1,
+  },
+  noFacilitiesText: {
+    fontSize: fontSizePixels.sm,
+    textAlign: 'center',
+    paddingVertical: spacingPixels[2],
   },
   playAttributesContainer: {
     marginTop: spacingPixels[3],

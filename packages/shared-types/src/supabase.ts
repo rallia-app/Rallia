@@ -3292,6 +3292,7 @@ export type Database = {
           playing_hand: Database['public']['Enums']['playing_hand'] | null;
           postal_code: string | null;
           privacy_show_age: boolean | null;
+          privacy_show_availability: boolean | null;
           privacy_show_location: boolean | null;
           privacy_show_stats: boolean | null;
           province: string | null;
@@ -3319,6 +3320,7 @@ export type Database = {
           playing_hand?: Database['public']['Enums']['playing_hand'] | null;
           postal_code?: string | null;
           privacy_show_age?: boolean | null;
+          privacy_show_availability?: boolean | null;
           privacy_show_location?: boolean | null;
           privacy_show_stats?: boolean | null;
           province?: string | null;
@@ -3346,6 +3348,7 @@ export type Database = {
           playing_hand?: Database['public']['Enums']['playing_hand'] | null;
           postal_code?: string | null;
           privacy_show_age?: boolean | null;
+          privacy_show_availability?: boolean | null;
           privacy_show_location?: boolean | null;
           privacy_show_stats?: boolean | null;
           province?: string | null;

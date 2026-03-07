@@ -499,6 +499,10 @@ CREATE POLICY "Users can delete their own blocks" ON player_block FOR DELETE USI
 DROP POLICY IF EXISTS "Players can view own favorite facilities" ON player_favorite_facility;
 CREATE POLICY "Players can view own favorite facilities" ON player_favorite_facility FOR SELECT USING (auth.uid() = player_id);
 
+-- Allow authenticated users to view any player's favorite facilities (for PlayerProfile)
+DROP POLICY IF EXISTS "Users can view all player favorite facilities" ON player_favorite_facility;
+CREATE POLICY "Users can view all player favorite facilities" ON player_favorite_facility FOR SELECT TO authenticated USING (true);
+
 DROP POLICY IF EXISTS "Players can insert own favorite facilities" ON player_favorite_facility;
 CREATE POLICY "Players can insert own favorite facilities" ON player_favorite_facility FOR INSERT WITH CHECK (auth.uid() = player_id);
 

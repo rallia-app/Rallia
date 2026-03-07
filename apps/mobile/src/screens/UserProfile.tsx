@@ -484,7 +484,10 @@ const UserProfile = () => {
   };
 
   // Handle saving availabilities from the overlay
-  const handleSaveAvailabilities = async (uiAvailabilities: WeeklyAvailability) => {
+  const handleSaveAvailabilities = async (
+    uiAvailabilities: WeeklyAvailability,
+    privacyShowAvailability: boolean
+  ) => {
     try {
       const {
         data: { user },
@@ -563,7 +566,23 @@ const UserProfile = () => {
         if (insertResult.error) throw insertResult.error;
       }
 
+      // Save the privacy setting to the player table
+      const privacyResult = await withTimeout(
+        (async () =>
+          supabase
+            .from('player')
+            .update({
+              privacy_show_availability: privacyShowAvailability,
+            })
+            .eq('id', user.id))(),
+        10000,
+        'Failed to save privacy setting - connection timeout'
+      );
+
+      if (privacyResult.error) throw privacyResult.error;
+
       await fetchProfileSections();
+      await refetchPlayer(); // Refresh player data to get updated privacy setting
 
       SheetManager.hide('player-availabilities');
 
@@ -1283,6 +1302,7 @@ const UserProfile = () => {
                       payload: {
                         mode: 'edit',
                         initialData: convertToUIFormat(availabilities),
+                        initialPrivacyShowAvailability: player?.privacy_show_availability ?? true,
                         onSave: handleSaveAvailabilities,
                       },
                     });
