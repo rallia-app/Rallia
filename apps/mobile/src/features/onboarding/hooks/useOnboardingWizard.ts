@@ -7,7 +7,7 @@
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import DatabaseService, { Logger } from '@rallia/shared-services';
+import DatabaseService, { Logger, supabase } from '@rallia/shared-services';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 
 export type OnboardingStepId =
@@ -305,7 +305,7 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
           }
         }
 
-        // Player data (gender, preferences, location)
+        // Player data (gender, preferences, location, privacy settings)
         if (playerRes.data) {
           // Location data is stored in player table
           updates.address = playerRes.data.address || '';
@@ -321,6 +321,9 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
           if (playerRes.data.max_travel_distance) {
             updates.maxTravelDistance = playerRes.data.max_travel_distance;
           }
+          // Load privacy_show_availability (defaults to true if not set)
+          // This ensures the visibility toggle shows the user's saved preference
+          updates.privacyShowAvailability = playerRes.data.privacy_show_availability ?? true;
         }
 
         // Sports data
@@ -434,6 +437,71 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
           }
 
           updates.availabilities = availabilities;
+        }
+
+        // Load favorite facilities from player_favorite_facility table
+        // This is critical for step completion check - without it, the wizard
+        // thinks favorite-sites step is incomplete even if user already saved favorites
+        const { data: favoritesData, error: favoritesError } = await supabase
+          .from('player_favorite_facility')
+          .select(
+            `
+            facility_id,
+            display_order,
+            facility:facility_id (
+              id,
+              name,
+              address,
+              city,
+              data_provider_id,
+              timezone,
+              facility_sport (
+                sport_id
+              )
+            )
+          `
+          )
+          .eq('player_id', userId)
+          .order('display_order', { ascending: true });
+
+        if (favoritesError) {
+          Logger.warn('Failed to load favorite facilities', { error: favoritesError });
+        } else if (favoritesData && favoritesData.length > 0) {
+          // Transform to FacilitySearchResult format with sport_ids populated
+          // sport_ids is critical for computeFavoriteSportCounts to work correctly
+          const favoriteFacilities: FacilitySearchResult[] = favoritesData.map(item => {
+            const facility = item.facility as unknown as {
+              id: string;
+              name: string;
+              address: string | null;
+              city: string | null;
+              data_provider_id: string | null;
+              timezone: string | null;
+              facility_sport: Array<{ sport_id: string }>;
+            };
+            // Extract sport_ids from the facility_sport junction table
+            const sportIds = facility?.facility_sport?.map(fs => fs.sport_id) ?? [];
+            return {
+              id: facility?.id || item.facility_id,
+              name: facility?.name || 'Unknown Facility',
+              city: facility?.city || null,
+              address: facility?.address || null,
+              distance_meters: null, // Not relevant for saved favorites
+              data_provider_id: facility?.data_provider_id || null,
+              data_provider_type: null,
+              booking_url_template: null,
+              external_provider_id: null,
+              timezone: facility?.timezone || null,
+              sport_ids: sportIds, // Critical for per-sport counting!
+            };
+          });
+          updates.favoriteFacilities = favoriteFacilities;
+          Logger.debug('Loaded favorite facilities', {
+            count: favoriteFacilities.length,
+            sportIdsSample: favoriteFacilities
+              .slice(0, 2)
+              .map(f => ({ name: f.name, sports: f.sport_ids })),
+          });
         }
 
         // Apply all updates at once
