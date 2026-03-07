@@ -18,7 +18,6 @@ export type NotificationType =
   | 'player_left'
   | 'new_message'
   | 'chat'
-  | 'friend_request'
   | 'rating_verified'
   | 'reminder'
   | 'payment'
@@ -182,7 +181,6 @@ export const DEFAULT_PREFERENCES: Record<NotificationType, Record<DeliveryChanne
   player_left: { email: false, push: true, sms: false },
   chat: { email: false, push: true, sms: false },
   new_message: { email: false, push: true, sms: false },
-  friend_request: { email: false, push: true, sms: false },
   rating_verified: { email: true, push: true, sms: false },
   reminder: { email: false, push: true, sms: false },
   payment: { email: true, push: true, sms: false },

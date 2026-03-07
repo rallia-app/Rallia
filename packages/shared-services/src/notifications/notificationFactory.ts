@@ -335,11 +335,9 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
 
   // Normal - standard notifications
   match_updated: 'normal',
-  match_completed: 'normal', // Unused — kept for type completeness (DB enum still has the value)
   match_check_in_available: 'high',
   new_message: 'normal',
   chat: 'normal',
-  friend_request: 'normal',
   rating_verified: 'normal',
   payment: 'normal',
   support: 'normal',
@@ -400,13 +398,11 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   match_cancelled: 'Game cancelled',
   match_updated: 'Game updated',
   match_starting_soon: 'Get ready!',
-  match_completed: 'Game complete!', // Unused — kept for type completeness
   match_check_in_available: 'Time to check in!',
   player_kicked: 'Removed from game',
   player_left: 'Player left',
   new_message: 'Message from {senderName}',
   chat: 'New message',
-  friend_request: 'New friend request',
   rating_verified: 'Rating verified!',
   reminder: 'Game coming up',
   payment: 'Payment update',
@@ -469,14 +465,12 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
     'Your {sportName} game on {matchDate} has been updated. Check the updated details.',
   match_starting_soon:
     'Your {sportName} game at {locationName} starts {timeUntil}. Time to warm up!',
-  match_completed: '', // Unused — kept for type completeness
   match_check_in_available: 'Check in once you arrive at the venue to confirm your presence.',
   player_kicked:
     "You've been removed from the {sportName} game on {matchDate}. Check out other games near you.",
   player_left: '{playerName} left your {sportName} game. {spotsLeft} spot(s) now open.',
   new_message: '{messagePreview}',
   chat: 'You have a new message waiting for you',
-  friend_request: '{playerName} wants to add you to their network. Check out their profile!',
   rating_verified:
     'Congrats! Your {ratingSystemName} rating of {ratingValue} for {sportName} is now verified.',
   reminder: "Don't forget your {sportName} game on {matchDate} at {locationName}",

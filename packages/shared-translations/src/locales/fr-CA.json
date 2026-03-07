@@ -177,7 +177,6 @@
       "player_kicked": "Retiré\nde la partie",
       "player_left": "Joueur\nparti",
       "new_message": "Nouveau\nmessage",
-      "friend_request": "Demande\nd'ami",
       "rating_verified": "Classement\nvérifié",
       "reminder": "Rappel",
       "payment": "Paiement",
@@ -265,10 +264,6 @@
       "chat": {
         "title": "Nouveau message",
         "body": "Vous avez un nouveau message qui vous attend"
-      },
-      "friend_request": {
-        "title": "Nouvelle demande de connexion",
-        "body": "{playerName} veut vous ajouter à son réseau. Consultez son profil!"
       },
       "rating_verified": {
         "title": "Classement vérifié!",

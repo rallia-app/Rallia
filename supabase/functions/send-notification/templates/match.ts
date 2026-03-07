@@ -284,10 +284,6 @@ function generateActionButton(
       buttonKey = 'match.button.viewMessage';
       if (payload.conversationId) deepLink = `rallia://chat/${payload.conversationId}`;
       break;
-    case 'friend_request':
-      buttonKey = 'match.button.viewProfile';
-      if (payload.playerId) deepLink = `rallia://player/${payload.playerId}`;
-      break;
     case 'rating_verified':
       buttonKey = 'match.button.viewRating';
       deepLink = 'rallia://profile/ratings';

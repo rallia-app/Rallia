@@ -177,7 +177,6 @@
       "player_kicked": "Removed\nfrom Game",
       "player_left": "Player\nLeft",
       "new_message": "New\nMessage",
-      "friend_request": "Friend\nRequest",
       "rating_verified": "Rating\nVerified",
       "reminder": "Reminder",
       "payment": "Payment",
@@ -265,10 +264,6 @@
       "chat": {
         "title": "New message",
         "body": "You have a new message waiting for you"
-      },
-      "friend_request": {
-        "title": "New friend request",
-        "body": "{playerName} wants to add you to their network. Check out their profile!"
       },
       "rating_verified": {
         "title": "Rating verified!",

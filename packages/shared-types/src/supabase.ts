@@ -7212,11 +7212,9 @@ export type Database = {
         | 'match_cancelled'
         | 'match_updated'
         | 'match_starting_soon'
-        | 'match_completed'
         | 'player_kicked'
         | 'player_left'
         | 'new_message'
-        | 'friend_request'
         | 'rating_verified'
         | 'feedback_request'
         | 'score_confirmation'
@@ -7610,11 +7608,9 @@ export const Constants = {
         'match_cancelled',
         'match_updated',
         'match_starting_soon',
-        'match_completed',
         'player_kicked',
         'player_left',
         'new_message',
-        'friend_request',
         'rating_verified',
         'feedback_request',
         'score_confirmation',
