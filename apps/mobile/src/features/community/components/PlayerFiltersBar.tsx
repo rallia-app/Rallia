@@ -4,7 +4,7 @@
  * Follows the same pattern as SportSelector with compact toggle chips and dropdown modals.
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, memo } from 'react';
 import { View, ScrollView, StyleSheet, TouchableOpacity, Modal, Animated } from 'react-native';
 import { Text, LocationSelector, type LocationMode } from '@rallia/shared-components';
 import { useTheme } from '@rallia/shared-hooks';
@@ -28,7 +28,15 @@ import { lightHaptic, selectionHaptic } from '../../../utils/haptics';
 
 export type GenderFilter = 'all' | 'male' | 'female' | 'other';
 export type AvailabilityFilter = 'all' | 'morning' | 'afternoon' | 'evening';
-export type DayFilter = 'all' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+export type DayFilter =
+  | 'all'
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday';
 export type PlayStyleFilter =
   | 'all'
   | 'counterpuncher'
@@ -112,7 +120,16 @@ export const DEFAULT_PLAYER_FILTERS: PlayerFilters = {
 
 const GENDER_OPTIONS: GenderFilter[] = ['all', 'male', 'female', 'other'];
 const AVAILABILITY_OPTIONS: AvailabilityFilter[] = ['all', 'morning', 'afternoon', 'evening'];
-const DAY_OPTIONS: DayFilter[] = ['all', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+const DAY_OPTIONS: DayFilter[] = [
+  'all',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+  'sunday',
+];
 const PLAY_STYLE_OPTIONS: PlayStyleFilter[] = [
   'all',
   'counterpuncher',
@@ -454,7 +471,7 @@ interface PlayerFiltersBarProps {
   homeLocationLabel?: string;
 }
 
-export function PlayerFiltersBar({
+export const PlayerFiltersBar = memo(function PlayerFiltersBar({
   filters,
   sportName = 'Tennis',
   onFiltersChange,
@@ -592,7 +609,7 @@ export function PlayerFiltersBar({
     (v: AvailabilityFilter) => t(AVAILABILITY_LABEL_KEYS[v]),
     [t]
   );
-  const getDayLabel = useCallback((v: DayFilter) => t(DAY_LABEL_KEYS[v] as any), [t]);
+  const getDayLabel = useCallback((v: DayFilter) => t(DAY_LABEL_KEYS[v] as TranslationKey), [t]);
   const getStyleLabel = useCallback((v: PlayStyleFilter) => t(PLAY_STYLE_LABEL_KEYS[v]), [t]);
   const getSortLabel = useCallback((v: SortOption) => t(SORT_LABEL_KEYS[v]), [t]);
 
@@ -612,13 +629,152 @@ export function PlayerFiltersBar({
       : t(AVAILABILITY_LABEL_KEYS[filters.availability]);
   const dayDisplay =
     filters.day === 'all'
-      ? t('playerDirectory.filters.day' as any)
-      : t(DAY_LABEL_KEYS[filters.day] as any);
+      ? t('playerDirectory.filters.day' as TranslationKey)
+      : t(DAY_LABEL_KEYS[filters.day] as TranslationKey);
   const styleDisplay =
     filters.playStyle === 'all'
       ? t('playerDirectory.filters.playStyle')
       : t(PLAY_STYLE_LABEL_KEYS[filters.playStyle]);
   const sortDisplay = t(SORT_LABEL_KEYS[filters.sortBy || 'name_asc']);
+
+  // Define all filter chips configuration
+  type FilterChipConfig = {
+    key: string;
+    label: string;
+    value: string;
+    isActive: boolean;
+    onPress: () => void;
+    hasDropdown?: boolean;
+    icon?: keyof typeof Ionicons.glyphMap;
+    show: boolean;
+  };
+
+  const filterChipConfigs: FilterChipConfig[] = useMemo(
+    () => [
+      // Favorites Toggle
+      {
+        key: 'favorites',
+        label: t('playerDirectory.filters.favorites'),
+        value: t('playerDirectory.filters.favorites'),
+        isActive: filters.favorites,
+        onPress: handleFavoritesToggle,
+        hasDropdown: false,
+        icon: filters.favorites ? 'heart' : 'heart-outline',
+        show: isAuthenticated,
+      },
+      // Gender Filter
+      {
+        key: 'gender',
+        label: t('playerDirectory.filters.gender'),
+        value: genderDisplay,
+        isActive: filters.gender !== 'all',
+        onPress: () => setShowGenderDropdown(true),
+        show: true,
+      },
+      // Skill Level Filter
+      {
+        key: 'skillLevel',
+        label: skillLabel,
+        value: skillDisplay,
+        isActive: filters.skillLevel !== 'all',
+        onPress: () => setShowSkillDropdown(true),
+        show: true,
+      },
+      // Distance Filter
+      {
+        key: 'distance',
+        label: t('playerDirectory.filters.distance'),
+        value: distanceDisplay,
+        isActive: filters.maxDistance !== 'all',
+        onPress: () => setShowDistanceDropdown(true),
+        show: true,
+      },
+      // Availability Filter
+      {
+        key: 'availability',
+        label: t('playerDirectory.filters.availability'),
+        value: availabilityDisplay,
+        isActive: filters.availability !== 'all',
+        onPress: () => setShowAvailabilityDropdown(true),
+        icon:
+          filters.availability === 'morning'
+            ? 'sunny-outline'
+            : filters.availability === 'afternoon'
+              ? 'partly-sunny-outline'
+              : filters.availability === 'evening'
+                ? 'moon-outline'
+                : undefined,
+        show: true,
+      },
+      // Day Filter
+      {
+        key: 'day',
+        label: t('playerDirectory.filters.day' as TranslationKey),
+        value: dayDisplay,
+        isActive: filters.day !== 'all',
+        onPress: () => setShowDayDropdown(true),
+        icon: 'calendar-outline',
+        show: true,
+      },
+      // Play Style Filter
+      {
+        key: 'playStyle',
+        label: t('playerDirectory.filters.playStyle'),
+        value: styleDisplay,
+        isActive: filters.playStyle !== 'all',
+        onPress: () => setShowStyleDropdown(true),
+        show: true,
+      },
+      // Blocked Toggle
+      {
+        key: 'blocked',
+        label: t('playerDirectory.filters.blocked'),
+        value: t('playerDirectory.filters.blocked'),
+        isActive: filters.blocked,
+        onPress: handleBlockedToggle,
+        hasDropdown: false,
+        icon: filters.blocked ? 'ban' : 'ban-outline',
+        show: isAuthenticated,
+      },
+      // Sort Option
+      {
+        key: 'sort',
+        label: t('playerDirectory.filters.sortBy'),
+        value: sortDisplay,
+        isActive: filters.sortBy !== 'name_asc',
+        onPress: () => setShowSortDropdown(true),
+        icon: 'swap-vertical-outline',
+        show: true,
+      },
+    ],
+    [
+      t,
+      filters,
+      isAuthenticated,
+      genderDisplay,
+      skillLabel,
+      skillDisplay,
+      distanceDisplay,
+      availabilityDisplay,
+      dayDisplay,
+      styleDisplay,
+      sortDisplay,
+      handleFavoritesToggle,
+      handleBlockedToggle,
+    ]
+  );
+
+  // Sort chips: active filters first when hasActiveFilters is true
+  const sortedFilterChips = useMemo(() => {
+    const visibleChips = filterChipConfigs.filter(chip => chip.show);
+    if (!hasActiveFilters) {
+      return visibleChips;
+    }
+    // Move active filters to the front, keep relative order within each group
+    const activeChips = visibleChips.filter(chip => chip.isActive);
+    const inactiveChips = visibleChips.filter(chip => !chip.isActive);
+    return [...activeChips, ...inactiveChips];
+  }, [filterChipConfigs, hasActiveFilters]);
 
   return (
     <View style={styles.container}>
@@ -627,7 +783,7 @@ export function PlayerFiltersBar({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Location Selector - if both GPS and home are available */}
+        {/* Location Selector - always first if shown */}
         {showLocationSelector && hasHomeLocation && onLocationModeChange && locationMode && (
           <View style={styles.locationSelectorWrapper}>
             <LocationSelector
@@ -641,107 +797,7 @@ export function PlayerFiltersBar({
           </View>
         )}
 
-        {/* Favorites Toggle - Only show for authenticated users */}
-        {isAuthenticated && (
-          <FilterChip
-            label={t('playerDirectory.filters.favorites')}
-            value={t('playerDirectory.filters.favorites')}
-            isActive={filters.favorites}
-            onPress={handleFavoritesToggle}
-            isDark={isDark}
-            hasDropdown={false}
-            icon={filters.favorites ? 'heart' : 'heart-outline'}
-          />
-        )}
-
-        {/* Gender Filter */}
-        <FilterChip
-          label={t('playerDirectory.filters.gender')}
-          value={genderDisplay}
-          isActive={filters.gender !== 'all'}
-          onPress={() => setShowGenderDropdown(true)}
-          isDark={isDark}
-        />
-
-        {/* Skill Level Filter (NTRP/DUPR) */}
-        <FilterChip
-          label={skillLabel}
-          value={skillDisplay}
-          isActive={filters.skillLevel !== 'all'}
-          onPress={() => setShowSkillDropdown(true)}
-          isDark={isDark}
-        />
-
-        {/* Distance Filter */}
-        <FilterChip
-          label={t('playerDirectory.filters.distance')}
-          value={distanceDisplay}
-          isActive={filters.maxDistance !== 'all'}
-          onPress={() => setShowDistanceDropdown(true)}
-          isDark={isDark}
-        />
-
-        {/* Availability Filter */}
-        <FilterChip
-          label={t('playerDirectory.filters.availability')}
-          value={availabilityDisplay}
-          isActive={filters.availability !== 'all'}
-          onPress={() => setShowAvailabilityDropdown(true)}
-          isDark={isDark}
-          icon={
-            filters.availability === 'morning'
-              ? 'sunny-outline'
-              : filters.availability === 'afternoon'
-                ? 'partly-sunny-outline'
-                : filters.availability === 'evening'
-                  ? 'moon-outline'
-                  : undefined
-          }
-        />
-
-        {/* Day Filter */}
-        <FilterChip
-          label={t('playerDirectory.filters.day' as any)}
-          value={dayDisplay}
-          isActive={filters.day !== 'all'}
-          onPress={() => setShowDayDropdown(true)}
-          isDark={isDark}
-          icon="calendar-outline"
-        />
-
-        {/* Play Style Filter */}
-        <FilterChip
-          label={t('playerDirectory.filters.playStyle')}
-          value={styleDisplay}
-          isActive={filters.playStyle !== 'all'}
-          onPress={() => setShowStyleDropdown(true)}
-          isDark={isDark}
-        />
-
-        {/* Blocked Toggle - Only show for authenticated users */}
-        {isAuthenticated && (
-          <FilterChip
-            label={t('playerDirectory.filters.blocked')}
-            value={t('playerDirectory.filters.blocked')}
-            isActive={filters.blocked}
-            onPress={handleBlockedToggle}
-            isDark={isDark}
-            hasDropdown={false}
-            icon={filters.blocked ? 'ban' : 'ban-outline'}
-          />
-        )}
-
-        {/* Sort Option */}
-        <FilterChip
-          label={t('playerDirectory.filters.sortBy')}
-          value={sortDisplay}
-          isActive={filters.sortBy !== 'name_asc'}
-          onPress={() => setShowSortDropdown(true)}
-          isDark={isDark}
-          icon="swap-vertical-outline"
-        />
-
-        {/* Reset Button - only show when filters are active */}
+        {/* Reset Button - show first when filters are active */}
         {hasActiveFilters && onReset && (
           <TouchableOpacity
             style={[
@@ -764,6 +820,20 @@ export function PlayerFiltersBar({
             </Text>
           </TouchableOpacity>
         )}
+
+        {/* Filter Chips - sorted with active filters first when filters are active */}
+        {sortedFilterChips.map(chip => (
+          <FilterChip
+            key={chip.key}
+            label={chip.label}
+            value={chip.value}
+            isActive={chip.isActive}
+            onPress={chip.onPress}
+            isDark={isDark}
+            hasDropdown={chip.hasDropdown}
+            icon={chip.icon}
+          />
+        ))}
       </ScrollView>
 
       {/* Dropdown Modals */}
@@ -813,7 +883,7 @@ export function PlayerFiltersBar({
 
       <FilterDropdown
         visible={showDayDropdown}
-        title={t('playerDirectory.filters.selectDay' as any)}
+        title={t('playerDirectory.filters.selectDay' as TranslationKey)}
         options={DAY_OPTIONS}
         selectedValue={filters.day}
         onSelect={handleDayChange}
@@ -845,7 +915,10 @@ export function PlayerFiltersBar({
       />
     </View>
   );
-}
+});
+
+// Display name for debugging
+PlayerFiltersBar.displayName = 'PlayerFiltersBar';
 
 // =============================================================================
 // STYLES

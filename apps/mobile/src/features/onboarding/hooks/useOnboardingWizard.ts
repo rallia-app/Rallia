@@ -63,6 +63,7 @@ export interface OnboardingFormData {
 
   // Availabilities
   availabilities: Record<string, { AM: boolean; PM: boolean; EVE: boolean }>;
+  privacyShowAvailability: boolean;
 }
 
 interface UseOnboardingWizardReturn {
@@ -133,6 +134,7 @@ const INITIAL_FORM_DATA: OnboardingFormData = {
   pickleballMatchType: 'competitive',
   favoriteFacilities: [],
   availabilities: DEFAULT_AVAILABILITIES,
+  privacyShowAvailability: true,
 };
 
 /**

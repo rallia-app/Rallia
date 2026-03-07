@@ -6,8 +6,9 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Switch } from 'react-native';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { selectionHaptic } from '@rallia/shared-utils';
@@ -168,6 +169,41 @@ export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
           );
         })}
       </View>
+
+      {/* Privacy Toggle */}
+      <View style={[styles.privacySection, { borderTopColor: colors.border }]}>
+        <View style={styles.privacyHeader}>
+          <Ionicons
+            name={formData.privacyShowAvailability ? 'globe-outline' : 'lock-closed-outline'}
+            size={20}
+            color={colors.text}
+          />
+          <Text weight="semibold" style={[styles.privacyTitle, { color: colors.text }]}>
+            {t('profile.availabilities.privacyTitle' as TranslationKey)}
+          </Text>
+        </View>
+        <Text style={[styles.privacyDescription, { color: colors.textSecondary }]}>
+          {formData.privacyShowAvailability
+            ? t('profile.availabilities.publicDescription' as TranslationKey)
+            : t('profile.availabilities.privateDescription' as TranslationKey)}
+        </Text>
+        <View style={styles.privacyToggleRow}>
+          <Text style={{ color: colors.text }}>
+            {formData.privacyShowAvailability
+              ? t('profile.availabilities.public' as TranslationKey)
+              : t('profile.availabilities.private' as TranslationKey)}
+          </Text>
+          <Switch
+            value={formData.privacyShowAvailability}
+            onValueChange={value => {
+              selectionHaptic();
+              onUpdateFormData({ privacyShowAvailability: value });
+            }}
+            trackColor={{ false: colors.buttonInactive, true: colors.buttonActive }}
+            thumbColor={colors.cardBackground}
+          />
+        </View>
+      </View>
     </BottomSheetScrollView>
   );
 };
@@ -220,6 +256,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
+  },
+  privacySection: {
+    marginTop: spacingPixels[2],
+    paddingTop: spacingPixels[4],
+    borderTopWidth: 1,
+  },
+  privacyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    marginBottom: spacingPixels[2],
+  },
+  privacyTitle: {
+    fontSize: 16,
+  },
+  privacyDescription: {
+    fontSize: 13,
+    marginBottom: spacingPixels[3],
+  },
+  privacyToggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
 });
 

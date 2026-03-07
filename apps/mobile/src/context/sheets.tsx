@@ -388,7 +388,8 @@ declare module 'react-native-actions-sheet' {
       payload: {
         mode?: 'onboarding' | 'edit';
         initialData?: WeeklyAvailability;
-        onSave?: (availabilities: WeeklyAvailability) => void;
+        initialPrivacyShowAvailability?: boolean;
+        onSave?: (availabilities: WeeklyAvailability, privacyShowAvailability: boolean) => void;
         onContinue?: (availabilities: WeeklyAvailability) => void;
         onBack?: () => void;
         currentStep?: number;

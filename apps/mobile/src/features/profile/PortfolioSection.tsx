@@ -72,12 +72,6 @@ const PortfolioSection: React.FC<PortfolioSectionProps> = ({
   const [showViewer, setShowViewer] = useState(false);
   const [selectedSportId, setSelectedSportId] = useState<string | null>(null);
 
-  // Get sports that have proofs
-  const sportsWithProofs = useMemo(() => {
-    const sportIds = new Set(proofs.map(p => p.sport_id).filter(Boolean));
-    return sports.filter(s => sportIds.has(s.id));
-  }, [proofs, sports]);
-
   // Filter proofs by selected sport
   const filteredProofs = useMemo(() => {
     if (selectedSportId === null) {
@@ -121,7 +115,8 @@ const PortfolioSection: React.FC<PortfolioSectionProps> = ({
   );
 
   const totalCount = filteredProofs.length;
-  const showSportToggle = sportsWithProofs.length > 1;
+  // Show sport toggle when user has multiple active sports
+  const showSportToggle = sports.length > 1;
 
   const handleProofPress = (proof: PortfolioProof) => {
     setSelectedProof(proof);
@@ -308,7 +303,7 @@ const PortfolioSection: React.FC<PortfolioSectionProps> = ({
             {t('profile.portfolio.all')}
           </Text>
         </TouchableOpacity>
-        {sportsWithProofs.map(sport => (
+        {sports.map(sport => (
           <TouchableOpacity
             key={sport.id}
             style={[
