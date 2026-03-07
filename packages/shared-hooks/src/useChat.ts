@@ -26,6 +26,7 @@ import {
   unsubscribeFromChannel,
   getTotalUnreadCount,
   getConversationByNetworkId,
+  getConversationUnreadCount,
   hasAgreedToChatRules,
   agreeToChatRules,
   // New enhanced functions
@@ -61,6 +62,8 @@ export const chatKeys = {
   reactions: (messageIds: string[]) =>
     [...chatKeys.all, 'reactions', messageIds.join(',')] as const,
   unreadCount: (playerId: string) => [...chatKeys.all, 'unreadCount', playerId] as const,
+  conversationUnreadCount: (conversationId: string, playerId: string) =>
+    [...chatKeys.all, 'conversationUnreadCount', conversationId, playerId] as const,
   networkConversation: (networkId: string) =>
     [...chatKeys.all, 'networkConversation', networkId] as const,
   chatAgreement: (playerId: string) => [...chatKeys.all, 'chatAgreement', playerId] as const,
@@ -484,6 +487,50 @@ export function useTotalUnreadCount(playerId: string | undefined) {
     enabled: !!playerId,
     staleTime: 5 * 1000, // 5 seconds - quick refresh for accurate badge count
   });
+}
+
+/**
+ * Get unread message count for a specific conversation
+ * Useful for showing unread count on Group/Community detail screens
+ */
+export function useConversationUnreadCount(
+  conversationId: string | undefined,
+  playerId: string | undefined
+) {
+  return useQuery({
+    queryKey: chatKeys.conversationUnreadCount(conversationId || '', playerId || ''),
+    queryFn: () => getConversationUnreadCount(conversationId!, playerId!),
+    enabled: !!conversationId && !!playerId,
+    staleTime: 5 * 1000, // 5 seconds - quick refresh for accurate badge count
+  });
+}
+
+/**
+ * Subscribe to real-time updates for a specific conversation's unread count
+ * Invalidates the unread count query when messages change
+ */
+export function useConversationUnreadRealtime(
+  conversationId: string | undefined,
+  playerId: string | undefined
+) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!conversationId || !playerId) return;
+
+    const channel = subscribeToMessages(conversationId, {
+      onInsert: () => {
+        // Invalidate unread count when a new message arrives
+        queryClient.invalidateQueries({
+          queryKey: chatKeys.conversationUnreadCount(conversationId, playerId),
+        });
+      },
+    });
+
+    return () => {
+      unsubscribeFromChannel(channel);
+    };
+  }, [conversationId, playerId, queryClient]);
 }
 
 // ============================================================================
