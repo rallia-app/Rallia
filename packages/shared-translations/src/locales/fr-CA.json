@@ -1297,6 +1297,7 @@
       "failedToSaveRating": "Échec de l'enregistrement de votre classement. Veuillez réessayer.",
       "failedToSavePreferences": "Échec de l'enregistrement de vos préférences. Veuillez réessayer.",
       "failedToSaveAvailability": "Échec de l'enregistrement de vos disponibilités. Veuillez réessayer.",
+      "failedToCompleteOnboarding": "Échec de la complétion de votre profil. Veuillez réessayer.",
       "failedToLoadSports": "Échec du chargement des sports. Veuillez réessayer.",
       "failedToLoadRatings": "Échec du chargement des classements. Veuillez réessayer.",
       "failedToUpdateSportSelection": "Échec de la mise à jour de la sélection du sport. Veuillez réessayer.",
