@@ -1190,22 +1190,6 @@ const PlayerProfile = () => {
             </Text>
           </View>
 
-          {/* Last Seen / Active Status */}
-          <View style={styles.lastSeenContainer}>
-            <Ionicons
-              name={isOnline ? 'ellipse' : 'time-outline'}
-              size={isOnline ? 8 : 14}
-              color={isOnline ? '#22C55E' : colors.textMuted}
-            />
-            <Text style={[styles.lastSeenText, { color: isOnline ? '#22C55E' : colors.textMuted }]}>
-              {isOnline
-                ? t('profile.status.activeNow')
-                : player?.last_seen_at
-                  ? `${t('profile.status.lastSeen')} ${formatRelativeTime(player.last_seen_at)}`
-                  : t('profile.status.offline')}
-            </Text>
-          </View>
-
           {/* Action Buttons */}
           <View style={styles.actionButtons}>
             <TouchableOpacity

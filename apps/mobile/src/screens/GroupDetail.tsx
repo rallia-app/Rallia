@@ -46,6 +46,8 @@ import {
   useGroupLeaderboard,
   useGroupRealtime,
   useScoreConfirmationsRealtime,
+  useConversationUnreadCount,
+  useConversationUnreadRealtime,
   type GroupActivity as GroupActivityType,
   type GroupMatch,
 } from '@rallia/shared-hooks';
@@ -123,10 +125,18 @@ export default function GroupDetailScreen() {
     leaderboardPeriod === 0 ? 3650 : leaderboardPeriod
   );
 
+  // Get unread message count for the group chat
+  const { data: unreadChatCount } = useConversationUnreadCount(
+    group?.conversation_id ?? undefined,
+    playerId
+  );
+
   // Subscribe to real-time updates for this group
   useGroupRealtime(groupId, playerId);
   // Subscribe to real-time score confirmation updates
   useScoreConfirmationsRealtime(playerId);
+  // Subscribe to real-time chat updates for unread count badge
+  useConversationUnreadRealtime(group?.conversation_id ?? undefined, playerId);
 
   const leaveGroupMutation = useLeaveGroup();
   const deleteGroupMutation = useDeleteGroup();
@@ -1353,7 +1363,7 @@ export default function GroupDetailScreen() {
 
           {/* Action Buttons Row */}
           <View style={styles.actionButtonsRow}>
-            {group.member_count < (group.max_members ?? 10) && (
+            {group.member_count < (group.max_members ?? 20) && (
               <TouchableOpacity
                 style={[styles.addMemberButton, { borderColor: colors.primary, flex: 1 }]}
                 onPress={() =>
@@ -1437,7 +1447,16 @@ export default function GroupDetailScreen() {
           style={[styles.chatButton, { backgroundColor: colors.primary }]}
           onPress={handleOpenChat}
         >
-          <Ionicons name="chatbubbles-outline" size={20} color="#FFFFFF" />
+          <View style={styles.chatIconContainer}>
+            <Ionicons name="chatbubbles-outline" size={20} color="#FFFFFF" />
+            {(unreadChatCount ?? 0) > 0 && (
+              <View style={styles.unreadBadge}>
+                <Text size="xs" weight="bold" style={styles.unreadBadgeText}>
+                  {(unreadChatCount ?? 0) > 99 ? '99+' : unreadChatCount}
+                </Text>
+              </View>
+            )}
+          </View>
           <Text weight="semibold" style={styles.chatButtonText}>
             {t('groups.chatWithMembers')}
           </Text>
@@ -1722,6 +1741,26 @@ const styles = StyleSheet.create({
   chatButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+  },
+  chatIconContainer: {
+    position: 'relative',
+  },
+  unreadBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -10,
+    backgroundColor: '#FF3B30',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  unreadBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    lineHeight: 12,
   },
   // Leaderboard Preview List
   leaderboardPreviewList: {
