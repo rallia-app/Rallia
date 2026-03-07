@@ -22,9 +22,7 @@ import type {
 /**
  * Get all conversations for a player
  */
-export async function getPlayerConversations(
-  playerId: string
-): Promise<ConversationPreview[]> {
+export async function getPlayerConversations(playerId: string): Promise<ConversationPreview[]> {
   // Get conversations where player is a participant
   const { data: participations, error: partError } = await supabase
     .from('conversation_participant')
@@ -40,12 +38,13 @@ export async function getPlayerConversations(
     return [];
   }
 
-  const conversationIds = participations.map((p) => p.conversation_id);
+  const conversationIds = participations.map(p => p.conversation_id);
 
   // Get conversations with last message
   const { data: conversations, error: convError } = await supabase
     .from('conversation')
-    .select(`
+    .select(
+      `
       id,
       conversation_type,
       title,
@@ -53,7 +52,8 @@ export async function getPlayerConversations(
       picture_url,
       created_at,
       updated_at
-    `)
+    `
+    )
     .in('id', conversationIds)
     .order('updated_at', { ascending: false });
 
@@ -73,7 +73,8 @@ export async function getPlayerConversations(
     // Get last message
     const { data: lastMessage } = await supabase
       .from('message')
-      .select(`
+      .select(
+        `
         id,
         content,
         created_at,
@@ -85,7 +86,8 @@ export async function getPlayerConversations(
             last_name
           )
         )
-      `)
+      `
+      )
       .eq('conversation_id', conv.id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -109,7 +111,7 @@ export async function getPlayerConversations(
     const isPinned = participation?.is_pinned ?? false;
     const isMuted = participation?.is_muted ?? false;
     const isArchived = participation?.is_archived ?? false;
-    
+
     let unreadCount = 0;
     if (lastReadAt) {
       const { count } = await supabase
@@ -138,7 +140,8 @@ export async function getPlayerConversations(
     if (conv.conversation_type === 'direct') {
       const { data: otherPart } = await supabase
         .from('conversation_participant')
-        .select(`
+        .select(
+          `
           player:player!conversation_participant_player_id_fkey (
             id,
             last_seen_at,
@@ -148,24 +151,27 @@ export async function getPlayerConversations(
               profile_picture_url
             )
           )
-        `)
+        `
+        )
         .eq('conversation_id', conv.id)
         .neq('player_id', playerId)
         .single();
 
-      const player = otherPart?.player as unknown as {
-        id: string;
-        last_seen_at: string | null;
-        profile: {
-          first_name: string;
-          last_name: string | null;
-          profile_picture_url: string | null;
-        } | null;
-      } | undefined;
+      const player = otherPart?.player as unknown as
+        | {
+            id: string;
+            last_seen_at: string | null;
+            profile: {
+              first_name: string;
+              last_name: string | null;
+              profile_picture_url: string | null;
+            } | null;
+          }
+        | undefined;
 
       if (player?.profile) {
         // Check if player was seen in last 5 minutes
-        const isOnline = player.last_seen_at 
+        const isOnline = player.last_seen_at
           ? new Date(player.last_seen_at) > new Date(Date.now() - 5 * 60 * 1000)
           : false;
 
@@ -182,13 +188,15 @@ export async function getPlayerConversations(
       // For group chats, check if linked to a network (for categorization and cover image)
       const { data: network } = await supabase
         .from('network')
-        .select(`
+        .select(
+          `
           id, 
           cover_image_url,
           network_type:network_type_id (
             name
           )
-        `)
+        `
+        )
         .eq('conversation_id', conv.id)
         .single();
 
@@ -209,19 +217,21 @@ export async function getPlayerConversations(
     if (conv.match_id) {
       const { data: match } = await supabase
         .from('match')
-        .select(`
+        .select(
+          `
           format,
           match_date,
           sport:sport_id (
             name
           )
-        `)
+        `
+        )
         .eq('id', conv.match_id)
         .single();
 
       if (match) {
         // Supabase can return nested objects as arrays, handle both cases
-        const sportData = Array.isArray(match.sport) 
+        const sportData = Array.isArray(match.sport)
           ? (match.sport[0] as { name: string } | undefined)
           : (match.sport as unknown as { name: string } | null);
         matchInfo = {
@@ -270,7 +280,7 @@ export async function getPlayerConversations(
     // Pinned conversations first
     if (a.is_pinned && !b.is_pinned) return -1;
     if (!a.is_pinned && b.is_pinned) return 1;
-    
+
     // Then by last message time
     const aTime = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
     const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
@@ -288,7 +298,8 @@ export async function getConversation(
 ): Promise<ConversationWithDetails | null> {
   const { data: conversation, error } = await supabase
     .from('conversation')
-    .select(`
+    .select(
+      `
       id,
       conversation_type,
       title,
@@ -297,7 +308,8 @@ export async function getConversation(
       created_by,
       created_at,
       updated_at
-    `)
+    `
+    )
     .eq('id', conversationId)
     .single();
 
@@ -312,7 +324,8 @@ export async function getConversation(
   // Get participants
   const { data: participants } = await supabase
     .from('conversation_participant')
-    .select(`
+    .select(
+      `
       id,
       player_id,
       last_read_at,
@@ -326,13 +339,15 @@ export async function getConversation(
           profile_picture_url
         )
       )
-    `)
+    `
+    )
     .eq('conversation_id', conversationId);
 
   // Get last message
   const { data: lastMessage } = await supabase
     .from('message')
-    .select(`
+    .select(
+      `
       id,
       conversation_id,
       sender_id,
@@ -350,7 +365,8 @@ export async function getConversation(
           profile_picture_url
         )
       )
-    `)
+    `
+    )
     .eq('conversation_id', conversationId)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -358,7 +374,7 @@ export async function getConversation(
 
   return {
     ...conversation,
-    participants: (participants || []).map((p) => ({
+    participants: (participants || []).map(p => ({
       id: p.id,
       player_id: p.player_id,
       last_read_at: p.last_read_at,
@@ -392,9 +408,7 @@ export async function getConversation(
 /**
  * Create a new conversation
  */
-export async function createConversation(
-  input: CreateConversationInput
-): Promise<Conversation> {
+export async function createConversation(input: CreateConversationInput): Promise<Conversation> {
   const { data: conversation, error } = await supabase
     .from('conversation')
     .insert({
@@ -413,7 +427,7 @@ export async function createConversation(
   }
 
   // Add participants
-  const participantInserts = input.participant_ids.map((playerId) => ({
+  const participantInserts = input.participant_ids.map(playerId => ({
     conversation_id: conversation.id,
     player_id: playerId,
   }));
@@ -442,7 +456,8 @@ export async function getOrCreateDirectConversation(
   // Check if direct conversation already exists between these two players
   const { data: existingConvs } = await supabase
     .from('conversation')
-    .select(`
+    .select(
+      `
       id,
       conversation_type,
       title,
@@ -451,7 +466,8 @@ export async function getOrCreateDirectConversation(
       created_by,
       created_at,
       updated_at
-    `)
+    `
+    )
     .eq('conversation_type', 'direct');
 
   if (existingConvs) {
@@ -462,7 +478,7 @@ export async function getOrCreateDirectConversation(
         .eq('conversation_id', conv.id);
 
       if (participants?.length === 2) {
-        const playerIds = participants.map((p) => p.player_id);
+        const playerIds = participants.map(p => p.player_id);
         if (playerIds.includes(playerId1) && playerIds.includes(playerId2)) {
           return conv;
         }
@@ -486,7 +502,7 @@ export async function getOrCreateDirectConversation(
  * Create a match chat when a match becomes full (all players confirmed)
  * - Singles (2 players): Creates a direct chat linked to the match
  * - Doubles (4 players): Creates a group chat linked to the match
- * 
+ *
  * @param matchId - The match ID
  * @param createdBy - The player ID who triggered the full match (e.g., last to join or host who accepted)
  * @param participantIds - All player IDs in the match (including host)
@@ -567,7 +583,7 @@ export async function updateConversation(
   updates: UpdateConversationInput
 ): Promise<boolean> {
   const updateData: Record<string, unknown> = {};
-  
+
   if (updates.title !== undefined) {
     updateData.title = updates.title;
   }
@@ -579,10 +595,7 @@ export async function updateConversation(
     return true; // Nothing to update
   }
 
-  const { error } = await supabase
-    .from('conversation')
-    .update(updateData)
-    .eq('id', conversationId);
+  const { error } = await supabase.from('conversation').update(updateData).eq('id', conversationId);
 
   if (error) {
     console.error('Error updating conversation:', error);
@@ -600,9 +613,7 @@ export async function updateConversation(
  * Get conversation by network (group/community/club)
  * Useful when you have a network ID and need its conversation
  */
-export async function getConversationByNetworkId(
-  networkId: string
-): Promise<Conversation | null> {
+export async function getConversationByNetworkId(networkId: string): Promise<Conversation | null> {
   const { data, error } = await supabase
     .from('network')
     .select('conversation_id')
@@ -630,9 +641,7 @@ export async function getConversationByNetworkId(
  * Get network info for a conversation (for group/community chats)
  * Returns network details including cover image and description
  */
-export async function getNetworkByConversationId(
-  conversationId: string
-): Promise<{
+export async function getNetworkByConversationId(conversationId: string): Promise<{
   id: string;
   name: string;
   cover_image_url: string | null;
@@ -642,14 +651,16 @@ export async function getNetworkByConversationId(
 } | null> {
   const { data, error } = await supabase
     .from('network')
-    .select(`
+    .select(
+      `
       id, 
       name, 
       cover_image_url, 
       description, 
       member_count,
       network_type:network_type_id (name)
-    `)
+    `
+    )
     .eq('conversation_id', conversationId)
     .single();
 
@@ -668,4 +679,41 @@ export async function getNetworkByConversationId(
     member_count: data.member_count,
     type: networkType?.name || null,
   };
+}
+
+/**
+ * Get unread message count for a specific conversation for a player
+ */
+export async function getConversationUnreadCount(
+  conversationId: string,
+  playerId: string
+): Promise<number> {
+  // Get player's last_read_at timestamp for this conversation
+  const { data: participation } = await supabase
+    .from('conversation_participant')
+    .select('last_read_at')
+    .eq('conversation_id', conversationId)
+    .eq('player_id', playerId)
+    .single();
+
+  const lastReadAt = participation?.last_read_at;
+
+  if (lastReadAt) {
+    // Count messages after the last read timestamp (excluding player's own messages)
+    const { count } = await supabase
+      .from('message')
+      .select('*', { count: 'exact', head: true })
+      .eq('conversation_id', conversationId)
+      .neq('sender_id', playerId)
+      .gt('created_at', lastReadAt);
+    return count || 0;
+  } else {
+    // Never read - count all messages not from this player
+    const { count } = await supabase
+      .from('message')
+      .select('*', { count: 'exact', head: true })
+      .eq('conversation_id', conversationId)
+      .neq('sender_id', playerId);
+    return count || 0;
+  }
 }

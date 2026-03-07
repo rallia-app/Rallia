@@ -14,11 +14,7 @@ import type { GroupMember, Group, GroupWithMembers, GroupActivity } from './grou
  * Get a group by ID (internal helper)
  */
 async function getGroupInternal(groupId: string): Promise<Group | null> {
-  const { data, error } = await supabase
-    .from('network')
-    .select('*')
-    .eq('id', groupId)
-    .single();
+  const { data, error } = await supabase.from('network').select('*').eq('id', groupId).single();
 
   if (error) {
     if (error.code === 'PGRST116') return null;
@@ -45,7 +41,8 @@ async function getGroupWithMembersInternal(groupId: string): Promise<GroupWithMe
 
   const { data: members, error: membersError } = await supabase
     .from('network_member')
-    .select(`
+    .select(
+      `
       *,
       player:player_id (
         id,
@@ -57,7 +54,8 @@ async function getGroupWithMembersInternal(groupId: string): Promise<GroupWithMe
           last_active_at
         )
       )
-    `)
+    `
+    )
     .eq('network_id', groupId)
     .eq('status', 'active')
     .order('role', { ascending: false })
@@ -85,15 +83,13 @@ async function logActivityInternal(
 ): Promise<void> {
   if (!actorId) return;
 
-  const { error } = await supabase
-    .from('group_activity')
-    .insert({
-      network_id: groupId,
-      activity_type: activityType,
-      player_id: actorId,
-      related_entity_id: targetId || null,
-      metadata: metadata || null,
-    });
+  const { error } = await supabase.from('group_activity').insert({
+    network_id: groupId,
+    activity_type: activityType,
+    player_id: actorId,
+    related_entity_id: targetId || null,
+    metadata: metadata || null,
+  });
 
   if (error) {
     console.error('Error logging activity:', error);
@@ -159,7 +155,8 @@ export async function getGroupMemberInfo(
 ): Promise<GroupMember | null> {
   const { data, error } = await supabase
     .from('network_member')
-    .select(`
+    .select(
+      `
       *,
       player:player_id (
         id,
@@ -170,7 +167,8 @@ export async function getGroupMemberInfo(
           profile_picture_url
         )
       )
-    `)
+    `
+    )
     .eq('network_id', groupId)
     .eq('player_id', playerId)
     .single();
@@ -205,25 +203,28 @@ export async function addGroupMember(
     throw new Error('Player is already a member of this group');
   }
 
-  // Check group capacity (default to 10 if max_members is null)
+  // Check group capacity (default to 20 if max_members is null)
   const group = await getGroupInternal(groupId);
-  const maxMembers = group?.max_members ?? 10;
+  const maxMembers = group?.max_members ?? 20;
   if (group && group.member_count >= maxMembers) {
     throw new Error(`Group has reached maximum capacity of ${maxMembers} members`);
   }
 
   const { data, error } = await supabase
     .from('network_member')
-    .upsert({
-      network_id: groupId,
-      player_id: playerIdToAdd,
-      role: 'member',
-      added_by: inviterId,
-      status: 'active',
-      joined_at: new Date().toISOString(),
-    }, {
-      onConflict: 'network_id,player_id',
-    })
+    .upsert(
+      {
+        network_id: groupId,
+        player_id: playerIdToAdd,
+        role: 'member',
+        added_by: inviterId,
+        status: 'active',
+        joined_at: new Date().toISOString(),
+      },
+      {
+        onConflict: 'network_id,player_id',
+      }
+    )
     .select()
     .single();
 
@@ -254,7 +255,9 @@ export async function removeGroupMember(
     const group = await getGroupWithMembersInternal(groupId);
     const moderators = group?.members.filter(m => m.role === 'moderator') || [];
     if (moderators.length <= 1) {
-      throw new Error('Cannot remove the last moderator. Transfer moderator role first or delete the group.');
+      throw new Error(
+        'Cannot remove the last moderator. Transfer moderator role first or delete the group.'
+      );
     }
   }
 
@@ -275,7 +278,7 @@ export async function removeGroupMember(
  */
 export async function leaveGroup(groupId: string, playerId: string): Promise<void> {
   const memberInfo = await getGroupMemberInfo(groupId, playerId);
-  
+
   if (!memberInfo || memberInfo.status !== 'active') {
     throw new Error('You are not a member of this group');
   }
@@ -285,7 +288,9 @@ export async function leaveGroup(groupId: string, playerId: string): Promise<voi
     const group = await getGroupWithMembersInternal(groupId);
     const moderators = group?.members.filter(m => m.role === 'moderator') || [];
     if (moderators.length <= 1) {
-      throw new Error('Cannot leave as the last moderator. Transfer moderator role first or delete the group.');
+      throw new Error(
+        'Cannot leave as the last moderator. Transfer moderator role first or delete the group.'
+      );
     }
   }
 
