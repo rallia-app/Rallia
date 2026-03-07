@@ -90,6 +90,7 @@ export interface PlayersPage {
   players: PlayerSearchResult[];
   hasMore: boolean;
   nextOffset: number | null;
+  totalCount: number;
 }
 
 /**
@@ -166,7 +167,7 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
   }
 
   if (!playerSports || playerSports.length === 0) {
-    return { players: [], hasMore: false, nextOffset: null };
+    return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
   }
 
   // Get unique player IDs from player_sport records
@@ -182,7 +183,7 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     playerIds = playerIds.filter(id => favoritePlayerIds.includes(id));
   } else if (filters.favorites && favoritePlayerIds.length === 0) {
     // No favorites, return empty
-    return { players: [], hasMore: false, nextOffset: null };
+    return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
   }
 
   // Handle blocked players:
@@ -193,14 +194,14 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     playerIds = playerIds.filter(id => blockedPlayerIds.includes(id));
   } else if (filters.blocked && blockedPlayerIds.length === 0) {
     // No blocked players, return empty
-    return { players: [], hasMore: false, nextOffset: null };
+    return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
   } else if (!filters.blocked && blockedPlayerIds.length > 0) {
     // Exclude blocked players from results (default behavior)
     playerIds = playerIds.filter(id => !blockedPlayerIds.includes(id));
   }
 
   if (playerIds.length === 0) {
-    return { players: [], hasMore: false, nextOffset: null };
+    return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
   }
 
   // Step 2: Apply gender filter by fetching player data
@@ -219,7 +220,7 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     }
 
     if (playerIds.length === 0) {
-      return { players: [], hasMore: false, nextOffset: null };
+      return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
     }
   }
 
@@ -245,7 +246,7 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
       }
 
       if (playerIds.length === 0) {
-        return { players: [], hasMore: false, nextOffset: null };
+        return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
       }
     }
   }
@@ -267,7 +268,7 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     }
 
     if (playerIds.length === 0) {
-      return { players: [], hasMore: false, nextOffset: null };
+      return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
     }
   }
 
@@ -288,7 +289,7 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     }
 
     if (playerIds.length === 0) {
-      return { players: [], hasMore: false, nextOffset: null };
+      return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
     }
   }
 
@@ -310,7 +311,7 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     }
 
     if (playerIds.length === 0) {
-      return { players: [], hasMore: false, nextOffset: null };
+      return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
     }
   }
 
@@ -376,7 +377,7 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
   }
 
   if (playerIds.length === 0) {
-    return { players: [], hasMore: false, nextOffset: null };
+    return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
   }
 
   // Step 7: If searching, find player IDs matching city and union with name-matched profile IDs
@@ -409,9 +410,12 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     playerIds = playerIds.filter(id => matchedIds.has(id));
 
     if (playerIds.length === 0) {
-      return { players: [], hasMore: false, nextOffset: null };
+      return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
     }
   }
+
+  // Capture total count before pagination
+  const totalCount = playerIds.length;
 
   // Step 8: Fetch profiles (paginated)
   const { data: profiles, error: profileError } = await supabase
@@ -427,7 +431,7 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
   }
 
   if (!profiles || profiles.length === 0) {
-    return { players: [], hasMore: false, nextOffset: null };
+    return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
   }
 
   // Check if there are more results
@@ -500,6 +504,7 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     players,
     hasMore,
     nextOffset: hasMore ? offset + limit : null,
+    totalCount,
   };
 }
 

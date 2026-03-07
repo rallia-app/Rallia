@@ -7245,7 +7245,9 @@ export type Database = {
         | 'program_waitlist_promoted'
         | 'program_payment_due'
         | 'program_payment_received'
-        | 'match_check_in_available';
+        | 'match_check_in_available'
+        | 'match_spot_opened'
+        | 'nearby_match_available';
       organization_nature_enum: 'public' | 'private';
       organization_type: 'club' | 'facility' | 'league' | 'academy' | 'association';
       organization_type_enum: 'club' | 'municipality' | 'city' | 'association';
@@ -7642,6 +7644,8 @@ export const Constants = {
         'program_payment_due',
         'program_payment_received',
         'match_check_in_available',
+        'match_spot_opened',
+        'nearby_match_available',
       ],
       organization_nature_enum: ['public', 'private'],
       organization_type: ['club', 'facility', 'league', 'academy', 'association'],

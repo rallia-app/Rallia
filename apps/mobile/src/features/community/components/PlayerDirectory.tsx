@@ -293,6 +293,7 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
 
   const {
     players,
+    totalCount,
     isLoading,
     isFetching,
     isFetchingNextPage,
@@ -465,6 +466,17 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
         hasHomeLocation={hasHomeLocation}
         homeLocationLabel={homeLocationLabel}
       />
+
+      {/* Results count */}
+      {!isLoading && totalCount !== undefined && (
+        <View style={styles.resultsInfo}>
+          <Text size="sm" color={colors.textMuted}>
+            {totalCount === 1
+              ? t('playerDirectory.results.countSingular')
+              : t('playerDirectory.results.count').replace('{count}', String(totalCount))}
+          </Text>
+        </View>
+      )}
     </View>
   );
 
@@ -607,6 +619,10 @@ const styles = StyleSheet.create({
   },
   searchLoader: {
     marginLeft: spacingPixels[2],
+  },
+  resultsInfo: {
+    paddingHorizontal: spacingPixels[4],
+    paddingBottom: spacingPixels[2],
   },
   listContent: {
     paddingBottom: spacingPixels[5],

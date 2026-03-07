@@ -71,7 +71,6 @@ function getPreheaderKey(type: string): string {
     match_updated: 'preheader.matchUpdated',
     match_starting_soon: 'preheader.matchStartingSoon',
     match_check_in_available: 'preheader.matchCheckInAvailable',
-    match_completed: 'preheader.matchCompleted',
     player_kicked: 'preheader.playerKicked',
     player_left: 'preheader.playerLeft',
     reminder: 'preheader.reminder',
@@ -262,10 +261,6 @@ function generateActionButton(
     case 'player_kicked':
       buttonKey = 'match.button.browseGames';
       deepLink = 'rallia://discover';
-      break;
-    case 'match_completed':
-      buttonKey = 'match.button.rateGame';
-      if (payload.matchId) deepLink = `rallia://match/${payload.matchId}/feedback`;
       break;
     case 'match_join_accepted':
     case 'match_player_joined':

@@ -328,12 +328,15 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
   match_join_rejected: 'high',
   match_player_joined: 'high',
   match_new_available: 'high',
+  match_spot_opened: 'high',
+  nearby_match_available: 'normal',
   player_kicked: 'high',
   player_left: 'high',
 
   // Normal - standard notifications
   match_updated: 'normal',
-  match_completed: 'normal',
+  match_completed: 'normal', // Unused — kept for type completeness (DB enum still has the value)
+  match_check_in_available: 'high',
   new_message: 'normal',
   chat: 'normal',
   friend_request: 'normal',
@@ -386,29 +389,32 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
  * These are fallbacks when translations are not available
  */
 const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
-  match_invitation: 'Game On!',
-  match_join_request: 'New Player Request',
-  match_join_accepted: "You're In!",
-  match_join_rejected: 'Request Declined',
-  match_player_joined: 'Player Joined!',
-  match_new_available: 'New Game in Group',
-  match_cancelled: 'Game Cancelled',
-  match_updated: 'Game Updated',
-  match_starting_soon: 'Get Ready!',
-  match_completed: 'Great Game!',
-  player_kicked: 'Removed from Game',
-  player_left: 'Player Left',
+  match_invitation: "You've been invited to play!",
+  match_join_request: '{playerName} wants to join',
+  match_join_accepted: "You're in!",
+  match_join_rejected: 'Request declined',
+  match_player_joined: 'New player joined!',
+  match_new_available: 'New game nearby',
+  match_spot_opened: 'A spot opened up!',
+  nearby_match_available: 'New match nearby',
+  match_cancelled: 'Game cancelled',
+  match_updated: 'Game updated',
+  match_starting_soon: 'Get ready!',
+  match_completed: 'Game complete!', // Unused — kept for type completeness
+  match_check_in_available: 'Time to check in!',
+  player_kicked: 'Removed from game',
+  player_left: 'Player left',
   new_message: 'Message from {senderName}',
-  chat: 'New Message',
-  friend_request: 'New Connection Request',
-  rating_verified: 'Rating Verified!',
-  reminder: 'Upcoming Game',
-  payment: 'Payment Update',
+  chat: 'New message',
+  friend_request: 'New friend request',
+  rating_verified: 'Rating verified!',
+  reminder: 'Game coming up',
+  payment: 'Payment update',
   support: 'Message from Rallia',
   system: 'Rallia Update',
   feedback_request: 'How was your game?',
-  feedback_reminder: 'You have a match to close out',
-  score_confirmation: 'Confirm Match Score',
+  feedback_reminder: 'Your game still needs a score',
+  score_confirmation: 'Confirm your score',
 
   // Organization staff notifications
   booking_created: 'New Booking',
@@ -451,19 +457,23 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   match_join_accepted:
     'Your {sportName} game on {matchDate} at {locationName} is confirmed. See you there!',
   match_join_rejected:
-    "Your request to join the {sportName} game wasn't accepted this time. Check out other games nearby!",
+    "Your request to join the {sportName} game wasn't accepted this time. Check out other games near you.",
   match_player_joined: '{playerName} joined your {sportName} game. {spotsLeft} spot(s) left!',
   match_new_available:
     'A new {sportName} game was created in a group you belong to. Tap to view and join!',
+  match_spot_opened: 'A spot opened in a {sportName} match{startTime}{locationName}. Join now!',
+  nearby_match_available: 'A {sportName} match is available near you{startTime}{locationName}',
   match_cancelled:
-    'The {sportName} game on {matchDate} at {locationName} has been cancelled. We hope to see you on the court soon!',
-  match_updated: 'Your {sportName} game on {matchDate} has new details. Tap to review the changes.',
+    'The {sportName} game on {matchDate} at {locationName} has been cancelled. We hope to see you playing soon!',
+  match_updated:
+    'Your {sportName} game on {matchDate} has been updated. Check the updated details.',
   match_starting_soon:
     'Your {sportName} game at {locationName} starts {timeUntil}. Time to warm up!',
-  match_completed: 'Your {sportName} game is complete. How did it go? Share your feedback!',
+  match_completed: '', // Unused — kept for type completeness
+  match_check_in_available: 'Check in once you arrive at the venue to confirm your presence.',
   player_kicked:
-    "You've been removed from the {sportName} game on {matchDate}. Check out other games nearby!",
-  player_left: '{playerName} left your {sportName} game. {spotsLeft} spot(s) now available.',
+    "You've been removed from the {sportName} game on {matchDate}. Check out other games near you.",
+  player_left: '{playerName} left your {sportName} game. {spotsLeft} spot(s) now open.',
   new_message: '{messagePreview}',
   chat: 'You have a new message waiting for you',
   friend_request: '{playerName} wants to add you to their network. Check out their profile!',
@@ -474,11 +484,11 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   support: 'Our support team has sent you a message. Tap to read.',
   system: 'We have an update for you. Tap to learn more.',
   feedback_request:
-    "Submit your score and rate your {sportName} match with {opponentNames} while it's fresh!",
+    "Submit your score and rate your {sportName} game with {opponentNames} while it's fresh!",
   feedback_reminder:
-    'Your {sportName} score and rating with {opponentNames} are still pending — complete them before the window closes.',
+    'Your {sportName} score and rating with {opponentNames} are still pending — complete them before the deadline.',
   score_confirmation:
-    '{playerName} submitted the score for your {sportName} game. Please confirm or dispute.',
+    '{playerName} submitted a score for your {sportName} game. Please confirm or correct.',
 
   // Organization staff notifications
   booking_created: '{playerName} booked {resourceName} on {bookingDate}{startTime}.',
@@ -1021,7 +1031,15 @@ export async function notifyMatchInvitation(
     type: 'match_invitation',
     userId: playerUserId,
     targetId: matchId,
-    payload: { matchId, playerName: inviterName, sportName, matchDate, startTime, locationName, ...extras },
+    payload: {
+      matchId,
+      playerName: inviterName,
+      sportName,
+      matchDate,
+      startTime,
+      locationName,
+      ...extras,
+    },
   });
 }
 
@@ -1056,24 +1074,6 @@ export async function notifyRatingVerified(
     userId: playerUserId,
     payload: { sportName, ratingSystemName, ratingValue },
   });
-}
-
-/**
- * Notify participants that a match has been completed
- */
-export async function notifyMatchCompleted(
-  participantUserIds: string[],
-  matchId: string,
-  sportName: string
-): Promise<Notification[]> {
-  return createNotifications(
-    participantUserIds.map(userId => ({
-      type: 'match_completed' as const,
-      userId,
-      targetId: matchId,
-      payload: { matchId, sportName },
-    }))
-  );
 }
 
 /**
@@ -1137,6 +1137,56 @@ export async function notifyScoreConfirmation(
 }
 
 /**
+ * Notify waitlisted players that a spot opened up in a match
+ */
+export async function notifyMatchSpotOpened(
+  recipientUserIds: string[],
+  matchId: string,
+  sportName?: string,
+  extras?: MatchNotificationExtras & { startTime?: string; locationName?: string }
+): Promise<Notification[]> {
+  return createNotifications(
+    recipientUserIds.map(userId => ({
+      type: 'match_spot_opened' as const,
+      userId,
+      targetId: matchId,
+      payload: {
+        matchId,
+        sportName,
+        startTime: extras?.startTime,
+        locationName: extras?.locationName,
+        ...extras,
+      },
+    }))
+  );
+}
+
+/**
+ * Notify nearby players that a new match is available near them
+ */
+export async function notifyNearbyMatchAvailable(
+  recipientUserIds: string[],
+  matchId: string,
+  sportName?: string,
+  extras?: MatchNotificationExtras & { startTime?: string; locationName?: string }
+): Promise<Notification[]> {
+  return createNotifications(
+    recipientUserIds.map(userId => ({
+      type: 'nearby_match_available' as const,
+      userId,
+      targetId: matchId,
+      payload: {
+        matchId,
+        sportName,
+        startTime: extras?.startTime,
+        locationName: extras?.locationName,
+        ...extras,
+      },
+    }))
+  );
+}
+
+/**
  * Notify a player about a match reminder
  */
 export async function notifyReminder(
@@ -1174,7 +1224,8 @@ export const notificationFactory = {
   matchStartingSoon: notifyMatchStartingSoon,
   matchInvitation: notifyMatchInvitation,
   playerKicked: notifyPlayerKicked,
-  matchCompleted: notifyMatchCompleted,
+  matchSpotOpened: notifyMatchSpotOpened,
+  nearbyMatchAvailable: notifyNearbyMatchAvailable,
   feedbackRequest: notifyFeedbackRequest,
   feedbackReminder: notifyFeedbackReminder,
   scoreConfirmation: notifyScoreConfirmation,
