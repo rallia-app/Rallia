@@ -1737,7 +1737,13 @@
     }
   },
   "map": {
-    "placeholder": "Vue carte"
+    "recenter": "Recentrer",
+    "loading": "Chargement de la carte...",
+    "noLocation": "Activez la localisation pour voir les installations et matchs à proximité",
+    "tooltip": {
+      "courts": "{count} terrains",
+      "courtsSingular": "1 terrain"
+    }
   },
   "community": {
     "placeholder": "Connectez-vous avec d'autres joueurs",

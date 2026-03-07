@@ -1737,7 +1737,13 @@
     }
   },
   "map": {
-    "placeholder": "Map View"
+    "recenter": "Re-center",
+    "loading": "Loading map data...",
+    "noLocation": "Enable location to see nearby facilities and matches",
+    "tooltip": {
+      "courts": "{count} courts",
+      "courtsSingular": "1 court"
+    }
   },
   "community": {
     "placeholder": "Connect with other players",
