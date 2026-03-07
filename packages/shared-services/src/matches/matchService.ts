@@ -20,7 +20,12 @@ import {
   countRecentCancellationEvents,
 } from '../reputation/reputationService';
 import { calculateCancellationPenalty } from '../reputation/reputationPenalties';
-import { createMatchChat, getMatchChat, removeConversationParticipant } from '../chat/chatService';
+import {
+  createMatchChat,
+  getMatchChat,
+  removeConversationParticipant,
+  addConversationParticipant,
+} from '../chat/chatService';
 import type {
   Match,
   TablesInsert,
@@ -1099,15 +1104,28 @@ export async function deleteMatch(matchId: string): Promise<void> {
 // =============================================================================
 
 /**
- * Helper function to check if a match is full and create a chat if so.
- * Called after a player joins or a join request is accepted.
+ * Ensures a match chat exists and that the new joiner is a participant.
+ * Creates the conversation on the first join, and adds subsequent joiners
+ * to the existing conversation.
  *
  * @param matchId - The match ID
- * @param triggeredBy - The player ID who triggered the action (for created_by in chat)
+ * @param newPlayerId - The player who just joined and needs to be in the chat
  */
-async function createMatchChatIfFull(matchId: string, triggeredBy: string): Promise<void> {
+async function ensureMatchChat(matchId: string, newPlayerId: string): Promise<void> {
   try {
-    // Get match details with participants
+    // Check if a conversation already exists for this match
+    const existingConversation = await getMatchChat(matchId);
+
+    if (existingConversation) {
+      // Chat exists — just add the new player
+      await addConversationParticipant(existingConversation.id, newPlayerId);
+      console.log(
+        `[ensureMatchChat] Added player ${newPlayerId} to existing chat for match ${matchId}`
+      );
+      return;
+    }
+
+    // No chat yet — fetch match details to create one
     const { data: match, error: matchError } = await supabase
       .from('match')
       .select(
@@ -1129,53 +1147,42 @@ async function createMatchChatIfFull(matchId: string, triggeredBy: string): Prom
       .single();
 
     if (matchError || !match) {
-      console.error('[createMatchChatIfFull] Failed to fetch match:', matchError);
+      console.error('[ensureMatchChat] Failed to fetch match:', matchError);
       return;
     }
 
-    // Calculate capacity
-    const totalSpots = match.format === 'doubles' ? 4 : 2;
+    // Collect all player IDs: host + all joined participants
     const joinedParticipants =
       match.participants?.filter((p: { status: string }) => p.status === 'joined') ?? [];
-    const joinedCount = joinedParticipants.length;
+    const allPlayerIds = [
+      match.created_by,
+      ...joinedParticipants.map((p: { player_id: string }) => p.player_id),
+    ];
+    const uniquePlayerIds = [...new Set(allPlayerIds)];
 
-    // Match is full when: host (1) + joined participants = total spots
-    const isFull = 1 + joinedCount >= totalSpots;
+    const sportName = (match.sport as { name?: string } | null)?.name || 'Match';
+    const matchFormat = match.format as 'singles' | 'doubles';
 
-    if (isFull) {
-      // Collect all player IDs: host + all joined participants
-      const allPlayerIds = [
-        match.created_by,
-        ...joinedParticipants.map((p: { player_id: string }) => p.player_id),
-      ];
+    // Create the match chat (may return existing conv in a race condition)
+    const conversation = await createMatchChat(
+      matchId,
+      newPlayerId,
+      uniquePlayerIds,
+      matchFormat,
+      sportName,
+      match.match_date
+    );
 
-      // Remove duplicates (in case host is in participants somehow)
-      const uniquePlayerIds = [...new Set(allPlayerIds)];
+    // Ensure the new player is a participant even if createMatchChat
+    // returned an already-existing conversation (race condition safety)
+    await addConversationParticipant(conversation.id, newPlayerId);
 
-      const sportName = (match.sport as { name?: string } | null)?.name || 'Match';
-      const matchFormat = match.format as 'singles' | 'doubles';
-
-      // Create the match chat (fire and forget)
-      createMatchChat(
-        matchId,
-        triggeredBy,
-        uniquePlayerIds,
-        matchFormat,
-        sportName,
-        match.match_date
-      )
-        .then(conversation => {
-          console.log(
-            `[createMatchChatIfFull] Created ${matchFormat} chat for match ${matchId}:`,
-            conversation.id
-          );
-        })
-        .catch(err => {
-          console.error('[createMatchChatIfFull] Failed to create match chat:', err);
-        });
-    }
+    console.log(
+      `[ensureMatchChat] Created/joined ${matchFormat} chat for match ${matchId}:`,
+      conversation.id
+    );
   } catch (error) {
-    console.error('[createMatchChatIfFull] Error:', error);
+    console.error('[ensureMatchChat] Error:', error);
   }
 }
 
@@ -1399,14 +1406,9 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
   if (participantStatus === 'requested') {
     // Notify the host (fire and forget - don't block on notification)
     const sportName = (match.sport as { name?: string } | null)?.name;
-    notifyMatchJoinRequest(
-      match.created_by,
-      matchId,
-      playerName,
-      sportName,
-      match.match_date,
-      { playerAvatarUrl }
-    ).catch(err => {
+    notifyMatchJoinRequest(match.created_by, matchId, playerName, sportName, match.match_date, {
+      playerAvatarUrl,
+    }).catch(err => {
       console.error('Failed to send join request notification:', err);
     });
   }
@@ -1492,8 +1494,8 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
       });
     }
 
-    // Create match chat if this join made the match full
-    createMatchChatIfFull(matchId, playerId);
+    // Ensure match chat exists and add the new player
+    ensureMatchChat(matchId, playerId);
   }
 
   return {
@@ -1851,8 +1853,8 @@ export async function acceptJoinRequest(
     console.error('Failed to send join accepted notification:', err);
   });
 
-  // Create match chat if this acceptance made the match full
-  createMatchChatIfFull(matchId, hostId);
+  // Ensure match chat exists and add the accepted player
+  ensureMatchChat(matchId, participant.player_id);
 
   return updatedParticipant as MatchParticipant;
 }
