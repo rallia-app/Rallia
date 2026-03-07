@@ -3109,11 +3109,14 @@
         "dateTime": "date/time",
         "location": "location",
         "format": "format",
-        "cost": "cost"
+        "cost": "cost",
+        "gender": "gender preference",
+        "rating": "minimum rating"
       },
       "errors": {
         "MATCH_NOT_FOUND": "Match not found.",
         "FORMAT_CHANGE_BLOCKED": "Cannot change from doubles to singles with 2 or more participants. Remove participants first or cancel the game.",
+        "GENDER_CHANGE_BLOCKED": "Cannot change gender preference — some participants don't match the new preference. Only narrowing from \"all\" is allowed when all participants match.",
         "UNKNOWN_ERROR": "An unexpected error occurred. Please try again."
       }
     },

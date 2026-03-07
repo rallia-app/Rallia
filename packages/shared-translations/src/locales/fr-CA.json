@@ -3109,11 +3109,14 @@
         "dateTime": "la date/heure",
         "location": "le lieu",
         "format": "le format",
-        "cost": "le coût"
+        "cost": "le coût",
+        "gender": "la préférence de genre",
+        "rating": "le classement minimum"
       },
       "errors": {
         "MATCH_NOT_FOUND": "Partie introuvable.",
         "FORMAT_CHANGE_BLOCKED": "Impossible de passer de double à simple avec 2 participants ou plus. Retirez des participants ou annulez la partie.",
+        "GENDER_CHANGE_BLOCKED": "Impossible de modifier la préférence de genre — certains participants ne correspondent pas à la nouvelle préférence. Seul le passage de « tous » à un genre spécifique est permis lorsque tous les participants correspondent.",
         "UNKNOWN_ERROR": "Une erreur inattendue s'est produite. Veuillez réessayer."
       }
     },
