@@ -833,6 +833,26 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             return false;
           }
 
+          // Save the privacy setting to the player table
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
+          if (user) {
+            const { error: privacyError } = await supabase
+              .from('player')
+              .update({ privacy_show_availability: formData.privacyShowAvailability })
+              .eq('id', user.id);
+
+            if (privacyError) {
+              Logger.warn('Failed to save availability privacy setting', { error: privacyError });
+              // Don't block the flow if this fails - just log it
+            } else {
+              Logger.debug('availability_privacy_saved', {
+                privacyShowAvailability: formData.privacyShowAvailability,
+              });
+            }
+          }
+
           // Mark onboarding as completed
           const { error: completeError } = await OnboardingService.completeOnboarding();
 
