@@ -13,7 +13,7 @@ import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import { isPlayerOnline } from '@rallia/shared-services';
-import { useTranslation } from '../../../hooks';
+import { useTranslation, type TranslationKey } from '../../../hooks';
 
 interface ThemeColors {
   background: string;
@@ -46,13 +46,17 @@ function formatDistance(meters: number | null, nearbyLabel: string): string {
  * Get level description based on rating value
  * Maps NTRP/DUPR rating values to skill level descriptions
  */
-function getLevelDescription(value: number | null | undefined, t: (key: string) => string): string {
-  if (value === null || value === undefined) return t('playerProfile.rating.unrated');
-  if (value <= 2.0) return t('playerProfile.rating.beginner');
-  if (value <= 3.0) return t('playerProfile.rating.intermediate');
-  if (value <= 4.0) return t('playerProfile.rating.intermediateAdvanced');
-  if (value <= 5.0) return t('playerProfile.rating.advanced');
-  return t('playerProfile.rating.professional');
+function getLevelDescription(
+  value: number | null | undefined,
+  t: (key: TranslationKey) => string
+): string {
+  if (value === null || value === undefined)
+    return t('playerProfile.rating.unrated' as TranslationKey);
+  if (value <= 2.0) return t('playerProfile.rating.beginner' as TranslationKey);
+  if (value <= 3.0) return t('playerProfile.rating.intermediate' as TranslationKey);
+  if (value <= 4.0) return t('playerProfile.rating.intermediateAdvanced' as TranslationKey);
+  if (value <= 5.0) return t('playerProfile.rating.advanced' as TranslationKey);
+  return t('playerProfile.rating.professional' as TranslationKey);
 }
 
 const PlayerCard: React.FC<PlayerCardProps> = ({ player, colors, onPress }) => {
