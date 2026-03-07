@@ -28,5 +28,8 @@
     "@next/eslint-plugin-next": {
       "optional": true
     }
+  },
+  "devDependencies": {
+    "@next/eslint-plugin-next": "^16.1.6"
   }
 }
