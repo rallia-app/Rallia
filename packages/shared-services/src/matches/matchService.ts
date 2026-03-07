@@ -640,7 +640,11 @@ export async function getMatchesByCreator(
  * Error codes for match update validation
  * These are translated on the frontend
  */
-export type UpdateMatchErrorCode = 'MATCH_NOT_FOUND' | 'FORMAT_CHANGE_BLOCKED' | 'UNKNOWN_ERROR';
+export type UpdateMatchErrorCode =
+  | 'MATCH_NOT_FOUND'
+  | 'FORMAT_CHANGE_BLOCKED'
+  | 'GENDER_CHANGE_BLOCKED'
+  | 'UNKNOWN_ERROR';
 
 /**
  * Result of match update validation
@@ -716,13 +720,29 @@ export async function validateMatchUpdate(
   // ========================================
   // GENDER PREFERENCE VALIDATION
   // ========================================
-  // Warn if changing gender preference would affect joined participants
+  // Gender change is allowed when:
+  // 1. No participants have joined
+  // 2. Widening (specific → any) — always allowed
+  // 3. Narrowing from "any" to a specific gender AND all joined participants match that gender
+  // Otherwise: blocked
   if (updates.preferredOpponentGender !== undefined && joinedCount > 0) {
+    const currentGender = match.preferred_opponent_gender; // null means "any"
     const newGender =
       updates.preferredOpponentGender === 'any' ? null : updates.preferredOpponentGender;
 
-    // Only check if setting a specific gender (not clearing it)
+    // Only validate if setting a specific gender (widening to "any" is always fine)
     if (newGender) {
+      // Block if changing from one specific gender to a different specific gender
+      if (currentGender && currentGender !== newGender) {
+        return {
+          canUpdate: false,
+          errorCode: 'GENDER_CHANGE_BLOCKED',
+          error:
+            'Cannot change gender preference when participants have joined. Only narrowing from "all" is allowed when all participants match.',
+        };
+      }
+
+      // Narrowing from "any" to specific — check that all participants match
       const mismatchedParticipants = joinedParticipants.filter(
         (p: { player: { gender: string } | { gender: string }[] | null }) => {
           // Handle both array and object formats from Supabase
@@ -732,13 +752,11 @@ export async function validateMatchUpdate(
       );
 
       if (mismatchedParticipants.length > 0) {
-        warnings.push({
-          type: 'gender_mismatch',
-          affectedParticipantIds: mismatchedParticipants.map(
-            (p: { player_id: string }) => p.player_id
-          ),
-          message: `${mismatchedParticipants.length} participant(s) do not match the new gender preference`,
-        });
+        return {
+          canUpdate: false,
+          errorCode: 'GENDER_CHANGE_BLOCKED',
+          error: `${mismatchedParticipants.length} participant(s) do not match the new gender preference.`,
+        };
       }
     }
   }
