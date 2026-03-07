@@ -51,6 +51,7 @@ export {
   updateConversation,
   getConversationByNetworkId,
   getNetworkByConversationId,
+  getConversationUnreadCount,
 } from './conversationService';
 
 // ============================================================================

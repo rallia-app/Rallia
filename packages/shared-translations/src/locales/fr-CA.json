@@ -1903,6 +1903,9 @@
       "scanQR": "Scanner QR",
       "joinButton": "Rejoindre"
     },
+    "nonMember": {
+      "joinToAccessContent": "Rejoignez cette communauté pour accéder à son contenu, son chat et ses activités"
+    },
     "errors": {
       "nameRequired": "Le nom de la communauté est requis",
       "nameTooShort": "Le nom doit contenir au moins 2 caractères",
@@ -2130,7 +2133,7 @@
       "newMembers": "{count} nouveaux membres",
       "gamesCreated": "{count} parties créées",
       "gamesCreated_one": "{count} partie créée",
-      "newMessages": "{count} nouveaux messages dans\nle clavardage"
+      "newMessages": "{count} nouveaux messages dans\nle clavardage du groupe"
     },
     "home": {
       "about": "À propos",

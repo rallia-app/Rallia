@@ -44,6 +44,7 @@ import type { RootStackParamList, CommunityStackParamList } from '../navigation/
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import { CommunityQRScannerModal } from '../features/communities';
 import { SheetManager } from 'react-native-actions-sheet';
+import { InfoModal } from '../components/InfoModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_GAP = 12;
@@ -78,7 +79,8 @@ const CommunityCard: React.FC<{
 }> = ({ item, index, colors, isDark, activeTab, onPress, onRequestToJoin, isRequestPending }) => {
   const scaleAnim = useMemo(() => new Animated.Value(1), []);
   const { t } = useTranslation();
-  const isUserMember = item.is_member || item.membership_status === 'active';
+  // Only show as member if they have active status (not pending)
+  const isUserMember = item.is_member && item.membership_status === 'active';
   const isPending = item.membership_status === 'pending';
 
   const handlePressIn = useCallback(() => {
@@ -211,6 +213,8 @@ export default function CommunitiesScreen() {
 
   const [activeTab, setActiveTab] = useState<TabType>('discover');
   const [showQRScanner, setShowQRScanner] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successModalCommunityName, setSuccessModalCommunityName] = useState('');
 
   // Switch to discover tab if user signs out while on "My Communities"
   useEffect(() => {
@@ -268,10 +272,8 @@ export default function CommunitiesScreen() {
 
       try {
         await requestToJoinMutation.mutateAsync({ communityId, playerId: playerId! });
-        Alert.alert(
-          'Request Sent',
-          `Your request to join "${communityName}" has been sent. A moderator will review it.`
-        );
+        setSuccessModalCommunityName(communityName);
+        setShowSuccessModal(true);
       } catch (error) {
         Alert.alert(
           'Error',
@@ -290,16 +292,10 @@ export default function CommunitiesScreen() {
     [navigation]
   );
 
-  const handleQRRequestSent = useCallback(
-    (communityId: string, communityName: string) => {
-      Alert.alert(
-        t('community.qrScanner.requestSent'),
-        t('community.qrScanner.requestSentMessage', { communityName }),
-        [{ text: t('common.ok') }]
-      );
-    },
-    [t]
-  );
+  const handleQRRequestSent = useCallback((communityId: string, communityName: string) => {
+    setSuccessModalCommunityName(communityName);
+    setShowSuccessModal(true);
+  }, []);
 
   const handleTabChange = useCallback(
     (tab: TabType) => {
@@ -555,6 +551,18 @@ export default function CommunitiesScreen() {
           onRequestSent={handleQRRequestSent}
         />
       )}
+
+      {/* Request Sent Success Modal */}
+      <InfoModal
+        visible={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        title={t('community.qrScanner.requestSent')}
+        message={t('community.qrScanner.requestSentMessage', {
+          communityName: successModalCommunityName,
+        })}
+        iconName="checkmark-circle"
+        closeLabel={t('common.ok')}
+      />
     </SafeAreaView>
   );
 }

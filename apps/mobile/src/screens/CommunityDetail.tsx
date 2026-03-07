@@ -51,6 +51,10 @@ import {
   useGroupLeaderboard,
   useMostRecentGroupMatch,
   useGroupMatches,
+  useCommunityAccess,
+  useRequestToJoinCommunity,
+  useConversationUnreadCount,
+  useConversationUnreadRealtime,
 } from '@rallia/shared-hooks';
 import type { GroupMatch } from '@rallia/shared-hooks';
 import type { GroupWithMembers } from '@rallia/shared-services';
@@ -59,6 +63,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { primary } from '@rallia/design-system';
 
 import { AddScoreIntroModal, AddScoreModal, type MatchType } from '../features/matches';
+import { InfoModal } from '../components/InfoModal';
 
 const HEADER_HEIGHT = 140;
 
@@ -101,6 +106,7 @@ export default function CommunityDetailScreen() {
   const [showAddScoreModal, setShowAddScoreModal] = useState(false);
   const [selectedMatchType, setSelectedMatchType] = useState<MatchType>('single');
   const [hasSeenAddScoreIntro, setHasSeenAddScoreIntro] = useState<boolean | null>(null);
+  const [showRequestSentModal, setShowRequestSentModal] = useState(false);
 
   // Check if user has dismissed the intro before
   useEffect(() => {
@@ -118,6 +124,11 @@ export default function CommunityDetailScreen() {
 
   const { data: community, isLoading, refetch } = useCommunityWithMembers(communityId);
   const { data: isModerator } = useIsCommunityModerator(communityId, playerId);
+  const {
+    data: accessInfo,
+    isLoading: isLoadingAccess,
+    refetch: refetchAccess,
+  } = useCommunityAccess(communityId, playerId);
   const { data: pendingRequests, refetch: refetchPendingRequests } = usePendingCommunityMembers(
     isModerator ? communityId : undefined,
     playerId
@@ -131,15 +142,43 @@ export default function CommunityDetailScreen() {
   const { data: recentMatch } = useMostRecentGroupMatch(communityId);
   const { data: allMatches } = useGroupMatches(communityId, 180, 100);
 
+  // Get unread message count for the community chat
+  const { data: unreadChatCount } = useConversationUnreadCount(
+    community?.conversation_id ?? undefined,
+    playerId
+  );
+
   // Subscribe to real-time updates for this community
   useCommunityRealtime(communityId);
   // Subscribe to real-time pending requests updates (for moderators)
   usePendingRequestsRealtime(isModerator ? communityId : undefined);
+  // Subscribe to real-time chat updates for unread count badge
+  useConversationUnreadRealtime(community?.conversation_id ?? undefined, playerId);
 
   const leaveCommunityMutation = useLeaveCommunity();
   const deleteCommunityMutation = useDeleteCommunity();
   const approveMemberMutation = useApproveCommunityMember();
   const rejectMemberMutation = useRejectCommunityMember();
+  const requestToJoinMutation = useRequestToJoinCommunity();
+
+  // Computed access state
+  const canAccessCommunity = accessInfo?.canAccess ?? false;
+  const isActiveMember = accessInfo?.isMember && accessInfo?.membershipStatus === 'active';
+  const isPendingMember = accessInfo?.membershipStatus === 'pending';
+
+  const handleRequestToJoin = useCallback(async () => {
+    if (!playerId || !community) return;
+    if (!guardAction()) return;
+
+    try {
+      await requestToJoinMutation.mutateAsync({ communityId, playerId });
+      setShowRequestSentModal(true);
+      // Refetch access info to update the UI
+      refetchAccess();
+    } catch (error) {
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to send join request');
+    }
+  }, [playerId, community, guardAction, communityId, requestToJoinMutation, refetchAccess]);
 
   const handleOpenChat = useCallback(() => {
     if (!community?.conversation_id) return;
@@ -1338,6 +1377,152 @@ export default function CommunityDetailScreen() {
     );
   }
 
+  // Non-member view: Show community info with Request to Join option
+  if (!isLoadingAccess && !canAccessCommunity && !isActiveMember) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {/* Header with back button */}
+          <View style={styles.nonMemberHeader}>
+            <TouchableOpacity
+              style={[styles.backButtonCircle, { backgroundColor: colors.cardBackground }]}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Cover Image */}
+          {community.cover_image_url ? (
+            <Image
+              source={{ uri: community.cover_image_url }}
+              style={styles.coverImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View
+              style={[
+                styles.headerSection,
+                { backgroundColor: isDark ? primary[900] : primary[100] },
+              ]}
+            >
+              <View style={[styles.headerIcon, { backgroundColor: colors.cardBackground }]}>
+                <Ionicons name="globe-outline" size={48} color={colors.primary} />
+              </View>
+            </View>
+          )}
+
+          {/* Community Info Card */}
+          <View
+            style={[
+              styles.infoCard,
+              { backgroundColor: colors.cardBackground, borderColor: colors.border },
+            ]}
+          >
+            <View style={styles.titleRow}>
+              <Text weight="bold" size="xl" style={{ color: colors.text, flex: 1 }}>
+                {community.name}
+              </Text>
+              {!community.is_private ? (
+                <View style={[styles.visibilityBadge, { backgroundColor: '#E8F5E9' }]}>
+                  <Ionicons name="globe-outline" size={14} color="#2E7D32" />
+                  <Text size="xs" weight="semibold" style={{ color: '#2E7D32', marginLeft: 4 }}>
+                    {t('community.visibility.public')}
+                  </Text>
+                </View>
+              ) : (
+                <View
+                  style={[
+                    styles.visibilityBadge,
+                    { backgroundColor: isDark ? '#2C2C2E' : '#FFF3E0' },
+                  ]}
+                >
+                  <Ionicons name="lock-closed" size={14} color="#F57C00" />
+                  <Text size="xs" weight="semibold" style={{ color: '#F57C00', marginLeft: 4 }}>
+                    {t('community.visibility.private')}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {community.description && (
+              <Text size="sm" style={{ color: colors.textSecondary, marginTop: 8, lineHeight: 20 }}>
+                {community.description}
+              </Text>
+            )}
+
+            {/* Member count */}
+            <View style={[styles.memberCountRow, { marginTop: 16 }]}>
+              <Ionicons name="people-outline" size={18} color={colors.textMuted} />
+              <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 8 }}>
+                {t('common.memberCount', { count: community.member_count || 0 })}
+              </Text>
+            </View>
+
+            {/* Action Section */}
+            <View style={styles.nonMemberActions}>
+              {isPendingMember ? (
+                <View
+                  style={[
+                    styles.pendingStatusBadge,
+                    { backgroundColor: isDark ? '#3C3C3E' : '#E5E5EA' },
+                  ]}
+                >
+                  <Ionicons name="time-outline" size={18} color={colors.textMuted} />
+                  <Text
+                    size="sm"
+                    weight="medium"
+                    style={{ color: colors.textMuted, marginLeft: 8 }}
+                  >
+                    {t('community.pendingRequests.pending')}
+                  </Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.requestToJoinButton, { backgroundColor: colors.primary }]}
+                  onPress={handleRequestToJoin}
+                  disabled={requestToJoinMutation.isPending}
+                >
+                  {requestToJoinMutation.isPending ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Ionicons name="person-add-outline" size={20} color="#FFFFFF" />
+                      <Text
+                        size="base"
+                        weight="semibold"
+                        style={{ color: '#FFFFFF', marginLeft: 8 }}
+                      >
+                        {t('community.pendingRequests.requestToJoin')}
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
+
+              <Text
+                size="xs"
+                style={{ color: colors.textMuted, marginTop: 12, textAlign: 'center' }}
+              >
+                {t('community.nonMember.joinToAccessContent')}
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
+
+        {/* Request Sent Success Modal */}
+        <InfoModal
+          visible={showRequestSentModal}
+          onClose={() => setShowRequestSentModal(false)}
+          title={t('community.qrScanner.requestSent')}
+          message={t('community.qrScanner.requestSentMessage', { communityName: community.name })}
+          iconName="checkmark-circle"
+          closeLabel={t('common.ok')}
+        />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <ScrollView
@@ -1550,7 +1735,16 @@ export default function CommunityDetailScreen() {
           style={[styles.chatButton, { backgroundColor: colors.primary }]}
           onPress={handleOpenChat}
         >
-          <Ionicons name="chatbubbles-outline" size={20} color="#FFFFFF" />
+          <View style={styles.chatIconContainer}>
+            <Ionicons name="chatbubbles-outline" size={20} color="#FFFFFF" />
+            {(unreadChatCount ?? 0) > 0 && (
+              <View style={styles.unreadBadge}>
+                <Text size="xs" weight="bold" style={styles.unreadBadgeText}>
+                  {(unreadChatCount ?? 0) > 99 ? '99+' : unreadChatCount}
+                </Text>
+              </View>
+            )}
+          </View>
           <Text weight="semibold" style={styles.chatButtonText}>
             {t('community.chat.chatWithMembers')}
           </Text>
@@ -1953,6 +2147,26 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
   },
+  chatIconContainer: {
+    position: 'relative',
+  },
+  unreadBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -10,
+    backgroundColor: '#FF3B30',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  unreadBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    lineHeight: 12,
+  },
   // Modal styles
   modalOverlay: {
     flex: 1,
@@ -2297,5 +2511,50 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
+  },
+  // Non-member view styles
+  nonMemberHeader: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    zIndex: 10,
+  },
+  backButtonCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  memberCountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  nonMemberActions: {
+    marginTop: 24,
+    alignItems: 'center',
+  },
+  pendingStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    width: '100%',
+  },
+  requestToJoinButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    width: '100%',
   },
 });
