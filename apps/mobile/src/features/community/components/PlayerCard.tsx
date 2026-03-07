@@ -66,7 +66,9 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, colors, onPress }) => {
 
   // Get level description for the rating
   const levelDescription =
-    player.rating?.value != null ? getLevelDescription(player.rating.value, t) : null;
+    player.rating?.value != null
+      ? getLevelDescription(player.rating.value, t as (key: string) => string)
+      : null;
 
   // Check online status
   useEffect(() => {
