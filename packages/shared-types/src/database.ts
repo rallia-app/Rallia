@@ -461,6 +461,10 @@ export interface FacilitySearchResult {
   court_count?: number;
   /** Number of upcoming public matches at this facility for the requested sport(s) */
   upcoming_match_count?: number;
+  /** Facility latitude for map display */
+  latitude?: number | null;
+  /** Facility longitude for map display */
+  longitude?: number | null;
 }
 
 /** Paginated facilities response */

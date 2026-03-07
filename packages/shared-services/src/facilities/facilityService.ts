@@ -397,6 +397,47 @@ export async function getFacilityWithDetails(
   };
 }
 
+export interface GetMapFacilitiesParams {
+  sportIds: string[];
+  latitude: number;
+  longitude: number;
+  maxDistanceKm?: number;
+}
+
+/**
+ * Get facilities for the map view.
+ * Fetches a large batch (no pagination) and filters to entries with valid lat/lng.
+ */
+export async function getMapFacilities(
+  params: GetMapFacilitiesParams
+): Promise<FacilitySearchResult[]> {
+  const { sportIds, latitude, longitude, maxDistanceKm } = params;
+
+  const { data, error } = await supabase.rpc('search_facilities_nearby', {
+    p_sport_ids: sportIds,
+    p_latitude: latitude,
+    p_longitude: longitude,
+    p_search_query: null,
+    p_max_distance_km: maxDistanceKm || null,
+    p_facility_types: null,
+    p_surface_types: null,
+    p_court_types: null,
+    p_has_lighting: null,
+    p_membership_required: null,
+    p_limit: 500,
+    p_offset: 0,
+  });
+
+  if (error) {
+    throw new Error(`Failed to get map facilities: ${error.message}`);
+  }
+
+  const facilities = (data ?? []) as FacilitySearchResult[];
+
+  // Only return facilities with valid coordinates
+  return facilities.filter(f => f.latitude != null && f.longitude != null);
+}
+
 /**
  * Facility service object for grouped exports
  */
@@ -404,6 +445,7 @@ export const facilityService = {
   getFacilityById,
   getFacilityWithDetails,
   searchFacilitiesNearby,
+  getMapFacilities,
 };
 
 export default facilityService;

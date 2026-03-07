@@ -4,6 +4,9 @@
  * to ensure the supabase client is properly configured before any hooks use it.
  */
 import './src/lib/supabase';
+import Mapbox from '@rnmapbox/maps';
+
+Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? '');
 
 import { useEffect, useState, useCallback, useRef, type PropsWithChildren } from 'react';
 import { Linking } from 'react-native';

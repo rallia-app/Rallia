@@ -617,6 +617,22 @@ export default function FacilitiesDirectory() {
           <Text size="xl" weight="bold" color={colors.text}>
             {t('facilitiesTab.title')}
           </Text>
+          <TouchableOpacity
+            onPress={() => {
+              lightHaptic();
+              rootNavigation.navigate(
+                'Map',
+                location
+                  ? { focusLocation: { lat: location.latitude, lng: location.longitude } }
+                  : undefined
+              );
+            }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessible
+            accessibilityLabel={t('navigation.map')}
+          >
+            <Ionicons name="map-outline" size={22} color={colors.text} />
+          </TouchableOpacity>
         </View>
         <View style={[styles.searchContainer, { backgroundColor: colors.background }]}>
           <SearchBar
@@ -671,6 +687,8 @@ export default function FacilitiesDirectory() {
     sportLoading,
     isDark,
     renderResultsInfo,
+    rootNavigation,
+    location,
   ]);
 
   // Render footer (loading indicator for infinite scroll)
@@ -740,6 +758,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[4],
     paddingBottom: spacingPixels[2],
