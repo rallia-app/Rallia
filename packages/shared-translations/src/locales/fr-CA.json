@@ -1738,7 +1738,21 @@
     }
   },
   "map": {
-    "placeholder": "Vue carte"
+    "recenter": "Recentrer",
+    "loading": "Chargement de la carte...",
+    "noLocation": "Activez la localisation pour voir les installations et matchs à proximité",
+    "tooltip": {
+      "courts": "{count} terrains",
+      "courtsSingular": "1 terrain"
+    },
+    "zoomIn": "Zoom avant",
+    "zoomOut": "Zoom arrière",
+    "legend": {
+      "facilities": "Installations",
+      "pickup": "Pickup"
+    },
+    "matchesAtLocation": "Matchs à cet endroit",
+    "searchPlaceholder": "Rechercher des installations..."
   },
   "community": {
     "placeholder": "Connectez-vous avec d'autres joueurs",
