@@ -3419,6 +3419,7 @@
         "label": "Quand",
         "all": "Tout moment",
         "today": "Aujourd'hui",
+        "tomorrow": "Demain",
         "week": "Cette semaine",
         "weekend": "Fin de semaine"
       },
@@ -3427,7 +3428,8 @@
         "all": "Toutes",
         "morning": "Matin",
         "afternoon": "Après-midi",
-        "evening": "Soir"
+        "evening": "Soir",
+        "pick_time": "Choisir une heure précise..."
       },
       "skillLevel": {
         "label": "Niveau",
@@ -3479,6 +3481,21 @@
         "mostWanted": "Incontournable",
         "covetedPlayers": "Joueurs convoités",
         "courtBooked": "Terrain réservé"
+      },
+      "spotsAvailable": {
+        "label": "Places",
+        "all": "Toutes",
+        "1": "1 place",
+        "2": "2 places",
+        "3": "3 places"
+      },
+      "favorites": {
+        "label": "Favoris"
+      },
+      "specificTime": {
+        "label": "Choisir une heure",
+        "pick": "Choisir une heure...",
+        "clear": "Effacer l'heure"
       },
       "specificDate": {
         "label": "Date",

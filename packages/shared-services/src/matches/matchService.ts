@@ -58,6 +58,8 @@ import type {
   DurationFilter,
   CourtStatusFilter,
   MatchTierFilter,
+  SpotsAvailableFilter,
+  SpecificTimeFilter,
 } from '@rallia/shared-types';
 import { calculateDistanceMeters } from '@rallia/shared-utils';
 
@@ -3125,6 +3127,10 @@ export interface SearchPublicMatchesParams {
   matchTier?: MatchTierFilter;
   /** Specific date filter (ISO date string YYYY-MM-DD), overrides dateRange when set */
   specificDate?: string | null;
+  /** Spots available filter */
+  spotsAvailable?: SpotsAvailableFilter;
+  /** Specific time filter (HH:MM format), overrides timeOfDay when set */
+  specificTime?: SpecificTimeFilter;
   /** The viewing user's gender for eligibility filtering */
   userGender?: string | null;
   /** Filter by specific facility ID - when set, only returns matches at that facility */
@@ -3167,6 +3173,8 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     courtStatus = 'all',
     matchTier = 'all',
     specificDate,
+    spotsAvailable = 'all',
+    specificTime,
     userGender,
     facilityId,
     limit = 20,
@@ -3199,6 +3207,8 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     p_user_gender: userGender || null, // Pass user's gender for eligibility filtering
     p_facility_id: facilityId || null, // Filter by specific facility
     p_match_tier: matchTier === 'all' ? null : matchTier,
+    p_spots_available: spotsAvailable === 'all' ? null : spotsAvailable,
+    p_specific_time: specificTime || null,
   });
 
   if (rpcError) {

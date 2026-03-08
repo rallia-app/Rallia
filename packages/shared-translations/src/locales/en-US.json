@@ -3419,6 +3419,7 @@
         "label": "When",
         "all": "Any time",
         "today": "Today",
+        "tomorrow": "Tomorrow",
         "week": "This week",
         "weekend": "Weekend"
       },
@@ -3427,7 +3428,8 @@
         "all": "Any",
         "morning": "Morning",
         "afternoon": "Afternoon",
-        "evening": "Evening"
+        "evening": "Evening",
+        "pick_time": "Pick specific time..."
       },
       "skillLevel": {
         "label": "Level",
@@ -3479,6 +3481,21 @@
         "mostWanted": "Must-Play",
         "covetedPlayers": "Coveted Players",
         "courtBooked": "Court Booked"
+      },
+      "spotsAvailable": {
+        "label": "Spots",
+        "all": "All",
+        "1": "1 spot",
+        "2": "2 spots",
+        "3": "3 spots"
+      },
+      "favorites": {
+        "label": "Favorites"
+      },
+      "specificTime": {
+        "label": "Pick a time",
+        "pick": "Pick a time...",
+        "clear": "Clear time"
       },
       "specificDate": {
         "label": "Date",
