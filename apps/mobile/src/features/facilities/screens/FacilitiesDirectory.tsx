@@ -346,9 +346,10 @@ export default function FacilitiesDirectory() {
         payload: {
           courts: slot.courtOptions ?? [],
           timeLabel: slot.time ?? '',
-          onSelect: (court: CourtOption) => {
-            if (court.bookingUrl) {
-              Linking.openURL(court.bookingUrl);
+          onSelect: (court: unknown) => {
+            const c = court as CourtOption;
+            if (c.bookingUrl) {
+              Linking.openURL(c.bookingUrl);
             }
           },
           onCancel: () => {},
