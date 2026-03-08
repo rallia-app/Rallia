@@ -38,7 +38,9 @@ import {
 import { getSafeAreaEdges } from '../../../utils';
 import { useSport } from '../../../context';
 import { SportIcon } from '../../../components/SportIcon';
-import { useCourtsRoute } from '../../../navigation/hooks';
+import { useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
+import type { FacilityDetailScreenParams } from '@rallia/shared-types';
 import {
   spacingPixels,
   radiusPixels,
@@ -71,7 +73,8 @@ const TAB_ICONS: Record<TabKey, keyof typeof Ionicons.glyphMap> = {
 // =============================================================================
 
 export default function FacilityDetail() {
-  const route = useCourtsRoute<'FacilityDetail'>();
+  const route =
+    useRoute<RouteProp<{ FacilityDetail: FacilityDetailScreenParams }, 'FacilityDetail'>>();
   const { facilityId } = route.params;
 
   const { colors, isDark } = useThemeStyles();
