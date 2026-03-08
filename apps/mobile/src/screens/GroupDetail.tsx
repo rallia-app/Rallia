@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
@@ -48,6 +48,7 @@ import {
   useScoreConfirmationsRealtime,
   useConversationUnreadCount,
   useConversationUnreadRealtime,
+  useSports,
   type GroupActivity as GroupActivityType,
   type GroupMatch,
 } from '@rallia/shared-hooks';
@@ -86,8 +87,19 @@ export default function GroupDetailScreen() {
   const { t } = useTranslation();
   const { guardAction } = useRequireOnboarding();
   const { selectedSport } = useSport();
+  const { sports } = useSports();
   const playerId = session?.user?.id;
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
+
+  // Helper to get sport name from sport_id
+  const getSportName = useCallback(
+    (sportId: string | null): string | null => {
+      if (!sportId || !sports) return null;
+      const sport = sports.find(s => s.id === sportId);
+      return sport?.name ?? null;
+    },
+    [sports]
+  );
 
   const [activeTab, setActiveTab] = useState<TabKey>('home');
   const [leaderboardPeriod, setLeaderboardPeriod] = useState<30 | 90 | 180 | 0>(30);
@@ -1298,9 +1310,44 @@ export default function GroupDetailScreen() {
             { backgroundColor: colors.cardBackground, borderColor: colors.border },
           ]}
         >
-          <Text weight="bold" size="xl" style={{ color: colors.text }}>
-            {group.name}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text weight="bold" size="xl" style={{ color: colors.text }}>
+              {group.name}
+            </Text>
+            {/* Sport icon(s) - show both when null, single when specific */}
+            {(() => {
+              const sportName = getSportName(group.sport_id);
+              // null = both sports
+              if (!group.sport_id) {
+                return (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
+                    <MaterialCommunityIcons name="tennis" size={18} color={colors.textMuted} />
+                    <Text style={{ color: colors.textMuted, marginHorizontal: 2, fontSize: 12 }}>
+                      +
+                    </Text>
+                    <MaterialCommunityIcons name="badminton" size={18} color={colors.textMuted} />
+                  </View>
+                );
+              }
+              // Tennis
+              if (sportName?.toLowerCase() === 'tennis') {
+                return (
+                  <View style={{ marginLeft: 8 }}>
+                    <MaterialCommunityIcons name="tennis" size={20} color={colors.textMuted} />
+                  </View>
+                );
+              }
+              // Pickleball
+              if (sportName?.toLowerCase() === 'pickleball') {
+                return (
+                  <View style={{ marginLeft: 8 }}>
+                    <MaterialCommunityIcons name="badminton" size={20} color={colors.textMuted} />
+                  </View>
+                );
+              }
+              return null;
+            })()}
+          </View>
 
           {/* Members Row */}
           <TouchableOpacity

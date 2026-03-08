@@ -18,7 +18,7 @@ import {
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -32,12 +32,14 @@ import {
   useRequireOnboarding,
   type TranslationKey,
 } from '../hooks';
+import { useSport } from '../context';
 import {
   usePublicCommunities,
   usePlayerCommunities,
   useRequestToJoinCommunity,
   usePlayerCommunitiesRealtime,
   usePublicCommunitiesRealtime,
+  useSports,
   type CommunityWithStatus,
 } from '@rallia/shared-hooks';
 import type { RootStackParamList, CommunityStackParamList } from '../navigation/types';
@@ -76,12 +78,24 @@ const CommunityCard: React.FC<{
   onPress: (community: CommunityWithStatus) => void;
   onRequestToJoin: (id: string, name: string) => void;
   isRequestPending: boolean;
-}> = ({ item, index, colors, isDark, activeTab, onPress, onRequestToJoin, isRequestPending }) => {
+  getSportName: (sportId: string | null) => string | null;
+}> = ({
+  item,
+  index,
+  colors,
+  isDark,
+  activeTab,
+  onPress,
+  onRequestToJoin,
+  isRequestPending,
+  getSportName,
+}) => {
   const scaleAnim = useMemo(() => new Animated.Value(1), []);
   const { t } = useTranslation();
   // Only show as member if they have active status (not pending)
   const isUserMember = item.is_member && item.membership_status === 'active';
   const isPending = item.membership_status === 'pending';
+  const sportName = getSportName(item.sport_id);
 
   const handlePressIn = useCallback(() => {
     Animated.timing(scaleAnim, {
@@ -98,6 +112,37 @@ const CommunityCard: React.FC<{
       useNativeDriver: true,
     }).start();
   }, [scaleAnim]);
+
+  // Get sport icon based on sport_id
+  const renderSportIcon = () => {
+    // null = both sports
+    if (!item.sport_id) {
+      return (
+        <View style={styles.sportIconContainer}>
+          <MaterialCommunityIcons name="tennis" size={14} color={colors.textMuted} />
+          <Text style={[styles.sportIconPlus, { color: colors.textMuted }]}>+</Text>
+          <MaterialCommunityIcons name="badminton" size={14} color={colors.textMuted} />
+        </View>
+      );
+    }
+    // Tennis
+    if (sportName?.toLowerCase() === 'tennis') {
+      return (
+        <View style={styles.sportIconContainer}>
+          <MaterialCommunityIcons name="tennis" size={16} color={colors.textMuted} />
+        </View>
+      );
+    }
+    // Pickleball
+    if (sportName?.toLowerCase() === 'pickleball') {
+      return (
+        <View style={styles.sportIconContainer}>
+          <MaterialCommunityIcons name="badminton" size={16} color={colors.textMuted} />
+        </View>
+      );
+    }
+    return null;
+  };
 
   return (
     <TouchableWithoutFeedback
@@ -144,9 +189,17 @@ const CommunityCard: React.FC<{
 
         {/* Community Info */}
         <View style={styles.communityInfo}>
-          <Text weight="semibold" size="sm" style={{ color: colors.text }} numberOfLines={2}>
-            {item.name}
-          </Text>
+          <View style={styles.titleRow}>
+            <Text
+              weight="semibold"
+              size="sm"
+              style={[{ color: colors.text }, styles.titleText]}
+              numberOfLines={2}
+            >
+              {item.name}
+            </Text>
+            {renderSportIcon()}
+          </View>
 
           {/* Member count + Status */}
           <View style={styles.bottomRow}>
@@ -209,6 +262,7 @@ export default function CommunitiesScreen() {
   const { session } = useAuth();
   const { t } = useTranslation();
   const { guardAction } = useRequireOnboarding();
+  const { selectedSport } = useSport();
   const playerId = session?.user?.id;
 
   const [activeTab, setActiveTab] = useState<TabType>('discover');
@@ -226,24 +280,37 @@ export default function CommunitiesScreen() {
     }
   }, [activeTab, playerId]);
 
-  // Queries
+  // Queries - filter by selected sport
   const {
     data: publicCommunities,
     isLoading: isLoadingPublic,
     isRefetching: isRefetchingPublic,
     refetch: refetchPublic,
-  } = usePublicCommunities(playerId);
+  } = usePublicCommunities(playerId, selectedSport?.id);
 
   const {
     data: myCommunities,
     isLoading: isLoadingMy,
     isRefetching: isRefetchingMy,
     refetch: refetchMy,
-  } = usePlayerCommunities(playerId);
+  } = usePlayerCommunities(playerId, selectedSport?.id);
 
   // Real-time subscriptions
   usePlayerCommunitiesRealtime(playerId);
   usePublicCommunitiesRealtime(playerId);
+
+  // Sports data for icon display
+  const { sports } = useSports();
+
+  // Helper to get sport name from sport_id
+  const getSportName = useCallback(
+    (sportId: string | null): string | null => {
+      if (!sportId || !sports) return null;
+      const sport = sports.find(s => s.id === sportId);
+      return sport?.name ?? null;
+    },
+    [sports]
+  );
 
   // Mutations
   const requestToJoinMutation = useRequestToJoinCommunity();
@@ -321,6 +388,7 @@ export default function CommunitiesScreen() {
           onPress={handleCommunityPress}
           onRequestToJoin={handleRequestToJoin}
           isRequestPending={requestToJoinMutation.isPending}
+          getSportName={getSportName}
         />
       );
     },
@@ -331,6 +399,7 @@ export default function CommunitiesScreen() {
       handleCommunityPress,
       handleRequestToJoin,
       requestToJoinMutation.isPending,
+      getSportName,
     ]
   );
 
@@ -659,9 +728,26 @@ const styles = StyleSheet.create({
   badgeText: {
     color: '#FFFFFF',
   },
+  sportIconContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 4,
+  },
+  sportIconPlus: {
+    color: '#666666',
+    fontSize: 8,
+    marginHorizontal: 1,
+  },
   communityInfo: {
     padding: 12,
     gap: 6,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  titleText: {
+    flex: 1,
   },
   bottomRow: {
     flexDirection: 'row',

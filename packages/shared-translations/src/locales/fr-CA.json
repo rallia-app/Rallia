@@ -1965,7 +1965,12 @@
     "moderatorAddedToCommunity": "Modérateur ajouté à la communauté",
     "memberAddedToCommunity": "Membre ajouté à la communauté",
     "membershipRequestSubmitted": "Demande d'adhésion soumise pour approbation",
-    "failedToAddMember": "Échec de l'ajout du membre"
+    "failedToAddMember": "Échec de l'ajout du membre",
+    "sportSelection": "Sport",
+    "sportBoth": "Les deux",
+    "sportTennis": "Tennis",
+    "sportPickleball": "Pickleball",
+    "sportSelectionHint": "Choisissez un sport pour filtrer qui voit cette communauté"
   },
   "groups": {
     "title": "Groupes",
@@ -2210,7 +2215,12 @@
       "minutesAgo": "Il y a {count} min",
       "hoursAgo": "Il y a {count}h",
       "daysAgo": "Il y a {count}j"
-    }
+    },
+    "sportSelection": "Sport",
+    "sportBoth": "Les deux",
+    "sportTennis": "Tennis",
+    "sportPickleball": "Pickleball",
+    "sportSelectionHint": "Choisissez un sport pour filtrer qui voit ce groupe"
   },
   "playerDirectory": {
     "title": "Répertoire des joueurs",

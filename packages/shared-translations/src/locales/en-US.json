@@ -1965,7 +1965,12 @@
     "moderatorAddedToCommunity": "Moderator added to the community",
     "memberAddedToCommunity": "Member added to the community",
     "membershipRequestSubmitted": "Membership request submitted for approval",
-    "failedToAddMember": "Failed to add member"
+    "failedToAddMember": "Failed to add member",
+    "sportSelection": "Sport",
+    "sportBoth": "Both",
+    "sportTennis": "Tennis",
+    "sportPickleball": "Pickleball",
+    "sportSelectionHint": "Choose a sport to filter who sees this community"
   },
   "groups": {
     "title": "Groups",
@@ -2210,7 +2215,12 @@
       "minutesAgo": "{count}m ago",
       "hoursAgo": "{count}h ago",
       "daysAgo": "{count}d ago"
-    }
+    },
+    "sportSelection": "Sport",
+    "sportBoth": "Both",
+    "sportTennis": "Tennis",
+    "sportPickleball": "Pickleball",
+    "sportSelectionHint": "Choose a sport to filter who sees this group"
   },
   "playerDirectory": {
     "title": "Player Directory",

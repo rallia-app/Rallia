@@ -63,7 +63,8 @@ import { matchKeys } from './useCreateMatch';
 export const groupKeys = {
   all: ['groups'] as const,
   lists: () => [...groupKeys.all, 'list'] as const,
-  playerGroups: (playerId: string) => [...groupKeys.lists(), playerId] as const,
+  playerGroups: (playerId: string, sportId?: string | null) =>
+    [...groupKeys.lists(), playerId, sportId ?? 'all'] as const,
   details: () => [...groupKeys.all, 'detail'] as const,
   detail: (groupId: string) => [...groupKeys.details(), groupId] as const,
   withMembers: (groupId: string) => [...groupKeys.detail(groupId), 'members'] as const,
@@ -89,11 +90,13 @@ export const groupKeys = {
 
 /**
  * Get all groups for the current player
+ * @param playerId - The player's ID
+ * @param sportId - Optional sport ID to filter by (null/undefined returns all groups)
  */
-export function usePlayerGroups(playerId: string | undefined) {
+export function usePlayerGroups(playerId: string | undefined, sportId?: string | null) {
   return useQuery({
-    queryKey: groupKeys.playerGroups(playerId || ''),
-    queryFn: () => getPlayerGroups(playerId!),
+    queryKey: groupKeys.playerGroups(playerId || '', sportId),
+    queryFn: () => getPlayerGroups(playerId!, sportId),
     enabled: !!playerId,
   });
 }
