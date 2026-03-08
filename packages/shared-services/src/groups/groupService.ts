@@ -103,7 +103,9 @@ export {
   submitMatchResultForMatch,
   getPendingScoreConfirmations,
   confirmMatchScore,
-  disputeMatchScore,
+  proposeRebuttalScore,
+  acceptRebuttalScore,
+  disputeRebuttalScore,
   notifyOpponentsOfPendingScore,
   type SubmitMatchResultForMatchParams,
 } from './playedMatchService';

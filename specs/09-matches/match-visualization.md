@@ -349,6 +349,8 @@ Additional management features:
 **Kick Participant**:
 
 - Remove button on each participant avatar (not host)
+- Hidden if participant joined more than 24 hours ago (based on `joined_at`)
+- Hidden during `in_progress` or after match has ended
 
 ### Status Banners
 

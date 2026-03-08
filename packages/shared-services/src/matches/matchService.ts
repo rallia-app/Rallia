@@ -241,6 +241,7 @@ export async function getMatchWithDetails(matchId: string) {
         team_number,
         feedback_completed,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
@@ -270,6 +271,13 @@ export async function getMatchWithDetails(matchId: string) {
         verified_at,
         created_at,
         updated_at,
+        rebuttal_team1_score,
+        rebuttal_team2_score,
+        rebuttal_winning_team,
+        rebuttal_sets,
+        rebuttal_submitted_by,
+        rebuttal_submitted_at,
+        rebuttal_deadline,
         sets:match_set (
           set_number,
           team1_score,
@@ -495,6 +503,7 @@ export async function getMatchesWithDetails(
         team_number,
         feedback_completed,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
@@ -2616,6 +2625,7 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
         team_number,
         feedback_completed,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
@@ -2645,6 +2655,13 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
         verified_at,
         created_at,
         updated_at,
+        rebuttal_team1_score,
+        rebuttal_team2_score,
+        rebuttal_winning_team,
+        rebuttal_sets,
+        rebuttal_submitted_by,
+        rebuttal_submitted_at,
+        rebuttal_deadline,
         sets:match_set (
           set_number,
           team1_score,
@@ -2935,6 +2952,7 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
         team_number,
         feedback_completed,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
@@ -2964,6 +2982,13 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
         verified_at,
         created_at,
         updated_at,
+        rebuttal_team1_score,
+        rebuttal_team2_score,
+        rebuttal_winning_team,
+        rebuttal_sets,
+        rebuttal_submitted_by,
+        rebuttal_submitted_at,
+        rebuttal_deadline,
         sets:match_set (
           set_number,
           team1_score,
@@ -3316,6 +3341,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
         team_number,
         feedback_completed,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
@@ -3345,6 +3371,13 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
         verified_at,
         created_at,
         updated_at,
+        rebuttal_team1_score,
+        rebuttal_team2_score,
+        rebuttal_winning_team,
+        rebuttal_sets,
+        rebuttal_submitted_by,
+        rebuttal_submitted_at,
+        rebuttal_deadline,
         sets:match_set (
           set_number,
           team1_score,
@@ -3966,6 +3999,7 @@ export async function getMatchNeedingFeedback(
         feedback_completed,
         match_outcome,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
@@ -4163,6 +4197,7 @@ export async function getCustomLocationMatches(
         team_number,
         feedback_completed,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
