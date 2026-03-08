@@ -233,12 +233,13 @@ On success:
 ### Host Kicks Participant
 
 - Host can remove `joined` participants
-- **Restriction:** Cannot kick within 24 hours of start_time (enforced in UI only — the backend checks that the match hasn't ended but does not enforce the 24h window)
+- **Restriction:** Cannot kick a participant who joined more than 24 hours ago (based on `joined_at` timestamp, enforced in UI only — the backend checks that the match hasn't ended but does not enforce this window)
+- Cannot kick during `in_progress` or after match has ended
 - Status → `kicked`
 - Player notified
 - Spot becomes available
 
-**Rationale:** Prevents last-minute removals that leave players stranded.
+**Rationale:** Protects players who have been committed to a match for a significant time, while still allowing hosts to remove recently-joined players regardless of how close the match start is.
 
 ### Match Cancellation
 
