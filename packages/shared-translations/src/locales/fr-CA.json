@@ -1744,7 +1744,14 @@
     "tooltip": {
       "courts": "{count} terrains",
       "courtsSingular": "1 terrain"
-    }
+    },
+    "zoomIn": "Zoom avant",
+    "zoomOut": "Zoom arrière",
+    "legend": {
+      "facilities": "Installations",
+      "pickup": "Pickup"
+    },
+    "matchesAtLocation": "Matchs à cet endroit"
   },
   "community": {
     "placeholder": "Connectez-vous avec d'autres joueurs",

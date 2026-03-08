@@ -620,12 +620,12 @@ export default function FacilitiesDirectory() {
           <TouchableOpacity
             onPress={() => {
               lightHaptic();
-              rootNavigation.navigate(
-                'Map',
-                location
+              rootNavigation.navigate('Map', {
+                screen: 'MapView',
+                params: location
                   ? { focusLocation: { lat: location.latitude, lng: location.longitude } }
-                  : undefined
-              );
+                  : undefined,
+              });
             }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             accessible
