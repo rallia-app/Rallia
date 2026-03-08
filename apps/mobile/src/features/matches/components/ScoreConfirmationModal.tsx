@@ -5,20 +5,18 @@
  * Shows the match details and score, with options to confirm or dispute.
  */
 
-import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, Image, TextInput } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button, useToast } from '@rallia/shared-components';
 import { successHaptic, warningHaptic, lightHaptic } from '@rallia/shared-utils';
 import { useThemeStyles } from '../../../hooks';
 import { SportIcon } from '../../../components/SportIcon';
-import {
-  useConfirmMatchScore,
-  useDisputeMatchScore,
-  type PendingScoreConfirmation,
-} from '@rallia/shared-hooks';
+import { useConfirmMatchScore, type PendingScoreConfirmation } from '@rallia/shared-hooks';
+import { getMatchWithDetails } from '@rallia/shared-services';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import type { MatchWithDetails } from '@rallia/shared-types';
 
 export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-confirmation'>) {
   const confirmation = payload?.confirmation as PendingScoreConfirmation | null;
@@ -26,20 +24,15 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
 
   const { colors, isDark } = useThemeStyles();
   const toast = useToast();
-  const [showDisputeReason, setShowDisputeReason] = useState(false);
-  const [disputeReason, setDisputeReason] = useState('');
 
   const handleClose = useCallback(() => {
     lightHaptic();
-    setShowDisputeReason(false);
-    setDisputeReason('');
     SheetManager.hide('score-confirmation');
   }, []);
 
   const confirmMutation = useConfirmMatchScore();
-  const disputeMutation = useDisputeMatchScore();
 
-  const isLoading = confirmMutation.isPending || disputeMutation.isPending;
+  const isLoading = confirmMutation.isPending;
 
   const handleConfirm = useCallback(async () => {
     if (!confirmation) return;
@@ -65,38 +58,25 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
     }
   }, [confirmation, playerId, confirmMutation, handleClose, toast]);
 
-  const handleDispute = useCallback(async () => {
+  const handleProposeRebuttal = useCallback(async () => {
     if (!confirmation) return;
 
-    if (!showDisputeReason) {
-      warningHaptic();
-      setShowDisputeReason(true);
-      return;
+    warningHaptic();
+    handleClose();
+    // Fetch full match details so the score sheet can render properly
+    const matchDetails = await getMatchWithDetails(confirmation.match_id);
+    if (matchDetails) {
+      setTimeout(() => {
+        SheetManager.show('register-match-score', {
+          payload: {
+            match: matchDetails as MatchWithDetails,
+            isRebuttal: true,
+            matchResultId: confirmation.match_result_id,
+          },
+        });
+      }, 200);
     }
-
-    lightHaptic();
-    try {
-      await disputeMutation.mutateAsync({
-        matchResultId: confirmation.match_result_id,
-        playerId,
-        reason: disputeReason.trim() || undefined,
-      });
-      toast.warning('Score disputed. Please contact your opponent to resolve the issue.');
-      setShowDisputeReason(false);
-      setDisputeReason('');
-      handleClose();
-    } catch (error) {
-      toast.error('Failed to dispute score. Please try again.');
-    }
-  }, [
-    confirmation,
-    playerId,
-    disputeMutation,
-    showDisputeReason,
-    disputeReason,
-    handleClose,
-    toast,
-  ]);
+  }, [confirmation, handleClose]);
 
   if (!confirmation) return null;
 
@@ -278,74 +258,26 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
               </Text>
             </View>
           </View>
-
-          {/* Dispute reason input */}
-          {showDisputeReason && (
-            <View style={styles.disputeReasonContainer}>
-              <Text size="sm" weight="medium" style={{ color: colors.text, marginBottom: 8 }}>
-                Why are you disputing this score? (optional)
-              </Text>
-              <TextInput
-                style={[
-                  styles.disputeInput,
-                  {
-                    backgroundColor: colors.cardBackground,
-                    borderColor: colors.border,
-                    color: colors.text,
-                  },
-                ]}
-                placeholder="Enter reason..."
-                placeholderTextColor={colors.textMuted}
-                value={disputeReason}
-                onChangeText={setDisputeReason}
-                multiline
-                numberOfLines={3}
-              />
-            </View>
-          )}
         </ScrollView>
 
         {/* Action buttons */}
         <View style={styles.actions}>
-          {!showDisputeReason ? (
-            <>
-              <Button
-                variant="outline"
-                onPress={handleDispute}
-                disabled={isLoading}
-                style={styles.disputeButton}
-              >
-                Dispute
-              </Button>
-              <Button
-                variant="primary"
-                onPress={handleConfirm}
-                disabled={isLoading}
-                style={styles.confirmButton}
-              >
-                {isLoading ? 'Processing...' : 'Confirm Score'}
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                variant="outline"
-                onPress={() => setShowDisputeReason(false)}
-                disabled={isLoading}
-                style={styles.disputeButton}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                onPress={handleDispute}
-                disabled={isLoading}
-                style={[styles.confirmButton, { backgroundColor: '#DC3545' }]}
-              >
-                {isLoading ? 'Processing...' : 'Submit Dispute'}
-              </Button>
-            </>
-          )}
+          <Button
+            variant="outline"
+            onPress={handleProposeRebuttal}
+            disabled={isLoading}
+            style={styles.disputeButton}
+          >
+            Propose Different Score
+          </Button>
+          <Button
+            variant="primary"
+            onPress={handleConfirm}
+            disabled={isLoading}
+            style={styles.confirmButton}
+          >
+            {isLoading ? 'Processing...' : 'Confirm Score'}
+          </Button>
         </View>
       </View>
     </ActionSheet>
@@ -472,16 +404,6 @@ const styles = StyleSheet.create({
   deadlineInfo: {
     marginLeft: 12,
     flex: 1,
-  },
-  disputeReasonContainer: {
-    marginBottom: 8,
-  },
-  disputeInput: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    minHeight: 80,
-    textAlignVertical: 'top',
   },
   actions: {
     flexDirection: 'row',
