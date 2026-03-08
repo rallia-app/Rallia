@@ -106,6 +106,9 @@ export default function MatchesTab({ facilityId }: MatchesTabProps) {
     setCourtStatus,
     setMatchTier,
     setSpecificDate,
+    setSpotsAvailable,
+    setFavoritesOnly,
+    setSpecificTime,
     resetFilters,
     clearSearch,
   } = usePublicMatchFilters();
@@ -294,6 +297,9 @@ export default function MatchesTab({ facilityId }: MatchesTabProps) {
           courtStatus={filters.courtStatus}
           matchTier={filters.matchTier}
           specificDate={filters.specificDate}
+          spotsAvailable={filters.spotsAvailable}
+          favoritesOnly={filters.favoritesOnly}
+          specificTime={filters.specificTime}
           onFormatChange={setFormat}
           onMatchTypeChange={setMatchType}
           onDateRangeChange={setDateRange}
@@ -307,6 +313,9 @@ export default function MatchesTab({ facilityId }: MatchesTabProps) {
           onCourtStatusChange={setCourtStatus}
           onMatchTierChange={setMatchTier}
           onSpecificDateChange={setSpecificDate}
+          onSpotsAvailableChange={setSpotsAvailable}
+          onFavoritesOnlyChange={setFavoritesOnly}
+          onSpecificTimeChange={setSpecificTime}
           onReset={resetFilters}
           hasActiveFilters={hasActiveFilters}
           showLocationSelector={false}
