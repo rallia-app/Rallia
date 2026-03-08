@@ -78,7 +78,8 @@ import {
   useMatchActions,
   usePlayerReputation,
   useConfirmMatchScore,
-  useDisputeMatchScore,
+  useAcceptRebuttalScore,
+  useDisputeRebuttalScore,
 } from '@rallia/shared-hooks';
 import {
   getMatchChat,
@@ -764,9 +765,10 @@ export const MatchDetailSheet: React.FC = () => {
   const [resendingInvitationId, setResendingInvitationId] = useState<string | null>(null);
   const [acceptingRequestId, setAcceptingRequestId] = useState<string | null>(null);
 
-  // Score confirm/dispute
+  // Score confirm/rebuttal
   const confirmMutation = useConfirmMatchScore();
-  const disputeMutation = useDisputeMatchScore();
+  const acceptRebuttalMutation = useAcceptRebuttalScore();
+  const disputeRebuttalMutation = useDisputeRebuttalScore();
   const [showDisputeModal, setShowDisputeModal] = useState(false);
 
   // Collapse/expand state for pending requests
@@ -1128,13 +1130,61 @@ export const MatchDetailSheet: React.FC = () => {
     }
   }, [playerId, selectedMatch, confirmMutation, toast, t, updateSelectedMatch]);
 
-  // Handle disputing a score - opens confirmation modal
-  const handleDisputeScore = useCallback(() => {
+  // Handle proposing a different score (rebuttal) - opens score sheet in rebuttal mode
+  const handleProposeRebuttal = useCallback(() => {
+    if (!selectedMatch?.result) return;
+    const raw = Array.isArray(selectedMatch.result)
+      ? selectedMatch.result[0]
+      : selectedMatch.result;
+    const resObj = raw as { id: string };
+    mediumHaptic();
+    const matchRef = selectedMatch;
+    closeSheet();
+    setTimeout(() => {
+      SheetManager.show('register-match-score', {
+        payload: {
+          match: matchRef,
+          isRebuttal: true,
+          matchResultId: resObj.id,
+          onSuccess: async () => {
+            const refreshed = await getMatchWithDetails(matchRef.id);
+            openSheet((refreshed ?? matchRef) as MatchDetailData);
+          },
+          onDismiss: () => {
+            openSheet(matchRef);
+          },
+        },
+      });
+    }, 100);
+  }, [selectedMatch, closeSheet, openSheet]);
+
+  // Handle accepting a rebuttal score
+  const handleAcceptRebuttal = useCallback(async () => {
+    if (!selectedMatch?.result || !playerId) return;
+    const raw = Array.isArray(selectedMatch.result)
+      ? selectedMatch.result[0]
+      : selectedMatch.result;
+    const resObj = raw as { id: string };
+    mediumHaptic();
+    try {
+      await acceptRebuttalMutation.mutateAsync({ matchResultId: resObj.id, playerId });
+      successHaptic();
+      toast.success(t('matchDetail.rebuttalAccepted'));
+      const refreshed = await getMatchWithDetails(selectedMatch.id);
+      if (refreshed) updateSelectedMatch(refreshed as MatchDetailData);
+    } catch {
+      errorHaptic();
+      toast.error(t('matchDetail.confirmScoreError'));
+    }
+  }, [playerId, selectedMatch, acceptRebuttalMutation, toast, t, updateSelectedMatch]);
+
+  // Handle disputing a rebuttal - opens confirmation modal
+  const handleDisputeRebuttal = useCallback(() => {
     mediumHaptic();
     setShowDisputeModal(true);
   }, []);
 
-  // Confirm dispute score
+  // Confirm dispute of rebuttal score
   const handleConfirmDispute = useCallback(async () => {
     if (!selectedMatch?.result || !playerId) return;
     const raw = Array.isArray(selectedMatch.result)
@@ -1142,20 +1192,20 @@ export const MatchDetailSheet: React.FC = () => {
       : selectedMatch.result;
     const resObj = raw as { id: string };
     try {
-      await disputeMutation.mutateAsync({
+      await disputeRebuttalMutation.mutateAsync({
         matchResultId: resObj.id,
         playerId,
       });
       successHaptic();
       setShowDisputeModal(false);
-      toast.warning(t('matchDetail.scoreDisputedSuccess'));
+      toast.warning(t('matchDetail.rebuttalDisputed'));
       const refreshed = await getMatchWithDetails(selectedMatch.id);
       if (refreshed) updateSelectedMatch(refreshed as MatchDetailData);
     } catch {
       errorHaptic();
       toast.error(t('matchDetail.disputeScoreError'));
     }
-  }, [playerId, selectedMatch, disputeMutation, toast, t, updateSelectedMatch]);
+  }, [playerId, selectedMatch, disputeRebuttalMutation, toast, t, updateSelectedMatch]);
 
   // Handle opening feedback sheet for the current player
   const handleOpenFeedback = useCallback(() => {
@@ -1523,7 +1573,8 @@ export const MatchDetailSheet: React.FC = () => {
     outputRange: [0.6, 1, 0.6],
   });
 
-  // Score confirmation progress (how many joined players have confirmed)
+  // Score confirmation progress: submitter's team (auto-confirmed) + opponent confirmations
+  // For the new rebuttal system, only 1 opponent needs to confirm (threshold = 1)
   // Must be before early return to satisfy React hooks rules
   const scoreConfirmProgress = useMemo(() => {
     if (!selectedMatch) return null;
@@ -1537,14 +1588,26 @@ export const MatchDetailSheet: React.FC = () => {
       confirmations?: Array<{ player_id: string; action: string }> | null;
     };
     const joinedPlayers = selectedMatch.participants?.filter(p => p.status === 'joined') ?? [];
-    const total = joinedPlayers.length;
+    if (joinedPlayers.length === 0) return null;
+
+    // Find submitter's team
+    const submitter = joinedPlayers.find(p => p.player_id === resObj.submitted_by);
+    const submitterTeamNum = submitter?.team_number;
+
+    // Count opponents (different team from submitter)
+    const opponents =
+      submitterTeamNum != null
+        ? joinedPlayers.filter(p => p.team_number !== submitterTeamNum)
+        : joinedPlayers.filter(p => p.player_id !== resObj.submitted_by);
+    const total = opponents.length;
+
     if (total === 0) return null;
-    if (resObj.is_verified) return { confirmed: total, total };
-    // Count: submitter (1) + individual confirmations (only 'confirmed', not 'disputed')
+    if (resObj.is_verified) return { confirmed: 1, total: 1 };
+
+    // Only 1 opponent confirmation needed
     const individualConfirmations =
       resObj.confirmations?.filter(c => c.action === 'confirmed').length ?? 0;
-    const confirmed = (resObj.submitted_by ? 1 : 0) + individualConfirmations;
-    return { confirmed, total };
+    return { confirmed: individualConfirmations, total: 1 };
   }, [selectedMatch]);
 
   // Live countdown that ticks every second when match is starting soon
@@ -1667,6 +1730,15 @@ export const MatchDetailSheet: React.FC = () => {
         disputed?: boolean | null;
         submitted_by?: string | null;
         confirmations?: Array<{ player_id: string; action: string }> | null;
+        rebuttal_submitted_by?: string | null;
+        rebuttal_team1_score?: number | null;
+        rebuttal_team2_score?: number | null;
+        rebuttal_winning_team?: number | null;
+        rebuttal_sets?: Array<{
+          set_number: number;
+          team1_score: number;
+          team2_score: number;
+        }> | null;
       })
     : null;
 
@@ -1722,9 +1794,26 @@ export const MatchDetailSheet: React.FC = () => {
     currentPlayerParticipant &&
     (!playerHasCompletedFeedback || !hasResult);
 
-  // Check if current player needs to confirm/dispute a score submitted by someone else
-  // Excludes players who have already responded (confirmed or disputed)
+  // Check if current player needs to confirm/propose rebuttal for a score submitted by someone else
+  // Excludes players who have already responded (confirmed or rebutted)
   const playerAlreadyResponded = !!resultObj?.confirmations?.some(c => c.player_id === playerId);
+
+  // Determine if a rebuttal is pending (opponent proposed a different score)
+  const isRebuttalPending =
+    !!resultObj &&
+    !resultObj.is_verified &&
+    !resultObj.disputed &&
+    !!resultObj.rebuttal_submitted_by;
+
+  // Current player's team number
+  const currentPlayerTeam = currentPlayerParticipant?.team_number;
+  // Submitter's team number (find from participants)
+  const submitterParticipant = match.participants?.find(
+    p => p.player_id === resultObj?.submitted_by && p.status === 'joined'
+  );
+  const submitterTeam = submitterParticipant?.team_number;
+
+  // Opponent needs to confirm or propose rebuttal (no rebuttal exists yet)
   const scoreNeedsConfirmation =
     !!resultObj &&
     !resultObj.is_verified &&
@@ -1732,11 +1821,34 @@ export const MatchDetailSheet: React.FC = () => {
     !!resultObj.submitted_by &&
     resultObj.submitted_by !== playerId &&
     !playerAlreadyResponded &&
-    !!currentPlayerParticipant;
+    !isRebuttalPending &&
+    !!currentPlayerParticipant &&
+    currentPlayerTeam != null &&
+    submitterTeam != null &&
+    currentPlayerTeam !== submitterTeam;
 
-  // Both score confirmation and feedback are pending
+  // Original team needs to respond to a rebuttal
+  const rebuttalNeedsResponse =
+    isRebuttalPending &&
+    !!currentPlayerParticipant &&
+    currentPlayerTeam != null &&
+    submitterTeam != null &&
+    currentPlayerTeam === submitterTeam;
+
+  // Whether any score-related action is pending AND feedback is also needed
+  const scoreActionNeedsFeedback =
+    isWithinFeedbackWindow && !playerHasCompletedFeedback && currentPlayerParticipant != null;
+
+  // Score actions that produce two CTAs (confirm/rebuttal or dispute/accept) need column layout
+  const hasTwoScoreActions = scoreNeedsConfirmation || rebuttalNeedsResponse;
+
+  // Register-score is a single CTA (no score submitted yet, within feedback window, match was full)
+  const hasRegisterScoreAction =
+    !hasResult && isWithinFeedbackWindow && !!currentPlayerParticipant && isFull;
+
+  // Any score action + pending feedback → show feedback button in sticky footer
   const needsScoreConfirmAndFeedback =
-    scoreNeedsConfirmation && isWithinFeedbackWindow && !playerHasCompletedFeedback;
+    (hasTwoScoreActions || hasRegisterScoreAction) && scoreActionNeedsFeedback;
 
   // Check-in window status (10 min before start until end, only for full games)
   const isWithinCheckInWindow = getCheckInWindowStatus(
@@ -2017,90 +2129,6 @@ export const MatchDetailSheet: React.FC = () => {
       );
     }
 
-    // Match has results → Show confirm/dispute, feedback, or "completed"
-    if (hasResult && match.result) {
-      // Non-submitter with unverified, undisputed score → show confirm/dispute buttons
-      if (scoreNeedsConfirmation) {
-        return (
-          <>
-            <Button
-              variant="primary"
-              onPress={handleDisputeScore}
-              style={styles.actionButton}
-              themeColors={warningThemeColors}
-              isDark={isDark}
-              loading={disputeMutation.isPending}
-              leftIcon={<Ionicons name="flag-outline" size={18} color={ctaDestructive} />}
-            >
-              {t('matchDetail.disputeScore')}
-            </Button>
-            <Button
-              variant="primary"
-              onPress={handleConfirmScore}
-              style={styles.actionButton}
-              themeColors={successThemeColors}
-              isDark={isDark}
-              loading={confirmMutation.isPending}
-              leftIcon={<Ionicons name="checkmark-circle-outline" size={18} color={base.white} />}
-            >
-              {t('matchDetail.confirmScore')}
-            </Button>
-          </>
-        );
-      }
-      // Player already responded (confirmed/disputed) but score not fully resolved (waiting for others in doubles)
-      if (playerAlreadyResponded && !resultObj?.is_verified && !resultObj?.disputed) {
-        if (isWithinFeedbackWindow && !playerHasCompletedFeedback && currentPlayerParticipant) {
-          // Still needs feedback - show feedback button
-          return (
-            <Button
-              variant="primary"
-              onPress={handleOpenFeedback}
-              style={styles.actionButton}
-              themeColors={successThemeColors}
-              isDark={isDark}
-              leftIcon={
-                <Ionicons name="chatbubble-ellipses-outline" size={18} color={base.white} />
-              }
-            >
-              {t('matchDetail.provideFeedbackOnly')}
-            </Button>
-          );
-        }
-        // All done — show "match completed" status
-        return (
-          <View style={styles.matchEndedContainer}>
-            <Ionicons name="trophy-outline" size={20} color={colors.textMuted} />
-            <Text size="sm" weight="medium" color={colors.textMuted} style={styles.matchEndedText}>
-              {t('matchDetail.matchCompleted')}
-            </Text>
-          </View>
-        );
-      }
-      if (isWithinFeedbackWindow && !playerHasCompletedFeedback && currentPlayerParticipant) {
-        return (
-          <Button
-            variant="primary"
-            onPress={handleOpenFeedback}
-            style={styles.actionButton}
-            themeColors={successThemeColors}
-            isDark={isDark}
-            leftIcon={<Ionicons name="chatbubble-ellipses-outline" size={18} color={base.white} />}
-          >
-            {t('matchDetail.provideFeedbackOnly')}
-          </Button>
-        );
-      }
-      return (
-        <View style={styles.matchEndedContainer}>
-          <Ionicons name="trophy-outline" size={20} color={colors.textMuted} />
-          <Text size="sm" weight="medium" color={colors.textMuted} style={styles.matchEndedText}>
-            {t('matchDetail.matchCompleted')}
-          </Text>
-        </View>
-      );
-    }
-
     // Match is expired - start time passed but not full
     if ((isInProgress || hasMatchEnded) && !isFull) {
       return (
@@ -2113,46 +2141,117 @@ export const MatchDetailSheet: React.FC = () => {
       );
     }
 
-    // Match has ended - show feedback/score CTAs or completion status based on conditions
-    if (hasMatchEnded) {
-      // Within 48h window
-      if (isWithinFeedbackWindow) {
-        // Participant with pending actions → Show appropriate CTA button(s)
-        if (playerNeedsFeedbackOrScore && currentPlayerParticipant && isFull) {
-          return (
-            <>
-              {/* Save score button (when score is missing) */}
-              {!hasResult && (
-                <Button
-                  variant="primary"
-                  onPress={handleRegisterScore}
-                  style={styles.actionButton}
-                  themeColors={successThemeColors}
-                  isDark={isDark}
-                  leftIcon={<Ionicons name="trophy-outline" size={18} color={base.white} />}
-                >
-                  {t('matchDetail.provideScoreOnly')}
-                </Button>
-              )}
-              {/* Register feedback button (when feedback is missing) */}
-              {!playerHasCompletedFeedback && (
-                <Button
-                  variant="primary"
-                  onPress={handleOpenFeedback}
-                  style={styles.actionButton}
-                  themeColors={successThemeColors}
-                  isDark={isDark}
-                  leftIcon={
-                    <Ionicons name="chatbubble-ellipses-outline" size={18} color={base.white} />
-                  }
-                >
-                  {t('matchDetail.provideFeedbackOnly')}
-                </Button>
-              )}
-            </>
+    // Match has ended (or has result) → collect all available CTAs, or show status text
+    if (hasMatchEnded || (hasResult && match.result)) {
+      // Build list of action buttons the player can take
+      const actions: React.ReactNode[] = [];
+
+      // Score confirmation / rebuttal actions (only when score exists and is unresolved)
+      if (hasResult && match.result) {
+        if (scoreNeedsConfirmation) {
+          actions.push(
+            <Button
+              key="propose-rebuttal"
+              variant="primary"
+              onPress={handleProposeRebuttal}
+              style={styles.actionButton}
+              themeColors={warningThemeColors}
+              isDark={isDark}
+              leftIcon={<Ionicons name="create-outline" size={18} color={ctaDestructive} />}
+            >
+              {t('matchDetail.proposeDifferentScore')}
+            </Button>,
+            <Button
+              key="confirm-score"
+              variant="primary"
+              onPress={handleConfirmScore}
+              style={styles.actionButton}
+              themeColors={successThemeColors}
+              isDark={isDark}
+              loading={confirmMutation.isPending}
+              leftIcon={<Ionicons name="checkmark-circle-outline" size={18} color={base.white} />}
+            >
+              {t('matchDetail.confirmScore')}
+            </Button>
+          );
+        } else if (rebuttalNeedsResponse) {
+          actions.push(
+            <Button
+              key="dispute-rebuttal"
+              variant="primary"
+              onPress={handleDisputeRebuttal}
+              style={styles.actionButton}
+              themeColors={warningThemeColors}
+              isDark={isDark}
+              loading={disputeRebuttalMutation.isPending}
+              leftIcon={<Ionicons name="flag-outline" size={18} color={ctaDestructive} />}
+            >
+              {t('matchDetail.disputeRebuttal')}
+            </Button>,
+            <Button
+              key="accept-rebuttal"
+              variant="primary"
+              onPress={handleAcceptRebuttal}
+              style={styles.actionButton}
+              themeColors={successThemeColors}
+              isDark={isDark}
+              loading={acceptRebuttalMutation.isPending}
+              leftIcon={<Ionicons name="checkmark-circle-outline" size={18} color={base.white} />}
+            >
+              {t('matchDetail.acceptRebuttal')}
+            </Button>
           );
         }
-        // Feedback/score completed or not a participant → Show "completed" message
+      }
+
+      // Score registration (when no score exists yet)
+      if (!hasResult && isWithinFeedbackWindow && currentPlayerParticipant && isFull) {
+        actions.push(
+          <Button
+            key="register-score"
+            variant="primary"
+            onPress={handleRegisterScore}
+            style={styles.actionButton}
+            themeColors={successThemeColors}
+            isDark={isDark}
+            leftIcon={<Ionicons name="trophy-outline" size={18} color={base.white} />}
+          >
+            {t('matchDetail.provideScoreOnly')}
+          </Button>
+        );
+      }
+
+      // Feedback (independent of score state)
+      // Only added here when there are no score-related actions (confirm, rebuttal, or register),
+      // because the sticky footer renders feedback alongside score CTAs via needsScoreConfirmAndFeedback
+      if (
+        actions.length === 0 &&
+        isWithinFeedbackWindow &&
+        !playerHasCompletedFeedback &&
+        currentPlayerParticipant
+      ) {
+        actions.push(
+          <Button
+            key="feedback"
+            variant="primary"
+            onPress={handleOpenFeedback}
+            style={styles.actionButton}
+            themeColors={successThemeColors}
+            isDark={isDark}
+            leftIcon={<Ionicons name="chatbubble-ellipses-outline" size={18} color={base.white} />}
+          >
+            {t('matchDetail.provideFeedbackOnly')}
+          </Button>
+        );
+      }
+
+      // If there are actions, show them
+      if (actions.length > 0) {
+        return <>{actions}</>;
+      }
+
+      // No actions available
+      if (isWithinFeedbackWindow) {
         return (
           <View style={styles.matchEndedContainer}>
             <Ionicons name="checkmark-circle-outline" size={20} color={colors.textMuted} />
@@ -2163,7 +2262,6 @@ export const MatchDetailSheet: React.FC = () => {
         );
       }
 
-      // Past 48h window → Show "closed" message
       return (
         <View style={styles.matchEndedContainer}>
           <Ionicons name="lock-closed-outline" size={20} color={colors.textMuted} />
@@ -2831,10 +2929,25 @@ export const MatchDetailSheet: React.FC = () => {
               disputed?: boolean | null;
               submitted_by?: string | null;
               sets?: Array<{ set_number: number; team1_score: number; team2_score: number }>;
+              rebuttal_team1_score?: number | null;
+              rebuttal_team2_score?: number | null;
+              rebuttal_winning_team?: number | null;
+              rebuttal_sets?: Array<{
+                set_number: number;
+                team1_score: number;
+                team2_score: number;
+              }>;
+              rebuttal_submitted_by?: string | null;
             };
-            const team1Sets = result.team1_score ?? 0;
-            const team2Sets = result.team2_score ?? 0;
-            const setsList = result.sets;
+            // When a rebuttal has been submitted, display its scores instead of the original
+            const hasRebuttalScore = !!result.rebuttal_submitted_by;
+            const team1Sets = hasRebuttalScore
+              ? (result.rebuttal_team1_score ?? 0)
+              : (result.team1_score ?? 0);
+            const team2Sets = hasRebuttalScore
+              ? (result.rebuttal_team2_score ?? 0)
+              : (result.team2_score ?? 0);
+            const setsList = hasRebuttalScore ? result.rebuttal_sets : result.sets;
             const isVerified = result.is_verified === true;
             const isDisputed = result.disputed === true;
             // Determine which side the current user is on:
@@ -2890,7 +3003,9 @@ export const MatchDetailSheet: React.FC = () => {
               }
             }
 
-            const winningTeam = result.winning_team;
+            const winningTeam = hasRebuttalScore
+              ? result.rebuttal_winning_team
+              : result.winning_team;
             const currentUserWon = isParticipantInMatch
               ? (isCurrentUserTeam1 && winningTeam === 1) ||
                 (!isCurrentUserTeam1 && winningTeam === 2)
@@ -2956,6 +3071,7 @@ export const MatchDetailSheet: React.FC = () => {
               : colors.iconMuted;
             const trophyIcon = isParticipantInMatch && currentUserWon ? 'trophy' : 'trophy-outline';
 
+            const hasRebuttal = !!resultObj?.rebuttal_submitted_by;
             const statusBadgeBg = isDisputed
               ? isDark
                 ? 'rgba(237, 106, 109, 0.15)'
@@ -2982,12 +3098,16 @@ export const MatchDetailSheet: React.FC = () => {
               ? 'warning-outline'
               : isVerified
                 ? 'checkmark-circle'
-                : 'time-outline';
+                : hasRebuttal
+                  ? 'swap-horizontal-outline'
+                  : 'time-outline';
             const statusKey = isDisputed
-              ? 'matchDetail.scoreDisputed'
+              ? 'matchDetail.scoreUnsettled'
               : isVerified
                 ? 'matchDetail.scoreVerified'
-                : 'matchDetail.scorePendingConfirmation';
+                : hasRebuttal
+                  ? 'matchDetail.rebuttalPending'
+                  : 'matchDetail.scorePendingConfirmation';
 
             // Number of players still needing to confirm (for singular/plural translation)
             const remaining = scoreConfirmProgress
@@ -2995,6 +3115,60 @@ export const MatchDetailSheet: React.FC = () => {
               : match.format === 'doubles'
                 ? 3
                 : 1;
+
+            // When disputed/unsettled: hide scores, show unsettled message
+            if (isDisputed) {
+              return (
+                <Animated.View
+                  entering={FadeInDown.delay(50).springify()}
+                  style={[styles.section, { borderBottomColor: colors.border }]}
+                >
+                  <View style={styles.sectionHeader}>
+                    <Ionicons
+                      name="warning-outline"
+                      size={20}
+                      color={isDark ? secondary[400] : secondary[500]}
+                    />
+                    <Text
+                      size="base"
+                      weight="semibold"
+                      color={colors.text}
+                      style={styles.sectionTitle}
+                    >
+                      {t('matchDetail.registerScore')}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.scoreboardCardWrapper,
+                      { alignItems: 'center', paddingVertical: spacingPixels[6] },
+                    ]}
+                  >
+                    <Ionicons
+                      name="warning-outline"
+                      size={40}
+                      color={isDark ? secondary[400] : secondary[500]}
+                    />
+                    <Text
+                      size="base"
+                      weight="semibold"
+                      color={isDark ? secondary[300] : secondary[600]}
+                      style={{ marginTop: spacingPixels[2], textAlign: 'center' }}
+                    >
+                      {t('matchDetail.scoreUnsettled')}
+                    </Text>
+                  </View>
+                </Animated.View>
+              );
+            }
+
+            // Show original score for reference when a rebuttal is pending and original team needs to respond
+            const showOriginalScoreRef = hasRebuttalScore && rebuttalNeedsResponse;
+            const origT1 = result.team1_score ?? 0;
+            const origT2 = result.team2_score ?? 0;
+            const origLeftScore = isCurrentUserTeam1 ? origT1 : origT2;
+            const origRightScore = isCurrentUserTeam1 ? origT2 : origT1;
+            const origSets = result.sets;
 
             return (
               <Animated.View
@@ -3013,6 +3187,17 @@ export const MatchDetailSheet: React.FC = () => {
                   </Text>
                 </View>
 
+                {/* Label when showing rebuttal as main score */}
+                {showOriginalScoreRef && (
+                  <Text
+                    size="xs"
+                    weight="semibold"
+                    color={isDark ? accent[300] : accent[600]}
+                    style={{ marginBottom: spacingPixels[1], marginLeft: spacingPixels[1] }}
+                  >
+                    {t('matchDetail.proposedScore')}
+                  </Text>
+                )}
                 <View style={styles.scoreboardCardWrapper}>
                   <View
                     style={[
@@ -3061,8 +3246,8 @@ export const MatchDetailSheet: React.FC = () => {
                     {setsList && setsList.length > 0 && (
                       <View style={styles.scoreboardSets}>
                         {setsList
-                          .sort((a, b) => a.set_number - b.set_number)
-                          .map(s => {
+                          .sort((a, b) => (a.set_number ?? 0) - (b.set_number ?? 0))
+                          .map((s, idx) => {
                             const s1 =
                               isParticipantInMatch && !isCurrentUserTeam1
                                 ? s.team2_score
@@ -3095,7 +3280,7 @@ export const MatchDetailSheet: React.FC = () => {
                                 : secondary[600];
                             return (
                               <View
-                                key={s.set_number}
+                                key={s.set_number ?? idx}
                                 style={[
                                   styles.scoreboardSetPill,
                                   { backgroundColor: pillBg, borderColor: pillBorder },
@@ -3110,7 +3295,7 @@ export const MatchDetailSheet: React.FC = () => {
                       </View>
                     )}
 
-                    {/* Status badge + confirmation progress */}
+                    {/* Status badge */}
                     <View style={styles.scoreboardStatusRow}>
                       <View
                         style={[styles.scoreboardStatusBadge, { backgroundColor: statusBadgeBg }]}
@@ -3125,7 +3310,7 @@ export const MatchDetailSheet: React.FC = () => {
                           {t(statusKey, { count: remaining })}
                         </Text>
                       </View>
-                      {scoreConfirmProgress && !isVerified && !isDisputed && (
+                      {scoreConfirmProgress && !isVerified && !isDisputed && !hasRebuttalScore && (
                         <Text size="xs" weight="medium" color={colors.textMuted}>
                           {t('matchDetail.scoreConfirmProgress', {
                             confirmed: scoreConfirmProgress.confirmed,
@@ -3137,6 +3322,106 @@ export const MatchDetailSheet: React.FC = () => {
                     </View>
                   </View>
                 </View>
+
+                {/* Original score reference (shown to original team when rebuttal is pending) */}
+                {showOriginalScoreRef && (
+                  <>
+                    <Text
+                      size="xs"
+                      weight="semibold"
+                      color={colors.textMuted}
+                      style={{
+                        marginTop: spacingPixels[3],
+                        marginBottom: spacingPixels[1],
+                        marginLeft: spacingPixels[1],
+                      }}
+                    >
+                      {t('matchDetail.originalScore')}
+                    </Text>
+                    <View style={[styles.scoreboardCardWrapper, { opacity: 0.7 }]}>
+                      <View
+                        style={[
+                          styles.scoreboardCardBg,
+                          {
+                            backgroundColor: isDark ? neutral[800] : neutral[50],
+                            borderColor: colors.border,
+                          },
+                        ]}
+                      />
+                      <View style={styles.scoreboardCardContent}>
+                        <View style={styles.scoreboardMain}>
+                          <View style={styles.scoreboardTeam}>
+                            <Text size="sm" weight="semibold" color={colors.textMuted}>
+                              {leftLabel}
+                            </Text>
+                            <Text
+                              size={24}
+                              weight="bold"
+                              color={colors.textMuted}
+                              style={styles.scoreboardTeamScore}
+                            >
+                              {origLeftScore}
+                            </Text>
+                          </View>
+                          <View style={styles.scoreboardDivider}>
+                            <View
+                              style={[
+                                styles.scoreboardDividerLine,
+                                { backgroundColor: isDark ? neutral[600] : neutral[300] },
+                              ]}
+                            />
+                          </View>
+                          <View style={styles.scoreboardTeam}>
+                            <Text size="sm" weight="semibold" color={colors.textMuted}>
+                              {rightLabel}
+                            </Text>
+                            <Text
+                              size={24}
+                              weight="bold"
+                              color={colors.textMuted}
+                              style={styles.scoreboardTeamScore}
+                            >
+                              {origRightScore}
+                            </Text>
+                          </View>
+                        </View>
+
+                        {origSets && origSets.length > 0 && (
+                          <View style={styles.scoreboardSets}>
+                            {origSets
+                              .sort((a, b) => (a.set_number ?? 0) - (b.set_number ?? 0))
+                              .map((s, idx) => {
+                                const s1 =
+                                  isParticipantInMatch && !isCurrentUserTeam1
+                                    ? s.team2_score
+                                    : s.team1_score;
+                                const s2 =
+                                  isParticipantInMatch && !isCurrentUserTeam1
+                                    ? s.team1_score
+                                    : s.team2_score;
+                                return (
+                                  <View
+                                    key={s.set_number ?? idx}
+                                    style={[
+                                      styles.scoreboardSetPill,
+                                      {
+                                        backgroundColor: isDark ? neutral[800] : neutral[100],
+                                        borderColor: isDark ? neutral[700] : neutral[200],
+                                      },
+                                    ]}
+                                  >
+                                    <Text size="xs" weight="semibold" color={colors.textMuted}>
+                                      {`${s1}-${s2}`}
+                                    </Text>
+                                  </View>
+                                );
+                              })}
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  </>
+                )}
               </Animated.View>
             );
           })()}
@@ -4246,11 +4531,11 @@ export const MatchDetailSheet: React.FC = () => {
             backgroundColor: colors.cardBackground,
             borderTopColor: colors.border,
           },
-          needsScoreConfirmAndFeedback && { flexDirection: 'column' },
+          needsScoreConfirmAndFeedback && hasTwoScoreActions && { flexDirection: 'column' },
         ]}
       >
-        {/* Feedback row when both score confirmation and feedback are pending */}
-        {needsScoreConfirmAndFeedback && (
+        {/* Feedback above score CTAs when two score actions need column layout */}
+        {needsScoreConfirmAndFeedback && hasTwoScoreActions && (
           <Button
             variant="primary"
             onPress={handleOpenFeedback}
@@ -4276,9 +4561,37 @@ export const MatchDetailSheet: React.FC = () => {
         <View
           style={[
             styles.actionButtonsContainer,
-            needsScoreConfirmAndFeedback && styles.actionButtonsContainerColumn,
+            needsScoreConfirmAndFeedback &&
+              hasTwoScoreActions &&
+              styles.actionButtonsContainerColumn,
           ]}
         >
+          {/* Feedback side-by-side with single score action (register score) */}
+          {needsScoreConfirmAndFeedback && !hasTwoScoreActions && (
+            <Button
+              variant="primary"
+              onPress={handleOpenFeedback}
+              style={styles.actionButton}
+              themeColors={{
+                primary: isDark ? primary[500] : primary[600],
+                primaryForeground: base.white,
+                buttonActive: isDark ? primary[500] : primary[600],
+                buttonInactive: neutral[300],
+                buttonTextActive: base.white,
+                buttonTextInactive: neutral[500],
+                text: colors.text,
+                textMuted: colors.textMuted,
+                border: colors.border,
+                background: colors.cardBackground,
+              }}
+              isDark={isDark}
+              leftIcon={
+                <Ionicons name="chatbubble-ellipses-outline" size={18} color={base.white} />
+              }
+            >
+              {t('matchDetail.provideFeedbackOnly')}
+            </Button>
+          )}
           {/* Cap at 2 CTA buttons to prevent layout overflow */}
           {React.Children.toArray(renderActionButtons()).slice(0, 2)}
         </View>
@@ -4420,12 +4733,12 @@ export const MatchDetailSheet: React.FC = () => {
         visible={showDisputeModal}
         onClose={() => setShowDisputeModal(false)}
         onConfirm={handleConfirmDispute}
-        title={t('matchDetail.disputeConfirmTitle')}
-        message={t('matchDetail.disputeConfirmMessage')}
-        confirmLabel={t('matchDetail.disputeScore')}
+        title={t('matchDetail.disputeRebuttalTitle')}
+        message={t('matchDetail.disputeRebuttalMessage')}
+        confirmLabel={t('matchDetail.disputeRebuttal')}
         cancelLabel={t('common.cancel')}
         destructive
-        isLoading={disputeMutation.isPending}
+        isLoading={disputeRebuttalMutation.isPending}
       />
 
       {/* Badge Info Modal */}
