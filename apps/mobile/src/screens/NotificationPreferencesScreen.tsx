@@ -53,6 +53,7 @@ const BASE_WHITE = '#ffffff';
 
 // Only show notification types that are actually triggered in the app
 const ACTIVE_NOTIFICATION_TYPES = new Set<ExtendedNotificationTypeEnum>([
+  // Match lifecycle
   'match_invitation',
   'match_join_request',
   'match_join_accepted',
@@ -60,11 +61,20 @@ const ACTIVE_NOTIFICATION_TYPES = new Set<ExtendedNotificationTypeEnum>([
   'match_player_joined',
   'match_cancelled',
   'match_updated',
+  'match_starting_soon',
+  'match_check_in_available',
+  'match_new_available',
+  'match_spot_opened',
+  'nearby_match_available',
   'player_kicked',
   'player_left',
+  // Feedback
   'feedback_request',
   'feedback_reminder',
   'score_confirmation',
+  // Social
+  'new_message',
+  'rating_verified',
 ] as ExtendedNotificationTypeEnum[]);
 
 // Design-system colors for active notification types
@@ -78,11 +88,19 @@ const NOTIFICATION_DS_COLORS: Partial<Record<ExtendedNotificationTypeEnum, strin
   match_player_joined: status.success.light,
   match_cancelled: secondary[500],
   match_updated: status.info.DEFAULT,
+  match_starting_soon: accent[600],
+  match_check_in_available: status.success.light,
+  match_new_available: primary[500],
+  match_spot_opened: status.success.light,
+  nearby_match_available: status.info.DEFAULT,
   player_kicked: secondary[500],
   player_left: accent[600],
   feedback_request: accent[400],
   feedback_reminder: accent[600],
   score_confirmation: status.success.light,
+  // Social
+  new_message: primary[500],
+  rating_verified: status.success.light,
 };
 
 // Group notification types by category
@@ -182,7 +200,13 @@ const NotificationTypeRow: React.FC<NotificationTypeRowProps> = ({
         <View style={[styles.typeIcon, { backgroundColor: `${iconColor}20` }]}>
           <Ionicons name={iconName as keyof typeof Ionicons.glyphMap} size={18} color={iconColor} />
         </View>
-        <Text size="sm" weight="medium" color={colors.text} style={styles.typeLabel}>
+        <Text
+          size="sm"
+          weight="medium"
+          color={colors.text}
+          style={styles.typeLabel}
+          numberOfLines={2}
+        >
           {typeLabel}
         </Text>
       </View>
@@ -391,8 +415,10 @@ const NotificationPreferencesScreen: React.FC = () => {
         match_cancelled: t('notifications.types.match_cancelled'),
         match_updated: t('notifications.types.match_updated'),
         match_starting_soon: t('notifications.types.match_starting_soon'),
-        match_completed: t('notifications.types.match_completed'),
+        match_check_in_available: t('notifications.types.match_check_in_available'),
         match_new_available: t('notifications.types.match_new_available'),
+        match_spot_opened: t('notifications.types.match_spot_opened'),
+        nearby_match_available: t('notifications.types.nearby_match_available'),
         player_kicked: t('notifications.types.player_kicked'),
         player_left: t('notifications.types.player_left'),
         feedback_request: t('notifications.types.feedback_request'),
@@ -401,7 +427,6 @@ const NotificationPreferencesScreen: React.FC = () => {
         // Social category
         chat: t('notifications.types.chat'),
         new_message: t('notifications.types.new_message'),
-        friend_request: t('notifications.types.friend_request'),
         rating_verified: t('notifications.types.rating_verified'),
         // System category
         reminder: t('notifications.types.reminder'),
@@ -587,6 +612,8 @@ const styles = StyleSheet.create({
   },
   typeLabel: {
     flex: 1,
+    lineHeight: 18,
+    minHeight: 36,
   },
   togglesRow: {
     flexDirection: 'row',

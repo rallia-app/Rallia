@@ -680,7 +680,7 @@ function mockNotification(
   type: string,
   title: string,
   body: string | null,
-  payloadOverrides: Record<string, unknown> = {},
+  payloadOverrides: Record<string, unknown> = {}
 ): NotificationRecord {
   return {
     id: `notif-${type}`,
@@ -726,7 +726,7 @@ function renderAuthTemplate(templateFile: string, locale: string): string {
   // Handle locale conditionals: {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}FR{{ else }}EN{{ end }}
   html = html.replace(
     /\{\{\s*if\s+or\s+\(eq\s+\.Data\.locale\s+"fr"\)\s+\(eq\s+\.Data\.locale\s+"fr-CA"\)\s*\}\}([\s\S]*?)\{\{\s*else\s*\}\}([\s\S]*?)\{\{\s*end\s*\}\}/g,
-    (_match, frBranch, enBranch) => isFr ? frBranch : enBranch,
+    (_match, frBranch, enBranch) => (isFr ? frBranch : enBranch)
   );
 
   return html;
@@ -738,13 +738,13 @@ const TEMPLATES: TemplateEntry[] = [
     id: 'auth_confirmation',
     label: 'Auth: Confirmation',
     category: 'Auth',
-    render: (locale) => renderAuthTemplate('confirmation.html', locale),
+    render: locale => renderAuthTemplate('confirmation.html', locale),
   },
   {
     id: 'auth_magic_link',
     label: 'Auth: Magic Link',
     category: 'Auth',
-    render: (locale) => renderAuthTemplate('magic_link.html', locale),
+    render: locale => renderAuthTemplate('magic_link.html', locale),
   },
 
   // ---- Invitation ----
@@ -752,7 +752,7 @@ const TEMPLATES: TemplateEntry[] = [
     id: 'invitation_org',
     label: 'Invitation: Org',
     category: 'Invitation',
-    render: (locale) => {
+    render: locale => {
       const payload: InvitationEmailPayload = {
         type: 'invitation',
         email: 'player@example.com',
@@ -770,7 +770,7 @@ const TEMPLATES: TemplateEntry[] = [
     id: 'invitation_platform',
     label: 'Invitation: Platform',
     category: 'Invitation',
-    render: (locale) => {
+    render: locale => {
       const payload: InvitationEmailPayload = {
         type: 'invitation',
         email: 'friend@example.com',
@@ -788,7 +788,7 @@ const TEMPLATES: TemplateEntry[] = [
     id: 'notification_generic',
     label: 'Notification: Generic',
     category: 'Notification',
-    render: (locale) => {
+    render: locale => {
       const payload: NotificationEmailPayload = {
         type: 'notification',
         email: 'user@example.com',
@@ -805,91 +805,121 @@ const TEMPLATES: TemplateEntry[] = [
     id: 'match_invitation',
     label: 'Match: Invitation',
     category: 'Match',
-    render: (locale) => generateEmailHtml(
-      mockNotification('match_invitation', 'You\'ve been invited to a game!', 'Alex Johnson invited you to play Tennis tomorrow.'),
-      locale,
-      PREVIEW_SITE_URL,
-    ),
+    render: locale =>
+      generateEmailHtml(
+        mockNotification(
+          'match_invitation',
+          "You've been invited to a game!",
+          'Alex Johnson invited you to play Tennis tomorrow.'
+        ),
+        locale,
+        PREVIEW_SITE_URL
+      ),
   },
   {
     id: 'match_join_accepted',
     label: 'Match: Join Accepted',
     category: 'Match',
-    render: (locale) => generateEmailHtml(
-      mockNotification('match_join_accepted', 'You\'re in the game!', 'Your request to join the Tennis match has been accepted.'),
-      locale,
-      PREVIEW_SITE_URL,
-    ),
+    render: locale =>
+      generateEmailHtml(
+        mockNotification(
+          'match_join_accepted',
+          "You're in the game!",
+          'Your request to join the Tennis match has been accepted.'
+        ),
+        locale,
+        PREVIEW_SITE_URL
+      ),
   },
   {
     id: 'match_cancelled',
     label: 'Match: Cancelled',
     category: 'Match',
-    render: (locale) => generateEmailHtml(
-      mockNotification('match_cancelled', 'Game cancelled', 'The Tennis match at Parc La Fontaine has been cancelled by the organizer.'),
-      locale,
-      PREVIEW_SITE_URL,
-    ),
+    render: locale =>
+      generateEmailHtml(
+        mockNotification(
+          'match_cancelled',
+          'Game cancelled',
+          'The Tennis match at Parc La Fontaine has been cancelled by the organizer.'
+        ),
+        locale,
+        PREVIEW_SITE_URL
+      ),
   },
   {
     id: 'match_updated',
     label: 'Match: Updated',
     category: 'Match',
-    render: (locale) => generateEmailHtml(
-      mockNotification('match_updated', 'Game details updated', 'The Tennis match details have been updated. Please check the new time and location.'),
-      locale,
-      PREVIEW_SITE_URL,
-    ),
+    render: locale =>
+      generateEmailHtml(
+        mockNotification(
+          'match_updated',
+          'Game details updated',
+          'The Tennis match details have been updated. Please check the new time and location.'
+        ),
+        locale,
+        PREVIEW_SITE_URL
+      ),
   },
   {
     id: 'match_starting_soon',
     label: 'Match: Starting Soon',
     category: 'Match',
-    render: (locale) => generateEmailHtml(
-      mockNotification('match_starting_soon', 'Game starts in 30 minutes!', 'Your Tennis match at Parc La Fontaine starts soon. Don\'t forget your gear!'),
-      locale,
-      PREVIEW_SITE_URL,
-    ),
-  },
-  {
-    id: 'match_completed',
-    label: 'Match: Completed',
-    category: 'Match',
-    render: (locale) => generateEmailHtml(
-      mockNotification('match_completed', 'Game completed — rate your experience', 'How was your Tennis match? Leave feedback for your opponents.'),
-      locale,
-      PREVIEW_SITE_URL,
-    ),
+    render: locale =>
+      generateEmailHtml(
+        mockNotification(
+          'match_starting_soon',
+          'Game starts in 30 minutes!',
+          "Your Tennis match at Parc La Fontaine starts soon. Don't forget your gear!"
+        ),
+        locale,
+        PREVIEW_SITE_URL
+      ),
   },
   {
     id: 'match_reminder',
     label: 'Match: Reminder',
     category: 'Match',
-    render: (locale) => generateEmailHtml(
-      mockNotification('reminder', 'Upcoming game reminder', 'You have a Tennis match tomorrow at 2:00 PM.'),
-      locale,
-      PREVIEW_SITE_URL,
-    ),
+    render: locale =>
+      generateEmailHtml(
+        mockNotification(
+          'reminder',
+          'Upcoming game reminder',
+          'You have a Tennis match tomorrow at 2:00 PM.'
+        ),
+        locale,
+        PREVIEW_SITE_URL
+      ),
   },
   {
     id: 'match_player_joined',
     label: 'Match: Player Joined',
     category: 'Match',
-    render: (locale) => generateEmailHtml(
-      mockNotification('match_player_joined', 'A new player joined your game', 'Alex Johnson has joined your Tennis match.'),
-      locale,
-      PREVIEW_SITE_URL,
-    ),
+    render: locale =>
+      generateEmailHtml(
+        mockNotification(
+          'match_player_joined',
+          'A new player joined your game',
+          'Alex Johnson has joined your Tennis match.'
+        ),
+        locale,
+        PREVIEW_SITE_URL
+      ),
   },
   {
     id: 'match_new_available',
     label: 'Match: New Available',
     category: 'Match',
-    render: (locale) => generateEmailHtml(
-      mockNotification('match_new_available', 'New Tennis game near you', 'A new Tennis game is available at Parc La Fontaine. Join now!'),
-      locale,
-      PREVIEW_SITE_URL,
-    ),
+    render: locale =>
+      generateEmailHtml(
+        mockNotification(
+          'match_new_available',
+          'New Tennis game near you',
+          'A new Tennis game is available at Parc La Fontaine. Join now!'
+        ),
+        locale,
+        PREVIEW_SITE_URL
+      ),
   },
 
   // ---- Org notifications (via renderOrgEmail) ----
@@ -897,70 +927,94 @@ const TEMPLATES: TemplateEntry[] = [
     id: 'org_booking_confirmed',
     label: 'Org: Booking Confirmed',
     category: 'Organization',
-    render: (locale) => renderOrgEmail(
-      mockNotification('booking_confirmed', 'Booking Confirmed', 'Your court booking has been confirmed.', {
-        bookingId: 'booking-123',
-        courtName: 'Court A',
-        facilityName: 'Montreal Tennis Club',
-        bookingDate: MATCH_DATE,
-        startTime: '14:00',
-        endTime: '15:00',
-        priceCents: 4500,
-        currency: 'CAD',
-        locationAddress: '1234 Rue Sherbrooke, Montreal, QC',
-      }),
-      MOCK_ORG,
-      locale,
-      PREVIEW_SITE_URL,
-    ).html,
+    render: locale =>
+      renderOrgEmail(
+        mockNotification(
+          'booking_confirmed',
+          'Booking Confirmed',
+          'Your court booking has been confirmed.',
+          {
+            bookingId: 'booking-123',
+            courtName: 'Court A',
+            facilityName: 'Montreal Tennis Club',
+            bookingDate: MATCH_DATE,
+            startTime: '14:00',
+            endTime: '15:00',
+            priceCents: 4500,
+            currency: 'CAD',
+            locationAddress: '1234 Rue Sherbrooke, Montreal, QC',
+          }
+        ),
+        MOCK_ORG,
+        locale,
+        PREVIEW_SITE_URL
+      ).html,
   },
   {
     id: 'org_booking_reminder',
     label: 'Org: Booking Reminder',
     category: 'Organization',
-    render: (locale) => renderOrgEmail(
-      mockNotification('booking_reminder', 'Booking Reminder', 'Your court booking is tomorrow.', {
-        bookingId: 'booking-123',
-        courtName: 'Court A',
-        facilityName: 'Montreal Tennis Club',
-        bookingDate: MATCH_DATE,
-        startTime: '14:00',
-        endTime: '15:00',
-        locationAddress: '1234 Rue Sherbrooke, Montreal, QC',
-      }),
-      MOCK_ORG,
-      locale,
-      PREVIEW_SITE_URL,
-    ).html,
+    render: locale =>
+      renderOrgEmail(
+        mockNotification(
+          'booking_reminder',
+          'Booking Reminder',
+          'Your court booking is tomorrow.',
+          {
+            bookingId: 'booking-123',
+            courtName: 'Court A',
+            facilityName: 'Montreal Tennis Club',
+            bookingDate: MATCH_DATE,
+            startTime: '14:00',
+            endTime: '15:00',
+            locationAddress: '1234 Rue Sherbrooke, Montreal, QC',
+          }
+        ),
+        MOCK_ORG,
+        locale,
+        PREVIEW_SITE_URL
+      ).html,
   },
   {
     id: 'org_payment_received',
     label: 'Org: Payment Received',
     category: 'Organization',
-    render: (locale) => renderOrgEmail(
-      mockNotification('payment_received', 'Payment Received', 'A payment has been processed for a court booking.', {
-        amountCents: 4500,
-        currency: 'CAD',
-        playerName: 'Alex Johnson',
-        paymentDate: new Date().toLocaleDateString(locale),
-      }),
-      MOCK_ORG,
-      locale,
-      PREVIEW_SITE_URL,
-    ).html,
+    render: locale =>
+      renderOrgEmail(
+        mockNotification(
+          'payment_received',
+          'Payment Received',
+          'A payment has been processed for a court booking.',
+          {
+            amountCents: 4500,
+            currency: 'CAD',
+            playerName: 'Alex Johnson',
+            paymentDate: new Date().toLocaleDateString(locale),
+          }
+        ),
+        MOCK_ORG,
+        locale,
+        PREVIEW_SITE_URL
+      ).html,
   },
   {
     id: 'org_new_member',
     label: 'Org: New Member',
     category: 'Organization',
-    render: (locale) => renderOrgEmail(
-      mockNotification('new_member_joined', 'New Member Joined', 'A new member has joined your organization.', {
-        playerName: 'Alex Johnson',
-      }),
-      MOCK_ORG,
-      locale,
-      PREVIEW_SITE_URL,
-    ).html,
+    render: locale =>
+      renderOrgEmail(
+        mockNotification(
+          'new_member_joined',
+          'New Member Joined',
+          'A new member has joined your organization.',
+          {
+            playerName: 'Alex Johnson',
+          }
+        ),
+        MOCK_ORG,
+        locale,
+        PREVIEW_SITE_URL
+      ).html,
   },
 ];
 
@@ -968,11 +1022,7 @@ const TEMPLATES: TemplateEntry[] = [
 // Gallery HTML
 // ---------------------------------------------------------------------------
 
-function renderSidebarControls(
-  templateId: string | null,
-  locale: string,
-  mode: string,
-): string {
+function renderSidebarControls(templateId: string | null, locale: string, mode: string): string {
   const otherMode = mode === 'dark' ? 'light' : 'dark';
   const modeIcon = mode === 'dark' ? '&#9788;' : '&#9790;';
   const modeLabel = mode === 'dark' ? 'Light' : 'Dark';
@@ -994,22 +1044,20 @@ function renderSidebarControls(
     </div>`;
 }
 
-function renderSidebarNav(
-  templateId: string | null,
-  locale: string,
-  mode: string,
-): string {
-  const categories = [...new Set(TEMPLATES.map((t) => t.category))];
-  return categories.map((cat) => {
-    const items = TEMPLATES.filter((t) => t.category === cat);
-    const links = items
-      .map(
-        (t) =>
-          `<a href="?template=${t.id}&locale=${locale}&mode=${mode}" style="display:block;padding:6px 12px;color:${templateId && t.id === templateId ? '#fff' : '#0d9488'};background:${templateId && t.id === templateId ? '#0d9488' : 'transparent'};text-decoration:none;border-radius:4px;font-size:14px;" onmouseover="if(!this.dataset.active)this.style.backgroundColor='#f0fdfa'" onmouseout="if(!this.dataset.active)this.style.backgroundColor='transparent'" ${templateId && t.id === templateId ? 'data-active="1"' : ''}>${t.label}</a>`,
-      )
-      .join('');
-    return `<div style="margin-bottom:16px;"><div style="font-size:12px;font-weight:600;color:#737373;text-transform:uppercase;letter-spacing:0.05em;padding:4px 12px;">${cat}</div>${links}</div>`;
-  }).join('');
+function renderSidebarNav(templateId: string | null, locale: string, mode: string): string {
+  const categories = [...new Set(TEMPLATES.map(t => t.category))];
+  return categories
+    .map(cat => {
+      const items = TEMPLATES.filter(t => t.category === cat);
+      const links = items
+        .map(
+          t =>
+            `<a href="?template=${t.id}&locale=${locale}&mode=${mode}" style="display:block;padding:6px 12px;color:${templateId && t.id === templateId ? '#fff' : '#0d9488'};background:${templateId && t.id === templateId ? '#0d9488' : 'transparent'};text-decoration:none;border-radius:4px;font-size:14px;" onmouseover="if(!this.dataset.active)this.style.backgroundColor='#f0fdfa'" onmouseout="if(!this.dataset.active)this.style.backgroundColor='transparent'" ${templateId && t.id === templateId ? 'data-active="1"' : ''}>${t.label}</a>`
+        )
+        .join('');
+      return `<div style="margin-bottom:16px;"><div style="font-size:12px;font-weight:600;color:#737373;text-transform:uppercase;letter-spacing:0.05em;padding:4px 12px;">${cat}</div>${links}</div>`;
+    })
+    .join('');
 }
 
 function renderGallery(locale: string, mode: string): string {
@@ -1055,10 +1103,7 @@ function renderGallery(locale: string, mode: string): string {
 function forceColorScheme(html: string, mode: string): string {
   const replacement = mode === 'dark' ? '@media all' : '@media not all';
 
-  html = html.replace(
-    /@media\s*\(\s*prefers-color-scheme\s*:\s*dark\s*\)/g,
-    replacement,
-  );
+  html = html.replace(/@media\s*\(\s*prefers-color-scheme\s*:\s*dark\s*\)/g, replacement);
 
   if (mode === 'dark') {
     // Activate [data-ogsc] Outlook dark mode rules
@@ -1075,7 +1120,7 @@ function forceColorScheme(html: string, mode: string): string {
  * Serve the raw rendered email HTML (used as iframe src).
  */
 function renderRawTemplate(templateId: string, locale: string, mode: string): string | null {
-  const entry = TEMPLATES.find((t) => t.id === templateId);
+  const entry = TEMPLATES.find(t => t.id === templateId);
   if (!entry) return null;
 
   let emailHtml: string;
@@ -1093,7 +1138,7 @@ function renderRawTemplate(templateId: string, locale: string, mode: string): st
 }
 
 function renderTemplateFrame(templateId: string, locale: string, mode: string): string {
-  const entry = TEMPLATES.find((t) => t.id === templateId);
+  const entry = TEMPLATES.find(t => t.id === templateId);
 
   if (!entry) {
     return `<!DOCTYPE html><html><body><p style="padding:40px;font-family:sans-serif;">Template <code>${templateId}</code> not found.</p></body></html>`;

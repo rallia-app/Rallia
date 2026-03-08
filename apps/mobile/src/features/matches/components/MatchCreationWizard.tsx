@@ -1090,13 +1090,11 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                   lightHaptic();
                   onClose();
                 }}
-                style={[
-                  styles.successCloseButton,
-                  { backgroundColor: isDark ? neutral[800] : neutral[100] },
-                ]}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={styles.successCloseButton}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                activeOpacity={0.7}
               >
-                <Ionicons name="close-outline" size={20} color={colors.textMuted} />
+                <Ionicons name="close-outline" size={24} color={colors.textMuted} />
               </TouchableOpacity>
 
               <View style={[styles.successIcon, { backgroundColor: colors.buttonActive }]}>
@@ -1540,11 +1538,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: spacingPixels[4],
     right: spacingPixels[4],
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: spacingPixels[1],
   },
   successIcon: {
     width: 80,

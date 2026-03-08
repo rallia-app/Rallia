@@ -14,6 +14,7 @@ import {
   notifyMatchUpdated,
   notifyPlayerKicked,
   notifyMatchInvitation,
+  notifyMatchSpotOpened,
 } from '../notifications/notificationFactory';
 import {
   createReputationEvent,
@@ -1694,6 +1695,21 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
         console.error('Failed to send player left notifications:', err);
       });
     }
+
+    // Notify waitlisted players that a spot opened up
+    const waitlistedPlayers =
+      match.participants?.filter(
+        (p: { player_id: string; status: string }) => p.status === 'waitlisted'
+      ) ?? [];
+
+    if (waitlistedPlayers.length > 0) {
+      const waitlistedUserIds = waitlistedPlayers.map((p: { player_id: string }) => p.player_id);
+      const startTime = match.start_time ? match.start_time.slice(0, 5) : undefined;
+
+      notifyMatchSpotOpened(waitlistedUserIds, matchId, sportName, { startTime }).catch(err => {
+        console.error('Failed to send spot opened notifications:', err);
+      });
+    }
   }
 
   // Remove the player from the match chat (fire and forget)
@@ -2131,6 +2147,21 @@ export async function kickParticipant(
     ).catch(err => {
       console.error('Failed to send kicked notification:', err);
     });
+
+    // Notify waitlisted players that a spot opened up
+    const waitlistedPlayers =
+      match.participants?.filter(
+        (p: { id: string; player_id: string; status: string }) =>
+          p.status === 'waitlisted' && p.id !== participantId
+      ) ?? [];
+
+    if (waitlistedPlayers.length > 0) {
+      const waitlistedUserIds = waitlistedPlayers.map((p: { player_id: string }) => p.player_id);
+
+      notifyMatchSpotOpened(waitlistedUserIds, matchId, sportName, { startTime }).catch(err => {
+        console.error('Failed to send spot opened notifications:', err);
+      });
+    }
 
     // Remove the kicked player from the match chat (fire and forget)
     removePlayerFromMatchChat(matchId, participantRecord.player_id).catch(err => {
