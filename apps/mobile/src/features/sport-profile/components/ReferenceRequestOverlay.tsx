@@ -49,6 +49,7 @@ interface RatingResponse {
   player_id: string;
   source: string;
   is_certified: boolean;
+  badge_status: string | null;
   rating_score: {
     id: string;
     label: string;
@@ -60,12 +61,6 @@ interface RatingResponse {
     }[];
   }[];
 }
-
-// Minimum level thresholds for requesting references
-const MIN_LEVEL_THRESHOLDS: Record<string, number> = {
-  NTRP: 3.0,
-  DUPR: 3.5,
-};
 
 export function ReferenceRequestActionSheet({ payload }: SheetProps<'reference-request'>) {
   const currentUserId = payload?.currentUserId || '';
@@ -85,7 +80,7 @@ export function ReferenceRequestActionSheet({ payload }: SheetProps<'reference-r
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    fetchCertifiedPlayers();
+    fetchEligiblePlayers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUserId, sportId]);
 
@@ -105,27 +100,14 @@ export function ReferenceRequestActionSheet({ payload }: SheetProps<'reference-r
     }
   }, [searchQuery, players]);
 
-  // Get minimum level threshold for current rating system
-  const getMinLevelThreshold = (): number => {
-    if (ratingSystemCode && MIN_LEVEL_THRESHOLDS[ratingSystemCode]) {
-      return MIN_LEVEL_THRESHOLDS[ratingSystemCode];
-    }
-    // Default to NTRP threshold if unknown
-    return 3.0;
-  };
-
-  // Check if current user meets minimum level for requesting references
-  const canRequestReferences = (): boolean => {
-    if (!currentUserRatingScore) return false;
-    return currentUserRatingScore >= getMinLevelThreshold();
-  };
-
-  const fetchCertifiedPlayers = async () => {
+  const fetchEligiblePlayers = async () => {
     try {
       setLoading(true);
 
-      // Step 1: Find all players with CERTIFIED ratings for this sport at same/higher level
-      const { data: certifiedRatings, error: ratingsError } = await supabase
+      // Step 1: Find ALL players with ratings for this sport at same/higher level
+      // (both certified and uncertified - user can request from anyone,
+      // but only certified references count toward certification requirement)
+      const { data: allRatings, error: ratingsError } = await supabase
         .from('player_rating_score')
         .select(
           `
@@ -146,34 +128,31 @@ export function ReferenceRequestActionSheet({ payload }: SheetProps<'reference-r
           )
         `
         )
-        .or('is_certified.eq.true,badge_status.eq.certified')
         .neq('player_id', currentUserId); // Exclude current user
 
       if (ratingsError) throw ratingsError;
 
       // Filter by sport and level (same or higher than current user)
-      const sportCertifiedRatings = ((certifiedRatings || []) as RatingResponse[]).filter(
-        rating => {
-          const ratingScore = Array.isArray(rating.rating_score)
-            ? rating.rating_score[0]
-            : rating.rating_score;
-          const ratingSystem = Array.isArray(ratingScore?.rating_system)
-            ? ratingScore?.rating_system[0]
-            : ratingScore?.rating_system;
+      const sportEligibleRatings = ((allRatings || []) as RatingResponse[]).filter(rating => {
+        const ratingScore = Array.isArray(rating.rating_score)
+          ? rating.rating_score[0]
+          : rating.rating_score;
+        const ratingSystem = Array.isArray(ratingScore?.rating_system)
+          ? ratingScore?.rating_system[0]
+          : ratingScore?.rating_system;
 
-          // Must be same sport
-          if (ratingSystem?.sport_id !== sportId) return false;
+        // Must be same sport
+        if (ratingSystem?.sport_id !== sportId) return false;
 
-          // If current user has a rating, only show players at same or higher level
-          if (currentUserRatingScore && ratingScore?.value) {
-            return ratingScore.value >= currentUserRatingScore;
-          }
-
-          return true;
+        // If current user has a rating, only show players at same or higher level
+        if (currentUserRatingScore && ratingScore?.value) {
+          return ratingScore.value >= currentUserRatingScore;
         }
-      );
 
-      const uniquePlayerIds = [...new Set(sportCertifiedRatings.map(r => r.player_id))];
+        return true;
+      });
+
+      const uniquePlayerIds = [...new Set(sportEligibleRatings.map(r => r.player_id))];
 
       if (uniquePlayerIds.length === 0) {
         setPlayers([]);
@@ -190,7 +169,8 @@ export function ReferenceRequestActionSheet({ payload }: SheetProps<'reference-r
 
       if (profilesError) throw profilesError;
 
-      // Step 3: Map ratings by player_id (get certified rating)
+      // Step 3: Map ratings by player_id
+      // Note: Only references from certified players count toward certification requirement
       const ratingsMap = new Map<
         string,
         {
@@ -201,13 +181,16 @@ export function ReferenceRequestActionSheet({ payload }: SheetProps<'reference-r
         }
       >();
 
-      sportCertifiedRatings.forEach(rating => {
+      sportEligibleRatings.forEach(rating => {
         const ratingScore = Array.isArray(rating.rating_score)
           ? rating.rating_score[0]
           : rating.rating_score;
-        const isCertified = rating.is_certified;
+        // Check both is_certified flag and badge_status for certification
+        const isCertified = rating.is_certified || rating.badge_status === 'certified';
 
-        if (!ratingsMap.has(rating.player_id)) {
+        // If player already in map, prefer the certified rating entry
+        const existing = ratingsMap.get(rating.player_id);
+        if (!existing || (!existing.isCertified && isCertified)) {
           ratingsMap.set(rating.player_id, {
             display_label: ratingScore?.label || '',
             ratingScore: ratingScore?.value || null,
@@ -241,13 +224,20 @@ export function ReferenceRequestActionSheet({ payload }: SheetProps<'reference-r
         }
       );
 
-      // Sort by rating score (highest first)
-      playersWithRatings.sort((a, b) => (b.ratingScore || 0) - (a.ratingScore || 0));
+      // Sort: certified players first, then by rating score (highest first)
+      playersWithRatings.sort((a, b) => {
+        // Certified players come first
+        if (a.isCertified !== b.isCertified) {
+          return a.isCertified ? -1 : 1;
+        }
+        // Then sort by rating score
+        return (b.ratingScore || 0) - (a.ratingScore || 0);
+      });
 
       setPlayers(playersWithRatings);
       setFilteredPlayers(playersWithRatings);
     } catch (error) {
-      Logger.error('Failed to fetch certified players', error as Error, { sportId });
+      Logger.error('Failed to fetch eligible players', error as Error, { sportId });
     } finally {
       setLoading(false);
     }
@@ -267,7 +257,7 @@ export function ReferenceRequestActionSheet({ payload }: SheetProps<'reference-r
   };
 
   const handleSendRequests = async () => {
-    if (selectedPlayers.size === 0 || sending || !userCanRequest) return;
+    if (selectedPlayers.size === 0 || sending) return;
 
     mediumHaptic();
     setSending(true);
@@ -350,10 +340,6 @@ export function ReferenceRequestActionSheet({ payload }: SheetProps<'reference-r
     );
   };
 
-  // Check if user can request references (meets minimum level)
-  const userCanRequest = canRequestReferences();
-  const minLevel = getMinLevelThreshold();
-
   return (
     <ActionSheet
       gestureEnabled
@@ -389,18 +375,6 @@ export function ReferenceRequestActionSheet({ payload }: SheetProps<'reference-r
           <Text style={[styles.subtitle, { color: colors.textMuted }]}>
             {t('profile.certification.referenceRequest.description')}
           </Text>
-
-          {/* Minimum Level Warning (if user doesn't meet threshold) */}
-          {!userCanRequest && (
-            <View style={[styles.warningBox, { backgroundColor: '#FFF8E1' }]}>
-              <Ionicons name="information-circle" size={20} color={colors.warning} />
-              <Text style={[styles.warningText, { color: '#F57C00' }]}>
-                {t('profile.certification.referenceRequest.minimumLevelRequired', {
-                  level: minLevel,
-                })}
-              </Text>
-            </View>
-          )}
 
           {/* Search Bar */}
           <SearchBar
@@ -444,10 +418,10 @@ export function ReferenceRequestActionSheet({ payload }: SheetProps<'reference-r
             style={[
               styles.submitButton,
               { backgroundColor: colors.primary },
-              (selectedPlayers.size === 0 || sending || !userCanRequest) && { opacity: 0.6 },
+              (selectedPlayers.size === 0 || sending) && { opacity: 0.6 },
             ]}
             onPress={handleSendRequests}
-            disabled={selectedPlayers.size === 0 || sending || !userCanRequest}
+            disabled={selectedPlayers.size === 0 || sending}
             activeOpacity={0.8}
           >
             {sending ? (

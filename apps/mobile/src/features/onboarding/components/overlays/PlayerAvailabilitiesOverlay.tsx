@@ -1,9 +1,16 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+  Switch,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Text, useToast } from '@rallia/shared-components';
-import { OnboardingService, Logger } from '@rallia/shared-services';
+import { OnboardingService, Logger, supabase } from '@rallia/shared-services';
 import type { DayEnum, PeriodEnum, OnboardingAvailability } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
@@ -30,6 +37,7 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
   const currentStep = payload?.currentStep || 1;
   const totalSteps = payload?.totalSteps || 8;
   const initialData = payload?.initialData;
+  const initialPrivacyShowAvailability = payload?.initialPrivacyShowAvailability ?? true;
   const _selectedSportIds = payload?.selectedSportIds;
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
@@ -64,6 +72,9 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
     initialData || defaultAvailabilities
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [privacyShowAvailability, setPrivacyShowAvailability] = useState(
+    initialPrivacyShowAvailability
+  );
 
   const toggleAvailability = (day: DayOfWeek, slot: TimeSlot) => {
     selectionHaptic();
@@ -84,7 +95,7 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
 
     // Edit mode: use the onSave callback
     if (mode === 'edit' && onSave) {
-      onSave(availabilities);
+      onSave(availabilities, privacyShowAvailability);
       SheetManager.hide('player-availabilities');
       return;
     }
@@ -137,6 +148,24 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
         }
 
         Logger.debug('player_availabilities_saved', { availabilityData });
+
+        // Save the privacy setting to the player table
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+          const { error: privacyError } = await supabase
+            .from('player')
+            .update({ privacy_show_availability: privacyShowAvailability })
+            .eq('id', user.id);
+
+          if (privacyError) {
+            Logger.warn('Failed to save availability privacy setting', { error: privacyError });
+            // Don't block the flow if this fails - just log it
+          } else {
+            Logger.debug('availability_privacy_saved', { privacyShowAvailability });
+          }
+        }
 
         // Mark onboarding as completed
         const { error: completeError } = await OnboardingService.completeOnboarding();
@@ -244,6 +273,41 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
                 ))}
               </View>
             ))}
+          </View>
+
+          {/* Privacy Toggle - Shows in both onboarding and edit modes */}
+          <View style={[styles.privacySection, { borderTopColor: colors.border }]}>
+            <View style={styles.privacyHeader}>
+              <Ionicons
+                name={privacyShowAvailability ? 'globe-outline' : 'lock-closed-outline'}
+                size={20}
+                color={colors.text}
+              />
+              <Text weight="semibold" style={[styles.privacyTitle, { color: colors.text }]}>
+                {t('profile.availabilities.privacyTitle')}
+              </Text>
+            </View>
+            <Text style={[styles.privacyDescription, { color: colors.textMuted }]}>
+              {privacyShowAvailability
+                ? t('profile.availabilities.publicDescription')
+                : t('profile.availabilities.privateDescription')}
+            </Text>
+            <View style={styles.privacyToggleRow}>
+              <Text style={{ color: colors.text }}>
+                {privacyShowAvailability
+                  ? t('profile.availabilities.public')
+                  : t('profile.availabilities.private')}
+              </Text>
+              <Switch
+                value={privacyShowAvailability}
+                onValueChange={value => {
+                  selectionHaptic();
+                  setPrivacyShowAvailability(value);
+                }}
+                trackColor={{ false: colors.inputBackground, true: colors.primary }}
+                thumbColor={colors.card}
+              />
+            </View>
           </View>
         </ScrollView>
 
@@ -381,5 +445,28 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     gap: spacingPixels[2],
+  },
+  privacySection: {
+    marginTop: spacingPixels[2],
+    paddingTop: spacingPixels[4],
+    borderTopWidth: 1,
+  },
+  privacyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    marginBottom: spacingPixels[2],
+  },
+  privacyTitle: {
+    fontSize: 16,
+  },
+  privacyDescription: {
+    fontSize: 13,
+    marginBottom: spacingPixels[3],
+  },
+  privacyToggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
 });

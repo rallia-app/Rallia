@@ -13,7 +13,7 @@ import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import { isPlayerOnline } from '@rallia/shared-services';
-import { useTranslation } from '../../../hooks';
+import { useTranslation, type TranslationKey } from '../../../hooks';
 
 interface ThemeColors {
   background: string;
@@ -42,14 +42,33 @@ function formatDistance(meters: number | null, nearbyLabel: string): string {
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
+/**
+ * Get level description based on rating value
+ * Maps NTRP/DUPR rating values to skill level descriptions
+ */
+function getLevelDescription(value: number | null | undefined, t: (key: string) => string): string {
+  if (value === null || value === undefined) return t('playerProfile.rating.unrated');
+  if (value <= 2.0) return t('playerProfile.rating.beginner');
+  if (value <= 3.0) return t('playerProfile.rating.intermediate');
+  if (value <= 4.0) return t('playerProfile.rating.intermediateAdvanced');
+  if (value <= 5.0) return t('playerProfile.rating.advanced');
+  return t('playerProfile.rating.professional');
+}
+
 const PlayerCard: React.FC<PlayerCardProps> = ({ player, colors, onPress }) => {
   const { t } = useTranslation();
-  const displayName =
-    player.display_name || `${player.first_name} ${player.last_name || ''}`.trim();
+  // Always use first + last name
+  const displayName = `${player.first_name || ''} ${player.last_name || ''}`.trim() || 'Unknown';
   const distanceText = formatDistance(player.distance_meters, t('playerDirectory.nearby'));
   const [isOnline, setIsOnline] = useState(false);
   // Animation value - using useMemo for stable instance
   const scaleAnim = useMemo(() => new Animated.Value(1), []);
+
+  // Get level description for the rating
+  const levelDescription =
+    player.rating?.value != null
+      ? getLevelDescription(player.rating.value, t as (key: string) => string)
+      : null;
 
   // Check online status
   useEffect(() => {
@@ -136,7 +155,16 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, colors, onPress }) => {
                 style={styles.ratingText}
               >
                 {player.rating.label}
+                {levelDescription && ` (${levelDescription})`}
               </Text>
+              {player.rating.is_certified && (
+                <Ionicons
+                  name="checkmark-circle"
+                  size={14}
+                  color="#22C55E"
+                  style={styles.certifiedIcon}
+                />
+              )}
             </View>
           )}
         </View>
@@ -202,6 +230,10 @@ const styles = StyleSheet.create({
     marginTop: spacingPixels[1],
   },
   ratingText: {
+    marginLeft: spacingPixels[1],
+    flex: 1,
+  },
+  certifiedIcon: {
     marginLeft: spacingPixels[1],
   },
 });

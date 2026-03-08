@@ -5,26 +5,19 @@
  * Features infinite scrolling, search, filters, and empty states.
  */
 
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  TextInput,
-  RefreshControl,
-  TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { View, StyleSheet, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, SkeletonPlayerCard, Skeleton } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
+import { Text, SkeletonPlayerCard } from '@rallia/shared-components';
+import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { usePlayerSearch, usePlayer } from '@rallia/shared-hooks';
 import { useTranslation } from '../../../hooks';
 import { useEffectiveLocation } from '../../../hooks/useEffectiveLocation';
 import { useUserHomeLocation } from '../../../context';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import { supabase, Logger } from '@rallia/shared-services';
+import { SearchBar } from '../../../components/SearchBar';
 import PlayerCard from './PlayerCard';
 import { PlayerFiltersBar, type PlayerFilters, DEFAULT_PLAYER_FILTERS } from './PlayerFiltersBar';
 
@@ -57,33 +50,6 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<PlayerFilters>(DEFAULT_PLAYER_FILTERS);
-  const [isTyping, setIsTyping] = useState(false);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Handle search with debounce indicator
-  const handleSearchChange = useCallback((text: string) => {
-    setSearchQuery(text);
-    setIsTyping(true);
-
-    // Clear existing timeout
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    // Set new timeout - matches the 300ms debounce in usePlayerSearch
-    typingTimeoutRef.current = setTimeout(() => {
-      setIsTyping(false);
-    }, 350);
-  }, []);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-    };
-  }, []);
 
   // Get user's max travel distance preference
   const { maxTravelDistanceKm, player } = usePlayer();
@@ -411,75 +377,6 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     );
   };
 
-  const renderHeader = () => (
-    <View>
-      {/* Search Bar - same look as WhereStep */}
-      <View style={styles.searchContainer}>
-        <View
-          style={[
-            styles.searchInputContainer,
-            {
-              borderColor: colors.border,
-              backgroundColor: colors.inputBackground ?? colors.cardBackground,
-            },
-          ]}
-        >
-          <Ionicons name="search-outline" size={20} color={colors.textMuted} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder={t('playerDirectory.searchPlaceholder')}
-            placeholderTextColor={colors.textMuted}
-            value={searchQuery}
-            onChangeText={handleSearchChange}
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="search"
-          />
-          {(isTyping || (isFetching && searchQuery.length > 0)) && (
-            <ActivityIndicator size="small" color={colors.primary} style={styles.searchLoader} />
-          )}
-          {searchQuery.length > 0 && !isTyping && !isFetching && (
-            <TouchableOpacity
-              onPress={() => {
-                setSearchQuery('');
-                setIsTyping(false);
-              }}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons name="close-circle" size={18} color={colors.textMuted} />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      {/* Filters Bar */}
-      <PlayerFiltersBar
-        filters={filters}
-        sportName={sportName}
-        maxTravelDistance={maxTravelDistanceKm ?? 50}
-        onFiltersChange={handleFiltersChange}
-        onReset={handleResetFilters}
-        isAuthenticated={!!currentUserId}
-        showLocationSelector={hasBothLocationOptions}
-        locationMode={locationMode}
-        onLocationModeChange={setLocationMode}
-        hasHomeLocation={hasHomeLocation}
-        homeLocationLabel={homeLocationLabel}
-      />
-
-      {/* Results count */}
-      {!isLoading && totalCount !== undefined && (
-        <View style={styles.resultsInfo}>
-          <Text size="sm" color={colors.textMuted}>
-            {totalCount === 1
-              ? t('playerDirectory.results.countSingular')
-              : t('playerDirectory.results.count').replace('{count}', String(totalCount))}
-          </Text>
-        </View>
-      )}
-    </View>
-  );
-
   if (!sportId) {
     return (
       <View style={styles.emptyContainer}>
@@ -494,135 +391,135 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     );
   }
 
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        {/* Skeleton search bar */}
-        <View style={[styles.searchContainer, { marginBottom: spacingPixels[4] }]}>
-          <Skeleton
-            width="100%"
-            height={44}
-            borderRadius={radiusPixels.lg}
-            backgroundColor={colors.inputBackground}
-            highlightColor={colors.border}
-          />
-        </View>
-        {/* Skeleton filter chips */}
-        <View style={[styles.skeletonFilters, { marginBottom: spacingPixels[4] }]}>
-          {[1, 2, 3, 4].map(i => (
-            <Skeleton
-              key={i}
-              width={80}
-              height={32}
-              borderRadius={16}
-              backgroundColor={colors.inputBackground}
-              highlightColor={colors.border}
-              style={{ marginRight: spacingPixels[2] }}
-            />
-          ))}
-        </View>
-        {/* Skeleton player cards */}
-        {[1, 2, 3, 4, 5].map(i => (
-          <SkeletonPlayerCard
-            key={i}
-            backgroundColor={colors.inputBackground}
-            highlightColor={colors.border}
-            style={{ marginBottom: spacingPixels[3], paddingHorizontal: spacingPixels[4] }}
-          />
-        ))}
-      </View>
-    );
-  }
-
-  // Error state with retry button
-  if (error && !players.length) {
-    return (
-      <View style={styles.emptyContainer}>
-        <Ionicons name="cloud-offline-outline" size={64} color={colors.textMuted} />
-        <Text size="lg" weight="semibold" color={colors.text} style={styles.emptyTitle}>
-          {t('playerDirectory.failedToLoad')}
-        </Text>
-        <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-          {error?.message || t('playerDirectory.checkConnection')}
-        </Text>
-        <TouchableOpacity
-          style={[styles.retryButton, { backgroundColor: colors.primary }]}
-          onPress={() => refetch()}
-        >
-          <Text size="sm" weight="semibold" color="#FFFFFF">
-            {t('common.retry')}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  return (
-    <FlatList
-      data={sortedPlayers}
-      renderItem={renderPlayer}
-      keyExtractor={item => item.id}
-      ListHeaderComponent={renderHeader}
-      ListEmptyComponent={renderEmpty}
-      ListFooterComponent={renderFooter}
-      contentContainerStyle={[
-        styles.listContent,
-        sortedPlayers.length === 0 && styles.emptyListContent,
-      ]}
-      onEndReached={handleEndReached}
-      onEndReachedThreshold={0.5}
-      refreshControl={
-        <RefreshControl
-          refreshing={isFetching && !isFetchingNextPage}
-          onRefresh={refetch}
-          colors={[colors.primary]}
-          tintColor={colors.primary}
+  // Render loading skeleton for list content only
+  const renderListSkeleton = () => (
+    <View style={styles.loadingContainer}>
+      {[1, 2, 3, 4, 5].map(i => (
+        <SkeletonPlayerCard
+          key={i}
+          backgroundColor={colors.inputBackground}
+          highlightColor={colors.border}
+          style={{ marginBottom: spacingPixels[3], paddingHorizontal: spacingPixels[4] }}
         />
-      }
-      showsVerticalScrollIndicator={false}
-      // Performance optimizations
-      removeClippedSubviews={true}
-      maxToRenderPerBatch={10}
-      windowSize={10}
-      initialNumToRender={10}
-      getItemLayout={undefined}
-    />
+      ))}
+    </View>
+  );
+
+  // Render error state for list content only
+  const renderErrorContent = () => (
+    <View style={styles.emptyContainer}>
+      <Ionicons name="cloud-offline-outline" size={64} color={colors.textMuted} />
+      <Text size="lg" weight="semibold" color={colors.text} style={styles.emptyTitle}>
+        {t('playerDirectory.failedToLoad')}
+      </Text>
+      <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
+        {error?.message || t('playerDirectory.checkConnection')}
+      </Text>
+      <TouchableOpacity
+        style={[styles.retryButton, { backgroundColor: colors.primary }]}
+        onPress={() => refetch()}
+      >
+        <Text size="sm" weight="semibold" color="#FFFFFF">
+          {t('common.retry')}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  // Determine what to render in the list area
+  const renderListContent = () => {
+    // Initial loading - show skeleton
+    if (isLoading) {
+      return renderListSkeleton();
+    }
+
+    // Error with no data - show error
+    if (error && !players.length) {
+      return renderErrorContent();
+    }
+
+    // Normal state - show FlatList
+    return (
+      <FlatList
+        data={sortedPlayers}
+        renderItem={renderPlayer}
+        keyExtractor={item => item.id}
+        ListEmptyComponent={renderEmpty}
+        ListFooterComponent={renderFooter}
+        contentContainerStyle={[
+          styles.listContent,
+          sortedPlayers.length === 0 && styles.emptyListContent,
+        ]}
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.5}
+        refreshControl={
+          <RefreshControl
+            refreshing={isFetching && !isFetchingNextPage}
+            onRefresh={refetch}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        initialNumToRender={10}
+        getItemLayout={undefined}
+      />
+    );
+  };
+
+  // Main render - SearchBar and Filters ALWAYS stay mounted
+  return (
+    <View style={styles.container}>
+      {/* Search Bar - ALWAYS rendered to prevent keyboard dismiss */}
+      <SearchBar
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder={t('playerDirectory.searchPlaceholder')}
+        colors={{
+          text: colors.text,
+          textMuted: colors.textMuted,
+          border: colors.border,
+          buttonInactive: colors.inputBackground ?? colors.cardBackground,
+        }}
+        style={styles.searchContainer}
+      />
+
+      {/* Filters Bar - ALWAYS rendered */}
+      <PlayerFiltersBar
+        filters={filters}
+        sportName={sportName}
+        maxTravelDistance={maxTravelDistanceKm ?? 50}
+        onFiltersChange={handleFiltersChange}
+        onReset={handleResetFilters}
+        isAuthenticated={!!currentUserId}
+        showLocationSelector={hasBothLocationOptions}
+        locationMode={locationMode}
+        onLocationModeChange={setLocationMode}
+        hasHomeLocation={hasHomeLocation}
+        homeLocationLabel={homeLocationLabel}
+      />
+
+      {/* List content - changes based on loading/error/data state */}
+      {renderListContent()}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   loadingContainer: {
     flex: 1,
     paddingTop: spacingPixels[3],
-  },
-  skeletonFilters: {
-    flexDirection: 'row',
-    paddingHorizontal: spacingPixels[4],
   },
   searchContainer: {
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[3],
     paddingBottom: spacingPixels[3],
-  },
-  searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-    gap: spacingPixels[2],
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    paddingVertical: spacingPixels[1],
-  },
-  searchLoader: {
-    marginLeft: spacingPixels[2],
-  },
-  resultsInfo: {
-    paddingHorizontal: spacingPixels[4],
-    paddingBottom: spacingPixels[2],
   },
   listContent: {
     paddingBottom: spacingPixels[5],

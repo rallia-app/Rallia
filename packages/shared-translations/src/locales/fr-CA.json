@@ -1037,7 +1037,86 @@
       "locationRequired": "L'accès à la localisation est nécessaire pour trouver les terrains à proximité",
       "maxFavoritesReached": "Vous avez sélectionné 3 terrains. Retirez-en un pour en ajouter un autre.",
       "tapToRemove": "Appuyez sur le X pour retirer un terrain"
+    },
+    "availabilities": {
+      "privacyTitle": "Visibilité",
+      "public": "Publique",
+      "private": "Privée",
+      "publicDescription": "Les autres joueurs peuvent voir quand vous êtes disponible pour jouer.",
+      "privateDescription": "Vos disponibilités sont cachées des autres joueurs."
     }
+  },
+  "playerProfile": {
+    "title": "Profil du joueur",
+    "joined": "Inscrit",
+    "inviteToMatch": "Inviter à une partie",
+    "requestReference": "Demander une référence",
+    "chat": "Discussion",
+    "sections": {
+      "playerInformation": "Informations du joueur",
+      "preferences": "Préférences",
+      "preferredCourts": "Terrains préférés",
+      "rating": "Classement",
+      "reputation": "Réputation",
+      "statistics": "Statistiques",
+      "availabilities": "Disponibilités"
+    },
+    "fields": {
+      "gender": "Genre",
+      "playingHand": "Main dominante",
+      "maxTravelDistance": "Distance maximale"
+    },
+    "stats": {
+      "hoursPlayed": "Heures jouées",
+      "gamesHosted": "Parties organisées",
+      "weekStreak": "Série de semaines"
+    },
+    "rating": {
+      "unrated": "Non classé",
+      "beginner": "Débutant",
+      "intermediate": "Intermédiaire",
+      "intermediateAdvanced": "Intermédiaire/Avancé",
+      "advanced": "Avancé",
+      "professional": "Professionnel",
+      "descriptions": {
+        "unrated": "Ce joueur n'a pas encore été classé.",
+        "beginner": "Nouveau dans le sport, apprend les coups de base et les règles.",
+        "intermediate": "Développe sa régularité et commence à jouer en compétition.",
+        "intermediateAdvanced": "Joueur intermédiaire capable d'échanger avec régularité et de contrôler la direction de ses coups.",
+        "advanced": "Joueur avancé avec une bonne variété de coups et une conscience tactique.",
+        "professional": "Joueur de niveau tournoi avec des compétences exceptionnelles."
+      }
+    },
+    "availability": {
+      "am": "MAT",
+      "pm": "APM",
+      "eve": "SOIR",
+      "days": {
+        "monday": "Lun",
+        "tuesday": "Mar",
+        "wednesday": "Mer",
+        "thursday": "Jeu",
+        "friday": "Ven",
+        "saturday": "Sam",
+        "sunday": "Dim"
+      }
+    },
+    "noPreferredCourts": "Aucun terrain préféré défini.",
+    "noBio": "Aucune biographie disponible.",
+    "newPlayer": "Nouveau joueur",
+    "referenceRequest": {
+      "success": "Demande de référence envoyée!",
+      "error": "Échec de l'envoi de la demande de référence. Veuillez réessayer.",
+      "noSportError": "Impossible de déterminer le sport pour la demande de référence.",
+      "noRatingError": "Vous devez avoir une cote dans ce sport pour demander une référence.",
+      "playerLevelTooLow": "Le niveau de ce joueur est inférieur au vôtre. Les références doivent provenir de joueurs de votre niveau ou supérieur."
+    }
+  },
+  "photoEditor": {
+    "title": "Modifier la photo",
+    "cropSquare": "Rogner carré",
+    "rotate": "Pivoter",
+    "processing": "Traitement..."
   },
   "onboarding": {
     "pageTitle": "Créer votre organisation",
@@ -1223,6 +1302,7 @@
       "failedToSaveRating": "Échec de l'enregistrement de votre classement. Veuillez réessayer.",
       "failedToSavePreferences": "Échec de l'enregistrement de vos préférences. Veuillez réessayer.",
       "failedToSaveAvailability": "Échec de l'enregistrement de vos disponibilités. Veuillez réessayer.",
+      "failedToCompleteOnboarding": "Échec de la complétion de votre profil. Veuillez réessayer.",
       "failedToLoadSports": "Échec du chargement des sports. Veuillez réessayer.",
       "failedToLoadRatings": "Échec du chargement des classements. Veuillez réessayer.",
       "failedToUpdateSportSelection": "Échec de la mise à jour de la sélection du sport. Veuillez réessayer.",
@@ -1829,6 +1909,9 @@
       "scanQR": "Scanner QR",
       "joinButton": "Rejoindre"
     },
+    "nonMember": {
+      "joinToAccessContent": "Rejoignez cette communauté pour accéder à son contenu, son chat et ses activités"
+    },
     "errors": {
       "nameRequired": "Le nom de la communauté est requis",
       "nameTooShort": "Le nom doit contenir au moins 2 caractères",
@@ -2056,7 +2139,7 @@
       "newMembers": "{count} nouveaux membres",
       "gamesCreated": "{count} parties créées",
       "gamesCreated_one": "{count} partie créée",
-      "newMessages": "{count} nouveaux messages dans\nle clavardage"
+      "newMessages": "{count} nouveaux messages dans\nle clavardage du groupe"
     },
     "home": {
       "about": "À propos",
@@ -2187,7 +2270,17 @@
       "selectMaxDistance": "Sélectionner la distance max",
       "selectAvailability": "Sélectionner la disponibilité",
       "selectPlayStyle": "Sélectionner le style de jeu",
-      "sortPlayersBy": "Trier les joueurs par"
+      "selectDay": "Sélectionner le jour",
+      "sortPlayersBy": "Trier les joueurs par",
+      "day": "Jour",
+      "dayAll": "Tous",
+      "dayMonday": "Lundi",
+      "dayTuesday": "Mardi",
+      "dayWednesday": "Mercredi",
+      "dayThursday": "Jeudi",
+      "dayFriday": "Vendredi",
+      "daySaturday": "Samedi",
+      "daySunday": "Dimanche"
     },
     "results": {
       "count": "{count} joueurs",

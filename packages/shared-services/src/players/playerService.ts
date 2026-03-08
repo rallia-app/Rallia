@@ -74,6 +74,8 @@ export interface PlayerSearchResult {
   rating: {
     label: string;
     value: number | null;
+    /** Whether the player is certified at this rating level */
+    is_certified: boolean;
   } | null;
   /** Player's latitude (from home location) */
   latitude: number | null;
@@ -316,7 +318,8 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
   }
 
   // Step 6: Apply skill level filter - we need to fetch ratings first
-  const ratingsMap: Record<string, { label: string; value: number | null }> = {};
+  const ratingsMap: Record<string, { label: string; value: number | null; is_certified: boolean }> =
+    {};
   let skillFilteredPlayerIds = playerIds;
 
   // Always fetch ratings (we need them for the result anyway)
@@ -325,6 +328,7 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     .select(
       `
       player_id,
+      is_certified,
       rating_score!player_rating_scores_rating_score_id_fkey!inner (
         label,
         value,
@@ -343,6 +347,7 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
   if (!ratingsError && ratingsData) {
     type RatingResult = {
       player_id: string;
+      is_certified: boolean;
       rating_score: {
         label: string;
         value: number | null;
@@ -358,6 +363,7 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
         ratingsMap[rating.player_id] = {
           label: ratingScore.label,
           value: ratingScore.value,
+          is_certified: rating.is_certified ?? false,
         };
       }
     });

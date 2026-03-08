@@ -730,7 +730,8 @@ const SportProfile = () => {
 
           if (insertResult.error) throw insertResult.error;
           const { data: newRecord } = insertResult;
-          if (newRecord) setPlayerSportId(newRecord.id);
+          const newPlayerSportId = newRecord?.id;
+          if (newPlayerSportId) setPlayerSportId(newPlayerSportId);
 
           setIsActive(true);
 
@@ -743,6 +744,68 @@ const SportProfile = () => {
 
           // Refresh data to load ratings and preferences
           await fetchSportProfileData();
+
+          // Prompt user to set up their rating level for this new sport
+          // This ensures the profile is complete rather than showing "Not set"
+          const showRatingOverlayForNewSport = () => {
+            const handleRatingSavedForNewSport = async (ratingScoreId: string) => {
+              // Save the rating using the existing logic
+              await handleSaveRating(ratingScoreId);
+
+              // After rating is saved, prompt for preferences
+              // Small delay to let the rating overlay close
+              setTimeout(() => {
+                if (sportName.toLowerCase() === 'tennis') {
+                  SheetManager.show('tennis-preferences', {
+                    payload: {
+                      onSave: handleSavePreferences,
+                      initialPreferences: {},
+                      playStyleOptions,
+                      playAttributesByCategory,
+                      loadingPlayOptions,
+                      playerId: user.id,
+                      sportId,
+                      latitude: location?.latitude ?? null,
+                      longitude: location?.longitude ?? null,
+                    },
+                  });
+                } else if (sportName.toLowerCase() === 'pickleball') {
+                  SheetManager.show('pickleball-preferences', {
+                    payload: {
+                      onSave: handleSavePreferences,
+                      initialPreferences: {},
+                      playStyleOptions,
+                      playAttributesByCategory,
+                      loadingPlayOptions,
+                      playerId: user.id,
+                      sportId,
+                      latitude: location?.latitude ?? null,
+                      longitude: location?.longitude ?? null,
+                    },
+                  });
+                }
+              }, 500);
+            };
+
+            if (sportName.toLowerCase() === 'tennis') {
+              SheetManager.show('tennis-rating', {
+                payload: {
+                  mode: 'edit',
+                  onSave: handleRatingSavedForNewSport,
+                },
+              });
+            } else if (sportName.toLowerCase() === 'pickleball') {
+              SheetManager.show('pickleball-rating', {
+                payload: {
+                  mode: 'edit',
+                  onSave: handleRatingSavedForNewSport,
+                },
+              });
+            }
+          };
+
+          // Small delay to let the toast appear first, then show rating overlay
+          setTimeout(showRatingOverlayForNewSport, 300);
         } else {
           // User doesn't want to play this sport: Don't create entry, just update UI
           setIsActive(false);
@@ -1235,9 +1298,6 @@ const SportProfile = () => {
                       >
                         {ratingInfo.displayLabel}
                       </Text>
-                      <Text style={[styles.ratingTypeText, { color: colors.textMuted }]}>
-                        {ratingInfo.ratingTypeName}
-                      </Text>
                     </View>
                     {ratingInfo.isVerified && (
                       <View style={styles.verifiedBadge}>
@@ -1378,21 +1438,6 @@ const SportProfile = () => {
                       });
                     }}
                     onManageProofs={handleManageProofs}
-                    canRequestReferences={
-                      ratingInfo.ratingTypeName?.toUpperCase() === 'NTRP'
-                        ? ratingInfo.scoreValue >= 3.0
-                        : ratingInfo.ratingTypeName?.toUpperCase() === 'DUPR'
-                          ? ratingInfo.scoreValue >= 3.5
-                          : true
-                    }
-                    minimumLevel={
-                      ratingInfo.ratingTypeName?.toUpperCase() === 'NTRP'
-                        ? 3.0
-                        : ratingInfo.ratingTypeName?.toUpperCase() === 'DUPR'
-                          ? 3.5
-                          : undefined
-                    }
-                    currentLevel={ratingInfo.scoreValue}
                   />
                 </>
               ) : (

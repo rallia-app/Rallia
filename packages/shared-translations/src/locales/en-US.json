@@ -1037,7 +1037,86 @@
       "locationRequired": "Location access is needed to find nearby courts",
       "maxFavoritesReached": "You've selected 3 courts. Remove one to add a different court.",
       "tapToRemove": "Tap the X to remove a court"
+    },
+    "availabilities": {
+      "privacyTitle": "Visibility",
+      "public": "Public",
+      "private": "Private",
+      "publicDescription": "Other players can see when you're available to play.",
+      "privateDescription": "Your availability is hidden from other players."
     }
+  },
+  "playerProfile": {
+    "title": "Player Profile",
+    "joined": "Joined",
+    "inviteToMatch": "Invite to Match",
+    "requestReference": "Request reference",
+    "chat": "Chat",
+    "sections": {
+      "playerInformation": "Player Information",
+      "preferences": "Preferences",
+      "preferredCourts": "Preferred Courts",
+      "rating": "Rating",
+      "reputation": "Reputation",
+      "statistics": "Statistics",
+      "availabilities": "Availabilities"
+    },
+    "fields": {
+      "gender": "Gender",
+      "playingHand": "Playing Hand",
+      "maxTravelDistance": "Max Travel Distance"
+    },
+    "stats": {
+      "hoursPlayed": "Hours Played",
+      "gamesHosted": "Games Hosted",
+      "weekStreak": "Week Streak"
+    },
+    "rating": {
+      "unrated": "Unrated",
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "intermediateAdvanced": "Intermediate/Advanced",
+      "advanced": "Advanced",
+      "professional": "Professional",
+      "descriptions": {
+        "unrated": "This player has not been rated yet.",
+        "beginner": "New to the sport, learning basic strokes and rules.",
+        "intermediate": "Developing consistency in shots and starting to play competitively.",
+        "intermediateAdvanced": "Intermediate player that can rally with decent consistency and control the direction of their shots.",
+        "advanced": "Advanced player with strong shot variety and tactical awareness.",
+        "professional": "Tournament-level player with exceptional skills."
+      }
+    },
+    "availability": {
+      "am": "AM",
+      "pm": "PM",
+      "eve": "EVE",
+      "days": {
+        "monday": "Mon",
+        "tuesday": "Tue",
+        "wednesday": "Wed",
+        "thursday": "Thu",
+        "friday": "Fri",
+        "saturday": "Sat",
+        "sunday": "Sun"
+      }
+    },
+    "noPreferredCourts": "No preferred courts set.",
+    "noBio": "No bio available.",
+    "newPlayer": "New Player",
+    "referenceRequest": {
+      "success": "Reference request sent!",
+      "error": "Failed to send reference request. Please try again.",
+      "noSportError": "Unable to determine sport for reference request.",
+      "noRatingError": "You need a rating in this sport to request a reference.",
+      "playerLevelTooLow": "This player's level is below yours. References must come from players at your level or higher."
+    }
+  },
+  "photoEditor": {
+    "title": "Edit Photo",
+    "cropSquare": "Crop Square",
+    "rotate": "Rotate",
+    "processing": "Processing..."
   },
   "onboarding": {
     "pageTitle": "Create Your Organization",
@@ -1223,6 +1302,7 @@
       "failedToSaveRating": "Failed to save your rating. Please try again.",
       "failedToSavePreferences": "Failed to save your preferences. Please try again.",
       "failedToSaveAvailability": "Failed to save your availability. Please try again.",
+      "failedToCompleteOnboarding": "Failed to complete your profile. Please try again.",
       "failedToLoadSports": "Failed to load sports. Please try again.",
       "failedToLoadRatings": "Failed to load ratings. Please try again.",
       "failedToUpdateSportSelection": "Failed to update sport selection. Please try again.",
@@ -1829,6 +1909,9 @@
       "scanQR": "Scan QR",
       "joinButton": "Join"
     },
+    "nonMember": {
+      "joinToAccessContent": "Join this community to access its content, chat, and activities"
+    },
     "errors": {
       "nameRequired": "Community name is required",
       "nameTooShort": "Name must be at least 2 characters",
@@ -2056,7 +2139,7 @@
       "newMembers": "{count} new members",
       "gamesCreated": "{count} games created",
       "gamesCreated_one": "{count} game created",
-      "newMessages": "{count} new messages in\ncommunity chat"
+      "newMessages": "{count} new messages in\ngroup chat"
     },
     "home": {
       "about": "About",
@@ -2187,7 +2270,17 @@
       "selectMaxDistance": "Select Max Distance",
       "selectAvailability": "Select Availability",
       "selectPlayStyle": "Select Play Style",
-      "sortPlayersBy": "Sort Players By"
+      "selectDay": "Select Day",
+      "sortPlayersBy": "Sort Players By",
+      "day": "Day",
+      "dayAll": "All",
+      "dayMonday": "Monday",
+      "dayTuesday": "Tuesday",
+      "dayWednesday": "Wednesday",
+      "dayThursday": "Thursday",
+      "dayFriday": "Friday",
+      "daySaturday": "Saturday",
+      "daySunday": "Sunday"
     },
     "results": {
       "count": "{count} players",

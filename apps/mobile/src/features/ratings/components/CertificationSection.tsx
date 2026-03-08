@@ -75,21 +75,6 @@ export interface CertificationSectionProps {
    * Callback when "Manage Proofs" is pressed
    */
   onManageProofs?: () => void;
-
-  /**
-   * Whether the player can request references (meets minimum level)
-   */
-  canRequestReferences?: boolean;
-
-  /**
-   * Minimum level required for references
-   */
-  minimumLevel?: number;
-
-  /**
-   * Player's current level
-   */
-  currentLevel?: number;
 }
 
 /**
@@ -107,9 +92,6 @@ export const CertificationSection: React.FC<CertificationSectionProps> = ({
   isOwnProfile = false,
   onRequestReference,
   onManageProofs,
-  canRequestReferences = true,
-  minimumLevel,
-  currentLevel,
 }) => {
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
@@ -231,18 +213,6 @@ export const CertificationSection: React.FC<CertificationSectionProps> = ({
               />
             </View>
           </View>
-
-          {/* Minimum Level Warning (if applicable) */}
-          {!canRequestReferences && minimumLevel != null && currentLevel != null && (
-            <View style={[styles.warningBox, { backgroundColor: '#FFF8E1' }]}>
-              <Ionicons name="information-circle" size={16} color={colors.warning} />
-              <Text style={[styles.warningText, { color: '#F57C00' }]}>
-                {t('profile.certification.referenceRequest.minimumLevelRequired', {
-                  level: minimumLevel,
-                })}
-              </Text>
-            </View>
-          )}
         </View>
       )}
 
@@ -273,7 +243,7 @@ export const CertificationSection: React.FC<CertificationSectionProps> = ({
       {/* Action Buttons (only for own profile) */}
       {isOwnProfile && (
         <View style={styles.actionsSection}>
-          {canRequestReferences && onRequestReference && (
+          {onRequestReference && (
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: colors.primary }]}
               onPress={onRequestReference}

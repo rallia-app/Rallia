@@ -833,12 +833,43 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             return false;
           }
 
-          // Mark onboarding as completed
+          // Save the privacy setting to the player table
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
+          if (user) {
+            const { error: privacyError } = await supabase
+              .from('player')
+              .update({ privacy_show_availability: formData.privacyShowAvailability })
+              .eq('id', user.id);
+
+            if (privacyError) {
+              Logger.warn('Failed to save availability privacy setting', { error: privacyError });
+              // Don't block the flow if this fails - just log it
+            } else {
+              Logger.debug('availability_privacy_saved', {
+                privacyShowAvailability: formData.privacyShowAvailability,
+              });
+            }
+          }
+
+          // Mark onboarding as completed - this is CRITICAL and must succeed
           const { error: completeError } = await OnboardingService.completeOnboarding();
 
           if (completeError) {
-            Logger.warn('Failed to mark onboarding as completed', { error: completeError });
+            Logger.error('Failed to mark onboarding as completed', completeError as Error);
+            Alert.alert(
+              t('alerts.error'),
+              t('onboarding.validation.failedToCompleteOnboarding' as TranslationKey) ||
+                'Failed to complete onboarding. Please try again.'
+            );
+            setIsSaving(false);
+            return false;
           }
+
+          Logger.info('onboarding_completed', {
+            message: 'Onboarding marked as completed in profile',
+          });
 
           // Attribute pending referral if one was stored before signup
           try {
