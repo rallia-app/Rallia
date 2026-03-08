@@ -853,12 +853,23 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             }
           }
 
-          // Mark onboarding as completed
+          // Mark onboarding as completed - this is CRITICAL and must succeed
           const { error: completeError } = await OnboardingService.completeOnboarding();
 
           if (completeError) {
-            Logger.warn('Failed to mark onboarding as completed', { error: completeError });
+            Logger.error('Failed to mark onboarding as completed', completeError as Error);
+            Alert.alert(
+              t('alerts.error'),
+              t('onboarding.validation.failedToCompleteOnboarding' as TranslationKey) ||
+                'Failed to complete onboarding. Please try again.'
+            );
+            setIsSaving(false);
+            return false;
           }
+
+          Logger.info('onboarding_completed', {
+            message: 'Onboarding marked as completed in profile',
+          });
 
           // Attribute pending referral if one was stored before signup
           try {

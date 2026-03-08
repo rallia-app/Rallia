@@ -93,11 +93,11 @@ function getPrioritizedContent(notification: NotificationRecord): {
   extra?: string;
 } {
   const { type, title, body, payload, priority } = notification;
-  const sportName = (payload as Record<string, unknown>)?.sportName as string | undefined;
-  const matchDate = (payload as Record<string, unknown>)?.matchDate as string | undefined;
-  const locationName = (payload as Record<string, unknown>)?.locationName as string | undefined;
-  const playerName = (payload as Record<string, unknown>)?.playerName as string | undefined;
-  const timeUntil = (payload as Record<string, unknown>)?.timeUntil as string | undefined;
+  const sportName = payload?.sportName as string | undefined;
+  const matchDate = payload?.matchDate as string | undefined;
+  const locationName = payload?.locationName as string | undefined;
+  const playerName = payload?.playerName as string | undefined;
+  const timeUntil = payload?.timeUntil as string | undefined;
 
   const sportPrefix = getSportPrefix(sportName);
 
@@ -108,6 +108,12 @@ function getPrioritizedContent(notification: NotificationRecord): {
         return {
           prefix: `${sportPrefix}`,
           core: `STARTING ${timeUntil?.toUpperCase() || 'SOON'}!`,
+          extra: locationName ? `at ${locationName}` : undefined,
+        };
+      case 'match_check_in_available':
+        return {
+          prefix: `${sportPrefix}`,
+          core: 'CHECK-IN NOW OPEN!',
           extra: locationName ? `at ${locationName}` : undefined,
         };
       case 'match_cancelled':
@@ -139,6 +145,13 @@ function getPrioritizedContent(notification: NotificationRecord): {
       return {
         prefix: `${sportPrefix}`,
         core: `Starts ${timeUntil || 'soon'}`,
+        extra: locationName ? `at ${locationName}` : undefined,
+      };
+
+    case 'match_check_in_available':
+      return {
+        prefix: `${sportPrefix}`,
+        core: 'Check-in is open',
         extra: locationName ? `at ${locationName}` : undefined,
       };
 

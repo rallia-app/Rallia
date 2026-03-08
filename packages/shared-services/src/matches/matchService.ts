@@ -14,6 +14,7 @@ import {
   notifyMatchUpdated,
   notifyPlayerKicked,
   notifyMatchInvitation,
+  notifyMatchSpotOpened,
 } from '../notifications/notificationFactory';
 import {
   createReputationEvent,
@@ -1712,6 +1713,21 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
         console.error('Failed to send player left notifications:', err);
       });
     }
+
+    // Notify waitlisted players that a spot opened up
+    const waitlistedPlayers =
+      match.participants?.filter(
+        (p: { player_id: string; status: string }) => p.status === 'waitlisted'
+      ) ?? [];
+
+    if (waitlistedPlayers.length > 0) {
+      const waitlistedUserIds = waitlistedPlayers.map((p: { player_id: string }) => p.player_id);
+      const startTime = match.start_time ? match.start_time.slice(0, 5) : undefined;
+
+      notifyMatchSpotOpened(waitlistedUserIds, matchId, sportName, { startTime }).catch(err => {
+        console.error('Failed to send spot opened notifications:', err);
+      });
+    }
   }
 
   // Remove the player from the match chat (fire and forget)
@@ -2149,6 +2165,21 @@ export async function kickParticipant(
     ).catch(err => {
       console.error('Failed to send kicked notification:', err);
     });
+
+    // Notify waitlisted players that a spot opened up
+    const waitlistedPlayers =
+      match.participants?.filter(
+        (p: { id: string; player_id: string; status: string }) =>
+          p.status === 'waitlisted' && p.id !== participantId
+      ) ?? [];
+
+    if (waitlistedPlayers.length > 0) {
+      const waitlistedUserIds = waitlistedPlayers.map((p: { player_id: string }) => p.player_id);
+
+      notifyMatchSpotOpened(waitlistedUserIds, matchId, sportName, { startTime }).catch(err => {
+        console.error('Failed to send spot opened notifications:', err);
+      });
+    }
 
     // Remove the kicked player from the match chat (fire and forget)
     removePlayerFromMatchChat(matchId, participantRecord.player_id).catch(err => {
@@ -4070,6 +4101,96 @@ export async function getMatchNeedingFeedback(
   return bestMatch;
 }
 
+export interface GetCustomLocationMatchesParams {
+  sportIds: string[];
+  latitude: number;
+  longitude: number;
+  maxDistanceKm?: number;
+}
+
+/**
+ * Get upcoming public matches with custom locations for the map view.
+ * Filters to matches where location_type='custom' with valid coordinates
+ * within a bounding box around the user's position.
+ */
+export async function getCustomLocationMatches(
+  params: GetCustomLocationMatchesParams
+): Promise<MatchWithDetails[]> {
+  const { sportIds, latitude, longitude, maxDistanceKm = 25 } = params;
+
+  // Approximate bounding box (~1 degree latitude ≈ 111 km)
+  const latDelta = maxDistanceKm / 111;
+  const lngDelta = maxDistanceKm / (111 * Math.cos((latitude * Math.PI) / 180));
+
+  const { data, error } = await supabase
+    .from('match')
+    .select(
+      `
+      *,
+      sport:sport_id (*),
+      facility:facility_id (*),
+      court:court_id (*),
+      created_by_player:created_by (
+        id,
+        gender,
+        playing_hand,
+        max_travel_distance,
+        player_reputation (reputation_score),
+        notification_match_requests,
+        notification_messages,
+        notification_reminders,
+        privacy_show_age,
+        privacy_show_location,
+        privacy_show_stats
+      ),
+      participants:match_participant (
+        id,
+        match_id,
+        player_id,
+        status,
+        is_host,
+        score,
+        team_number,
+        feedback_completed,
+        checked_in_at,
+        created_at,
+        updated_at,
+        player:player_id (
+          id,
+          gender,
+          playing_hand,
+          max_travel_distance,
+          player_reputation (reputation_score),
+          notification_match_requests,
+          notification_messages,
+          notification_reminders,
+          privacy_show_age,
+          privacy_show_location,
+          privacy_show_stats
+        )
+      )
+    `
+    )
+    .in('sport_id', sportIds)
+    .eq('location_type', 'custom')
+    .eq('visibility', 'public')
+    .is('cancelled_at', null)
+    .not('custom_latitude', 'is', null)
+    .not('custom_longitude', 'is', null)
+    .gte('custom_latitude', latitude - latDelta)
+    .lte('custom_latitude', latitude + latDelta)
+    .gte('custom_longitude', longitude - lngDelta)
+    .lte('custom_longitude', longitude + lngDelta)
+    .gte('match_date', new Date().toISOString().split('T')[0])
+    .limit(100);
+
+  if (error) {
+    throw new Error(`Failed to get custom location matches: ${error.message}`);
+  }
+
+  return (data ?? []) as unknown as MatchWithDetails[];
+}
+
 /**
  * Match service object for grouped exports
  */
@@ -4081,6 +4202,7 @@ export const matchService = {
   getPlayerMatchesWithDetails,
   getNearbyMatches,
   getPublicMatches,
+  getCustomLocationMatches,
   updateMatch,
   cancelMatch,
   deleteMatch,
