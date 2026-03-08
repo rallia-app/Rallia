@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, neutral, accent, status } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, accent, status } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import type { FormattedSlot } from '@rallia/shared-hooks';
 import type { TranslationKey, TranslationOptions } from '../../../hooks';
@@ -144,7 +144,7 @@ export default function TimeOfDaySection({
       <TouchableOpacity
         onPress={handleToggle}
         activeOpacity={0.7}
-        style={[styles.header, { backgroundColor: isDark ? neutral[800] + '50' : neutral[50] }]}
+        style={[styles.header, { backgroundColor: colors.primary + '08' }]}
       >
         <View style={styles.headerLeft}>
           <View style={[styles.iconWrapper, { backgroundColor: iconColor + '20' }]}>

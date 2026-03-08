@@ -97,8 +97,8 @@ export default function DatePickerBar({
               style={[
                 styles.dateItem,
                 {
-                  backgroundColor: isSelected ? primary[500] : isDark ? neutral[800] : colors.card,
-                  borderColor: isSelected ? primary[500] : isDark ? neutral[700] : neutral[200],
+                  backgroundColor: isSelected ? primary[500] : colors.primary + '10',
+                  borderColor: isSelected ? primary[500] : colors.primary + '25',
                 },
                 isSelected && shadowsNative.sm,
               ]}
@@ -130,9 +130,7 @@ export default function DatePickerBar({
                     {
                       backgroundColor: isSelected
                         ? 'rgba(255,255,255,0.25)'
-                        : isDark
-                          ? neutral[700]
-                          : primary[50],
+                        : colors.primary + '15',
                     },
                   ]}
                 >
