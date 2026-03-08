@@ -34,7 +34,7 @@ import {
 } from '@rallia/design-system';
 import { lightHaptic, selectionHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../../hooks';
-import { usePlayer } from '@rallia/shared-hooks';
+import { usePlayer, useProposeRebuttalScore } from '@rallia/shared-hooks';
 import { submitMatchResultForMatch } from '@rallia/shared-services';
 import type { MatchWithDetails, MatchParticipantWithPlayer } from '@rallia/shared-types';
 
@@ -103,11 +103,14 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
   const match = payload?.match as MatchWithDetails | null | undefined;
   const onSuccess = payload?.onSuccess;
   const onDismiss = payload?.onDismiss;
+  const isRebuttal = payload?.isRebuttal ?? false;
+  const matchResultId = payload?.matchResultId;
 
   const { isDark } = useThemeStyles();
   const { t } = useTranslation();
   const { player } = usePlayer();
   const playerId = player?.id ?? '';
+  const rebuttalMutation = useProposeRebuttalScore();
 
   const theme = isDark ? darkTheme : lightTheme;
   const colors: ThemeColors = useMemo(
@@ -152,9 +155,9 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
   const winningTeam = useMemo(() => deriveWinningTeamFromSets(validSets), [validSets]);
   const canSubmit = useMemo(() => {
     if (validSets.length === 0) return false;
-    if (isDoubles && !partnerId) return false;
+    if (isDoubles && !isRebuttal && !partnerId) return false;
     return true;
-  }, [validSets.length, isDoubles, partnerId]);
+  }, [validSets.length, isDoubles, isRebuttal, partnerId]);
 
   const getParticipantName = useCallback((p: MatchParticipantWithPlayer) => {
     const playerObj = Array.isArray(p.player) ? p.player[0] : p.player;
@@ -274,7 +277,7 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
       );
       return;
     }
-    if (isDoubles && !partnerId) {
+    if (isDoubles && !isRebuttal && !partnerId) {
       setError(t('registerMatchScore.error.selectPartner'));
       return;
     }
@@ -283,16 +286,29 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
     setIsSubmitting(true);
     setError(null);
     try {
-      await submitMatchResultForMatch({
-        matchId: match.id,
-        submittedByPlayerId: playerId,
-        winningTeam,
-        sets: validSets.map(s => ({
-          team1_score: s.team1Score!,
-          team2_score: s.team2Score!,
-        })),
-        partnerId: isDoubles ? (partnerId ?? undefined) : undefined,
-      });
+      if (isRebuttal && matchResultId) {
+        // Rebuttal mode: propose a different score
+        await rebuttalMutation.mutateAsync({
+          matchResultId,
+          playerId,
+          winningTeam,
+          sets: validSets.map(s => ({
+            team1_score: s.team1Score!,
+            team2_score: s.team2Score!,
+          })),
+        });
+      } else {
+        await submitMatchResultForMatch({
+          matchId: match.id,
+          submittedByPlayerId: playerId,
+          winningTeam,
+          sets: validSets.map(s => ({
+            team1_score: s.team1Score!,
+            team2_score: s.team2Score!,
+          })),
+          partnerId: isDoubles ? (partnerId ?? undefined) : undefined,
+        });
+      }
       successHaptic();
       didSubmitRef.current = true;
       SheetManager.hide('register-match-score');
@@ -365,7 +381,7 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
             style={styles.headerTitle}
             numberOfLines={1}
           >
-            {t('registerMatchScore.title')}
+            {t(isRebuttal ? 'registerMatchScore.rebuttalTitle' : 'registerMatchScore.title')}
           </Text>
           <View style={styles.headerRight}>
             <TouchableOpacity
@@ -385,7 +401,7 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {isDoubles && (
+          {isDoubles && !isRebuttal && (
             <>
               <Text
                 size="sm"

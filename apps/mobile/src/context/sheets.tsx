@@ -266,6 +266,8 @@ declare module 'react-native-actions-sheet' {
         match: import('@rallia/shared-types').MatchWithDetails;
         onSuccess?: () => void;
         onDismiss?: () => void;
+        isRebuttal?: boolean;
+        matchResultId?: string;
       };
     }>;
     'court-selection': SheetDefinition<{

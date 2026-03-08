@@ -426,21 +426,100 @@ export async function confirmMatchScore(matchResultId: string, playerId: string)
 }
 
 /**
- * Dispute a match score
+ * Propose a rebuttal score (opponent disagrees and suggests different score)
  */
-export async function disputeMatchScore(
+export async function proposeRebuttalScore(
   matchResultId: string,
   playerId: string,
-  reason?: string
+  winningTeam: 1 | 2 | null,
+  sets: Array<{ team1_score: number; team2_score: number }>
 ): Promise<boolean> {
-  const { data, error } = await supabase.rpc('dispute_match_score', {
+  const { data, error } = await supabase.rpc('propose_rebuttal_score', {
     p_match_result_id: matchResultId,
     p_player_id: playerId,
-    p_reason: reason || null,
+    p_winning_team: winningTeam,
+    p_sets: sets,
   });
 
   if (error) {
-    console.error('Error disputing score:', error);
+    console.error('Error proposing rebuttal:', error);
+    throw new Error(error.message);
+  }
+
+  // Notify the original submitter's team about the rebuttal
+  try {
+    const { data: resultData } = await supabase
+      .from('match_result')
+      .select('match_id, submitted_by')
+      .eq('id', matchResultId)
+      .single();
+
+    if (resultData) {
+      // Get original submitter's team members (same team_number as submitted_by)
+      const { data: submitterPart } = await supabase
+        .from('match_participant')
+        .select('team_number')
+        .eq('match_id', resultData.match_id)
+        .eq('player_id', resultData.submitted_by)
+        .eq('status', 'joined')
+        .single();
+
+      if (submitterPart?.team_number) {
+        const { data: teammates } = await supabase
+          .from('match_participant')
+          .select('player_id')
+          .eq('match_id', resultData.match_id)
+          .eq('team_number', submitterPart.team_number)
+          .eq('status', 'joined');
+
+        const teammateIds = teammates?.map(t => t.player_id) ?? [];
+        if (teammateIds.length > 0) {
+          await notifyOpponentsOfPendingScore(resultData.match_id, playerId, teammateIds);
+        }
+      }
+    }
+  } catch (notifyError) {
+    console.error('Error sending rebuttal notifications:', notifyError);
+    // Don't fail — notification failure shouldn't break the flow
+  }
+
+  return data as boolean;
+}
+
+/**
+ * Accept a rebuttal score (original team agrees with opponent's proposed score)
+ */
+export async function acceptRebuttalScore(
+  matchResultId: string,
+  playerId: string
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc('accept_rebuttal_score', {
+    p_match_result_id: matchResultId,
+    p_player_id: playerId,
+  });
+
+  if (error) {
+    console.error('Error accepting rebuttal:', error);
+    throw new Error(error.message);
+  }
+
+  return data as boolean;
+}
+
+/**
+ * Dispute a rebuttal score (original team disagrees → score becomes unsettled)
+ */
+export async function disputeRebuttalScore(
+  matchResultId: string,
+  playerId: string
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc('dispute_rebuttal_score', {
+    p_match_result_id: matchResultId,
+    p_player_id: playerId,
+  });
+
+  if (error) {
+    console.error('Error disputing rebuttal:', error);
     throw new Error(error.message);
   }
 
