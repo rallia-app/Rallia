@@ -1479,7 +1479,7 @@ DECLARE
   notification_types text[] := ARRAY[
     'match_invitation', 'reminder', 'match_join_request', 'match_player_joined',
     'match_starting_soon', 'feedback_request', 'new_message', 'system',
-    'match_completed', 'score_confirmation'
+    'score_confirmation'
   ];
   notification_type text;
   i integer;
@@ -1502,7 +1502,7 @@ BEGIN
   DELETE FROM notification WHERE user_id = target_user_id;
 
   FOR i IN 1..30 LOOP
-    notification_type := notification_types[1 + ((i - 1) % 10)];
+    notification_type := notification_types[1 + ((i - 1) % 9)];
     is_read := (i % 5 = 0) OR (i % 7 = 0);
     created_time := NOW() - ((30 - i) * INTERVAL '5 hours');
 
@@ -1520,7 +1520,6 @@ BEGIN
         WHEN 'feedback_request' THEN 'How was your match with Alexandre?'
         WHEN 'new_message' THEN 'New message from Marc Dupont'
         WHEN 'system' THEN 'Welcome to Rallia!'
-        WHEN 'match_completed' THEN 'Match completed - submit your score'
         WHEN 'score_confirmation' THEN 'Confirm your match score'
       END,
       CASE notification_type
@@ -1532,7 +1531,6 @@ BEGIN
         WHEN 'feedback_request' THEN 'Tell us how your match with Alexandre Morin went. Your feedback helps the community!'
         WHEN 'new_message' THEN 'Marc: N''oublie pas ta raquette de rechange!'
         WHEN 'system' THEN 'Welcome to Rallia! Find players, book courts, and enjoy your game.'
-        WHEN 'match_completed' THEN 'Your match has been completed. Please submit the score to update rankings.'
         WHEN 'score_confirmation' THEN 'Alexandre submitted a score for your match. Please confirm or dispute.'
       END,
       CASE WHEN is_read THEN created_time + INTERVAL '30 minutes' ELSE NULL END,
