@@ -1956,8 +1956,10 @@ export type Database = {
           initial_feedback_notification_sent_at: string | null;
           is_host: boolean | null;
           joined_at: string | null;
+          match_check_in_reminder_sent_at: string | null;
           match_id: string;
           match_outcome: Database['public']['Enums']['match_outcome_enum'] | null;
+          match_starting_soon_sent_at: string | null;
           player_id: string;
           score: number | null;
           showed_up: boolean | null;
@@ -1979,8 +1981,10 @@ export type Database = {
           initial_feedback_notification_sent_at?: string | null;
           is_host?: boolean | null;
           joined_at?: string | null;
+          match_check_in_reminder_sent_at?: string | null;
           match_id: string;
           match_outcome?: Database['public']['Enums']['match_outcome_enum'] | null;
+          match_starting_soon_sent_at?: string | null;
           player_id: string;
           score?: number | null;
           showed_up?: boolean | null;
@@ -2002,8 +2006,10 @@ export type Database = {
           initial_feedback_notification_sent_at?: string | null;
           is_host?: boolean | null;
           joined_at?: string | null;
+          match_check_in_reminder_sent_at?: string | null;
           match_id?: string;
           match_outcome?: Database['public']['Enums']['match_outcome_enum'] | null;
+          match_starting_soon_sent_at?: string | null;
           player_id?: string;
           score?: number | null;
           showed_up?: boolean | null;
@@ -4635,6 +4641,48 @@ export type Database = {
           },
         ];
       };
+      proof_endorsement: {
+        Row: {
+          created_at: string;
+          id: string;
+          is_approved: boolean;
+          proof_id: string;
+          reviewer_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          is_approved: boolean;
+          proof_id: string;
+          reviewer_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          is_approved?: boolean;
+          proof_id?: string;
+          reviewer_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'proof_endorsement_proof_id_fkey';
+            columns: ['proof_id'];
+            isOneToOne: false;
+            referencedRelation: 'rating_proof';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'proof_endorsement_reviewer_id_fkey';
+            columns: ['reviewer_id'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       rating_proof: {
         Row: {
           created_at: string;
@@ -6112,6 +6160,20 @@ export type Database = {
           user_id: string;
         }[];
       };
+      get_participants_for_check_in_reminder: {
+        Args: { p_window_end: string; p_window_start: string };
+        Returns: {
+          format: string;
+          location_name: string;
+          match_date: string;
+          match_id: string;
+          participant_id: string;
+          player_id: string;
+          sport_name: string;
+          start_time: string;
+          timezone: string;
+        }[];
+      };
       get_participants_for_feedback_reminder: {
         Args: { p_cutoff_end: string; p_cutoff_start: string };
         Returns: {
@@ -6131,6 +6193,20 @@ export type Database = {
         Returns: {
           end_time: string;
           format: string;
+          match_date: string;
+          match_id: string;
+          participant_id: string;
+          player_id: string;
+          sport_name: string;
+          start_time: string;
+          timezone: string;
+        }[];
+      };
+      get_participants_for_match_starting_soon: {
+        Args: { p_window_end: string; p_window_start: string };
+        Returns: {
+          format: string;
+          location_name: string;
           match_date: string;
           match_id: string;
           participant_id: string;
@@ -6301,6 +6377,14 @@ export type Database = {
           current_level_proofs_count: number;
           total_proofs_count: number;
           valid_proofs_for_certification: number;
+        }[];
+      };
+      get_proof_endorsement_counts: {
+        Args: { p_proof_id: string };
+        Returns: {
+          approvals_count: number;
+          declines_count: number;
+          total_count: number;
         }[];
       };
       get_public_communities: {
@@ -6724,11 +6808,19 @@ export type Database = {
         Args: { p_admin_id: string; p_alert_id: string };
         Returns: boolean;
       };
+      mark_check_in_reminder_sent: {
+        Args: { p_participant_ids: string[] };
+        Returns: number;
+      };
       mark_feedback_reminders_sent: {
         Args: { p_participant_ids: string[] };
         Returns: number;
       };
       mark_initial_feedback_notifications_sent: {
+        Args: { p_participant_ids: string[] };
+        Returns: number;
+      };
+      mark_match_starting_soon_sent: {
         Args: { p_participant_ids: string[] };
         Returns: number;
       };
@@ -7123,11 +7215,9 @@ export type Database = {
         | 'match_cancelled'
         | 'match_updated'
         | 'match_starting_soon'
-        | 'match_completed'
         | 'player_kicked'
         | 'player_left'
         | 'new_message'
-        | 'friend_request'
         | 'rating_verified'
         | 'feedback_request'
         | 'score_confirmation'
@@ -7155,7 +7245,10 @@ export type Database = {
         | 'program_session_cancelled'
         | 'program_waitlist_promoted'
         | 'program_payment_due'
-        | 'program_payment_received';
+        | 'program_payment_received'
+        | 'match_check_in_available'
+        | 'match_spot_opened'
+        | 'nearby_match_available';
       organization_nature_enum: 'public' | 'private';
       organization_type: 'club' | 'facility' | 'league' | 'academy' | 'association';
       organization_type_enum: 'club' | 'municipality' | 'city' | 'association';
@@ -7518,11 +7611,9 @@ export const Constants = {
         'match_cancelled',
         'match_updated',
         'match_starting_soon',
-        'match_completed',
         'player_kicked',
         'player_left',
         'new_message',
-        'friend_request',
         'rating_verified',
         'feedback_request',
         'score_confirmation',
@@ -7551,6 +7642,9 @@ export const Constants = {
         'program_waitlist_promoted',
         'program_payment_due',
         'program_payment_received',
+        'match_check_in_available',
+        'match_spot_opened',
+        'nearby_match_available',
       ],
       organization_nature_enum: ['public', 'private'],
       organization_type: ['club', 'facility', 'league', 'academy', 'association'],

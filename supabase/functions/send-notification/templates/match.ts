@@ -44,7 +44,7 @@ function getSportEmoji(sportName?: string): string {
  */
 export function generateEmailSubject(notification: NotificationRecord): string {
   const { title, type, payload } = notification;
-  const sportName = (payload as Record<string, unknown>)?.sportName as string | undefined;
+  const sportName = payload?.sportName as string | undefined;
   const emoji = getSportEmoji(sportName);
 
   if (type.startsWith('match_') || type === 'feedback_request' || type === 'reminder') {
@@ -70,7 +70,7 @@ function getPreheaderKey(type: string): string {
     match_cancelled: 'preheader.matchCancelled',
     match_updated: 'preheader.matchUpdated',
     match_starting_soon: 'preheader.matchStartingSoon',
-    match_completed: 'preheader.matchCompleted',
+    match_check_in_available: 'preheader.matchCheckInAvailable',
     player_kicked: 'preheader.playerKicked',
     player_left: 'preheader.playerLeft',
     reminder: 'preheader.reminder',
@@ -83,11 +83,7 @@ function getPreheaderKey(type: string): string {
 /**
  * Generate static map image HTML
  */
-function generateStaticMapHtml(
-  latitude: number,
-  longitude: number,
-  locale: string
-): string {
+function generateStaticMapHtml(latitude: number, longitude: number, locale: string): string {
   if (!GOOGLE_MAPS_API_KEY) return '';
 
   const mapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${latitude},${longitude}&zoom=15&size=520x200&markers=color:red|${latitude},${longitude}&key=${GOOGLE_MAPS_API_KEY}`;
@@ -108,10 +104,7 @@ function generateStaticMapHtml(
 /**
  * Generate calendar buttons HTML (Google Calendar + .ics download)
  */
-function generateCalendarButtons(
-  payload: Record<string, unknown>,
-  locale: string
-): string {
+function generateCalendarButtons(payload: Record<string, unknown>, locale: string): string {
   const matchDate = payload.matchDate as string | undefined;
   const startTime = payload.startTime as string | undefined;
   const sportName = payload.sportName as string | undefined;
@@ -134,8 +127,14 @@ function generateCalendarButtons(
   const location = locationName || '';
 
   // Google Calendar URL
-  const gcalStart = startDate.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-  const gcalEnd = endDate.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  const gcalStart = startDate
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\.\d{3}/, '');
+  const gcalEnd = endDate
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\.\d{3}/, '');
   const gcalUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${gcalStart}/${gcalEnd}&location=${encodeURIComponent(location)}&details=${encodeURIComponent('Created with Rallia')}`;
 
   // .ics download URL
@@ -171,6 +170,8 @@ function generateStatusBadge(type: string, locale: string): string {
       return renderStatusBadge(t(locale, 'match.status.updated'), 'amber');
     case 'match_starting_soon':
       return renderStatusBadge(t(locale, 'match.status.startingSoon'), 'green');
+    case 'match_check_in_available':
+      return renderStatusBadge(t(locale, 'match.status.checkInOpen'), 'green');
     default:
       return '';
   }
@@ -179,10 +180,7 @@ function generateStatusBadge(type: string, locale: string): string {
 /**
  * Generate match details card for match-related emails
  */
-function generateMatchDetailsCard(
-  payload: Record<string, unknown>,
-  locale: string
-): string {
+function generateMatchDetailsCard(payload: Record<string, unknown>, locale: string): string {
   const sportName = payload.sportName as string | undefined;
   const matchDate = payload.matchDate as string | undefined;
   const startTime = payload.startTime as string | undefined;
@@ -264,19 +262,21 @@ function generateActionButton(
       buttonKey = 'match.button.browseGames';
       deepLink = 'rallia://discover';
       break;
-    case 'match_completed':
-      buttonKey = 'match.button.rateGame';
-      if (payload.matchId) deepLink = `rallia://match/${payload.matchId}/feedback`;
-      break;
     case 'match_join_accepted':
     case 'match_player_joined':
     case 'match_updated':
     case 'match_starting_soon':
+    case 'match_check_in_available':
+    case 'match_new_available':
+    case 'match_spot_opened':
+    case 'nearby_match_available':
+    case 'score_confirmation':
     case 'player_left':
       buttonKey = 'match.button.viewGame';
       if (payload.matchId) deepLink = `rallia://match/${payload.matchId}`;
       break;
     case 'feedback_request':
+    case 'feedback_reminder':
       buttonKey = 'match.button.rateGame';
       if (payload.matchId) deepLink = `rallia://match/${payload.matchId}/feedback`;
       break;
@@ -288,10 +288,6 @@ function generateActionButton(
     case 'chat':
       buttonKey = 'match.button.viewMessage';
       if (payload.conversationId) deepLink = `rallia://chat/${payload.conversationId}`;
-      break;
-    case 'friend_request':
-      buttonKey = 'match.button.viewProfile';
-      if (payload.playerId) deepLink = `rallia://player/${payload.playerId}`;
       break;
     case 'rating_verified':
       buttonKey = 'match.button.viewRating';
@@ -311,16 +307,14 @@ function generateActionButton(
 export function generateEmailHtml(
   notification: NotificationRecord,
   locale: string,
-  siteUrl?: string,
+  siteUrl?: string
 ): string {
   const { title, body, type, payload } = notification;
   const T = EMAIL_TOKENS;
 
   const isMatchRelated =
     type.startsWith('match_') || type === 'feedback_request' || type === 'reminder';
-  const matchDetailsCard = isMatchRelated
-    ? generateMatchDetailsCard(payload as Record<string, unknown>, locale)
-    : '';
+  const matchDetailsCard = isMatchRelated ? generateMatchDetailsCard(payload, locale) : '';
 
   const bodyHtml = body
     ? `
@@ -331,14 +325,18 @@ export function generateEmailHtml(
 
   // Status badge for specific notification types
   const statusBadge = generateStatusBadge(type, locale);
-  const titleWithBadge = statusBadge
-    ? `${escapeHtml(title)} ${statusBadge}`
-    : escapeHtml(title);
+  const titleWithBadge = statusBadge ? `${escapeHtml(title)} ${statusBadge}` : escapeHtml(title);
 
   // Calendar buttons for calendar-eligible notifications
-  const calendarEligibleTypes = ['match_invitation', 'match_join_accepted', 'match_starting_soon', 'reminder'];
+  const calendarEligibleTypes = [
+    'match_invitation',
+    'match_join_accepted',
+    'match_starting_soon',
+    'match_check_in_available',
+    'reminder',
+  ];
   const calendarHtml = calendarEligibleTypes.includes(type)
-    ? generateCalendarButtons(payload as Record<string, unknown>, locale)
+    ? generateCalendarButtons(payload, locale)
     : '';
 
   const content = `

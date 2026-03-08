@@ -301,13 +301,14 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   match_cancelled: 'calendar-clear-outline',
   match_updated: 'create-outline',
   match_starting_soon: 'time-outline',
-  match_completed: 'trophy-outline',
+  match_check_in_available: 'checkmark-circle-outline',
   match_new_available: 'add-circle-outline',
+  match_spot_opened: 'enter-outline',
+  nearby_match_available: 'location-outline',
   player_kicked: 'remove-circle-outline',
   player_left: 'exit-outline',
   // Social types
   new_message: 'chatbubble-ellipses-outline',
-  friend_request: 'people-outline',
   rating_verified: 'ribbon-outline',
   // Feedback types
   feedback_request: 'star-outline',
@@ -360,13 +361,14 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   match_cancelled: '#F44336', // Red
   match_updated: '#2196F3', // Blue
   match_starting_soon: '#FF9800', // Orange
-  match_completed: '#4CAF50', // Green
+  match_check_in_available: '#4CAF50', // Green
   match_new_available: '#4DB8A8', // Teal
+  match_spot_opened: '#4CAF50', // Green
+  nearby_match_available: '#2196F3', // Blue
   player_kicked: '#F44336', // Red
   player_left: '#FF9800', // Orange
   // Social types
   new_message: '#9C27B0', // Purple
-  friend_request: '#4DB8A8', // Teal
   rating_verified: '#4CAF50', // Green
   // Feedback types
   feedback_request: '#FFC107', // Amber
@@ -417,12 +419,13 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   match_cancelled: 'Match Cancelled',
   match_updated: 'Match Updated',
   match_starting_soon: 'Match Starting Soon',
-  match_completed: 'Match Completed',
+  match_check_in_available: 'Check-in Available',
   match_new_available: 'New Game in Group',
+  match_spot_opened: 'Spot Opened',
+  nearby_match_available: 'Nearby Match',
   player_kicked: 'Removed from Match',
   player_left: 'Player Left',
   new_message: 'New Message',
-  friend_request: 'Friend Request',
   rating_verified: 'Rating Verified',
   feedback_request: 'Feedback Request',
   feedback_reminder: 'Feedback Reminder',
@@ -473,14 +476,15 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   match_cancelled: 'match',
   match_updated: 'match',
   match_starting_soon: 'match',
-  match_completed: 'match',
+  match_check_in_available: 'match',
   match_new_available: 'match',
+  match_spot_opened: 'match',
+  nearby_match_available: 'match',
   player_kicked: 'match',
   player_left: 'match',
   // Social category
   chat: 'social',
   new_message: 'social',
-  friend_request: 'social',
   rating_verified: 'social',
   // System category
   reminder: 'system',
@@ -574,14 +578,15 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   match_cancelled: { email: true, push: true, sms: true }, // SMS for cancellations
   match_updated: { email: false, push: true, sms: false },
   match_starting_soon: { email: false, push: true, sms: true }, // SMS for reminders
-  match_completed: { email: false, push: true, sms: false },
+  match_check_in_available: { email: true, push: true, sms: false },
   match_new_available: { email: false, push: true, sms: false },
+  match_spot_opened: { email: false, push: true, sms: false },
+  nearby_match_available: { email: false, push: true, sms: false },
   player_kicked: { email: true, push: true, sms: false },
   player_left: { email: false, push: true, sms: false }, // Push only for player leaves
   // Social types - push only by default
   chat: { email: false, push: true, sms: false },
   new_message: { email: false, push: true, sms: false },
-  friend_request: { email: false, push: true, sms: false },
   rating_verified: { email: true, push: true, sms: false },
   // System types - email only by default
   reminder: { email: false, push: true, sms: false },
