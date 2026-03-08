@@ -156,6 +156,11 @@
     "onboardingRequired": "Complétez votre profil",
     "onboardingPrompt": "Terminez la configuration de votre profil pour recevoir et voir vos notifications",
     "completeOnboarding": "Compléter le profil",
+    "sportSwitch": {
+      "title": "Changer de sport?",
+      "message": "Cette partie est pour le {sportName}. Changer mettra à jour votre fil de parties pour afficher les parties de ce sport.",
+      "confirm": "Changer et voir"
+    },
     "time": {
       "justNow": "À l'instant",
       "today": "Aujourd'hui",
@@ -3180,7 +3185,7 @@
     "completeProfile": "Compléter le profil",
     "user": "Utilisateur",
     "subtitle": "La meilleure façon de trouver votre prochain partenaire de tennis ou de pickleball",
-    "soonAndNearby": "Bientôt et proche",
+    "soonAndNearby": "À proximité",
     "publicMatches": "Parties publiques",
     "viewAll": "Voir tout",
     "myMatches": "Mes parties",
@@ -3201,6 +3206,10 @@
       "currentDescription": "Utiliser votre position GPS",
       "home": "Emplacement domicile",
       "homeNotSet": "Définissez votre emplacement domicile dans les paramètres"
+    },
+    "crossSportBanner": {
+      "unreadNotifications": "Vous avez {count} notification(s) en attente pour {sportName}",
+      "switch": "Changer"
     },
     "header": {
       "ctaButton": "Devenir bêta-testeur"

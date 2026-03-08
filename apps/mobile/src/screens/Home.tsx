@@ -43,13 +43,94 @@ import {
   usePlayer,
   useNearbyMatches,
   usePlayerMatches,
+  usePlayerSports,
+  useRatingScoresForSport,
+  useSortedNearbyMatches,
+  useFavoriteFacilities,
+  useOtherSportsUnreadCount,
 } from '@rallia/shared-hooks';
-import type { NearbyMatch } from '@rallia/shared-hooks';
+import type { NearbyMatch, MatchScoringPreferences } from '@rallia/shared-hooks';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import { Logger } from '@rallia/shared-services';
 import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
 import { SportIcon } from '../components/SportIcon';
 import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
+
+/** Dismissible banner alerting the player to unread notifications in another sport */
+const CrossSportBanner: React.FC<{
+  sportName: string;
+  displayName: string;
+  count: number;
+  onSwitch: () => void;
+  onDismiss: () => void;
+  colors: { card: string; text: string; textMuted: string; primary: string; border: string };
+  t: (key: string, options?: Record<string, string | number | boolean>) => string;
+}> = ({ sportName, displayName, count, onSwitch, onDismiss, colors, t }) => (
+  <View
+    style={[
+      crossBannerStyles.container,
+      { backgroundColor: colors.card, borderColor: colors.border },
+    ]}
+  >
+    <View style={crossBannerStyles.content}>
+      <SportIcon
+        sportName={sportName}
+        size={20}
+        color={colors.primary}
+        style={{ marginRight: 8 }}
+      />
+      <Text size="sm" color={colors.text} style={crossBannerStyles.text} numberOfLines={2}>
+        {t('home.crossSportBanner.unreadNotifications', { count, sportName: displayName })}
+      </Text>
+    </View>
+    <View style={crossBannerStyles.actions}>
+      <TouchableOpacity
+        onPress={onSwitch}
+        style={[crossBannerStyles.switchButton, { backgroundColor: colors.primary }]}
+      >
+        <Text size="xs" weight="semibold" color="#ffffff">
+          {t('home.crossSportBanner.switch')}
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={onDismiss} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <Ionicons name="close" size={18} color={colors.textMuted} />
+      </TouchableOpacity>
+    </View>
+  </View>
+);
+
+const crossBannerStyles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: spacingPixels[4],
+    marginTop: spacingPixels[3],
+    marginBottom: spacingPixels[2],
+    padding: spacingPixels[3],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: spacingPixels[2],
+  },
+  text: {
+    flex: 1,
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+  },
+  switchButton: {
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[1.5],
+    borderRadius: radiusPixels.md,
+  },
+});
 
 const Home = () => {
   // Use custom hooks for auth, profile, and overlay context
@@ -81,7 +162,33 @@ const Home = () => {
     useEffectiveLocation();
   const { homeLocation } = useUserHomeLocation();
   const { player, maxTravelDistanceKm, loading: playerLoading } = usePlayer();
-  const { selectedSport, isLoading: sportLoading } = useSport();
+  const { selectedSport, isLoading: sportLoading, userSports, setSelectedSport } = useSport();
+
+  // Player sport preferences and rating for match relevance scoring
+  const { playerSports } = usePlayerSports(session?.user?.id);
+
+  // Cross-sport unread notification counts
+  const { otherSportsUnreadCount } = useOtherSportsUnreadCount(
+    session?.user?.id,
+    userSports,
+    selectedSport?.name
+  );
+  const [dismissedBannerSports, setDismissedBannerSports] = useState<Set<string>>(new Set());
+  const currentPlayerSport = useMemo(
+    () => playerSports.find(ps => ps.sport_id === selectedSport?.id),
+    [playerSports, selectedSport?.id]
+  );
+  const { ratingScores, playerRatingScoreId } = useRatingScoresForSport(
+    selectedSport?.name,
+    selectedSport?.id,
+    session?.user?.id
+  );
+  const playerRatingValue = useMemo(() => {
+    if (!playerRatingScoreId) return null;
+    return ratingScores.find(rs => rs.id === playerRatingScoreId)?.value ?? null;
+  }, [ratingScores, playerRatingScoreId]);
+  const { favorites } = useFavoriteFacilities(session?.user?.id ?? null);
+  const favoriteFacilityIds = useMemo(() => favorites.map(f => f.facilityId), [favorites]);
 
   // Default search radius for signed-out users (10km)
   const GUEST_SEARCH_RADIUS_KM = 15;
@@ -115,22 +222,48 @@ const Home = () => {
   });
 
   // Filter out matches where user is creator or participant (these show in "My Matches" section)
-  const matches = useMemo(() => {
+  const filteredMatches = useMemo(() => {
     if (!session?.user?.id) return allNearbyMatches;
 
     return allNearbyMatches.filter(match => {
       // Exclude if user is the creator
       if (match.created_by === session.user.id) return false;
 
-      // Exclude if user is a participant
-      const isParticipant = match.participants?.some(
-        p => p.player_id === session.user.id && p.status === 'joined'
+      // Exclude if user is a participant, has requested to join, or is waitlisted
+      const isInvolved = match.participants?.some(
+        p =>
+          p.player_id === session.user.id &&
+          p.status != null &&
+          ['joined', 'requested', 'waitlisted'].includes(p.status)
       );
-      if (isParticipant) return false;
+      if (isInvolved) return false;
 
       return true;
     });
   }, [allNearbyMatches, session?.user?.id]);
+
+  // Build scoring preferences for match relevance sorting
+  const scoringPreferences = useMemo<MatchScoringPreferences>(
+    () => ({
+      playerGender: player?.gender,
+      playerRatingValue,
+      preferredMatchDuration: currentPlayerSport?.preferred_match_duration,
+      preferredMatchType: currentPlayerSport?.preferred_match_type,
+      favoriteFacilityIds,
+      maxTravelDistanceKm,
+    }),
+    [
+      player?.gender,
+      playerRatingValue,
+      currentPlayerSport?.preferred_match_duration,
+      currentPlayerSport?.preferred_match_type,
+      favoriteFacilityIds,
+      maxTravelDistanceKm,
+    ]
+  );
+
+  // Sort nearby matches by relevance score
+  const matches = useSortedNearbyMatches(filteredMatches, scoringPreferences);
 
   // Use TanStack Query hook for fetching player's upcoming matches
   // Filters by selected sport to match the Soon & Nearby section
@@ -588,6 +721,29 @@ const Home = () => {
         );
       }
 
+      // Cross-sport banners for unread notifications in other sports
+      Object.entries(otherSportsUnreadCount).forEach(([sportName, count]) => {
+        if (count > 0 && !dismissedBannerSports.has(sportName)) {
+          const sport = userSports.find(s => s.name === sportName);
+          if (sport) {
+            headerComponents.push(
+              <CrossSportBanner
+                key={`cross-sport-${sportName}`}
+                sportName={sportName}
+                displayName={sport.display_name.toLowerCase()}
+                count={count}
+                onSwitch={() => setSelectedSport(sport)}
+                onDismiss={() => setDismissedBannerSports(prev => new Set(prev).add(sportName))}
+                colors={colors}
+                t={
+                  t as (key: string, options?: Record<string, string | number | boolean>) => string
+                }
+              />
+            );
+          }
+        }
+      });
+
       // Add "My Matches" section for fully onboarded users
       headerComponents.push(<View key="my-matches">{renderMyMatchesSection()}</View>);
     }
@@ -615,6 +771,11 @@ const Home = () => {
     selectedSport,
     renderMyMatchesSection,
     renderSectionHeader,
+    otherSportsUnreadCount,
+    dismissedBannerSports,
+    userSports,
+    setSelectedSport,
+    colors.primary,
   ]);
 
   // Show loading if auth is loading, or if player/sport data is loading initially

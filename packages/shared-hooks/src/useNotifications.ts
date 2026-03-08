@@ -7,6 +7,7 @@
 import {
   useInfiniteQuery,
   useQuery,
+  useQueries,
   useMutation,
   useQueryClient,
   InfiniteData,
@@ -14,6 +15,8 @@ import {
 import {
   getNotifications,
   getUnreadCount,
+  getUnreadCountForSport,
+  getUnreadCountBySport,
   markAsRead,
   markAllAsRead,
   deleteNotification,
@@ -44,6 +47,10 @@ export const notificationKeys = {
   list: (userId: string, options?: NotificationQueryOptions) =>
     [...notificationKeys.lists(), userId, options] as const,
   unreadCount: (userId: string) => [...notificationKeys.all, 'unreadCount', userId] as const,
+  unreadCountForSport: (userId: string, sportName: string) =>
+    [...notificationKeys.all, 'unreadCountForSport', userId, sportName] as const,
+  unreadCountBySport: (userId: string, sportName: string) =>
+    [...notificationKeys.all, 'unreadCountBySport', userId, sportName] as const,
 };
 
 interface UseNotificationsOptions extends Omit<NotificationQueryOptions, 'cursor'> {
@@ -101,6 +108,38 @@ export function useUnreadNotificationCount(userId: string | undefined) {
   });
 }
 
+/**
+ * Hook for fetching unread notification count filtered to the selected sport.
+ * Counts notifications for the given sport + system/social notifications (no sportName in payload).
+ */
+export function useUnreadCountForSport(userId: string | undefined, sportName: string | undefined) {
+  return useQuery<number, Error>({
+    queryKey: notificationKeys.unreadCountForSport(userId ?? '', sportName ?? ''),
+    queryFn: async () => {
+      if (!userId || !sportName) return 0;
+      return getUnreadCountForSport(userId, sportName);
+    },
+    enabled: !!userId && !!sportName,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  });
+}
+
+/**
+ * Helper: cancel, optimistically update, and invalidate ALL unread count queries
+ * (unreadCount, unreadCountForSport, unreadCountBySport).
+ */
+function isUnreadCountQuery(queryKey: readonly unknown[]): boolean {
+  return (
+    queryKey[0] === 'notifications' &&
+    typeof queryKey[1] === 'string' &&
+    (queryKey[1] === 'unreadCount' ||
+      queryKey[1] === 'unreadCountForSport' ||
+      queryKey[1] === 'unreadCountBySport')
+  );
+}
+
 // Extended context for mark as read mutation
 interface MarkAsReadMutationContext extends MutationContext {
   wasUnread: boolean;
@@ -115,13 +154,12 @@ export function useMarkAsRead(userId: string | undefined) {
   return useMutation<Notification, Error, string, MarkAsReadMutationContext>({
     mutationFn: markAsRead,
     onMutate: async notificationId => {
-      // Cancel any outgoing refetches for notifications and unread count
-      // to prevent in-flight refetches from overwriting optimistic updates
+      // Cancel any outgoing refetches for notifications and all unread counts
       await queryClient.cancelQueries({
         queryKey: notificationKeys.lists(),
       });
       await queryClient.cancelQueries({
-        queryKey: notificationKeys.unreadCount(userId ?? ''),
+        predicate: query => isUnreadCountQuery(query.queryKey),
       });
 
       // Get all notification list queries for this user and update them
@@ -167,34 +205,35 @@ export function useMarkAsRead(userId: string | undefined) {
         }
       });
 
-      // Optimistically decrement unread count only if the notification was actually unread
+      // Optimistically decrement ALL cached unread count queries
       const previousUnreadCount = queryClient.getQueryData<number>(
         notificationKeys.unreadCount(userId ?? '')
       );
       if (wasUnread) {
-        queryClient.setQueryData<number>(notificationKeys.unreadCount(userId ?? ''), old =>
-          Math.max(0, (old ?? 0) - 1)
-        );
+        const countQueries = queryCache.findAll({
+          predicate: query => isUnreadCountQuery(query.queryKey),
+        });
+        countQueries.forEach(query => {
+          queryClient.setQueryData<number>(query.queryKey, old => Math.max(0, (old ?? 0) - 1));
+        });
       }
 
       return { previousQueries, previousUnreadCount, wasUnread };
     },
     onError: (_err, _notificationId, context) => {
-      // Rollback all queries on error
+      // Rollback all queries on error — invalidation in onSettled will re-sync
       context?.previousQueries?.forEach(({ queryKey, data }) => {
         queryClient.setQueryData(queryKey, data);
       });
-      if (context?.previousUnreadCount !== undefined) {
-        queryClient.setQueryData(
-          notificationKeys.unreadCount(userId ?? ''),
-          context.previousUnreadCount
-        );
-      }
+      // Invalidate all counts to re-sync from server
+      queryClient.invalidateQueries({
+        predicate: query => isUnreadCountQuery(query.queryKey),
+      });
     },
     onSettled: () => {
-      // Re-sync unread count with the server after mutation
+      // Re-sync all unread counts with the server after mutation
       queryClient.invalidateQueries({
-        queryKey: notificationKeys.unreadCount(userId ?? ''),
+        predicate: query => isUnreadCountQuery(query.queryKey),
       });
     },
   });
@@ -212,12 +251,12 @@ export function useMarkAllAsRead(userId: string | undefined) {
       return markAllAsRead(userId);
     },
     onMutate: async () => {
-      // Cancel any outgoing refetches for notifications and unread count
+      // Cancel any outgoing refetches for notifications and all unread counts
       await queryClient.cancelQueries({
         queryKey: notificationKeys.lists(),
       });
       await queryClient.cancelQueries({
-        queryKey: notificationKeys.unreadCount(userId ?? ''),
+        predicate: query => isUnreadCountQuery(query.queryKey),
       });
 
       // Get all notification list queries and update them
@@ -252,29 +291,32 @@ export function useMarkAllAsRead(userId: string | undefined) {
         }
       });
 
-      // Optimistically set unread count to 0
+      // Optimistically set ALL cached unread counts to 0
       const previousUnreadCount = queryClient.getQueryData<number>(
         notificationKeys.unreadCount(userId ?? '')
       );
-      queryClient.setQueryData<number>(notificationKeys.unreadCount(userId ?? ''), 0);
+      const countQueries = queryCache.findAll({
+        predicate: query => isUnreadCountQuery(query.queryKey),
+      });
+      countQueries.forEach(query => {
+        queryClient.setQueryData<number>(query.queryKey, 0);
+      });
 
       return { previousQueries, previousUnreadCount };
     },
     onError: (_err, _vars, context) => {
-      // Rollback all queries on error
+      // Rollback list queries on error
       context?.previousQueries?.forEach(({ queryKey, data }) => {
         queryClient.setQueryData(queryKey, data);
       });
-      if (context?.previousUnreadCount !== undefined) {
-        queryClient.setQueryData(
-          notificationKeys.unreadCount(userId ?? ''),
-          context.previousUnreadCount
-        );
-      }
+      // Invalidate all counts to re-sync from server
+      queryClient.invalidateQueries({
+        predicate: query => isUnreadCountQuery(query.queryKey),
+      });
     },
     onSettled: () => {
       queryClient.invalidateQueries({
-        queryKey: notificationKeys.unreadCount(userId ?? ''),
+        predicate: query => isUnreadCountQuery(query.queryKey),
       });
     },
   });
@@ -289,12 +331,12 @@ export function useDeleteNotification(userId: string | undefined) {
   return useMutation<void, Error, string, DeleteMutationContext>({
     mutationFn: deleteNotification,
     onMutate: async notificationId => {
-      // Cancel any outgoing refetches for notifications and unread count
+      // Cancel any outgoing refetches for notifications and all unread counts
       await queryClient.cancelQueries({
         queryKey: notificationKeys.lists(),
       });
       await queryClient.cancelQueries({
-        queryKey: notificationKeys.unreadCount(userId ?? ''),
+        predicate: query => isUnreadCountQuery(query.queryKey),
       });
 
       // Get all notification list queries
@@ -338,36 +380,74 @@ export function useDeleteNotification(userId: string | undefined) {
         }
       });
 
-      // Optimistically decrement unread count if notification was unread
+      // Optimistically decrement ALL cached unread count queries
       const previousUnreadCount = queryClient.getQueryData<number>(
         notificationKeys.unreadCount(userId ?? '')
       );
       if (wasUnread) {
-        queryClient.setQueryData<number>(notificationKeys.unreadCount(userId ?? ''), old =>
-          Math.max(0, (old ?? 0) - 1)
-        );
+        const countQueries = queryCache.findAll({
+          predicate: query => isUnreadCountQuery(query.queryKey),
+        });
+        countQueries.forEach(query => {
+          queryClient.setQueryData<number>(query.queryKey, old => Math.max(0, (old ?? 0) - 1));
+        });
       }
 
       return { previousQueries, previousUnreadCount, wasUnread };
     },
     onError: (_err, _notificationId, context) => {
-      // Rollback all queries on error
+      // Rollback list queries on error
       context?.previousQueries?.forEach(({ queryKey, data }) => {
         queryClient.setQueryData(queryKey, data);
       });
-      if (context?.previousUnreadCount !== undefined) {
-        queryClient.setQueryData(
-          notificationKeys.unreadCount(userId ?? ''),
-          context.previousUnreadCount
-        );
-      }
+      // Invalidate all counts to re-sync from server
+      queryClient.invalidateQueries({
+        predicate: query => isUnreadCountQuery(query.queryKey),
+      });
     },
     onSettled: () => {
       queryClient.invalidateQueries({
-        queryKey: notificationKeys.unreadCount(userId ?? ''),
+        predicate: query => isUnreadCountQuery(query.queryKey),
       });
     },
   });
+}
+
+/**
+ * Hook that returns unread notification counts for sports OTHER than the currently selected one.
+ * Useful for showing badges on the sport selector indicating pending actions in other sports.
+ */
+export function useOtherSportsUnreadCount(
+  userId: string | undefined,
+  userSports: Array<{ name: string }>,
+  selectedSportName: string | undefined
+) {
+  const otherSports = userSports.filter(s => s.name !== selectedSportName);
+
+  const queries = useQueries({
+    queries: otherSports.map(sport => ({
+      queryKey: notificationKeys.unreadCountBySport(userId ?? '', sport.name),
+      queryFn: () => {
+        if (!userId) return 0;
+        return getUnreadCountBySport(userId, sport.name);
+      },
+      enabled: !!userId && !!selectedSportName,
+      staleTime: 1000 * 60 * 5,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+    })),
+  });
+
+  const otherSportsUnreadCount: Record<string, number> = {};
+  let totalOtherSportsUnread = 0;
+
+  otherSports.forEach((sport, index) => {
+    const count = queries[index]?.data ?? 0;
+    otherSportsUnreadCount[sport.name] = count;
+    totalOtherSportsUnread += count;
+  });
+
+  return { otherSportsUnreadCount, totalOtherSportsUnread };
 }
 
 /**
