@@ -6739,7 +6739,29 @@
       "description": "No matches match the selected filter. Try a different filter or check back later."
     },
     "showAllMatches": "Show All Matches",
-    "beTheFirst": "Be the first!"
+    "beTheFirst": "Be the first!",
+    "reportInaccuracy": "Report inaccuracy",
+    "reportFacility": {
+      "title": "Report Inaccuracy",
+      "description": "Help us keep facility information accurate. Select the type of inaccuracy you've noticed.",
+      "selectReason": "What's incorrect?",
+      "reasons": {
+        "wrong_address": "Wrong address",
+        "incorrect_hours": "Incorrect hours",
+        "wrong_court_count": "Wrong court count",
+        "wrong_surface_types": "Wrong surface types",
+        "outdated_contact_info": "Outdated contact info",
+        "wrong_amenities": "Wrong amenities",
+        "other": "Other"
+      },
+      "additionalDetails": "Additional details (optional)",
+      "detailsPlaceholder": "Describe what's incorrect...",
+      "submit": "Submit Report",
+      "successTitle": "Report Submitted",
+      "successMessage": "Thank you for helping us improve facility information. We'll review your report shortly.",
+      "errorDuplicate": "You've already reported this issue in the last 24 hours.",
+      "errorGeneric": "Failed to submit report. Please try again."
+    }
   },
   "booking": {
     "selectSlot": "Select Time Slot",
