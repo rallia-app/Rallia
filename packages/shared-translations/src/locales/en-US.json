@@ -156,6 +156,11 @@
     "onboardingRequired": "Complete Your Profile",
     "onboardingPrompt": "Finish setting up your profile to receive and view notifications",
     "completeOnboarding": "Complete Profile",
+    "sportSwitch": {
+      "title": "Switch Sport?",
+      "message": "This match is for {sportName}. Switching will update your match feed to show games for this sport.",
+      "confirm": "Switch & View"
+    },
     "time": {
       "justNow": "Just now",
       "today": "Today",
@@ -3180,7 +3185,7 @@
     "completeProfile": "Complete Profile",
     "user": "User",
     "subtitle": "The best way to find your next tennis or pickleball partner",
-    "soonAndNearby": "Soon & Nearby",
+    "soonAndNearby": "Nearby",
     "publicMatches": "Public Games",
     "viewAll": "View All",
     "myMatches": "My Games",
@@ -3201,6 +3206,10 @@
       "currentDescription": "Use your GPS location",
       "home": "Home Location",
       "homeNotSet": "Set your home location in settings"
+    },
+    "crossSportBanner": {
+      "unreadNotifications": "You have {count} pending notification(s) in {sportName}",
+      "switch": "Switch"
     },
     "header": {
       "ctaButton": "Become a Beta Tester"

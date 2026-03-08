@@ -14,7 +14,12 @@ import {
   usePlayer,
   usePublicMatches,
   usePublicMatchFilters,
+  usePlayerSports,
+  useRatingScoresForSport,
+  useSortedNearbyMatches,
+  useFavoriteFacilities,
   type PublicMatch,
+  type MatchScoringPreferences,
 } from '@rallia/shared-hooks';
 import { useAuth, useThemeStyles, useTranslation, useEffectiveLocation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
@@ -78,7 +83,7 @@ export default function PublicMatches() {
   const { location, locationMode, setLocationMode, hasHomeLocation, hasBothLocationOptions } =
     useEffectiveLocation();
   const { homeLocation } = useUserHomeLocation();
-  const { player, loading: playerLoading } = usePlayer();
+  const { player, maxTravelDistanceKm, loading: playerLoading } = usePlayer();
   const { selectedSport, isLoading: sportLoading } = useSport();
 
   // Get a short label for the home location (full address if available, otherwise postal code)
@@ -152,6 +157,47 @@ export default function PublicMatches() {
     });
   }, [matches, session]);
 
+  // Player sport preferences and rating for match relevance scoring (tiebreaker)
+  const { playerSports } = usePlayerSports(session?.user?.id);
+  const currentPlayerSport = useMemo(
+    () => playerSports.find(ps => ps.sport_id === selectedSport?.id),
+    [playerSports, selectedSport?.id]
+  );
+  const { ratingScores, playerRatingScoreId } = useRatingScoresForSport(
+    selectedSport?.name,
+    selectedSport?.id,
+    session?.user?.id
+  );
+  const playerRatingValue = useMemo(() => {
+    if (!playerRatingScoreId) return null;
+    return ratingScores.find(rs => rs.id === playerRatingScoreId)?.value ?? null;
+  }, [ratingScores, playerRatingScoreId]);
+  const { favorites } = useFavoriteFacilities(session?.user?.id ?? null);
+  const favoriteFacilityIds = useMemo(() => favorites.map(f => f.facilityId), [favorites]);
+
+  // Build scoring preferences for relevance tiebreaking
+  const scoringPreferences = useMemo<MatchScoringPreferences>(
+    () => ({
+      playerGender: player?.gender,
+      playerRatingValue,
+      preferredMatchDuration: currentPlayerSport?.preferred_match_duration,
+      preferredMatchType: currentPlayerSport?.preferred_match_type,
+      favoriteFacilityIds,
+      maxTravelDistanceKm,
+    }),
+    [
+      player?.gender,
+      playerRatingValue,
+      currentPlayerSport?.preferred_match_duration,
+      currentPlayerSport?.preferred_match_type,
+      favoriteFacilityIds,
+      maxTravelDistanceKm,
+    ]
+  );
+
+  // Sort: chronological primary, relevance score as tiebreaker for same date+time
+  const sortedMatches = useSortedNearbyMatches(filteredMatches, scoringPreferences);
+
   // Handle infinite scroll
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -199,14 +245,14 @@ export default function PublicMatches() {
     }
 
     // Show results count when we have matches
-    if (!isLoading && filteredMatches.length > 0) {
+    if (!isLoading && sortedMatches.length > 0) {
       return (
         <View style={styles.resultsContainer}>
           <Text size="sm" color={colors.textMuted}>
-            {filteredMatches.length === 1
+            {sortedMatches.length === 1
               ? t('publicMatches.results.countSingular')
               : t('publicMatches.results.count', {
-                  count: filteredMatches.length,
+                  count: sortedMatches.length,
                 })}
           </Text>
         </View>
@@ -214,7 +260,7 @@ export default function PublicMatches() {
     }
 
     return null;
-  }, [isSearching, isLoading, filteredMatches.length, colors.primary, colors.textMuted, t]);
+  }, [isSearching, isLoading, sortedMatches.length, colors.primary, colors.textMuted, t]);
 
   // Render empty state
   const renderEmptyComponent = useCallback(() => {
@@ -322,7 +368,7 @@ export default function PublicMatches() {
         </View>
       ) : (
         <FlatList
-          data={isSearching ? [] : filteredMatches}
+          data={isSearching ? [] : sortedMatches}
           renderItem={renderMatchCard}
           keyExtractor={item => item.id}
           ListHeaderComponent={renderResultsInfo}
@@ -332,7 +378,7 @@ export default function PublicMatches() {
           onEndReachedThreshold={0.3}
           contentContainerStyle={[
             styles.listContent,
-            (filteredMatches.length === 0 || isSearching) && styles.emptyListContent,
+            (sortedMatches.length === 0 || isSearching) && styles.emptyListContent,
           ]}
           showsVerticalScrollIndicator={false}
           refreshControl={

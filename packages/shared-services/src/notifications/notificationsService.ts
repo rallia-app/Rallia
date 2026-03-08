@@ -88,6 +88,50 @@ export async function getUnreadCount(userId: string): Promise<number> {
 }
 
 /**
+ * Get count of unread notifications for a user, filtered to the selected sport.
+ * Counts notifications whose `payload->>sportName` matches the selected sport,
+ * PLUS system/social notifications that have no `sportName` in payload.
+ */
+export async function getUnreadCountForSport(userId: string, sportName: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('notification')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .is('organization_id', null)
+    .is('read_at', null)
+    .or(`payload->>sportName.eq.${sportName},payload->>sportName.is.null`)
+    .or('expires_at.is.null,expires_at.gt.now()');
+
+  if (error) {
+    throw new Error(`Failed to get unread count for sport: ${error.message}`);
+  }
+
+  return count ?? 0;
+}
+
+/**
+ * Get count of unread notifications for a user, filtered by sport name.
+ * Uses the `sportName` field inside the notification `payload` JSONB column.
+ * Counts all notification types (not just match-category).
+ */
+export async function getUnreadCountBySport(userId: string, sportName: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('notification')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .is('organization_id', null)
+    .is('read_at', null)
+    .eq('payload->>sportName', sportName)
+    .or('expires_at.is.null,expires_at.gt.now()');
+
+  if (error) {
+    throw new Error(`Failed to get unread count by sport: ${error.message}`);
+  }
+
+  return count ?? 0;
+}
+
+/**
  * Mark a single notification as read
  */
 export async function markAsRead(notificationId: string): Promise<Notification> {
@@ -158,6 +202,8 @@ export async function getNotification(notificationId: string): Promise<Notificat
 export const notificationsService = {
   getNotifications,
   getUnreadCount,
+  getUnreadCountForSport,
+  getUnreadCountBySport,
   markAsRead,
   markAllAsRead,
   deleteNotification,
