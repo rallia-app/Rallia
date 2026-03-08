@@ -1744,7 +1744,14 @@
     "tooltip": {
       "courts": "{count} courts",
       "courtsSingular": "1 court"
-    }
+    },
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "legend": {
+      "facilities": "Facilities",
+      "pickup": "Pickup"
+    },
+    "matchesAtLocation": "Matches at this location"
   },
   "community": {
     "placeholder": "Connect with other players",
