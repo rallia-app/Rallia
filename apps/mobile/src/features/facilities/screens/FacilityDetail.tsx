@@ -49,6 +49,7 @@ import {
   neutral,
 } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
+import { SheetManager } from 'react-native-actions-sheet';
 
 // Tab components
 import InfoTab from '../components/InfoTab';
@@ -206,6 +207,19 @@ export default function FacilityDetail() {
       }
     });
   }, [facility]);
+
+  // Handle report inaccuracy
+  const handleReportInaccuracy = useCallback(() => {
+    if (!player?.id || !facility) return;
+    lightHaptic();
+    SheetManager.show('report-facility', {
+      payload: {
+        reporterId: player.id,
+        facilityId,
+        facilityName: facility.name,
+      },
+    });
+  }, [player?.id, facility, facilityId]);
 
   // Contact info
   const primaryContact = contacts.find(c => c.is_primary) || contacts[0];
@@ -449,14 +463,9 @@ export default function FacilityDetail() {
               </View>
             )}
             {courts.length > 0 && (
-              <View
-                style={[
-                  styles.metaBadge,
-                  { backgroundColor: isDark ? neutral[700] : neutral[100] },
-                ]}
-              >
-                <Ionicons name="grid-outline" size={12} color={colors.textMuted} />
-                <Text size="xs" weight="medium" color={colors.textMuted}>
+              <View style={[styles.metaBadge, { backgroundColor: colors.primary + '15' }]}>
+                <Ionicons name="grid-outline" size={12} color={colors.primary} />
+                <Text size="xs" weight="medium" color={colors.primary}>
                   {courts.length} {courts.length === 1 ? 'court' : 'courts'}
                 </Text>
               </View>
@@ -572,6 +581,7 @@ export default function FacilityDetail() {
                 facility={facility}
                 courts={courts}
                 onOpenInMaps={handleOpenInMaps}
+                onReportInaccuracy={player ? handleReportInaccuracy : undefined}
                 colors={colors}
                 isDark={isDark}
                 t={t}
