@@ -2686,7 +2686,8 @@
       "otherReasonPlaceholder": "Veuillez décrire pourquoi le match a été annulé...",
       "confirmCancelled": "Confirmer l'annulation",
       "confirmNoShows": "Confirmer la/les absence(s)",
-      "continue": "Continuer"
+      "continue": "Continuer",
+      "playerCheckedIn": "Enregistré"
     },
     "cancellationReasons": {
       "weather": "Météo",

@@ -232,6 +232,7 @@ async function markFeedbackCompleted(matchId: string, reviewerId: string): Promi
 interface ParticipantWithProfile {
   id: string;
   player_id: string;
+  checked_in_at: string | null;
   player: {
     id: string;
     profile: {
@@ -258,6 +259,7 @@ export async function getOpponentsForFeedback(
       `
       id,
       player_id,
+      checked_in_at,
       player:player_id (
         id,
         profile (
@@ -323,6 +325,7 @@ export async function getOpponentsForFeedback(
       avatarUrl: profile?.profile_picture_url || null,
       hasExistingFeedback: ratedOpponentIds.has(p.player_id),
       hasExistingReport: reportedOpponentIds.has(p.player_id),
+      checkedInAt: p.checked_in_at || null,
     };
   });
 }
