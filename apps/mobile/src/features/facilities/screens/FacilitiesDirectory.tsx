@@ -12,6 +12,7 @@ import {
   RefreshControl,
   ScrollView,
   TouchableOpacity,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -45,6 +46,8 @@ import { FacilityCard, FacilityFiltersBar } from '../components';
 import { SportIcon } from '../../../components/SportIcon';
 import { lightHaptic } from '@rallia/shared-utils';
 import { MyBookingCard } from '../../bookings/components';
+import { SheetManager } from 'react-native-actions-sheet';
+import type { FormattedSlot, CourtOption } from '@rallia/shared-hooks';
 
 // =============================================================================
 // HELPER COMPONENTS
@@ -335,6 +338,33 @@ export default function FacilitiesDirectory() {
     [player?.id, isFavorite, removeFavorite, addFavorite, isMaxReached, t, toast]
   );
 
+  // Handle slot press - show court selection sheet if multiple courts available
+  const handleSlotPress = useCallback((facility: FacilitySearchResult, slot: FormattedSlot) => {
+    // If multiple courts available, show court selection sheet
+    if (slot.courtOptions.length > 1) {
+      SheetManager.show('court-selection', {
+        payload: {
+          courts: slot.courtOptions ?? [],
+          timeLabel: slot.time ?? '',
+          onSelect: (court: unknown) => {
+            const c = court as CourtOption;
+            if (c.bookingUrl) {
+              Linking.openURL(c.bookingUrl);
+            }
+          },
+          onCancel: () => {},
+        },
+      });
+      return;
+    }
+
+    // Single court or no options - open booking URL directly
+    const bookingUrl = slot.courtOptions[0]?.bookingUrl || slot.bookingUrl;
+    if (bookingUrl) {
+      Linking.openURL(bookingUrl);
+    }
+  }, []);
+
   // Render facility card
   const renderFacilityCard = useCallback(
     ({ item }: { item: FacilitySearchResult }) => (
@@ -346,6 +376,7 @@ export default function FacilitiesDirectory() {
         isMaxFavoritesReached={isMaxReached}
         showFavoriteButton={showFavoriteButton}
         sportName={selectedSport?.name}
+        onSlotPress={handleSlotPress}
         isDark={isDark}
         colors={colors}
         t={t}
@@ -355,6 +386,7 @@ export default function FacilitiesDirectory() {
       isFavorite,
       handleFacilityPress,
       handleToggleFavorite,
+      handleSlotPress,
       isMaxReached,
       showFavoriteButton,
       selectedSport?.name,
