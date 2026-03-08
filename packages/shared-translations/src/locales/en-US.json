@@ -2686,7 +2686,8 @@
       "otherReasonPlaceholder": "Please describe why the match was cancelled...",
       "confirmCancelled": "Confirm Cancellation",
       "confirmNoShows": "Confirm no-shows",
-      "continue": "Continue"
+      "continue": "Continue",
+      "playerCheckedIn": "Checked in"
     },
     "cancellationReasons": {
       "weather": "Weather",
