@@ -1751,7 +1751,8 @@
       "facilities": "Installations",
       "pickup": "Pickup"
     },
-    "matchesAtLocation": "Matchs à cet endroit"
+    "matchesAtLocation": "Matchs à cet endroit",
+    "searchPlaceholder": "Rechercher des installations..."
   },
   "community": {
     "placeholder": "Connectez-vous avec d'autres joueurs",

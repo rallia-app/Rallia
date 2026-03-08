@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   FlatList,
   Dimensions,
+  Keyboard,
 } from 'react-native';
 import Animated, {
   FadeIn,
@@ -23,7 +24,7 @@ import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@g
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, primary, accent } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, primary, accent } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useMapData, useFavoriteFacilities, usePlayer } from '@rallia/shared-hooks';
 import type { MapFacility, MapCustomMatch } from '@rallia/shared-hooks';
@@ -34,6 +35,7 @@ import type { MapStackParamList } from '../navigation/types';
 import { useThemeStyles, useTranslation, useEffectiveLocation } from '../hooks';
 import { useSport, useMatchDetailSheet } from '../context';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
+import { SearchBar } from '../components/SearchBar';
 import { MapMarkerImages } from '../components/map/MapMarkerImages';
 import { facilitiesToGeoJSON, matchesToGeoJSON } from '../components/map/mapGeoJson';
 import { FacilityCard } from '../features/facilities/components';
@@ -91,6 +93,8 @@ const Map = () => {
   const carouselRef = useRef<FlatList<MapFacility>>(null);
   const highlightTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [clusterMatches, setClusterMatches] = useState<MapCustomMatch[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const shapePressed = useRef(false);
 
   const focusLocation = route.params?.focusLocation;
@@ -99,7 +103,7 @@ const Map = () => {
     : location
       ? [location.longitude, location.latitude]
       : [-73.5673, 45.5017]; // Default: Montreal
-  const initialZoom = focusLocation ? 15 : 12;
+  const initialZoom = focusLocation ? 13 : 10;
 
   const sportIds = selectedSport?.id ? [selectedSport.id] : undefined;
 
@@ -138,6 +142,29 @@ const Map = () => {
     [facilities, highlightedId]
   );
   const matchGeoJson = useMemo(() => matchesToGeoJSON(customMatches), [customMatches]);
+
+  const filteredFacilities = useMemo(() => {
+    const normalized = searchQuery.trim().replace(/\s+/g, ' ').toLowerCase();
+    if (!normalized) return [];
+    const terms = normalized.split(' ');
+    return facilities
+      .filter(f => {
+        const haystack = [f.name, f.address, f.city].filter(Boolean).join(' ').toLowerCase();
+        return terms.every(term => haystack.includes(term));
+      })
+      .slice(0, 5);
+  }, [searchQuery, facilities]);
+
+  const showSearchResults =
+    isSearchFocused && searchQuery.trim().length > 0 && filteredFacilities.length > 0;
+
+  const dismissSearch = useCallback(() => {
+    if (isSearchFocused || searchQuery.length > 0) {
+      setSearchQuery('');
+      setIsSearchFocused(false);
+      Keyboard.dismiss();
+    }
+  }, [isSearchFocused, searchQuery]);
 
   const handleClose = useCallback(() => {
     lightHaptic();
@@ -188,6 +215,7 @@ const Map = () => {
       shapePressed.current = false;
       return;
     }
+    dismissSearch();
     if (selectedFacilities.length > 0) {
       lightHaptic();
       clearTimeout(highlightTimer.current);
@@ -195,7 +223,7 @@ const Map = () => {
       setActiveCardIndex(0);
       setHighlightedId(null);
     }
-  }, [selectedFacilities.length]);
+  }, [selectedFacilities.length, dismissSearch]);
 
   const handleFacilitySelect = useCallback((facilityOrFacilities: MapFacility | MapFacility[]) => {
     lightHaptic();
@@ -215,6 +243,16 @@ const Map = () => {
       });
     }
   }, []);
+
+  const handleSearchResultPress = useCallback(
+    (facility: MapFacility) => {
+      setSearchQuery('');
+      setIsSearchFocused(false);
+      Keyboard.dismiss();
+      handleFacilitySelect(facility);
+    },
+    [handleFacilitySelect]
+  );
 
   const handleFacilityShapePress = useCallback(
     async (event: any) => {
@@ -439,6 +477,7 @@ const Map = () => {
         attributionEnabled={false}
         logoEnabled={false}
         compassEnabled={false}
+        scaleBarEnabled={false}
       >
         <Mapbox.Camera
           ref={cameraRef}
@@ -567,6 +606,52 @@ const Map = () => {
           </Text>
         </Animated.View>
       )}
+
+      {/* Search bar */}
+      <View style={[styles.searchWrapper, { top: insets.top + 12 }]}>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder={t('map.searchPlaceholder')}
+          onFocus={() => setIsSearchFocused(true)}
+          returnKeyType="search"
+          containerStyle={{ backgroundColor: colors.card }}
+        />
+        {showSearchResults && (
+          <Animated.View
+            entering={FadeInDown.duration(150)}
+            exiting={FadeOutDown.duration(100)}
+            style={[styles.searchResults, { backgroundColor: colors.card }]}
+          >
+            {filteredFacilities.map((facility, index) => (
+              <TouchableOpacity
+                key={facility.id}
+                style={[
+                  styles.searchResultRow,
+                  index < filteredFacilities.length - 1 && {
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: colors.border,
+                  },
+                ]}
+                onPress={() => handleSearchResultPress(facility)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="location-outline" size={18} color={colors.textMuted} />
+                <View style={styles.searchResultText}>
+                  <Text size="sm" weight="medium" color={colors.text} numberOfLines={1}>
+                    {facility.name}
+                  </Text>
+                  {(facility.address || facility.city) && (
+                    <Text size="xs" color={colors.textMuted} numberOfLines={1}>
+                      {[facility.address, facility.city].filter(Boolean).join(', ')}
+                    </Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))}
+          </Animated.View>
+        )}
+      </View>
 
       {/* Right-side control stack (Apple Maps style) */}
       <View style={[styles.controlStack, { top: insets.top + 12, right: 16 }]}>
@@ -789,6 +874,35 @@ const styles = StyleSheet.create({
   },
   noLocationText: {
     textAlign: 'center',
+  },
+
+  // Search bar
+  searchWrapper: {
+    position: 'absolute',
+    left: 16,
+    right: 72,
+    zIndex: 25,
+  },
+  searchResults: {
+    marginTop: 4,
+    borderRadius: radiusPixels.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+    overflow: 'hidden',
+  },
+  searchResultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[2.5],
+    gap: spacingPixels[2],
+  },
+  searchResultText: {
+    flex: 1,
+    gap: 1,
   },
 
   // Right-side control stack
