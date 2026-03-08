@@ -156,6 +156,11 @@
     "onboardingRequired": "Complete Your Profile",
     "onboardingPrompt": "Finish setting up your profile to receive and view notifications",
     "completeOnboarding": "Complete Profile",
+    "sportSwitch": {
+      "title": "Switch Sport?",
+      "message": "This match is for {sportName}. Switching will update your match feed to show games for this sport.",
+      "confirm": "Switch & View"
+    },
     "time": {
       "justNow": "Just now",
       "today": "Today",
@@ -2686,7 +2691,8 @@
       "otherReasonPlaceholder": "Please describe why the match was cancelled...",
       "confirmCancelled": "Confirm Cancellation",
       "confirmNoShows": "Confirm no-shows",
-      "continue": "Continue"
+      "continue": "Continue",
+      "playerCheckedIn": "Checked in"
     },
     "cancellationReasons": {
       "weather": "Weather",
@@ -3109,11 +3115,14 @@
         "dateTime": "date/time",
         "location": "location",
         "format": "format",
-        "cost": "cost"
+        "cost": "cost",
+        "gender": "gender preference",
+        "rating": "minimum rating"
       },
       "errors": {
         "MATCH_NOT_FOUND": "Match not found.",
         "FORMAT_CHANGE_BLOCKED": "Cannot change from doubles to singles with 2 or more participants. Remove participants first or cancel the game.",
+        "GENDER_CHANGE_BLOCKED": "Cannot change gender preference — some participants don't match the new preference. Only narrowing from \"all\" is allowed when all participants match.",
         "UNKNOWN_ERROR": "An unexpected error occurred. Please try again."
       }
     },
@@ -3176,7 +3185,7 @@
     "completeProfile": "Complete Profile",
     "user": "User",
     "subtitle": "The best way to find your next tennis or pickleball partner",
-    "soonAndNearby": "Soon & Nearby",
+    "soonAndNearby": "Nearby",
     "publicMatches": "Public Games",
     "viewAll": "View All",
     "myMatches": "My Games",
@@ -3197,6 +3206,10 @@
       "currentDescription": "Use your GPS location",
       "home": "Home Location",
       "homeNotSet": "Set your home location in settings"
+    },
+    "crossSportBanner": {
+      "unreadNotifications": "You have {count} pending notification(s) in {sportName}",
+      "switch": "Switch"
     },
     "header": {
       "ctaButton": "Become a Beta Tester"
@@ -6752,7 +6765,29 @@
       "description": "No matches match the selected filter. Try a different filter or check back later."
     },
     "showAllMatches": "Show All Matches",
-    "beTheFirst": "Be the first!"
+    "beTheFirst": "Be the first!",
+    "reportInaccuracy": "Report inaccuracy",
+    "reportFacility": {
+      "title": "Report Inaccuracy",
+      "description": "Help us keep facility information accurate. Select the type of inaccuracy you've noticed.",
+      "selectReason": "What's incorrect?",
+      "reasons": {
+        "wrong_address": "Wrong address",
+        "incorrect_hours": "Incorrect hours",
+        "wrong_court_count": "Wrong court count",
+        "wrong_surface_types": "Wrong surface types",
+        "outdated_contact_info": "Outdated contact info",
+        "wrong_amenities": "Wrong amenities",
+        "other": "Other"
+      },
+      "additionalDetails": "Additional details (optional)",
+      "detailsPlaceholder": "Describe what's incorrect...",
+      "submit": "Submit Report",
+      "successTitle": "Report Submitted",
+      "successMessage": "Thank you for helping us improve facility information. We'll review your report shortly.",
+      "errorDuplicate": "You've already reported this issue in the last 24 hours.",
+      "errorGeneric": "Failed to submit report. Please try again."
+    }
   },
   "booking": {
     "selectSlot": "Select Time Slot",

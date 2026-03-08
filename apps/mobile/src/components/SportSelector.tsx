@@ -42,6 +42,8 @@ export interface SportSelectorProps {
   isDark?: boolean;
   confirmBeforeSwitch?: boolean;
   t?: (key: string) => string;
+  /** Unread notification counts keyed by sport name, for non-selected sports */
+  otherSportsUnreadCount?: Record<string, number>;
 }
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -53,6 +55,7 @@ const SportSelector: React.FC<SportSelectorProps> = ({
   isDark = false,
   confirmBeforeSwitch = true,
   t,
+  otherSportsUnreadCount = {},
 }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -145,6 +148,7 @@ const SportSelector: React.FC<SportSelectorProps> = ({
   if (!selectedSport || userSports.length === 0) return null;
 
   const hasMultipleSports = userSports.length > 1;
+  const totalOtherSportsUnread = Object.values(otherSportsUnreadCount).reduce((a, b) => a + b, 0);
 
   const handleButtonPress = () => {
     if (hasMultipleSports) {
@@ -183,6 +187,7 @@ const SportSelector: React.FC<SportSelectorProps> = ({
               style={{ marginLeft: 2 }}
             />
           )}
+          {totalOtherSportsUnread > 0 && <View style={styles.pillBadge} />}
         </TouchableOpacity>
       </Animated.View>
 
@@ -271,6 +276,18 @@ const SportSelector: React.FC<SportSelectorProps> = ({
                         {sport.display_name}
                       </Text>
                     </View>
+                    {!isSelected && (otherSportsUnreadCount[sport.name] ?? 0) > 0 && (
+                      <View style={styles.dropdownBadge}>
+                        <Text
+                          size="xs"
+                          weight="semibold"
+                          color="#ffffff"
+                          style={styles.dropdownBadgeText}
+                        >
+                          {otherSportsUnreadCount[sport.name]}
+                        </Text>
+                      </View>
+                    )}
                     {isSelected && (
                       <View style={styles.checkContainer}>
                         <Ionicons
@@ -394,6 +411,33 @@ const styles = StyleSheet.create({
   },
   selectorIcon: {
     marginRight: 4,
+  },
+  pillBadge: {
+    position: 'absolute',
+    top: -1,
+    right: -2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#ef4444',
+    borderWidth: 1.5,
+    borderColor: '#ffffff',
+  },
+  dropdownBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#ef4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+    marginLeft: spacingPixels[2],
+  },
+  dropdownBadgeText: {
+    lineHeight: 20,
+    textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalOverlay: {
     flex: 1,

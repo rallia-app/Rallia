@@ -39,7 +39,12 @@ import SportSelector from '../components/SportSelector';
 import TennisIcon from '../../assets/icons/tennis.svg';
 import PickleballIcon from '../../assets/icons/pickleball.svg';
 import TennisCourtIcon from '../../assets/icons/tennis-court.svg';
-import { useUnreadNotificationCount, useProfile, useTotalUnreadCount } from '@rallia/shared-hooks';
+import {
+  useUnreadCountForSport,
+  useProfile,
+  useTotalUnreadCount,
+  useOtherSportsUnreadCount,
+} from '@rallia/shared-hooks';
 import { useAuth, useThemeStyles, useTranslation, useRequireOnboarding } from '../hooks';
 import { useTheme } from '@rallia/shared-hooks';
 import { useAppNavigation } from './hooks';
@@ -139,7 +144,8 @@ const MapStackNavigator = createNativeStackNavigator<MapStackParamList>();
 function NotificationButtonWithBadge({ color }: { color?: string }) {
   const navigation = useAppNavigation();
   const { session } = useAuth();
-  const { data: unreadCount } = useUnreadNotificationCount(session?.user?.id);
+  const { selectedSport } = useSport();
+  const { data: unreadCount } = useUnreadCountForSport(session?.user?.id, selectedSport?.name);
   const { colors } = useThemeStyles();
 
   return (
@@ -168,6 +174,13 @@ function SportSelectorWithContext() {
   const { refetch } = useProfile();
   const { t } = useTranslation();
   const isDark = theme === 'dark';
+
+  // Fetch unread counts for other sports to show badge on selector
+  const { otherSportsUnreadCount } = useOtherSportsUnreadCount(
+    session?.user?.id,
+    userSports,
+    selectedSport?.name
+  );
 
   // Determine if user is a guest (not signed in)
   // const isGuest = !session?.user;
@@ -216,6 +229,7 @@ function SportSelectorWithContext() {
           isDark={isDark}
           confirmBeforeSwitch
           t={t as (key: string) => string}
+          otherSportsUnreadCount={otherSportsUnreadCount}
         />
       </WalkthroughableView>
     </CopilotStep>

@@ -156,6 +156,11 @@
     "onboardingRequired": "Complétez votre profil",
     "onboardingPrompt": "Terminez la configuration de votre profil pour recevoir et voir vos notifications",
     "completeOnboarding": "Compléter le profil",
+    "sportSwitch": {
+      "title": "Changer de sport?",
+      "message": "Cette partie est pour le {sportName}. Changer mettra à jour votre fil de parties pour afficher les parties de ce sport.",
+      "confirm": "Changer et voir"
+    },
     "time": {
       "justNow": "À l'instant",
       "today": "Aujourd'hui",
@@ -2686,7 +2691,8 @@
       "otherReasonPlaceholder": "Veuillez décrire pourquoi le match a été annulé...",
       "confirmCancelled": "Confirmer l'annulation",
       "confirmNoShows": "Confirmer la/les absence(s)",
-      "continue": "Continuer"
+      "continue": "Continuer",
+      "playerCheckedIn": "Enregistré"
     },
     "cancellationReasons": {
       "weather": "Météo",
@@ -3109,11 +3115,14 @@
         "dateTime": "la date/heure",
         "location": "le lieu",
         "format": "le format",
-        "cost": "le coût"
+        "cost": "le coût",
+        "gender": "la préférence de genre",
+        "rating": "le classement minimum"
       },
       "errors": {
         "MATCH_NOT_FOUND": "Partie introuvable.",
         "FORMAT_CHANGE_BLOCKED": "Impossible de passer de double à simple avec 2 participants ou plus. Retirez des participants ou annulez la partie.",
+        "GENDER_CHANGE_BLOCKED": "Impossible de modifier la préférence de genre — certains participants ne correspondent pas à la nouvelle préférence. Seul le passage de « tous » à un genre spécifique est permis lorsque tous les participants correspondent.",
         "UNKNOWN_ERROR": "Une erreur inattendue s'est produite. Veuillez réessayer."
       }
     },
@@ -3176,7 +3185,7 @@
     "completeProfile": "Compléter le profil",
     "user": "Utilisateur",
     "subtitle": "La meilleure façon de trouver votre prochain partenaire de tennis ou de pickleball",
-    "soonAndNearby": "Bientôt et proche",
+    "soonAndNearby": "À proximité",
     "publicMatches": "Parties publiques",
     "viewAll": "Voir tout",
     "myMatches": "Mes parties",
@@ -3197,6 +3206,10 @@
       "currentDescription": "Utiliser votre position GPS",
       "home": "Emplacement domicile",
       "homeNotSet": "Définissez votre emplacement domicile dans les paramètres"
+    },
+    "crossSportBanner": {
+      "unreadNotifications": "Vous avez {count} notification(s) en attente pour {sportName}",
+      "switch": "Changer"
     },
     "header": {
       "ctaButton": "Devenir bêta-testeur"
@@ -6754,7 +6767,29 @@
       "description": "Aucune partie ne correspond au filtre sélectionné. Essayez un autre filtre ou revenez plus tard."
     },
     "showAllMatches": "Voir toutes les parties",
-    "beTheFirst": "Soyez le premier!"
+    "beTheFirst": "Soyez le premier!",
+    "reportInaccuracy": "Signaler une inexactitude",
+    "reportFacility": {
+      "title": "Signaler une inexactitude",
+      "description": "Aidez-nous à garder les informations des sites de jeu à jour. Sélectionnez le type d'inexactitude que vous avez remarqué.",
+      "selectReason": "Qu'est-ce qui est incorrect?",
+      "reasons": {
+        "wrong_address": "Mauvaise adresse",
+        "incorrect_hours": "Horaires incorrects",
+        "wrong_court_count": "Nombre de terrains incorrect",
+        "wrong_surface_types": "Types de surface incorrects",
+        "outdated_contact_info": "Coordonnées obsolètes",
+        "wrong_amenities": "Équipements incorrects",
+        "other": "Autre"
+      },
+      "additionalDetails": "Détails supplémentaires (optionnel)",
+      "detailsPlaceholder": "Décrivez ce qui est incorrect...",
+      "submit": "Envoyer le signalement",
+      "successTitle": "Signalement envoyé",
+      "successMessage": "Merci de nous aider à améliorer les informations des sites de jeu. Nous examinerons votre signalement sous peu.",
+      "errorDuplicate": "Vous avez déjà signalé ce problème au cours des dernières 24 heures.",
+      "errorGeneric": "Échec de l'envoi du signalement. Veuillez réessayer."
+    }
   },
   "booking": {
     "selectSlot": "Sélectionner un créneau",

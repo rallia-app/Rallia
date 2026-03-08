@@ -24,6 +24,7 @@ import { ReportIssueActionSheet } from '../features/matches/components/feedback-
 // Facilities components
 import { ExternalBookingActionSheet } from '../features/facilities/components/ExternalBookingSheet';
 import { CourtBookingActionSheet } from '../features/facilities/components/CourtBookingSheet';
+import { ReportFacilityActionSheet } from '../features/facilities/components/ReportFacilitySheet';
 // Booking components
 import { BookingDetailActionSheet } from '../features/bookings/components/BookingDetailSheet';
 // Shared components
@@ -312,6 +313,13 @@ declare module 'react-native-actions-sheet' {
         }) => void;
       };
     }>;
+    'report-facility': SheetDefinition<{
+      payload: {
+        reporterId: string;
+        facilityId: string;
+        facilityName: string;
+      };
+    }>;
     'image-picker': SheetDefinition<{
       payload: {
         onTakePhoto?: () => void;
@@ -572,6 +580,7 @@ export const Sheets = () => {
         'report-issue': ReportIssueActionSheet,
         'external-booking': ExternalBookingActionSheet,
         'court-booking': CourtBookingActionSheet,
+        'report-facility': ReportFacilityActionSheet,
         'image-picker': ImagePickerActionSheet,
         'player-invite': PlayerInviteActionSheet,
         // Sport profile sheets

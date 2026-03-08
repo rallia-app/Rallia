@@ -417,6 +417,8 @@ interface PlayerSelectCardProps {
   selected: boolean;
   onToggle: () => void;
   colors: MatchOutcomeStepProps['colors'];
+  disabled?: boolean;
+  disabledLabel?: string;
 }
 
 const PlayerSelectCard: React.FC<PlayerSelectCardProps> = ({
@@ -424,6 +426,8 @@ const PlayerSelectCard: React.FC<PlayerSelectCardProps> = ({
   selected,
   onToggle,
   colors,
+  disabled,
+  disabledLabel,
 }) => {
   const avatarUrl = getProfilePictureUrl(player.avatarUrl);
 
@@ -432,15 +436,22 @@ const PlayerSelectCard: React.FC<PlayerSelectCardProps> = ({
       style={[
         styles.playerCard,
         {
-          backgroundColor: selected ? `${colors.buttonActive}15` : colors.buttonInactive,
-          borderColor: selected ? colors.buttonActive : colors.border,
+          backgroundColor: disabled
+            ? `${colors.border}30`
+            : selected
+              ? `${colors.buttonActive}15`
+              : colors.buttonInactive,
+          borderColor: disabled ? colors.border : selected ? colors.buttonActive : colors.border,
+          opacity: disabled ? 0.6 : 1,
         },
       ]}
       onPress={() => {
+        if (disabled) return;
         lightHaptic();
         onToggle();
       }}
-      activeOpacity={0.7}
+      activeOpacity={disabled ? 1 : 0.7}
+      disabled={disabled}
     >
       {avatarUrl ? (
         <Image source={{ uri: avatarUrl }} style={styles.playerAvatar} />
@@ -449,26 +460,41 @@ const PlayerSelectCard: React.FC<PlayerSelectCardProps> = ({
           <Ionicons name="person-outline" size={20} color={colors.textMuted} />
         </View>
       )}
-      <Text
-        size="base"
-        weight={selected ? 'semibold' : 'regular'}
-        color={selected ? colors.buttonActive : colors.text}
-        style={styles.playerName}
-      >
-        {player.fullName}
-      </Text>
+      <View style={styles.playerNameContainer}>
+        <Text
+          size="base"
+          weight={selected ? 'semibold' : 'regular'}
+          color={disabled ? colors.textMuted : selected ? colors.buttonActive : colors.text}
+          style={styles.playerName}
+        >
+          {player.fullName}
+        </Text>
+        {disabled && disabledLabel && (
+          <View style={[styles.checkedInBadge, { backgroundColor: `${colors.buttonActive}20` }]}>
+            <Ionicons name="checkmark-circle" size={12} color={colors.buttonActive} />
+            <Text size="xs" color={colors.buttonActive}>
+              {disabledLabel}
+            </Text>
+          </View>
+        )}
+      </View>
       <View
         style={[
           styles.checkbox,
           {
-            backgroundColor: selected ? colors.buttonActive : 'transparent',
-            borderColor: selected ? colors.buttonActive : colors.border,
+            backgroundColor: disabled
+              ? colors.border
+              : selected
+                ? colors.buttonActive
+                : 'transparent',
+            borderColor: disabled ? colors.border : selected ? colors.buttonActive : colors.border,
           },
         ]}
       >
-        {selected && (
+        {selected && !disabled && (
           <Ionicons name="checkmark-outline" size={16} color={colors.buttonTextActive} />
         )}
+        {disabled && <Ionicons name="remove-outline" size={16} color={colors.textMuted} />}
       </View>
     </TouchableOpacity>
   );
@@ -600,22 +626,25 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
           onPress={() => handleOutcomeChange('mutual_cancel')}
           colors={colors}
         />
-        <OptionCard
-          icon="person-remove-outline"
-          title={
-            opponents.length === 1
-              ? t('matchFeedback.outcomeStep.missingPlayer')
-              : t('matchFeedback.outcomeStep.missingPlayers')
-          }
-          description={
-            opponents.length === 1
-              ? t('matchFeedback.outcomeStep.missingPlayerDescription')
-              : t('matchFeedback.outcomeStep.missingPlayersDescription')
-          }
-          selected={outcome === 'opponent_no_show'}
-          onPress={() => handleOutcomeChange('opponent_no_show')}
-          colors={colors}
-        />
+        {/* Hide no-show option in singles when the only opponent has checked in */}
+        {!(opponents.length === 1 && opponents[0].checkedInAt) && (
+          <OptionCard
+            icon="person-remove-outline"
+            title={
+              opponents.length === 1
+                ? t('matchFeedback.outcomeStep.missingPlayer')
+                : t('matchFeedback.outcomeStep.missingPlayers')
+            }
+            description={
+              opponents.length === 1
+                ? t('matchFeedback.outcomeStep.missingPlayerDescription')
+                : t('matchFeedback.outcomeStep.missingPlayersDescription')
+            }
+            selected={outcome === 'opponent_no_show'}
+            onPress={() => handleOutcomeChange('opponent_no_show')}
+            colors={colors}
+          />
+        )}
       </View>
 
       {/* No-show player selection (only for doubles - singles auto-selects the only opponent) */}
@@ -637,6 +666,8 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
                 selected={noShowPlayerIds.includes(opponent.playerId)}
                 onToggle={() => handlePlayerToggle(opponent.playerId)}
                 colors={colors}
+                disabled={!!opponent.checkedInAt}
+                disabledLabel={t('matchFeedback.outcomeStep.playerCheckedIn')}
               />
             ))}
           </View>
@@ -840,8 +871,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  playerName: {
+  playerNameContainer: {
     flex: 1,
+    gap: spacingPixels[1],
+  },
+  playerName: {},
+  checkedInBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: 2,
+    borderRadius: radiusPixels.sm,
+    alignSelf: 'flex-start',
   },
   checkbox: {
     width: 24,
