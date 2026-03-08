@@ -1297,6 +1297,7 @@
       "failedToSaveRating": "Failed to save your rating. Please try again.",
       "failedToSavePreferences": "Failed to save your preferences. Please try again.",
       "failedToSaveAvailability": "Failed to save your availability. Please try again.",
+      "failedToCompleteOnboarding": "Failed to complete your profile. Please try again.",
       "failedToLoadSports": "Failed to load sports. Please try again.",
       "failedToLoadRatings": "Failed to load ratings. Please try again.",
       "failedToUpdateSportSelection": "Failed to update sport selection. Please try again.",
