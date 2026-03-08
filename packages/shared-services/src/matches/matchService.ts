@@ -241,6 +241,7 @@ export async function getMatchWithDetails(matchId: string) {
         team_number,
         feedback_completed,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
@@ -495,6 +496,7 @@ export async function getMatchesWithDetails(
         team_number,
         feedback_completed,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
@@ -2616,6 +2618,7 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
         team_number,
         feedback_completed,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
@@ -2935,6 +2938,7 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
         team_number,
         feedback_completed,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
@@ -3316,6 +3320,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
         team_number,
         feedback_completed,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
@@ -3966,6 +3971,7 @@ export async function getMatchNeedingFeedback(
         feedback_completed,
         match_outcome,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
@@ -4163,6 +4169,7 @@ export async function getCustomLocationMatches(
         team_number,
         feedback_completed,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (

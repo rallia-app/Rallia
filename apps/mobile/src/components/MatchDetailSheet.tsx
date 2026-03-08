@@ -358,21 +358,17 @@ function willLeaveAffectReputation(match: MatchDetailData): boolean {
 }
 
 /**
- * Check if we're within 24 hours of the match start time.
- * Used to prevent certain actions like kicking players too close to game time.
- * Uses timezone-aware date utilities to properly handle timezones.
+ * Check if a participant joined more than 24 hours ago.
+ * Used to prevent kicking players who have been committed for a while.
  *
- * @param match - The match data
- * @returns true if we're within 24 hours of match start
+ * @param joinedAt - The ISO timestamp when the participant joined
+ * @returns true if the participant joined more than 24 hours ago
  */
-function isWithin24HoursOfStart(match: MatchDetailData): boolean {
-  const tz = match.timezone || 'UTC';
-  // Get time difference in milliseconds (positive = future, negative = past)
-  const msDiff = getTimeDifferenceFromNow(match.match_date, match.start_time, tz);
-  const hoursUntilMatch = msDiff / (1000 * 60 * 60);
-
-  // Returns true if match is in the future and within 24 hours
-  return hoursUntilMatch >= 0 && hoursUntilMatch < 24;
+function hasBeenJoinedOver24Hours(joinedAt: string | null | undefined): boolean {
+  if (!joinedAt) return true;
+  const joinedTime = new Date(joinedAt).getTime();
+  const hoursSinceJoin = (Date.now() - joinedTime) / (1000 * 60 * 60);
+  return hoursSinceJoin >= 24;
 }
 
 /**
@@ -1706,9 +1702,6 @@ export const MatchDetailSheet: React.FC = () => {
   );
   const hasStartTimePassed = startTimeDiffMs < 0;
 
-  // Check if we're within 24h of match start (to prevent kicking players)
-  const cannotKickWithin24h = isWithin24HoursOfStart(match);
-
   // Feedback window status (48h after end time)
   const { isWithinFeedbackWindow } = getFeedbackWindowStatus(
     match.match_date,
@@ -1779,6 +1772,7 @@ export const MatchDetailSheet: React.FC = () => {
     isCheckedIn?: boolean;
     isMostWanted?: boolean;
     certificationStatus?: 'self_declared' | 'certified' | 'disputed';
+    joinedAt?: string | null;
   }> = [];
 
   // Helper to get the certification status for a player's rating
@@ -1832,6 +1826,7 @@ export const MatchDetailSheet: React.FC = () => {
       isCheckedIn: !!p.checked_in_at,
       isMostWanted: getIsMostWanted(p.player),
       certificationStatus: getCertificationStatus(p.player),
+      joinedAt: p.joined_at,
     });
   });
 
@@ -3339,14 +3334,14 @@ export const MatchDetailSheet: React.FC = () => {
                       tierAccentLight={tierAccentLight}
                     />
                   </TouchableOpacity>
-                  {/* Kick button for host to remove joined participants (not for host avatar, not for empty slots, not if match ended, in progress, or within 24h of start) */}
+                  {/* Kick button for host to remove joined participants (not for host avatar, not for empty slots, not if match ended, in progress, or if participant joined >24h ago) */}
                   {isCreator &&
                     !p.isHost &&
                     !p.isEmpty &&
                     p.participantId &&
                     !hasMatchEnded &&
                     !isInProgress &&
-                    !cannotKickWithin24h && (
+                    !hasBeenJoinedOver24Hours(p.joinedAt) && (
                       <TouchableOpacity
                         style={[
                           styles.kickButton,
