@@ -45,6 +45,8 @@ import type {
   CourtStatusFilter,
   MatchTierFilter,
   SpecificDateFilter,
+  SpotsAvailableFilter,
+  SpecificTimeFilter,
 } from '@rallia/shared-hooks';
 
 // =============================================================================
@@ -65,6 +67,9 @@ interface MatchFiltersBarProps {
   courtStatus: CourtStatusFilter;
   matchTier: MatchTierFilter;
   specificDate: SpecificDateFilter;
+  spotsAvailable: SpotsAvailableFilter;
+  favoritesOnly: boolean;
+  specificTime: SpecificTimeFilter;
   onFormatChange: (format: FormatFilter) => void;
   onMatchTypeChange: (matchType: MatchTypeFilter) => void;
   onDateRangeChange: (dateRange: DateRangeFilter) => void;
@@ -78,6 +83,10 @@ interface MatchFiltersBarProps {
   onCourtStatusChange: (courtStatus: CourtStatusFilter) => void;
   onMatchTierChange: (matchTier: MatchTierFilter) => void;
   onSpecificDateChange: (specificDate: SpecificDateFilter) => void;
+  onSpotsAvailableChange: (spotsAvailable: SpotsAvailableFilter) => void;
+  onFavoritesOnlyChange: (favoritesOnly: boolean) => void;
+  onSpecificTimeChange: (specificTime: SpecificTimeFilter) => void;
+  isAuthenticated?: boolean;
   onReset?: () => void;
   hasActiveFilters?: boolean;
   showLocationSelector?: boolean;
@@ -97,6 +106,7 @@ const COST_OPTIONS: CostFilter[] = ['all', 'free', 'paid'];
 const JOIN_MODE_OPTIONS: JoinModeFilter[] = ['all', 'direct', 'request'];
 const DURATION_OPTIONS_LIST: DurationFilter[] = ['all', '30', '60', '90', '120+'];
 const COURT_STATUS_OPTIONS: CourtStatusFilter[] = ['all', 'reserved', 'to_reserve'];
+const SPOTS_AVAILABLE_OPTIONS: SpotsAvailableFilter[] = ['all', '1', '2', '3'];
 
 // =============================================================================
 // FILTER CHIP COMPONENT
@@ -351,6 +361,9 @@ export default function MatchFiltersBar({
   courtStatus,
   matchTier,
   specificDate,
+  spotsAvailable,
+  favoritesOnly,
+  specificTime,
   onFormatChange,
   onMatchTypeChange,
   onDateRangeChange,
@@ -364,6 +377,10 @@ export default function MatchFiltersBar({
   onCourtStatusChange,
   onMatchTierChange,
   onSpecificDateChange,
+  onSpotsAvailableChange,
+  onFavoritesOnlyChange,
+  onSpecificTimeChange,
+  isAuthenticated = false,
   onReset,
   hasActiveFilters = false,
   showLocationSelector = false,
@@ -390,6 +407,21 @@ export default function MatchFiltersBar({
   const [showDurationDropdown, setShowDurationDropdown] = useState(false);
   const [showCourtStatusDropdown, setShowCourtStatusDropdown] = useState(false);
   const [showMatchTierDropdown, setShowMatchTierDropdown] = useState(false);
+  const [showSpotsDropdown, setShowSpotsDropdown] = useState(false);
+
+  // Time picker state
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [tempTime, setTempTime] = useState<Date>(() => {
+    if (specificTime) {
+      const [hours, minutes] = specificTime.split(':').map(Number);
+      const d = new Date();
+      d.setHours(hours, minutes, 0, 0);
+      return d;
+    }
+    const d = new Date();
+    d.setMinutes(0, 0, 0);
+    return d;
+  });
 
   // Date picker state
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -461,6 +493,10 @@ export default function MatchFiltersBar({
     (v: MatchTierFilter) => t(`publicMatches.filters.tier.${v}` as TranslationKey),
     [t]
   );
+  const getSpotsAvailableLabel = useCallback(
+    (v: SpotsAvailableFilter) => t(`publicMatches.filters.spotsAvailable.${v}` as TranslationKey),
+    [t]
+  );
   const getDistanceLabel = useCallback(
     (v: DistanceFilter) => {
       if (v === 'all') return t('publicMatches.filters.distance.all');
@@ -528,6 +564,26 @@ export default function MatchFiltersBar({
       : getCourtStatusLabel(courtStatus);
   const matchTierDisplay =
     matchTier === 'all' ? t('publicMatches.filters.tier.label') : getMatchTierLabel(matchTier);
+
+  const spotsAvailableDisplay =
+    spotsAvailable === 'all'
+      ? t('publicMatches.filters.spotsAvailable.label' as TranslationKey)
+      : getSpotsAvailableLabel(spotsAvailable);
+  const favoritesDisplay = t('publicMatches.filters.favorites.label' as TranslationKey);
+
+  // Time display - combines timeOfDay and specificTime
+  const getTimeDisplay = useCallback(() => {
+    if (specificTime) {
+      const [hours, minutes] = specificTime.split(':').map(Number);
+      const d = new Date();
+      d.setHours(hours, minutes, 0, 0);
+      return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    }
+    if (timeOfDay === 'all') {
+      return t('publicMatches.filters.timeOfDay.label');
+    }
+    return getTimeOfDayLabel(timeOfDay);
+  }, [specificTime, timeOfDay, t, getTimeOfDayLabel]);
 
   // Date display - combines dateRange and specificDate
   const getDateDisplay = useCallback(() => {
@@ -616,6 +672,7 @@ export default function MatchFiltersBar({
   const dateOptions: (DateRangeFilter | 'pick_date')[] = [
     'all',
     'today',
+    'tomorrow',
     'week',
     'weekend',
     'pick_date',
@@ -642,6 +699,106 @@ export default function MatchFiltersBar({
   const currentDateSelection = specificDate ? 'pick_date' : dateRange;
 
   // =============================================================================
+  // TIME OPTIONS (including pick specific time)
+  // =============================================================================
+
+  const timeOptions: (TimeOfDayFilter | 'pick_time')[] = [
+    'all',
+    'morning',
+    'afternoon',
+    'evening',
+    'pick_time',
+  ];
+
+  const getTimeOptionLabel = useCallback(
+    (v: TimeOfDayFilter | 'pick_time') => {
+      if (v === 'pick_time') {
+        return specificTime
+          ? t('publicMatches.filters.specificTime.clear' as TranslationKey)
+          : t('publicMatches.filters.timeOfDay.pick_time' as TranslationKey);
+      }
+      return getTimeOfDayLabel(v as TimeOfDayFilter);
+    },
+    [t, getTimeOfDayLabel, specificTime]
+  );
+
+  const getTimeOptionIcon = useCallback(
+    (v: TimeOfDayFilter | 'pick_time') => {
+      if (v === 'pick_time') return 'time-outline' as keyof typeof Ionicons.glyphMap;
+      return getTimeOfDayIcon(v as TimeOfDayFilter);
+    },
+    [getTimeOfDayIcon]
+  );
+
+  const currentTimeSelection: TimeOfDayFilter | 'pick_time' = specificTime
+    ? 'pick_time'
+    : timeOfDay;
+
+  const handleTimeOptionSelect = useCallback(
+    (value: TimeOfDayFilter | 'pick_time') => {
+      if (value === 'pick_time') {
+        if (specificTime) {
+          // Clear specific time
+          onSpecificTimeChange(null);
+        } else {
+          // Open time picker
+          setTempTime(() => {
+            if (specificTime) {
+              const [hours, minutes] = specificTime.split(':').map(Number);
+              const d = new Date();
+              d.setHours(hours, minutes, 0, 0);
+              return d;
+            }
+            const d = new Date();
+            d.setMinutes(0, 0, 0);
+            return d;
+          });
+          setShowTimePicker(true);
+        }
+      } else {
+        onTimeOfDayChange(value);
+        if (specificTime !== null) {
+          onSpecificTimeChange(null);
+        }
+      }
+    },
+    [specificTime, onTimeOfDayChange, onSpecificTimeChange]
+  );
+
+  // =============================================================================
+  // TIME PICKER HANDLERS
+  // =============================================================================
+
+  const handleTimeChange = useCallback(
+    (_event: unknown, selectedDate?: Date) => {
+      if (Platform.OS === 'android') {
+        setShowTimePicker(false);
+        if (selectedDate) {
+          const hours = selectedDate.getHours().toString().padStart(2, '0');
+          const minutes = selectedDate.getMinutes().toString().padStart(2, '0');
+          onSpecificTimeChange(`${hours}:${minutes}`);
+          selectionHaptic();
+        }
+      } else if (selectedDate) {
+        setTempTime(selectedDate);
+      }
+    },
+    [onSpecificTimeChange]
+  );
+
+  const handleTimeCancel = useCallback(() => {
+    setShowTimePicker(false);
+  }, []);
+
+  const handleTimeDone = useCallback(() => {
+    setShowTimePicker(false);
+    const hours = tempTime.getHours().toString().padStart(2, '0');
+    const minutes = tempTime.getMinutes().toString().padStart(2, '0');
+    onSpecificTimeChange(`${hours}:${minutes}`);
+    selectionHaptic();
+  }, [tempTime, onSpecificTimeChange]);
+
+  // =============================================================================
   // SORTED FILTER CHIPS — active filters float to front
   // =============================================================================
 
@@ -652,7 +809,21 @@ export default function MatchFiltersBar({
       isActive: boolean;
       onPress: () => void;
       icon?: keyof typeof Ionicons.glyphMap;
+      hasDropdown?: boolean;
     }[] = [
+      // Favorites chip - only visible when authenticated
+      ...(isAuthenticated
+        ? [
+            {
+              key: 'favorites',
+              value: favoritesDisplay,
+              isActive: favoritesOnly,
+              onPress: () => onFavoritesOnlyChange(!favoritesOnly),
+              icon: (favoritesOnly ? 'heart' : 'heart-outline') as keyof typeof Ionicons.glyphMap,
+              hasDropdown: false,
+            },
+          ]
+        : []),
       {
         key: 'matchTier',
         value: matchTierDisplay,
@@ -669,10 +840,12 @@ export default function MatchFiltersBar({
       },
       {
         key: 'timeOfDay',
-        value: timeOfDayDisplay,
-        isActive: timeOfDay !== 'all',
+        value: getTimeDisplay(),
+        isActive: timeOfDay !== 'all' || specificTime !== null,
         onPress: () => setShowTimeDropdown(true),
-        icon: getTimeOfDayIcon(timeOfDay),
+        icon: specificTime
+          ? ('time' as keyof typeof Ionicons.glyphMap)
+          : getTimeOfDayIcon(timeOfDay),
       },
       {
         key: 'format',
@@ -719,6 +892,13 @@ export default function MatchFiltersBar({
         icon: getCostIcon(cost),
       },
       {
+        key: 'spotsAvailable',
+        value: spotsAvailableDisplay,
+        isActive: spotsAvailable !== 'all',
+        onPress: () => setShowSpotsDropdown(true),
+        icon: 'people-outline' as keyof typeof Ionicons.glyphMap,
+      },
+      {
         key: 'courtStatus',
         value: courtStatusDisplay,
         isActive: courtStatus !== 'all',
@@ -739,12 +919,17 @@ export default function MatchFiltersBar({
       return 0;
     });
   }, [
+    isAuthenticated,
+    favoritesDisplay,
+    favoritesOnly,
+    onFavoritesOnlyChange,
     getDateDisplay,
     dateRange,
     specificDate,
     handleDateChipPress,
-    timeOfDayDisplay,
+    getTimeDisplay,
     timeOfDay,
+    specificTime,
     getTimeOfDayIcon,
     formatDisplay,
     format,
@@ -761,6 +946,8 @@ export default function MatchFiltersBar({
     costDisplay,
     cost,
     getCostIcon,
+    spotsAvailableDisplay,
+    spotsAvailable,
     courtStatusDisplay,
     courtStatus,
     matchTierDisplay,
@@ -824,6 +1011,7 @@ export default function MatchFiltersBar({
             onPress={chip.onPress}
             isDark={isDark}
             icon={chip.icon}
+            hasDropdown={chip.hasDropdown}
           />
         ))}
       </ScrollView>
@@ -845,17 +1033,17 @@ export default function MatchFiltersBar({
         getIcon={getDateOptionIcon}
       />
 
-      {/* Time of Day Dropdown */}
+      {/* Time of Day Dropdown (includes pick specific time option) */}
       <FilterDropdown
         visible={showTimeDropdown}
         title={t('publicMatches.filters.timeOfDay.label')}
-        options={TIME_OF_DAY_OPTIONS}
-        selectedValue={timeOfDay}
-        onSelect={onTimeOfDayChange}
+        options={timeOptions}
+        selectedValue={currentTimeSelection}
+        onSelect={handleTimeOptionSelect}
         onClose={() => setShowTimeDropdown(false)}
         isDark={isDark}
-        getLabel={getTimeOfDayLabel}
-        getIcon={getTimeOfDayIcon}
+        getLabel={getTimeOptionLabel}
+        getIcon={getTimeOptionIcon}
       />
 
       {/* Format Dropdown */}
@@ -980,8 +1168,20 @@ export default function MatchFiltersBar({
         getLabel={getJoinModeLabel}
       />
 
+      {/* Spots Available Dropdown */}
+      <FilterDropdown
+        visible={showSpotsDropdown}
+        title={t('publicMatches.filters.spotsAvailable.label' as TranslationKey)}
+        options={SPOTS_AVAILABLE_OPTIONS}
+        selectedValue={spotsAvailable}
+        onSelect={onSpotsAvailableChange}
+        onClose={() => setShowSpotsDropdown(false)}
+        isDark={isDark}
+        getLabel={getSpotsAvailableLabel}
+      />
+
       {/* =================================================================== */}
-      {/* DATE PICKER MODALS */}
+      {/* DATE & TIME PICKER MODALS */}
       {/* =================================================================== */}
 
       {/* Android Date Picker */}
@@ -1033,6 +1233,62 @@ export default function MatchFiltersBar({
                 display="spinner"
                 onChange={handleDateChange}
                 minimumDate={getTodayAtMidnight()}
+                themeVariant={isDark ? 'dark' : 'light'}
+                style={styles.iosPicker}
+              />
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      )}
+      {/* Android Time Picker */}
+      {showTimePicker && Platform.OS === 'android' && (
+        <DateTimePicker
+          value={tempTime}
+          mode="time"
+          display="spinner"
+          onChange={handleTimeChange}
+          minuteInterval={15}
+        />
+      )}
+
+      {/* iOS Time Picker Modal */}
+      {Platform.OS === 'ios' && (
+        <Modal
+          visible={showTimePicker}
+          transparent
+          animationType="fade"
+          onRequestClose={handleTimeCancel}
+        >
+          <TouchableOpacity
+            style={styles.datePickerOverlay}
+            activeOpacity={1}
+            onPress={handleTimeCancel}
+          >
+            <View
+              style={[styles.datePickerModal, { backgroundColor: colors.cardBackground }]}
+              onStartShouldSetResponder={() => true}
+            >
+              <View style={[styles.datePickerHeader, { borderBottomColor: colors.border }]}>
+                <TouchableOpacity onPress={handleTimeCancel} style={styles.datePickerHeaderButton}>
+                  <Text size="base" color={colors.textMuted}>
+                    {t('common.cancel')}
+                  </Text>
+                </TouchableOpacity>
+                <Text size="base" weight="semibold" color={colors.text}>
+                  {t('publicMatches.filters.specificTime.label' as TranslationKey)}
+                </Text>
+                <TouchableOpacity onPress={handleTimeDone} style={styles.datePickerHeaderButton}>
+                  <Text size="base" weight="semibold" color={primary[500]}>
+                    {t('common.done')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={tempTime}
+                mode="time"
+                display="spinner"
+                onChange={handleTimeChange}
+                minuteInterval={15}
                 themeVariant={isDark ? 'dark' : 'light'}
                 style={styles.iosPicker}
               />

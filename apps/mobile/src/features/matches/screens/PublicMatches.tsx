@@ -3,7 +3,7 @@
  * Displays public matches with search, filtering, and infinite scroll.
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useEffect, useState } from 'react';
 import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,7 +19,7 @@ import {
 import { useAuth, useThemeStyles, useTranslation, useEffectiveLocation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { useMatchDetailSheet, useSport, useUserHomeLocation } from '../../../context';
-import { Logger } from '@rallia/shared-services';
+import { Logger, supabase } from '@rallia/shared-services';
 import { spacingPixels, neutral } from '@rallia/design-system';
 import { SearchBar, MatchFiltersBar } from '../components';
 
@@ -105,9 +105,31 @@ export default function PublicMatches() {
     setCourtStatus,
     setMatchTier,
     setSpecificDate,
+    setSpotsAvailable,
+    setFavoritesOnly,
+    setSpecificTime,
     resetFilters,
     clearSearch,
   } = usePublicMatchFilters();
+
+  // Fetch favorite player IDs for favorites filter
+  const [favoritePlayerIds, setFavoritePlayerIds] = useState<string[]>([]);
+  useEffect(() => {
+    if (!session?.user?.id) {
+      setFavoritePlayerIds([]);
+      return;
+    }
+    const fetchFavorites = async () => {
+      const { data } = await supabase
+        .from('player_favorite')
+        .select('favorite_player_id')
+        .eq('player_id', session.user.id);
+      if (data) {
+        setFavoritePlayerIds(data.map(row => row.favorite_player_id));
+      }
+    };
+    fetchFavorites();
+  }, [session?.user?.id]);
 
   // Determine if we should enable the query
   const showMatches = !!location && !!selectedSport;
@@ -134,23 +156,32 @@ export default function PublicMatches() {
   });
 
   // Filter out matches where user is creator or participant (show only joinable matches)
+  // Also apply favorites filter client-side
   const filteredMatches = useMemo(() => {
     const userId = session?.user?.id;
-    if (!userId) return matches;
 
     return matches.filter(match => {
       // Exclude if user is the creator
-      if (match.created_by === userId) return false;
+      if (userId && match.created_by === userId) return false;
 
       // Exclude if user is a participant
-      const isParticipant = match.participants?.some(
-        p => p.player_id === userId && p.status === 'joined'
-      );
-      if (isParticipant) return false;
+      if (userId) {
+        const isParticipant = match.participants?.some(
+          p => p.player_id === userId && p.status === 'joined'
+        );
+        if (isParticipant) return false;
+      }
+
+      // Favorites filter: only show matches from favorited hosts
+      if (filters.favoritesOnly && favoritePlayerIds.length > 0) {
+        if (!favoritePlayerIds.includes(match.created_by)) return false;
+      }
+      // If favoritesOnly but no favorites, show nothing
+      if (filters.favoritesOnly && favoritePlayerIds.length === 0) return false;
 
       return true;
     });
-  }, [matches, session]);
+  }, [matches, session, filters.favoritesOnly, favoritePlayerIds]);
 
   // Handle infinite scroll
   const handleEndReached = useCallback(() => {
@@ -292,6 +323,9 @@ export default function PublicMatches() {
           courtStatus={filters.courtStatus}
           matchTier={filters.matchTier}
           specificDate={filters.specificDate}
+          spotsAvailable={filters.spotsAvailable}
+          favoritesOnly={filters.favoritesOnly}
+          specificTime={filters.specificTime}
           onFormatChange={setFormat}
           onMatchTypeChange={setMatchType}
           onDateRangeChange={setDateRange}
@@ -305,6 +339,10 @@ export default function PublicMatches() {
           onCourtStatusChange={setCourtStatus}
           onMatchTierChange={setMatchTier}
           onSpecificDateChange={setSpecificDate}
+          onSpotsAvailableChange={setSpotsAvailable}
+          onFavoritesOnlyChange={setFavoritesOnly}
+          onSpecificTimeChange={setSpecificTime}
+          isAuthenticated={!!session?.user}
           onReset={resetFilters}
           hasActiveFilters={hasActiveFilters}
           showLocationSelector={hasBothLocationOptions}
