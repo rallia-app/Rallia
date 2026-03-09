@@ -191,12 +191,7 @@ export default function AvailabilitySlotCard({
               {priceText}
             </Text>
           ) : (
-            <View
-              style={[
-                styles.freeBadge,
-                { backgroundColor: isDark ? neutral[700] : status.success.light + '15' },
-              ]}
-            >
+            <View style={[styles.freeBadge, { backgroundColor: status.success.light + '15' }]}>
               <Text size="xs" weight="semibold" color={status.success.light}>
                 {t('facilityDetail.free')}
               </Text>

@@ -61,6 +61,58 @@ A vertical list of public matches near the user's location.
 - Infinite scroll with pagination
 - Pull-to-refresh support
 
+## Match Sorting & Relevance Scoring
+
+Both the **Home Screen** (Soon & Nearby) and the **Public Matches Screen** use the same two-tier sorting strategy to order matches.
+
+### Sorting Strategy
+
+**Primary sort: Chronological (soonest first)**
+
+Matches are ordered by `match_date ASC`, then `start_time ASC`. This ordering is applied on the server (PostGIS RPC `search_matches_nearby`) and preserved through pagination. The client-side sort mirrors this to handle any edge cases where order may not be preserved after data enrichment.
+
+**Secondary sort (tiebreaker): Relevance score**
+
+When two or more matches share the same date **and** time, they are ranked by a 0–100 relevance score (highest first). This ensures the most interesting matches appear first within a given time slot without breaking pagination across pages.
+
+### Relevance Score Factors
+
+The relevance score is computed client-side from the player's preferences and the match attributes. Weights sum to 100:
+
+| #   | Factor                 | Weight | Best Score                    | Description                                                                                              |
+| --- | ---------------------- | ------ | ----------------------------- | -------------------------------------------------------------------------------------------------------- |
+| 1   | **Spots left**         | 25     | 1 spot left                   | Fewer spots = more urgent. Full matches score 0.                                                         |
+| 2   | **Match tier**         | 20     | Coveted player + court booked | Rewards high-value matches (certified players, reserved courts).                                         |
+| 3   | **Rating fit**         | 15     | Min rating ≥ player rating    | Matches at or above the player's level score highest. Below-level matches are penalized proportionally.  |
+| 4   | **Distance**           | 12     | Very close                    | Linear decay: `1.0 − (distance / maxTravelDistance)`.                                                    |
+| 5   | **Duration match**     | 8      | Exact match                   | Compares match duration to player's preferred duration. Each step off reduces score.                     |
+| 6   | **Preferred facility** | 7      | At favorite                   | 1.0 if the match is at one of the player's favorite facilities, 0 otherwise.                             |
+| 7   | **Format/type**        | 5      | Exact match                   | Casual/competitive alignment with player preference.                                                     |
+| 8   | **Cost**               | 4      | Free                          | Free courts score 1.0. Paid courts are normalized against the most expensive match in the current batch. |
+| 9   | **Gender**             | 4      | Gender matches                | Alignment between player gender and match's `preferred_opponent_gender`.                                 |
+
+### Data Flow
+
+```
+Server (PostGIS RPC)
+  → ORDER BY match_date ASC, start_time ASC
+  → LIMIT/OFFSET pagination
+        ↓
+Service Layer (matchService)
+  → Enriches with profiles, ratings, distance_meters
+  → Preserves chronological order
+        ↓
+Client (useSortedNearbyMatches hook)
+  → Sorts by date+time ASC (preserves server order)
+  → Tiebreaks by relevance score DESC (same time slot only)
+        ↓
+Render
+```
+
+### Why Server-First Chronological Sort
+
+Sorting primarily by relevance on the client would break paginated results — a high-relevance match on page 2 might rank above a low-relevance match on page 1, leading to inconsistent ordering across pages. By keeping the primary sort chronological (which the server already provides), pagination remains deterministic. The relevance score only reorders matches within the same time slot, which is bounded and safe.
+
 ### Unauthenticated User View
 
 Non-authenticated users see:
@@ -297,6 +349,8 @@ Additional management features:
 **Kick Participant**:
 
 - Remove button on each participant avatar (not host)
+- Hidden if participant joined more than 24 hours ago (based on `joined_at`)
+- Hidden during `in_progress` or after match has ended
 
 ### Status Banners
 
@@ -410,13 +464,15 @@ Match Detail Sheet (Modal)
 
 ### Data Fetching
 
-| Screen/Component   | Hook               | Key Parameters                                  |
-| ------------------ | ------------------ | ----------------------------------------------- |
-| Home (My Matches)  | `usePlayerMatches` | `timeFilter: 'upcoming'`, `limit: 5`            |
-| Home (Nearby)      | `useNearbyMatches` | `maxDistanceKm`, `sportId`, `userGender`        |
-| Player Matches     | `usePlayerMatches` | `timeFilter: 'upcoming' \| 'past'`, `limit: 20` |
-| Public Matches     | `usePublicMatches` | All filter params, `debouncedSearchQuery`       |
-| Match Detail Sheet | `useMatchActions`  | `matchId`, action callbacks                     |
+| Screen/Component   | Hook                     | Key Parameters                                  |
+| ------------------ | ------------------------ | ----------------------------------------------- |
+| Home (My Matches)  | `usePlayerMatches`       | `timeFilter: 'upcoming'`, `limit: 5`            |
+| Home (Nearby)      | `useNearbyMatches`       | `maxDistanceKm`, `sportId`, `userGender`        |
+| Home (Nearby sort) | `useSortedNearbyMatches` | Chronological + relevance tiebreaker            |
+| Player Matches     | `usePlayerMatches`       | `timeFilter: 'upcoming' \| 'past'`, `limit: 20` |
+| Public Matches     | `usePublicMatches`       | All filter params, `debouncedSearchQuery`       |
+| Public (sort)      | `useSortedNearbyMatches` | Chronological + relevance tiebreaker            |
+| Match Detail Sheet | `useMatchActions`        | `matchId`, action callbacks                     |
 
 ### Match Actions
 

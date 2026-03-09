@@ -243,28 +243,35 @@ All creation fields can be updated: date, time, duration, timezone, location (ty
 
 ### Blocking Rules
 
-Only **one hard blocker** exists:
+| Rule                                   | Condition                                                       | Error Code              |
+| -------------------------------------- | --------------------------------------------------------------- | ----------------------- |
+| Cannot change doubles → singles format | 2 or more participants with `joined` status exist               | `FORMAT_CHANGE_BLOCKED` |
+| Cannot change gender preference        | Joined participants exist and change is not allowed (see below) | `GENDER_CHANGE_BLOCKED` |
 
-| Rule                                   | Condition                                         | Error Code              |
-| -------------------------------------- | ------------------------------------------------- | ----------------------- |
-| Cannot change doubles → singles format | 2 or more participants with `joined` status exist | `FORMAT_CHANGE_BLOCKED` |
+#### Gender Preference Change Rules
 
-### Warnings (Non-Blocking)
+When **joined participants exist**, updating `preferredOpponentGender` is only allowed in two cases:
 
-| Warning         | Trigger                                                                                      | Behavior                                                |
-| --------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| Gender mismatch | Changing `preferredOpponentGender` to a specific gender when joined participants don't match | Confirmation modal shown; creator can proceed or cancel |
+1. **Widening** (specific → "any"): Always allowed — loosening the restriction affects nobody negatively.
+2. **Narrowing** ("any" → specific gender): Allowed **only if all** joined participants already match the new gender.
+
+All other gender changes with joined participants are **blocked**:
+
+- Switching from one specific gender to a different specific gender.
+- Narrowing from "any" to a specific gender when any joined participant does not match.
 
 ### Impactful Change Confirmation
 
 When **joined participants exist** (excluding the creator) and any of the following fields change, a confirmation dialog is shown listing the changes before proceeding:
 
-| Change Category | Fields                                          |
-| --------------- | ----------------------------------------------- |
-| Date/Time       | `matchDate`, `startTime`, `duration`            |
-| Location        | `locationType`, `facilityId`, `locationName`    |
-| Format          | `format`                                        |
-| Cost            | `isCourtFree`, `estimatedCost`, `costSplitType` |
+| Change Category   | Fields                                          |
+| ----------------- | ----------------------------------------------- |
+| Date/Time         | `matchDate`, `startTime`, `duration`            |
+| Location          | `locationType`, `facilityId`, `locationName`    |
+| Format            | `format`                                        |
+| Cost              | `isCourtFree`, `estimatedCost`, `costSplitType` |
+| Gender Preference | `preferredOpponentGender`                       |
+| Minimum Rating    | `minRatingScoreId`                              |
 
 This is a **client-side UX safeguard** only — the server does not enforce this confirmation.
 
@@ -341,10 +348,10 @@ Each step validates its fields before allowing progression:
 
 When editing matches with participants:
 
-- **Server-side validation** via `validateMatchUpdate()` checks blocking rules (format change) and warnings (gender mismatch)
+- **Server-side validation** via `validateMatchUpdate()` checks blocking rules (format change, gender preference change)
 - Blocks doubles → singles if 2+ joined participants (`FORMAT_CHANGE_BLOCKED`)
-- Shows warning modal for gender mismatches (non-blocking, creator can proceed)
-- Shows confirmation dialog for impactful changes (date/time, location, format, cost) when joined participants exist
+- Blocks invalid gender preference changes with joined participants (`GENDER_CHANGE_BLOCKED`)
+- Shows confirmation dialog for impactful changes (date/time, location, format, cost, gender, rating) when joined participants exist
 
 ## Match Templates (Future)
 

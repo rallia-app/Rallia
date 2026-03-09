@@ -14,6 +14,7 @@ import {
   notifyMatchUpdated,
   notifyPlayerKicked,
   notifyMatchInvitation,
+  notifyMatchSpotOpened,
 } from '../notifications/notificationFactory';
 import {
   createReputationEvent,
@@ -58,6 +59,8 @@ import type {
   DurationFilter,
   CourtStatusFilter,
   MatchTierFilter,
+  SpotsAvailableFilter,
+  SpecificTimeFilter,
 } from '@rallia/shared-types';
 import { calculateDistanceMeters } from '@rallia/shared-utils';
 
@@ -238,6 +241,7 @@ export async function getMatchWithDetails(matchId: string) {
         team_number,
         feedback_completed,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
@@ -267,6 +271,13 @@ export async function getMatchWithDetails(matchId: string) {
         verified_at,
         created_at,
         updated_at,
+        rebuttal_team1_score,
+        rebuttal_team2_score,
+        rebuttal_winning_team,
+        rebuttal_sets,
+        rebuttal_submitted_by,
+        rebuttal_submitted_at,
+        rebuttal_deadline,
         sets:match_set (
           set_number,
           team1_score,
@@ -492,6 +503,7 @@ export async function getMatchesWithDetails(
         team_number,
         feedback_completed,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
@@ -640,7 +652,11 @@ export async function getMatchesByCreator(
  * Error codes for match update validation
  * These are translated on the frontend
  */
-export type UpdateMatchErrorCode = 'MATCH_NOT_FOUND' | 'FORMAT_CHANGE_BLOCKED' | 'UNKNOWN_ERROR';
+export type UpdateMatchErrorCode =
+  | 'MATCH_NOT_FOUND'
+  | 'FORMAT_CHANGE_BLOCKED'
+  | 'GENDER_CHANGE_BLOCKED'
+  | 'UNKNOWN_ERROR';
 
 /**
  * Result of match update validation
@@ -716,13 +732,29 @@ export async function validateMatchUpdate(
   // ========================================
   // GENDER PREFERENCE VALIDATION
   // ========================================
-  // Warn if changing gender preference would affect joined participants
+  // Gender change is allowed when:
+  // 1. No participants have joined
+  // 2. Widening (specific → any) — always allowed
+  // 3. Narrowing from "any" to a specific gender AND all joined participants match that gender
+  // Otherwise: blocked
   if (updates.preferredOpponentGender !== undefined && joinedCount > 0) {
+    const currentGender = match.preferred_opponent_gender; // null means "any"
     const newGender =
       updates.preferredOpponentGender === 'any' ? null : updates.preferredOpponentGender;
 
-    // Only check if setting a specific gender (not clearing it)
+    // Only validate if setting a specific gender (widening to "any" is always fine)
     if (newGender) {
+      // Block if changing from one specific gender to a different specific gender
+      if (currentGender && currentGender !== newGender) {
+        return {
+          canUpdate: false,
+          errorCode: 'GENDER_CHANGE_BLOCKED',
+          error:
+            'Cannot change gender preference when participants have joined. Only narrowing from "all" is allowed when all participants match.',
+        };
+      }
+
+      // Narrowing from "any" to specific — check that all participants match
       const mismatchedParticipants = joinedParticipants.filter(
         (p: { player: { gender: string } | { gender: string }[] | null }) => {
           // Handle both array and object formats from Supabase
@@ -732,13 +764,11 @@ export async function validateMatchUpdate(
       );
 
       if (mismatchedParticipants.length > 0) {
-        warnings.push({
-          type: 'gender_mismatch',
-          affectedParticipantIds: mismatchedParticipants.map(
-            (p: { player_id: string }) => p.player_id
-          ),
-          message: `${mismatchedParticipants.length} participant(s) do not match the new gender preference`,
-        });
+        return {
+          canUpdate: false,
+          errorCode: 'GENDER_CHANGE_BLOCKED',
+          error: `${mismatchedParticipants.length} participant(s) do not match the new gender preference.`,
+        };
       }
     }
   }
@@ -1694,6 +1724,21 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
         console.error('Failed to send player left notifications:', err);
       });
     }
+
+    // Notify waitlisted players that a spot opened up
+    const waitlistedPlayers =
+      match.participants?.filter(
+        (p: { player_id: string; status: string }) => p.status === 'waitlisted'
+      ) ?? [];
+
+    if (waitlistedPlayers.length > 0) {
+      const waitlistedUserIds = waitlistedPlayers.map((p: { player_id: string }) => p.player_id);
+      const startTime = match.start_time ? match.start_time.slice(0, 5) : undefined;
+
+      notifyMatchSpotOpened(waitlistedUserIds, matchId, sportName, { startTime }).catch(err => {
+        console.error('Failed to send spot opened notifications:', err);
+      });
+    }
   }
 
   // Remove the player from the match chat (fire and forget)
@@ -2132,6 +2177,21 @@ export async function kickParticipant(
       console.error('Failed to send kicked notification:', err);
     });
 
+    // Notify waitlisted players that a spot opened up
+    const waitlistedPlayers =
+      match.participants?.filter(
+        (p: { id: string; player_id: string; status: string }) =>
+          p.status === 'waitlisted' && p.id !== participantId
+      ) ?? [];
+
+    if (waitlistedPlayers.length > 0) {
+      const waitlistedUserIds = waitlistedPlayers.map((p: { player_id: string }) => p.player_id);
+
+      notifyMatchSpotOpened(waitlistedUserIds, matchId, sportName, { startTime }).catch(err => {
+        console.error('Failed to send spot opened notifications:', err);
+      });
+    }
+
     // Remove the kicked player from the match chat (fire and forget)
     removePlayerFromMatchChat(matchId, participantRecord.player_id).catch(err => {
       console.error('[kickParticipant] Failed to remove player from match chat:', err);
@@ -2565,6 +2625,7 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
         team_number,
         feedback_completed,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
@@ -2594,6 +2655,13 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
         verified_at,
         created_at,
         updated_at,
+        rebuttal_team1_score,
+        rebuttal_team2_score,
+        rebuttal_winning_team,
+        rebuttal_sets,
+        rebuttal_submitted_by,
+        rebuttal_submitted_at,
+        rebuttal_deadline,
         sets:match_set (
           set_number,
           team1_score,
@@ -2884,6 +2952,7 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
         team_number,
         feedback_completed,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
@@ -2913,6 +2982,13 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
         verified_at,
         created_at,
         updated_at,
+        rebuttal_team1_score,
+        rebuttal_team2_score,
+        rebuttal_winning_team,
+        rebuttal_sets,
+        rebuttal_submitted_by,
+        rebuttal_submitted_at,
+        rebuttal_deadline,
         sets:match_set (
           set_number,
           team1_score,
@@ -3125,6 +3201,10 @@ export interface SearchPublicMatchesParams {
   matchTier?: MatchTierFilter;
   /** Specific date filter (ISO date string YYYY-MM-DD), overrides dateRange when set */
   specificDate?: string | null;
+  /** Spots available filter */
+  spotsAvailable?: SpotsAvailableFilter;
+  /** Specific time filter (HH:MM format), overrides timeOfDay when set */
+  specificTime?: SpecificTimeFilter;
   /** The viewing user's gender for eligibility filtering */
   userGender?: string | null;
   /** Filter by specific facility ID - when set, only returns matches at that facility */
@@ -3167,6 +3247,8 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     courtStatus = 'all',
     matchTier = 'all',
     specificDate,
+    spotsAvailable = 'all',
+    specificTime,
     userGender,
     facilityId,
     limit = 20,
@@ -3199,6 +3281,8 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     p_user_gender: userGender || null, // Pass user's gender for eligibility filtering
     p_facility_id: facilityId || null, // Filter by specific facility
     p_match_tier: matchTier === 'all' ? null : matchTier,
+    p_spots_available: spotsAvailable === 'all' ? null : spotsAvailable,
+    p_specific_time: specificTime || null,
   });
 
   if (rpcError) {
@@ -3257,6 +3341,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
         team_number,
         feedback_completed,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
@@ -3286,6 +3371,13 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
         verified_at,
         created_at,
         updated_at,
+        rebuttal_team1_score,
+        rebuttal_team2_score,
+        rebuttal_winning_team,
+        rebuttal_sets,
+        rebuttal_submitted_by,
+        rebuttal_submitted_at,
+        rebuttal_deadline,
         sets:match_set (
           set_number,
           team1_score,
@@ -3907,6 +3999,7 @@ export async function getMatchNeedingFeedback(
         feedback_completed,
         match_outcome,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
@@ -4052,6 +4145,97 @@ export async function getMatchNeedingFeedback(
   return bestMatch;
 }
 
+export interface GetCustomLocationMatchesParams {
+  sportIds: string[];
+  latitude: number;
+  longitude: number;
+  maxDistanceKm?: number;
+}
+
+/**
+ * Get upcoming public matches with custom locations for the map view.
+ * Filters to matches where location_type='custom' with valid coordinates
+ * within a bounding box around the user's position.
+ */
+export async function getCustomLocationMatches(
+  params: GetCustomLocationMatchesParams
+): Promise<MatchWithDetails[]> {
+  const { sportIds, latitude, longitude, maxDistanceKm = 25 } = params;
+
+  // Approximate bounding box (~1 degree latitude ≈ 111 km)
+  const latDelta = maxDistanceKm / 111;
+  const lngDelta = maxDistanceKm / (111 * Math.cos((latitude * Math.PI) / 180));
+
+  const { data, error } = await supabase
+    .from('match')
+    .select(
+      `
+      *,
+      sport:sport_id (*),
+      facility:facility_id (*),
+      court:court_id (*),
+      created_by_player:created_by (
+        id,
+        gender,
+        playing_hand,
+        max_travel_distance,
+        player_reputation (reputation_score),
+        notification_match_requests,
+        notification_messages,
+        notification_reminders,
+        privacy_show_age,
+        privacy_show_location,
+        privacy_show_stats
+      ),
+      participants:match_participant (
+        id,
+        match_id,
+        player_id,
+        status,
+        is_host,
+        score,
+        team_number,
+        feedback_completed,
+        checked_in_at,
+        joined_at,
+        created_at,
+        updated_at,
+        player:player_id (
+          id,
+          gender,
+          playing_hand,
+          max_travel_distance,
+          player_reputation (reputation_score),
+          notification_match_requests,
+          notification_messages,
+          notification_reminders,
+          privacy_show_age,
+          privacy_show_location,
+          privacy_show_stats
+        )
+      )
+    `
+    )
+    .in('sport_id', sportIds)
+    .eq('location_type', 'custom')
+    .eq('visibility', 'public')
+    .is('cancelled_at', null)
+    .not('custom_latitude', 'is', null)
+    .not('custom_longitude', 'is', null)
+    .gte('custom_latitude', latitude - latDelta)
+    .lte('custom_latitude', latitude + latDelta)
+    .gte('custom_longitude', longitude - lngDelta)
+    .lte('custom_longitude', longitude + lngDelta)
+    .gte('match_date', new Date().toISOString().split('T')[0])
+    .limit(100);
+
+  if (error) {
+    throw new Error(`Failed to get custom location matches: ${error.message}`);
+  }
+
+  return (data ?? []) as unknown as MatchWithDetails[];
+}
+
 /**
  * Match service object for grouped exports
  */
@@ -4063,6 +4247,7 @@ export const matchService = {
   getPlayerMatchesWithDetails,
   getNearbyMatches,
   getPublicMatches,
+  getCustomLocationMatches,
   updateMatch,
   cancelMatch,
   deleteMatch,

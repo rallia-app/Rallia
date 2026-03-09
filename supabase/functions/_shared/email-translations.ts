@@ -28,11 +28,12 @@ const translations: Translations = {
     'preheader.matchCancelled': 'A game you were part of has been cancelled',
     'preheader.matchUpdated': 'Your game details have been updated',
     'preheader.matchStartingSoon': 'Your game starts soon — time to warm up!',
-    'preheader.matchCompleted': 'Your game is complete — share your feedback',
+    'preheader.matchCheckInAvailable':
+      'Check-in is now open — confirm your presence when you arrive',
     'preheader.playerKicked': "You've been removed from a game",
     'preheader.playerLeft': 'A player left your game',
     'preheader.reminder': "Don't forget your upcoming game",
-    'preheader.feedbackRequest': 'Submit your score and rate your match',
+    'preheader.feedbackRequest': 'Submit your score and rate your game',
     'preheader.feedbackReminder': 'Your score and rating are still pending',
     'preheader.notification': '{body}',
     'preheader.orgBooking': 'Booking update from {orgName}',
@@ -45,15 +46,19 @@ const translations: Translations = {
     'invitation.heading': "You're Invited!",
     'invitation.ctaButton': 'Accept Invitation',
     'invitation.expiresAt': 'This invitation will expire on',
-    'invitation.disclaimer': "If you didn't expect this invitation, you can safely ignore this email.",
+    'invitation.disclaimer':
+      "If you didn't expect this invitation, you can safely ignore this email.",
     'invitation.footerNote': "You're receiving this email because you were invited to join Rallia.",
     'invitation.messageOrg': '{inviter} has invited you to join {org} on Rallia as a {role}.',
     'invitation.messagePlatform': '{inviter} has invited you to join Rallia as a {role}.',
-    'invitation.ctaDescription': 'Click the button below to accept your invitation and create your account.',
+    'invitation.ctaDescription':
+      'Click the button below to accept your invitation and create your account.',
 
     // Notification (send-email)
-    'notification.disclaimer': "If you didn't expect this notification, you can safely ignore this email.",
-    'notification.footerNote': "You're receiving this email because of your notification preferences on Rallia.",
+    'notification.disclaimer':
+      "If you didn't expect this notification, you can safely ignore this email.",
+    'notification.footerNote':
+      "You're receiving this email because of your notification preferences on Rallia.",
     'notification.supportText': "If you're having trouble, please contact our support team.",
 
     // Notification subject prefixes
@@ -72,7 +77,8 @@ const translations: Translations = {
     'match.address': 'Address',
     'match.duration': 'Duration',
     'match.disclaimer': "If you didn't expect this notification, you can safely ignore this email.",
-    'match.footerNote': "You're receiving this email because of your notification preferences on Rallia.",
+    'match.footerNote':
+      "You're receiving this email because of your notification preferences on Rallia.",
     'match.managePreferences': 'Manage preferences',
     'match.viewOnMap': 'View on map',
 
@@ -96,6 +102,7 @@ const translations: Translations = {
     'match.status.cancelled': 'Cancelled',
     'match.status.updated': 'Updated',
     'match.status.startingSoon': 'Starting Soon',
+    'match.status.checkInOpen': 'Check-in Open',
 
     // Organization email
     'org.court': 'Court',
@@ -130,22 +137,23 @@ const translations: Translations = {
     'layout.managePreferences': 'Gérer les préférences de notification',
 
     // Preheaders
-    'preheader.confirmation': 'Votre code de vérification Rallia est à l\'intérieur',
+    'preheader.confirmation': "Votre code de vérification Rallia est à l'intérieur",
     'preheader.magicLink': 'Votre code de connexion à usage unique pour Rallia',
     'preheader.invitation': 'Vous avez été invité(e) à rejoindre {networkName} sur Rallia',
     'preheader.matchInvitation': '{playerName} veut jouer au {sportName} avec vous',
-    'preheader.matchJoinRequest': '{playerName} veut rejoindre votre match',
-    'preheader.matchJoinAccepted': 'Confirmé ! Votre match est réservé',
+    'preheader.matchJoinRequest': '{playerName} veut rejoindre votre partie',
+    'preheader.matchJoinAccepted': 'Confirmé ! Votre partie est réservée',
     'preheader.matchJoinRejected': "Votre demande n'a pas été acceptée",
-    'preheader.matchPlayerJoined': '{playerName} a rejoint votre match',
-    'preheader.matchCancelled': 'Un match auquel vous participiez a été annulé',
-    'preheader.matchUpdated': 'Les détails de votre match ont été mis à jour',
-    'preheader.matchStartingSoon': 'Votre match commence bientôt — échauffez-vous !',
-    'preheader.matchCompleted': 'Votre match est terminé — partagez vos commentaires',
-    'preheader.playerKicked': 'Vous avez été retiré(e) d\'un match',
-    'preheader.playerLeft': 'Un joueur a quitté votre match',
-    'preheader.reminder': "N'oubliez pas votre prochain match",
-    'preheader.feedbackRequest': 'Soumettez votre score et évaluez votre match',
+    'preheader.matchPlayerJoined': '{playerName} a rejoint votre partie',
+    'preheader.matchCancelled': 'Une partie à laquelle vous participiez a été annulée',
+    'preheader.matchUpdated': 'Les détails de votre partie ont été mis à jour',
+    'preheader.matchStartingSoon': 'Votre partie commence bientôt — échauffez-vous !',
+    'preheader.matchCheckInAvailable':
+      "L'enregistrement est maintenant ouvert — confirmez votre présence à votre arrivée",
+    'preheader.playerKicked': "Vous avez été retiré(e) d'une partie",
+    'preheader.playerLeft': 'Un joueur a quitté votre partie',
+    'preheader.reminder': "N'oubliez pas votre prochaine partie",
+    'preheader.feedbackRequest': 'Soumettez votre score et évaluez votre partie',
     'preheader.feedbackReminder': 'Votre score et votre évaluation sont toujours en attente',
     'preheader.notification': '{body}',
     'preheader.orgBooking': 'Mise à jour de réservation de {orgName}',
@@ -158,19 +166,26 @@ const translations: Translations = {
     'invitation.heading': 'Vous êtes invité(e) !',
     'invitation.ctaButton': "Accepter l'invitation",
     'invitation.expiresAt': 'Cette invitation expire le',
-    'invitation.disclaimer': "Si vous n'attendiez pas cette invitation, vous pouvez ignorer ce courriel.",
-    'invitation.footerNote': 'Vous recevez ce courriel car vous avez été invité(e) à rejoindre Rallia.',
-    'invitation.messageOrg': '{inviter} vous a invité(e) à rejoindre {org} sur Rallia en tant que {role}.',
-    'invitation.messagePlatform': '{inviter} vous a invité(e) à rejoindre Rallia en tant que {role}.',
-    'invitation.ctaDescription': "Cliquez sur le bouton ci-dessous pour accepter votre invitation et créer votre compte.",
+    'invitation.disclaimer':
+      "Si vous n'attendiez pas cette invitation, vous pouvez ignorer ce courriel.",
+    'invitation.footerNote':
+      'Vous recevez ce courriel car vous avez été invité(e) à rejoindre Rallia.',
+    'invitation.messageOrg':
+      '{inviter} vous a invité(e) à rejoindre {org} sur Rallia en tant que {role}.',
+    'invitation.messagePlatform':
+      '{inviter} vous a invité(e) à rejoindre Rallia en tant que {role}.',
+    'invitation.ctaDescription':
+      'Cliquez sur le bouton ci-dessous pour accepter votre invitation et créer votre compte.',
 
     // Notification (send-email)
-    'notification.disclaimer': "Si vous n'attendiez pas cette notification, vous pouvez ignorer ce courriel.",
-    'notification.footerNote': 'Vous recevez ce courriel en raison de vos préférences de notification sur Rallia.',
+    'notification.disclaimer':
+      "Si vous n'attendiez pas cette notification, vous pouvez ignorer ce courriel.",
+    'notification.footerNote':
+      'Vous recevez ce courriel en raison de vos préférences de notification sur Rallia.',
     'notification.supportText': 'En cas de problème, contactez notre équipe de soutien.',
 
     // Notification subject prefixes
-    'notification.prefix.match_invitation': 'Invitation de match',
+    'notification.prefix.match_invitation': 'Invitation de partie',
     'notification.prefix.reminder': 'Rappel',
     'notification.prefix.payment': 'Paiement',
     'notification.prefix.support': 'Soutien',
@@ -184,8 +199,10 @@ const translations: Translations = {
     'match.with': 'Avec',
     'match.address': 'Adresse',
     'match.duration': 'Durée',
-    'match.disclaimer': "Si vous n'attendiez pas cette notification, vous pouvez ignorer ce courriel.",
-    'match.footerNote': 'Vous recevez ce courriel en raison de vos préférences de notification sur Rallia.',
+    'match.disclaimer':
+      "Si vous n'attendiez pas cette notification, vous pouvez ignorer ce courriel.",
+    'match.footerNote':
+      'Vous recevez ce courriel en raison de vos préférences de notification sur Rallia.',
     'match.managePreferences': 'Gérer les préférences',
     'match.viewOnMap': 'Voir sur la carte',
 
@@ -196,10 +213,10 @@ const translations: Translations = {
     // Match action buttons
     'match.button.viewInvitation': "Voir l'invitation",
     'match.button.reviewRequest': 'Examiner la demande',
-    'match.button.browseGames': 'Parcourir les matchs',
-    'match.button.rateGame': 'Évaluer votre match',
-    'match.button.viewGame': 'Voir le match',
-    'match.button.viewGameDetails': 'Voir les détails du match',
+    'match.button.browseGames': 'Parcourir les parties',
+    'match.button.rateGame': 'Évaluer votre partie',
+    'match.button.viewGame': 'Voir la partie',
+    'match.button.viewGameDetails': 'Voir les détails de la partie',
     'match.button.viewMessage': 'Voir le message',
     'match.button.viewProfile': 'Voir le profil',
     'match.button.viewRating': "Voir l'évaluation",
@@ -209,6 +226,7 @@ const translations: Translations = {
     'match.status.cancelled': 'Annulé',
     'match.status.updated': 'Mis à jour',
     'match.status.startingSoon': 'Commence bientôt',
+    'match.status.checkInOpen': 'Enregistrement ouvert',
 
     // Organization email
     'org.court': 'Terrain',
