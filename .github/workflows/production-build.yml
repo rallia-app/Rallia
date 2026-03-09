@@ -41,7 +41,6 @@ jobs:
 
       - name: Build production
         id: build
-        continue-on-error: true
         run: |
           cd apps/mobile
           eas build --platform all --profile production --non-interactive --json \
@@ -49,14 +48,13 @@ jobs:
 
       - name: Submit to app stores
         id: submit
-        if: steps.build.outcome == 'success'
-        continue-on-error: true
+        if: success()
         run: |
           cd apps/mobile
           eas submit --platform all --non-interactive
 
       - name: Notify Discord
-        if: always()
+        if: success() || failure()
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
