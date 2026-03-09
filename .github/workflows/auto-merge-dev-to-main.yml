@@ -36,16 +36,15 @@ jobs:
           EXISTING_PR=$(gh pr list --base main --head dev --state open --json number --jq '.[0].number // empty')
 
           if [ -n "$EXISTING_PR" ]; then
-            echo "Existing PR #${EXISTING_PR} found. Enabling auto-merge."
-            PR_NUMBER="$EXISTING_PR"
+            echo "Existing PR #${EXISTING_PR} already open. Nothing to do."
           else
             echo "Creating new PR..."
             PR_URL=$(gh pr create \
               --base main \
               --head dev \
-              --title "Daily Auto-Merge: Dev to Main" \
+              --title "Merge Dev to Main" \
               --body "$(cat <<EOF
-          ## Automated Daily Merge
+          ## Dev to Main Merge
 
           This PR was automatically created to merge the latest changes from \`dev\` into \`main\`.
 
@@ -53,19 +52,16 @@ jobs:
           **Triggered**: $(date -u '+%Y-%m-%d %H:%M UTC')
 
           ### Pre-merge checklist
-          - All CI checks must pass
-          - No merge conflicts
+          - [ ] All CI checks pass
+          - [ ] No merge conflicts
+          - [ ] Changes reviewed and approved
 
           ---
-          *This PR will auto-merge once all checks pass.*
+          *This PR requires manual review and approval before merging.*
           EOF
             )" \
               --label "auto-merge")
 
             PR_NUMBER=$(gh pr view "$PR_URL" --json number --jq '.number')
-            echo "Created PR #${PR_NUMBER}."
+            echo "Created PR #${PR_NUMBER}. Manual review required."
           fi
-
-          # Enable auto-merge (squash, keep dev branch)
-          gh pr merge "$PR_NUMBER" --auto --squash
-          echo "Auto-merge enabled for PR #${PR_NUMBER}."
