@@ -62,6 +62,8 @@ export {
   getMessages,
   sendMessage,
   markMessagesAsRead,
+  markMessagesAsDelivered,
+  markMessageAsDelivered,
   deleteMessage,
   editMessage,
   clearChatForUser,

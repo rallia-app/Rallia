@@ -179,6 +179,8 @@
       "match_starting_soon": "Partie\nimminente",
       "match_check_in_available": "Enregistrement\ndisponible",
       "match_new_available": "Nouvelle partie\ndans un groupe",
+      "match_spot_opened": "Place\nlibérée",
+      "nearby_match_available": "Partie\nà proximité",
       "player_kicked": "Retiré\nde la partie",
       "player_left": "Joueur\nparti",
       "new_message": "Nouveau\nmessage",
@@ -188,11 +190,12 @@
       "support": "Support",
       "chat": "Message",
       "system": "Système",
-      "feedback_request": "Demande\nd'évaluation",
-      "feedback_reminder": "Rappel\nd'évaluation",
-      "score_confirmation": "Confirmation\ndu score",
-      "match_spot_opened": "Place\nlibérée",
-      "nearby_match_available": "Partie\nà proximité"
+      "feedback_request": "Demande d'évaluation",
+      "feedback_reminder": "Rappel d'évaluation",
+      "score_confirmation": "Confirmation du score",
+      "community_join_request": "Demande d'adhésion",
+      "community_join_accepted": "Demande approuvée",
+      "community_join_rejected": "Demande refusée"
     },
     "categories": {
       "match": "Notifications de parties",
@@ -299,16 +302,20 @@
         "body": "Votre score et évaluation de {sportName} avec {opponentNames} sont toujours en attente — complétez-les avant la date limite."
       },
       "score_confirmation": {
-        "title": "Confirmez votre score",
-        "body": "{playerName} a soumis un score pour votre partie de {sportName}. Veuillez confirmer ou corriger."
+        "title": "Confirmer le score",
+        "body": "{playerName} a soumis un score pour votre partie de {sportName}. Veuillez confirmer ou contester."
       },
-      "match_spot_opened": {
-        "title": "Une place s'est libérée!",
-        "body": "Une place s'est libérée dans une partie de {sportName}{startTime}{locationName}. Rejoignez maintenant!"
+      "community_join_request": {
+        "title": "Nouvelle demande d'adhésion",
+        "body": "{requesterName} souhaite rejoindre {communityName}"
       },
-      "nearby_match_available": {
-        "title": "Nouvelle partie à proximité",
-        "body": "Une partie de {sportName} est disponible près de chez vous{startTime}{locationName}"
+      "community_join_accepted": {
+        "title": "Demande approuvée!",
+        "body": "Vous êtes maintenant membre de {communityName}"
+      },
+      "community_join_rejected": {
+        "title": "Demande non approuvée",
+        "body": "Votre demande pour rejoindre {communityName} n'a pas été approuvée"
       }
     }
   },
@@ -1683,6 +1690,8 @@
     "noPlayersFoundMatching": "Aucun joueur trouvé pour \"{query}\"",
     "noPlayersAvailable": "Aucun joueur disponible",
     "continueSelected": "Continuer ({count} sélectionné(s))",
+    "startChat": "Démarrer la discussion",
+    "failedToCreateConversation": "Échec de la création de la conversation. Veuillez réessayer.",
     "groupDetails": "Détails du groupe",
     "addPhoto": "Ajouter une photo",
     "groupName": "Nom du groupe",
@@ -1989,7 +1998,12 @@
     "moderatorAddedToCommunity": "Modérateur ajouté à la communauté",
     "memberAddedToCommunity": "Membre ajouté à la communauté",
     "membershipRequestSubmitted": "Demande d'adhésion soumise pour approbation",
-    "failedToAddMember": "Échec de l'ajout du membre"
+    "failedToAddMember": "Échec de l'ajout du membre",
+    "sportSelection": "Sport",
+    "sportBoth": "Les deux",
+    "sportTennis": "Tennis",
+    "sportPickleball": "Pickleball",
+    "sportSelectionHint": "Choisissez un sport pour filtrer qui voit cette communauté"
   },
   "groups": {
     "title": "Groupes",
@@ -2234,7 +2248,12 @@
       "minutesAgo": "Il y a {count} min",
       "hoursAgo": "Il y a {count}h",
       "daysAgo": "Il y a {count}j"
-    }
+    },
+    "sportSelection": "Sport",
+    "sportBoth": "Les deux",
+    "sportTennis": "Tennis",
+    "sportPickleball": "Pickleball",
+    "sportSelectionHint": "Choisissez un sport pour filtrer qui voit ce groupe"
   },
   "playerDirectory": {
     "title": "Répertoire des joueurs",

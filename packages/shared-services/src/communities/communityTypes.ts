@@ -122,6 +122,8 @@ export interface CreateCommunityInput {
   cover_image_url?: string;
   /** Whether the community is publicly discoverable (default: true) */
   is_public?: boolean;
+  /** Optional sport association (null/undefined = both sports) */
+  sport_id?: string | null;
 }
 
 /**
@@ -132,6 +134,7 @@ export interface UpdateCommunityInput {
   description?: string;
   cover_image_url?: string;
   is_public?: boolean;
+  sport_id?: string | null;
 }
 
 // ============================================================================

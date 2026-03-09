@@ -29,6 +29,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
 import { Text } from '@rallia/shared-components';
+import { useGetOrCreateDirectConversation } from '@rallia/shared-hooks';
 import { useThemeStyles, useAuth, useTranslation } from '../../../hooks';
 import { uploadImage } from '../../../services/imageUpload';
 import { primary, spacingPixels, fontSizePixels, radiusPixels } from '@rallia/design-system';
@@ -190,13 +191,37 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
     });
   }, []);
 
-  const handleContinueToDetails = useCallback(() => {
+  // Hook for creating direct conversations
+  const getOrCreateDirectConversation = useGetOrCreateDirectConversation();
+
+  const handleContinueToDetails = useCallback(async () => {
     if (selectedMembers.length === 0) {
       Alert.alert(t('chat.selectMembers'), t('chat.pleaseSelectMember'));
       return;
     }
+
+    // If only 1 member selected, create a direct chat instead of a group
+    if (selectedMembers.length === 1 && currentUserId) {
+      setIsCreating(true);
+      try {
+        const conversation = await getOrCreateDirectConversation.mutateAsync({
+          playerId1: currentUserId,
+          playerId2: selectedMembers[0].id,
+        });
+        await handleClose();
+        onSuccess?.(conversation.id);
+      } catch (err) {
+        console.error('Error creating direct conversation:', err);
+        Alert.alert(t('common.error'), t('chat.failedToCreateConversation'));
+      } finally {
+        setIsCreating(false);
+      }
+      return;
+    }
+
+    // 2+ members: continue to group details
     setStep('group-details');
-  }, [selectedMembers, t]);
+  }, [selectedMembers, currentUserId, t, getOrCreateDirectConversation, handleClose, onSuccess]);
 
   const handleBackToMembers = useCallback(() => {
     setStep('select-members');
@@ -451,25 +476,42 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
   const buttonTextActive = BASE_WHITE;
 
   // Render Step 1 Footer
-  const renderSelectMembersFooter = () => (
-    <View style={[styles.footer, { borderTopColor: colors.border }]}>
-      <TouchableOpacity
-        style={[
-          styles.navButton,
-          { backgroundColor: buttonActive },
-          selectedMembers.length === 0 && styles.navButtonDisabled,
-        ]}
-        onPress={handleContinueToDetails}
-        disabled={selectedMembers.length === 0}
-        activeOpacity={0.8}
-      >
-        <Text size="lg" weight="semibold" color={buttonTextActive}>
-          {t('chat.continueSelected', { count: selectedMembers.length })}
-        </Text>
-        <Ionicons name="arrow-forward-outline" size={20} color={buttonTextActive} />
-      </TouchableOpacity>
-    </View>
-  );
+  const renderSelectMembersFooter = () => {
+    const isDisabled = selectedMembers.length === 0 || isCreating;
+    const isSingleMember = selectedMembers.length === 1;
+
+    return (
+      <View style={[styles.footer, { borderTopColor: colors.border }]}>
+        <TouchableOpacity
+          style={[
+            styles.navButton,
+            { backgroundColor: buttonActive },
+            isDisabled && styles.navButtonDisabled,
+          ]}
+          onPress={handleContinueToDetails}
+          disabled={isDisabled}
+          activeOpacity={0.8}
+        >
+          {isCreating ? (
+            <ActivityIndicator color={buttonTextActive} />
+          ) : (
+            <>
+              <Text size="lg" weight="semibold" color={buttonTextActive}>
+                {isSingleMember
+                  ? t('chat.startChat')
+                  : t('chat.continueSelected', { count: selectedMembers.length })}
+              </Text>
+              <Ionicons
+                name={isSingleMember ? 'chatbubble-outline' : 'arrow-forward-outline'}
+                size={20}
+                color={buttonTextActive}
+              />
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   // Render Step 2: Group Details
   const renderGroupDetailsStep = () => (

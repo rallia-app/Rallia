@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '../supabase';
+
 import type {
   Conversation,
   ConversationPreview,
@@ -15,279 +16,115 @@ import type {
   MessageWithSender,
 } from './chatTypes';
 
+// Type for the optimized RPC function return
+interface ConversationRPCRow {
+  id: string;
+  conversation_type: string;
+  title: string | null;
+  picture_url: string | null;
+  match_id: string | null;
+  last_message_content: string | null;
+  last_message_at: string | null;
+  last_message_sender_first_name: string | null;
+  is_pinned: boolean;
+  is_muted: boolean;
+  is_archived: boolean;
+  participant_count: number;
+  unread_count: number;
+  other_participant_id: string | null;
+  other_participant_first_name: string | null;
+  other_participant_last_name: string | null;
+  other_participant_picture_url: string | null;
+  other_participant_last_seen_at: string | null;
+  network_id: string | null;
+  network_type: string | null;
+  network_cover_image_url: string | null;
+  match_format: string | null;
+  match_date: string | null;
+  match_sport_name: string | null;
+}
+
 // ============================================================================
 // READ OPERATIONS
 // ============================================================================
 
 /**
- * Get all conversations for a player
+ * Get all conversations for a player (OPTIMIZED)
+ * Uses a single RPC call instead of N+1 queries for much faster loading
  */
 export async function getPlayerConversations(playerId: string): Promise<ConversationPreview[]> {
-  // Get conversations where player is a participant
-  const { data: participations, error: partError } = await supabase
-    .from('conversation_participant')
-    .select('conversation_id')
-    .eq('player_id', playerId);
+  try {
+    const { data, error } = await supabase.rpc('get_player_conversations_optimized', {
+      p_player_id: playerId,
+    });
 
-  if (partError) {
-    console.error('Error fetching participations:', partError);
-    throw partError;
-  }
-
-  if (!participations || participations.length === 0) {
-    return [];
-  }
-
-  const conversationIds = participations.map(p => p.conversation_id);
-
-  // Get conversations with last message
-  const { data: conversations, error: convError } = await supabase
-    .from('conversation')
-    .select(
-      `
-      id,
-      conversation_type,
-      title,
-      match_id,
-      picture_url,
-      created_at,
-      updated_at
-    `
-    )
-    .in('id', conversationIds)
-    .order('updated_at', { ascending: false });
-
-  if (convError) {
-    console.error('Error fetching conversations:', convError);
-    throw convError;
-  }
-
-  if (!conversations) {
-    return [];
-  }
-
-  // Build preview for each conversation
-  const previews: ConversationPreview[] = [];
-
-  for (const conv of conversations) {
-    // Get last message
-    const { data: lastMessage } = await supabase
-      .from('message')
-      .select(
-        `
-        id,
-        content,
-        created_at,
-        sender_id,
-        sender:player!message_sender_id_fkey (
-          id,
-          profile (
-            first_name,
-            last_name
-          )
-        )
-      `
-      )
-      .eq('conversation_id', conv.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    // Get participant count
-    const { count: participantCount } = await supabase
-      .from('conversation_participant')
-      .select('*', { count: 'exact', head: true })
-      .eq('conversation_id', conv.id);
-
-    // Get unread count for this player (and their participation settings)
-    const { data: participation } = await supabase
-      .from('conversation_participant')
-      .select('last_read_at, is_muted, is_pinned, is_archived')
-      .eq('conversation_id', conv.id)
-      .eq('player_id', playerId)
-      .single();
-
-    const lastReadAt = participation?.last_read_at;
-    const isPinned = participation?.is_pinned ?? false;
-    const isMuted = participation?.is_muted ?? false;
-    const isArchived = participation?.is_archived ?? false;
-
-    let unreadCount = 0;
-    if (lastReadAt) {
-      const { count } = await supabase
-        .from('message')
-        .select('*', { count: 'exact', head: true })
-        .eq('conversation_id', conv.id)
-        .neq('sender_id', playerId)
-        .gt('created_at', lastReadAt);
-      unreadCount = count || 0;
-    } else {
-      // Never read - count all messages not from this player
-      const { count } = await supabase
-        .from('message')
-        .select('*', { count: 'exact', head: true })
-        .eq('conversation_id', conv.id)
-        .neq('sender_id', playerId);
-      unreadCount = count || 0;
+    if (error) {
+      console.error('Error fetching conversations from RPC:', error);
+      // Return empty array instead of throwing to prevent app crash
+      return [];
     }
 
-    // For direct messages, get the other participant
-    let otherParticipant: ConversationPreview['other_participant'] | undefined;
-    let coverImageUrl: string | null = null;
-    let networkId: string | null = null;
-    let networkType: string | null = null;
+    if (!data || (data as ConversationRPCRow[]).length === 0) {
+      return [];
+    }
 
-    if (conv.conversation_type === 'direct') {
-      const { data: otherPart } = await supabase
-        .from('conversation_participant')
-        .select(
-          `
-          player:player!conversation_participant_player_id_fkey (
-            id,
-            last_seen_at,
-            profile (
-              first_name,
-              last_name,
-              profile_picture_url
-            )
-          )
-        `
-        )
-        .eq('conversation_id', conv.id)
-        .neq('player_id', playerId)
-        .single();
+    const rows = data as ConversationRPCRow[];
 
-      const player = otherPart?.player as unknown as
-        | {
-            id: string;
-            last_seen_at: string | null;
-            profile: {
-              first_name: string;
-              last_name: string | null;
-              profile_picture_url: string | null;
-            } | null;
-          }
-        | undefined;
-
-      if (player?.profile) {
-        // Check if player was seen in last 5 minutes
-        const isOnline = player.last_seen_at
-          ? new Date(player.last_seen_at) > new Date(Date.now() - 5 * 60 * 1000)
+    // Transform RPC results to ConversationPreview format
+    const previews: ConversationPreview[] = rows.map((row: ConversationRPCRow) => {
+      // Build other_participant for direct chats
+      let otherParticipant: ConversationPreview['other_participant'] | undefined;
+      if (row.other_participant_id) {
+        const isOnline = row.other_participant_last_seen_at
+          ? new Date(row.other_participant_last_seen_at) > new Date(Date.now() - 5 * 60 * 1000)
           : false;
 
         otherParticipant = {
-          id: player.id,
-          first_name: player.profile.first_name,
-          last_name: player.profile.last_name,
-          profile_picture_url: player.profile.profile_picture_url,
+          id: row.other_participant_id,
+          first_name: row.other_participant_first_name || '',
+          last_name: row.other_participant_last_name,
+          profile_picture_url: row.other_participant_picture_url,
           is_online: isOnline,
-          last_seen_at: player.last_seen_at,
+          last_seen_at: row.other_participant_last_seen_at,
         };
       }
-    } else if (conv.conversation_type === 'group') {
-      // For group chats, check if linked to a network (for categorization and cover image)
-      const { data: network } = await supabase
-        .from('network')
-        .select(
-          `
-          id, 
-          cover_image_url,
-          network_type:network_type_id (
-            name
-          )
-        `
-        )
-        .eq('conversation_id', conv.id)
-        .single();
 
-      if (network) {
-        coverImageUrl = network.cover_image_url || null;
-        networkId = network.id;
-        // Extract network type name
-        const networkTypeData = network.network_type as { name?: string } | null;
-        networkType = networkTypeData?.name || null;
-      } else {
-        // No network linked - use conversation's own picture_url (for standalone group chats)
-        coverImageUrl = (conv as { picture_url?: string | null }).picture_url || null;
-      }
-    }
-
-    // For match-linked chats, get the match info
-    let matchInfo: ConversationPreview['match_info'] = null;
-    if (conv.match_id) {
-      const { data: match } = await supabase
-        .from('match')
-        .select(
-          `
-          format,
-          match_date,
-          sport:sport_id (
-            name
-          )
-        `
-        )
-        .eq('id', conv.match_id)
-        .single();
-
-      if (match) {
-        // Supabase can return nested objects as arrays, handle both cases
-        const sportData = Array.isArray(match.sport)
-          ? (match.sport[0] as { name: string } | undefined)
-          : (match.sport as unknown as { name: string } | null);
+      // Build match_info for match-linked chats
+      let matchInfo: ConversationPreview['match_info'] = null;
+      if (row.match_id && row.match_sport_name) {
         matchInfo = {
-          sport_name: sportData?.name || 'Match',
-          match_date: match.match_date,
-          format: match.format as 'singles' | 'doubles',
+          sport_name: row.match_sport_name,
+          match_date: row.match_date || '',
+          format: (row.match_format as 'singles' | 'doubles') || 'singles',
         };
       }
-    }
 
-    // Get sender name
-    let lastMessageSenderName: string | null = null;
-    if (lastMessage?.sender) {
-      const sender = lastMessage.sender as unknown as {
-        id: string;
-        profile: { first_name: string; last_name: string | null } | null;
+      return {
+        id: row.id,
+        conversation_type: row.conversation_type as ConversationType,
+        title: row.title,
+        last_message_content: row.last_message_content,
+        last_message_at: row.last_message_at,
+        last_message_sender_name: row.last_message_sender_first_name,
+        unread_count: Number(row.unread_count) || 0,
+        participant_count: Number(row.participant_count) || 0,
+        other_participant: otherParticipant,
+        cover_image_url: row.network_cover_image_url || row.picture_url,
+        is_pinned: row.is_pinned,
+        is_muted: row.is_muted,
+        is_archived: row.is_archived,
+        match_id: row.match_id,
+        match_info: matchInfo,
+        network_id: row.network_id,
+        network_type: row.network_type,
       };
-      if (sender.profile) {
-        lastMessageSenderName = sender.profile.first_name;
-      }
-    }
-
-    previews.push({
-      id: conv.id,
-      conversation_type: conv.conversation_type,
-      title: conv.title,
-      last_message_content: lastMessage?.content || null,
-      last_message_at: lastMessage?.created_at || null,
-      last_message_sender_name: lastMessageSenderName,
-      unread_count: unreadCount,
-      participant_count: participantCount || 0,
-      other_participant: otherParticipant,
-      cover_image_url: coverImageUrl,
-      is_pinned: isPinned,
-      is_muted: isMuted,
-      is_archived: isArchived,
-      match_id: conv.match_id || null,
-      match_info: matchInfo,
-      network_id: networkId,
-      network_type: networkType,
     });
+
+    return previews;
+  } catch (err) {
+    console.error('Unexpected error in getPlayerConversations:', err);
+    return [];
   }
-
-  // Sort: pinned first, then by last_message_at
-  previews.sort((a, b) => {
-    // Pinned conversations first
-    if (a.is_pinned && !b.is_pinned) return -1;
-    if (!a.is_pinned && b.is_pinned) return 1;
-
-    // Then by last message time
-    const aTime = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
-    const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
-    return bTime - aTime;
-  });
-
-  return previews;
 }
 
 /**
