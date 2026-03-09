@@ -179,6 +179,8 @@
       "match_starting_soon": "Partie\nimminente",
       "match_check_in_available": "Enregistrement\ndisponible",
       "match_new_available": "Nouvelle partie\ndans un groupe",
+      "match_spot_opened": "Place\nlibérée",
+      "nearby_match_available": "Partie\nà proximité",
       "player_kicked": "Retiré\nde la partie",
       "player_left": "Joueur\nparti",
       "new_message": "Nouveau\nmessage",

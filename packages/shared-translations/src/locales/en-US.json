@@ -179,6 +179,8 @@
       "match_starting_soon": "Starting\nSoon",
       "match_check_in_available": "Check-in\nAvailable",
       "match_new_available": "New Game\nin Group",
+      "match_spot_opened": "Spot\nOpened",
+      "nearby_match_available": "Nearby\nGame",
       "player_kicked": "Removed\nfrom Game",
       "player_left": "Player\nLeft",
       "new_message": "New\nMessage",

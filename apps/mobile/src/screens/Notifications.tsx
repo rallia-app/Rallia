@@ -16,7 +16,7 @@ import { useTheme, useMatch } from '@rallia/shared-hooks';
 import { useAuth, useRequireOnboarding } from '../hooks';
 import { useTranslation, type TranslationOptions } from '../hooks/useTranslation';
 import type { TranslationKey } from '@rallia/shared-translations';
-import { useActionsSheet, useMatchDetailSheet } from '../context';
+import { useActionsSheet, useMatchDetailSheet, useSport } from '../context';
 import { useCommunityNavigation } from '../navigation';
 import SignInPrompt from '../components/SignInPrompt';
 import { SportIcon } from '../components/SportIcon';
