@@ -98,7 +98,12 @@
           "enableGooglePay": false
         }
       ],
-      "@rnmapbox/maps"
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsImpl": "mapbox"
+        }
+      ]
     ],
     "extra": {
       "eas": {
