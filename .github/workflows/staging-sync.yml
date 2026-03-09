@@ -35,8 +35,8 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_STAGING_ACCESS_TOKEN }}
         run: |
-          npx supabase link --project-ref ahbaeewecdeguxtxtvhr
-          npx supabase db push --include-all
+          npx supabase link --project-ref ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+          npx supabase db push
 
       - name: Deploy edge functions
         env:
