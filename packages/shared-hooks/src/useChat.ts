@@ -13,6 +13,7 @@ import {
   getMessages,
   sendMessage,
   markMessagesAsRead,
+  markMessagesAsDelivered,
   deleteMessage,
   editMessage,
   toggleMuteConversation,
@@ -289,6 +290,21 @@ export function useMarkMessagesAsRead() {
         refetchType: 'all',
       });
     },
+  });
+}
+
+/**
+ * Mark messages as delivered (when recipient receives them)
+ */
+export function useMarkMessagesAsDelivered() {
+  return useMutation({
+    mutationFn: ({
+      conversationId,
+      recipientId,
+    }: {
+      conversationId: string;
+      recipientId: string;
+    }) => markMessagesAsDelivered(conversationId, recipientId),
   });
 }
 

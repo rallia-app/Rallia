@@ -18,7 +18,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SheetManager } from 'react-native-actions-sheet';
@@ -27,7 +27,13 @@ import { Text, Skeleton } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
 import { getSafeAreaEdges } from '../utils';
 import { useThemeStyles, useAuth, useTranslation, useRequireOnboarding } from '../hooks';
-import { usePlayerGroups, usePlayerGroupsRealtime, type Group } from '@rallia/shared-hooks';
+import { useSport } from '../context';
+import {
+  usePlayerGroups,
+  usePlayerGroupsRealtime,
+  useSports,
+  type Group,
+} from '@rallia/shared-hooks';
 import type { RootStackParamList } from '../navigation/types';
 import { QRScannerModal } from '../features/groups';
 
@@ -55,10 +61,12 @@ const GroupCard: React.FC<{
   colors: ThemeColors;
   isDark: boolean;
   onPress: (group: Group) => void;
-}> = ({ item, index, colors, isDark, onPress }) => {
+  getSportName: (sportId: string | null) => string | null;
+}> = ({ item, index, colors, isDark, onPress, getSportName }) => {
   const scaleAnim = useMemo(() => new Animated.Value(1), []);
   const { t } = useTranslation();
   const hasBooking = false; // TODO: Add booking feature indicator
+  const sportName = getSportName(item.sport_id);
 
   const handlePressIn = useCallback(() => {
     Animated.timing(scaleAnim, {
@@ -75,6 +83,37 @@ const GroupCard: React.FC<{
       useNativeDriver: true,
     }).start();
   }, [scaleAnim]);
+
+  // Get sport icon based on sport_id
+  const renderSportIcon = () => {
+    // null = both sports
+    if (!item.sport_id) {
+      return (
+        <View style={styles.sportIconContainer}>
+          <MaterialCommunityIcons name="tennis" size={14} color={colors.textMuted} />
+          <Text style={[styles.sportIconPlus, { color: colors.textMuted }]}>+</Text>
+          <MaterialCommunityIcons name="badminton" size={14} color={colors.textMuted} />
+        </View>
+      );
+    }
+    // Tennis
+    if (sportName?.toLowerCase() === 'tennis') {
+      return (
+        <View style={styles.sportIconContainer}>
+          <MaterialCommunityIcons name="tennis" size={16} color={colors.textMuted} />
+        </View>
+      );
+    }
+    // Pickleball
+    if (sportName?.toLowerCase() === 'pickleball') {
+      return (
+        <View style={styles.sportIconContainer}>
+          <MaterialCommunityIcons name="badminton" size={16} color={colors.textMuted} />
+        </View>
+      );
+    }
+    return null;
+  };
 
   return (
     <TouchableWithoutFeedback
@@ -120,9 +159,17 @@ const GroupCard: React.FC<{
 
         {/* Group Info */}
         <View style={styles.groupInfo}>
-          <Text weight="semibold" size="sm" style={{ color: colors.text }} numberOfLines={2}>
-            {item.name}
-          </Text>
+          <View style={styles.titleRow}>
+            <Text
+              weight="semibold"
+              size="sm"
+              style={[{ color: colors.text }, styles.titleText]}
+              numberOfLines={2}
+            >
+              {item.name}
+            </Text>
+            {renderSportIcon()}
+          </View>
 
           {/* Verified indicator + Member count */}
           <View style={styles.bottomRow}>
@@ -148,11 +195,29 @@ export default function GroupsScreen() {
   const { session } = useAuth();
   const { t } = useTranslation();
   const { guardAction } = useRequireOnboarding();
+  const { selectedSport } = useSport();
   const playerId = session?.user?.id;
 
   const [showScannerModal, setShowScannerModal] = useState(false);
 
-  const { data: groups, isLoading, isRefetching, refetch } = usePlayerGroups(playerId);
+  // Filter groups by selected sport
+  const {
+    data: groups,
+    isLoading,
+    isRefetching,
+    refetch,
+  } = usePlayerGroups(playerId, selectedSport?.id);
+  const { sports } = useSports();
+
+  // Helper to get sport name from sport_id
+  const getSportName = useCallback(
+    (sportId: string | null): string | null => {
+      if (!sportId || !sports) return null;
+      const sport = sports.find(s => s.id === sportId);
+      return sport?.name ?? null;
+    },
+    [sports]
+  );
 
   // Subscribe to real-time updates for player's groups
   usePlayerGroupsRealtime(playerId);
@@ -188,10 +253,11 @@ export default function GroupsScreen() {
           colors={colors}
           isDark={isDark}
           onPress={handleGroupPress}
+          getSportName={getSportName}
         />
       );
     },
-    [colors, isDark, handleGroupPress]
+    [colors, isDark, handleGroupPress, getSportName]
   );
 
   const renderEmptyState = useMemo(
@@ -456,9 +522,26 @@ const styles = StyleSheet.create({
   badgeText: {
     color: '#FFFFFF',
   },
+  sportIconContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 4,
+  },
+  sportIconPlus: {
+    color: '#666666',
+    fontSize: 8,
+    marginHorizontal: 1,
+  },
   groupInfo: {
     padding: 12,
     gap: 6,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  titleText: {
+    flex: 1,
   },
   bottomRow: {
     flexDirection: 'row',

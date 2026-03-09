@@ -179,6 +179,8 @@
       "match_starting_soon": "Starting\nSoon",
       "match_check_in_available": "Check-in\nAvailable",
       "match_new_available": "New Game\nin Group",
+      "match_spot_opened": "Spot\nOpened",
+      "nearby_match_available": "Nearby\nGame",
       "player_kicked": "Removed\nfrom Game",
       "player_left": "Player\nLeft",
       "new_message": "New\nMessage",
@@ -188,11 +190,12 @@
       "support": "Support",
       "chat": "Message",
       "system": "System",
-      "feedback_request": "Feedback\nRequest",
-      "feedback_reminder": "Feedback\nReminder",
-      "score_confirmation": "Score\nConfirmation",
-      "match_spot_opened": "Spot\nOpened",
-      "nearby_match_available": "Nearby\nMatch"
+      "feedback_request": "Feedback Request",
+      "feedback_reminder": "Feedback Reminder",
+      "score_confirmation": "Score Confirmation",
+      "community_join_request": "Community Join Request",
+      "community_join_accepted": "Request Approved",
+      "community_join_rejected": "Request Declined"
     },
     "categories": {
       "match": "Game Notifications",
@@ -299,16 +302,20 @@
         "body": "Your {sportName} score and rating with {opponentNames} are still pending — complete them before the deadline."
       },
       "score_confirmation": {
-        "title": "Confirm your score",
-        "body": "{playerName} submitted a score for your {sportName} game. Please confirm or correct."
+        "title": "Confirm Game Score",
+        "body": "{playerName} submitted a score for your {sportName} game. Please confirm or dispute."
       },
-      "match_spot_opened": {
-        "title": "A spot opened up!",
-        "body": "A spot opened in a {sportName} match{startTime}{locationName}. Join now!"
+      "community_join_request": {
+        "title": "New Join Request",
+        "body": "{requesterName} wants to join {communityName}"
       },
-      "nearby_match_available": {
-        "title": "New match nearby",
-        "body": "A {sportName} match is available near you{startTime}{locationName}"
+      "community_join_accepted": {
+        "title": "Request Approved!",
+        "body": "You are now a member of {communityName}"
+      },
+      "community_join_rejected": {
+        "title": "Request Not Approved",
+        "body": "Your request to join {communityName} was not approved"
       }
     }
   },
@@ -1662,6 +1669,8 @@
     "noPlayersFoundMatching": "No players found matching \"{query}\"",
     "noPlayersAvailable": "No players available",
     "continueSelected": "Continue ({count} selected)",
+    "startChat": "Start Chat",
+    "failedToCreateConversation": "Failed to create conversation. Please try again.",
     "groupDetails": "Group Details",
     "addPhoto": "Add Photo",
     "groupName": "Group Name",
@@ -1989,7 +1998,12 @@
     "moderatorAddedToCommunity": "Moderator added to the community",
     "memberAddedToCommunity": "Member added to the community",
     "membershipRequestSubmitted": "Membership request submitted for approval",
-    "failedToAddMember": "Failed to add member"
+    "failedToAddMember": "Failed to add member",
+    "sportSelection": "Sport",
+    "sportBoth": "Both",
+    "sportTennis": "Tennis",
+    "sportPickleball": "Pickleball",
+    "sportSelectionHint": "Choose a sport to filter who sees this community"
   },
   "groups": {
     "title": "Groups",
@@ -2234,7 +2248,12 @@
       "minutesAgo": "{count}m ago",
       "hoursAgo": "{count}h ago",
       "daysAgo": "{count}d ago"
-    }
+    },
+    "sportSelection": "Sport",
+    "sportBoth": "Both",
+    "sportTennis": "Tennis",
+    "sportPickleball": "Pickleball",
+    "sportSelectionHint": "Choose a sport to filter who sees this group"
   },
   "playerDirectory": {
     "title": "Player Directory",

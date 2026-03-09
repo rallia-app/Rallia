@@ -78,6 +78,7 @@ export async function createCommunity(
       is_private: !(input.is_public ?? true), // Default to public
       max_members: null, // Communities have no member limit
       created_by: playerId,
+      sport_id: input.sport_id || null, // null means both sports
     })
     .select()
     .single();
@@ -174,10 +175,16 @@ export async function getCommunityWithMembers(
 /**
  * Get all public communities for discovery
  * Returns communities with membership status for the current user
+ * @param playerId - Optional player ID to check membership status
+ * @param sportId - Optional sport ID to filter by (null returns communities for all sports)
  */
-export async function getPublicCommunities(playerId?: string): Promise<CommunityWithStatus[]> {
+export async function getPublicCommunities(
+  playerId?: string,
+  sportId?: string | null
+): Promise<CommunityWithStatus[]> {
   const { data, error } = await supabase.rpc('get_public_communities', {
     p_player_id: playerId || null,
+    p_sport_id: sportId || null,
   });
 
   if (error) {
@@ -194,9 +201,17 @@ export async function getPublicCommunities(playerId?: string): Promise<Community
 
 /**
  * Get all communities for a player (communities they are a member of)
+ * @param playerId - The player's ID
+ * @param sportId - Optional sport ID to filter by (null returns communities for all sports)
  */
-export async function getPlayerCommunities(playerId: string): Promise<CommunityWithStatus[]> {
-  const { data, error } = await supabase.rpc('get_player_communities', { p_player_id: playerId });
+export async function getPlayerCommunities(
+  playerId: string,
+  sportId?: string | null
+): Promise<CommunityWithStatus[]> {
+  const { data, error } = await supabase.rpc('get_player_communities', {
+    p_player_id: playerId,
+    p_sport_id: sportId || null,
+  });
 
   if (error) {
     console.error('Error fetching player communities:', error);
@@ -244,6 +259,9 @@ export async function updateCommunity(
   }
   if (input.is_public !== undefined) {
     updateData.is_private = !input.is_public;
+  }
+  if (input.sport_id !== undefined) {
+    updateData.sport_id = input.sport_id;
   }
 
   const { data, error } = await supabase
@@ -484,9 +502,9 @@ export async function checkCommunityAccess(
   }
 
   const { data, error } = await supabase
-    .rpc('check_community_access', { 
-      p_community_id: communityId, 
-      p_player_id: playerId || null 
+    .rpc('check_community_access', {
+      p_community_id: communityId,
+      p_player_id: playerId || null,
     })
     .single<CheckCommunityAccessResponse>();
 

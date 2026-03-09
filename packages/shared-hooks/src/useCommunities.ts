@@ -52,8 +52,10 @@ import {
 export const communityKeys = {
   all: ['communities'] as const,
   lists: () => [...communityKeys.all, 'list'] as const,
-  publicCommunities: (playerId?: string) => [...communityKeys.lists(), 'public', playerId] as const,
-  playerCommunities: (playerId: string) => [...communityKeys.lists(), 'player', playerId] as const,
+  publicCommunities: (playerId?: string, sportId?: string | null) =>
+    [...communityKeys.lists(), 'public', playerId, sportId ?? 'all'] as const,
+  playerCommunities: (playerId: string, sportId?: string | null) =>
+    [...communityKeys.lists(), 'player', playerId, sportId ?? 'all'] as const,
   details: () => [...communityKeys.all, 'detail'] as const,
   detail: (communityId: string) => [...communityKeys.details(), communityId] as const,
   withMembers: (communityId: string) => [...communityKeys.detail(communityId), 'members'] as const,
@@ -75,21 +77,25 @@ export const communityKeys = {
 
 /**
  * Get all public communities for discovery
+ * @param playerId - Optional player ID to check membership status
+ * @param sportId - Optional sport ID to filter by (null/undefined returns all communities)
  */
-export function usePublicCommunities(playerId?: string) {
+export function usePublicCommunities(playerId?: string, sportId?: string | null) {
   return useQuery({
-    queryKey: communityKeys.publicCommunities(playerId),
-    queryFn: () => getPublicCommunities(playerId),
+    queryKey: communityKeys.publicCommunities(playerId, sportId),
+    queryFn: () => getPublicCommunities(playerId, sportId),
   });
 }
 
 /**
  * Get all communities for the current player
+ * @param playerId - The player's ID
+ * @param sportId - Optional sport ID to filter by (null/undefined returns all communities)
  */
-export function usePlayerCommunities(playerId: string | undefined) {
+export function usePlayerCommunities(playerId: string | undefined, sportId?: string | null) {
   return useQuery({
-    queryKey: communityKeys.playerCommunities(playerId || ''),
-    queryFn: () => getPlayerCommunities(playerId!),
+    queryKey: communityKeys.playerCommunities(playerId || '', sportId),
+    queryFn: () => getPlayerCommunities(playerId!, sportId),
     enabled: !!playerId,
   });
 }
@@ -474,7 +480,9 @@ export function usePromoteCommunityMember() {
       promoterId: string;
     }) => promoteCommunityMember(communityId, playerId, promoterId),
     onSuccess: async (_, variables) => {
-      await queryClient.invalidateQueries({ queryKey: communityKeys.withMembers(variables.communityId) });
+      await queryClient.invalidateQueries({
+        queryKey: communityKeys.withMembers(variables.communityId),
+      });
       // Force refetch activity to show the promotion/demotion immediately
       await queryClient.refetchQueries({ queryKey: ['groups', 'activity', variables.communityId] });
     },
@@ -498,7 +506,9 @@ export function useDemoteCommunityMember() {
       demoterId: string;
     }) => demoteCommunityMember(communityId, playerId, demoterId),
     onSuccess: async (_, variables) => {
-      await queryClient.invalidateQueries({ queryKey: communityKeys.withMembers(variables.communityId) });
+      await queryClient.invalidateQueries({
+        queryKey: communityKeys.withMembers(variables.communityId),
+      });
       // Force refetch activity to show the promotion/demotion immediately
       await queryClient.refetchQueries({ queryKey: ['groups', 'activity', variables.communityId] });
     },
