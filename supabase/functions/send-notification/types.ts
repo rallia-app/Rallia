@@ -27,6 +27,10 @@ export type NotificationType =
   | 'feedback_request'
   | 'feedback_reminder'
   | 'score_confirmation'
+  // Community notifications
+  | 'community_join_request'
+  | 'community_join_accepted'
+  | 'community_join_rejected'
   // Organization staff notifications
   | 'booking_created'
   | 'booking_cancelled_by_player'

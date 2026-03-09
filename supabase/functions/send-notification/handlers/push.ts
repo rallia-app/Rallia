@@ -36,6 +36,8 @@ function getCategoryId(type: string): string | undefined {
     case 'match_invitation':
     case 'match_join_request':
       return 'match_action'; // Can have Accept/Decline actions
+    case 'community_join_request':
+      return 'community_action'; // Can have Accept/Decline actions
     case 'feedback_request':
       return 'feedback_action'; // Can have Rate action
     case 'new_message':
@@ -124,7 +126,7 @@ function buildPushPayload(notification: NotificationRecord, expoPushToken: strin
   const expoPriority = priority === 'urgent' || priority === 'high' ? 'high' : 'normal';
 
   // Get sport emoji for visual context
-  const sportName = (payload as Record<string, unknown>)?.sportName as string | undefined;
+  const sportName = payload?.sportName as string | undefined;
   const sportEmoji = getSportEmoji(sportName);
 
   // Enhance title with sport emoji for match-related notifications

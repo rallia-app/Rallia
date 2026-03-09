@@ -186,7 +186,10 @@
       "system": "Système",
       "feedback_request": "Demande d'évaluation",
       "feedback_reminder": "Rappel d'évaluation",
-      "score_confirmation": "Confirmation du score"
+      "score_confirmation": "Confirmation du score",
+      "community_join_request": "Demande d'adhésion",
+      "community_join_accepted": "Demande approuvée",
+      "community_join_rejected": "Demande refusée"
     },
     "categories": {
       "match": "Notifications de parties",
@@ -299,6 +302,18 @@
       "score_confirmation": {
         "title": "Confirmer le score",
         "body": "{playerName} a soumis un score pour votre partie de {sportName}. Veuillez confirmer ou contester."
+      },
+      "community_join_request": {
+        "title": "Nouvelle demande d'adhésion",
+        "body": "{requesterName} souhaite rejoindre {communityName}"
+      },
+      "community_join_accepted": {
+        "title": "Demande approuvée!",
+        "body": "Vous êtes maintenant membre de {communityName}"
+      },
+      "community_join_rejected": {
+        "title": "Demande non approuvée",
+        "body": "Votre demande pour rejoindre {communityName} n'a pas été approuvée"
       }
     }
   },
@@ -1673,6 +1688,8 @@
     "noPlayersFoundMatching": "Aucun joueur trouvé pour \"{query}\"",
     "noPlayersAvailable": "Aucun joueur disponible",
     "continueSelected": "Continuer ({count} sélectionné(s))",
+    "startChat": "Démarrer la discussion",
+    "failedToCreateConversation": "Échec de la création de la conversation. Veuillez réessayer.",
     "groupDetails": "Détails du groupe",
     "addPhoto": "Ajouter une photo",
     "groupName": "Nom du groupe",

@@ -15,6 +15,7 @@ import { useAuth, useRequireOnboarding } from '../hooks';
 import { useTranslation, type TranslationOptions } from '../hooks/useTranslation';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { useActionsSheet, useMatchDetailSheet } from '../context';
+import { useCommunityNavigation } from '../navigation';
 import SignInPrompt from '../components/SignInPrompt';
 import {
   Notification,
@@ -53,6 +54,15 @@ const MATCH_NOTIFICATION_TYPES: ExtendedNotificationTypeEnum[] = [
   'score_confirmation',
   'feedback_request',
   'feedback_reminder',
+];
+
+/**
+ * Community-related notification types that should navigate to community detail
+ */
+const COMMUNITY_NOTIFICATION_TYPES: string[] = [
+  'community_join_request',
+  'community_join_accepted',
+  'community_join_rejected',
 ];
 
 const BASE_WHITE = '#ffffff';
@@ -292,6 +302,7 @@ const Notifications: React.FC = () => {
   const { openSheet } = useActionsSheet();
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
   const { isReady: isOnboarded } = useRequireOnboarding();
+  const communityNavigation = useCommunityNavigation();
   const isDark = theme === 'dark';
 
   // State for handling match detail opening
@@ -373,12 +384,28 @@ const Notifications: React.FC = () => {
             type: notification.type,
           });
           setSelectedMatchId(notification.target_id);
+          return;
+        }
+
+        // Handle community notifications - navigate to CommunityDetail screen
+        const isCommunityNotification = COMMUNITY_NOTIFICATION_TYPES.includes(notification.type);
+
+        if (isCommunityNotification) {
+          Logger.logUserAction('notification_community_tapped', {
+            notificationId: notification.id,
+            communityId: notification.target_id,
+            type: notification.type,
+          });
+          communityNavigation.navigate('CommunityDetail', {
+            communityId: notification.target_id,
+          });
+          return;
         }
 
         // TODO: Handle other notification types (messages, friend requests, etc.)
       }
     },
-    [markAsRead]
+    [markAsRead, communityNavigation]
   );
 
   const handleLoadMore = useCallback(() => {

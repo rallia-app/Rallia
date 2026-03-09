@@ -186,7 +186,10 @@
       "system": "System",
       "feedback_request": "Feedback Request",
       "feedback_reminder": "Feedback Reminder",
-      "score_confirmation": "Score Confirmation"
+      "score_confirmation": "Score Confirmation",
+      "community_join_request": "Community Join Request",
+      "community_join_accepted": "Request Approved",
+      "community_join_rejected": "Request Declined"
     },
     "categories": {
       "match": "Game Notifications",
@@ -299,6 +302,18 @@
       "score_confirmation": {
         "title": "Confirm Game Score",
         "body": "{playerName} submitted a score for your {sportName} game. Please confirm or dispute."
+      },
+      "community_join_request": {
+        "title": "New Join Request",
+        "body": "{requesterName} wants to join {communityName}"
+      },
+      "community_join_accepted": {
+        "title": "Request Approved!",
+        "body": "You are now a member of {communityName}"
+      },
+      "community_join_rejected": {
+        "title": "Request Not Approved",
+        "body": "Your request to join {communityName} was not approved"
       }
     }
   },
@@ -1652,6 +1667,8 @@
     "noPlayersFoundMatching": "No players found matching \"{query}\"",
     "noPlayersAvailable": "No players available",
     "continueSelected": "Continue ({count} selected)",
+    "startChat": "Start Chat",
+    "failedToCreateConversation": "Failed to create conversation. Please try again.",
     "groupDetails": "Group Details",
     "addPhoto": "Add Photo",
     "groupName": "Group Name",
