@@ -501,14 +501,14 @@ function CourtsStack() {
         name="FacilityDetail"
         component={FacilityDetail}
         options={({ navigation, route }) => {
-          const rootNav = navigation.getParent()?.getParent() as
-            | NativeStackNavigationProp<RootStackParamList>
-            | undefined;
-          const returnTo = route.params?.returnTo;
+          const rootNav = navigation.getParent()?.getParent();
+          const { returnTo } = route.params ?? {};
+          // Handle returnTo for navigation from MyBookings
           const goBack =
             returnTo === 'MyBookings' && rootNav
               ? () => rootNav.navigate('MyBookings')
               : () => navigation.goBack();
+
           return {
             ...sharedOptions,
             headerTitle: t('facilitiesTab.title'),
@@ -1303,6 +1303,16 @@ export default function AppNavigator() {
         options={({ route, navigation }) => ({
           ...sharedOptions,
           headerTitle: route.params?.communityName || 'Community',
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="FacilityDetail"
+        component={FacilityDetail}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('facilitiesTab.title'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />
