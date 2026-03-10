@@ -27,8 +27,6 @@ import { supabase, Logger } from '@rallia/shared-services';
 
 type SportOption = 'both' | 'tennis' | 'pickleball';
 
-type SportOption = 'both' | 'tennis' | 'pickleball';
-
 export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community'>) {
   const community = payload?.community as Community;
   const onSuccess = payload?.onSuccess;
