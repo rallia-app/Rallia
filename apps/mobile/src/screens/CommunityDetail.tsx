@@ -120,16 +120,6 @@ export default function CommunityDetailScreen() {
     [sports]
   );
 
-  // Helper to get sport name from sport_id
-  const getSportName = useCallback(
-    (sportId: string | null): string | null => {
-      if (!sportId || !sports) return null;
-      const sport = sports.find(s => s.id === sportId);
-      return sport?.name ?? null;
-    },
-    [sports]
-  );
-
   const [activeTab, setActiveTab] = useState<TabKey>('home');
   const [showPendingRequestsModal, setShowPendingRequestsModal] = useState(false);
   const [leaderboardPeriod, setLeaderboardPeriod] = useState<30 | 90 | 180 | 0>(30);
