@@ -1987,7 +1987,18 @@
     "sportBoth": "Les deux",
     "sportTennis": "Tennis",
     "sportPickleball": "Pickleball",
-    "sportSelectionHint": "Choisissez un sport pour filtrer qui voit cette communauté"
+    "sportSelectionHint": "Choisissez un sport pour filtrer qui voit cette communauté",
+    "favoriteFacilities": "Installations favorites",
+    "favoriteFacilitiesOptional": "Installations favorites (Optionnel)",
+    "noFavoriteFacilities": "Aucune installation favorite pour le moment",
+    "addFavoriteFacilitiesHint": "Ajoutez les installations où votre communauté joue",
+    "addFavoriteFacility": "Ajouter une installation favorite",
+    "favoriteFacilitiesHint": "Vous pouvez toujours ajouter ou modifier les installations plus tard",
+    "searchFacilityToAdd": "Rechercher une installation...",
+    "addAnotherFacility": "Ajouter une autre installation",
+    "noFacilitiesFound": "Aucune installation trouvée",
+    "typeToSearchFacility": "Tapez pour rechercher des installations",
+    "locationRequiredForFacilities": "Emplacement requis pour rechercher des installations"
   },
   "groups": {
     "title": "Groupes",
@@ -2010,6 +2021,7 @@
       "createButton": "Créer un groupe",
       "scanButton": "Scanner le code QR"
     },
+    "listInfoMessage": "Les groupes sont des communautés privées limitées à un maximum de 20 joueurs.",
     "welcome": {
       "title": "Bienvenue!",
       "joinedMessage": "Vous avez rejoint \"{groupName}\" avec succès"
@@ -2032,7 +2044,7 @@
     "addCoverImage": "Ajouter une image de couverture",
     "changeImage": "Changer",
     "removeImage": "Supprimer",
-    "createGroupHint": "Les groupes peuvent avoir jusqu'à 10 membres. En tant que créateur, vous serez modérateur avec la possibilité d'ajouter et retirer des membres.",
+    "createGroupHint": "Les groupes peuvent avoir jusqu'à 20 membres. En tant que créateur, vous serez modérateur avec la possibilité d'ajouter et retirer des membres.",
     "permissionRequired": "Permission requise",
     "photoAccessRequired": "Veuillez autoriser l'accès à vos photos pour ajouter une image au groupe.",
     "photoAccessRequiredEdit": "Veuillez autoriser l'accès à vos photos pour changer l'image du groupe.",
@@ -2199,7 +2211,11 @@
       "noRecentActivity": "Aucune activité récente",
       "addMember": "Ajouter un membre",
       "shareInviteLink": "Partager le lien d'invitation",
-      "noRecentGames": "Aucune partie récente"
+      "noRecentGames": "Aucune partie récente",
+      "groupStats": "Stats du groupe",
+      "totalMembers": "Membres total",
+      "visibility": "Visibilité",
+      "private": "Privé"
     },
     "options": {
       "shareInviteLink": "Partager le lien d'invitation",
@@ -2237,7 +2253,18 @@
     "sportBoth": "Les deux",
     "sportTennis": "Tennis",
     "sportPickleball": "Pickleball",
-    "sportSelectionHint": "Choisissez un sport pour filtrer qui voit ce groupe"
+    "sportSelectionHint": "Choisissez un sport pour filtrer qui voit ce groupe",
+    "favoriteFacilities": "Terrains favoris",
+    "favoriteFacilitiesOptional": "Terrains favoris (Optionnel)",
+    "noFavoriteFacilities": "Aucun terrain favori",
+    "addFavoriteFacilitiesHint": "Ajoutez les terrains où votre groupe joue",
+    "addFavoriteFacility": "Ajouter un terrain favori",
+    "addAnotherFacility": "Ajouter un autre terrain",
+    "searchFacilityToAdd": "Rechercher un terrain à ajouter",
+    "noFacilitiesFound": "Aucun terrain trouvé",
+    "typeToSearchFacility": "Tapez pour rechercher des terrains",
+    "locationRequiredForFacilities": "La localisation est requise pour rechercher des terrains",
+    "favoriteFacilitiesHint": "Vous pouvez toujours ajouter ou changer les terrains plus tard"
   },
   "playerDirectory": {
     "title": "Répertoire des joueurs",

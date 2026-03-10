@@ -389,6 +389,16 @@ export default function GroupsScreen() {
         ]}
         columnWrapperStyle={groups && groups.length > 1 ? styles.columnWrapper : undefined}
         ListEmptyComponent={renderEmptyState}
+        ListHeaderComponent={
+          groups && groups.length > 0 ? (
+            <View style={[styles.infoBox, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
+              <Ionicons name="information-circle-outline" size={20} color={colors.textMuted} />
+              <Text size="sm" style={[styles.infoBoxText, { color: colors.textSecondary }]}>
+                {t('groups.listInfoMessage')}
+              </Text>
+            </View>
+          ) : null
+        }
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
@@ -484,6 +494,18 @@ const styles = StyleSheet.create({
   },
   columnWrapper: {
     marginBottom: CARD_GAP,
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 16,
+    gap: 10,
+  },
+  infoBoxText: {
+    flex: 1,
+    lineHeight: 20,
   },
   groupCard: {
     width: CARD_WIDTH,

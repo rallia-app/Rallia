@@ -1987,7 +1987,18 @@
     "sportBoth": "Both",
     "sportTennis": "Tennis",
     "sportPickleball": "Pickleball",
-    "sportSelectionHint": "Choose a sport to filter who sees this community"
+    "sportSelectionHint": "Choose a sport to filter who sees this community",
+    "favoriteFacilities": "Favorite Facilities",
+    "favoriteFacilitiesOptional": "Favorite Facilities (Optional)",
+    "noFavoriteFacilities": "No favorite facilities yet",
+    "addFavoriteFacilitiesHint": "Add facilities where your community plays",
+    "addFavoriteFacility": "Add a favorite facility",
+    "favoriteFacilitiesHint": "You can always add or change facilities later",
+    "searchFacilityToAdd": "Search for a facility...",
+    "addAnotherFacility": "Add another facility",
+    "noFacilitiesFound": "No facilities found",
+    "typeToSearchFacility": "Type to search for facilities",
+    "locationRequiredForFacilities": "Location required to search facilities"
   },
   "groups": {
     "title": "Groups",
@@ -2010,6 +2021,7 @@
       "createButton": "Create Group",
       "scanButton": "Scan QR Code"
     },
+    "listInfoMessage": "Groups are private communities limited to a maximum of 20 players.",
     "welcome": {
       "title": "Welcome!",
       "joinedMessage": "You've successfully joined \"{groupName}\""
@@ -2032,7 +2044,7 @@
     "addCoverImage": "Add a cover image",
     "changeImage": "Change",
     "removeImage": "Remove",
-    "createGroupHint": "Groups can have up to 10 members. As the creator, you'll be a moderator with the ability to add and remove members.",
+    "createGroupHint": "Groups can have up to 20 members. As the creator, you'll be a moderator with the ability to add and remove members.",
     "permissionRequired": "Permission Required",
     "photoAccessRequired": "Please allow access to your photos to add a group image.",
     "photoAccessRequiredEdit": "Please allow access to your photos to change the group image.",
@@ -2199,7 +2211,11 @@
       "noRecentActivity": "No recent activity",
       "addMember": "Add Member",
       "shareInviteLink": "Share Invite Link",
-      "noRecentGames": "No recent games"
+      "noRecentGames": "No recent games",
+      "groupStats": "Group Stats",
+      "totalMembers": "Total Members",
+      "visibility": "Visibility",
+      "private": "Private"
     },
     "options": {
       "shareInviteLink": "Share Invite Link",
@@ -2237,7 +2253,18 @@
     "sportBoth": "Both",
     "sportTennis": "Tennis",
     "sportPickleball": "Pickleball",
-    "sportSelectionHint": "Choose a sport to filter who sees this group"
+    "sportSelectionHint": "Choose a sport to filter who sees this group",
+    "favoriteFacilities": "Favorite Facilities",
+    "favoriteFacilitiesOptional": "Favorite Facilities (Optional)",
+    "noFavoriteFacilities": "No favorite facilities yet",
+    "addFavoriteFacilitiesHint": "Add facilities where your group plays",
+    "addFavoriteFacility": "Add a favorite facility",
+    "addAnotherFacility": "Add another facility",
+    "searchFacilityToAdd": "Search for a facility to add",
+    "noFacilitiesFound": "No facilities found",
+    "typeToSearchFacility": "Type to search for facilities",
+    "locationRequiredForFacilities": "Location is required to search facilities",
+    "favoriteFacilitiesHint": "You can always add or change facilities later"
   },
   "playerDirectory": {
     "title": "Player Directory",

@@ -56,6 +56,7 @@ import {
   useConversationUnreadCount,
   useConversationUnreadRealtime,
   useSports,
+  usePlayer,
 } from '@rallia/shared-hooks';
 import type { GroupMatch } from '@rallia/shared-hooks';
 import type { GroupWithMembers } from '@rallia/shared-services';
@@ -64,6 +65,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { primary } from '@rallia/design-system';
 
 import { AddScoreIntroModal, AddScoreModal, type MatchType } from '../features/matches';
+import { CommunityFavoriteFacilitiesSelector } from '../features/communities/components';
 import { InfoModal } from '../components/InfoModal';
 
 const HEADER_HEIGHT = 140;
@@ -97,6 +99,16 @@ export default function CommunityDetailScreen() {
   const { sports } = useSports();
   const playerId = session?.user?.id;
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
+  const { player } = usePlayer();
+
+  // Get all sport IDs and names for facility search when community has no specific sport
+  const { allSportIds, sportNames } = useMemo(() => {
+    if (!sports) return { allSportIds: [], sportNames: [] };
+    return {
+      allSportIds: sports.map(s => s.id),
+      sportNames: sports.map(s => s.name.charAt(0).toUpperCase() + s.name.slice(1)),
+    };
+  }, [sports]);
 
   // Helper to get sport name from sport_id
   const getSportName = useCallback(
@@ -606,6 +618,29 @@ export default function CommunityDetailScreen() {
                 </Text>
               </View>
             )}
+
+            {/* Favorite Facilities Section */}
+            <View
+              style={[
+                styles.facilitiesCard,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
+              <CommunityFavoriteFacilitiesSelector
+                networkId={communityId}
+                currentPlayerId={playerId ?? null}
+                sportId={community?.sport_id ?? null}
+                allSportIds={allSportIds}
+                sportNames={sportNames}
+                latitude={player?.latitude ?? null}
+                longitude={player?.longitude ?? null}
+                colors={colors}
+                t={t}
+                onNavigateToFacility={facilityId =>
+                  navigation.navigate('FacilityDetail', { facilityId })
+                }
+              />
+            </View>
 
             {/* Leaderboard Preview */}
             <View
@@ -1760,6 +1795,22 @@ export default function CommunityDetailScreen() {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
+              style={[styles.menuButton, { borderColor: colors.primary }]}
+              onPress={() =>
+                SheetManager.show('invite-link', {
+                  payload: {
+                    groupId: communityId,
+                    groupName: community?.name ?? '',
+                    currentUserId: playerId ?? '',
+                    isModerator: isModerator ?? false,
+                    type: 'community',
+                  },
+                })
+              }
+            >
+              <Ionicons name="share-outline" size={20} color={colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
               style={[styles.menuButton, { borderColor: colors.border }]}
               onPress={handleShowOptions}
             >
@@ -2209,6 +2260,12 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 16,
     borderWidth: 1,
+  },
+  facilitiesCard: {
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginTop: 16,
   },
   aboutHeader: {
     flexDirection: 'row',

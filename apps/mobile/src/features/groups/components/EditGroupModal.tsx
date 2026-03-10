@@ -24,6 +24,7 @@ import { useUpdateGroup, useSports, type Group } from '@rallia/shared-hooks';
 type SportOption = 'both' | 'tennis' | 'pickleball';
 import { uploadImage, replaceImage } from '../../../services/imageUpload';
 import { primary, radiusPixels, spacingPixels } from '@rallia/design-system';
+import { supabase, Logger } from '@rallia/shared-services';
 
 export function EditGroupActionSheet({ payload }: SheetProps<'edit-group'>) {
   const group = payload?.group as Group;
@@ -77,6 +78,92 @@ export function EditGroupActionSheet({ payload }: SheetProps<'edit-group'>) {
       return 'both';
     },
     [sportIds]
+  );
+
+  /**
+   * Cleanup favorite facilities when sport changes.
+   * - If changing to "both" (null) -> no cleanup (expanding scope)
+   * - If changing from one sport to another or from "both" to specific ->
+   *   remove facilities that don't support the new sport
+   */
+  const cleanupIncompatibleFacilities = useCallback(
+    async (oldSportId: string | null, newSportId: string | null) => {
+      // If new sport is "both" (null), no cleanup needed - we're expanding, not restricting
+      if (newSportId === null) {
+        return;
+      }
+
+      // If sport didn't actually change, no cleanup needed
+      if (oldSportId === newSportId) {
+        return;
+      }
+
+      try {
+        // Get all favorite facilities for this group with their sport associations
+        const { data: favorites, error: fetchError } = await supabase
+          .from('network_favorite_facility')
+          .select(
+            `
+            id,
+            facility_id,
+            facility:facility_id (
+              id,
+              facility_sport (
+                sport_id
+              )
+            )
+          `
+          )
+          .eq('network_id', group.id);
+
+        if (fetchError) {
+          Logger.error('Error fetching favorite facilities for cleanup:', fetchError);
+          return;
+        }
+
+        if (!favorites || favorites.length === 0) {
+          return;
+        }
+
+        // Find facilities that don't support the new sport
+        const facilitiesToRemove = favorites.filter(fav => {
+          // Supabase returns nested joins as objects
+          const facility = fav.facility as unknown as {
+            id: string;
+            facility_sport: { sport_id: string }[];
+          } | null;
+          if (!facility) return true; // Remove if facility data is missing
+          const facilitySportIds = facility.facility_sport?.map(fs => fs.sport_id) ?? [];
+          // Keep if facility supports the new sport
+          return !facilitySportIds.includes(newSportId);
+        });
+
+        if (facilitiesToRemove.length === 0) {
+          return;
+        }
+
+        // Remove incompatible facilities
+        const idsToRemove = facilitiesToRemove.map(f => f.id as string);
+        const { error: deleteError } = await supabase
+          .from('network_favorite_facility')
+          .delete()
+          .in('id', idsToRemove);
+
+        if (deleteError) {
+          Logger.error('Error removing incompatible facilities:', deleteError);
+        } else {
+          Logger.info(
+            `Removed ${idsToRemove.length} incompatible favorite facilities after sport change`
+          );
+        }
+      } catch (err) {
+        Logger.error(
+          'Error in cleanupIncompatibleFacilities:',
+          err instanceof Error ? err : undefined
+        );
+      }
+    },
+    [group.id]
   );
 
   // Reset form when group changes
@@ -186,16 +273,23 @@ export function EditGroupActionSheet({ payload }: SheetProps<'edit-group'>) {
     }
 
     try {
+      const newSportId = getSportId();
+      const oldSportId = group.sport_id;
+
       await updateGroupMutation.mutateAsync({
         groupId: group.id,
         playerId,
         input: {
           name: name.trim(),
           description: description.trim() || undefined,
-          sport_id: getSportId(),
+          sport_id: newSportId,
           ...(coverImageUrl !== undefined && { cover_image_url: coverImageUrl || undefined }),
         },
       });
+
+      // Cleanup incompatible facilities if sport changed
+      await cleanupIncompatibleFacilities(oldSportId, newSportId);
+
       // Close modal first
       await SheetManager.hide('edit-group');
       // Show success toast
@@ -212,12 +306,14 @@ export function EditGroupActionSheet({ payload }: SheetProps<'edit-group'>) {
     description,
     group.id,
     group.cover_image_url,
+    group.sport_id,
     playerId,
     updateGroupMutation,
     onSuccess,
     newCoverImage,
     coverImage,
     getSportId,
+    cleanupIncompatibleFacilities,
     toast,
     t,
   ]);
