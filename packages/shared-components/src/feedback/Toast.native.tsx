@@ -136,9 +136,7 @@ export function Toast({
     >
       <TouchableOpacity style={styles.content} onPress={hideToast} activeOpacity={0.9}>
         <Text style={[styles.icon, { color: colors.text }]}>{colors.icon}</Text>
-        <Text style={[styles.message, { color: colors.text }]} numberOfLines={2}>
-          {message}
-        </Text>
+        <Text style={[styles.message, { color: colors.text }]}>{message}</Text>
         {actionText && onAction && (
           <TouchableOpacity onPress={handleAction} style={styles.actionButton}>
             <Text style={[styles.actionText, { color: colors.text }]}>{actionText}</Text>

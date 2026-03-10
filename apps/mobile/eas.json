@@ -28,6 +28,16 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascApiKeyPath": "./credentials/asc-api-key.p8",
+        "ascApiKeyIssuerId": "629c1c4a-1257-452f-9a2e-1ac49cbb86aa",
+        "ascApiKeyId": "K9JA2C2Q49"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./credentials/play-store-service-account.json",
+        "track": "internal"
+      }
+    }
   }
 }

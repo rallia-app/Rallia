@@ -97,6 +97,12 @@
           "merchantIdentifier": "merchant.com.mathisl971.rallia-app",
           "enableGooglePay": false
         }
+      ],
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsImpl": "mapbox"
+        }
       ]
     ],
     "extra": {

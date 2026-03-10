@@ -18,6 +18,7 @@ export * from './usePlayerSports';
 export * from './usePlayer';
 export * from './useNotifications';
 export * from './useNotificationRealtime';
+// useBadgeCountSync moved to apps/mobile/src/hooks/ (native-only hook, requires expo-notifications)
 export * from './useNotificationPreferences';
 export * from './useOrgNotifications';
 export * from './useCreateMatch';
@@ -26,6 +27,7 @@ export * from './useMatches';
 export * from './useMatchActions';
 export * from './useMatchFeedback';
 export * from './useNearbyMatches';
+export * from './useMatchRelevanceScore';
 export * from './usePlayerMatches';
 export * from './usePlayerMatchFilters';
 export * from './usePublicMatches';
@@ -61,6 +63,7 @@ export * from './useModeration';
 export * from './useBooking';
 export * from './usePlayerBookingFilters';
 export * from './useReferral';
+export * from './useMapData';
 
 // Platform-specific exports - Metro resolves .native.ts for React Native builds
 // Web bundlers will use the stub .ts files which throw helpful errors at runtime

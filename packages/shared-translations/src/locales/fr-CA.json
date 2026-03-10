@@ -156,6 +156,11 @@
     "onboardingRequired": "Complétez votre profil",
     "onboardingPrompt": "Terminez la configuration de votre profil pour recevoir et voir vos notifications",
     "completeOnboarding": "Compléter le profil",
+    "sportSwitch": {
+      "title": "Changer de sport?",
+      "message": "Cette partie est pour le {sportName}. Changer mettra à jour votre fil de parties pour afficher les parties de ce sport.",
+      "confirm": "Changer et voir"
+    },
     "time": {
       "justNow": "À l'instant",
       "today": "Aujourd'hui",
@@ -164,21 +169,22 @@
       "earlier": "Plus tôt"
     },
     "types": {
-      "match_invitation": "Invitation à une partie",
-      "match_join_request": "Demande de participation",
-      "match_join_accepted": "Demande acceptée",
-      "match_join_rejected": "Demande refusée",
-      "match_player_joined": "Joueur inscrit",
-      "match_cancelled": "Partie annulée",
-      "match_updated": "Partie mise à jour",
-      "match_starting_soon": "Partie imminente",
-      "match_completed": "Partie terminée",
-      "match_new_available": "Nouvelle partie dans un groupe",
-      "player_kicked": "Retiré de la partie",
-      "player_left": "Joueur parti",
-      "new_message": "Nouveau message",
-      "friend_request": "Demande d'ami",
-      "rating_verified": "Classement vérifié",
+      "match_invitation": "Invitation\nà une partie",
+      "match_join_request": "Demande\nde participation",
+      "match_join_accepted": "Demande\nacceptée",
+      "match_join_rejected": "Demande\nrefusée",
+      "match_player_joined": "Joueur\ninscrit",
+      "match_cancelled": "Partie\nannulée",
+      "match_updated": "Partie\nmise à jour",
+      "match_starting_soon": "Partie\nimminente",
+      "match_check_in_available": "Enregistrement\ndisponible",
+      "match_new_available": "Nouvelle partie\ndans un groupe",
+      "match_spot_opened": "Place\nlibérée",
+      "nearby_match_available": "Partie\nà proximité",
+      "player_kicked": "Retiré\nde la partie",
+      "player_left": "Joueur\nparti",
+      "new_message": "Nouveau\nmessage",
+      "rating_verified": "Classement\nvérifié",
       "reminder": "Rappel",
       "payment": "Paiement",
       "support": "Support",
@@ -211,11 +217,11 @@
     },
     "messages": {
       "match_invitation": {
-        "title": "C'est parti!",
+        "title": "Partie en vue!",
         "body": "{playerName} veut jouer au {sportName} avec vous le {matchDate}{startTime}{locationName}"
       },
       "match_join_request": {
-        "title": "Nouvelle demande",
+        "title": "{playerName} veut rejoindre",
         "body": "{playerName} souhaite rejoindre votre partie de {sportName} du {matchDate}"
       },
       "match_join_accepted": {
@@ -223,8 +229,8 @@
         "body": "Votre partie de {sportName} du {matchDate} à {locationName} est confirmée. À bientôt!"
       },
       "match_join_rejected": {
-        "title": "Partie complète",
-        "body": "Votre demande pour la partie de {sportName} du {matchDate} n'a pas été acceptée. Trouvez d'autres parties à proximité!"
+        "title": "Demande refusée",
+        "body": "Votre demande pour la partie de {sportName} du {matchDate} n'a pas été acceptée. Découvrez d'autres parties près de chez vous."
       },
       "match_player_joined": {
         "title": "Nouveau joueur!",
@@ -237,15 +243,15 @@
       },
       "match_updated": {
         "title": "Partie modifiée",
-        "body": "Votre partie de {sportName} du {matchDate} a été mise à jour. Ouvrez la partie pour voir les changements."
+        "body": "Votre partie de {sportName} du {matchDate} a été mise à jour. Consultez les nouveaux détails."
       },
       "match_starting_soon": {
         "title": "Préparez-vous!",
         "body": "Votre partie de {sportName} à {locationName} commence {timeUntil}. C'est l'heure de s'échauffer!"
       },
-      "match_completed": {
-        "title": "Partie terminée",
-        "body": "Votre partie de {sportName} est terminée! Comment ça s'est passé? Évaluez votre expérience."
+      "match_check_in_available": {
+        "title": "C'est l'heure de pointer!",
+        "body": "Enregistrez-vous une fois arrivé(e) sur place pour confirmer votre présence."
       },
       "match_new_available": {
         "title": "Nouvelle partie",
@@ -253,11 +259,11 @@
       },
       "player_kicked": {
         "title": "Retiré de la partie",
-        "body": "Vous avez été retiré de la partie de {sportName} du {matchDate}. Trouvez d'autres parties à proximité!"
+        "body": "Vous avez été retiré de la partie de {sportName} du {matchDate}. Découvrez d'autres parties près de chez vous."
       },
       "player_left": {
         "title": "Joueur parti",
-        "body": "{playerName} a quitté votre partie de {sportName} — {spotsLeft} maintenant disponible(s)."
+        "body": "{playerName} a quitté votre partie de {sportName} — {spotsLeft} place(s) maintenant disponible(s)."
       },
       "new_message": {
         "title": "Message de {senderName}",
@@ -266,10 +272,6 @@
       "chat": {
         "title": "Nouveau message",
         "body": "Vous avez un nouveau message qui vous attend"
-      },
-      "friend_request": {
-        "title": "Nouvelle demande de connexion",
-        "body": "{playerName} veut vous ajouter à son réseau. Consultez son profil!"
       },
       "rating_verified": {
         "title": "Classement vérifié!",
@@ -293,11 +295,11 @@
       },
       "feedback_request": {
         "title": "Comment était votre partie?",
-        "body": "Soumettez votre score et évaluez votre partie de {sportName} avec {opponentNames} pendant que c'est frais!"
+        "body": "Soumettez votre score et évaluez votre partie de {sportName} avec {opponentNames} tant que c'est frais!"
       },
       "feedback_reminder": {
-        "title": "Une partie à clôturer",
-        "body": "Votre score et évaluation de {sportName} avec {opponentNames} sont toujours en attente — clôturez-les avant la fermeture."
+        "title": "Votre partie attend un score",
+        "body": "Votre score et évaluation de {sportName} avec {opponentNames} sont toujours en attente — complétez-les avant la date limite."
       },
       "score_confirmation": {
         "title": "Confirmer le score",
@@ -1755,7 +1757,21 @@
     }
   },
   "map": {
-    "placeholder": "Vue carte"
+    "recenter": "Recentrer",
+    "loading": "Chargement de la carte...",
+    "noLocation": "Activez la localisation pour voir les installations et matchs à proximité",
+    "tooltip": {
+      "courts": "{count} terrains",
+      "courtsSingular": "1 terrain"
+    },
+    "zoomIn": "Zoom avant",
+    "zoomOut": "Zoom arrière",
+    "legend": {
+      "facilities": "Installations",
+      "pickup": "Pickup"
+    },
+    "matchesAtLocation": "Matchs à cet endroit",
+    "searchPlaceholder": "Rechercher des installations..."
   },
   "community": {
     "placeholder": "Connectez-vous avec d'autres joueurs",
@@ -2330,6 +2346,10 @@
       "dayFriday": "Vendredi",
       "daySaturday": "Samedi",
       "daySunday": "Dimanche"
+    },
+    "results": {
+      "count": "{count} joueurs",
+      "countSingular": "1 joueur"
     }
   },
   "sharedLists": {
@@ -2561,6 +2581,7 @@
     "matchClosed": "Cette partie est fermée",
     "provideFeedback": "Avis et score",
     "provideFeedbackAndConfirm": "Avis et confirmer",
+    "provideFeedbackAndReview": "Avis et revue du score",
     "provideFeedbackOnly": "Donner avis",
     "provideScoreOnly": "Enregistrer score",
     "checkIn": "Confirmer présence",
@@ -2610,6 +2631,17 @@
     "scorePendingConfirmation_one": "En attente de la confirmation de l'adversaire",
     "scorePendingConfirmation_other": "En attente de la confirmation des adversaires",
     "scoreDisputed": "Score contesté",
+    "scoreUnsettled": "Score non résolu",
+    "proposeDifferentScore": "Proposer un score différent",
+    "rebuttalPending": "Score alternatif proposé — en attente de réponse",
+    "acceptRebuttal": "Accepter le score",
+    "disputeRebuttal": "Contester",
+    "rebuttalAccepted": "Score alternatif accepté",
+    "rebuttalDisputed": "Score marqué comme non résolu",
+    "disputeRebuttalTitle": "Contester ce score ?",
+    "disputeRebuttalMessage": "Cela marquera le score du match comme non résolu. Cette action est irréversible.",
+    "proposedScore": "Score proposé",
+    "originalScore": "Score original",
     "badgeInfoTitle": "Badges des joueurs",
     "badgeHost": "Hôte",
     "badgeHostDesc": "Le joueur qui a créé cette partie",
@@ -2643,10 +2675,12 @@
     "scoreConfirmProgress": "{confirmed}/{total} confirmés",
     "scoreConfirmProgress_one": "{confirmed}/{total} joueur confirmé",
     "scoreConfirmProgress_other": "{confirmed}/{total} joueurs confirmés",
-    "yourScoreConfirmed": "Votre confirmation reçue"
+    "yourScoreConfirmed": "Votre confirmation reçue",
+    "reviewRebuttal": "Revoir le score"
   },
   "registerMatchScore": {
     "title": "Enregistrer le score",
+    "rebuttalTitle": "Proposer un score",
     "step": "Étape {current} sur {total}",
     "stepNames": {
       "outcome": "Qui a gagné?",
@@ -2717,7 +2751,8 @@
       "otherReasonPlaceholder": "Veuillez décrire pourquoi le match a été annulé...",
       "confirmCancelled": "Confirmer l'annulation",
       "confirmNoShows": "Confirmer la/les absence(s)",
-      "continue": "Continuer"
+      "continue": "Continuer",
+      "playerCheckedIn": "Enregistré"
     },
     "cancellationReasons": {
       "weather": "Météo",
@@ -3140,11 +3175,14 @@
         "dateTime": "la date/heure",
         "location": "le lieu",
         "format": "le format",
-        "cost": "le coût"
+        "cost": "le coût",
+        "gender": "la préférence de genre",
+        "rating": "le classement minimum"
       },
       "errors": {
         "MATCH_NOT_FOUND": "Partie introuvable.",
         "FORMAT_CHANGE_BLOCKED": "Impossible de passer de double à simple avec 2 participants ou plus. Retirez des participants ou annulez la partie.",
+        "GENDER_CHANGE_BLOCKED": "Impossible de modifier la préférence de genre — certains participants ne correspondent pas à la nouvelle préférence. Seul le passage de « tous » à un genre spécifique est permis lorsque tous les participants correspondent.",
         "UNKNOWN_ERROR": "Une erreur inattendue s'est produite. Veuillez réessayer."
       }
     },
@@ -3207,7 +3245,7 @@
     "completeProfile": "Compléter le profil",
     "user": "Utilisateur",
     "subtitle": "La meilleure façon de trouver votre prochain partenaire de tennis ou de pickleball",
-    "soonAndNearby": "Bientôt et proche",
+    "soonAndNearby": "À proximité",
     "publicMatches": "Parties publiques",
     "viewAll": "Voir tout",
     "myMatches": "Mes parties",
@@ -3228,6 +3266,10 @@
       "currentDescription": "Utiliser votre position GPS",
       "home": "Emplacement domicile",
       "homeNotSet": "Définissez votre emplacement domicile dans les paramètres"
+    },
+    "crossSportBanner": {
+      "unreadNotifications": "Vous avez {count} notification(s) en attente pour {sportName}",
+      "switch": "Changer"
     },
     "header": {
       "ctaButton": "Devenir bêta-testeur"
@@ -3474,6 +3516,7 @@
         "label": "Quand",
         "all": "Tout moment",
         "today": "Aujourd'hui",
+        "tomorrow": "Demain",
         "week": "Cette semaine",
         "weekend": "Fin de semaine"
       },
@@ -3482,7 +3525,8 @@
         "all": "Toutes",
         "morning": "Matin",
         "afternoon": "Après-midi",
-        "evening": "Soir"
+        "evening": "Soir",
+        "pick_time": "Choisir une heure précise..."
       },
       "skillLevel": {
         "label": "Niveau",
@@ -3534,6 +3578,21 @@
         "mostWanted": "Incontournable",
         "covetedPlayers": "Joueurs convoités",
         "courtBooked": "Terrain réservé"
+      },
+      "spotsAvailable": {
+        "label": "Places",
+        "all": "Toutes",
+        "1": "1 place",
+        "2": "2 places",
+        "3": "3 places"
+      },
+      "favorites": {
+        "label": "Favoris"
+      },
+      "specificTime": {
+        "label": "Choisir une heure",
+        "pick": "Choisir une heure...",
+        "clear": "Effacer l'heure"
       },
       "specificDate": {
         "label": "Date",
@@ -6768,7 +6827,29 @@
       "description": "Aucune partie ne correspond au filtre sélectionné. Essayez un autre filtre ou revenez plus tard."
     },
     "showAllMatches": "Voir toutes les parties",
-    "beTheFirst": "Soyez le premier!"
+    "beTheFirst": "Soyez le premier!",
+    "reportInaccuracy": "Signaler une inexactitude",
+    "reportFacility": {
+      "title": "Signaler une inexactitude",
+      "description": "Aidez-nous à garder les informations des sites de jeu à jour. Sélectionnez le type d'inexactitude que vous avez remarqué.",
+      "selectReason": "Qu'est-ce qui est incorrect?",
+      "reasons": {
+        "wrong_address": "Mauvaise adresse",
+        "incorrect_hours": "Horaires incorrects",
+        "wrong_court_count": "Nombre de terrains incorrect",
+        "wrong_surface_types": "Types de surface incorrects",
+        "outdated_contact_info": "Coordonnées obsolètes",
+        "wrong_amenities": "Équipements incorrects",
+        "other": "Autre"
+      },
+      "additionalDetails": "Détails supplémentaires (optionnel)",
+      "detailsPlaceholder": "Décrivez ce qui est incorrect...",
+      "submit": "Envoyer le signalement",
+      "successTitle": "Signalement envoyé",
+      "successMessage": "Merci de nous aider à améliorer les informations des sites de jeu. Nous examinerons votre signalement sous peu.",
+      "errorDuplicate": "Vous avez déjà signalé ce problème au cours des dernières 24 heures.",
+      "errorGeneric": "Échec de l'envoi du signalement. Veuillez réessayer."
+    }
   },
   "booking": {
     "selectSlot": "Sélectionner un créneau",

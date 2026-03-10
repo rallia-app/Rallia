@@ -3,7 +3,7 @@
  * Displays public matches with search, filtering, and infinite scroll.
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useEffect, useState } from 'react';
 import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,12 +14,17 @@ import {
   usePlayer,
   usePublicMatches,
   usePublicMatchFilters,
+  usePlayerSports,
+  useRatingScoresForSport,
+  useSortedNearbyMatches,
+  useFavoriteFacilities,
   type PublicMatch,
+  type MatchScoringPreferences,
 } from '@rallia/shared-hooks';
 import { useAuth, useThemeStyles, useTranslation, useEffectiveLocation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { useMatchDetailSheet, useSport, useUserHomeLocation } from '../../../context';
-import { Logger } from '@rallia/shared-services';
+import { Logger, supabase } from '@rallia/shared-services';
 import { spacingPixels, neutral } from '@rallia/design-system';
 import { SearchBar, MatchFiltersBar } from '../components';
 
@@ -78,7 +83,7 @@ export default function PublicMatches() {
   const { location, locationMode, setLocationMode, hasHomeLocation, hasBothLocationOptions } =
     useEffectiveLocation();
   const { homeLocation } = useUserHomeLocation();
-  const { player, loading: playerLoading } = usePlayer();
+  const { player, maxTravelDistanceKm, loading: playerLoading } = usePlayer();
   const { selectedSport, isLoading: sportLoading } = useSport();
 
   // Get a short label for the home location (full address if available, otherwise postal code)
@@ -105,9 +110,31 @@ export default function PublicMatches() {
     setCourtStatus,
     setMatchTier,
     setSpecificDate,
+    setSpotsAvailable,
+    setFavoritesOnly,
+    setSpecificTime,
     resetFilters,
     clearSearch,
   } = usePublicMatchFilters();
+
+  // Fetch favorite player IDs for favorites filter
+  const [favoritePlayerIds, setFavoritePlayerIds] = useState<string[]>([]);
+  useEffect(() => {
+    if (!session?.user?.id) {
+      setFavoritePlayerIds([]);
+      return;
+    }
+    const fetchFavorites = async () => {
+      const { data } = await supabase
+        .from('player_favorite')
+        .select('favorite_player_id')
+        .eq('player_id', session.user.id);
+      if (data) {
+        setFavoritePlayerIds(data.map(row => row.favorite_player_id));
+      }
+    };
+    fetchFavorites();
+  }, [session?.user?.id]);
 
   // Determine if we should enable the query
   const showMatches = !!location && !!selectedSport;
@@ -134,23 +161,73 @@ export default function PublicMatches() {
   });
 
   // Filter out matches where user is creator or participant (show only joinable matches)
+  // Also apply favorites filter client-side
   const filteredMatches = useMemo(() => {
     const userId = session?.user?.id;
-    if (!userId) return matches;
 
     return matches.filter(match => {
       // Exclude if user is the creator
-      if (match.created_by === userId) return false;
+      if (userId && match.created_by === userId) return false;
 
       // Exclude if user is a participant
-      const isParticipant = match.participants?.some(
-        p => p.player_id === userId && p.status === 'joined'
-      );
-      if (isParticipant) return false;
+      if (userId) {
+        const isParticipant = match.participants?.some(
+          p => p.player_id === userId && p.status === 'joined'
+        );
+        if (isParticipant) return false;
+      }
+
+      // Favorites filter: only show matches from favorited hosts
+      if (filters.favoritesOnly && favoritePlayerIds.length > 0) {
+        if (!favoritePlayerIds.includes(match.created_by)) return false;
+      }
+      // If favoritesOnly but no favorites, show nothing
+      if (filters.favoritesOnly && favoritePlayerIds.length === 0) return false;
 
       return true;
     });
-  }, [matches, session]);
+  }, [matches, session, filters.favoritesOnly, favoritePlayerIds]);
+
+  // Player sport preferences and rating for match relevance scoring (tiebreaker)
+  const { playerSports } = usePlayerSports(session?.user?.id);
+  const currentPlayerSport = useMemo(
+    () => playerSports.find(ps => ps.sport_id === selectedSport?.id),
+    [playerSports, selectedSport?.id]
+  );
+  const { ratingScores, playerRatingScoreId } = useRatingScoresForSport(
+    selectedSport?.name,
+    selectedSport?.id,
+    session?.user?.id
+  );
+  const playerRatingValue = useMemo(() => {
+    if (!playerRatingScoreId) return null;
+    return ratingScores.find(rs => rs.id === playerRatingScoreId)?.value ?? null;
+  }, [ratingScores, playerRatingScoreId]);
+  const { favorites } = useFavoriteFacilities(session?.user?.id ?? null);
+  const favoriteFacilityIds = useMemo(() => favorites.map(f => f.facilityId), [favorites]);
+
+  // Build scoring preferences for relevance tiebreaking
+  const scoringPreferences = useMemo<MatchScoringPreferences>(
+    () => ({
+      playerGender: player?.gender,
+      playerRatingValue,
+      preferredMatchDuration: currentPlayerSport?.preferred_match_duration,
+      preferredMatchType: currentPlayerSport?.preferred_match_type,
+      favoriteFacilityIds,
+      maxTravelDistanceKm,
+    }),
+    [
+      player?.gender,
+      playerRatingValue,
+      currentPlayerSport?.preferred_match_duration,
+      currentPlayerSport?.preferred_match_type,
+      favoriteFacilityIds,
+      maxTravelDistanceKm,
+    ]
+  );
+
+  // Sort: chronological primary, relevance score as tiebreaker for same date+time
+  const sortedMatches = useSortedNearbyMatches(filteredMatches, scoringPreferences);
 
   // Handle infinite scroll
   const handleEndReached = useCallback(() => {
@@ -199,14 +276,14 @@ export default function PublicMatches() {
     }
 
     // Show results count when we have matches
-    if (!isLoading && filteredMatches.length > 0) {
+    if (!isLoading && sortedMatches.length > 0) {
       return (
         <View style={styles.resultsContainer}>
           <Text size="sm" color={colors.textMuted}>
-            {filteredMatches.length === 1
+            {sortedMatches.length === 1
               ? t('publicMatches.results.countSingular')
               : t('publicMatches.results.count', {
-                  count: filteredMatches.length,
+                  count: sortedMatches.length,
                 })}
           </Text>
         </View>
@@ -214,7 +291,7 @@ export default function PublicMatches() {
     }
 
     return null;
-  }, [isSearching, isLoading, filteredMatches.length, colors.primary, colors.textMuted, t]);
+  }, [isSearching, isLoading, sortedMatches.length, colors.primary, colors.textMuted, t]);
 
   // Render empty state
   const renderEmptyComponent = useCallback(() => {
@@ -292,6 +369,9 @@ export default function PublicMatches() {
           courtStatus={filters.courtStatus}
           matchTier={filters.matchTier}
           specificDate={filters.specificDate}
+          spotsAvailable={filters.spotsAvailable}
+          favoritesOnly={filters.favoritesOnly}
+          specificTime={filters.specificTime}
           onFormatChange={setFormat}
           onMatchTypeChange={setMatchType}
           onDateRangeChange={setDateRange}
@@ -305,6 +385,10 @@ export default function PublicMatches() {
           onCourtStatusChange={setCourtStatus}
           onMatchTierChange={setMatchTier}
           onSpecificDateChange={setSpecificDate}
+          onSpotsAvailableChange={setSpotsAvailable}
+          onFavoritesOnlyChange={setFavoritesOnly}
+          onSpecificTimeChange={setSpecificTime}
+          isAuthenticated={!!session?.user}
           onReset={resetFilters}
           hasActiveFilters={hasActiveFilters}
           showLocationSelector={hasBothLocationOptions}
@@ -322,7 +406,7 @@ export default function PublicMatches() {
         </View>
       ) : (
         <FlatList
-          data={isSearching ? [] : filteredMatches}
+          data={isSearching ? [] : sortedMatches}
           renderItem={renderMatchCard}
           keyExtractor={item => item.id}
           ListHeaderComponent={renderResultsInfo}
@@ -332,7 +416,7 @@ export default function PublicMatches() {
           onEndReachedThreshold={0.3}
           contentContainerStyle={[
             styles.listContent,
-            (filteredMatches.length === 0 || isSearching) && styles.emptyListContent,
+            (sortedMatches.length === 0 || isSearching) && styles.emptyListContent,
           ]}
           showsVerticalScrollIndicator={false}
           refreshControl={

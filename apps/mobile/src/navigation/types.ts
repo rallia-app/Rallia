@@ -39,7 +39,7 @@ export type RootStackParamList = {
   NotificationPreferences: undefined;
   Permissions: undefined;
   Feedback: undefined; // Feedback/Suggestion box
-  Map: { focusLocation?: { lat: number; lng: number } } | undefined;
+  Map: NavigatorScreenParams<MapStackParamList> | undefined;
   RatingProofs: RatingProofsScreenParams;
   IncomingReferenceRequests: undefined; // Incoming reference requests from other players
   GroupDetail: { groupId: string; groupName?: string }; // Group detail view
@@ -136,6 +136,14 @@ export type CommunityStackParamList = {
 export type ChatStackParamList = {
   Conversations: undefined;
   ArchivedChats: undefined;
+};
+
+/**
+ * Map Stack - Map view with facility detail drill-down
+ */
+export type MapStackParamList = {
+  MapView: { focusLocation?: { lat: number; lng: number } } | undefined;
+  FacilityDetail: FacilityDetailScreenParams;
 };
 
 // =============================================================================
