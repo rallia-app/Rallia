@@ -52,6 +52,7 @@ export * from './useFavoriteStatus';
 export * from './useSharedLists';
 export * from './usePlayPreferences';
 export * from './useFavoriteFacilities';
+export * from './useCommunityFavoriteFacilities';
 export * from './useAdminStatus';
 export * from './useAdminUsers';
 export * from './useAdminAnalytics';
