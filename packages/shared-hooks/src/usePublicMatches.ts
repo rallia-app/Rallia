@@ -50,6 +50,8 @@ export interface UsePublicMatchesOptions {
   userGender?: string | null;
   /** Optional facility ID to filter matches to a specific facility */
   facilityId?: string;
+  /** Favorite player IDs for client-side favorites filtering */
+  favoritePlayerIds?: string[];
   /** Maximum number of matches to fetch per page */
   limit?: number;
   /** Enable/disable the query */
@@ -96,6 +98,7 @@ export function usePublicMatches(options: UsePublicMatchesOptions) {
     debouncedSearchQuery,
     userGender,
     facilityId,
+    favoritePlayerIds,
     limit = DEFAULT_PAGE_SIZE,
     enabled = true,
   } = options;
@@ -129,6 +132,9 @@ export function usePublicMatches(options: UsePublicMatchesOptions) {
       courtStatus: filters.courtStatus,
       matchTier: filters.matchTier,
       specificDate: filters.specificDate,
+      spotsAvailable: filters.spotsAvailable,
+      specificTime: filters.specificTime,
+      favoritePlayerIds,
       userGender,
       limit,
     }),
@@ -156,6 +162,8 @@ export function usePublicMatches(options: UsePublicMatchesOptions) {
         courtStatus: filters.courtStatus,
         matchTier: filters.matchTier,
         specificDate: filters.specificDate,
+        spotsAvailable: filters.spotsAvailable,
+        specificTime: filters.specificTime,
         userGender,
         limit,
         offset: pageParam as number,

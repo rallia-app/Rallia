@@ -12,13 +12,12 @@ export type NotificationType =
   | 'match_cancelled'
   | 'match_updated'
   | 'match_starting_soon'
-  | 'match_completed'
+  | 'match_check_in_available'
   | 'match_new_available'
   | 'player_kicked'
   | 'player_left'
   | 'new_message'
   | 'chat'
-  | 'friend_request'
   | 'rating_verified'
   | 'reminder'
   | 'payment'
@@ -48,7 +47,10 @@ export type NotificationType =
   | 'booking_reminder'
   | 'booking_cancelled_by_org'
   | 'membership_approved'
-  | 'org_announcement';
+  | 'org_announcement'
+  // Match discovery notifications
+  | 'match_spot_opened'
+  | 'nearby_match_available';
 
 // Organization notification types (subset for org-specific handling)
 export type OrgNotificationType =
@@ -175,13 +177,14 @@ export const DEFAULT_PREFERENCES: Record<NotificationType, Record<DeliveryChanne
   match_cancelled: { email: true, push: true, sms: true },
   match_updated: { email: false, push: true, sms: false },
   match_starting_soon: { email: false, push: true, sms: true },
-  match_completed: { email: false, push: true, sms: false },
+  match_check_in_available: { email: true, push: true, sms: false },
   match_new_available: { email: false, push: true, sms: false },
+  match_spot_opened: { email: false, push: true, sms: false },
+  nearby_match_available: { email: false, push: true, sms: false },
   player_kicked: { email: true, push: true, sms: false },
   player_left: { email: false, push: true, sms: false },
   chat: { email: false, push: true, sms: false },
   new_message: { email: false, push: true, sms: false },
-  friend_request: { email: false, push: true, sms: false },
   rating_verified: { email: true, push: true, sms: false },
   reminder: { email: false, push: true, sms: false },
   payment: { email: true, push: true, sms: false },

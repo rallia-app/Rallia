@@ -665,12 +665,35 @@ const CardFooter: React.FC<CardFooterProps> = ({
   const playerHasCompletedFeedback = currentPlayerParticipant?.feedback_completed ?? false;
   const hasScore = !!match.result;
 
+  // Check if a rebuttal is pending (opponent proposed a different score)
+  const isRebuttalPending =
+    hasScore &&
+    !match.result?.is_verified &&
+    !match.result?.disputed &&
+    !!match.result?.rebuttal_submitted_by;
+
+  // Determine team numbers for rebuttal response logic
+  const currentPlayerTeamNumber = currentPlayerParticipant?.team_number;
+  const submitterParticipant = match.participants?.find(
+    p => p.player_id === match.result?.submitted_by && p.status === 'joined'
+  );
+  const submitterTeamNumber = submitterParticipant?.team_number;
+
+  // Original team needs to respond to a rebuttal (accept or dispute)
+  const rebuttalNeedsPlayerResponse =
+    isRebuttalPending &&
+    !!currentPlayerParticipant &&
+    currentPlayerTeamNumber != null &&
+    submitterTeamNumber != null &&
+    currentPlayerTeamNumber === submitterTeamNumber;
+
   // Check if the current player still needs to confirm/dispute the score
   // (score exists but not verified/disputed, player hasn't responded yet, player isn't the submitter)
   const scoreNeedsPlayerConfirmation =
     hasScore &&
     !match.result?.is_verified &&
     !match.result?.disputed &&
+    !isRebuttalPending &&
     match.result?.submitted_by !== currentPlayerId &&
     !match.result?.confirmations?.some(c => c.player_id === currentPlayerId);
 
@@ -678,7 +701,10 @@ const CardFooter: React.FC<CardFooterProps> = ({
     hasMatchEnded &&
     isWithinFeedbackWindow &&
     currentPlayerParticipant &&
-    (!playerHasCompletedFeedback || !hasScore || scoreNeedsPlayerConfirmation);
+    (!playerHasCompletedFeedback ||
+      !hasScore ||
+      scoreNeedsPlayerConfirmation ||
+      rebuttalNeedsPlayerResponse);
 
   // Check-in window status (10 min before start until end, only for full games)
   const isWithinCheckInWindow = getCheckInWindowStatus(
@@ -745,7 +771,16 @@ const CardFooter: React.FC<CardFooterProps> = ({
     const needsFeedback = !playerHasCompletedFeedback;
     const needsScore = !hasScore;
     const needsScoreConfirmation = !!scoreNeedsPlayerConfirmation;
-    if (needsFeedback && needsScore) {
+    const needsRebuttalResponse = !!rebuttalNeedsPlayerResponse;
+    if (needsRebuttalResponse && needsFeedback) {
+      // Rebuttal proposed by opponent + feedback still needed
+      ctaLabel = t('matchDetail.provideFeedbackAndReview' as TranslationKey);
+      ctaIcon = 'star-outline';
+    } else if (needsRebuttalResponse) {
+      // Rebuttal proposed by opponent → original team needs to review (accept or dispute)
+      ctaLabel = t('matchDetail.reviewRebuttal' as TranslationKey);
+      ctaIcon = 'swap-horizontal-outline';
+    } else if (needsFeedback && needsScore) {
       // No score submitted yet → need both feedback and score
       ctaLabel = t('matchDetail.provideFeedback');
       ctaIcon = 'star-outline';

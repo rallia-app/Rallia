@@ -33,6 +33,8 @@ export type {
   ReportReason,
   PlayerReportType,
 } from './reports';
+export { createFacilityReport } from './reports';
+export type { FacilityReportReason, CreateFacilityReportParams } from './reports';
 // Bookings - client-safe exports (types, validation, status, policy)
 // For server-side functions (createBooking, cancelBooking), use web app's lib/bookings
 export * from './bookings';

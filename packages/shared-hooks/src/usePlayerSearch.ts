@@ -80,6 +80,8 @@ interface UsePlayerSearchReturn {
   isFetchingNextPage: boolean;
   /** Whether there are more pages to load */
   hasNextPage: boolean;
+  /** Total count of matching players (before pagination) */
+  totalCount: number | undefined;
   /** Error if any */
   error: Error | null;
   /** Function to fetch the next page */
@@ -143,7 +145,7 @@ export function usePlayerSearch(options: UsePlayerSearchOptions): UsePlayerSearc
     ),
     queryFn: async ({ pageParam }) => {
       if (!sportId) {
-        return { players: [], hasMore: false, nextOffset: null };
+        return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
       }
 
       return searchPlayersForSport({
@@ -173,8 +175,12 @@ export function usePlayerSearch(options: UsePlayerSearchOptions): UsePlayerSearc
     [query.data?.pages]
   );
 
+  // Total count from the first page (same across all pages)
+  const totalCount = query.data?.pages[0]?.totalCount;
+
   return {
     players: allPlayers,
+    totalCount,
     isLoading: query.isLoading,
     isFetching: query.isFetching,
     isFetchingNextPage: query.isFetchingNextPage,
