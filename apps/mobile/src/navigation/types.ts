@@ -57,6 +57,8 @@ export type RootStackParamList = {
   AdminDashboard: undefined; // Analytics dashboard
   AdminUsers: undefined; // User management list
   AdminUserDetail: { userId: string }; // User detail view
+  AdminNetworks: undefined; // Network management list (groups & communities)
+  AdminNetworkDetail: { networkId: string }; // Network detail view
   AdminActivityLog: undefined; // Audit trail / activity log
   AdminAlerts: undefined; // Admin alerts and notifications
   AdminSettings: undefined; // Admin settings and preferences

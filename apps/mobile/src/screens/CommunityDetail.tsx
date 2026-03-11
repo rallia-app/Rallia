@@ -1515,6 +1515,21 @@ export default function CommunityDetailScreen() {
                   return null;
                 })()}
               </View>
+              {/* Certification badge for verified communities */}
+              {community.is_certified && (
+                <View
+                  style={[styles.visibilityBadge, { backgroundColor: '#E3F2FD', marginRight: 8 }]}
+                >
+                  <MaterialCommunityIcons name="check-decagram" size={14} color={colors.primary} />
+                  <Text
+                    size="xs"
+                    weight="semibold"
+                    style={{ color: colors.primary, marginLeft: 4 }}
+                  >
+                    {t('community.certified')}
+                  </Text>
+                </View>
+              )}
               {!community.is_private ? (
                 <View style={[styles.visibilityBadge, { backgroundColor: '#E8F5E9' }]}>
                   <Ionicons name="globe-outline" size={14} color="#2E7D32" />
@@ -1693,6 +1708,17 @@ export default function CommunityDetailScreen() {
                 return null;
               })()}
             </View>
+            {/* Certification badge for verified communities */}
+            {community.is_certified && (
+              <View
+                style={[styles.visibilityBadge, { backgroundColor: '#E3F2FD', marginRight: 8 }]}
+              >
+                <MaterialCommunityIcons name="check-decagram" size={14} color={colors.primary} />
+                <Text size="xs" weight="semibold" style={{ color: colors.primary, marginLeft: 4 }}>
+                  {t('community.certified')}
+                </Text>
+              </View>
+            )}
             {community.is_public ? (
               <View style={[styles.visibilityBadge, { backgroundColor: '#E8F5E9' }]}>
                 <Ionicons name="globe-outline" size={14} color="#2E7D32" />

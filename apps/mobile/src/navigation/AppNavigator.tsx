@@ -84,6 +84,8 @@ import AdminPanelScreen from '../screens/AdminPanelScreen';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
 import AdminUsersScreen from '../screens/AdminUsersScreen';
 import AdminUserDetailScreen from '../screens/AdminUserDetailScreen';
+import AdminNetworksScreen from '../screens/AdminNetworksScreen';
+import AdminNetworkDetailScreen from '../screens/AdminNetworkDetailScreen';
 import AdminActivityLogScreen from '../screens/AdminActivityLogScreen';
 import AdminAlertsScreen from '../screens/AdminAlertsScreen';
 import AdminSettingsScreen from '../screens/AdminSettingsScreen';
@@ -1172,6 +1174,26 @@ export default function AppNavigator() {
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('admin.users.detail.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="AdminNetworks"
+        component={AdminNetworksScreen}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('admin.networks.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="AdminNetworkDetail"
+        component={AdminNetworkDetailScreen}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('admin.networks.detail.title'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />

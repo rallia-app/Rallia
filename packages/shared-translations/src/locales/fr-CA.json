@@ -14,6 +14,7 @@
     "delete": "Supprimer",
     "leave": "Quitter",
     "edit": "Modifier",
+    "update": "Modifier",
     "back": "Retour",
     "goBack": "Retourner",
     "next": "Suivant",
@@ -82,7 +83,8 @@
       "timeSeparator": " • ",
       "slots": "créneau(s)"
     },
-    "locale": "fr-CA"
+    "locale": "fr-CA",
+    "by": "par"
   },
   "auth": {
     "signIn": "Connexion",
@@ -803,7 +805,8 @@
         "levelProofInfoTitle": "Qu'est-ce qu'une preuve de niveau?",
         "levelProofInfoMessage": "Une preuve de niveau est tout élément qui permet à quelqu'un qui n'a jamais joué contre vous de se faire une évaluation juste et convaincante de votre niveau de jeu réel.",
         "referencesInfoTitle": "Qu'est-ce qu'une référence?",
-        "referencesInfoMessage": "Une référence est une recommandation d'un joueur certifié à votre niveau ou supérieur qui a joué avec vous et peut attester de votre niveau. Les références aident les autres joueurs à faire confiance à votre classement."
+        "referencesInfoMessage": "Une référence est une recommandation d'un joueur certifié à votre niveau ou supérieur qui a joué avec vous et peut attester de votre niveau. Les références aident les autres joueurs à faire confiance à votre classement.",
+        "encouragedLevelMessage": "Les joueurs de niveau {level}+ sont fortement encouragés à fournir une preuve de leur niveau pour renforcer la confiance dans la communauté."
       },
       "referenceRequest": {
         "title": "Demander une référence",
@@ -1806,6 +1809,7 @@
       "public": "Public",
       "private": "Privé"
     },
+    "certified": "Certifiée",
     "stats": {
       "title": "Statistiques de la communauté",
       "totalMembers": "Membres totaux",
@@ -2037,7 +2041,7 @@
       "createButton": "Créer un groupe",
       "scanButton": "Scanner le code QR"
     },
-    "listInfoMessage": "Les groupes sont des communautés privées limitées à un maximum de 20 joueurs.",
+    "listInfoMessage": "Les groupes sont des communautés privées limitées à un maximum de {maxMembers} joueurs.",
     "welcome": {
       "title": "Bienvenue!",
       "joinedMessage": "Vous avez rejoint \"{groupName}\" avec succès"
@@ -2060,7 +2064,7 @@
     "addCoverImage": "Ajouter une image de couverture",
     "changeImage": "Changer",
     "removeImage": "Supprimer",
-    "createGroupHint": "Les groupes peuvent avoir jusqu'à 20 membres. En tant que créateur, vous serez modérateur avec la possibilité d'ajouter et retirer des membres.",
+    "createGroupHint": "Les groupes peuvent avoir jusqu'à {maxMembers} membres. En tant que créateur, vous serez modérateur avec la possibilité d'ajouter et retirer des membres.",
     "permissionRequired": "Permission requise",
     "photoAccessRequired": "Veuillez autoriser l'accès à vos photos pour ajouter une image au groupe.",
     "photoAccessRequiredEdit": "Veuillez autoriser l'accès à vos photos pour changer l'image du groupe.",
@@ -2298,6 +2302,10 @@
     "nearby": "À proximité",
     "failedToLoad": "Échec du chargement des joueurs",
     "checkConnection": "Veuillez vérifier votre connexion et réessayer",
+    "favorites": {
+      "addedToFavorites": "Ajouté aux favoris",
+      "removedFromFavorites": "Retiré des favoris"
+    },
     "filters": {
       "title": "Filtres",
       "favorites": "Favoris",
@@ -5328,6 +5336,119 @@
         "success": {
           "invitationSent": "Invitation envoyée avec succès à {email}!"
         }
+      }
+    },
+    "networks": {
+      "title": "Réseaux",
+      "description": "Gérer les groupes et communautés de la plateforme.",
+      "searchPlaceholder": "Rechercher des réseaux...",
+      "noResults": "Aucun réseau trouvé",
+      "noResultsDescription": "Essayez d'ajuster votre recherche ou vos filtres",
+      "totalNetworks": "{count, plural, one {# réseau} other {# réseaux}}",
+      "empty": "Aucun réseau pour le moment",
+      "emptyDescription": "Les réseaux apparaîtront ici une fois créés",
+      "tryDifferentSearch": "Essayez un autre terme de recherche",
+      "members": "membres",
+      "unknownCreator": "Créateur inconnu",
+      "networksFound": "réseaux trouvés",
+      "private": "Privé",
+      "public": "Public",
+      "certified": "Certifié",
+      "details": "Détails",
+      "createdBy": "Créé par",
+      "createdAt": "Créé le",
+      "updatedAt": "Mis à jour",
+      "inviteCode": "Code d'invitation",
+      "membersList": "Liste des membres",
+      "favoriteFacilities": "Installations favorites",
+      "about": "À propos",
+      "accessDeniedDescription": "Vous n'avez pas la permission de voir cette section",
+      "types": {
+        "all": "Tous",
+        "groups": "Groupes",
+        "communities": "Communautés",
+        "group": "Groupe",
+        "community": "Communauté"
+      },
+      "filters": {
+        "all": "Tous",
+        "certified": "Certifié",
+        "uncertified": "Non certifié",
+        "sportTitle": "Sport",
+        "certificationTitle": "Certification",
+        "privacyTitle": "Confidentialité",
+        "privacyAll": "Tous types",
+        "public": "Public",
+        "private": "Privé",
+        "allSports": "Tous les sports"
+      },
+      "card": {
+        "members": "{count, plural, one {# membre} other {# membres}}",
+        "group": "Groupe",
+        "community": "Communauté",
+        "certified": "Certifié",
+        "private": "Privé"
+      },
+      "detail": {
+        "title": "Détails du réseau",
+        "info": "Information",
+        "members": "Membres",
+        "facilities": "Installations",
+        "noFacilities": "Aucune installation",
+        "stats": {
+          "members": "Membres",
+          "facilities": "Installations",
+          "created": "Créé"
+        }
+      },
+      "certification": {
+        "title": "Certification",
+        "description": "Les communautés certifiées sont vérifiées et affichent un badge aux utilisateurs.",
+        "certified": "Certifié",
+        "notCertified": "Non certifié",
+        "isCertified": "Cette communauté est certifiée",
+        "certify": "Certifier la communauté",
+        "revoke": "Révoquer la certification",
+        "uncertify": "Décertifier",
+        "uncertifyNotes": "Notes de décertification",
+        "certifyNotes": "Notes de certification",
+        "onlyForCommunities": "La certification n'est disponible que pour les communautés.",
+        "notes": "Notes de certification",
+        "notesPlaceholder": "Ajouter des notes sur cette certification...",
+        "certifiedBy": "Certifié par {name}",
+        "certifiedAt": "Certifié le {date}",
+        "confirmCertify": "Êtes-vous sûr de vouloir certifier cette communauté?",
+        "confirmRevoke": "Êtes-vous sûr de vouloir révoquer la certification de cette communauté?",
+        "certifySuccess": "La communauté a été certifiée",
+        "revokeSuccess": "La certification a été révoquée",
+        "certifyError": "Échec de la certification de la communauté",
+        "revokeError": "Échec de la révocation de la certification"
+      },
+      "maxMembers": {
+        "title": "Max membres du groupe",
+        "description": "Nombre maximum de membres autorisés par groupe",
+        "invalidValue": "Veuillez entrer un nombre valide entre 2 et 100",
+        "saveSuccess": "Paramètre du nombre maximum de membres sauvegardé avec succès",
+        "saveError": "Échec de la sauvegarde du paramètre du nombre maximum de membres"
+      },
+      "settings": {
+        "title": "Paramètres des réseaux",
+        "maxMembersPerGroup": "Maximum de membres par groupe",
+        "maxMembersDescription": "Définir le nombre maximum de membres autorisés dans un groupe.",
+        "saveSuccess": "Paramètres sauvegardés avec succès",
+        "saveError": "Échec de la sauvegarde des paramètres"
+      },
+      "delete": {
+        "dangerZone": "Zone de danger",
+        "title": "Supprimer le réseau",
+        "description": "La suppression de ce réseau le supprimera définitivement et notifiera tous les membres. Cette action est irréversible.",
+        "reasonLabel": "Raison de la suppression (optionnel)",
+        "reasonPlaceholder": "Expliquez pourquoi ce réseau est supprimé...",
+        "deleteGroup": "Supprimer le groupe",
+        "deleteCommunity": "Supprimer la communauté",
+        "confirmMessage": "Êtes-vous sûr de vouloir supprimer « {name} »? Ce {type} a {count} membres qui seront notifiés.",
+        "success": "« {name} » a été supprimé. {count} membres ont été notifiés.",
+        "error": "Échec de la suppression du réseau"
       }
     },
     "analytics": {
