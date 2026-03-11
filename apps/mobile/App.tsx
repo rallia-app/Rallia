@@ -18,6 +18,7 @@ import { navigationRef } from './src/navigation';
 import { linking } from './src/navigation/linking';
 import { ActionsBottomSheet } from './src/components/ActionsBottomSheet';
 import { FeedbackSheet } from './src/components/FeedbackSheet';
+import { BugReportSheet } from './src/components/BugReportSheet';
 import { SplashOverlay } from './src/components/SplashOverlay';
 import {
   ThemeProvider,
@@ -45,6 +46,8 @@ import {
   PlayerInviteSheetProvider,
   FeedbackSheetProvider,
   useFeedbackSheet,
+  BugReportSheetProvider,
+  useBugReportSheet,
   DeepLinkProvider,
   useDeepLink,
   useOverlay,
@@ -54,7 +57,7 @@ import {
   useTour,
   TourProvider,
 } from './src/context';
-import { usePushNotifications } from './src/hooks';
+import { usePushNotifications, useShakeDetection } from './src/hooks';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { SheetProvider } from 'react-native-actions-sheet';
 import { Sheets } from './src/context/sheets';
@@ -315,6 +318,26 @@ function DeepLinkHandler() {
   return null;
 }
 
+/**
+ * ShakeHandler - Detects device shakes and opens the bug report sheet.
+ * Must be inside BugReportSheetProvider.
+ */
+function ShakeHandler() {
+  const { openBugReport } = useBugReportSheet();
+  const { isSplashComplete } = useOverlay();
+
+  useShakeDetection({
+    onShake: () => {
+      Logger.logUserAction('shake_detected_bug_report');
+      openBugReport('shake');
+    },
+    // Only enable shake detection after splash is complete
+    enabled: isSplashComplete,
+  });
+
+  return null;
+}
+
 function AppContent() {
   const { theme } = useTheme();
   const { setSplashComplete, isSplashComplete, permissionsHandled } = useOverlay();
@@ -334,6 +357,8 @@ function AppContent() {
         <ActionsBottomSheet />
         {/* Feedback Bottom Sheet - shows when providing post-match feedback */}
         <FeedbackSheet />
+        {/* Bug Report Bottom Sheet - shows on shake or help menu */}
+        <BugReportSheet />
       </NavigationContainer>
 
       {/* Deep Link Handler - opens match detail sheet when a deep link is received */}
@@ -342,6 +367,8 @@ function AppContent() {
       <PendingFeedbackHandler />
       {/* Session Expiry Handler - shows toast when session expires */}
       <SessionExpiryHandler />
+      {/* Shake Handler - detects shakes and opens bug report sheet */}
+      <ShakeHandler />
 
       {/* Welcome Tour Modal - shows for new users after splash/permissions */}
       <WelcomeTourModal splashComplete={isSplashComplete} permissionsHandled={permissionsHandled} />
@@ -383,16 +410,18 @@ export default function App() {
                                 <MatchDetailSheetProvider>
                                   <PlayerInviteSheetProvider>
                                     <FeedbackSheetProvider>
-                                      <StripeProvider
-                                        publishableKey={
-                                          process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
-                                        }
-                                        merchantIdentifier="merchant.com.rallia"
-                                      >
-                                        <BottomSheetModalProvider>
-                                          <AppContent />
-                                        </BottomSheetModalProvider>
-                                      </StripeProvider>
+                                      <BugReportSheetProvider>
+                                        <StripeProvider
+                                          publishableKey={
+                                            process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
+                                          }
+                                          merchantIdentifier="merchant.com.rallia"
+                                        >
+                                          <BottomSheetModalProvider>
+                                            <AppContent />
+                                          </BottomSheetModalProvider>
+                                        </StripeProvider>
+                                      </BugReportSheetProvider>
                                     </FeedbackSheetProvider>
                                   </PlayerInviteSheetProvider>
                                 </MatchDetailSheetProvider>

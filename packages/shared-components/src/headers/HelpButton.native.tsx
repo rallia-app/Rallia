@@ -5,22 +5,26 @@ import { useNavigation } from '@react-navigation/native';
 import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 import { lightHaptic } from '@rallia/shared-utils';
 
-interface SettingsButtonProps {
+interface HelpButtonProps {
   size?: number;
   color?: string;
 }
 
-const SettingsButton: React.FC<SettingsButtonProps> = ({ size = 24, color = '#333' }) => {
+/**
+ * Help button that navigates to the Feedback & Suggestions screen.
+ * Placed in the app header near settings for easy access to bug reporting.
+ */
+const HelpButton: React.FC<HelpButtonProps> = ({ size = 24, color = '#333' }) => {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
 
   const handlePress = () => {
-    lightHaptic();
-    navigation.navigate('Settings');
+    void lightHaptic();
+    navigation.navigate('Feedback');
   };
 
   return (
     <TouchableOpacity style={styles.button} onPress={handlePress}>
-      <Ionicons name="settings-outline" size={size} color={color} />
+      <Ionicons name="help-circle-outline" size={size} color={color} />
     </TouchableOpacity>
   );
 };
@@ -31,4 +35,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SettingsButton;
+export default HelpButton;

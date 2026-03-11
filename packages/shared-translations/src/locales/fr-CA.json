@@ -7334,5 +7334,28 @@
     "selectImageSource": "Sélectionner la source de l'image",
     "submitAnother": "Soumettre un autre",
     "backToSettings": "Retour aux paramètres"
+  },
+  "bugReport": {
+    "title": "Signaler un bogue",
+    "subtitle": "Secousse détectée ! Décrivez ce qui s'est passé.",
+    "subtitleMenu": "Décrivez ce qui s'est passé.",
+    "subjectLabel": "Sujet",
+    "subjectPlaceholder": "Résumé du bogue",
+    "descriptionLabel": "Que s'est-il passé ?",
+    "descriptionPlaceholder": "Décrivez le problème rencontré...",
+    "moduleLabel": "Où cela s'est-il produit ?",
+    "modules": {
+      "matches": "Matchs",
+      "chat": "Messages",
+      "profile": "Profil",
+      "other": "Autre"
+    },
+    "minChars": "Minimum 10 caractères",
+    "submit": "Envoyer le rapport",
+    "submitting": "Envoi en cours...",
+    "cancel": "Annuler",
+    "success": "Rapport de bogue envoyé ! Merci d'aider à améliorer Rallia.",
+    "error": "Échec de l'envoi. Veuillez réessayer.",
+    "fullFeedback": "Plus d'options"
   }
 }
