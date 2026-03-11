@@ -53,6 +53,7 @@ export * from './useFavoriteFacilities';
 export * from './useCommunityFavoriteFacilities';
 export * from './useAdminStatus';
 export * from './useAdminUsers';
+export * from './useAdminNetworks';
 export * from './useAdminAnalytics';
 export * from './useAnalyticsTimeRange';
 export * from './useAdminAudit';

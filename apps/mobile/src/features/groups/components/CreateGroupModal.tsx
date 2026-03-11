@@ -24,7 +24,13 @@ import { Text, useToast } from '@rallia/shared-components';
 import { useRequireOnboarding, useThemeStyles, useTranslation } from '../../../hooks';
 import { uploadImage } from '../../../services/imageUpload';
 import { primary, radiusPixels, spacingPixels } from '@rallia/design-system';
-import { useCreateGroup, useSports, useFacilitySearch, usePlayer } from '@rallia/shared-hooks';
+import {
+  useCreateGroup,
+  useSports,
+  useFacilitySearch,
+  usePlayer,
+  useNetworkLimits,
+} from '@rallia/shared-hooks';
 import { supabase, Logger } from '@rallia/shared-services';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 import type { RootStackParamList } from '../../../navigation/types';
@@ -41,6 +47,7 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { sports } = useSports();
   const { player } = usePlayer();
+  const { limits } = useNetworkLimits();
   const toast = useToast();
 
   const [name, setName] = useState('');
@@ -736,7 +743,7 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
         <View style={[styles.infoBox, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
           <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
           <Text size="sm" style={{ color: colors.textSecondary, flex: 1, marginLeft: 8 }}>
-            {t('groups.createGroupHint')}
+            {t('groups.createGroupHint', { maxMembers: limits?.max_group_members ?? 20 })}
           </Text>
         </View>
       </ScrollView>

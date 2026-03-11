@@ -41,6 +41,12 @@ export interface Community extends Omit<Group, 'max_members'> {
   is_public: boolean;
   /** Communities have no member limit (null means unlimited) */
   max_members: null;
+  /** Whether the community is certified/verified by admin */
+  is_certified?: boolean;
+  /** Timestamp when the community was certified */
+  certified_at?: string | null;
+  /** ID of admin who certified the community */
+  certified_by?: string | null;
 }
 
 /**

@@ -14,6 +14,7 @@
     "delete": "Delete",
     "leave": "Leave",
     "edit": "Edit",
+    "update": "Update",
     "back": "Back",
     "goBack": "Go back",
     "next": "Next",
@@ -73,6 +74,7 @@
     "copied": "Copied",
     "reset": "Reset",
     "success": "Success",
+    "by": "by",
     "permissionRequired": "Permission Required",
     "saving": "Saving...",
     "warning": "Warning",
@@ -801,7 +803,8 @@
         "levelProofInfoTitle": "What is a Level Proof?",
         "levelProofInfoMessage": "A level proof is anything that allows someone who has never played against you to form a fair and convincing assessment of your actual skill level.",
         "referencesInfoTitle": "What is a Reference?",
-        "referencesInfoMessage": "A reference is a recommendation from a certified player at your level or higher who has played with you and can vouch for your skill level. References help other players trust your rating."
+        "referencesInfoMessage": "A reference is a recommendation from a certified player at your level or higher who has played with you and can vouch for your skill level. References help other players trust your rating.",
+        "encouragedLevelMessage": "Players at level {level}+ are strongly encouraged to provide proof of their skill level to help build trust in the community."
       },
       "referenceRequest": {
         "title": "Request Reference",
@@ -1790,6 +1793,7 @@
       "public": "Public",
       "private": "Private"
     },
+    "certified": "Certified",
     "stats": {
       "title": "Community Stats",
       "totalMembers": "Total Members",
@@ -2021,7 +2025,7 @@
       "createButton": "Create Group",
       "scanButton": "Scan QR Code"
     },
-    "listInfoMessage": "Groups are private communities limited to a maximum of 20 players.",
+    "listInfoMessage": "Groups are private communities limited to a maximum of {maxMembers} players.",
     "welcome": {
       "title": "Welcome!",
       "joinedMessage": "You've successfully joined \"{groupName}\""
@@ -2044,7 +2048,7 @@
     "addCoverImage": "Add a cover image",
     "changeImage": "Change",
     "removeImage": "Remove",
-    "createGroupHint": "Groups can have up to 20 members. As the creator, you'll be a moderator with the ability to add and remove members.",
+    "createGroupHint": "Groups can have up to {maxMembers} members. As the creator, you'll be a moderator with the ability to add and remove members.",
     "permissionRequired": "Permission Required",
     "photoAccessRequired": "Please allow access to your photos to add a group image.",
     "photoAccessRequiredEdit": "Please allow access to your photos to change the group image.",
@@ -2282,6 +2286,10 @@
     "nearby": "Nearby",
     "failedToLoad": "Failed to load players",
     "checkConnection": "Please check your connection and try again",
+    "favorites": {
+      "addedToFavorites": "Added to favorites",
+      "removedFromFavorites": "Removed from favorites"
+    },
     "filters": {
       "title": "Filters",
       "favorites": "Favorites",
@@ -5267,6 +5275,119 @@
         "success": {
           "invitationSent": "Invitation sent successfully to {email}!"
         }
+      }
+    },
+    "networks": {
+      "title": "Networks",
+      "description": "Manage groups and communities across the platform.",
+      "searchPlaceholder": "Search networks...",
+      "noResults": "No networks found",
+      "noResultsDescription": "Try adjusting your search or filters",
+      "totalNetworks": "{count, plural, one {# network} other {# networks}}",
+      "empty": "No networks yet",
+      "emptyDescription": "Networks will appear here once created",
+      "tryDifferentSearch": "Try a different search term",
+      "members": "members",
+      "unknownCreator": "Unknown creator",
+      "networksFound": "networks found",
+      "private": "Private",
+      "public": "Public",
+      "certified": "Certified",
+      "details": "Details",
+      "createdBy": "Created by",
+      "createdAt": "Created",
+      "updatedAt": "Updated",
+      "inviteCode": "Invite Code",
+      "membersList": "Members List",
+      "favoriteFacilities": "Favorite Facilities",
+      "about": "About",
+      "accessDeniedDescription": "You don't have permission to view this section",
+      "types": {
+        "all": "All",
+        "groups": "Groups",
+        "communities": "Communities",
+        "group": "Group",
+        "community": "Community"
+      },
+      "filters": {
+        "all": "All",
+        "certified": "Certified",
+        "uncertified": "Not Certified",
+        "sportTitle": "Sport",
+        "certificationTitle": "Certification",
+        "privacyTitle": "Privacy",
+        "privacyAll": "All Privacy",
+        "public": "Public",
+        "private": "Private",
+        "allSports": "All Sports"
+      },
+      "card": {
+        "members": "{count, plural, one {# member} other {# members}}",
+        "group": "Group",
+        "community": "Community",
+        "certified": "Certified",
+        "private": "Private"
+      },
+      "detail": {
+        "title": "Network Details",
+        "info": "Information",
+        "members": "Members",
+        "facilities": "Facilities",
+        "noFacilities": "No facilities",
+        "stats": {
+          "members": "Members",
+          "facilities": "Facilities",
+          "created": "Created"
+        }
+      },
+      "certification": {
+        "title": "Certification",
+        "description": "Certified communities are verified and display a badge to users.",
+        "certified": "Certified",
+        "notCertified": "Not Certified",
+        "isCertified": "This community is certified",
+        "certify": "Certify Community",
+        "revoke": "Revoke Certification",
+        "uncertify": "Uncertify",
+        "uncertifyNotes": "Uncertification Notes",
+        "certifyNotes": "Certification Notes",
+        "onlyForCommunities": "Certification is only available for communities.",
+        "notes": "Certification Notes",
+        "notesPlaceholder": "Add notes about this certification...",
+        "certifiedBy": "Certified by {name}",
+        "certifiedAt": "Certified on {date}",
+        "confirmCertify": "Are you sure you want to certify this community?",
+        "confirmRevoke": "Are you sure you want to revoke certification from this community?",
+        "certifySuccess": "Community has been certified",
+        "revokeSuccess": "Certification has been revoked",
+        "certifyError": "Failed to certify community",
+        "revokeError": "Failed to revoke certification"
+      },
+      "maxMembers": {
+        "title": "Max Group Members",
+        "description": "Maximum number of members allowed per group",
+        "invalidValue": "Please enter a valid number between 2 and 100",
+        "saveSuccess": "Maximum members setting saved successfully",
+        "saveError": "Failed to save maximum members setting"
+      },
+      "settings": {
+        "title": "Network Settings",
+        "maxMembersPerGroup": "Maximum Members per Group",
+        "maxMembersDescription": "Set the maximum number of members allowed in a group.",
+        "saveSuccess": "Settings saved successfully",
+        "saveError": "Failed to save settings"
+      },
+      "delete": {
+        "dangerZone": "Danger Zone",
+        "title": "Delete Network",
+        "description": "Deleting this network will permanently remove it and notify all members. This action cannot be undone.",
+        "reasonLabel": "Reason for deletion (optional)",
+        "reasonPlaceholder": "Explain why this network is being deleted...",
+        "deleteGroup": "Delete Group",
+        "deleteCommunity": "Delete Community",
+        "confirmMessage": "Are you sure you want to delete \"{name}\"? This {type} has {count} members who will be notified.",
+        "success": "\"{name}\" has been deleted. {count} members were notified.",
+        "error": "Failed to delete network"
       }
     },
     "analytics": {
