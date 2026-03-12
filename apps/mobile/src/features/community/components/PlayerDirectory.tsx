@@ -9,7 +9,7 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { View, StyleSheet, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, SkeletonPlayerCard } from '@rallia/shared-components';
+import { Text, SkeletonPlayerCard, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { usePlayerSearch, usePlayer } from '@rallia/shared-hooks';
 import { useTranslation } from '../../../hooks';
@@ -17,6 +17,7 @@ import { useEffectiveLocation } from '../../../hooks/useEffectiveLocation';
 import { useUserHomeLocation } from '../../../context';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import { supabase, Logger } from '@rallia/shared-services';
+import { lightHaptic } from '@rallia/shared-utils';
 import { SearchBar } from '../../../components/SearchBar';
 import PlayerCard from './PlayerCard';
 import { PlayerFiltersBar, type PlayerFilters, DEFAULT_PLAYER_FILTERS } from './PlayerFiltersBar';
@@ -48,6 +49,7 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
   onPlayerPress,
 }) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<PlayerFilters>(DEFAULT_PLAYER_FILTERS);
 
@@ -99,6 +101,8 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
   // State for favorite player IDs
   const [favoritePlayerIds, setFavoritePlayerIds] = useState<string[]>([]);
   const [, setFavoritesLoading] = useState(false);
+  // Track if we're making a local change to skip subscription refetch
+  const isLocalFavoriteChangeRef = React.useRef(false);
 
   // State for blocked player IDs
   const [blockedPlayerIds, setBlockedPlayerIds] = useState<string[]>([]);
@@ -172,7 +176,12 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
           filter: `player_id=eq.${currentUserId}`,
         },
         () => {
-          // Refetch favorites when any change occurs
+          // Skip refetch if this was triggered by our own local change
+          if (isLocalFavoriteChangeRef.current) {
+            isLocalFavoriteChangeRef.current = false;
+            return;
+          }
+          // Refetch favorites when any external change occurs
           fetchFavorites();
         }
       )
@@ -329,6 +338,61 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     }
   }, [players, filters.sortBy]);
 
+  // Toggle favorite handler
+  const handleToggleFavorite = useCallback(
+    async (playerId: string) => {
+      if (!currentUserId) return;
+
+      lightHaptic();
+      const wasFavorite = favoritePlayerIds.includes(playerId);
+
+      // Mark as local change to skip subscription refetch
+      isLocalFavoriteChangeRef.current = true;
+
+      // Optimistic update
+      if (wasFavorite) {
+        setFavoritePlayerIds(prev => prev.filter(id => id !== playerId));
+      } else {
+        setFavoritePlayerIds(prev => [...prev, playerId]);
+      }
+
+      try {
+        if (wasFavorite) {
+          // Remove from favorites
+          const { error } = await supabase
+            .from('player_favorite')
+            .delete()
+            .eq('player_id', currentUserId)
+            .eq('favorite_player_id', playerId);
+
+          if (error) throw error;
+          toast.success(t('playerDirectory.favorites.removedFromFavorites'));
+          Logger.info('Player removed from favorites', { playerId });
+        } else {
+          // Add to favorites
+          const { error } = await supabase.from('player_favorite').insert({
+            player_id: currentUserId,
+            favorite_player_id: playerId,
+          });
+
+          if (error) throw error;
+          toast.success(t('playerDirectory.favorites.addedToFavorites'));
+          Logger.info('Player added to favorites', { playerId });
+        }
+      } catch (error) {
+        // Revert optimistic update on error
+        if (wasFavorite) {
+          setFavoritePlayerIds(prev => [...prev, playerId]);
+        } else {
+          setFavoritePlayerIds(prev => prev.filter(id => id !== playerId));
+        }
+        Logger.error('Failed to toggle favorite', error as Error);
+        toast.error(t('common.error'));
+      }
+    },
+    [currentUserId, favoritePlayerIds, t, toast]
+  );
+
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
@@ -337,9 +401,16 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
 
   const renderPlayer = useCallback(
     ({ item }: { item: PlayerSearchResult }) => (
-      <PlayerCard player={item} colors={colors} onPress={onPlayerPress} />
+      <PlayerCard
+        player={item}
+        colors={colors}
+        onPress={onPlayerPress}
+        isFavorite={favoritePlayerIds.includes(item.id)}
+        onToggleFavorite={handleToggleFavorite}
+        showFavorite={!!currentUserId && currentUserId !== item.id}
+      />
     ),
-    [colors, onPlayerPress]
+    [colors, onPlayerPress, favoritePlayerIds, handleToggleFavorite, currentUserId]
   );
 
   const renderEmpty = () => {

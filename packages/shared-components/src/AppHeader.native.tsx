@@ -30,6 +30,8 @@ interface AppHeaderProps {
   };
   /** Whether dark mode is active */
   isDark?: boolean;
+  /** Optional callback for help button press (shows bug report / feedback menu) */
+  onHelpPress?: () => void;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = ({
@@ -37,6 +39,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   Logo,
   themeColors,
   isDark = false,
+  onHelpPress,
 }) => {
   // Use theme colors if provided, otherwise use design system defaults
   const colors = themeColors || {
@@ -184,10 +187,16 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         {/* Center - Logo */}
         <View style={styles.centerSection}>{Logo && <Logo width={100} height={30} />}</View>
 
-        {/* Right - Notification and Settings Icons */}
+        {/* Right - Help, Notification and Settings Icons */}
         <View style={styles.rightIcons}>
           {isLoggedIn && (
             <>
+              {onHelpPress && (
+                <TouchableOpacity style={styles.iconButton} onPress={onHelpPress}>
+                  <Ionicons name="help-circle-outline" size={24} color={colors.icon} />
+                </TouchableOpacity>
+              )}
+
               <TouchableOpacity style={styles.iconButton} onPress={handleNotificationsPress}>
                 <Ionicons name="notifications-outline" size={24} color={colors.icon} />
               </TouchableOpacity>

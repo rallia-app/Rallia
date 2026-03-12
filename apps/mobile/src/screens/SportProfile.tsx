@@ -1424,6 +1424,7 @@ const SportProfile = () => {
                     peerEvaluationAverage={peerEvaluationAverage}
                     peerEvaluationCount={peerEvaluationCount}
                     ratingSystemName={ratingInfo.ratingTypeName}
+                    currentRatingValue={ratingInfo?.scoreValue}
                     isOwnProfile={true}
                     onRequestReference={() => {
                       SheetManager.show('reference-request', {

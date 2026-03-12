@@ -11,6 +11,7 @@ export * from './useUserLocation';
 export * from './useEffectiveLocation';
 export * from './usePushNotifications';
 export * from './useTourSequence';
+export * from './useShakeDetection';
 
 // Group chat hooks
 export * from './groupChat';

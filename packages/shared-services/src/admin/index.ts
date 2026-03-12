@@ -181,3 +181,32 @@ export * from './moderationService';
 
 // Admin Push Service
 export * from './adminPushService';
+
+// Admin Network Service - Types
+export type {
+  AdminNetworkType,
+  AdminNetworkFilters,
+  AdminNetworkInfo,
+  AdminNetworkMember,
+  AdminNetworkFacility,
+  AdminNetworkDetail,
+  AdminNetworksPage,
+  FetchAdminNetworksParams,
+  CertifyNetworkParams,
+  DeleteNetworkParams,
+  DeleteNetworkResult,
+  AdminSetting,
+  NetworkLimits,
+} from './adminNetworkService';
+
+// Admin Network Service - Functions
+export {
+  fetchAdminNetworks,
+  fetchAdminNetworkDetail,
+  certifyNetwork,
+  deleteNetwork,
+  getAdminSetting,
+  updateAdminSetting,
+  getNetworkLimits,
+  updateNetworkLimits,
+} from './adminNetworkService';

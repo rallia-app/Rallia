@@ -32,6 +32,7 @@ import {
   usePlayerGroups,
   usePlayerGroupsRealtime,
   useSports,
+  useNetworkLimits,
   type Group,
 } from '@rallia/shared-hooks';
 import type { RootStackParamList } from '../navigation/types';
@@ -208,6 +209,7 @@ export default function GroupsScreen() {
     refetch,
   } = usePlayerGroups(playerId, selectedSport?.id);
   const { sports } = useSports();
+  const { limits } = useNetworkLimits();
 
   // Helper to get sport name from sport_id
   const getSportName = useCallback(
@@ -394,7 +396,7 @@ export default function GroupsScreen() {
             <View style={[styles.infoBox, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
               <Ionicons name="information-circle-outline" size={20} color={colors.textMuted} />
               <Text size="sm" style={[styles.infoBoxText, { color: colors.textSecondary }]}>
-                {t('groups.listInfoMessage')}
+                {t('groups.listInfoMessage', { maxMembers: limits?.max_group_members ?? 20 })}
               </Text>
             </View>
           ) : null

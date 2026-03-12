@@ -90,6 +90,8 @@ export const linking: LinkingOptions<RootStackParamList> = {
       AdminDashboard: 'admin/dashboard',
       AdminUsers: 'admin/users',
       AdminUserDetail: 'admin/users/:userId',
+      AdminNetworks: 'admin/networks',
+      AdminNetworkDetail: 'admin/networks/:networkId',
       AdminModeration: 'admin/moderation',
       AdminAlerts: 'admin/alerts',
       AdminActivityLog: 'admin/activity',
