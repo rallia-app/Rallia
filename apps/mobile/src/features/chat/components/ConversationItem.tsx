@@ -124,7 +124,7 @@ function ConversationItemComponent({
     isBlockedPreview = true;
   } else if (conversation.last_message_content) {
     if (conversation.conversation_type !== 'direct' && conversation.last_message_sender_name) {
-      previewText = `@${conversation.last_message_sender_name} ${conversation.last_message_content}`;
+      previewText = `${conversation.last_message_sender_name}: ${conversation.last_message_content}`;
     } else {
       previewText = conversation.last_message_content;
     }
@@ -134,8 +134,9 @@ function ConversationItemComponent({
     <TouchableOpacity
       style={[
         styles.container,
-        { backgroundColor: isDark ? colors.card : '#FFFFFF' },
-        isPinned && styles.pinnedContainer,
+        isPinned && {
+          backgroundColor: isDark ? 'rgba(139, 92, 246, 0.08)' : 'rgba(139, 92, 246, 0.05)',
+        },
       ]}
       onPress={onPress}
       onLongPress={onLongPress}
@@ -152,16 +153,10 @@ function ConversationItemComponent({
         )}
 
         {/* Online Status Indicator */}
-        {conversation.conversation_type === 'direct' && (
-          <View
-            style={[
-              styles.onlineIndicator,
-              {
-                backgroundColor: isOnline ? '#22C55E' : neutral[400],
-                borderColor: isDark ? colors.card : '#FFFFFF',
-              },
-            ]}
-          />
+        {conversation.conversation_type === 'direct' && isOnline && (
+          <View style={[styles.onlineIndicatorRing, { backgroundColor: colors.background }]}>
+            <View style={styles.onlineIndicatorDot} />
+          </View>
         )}
       </View>
 
@@ -173,10 +168,7 @@ function ConversationItemComponent({
               <Ionicons name="pin" size={14} color={primary[500]} style={styles.pinIcon} />
             )}
             <Text
-              style={[
-                styles.name,
-                { color: colors.text, fontWeight: hasUnread ? '600' : undefined },
-              ]}
+              style={[styles.name, { color: colors.text, fontWeight: hasUnread ? '700' : '600' }]}
               numberOfLines={1}
             >
               {name}
@@ -219,7 +211,7 @@ function ConversationItemComponent({
 
           {/* Unread badge */}
           {hasUnread && (
-            <View style={[styles.unreadBadge, { backgroundColor: primary[500] }]}>
+            <View style={[styles.unreadBadge, { backgroundColor: '#EF4444' }]}>
               <Text style={styles.unreadText}>
                 {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
               </Text>
@@ -240,9 +232,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[3],
     alignItems: 'center',
   },
-  pinnedContainer: {
-    backgroundColor: 'rgba(139, 92, 246, 0.05)', // Light primary tint
-  },
   avatarContainer: {
     marginRight: spacingPixels[3],
     position: 'relative',
@@ -259,14 +248,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  onlineIndicator: {
+  onlineIndicatorRing: {
     position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 2,
+    bottom: 0,
+    right: 0,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  onlineIndicatorDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#22C55E',
   },
   content: {
     flex: 1,
@@ -275,7 +271,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacingPixels[1],
+    marginBottom: 2,
   },
   nameRow: {
     flexDirection: 'row',
@@ -316,11 +312,14 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
   },
   unreadText: {
     color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '700',
+    textAlign: 'center',
+    lineHeight: 20,
+    includeFontPadding: false,
   },
 });

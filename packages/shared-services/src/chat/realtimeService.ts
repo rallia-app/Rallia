@@ -135,7 +135,7 @@ export function subscribeToConversations(playerId: string, onUpdate: () => void)
     .on(
       'postgres_changes',
       {
-        event: '*',
+        event: 'INSERT',
         schema: 'public',
         table: 'message',
       },

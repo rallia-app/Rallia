@@ -79,7 +79,7 @@ export interface ConversationParticipant {
  * @property sender_id - ID of the sender
  * @property content - Message text content
  * @property status - Delivery status
- * @property read_by - Array of player IDs who have read this message
+ * @property read_by - Deprecated: use conversation_participant.last_read_at instead
  * @property created_at - ISO timestamp of creation
  * @property updated_at - ISO timestamp of last update
  * @property reply_to_message_id - ID of message being replied to

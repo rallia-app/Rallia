@@ -35,10 +35,13 @@ import {
   useToggleMuteConversation,
   useBlockedStatus,
   useFavoriteStatus,
+  chatKeys,
 } from '@rallia/shared-hooks';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   getMessagesReactions,
   getNetworkByConversationId,
+  getMatchWithDetails,
   deleteMessage,
   type ReactionSummary,
   type MessageWithSender,
@@ -52,6 +55,8 @@ import {
   BlockedUserModal,
 } from '../features/chat';
 import { SheetManager } from 'react-native-actions-sheet';
+import { useMatchDetailSheet } from '../context/MatchDetailSheetContext';
+import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import type { MessageListRef } from '../features/chat';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -79,6 +84,8 @@ export default function ChatConversationScreen() {
   // Get player name for typing indicator - use type assertion since DB types may not include first_name directly
   const playerName = (profile as { first_name?: string } | null)?.first_name || t('common.user');
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
+  const { openSheet: openMatchDetailSheet } = useMatchDetailSheet();
 
   const [reactions, setReactions] = useState<Map<string, ReactionSummary[]>>(new Map());
   const [networkInfo, setNetworkInfo] = useState<NetworkInfo | null>(null);
@@ -112,16 +119,19 @@ export default function ChatConversationScreen() {
     agreeToChatRulesMutation.mutate(playerId);
   }, [playerId, agreeToChatRulesMutation]);
 
+  // Handle declining chat rules - navigate back
+  const handleDeclineRules = useCallback(() => {
+    navigation.goBack();
+  }, [navigation]);
+
   // Show agreement modal if user hasn't agreed yet (only once)
   useEffect(() => {
     if (!isLoadingAgreement && hasAgreed === false && !agreementModalShownRef.current) {
       agreementModalShownRef.current = true;
       SheetManager.show('chat-agreement', {
         payload: {
-          chatName: routeTitle,
-          chatImageUrl: null,
-          isDirectChat: false,
           onAgree: handleAgreeToRules,
+          onDecline: handleDeclineRules,
         },
       });
     }
@@ -129,7 +139,7 @@ export default function ChatConversationScreen() {
     if (hasAgreed === true) {
       agreementModalShownRef.current = false;
     }
-  }, [hasAgreed, isLoadingAgreement, routeTitle, handleAgreeToRules]);
+  }, [hasAgreed, isLoadingAgreement, routeTitle, handleAgreeToRules, handleDeclineRules]);
 
   // Fetch conversation details
   const { data: conversation, isLoading: isLoadingConversation } = useConversation(conversationId);
@@ -344,10 +354,31 @@ export default function ChatConversationScreen() {
   }, [navigation]);
 
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
-  // Navigate to player profile (direct chat) or group info (group chat) when tapping header
-  const handleTitlePress = useCallback(() => {
+  // Navigate to player profile (direct chat), group info (group chat), or match detail (match chat) when tapping header
+  const handleTitlePress = useCallback(async () => {
+    lightHaptic();
     if (isDirectChat && otherUserId) {
       navigateToPlayerProfile(otherUserId);
+    } else if (conversation?.conversation_type === 'match' && conversation.match_id) {
+      try {
+        const match = await getMatchWithDetails(conversation.match_id);
+        if (match) {
+          openMatchDetailSheet(match as MatchDetailData, {
+            onMatchRemoved: () => {
+              // Optimistically remove this conversation from the cached list
+              if (playerId) {
+                queryClient.setQueryData(
+                  chatKeys.playerConversations(playerId),
+                  (old: { id: string }[] | undefined) => old?.filter(c => c.id !== conversationId)
+                );
+              }
+              navigation.goBack();
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching match details:', error);
+      }
     } else if (conversation?.conversation_type === 'group') {
       navigation.navigate('GroupChatInfo', { conversationId });
     }
@@ -358,6 +389,9 @@ export default function ChatConversationScreen() {
     conversationId,
     navigation,
     navigateToPlayerProfile,
+    openMatchDetailSheet,
+    playerId,
+    queryClient,
   ]);
 
   // Header menu handlers
@@ -718,7 +752,6 @@ export default function ChatConversationScreen() {
       ) : (
         <MessageInput
           onSend={handleSendMessage}
-          disabled={sendMessageMutation.isPending}
           replyToMessage={replyToMessage}
           onCancelReply={handleCancelReply}
           onTypingChange={handleTypingChange}

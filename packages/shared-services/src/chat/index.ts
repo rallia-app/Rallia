@@ -31,6 +31,7 @@ export {
   getOrCreateDirectConversation,
   createMatchChat,
   getMatchChat,
+  syncMatchConversationTitle,
 
   // Message Operations
   getMessages,

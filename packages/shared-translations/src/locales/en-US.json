@@ -1601,13 +1601,12 @@
     "participants": "{{count}} participant",
     "participants_plural": "{{count}} participants",
     "agreement": {
-      "welcome": "Welcome to",
-      "welcomeDirect": "Starting conversation with",
-      "description": "This is a group chat - all members of this community will see your messages",
-      "descriptionDirect": "This is a private conversation. Please be respectful and follow our community guidelines.",
+      "welcome": "Welcome to Rallia Chat",
+      "description": "Please be respectful and follow our community guidelines in all conversations.",
       "chatRules": "Chat rules",
       "warning": "Content will be removed and users banned for violations of our community guidelines",
-      "agree": "I agree"
+      "agree": "I agree",
+      "decline": "Decline"
     },
     "rules": {
       "noHarassment": "No harassment, hate speech, sexual language",
@@ -1656,7 +1655,8 @@
       "maxImages": "You can add up to 3 images",
       "uploadingImages": "Uploading images..."
     },
-    "selectMembers": "Select Members",
+    "newConversation": "New Conversation",
+    "selectAPlayer": "Select a player",
     "pleaseSelectMember": "Please select at least one member for the group.",
     "photoAccessRequired": "Please allow access to your photos to add a group image.",
     "failedToPickImage": "Failed to pick image",
@@ -1669,7 +1669,7 @@
     "noPlayersFoundMatching": "No players found matching \"{query}\"",
     "noPlayersAvailable": "No players available",
     "continueSelected": "Continue ({count} selected)",
-    "startChat": "Start Chat",
+    "startChat": "Send Message",
     "failedToCreateConversation": "Failed to create conversation. Please try again.",
     "groupDetails": "Group Details",
     "addPhoto": "Add Photo",
@@ -1678,7 +1678,7 @@
     "members": "Members",
     "you": "You",
     "admin": "Admin",
-    "createGroup": "Create Group",
+    "createGroup": "Create Group Chat",
     "addMembers": "Add Members",
     "addCount": "Add ({count})",
     "noPlayersFound": "No players found",

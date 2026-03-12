@@ -48,6 +48,7 @@ export {
   getOrCreateDirectConversation,
   createMatchChat,
   getMatchChat,
+  syncMatchConversationTitle,
   updateConversation,
   getConversationByNetworkId,
   getNetworkByConversationId,

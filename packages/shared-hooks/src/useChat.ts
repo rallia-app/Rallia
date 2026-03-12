@@ -134,16 +134,9 @@ export function useCreateConversation() {
  * Get or create a direct conversation between two players
  */
 export function useGetOrCreateDirectConversation() {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: ({ playerId1, playerId2 }: { playerId1: string; playerId2: string }) =>
       getOrCreateDirectConversation(playerId1, playerId2),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: chatKeys.playerConversations(variables.playerId1),
-      });
-    },
   });
 }
 
@@ -213,7 +206,7 @@ export function useSendMessage() {
             status: 'sent',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            read_by: [],
+            read_by: null,
             sender: null,
           };
 
@@ -253,10 +246,65 @@ export function useSendMessage() {
         }
       );
 
-      // Invalidate conversation list to update last message preview
-      queryClient.invalidateQueries({
-        queryKey: chatKeys.conversations(),
-      });
+      // Optimistically update conversation list so new conversations appear immediately
+      const conversationId = variables.conversation_id;
+      const messageTime = (newMessage as MessageWithSender).created_at || new Date().toISOString();
+
+      queryClient.setQueriesData<ConversationPreview[]>(
+        { queryKey: chatKeys.conversations() },
+        oldData => {
+          if (!oldData) return oldData;
+
+          const idx = oldData.findIndex(c => c.id === conversationId);
+
+          if (idx >= 0) {
+            // Existing conversation — update last message preview and move to top
+            const updated = oldData.filter(c => c.id !== conversationId);
+            return [
+              {
+                ...oldData[idx],
+                last_message_content: variables.content,
+                last_message_at: messageTime,
+              },
+              ...updated,
+            ];
+          }
+
+          // New conversation not yet in the list — build preview from conversation details cache
+          const details = queryClient.getQueryData<ConversationWithDetails>(
+            chatKeys.conversation(conversationId)
+          );
+          if (!details) return oldData;
+
+          const other = details.participants?.find(p => p.player_id !== variables.sender_id);
+
+          const newPreview: ConversationPreview = {
+            id: conversationId,
+            conversation_type: details.conversation_type,
+            title: details.title,
+            last_message_content: variables.content,
+            last_message_at: messageTime,
+            last_message_sender_name: null,
+            unread_count: 0,
+            participant_count: details.participants?.length || 2,
+            other_participant: other?.player?.profile
+              ? {
+                  id: other.player_id,
+                  first_name: other.player.profile.first_name,
+                  last_name: other.player.profile.last_name,
+                  profile_picture_url: other.player.profile.profile_picture_url,
+                }
+              : undefined,
+            cover_image_url: details.picture_url,
+            is_pinned: false,
+            is_muted: false,
+            is_archived: false,
+            match_id: details.match_id,
+          };
+
+          return [newPreview, ...oldData];
+        }
+      );
     },
     onError: (_err, variables, context) => {
       // Rollback on error
@@ -279,15 +327,42 @@ export function useMarkMessagesAsRead() {
   return useMutation({
     mutationFn: ({ conversationId, playerId }: { conversationId: string; playerId: string }) =>
       markMessagesAsRead(conversationId, playerId),
-    onSuccess: (_, variables) => {
-      // Invalidate and refetch unread counts immediately
+    onMutate: async variables => {
+      // Cancel outgoing refetches so they don't overwrite optimistic update
+      await queryClient.cancelQueries({
+        queryKey: chatKeys.playerConversations(variables.playerId),
+      });
+
+      // Snapshot previous value
+      const previousConversations = queryClient.getQueryData<ConversationPreview[]>(
+        chatKeys.playerConversations(variables.playerId)
+      );
+
+      // Optimistically set unread_count to 0 for this conversation
+      if (previousConversations) {
+        queryClient.setQueryData<ConversationPreview[]>(
+          chatKeys.playerConversations(variables.playerId),
+          previousConversations.map(conv =>
+            conv.id === variables.conversationId ? { ...conv, unread_count: 0 } : conv
+          )
+        );
+      }
+
+      return { previousConversations };
+    },
+    onError: (_err, variables, context) => {
+      // Roll back on error
+      if (context?.previousConversations) {
+        queryClient.setQueryData(
+          chatKeys.playerConversations(variables.playerId),
+          context.previousConversations
+        );
+      }
+    },
+    onSettled: (_, __, variables) => {
+      // Refetch unread count badge to ensure server state is in sync
       queryClient.invalidateQueries({
         queryKey: chatKeys.unreadCount(variables.playerId),
-        refetchType: 'all',
-      });
-      queryClient.invalidateQueries({
-        queryKey: chatKeys.playerConversations(variables.playerId),
-        refetchType: 'all',
       });
     },
   });
@@ -579,16 +654,34 @@ export function useChatRealtime(
           (oldData: { pages: MessageWithSender[][]; pageParams: number[] } | undefined) => {
             if (!oldData) return oldData;
 
-            const newPages = [...oldData.pages];
-            // Only add if not already present (avoid duplicates)
-            const exists = newPages[0]?.some(m => m.id === newMessage.id);
-            if (!exists) {
-              newPages[0] = [newMessage as MessageWithSender, ...(newPages[0] || [])];
+            const firstPage = oldData.pages[0] || [];
+
+            // Already present by real ID — skip
+            if (firstPage.some(m => m.id === newMessage.id)) {
+              return oldData;
+            }
+
+            // Check if this replaces an optimistic (temp-*) message
+            const tempIndex = firstPage.findIndex(
+              m =>
+                m.id.startsWith('temp-') &&
+                m.sender_id === newMessage.sender_id &&
+                m.content === newMessage.content
+            );
+
+            const newFirstPage = [...firstPage];
+
+            if (tempIndex >= 0) {
+              // Replace the optimistic message in-place to avoid reorder flash
+              newFirstPage[tempIndex] = newMessage as MessageWithSender;
+            } else {
+              // Genuinely new message — prepend
+              newFirstPage.unshift(newMessage as MessageWithSender);
             }
 
             return {
               ...oldData,
-              pages: newPages,
+              pages: [newFirstPage, ...oldData.pages.slice(1)],
             };
           }
         );

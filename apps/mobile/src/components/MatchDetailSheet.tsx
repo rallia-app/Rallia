@@ -691,6 +691,7 @@ export const MatchDetailSheet: React.FC = () => {
     selectedMatch,
     updateSelectedMatch,
     handleSheetDismiss,
+    onMatchRemovedRef,
   } = useMatchDetailSheet();
   const { openSheetForEdit } = useActionsSheet();
   const { openSheet: openInviteSheet } = usePlayerInviteSheet();
@@ -855,6 +856,7 @@ export const MatchDetailSheet: React.FC = () => {
     onLeaveSuccess: () => {
       successHaptic();
       setShowLeaveModal(false);
+      onMatchRemovedRef.current?.();
       closeSheet();
       toast.success(t('matchActions.leaveSuccess'));
     },
@@ -866,6 +868,7 @@ export const MatchDetailSheet: React.FC = () => {
     onCancelSuccess: () => {
       successHaptic();
       setShowCancelModal(false);
+      onMatchRemovedRef.current?.();
       closeSheet();
       toast.success(t('matchActions.cancelSuccess'));
     },

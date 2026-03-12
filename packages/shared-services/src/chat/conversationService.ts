@@ -129,6 +129,7 @@ export async function getPlayerConversations(playerId: string): Promise<Conversa
 
 /**
  * Get a single conversation with details
+ * Fetches conversation, participants, and last message in parallel
  */
 export async function getConversation(
   conversationId: string
@@ -158,56 +159,59 @@ export async function getConversation(
     throw error;
   }
 
-  // Get participants
-  const { data: participants } = await supabase
-    .from('conversation_participant')
-    .select(
-      `
-      id,
-      player_id,
-      last_read_at,
-      is_muted,
-      player:player!conversation_participant_player_id_fkey (
+  // Fetch participants and last message in parallel
+  const [participantsResult, lastMessageResult] = await Promise.all([
+    supabase
+      .from('conversation_participant')
+      .select(
+        `
         id,
-        profile (
-          first_name,
-          last_name,
-          display_name,
-          profile_picture_url
+        player_id,
+        last_read_at,
+        is_muted,
+        player:player!conversation_participant_player_id_fkey (
+          id,
+          profile (
+            first_name,
+            last_name,
+            display_name,
+            profile_picture_url
+          )
         )
+      `
       )
-    `
-    )
-    .eq('conversation_id', conversationId);
+      .eq('conversation_id', conversationId),
+    supabase
+      .from('message')
+      .select(
+        `
+        id,
+        conversation_id,
+        sender_id,
+        content,
+        status,
+        created_at,
+        updated_at,
+        sender:player!message_sender_id_fkey (
+          id,
+          profile (
+            first_name,
+            last_name,
+            display_name,
+            profile_picture_url
+          )
+        )
+      `
+      )
+      .eq('conversation_id', conversationId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single(),
+  ]);
 
-  // Get last message
-  const { data: lastMessage } = await supabase
-    .from('message')
-    .select(
-      `
-      id,
-      conversation_id,
-      sender_id,
-      content,
-      status,
-      read_by,
-      created_at,
-      updated_at,
-      sender:player!message_sender_id_fkey (
-        id,
-        profile (
-          first_name,
-          last_name,
-          display_name,
-          profile_picture_url
-        )
-      )
-    `
-    )
-    .eq('conversation_id', conversationId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
+  const participants = participantsResult.data;
+  const lastMessage = lastMessageResult.data;
 
   return {
     ...conversation,
@@ -230,11 +234,11 @@ export async function getConversation(
       ? {
           ...lastMessage,
           status: (lastMessage.status || 'sent') as MessageStatus,
-          read_by: lastMessage.read_by as string[] | null,
+          read_by: null,
           sender: lastMessage.sender as unknown as MessageWithSender['sender'],
         }
       : null,
-    unread_count: 0, // TODO: Calculate based on current user
+    unread_count: 0,
   };
 }
 
@@ -285,41 +289,27 @@ export async function createConversation(input: CreateConversationInput): Promis
 
 /**
  * Create or get existing direct conversation between two players
+ * Uses an RPC function for a single-query lookup instead of N+1
  */
 export async function getOrCreateDirectConversation(
   playerId1: string,
   playerId2: string
 ): Promise<Conversation> {
-  // Check if direct conversation already exists between these two players
-  const { data: existingConvs } = await supabase
-    .from('conversation')
-    .select(
-      `
-      id,
-      conversation_type,
-      title,
-      picture_url,
-      match_id,
-      created_by,
-      created_at,
-      updated_at
-    `
-    )
-    .eq('conversation_type', 'direct');
+  // Single query to find existing direct conversation between these two players
+  const { data: existingId } = await supabase.rpc('find_direct_conversation', {
+    p_player1: playerId1,
+    p_player2: playerId2,
+  });
 
-  if (existingConvs) {
-    for (const conv of existingConvs) {
-      const { data: participants } = await supabase
-        .from('conversation_participant')
-        .select('player_id')
-        .eq('conversation_id', conv.id);
+  if (existingId) {
+    const { data: conversation } = await supabase
+      .from('conversation')
+      .select('*')
+      .eq('id', existingId)
+      .single();
 
-      if (participants?.length === 2) {
-        const playerIds = participants.map(p => p.player_id);
-        if (playerIds.includes(playerId1) && playerIds.includes(playerId2)) {
-          return conv;
-        }
-      }
+    if (conversation) {
+      return conversation;
     }
   }
 
@@ -335,10 +325,32 @@ export async function getOrCreateDirectConversation(
 // MATCH CHAT OPERATIONS
 // ============================================================================
 
+const FORMAT_LABELS: Record<string, Record<string, string>> = {
+  singles: { 'en-US': 'Singles', 'en-CA': 'Singles', 'fr-CA': 'Simple', 'fr-FR': 'Simple' },
+  doubles: { 'en-US': 'Doubles', 'en-CA': 'Doubles', 'fr-CA': 'Double', 'fr-FR': 'Double' },
+};
+
+function generateMatchChatTitle(
+  matchFormat: 'singles' | 'doubles',
+  hostFirstName: string,
+  matchDate: string,
+  locale: string
+): string {
+  const formattedDate = new Date(matchDate).toLocaleDateString(locale, {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+  const withWord = locale.startsWith('fr') ? 'avec' : 'with';
+  const formatLabel =
+    FORMAT_LABELS[matchFormat]?.[locale] ||
+    matchFormat.charAt(0).toUpperCase() + matchFormat.slice(1);
+  return `${formatLabel} ${withWord} ${hostFirstName} - ${formattedDate}`;
+}
+
 /**
  * Create a match chat when a match becomes full (all players confirmed)
- * - Singles (2 players): Creates a direct chat linked to the match
- * - Doubles (4 players): Creates a group chat linked to the match
+ * Always creates a 'match' type conversation with a descriptive title.
  *
  * @param matchId - The match ID
  * @param createdBy - The player ID who triggered the full match (e.g., last to join or host who accepted)
@@ -368,19 +380,30 @@ export async function createMatchChat(
     return existingConv;
   }
 
-  // Generate title: "Sport - Date" format
-  const formattedDate = new Date(matchDate).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
-  const title = `${sportName} - ${formattedDate}`;
+  // Fetch the match host's first name for the title
+  // Note: createdBy is the authenticated user (for RLS), not necessarily the match host
+  const { data: matchData } = await supabase
+    .from('match')
+    .select('created_by')
+    .eq('id', matchId)
+    .single();
 
-  // Singles = direct chat with match_id, Doubles = group chat with match_id
-  const conversationType: ConversationType = matchFormat === 'singles' ? 'direct' : 'group';
+  const matchHostId = matchData?.created_by || createdBy;
+
+  const { data: hostProfile } = await supabase
+    .from('profile')
+    .select('first_name, preferred_locale')
+    .eq('id', matchHostId)
+    .single();
+
+  const hostFirstName = hostProfile?.first_name || 'Player';
+  const locale = hostProfile?.preferred_locale || 'en-US';
+
+  const title = generateMatchChatTitle(matchFormat, hostFirstName, matchDate, locale);
 
   return createConversation({
-    conversation_type: conversationType,
-    title: conversationType === 'group' ? title : undefined, // Direct chats don't need title
+    conversation_type: 'match',
+    title,
     participant_ids: participantIds,
     created_by: createdBy,
     match_id: matchId,
@@ -406,6 +429,38 @@ export async function getMatchChat(matchId: string): Promise<Conversation | null
   }
 
   return data;
+}
+
+/**
+ * Sync match conversation title when match format or date changes.
+ * Re-generates the title using the host's locale.
+ */
+export async function syncMatchConversationTitle(
+  matchId: string,
+  matchFormat: 'singles' | 'doubles',
+  matchDate: string,
+  hostId: string
+): Promise<void> {
+  const { data: conversation } = await supabase
+    .from('conversation')
+    .select('id')
+    .eq('match_id', matchId)
+    .single();
+
+  if (!conversation) return;
+
+  const { data: hostProfile } = await supabase
+    .from('profile')
+    .select('first_name, preferred_locale')
+    .eq('id', hostId)
+    .single();
+
+  const hostFirstName = hostProfile?.first_name || 'Player';
+  const locale = hostProfile?.preferred_locale || 'en-US';
+
+  const title = generateMatchChatTitle(matchFormat, hostFirstName, matchDate, locale);
+
+  await supabase.from('conversation').update({ title }).eq('id', conversation.id);
 }
 
 // ============================================================================
@@ -535,22 +590,17 @@ export async function getConversationUnreadCount(
 
   const lastReadAt = participation?.last_read_at;
 
+  let query = supabase
+    .from('message')
+    .select('*', { count: 'exact', head: true })
+    .eq('conversation_id', conversationId)
+    .neq('sender_id', playerId)
+    .is('deleted_at', null);
+
   if (lastReadAt) {
-    // Count messages after the last read timestamp (excluding player's own messages)
-    const { count } = await supabase
-      .from('message')
-      .select('*', { count: 'exact', head: true })
-      .eq('conversation_id', conversationId)
-      .neq('sender_id', playerId)
-      .gt('created_at', lastReadAt);
-    return count || 0;
-  } else {
-    // Never read - count all messages not from this player
-    const { count } = await supabase
-      .from('message')
-      .select('*', { count: 'exact', head: true })
-      .eq('conversation_id', conversationId)
-      .neq('sender_id', playerId);
-    return count || 0;
+    query = query.gt('created_at', lastReadAt);
   }
+
+  const { count } = await query;
+  return count || 0;
 }

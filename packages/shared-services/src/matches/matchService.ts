@@ -24,6 +24,8 @@ import { calculateCancellationPenalty } from '../reputation/reputationPenalties'
 import {
   createMatchChat,
   getMatchChat,
+  syncMatchConversationTitle,
+  updateConversation,
   removeConversationParticipant,
   addConversationParticipant,
 } from '../chat/chatService';
@@ -717,14 +719,15 @@ export async function validateMatchUpdate(
   // ========================================
   // FORMAT VALIDATION
   // ========================================
-  // Block format change from doubles to singles if 2+ participants joined
+  // Block format change from doubles to singles if more than 2 participants joined
+  // (singles supports up to 2: creator + 1 opponent)
   if (updates.format !== undefined && updates.format !== match.format) {
-    if (match.format === 'doubles' && updates.format === 'singles' && joinedCount >= 2) {
+    if (match.format === 'doubles' && updates.format === 'singles' && joinedCount > 2) {
       return {
         canUpdate: false,
         errorCode: 'FORMAT_CHANGE_BLOCKED',
         error:
-          'Cannot change from doubles to singles with 2 or more participants. Remove participants first or cancel the match.',
+          'Cannot change from doubles to singles with more than 2 participants. Remove participants first or cancel the match.',
       };
     }
   }
@@ -794,6 +797,13 @@ export async function updateMatch(
     }
     // Note: Warnings are returned but not blocking - caller can check them first
   }
+
+  // Fetch original match details BEFORE applying updates (for notification with original date)
+  const { data: originalMatch } = await supabase
+    .from('match')
+    .select('sport:sport_id (name), match_date, start_time')
+    .eq('id', matchId)
+    .single();
 
   // Map costSplitType to database enum values (same as createMatch)
   const costSplitMap: Record<string, 'host_pays' | 'split_equal' | 'custom'> = {
@@ -937,11 +947,33 @@ export async function updateMatch(
 
       if (participantIds.length > 0) {
         // Send notifications (fire and forget - don't block on notification)
-        notifyMatchUpdated(participantIds, matchId, updatedFields).catch(err => {
+        notifyMatchUpdated(participantIds, matchId, updatedFields, {
+          sportName: (originalMatch?.sport as { name?: string } | null)?.name,
+          matchDate: originalMatch?.match_date,
+          startTime: originalMatch?.start_time,
+        }).catch(err => {
           console.error('Failed to send match updated notifications:', err);
         });
       }
     }
+  }
+
+  // ========================================
+  // SYNC MATCH CONVERSATION TITLE
+  // ========================================
+  const titleAffectingFields = ['format', 'matchDate'];
+  const hasTitleChanges = updatedFields.some(field => titleAffectingFields.includes(field));
+
+  if (hasTitleChanges) {
+    const updatedMatch = data as Match;
+    syncMatchConversationTitle(
+      matchId,
+      updatedMatch.format as 'singles' | 'doubles',
+      updatedMatch.match_date,
+      updatedMatch.created_by
+    ).catch(err => {
+      console.error('[updateMatch] Failed to sync conversation title:', err);
+    });
   }
 
   return data as Match;
@@ -1128,6 +1160,10 @@ export async function deleteMatch(matchId: string): Promise<void> {
     throw new Error(`Failed to delete match: ${error.message}`);
   }
 }
+
+// =============================================================================
+// MATCH CHAT HELPERS
+// =============================================================================
 
 // =============================================================================
 // MATCH PARTICIPANT ACTIONS

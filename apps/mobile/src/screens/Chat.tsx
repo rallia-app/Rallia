@@ -210,9 +210,7 @@ const Chat = () => {
     SheetManager.show('create-group-chat', {
       payload: {
         onSuccess: (conversationId: string) => {
-          // Refetch conversations to include the new group
-          refetch();
-          // Navigate to the new conversation
+          // Navigate to the new conversation (optimistic update in useSendMessage handles the list)
           rootNavigation.navigate('ChatConversation', {
             conversationId,
             title: undefined, // Will be loaded from conversation
