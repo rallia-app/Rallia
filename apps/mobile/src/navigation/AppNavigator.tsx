@@ -878,6 +878,13 @@ const resetStackOnBlur = ({
 
 function BottomTabs() {
   const { colors } = useThemeStyles();
+  const insets = useSafeAreaInsets();
+
+  // Add bottom safe area inset to handle Android software navigation bar
+  // This prevents the system nav bar from overlapping the tab bar
+  const bottomInset = insets.bottom;
+  const tabBarHeight = spacingPixels[20] + bottomInset;
+
   return (
     <Tab.Navigator
       id="BottomTabs"
@@ -889,8 +896,8 @@ function BottomTabs() {
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
-          height: spacingPixels[20],
-          paddingBottom: spacingPixels[2],
+          height: tabBarHeight,
+          paddingBottom: spacingPixels[2] + bottomInset,
           paddingTop: spacingPixels[2],
         },
         tabBarButton: props => <TabButtonWithHaptic {...props} />,
