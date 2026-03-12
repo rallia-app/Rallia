@@ -44,6 +44,7 @@ export type RootStackParamList = {
   IncomingReferenceRequests: undefined; // Incoming reference requests from other players
   GroupDetail: { groupId: string; groupName?: string }; // Group detail view
   CommunityDetail: { communityId: string; communityName?: string }; // Community detail view
+  FacilityDetail: FacilityDetailScreenParams; // Facility detail (root-level for external navigation)
   GroupChatInfo: { conversationId: string }; // Group chat info/settings view
   ChatConversation: { conversationId: string; title?: string }; // Direct chat navigation
   PlayedMatchDetail: { match: unknown }; // Played match detail view
@@ -56,6 +57,8 @@ export type RootStackParamList = {
   AdminDashboard: undefined; // Analytics dashboard
   AdminUsers: undefined; // User management list
   AdminUserDetail: { userId: string }; // User detail view
+  AdminNetworks: undefined; // Network management list (groups & communities)
+  AdminNetworkDetail: { networkId: string }; // Network detail view
   AdminActivityLog: undefined; // Audit trail / activity log
   AdminAlerts: undefined; // Admin alerts and notifications
   AdminSettings: undefined; // Admin settings and preferences

@@ -41,6 +41,12 @@ export interface Community extends Omit<Group, 'max_members'> {
   is_public: boolean;
   /** Communities have no member limit (null means unlimited) */
   max_members: null;
+  /** Whether the community is certified/verified by admin */
+  is_certified?: boolean;
+  /** Timestamp when the community was certified */
+  certified_at?: string | null;
+  /** ID of admin who certified the community */
+  certified_by?: string | null;
 }
 
 /**
@@ -122,6 +128,8 @@ export interface CreateCommunityInput {
   cover_image_url?: string;
   /** Whether the community is publicly discoverable (default: true) */
   is_public?: boolean;
+  /** Optional sport association (null/undefined = both sports) */
+  sport_id?: string | null;
 }
 
 /**
@@ -132,6 +140,7 @@ export interface UpdateCommunityInput {
   description?: string;
   cover_image_url?: string;
   is_public?: boolean;
+  sport_id?: string | null;
 }
 
 // ============================================================================

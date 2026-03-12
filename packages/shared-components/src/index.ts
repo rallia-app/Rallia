@@ -36,6 +36,7 @@ export { Spinner } from './feedback/Spinner.native';
 export { ErrorMessage } from './feedback/ErrorMessage.native';
 export { Badge } from './feedback/Badge.native';
 export { ErrorBoundary } from './ErrorBoundary';
+export type { ErrorBoundaryTranslations } from './ErrorBoundary';
 export {
   Skeleton,
   SkeletonText,
@@ -85,6 +86,7 @@ export {
   ProfilePictureButton,
   NotificationButton,
   SettingsButton,
+  HelpButton,
   SportSelector,
   LocationSelector,
 } from './headers';

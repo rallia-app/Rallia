@@ -10,7 +10,7 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { registerPushToken, unregisterPushToken } from '@rallia/shared-services';
 import { Logger } from '@rallia/shared-services';
-import { navigateFromOutside } from '../navigation';
+import { navigateFromOutside, navigateToCommunityScreen } from '../navigation';
 
 // =============================================================================
 // TYPES
@@ -24,6 +24,7 @@ interface NotificationPayload {
   matchId?: string;
   conversationId?: string;
   playerId?: string;
+  communityId?: string;
   [key: string]: unknown;
 }
 
@@ -48,6 +49,15 @@ const MATCH_NOTIFICATION_TYPES = [
   'score_confirmation',
   'feedback_request',
   'feedback_reminder',
+] as const;
+
+/**
+ * Community-related notification types that should navigate to community detail
+ */
+const COMMUNITY_NOTIFICATION_TYPES = [
+  'community_join_request',
+  'community_join_accepted',
+  'community_join_rejected',
 ] as const;
 
 /**
@@ -97,6 +107,8 @@ export interface PushNotificationState {
 export interface UsePushNotificationsOptions {
   /** Callback to set a pending match ID for deep linking */
   onMatchNotificationTapped?: (matchId: string) => void;
+  /** Callback to set a pending community ID for deep linking */
+  onCommunityNotificationTapped?: (communityId: string) => void;
   /** Whether the splash animation has completed (delays cold start navigation until true) */
   isSplashComplete?: boolean;
 }
@@ -184,7 +196,11 @@ export function usePushNotifications(
   requestPermissions: () => Promise<boolean>;
   unregister: () => Promise<void>;
 } {
-  const { onMatchNotificationTapped, isSplashComplete = true } = options;
+  const {
+    onMatchNotificationTapped,
+    onCommunityNotificationTapped,
+    isSplashComplete = true,
+  } = options;
   const [state, setState] = useState<PushNotificationState>({
     expoPushToken: null,
     isRegistered: false,
@@ -260,6 +276,11 @@ export function usePushNotifications(
     onMatchNotificationTappedRef.current = onMatchNotificationTapped;
   }, [onMatchNotificationTapped]);
 
+  const onCommunityNotificationTappedRef = useRef(onCommunityNotificationTapped);
+  useEffect(() => {
+    onCommunityNotificationTappedRef.current = onCommunityNotificationTapped;
+  }, [onCommunityNotificationTapped]);
+
   /**
    * Handle a notification response (from tap)
    * Extracted to reuse for both listener and cold start handling
@@ -288,6 +309,28 @@ export function usePushNotifications(
 
         Logger.logUserAction('push_notification_deep_link', {
           matchId: data.matchId,
+          type: notificationType,
+        });
+      }
+    }
+
+    // Handle community-related notifications
+    if (data.communityId && notificationType) {
+      const isCommunityNotification = COMMUNITY_NOTIFICATION_TYPES.includes(
+        notificationType as (typeof COMMUNITY_NOTIFICATION_TYPES)[number]
+      );
+
+      if (isCommunityNotification) {
+        // Set pending community ID for deep linking
+        if (onCommunityNotificationTappedRef.current) {
+          onCommunityNotificationTappedRef.current(data.communityId);
+        }
+
+        // Navigate to CommunityDetail screen
+        navigateToCommunityScreen('CommunityDetail', { communityId: data.communityId });
+
+        Logger.logUserAction('push_notification_deep_link', {
+          communityId: data.communityId,
           type: notificationType,
         });
       }

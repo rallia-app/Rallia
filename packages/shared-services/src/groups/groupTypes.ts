@@ -21,6 +21,7 @@
  * @property created_by - Player ID of the creator
  * @property created_at - ISO timestamp of creation
  * @property updated_at - ISO timestamp of last update
+ * @property sport_id - Optional sport association (null = both sports)
  */
 export interface Group {
   id: string;
@@ -34,6 +35,7 @@ export interface Group {
   created_by: string;
   created_at: string;
   updated_at: string;
+  sport_id: string | null;
 }
 
 /**
@@ -100,7 +102,14 @@ export interface GroupWithMembers extends Group {
 export interface GroupActivity {
   id: string;
   network_id: string;
-  activity_type: 'member_joined' | 'member_left' | 'member_promoted' | 'member_demoted' | 'game_created' | 'message_sent' | 'group_updated';
+  activity_type:
+    | 'member_joined'
+    | 'member_left'
+    | 'member_promoted'
+    | 'member_demoted'
+    | 'game_created'
+    | 'message_sent'
+    | 'group_updated';
   actor_id: string | null;
   target_id: string | null;
   metadata: Record<string, unknown> | null;
@@ -139,11 +148,13 @@ export interface GroupStats {
  * @property name - Required display name for the group
  * @property description - Optional group description
  * @property cover_image_url - Optional URL to cover image
+ * @property sport_id - Optional sport association (null/undefined = both sports)
  */
 export interface CreateGroupInput {
   name: string;
   description?: string;
   cover_image_url?: string;
+  sport_id?: string | null;
 }
 
 /**
@@ -157,6 +168,7 @@ export interface UpdateGroupInput {
   name?: string;
   description?: string;
   cover_image_url?: string;
+  sport_id?: string | null;
 }
 
 // ============================================================================
@@ -299,22 +311,22 @@ export interface CreatePlayedMatchInput {
   sportId: string;
   createdBy: string;
   matchDate: string; // YYYY-MM-DD format
-  
+
   // Match format
   format: 'singles' | 'doubles';
   expectation: 'friendly' | 'competitive';
-  
+
   // Location (optional)
   locationName?: string;
-  
+
   // Participants
   team1PlayerIds: string[]; // Current user + partner for doubles
   team2PlayerIds: string[]; // Opponent(s)
-  
+
   // Results (only for competitive)
   winnerId: 'team1' | 'team2';
   sets: SetScore[];
-  
+
   // Optional: Post to a group
   networkId?: string;
 }

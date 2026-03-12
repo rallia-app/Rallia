@@ -167,7 +167,7 @@ export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilit
   } = options;
 
   // Normalize whitespace before debouncing for consistent cache keys and cleaner queries
-  const normalizedQuery = searchQuery.trim().replace(/\s+/g, ' ');
+  const normalizedQuery = (searchQuery ?? '').trim().replace(/\s+/g, ' ');
   const debouncedQuery = useDebounce(normalizedQuery, debounceMs);
 
   // Check if we have all required params

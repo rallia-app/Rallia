@@ -56,9 +56,9 @@ CREATE TABLE IF NOT EXISTS public.facility_report (
 -- INDEXES
 -- ============================================================
 
-CREATE INDEX idx_facility_report_facility ON public.facility_report(facility_id);
-CREATE INDEX idx_facility_report_status ON public.facility_report(status);
-CREATE INDEX idx_facility_report_created ON public.facility_report(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_facility_report_facility ON public.facility_report(facility_id);
+CREATE INDEX IF NOT EXISTS idx_facility_report_status ON public.facility_report(status);
+CREATE INDEX IF NOT EXISTS idx_facility_report_created ON public.facility_report(created_at DESC);
 
 -- ============================================================
 -- TRIGGER: Auto-update updated_at
@@ -72,6 +72,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_facility_report_updated_at ON public.facility_report;
 CREATE TRIGGER trigger_facility_report_updated_at
   BEFORE UPDATE ON public.facility_report
   FOR EACH ROW
@@ -84,6 +85,7 @@ CREATE TRIGGER trigger_facility_report_updated_at
 ALTER TABLE public.facility_report ENABLE ROW LEVEL SECURITY;
 
 -- Players can create reports
+DROP POLICY IF EXISTS "Players can create facility reports" ON public.facility_report;
 CREATE POLICY "Players can create facility reports"
   ON public.facility_report
   FOR INSERT
@@ -91,6 +93,7 @@ CREATE POLICY "Players can create facility reports"
   WITH CHECK (reporter_id = auth.uid());
 
 -- Players can view their own submitted reports
+DROP POLICY IF EXISTS "Players can view own facility reports" ON public.facility_report;
 CREATE POLICY "Players can view own facility reports"
   ON public.facility_report
   FOR SELECT
@@ -98,6 +101,7 @@ CREATE POLICY "Players can view own facility reports"
   USING (reporter_id = auth.uid());
 
 -- Admins can view all reports
+DROP POLICY IF EXISTS "Admins can view all facility reports" ON public.facility_report;
 CREATE POLICY "Admins can view all facility reports"
   ON public.facility_report
   FOR SELECT
@@ -110,6 +114,7 @@ CREATE POLICY "Admins can view all facility reports"
   );
 
 -- Admins can update reports
+DROP POLICY IF EXISTS "Admins can update facility reports" ON public.facility_report;
 CREATE POLICY "Admins can update facility reports"
   ON public.facility_report
   FOR UPDATE

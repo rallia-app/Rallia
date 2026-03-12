@@ -35,11 +35,32 @@ import { Heading } from './foundation/Heading.native';
 import { Button } from './foundation/Button.native';
 import { VStack } from './layout/Stack.native';
 
+export interface ErrorBoundaryTranslations {
+  title?: string;
+  description?: string;
+  tryAgain?: string;
+  errorDetailsTitle?: string;
+  errorMessage?: string;
+  stackTrace?: string;
+  componentStack?: string;
+}
+
+const defaultTranslations: Required<ErrorBoundaryTranslations> = {
+  title: 'Oops! Something went wrong',
+  description: "We're sorry for the inconvenience. The app encountered an unexpected error.",
+  tryAgain: 'Try Again',
+  errorDetailsTitle: 'Error Details (Development Only)',
+  errorMessage: 'Error Message:',
+  stackTrace: 'Stack Trace:',
+  componentStack: 'Component Stack:',
+};
+
 interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
   onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
   onReset?: () => void;
+  translations?: ErrorBoundaryTranslations;
 }
 
 interface ErrorBoundaryState {
@@ -55,9 +76,15 @@ interface ErrorFallbackProps {
   error: Error | null;
   errorInfo: React.ErrorInfo | null;
   onReset?: () => void;
+  translations: Required<ErrorBoundaryTranslations>;
 }
 
-const ErrorFallback: React.FC<ErrorFallbackProps> = ({ error, errorInfo, onReset }) => {
+const ErrorFallback: React.FC<ErrorFallbackProps> = ({
+  error,
+  errorInfo,
+  onReset,
+  translations: t,
+}) => {
   const isDevelopment = __DEV__;
 
   return (
@@ -69,16 +96,16 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({ error, errorInfo, onReset
 
         <VStack spacing={8} align="center">
           <Heading level={2} align="center">
-            Oops! Something went wrong
+            {t.title}
           </Heading>
           <Text align="center" color="#666" size="base">
-            We're sorry for the inconvenience. The app encountered an unexpected error.
+            {t.description}
           </Text>
         </VStack>
 
         {onReset && (
           <Button variant="primary" onPress={onReset}>
-            Try Again
+            {t.tryAgain}
           </Button>
         )}
 
@@ -86,12 +113,12 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({ error, errorInfo, onReset
           <View style={styles.errorDetails}>
             <VStack spacing={12}>
               <Heading level={4} color="#D32F2F">
-                Error Details (Development Only)
+                {t.errorDetailsTitle}
               </Heading>
 
               <VStack spacing={8}>
                 <Text weight="bold" size="sm" color="#666">
-                  Error Message:
+                  {t.errorMessage}
                 </Text>
                 <View style={styles.errorBox}>
                   <Text size="sm" color="#D32F2F">
@@ -103,7 +130,7 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({ error, errorInfo, onReset
               {error.stack && (
                 <VStack spacing={8}>
                   <Text weight="bold" size="sm" color="#666">
-                    Stack Trace:
+                    {t.stackTrace}
                   </Text>
                   <View style={styles.errorBox}>
                     <Text size="xs" color="#333">
@@ -116,7 +143,7 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({ error, errorInfo, onReset
               {errorInfo?.componentStack && (
                 <VStack spacing={8}>
                   <Text weight="bold" size="sm" color="#666">
-                    Component Stack:
+                    {t.componentStack}
                   </Text>
                   <View style={styles.errorBox}>
                     <Text size="xs" color="#333">
@@ -240,11 +267,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       }
 
       // Render default fallback
+      const mergedTranslations = { ...defaultTranslations, ...this.props.translations };
       return (
         <ErrorFallback
           error={this.state.error}
           errorInfo={this.state.errorInfo}
           onReset={this.handleReset}
+          translations={mergedTranslations}
         />
       );
     }

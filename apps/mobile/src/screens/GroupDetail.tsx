@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
@@ -48,6 +48,8 @@ import {
   useScoreConfirmationsRealtime,
   useConversationUnreadCount,
   useConversationUnreadRealtime,
+  useSports,
+  usePlayer,
   type GroupActivity as GroupActivityType,
   type GroupMatch,
 } from '@rallia/shared-hooks';
@@ -60,6 +62,7 @@ import {
   PendingScoresSection,
   type MatchType,
 } from '../features/matches';
+import { GroupFavoriteFacilitiesSelector } from '../features/groups/components';
 
 const HEADER_HEIGHT = 140;
 
@@ -86,8 +89,31 @@ export default function GroupDetailScreen() {
   const { t } = useTranslation();
   const { guardAction } = useRequireOnboarding();
   const { selectedSport } = useSport();
+  const { sports } = useSports();
+  const { player } = usePlayer();
   const playerId = session?.user?.id;
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
+
+  // Get all sport IDs and names for displaying sport tags on facilities
+  const { allSportIds, sportNames } = useMemo(() => {
+    if (!sports || sports.length === 0) {
+      return { allSportIds: [] as string[], sportNames: [] as string[] };
+    }
+    return {
+      allSportIds: sports.map(s => s.id),
+      sportNames: sports.map(s => s.name.charAt(0).toUpperCase() + s.name.slice(1)),
+    };
+  }, [sports]);
+
+  // Helper to get sport name from sport_id
+  const getSportName = useCallback(
+    (sportId: string | null): string | null => {
+      if (!sportId || !sports) return null;
+      const sport = sports.find(s => s.id === sportId);
+      return sport?.name ?? null;
+    },
+    [sports]
+  );
 
   const [activeTab, setActiveTab] = useState<TabKey>('home');
   const [leaderboardPeriod, setLeaderboardPeriod] = useState<30 | 90 | 180 | 0>(30);
@@ -422,7 +448,47 @@ export default function GroupDetailScreen() {
               />
             )}
 
-            {/* Stats Card */}
+            {/* Group Stats */}
+            <View
+              style={[
+                styles.groupStatsCard,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
+              <Text weight="semibold" size="base" style={{ color: colors.text, marginBottom: 12 }}>
+                {t('groups.detail.groupStats')}
+              </Text>
+              <View style={styles.groupStatsList}>
+                <View style={styles.groupStatItem}>
+                  <View style={[styles.groupStatIcon, { backgroundColor: '#5AC8FA20' }]}>
+                    <Ionicons name="people-outline" size={20} color="#5AC8FA" />
+                  </View>
+                  <View style={styles.groupStatInfo}>
+                    <Text size="sm" style={{ color: colors.textSecondary }}>
+                      {t('groups.detail.totalMembers')}
+                    </Text>
+                    <Text weight="semibold" size="base" style={{ color: colors.text }}>
+                      {group?.member_count ?? 0}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.groupStatItem}>
+                  <View style={[styles.groupStatIcon, { backgroundColor: '#FF950015' }]}>
+                    <Ionicons name="lock-closed" size={20} color="#FF9500" />
+                  </View>
+                  <View style={styles.groupStatInfo}>
+                    <Text size="sm" style={{ color: colors.textSecondary }}>
+                      {t('groups.detail.visibility')}
+                    </Text>
+                    <Text weight="semibold" size="base" style={{ color: colors.text }}>
+                      {t('groups.detail.private')}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            {/* Activity Stats Card */}
             <View
               style={[
                 styles.statsCard,
@@ -556,6 +622,29 @@ export default function GroupDetailScreen() {
                 </Text>
               </View>
             )}
+
+            {/* Favorite Facilities Section */}
+            <View
+              style={[
+                styles.facilitiesCard,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
+              <GroupFavoriteFacilitiesSelector
+                groupId={groupId}
+                currentPlayerId={playerId ?? null}
+                sportId={group?.sport_id ?? null}
+                allSportIds={allSportIds}
+                sportNames={sportNames}
+                latitude={player?.latitude ?? null}
+                longitude={player?.longitude ?? null}
+                colors={colors}
+                t={t}
+                onNavigateToFacility={facilityId =>
+                  navigation.navigate('FacilityDetail', { facilityId })
+                }
+              />
+            </View>
 
             {/* Leaderboard Preview */}
             <View
@@ -1298,9 +1387,44 @@ export default function GroupDetailScreen() {
             { backgroundColor: colors.cardBackground, borderColor: colors.border },
           ]}
         >
-          <Text weight="bold" size="xl" style={{ color: colors.text }}>
-            {group.name}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text weight="bold" size="xl" style={{ color: colors.text }}>
+              {group.name}
+            </Text>
+            {/* Sport icon(s) - show both when null, single when specific */}
+            {(() => {
+              const sportName = getSportName(group.sport_id);
+              // null = both sports
+              if (!group.sport_id) {
+                return (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
+                    <MaterialCommunityIcons name="tennis" size={18} color={colors.textMuted} />
+                    <Text style={{ color: colors.textMuted, marginHorizontal: 2, fontSize: 12 }}>
+                      +
+                    </Text>
+                    <MaterialCommunityIcons name="badminton" size={18} color={colors.textMuted} />
+                  </View>
+                );
+              }
+              // Tennis
+              if (sportName?.toLowerCase() === 'tennis') {
+                return (
+                  <View style={{ marginLeft: 8 }}>
+                    <MaterialCommunityIcons name="tennis" size={20} color={colors.textMuted} />
+                  </View>
+                );
+              }
+              // Pickleball
+              if (sportName?.toLowerCase() === 'pickleball') {
+                return (
+                  <View style={{ marginLeft: 8 }}>
+                    <MaterialCommunityIcons name="badminton" size={20} color={colors.textMuted} />
+                  </View>
+                );
+              }
+              return null;
+            })()}
+          </View>
 
           {/* Members Row */}
           <TouchableOpacity
@@ -1382,6 +1506,21 @@ export default function GroupDetailScreen() {
                 </Text>
               </TouchableOpacity>
             )}
+            <TouchableOpacity
+              style={[styles.menuButton, { borderColor: colors.primary }]}
+              onPress={() =>
+                SheetManager.show('invite-link', {
+                  payload: {
+                    groupId,
+                    groupName: group?.name ?? '',
+                    currentUserId: playerId ?? '',
+                    isModerator: isModerator ?? false,
+                  },
+                })
+              }
+            >
+              <Ionicons name="share-outline" size={20} color={colors.primary} />
+            </TouchableOpacity>
             <TouchableOpacity
               style={[styles.menuButton, { borderColor: colors.border }]}
               onPress={handleShowOptions}
@@ -1624,6 +1763,31 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 16,
   },
+  groupStatsCard: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  groupStatsList: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  groupStatItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  groupStatIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  groupStatInfo: {
+    flex: 1,
+  },
   statsCard: {
     padding: 20,
     borderRadius: 16,
@@ -1664,6 +1828,11 @@ const styles = StyleSheet.create({
   aboutHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  facilitiesCard: {
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
   },
   leaderboardPreview: {
     padding: 20,

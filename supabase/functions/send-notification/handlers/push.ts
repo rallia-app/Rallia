@@ -36,6 +36,8 @@ function getCategoryId(type: string): string | undefined {
     case 'match_invitation':
     case 'match_join_request':
       return 'match_action'; // Can have Accept/Decline actions
+    case 'community_join_request':
+      return 'community_action'; // Can have Accept/Decline actions
     case 'feedback_request':
       return 'feedback_action'; // Can have Rate action
     case 'new_message':

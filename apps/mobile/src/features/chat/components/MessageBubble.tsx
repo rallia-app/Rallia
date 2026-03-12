@@ -293,7 +293,7 @@ function MessageBubbleComponent({
               style={[
                 styles.bubble,
                 isOwnMessage
-                  ? { backgroundColor: primary[500] }
+                  ? { backgroundColor: primary[600] }
                   : { backgroundColor: isDark ? colors.card : '#F0F0F0' },
                 isDeleted && styles.deletedBubble,
                 // Search highlight styling
@@ -375,13 +375,13 @@ function MessageBubbleComponent({
                         <Ionicons
                           name="checkmark"
                           size={12}
-                          color="rgba(255,255,255,0.9)"
+                          color="#34B7F1"
                           style={styles.checkFirst}
                         />
                         <Ionicons
                           name="checkmark"
                           size={12}
-                          color="rgba(255,255,255,0.9)"
+                          color="#34B7F1"
                           style={styles.checkSecond}
                         />
                       </View>

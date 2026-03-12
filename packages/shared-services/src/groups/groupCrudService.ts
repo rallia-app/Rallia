@@ -68,6 +68,7 @@ export async function createGroup(playerId: string, input: CreateGroupInput): Pr
       cover_image_url: input.cover_image_url || null,
       is_private: true, // Groups are always private
       created_by: playerId,
+      sport_id: input.sport_id || null, // null means both sports
     })
     .select()
     .single();
@@ -151,37 +152,21 @@ export async function getGroupWithMembers(groupId: string): Promise<GroupWithMem
 /**
  * Get all groups for a player (groups they are a member of)
  * Only returns networks with type 'player_group', not communities
+ * @param playerId - The player's ID
+ * @param sportId - Optional sport ID to filter by (null returns groups for all sports)
  */
-export async function getPlayerGroups(playerId: string): Promise<Group[]> {
-  // First get the player_group type ID
-  const typeId = await getPlayerGroupTypeId();
-
-  const { data, error } = await supabase
-    .from('network_member')
-    .select(
-      `
-      network:network_id (
-        *
-      )
-    `
-    )
-    .eq('player_id', playerId)
-    .eq('status', 'active');
+export async function getPlayerGroups(playerId: string, sportId?: string | null): Promise<Group[]> {
+  const { data, error } = await supabase.rpc('get_player_groups', {
+    p_player_id: playerId,
+    p_sport_id: sportId || null,
+  });
 
   if (error) {
     console.error('Error fetching player groups:', error);
     throw new Error(error.message);
   }
 
-  // Extract networks from the join and filter to only player_group type
-  // The raw database row includes network_type_id which we filter on
-  /* eslint-disable @typescript-eslint/no-explicit-any */
-  const groups = (data || [])
-    .map((d: any) => d.network)
-    .filter((network: any) => network && network.network_type_id === typeId) as Group[];
-  /* eslint-enable @typescript-eslint/no-explicit-any */
-
-  return groups;
+  return (data || []) as Group[];
 }
 
 // ============================================================================
@@ -215,6 +200,9 @@ export async function updateGroup(
   }
   if (input.cover_image_url !== undefined) {
     updateData.cover_image_url = input.cover_image_url;
+  }
+  if (input.sport_id !== undefined) {
+    updateData.sport_id = input.sport_id;
   }
 
   const { data, error } = await supabase

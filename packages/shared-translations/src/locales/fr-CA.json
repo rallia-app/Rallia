@@ -14,6 +14,7 @@
     "delete": "Supprimer",
     "leave": "Quitter",
     "edit": "Modifier",
+    "update": "Modifier",
     "back": "Retour",
     "goBack": "Retourner",
     "next": "Suivant",
@@ -82,7 +83,8 @@
       "timeSeparator": " • ",
       "slots": "créneau(s)"
     },
-    "locale": "fr-CA"
+    "locale": "fr-CA",
+    "by": "par"
   },
   "auth": {
     "signIn": "Connexion",
@@ -179,6 +181,8 @@
       "match_starting_soon": "Partie\nimminente",
       "match_check_in_available": "Enregistrement\ndisponible",
       "match_new_available": "Nouvelle partie\ndans un groupe",
+      "match_spot_opened": "Place\nlibérée",
+      "nearby_match_available": "Partie\nà proximité",
       "player_kicked": "Retiré\nde la partie",
       "player_left": "Joueur\nparti",
       "new_message": "Nouveau\nmessage",
@@ -188,11 +192,12 @@
       "support": "Support",
       "chat": "Message",
       "system": "Système",
-      "feedback_request": "Demande\nd'évaluation",
-      "feedback_reminder": "Rappel\nd'évaluation",
-      "score_confirmation": "Confirmation\ndu score",
-      "match_spot_opened": "Place\nlibérée",
-      "nearby_match_available": "Partie\nà proximité"
+      "feedback_request": "Demande d'évaluation",
+      "feedback_reminder": "Rappel d'évaluation",
+      "score_confirmation": "Confirmation du score",
+      "community_join_request": "Demande d'adhésion",
+      "community_join_accepted": "Demande approuvée",
+      "community_join_rejected": "Demande refusée"
     },
     "categories": {
       "match": "Notifications de parties",
@@ -299,16 +304,20 @@
         "body": "Votre score et évaluation de {sportName} avec {opponentNames} sont toujours en attente — complétez-les avant la date limite."
       },
       "score_confirmation": {
-        "title": "Confirmez votre score",
-        "body": "{playerName} a soumis un score pour votre partie de {sportName}. Veuillez confirmer ou corriger."
+        "title": "Confirmer le score",
+        "body": "{playerName} a soumis un score pour votre partie de {sportName}. Veuillez confirmer ou contester."
       },
-      "match_spot_opened": {
-        "title": "Une place s'est libérée!",
-        "body": "Une place s'est libérée dans une partie de {sportName}{startTime}{locationName}. Rejoignez maintenant!"
+      "community_join_request": {
+        "title": "Nouvelle demande d'adhésion",
+        "body": "{requesterName} souhaite rejoindre {communityName}"
       },
-      "nearby_match_available": {
-        "title": "Nouvelle partie à proximité",
-        "body": "Une partie de {sportName} est disponible près de chez vous{startTime}{locationName}"
+      "community_join_accepted": {
+        "title": "Demande approuvée!",
+        "body": "Vous êtes maintenant membre de {communityName}"
+      },
+      "community_join_rejected": {
+        "title": "Demande non approuvée",
+        "body": "Votre demande pour rejoindre {communityName} n'a pas été approuvée"
       }
     }
   },
@@ -796,7 +805,8 @@
         "levelProofInfoTitle": "Qu'est-ce qu'une preuve de niveau?",
         "levelProofInfoMessage": "Une preuve de niveau est tout élément qui permet à quelqu'un qui n'a jamais joué contre vous de se faire une évaluation juste et convaincante de votre niveau de jeu réel.",
         "referencesInfoTitle": "Qu'est-ce qu'une référence?",
-        "referencesInfoMessage": "Une référence est une recommandation d'un joueur certifié à votre niveau ou supérieur qui a joué avec vous et peut attester de votre niveau. Les références aident les autres joueurs à faire confiance à votre classement."
+        "referencesInfoMessage": "Une référence est une recommandation d'un joueur certifié à votre niveau ou supérieur qui a joué avec vous et peut attester de votre niveau. Les références aident les autres joueurs à faire confiance à votre classement.",
+        "encouragedLevelMessage": "Les joueurs de niveau {level}+ sont fortement encouragés à fournir une preuve de leur niveau pour renforcer la confiance dans la communauté."
       },
       "referenceRequest": {
         "title": "Demander une référence",
@@ -1683,6 +1693,8 @@
     "noPlayersFoundMatching": "Aucun joueur trouvé pour \"{query}\"",
     "noPlayersAvailable": "Aucun joueur disponible",
     "continueSelected": "Continuer ({count} sélectionné(s))",
+    "startChat": "Démarrer la discussion",
+    "failedToCreateConversation": "Échec de la création de la conversation. Veuillez réessayer.",
     "groupDetails": "Détails du groupe",
     "addPhoto": "Ajouter une photo",
     "groupName": "Nom du groupe",
@@ -1797,6 +1809,7 @@
       "public": "Public",
       "private": "Privé"
     },
+    "certified": "Certifiée",
     "stats": {
       "title": "Statistiques de la communauté",
       "totalMembers": "Membres totaux",
@@ -1989,7 +2002,23 @@
     "moderatorAddedToCommunity": "Modérateur ajouté à la communauté",
     "memberAddedToCommunity": "Membre ajouté à la communauté",
     "membershipRequestSubmitted": "Demande d'adhésion soumise pour approbation",
-    "failedToAddMember": "Échec de l'ajout du membre"
+    "failedToAddMember": "Échec de l'ajout du membre",
+    "sportSelection": "Sport",
+    "sportBoth": "Les deux",
+    "sportTennis": "Tennis",
+    "sportPickleball": "Pickleball",
+    "sportSelectionHint": "Choisissez un sport pour filtrer qui voit cette communauté",
+    "favoriteFacilities": "Installations favorites",
+    "favoriteFacilitiesOptional": "Installations favorites (Optionnel)",
+    "noFavoriteFacilities": "Aucune installation favorite pour le moment",
+    "addFavoriteFacilitiesHint": "Ajoutez les installations où votre communauté joue",
+    "addFavoriteFacility": "Ajouter une installation favorite",
+    "favoriteFacilitiesHint": "Vous pouvez toujours ajouter ou modifier les installations plus tard",
+    "searchFacilityToAdd": "Rechercher une installation...",
+    "addAnotherFacility": "Ajouter une autre installation",
+    "noFacilitiesFound": "Aucune installation trouvée",
+    "typeToSearchFacility": "Tapez pour rechercher des installations",
+    "locationRequiredForFacilities": "Emplacement requis pour rechercher des installations"
   },
   "groups": {
     "title": "Groupes",
@@ -2012,6 +2041,7 @@
       "createButton": "Créer un groupe",
       "scanButton": "Scanner le code QR"
     },
+    "listInfoMessage": "Les groupes sont des communautés privées limitées à un maximum de {maxMembers} joueurs.",
     "welcome": {
       "title": "Bienvenue!",
       "joinedMessage": "Vous avez rejoint \"{groupName}\" avec succès"
@@ -2034,7 +2064,7 @@
     "addCoverImage": "Ajouter une image de couverture",
     "changeImage": "Changer",
     "removeImage": "Supprimer",
-    "createGroupHint": "Les groupes peuvent avoir jusqu'à 10 membres. En tant que créateur, vous serez modérateur avec la possibilité d'ajouter et retirer des membres.",
+    "createGroupHint": "Les groupes peuvent avoir jusqu'à {maxMembers} membres. En tant que créateur, vous serez modérateur avec la possibilité d'ajouter et retirer des membres.",
     "permissionRequired": "Permission requise",
     "photoAccessRequired": "Veuillez autoriser l'accès à vos photos pour ajouter une image au groupe.",
     "photoAccessRequiredEdit": "Veuillez autoriser l'accès à vos photos pour changer l'image du groupe.",
@@ -2201,7 +2231,11 @@
       "noRecentActivity": "Aucune activité récente",
       "addMember": "Ajouter un membre",
       "shareInviteLink": "Partager le lien d'invitation",
-      "noRecentGames": "Aucune partie récente"
+      "noRecentGames": "Aucune partie récente",
+      "groupStats": "Stats du groupe",
+      "totalMembers": "Membres total",
+      "visibility": "Visibilité",
+      "private": "Privé"
     },
     "options": {
       "shareInviteLink": "Partager le lien d'invitation",
@@ -2234,7 +2268,23 @@
       "minutesAgo": "Il y a {count} min",
       "hoursAgo": "Il y a {count}h",
       "daysAgo": "Il y a {count}j"
-    }
+    },
+    "sportSelection": "Sport",
+    "sportBoth": "Les deux",
+    "sportTennis": "Tennis",
+    "sportPickleball": "Pickleball",
+    "sportSelectionHint": "Choisissez un sport pour filtrer qui voit ce groupe",
+    "favoriteFacilities": "Terrains favoris",
+    "favoriteFacilitiesOptional": "Terrains favoris (Optionnel)",
+    "noFavoriteFacilities": "Aucun terrain favori",
+    "addFavoriteFacilitiesHint": "Ajoutez les terrains où votre groupe joue",
+    "addFavoriteFacility": "Ajouter un terrain favori",
+    "addAnotherFacility": "Ajouter un autre terrain",
+    "searchFacilityToAdd": "Rechercher un terrain à ajouter",
+    "noFacilitiesFound": "Aucun terrain trouvé",
+    "typeToSearchFacility": "Tapez pour rechercher des terrains",
+    "locationRequiredForFacilities": "La localisation est requise pour rechercher des terrains",
+    "favoriteFacilitiesHint": "Vous pouvez toujours ajouter ou changer les terrains plus tard"
   },
   "playerDirectory": {
     "title": "Répertoire des joueurs",
@@ -2252,6 +2302,10 @@
     "nearby": "À proximité",
     "failedToLoad": "Échec du chargement des joueurs",
     "checkConnection": "Veuillez vérifier votre connexion et réessayer",
+    "favorites": {
+      "addedToFavorites": "Ajouté aux favoris",
+      "removedFromFavorites": "Retiré des favoris"
+    },
     "filters": {
       "title": "Filtres",
       "favorites": "Favoris",
@@ -5284,6 +5338,119 @@
         }
       }
     },
+    "networks": {
+      "title": "Réseaux",
+      "description": "Gérer les groupes et communautés de la plateforme.",
+      "searchPlaceholder": "Rechercher des réseaux...",
+      "noResults": "Aucun réseau trouvé",
+      "noResultsDescription": "Essayez d'ajuster votre recherche ou vos filtres",
+      "totalNetworks": "{count, plural, one {# réseau} other {# réseaux}}",
+      "empty": "Aucun réseau pour le moment",
+      "emptyDescription": "Les réseaux apparaîtront ici une fois créés",
+      "tryDifferentSearch": "Essayez un autre terme de recherche",
+      "members": "membres",
+      "unknownCreator": "Créateur inconnu",
+      "networksFound": "réseaux trouvés",
+      "private": "Privé",
+      "public": "Public",
+      "certified": "Certifié",
+      "details": "Détails",
+      "createdBy": "Créé par",
+      "createdAt": "Créé le",
+      "updatedAt": "Mis à jour",
+      "inviteCode": "Code d'invitation",
+      "membersList": "Liste des membres",
+      "favoriteFacilities": "Installations favorites",
+      "about": "À propos",
+      "accessDeniedDescription": "Vous n'avez pas la permission de voir cette section",
+      "types": {
+        "all": "Tous",
+        "groups": "Groupes",
+        "communities": "Communautés",
+        "group": "Groupe",
+        "community": "Communauté"
+      },
+      "filters": {
+        "all": "Tous",
+        "certified": "Certifié",
+        "uncertified": "Non certifié",
+        "sportTitle": "Sport",
+        "certificationTitle": "Certification",
+        "privacyTitle": "Confidentialité",
+        "privacyAll": "Tous types",
+        "public": "Public",
+        "private": "Privé",
+        "allSports": "Tous les sports"
+      },
+      "card": {
+        "members": "{count, plural, one {# membre} other {# membres}}",
+        "group": "Groupe",
+        "community": "Communauté",
+        "certified": "Certifié",
+        "private": "Privé"
+      },
+      "detail": {
+        "title": "Détails du réseau",
+        "info": "Information",
+        "members": "Membres",
+        "facilities": "Installations",
+        "noFacilities": "Aucune installation",
+        "stats": {
+          "members": "Membres",
+          "facilities": "Installations",
+          "created": "Créé"
+        }
+      },
+      "certification": {
+        "title": "Certification",
+        "description": "Les communautés certifiées sont vérifiées et affichent un badge aux utilisateurs.",
+        "certified": "Certifié",
+        "notCertified": "Non certifié",
+        "isCertified": "Cette communauté est certifiée",
+        "certify": "Certifier la communauté",
+        "revoke": "Révoquer la certification",
+        "uncertify": "Décertifier",
+        "uncertifyNotes": "Notes de décertification",
+        "certifyNotes": "Notes de certification",
+        "onlyForCommunities": "La certification n'est disponible que pour les communautés.",
+        "notes": "Notes de certification",
+        "notesPlaceholder": "Ajouter des notes sur cette certification...",
+        "certifiedBy": "Certifié par {name}",
+        "certifiedAt": "Certifié le {date}",
+        "confirmCertify": "Êtes-vous sûr de vouloir certifier cette communauté?",
+        "confirmRevoke": "Êtes-vous sûr de vouloir révoquer la certification de cette communauté?",
+        "certifySuccess": "La communauté a été certifiée",
+        "revokeSuccess": "La certification a été révoquée",
+        "certifyError": "Échec de la certification de la communauté",
+        "revokeError": "Échec de la révocation de la certification"
+      },
+      "maxMembers": {
+        "title": "Max membres du groupe",
+        "description": "Nombre maximum de membres autorisés par groupe",
+        "invalidValue": "Veuillez entrer un nombre valide entre 2 et 100",
+        "saveSuccess": "Paramètre du nombre maximum de membres sauvegardé avec succès",
+        "saveError": "Échec de la sauvegarde du paramètre du nombre maximum de membres"
+      },
+      "settings": {
+        "title": "Paramètres des réseaux",
+        "maxMembersPerGroup": "Maximum de membres par groupe",
+        "maxMembersDescription": "Définir le nombre maximum de membres autorisés dans un groupe.",
+        "saveSuccess": "Paramètres sauvegardés avec succès",
+        "saveError": "Échec de la sauvegarde des paramètres"
+      },
+      "delete": {
+        "dangerZone": "Zone de danger",
+        "title": "Supprimer le réseau",
+        "description": "La suppression de ce réseau le supprimera définitivement et notifiera tous les membres. Cette action est irréversible.",
+        "reasonLabel": "Raison de la suppression (optionnel)",
+        "reasonPlaceholder": "Expliquez pourquoi ce réseau est supprimé...",
+        "deleteGroup": "Supprimer le groupe",
+        "deleteCommunity": "Supprimer la communauté",
+        "confirmMessage": "Êtes-vous sûr de vouloir supprimer « {name} »? Ce {type} a {count} membres qui seront notifiés.",
+        "success": "« {name} » a été supprimé. {count} membres ont été notifiés.",
+        "error": "Échec de la suppression du réseau"
+      }
+    },
     "analytics": {
       "title": "Analytique",
       "description": "Analyses et informations.",
@@ -7248,5 +7415,28 @@
     "selectImageSource": "Sélectionner la source de l'image",
     "submitAnother": "Soumettre un autre",
     "backToSettings": "Retour aux paramètres"
+  },
+  "bugReport": {
+    "title": "Signaler un bogue",
+    "subtitle": "Secousse détectée ! Décrivez ce qui s'est passé.",
+    "subtitleMenu": "Décrivez ce qui s'est passé.",
+    "subjectLabel": "Sujet",
+    "subjectPlaceholder": "Résumé du bogue",
+    "descriptionLabel": "Que s'est-il passé ?",
+    "descriptionPlaceholder": "Décrivez le problème rencontré...",
+    "moduleLabel": "Où cela s'est-il produit ?",
+    "modules": {
+      "matches": "Matchs",
+      "chat": "Messages",
+      "profile": "Profil",
+      "other": "Autre"
+    },
+    "minChars": "Minimum 10 caractères",
+    "submit": "Envoyer le rapport",
+    "submitting": "Envoi en cours...",
+    "cancel": "Annuler",
+    "success": "Rapport de bogue envoyé ! Merci d'aider à améliorer Rallia.",
+    "error": "Échec de l'envoi. Veuillez réessayer.",
+    "fullFeedback": "Plus d'options"
   }
 }
