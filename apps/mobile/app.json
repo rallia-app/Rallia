@@ -98,7 +98,19 @@
           "enableGooglePay": false
         }
       ],
-      "@rnmapbox/maps"
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsImpl": "mapbox"
+        }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "rallia",
+          "project": "react-native"
+        }
+      ]
     ],
     "extra": {
       "eas": {

@@ -4,12 +4,7 @@
  */
 
 import { supabase } from '../supabase';
-import type {
-  Message,
-  MessageWithSender,
-  MessageStatus,
-  SendMessageInput,
-} from './chatTypes';
+import type { Message, MessageWithSender, MessageStatus, SendMessageInput } from './chatTypes';
 
 // ============================================================================
 // READ OPERATIONS
@@ -31,7 +26,8 @@ export async function getMessages(
 
   let query = supabase
     .from('message')
-    .select(`
+    .select(
+      `
       id,
       conversation_id,
       sender_id,
@@ -53,7 +49,8 @@ export async function getMessages(
           profile_picture_url
         )
       )
-    `)
+    `
+    )
     .eq('conversation_id', conversationId)
     .is('deleted_at', null) // Don't fetch soft-deleted messages
     .order('created_at', { ascending: false })
@@ -73,15 +70,16 @@ export async function getMessages(
   // Get reply_to message data for messages that have replies
   const messagesWithReplies = data || [];
   const replyToIds = messagesWithReplies
-    .filter((m) => m.reply_to_message_id)
-    .map((m) => m.reply_to_message_id as string);
+    .filter(m => m.reply_to_message_id)
+    .map(m => m.reply_to_message_id as string);
 
   const replyToMap = new Map<string, { id: string; content: string; sender_name: string }>();
 
   if (replyToIds.length > 0) {
     const { data: replyMessages } = await supabase
       .from('message')
-      .select(`
+      .select(
+        `
         id,
         content,
         sender:player!message_sender_id_fkey (
@@ -89,7 +87,8 @@ export async function getMessages(
             first_name
           )
         )
-      `)
+      `
+      )
       .in('id', replyToIds);
 
     if (replyMessages) {
@@ -104,12 +103,12 @@ export async function getMessages(
     }
   }
 
-  return messagesWithReplies.map((msg) => ({
+  return messagesWithReplies.map(msg => ({
     ...msg,
     status: (msg.status || 'sent') as MessageStatus,
     read_by: msg.read_by as string[] | null,
     sender: msg.sender as unknown as MessageWithSender['sender'],
-    reply_to: msg.reply_to_message_id ? replyToMap.get(msg.reply_to_message_id) ?? null : null,
+    reply_to: msg.reply_to_message_id ? (replyToMap.get(msg.reply_to_message_id) ?? null) : null,
   }));
 }
 
@@ -137,7 +136,8 @@ export async function sendMessage(input: SendMessageInput): Promise<MessageWithS
   const { data, error } = await supabase
     .from('message')
     .insert(insertData)
-    .select(`
+    .select(
+      `
       id,
       conversation_id,
       sender_id,
@@ -159,7 +159,8 @@ export async function sendMessage(input: SendMessageInput): Promise<MessageWithS
           profile_picture_url
         )
       )
-    `)
+    `
+    )
     .single();
 
   if (error) {
@@ -175,11 +176,12 @@ export async function sendMessage(input: SendMessageInput): Promise<MessageWithS
 
   // Build reply_to data if this is a reply
   let replyTo: { id: string; content: string; sender_name: string } | null = null;
-  
+
   if (input.reply_to_message_id) {
     const { data: replyMessage } = await supabase
       .from('message')
-      .select(`
+      .select(
+        `
         id,
         content,
         sender:player!message_sender_id_fkey (
@@ -187,7 +189,8 @@ export async function sendMessage(input: SendMessageInput): Promise<MessageWithS
             first_name
           )
         )
-      `)
+      `
+      )
       .eq('id', input.reply_to_message_id)
       .single();
 
@@ -212,20 +215,68 @@ export async function sendMessage(input: SendMessageInput): Promise<MessageWithS
 
 /**
  * Mark messages as read up to a certain point
+ * Updates both conversation_participant.last_read_at AND message.status
+ * Uses RPC function to bypass RLS (since recipient is not the sender)
  */
-export async function markMessagesAsRead(
-  conversationId: string,
-  playerId: string
-): Promise<void> {
-  const { error } = await supabase
+export async function markMessagesAsRead(conversationId: string, playerId: string): Promise<void> {
+  // Update the participant's last_read_at
+  const { error: participantError } = await supabase
     .from('conversation_participant')
     .update({ last_read_at: new Date().toISOString() })
     .eq('conversation_id', conversationId)
     .eq('player_id', playerId);
 
+  if (participantError) {
+    console.error('Error updating participant last_read_at:', participantError);
+    throw participantError;
+  }
+
+  // Use RPC function to update message status to 'read'
+  // This bypasses RLS which only allows sender to update their own messages
+  const { error: messageError } = await supabase.rpc('mark_messages_as_read', {
+    p_conversation_id: conversationId,
+    p_reader_id: playerId,
+  });
+
+  if (messageError) {
+    console.error('Error updating message status to read:', messageError);
+    // Don't throw here - the participant update succeeded,
+    // and this is a secondary update for status display
+  }
+}
+
+/**
+ * Mark messages as delivered when recipient receives/fetches them
+ * Called when messages are fetched or received via realtime
+ * Uses RPC function to bypass RLS
+ */
+export async function markMessagesAsDelivered(
+  conversationId: string,
+  recipientId: string
+): Promise<void> {
+  // Use RPC function to update message status to 'delivered'
+  const { error } = await supabase.rpc('mark_messages_as_delivered', {
+    p_conversation_id: conversationId,
+    p_recipient_id: recipientId,
+  });
+
   if (error) {
-    console.error('Error marking messages as read:', error);
-    throw error;
+    console.error('Error updating message status to delivered:', error);
+    // Don't throw - this is a non-critical update
+  }
+}
+
+/**
+ * Mark a single message as delivered (for realtime incoming messages)
+ * Uses RPC function to bypass RLS
+ */
+export async function markMessageAsDelivered(messageId: string): Promise<void> {
+  const { error } = await supabase.rpc('mark_message_as_delivered', {
+    p_message_id: messageId,
+  });
+
+  if (error) {
+    console.error('Error updating single message status to delivered:', error);
   }
 }
 
@@ -233,14 +284,11 @@ export async function markMessagesAsRead(
  * Soft delete a message (shows "This message was deleted")
  * Only the sender can delete their own messages
  */
-export async function deleteMessage(
-  messageId: string,
-  senderId: string
-): Promise<void> {
+export async function deleteMessage(messageId: string, senderId: string): Promise<void> {
   // Soft delete - set deleted_at timestamp
   const { error } = await supabase
     .from('message')
-    .update({ 
+    .update({
       deleted_at: new Date().toISOString(),
       content: '', // Clear content for privacy
     })
@@ -278,25 +326,24 @@ export async function editMessage(
     throw error;
   }
 
-  return data ? {
-    ...data,
-    status: (data.status || 'sent') as MessageStatus,
-    read_by: data.read_by as string[] | null,
-  } : null;
+  return data
+    ? {
+        ...data,
+        status: (data.status || 'sent') as MessageStatus,
+        read_by: data.read_by as string[] | null,
+      }
+    : null;
 }
 
 /**
  * Clear all messages in a conversation for a specific user
  * This soft-deletes messages sent by the user only
  */
-export async function clearChatForUser(
-  conversationId: string,
-  playerId: string
-): Promise<number> {
+export async function clearChatForUser(conversationId: string, playerId: string): Promise<number> {
   // Soft delete all messages sent by this user in this conversation
   const { data, error } = await supabase
     .from('message')
-    .update({ 
+    .update({
       deleted_at: new Date().toISOString(),
       content: '', // Clear content for privacy
     })

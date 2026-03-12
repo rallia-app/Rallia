@@ -1,9 +1,10 @@
 /**
  * CreateCommunityModal
  * Modal for creating a new community with visibility toggle
+ * Includes optional facility selection during creation
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -15,16 +16,20 @@ import {
   Switch,
   ScrollView,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 
-import { Text } from '@rallia/shared-components';
+import { Text, useToast } from '@rallia/shared-components';
 import { useRequireOnboarding, useThemeStyles, useTranslation } from '../../../hooks';
 import { uploadImage } from '../../../services/imageUpload';
 import { primary, radiusPixels, spacingPixels } from '@rallia/design-system';
-import { useCreateCommunity } from '@rallia/shared-hooks';
+import { useCreateCommunity, useSports, useFacilitySearch, usePlayer } from '@rallia/shared-hooks';
+import { supabase, Logger } from '@rallia/shared-services';
+import type { FacilitySearchResult } from '@rallia/shared-types';
+
+type SportOption = 'both' | 'tennis' | 'pickleball';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { CommunityStackParamList } from '../../../navigation/types';
 
@@ -35,39 +40,134 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
   const { t } = useTranslation();
   const { guardAction } = useRequireOnboarding();
   const navigation = useNavigation<NavigationProp<CommunityStackParamList>>();
+  const toast = useToast();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [isPublic, setIsPublic] = useState(true);
+  const [selectedSport, setSelectedSport] = useState<SportOption>('both');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Facility selection state
+  const [selectedFacilities, setSelectedFacilities] = useState<FacilitySearchResult[]>([]);
+  const [facilitySearchQuery, setFacilitySearchQuery] = useState('');
+  const [showFacilitySearch, setShowFacilitySearch] = useState(false);
+
   const createCommunityMutation = useCreateCommunity();
+  const { sports } = useSports();
+  const { player } = usePlayer();
+
+  // Get all sport IDs and names for displaying sport tags on facilities
+  const { allSportIds, sportNames } = useMemo(() => {
+    if (!sports || sports.length === 0) {
+      return { allSportIds: [], sportNames: [] };
+    }
+    return {
+      allSportIds: sports.map(s => s.id),
+      sportNames: sports.map(s => s.name.charAt(0).toUpperCase() + s.name.slice(1)),
+    };
+  }, [sports]);
+
+  // Helper to get sport labels for a facility
+  const getSportLabels = useCallback(
+    (facility: FacilitySearchResult): string[] => {
+      const facilitySpIds = facility.sport_ids ?? [];
+      const labels: string[] = [];
+      for (let i = 0; i < allSportIds.length; i++) {
+        if (facilitySpIds.includes(allSportIds[i])) {
+          labels.push(sportNames[i]);
+        }
+      }
+      return labels;
+    },
+    [allSportIds, sportNames]
+  );
+
+  // Get sport IDs for facility search based on selection
+  const facilitySearchSportIds = useMemo(() => {
+    if (selectedSport === 'both') {
+      return sports?.map(s => s.id) ?? [];
+    }
+    const sport = sports?.find(s => s.name.toLowerCase() === selectedSport.toLowerCase());
+    return sport ? [sport.id] : [];
+  }, [selectedSport, sports]);
+
+  // Use facility search hook - enabled when search is open (shows all nearby by default)
+  const { facilities: searchResults, isLoading: facilitySearchLoading } = useFacilitySearch({
+    searchQuery: facilitySearchQuery,
+    latitude: player?.latitude ?? undefined,
+    longitude: player?.longitude ?? undefined,
+    sportIds: facilitySearchSportIds,
+    enabled: showFacilitySearch,
+  });
+
+  // Get the sport_id based on selection (null = both sports)
+  const getSportId = useMemo(() => {
+    return () => {
+      if (selectedSport === 'both') return null;
+      const sport = sports?.find(s => s.name.toLowerCase() === selectedSport.toLowerCase());
+      return sport?.id ?? null;
+    };
+  }, [selectedSport, sports]);
 
   const handleCreateCommunity = useCallback(
     async (
       name: string,
       description?: string,
       coverImageUrl?: string,
-      isPublic: boolean = true
+      isPublic: boolean = true,
+      sportId: string | null = null,
+      facilities: FacilitySearchResult[] = []
     ) => {
       if (!guardAction()) return;
 
       try {
         const newCommunity = await createCommunityMutation.mutateAsync({
           playerId: playerId!,
-          input: { name, description, cover_image_url: coverImageUrl, is_public: isPublic },
+          input: {
+            name,
+            description,
+            cover_image_url: coverImageUrl,
+            is_public: isPublic,
+            sport_id: sportId,
+          },
         });
-        // setShowCreateModal(false);
+
+        // Add selected facilities as favorites
+        if (facilities.length > 0) {
+          const facilityInserts = facilities.map((facility, index) => ({
+            network_id: newCommunity.id,
+            facility_id: facility.id,
+            display_order: index + 1,
+          }));
+
+          const { error: facilityError } = await supabase
+            .from('network_favorite_facility')
+            .insert(facilityInserts);
+
+          if (facilityError) {
+            Logger.warn('Failed to add favorite facilities during community creation', {
+              error: facilityError,
+              communityId: newCommunity.id,
+            });
+            // Don't fail creation, just log the warning
+          }
+        }
+
+        // Close modal first
+        await SheetManager.hide('create-community');
+        // Show success toast
+        toast.success(t('community.success.created'));
         // Navigate to the new community
         navigation.navigate('CommunityDetail', { communityId: newCommunity.id });
       } catch (error) {
         Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create community');
       }
     },
-    [guardAction, playerId, createCommunityMutation, navigation]
+    [guardAction, playerId, createCommunityMutation, navigation, toast, t]
   );
 
   const handlePickImage = useCallback(async () => {
@@ -97,6 +197,26 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
   const handleRemoveImage = useCallback(() => {
     setCoverImage(null);
   }, []);
+
+  // Facility selection handlers
+  const handleAddFacility = useCallback(
+    (facility: FacilitySearchResult) => {
+      if (selectedFacilities.some(f => f.id === facility.id)) return;
+      setSelectedFacilities(prev => [...prev, facility]);
+      setFacilitySearchQuery('');
+      setShowFacilitySearch(false);
+    },
+    [selectedFacilities]
+  );
+
+  const handleRemoveFacility = useCallback((facilityId: string) => {
+    setSelectedFacilities(prev => prev.filter(f => f.id !== facilityId));
+  }, []);
+
+  // Filter search results to exclude already selected facilities
+  const filteredSearchResults = useMemo(() => {
+    return searchResults.filter(f => !selectedFacilities.some(sf => sf.id === f.id));
+  }, [searchResults, selectedFacilities]);
 
   const handleSubmit = useCallback(async () => {
     if (!name.trim()) {
@@ -140,19 +260,38 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
       name.trim(),
       description.trim() || undefined,
       coverImageUrl,
-      isPublic
+      isPublic,
+      getSportId(),
+      selectedFacilities
     );
     setName('');
     setDescription('');
     setCoverImage(null);
     setIsPublic(true);
-  }, [name, description, coverImage, isPublic, t]);
+    setSelectedSport('both');
+    setSelectedFacilities([]);
+    setFacilitySearchQuery('');
+    setShowFacilitySearch(false);
+  }, [
+    name,
+    description,
+    coverImage,
+    isPublic,
+    t,
+    getSportId,
+    selectedFacilities,
+    handleCreateCommunity,
+  ]);
 
   const handleClose = useCallback(() => {
     setName('');
     setDescription('');
     setCoverImage(null);
     setIsPublic(true);
+    setSelectedSport('both');
+    setSelectedFacilities([]);
+    setFacilitySearchQuery('');
+    setShowFacilitySearch(false);
     setError(null);
     SheetManager.hide('create-community');
   }, []);
@@ -325,6 +464,309 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
           />
         </View>
 
+        {/* Sport Selection */}
+        <View style={styles.inputGroup}>
+          <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
+            {t('community.sportSelection')}
+          </Text>
+          <View style={styles.sportOptions}>
+            <TouchableOpacity
+              style={[
+                styles.sportOption,
+                {
+                  backgroundColor:
+                    selectedSport === 'both'
+                      ? isDark
+                        ? primary[900]
+                        : primary[50]
+                      : colors.inputBackground,
+                  borderColor: selectedSport === 'both' ? colors.primary : colors.border,
+                },
+              ]}
+              onPress={() => setSelectedSport('both')}
+            >
+              <View style={styles.sportOptionIcons}>
+                <MaterialCommunityIcons
+                  name="tennis"
+                  size={20}
+                  color={selectedSport === 'both' ? colors.primary : colors.textMuted}
+                />
+                <Text style={{ color: colors.textMuted, marginHorizontal: 2 }}>+</Text>
+                <MaterialCommunityIcons
+                  name="badminton"
+                  size={20}
+                  color={selectedSport === 'both' ? colors.primary : colors.textMuted}
+                />
+              </View>
+              <Text
+                size="xs"
+                weight={selectedSport === 'both' ? 'semibold' : 'regular'}
+                style={{
+                  color: selectedSport === 'both' ? colors.primary : colors.textSecondary,
+                  marginTop: 4,
+                }}
+              >
+                {t('community.sportBoth')}
+              </Text>
+              {selectedSport === 'both' && (
+                <View style={[styles.sportOptionCheck, { backgroundColor: colors.primary }]}>
+                  <Ionicons name="checkmark" size={10} color="#FFFFFF" />
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.sportOption,
+                {
+                  backgroundColor:
+                    selectedSport === 'tennis'
+                      ? isDark
+                        ? primary[900]
+                        : primary[50]
+                      : colors.inputBackground,
+                  borderColor: selectedSport === 'tennis' ? colors.primary : colors.border,
+                },
+              ]}
+              onPress={() => setSelectedSport('tennis')}
+            >
+              <MaterialCommunityIcons
+                name="tennis"
+                size={24}
+                color={selectedSport === 'tennis' ? colors.primary : colors.textMuted}
+              />
+              <Text
+                size="xs"
+                weight={selectedSport === 'tennis' ? 'semibold' : 'regular'}
+                style={{
+                  color: selectedSport === 'tennis' ? colors.primary : colors.textSecondary,
+                  marginTop: 4,
+                }}
+              >
+                {t('community.sportTennis')}
+              </Text>
+              {selectedSport === 'tennis' && (
+                <View style={[styles.sportOptionCheck, { backgroundColor: colors.primary }]}>
+                  <Ionicons name="checkmark" size={10} color="#FFFFFF" />
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.sportOption,
+                {
+                  backgroundColor:
+                    selectedSport === 'pickleball'
+                      ? isDark
+                        ? primary[900]
+                        : primary[50]
+                      : colors.inputBackground,
+                  borderColor: selectedSport === 'pickleball' ? colors.primary : colors.border,
+                },
+              ]}
+              onPress={() => setSelectedSport('pickleball')}
+            >
+              <MaterialCommunityIcons
+                name="badminton"
+                size={24}
+                color={selectedSport === 'pickleball' ? colors.primary : colors.textMuted}
+              />
+              <Text
+                size="xs"
+                weight={selectedSport === 'pickleball' ? 'semibold' : 'regular'}
+                style={{
+                  color: selectedSport === 'pickleball' ? colors.primary : colors.textSecondary,
+                  marginTop: 4,
+                }}
+              >
+                {t('community.sportPickleball')}
+              </Text>
+              {selectedSport === 'pickleball' && (
+                <View style={[styles.sportOptionCheck, { backgroundColor: colors.primary }]}>
+                  <Ionicons name="checkmark" size={10} color="#FFFFFF" />
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+          <Text size="xs" style={{ color: colors.textMuted, marginTop: 6 }}>
+            {t('community.sportSelectionHint')}
+          </Text>
+        </View>
+
+        {/* Favorite Facilities Section (Optional) */}
+        <View style={styles.inputGroup}>
+          <View style={styles.labelRow}>
+            <Text weight="medium" size="sm" style={{ color: colors.text }}>
+              {t('community.favoriteFacilitiesOptional')}
+            </Text>
+            {selectedFacilities.length > 0 && (
+              <Text size="xs" style={{ color: colors.textMuted }}>
+                {selectedFacilities.length}
+              </Text>
+            )}
+          </View>
+
+          {/* Selected facilities */}
+          {selectedFacilities.length > 0 && (
+            <View style={styles.selectedFacilitiesContainer}>
+              {selectedFacilities.map((facility, index) => (
+                <View
+                  key={facility.id}
+                  style={[
+                    styles.selectedFacilityBadge,
+                    { backgroundColor: `${colors.primary}15`, borderColor: colors.primary },
+                  ]}
+                >
+                  <View style={[styles.facilityOrderBadge, { backgroundColor: colors.primary }]}>
+                    <Text style={styles.facilityOrderText}>{index + 1}</Text>
+                  </View>
+                  <View style={styles.facilityBadgeTextContainer}>
+                    <Text
+                      style={[styles.facilityBadgeName, { color: colors.text }]}
+                      numberOfLines={1}
+                    >
+                      {facility.name}
+                    </Text>
+                    {facility.city && (
+                      <Text
+                        style={[styles.facilityBadgeCity, { color: colors.textMuted }]}
+                        numberOfLines={1}
+                      >
+                        {facility.city}
+                      </Text>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => handleRemoveFacility(facility.id)}
+                    style={styles.facilityRemoveButton}
+                  >
+                    <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Add facility search */}
+          {!showFacilitySearch ? (
+            <TouchableOpacity
+              style={[
+                styles.addFacilityButton,
+                { backgroundColor: colors.inputBackground, borderColor: colors.border },
+              ]}
+              onPress={() => setShowFacilitySearch(true)}
+            >
+              <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+              <Text size="sm" style={{ color: colors.primary, marginLeft: 8 }}>
+                {selectedFacilities.length > 0
+                  ? t('community.addAnotherFacility')
+                  : t('community.addFavoriteFacility')}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.facilitySearchContainer}>
+              <View
+                style={[
+                  styles.facilitySearchInputWrapper,
+                  { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                ]}
+              >
+                <Ionicons name="search" size={18} color={colors.textMuted} />
+                <TextInput
+                  style={[styles.facilitySearchInput, { color: colors.text }]}
+                  placeholder={t('community.searchFacilityToAdd')}
+                  placeholderTextColor={colors.textMuted}
+                  value={facilitySearchQuery}
+                  onChangeText={setFacilitySearchQuery}
+                  autoFocus
+                />
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowFacilitySearch(false);
+                    setFacilitySearchQuery('');
+                  }}
+                >
+                  <Ionicons name="close" size={18} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Search results - show immediately, filter as user types */}
+              <View
+                style={[
+                  styles.facilitySearchResults,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                ]}
+              >
+                {facilitySearchLoading ? (
+                  <View style={styles.facilitySearchLoading}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  </View>
+                ) : filteredSearchResults.length > 0 ? (
+                  filteredSearchResults.slice(0, 8).map(facility => (
+                    <TouchableOpacity
+                      key={facility.id}
+                      style={[
+                        styles.facilitySearchResultItem,
+                        { borderBottomColor: colors.border },
+                      ]}
+                      onPress={() => handleAddFacility(facility)}
+                    >
+                      <View style={styles.facilityResultInfo}>
+                        <Text
+                          style={[styles.facilityResultName, { color: colors.text }]}
+                          numberOfLines={1}
+                        >
+                          {facility.name}
+                        </Text>
+                        {(facility.address || facility.city) && (
+                          <Text
+                            style={[styles.facilityResultAddress, { color: colors.textMuted }]}
+                            numberOfLines={1}
+                          >
+                            {[facility.address, facility.city].filter(Boolean).join(', ')}
+                          </Text>
+                        )}
+                        {/* Sport tags */}
+                        {getSportLabels(facility).length > 0 && (
+                          <View style={styles.facilitySportTagsRow}>
+                            {getSportLabels(facility).map(label => (
+                              <View
+                                key={label}
+                                style={[
+                                  styles.facilitySportTag,
+                                  { backgroundColor: `${colors.primary}20` },
+                                ]}
+                              >
+                                <Text
+                                  style={[styles.facilitySportTagText, { color: colors.primary }]}
+                                >
+                                  {label}
+                                </Text>
+                              </View>
+                            ))}
+                          </View>
+                        )}
+                      </View>
+                      <Ionicons name="add-circle" size={24} color={colors.primary} />
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <View style={styles.facilityNoResults}>
+                    <Text style={[styles.facilityNoResultsText, { color: colors.textMuted }]}>
+                      {t('community.noFacilitiesFound')}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+
+          <Text size="xs" style={{ color: colors.textMuted, marginTop: 6 }}>
+            {t('community.favoriteFacilitiesHint')}
+          </Text>
+        </View>
+
         <View style={[styles.infoBox, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
           <Ionicons name="information-circle" size={20} color={colors.primary} />
           <Text size="sm" style={{ color: colors.textSecondary, flex: 1, marginLeft: 8 }}>
@@ -495,6 +937,35 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 10,
   },
+  sportOptions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  sportOption: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    position: 'relative',
+    minHeight: 70,
+  },
+  sportOptionIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sportOptionCheck: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   footer: {
     padding: spacingPixels[4],
     borderTopWidth: 1,
@@ -515,5 +986,120 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     gap: spacingPixels[2],
+  },
+  // Facility selection styles
+  selectedFacilitiesContainer: {
+    gap: spacingPixels[2],
+    marginBottom: spacingPixels[2],
+  },
+  selectedFacilityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacingPixels[2],
+    borderRadius: radiusPixels.md,
+    borderWidth: 1,
+  },
+  facilityOrderBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacingPixels[2],
+  },
+  facilityOrderText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  facilityBadgeTextContainer: {
+    flex: 1,
+    marginRight: spacingPixels[2],
+  },
+  facilityBadgeName: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  facilityBadgeCity: {
+    fontSize: 11,
+    marginTop: 1,
+  },
+  facilityRemoveButton: {
+    padding: 2,
+  },
+  addFacilityButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacingPixels[3],
+    borderRadius: radiusPixels.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  facilitySearchContainer: {
+    gap: spacingPixels[2],
+  },
+  facilitySearchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacingPixels[3],
+    borderRadius: radiusPixels.md,
+    borderWidth: 1,
+    gap: spacingPixels[2],
+  },
+  facilitySearchInput: {
+    flex: 1,
+    fontSize: 14,
+    padding: 0,
+  },
+  facilitySearchResults: {
+    borderRadius: radiusPixels.md,
+    borderWidth: 1,
+    maxHeight: 280,
+    overflow: 'hidden',
+  },
+  facilitySearchLoading: {
+    padding: spacingPixels[4],
+    alignItems: 'center',
+  },
+  facilitySearchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacingPixels[3],
+    borderBottomWidth: 1,
+  },
+  facilityResultInfo: {
+    flex: 1,
+    marginRight: spacingPixels[2],
+  },
+  facilityResultName: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  facilityResultAddress: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  facilitySportTagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacingPixels[1],
+    marginTop: spacingPixels[1],
+  },
+  facilitySportTag: {
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: 2,
+    borderRadius: radiusPixels.sm,
+  },
+  facilitySportTagText: {
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  facilityNoResults: {
+    padding: spacingPixels[4],
+    alignItems: 'center',
+  },
+  facilityNoResultsText: {
+    fontSize: 13,
   },
 });

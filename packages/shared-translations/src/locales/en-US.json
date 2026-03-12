@@ -14,6 +14,7 @@
     "delete": "Delete",
     "leave": "Leave",
     "edit": "Edit",
+    "update": "Update",
     "back": "Back",
     "goBack": "Go back",
     "next": "Next",
@@ -73,6 +74,7 @@
     "copied": "Copied",
     "reset": "Reset",
     "success": "Success",
+    "by": "by",
     "permissionRequired": "Permission Required",
     "saving": "Saving...",
     "warning": "Warning",
@@ -179,6 +181,8 @@
       "match_starting_soon": "Starting\nSoon",
       "match_check_in_available": "Check-in\nAvailable",
       "match_new_available": "New Game\nin Group",
+      "match_spot_opened": "Spot\nOpened",
+      "nearby_match_available": "Nearby\nGame",
       "player_kicked": "Removed\nfrom Game",
       "player_left": "Player\nLeft",
       "new_message": "New\nMessage",
@@ -188,11 +192,12 @@
       "support": "Support",
       "chat": "Message",
       "system": "System",
-      "feedback_request": "Feedback\nRequest",
-      "feedback_reminder": "Feedback\nReminder",
-      "score_confirmation": "Score\nConfirmation",
-      "match_spot_opened": "Spot\nOpened",
-      "nearby_match_available": "Nearby\nMatch"
+      "feedback_request": "Feedback Request",
+      "feedback_reminder": "Feedback Reminder",
+      "score_confirmation": "Score Confirmation",
+      "community_join_request": "Community Join Request",
+      "community_join_accepted": "Request Approved",
+      "community_join_rejected": "Request Declined"
     },
     "categories": {
       "match": "Game Notifications",
@@ -299,16 +304,20 @@
         "body": "Your {sportName} score and rating with {opponentNames} are still pending — complete them before the deadline."
       },
       "score_confirmation": {
-        "title": "Confirm your score",
-        "body": "{playerName} submitted a score for your {sportName} game. Please confirm or correct."
+        "title": "Confirm Game Score",
+        "body": "{playerName} submitted a score for your {sportName} game. Please confirm or dispute."
       },
-      "match_spot_opened": {
-        "title": "A spot opened up!",
-        "body": "A spot opened in a {sportName} match{startTime}{locationName}. Join now!"
+      "community_join_request": {
+        "title": "New Join Request",
+        "body": "{requesterName} wants to join {communityName}"
       },
-      "nearby_match_available": {
-        "title": "New match nearby",
-        "body": "A {sportName} match is available near you{startTime}{locationName}"
+      "community_join_accepted": {
+        "title": "Request Approved!",
+        "body": "You are now a member of {communityName}"
+      },
+      "community_join_rejected": {
+        "title": "Request Not Approved",
+        "body": "Your request to join {communityName} was not approved"
       }
     }
   },
@@ -796,7 +805,8 @@
         "levelProofInfoTitle": "What is a Level Proof?",
         "levelProofInfoMessage": "A level proof is anything that allows someone who has never played against you to form a fair and convincing assessment of your actual skill level.",
         "referencesInfoTitle": "What is a Reference?",
-        "referencesInfoMessage": "A reference is a recommendation from a certified player at your level or higher who has played with you and can vouch for your skill level. References help other players trust your rating."
+        "referencesInfoMessage": "A reference is a recommendation from a certified player at your level or higher who has played with you and can vouch for your skill level. References help other players trust your rating.",
+        "encouragedLevelMessage": "Players at level {level}+ are strongly encouraged to provide proof of their skill level to help build trust in the community."
       },
       "referenceRequest": {
         "title": "Request Reference",
@@ -1662,6 +1672,8 @@
     "noPlayersFoundMatching": "No players found matching \"{query}\"",
     "noPlayersAvailable": "No players available",
     "continueSelected": "Continue ({count} selected)",
+    "startChat": "Start Chat",
+    "failedToCreateConversation": "Failed to create conversation. Please try again.",
     "groupDetails": "Group Details",
     "addPhoto": "Add Photo",
     "groupName": "Group Name",
@@ -1797,6 +1809,7 @@
       "public": "Public",
       "private": "Private"
     },
+    "certified": "Certified",
     "stats": {
       "title": "Community Stats",
       "totalMembers": "Total Members",
@@ -1989,7 +2002,23 @@
     "moderatorAddedToCommunity": "Moderator added to the community",
     "memberAddedToCommunity": "Member added to the community",
     "membershipRequestSubmitted": "Membership request submitted for approval",
-    "failedToAddMember": "Failed to add member"
+    "failedToAddMember": "Failed to add member",
+    "sportSelection": "Sport",
+    "sportBoth": "Both",
+    "sportTennis": "Tennis",
+    "sportPickleball": "Pickleball",
+    "sportSelectionHint": "Choose a sport to filter who sees this community",
+    "favoriteFacilities": "Favorite Facilities",
+    "favoriteFacilitiesOptional": "Favorite Facilities (Optional)",
+    "noFavoriteFacilities": "No favorite facilities yet",
+    "addFavoriteFacilitiesHint": "Add facilities where your community plays",
+    "addFavoriteFacility": "Add a favorite facility",
+    "favoriteFacilitiesHint": "You can always add or change facilities later",
+    "searchFacilityToAdd": "Search for a facility...",
+    "addAnotherFacility": "Add another facility",
+    "noFacilitiesFound": "No facilities found",
+    "typeToSearchFacility": "Type to search for facilities",
+    "locationRequiredForFacilities": "Location required to search facilities"
   },
   "groups": {
     "title": "Groups",
@@ -2012,6 +2041,7 @@
       "createButton": "Create Group",
       "scanButton": "Scan QR Code"
     },
+    "listInfoMessage": "Groups are private communities limited to a maximum of {maxMembers} players.",
     "welcome": {
       "title": "Welcome!",
       "joinedMessage": "You've successfully joined \"{groupName}\""
@@ -2034,7 +2064,7 @@
     "addCoverImage": "Add a cover image",
     "changeImage": "Change",
     "removeImage": "Remove",
-    "createGroupHint": "Groups can have up to 10 members. As the creator, you'll be a moderator with the ability to add and remove members.",
+    "createGroupHint": "Groups can have up to {maxMembers} members. As the creator, you'll be a moderator with the ability to add and remove members.",
     "permissionRequired": "Permission Required",
     "photoAccessRequired": "Please allow access to your photos to add a group image.",
     "photoAccessRequiredEdit": "Please allow access to your photos to change the group image.",
@@ -2201,7 +2231,11 @@
       "noRecentActivity": "No recent activity",
       "addMember": "Add Member",
       "shareInviteLink": "Share Invite Link",
-      "noRecentGames": "No recent games"
+      "noRecentGames": "No recent games",
+      "groupStats": "Group Stats",
+      "totalMembers": "Total Members",
+      "visibility": "Visibility",
+      "private": "Private"
     },
     "options": {
       "shareInviteLink": "Share Invite Link",
@@ -2234,7 +2268,23 @@
       "minutesAgo": "{count}m ago",
       "hoursAgo": "{count}h ago",
       "daysAgo": "{count}d ago"
-    }
+    },
+    "sportSelection": "Sport",
+    "sportBoth": "Both",
+    "sportTennis": "Tennis",
+    "sportPickleball": "Pickleball",
+    "sportSelectionHint": "Choose a sport to filter who sees this group",
+    "favoriteFacilities": "Favorite Facilities",
+    "favoriteFacilitiesOptional": "Favorite Facilities (Optional)",
+    "noFavoriteFacilities": "No favorite facilities yet",
+    "addFavoriteFacilitiesHint": "Add facilities where your group plays",
+    "addFavoriteFacility": "Add a favorite facility",
+    "addAnotherFacility": "Add another facility",
+    "searchFacilityToAdd": "Search for a facility to add",
+    "noFacilitiesFound": "No facilities found",
+    "typeToSearchFacility": "Type to search for facilities",
+    "locationRequiredForFacilities": "Location is required to search facilities",
+    "favoriteFacilitiesHint": "You can always add or change facilities later"
   },
   "playerDirectory": {
     "title": "Player Directory",
@@ -2252,6 +2302,10 @@
     "nearby": "Nearby",
     "failedToLoad": "Failed to load players",
     "checkConnection": "Please check your connection and try again",
+    "favorites": {
+      "addedToFavorites": "Added to favorites",
+      "removedFromFavorites": "Removed from favorites"
+    },
     "filters": {
       "title": "Filters",
       "favorites": "Favorites",
@@ -5282,6 +5336,119 @@
         }
       }
     },
+    "networks": {
+      "title": "Networks",
+      "description": "Manage groups and communities across the platform.",
+      "searchPlaceholder": "Search networks...",
+      "noResults": "No networks found",
+      "noResultsDescription": "Try adjusting your search or filters",
+      "totalNetworks": "{count, plural, one {# network} other {# networks}}",
+      "empty": "No networks yet",
+      "emptyDescription": "Networks will appear here once created",
+      "tryDifferentSearch": "Try a different search term",
+      "members": "members",
+      "unknownCreator": "Unknown creator",
+      "networksFound": "networks found",
+      "private": "Private",
+      "public": "Public",
+      "certified": "Certified",
+      "details": "Details",
+      "createdBy": "Created by",
+      "createdAt": "Created",
+      "updatedAt": "Updated",
+      "inviteCode": "Invite Code",
+      "membersList": "Members List",
+      "favoriteFacilities": "Favorite Facilities",
+      "about": "About",
+      "accessDeniedDescription": "You don't have permission to view this section",
+      "types": {
+        "all": "All",
+        "groups": "Groups",
+        "communities": "Communities",
+        "group": "Group",
+        "community": "Community"
+      },
+      "filters": {
+        "all": "All",
+        "certified": "Certified",
+        "uncertified": "Not Certified",
+        "sportTitle": "Sport",
+        "certificationTitle": "Certification",
+        "privacyTitle": "Privacy",
+        "privacyAll": "All Privacy",
+        "public": "Public",
+        "private": "Private",
+        "allSports": "All Sports"
+      },
+      "card": {
+        "members": "{count, plural, one {# member} other {# members}}",
+        "group": "Group",
+        "community": "Community",
+        "certified": "Certified",
+        "private": "Private"
+      },
+      "detail": {
+        "title": "Network Details",
+        "info": "Information",
+        "members": "Members",
+        "facilities": "Facilities",
+        "noFacilities": "No facilities",
+        "stats": {
+          "members": "Members",
+          "facilities": "Facilities",
+          "created": "Created"
+        }
+      },
+      "certification": {
+        "title": "Certification",
+        "description": "Certified communities are verified and display a badge to users.",
+        "certified": "Certified",
+        "notCertified": "Not Certified",
+        "isCertified": "This community is certified",
+        "certify": "Certify Community",
+        "revoke": "Revoke Certification",
+        "uncertify": "Uncertify",
+        "uncertifyNotes": "Uncertification Notes",
+        "certifyNotes": "Certification Notes",
+        "onlyForCommunities": "Certification is only available for communities.",
+        "notes": "Certification Notes",
+        "notesPlaceholder": "Add notes about this certification...",
+        "certifiedBy": "Certified by {name}",
+        "certifiedAt": "Certified on {date}",
+        "confirmCertify": "Are you sure you want to certify this community?",
+        "confirmRevoke": "Are you sure you want to revoke certification from this community?",
+        "certifySuccess": "Community has been certified",
+        "revokeSuccess": "Certification has been revoked",
+        "certifyError": "Failed to certify community",
+        "revokeError": "Failed to revoke certification"
+      },
+      "maxMembers": {
+        "title": "Max Group Members",
+        "description": "Maximum number of members allowed per group",
+        "invalidValue": "Please enter a valid number between 2 and 100",
+        "saveSuccess": "Maximum members setting saved successfully",
+        "saveError": "Failed to save maximum members setting"
+      },
+      "settings": {
+        "title": "Network Settings",
+        "maxMembersPerGroup": "Maximum Members per Group",
+        "maxMembersDescription": "Set the maximum number of members allowed in a group.",
+        "saveSuccess": "Settings saved successfully",
+        "saveError": "Failed to save settings"
+      },
+      "delete": {
+        "dangerZone": "Danger Zone",
+        "title": "Delete Network",
+        "description": "Deleting this network will permanently remove it and notify all members. This action cannot be undone.",
+        "reasonLabel": "Reason for deletion (optional)",
+        "reasonPlaceholder": "Explain why this network is being deleted...",
+        "deleteGroup": "Delete Group",
+        "deleteCommunity": "Delete Community",
+        "confirmMessage": "Are you sure you want to delete \"{name}\"? This {type} has {count} members who will be notified.",
+        "success": "\"{name}\" has been deleted. {count} members were notified.",
+        "error": "Failed to delete network"
+      }
+    },
     "analytics": {
       "title": "Analytics",
       "description": "Analytics and insights.",
@@ -7246,5 +7413,28 @@
     "selectImageSource": "Select Image Source",
     "submitAnother": "Submit Another",
     "backToSettings": "Back to Settings"
+  },
+  "bugReport": {
+    "title": "Quick Bug Report",
+    "subtitle": "Shake detected! Describe what went wrong.",
+    "subtitleMenu": "Describe what went wrong.",
+    "subjectLabel": "Subject",
+    "subjectPlaceholder": "Brief summary of the bug",
+    "descriptionLabel": "What happened?",
+    "descriptionPlaceholder": "Describe the issue you encountered...",
+    "moduleLabel": "Where did it happen?",
+    "modules": {
+      "matches": "Matches",
+      "chat": "Chat",
+      "profile": "Profile",
+      "other": "Other"
+    },
+    "minChars": "Minimum 10 characters",
+    "submit": "Submit Bug Report",
+    "submitting": "Submitting...",
+    "cancel": "Cancel",
+    "success": "Bug report submitted! Thank you for helping improve Rallia.",
+    "error": "Failed to submit. Please try again.",
+    "fullFeedback": "More Options"
   }
 }

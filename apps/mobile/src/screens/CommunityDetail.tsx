@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
@@ -55,6 +55,8 @@ import {
   useRequestToJoinCommunity,
   useConversationUnreadCount,
   useConversationUnreadRealtime,
+  useSports,
+  usePlayer,
 } from '@rallia/shared-hooks';
 import type { GroupMatch } from '@rallia/shared-hooks';
 import type { GroupWithMembers } from '@rallia/shared-services';
@@ -63,6 +65,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { primary } from '@rallia/design-system';
 
 import { AddScoreIntroModal, AddScoreModal, type MatchType } from '../features/matches';
+import { CommunityFavoriteFacilitiesSelector } from '../features/communities/components';
 import { InfoModal } from '../components/InfoModal';
 
 const HEADER_HEIGHT = 140;
@@ -93,8 +96,29 @@ export default function CommunityDetailScreen() {
   const { t } = useTranslation();
   const { guardAction } = useRequireOnboarding();
   const { selectedSport } = useSport();
+  const { sports } = useSports();
   const playerId = session?.user?.id;
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
+  const { player } = usePlayer();
+
+  // Get all sport IDs and names for facility search when community has no specific sport
+  const { allSportIds, sportNames } = useMemo(() => {
+    if (!sports) return { allSportIds: [], sportNames: [] };
+    return {
+      allSportIds: sports.map(s => s.id),
+      sportNames: sports.map(s => s.name.charAt(0).toUpperCase() + s.name.slice(1)),
+    };
+  }, [sports]);
+
+  // Helper to get sport name from sport_id
+  const getSportName = useCallback(
+    (sportId: string | null): string | null => {
+      if (!sportId || !sports) return null;
+      const sport = sports.find(s => s.id === sportId);
+      return sport?.name ?? null;
+    },
+    [sports]
+  );
 
   const [activeTab, setActiveTab] = useState<TabKey>('home');
   const [showPendingRequestsModal, setShowPendingRequestsModal] = useState(false);
@@ -594,6 +618,29 @@ export default function CommunityDetailScreen() {
                 </Text>
               </View>
             )}
+
+            {/* Favorite Facilities Section */}
+            <View
+              style={[
+                styles.facilitiesCard,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
+              <CommunityFavoriteFacilitiesSelector
+                networkId={communityId}
+                currentPlayerId={playerId ?? null}
+                sportId={community?.sport_id ?? null}
+                allSportIds={allSportIds}
+                sportNames={sportNames}
+                latitude={player?.latitude ?? null}
+                longitude={player?.longitude ?? null}
+                colors={colors}
+                t={t}
+                onNavigateToFacility={facilityId =>
+                  navigation.navigate('FacilityDetail', { facilityId })
+                }
+              />
+            </View>
 
             {/* Leaderboard Preview */}
             <View
@@ -1420,9 +1467,69 @@ export default function CommunityDetailScreen() {
             ]}
           >
             <View style={styles.titleRow}>
-              <Text weight="bold" size="xl" style={{ color: colors.text, flex: 1 }}>
-                {community.name}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                <Text weight="bold" size="xl" style={{ color: colors.text }}>
+                  {community.name}
+                </Text>
+                {/* Sport icon(s) - show both when null, single when specific */}
+                {(() => {
+                  const sportName = getSportName(community.sport_id);
+                  // null = both sports
+                  if (!community.sport_id) {
+                    return (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
+                        <MaterialCommunityIcons name="tennis" size={18} color={colors.textMuted} />
+                        <Text
+                          style={{ color: colors.textMuted, marginHorizontal: 2, fontSize: 12 }}
+                        >
+                          +
+                        </Text>
+                        <MaterialCommunityIcons
+                          name="badminton"
+                          size={18}
+                          color={colors.textMuted}
+                        />
+                      </View>
+                    );
+                  }
+                  // Tennis
+                  if (sportName?.toLowerCase() === 'tennis') {
+                    return (
+                      <View style={{ marginLeft: 8 }}>
+                        <MaterialCommunityIcons name="tennis" size={20} color={colors.textMuted} />
+                      </View>
+                    );
+                  }
+                  // Pickleball
+                  if (sportName?.toLowerCase() === 'pickleball') {
+                    return (
+                      <View style={{ marginLeft: 8 }}>
+                        <MaterialCommunityIcons
+                          name="badminton"
+                          size={20}
+                          color={colors.textMuted}
+                        />
+                      </View>
+                    );
+                  }
+                  return null;
+                })()}
+              </View>
+              {/* Certification badge for verified communities */}
+              {community.is_certified && (
+                <View
+                  style={[styles.visibilityBadge, { backgroundColor: '#E3F2FD', marginRight: 8 }]}
+                >
+                  <MaterialCommunityIcons name="check-decagram" size={14} color={colors.primary} />
+                  <Text
+                    size="xs"
+                    weight="semibold"
+                    style={{ color: colors.primary, marginLeft: 4 }}
+                  >
+                    {t('community.certified')}
+                  </Text>
+                </View>
+              )}
               {!community.is_private ? (
                 <View style={[styles.visibilityBadge, { backgroundColor: '#E8F5E9' }]}>
                   <Ionicons name="globe-outline" size={14} color="#2E7D32" />
@@ -1566,9 +1673,52 @@ export default function CommunityDetailScreen() {
           ]}
         >
           <View style={styles.titleRow}>
-            <Text weight="bold" size="xl" style={{ color: colors.text, flex: 1 }}>
-              {community.name}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+              <Text weight="bold" size="xl" style={{ color: colors.text }}>
+                {community.name}
+              </Text>
+              {(() => {
+                const sportName = getSportName(community.sport_id);
+                if (!community.sport_id) {
+                  // Show both sports icons when no specific sport is set
+                  return (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
+                      <MaterialCommunityIcons name="tennis" size={18} color={colors.textMuted} />
+                      <Text style={{ color: colors.textMuted, marginHorizontal: 2, fontSize: 12 }}>
+                        +
+                      </Text>
+                      <MaterialCommunityIcons name="badminton" size={18} color={colors.textMuted} />
+                    </View>
+                  );
+                }
+                if (sportName?.toLowerCase() === 'tennis') {
+                  return (
+                    <View style={{ marginLeft: 8 }}>
+                      <MaterialCommunityIcons name="tennis" size={20} color={colors.textMuted} />
+                    </View>
+                  );
+                }
+                if (sportName?.toLowerCase() === 'pickleball') {
+                  return (
+                    <View style={{ marginLeft: 8 }}>
+                      <MaterialCommunityIcons name="badminton" size={20} color={colors.textMuted} />
+                    </View>
+                  );
+                }
+                return null;
+              })()}
+            </View>
+            {/* Certification badge for verified communities */}
+            {community.is_certified && (
+              <View
+                style={[styles.visibilityBadge, { backgroundColor: '#E3F2FD', marginRight: 8 }]}
+              >
+                <MaterialCommunityIcons name="check-decagram" size={14} color={colors.primary} />
+                <Text size="xs" weight="semibold" style={{ color: colors.primary, marginLeft: 4 }}>
+                  {t('community.certified')}
+                </Text>
+              </View>
+            )}
             {community.is_public ? (
               <View style={[styles.visibilityBadge, { backgroundColor: '#E8F5E9' }]}>
                 <Ionicons name="globe-outline" size={14} color="#2E7D32" />
@@ -1669,6 +1819,22 @@ export default function CommunityDetailScreen() {
               <Text weight="semibold" style={{ color: colors.primary, marginLeft: 8 }}>
                 {t('community.members.addMember')}
               </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.menuButton, { borderColor: colors.primary }]}
+              onPress={() =>
+                SheetManager.show('invite-link', {
+                  payload: {
+                    groupId: communityId,
+                    groupName: community?.name ?? '',
+                    currentUserId: playerId ?? '',
+                    isModerator: isModerator ?? false,
+                    type: 'community',
+                  },
+                })
+              }
+            >
+              <Ionicons name="share-outline" size={20} color={colors.primary} />
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.menuButton, { borderColor: colors.border }]}
@@ -1901,7 +2067,7 @@ export default function CommunityDetailScreen() {
         onClose={() => setShowAddScoreIntro(false)}
         onAddScore={handleAddScoreIntroComplete}
         onNeverShowAgain={() => {
-          AsyncStorage.setItem(ADD_SCORE_INTRO_KEY, 'true').catch(console.error);
+          AsyncStorage.setItem(ADD_SCORE_INTRO_KEY, 'true').catch(() => {});
           setHasSeenAddScoreIntro(true);
           handleAddScoreIntroComplete();
         }}
@@ -2120,6 +2286,12 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 16,
     borderWidth: 1,
+  },
+  facilitiesCard: {
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginTop: 16,
   },
   aboutHeader: {
     flexDirection: 'row',
