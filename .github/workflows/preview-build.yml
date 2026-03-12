@@ -40,14 +40,13 @@ jobs:
 
       - name: Build preview
         id: build
-        continue-on-error: true
         run: |
           cd apps/mobile
           eas build --platform all --profile preview --non-interactive --json \
             | tee build-result.json
 
       - name: Notify Discord
-        if: always()
+        if: success() || failure()
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
 
@@ -207,7 +206,7 @@ jobs:
           curl -sf -H "Content-Type: application/json" -d "$PAYLOAD" "$DISCORD_WEBHOOK_URL"
 
       - name: Push preview build tag
-        if: always()
+        if: success() || failure()
         run: |
           SHORT_SHA="${GITHUB_SHA::7}"
           git push origin "preview-build/${SHORT_SHA}" 2>/dev/null || true

@@ -125,6 +125,25 @@ Players who receive many invitations:
 | Day of match    | Push + SMS      | Time and location reminder  |
 | 2 hours before  | Push (optional) | "Get ready for your match!" |
 
+## Sport-Based Filtering
+
+The in-app Notifications screen filters notifications by the currently selected sport.
+
+### Filtering Rules
+
+| Notification Category                                           | Filtering Behavior                                                               |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| **Match** (invitations, join requests, updates, feedback, etc.) | Filtered by `payload.sportName` — only shown when the matching sport is selected |
+| **Social** (chat, messages, rating verified)                    | Always shown regardless of selected sport                                        |
+| **System** (reminders, payments, support)                       | Always shown regardless of selected sport                                        |
+
+### Implementation
+
+- All match-related notifications include a `sportName` field in their `payload` JSONB (lowercase: `"tennis"`, `"pickleball"`)
+- Filtering is applied client-side on already-fetched data
+- Notifications without a `sportName` in their payload are always displayed (system/social)
+- Unread counts per sport are queried server-side for badge indicators (see [Cross-Sport Pending Actions Alert](../02-sport-modes/interface-switching.md#cross-sport-pending-actions-alert))
+
 ## Technical Notes
 
 - Use FCM for Android push

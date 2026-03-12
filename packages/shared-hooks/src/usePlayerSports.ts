@@ -26,6 +26,7 @@ export interface PlayerSport {
   is_active: boolean;
   preferred_match_duration?: string;
   preferred_match_type?: string;
+  preferred_facility_id?: string | null;
   sport?: Sport | Sport[];
 }
 
@@ -78,6 +79,7 @@ export const usePlayerSports = (playerId: string | undefined) => {
           is_active,
           preferred_match_duration,
           preferred_match_type,
+          preferred_facility_id,
           sport:sport_id (
             id,
             name,

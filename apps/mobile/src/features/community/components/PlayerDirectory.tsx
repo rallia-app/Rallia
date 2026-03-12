@@ -268,6 +268,7 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
 
   const {
     players,
+    totalCount,
     isLoading,
     isFetching,
     isFetchingNextPage,

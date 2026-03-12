@@ -15,7 +15,6 @@ import {
   shadowsNative,
   primary,
   accent,
-  neutral,
 } from '@rallia/design-system';
 import type { Court } from '@rallia/shared-types';
 import type { TranslationKey, TranslationOptions } from '../../../hooks';
@@ -51,11 +50,7 @@ export default function CourtCard({ court, colors, isDark, t }: CourtCardProps) 
           style={[
             styles.badge,
             {
-              backgroundColor: isDark
-                ? neutral[700]
-                : court.indoor
-                  ? primary[500] + '15'
-                  : accent[500] + '15',
+              backgroundColor: court.indoor ? primary[500] + '15' : accent[500] + '15',
             },
           ]}
         >
@@ -65,20 +60,13 @@ export default function CourtCard({ court, colors, isDark, t }: CourtCardProps) 
         </View>
 
         {surfaceLabel && (
-          <View
-            style={[styles.badge, { backgroundColor: isDark ? neutral[700] : primary[500] + '15' }]}
-          >
+          <View style={[styles.badge, { backgroundColor: primary[500] + '15' }]}>
             <Text style={[styles.badgeText, { color: primary[600] }]}>{surfaceLabel}</Text>
           </View>
         )}
 
         {court.lighting && (
-          <View
-            style={[
-              styles.lightBadge,
-              { backgroundColor: isDark ? neutral[700] : accent[500] + '15' },
-            ]}
-          >
+          <View style={[styles.lightBadge, { backgroundColor: accent[500] + '15' }]}>
             <Ionicons name="bulb-outline" size={11} color={accent[600]} />
           </View>
         )}

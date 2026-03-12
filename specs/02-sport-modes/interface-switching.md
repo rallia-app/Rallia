@@ -72,6 +72,44 @@ flowchart TD
     D --> J[App data updates with new sport context]
 ```
 
+## Cross-Sport Pending Actions Alert
+
+Players with multiple sports can miss actions (match invitations, join requests, etc.) in their non-active sport. The app proactively surfaces these to prevent missed games.
+
+### How It Works
+
+Every match-related notification carries a `sportName` field in its `payload` JSONB (e.g. `"tennis"`, `"pickleball"`). The app queries unread match-notification counts per sport to detect pending actions in non-active sports.
+
+### Visual Indicators
+
+| Element                          | Behavior                                                                                             |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **Sport Selector pill** (header) | Red dot badge (8px) appears when any non-active sport has unread match notifications                 |
+| **Sport Selector dropdown**      | Each non-selected sport shows an unread count pill (e.g. "3") next to its name                       |
+| **Home screen banner**           | Dismissible banner above "My Matches" per sport with unread count, sport icon, and a "Switch" button |
+
+### Banner Behavior
+
+- One banner per sport that has unread match notifications
+- Tapping "Switch" triggers the sport switch confirmation flow
+- Dismissing (X button) hides the banner for that sport until the next app session (state resets on app reopen)
+- Banner only appears for fully onboarded, signed-in users
+
+### Flow
+
+```mermaid
+flowchart TD
+    A[App fetches unread match notification counts per sport] --> B{Other sport has unread?}
+    B -->|No| C[No indicators shown]
+    B -->|Yes| D[Red dot on SportSelector pill]
+    D --> E[Banner on Home screen]
+    E --> F{User action?}
+    F -->|Taps Switch| G[Sport switch confirmation modal]
+    F -->|Taps X| H[Banner dismissed for session]
+    F -->|Opens dropdown| I[Unread count shown per sport]
+    I --> J[User selects sport → switch confirmation]
+```
+
 ## UX Guidelines
 
 - Make current sport always visible (header, tab bar, etc.)
