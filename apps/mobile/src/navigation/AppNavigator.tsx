@@ -33,6 +33,7 @@ import {
   ProfilePictureButton,
   NotificationButton,
   SettingsButton,
+  HelpButton,
 } from '@rallia/shared-components';
 import { useActionsSheet, useSport, useOverlay } from '../context';
 import SportSelector from '../components/SportSelector';
@@ -347,6 +348,7 @@ function HeaderRightButtons() {
       >
         <NotificationButtonWithBadge color={colors.headerForeground} />
         <SettingsButton color={colors.headerForeground} />
+        <HelpButton color={colors.headerForeground} />
       </WalkthroughableView>
     </CopilotStep>
   );
@@ -892,6 +894,13 @@ const resetStackOnBlur = ({
 
 function BottomTabs() {
   const { colors } = useThemeStyles();
+  const insets = useSafeAreaInsets();
+
+  // Add bottom safe area inset to handle Android software navigation bar
+  // This prevents the system nav bar from overlapping the tab bar
+  const bottomInset = insets.bottom;
+  const tabBarHeight = spacingPixels[20] + bottomInset;
+
   return (
     <Tab.Navigator
       id="BottomTabs"
@@ -903,8 +912,8 @@ function BottomTabs() {
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
-          height: spacingPixels[20],
-          paddingBottom: spacingPixels[2],
+          height: tabBarHeight,
+          paddingBottom: spacingPixels[2] + bottomInset,
           paddingTop: spacingPixels[2],
         },
         tabBarButton: props => <TabButtonWithHaptic {...props} />,

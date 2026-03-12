@@ -7413,5 +7413,28 @@
     "selectImageSource": "Select Image Source",
     "submitAnother": "Submit Another",
     "backToSettings": "Back to Settings"
+  },
+  "bugReport": {
+    "title": "Quick Bug Report",
+    "subtitle": "Shake detected! Describe what went wrong.",
+    "subtitleMenu": "Describe what went wrong.",
+    "subjectLabel": "Subject",
+    "subjectPlaceholder": "Brief summary of the bug",
+    "descriptionLabel": "What happened?",
+    "descriptionPlaceholder": "Describe the issue you encountered...",
+    "moduleLabel": "Where did it happen?",
+    "modules": {
+      "matches": "Matches",
+      "chat": "Chat",
+      "profile": "Profile",
+      "other": "Other"
+    },
+    "minChars": "Minimum 10 characters",
+    "submit": "Submit Bug Report",
+    "submitting": "Submitting...",
+    "cancel": "Cancel",
+    "success": "Bug report submitted! Thank you for helping improve Rallia.",
+    "error": "Failed to submit. Please try again.",
+    "fullFeedback": "More Options"
   }
 }
