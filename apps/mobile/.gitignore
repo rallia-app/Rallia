@@ -45,3 +45,6 @@ credentials/
 /android
 
 .env.local
+
+# Sentry
+.env.sentry-build-plugin
