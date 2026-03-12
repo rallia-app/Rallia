@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import * as Notifications from 'expo-notifications';
+import { Logger } from '@rallia/shared-services';
 import { useUnreadNotificationCount } from './useNotifications';
 
 /**
@@ -13,15 +14,22 @@ export function useBadgeCountSync(userId: string | undefined) {
 
   useEffect(() => {
     if (count == null) return;
-    Notifications.setBadgeCountAsync(count).catch(() => {
-      // Silently ignore - badge API may not be available on all platforms
+    Notifications.setBadgeCountAsync(count).catch((err: unknown) => {
+      Logger.warn('[useBadgeCountSync] Failed to set badge count', {
+        count,
+        error: String(err),
+      });
     });
   }, [count]);
 
   // Reset badge on unmount (logout)
   useEffect(() => {
     return () => {
-      Notifications.setBadgeCountAsync(0).catch(() => {});
+      Notifications.setBadgeCountAsync(0).catch((err: unknown) => {
+        Logger.warn('[useBadgeCountSync] Failed to reset badge count', {
+          error: String(err),
+        });
+      });
     };
   }, []);
 }

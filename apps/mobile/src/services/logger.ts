@@ -178,35 +178,24 @@ class LoggerService {
   }
 
   /**
-   * Send error to error tracking service (Sentry)
+   * Send error to Sentry
    */
   private sendToErrorTracking(entry: LogEntry): void {
     try {
-      // TODO: Integrate with Sentry or other error tracking service
-      // Example Sentry integration:
-      // import * as Sentry from '@sentry/react-native';
-      //
-      // if (entry.error) {
-      //   Sentry.captureException(entry.error, {
-      //     level: entry.level as Sentry.SeverityLevel,
-      //     tags: {
-      //       component: entry.context?.component as string,
-      //     },
-      //     extra: entry.context,
-      //   });
-      // } else {
-      //   Sentry.captureMessage(entry.message, {
-      //     level: entry.level as Sentry.SeverityLevel,
-      //     extra: entry.context,
-      //   });
-      // }
+      const Sentry = require('@sentry/react-native');
 
-      // For now, just log to console in production
-      if (!this.isDevelopment) {
-        console.error('Error Tracking:', entry.message, entry.error);
+      if (entry.error) {
+        Sentry.captureException(entry.error, {
+          extra: entry.context,
+        });
+      } else {
+        Sentry.captureMessage(entry.message, {
+          level: 'error',
+          extra: entry.context,
+        });
       }
     } catch (error) {
-      console.error('Failed to send error to tracking service:', error);
+      console.error('Failed to send error to Sentry:', error);
     }
   }
 
