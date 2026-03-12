@@ -2067,7 +2067,7 @@ export default function CommunityDetailScreen() {
         onClose={() => setShowAddScoreIntro(false)}
         onAddScore={handleAddScoreIntroComplete}
         onNeverShowAgain={() => {
-          AsyncStorage.setItem(ADD_SCORE_INTRO_KEY, 'true').catch(console.error);
+          AsyncStorage.setItem(ADD_SCORE_INTRO_KEY, 'true').catch(() => {});
           setHasSeenAddScoreIntro(true);
           handleAddScoreIntroComplete();
         }}

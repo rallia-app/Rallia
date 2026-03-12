@@ -12,7 +12,7 @@ import * as Crypto from 'expo-crypto';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import { PENDING_REFERRAL_KEY_EXPORT } from '../screens/InviteReferralScreen';
-import { matchReferralFingerprint } from '@rallia/shared-services';
+import { matchReferralFingerprint, Logger } from '@rallia/shared-services';
 
 const ATTRIBUTION_ATTEMPTED_KEY = 'referral_attribution_attempted';
 
@@ -47,7 +47,9 @@ export async function attemptFirstLaunchAttribution(playerId: string): Promise<v
 
     await AsyncStorage.setItem(ATTRIBUTION_ATTEMPTED_KEY, 'true');
   } catch (error) {
-    console.warn('First launch attribution failed:', error);
+    Logger.warn('[referralAttribution] First launch attribution failed', {
+      error: String(error),
+    });
     // Mark as attempted to avoid retrying on every launch
     await AsyncStorage.setItem(ATTRIBUTION_ATTEMPTED_KEY, 'true').catch(() => {});
   }
