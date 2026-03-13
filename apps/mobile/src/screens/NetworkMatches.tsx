@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MatchCard, Text } from '@rallia/shared-components';
-import { spacingPixels, neutral } from '@rallia/design-system';
+import { spacingPixels, neutral, primary } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import {
   useNetworkMemberUpcomingMatches,
@@ -407,8 +407,8 @@ export default function NetworkMatchesScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
       edges={getSafeAreaEdges(['top'])}
     >
-      {/* Header - following pattern from other detail screens */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+      {/* Header - green background like CommunityDetail/GroupDetail */}
+      <View style={[styles.header, { backgroundColor: isDark ? primary[900] : primary[100] }]}>
         <TouchableOpacity
           onPress={() => {
             void lightHaptic();
@@ -417,14 +417,17 @@ export default function NetworkMatchesScreen() {
           style={styles.backButton}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="chevron-back" size={28} color={colors.icon} />
+          <Ionicons name="chevron-back" size={28} color={isDark ? '#FFFFFF' : colors.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text size="lg" weight="bold" style={{ color: colors.primary }}>
+          <Text size="lg" weight="bold" style={{ color: isDark ? '#FFFFFF' : colors.text }}>
             {networkType === 'community' ? t('community.matches.title') : t('groups.matches.title')}
           </Text>
           {networkName && (
-            <Text size="xs" style={{ color: colors.textMuted }}>
+            <Text
+              size="xs"
+              style={{ color: isDark ? 'rgba(255,255,255,0.8)' : colors.textSecondary }}
+            >
               {networkName}
             </Text>
           )}
@@ -525,7 +528,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[3],
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   backButton: {
     width: 40,
