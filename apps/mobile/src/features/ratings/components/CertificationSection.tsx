@@ -62,6 +62,11 @@ export interface CertificationSectionProps {
   ratingSystemName?: string;
 
   /**
+   * The current rating value for this sport
+   */
+  currentRatingValue?: number;
+
+  /**
    * Whether this is the current user's profile (show action buttons)
    */
   isOwnProfile?: boolean;
@@ -88,7 +93,8 @@ export const CertificationSection: React.FC<CertificationSectionProps> = ({
   requiredProofs = 2,
   peerEvaluationAverage,
   peerEvaluationCount,
-  ratingSystemName: _ratingSystemName,
+  ratingSystemName,
+  currentRatingValue,
   isOwnProfile = false,
   onRequestReference,
   onManageProofs,
@@ -100,6 +106,24 @@ export const CertificationSection: React.FC<CertificationSectionProps> = ({
   const isCertified = badgeStatus === 'certified';
   const referencesProgress = Math.min(referencesCount / requiredReferences, 1);
   const proofsProgress = Math.min(approvedProofsCount / requiredProofs, 1);
+
+  // Determine if player is at an "encouraged" certification level
+  // Tennis (NTRP): 3.0+, Pickleball (DUPR): 3.5+
+  const getEncouragedLevelThreshold = (): number | null => {
+    if (!ratingSystemName) return null;
+    const system = ratingSystemName.toUpperCase();
+    if (system === 'NTRP') return 3.0;
+    if (system === 'DUPR') return 3.5;
+    return null;
+  };
+
+  const encouragedThreshold = getEncouragedLevelThreshold();
+  const showEncouragementMessage =
+    !isCertified &&
+    isOwnProfile &&
+    encouragedThreshold !== null &&
+    currentRatingValue !== undefined &&
+    currentRatingValue >= encouragedThreshold;
 
   // Get status description
   const getStatusDescription = (): string => {
@@ -135,6 +159,18 @@ export const CertificationSection: React.FC<CertificationSectionProps> = ({
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
             {t('profile.certification.requirements.title')}
           </Text>
+
+          {/* Encouragement message for players at recommended certification levels */}
+          {showEncouragementMessage && encouragedThreshold !== null && (
+            <View style={[styles.encouragementBox, { backgroundColor: colors.primary + '15' }]}>
+              <Ionicons name="star" size={18} color={colors.primary} />
+              <Text style={[styles.encouragementText, { color: colors.text }]}>
+                {t('profile.certification.requirements.encouragedLevelMessage', {
+                  level: encouragedThreshold.toFixed(1),
+                })}
+              </Text>
+            </View>
+          )}
 
           {/* References Progress */}
           <View style={styles.progressItem}>
@@ -348,6 +384,19 @@ const styles = StyleSheet.create({
     fontSize: fontSizePixels.base,
     fontWeight: '500',
     marginBottom: spacingPixels[2], // 8px
+  },
+  encouragementBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: spacingPixels[3], // 12px
+    borderRadius: radiusPixels.md,
+    marginBottom: spacingPixels[3], // 12px
+    gap: spacingPixels[2], // 8px
+  },
+  encouragementText: {
+    fontSize: fontSizePixels.sm,
+    flex: 1,
+    lineHeight: fontSizePixels.sm * 1.4,
   },
   progressItem: {
     marginBottom: spacingPixels[2], // 8px

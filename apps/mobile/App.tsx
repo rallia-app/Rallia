@@ -4,23 +4,66 @@
  * to ensure the supabase client is properly configured before any hooks use it.
  */
 import './src/lib/supabase';
+import * as Sentry from '@sentry/react-native';
+import { isRunningInExpoGo } from 'expo';
 import Mapbox from '@rnmapbox/maps';
 
 Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? '');
 
+// Set up Sentry navigation integration (must be created before Sentry.init)
+const sentryNavigationIntegration = Sentry.reactNavigationIntegration({
+  enableTimeToInitialDisplay: !isRunningInExpoGo(),
+});
+
+Sentry.init({
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+  // Disable in development, active for preview + production builds
+  enabled: !__DEV__,
+  tracesSampleRate: 0.2,
+  replaysOnErrorSampleRate: 1.0,
+  replaysSessionSampleRate: 0.1,
+  integrations: [sentryNavigationIntegration, Sentry.mobileReplayIntegration()],
+  enableNativeFramesTracking: !isRunningInExpoGo(),
+  sendDefaultPii: true,
+});
+
+// Wire up the shared logger's SentryTransport so Logger.error() calls also go to Sentry
+import { SentryTransport } from '@rallia/shared-services';
+SentryTransport.configure(Sentry);
+
+// Global handler for unhandled JS errors outside the React tree
+// (e.g. setTimeout callbacks, event listeners, native module errors)
+declare const ErrorUtils: {
+  getGlobalHandler(): (error: Error, isFatal?: boolean) => void;
+  setGlobalHandler(handler: (error: Error, isFatal?: boolean) => void): void;
+};
+
+const previousGlobalHandler = ErrorUtils.getGlobalHandler();
+ErrorUtils.setGlobalHandler((error, isFatal) => {
+  // Import Logger lazily to avoid circular dependency at module init
+  const { Logger: L } = require('./src/services/logger');
+  L.error('Unhandled JS error (global)', error, { isFatal });
+  // Sentry captures via SentryTransport through Logger, but also send directly for fatal errors
+  if (isFatal) {
+    Sentry.captureException(error, { level: 'fatal', extra: { isFatal } });
+  }
+  previousGlobalHandler(error, isFatal);
+});
+
 import { useEffect, useState, useCallback, useRef, type PropsWithChildren } from 'react';
-import { Linking } from 'react-native';
+import { AppState, Linking } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { StatusBar } from 'expo-status-bar';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AppNavigator from './src/navigation/AppNavigator';
 import { navigationRef } from './src/navigation';
 import { linking } from './src/navigation/linking';
 import { ActionsBottomSheet } from './src/components/ActionsBottomSheet';
 import { FeedbackSheet } from './src/components/FeedbackSheet';
+import { BugReportSheet } from './src/components/BugReportSheet';
 import { SplashOverlay } from './src/components/SplashOverlay';
 import {
   ThemeProvider,
@@ -35,6 +78,8 @@ import { useBadgeCountSync } from '@rallia/shared-hooks/src/useBadgeCountSync';
 import { WelcomeTourModal } from './src/components/WelcomeTourModal';
 import { TourCompleteModal } from './src/components/TourCompleteModal';
 import { ErrorBoundary, ToastProvider, NetworkProvider } from '@rallia/shared-components';
+import type { ErrorBoundaryTranslations } from '@rallia/shared-components';
+import { getLocales } from 'expo-localization';
 import { Logger } from './src/services/logger';
 import {
   AuthProvider,
@@ -49,6 +94,8 @@ import {
   PlayerInviteSheetProvider,
   FeedbackSheetProvider,
   useFeedbackSheet,
+  BugReportSheetProvider,
+  useBugReportSheet,
   DeepLinkProvider,
   useDeepLink,
   useOverlay,
@@ -58,7 +105,7 @@ import {
   useTour,
   TourProvider,
 } from './src/context';
-import { usePushNotifications } from './src/hooks';
+import { usePushNotifications, useShakeDetection } from './src/hooks';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { SheetProvider } from 'react-native-actions-sheet';
 import { Sheets } from './src/context/sheets';
@@ -71,13 +118,23 @@ import { attemptFirstLaunchAttribution } from './src/utils/referralAttribution';
 import './global.css';
 import MatchDetailSheet from './src/components/MatchDetailSheet';
 
+// Connect React Query's focusManager to React Native's AppState.
+// When the app returns from background, stale queries automatically refetch.
+focusManager.setEventListener(handleFocus => {
+  const subscription = AppState.addEventListener('change', state => {
+    handleFocus(state === 'active');
+  });
+  return () => subscription.remove();
+});
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       // Data stays fresh for 2 minutes - prevents unnecessary refetches
       staleTime: 1000 * 60 * 2,
-      // Don't refetch on window focus by default (use pull-to-refresh instead)
-      refetchOnWindowFocus: false,
+      // Refetch stale queries when app comes back from background
+      // or when navigating back to a screen (via focusManager integration)
+      refetchOnWindowFocus: true,
       // Don't refetch on mount if data is fresh
       refetchOnMount: 'always',
       // Keep unused data in cache for 5 minutes
@@ -322,15 +379,51 @@ function DeepLinkHandler() {
   return null;
 }
 
+/**
+ * ShakeHandler - Detects device shakes and opens the bug report sheet.
+ * Must be inside BugReportSheetProvider.
+ */
+function ShakeHandler() {
+  const { openBugReport } = useBugReportSheet();
+  const { isSplashComplete } = useOverlay();
+
+  useShakeDetection({
+    onShake: () => {
+      Logger.logUserAction('shake_detected_bug_report');
+      openBugReport('shake');
+    },
+    // Only enable shake detection after splash is complete
+    enabled: isSplashComplete,
+  });
+
+  return null;
+}
+
 function AppContent() {
   const { theme } = useTheme();
   const { setSplashComplete, isSplashComplete, permissionsHandled } = useOverlay();
   const { showCompletionModal, dismissCompletionModal, lastCompletedTourId } = useTour();
 
+  // Register the navigation container with Sentry for screen tracking
+  useEffect(() => {
+    if (navigationRef.current) {
+      sentryNavigationIntegration.registerNavigationContainer(navigationRef);
+    }
+  }, []);
+
   return (
     <>
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
-      <NavigationContainer ref={navigationRef} linking={linking}>
+      <NavigationContainer
+        ref={navigationRef}
+        linking={linking}
+        onStateChange={() => {
+          // Notify React Query of navigation state changes so stale queries
+          // refetch when the user navigates back to a screen.
+          // Fresh queries (within staleTime) are not affected.
+          focusManager.setFocused(true);
+        }}
+      >
         <SheetProvider>
           <Sheets />
           <AppNavigator />
@@ -341,6 +434,8 @@ function AppContent() {
         <ActionsBottomSheet />
         {/* Feedback Bottom Sheet - shows when providing post-match feedback */}
         <FeedbackSheet />
+        {/* Bug Report Bottom Sheet - shows on shake or help menu */}
+        <BugReportSheet />
       </NavigationContainer>
 
       {/* Deep Link Handler - opens match detail sheet when a deep link is received */}
@@ -349,6 +444,8 @@ function AppContent() {
       <PendingFeedbackHandler />
       {/* Session Expiry Handler - shows toast when session expires */}
       <SessionExpiryHandler />
+      {/* Shake Handler - detects shakes and opens bug report sheet */}
+      <ShakeHandler />
 
       {/* Welcome Tour Modal - shows for new users after splash/permissions */}
       <WelcomeTourModal splashComplete={isSplashComplete} permissionsHandled={permissionsHandled} />
@@ -364,17 +461,37 @@ function AppContent() {
   );
 }
 
-export default function App() {
+// Detect device language for ErrorBoundary (rendered above LocaleProvider)
+const deviceLanguage = getLocales()[0]?.languageCode;
+const errorBoundaryTranslations: ErrorBoundaryTranslations | undefined =
+  deviceLanguage === 'fr'
+    ? {
+        title: 'Oups ! Une erreur est survenue',
+        description:
+          "Nous nous excusons pour le désagrément. L'application a rencontré une erreur inattendue.",
+        tryAgain: 'Réessayer',
+        errorDetailsTitle: "Détails de l'erreur (développement uniquement)",
+        errorMessage: "Message d'erreur :",
+        stackTrace: "Trace d'appels :",
+        componentStack: 'Pile des composants :',
+      }
+    : undefined;
+
+function App() {
   const handleError = (error: Error, errorInfo: React.ErrorInfo) => {
     // Log unhandled errors with full context
     Logger.error('Unhandled app error', error, {
       componentStack: errorInfo.componentStack,
     });
+    // Also capture in Sentry with component stack context
+    Sentry.captureException(error, {
+      contexts: { react: { componentStack: errorInfo.componentStack } },
+    });
   };
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ErrorBoundary onError={handleError}>
+      <ErrorBoundary onError={handleError} translations={errorBoundaryTranslations}>
         <SafeAreaProvider>
           <QueryClientProvider client={queryClient}>
             <LocaleProvider>
@@ -390,16 +507,18 @@ export default function App() {
                                 <MatchDetailSheetProvider>
                                   <PlayerInviteSheetProvider>
                                     <FeedbackSheetProvider>
-                                      <StripeProvider
-                                        publishableKey={
-                                          process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
-                                        }
-                                        merchantIdentifier="merchant.com.rallia"
-                                      >
-                                        <BottomSheetModalProvider>
-                                          <AppContent />
-                                        </BottomSheetModalProvider>
-                                      </StripeProvider>
+                                      <BugReportSheetProvider>
+                                        <StripeProvider
+                                          publishableKey={
+                                            process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
+                                          }
+                                          merchantIdentifier="merchant.com.rallia"
+                                        >
+                                          <BottomSheetModalProvider>
+                                            <AppContent />
+                                          </BottomSheetModalProvider>
+                                        </StripeProvider>
+                                      </BugReportSheetProvider>
                                     </FeedbackSheetProvider>
                                   </PlayerInviteSheetProvider>
                                 </MatchDetailSheetProvider>
@@ -419,3 +538,5 @@ export default function App() {
     </GestureHandlerRootView>
   );
 }
+
+export default Sentry.wrap(App);

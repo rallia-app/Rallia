@@ -190,14 +190,25 @@ const CommunityCard: React.FC<{
         {/* Community Info */}
         <View style={styles.communityInfo}>
           <View style={styles.titleRow}>
-            <Text
-              weight="semibold"
-              size="sm"
-              style={[{ color: colors.text }, styles.titleText]}
-              numberOfLines={2}
-            >
-              {item.name}
-            </Text>
+            <View style={styles.nameWithBadge}>
+              <Text
+                weight="semibold"
+                size="sm"
+                style={[{ color: colors.text }, styles.titleText]}
+                numberOfLines={2}
+              >
+                {item.name}
+              </Text>
+              {/* Certification badge for verified communities */}
+              {item.is_certified && (
+                <View style={styles.certifiedBadge}>
+                  <MaterialCommunityIcons name="check-decagram" size={12} color="#22c55e" />
+                  <Text size="xs" weight="semibold" style={{ color: '#22c55e' }}>
+                    {t('community.certified')}
+                  </Text>
+                </View>
+              )}
+            </View>
             {renderSportIcon()}
           </View>
 
@@ -728,6 +739,24 @@ const styles = StyleSheet.create({
   badgeText: {
     color: '#FFFFFF',
   },
+  certifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#dcfce7',
+    borderWidth: 1,
+    borderColor: '#22c55e',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginLeft: 6,
+    gap: 3,
+  },
+  nameWithBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    flexWrap: 'wrap',
+  },
   sportIconContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -747,7 +776,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   titleText: {
-    flex: 1,
+    flexShrink: 1,
   },
   bottomRow: {
     flexDirection: 'row',

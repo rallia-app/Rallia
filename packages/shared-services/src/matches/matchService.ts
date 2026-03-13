@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '../supabase';
+import { Logger } from '../logger';
 import {
   notifyMatchJoinRequest,
   notifyJoinRequestAccepted,
@@ -364,7 +365,7 @@ export async function getMatchWithDetails(matchId: string) {
       .in('player_id', profileIds);
 
     if (ratingsError) {
-      console.error('[getMatchWithDetails] Error fetching ratings:', ratingsError);
+      Logger.error('[getMatchWithDetails] Error fetching ratings:', ratingsError);
     }
 
     if (!ratingsError && ratingsData) {
@@ -952,7 +953,7 @@ export async function updateMatch(
           matchDate: originalMatch?.match_date,
           startTime: originalMatch?.start_time,
         }).catch(err => {
-          console.error('Failed to send match updated notifications:', err);
+          Logger.error('Failed to send match updated notifications:', err);
         });
       }
     }
@@ -1098,11 +1099,11 @@ export async function cancelMatch(matchId: string, userId?: string): Promise<Mat
         customImpact: penalty,
         metadata: { hoursUntilMatch, courtStatus: match.court_status, recentOffenses },
       }).catch(err => {
-        console.error('[cancelMatch] Failed to create reputation event:', err);
+        Logger.error('[cancelMatch] Failed to create reputation event:', err);
       });
     } else {
       createReputationEvent(userId, 'match_cancelled_early', { matchId }).catch(err => {
-        console.error('[cancelMatch] Failed to create reputation event:', err);
+        Logger.error('[cancelMatch] Failed to create reputation event:', err);
       });
     }
   }
@@ -1142,7 +1143,7 @@ export async function cancelMatch(matchId: string, userId?: string): Promise<Mat
         startTime,
         locationName
       ).catch(err => {
-        console.error('Failed to send match cancelled notifications:', err);
+        Logger.error('Failed to send match cancelled notifications:', err);
       });
     }
   }
@@ -1213,7 +1214,7 @@ async function ensureMatchChat(matchId: string, newPlayerId: string): Promise<vo
       .single();
 
     if (matchError || !match) {
-      console.error('[ensureMatchChat] Failed to fetch match:', matchError);
+      Logger.error('[ensureMatchChat] Failed to fetch match:', matchError);
       return;
     }
 
@@ -1248,7 +1249,10 @@ async function ensureMatchChat(matchId: string, newPlayerId: string): Promise<vo
       conversation.id
     );
   } catch (error) {
-    console.error('[ensureMatchChat] Error:', error);
+    Logger.error(
+      '[ensureMatchChat] Error',
+      error instanceof Error ? error : new Error(String(error))
+    );
   }
 }
 
@@ -1266,7 +1270,10 @@ async function removePlayerFromMatchChat(matchId: string, playerId: string): Pro
       `[removePlayerFromMatchChat] Removed player ${playerId} from chat for match ${matchId}`
     );
   } catch (error) {
-    console.error('[removePlayerFromMatchChat] Error:', error);
+    Logger.error(
+      '[removePlayerFromMatchChat] Error',
+      error instanceof Error ? error : new Error(String(error))
+    );
   }
 }
 
@@ -1475,7 +1482,7 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
     notifyMatchJoinRequest(match.created_by, matchId, playerName, sportName, match.match_date, {
       playerAvatarUrl,
     }).catch(err => {
-      console.error('Failed to send join request notification:', err);
+      Logger.error('Failed to send join request notification:', err);
     });
   }
 
@@ -1556,12 +1563,18 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
           longitude: matchDetails?.custom_longitude ?? undefined,
         }
       ).catch(err => {
-        console.error('Failed to send player joined notifications:', err);
+        Logger.error('Failed to send player joined notifications:', err);
       });
     }
 
     // Ensure match chat exists and add the new player
-    ensureMatchChat(matchId, playerId);
+    ensureMatchChat(matchId, playerId).catch(err => {
+      Logger.error(
+        '[joinMatch] Failed to ensure match chat',
+        err instanceof Error ? err : new Error(String(err)),
+        { matchId, playerId }
+      );
+    });
   }
 
   return {
@@ -1716,7 +1729,7 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
           customImpact: penalty,
           metadata: { hoursUntilMatch, recentOffenses },
         }).catch(err => {
-          console.error('[leaveMatch] Failed to create reputation event:', err);
+          Logger.error('[leaveMatch] Failed to create reputation event:', err);
         });
       }
     }
@@ -1757,7 +1770,7 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
 
       // Notify all users (fire and forget - don't block on notification)
       notifyPlayerLeft(uniqueUserIds, matchId, playerName, sportName, spotsLeft).catch(err => {
-        console.error('Failed to send player left notifications:', err);
+        Logger.error('Failed to send player left notifications:', err);
       });
     }
 
@@ -1772,14 +1785,14 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
       const startTime = match.start_time ? match.start_time.slice(0, 5) : undefined;
 
       notifyMatchSpotOpened(waitlistedUserIds, matchId, sportName, { startTime }).catch(err => {
-        console.error('Failed to send spot opened notifications:', err);
+        Logger.error('Failed to send spot opened notifications:', err);
       });
     }
   }
 
   // Remove the player from the match chat (fire and forget)
   removePlayerFromMatchChat(matchId, playerId).catch(err => {
-    console.error('[leaveMatch] Failed to remove player from match chat:', err);
+    Logger.error('[leaveMatch] Failed to remove player from match chat:', err);
   });
 }
 
@@ -1931,11 +1944,17 @@ export async function acceptJoinRequest(
     sportName,
     locationName
   ).catch(err => {
-    console.error('Failed to send join accepted notification:', err);
+    Logger.error('Failed to send join accepted notification:', err);
   });
 
   // Ensure match chat exists and add the accepted player
-  ensureMatchChat(matchId, participant.player_id);
+  ensureMatchChat(matchId, participant.player_id).catch(err => {
+    Logger.error(
+      '[acceptJoinRequest] Failed to ensure match chat',
+      err instanceof Error ? err : new Error(String(err)),
+      { matchId, playerId: participant.player_id }
+    );
+  });
 
   return updatedParticipant as MatchParticipant;
 }
@@ -2048,7 +2067,7 @@ export async function rejectJoinRequest(
       sportName,
       match.match_date
     ).catch(err => {
-      console.error('Failed to send join rejected notification:', err);
+      Logger.error('Failed to send join rejected notification:', err);
     });
   }
 
@@ -2210,7 +2229,7 @@ export async function kickParticipant(
       match.match_date,
       startTime
     ).catch(err => {
-      console.error('Failed to send kicked notification:', err);
+      Logger.error('Failed to send kicked notification:', err);
     });
 
     // Notify waitlisted players that a spot opened up
@@ -2224,13 +2243,13 @@ export async function kickParticipant(
       const waitlistedUserIds = waitlistedPlayers.map((p: { player_id: string }) => p.player_id);
 
       notifyMatchSpotOpened(waitlistedUserIds, matchId, sportName, { startTime }).catch(err => {
-        console.error('Failed to send spot opened notifications:', err);
+        Logger.error('Failed to send spot opened notifications:', err);
       });
     }
 
     // Remove the kicked player from the match chat (fire and forget)
     removePlayerFromMatchChat(matchId, participantRecord.player_id).catch(err => {
-      console.error('[kickParticipant] Failed to remove player from match chat:', err);
+      Logger.error('[kickParticipant] Failed to remove player from match chat:', err);
     });
   }
 
@@ -2542,7 +2561,7 @@ export async function resendInvitation(
       startTime,
       locationName
     ).catch(err => {
-      console.error('Failed to send invitation notification:', err);
+      Logger.error('Failed to send invitation notification:', err);
     });
   }
 
@@ -3121,7 +3140,7 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
         .in('player_id', profileIds);
 
       if (ratingsError) {
-        console.error('[getPlayerMatchesWithDetails] Error fetching ratings:', ratingsError);
+        Logger.error('[getPlayerMatchesWithDetails] Error fetching ratings:', ratingsError);
       }
 
       if (!ratingsError && ratingsData) {
@@ -3752,7 +3771,7 @@ export async function invitePlayersToMatch(
       .single();
 
     if (updateError) {
-      console.error('[invitePlayersToMatch] Update error for re-invite:', updateError);
+      Logger.error('[invitePlayersToMatch] Update error for re-invite:', updateError);
       failed.push(playerId);
     } else if (updatedParticipant) {
       invited.push(updatedParticipant as MatchParticipant);
@@ -3774,7 +3793,7 @@ export async function invitePlayersToMatch(
       .select();
 
     if (insertError) {
-      console.error('[invitePlayersToMatch] Insert error:', insertError);
+      Logger.error('[invitePlayersToMatch] Insert error:', insertError);
       // Add all toInvite players to failed
       failed.push(...toInvite);
     } else {
@@ -3804,7 +3823,7 @@ export async function invitePlayersToMatch(
       startTime,
       locationName
     ).catch(err => {
-      console.error('[invitePlayersToMatch] Notification error:', err);
+      Logger.error('[invitePlayersToMatch] Notification error:', err);
     });
   }
 
@@ -3862,7 +3881,7 @@ export async function checkInToMatch(
       .single();
 
     if (matchError || !match) {
-      console.error('[checkInToMatch] Failed to fetch match:', matchError);
+      Logger.error('[checkInToMatch] Failed to fetch match:', matchError);
       return { success: false, error: 'unknown' };
     }
 
@@ -3882,7 +3901,7 @@ export async function checkInToMatch(
 
     // 3. Validate we have location coordinates
     if (targetLat === null || targetLng === null) {
-      console.error('[checkInToMatch] Match has no valid location coordinates:', {
+      Logger.error('[checkInToMatch] Match has no valid location coordinates', undefined, {
         matchId,
         locationType: match.location_type,
       });
@@ -3899,7 +3918,7 @@ export async function checkInToMatch(
       .single();
 
     if (participantError || !participant) {
-      console.error('[checkInToMatch] Player is not a participant:', {
+      Logger.error('[checkInToMatch] Player is not a participant', undefined, {
         matchId,
         playerId,
         error: participantError,
@@ -3926,13 +3945,16 @@ export async function checkInToMatch(
       .eq('id', participant.id);
 
     if (updateError) {
-      console.error('[checkInToMatch] Failed to update checked_in_at:', updateError);
+      Logger.error('[checkInToMatch] Failed to update checked_in_at:', updateError);
       return { success: false, error: 'unknown' };
     }
 
     return { success: true, distanceMeters };
   } catch (err) {
-    console.error('[checkInToMatch] Unexpected error:', err);
+    Logger.error(
+      '[checkInToMatch] Unexpected error',
+      err instanceof Error ? err : new Error(String(err))
+    );
     return { success: false, error: 'unknown' };
   }
 }
@@ -3980,18 +4002,18 @@ export async function getMatchNeedingFeedback(
 
   // Retry once on upstream/invalid response (common after db reset or transient PostgREST issues)
   if (rpcError?.message?.includes('upstream') || rpcError?.message?.includes('invalid response')) {
-    console.warn('[getMatchNeedingFeedback] RPC upstream error, retrying once:', rpcError.message);
+    Logger.warn('[getMatchNeedingFeedback] RPC upstream error, retrying once', {
+      message: rpcError.message,
+    });
     const retry = await callGetPlayerMatchesForFeedback(userId);
     rpcError = retry.error;
     matchIdResults = retry.data;
   }
 
   if (rpcError) {
-    console.error(
-      '[getMatchNeedingFeedback] RPC error:',
-      rpcError?.message,
-      rpcError?.details ?? rpcError
-    );
+    Logger.error('[getMatchNeedingFeedback] RPC error', new Error(rpcError.message), {
+      details: rpcError.details,
+    });
     return null;
   }
 
@@ -4058,7 +4080,7 @@ export async function getMatchNeedingFeedback(
     .is('cancelled_at', null); // Exclude cancelled matches
 
   if (error) {
-    console.error('[getMatchNeedingFeedback] Query error:', error);
+    Logger.error('[getMatchNeedingFeedback] Query error:', error);
     return null;
   }
 

@@ -128,6 +128,103 @@ export async function getPlayerConversations(playerId: string): Promise<Conversa
 }
 
 /**
+ * Get filtered + paginated conversations for a player.
+ * Uses the get_player_conversations_filtered RPC with server-side filtering.
+ */
+export async function getPlayerConversationsFiltered(params: {
+  playerId: string;
+  filter?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<{
+  conversations: ConversationPreview[];
+  hasMore: boolean;
+  nextOffset: number | null;
+}> {
+  const { playerId, filter = 'all', search = '', limit = 20, offset = 0 } = params;
+
+  try {
+    const { data, error } = await supabase.rpc('get_player_conversations_filtered', {
+      p_player_id: playerId,
+      p_filter: filter,
+      p_search: search,
+      p_limit: limit + 1, // Fetch one extra to determine hasMore
+      p_offset: offset,
+    });
+
+    if (error) {
+      console.error('Error fetching filtered conversations from RPC:', error);
+      return { conversations: [], hasMore: false, nextOffset: null };
+    }
+
+    if (!data || (data as ConversationRPCRow[]).length === 0) {
+      return { conversations: [], hasMore: false, nextOffset: null };
+    }
+
+    const rows = data as ConversationRPCRow[];
+    const hasMore = rows.length > limit;
+    const rowsToMap = hasMore ? rows.slice(0, limit) : rows;
+
+    // Transform RPC results to ConversationPreview format (same mapping as getPlayerConversations)
+    const previews: ConversationPreview[] = rowsToMap.map((row: ConversationRPCRow) => {
+      let otherParticipant: ConversationPreview['other_participant'] | undefined;
+      if (row.other_participant_id) {
+        const isOnline = row.other_participant_last_seen_at
+          ? new Date(row.other_participant_last_seen_at) > new Date(Date.now() - 5 * 60 * 1000)
+          : false;
+        otherParticipant = {
+          id: row.other_participant_id,
+          first_name: row.other_participant_first_name || '',
+          last_name: row.other_participant_last_name,
+          profile_picture_url: row.other_participant_picture_url,
+          is_online: isOnline,
+          last_seen_at: row.other_participant_last_seen_at,
+        };
+      }
+
+      let matchInfo: ConversationPreview['match_info'] = null;
+      if (row.match_id && row.match_sport_name) {
+        matchInfo = {
+          sport_name: row.match_sport_name,
+          match_date: row.match_date || '',
+          format: (row.match_format as 'singles' | 'doubles') || 'singles',
+        };
+      }
+
+      return {
+        id: row.id,
+        conversation_type: row.conversation_type as ConversationType,
+        title: row.title,
+        last_message_content: row.last_message_content,
+        last_message_at: row.last_message_at,
+        last_message_sender_name: row.last_message_sender_first_name,
+        unread_count: Number(row.unread_count) || 0,
+        participant_count: Number(row.participant_count) || 0,
+        other_participant: otherParticipant,
+        cover_image_url: row.network_cover_image_url || row.picture_url,
+        is_pinned: row.is_pinned,
+        is_muted: row.is_muted,
+        is_archived: row.is_archived,
+        match_id: row.match_id,
+        match_info: matchInfo,
+        network_id: row.network_id,
+        network_type: row.network_type,
+      };
+    });
+
+    return {
+      conversations: previews,
+      hasMore,
+      nextOffset: hasMore ? offset + limit : null,
+    };
+  } catch (err) {
+    console.error('Unexpected error in getPlayerConversationsFiltered:', err);
+    return { conversations: [], hasMore: false, nextOffset: null };
+  }
+}
+
+/**
  * Get a single conversation with details
  * Fetches conversation, participants, and last message in parallel
  */

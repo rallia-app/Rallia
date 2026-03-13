@@ -43,6 +43,7 @@ import {
   getNetworkByConversationId,
   getMatchWithDetails,
   deleteMessage,
+  isGroupConversationType,
   type ReactionSummary,
   type MessageWithSender,
 } from '@rallia/shared-services';
@@ -199,9 +200,13 @@ export default function ChatConversationScreen() {
   // Real-time subscription for reactions
   useReactionsRealtime(conversationId);
 
-  // Mark messages as read when entering the conversation
+  // Invalidate messages cache and mark as read when entering the conversation
+  // This ensures message statuses (sent → read) are fresh from the server
   useEffect(() => {
     if (conversationId && playerId) {
+      queryClient.invalidateQueries({
+        queryKey: chatKeys.messages(conversationId),
+      });
       markAsReadMutation.mutate({ conversationId, playerId });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -226,7 +231,7 @@ export default function ChatConversationScreen() {
   // Fetch network info for group chats (for cover image)
   useEffect(() => {
     const fetchNetworkInfo = async () => {
-      if (!conversation || conversation.conversation_type !== 'group') {
+      if (!conversation || !isGroupConversationType(conversation.conversation_type)) {
         setNetworkInfo(null);
         return;
       }
@@ -247,8 +252,7 @@ export default function ChatConversationScreen() {
     if (messages.length === 0 || !playerId) return;
 
     try {
-      // Filter out temp IDs from optimistic messages (they start with "temp-")
-      const messageIds = messages.map(m => m.id).filter(id => !id.startsWith('temp-'));
+      const messageIds = messages.map(m => m.id);
 
       if (messageIds.length === 0) return;
 
@@ -284,7 +288,7 @@ export default function ChatConversationScreen() {
     if (!conversation) return undefined;
 
     if (
-      conversation.conversation_type === 'group' ||
+      isGroupConversationType(conversation.conversation_type) ||
       conversation.conversation_type === 'announcement'
     ) {
       const count = networkInfo?.member_count || conversation.participants?.length || 0;
@@ -297,12 +301,20 @@ export default function ChatConversationScreen() {
   // Get group avatar (if it's a group conversation linked to a network)
   const headerImage = useMemo(() => {
     // For group chats linked to a network, use network cover image
-    if (conversation?.conversation_type === 'group' && networkInfo?.cover_image_url) {
+    if (
+      conversation &&
+      isGroupConversationType(conversation.conversation_type) &&
+      networkInfo?.cover_image_url
+    ) {
       return networkInfo.cover_image_url;
     }
 
     // For simple group chats (no network), use conversation picture_url
-    if (conversation?.conversation_type === 'group' && conversation.picture_url) {
+    if (
+      conversation &&
+      isGroupConversationType(conversation.conversation_type) &&
+      conversation.picture_url
+    ) {
       return conversation.picture_url;
     }
 
@@ -379,7 +391,7 @@ export default function ChatConversationScreen() {
       } catch (error) {
         console.error('Error fetching match details:', error);
       }
-    } else if (conversation?.conversation_type === 'group') {
+    } else if (conversation && isGroupConversationType(conversation.conversation_type)) {
       navigation.navigate('GroupChatInfo', { conversationId });
     }
   }, [

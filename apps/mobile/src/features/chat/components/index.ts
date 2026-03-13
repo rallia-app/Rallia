@@ -23,3 +23,4 @@ export { CreateGroupChatModal } from './CreateGroupChatModal';
 export { AddMembersToGroupModal } from './AddMembersToGroupModal';
 export { ReportUserModal } from './ReportUserModal';
 export { ChatMemberOptionsModal } from './ChatMemberOptionsModal';
+export { default as ConversationFilterChips } from './ConversationFilterChips';

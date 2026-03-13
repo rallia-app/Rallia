@@ -28,7 +28,6 @@ const SettingsButton: React.FC<SettingsButtonProps> = ({ size = 24, color = '#33
 const styles = StyleSheet.create({
   button: {
     padding: 4,
-    marginRight: 4,
   },
 });
 

@@ -149,6 +149,19 @@ const AdminPanelScreen: React.FC = () => {
         comingSoon: false,
       },
       {
+        id: 'networks',
+        icon: 'layers-outline',
+        titleKey: 'admin.networks.title',
+        descriptionKey: 'admin.networks.description',
+        onPress: () => {
+          lightHaptic();
+          Logger.logUserAction('admin_networks_pressed');
+          navigation.navigate('AdminNetworks');
+        },
+        minimumRole: 'support',
+        comingSoon: false,
+      },
+      {
         id: 'analytics',
         icon: 'bar-chart-outline',
         titleKey: 'admin.sections.analytics.title',

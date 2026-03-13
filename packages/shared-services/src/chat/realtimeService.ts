@@ -127,17 +127,19 @@ export function subscribeToReactions(
 
 /**
  * Subscribe to conversation updates (new messages in any conversation)
+ * Listens to conversation UPDATE events — triggered automatically by the
+ * update_conversation_on_new_message trigger when a message is inserted.
+ * RLS ensures only conversations the player participates in are delivered.
  */
 export function subscribeToConversations(playerId: string, onUpdate: () => void): RealtimeChannel {
-  // Subscribe to conversation updates
   const channel = supabase
     .channel(`conversations:${playerId}`)
     .on(
       'postgres_changes',
       {
-        event: 'INSERT',
+        event: 'UPDATE',
         schema: 'public',
-        table: 'message',
+        table: 'conversation',
       },
       () => {
         onUpdate();
@@ -195,8 +197,12 @@ export function subscribeToTypingIndicators(
 
       for (const [key, presences] of Object.entries(state)) {
         if (key !== playerId) {
-          const presence = presences[0] as { player_name?: string; timestamp?: number };
-          if (presence) {
+          const presence = presences[0] as {
+            player_name?: string;
+            timestamp?: number;
+            is_typing?: boolean;
+          };
+          if (presence?.is_typing) {
             typingUsers.push({
               player_id: key,
               player_name: presence.player_name || 'Someone',

@@ -37,12 +37,15 @@ export type {
   SearchMessageResult,
 } from './chatTypes';
 
+export { isGroupConversationType } from './chatTypes';
+
 // ============================================================================
 // CONVERSATION OPERATIONS
 // ============================================================================
 
 export {
   getPlayerConversations,
+  getPlayerConversationsFiltered,
   getConversation,
   createConversation,
   getOrCreateDirectConversation,
@@ -122,6 +125,7 @@ export {
   isPlayerOnline,
   searchMessagesInConversation,
   getTotalUnreadCount,
+  getUnreadConversationsCount,
   hasAgreedToChatRules,
   agreeToChatRules,
 } from './chatUtilityService';

@@ -333,7 +333,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
       const { data: conversation, error: convError } = await supabase
         .from('conversation')
         .insert({
-          conversation_type: 'group',
+          conversation_type: 'group_chat',
           title: groupName.trim(),
           created_by: currentUserId,
           picture_url: pictureUrl || null,
@@ -374,7 +374,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
   const renderPlayerItem = useCallback(
     ({ item }: { item: SelectedMember }) => {
       const isSelected = selectedMembers.some(p => p.id === item.id);
-      const displayName = item.displayName || `${item.firstName} ${item.lastName || ''}`.trim();
+      const displayName = `${item.firstName} ${item.lastName || ''}`.trim();
 
       return (
         <TouchableOpacity
@@ -633,8 +633,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
 
           {/* Selected members */}
           {selectedMembers.map(member => {
-            const displayName =
-              member.displayName || `${member.firstName} ${member.lastName || ''}`.trim();
+            const displayName = `${member.firstName} ${member.lastName || ''}`.trim();
             return (
               <View key={member.id} style={styles.memberRow}>
                 <View

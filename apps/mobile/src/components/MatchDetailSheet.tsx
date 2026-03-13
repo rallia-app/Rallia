@@ -1254,23 +1254,13 @@ export const MatchDetailSheet: React.FC = () => {
     pendingReopenRef.current = selectedMatch;
     closeSheet();
 
-    // Generate chat title from match info (sport name + date)
-    const dateResult = formatIntuitiveDateInTimezone(
-      selectedMatch.match_date,
-      selectedMatch.timezone,
-      locale
-    );
-    const dateLabel = dateResult.translationKey ? t(dateResult.translationKey) : dateResult.label;
-    const chatTitle = selectedMatch.sport?.name
-      ? `${selectedMatch.sport.name} - ${dateLabel}`
-      : t('matchDetail.title');
-
     // Short delay so navigation runs after sheet close animation.
     // Navigate to the Chat conversation screen (full screen, no tabs)
+    // Don't pass a custom title — let ChatConversation use the DB conversation title
     setTimeout(() => {
       navigation.navigate('ChatConversation', {
         conversationId: matchConversationId,
-        title: chatTitle,
+        title: undefined,
       });
     }, 100);
   }, [matchConversationId, selectedMatch, guardAction, closeSheet, locale, t, navigation]);

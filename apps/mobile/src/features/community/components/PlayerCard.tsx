@@ -7,7 +7,14 @@
  */
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { View, StyleSheet, Image, Animated, TouchableWithoutFeedback } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Image,
+  Animated,
+  TouchableWithoutFeedback,
+  TouchableOpacity,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
@@ -29,6 +36,9 @@ interface PlayerCardProps {
   player: PlayerSearchResult;
   colors: ThemeColors;
   onPress: (player: PlayerSearchResult) => void;
+  isFavorite?: boolean;
+  onToggleFavorite?: (playerId: string) => void;
+  showFavorite?: boolean;
 }
 
 function formatDistance(meters: number | null, nearbyLabel: string): string {
@@ -55,7 +65,14 @@ function getLevelDescription(value: number | null | undefined, t: (key: string) 
   return t('playerProfile.rating.professional');
 }
 
-const PlayerCard: React.FC<PlayerCardProps> = ({ player, colors, onPress }) => {
+const PlayerCard: React.FC<PlayerCardProps> = ({
+  player,
+  colors,
+  onPress,
+  isFavorite = false,
+  onToggleFavorite,
+  showFavorite = false,
+}) => {
   const { t } = useTranslation();
   // Always use first + last name
   const displayName = `${player.first_name || ''} ${player.last_name || ''}`.trim() || 'Unknown';
@@ -107,6 +124,21 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, colors, onPress }) => {
           { transform: [{ scale: scaleAnim }] },
         ]}
       >
+        {/* Favorite Button - Top Right */}
+        {showFavorite && onToggleFavorite && (
+          <TouchableOpacity
+            style={styles.favoriteButton}
+            onPress={() => onToggleFavorite(player.id)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons
+              name={isFavorite ? 'heart' : 'heart-outline'}
+              size={24}
+              color={isFavorite ? '#EF4444' : colors.textMuted}
+            />
+          </TouchableOpacity>
+        )}
+
         {/* Profile Picture with Online Indicator */}
         <View style={styles.avatarContainer}>
           {player.profile_picture_url ? (
@@ -127,9 +159,25 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, colors, onPress }) => {
 
         {/* Player Info */}
         <View style={styles.infoContainer}>
-          <Text size="base" weight="semibold" color={colors.text} numberOfLines={1}>
-            {displayName}
-          </Text>
+          <View style={styles.nameRow}>
+            <Text
+              size="base"
+              weight="semibold"
+              color={colors.text}
+              numberOfLines={1}
+              style={{ flexShrink: 1 }}
+            >
+              {displayName}
+            </Text>
+            {player.rating?.is_certified && (
+              <View style={styles.certifiedBadge}>
+                <Ionicons name="checkmark-circle" size={12} color="#4CAF50" />
+                <Text size="xs" weight="semibold" style={styles.certifiedBadgeText}>
+                  {t('community.certified')}
+                </Text>
+              </View>
+            )}
+          </View>
 
           {(player.city || distanceText) && (
             <View style={styles.locationRow}>
@@ -157,14 +205,6 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, colors, onPress }) => {
                 {player.rating.label}
                 {levelDescription && ` (${levelDescription})`}
               </Text>
-              {player.rating.is_certified && (
-                <Ionicons
-                  name="checkmark-circle"
-                  size={14}
-                  color="#22C55E"
-                  style={styles.certifiedIcon}
-                />
-              )}
             </View>
           )}
         </View>
@@ -185,6 +225,14 @@ const styles = StyleSheet.create({
     marginBottom: spacingPixels[2],
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
+    position: 'relative',
+  },
+  favoriteButton: {
+    position: 'absolute',
+    top: spacingPixels[2],
+    right: spacingPixels[1.5],
+    padding: spacingPixels[1],
+    zIndex: 1,
   },
   avatarContainer: {
     marginRight: spacingPixels[3],
@@ -233,8 +281,25 @@ const styles = StyleSheet.create({
     marginLeft: spacingPixels[1],
     flex: 1,
   },
-  certifiedIcon: {
-    marginLeft: spacingPixels[1],
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  certifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radiusPixels.full,
+    gap: 3,
+  },
+  certifiedBadgeText: {
+    color: '#4CAF50',
+    fontSize: 10,
   },
 });
 
