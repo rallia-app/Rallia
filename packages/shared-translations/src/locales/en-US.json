@@ -1729,10 +1729,16 @@
       "blocked": "Blocked",
       "unread": "Unread",
       "favorites": "Favorites",
+      "archived": "Archived",
+      "muted": "Muted",
+      "pinned": "Pinned",
       "reset": "Reset",
       "emptyBlocked": "No blocked conversations",
       "emptyUnread": "All caught up!",
-      "emptyFavorites": "No favorite conversations"
+      "emptyFavorites": "No favorite conversations",
+      "emptyArchived": "No archived conversations",
+      "emptyMuted": "No muted conversations",
+      "emptyPinned": "No pinned conversations"
     },
     "messages": {
       "addReaction": "Add Reaction",

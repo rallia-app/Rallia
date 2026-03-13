@@ -29,12 +29,18 @@ export interface ChatFilters {
   blocked: boolean;
   unread: boolean;
   favorites: boolean;
+  archived: boolean;
+  muted: boolean;
+  pinned: boolean;
 }
 
 export const DEFAULT_CHAT_FILTERS: ChatFilters = {
   blocked: false,
   unread: false,
   favorites: false,
+  archived: false,
+  muted: false,
+  pinned: false,
 };
 
 // =============================================================================
@@ -117,34 +123,62 @@ export const ChatFiltersBar = memo(function ChatFiltersBar({
 
   // Check if any filter is active
   const hasActiveFilters = useMemo(() => {
-    return filters.blocked || filters.unread || filters.favorites;
+    return (
+      filters.blocked ||
+      filters.unread ||
+      filters.favorites ||
+      filters.archived ||
+      filters.muted ||
+      filters.pinned
+    );
   }, [filters]);
 
   // Handlers - only one filter can be active at a time (mutually exclusive)
   const handleBlockedToggle = useCallback(() => {
     void selectionHaptic();
     onFiltersChange({
+      ...DEFAULT_CHAT_FILTERS,
       blocked: !filters.blocked,
-      unread: false,
-      favorites: false,
     });
   }, [filters, onFiltersChange]);
 
   const handleUnreadToggle = useCallback(() => {
     void selectionHaptic();
     onFiltersChange({
-      blocked: false,
+      ...DEFAULT_CHAT_FILTERS,
       unread: !filters.unread,
-      favorites: false,
     });
   }, [filters, onFiltersChange]);
 
   const handleFavoritesToggle = useCallback(() => {
     void selectionHaptic();
     onFiltersChange({
-      blocked: false,
-      unread: false,
+      ...DEFAULT_CHAT_FILTERS,
       favorites: !filters.favorites,
+    });
+  }, [filters, onFiltersChange]);
+
+  const handleArchivedToggle = useCallback(() => {
+    void selectionHaptic();
+    onFiltersChange({
+      ...DEFAULT_CHAT_FILTERS,
+      archived: !filters.archived,
+    });
+  }, [filters, onFiltersChange]);
+
+  const handleMutedToggle = useCallback(() => {
+    void selectionHaptic();
+    onFiltersChange({
+      ...DEFAULT_CHAT_FILTERS,
+      muted: !filters.muted,
+    });
+  }, [filters, onFiltersChange]);
+
+  const handlePinnedToggle = useCallback(() => {
+    void selectionHaptic();
+    onFiltersChange({
+      ...DEFAULT_CHAT_FILTERS,
+      pinned: !filters.pinned,
     });
   }, [filters, onFiltersChange]);
 
@@ -188,8 +222,41 @@ export const ChatFiltersBar = memo(function ChatFiltersBar({
         onPress: handleFavoritesToggle,
         icon: filters.favorites ? 'heart' : 'heart-outline',
       },
+      // Archived Toggle
+      {
+        key: 'archived',
+        label: t('chat.filters.archived' as TranslationKey),
+        isActive: filters.archived,
+        onPress: handleArchivedToggle,
+        icon: filters.archived ? 'archive' : 'archive-outline',
+      },
+      // Muted Toggle
+      {
+        key: 'muted',
+        label: t('chat.filters.muted' as TranslationKey),
+        isActive: filters.muted,
+        onPress: handleMutedToggle,
+        icon: filters.muted ? 'volume-mute' : 'volume-mute-outline',
+      },
+      // Pinned Toggle
+      {
+        key: 'pinned',
+        label: t('chat.filters.pinned' as TranslationKey),
+        isActive: filters.pinned,
+        onPress: handlePinnedToggle,
+        icon: filters.pinned ? 'pin' : 'pin-outline',
+      },
     ],
-    [t, filters, handleBlockedToggle, handleUnreadToggle, handleFavoritesToggle]
+    [
+      t,
+      filters,
+      handleBlockedToggle,
+      handleUnreadToggle,
+      handleFavoritesToggle,
+      handleArchivedToggle,
+      handleMutedToggle,
+      handlePinnedToggle,
+    ]
   );
 
   // Sort chips: active filters first when hasActiveFilters is true

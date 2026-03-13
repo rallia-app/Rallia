@@ -188,7 +188,14 @@ const Chat = () => {
     let tabConversations = categorizedConversations[activeTab];
 
     // Apply chat filters (only for direct messages tab where we have other_participant)
-    if (chatFilters.blocked || chatFilters.unread || chatFilters.favorites) {
+    if (
+      chatFilters.blocked ||
+      chatFilters.unread ||
+      chatFilters.favorites ||
+      chatFilters.archived ||
+      chatFilters.muted ||
+      chatFilters.pinned
+    ) {
       tabConversations = tabConversations.filter(conversation => {
         // For blocked filter - show only conversations with blocked users (direct chats only)
         if (chatFilters.blocked) {
@@ -211,6 +218,21 @@ const Chat = () => {
           return false; // Non-direct chats don't match favorites filter
         }
 
+        // For archived filter - show only archived conversations
+        if (chatFilters.archived) {
+          return conversation.is_archived === true;
+        }
+
+        // For muted filter - show only muted conversations
+        if (chatFilters.muted) {
+          return conversation.is_muted === true;
+        }
+
+        // For pinned filter - show only pinned conversations
+        if (chatFilters.pinned) {
+          return conversation.is_pinned === true;
+        }
+
         return true;
       });
     }
@@ -219,8 +241,8 @@ const Chat = () => {
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       const filtered = tabConversations.filter(conversation => {
-        // Don't include archived in search results
-        if (conversation.is_archived) return false;
+        // Don't include archived in search results (unless archived filter is active)
+        if (conversation.is_archived && !chatFilters.archived) return false;
 
         // Search by conversation title (group name)
         if (conversation.title?.toLowerCase().includes(query)) {
@@ -247,7 +269,12 @@ const Chat = () => {
       return { filteredConversations: filtered, archivedCount };
     }
 
-    // Filter out archived conversations for normal view
+    // Filter out archived conversations for normal view (unless archived filter is active)
+    if (chatFilters.archived) {
+      // When archived filter is active, we've already filtered to only archived ones
+      return { filteredConversations: tabConversations, archivedCount };
+    }
+
     const filtered = tabConversations.filter(c => !c.is_archived);
     return { filteredConversations: filtered, archivedCount };
   }, [
@@ -404,6 +431,39 @@ const Chat = () => {
           <Ionicons name="star-outline" size={64} color={colors.textMuted} />
           <Text style={[styles.emptyTitle, { color: colors.text }]}>
             {t('chat.filters.emptyFavorites')}
+          </Text>
+        </View>
+      );
+    }
+
+    if (chatFilters.archived) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="archive-outline" size={64} color={colors.textMuted} />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            {t('chat.filters.emptyArchived')}
+          </Text>
+        </View>
+      );
+    }
+
+    if (chatFilters.muted) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="volume-mute-outline" size={64} color={colors.textMuted} />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            {t('chat.filters.emptyMuted')}
+          </Text>
+        </View>
+      );
+    }
+
+    if (chatFilters.pinned) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="pin-outline" size={64} color={colors.textMuted} />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            {t('chat.filters.emptyPinned')}
           </Text>
         </View>
       );

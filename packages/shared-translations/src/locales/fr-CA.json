@@ -1657,10 +1657,16 @@
       "blocked": "Bloqués",
       "unread": "Non lus",
       "favorites": "Favoris",
+      "archived": "Archivés",
+      "muted": "En sourdine",
+      "pinned": "Épinglés",
       "reset": "Réinitialiser",
       "emptyBlocked": "Aucune conversation bloquée",
       "emptyUnread": "Tout est à jour!",
-      "emptyFavorites": "Aucune conversation favorite"
+      "emptyFavorites": "Aucune conversation favorite",
+      "emptyArchived": "Aucune conversation archivée",
+      "emptyMuted": "Aucune conversation en sourdine",
+      "emptyPinned": "Aucune conversation épinglée"
     },
     "messages": {
       "addReaction": "Ajouter une réaction",
