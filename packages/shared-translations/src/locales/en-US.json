@@ -1725,6 +1725,15 @@
       "unarchive": "Unarchive",
       "leaveGroup": "Leave Group"
     },
+    "filters": {
+      "blocked": "Blocked",
+      "unread": "Unread",
+      "favorites": "Favorites",
+      "reset": "Reset",
+      "emptyBlocked": "No blocked conversations",
+      "emptyUnread": "All caught up!",
+      "emptyFavorites": "No favorite conversations"
+    },
     "messages": {
       "addReaction": "Add Reaction",
       "reply": "Reply",

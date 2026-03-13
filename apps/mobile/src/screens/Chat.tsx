@@ -51,9 +51,15 @@ import {
   useToggleArchiveConversation,
   useUpdateLastSeen,
   useBlockedUserIds,
+  useFavoriteUserIds,
   type ConversationPreview,
 } from '@rallia/shared-hooks';
-import { ConversationItem } from '../features/chat';
+import {
+  ConversationItem,
+  ChatFiltersBar,
+  DEFAULT_CHAT_FILTERS,
+  type ChatFilters,
+} from '../features/chat';
 import { SheetManager } from 'react-native-actions-sheet';
 import { useAppNavigation, useChatNavigation } from '../navigation/hooks';
 
@@ -78,6 +84,7 @@ const Chat = () => {
   const playerId = session?.user?.id;
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<TabKey>('direct');
+  const [chatFilters, setChatFilters] = useState<ChatFilters>(DEFAULT_CHAT_FILTERS);
 
   // Chat screen tour - triggers after main navigation tour is completed
   const { shouldShowTour: _shouldShowChatTour } = useTourSequence({
@@ -114,6 +121,17 @@ const Chat = () => {
 
   // Fetch blocked user IDs to show "You blocked this user" in conversation preview
   const { data: blockedUserIds = new Set<string>() } = useBlockedUserIds(playerId);
+
+  // Fetch favorite user IDs for filtering by favorites
+  const { data: favoriteUserIds = new Set<string>() } = useFavoriteUserIds(playerId);
+
+  // Check if any chat filter is active (used for empty state messages)
+  const _hasActiveChatFilters = chatFilters.blocked || chatFilters.unread || chatFilters.favorites;
+
+  // Reset chat filters handler
+  const handleResetFilters = useCallback(() => {
+    setChatFilters(DEFAULT_CHAT_FILTERS);
+  }, []);
 
   // Categorize conversations into tabs
   const categorizedConversations = useMemo(() => {
@@ -159,7 +177,7 @@ const Chat = () => {
     };
   }, [categorizedConversations]);
 
-  // Filter conversations based on active tab, search query and exclude archived
+  // Filter conversations based on active tab, search query, chat filters and exclude archived
   const { filteredConversations, archivedCount } = useMemo(() => {
     if (!conversations) return { filteredConversations: [], archivedCount: 0 };
 
@@ -167,12 +185,43 @@ const Chat = () => {
     const archivedCount = conversations.filter(c => c.is_archived).length;
 
     // Get conversations for active tab
-    const tabConversations = categorizedConversations[activeTab];
+    let tabConversations = categorizedConversations[activeTab];
 
-    // When searching, search across current tab only
+    // Apply chat filters (only for direct messages tab where we have other_participant)
+    if (chatFilters.blocked || chatFilters.unread || chatFilters.favorites) {
+      tabConversations = tabConversations.filter(conversation => {
+        // For blocked filter - show only conversations with blocked users (direct chats only)
+        if (chatFilters.blocked) {
+          if (conversation.conversation_type === 'direct' && conversation.other_participant?.id) {
+            return blockedUserIds.has(conversation.other_participant.id);
+          }
+          return false; // Non-direct chats don't match blocked filter
+        }
+
+        // For unread filter - show only conversations with unread messages
+        if (chatFilters.unread) {
+          return (conversation.unread_count || 0) > 0;
+        }
+
+        // For favorites filter - show only conversations with favorite users (direct chats only)
+        if (chatFilters.favorites) {
+          if (conversation.conversation_type === 'direct' && conversation.other_participant?.id) {
+            return favoriteUserIds.has(conversation.other_participant.id);
+          }
+          return false; // Non-direct chats don't match favorites filter
+        }
+
+        return true;
+      });
+    }
+
+    // When searching, search across current tab only (after applying chat filters)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       const filtered = tabConversations.filter(conversation => {
+        // Don't include archived in search results
+        if (conversation.is_archived) return false;
+
         // Search by conversation title (group name)
         if (conversation.title?.toLowerCase().includes(query)) {
           return true;
@@ -201,7 +250,15 @@ const Chat = () => {
     // Filter out archived conversations for normal view
     const filtered = tabConversations.filter(c => !c.is_archived);
     return { filteredConversations: filtered, archivedCount };
-  }, [conversations, categorizedConversations, activeTab, searchQuery]);
+  }, [
+    conversations,
+    categorizedConversations,
+    activeTab,
+    searchQuery,
+    chatFilters,
+    blockedUserIds,
+    favoriteUserIds,
+  ]);
 
   // Navigate to archived chats
   const handleArchivedPress = useCallback(() => {
@@ -318,6 +375,40 @@ const Chat = () => {
       );
     }
 
+    // Show different message when filter is active
+    if (chatFilters.blocked) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="ban-outline" size={64} color={colors.textMuted} />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            {t('chat.filters.emptyBlocked')}
+          </Text>
+        </View>
+      );
+    }
+
+    if (chatFilters.unread) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="mail-open-outline" size={64} color={colors.textMuted} />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            {t('chat.filters.emptyUnread')}
+          </Text>
+        </View>
+      );
+    }
+
+    if (chatFilters.favorites) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="star-outline" size={64} color={colors.textMuted} />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            {t('chat.filters.emptyFavorites')}
+          </Text>
+        </View>
+      );
+    }
+
     // Tab-specific empty messages
     const emptyMessages = {
       direct: {
@@ -354,7 +445,7 @@ const Chat = () => {
         <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>{subtitle}</Text>
       </View>
     );
-  }, [isLoading, colors, searchQuery, activeTab, t, selectedSport?.name]);
+  }, [isLoading, colors, searchQuery, activeTab, t, selectedSport?.name, chatFilters]);
 
   const renderSeparator = useCallback(
     () => <View style={[styles.separator, { backgroundColor: colors.border }]} />,
@@ -455,6 +546,13 @@ const Chat = () => {
           />
         </WalkthroughableView>
       </CopilotStep>
+
+      {/* Chat Filters Bar - below search, before tabs */}
+      <ChatFiltersBar
+        filters={chatFilters}
+        onFiltersChange={setChatFilters}
+        onReset={handleResetFilters}
+      />
 
       {/* Tab Bar - Wrapped with CopilotStep for tour */}
       <CopilotStep text={t('tour.chatScreen.tabs.description')} order={31} name="chat_tabs">

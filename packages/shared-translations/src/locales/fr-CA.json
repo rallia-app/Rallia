@@ -1653,6 +1653,15 @@
       "unarchive": "Désarchiver",
       "leaveGroup": "Quitter le groupe"
     },
+    "filters": {
+      "blocked": "Bloqués",
+      "unread": "Non lus",
+      "favorites": "Favoris",
+      "reset": "Réinitialiser",
+      "emptyBlocked": "Aucune conversation bloquée",
+      "emptyUnread": "Tout est à jour!",
+      "emptyFavorites": "Aucune conversation favorite"
+    },
     "messages": {
       "addReaction": "Ajouter une réaction",
       "reply": "Répondre",

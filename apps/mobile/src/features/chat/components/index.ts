@@ -23,3 +23,6 @@ export { CreateGroupChatModal } from './CreateGroupChatModal';
 export { AddMembersToGroupModal } from './AddMembersToGroupModal';
 export { ReportUserModal } from './ReportUserModal';
 export { ChatMemberOptionsModal } from './ChatMemberOptionsModal';
+export { ChatFiltersBar } from './ChatFiltersBar';
+export type { ChatFilters } from './ChatFiltersBar';
+export { DEFAULT_CHAT_FILTERS } from './ChatFiltersBar';
