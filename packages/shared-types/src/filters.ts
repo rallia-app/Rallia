@@ -78,3 +78,18 @@ export type PastMatchFilter =
 
 /** Union type for all player match filters */
 export type PlayerMatchFilter = UpcomingMatchFilter | PastMatchFilter;
+
+// ============================================
+// CONVERSATION FILTERS
+// ============================================
+
+/** Filter values for conversation inbox */
+export type ConversationFilter =
+  | 'all'
+  | 'unread'
+  | 'direct'
+  | 'group_chat'
+  | 'player_group'
+  | 'community'
+  | 'club'
+  | 'match';

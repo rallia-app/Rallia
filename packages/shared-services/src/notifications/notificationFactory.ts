@@ -899,31 +899,43 @@ export async function notifyMatchCancelled(
 
 /**
  * Notify all participants that a match was updated
- * Fetches match details for a more informative notification
+ * Uses original (pre-update) match details so the notification references the date
+ * the participants originally knew about, not the newly changed date.
  */
 export async function notifyMatchUpdated(
   participantUserIds: string[],
   matchId: string,
-  updatedFields?: string[]
+  updatedFields?: string[],
+  originalDetails?: { sportName?: string; matchDate?: string; startTime?: string }
 ): Promise<Notification[]> {
-  // Fetch match details for more informative notification
-  const { data: matchDetails } = await supabase
-    .from('match')
-    .select(
-      `
-      sport:sport_id (name),
-      match_date,
-      start_time
-    `
-    )
-    .eq('id', matchId)
-    .single();
+  let sportName = originalDetails?.sportName;
+  let matchDate = originalDetails?.matchDate;
+  let startTime = originalDetails?.startTime;
 
-  const rawSportName = (matchDetails?.sport as { name?: string } | null)?.name;
-  const sportName = rawSportName ? normalizeSportName(rawSportName) : undefined;
+  // Fallback: fetch from DB if original details not provided (backwards compatibility)
+  if (!sportName && !matchDate && !startTime) {
+    const { data: matchDetails } = await supabase
+      .from('match')
+      .select(
+        `
+        sport:sport_id (name),
+        match_date,
+        start_time
+      `
+      )
+      .eq('id', matchId)
+      .single();
+
+    const rawSportName = (matchDetails?.sport as { name?: string } | null)?.name;
+    sportName = rawSportName ? normalizeSportName(rawSportName) : undefined;
+    matchDate = matchDetails?.match_date;
+    startTime = matchDetails?.start_time;
+  } else {
+    sportName = sportName ? normalizeSportName(sportName) : undefined;
+  }
 
   // Extract time in HH:MM format for notification (formatting will be done in getTranslatedBody)
-  const startTime = matchDetails?.start_time ? matchDetails.start_time.slice(0, 5) : undefined;
+  const formattedStartTime = startTime ? startTime.slice(0, 5) : undefined;
 
   return createNotifications(
     participantUserIds.map(userId => ({
@@ -934,8 +946,8 @@ export async function notifyMatchUpdated(
         matchId,
         updatedFields,
         sportName,
-        matchDate: matchDetails?.match_date,
-        startTime,
+        matchDate,
+        startTime: formattedStartTime,
       },
     }))
   );

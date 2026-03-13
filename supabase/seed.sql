@@ -1449,7 +1449,7 @@ BEGIN
 
   -- Conv 3: Group chat (3 people planning a doubles match)
   INSERT INTO conversation (id, conversation_type, created_by, title)
-  VALUES (conv3, 'group', p2, 'Doubles ce weekend')
+  VALUES (conv3, 'match', p2, 'Doubles ce weekend')
   ON CONFLICT (id) DO NOTHING;
 
   INSERT INTO conversation_participant (conversation_id, player_id, last_read_at) VALUES

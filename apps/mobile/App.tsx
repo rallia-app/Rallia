@@ -51,13 +51,13 @@ ErrorUtils.setGlobalHandler((error, isFatal) => {
 });
 
 import { useEffect, useState, useCallback, useRef, type PropsWithChildren } from 'react';
-import { Linking } from 'react-native';
+import { AppState, Linking } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { StatusBar } from 'expo-status-bar';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AppNavigator from './src/navigation/AppNavigator';
 import { navigationRef } from './src/navigation';
 import { linking } from './src/navigation/linking';
@@ -118,13 +118,23 @@ import { attemptFirstLaunchAttribution } from './src/utils/referralAttribution';
 import './global.css';
 import MatchDetailSheet from './src/components/MatchDetailSheet';
 
+// Connect React Query's focusManager to React Native's AppState.
+// When the app returns from background, stale queries automatically refetch.
+focusManager.setEventListener(handleFocus => {
+  const subscription = AppState.addEventListener('change', state => {
+    handleFocus(state === 'active');
+  });
+  return () => subscription.remove();
+});
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       // Data stays fresh for 2 minutes - prevents unnecessary refetches
       staleTime: 1000 * 60 * 2,
-      // Don't refetch on window focus by default (use pull-to-refresh instead)
-      refetchOnWindowFocus: false,
+      // Refetch stale queries when app comes back from background
+      // or when navigating back to a screen (via focusManager integration)
+      refetchOnWindowFocus: true,
       // Don't refetch on mount if data is fresh
       refetchOnMount: 'always',
       // Keep unused data in cache for 5 minutes
@@ -404,7 +414,16 @@ function AppContent() {
   return (
     <>
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
-      <NavigationContainer ref={navigationRef} linking={linking}>
+      <NavigationContainer
+        ref={navigationRef}
+        linking={linking}
+        onStateChange={() => {
+          // Notify React Query of navigation state changes so stale queries
+          // refetch when the user navigates back to a screen.
+          // Fresh queries (within staleTime) are not affected.
+          focusManager.setFocused(true);
+        }}
+      >
         <SheetProvider>
           <Sheets />
           <AppNavigator />

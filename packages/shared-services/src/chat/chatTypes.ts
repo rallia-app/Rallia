@@ -11,11 +11,35 @@
 /**
  * Type of conversation
  * - 'direct': 1-on-1 chat between two players
- * - 'group': Group chat (may be linked to a network)
+ * - 'group_chat': Friend group chat (created from FAB)
+ * - 'player_group': Player group network chat
+ * - 'community': Community network chat
+ * - 'club': Club network chat
  * - 'match': Chat created for a specific match
  * - 'announcement': Broadcast channel (future)
+ * - 'group': Legacy value kept for backward compat
  */
-export type ConversationType = 'direct' | 'group' | 'match' | 'announcement';
+export type ConversationType =
+  | 'direct'
+  | 'group'
+  | 'group_chat'
+  | 'player_group'
+  | 'community'
+  | 'club'
+  | 'match'
+  | 'announcement';
+
+const GROUP_CONVERSATION_TYPES: ConversationType[] = [
+  'group',
+  'group_chat',
+  'player_group',
+  'community',
+  'club',
+];
+
+export function isGroupConversationType(type: ConversationType): boolean {
+  return GROUP_CONVERSATION_TYPES.includes(type);
+}
 
 /**
  * Delivery status of a message
@@ -79,7 +103,7 @@ export interface ConversationParticipant {
  * @property sender_id - ID of the sender
  * @property content - Message text content
  * @property status - Delivery status
- * @property read_by - Array of player IDs who have read this message
+ * @property read_by - Deprecated: use conversation_participant.last_read_at instead
  * @property created_at - ISO timestamp of creation
  * @property updated_at - ISO timestamp of last update
  * @property reply_to_message_id - ID of message being replied to

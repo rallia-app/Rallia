@@ -1598,19 +1598,32 @@
       "groups": "Groupes",
       "matches": "Matchs"
     },
+    "filters": {
+      "all": "Tout",
+      "unread": "Non lus",
+      "direct": "Direct",
+      "groupChat": "Groupes",
+      "playerGroup": "Groupes de joueurs",
+      "community": "Communautés",
+      "club": "Clubs",
+      "match": "Matchs"
+    },
+    "emptyFiltered": {
+      "title": "Aucune conversation trouvée",
+      "description": "Aucune conversation ne correspond au filtre sélectionné"
+    },
     "typeMessage": "Tapez votre message",
     "today": "Aujourd'hui",
     "yesterday": "Hier",
     "participants": "{{count}} participant",
     "participants_plural": "{{count}} participants",
     "agreement": {
-      "welcome": "Bienvenue dans",
-      "welcomeDirect": "Démarrage de la conversation avec",
-      "description": "Ceci est une discussion de groupe - tous les membres de cette communauté verront vos messages",
-      "descriptionDirect": "Ceci est une conversation privée. Veuillez être respectueux et suivre nos règles communautaires.",
+      "welcome": "Bienvenue sur Rallia Chat",
+      "description": "Veuillez être respectueux et suivre nos règles communautaires dans toutes les conversations.",
       "chatRules": "Règles de discussion",
       "warning": "Le contenu sera supprimé et les utilisateurs bannis en cas de violation de nos règles communautaires",
-      "agree": "J'accepte"
+      "agree": "J'accepte",
+      "decline": "Refuser"
     },
     "rules": {
       "noHarassment": "Pas de harcèlement, de discours haineux ou de langage sexuel",
@@ -1648,7 +1661,7 @@
       "edited": "modifié",
       "replyingTo": "Réponse à {name}"
     },
-    "createGroup": "Créer le groupe",
+    "createGroup": "Créer la discussion de groupe",
     "blocked": {
       "title": "Vous avez bloqué {name}",
       "description": "Vous devez débloquer cet utilisateur pour continuer la conversation. Si vous avez rencontré des problèmes graves, vous pouvez le signaler.",
@@ -1680,7 +1693,8 @@
       "maxImages": "Vous pouvez ajouter jusqu'à 3 images",
       "uploadingImages": "Téléchargement des images..."
     },
-    "selectMembers": "Sélectionner les membres",
+    "newConversation": "Nouvelle conversation",
+    "selectAPlayer": "Sélectionner un joueur",
     "pleaseSelectMember": "Veuillez sélectionner au moins un membre pour le groupe.",
     "photoAccessRequired": "Veuillez autoriser l'accès à vos photos pour ajouter une image de groupe.",
     "failedToPickImage": "Échec de la sélection de l'image",
@@ -1693,7 +1707,7 @@
     "noPlayersFoundMatching": "Aucun joueur trouvé pour \"{query}\"",
     "noPlayersAvailable": "Aucun joueur disponible",
     "continueSelected": "Continuer ({count} sélectionné(s))",
-    "startChat": "Démarrer la discussion",
+    "startChat": "Envoyer un message",
     "failedToCreateConversation": "Échec de la création de la conversation. Veuillez réessayer.",
     "groupDetails": "Détails du groupe",
     "addPhoto": "Ajouter une photo",
