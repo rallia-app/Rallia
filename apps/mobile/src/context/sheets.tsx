@@ -29,6 +29,7 @@ import { BookingDetailActionSheet } from '../features/bookings/components/Bookin
 // Shared components
 import { ImagePickerActionSheet } from '../components/ImagePickerSheet';
 import { PlayerInviteActionSheet } from '../components/PlayerInviteSheet';
+import { InviteToMatchActionSheet } from '../components/InviteToMatchSheet';
 // Sport profile components
 import { PeerRatingRequestActionSheet } from '../features/sport-profile/components/PeerRatingRequestOverlay';
 // Chat components
@@ -331,6 +332,12 @@ declare module 'react-native-actions-sheet' {
         excludePlayerIds: string[];
       };
     }>;
+    'invite-to-match': SheetDefinition<{
+      payload: {
+        playerId: string;
+        playerName: string;
+      };
+    }>;
     // Sport profile sheets
     'peer-rating-request': SheetDefinition<{
       payload: {
@@ -574,6 +581,7 @@ export const Sheets = () => {
         'court-booking': CourtBookingActionSheet,
         'image-picker': ImagePickerActionSheet,
         'player-invite': PlayerInviteActionSheet,
+        'invite-to-match': InviteToMatchActionSheet,
         // Sport profile sheets
         'peer-rating-request': PeerRatingRequestActionSheet,
         // Profile/Onboarding sheets

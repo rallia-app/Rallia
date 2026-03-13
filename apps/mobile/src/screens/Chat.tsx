@@ -144,12 +144,18 @@ const Chat = () => {
     return { direct, groups, matches };
   }, [conversations]);
 
-  // Get counts for each tab (excluding archived)
+  // Get unread message counts for each tab (excluding archived)
   const tabCounts = useMemo(() => {
     return {
-      direct: categorizedConversations.direct.filter(c => !c.is_archived).length,
-      groups: categorizedConversations.groups.filter(c => !c.is_archived).length,
-      matches: categorizedConversations.matches.filter(c => !c.is_archived).length,
+      direct: categorizedConversations.direct
+        .filter(c => !c.is_archived)
+        .reduce((sum, c) => sum + (c.unread_count || 0), 0),
+      groups: categorizedConversations.groups
+        .filter(c => !c.is_archived)
+        .reduce((sum, c) => sum + (c.unread_count || 0), 0),
+      matches: categorizedConversations.matches
+        .filter(c => !c.is_archived)
+        .reduce((sum, c) => sum + (c.unread_count || 0), 0),
     };
   }, [categorizedConversations]);
 

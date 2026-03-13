@@ -1123,7 +1123,24 @@
       "noSportError": "Unable to determine sport for reference request.",
       "noRatingError": "You need a rating in this sport to request a reference.",
       "playerLevelTooLow": "This player's level is below yours. References must come from players at your level or higher."
-    }
+    },
+    "unknownPlayer": "Player"
+  },
+  "inviteToMatch": {
+    "title": "Invite to Match",
+    "subtitle": "Select a match to invite {name}",
+    "sendInvite": "Send Invite",
+    "inviteSent": "Invitation sent to {name}!",
+    "inviteError": "Failed to send invite. Please try again.",
+    "spotsAvailable": "{count} spot(s) available",
+    "doubles": "Doubles",
+    "singles": "Singles",
+    "noMatches": "No Matches Available",
+    "noMatchesDescription": "You don't have any upcoming matches with open spots. Create a match first to invite players.",
+    "loadingMatches": "Loading your matches...",
+    "errorLoading": "Unable to Load Matches",
+    "errorLoadingDescription": "Something went wrong. Please try again later.",
+    "unknownLocation": "Location TBD"
   },
   "photoEditor": {
     "title": "Edit Photo",
@@ -1867,6 +1884,13 @@
       "recentGames": "Recent Games",
       "noActivity": "No activity yet"
     },
+    "matches": {
+      "title": "Member Matches",
+      "empty": {
+        "title": "No Upcoming Matches",
+        "description": "Members haven't shared any public matches yet"
+      }
+    },
     "detail": {
       "last7DaysActivities": "Last 7 days activities",
       "activities": "ACTIVITIES",
@@ -2174,6 +2198,13 @@
       "gamesCreated_one": "{count} game created",
       "newMessages": "{count} new messages in\ngroup chat"
     },
+    "matches": {
+      "title": "Member Matches",
+      "empty": {
+        "title": "No Upcoming Matches",
+        "description": "Members haven't shared any public matches yet"
+      }
+    },
     "home": {
       "about": "About",
       "viewAll": "View all"
@@ -2462,6 +2493,8 @@
   "match": {
     "placeholder": "Game Screen - Ready for your implementation",
     "host": "Host",
+    "hostedBy": "Hosted by",
+    "full": "Full",
     "pickMatchType": "Pick match type",
     "format": {
       "singles": "Singles",

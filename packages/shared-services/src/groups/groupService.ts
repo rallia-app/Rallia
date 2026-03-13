@@ -91,6 +91,8 @@ export {
   getGroupLeaderboard,
   postMatchToGroup,
   removeMatchFromGroup,
+  getNetworkMemberUpcomingMatches,
+  type NetworkMemberMatch,
 } from './groupMatchService';
 
 // ============================================================================

@@ -199,18 +199,19 @@ const CommunityCard: React.FC<{
               >
                 {item.name}
               </Text>
-              {/* Certification badge for verified communities */}
-              {item.is_certified && (
-                <View style={styles.certifiedBadge}>
-                  <MaterialCommunityIcons name="check-decagram" size={12} color="#22c55e" />
-                  <Text size="xs" weight="semibold" style={{ color: '#22c55e' }}>
-                    {t('community.certified')}
-                  </Text>
-                </View>
-              )}
             </View>
             {renderSportIcon()}
           </View>
+
+          {/* Certification badge for verified communities - displayed under the name */}
+          {item.is_certified && (
+            <View style={styles.certifiedBadge}>
+              <MaterialCommunityIcons name="check-decagram" size={12} color="#22c55e" />
+              <Text size="xs" weight="semibold" style={{ color: '#22c55e' }}>
+                {t('community.certified')}
+              </Text>
+            </View>
+          )}
 
           {/* Member count + Status */}
           <View style={styles.bottomRow}>
@@ -742,13 +743,13 @@ const styles = StyleSheet.create({
   certifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
     backgroundColor: '#dcfce7',
     borderWidth: 1,
     borderColor: '#22c55e',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
-    marginLeft: 6,
     gap: 3,
   },
   nameWithBadge: {

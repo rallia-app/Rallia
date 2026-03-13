@@ -4,7 +4,7 @@
  */
 
 import { useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import {
   getPlayerGroups,
   getGroup,
@@ -35,6 +35,7 @@ import {
   getPendingScoreConfirmations,
   confirmMatchScore,
   disputeMatchScore,
+  getNetworkMemberUpcomingMatches,
   // Realtime functions
   subscribeToGroupMembers,
   subscribeToGroupActivity,
@@ -56,6 +57,7 @@ import {
   type CreatePlayedMatchInput,
   type SubmitMatchResultForMatchParams,
   type PendingScoreConfirmation,
+  type NetworkMemberMatch,
 } from '@rallia/shared-services';
 import { matchKeys } from './useCreateMatch';
 
@@ -82,6 +84,17 @@ export const groupKeys = {
     [...groupKeys.detail(groupId), 'leaderboard', daysBack] as const,
   pendingConfirmations: (playerId: string) =>
     [...groupKeys.all, 'pendingConfirmations', playerId] as const,
+  memberUpcomingMatches: (
+    networkId: string,
+    networkType: 'community' | 'group',
+    sportId?: string | null
+  ) =>
+    [
+      ...groupKeys.detail(networkId),
+      'memberUpcomingMatches',
+      networkType,
+      sportId ?? 'all',
+    ] as const,
 };
 
 // =============================================================================
@@ -438,6 +451,37 @@ export function useGroupLeaderboard(groupId: string | undefined, daysBack: numbe
 }
 
 /**
+ * Get upcoming public matches of network (community/group) members.
+ * Returns matches where a network member is either the creator or a participant.
+ *
+ * @param networkId - The network (community or group) ID
+ * @param networkType - 'community' or 'group' for proper visibility filtering
+ * @param sportId - Optional sport ID to filter (null/undefined = all sports)
+ * @param excludePlayerId - Player ID to exclude from results (current user's matches)
+ * @param limit - Maximum matches to return (default 20)
+ */
+export function useNetworkMemberUpcomingMatches(
+  networkId: string | undefined,
+  networkType: 'community' | 'group',
+  excludePlayerId?: string,
+  sportId?: string,
+  limit: number = 20
+): UseQueryResult<NetworkMemberMatch[]> {
+  return useQuery({
+    queryKey: groupKeys.memberUpcomingMatches(networkId!, networkType, sportId ?? null),
+    queryFn: () =>
+      getNetworkMemberUpcomingMatches(
+        networkId!,
+        networkType,
+        sportId ?? null,
+        excludePlayerId ?? null,
+        limit
+      ),
+    enabled: !!networkId,
+  });
+}
+
+/**
  * Post a match to a group
  */
 export function usePostMatchToGroup() {
@@ -628,22 +672,6 @@ export function useDisputeMatchScore() {
   });
 }
 
-// Re-export types
-export type {
-  Group,
-  GroupWithMembers,
-  GroupMember,
-  GroupActivity,
-  GroupStats,
-  CreateGroupInput,
-  UpdateGroupInput,
-  GroupMatch,
-  MatchSet,
-  LeaderboardEntry,
-  CreatePlayedMatchInput,
-  PendingScoreConfirmation,
-};
-
 // =============================================================================
 // REALTIME HOOKS
 // =============================================================================
@@ -769,3 +797,21 @@ export function useScoreConfirmationsRealtime(playerId: string | undefined) {
     };
   }, [playerId, queryClient]);
 }
+
+// =============================================================================
+// TYPE RE-EXPORTS
+// =============================================================================
+
+export type {
+  Group,
+  GroupWithMembers,
+  GroupMember,
+  GroupActivity,
+  GroupStats,
+  GroupMatch,
+  MatchSet,
+  LeaderboardEntry,
+  CreatePlayedMatchInput,
+  PendingScoreConfirmation,
+  NetworkMemberMatch,
+};
