@@ -206,6 +206,23 @@ export function useSocialAuth(): UseSocialAuthReturn {
       // Check if Google Play Services are available (Android)
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
+      // Generate a secure random nonce (required for production builds on iOS)
+      const rawNonce = Array.from(await Crypto.getRandomBytesAsync(32), byte =>
+        byte.toString(16).padStart(2, '0')
+      ).join('');
+      const hashedNonce = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        rawNonce
+      );
+
+      // Reconfigure Google Sign-In with the nonce
+      GoogleSignin.configure({
+        webClientId: GOOGLE_WEB_CLIENT_ID,
+        ...(Platform.OS === 'ios' ? { iosClientId: GOOGLE_IOS_CLIENT_ID } : {}),
+        scopes: ['email', 'profile'],
+        nonce: hashedNonce,
+      });
+
       // Perform sign-in
       const response = await GoogleSignin.signIn();
 
@@ -221,10 +238,11 @@ export function useSocialAuth(): UseSocialAuthReturn {
 
       Logger.debug('Google sign-in successful, authenticating with Supabase');
 
-      // Sign in to Supabase with the Google ID token
+      // Sign in to Supabase with the Google ID token and raw nonce
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: idToken,
+        nonce: rawNonce,
       });
 
       if (error) {
