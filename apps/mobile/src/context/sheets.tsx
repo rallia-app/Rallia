@@ -31,6 +31,7 @@ import { ReportIssueActionSheet } from '../features/matches/components/feedback-
 // Facilities components
 import { ExternalBookingActionSheet } from '../features/facilities/components/ExternalBookingSheet';
 import { CourtBookingActionSheet } from '../features/facilities/components/CourtBookingSheet';
+import { ReportFacilityActionSheet } from '../features/facilities/components/ReportFacilitySheet';
 // Booking components
 import { BookingDetailActionSheet } from '../features/bookings/components/BookingDetailSheet';
 // Shared components
@@ -148,10 +149,8 @@ declare module 'react-native-actions-sheet' {
     }>;
     'chat-agreement': SheetDefinition<{
       payload: {
-        chatName?: string;
-        chatImageUrl?: string | null;
-        isDirectChat?: boolean;
         onAgree?: () => void;
+        onDecline?: () => void;
       };
     }>;
     'add-members-to-group': SheetDefinition<{
@@ -266,6 +265,8 @@ declare module 'react-native-actions-sheet' {
         match: import('@rallia/shared-types').MatchWithDetails;
         onSuccess?: () => void;
         onDismiss?: () => void;
+        isRebuttal?: boolean;
+        matchResultId?: string;
       };
     }>;
     'court-selection': SheetDefinition<{
@@ -311,6 +312,13 @@ declare module 'react-native-actions-sheet' {
           courtId: string;
           courtNumber: number | null;
         }) => void;
+      };
+    }>;
+    'report-facility': SheetDefinition<{
+      payload: {
+        reporterId: string;
+        facilityId: string;
+        facilityName: string;
       };
     }>;
     'image-picker': SheetDefinition<{
@@ -588,6 +596,7 @@ export const Sheets = () => {
         'report-issue': ReportIssueActionSheet,
         'external-booking': ExternalBookingActionSheet,
         'court-booking': CourtBookingActionSheet,
+        'report-facility': ReportFacilityActionSheet,
         'image-picker': ImagePickerActionSheet,
         'image-cropper': ImageCropperSheet,
         'player-invite': PlayerInviteActionSheet,

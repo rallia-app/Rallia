@@ -158,6 +158,11 @@
     "onboardingRequired": "Complete Your Profile",
     "onboardingPrompt": "Finish setting up your profile to receive and view notifications",
     "completeOnboarding": "Complete Profile",
+    "sportSwitch": {
+      "title": "Switch Sport?",
+      "message": "This match is for {sportName}. Switching will update your match feed to show games for this sport.",
+      "confirm": "Switch & View"
+    },
     "time": {
       "justNow": "Just now",
       "today": "Today",
@@ -166,21 +171,22 @@
       "earlier": "Earlier"
     },
     "types": {
-      "match_invitation": "Game Invitation",
-      "match_join_request": "Join Request",
-      "match_join_accepted": "Request Accepted",
-      "match_join_rejected": "Request Declined",
-      "match_player_joined": "Player Joined",
-      "match_cancelled": "Game Cancelled",
-      "match_updated": "Game Updated",
-      "match_starting_soon": "Game Starting Soon",
-      "match_completed": "Game Completed",
-      "match_new_available": "New game in group",
-      "player_kicked": "Removed from Game",
-      "player_left": "Player Left",
-      "new_message": "New Message",
-      "friend_request": "Friend Request",
-      "rating_verified": "Rating Verified",
+      "match_invitation": "Game\nInvitation",
+      "match_join_request": "Join\nRequest",
+      "match_join_accepted": "Request\nAccepted",
+      "match_join_rejected": "Request\nDeclined",
+      "match_player_joined": "Player\nJoined",
+      "match_cancelled": "Game\nCancelled",
+      "match_updated": "Game\nUpdated",
+      "match_starting_soon": "Starting\nSoon",
+      "match_check_in_available": "Check-in\nAvailable",
+      "match_new_available": "New Game\nin Group",
+      "match_spot_opened": "Spot\nOpened",
+      "nearby_match_available": "Nearby\nGame",
+      "player_kicked": "Removed\nfrom Game",
+      "player_left": "Player\nLeft",
+      "new_message": "New\nMessage",
+      "rating_verified": "Rating\nVerified",
       "reminder": "Reminder",
       "payment": "Payment",
       "support": "Support",
@@ -213,76 +219,72 @@
     },
     "messages": {
       "match_invitation": {
-        "title": "Game On!",
+        "title": "You've been invited to play!",
         "body": "{playerName} wants to play {sportName} with you on {matchDate}{startTime}{locationName}"
       },
       "match_join_request": {
-        "title": "New Player Request",
+        "title": "{playerName} wants to join",
         "body": "{playerName} wants to join your {sportName} game on {matchDate}"
       },
       "match_join_accepted": {
-        "title": "You're In!",
+        "title": "You're in!",
         "body": "Your {sportName} game on {matchDate} at {locationName} is confirmed. See you there!"
       },
       "match_join_rejected": {
-        "title": "Game Full",
-        "body": "Your request to join the {sportName} game on {matchDate} wasn't accepted this time. Find other games nearby!"
+        "title": "Request declined",
+        "body": "Your request to join the {sportName} game on {matchDate} wasn't accepted this time. Check out other games near you."
       },
       "match_player_joined": {
-        "title": "Player Joined!",
+        "title": "New player joined!",
         "body": "{playerName} joined your {sportName} game — {spotsLeft} left!",
         "body_full": "{playerName} joined your {sportName} game. The game is full!"
       },
       "match_cancelled": {
-        "title": "Game Cancelled",
+        "title": "Game cancelled",
         "body": "The {sportName} game on {matchDate} at {locationName} has been cancelled. We hope to see you playing soon!"
       },
       "match_updated": {
-        "title": "Game Updated",
-        "body": "Your {sportName} game on {matchDate} has been updated. Open the game to review the changes."
+        "title": "Game updated",
+        "body": "Your {sportName} game on {matchDate} has been updated. Check the updated details."
       },
       "match_starting_soon": {
-        "title": "Get Ready!",
+        "title": "Get ready!",
         "body": "Your {sportName} game at {locationName} starts {timeUntil}. Time to warm up!"
       },
-      "match_completed": {
-        "title": "Game Complete",
-        "body": "Your {sportName} game is done! How did it go? Rate your experience."
+      "match_check_in_available": {
+        "title": "Time to check in!",
+        "body": "Check in once you arrive at the venue to confirm your presence."
       },
       "match_new_available": {
-        "title": "New Game Nearby",
+        "title": "New game nearby",
         "body": "A {sportName} game on {matchDate} is looking for players. Join before it fills up!"
       },
       "player_kicked": {
-        "title": "Removed from Game",
-        "body": "You've been removed from the {sportName} game on {matchDate}. Find other games nearby!"
+        "title": "Removed from game",
+        "body": "You've been removed from the {sportName} game on {matchDate}. Check out other games near you."
       },
       "player_left": {
-        "title": "Player Left",
-        "body": "{playerName} left your {sportName} game — {spotsLeft} now available."
+        "title": "Player left",
+        "body": "{playerName} left your {sportName} game — {spotsLeft} spot(s) now open."
       },
       "new_message": {
         "title": "Message from {senderName}",
         "body": "{messagePreview}"
       },
       "chat": {
-        "title": "New Message",
+        "title": "New message",
         "body": "You have a new message waiting for you"
       },
-      "friend_request": {
-        "title": "New Connection Request",
-        "body": "{playerName} wants to add you to their network. Check out their profile!"
-      },
       "rating_verified": {
-        "title": "Rating Verified!",
+        "title": "Rating verified!",
         "body": "Congrats! Your {ratingSystemName} rating of {ratingValue} for {sportName} is now verified."
       },
       "reminder": {
-        "title": "Upcoming Game",
+        "title": "Game coming up",
         "body": "Don't forget your {sportName} game on {matchDate} at {locationName}"
       },
       "payment": {
-        "title": "Payment Update",
+        "title": "Payment update",
         "body": "Your payment status has been updated. Tap to view details."
       },
       "support": {
@@ -295,11 +297,11 @@
       },
       "feedback_request": {
         "title": "How was your game?",
-        "body": "Submit your score and rate your {sportName} match with {opponentNames} while it's fresh!"
+        "body": "Submit your score and rate your {sportName} game with {opponentNames} while it's fresh!"
       },
       "feedback_reminder": {
-        "title": "You have a match to close out",
-        "body": "Your {sportName} score and rating with {opponentNames} are still pending — complete them before the window closes."
+        "title": "Your game still needs a score",
+        "body": "Your {sportName} score and rating with {opponentNames} are still pending — complete them before the deadline."
       },
       "score_confirmation": {
         "title": "Confirm Game Score",
@@ -1613,19 +1615,32 @@
       "groups": "Groups",
       "matches": "Matches"
     },
+    "filters": {
+      "all": "All",
+      "unread": "Unread",
+      "direct": "Direct",
+      "groupChat": "Group Chats",
+      "playerGroup": "Player Groups",
+      "community": "Communities",
+      "club": "Clubs",
+      "match": "Matches"
+    },
+    "emptyFiltered": {
+      "title": "No conversations found",
+      "description": "No conversations match the selected filter"
+    },
     "typeMessage": "Type your message",
     "today": "Today",
     "yesterday": "Yesterday",
     "participants": "{{count}} participant",
     "participants_plural": "{{count}} participants",
     "agreement": {
-      "welcome": "Welcome to",
-      "welcomeDirect": "Starting conversation with",
-      "description": "This is a group chat - all members of this community will see your messages",
-      "descriptionDirect": "This is a private conversation. Please be respectful and follow our community guidelines.",
+      "welcome": "Welcome to Rallia Chat",
+      "description": "Please be respectful and follow our community guidelines in all conversations.",
       "chatRules": "Chat rules",
       "warning": "Content will be removed and users banned for violations of our community guidelines",
-      "agree": "I agree"
+      "agree": "I agree",
+      "decline": "Decline"
     },
     "rules": {
       "noHarassment": "No harassment, hate speech, sexual language",
@@ -1674,7 +1689,8 @@
       "maxImages": "You can add up to 3 images",
       "uploadingImages": "Uploading images..."
     },
-    "selectMembers": "Select Members",
+    "newConversation": "New Conversation",
+    "selectAPlayer": "Select a player",
     "pleaseSelectMember": "Please select at least one member for the group.",
     "photoAccessRequired": "Please allow access to your photos to add a group image.",
     "failedToPickImage": "Failed to pick image",
@@ -1696,7 +1712,7 @@
     "members": "Members",
     "you": "You",
     "admin": "Admin",
-    "createGroup": "Create Group",
+    "createGroup": "Create Group Chat",
     "addMembers": "Add Members",
     "addCount": "Add ({count})",
     "noPlayersFound": "No players found",
@@ -1790,7 +1806,21 @@
     }
   },
   "map": {
-    "placeholder": "Map View"
+    "recenter": "Re-center",
+    "loading": "Loading map data...",
+    "noLocation": "Enable location to see nearby facilities and matches",
+    "tooltip": {
+      "courts": "{count} courts",
+      "courtsSingular": "1 court"
+    },
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "legend": {
+      "facilities": "Facilities",
+      "pickup": "Pickup"
+    },
+    "matchesAtLocation": "Matches at this location",
+    "searchPlaceholder": "Search facilities..."
   },
   "community": {
     "placeholder": "Connect with other players",
@@ -2384,6 +2414,10 @@
       "dayFriday": "Friday",
       "daySaturday": "Saturday",
       "daySunday": "Sunday"
+    },
+    "results": {
+      "count": "{count} players",
+      "countSingular": "1 player"
     }
   },
   "sharedLists": {
@@ -2617,6 +2651,7 @@
     "matchClosed": "This game is closed",
     "provideFeedback": "Feedback & Score",
     "provideFeedbackAndConfirm": "Feedback & Confirm",
+    "provideFeedbackAndReview": "Feedback & Score Review",
     "provideFeedbackOnly": "Give feedback",
     "provideScoreOnly": "Save score",
     "checkIn": "Check in",
@@ -2666,6 +2701,17 @@
     "scorePendingConfirmation_one": "Waiting for opponent to confirm",
     "scorePendingConfirmation_other": "Waiting for opponents to confirm",
     "scoreDisputed": "Score disputed",
+    "scoreUnsettled": "Score unsettled",
+    "proposeDifferentScore": "Propose Different Score",
+    "rebuttalPending": "Rebuttal proposed — waiting for response",
+    "acceptRebuttal": "Accept Score",
+    "disputeRebuttal": "Dispute",
+    "rebuttalAccepted": "Rebuttal score accepted",
+    "rebuttalDisputed": "Score marked as unsettled",
+    "disputeRebuttalTitle": "Dispute this score?",
+    "disputeRebuttalMessage": "This will mark the match score as unsettled. This cannot be undone.",
+    "proposedScore": "Proposed score",
+    "originalScore": "Original score",
     "badgeInfoTitle": "Player Badges",
     "badgeHost": "Host",
     "badgeHostDesc": "The player who created this match",
@@ -2699,10 +2745,12 @@
     "scoreConfirmProgress": "{confirmed}/{total} confirmed",
     "scoreConfirmProgress_one": "{confirmed}/{total} player confirmed",
     "scoreConfirmProgress_other": "{confirmed}/{total} players confirmed",
-    "yourScoreConfirmed": "Your confirmation received"
+    "yourScoreConfirmed": "Your confirmation received",
+    "reviewRebuttal": "Review Score"
   },
   "registerMatchScore": {
     "title": "Register score",
+    "rebuttalTitle": "Propose score",
     "step": "Step {current} of {total}",
     "stepNames": {
       "outcome": "Who won?",
@@ -2773,7 +2821,8 @@
       "otherReasonPlaceholder": "Please describe why the match was cancelled...",
       "confirmCancelled": "Confirm Cancellation",
       "confirmNoShows": "Confirm no-shows",
-      "continue": "Continue"
+      "continue": "Continue",
+      "playerCheckedIn": "Checked in"
     },
     "cancellationReasons": {
       "weather": "Weather",
@@ -3196,11 +3245,14 @@
         "dateTime": "date/time",
         "location": "location",
         "format": "format",
-        "cost": "cost"
+        "cost": "cost",
+        "gender": "gender preference",
+        "rating": "minimum rating"
       },
       "errors": {
         "MATCH_NOT_FOUND": "Match not found.",
         "FORMAT_CHANGE_BLOCKED": "Cannot change from doubles to singles with 2 or more participants. Remove participants first or cancel the game.",
+        "GENDER_CHANGE_BLOCKED": "Cannot change gender preference — some participants don't match the new preference. Only narrowing from \"all\" is allowed when all participants match.",
         "UNKNOWN_ERROR": "An unexpected error occurred. Please try again."
       }
     },
@@ -3263,7 +3315,7 @@
     "completeProfile": "Complete Profile",
     "user": "User",
     "subtitle": "The best way to find your next tennis or pickleball partner",
-    "soonAndNearby": "Soon & Nearby",
+    "soonAndNearby": "Nearby",
     "publicMatches": "Public Games",
     "viewAll": "View All",
     "myMatches": "My Games",
@@ -3284,6 +3336,10 @@
       "currentDescription": "Use your GPS location",
       "home": "Home Location",
       "homeNotSet": "Set your home location in settings"
+    },
+    "crossSportBanner": {
+      "unreadNotifications": "You have {count} pending notification(s) in {sportName}",
+      "switch": "Switch"
     },
     "header": {
       "ctaButton": "Become a Beta Tester"
@@ -3530,6 +3586,7 @@
         "label": "When",
         "all": "Any time",
         "today": "Today",
+        "tomorrow": "Tomorrow",
         "week": "This week",
         "weekend": "Weekend"
       },
@@ -3538,7 +3595,8 @@
         "all": "Any",
         "morning": "Morning",
         "afternoon": "Afternoon",
-        "evening": "Evening"
+        "evening": "Evening",
+        "pick_time": "Pick specific time..."
       },
       "skillLevel": {
         "label": "Level",
@@ -3590,6 +3648,21 @@
         "mostWanted": "Must-Play",
         "covetedPlayers": "Coveted Players",
         "courtBooked": "Court Booked"
+      },
+      "spotsAvailable": {
+        "label": "Spots",
+        "all": "All",
+        "1": "1 spot",
+        "2": "2 spots",
+        "3": "3 spots"
+      },
+      "favorites": {
+        "label": "Favorites"
+      },
+      "specificTime": {
+        "label": "Pick a time",
+        "pick": "Pick a time...",
+        "clear": "Clear time"
       },
       "specificDate": {
         "label": "Date",
@@ -6935,7 +7008,29 @@
       "description": "No matches match the selected filter. Try a different filter or check back later."
     },
     "showAllMatches": "Show All Matches",
-    "beTheFirst": "Be the first!"
+    "beTheFirst": "Be the first!",
+    "reportInaccuracy": "Report inaccuracy",
+    "reportFacility": {
+      "title": "Report Inaccuracy",
+      "description": "Help us keep facility information accurate. Select the type of inaccuracy you've noticed.",
+      "selectReason": "What's incorrect?",
+      "reasons": {
+        "wrong_address": "Wrong address",
+        "incorrect_hours": "Incorrect hours",
+        "wrong_court_count": "Wrong court count",
+        "wrong_surface_types": "Wrong surface types",
+        "outdated_contact_info": "Outdated contact info",
+        "wrong_amenities": "Wrong amenities",
+        "other": "Other"
+      },
+      "additionalDetails": "Additional details (optional)",
+      "detailsPlaceholder": "Describe what's incorrect...",
+      "submit": "Submit Report",
+      "successTitle": "Report Submitted",
+      "successMessage": "Thank you for helping us improve facility information. We'll review your report shortly.",
+      "errorDuplicate": "You've already reported this issue in the last 24 hours.",
+      "errorGeneric": "Failed to submit report. Please try again."
+    }
   },
   "booking": {
     "selectSlot": "Select Time Slot",

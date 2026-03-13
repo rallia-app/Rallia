@@ -30,6 +30,9 @@ yarn-error.*
 .DS_Store
 *.pem
 
+# credentials (API keys, service accounts)
+credentials/
+
 # local env files
 .env
 .env*.local
@@ -42,3 +45,6 @@ yarn-error.*
 /android
 
 .env.local
+
+# Sentry
+.env.sentry-build-plugin

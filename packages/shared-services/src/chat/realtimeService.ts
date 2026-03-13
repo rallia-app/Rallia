@@ -129,17 +129,19 @@ export function subscribeToReactions(
 
 /**
  * Subscribe to conversation updates (new messages in any conversation)
+ * Listens to conversation UPDATE events — triggered automatically by the
+ * update_conversation_on_new_message trigger when a message is inserted.
+ * RLS ensures only conversations the player participates in are delivered.
  */
 export function subscribeToConversations(playerId: string, onUpdate: () => void): RealtimeChannel {
-  // Subscribe to conversation updates
   const channel = supabase
     .channel(`conversations:${playerId}`)
     .on(
       'postgres_changes',
       {
-        event: '*',
+        event: 'UPDATE',
         schema: 'public',
-        table: 'message',
+        table: 'conversation',
       },
       () => {
         onUpdate();

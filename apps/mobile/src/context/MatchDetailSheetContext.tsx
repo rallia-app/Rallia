@@ -35,7 +35,7 @@ export interface MatchDetailData extends MatchWithDetails {
 
 interface MatchDetailSheetContextType {
   /** Open the Match Detail bottom sheet with the specified match */
-  openSheet: (match: MatchDetailData) => void;
+  openSheet: (match: MatchDetailData, options?: { onMatchRemoved?: () => void }) => void;
 
   /** Close the Match Detail bottom sheet */
   closeSheet: () => void;
@@ -51,6 +51,9 @@ interface MatchDetailSheetContextType {
 
   /** Callback for BottomSheetModal onDismiss — clears selectedMatch after animation completes */
   handleSheetDismiss: () => void;
+
+  /** Callback fired when the user leaves or cancels the match from the sheet */
+  onMatchRemovedRef: React.RefObject<(() => void) | null>;
 }
 
 // =============================================================================
@@ -69,6 +72,7 @@ interface MatchDetailSheetProviderProps {
 
 export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> = ({ children }) => {
   const sheetRef = useRef<BottomSheetModal>(null);
+  const onMatchRemovedRef = useRef<(() => void) | null>(null);
   const [selectedMatch, setSelectedMatch] = useState<MatchDetailData | null>(null);
 
   /**
@@ -77,23 +81,27 @@ export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> =
    * already includes result (e.g. from list queries). Only refetches when the match has no
    * result so we still get scores for lists that don't include the result relation.
    */
-  const openSheet = useCallback((match: MatchDetailData) => {
-    setSelectedMatch(match);
-    sheetRef.current?.present();
-    const hasResult = Array.isArray(match.result)
-      ? (match.result?.length ?? 0) > 0
-      : !!match.result;
-    if (!hasResult) {
-      getMatchWithDetails(match.id).then(refreshed => {
-        if (refreshed) {
-          setSelectedMatch({
-            ...refreshed,
-            distance_meters: match.distance_meters,
-          } as MatchDetailData);
-        }
-      });
-    }
-  }, []);
+  const openSheet = useCallback(
+    (match: MatchDetailData, options?: { onMatchRemoved?: () => void }) => {
+      onMatchRemovedRef.current = options?.onMatchRemoved ?? null;
+      setSelectedMatch(match);
+      sheetRef.current?.present();
+      const hasResult = Array.isArray(match.result)
+        ? (match.result?.length ?? 0) > 0
+        : !!match.result;
+      if (!hasResult) {
+        getMatchWithDetails(match.id).then(refreshed => {
+          if (refreshed) {
+            setSelectedMatch({
+              ...refreshed,
+              distance_meters: match.distance_meters,
+            } as MatchDetailData);
+          }
+        });
+      }
+    },
+    []
+  );
 
   /**
    * Close the sheet. Selected match is cleared via handleSheetDismiss
@@ -125,6 +133,7 @@ export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> =
     sheetRef,
     updateSelectedMatch,
     handleSheetDismiss,
+    onMatchRemovedRef,
   };
 
   return (

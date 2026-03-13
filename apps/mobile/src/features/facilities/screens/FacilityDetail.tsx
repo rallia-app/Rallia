@@ -38,7 +38,9 @@ import {
 import { getSafeAreaEdges } from '../../../utils';
 import { useSport } from '../../../context';
 import { SportIcon } from '../../../components/SportIcon';
-import { useCourtsRoute } from '../../../navigation/hooks';
+import { useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
+import type { FacilityDetailScreenParams } from '@rallia/shared-types';
 import {
   spacingPixels,
   radiusPixels,
@@ -47,6 +49,7 @@ import {
   neutral,
 } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
+import { SheetManager } from 'react-native-actions-sheet';
 
 // Tab components
 import InfoTab from '../components/InfoTab';
@@ -71,7 +74,8 @@ const TAB_ICONS: Record<TabKey, keyof typeof Ionicons.glyphMap> = {
 // =============================================================================
 
 export default function FacilityDetail() {
-  const route = useCourtsRoute<'FacilityDetail'>();
+  const route =
+    useRoute<RouteProp<{ FacilityDetail: FacilityDetailScreenParams }, 'FacilityDetail'>>();
   const { facilityId } = route.params;
 
   const { colors, isDark } = useThemeStyles();
@@ -203,6 +207,19 @@ export default function FacilityDetail() {
       }
     });
   }, [facility]);
+
+  // Handle report inaccuracy
+  const handleReportInaccuracy = useCallback(() => {
+    if (!player?.id || !facility) return;
+    lightHaptic();
+    SheetManager.show('report-facility', {
+      payload: {
+        reporterId: player.id,
+        facilityId,
+        facilityName: facility.name,
+      },
+    });
+  }, [player?.id, facility, facilityId]);
 
   // Contact info
   const primaryContact = contacts.find(c => c.is_primary) || contacts[0];
@@ -446,14 +463,9 @@ export default function FacilityDetail() {
               </View>
             )}
             {courts.length > 0 && (
-              <View
-                style={[
-                  styles.metaBadge,
-                  { backgroundColor: isDark ? neutral[700] : neutral[100] },
-                ]}
-              >
-                <Ionicons name="grid-outline" size={12} color={colors.textMuted} />
-                <Text size="xs" weight="medium" color={colors.textMuted}>
+              <View style={[styles.metaBadge, { backgroundColor: colors.primary + '15' }]}>
+                <Ionicons name="grid-outline" size={12} color={colors.primary} />
+                <Text size="xs" weight="medium" color={colors.primary}>
                   {courts.length} {courts.length === 1 ? 'court' : 'courts'}
                 </Text>
               </View>
@@ -569,6 +581,7 @@ export default function FacilityDetail() {
                 facility={facility}
                 courts={courts}
                 onOpenInMaps={handleOpenInMaps}
+                onReportInaccuracy={player ? handleReportInaccuracy : undefined}
                 colors={colors}
                 isDark={isDark}
                 t={t}

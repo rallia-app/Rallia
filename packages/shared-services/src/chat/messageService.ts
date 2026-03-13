@@ -33,7 +33,6 @@ export async function getMessages(
       sender_id,
       content,
       status,
-      read_by,
       created_at,
       updated_at,
       reply_to_message_id,
@@ -106,7 +105,7 @@ export async function getMessages(
   return messagesWithReplies.map(msg => ({
     ...msg,
     status: (msg.status || 'sent') as MessageStatus,
-    read_by: msg.read_by as string[] | null,
+    read_by: null,
     sender: msg.sender as unknown as MessageWithSender['sender'],
     reply_to: msg.reply_to_message_id ? (replyToMap.get(msg.reply_to_message_id) ?? null) : null,
   }));
@@ -143,7 +142,6 @@ export async function sendMessage(input: SendMessageInput): Promise<MessageWithS
       sender_id,
       content,
       status,
-      read_by,
       created_at,
       updated_at,
       reply_to_message_id,
@@ -168,13 +166,9 @@ export async function sendMessage(input: SendMessageInput): Promise<MessageWithS
     throw error;
   }
 
-  // Update conversation's updated_at
-  await supabase
-    .from('conversation')
-    .update({ updated_at: new Date().toISOString() })
-    .eq('id', input.conversation_id);
+  // conversation.updated_at is handled by trigger_update_conversation_on_message
 
-  // Build reply_to data if this is a reply
+  // Fetch reply_to data only if this is a reply
   let replyTo: { id: string; content: string; sender_name: string } | null = null;
 
   if (input.reply_to_message_id) {
@@ -207,7 +201,7 @@ export async function sendMessage(input: SendMessageInput): Promise<MessageWithS
   return {
     ...data,
     status: (data.status || 'sent') as MessageStatus,
-    read_by: data.read_by as string[] | null,
+    read_by: null,
     sender: data.sender as unknown as MessageWithSender['sender'],
     reply_to: replyTo,
   };

@@ -78,7 +78,6 @@ export async function getPlayerConversations(playerId: string): Promise<Conversa
         const isOnline = row.other_participant_last_seen_at
           ? new Date(row.other_participant_last_seen_at) > new Date(Date.now() - 5 * 60 * 1000)
           : false;
-
         otherParticipant = {
           id: row.other_participant_id,
           first_name: row.other_participant_first_name || '',
@@ -129,6 +128,7 @@ export async function getPlayerConversations(playerId: string): Promise<Conversa
 
 /**
  * Get a single conversation with details
+ * Fetches conversation, participants, and last message in parallel
  */
 export async function getConversation(
   conversationId: string
@@ -169,12 +169,19 @@ export async function getConversation(
       is_muted,
       player:player!conversation_participant_player_id_fkey (
         id,
-        profile (
-          first_name,
-          last_name,
-          display_name,
-          profile_picture_url
+        player_id,
+        last_read_at,
+        is_muted,
+        player:player!conversation_participant_player_id_fkey (
+          id,
+          profile (
+            first_name,
+            last_name,
+            display_name,
+            profile_picture_url
+          )
         )
+      `
       )
     `
     )
@@ -195,12 +202,22 @@ export async function getConversation(
       updated_at,
       sender:player!message_sender_id_fkey (
         id,
-        profile (
-          first_name,
-          last_name,
-          display_name,
-          profile_picture_url
+        conversation_id,
+        sender_id,
+        content,
+        status,
+        created_at,
+        updated_at,
+        sender:player!message_sender_id_fkey (
+          id,
+          profile (
+            first_name,
+            last_name,
+            display_name,
+            profile_picture_url
+          )
         )
+      `
       )
     `
     )
@@ -230,11 +247,11 @@ export async function getConversation(
       ? {
           ...lastMessage,
           status: (lastMessage.status || 'sent') as MessageStatus,
-          read_by: lastMessage.read_by as string[] | null,
+          read_by: null,
           sender: lastMessage.sender as unknown as MessageWithSender['sender'],
         }
       : null,
-    unread_count: 0, // TODO: Calculate based on current user
+    unread_count: 0,
   };
 }
 
@@ -285,6 +302,7 @@ export async function createConversation(input: CreateConversationInput): Promis
 
 /**
  * Create or get existing direct conversation between two players
+ * Uses an RPC function for a single-query lookup instead of N+1
  */
 export async function getOrCreateDirectConversation(
   playerId1: string,
@@ -335,6 +353,29 @@ export async function getOrCreateDirectConversation(
 // MATCH CHAT OPERATIONS
 // ============================================================================
 
+const FORMAT_LABELS: Record<string, Record<string, string>> = {
+  singles: { 'en-US': 'Singles', 'en-CA': 'Singles', 'fr-CA': 'Simple', 'fr-FR': 'Simple' },
+  doubles: { 'en-US': 'Doubles', 'en-CA': 'Doubles', 'fr-CA': 'Double', 'fr-FR': 'Double' },
+};
+
+function generateMatchChatTitle(
+  matchFormat: 'singles' | 'doubles',
+  hostFirstName: string,
+  matchDate: string,
+  locale: string
+): string {
+  const formattedDate = new Date(matchDate).toLocaleDateString(locale, {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+  const withWord = locale.startsWith('fr') ? 'avec' : 'with';
+  const formatLabel =
+    FORMAT_LABELS[matchFormat]?.[locale] ||
+    matchFormat.charAt(0).toUpperCase() + matchFormat.slice(1);
+  return `${formatLabel} ${withWord} ${hostFirstName} - ${formattedDate}`;
+}
+
 /**
  * Create a match chat when a match becomes full (all players confirmed)
  * - Singles (2 players): Creates a direct chat linked to the match
@@ -368,19 +409,30 @@ export async function createMatchChat(
     return existingConv;
   }
 
-  // Generate title: "Sport - Date" format
-  const formattedDate = new Date(matchDate).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
-  const title = `${sportName} - ${formattedDate}`;
+  // Fetch the match host's first name for the title
+  // Note: createdBy is the authenticated user (for RLS), not necessarily the match host
+  const { data: matchData } = await supabase
+    .from('match')
+    .select('created_by')
+    .eq('id', matchId)
+    .single();
 
-  // Singles = direct chat with match_id, Doubles = group chat with match_id
-  const conversationType: ConversationType = matchFormat === 'singles' ? 'direct' : 'group';
+  const matchHostId = matchData?.created_by || createdBy;
+
+  const { data: hostProfile } = await supabase
+    .from('profile')
+    .select('first_name, preferred_locale')
+    .eq('id', matchHostId)
+    .single();
+
+  const hostFirstName = hostProfile?.first_name || 'Player';
+  const locale = hostProfile?.preferred_locale || 'en-US';
+
+  const title = generateMatchChatTitle(matchFormat, hostFirstName, matchDate, locale);
 
   return createConversation({
-    conversation_type: conversationType,
-    title: conversationType === 'group' ? title : undefined, // Direct chats don't need title
+    conversation_type: 'match',
+    title,
     participant_ids: participantIds,
     created_by: createdBy,
     match_id: matchId,
@@ -406,6 +458,38 @@ export async function getMatchChat(matchId: string): Promise<Conversation | null
   }
 
   return data;
+}
+
+/**
+ * Sync match conversation title when match format or date changes.
+ * Re-generates the title using the host's locale.
+ */
+export async function syncMatchConversationTitle(
+  matchId: string,
+  matchFormat: 'singles' | 'doubles',
+  matchDate: string,
+  hostId: string
+): Promise<void> {
+  const { data: conversation } = await supabase
+    .from('conversation')
+    .select('id')
+    .eq('match_id', matchId)
+    .single();
+
+  if (!conversation) return;
+
+  const { data: hostProfile } = await supabase
+    .from('profile')
+    .select('first_name, preferred_locale')
+    .eq('id', hostId)
+    .single();
+
+  const hostFirstName = hostProfile?.first_name || 'Player';
+  const locale = hostProfile?.preferred_locale || 'en-US';
+
+  const title = generateMatchChatTitle(matchFormat, hostFirstName, matchDate, locale);
+
+  await supabase.from('conversation').update({ title }).eq('id', conversation.id);
 }
 
 // ============================================================================

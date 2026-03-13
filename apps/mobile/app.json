@@ -97,6 +97,19 @@
           "merchantIdentifier": "merchant.com.mathisl971.rallia-app",
           "enableGooglePay": false
         }
+      ],
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsImpl": "mapbox"
+        }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "rallia",
+          "project": "react-native"
+        }
       ]
     ],
     "extra": {

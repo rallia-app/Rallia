@@ -245,21 +245,39 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
         </Text>
       </View>
 
-      {/* Attendance Toggle */}
+      {/* Attendance Toggle (disabled for checked-in players) */}
       <View style={styles.fieldGroup}>
-        <ToggleRow
-          label={t('matchFeedback.opponentStep.showedUp')}
-          value={showedUp}
-          onChange={handleShowedUpChange}
-          colors={colors}
-        />
-        {showedUp && (
-          <View style={[styles.infoBox, { backgroundColor: `${colors.buttonActive}10` }]}>
-            <Ionicons name="information-circle-outline" size={16} color={colors.buttonActive} />
-            <Text size="xs" color={colors.textSecondary} style={styles.infoText}>
-              {t('matchFeedback.opponentStep.noShowInfo')}
-            </Text>
+        {opponent.checkedInAt ? (
+          <View style={[styles.toggleRow, { borderColor: colors.border }]}>
+            <View style={styles.toggleTextContainer}>
+              <Text size="base" weight="medium" color={colors.text}>
+                {t('matchFeedback.opponentStep.showedUp')}
+              </Text>
+            </View>
+            <View style={[styles.checkedInBadge, { backgroundColor: `${colors.buttonActive}20` }]}>
+              <Ionicons name="checkmark-circle" size={14} color={colors.buttonActive} />
+              <Text size="sm" weight="semibold" color={colors.buttonActive}>
+                {t('matchFeedback.outcomeStep.playerCheckedIn')}
+              </Text>
+            </View>
           </View>
+        ) : (
+          <>
+            <ToggleRow
+              label={t('matchFeedback.opponentStep.showedUp')}
+              value={showedUp}
+              onChange={handleShowedUpChange}
+              colors={colors}
+            />
+            {showedUp && (
+              <View style={[styles.infoBox, { backgroundColor: `${colors.buttonActive}10` }]}>
+                <Ionicons name="information-circle-outline" size={16} color={colors.buttonActive} />
+                <Text size="xs" color={colors.textSecondary} style={styles.infoText}>
+                  {t('matchFeedback.opponentStep.noShowInfo')}
+                </Text>
+              </View>
+            )}
+          </>
         )}
       </View>
 
@@ -421,6 +439,14 @@ const styles = StyleSheet.create({
   characterCount: {
     textAlign: 'right',
     marginTop: spacingPixels[1],
+  },
+  checkedInBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[1],
+    borderRadius: radiusPixels.md,
   },
   reportLink: {
     flexDirection: 'row',

@@ -118,6 +118,27 @@ export default function GroupDetailScreen() {
     [sports]
   );
 
+  // Get all sport IDs and names for displaying sport tags on facilities
+  const { allSportIds, sportNames } = useMemo(() => {
+    if (!sports || sports.length === 0) {
+      return { allSportIds: [] as string[], sportNames: [] as string[] };
+    }
+    return {
+      allSportIds: sports.map(s => s.id),
+      sportNames: sports.map(s => s.name.charAt(0).toUpperCase() + s.name.slice(1)),
+    };
+  }, [sports]);
+
+  // Helper to get sport name from sport_id
+  const getSportName = useCallback(
+    (sportId: string | null): string | null => {
+      if (!sportId || !sports) return null;
+      const sport = sports.find(s => s.id === sportId);
+      return sport?.name ?? null;
+    },
+    [sports]
+  );
+
   const [activeTab, setActiveTab] = useState<TabKey>('home');
   const [leaderboardPeriod, setLeaderboardPeriod] = useState<30 | 90 | 180 | 0>(30);
   // Add Score flow state
@@ -2011,6 +2032,11 @@ const styles = StyleSheet.create({
   aboutHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  facilitiesCard: {
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
   },
   leaderboardPreview: {
     padding: 20,

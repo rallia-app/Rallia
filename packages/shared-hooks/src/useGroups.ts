@@ -648,23 +648,60 @@ export function useConfirmMatchScore() {
 }
 
 /**
- * Dispute a match score
+ * Propose a rebuttal score (opponent suggests a different score)
  */
-export function useDisputeMatchScore() {
+export function useProposeRebuttalScore() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({
       matchResultId,
       playerId,
-      reason,
+      winningTeam,
+      sets,
     }: {
       matchResultId: string;
       playerId: string;
-      reason?: string;
-    }) => disputeMatchScore(matchResultId, playerId, reason),
+      winningTeam: 1 | 2 | null;
+      sets: Array<{ team1_score: number; team2_score: number }>;
+    }) => proposeRebuttalScore(matchResultId, playerId, winningTeam, sets),
     onSuccess: (_, variables) => {
-      // Invalidate pending confirmations
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.pendingConfirmations(variables.playerId),
+      });
+      queryClient.invalidateQueries({ queryKey: [...groupKeys.all, 'detail'] });
+    },
+  });
+}
+
+/**
+ * Accept a rebuttal score (original team agrees with opponent's proposed score)
+ */
+export function useAcceptRebuttalScore() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ matchResultId, playerId }: { matchResultId: string; playerId: string }) =>
+      acceptRebuttalScore(matchResultId, playerId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.pendingConfirmations(variables.playerId),
+      });
+      queryClient.invalidateQueries({ queryKey: [...groupKeys.all, 'detail'] });
+    },
+  });
+}
+
+/**
+ * Dispute a rebuttal score (original team disagrees → score becomes unsettled)
+ */
+export function useDisputeRebuttalScore() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ matchResultId, playerId }: { matchResultId: string; playerId: string }) =>
+      disputeRebuttalScore(matchResultId, playerId),
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: groupKeys.pendingConfirmations(variables.playerId),
       });

@@ -32,8 +32,11 @@ export default async function middleware(request: NextRequest) {
   // This refreshes the auth token if expired
   await supabase.auth.getUser();
 
-  // For API routes, return the response with refreshed cookies only
-  if (request.nextUrl.pathname.startsWith('/api')) {
+  // For API routes and Sentry tunnel, return the response with refreshed cookies only
+  if (
+    request.nextUrl.pathname.startsWith('/api') ||
+    request.nextUrl.pathname.startsWith('/monitoring')
+  ) {
     return supabaseResponse;
   }
 

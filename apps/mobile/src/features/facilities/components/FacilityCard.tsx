@@ -26,6 +26,8 @@ interface FacilityCardProps {
   showFavoriteButton?: boolean;
   /** Sport name for filtering provider availability (e.g., "tennis") */
   sportName?: string;
+  /** Callback when a slot is pressed - receives facility and slot for court selection handling */
+  onSlotPress?: (facility: FacilitySearchResult, slot: FormattedSlot) => void;
   /** Whether dark mode is active */
   isDark: boolean;
   colors: {
@@ -103,6 +105,7 @@ export default function FacilityCard({
   isMaxFavoritesReached,
   showFavoriteButton,
   sportName,
+  onSlotPress,
   isDark,
   colors,
   t,
@@ -129,12 +132,18 @@ export default function FacilityCard({
     sportName,
   });
 
-  const handleSlotPress = useCallback((slot: FormattedSlot) => {
-    if (slot.bookingUrl) {
+  const handleSlotPress = useCallback(
+    (slot: FormattedSlot) => {
+      if (!slot.bookingUrl && !slot.isLocalSlot) return;
       lightHaptic();
-      Linking.openURL(slot.bookingUrl);
-    }
-  }, []);
+      if (onSlotPress) {
+        onSlotPress(facility, slot);
+      } else if (slot.bookingUrl) {
+        Linking.openURL(slot.bookingUrl);
+      }
+    },
+    [facility, onSlotPress]
+  );
 
   // Determine if favorite toggle should be disabled
   const favoriteDisabled = !isFavorite && isMaxFavoritesReached;

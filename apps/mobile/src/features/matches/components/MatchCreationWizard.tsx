@@ -295,8 +295,6 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   const hasUnsavedChanges = useRef(false);
 
   // Confirmation modal states (replace native Alert.alert)
-  const [showGenderMismatchModal, setShowGenderMismatchModal] = useState(false);
-  const [genderMismatchCount, setGenderMismatchCount] = useState(0);
   const [showConfirmChangesModal, setShowConfirmChangesModal] = useState(false);
   const [confirmChangesInfo, setConfirmChangesInfo] = useState({
     changesList: '',
@@ -788,6 +786,15 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       changes.push('cost');
     }
 
+    // Gender preference changes
+    const currentGender = editMatch.preferred_opponent_gender ?? 'any';
+    const newGender = values.preferredOpponentGender ?? 'any';
+    if (newGender !== currentGender) changes.push('gender');
+
+    // Minimum rating changes
+    if (norm(values.minRatingScoreId) !== norm(editMatch.min_rating_score_id))
+      changes.push('rating');
+
     // Remove duplicates
     return [...new Set(changes)];
   }, [editMatch, values]);
@@ -905,19 +912,6 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
             toast.error(errorMessage);
             return;
           }
-
-          // Check for warnings (e.g., gender mismatch)
-          if (validation.warnings && validation.warnings.length > 0) {
-            const genderWarning = validation.warnings.find(w => w.type === 'gender_mismatch');
-
-            if (genderWarning) {
-              // Show confirmation for gender mismatch
-              pendingMatchData.current = matchData;
-              setGenderMismatchCount(genderWarning.affectedParticipantIds.length);
-              setShowGenderMismatchModal(true);
-              return;
-            }
-          }
         } catch (error) {
           console.error('Validation error:', error);
           // Continue with update if validation fails unexpectedly
@@ -940,6 +934,12 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
           }
           if (impactfulChanges.includes('cost')) {
             changeDescriptions.push(t('matchCreation.validation.changes.cost'));
+          }
+          if (impactfulChanges.includes('gender')) {
+            changeDescriptions.push(t('matchCreation.validation.changes.gender'));
+          }
+          if (impactfulChanges.includes('rating')) {
+            changeDescriptions.push(t('matchCreation.validation.changes.rating'));
           }
 
           const changesList = changeDescriptions.join(', ');
@@ -1090,13 +1090,11 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                   lightHaptic();
                   onClose();
                 }}
-                style={[
-                  styles.successCloseButton,
-                  { backgroundColor: isDark ? neutral[800] : neutral[100] },
-                ]}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={styles.successCloseButton}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                activeOpacity={0.7}
               >
-                <Ionicons name="close-outline" size={20} color={colors.textMuted} />
+                <Ionicons name="close-outline" size={24} color={colors.textMuted} />
               </TouchableOpacity>
 
               <View style={[styles.successIcon, { backgroundColor: colors.buttonActive }]}>
@@ -1342,30 +1340,6 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
         )}
       </View>
 
-      {/* Gender mismatch confirmation */}
-      <ConfirmationModal
-        visible={showGenderMismatchModal}
-        onClose={() => {
-          setShowGenderMismatchModal(false);
-          pendingMatchData.current = null;
-        }}
-        onConfirm={() => {
-          setShowGenderMismatchModal(false);
-          if (pendingMatchData.current) {
-            performUpdate(pendingMatchData.current);
-            pendingMatchData.current = null;
-          }
-        }}
-        title={t('matchCreation.validation.genderMismatchTitle')}
-        message={t('matchCreation.validation.genderMismatchMessage').replace(
-          '{count}',
-          String(genderMismatchCount)
-        )}
-        confirmLabel={t('matchCreation.validation.updateAnyway')}
-        cancelLabel={t('common.cancel')}
-        destructive
-      />
-
       {/* Confirm impactful changes */}
       <ConfirmationModal
         visible={showConfirmChangesModal}
@@ -1540,11 +1514,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: spacingPixels[4],
     right: spacingPixels[4],
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: spacingPixels[1],
   },
   successIcon: {
     width: 80,

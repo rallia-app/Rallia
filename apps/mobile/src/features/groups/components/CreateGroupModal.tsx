@@ -38,6 +38,9 @@ import { pickImageWithCropper } from '../../../utils/imagePicker';
 // Sport selection option type
 type SportOption = 'both' | 'tennis' | 'pickleball';
 
+// Sport selection option type
+type SportOption = 'both' | 'tennis' | 'pickleball';
+
 export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) {
   const playerId = payload?.playerId;
 

@@ -246,6 +246,12 @@ export type MatchReport = TableRow<'match_report'>;
 export interface MatchResultWithSets extends MatchResult {
   sets?: MatchSet[];
   confirmations?: Array<{ player_id: string; action: 'confirmed' | 'disputed' }>;
+  rebuttal_submitted_by?: string | null;
+  rebuttal_team1_score?: number | null;
+  rebuttal_team2_score?: number | null;
+  rebuttal_winning_team?: number | null;
+  rebuttal_sets?: Array<{ set_number: number; team1_score: number; team2_score: number }> | null;
+  rebuttal_deadline?: string | null;
 }
 
 // Notification
@@ -461,6 +467,10 @@ export interface FacilitySearchResult {
   court_count?: number;
   /** Number of upcoming public matches at this facility for the requested sport(s) */
   upcoming_match_count?: number;
+  /** Facility latitude for map display */
+  latitude?: number | null;
+  /** Facility longitude for map display */
+  longitude?: number | null;
 }
 
 /** Paginated facilities response */

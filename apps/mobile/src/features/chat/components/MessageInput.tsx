@@ -1,10 +1,10 @@
 /**
  * MessageInput Component
- * Text input for sending messages with emoji keyboard support and reply functionality
+ * Text input for sending messages with reply functionality
  */
 
 import React, { useState, useCallback, useRef, memo, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
@@ -121,7 +121,7 @@ function MessageInputComponent({
         {
           backgroundColor: isDark ? colors.background : '#FFFFFF',
           borderTopColor: colors.border,
-          paddingBottom: keyboardVisible ? spacingPixels[2] : spacingPixels[4],
+          paddingBottom: keyboardVisible ? spacingPixels[2] : spacingPixels[8],
         },
       ]}
     >
@@ -146,21 +146,13 @@ function MessageInputComponent({
       )}
 
       <View style={[styles.inputContainer, { backgroundColor: isDark ? colors.card : '#F0F0F0' }]}>
-        {/* Emoji button - opens native emoji keyboard */}
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={() => {
-            // On most devices, long-pressing the keyboard button or using globe key shows emoji
-            // This is a hint to the user - focusing the input will show the keyboard
-            inputRef.current?.focus();
-          }}
-        >
-          <Ionicons name="happy-outline" size={24} color={colors.textMuted} />
-        </TouchableOpacity>
-
         <TextInput
           ref={inputRef}
-          style={[styles.input, { color: colors.text }]}
+          style={[
+            styles.input,
+            { color: colors.text },
+            Platform.OS === 'android' && { textAlignVertical: 'center' },
+          ]}
           value={message}
           onChangeText={handleTextChange}
           placeholder={placeholder}
@@ -169,7 +161,6 @@ function MessageInputComponent({
           maxLength={2000}
           editable={!disabled}
           returnKeyType="default"
-          blurOnSubmit={false}
         />
 
         {/* Send button */}
@@ -178,7 +169,7 @@ function MessageInputComponent({
           onPress={handleSend}
           disabled={!canSend}
         >
-          <Ionicons name="send" size={20} color={canSend ? '#FFFFFF' : colors.textMuted} />
+          <Ionicons name="send" size={18} color={canSend ? '#FFFFFF' : colors.textMuted} />
         </TouchableOpacity>
       </View>
     </View>
@@ -225,28 +216,28 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     borderRadius: 24,
-    paddingHorizontal: spacingPixels[2],
+    paddingLeft: spacingPixels[4],
+    paddingRight: spacingPixels[1],
     paddingVertical: spacingPixels[1],
-    minHeight: 48,
-  },
-  iconButton: {
-    padding: spacingPixels[2],
+    minHeight: 44,
   },
   input: {
     flex: 1,
     fontSize: fontSizePixels.base,
     maxHeight: 100,
-    paddingVertical: spacingPixels[2],
-    paddingHorizontal: spacingPixels[2],
+    paddingVertical: Platform.OS === 'ios' ? spacingPixels[1.5] : spacingPixels[1],
+    paddingHorizontal: 0,
+    lineHeight: 20,
   },
   sendButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: spacingPixels[1],
+    alignSelf: 'flex-end',
+    marginLeft: spacingPixels[2],
   },
 });

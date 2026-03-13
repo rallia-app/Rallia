@@ -2243,7 +2243,7 @@ export default function CommunityDetailScreen() {
         onClose={() => setShowAddScoreIntro(false)}
         onAddScore={handleAddScoreIntroComplete}
         onNeverShowAgain={() => {
-          AsyncStorage.setItem(ADD_SCORE_INTRO_KEY, 'true').catch(console.error);
+          AsyncStorage.setItem(ADD_SCORE_INTRO_KEY, 'true').catch(() => {});
           setHasSeenAddScoreIntro(true);
           handleAddScoreIntroComplete();
         }}
@@ -2462,6 +2462,12 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 16,
     borderWidth: 1,
+  },
+  facilitiesCard: {
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginTop: 16,
   },
   aboutHeader: {
     flexDirection: 'row',
