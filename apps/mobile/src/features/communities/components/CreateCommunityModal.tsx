@@ -17,21 +17,20 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
-
+import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { Text, useToast } from '@rallia/shared-components';
-import { useRequireOnboarding, useThemeStyles, useTranslation } from '../../../hooks';
-import { uploadImage } from '../../../services/imageUpload';
 import { primary, radiusPixels, spacingPixels } from '@rallia/design-system';
 import { useCreateCommunity, useSports, useFacilitySearch, usePlayer } from '@rallia/shared-hooks';
 import { supabase, Logger } from '@rallia/shared-services';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 
-type SportOption = 'both' | 'tennis' | 'pickleball';
-import { NavigationProp, useNavigation } from '@react-navigation/native';
+import { useRequireOnboarding, useThemeStyles, useTranslation } from '../../../hooks';
 import { CommunityStackParamList } from '../../../navigation/types';
+import { uploadImage } from '../../../services/imageUpload';
+import { pickImageWithCropper } from '../../../utils/imagePicker';
+
+type SportOption = 'both' | 'tennis' | 'pickleball';
 
 export function CreateCommunityActionSheet({ payload }: SheetProps<'create-community'>) {
   const playerId = payload?.playerId;
@@ -48,7 +47,7 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
   const [isPublic, setIsPublic] = useState(true);
   const [selectedSport, setSelectedSport] = useState<SportOption>('both');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, _setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Facility selection state
@@ -172,21 +171,19 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
 
   const handlePickImage = useCallback(async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
+      const { uri, error } = await pickImageWithCropper({
+        aspectRatio: [16, 9],
+        quality: 0.8,
+        source: 'gallery',
+      });
+
+      if (error) {
         Alert.alert(t('community.permissionRequired'), t('community.photoAccessRequired'));
         return;
       }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [16, 9],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        setCoverImage(result.assets[0].uri);
+      if (uri) {
+        setCoverImage(uri);
       }
     } catch (err) {
       console.error('Error picking image:', err);
@@ -293,7 +290,7 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
     setFacilitySearchQuery('');
     setShowFacilitySearch(false);
     setError(null);
-    SheetManager.hide('create-community');
+    void SheetManager.hide('create-community');
   }, []);
 
   const isSubmitting = isLoading || isUploadingImage;
@@ -341,7 +338,7 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.changeImageButton, { backgroundColor: colors.primary }]}
-                onPress={handlePickImage}
+                onPress={() => void handlePickImage()}
               >
                 <Ionicons name="camera-outline" size={16} color="#FFFFFF" />
                 <Text size="xs" weight="semibold" style={{ color: '#FFFFFF', marginLeft: 4 }}>
@@ -358,7 +355,7 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
                   borderColor: colors.border,
                 },
               ]}
-              onPress={handlePickImage}
+              onPress={() => void handlePickImage()}
             >
               <View style={[styles.imagePickerIcon, { backgroundColor: colors.cardBackground }]}>
                 <Ionicons name="camera-outline" size={24} color={colors.primary} />
@@ -783,7 +780,7 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
             { backgroundColor: colors.primary },
             isSubmitting && { opacity: 0.7 },
           ]}
-          onPress={handleSubmit}
+          onPress={() => void handleSubmit()}
           disabled={isSubmitting || !name.trim()}
         >
           {isSubmitting ? (
@@ -970,14 +967,6 @@ const styles = StyleSheet.create({
     padding: spacingPixels[4],
     borderTopWidth: 1,
     paddingBottom: spacingPixels[4],
-  },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   submitButton: {
     flexDirection: 'row',

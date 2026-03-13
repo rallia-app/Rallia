@@ -1,4 +1,11 @@
 import { SheetRegister, SheetDefinition } from 'react-native-actions-sheet';
+import type {
+  SharedContactList,
+  SharedContact,
+  MessageWithSender,
+  ConversationPreview,
+} from '@rallia/shared-services';
+
 import { CreateCommunityActionSheet } from '../features/communities/components/CreateCommunityModal';
 import { CreateListActionSheet } from '../features/shared-lists/components/CreateListModal';
 import { ShareMatchActionSheet } from '../features/shared-lists/components/ShareMatchModal';
@@ -28,6 +35,7 @@ import { CourtBookingActionSheet } from '../features/facilities/components/Court
 import { BookingDetailActionSheet } from '../features/bookings/components/BookingDetailSheet';
 // Shared components
 import { ImagePickerActionSheet } from '../components/ImagePickerSheet';
+import { ImageCropperSheet } from '../components/ImageCropperSheet';
 import { PlayerInviteActionSheet } from '../components/PlayerInviteSheet';
 import { InviteToMatchActionSheet } from '../components/InviteToMatchSheet';
 // Sport profile components
@@ -57,14 +65,6 @@ import { ImageProofActionSheet } from '../features/ratings/components/ImageProof
 import { VideoProofActionSheet } from '../features/ratings/components/VideoProofOverlay';
 import { DocumentProofActionSheet } from '../features/ratings/components/DocumentProofOverlay';
 import { EditProofActionSheet } from '../features/ratings/components/EditProofOverlay';
-
-import type {
-  SharedContactList,
-  SharedContact,
-  MessageWithSender,
-  ConversationPreview,
-} from '@rallia/shared-services';
-
 // Define WeeklyAvailability inline to avoid circular dependencies
 type DayOfWeek = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
 interface DayAvailability {
@@ -324,6 +324,15 @@ declare module 'react-native-actions-sheet' {
         galleryDisabled?: boolean;
       };
     }>;
+    'image-cropper': SheetDefinition<{
+      payload: {
+        imageUri: string;
+        aspectRatio?: [number, number];
+        onConfirm: (uri: string) => void;
+        onCancel?: () => void;
+        title?: string;
+      };
+    }>;
     'player-invite': SheetDefinition<{
       payload: {
         matchId: string;
@@ -580,6 +589,7 @@ export const Sheets = () => {
         'external-booking': ExternalBookingActionSheet,
         'court-booking': CourtBookingActionSheet,
         'image-picker': ImagePickerActionSheet,
+        'image-cropper': ImageCropperSheet,
         'player-invite': PlayerInviteActionSheet,
         'invite-to-match': InviteToMatchActionSheet,
         // Sport profile sheets

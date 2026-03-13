@@ -17,12 +17,8 @@ import {
 } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-
 import { Text, useToast } from '@rallia/shared-components';
-import { useRequireOnboarding, useThemeStyles, useTranslation } from '../../../hooks';
-import { uploadImage } from '../../../services/imageUpload';
 import { primary, radiusPixels, spacingPixels } from '@rallia/design-system';
 import {
   useCreateGroup,
@@ -33,7 +29,11 @@ import {
 } from '@rallia/shared-hooks';
 import { supabase, Logger } from '@rallia/shared-services';
 import type { FacilitySearchResult } from '@rallia/shared-types';
+
+import { useRequireOnboarding, useThemeStyles, useTranslation } from '../../../hooks';
 import type { RootStackParamList } from '../../../navigation/types';
+import { uploadImage } from '../../../services/imageUpload';
+import { pickImageWithCropper } from '../../../utils/imagePicker';
 
 // Sport selection option type
 type SportOption = 'both' | 'tennis' | 'pickleball';
@@ -162,26 +162,24 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
 
   const handleClose = useCallback(() => {
     resetForm();
-    SheetManager.hide('create-group');
+    void SheetManager.hide('create-group');
   }, [resetForm]);
 
   const handlePickImage = useCallback(async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
+      const { uri, error } = await pickImageWithCropper({
+        aspectRatio: [16, 9],
+        quality: 0.8,
+        source: 'gallery',
+      });
+
+      if (error) {
         Alert.alert(t('groups.permissionRequired'), t('groups.photoAccessRequired'));
         return;
       }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [16, 9],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        setCoverImage(result.assets[0].uri);
+      if (uri) {
+        setCoverImage(uri);
       }
     } catch (err) {
       console.error('Error picking image:', err);
@@ -343,7 +341,7 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.changeImageButton, { backgroundColor: colors.primary }]}
-                onPress={handlePickImage}
+                onPress={() => void handlePickImage()}
               >
                 <Ionicons name="camera-outline" size={16} color="#FFFFFF" />
                 <Text size="xs" weight="semibold" style={{ color: '#FFFFFF', marginLeft: 4 }}>
@@ -360,7 +358,7 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
                   borderColor: colors.border,
                 },
               ]}
-              onPress={handlePickImage}
+              onPress={() => void handlePickImage()}
             >
               <View style={[styles.imagePickerIcon, { backgroundColor: colors.cardBackground }]}>
                 <Ionicons name="camera-outline" size={24} color={colors.primary} />
@@ -756,7 +754,7 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
             { backgroundColor: colors.primary },
             isSubmitting && { opacity: 0.7 },
           ]}
-          onPress={handleSubmit}
+          onPress={() => void handleSubmit()}
           disabled={isSubmitting || !name.trim()}
         >
           {isSubmitting ? (
