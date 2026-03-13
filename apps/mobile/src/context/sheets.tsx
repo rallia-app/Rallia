@@ -148,10 +148,8 @@ declare module 'react-native-actions-sheet' {
     }>;
     'chat-agreement': SheetDefinition<{
       payload: {
-        chatName?: string;
-        chatImageUrl?: string | null;
-        isDirectChat?: boolean;
         onAgree?: () => void;
+        onDecline?: () => void;
       };
     }>;
     'add-members-to-group': SheetDefinition<{

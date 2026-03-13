@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@rallia/shared-components';
+import { lightHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary, status } from '@rallia/design-system';
 
@@ -73,6 +74,7 @@ function ChatHeaderComponent({
   const [showMenu, setShowMenu] = useState(false);
 
   const handleMenuPress = useCallback(() => {
+    lightHaptic();
     setShowMenu(true);
   }, []);
 
@@ -146,8 +148,14 @@ function ChatHeaderComponent({
       ]}
     >
       {/* Back button */}
-      <TouchableOpacity style={styles.backButton} onPress={onBack}>
-        <Ionicons name="arrow-back" size={24} color={colors.text} />
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => {
+          lightHaptic();
+          onBack();
+        }}
+      >
+        <Ionicons name="chevron-back" size={24} color={colors.text} />
       </TouchableOpacity>
 
       {/* Avatar and info */}

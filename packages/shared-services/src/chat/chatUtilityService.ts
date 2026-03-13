@@ -29,9 +29,7 @@ export async function updatePlayerLastSeen(playerId: string): Promise<void> {
 /**
  * Get online status for multiple players
  */
-export async function getPlayersOnlineStatus(
-  playerIds: string[]
-): Promise<PlayerOnlineStatus[]> {
+export async function getPlayersOnlineStatus(playerIds: string[]): Promise<PlayerOnlineStatus[]> {
   if (playerIds.length === 0) return [];
 
   const { data, error } = await supabase
@@ -41,12 +39,12 @@ export async function getPlayersOnlineStatus(
 
   if (error) {
     console.error('Error fetching online status:', error);
-    return playerIds.map((id) => ({ player_id: id, is_online: false, last_seen_at: null }));
+    return playerIds.map(id => ({ player_id: id, is_online: false, last_seen_at: null }));
   }
 
   const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
 
-  return (data || []).map((player) => ({
+  return (data || []).map(player => ({
     player_id: player.id,
     is_online: player.last_seen_at ? new Date(player.last_seen_at) > fiveMinutesAgo : false,
     last_seen_at: player.last_seen_at,
@@ -90,18 +88,29 @@ export async function searchMessagesInConversation(
   }
 
   // Fetch sender names for results
-  const senderIds = [...new Set((data || []).map((r: { sender_id: string }) => r.sender_id))] as string[];
+  const senderIds = [
+    ...new Set((data || []).map((r: { sender_id: string }) => r.sender_id)),
+  ] as string[];
   const senderMap = await getSenderNames(senderIds);
 
-  return (data || []).map((r: { id: string; conversation_id: string; sender_id: string; content: string; created_at: string; rank: number }) => ({
-    id: r.id,
-    conversation_id: r.conversation_id,
-    sender_id: r.sender_id,
-    content: r.content,
-    created_at: r.created_at,
-    rank: r.rank,
-    sender_name: senderMap.get(r.sender_id) || 'Unknown',
-  }));
+  return (data || []).map(
+    (r: {
+      id: string;
+      conversation_id: string;
+      sender_id: string;
+      content: string;
+      created_at: string;
+      rank: number;
+    }) => ({
+      id: r.id,
+      conversation_id: r.conversation_id,
+      sender_id: r.sender_id,
+      content: r.content,
+      created_at: r.created_at,
+      rank: r.rank,
+      sender_name: senderMap.get(r.sender_id) || 'Unknown',
+    })
+  );
 }
 
 /**
@@ -114,13 +123,15 @@ async function searchMessagesFallback(
 ): Promise<SearchMessageResult[]> {
   const { data, error } = await supabase
     .from('message')
-    .select(`
+    .select(
+      `
       id,
       conversation_id,
       sender_id,
       content,
       created_at
-    `)
+    `
+    )
     .eq('conversation_id', conversationId)
     .is('deleted_at', null)
     .ilike('content', `%${query}%`)
@@ -132,10 +143,10 @@ async function searchMessagesFallback(
     return [];
   }
 
-  const senderIds = [...new Set((data || []).map((m) => m.sender_id))];
+  const senderIds = [...new Set((data || []).map(m => m.sender_id))];
   const senderMap = await getSenderNames(senderIds);
 
-  return (data || []).map((m) => ({
+  return (data || []).map(m => ({
     id: m.id,
     conversation_id: m.conversation_id,
     sender_id: m.sender_id,
@@ -154,19 +165,21 @@ async function getSenderNames(senderIds: string[]): Promise<Map<string, string>>
 
   const { data } = await supabase
     .from('player')
-    .select(`
+    .select(
+      `
       id,
       profile (
         first_name
       )
-    `)
+    `
+    )
     .in('id', senderIds);
 
   const map = new Map<string, string>();
   for (const player of data || []) {
-    const profile = Array.isArray(player.profile) 
-      ? player.profile[0] as { first_name: string } | undefined
-      : player.profile as { first_name: string } | null;
+    const profile = Array.isArray(player.profile)
+      ? (player.profile[0] as { first_name: string } | undefined)
+      : (player.profile as { first_name: string } | null);
     map.set(player.id, profile?.first_name || 'Unknown');
   }
 
@@ -183,6 +196,23 @@ async function getSenderNames(senderIds: string[]): Promise<Map<string, string>>
 export async function getTotalUnreadCount(playerId: string): Promise<number> {
   const conversations = await getPlayerConversations(playerId);
   return conversations.reduce((total, conv) => total + conv.unread_count, 0);
+}
+
+/**
+ * Get count of conversations with unread messages (for Unread chip badge).
+ * Uses a lightweight RPC instead of fetching all conversations.
+ */
+export async function getUnreadConversationsCount(playerId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('get_unread_conversations_count', {
+    p_player_id: playerId,
+  });
+
+  if (error) {
+    console.error('Error fetching unread conversations count:', error);
+    return 0;
+  }
+
+  return data ?? 0;
 }
 
 // ============================================================================

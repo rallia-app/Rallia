@@ -47,6 +47,7 @@ export * from './useGroups';
 export * from './usePendingFeedbackCheck';
 export * from './useCommunities';
 export * from './useChat';
+export * from './useConversationFilter';
 export * from './useBlockedStatus';
 export * from './useFavoriteStatus';
 export * from './useSharedLists';

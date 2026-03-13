@@ -18,6 +18,7 @@ import {
   ViewStyle,
   GestureResponderEvent,
   Text as RNText,
+  Platform,
 } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
@@ -896,9 +897,9 @@ function BottomTabs() {
   const { colors } = useThemeStyles();
   const insets = useSafeAreaInsets();
 
-  // Add bottom safe area inset to handle Android software navigation bar
-  // This prevents the system nav bar from overlapping the tab bar
-  const bottomInset = insets.bottom;
+  // Add bottom safe area inset only on Android to handle software navigation bar
+  // iOS already handles safe area natively, so adding it causes excessive bottom spacing
+  const bottomInset = Platform.OS === 'android' ? insets.bottom : 0;
   const tabBarHeight = spacingPixels[20] + bottomInset;
 
   return (
