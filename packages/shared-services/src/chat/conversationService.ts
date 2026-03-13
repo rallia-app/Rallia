@@ -169,19 +169,12 @@ export async function getConversation(
       is_muted,
       player:player!conversation_participant_player_id_fkey (
         id,
-        player_id,
-        last_read_at,
-        is_muted,
-        player:player!conversation_participant_player_id_fkey (
-          id,
-          profile (
-            first_name,
-            last_name,
-            display_name,
-            profile_picture_url
-          )
+        profile (
+          first_name,
+          last_name,
+          display_name,
+          profile_picture_url
         )
-      `
       )
     `
     )
@@ -202,22 +195,12 @@ export async function getConversation(
       updated_at,
       sender:player!message_sender_id_fkey (
         id,
-        conversation_id,
-        sender_id,
-        content,
-        status,
-        created_at,
-        updated_at,
-        sender:player!message_sender_id_fkey (
-          id,
-          profile (
-            first_name,
-            last_name,
-            display_name,
-            profile_picture_url
-          )
+        profile (
+          first_name,
+          last_name,
+          display_name,
+          profile_picture_url
         )
-      `
       )
     `
     )
