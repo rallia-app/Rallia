@@ -1,8 +1,9 @@
 /**
  * Chat Screen (Inbox)
- * Shows all conversations with WhatsApp-style filter chips for:
- * All, Unread, Direct, Group Chats, Player Groups, Communities, Clubs, Matches.
- * Uses server-side filtering and infinite scroll pagination.
+ * Shows all conversations the user is part of with tabbed sections:
+ * - Direct Messages: User-to-user chats (not linked to matches) + manually created group chats
+ * - Groups & Communities: Chats linked to networks (groups/communities)
+ * - Match Chats: Chats linked to matches (both singles and doubles)
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
@@ -29,16 +30,21 @@ import {
   useTourSequence,
   type TranslationKey,
 } from '../hooks';
-import { useActionsSheet } from '../context';
+import { useActionsSheet, useSport } from '../context';
+import { SportIcon } from '../components/SportIcon';
 import { CopilotStep, WalkthroughableView } from '../context/TourContext';
 import SignInPrompt from '../components/SignInPrompt';
 import { SearchBar } from '../components/SearchBar';
-import { spacingPixels, fontSizePixels, fontWeightNumeric, primary } from '@rallia/design-system';
+import {
+  spacingPixels,
+  fontSizePixels,
+  fontWeightNumeric,
+  primary,
+  neutral,
+  radiusPixels,
+} from '@rallia/design-system';
 import {
   usePlayerConversations,
-  useFilteredConversations,
-  useConversationFilter,
-  useUnreadConversationsCount,
   useConversationsRealtime,
   useTogglePinConversation,
   useToggleMuteConversation,
@@ -57,6 +63,14 @@ import {
 import { SheetManager } from 'react-native-actions-sheet';
 import { useAppNavigation, useChatNavigation } from '../navigation/hooks';
 
+type TabKey = 'direct' | 'groups' | 'matches';
+
+const TAB_CONFIGS: { key: TabKey; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'direct', icon: 'chatbubble-outline' },
+  { key: 'groups', icon: 'people-outline' },
+  { key: 'matches', icon: 'tennisball-outline' }, // Rendered as SportIcon when key === 'matches'
+];
+
 const Chat = () => {
   const { colors, isDark } = useThemeStyles();
   const insets = useSafeAreaInsets();
@@ -65,13 +79,14 @@ const Chat = () => {
   const { session, isAuthenticated, loading: isLoadingAuth } = useAuth();
   const { t } = useTranslation();
   const { openSheet } = useActionsSheet();
+  const { selectedSport } = useSport();
   const { guardAction, isReady: isOnboarded } = useRequireOnboarding();
   const playerId = session?.user?.id;
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<TabKey>('direct');
   const [chatFilters, setChatFilters] = useState<ChatFilters>(DEFAULT_CHAT_FILTERS);
 
-  // Chat screen tour
+  // Chat screen tour - triggers after main navigation tour is completed
   const { shouldShowTour: _shouldShowChatTour } = useTourSequence({
     screenId: 'chat',
     isReady: !!playerId,
@@ -79,25 +94,19 @@ const Chat = () => {
     autoStart: true,
   });
 
-  // Filtered + paginated conversations
-  const { conversations, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } =
-    useFilteredConversations({
-      playerId,
-      filter,
-      search: debouncedSearch,
-      limit: 20,
-      enabled: !!playerId,
-    });
-
-  // Unread conversations count for badge
-  const { data: unreadConversationsCount } = useUnreadConversationsCount(playerId);
-
-  // Keep usePlayerConversations for archived count (data is cached, no extra fetch)
-  const { data: allConversations } = usePlayerConversations(playerId);
-  const archivedCount = useMemo(
-    () => (allConversations ?? []).filter(c => c.is_archived).length,
-    [allConversations]
+  // Track selected conversation for action handlers
+  const [selectedConversation, setSelectedConversation] = useState<ConversationPreview | null>(
+    null
   );
+  const [showActionsSheet, setShowActionsSheet] = useState(false);
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+
+  const {
+    data: conversations,
+    isLoading,
+    refetch,
+    isRefetching,
+  } = usePlayerConversations(playerId);
 
   // Subscribe to real-time updates
   useConversationsRealtime(playerId);
@@ -259,7 +268,6 @@ const Chat = () => {
       });
       return { filteredConversations: filtered, archivedCount };
     }
-  }, [refetch]);
 
     // Filter out archived conversations for normal view (unless archived filter is active)
     if (chatFilters.archived) {
@@ -292,14 +300,17 @@ const Chat = () => {
     SheetManager.show('create-group-chat', {
       payload: {
         onSuccess: (conversationId: string) => {
+          // Refetch conversations to include the new group
+          refetch();
+          // Navigate to the new conversation
           rootNavigation.navigate('ChatConversation', {
             conversationId,
-            title: undefined,
+            title: undefined, // Will be loaded from conversation
           });
         },
       },
     });
-  }, [guardAction, rootNavigation]);
+  }, [guardAction, refetch, rootNavigation]);
 
   const handleConversationPress = useCallback(
     (conversation: ConversationPreview) => {
@@ -315,6 +326,7 @@ const Chat = () => {
   const handleConversationLongPress = useCallback(
     (conversation: ConversationPreview) => {
       selectionHaptic();
+      setSelectedConversation(conversation);
 
       SheetManager.show('conversation-actions', {
         payload: {
@@ -351,6 +363,7 @@ const Chat = () => {
 
   const renderItem = useCallback(
     ({ item }: { item: ConversationPreview }) => {
+      // Check if the other user in a direct chat is blocked
       const isOtherUserBlocked = Boolean(
         item.conversation_type === 'direct' &&
         item.other_participant?.id &&
@@ -477,16 +490,19 @@ const Chat = () => {
 
     const { icon, title, subtitle } = emptyMessages[activeTab];
 
-    // Default empty state
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons name="chatbubbles-outline" size={64} color={colors.textMuted} />
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>
-          {t('chat.empty.direct.title')}
-        </Text>
-        <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
-          {t('chat.empty.direct.subtitle')}
-        </Text>
+        {activeTab === 'matches' ? (
+          <SportIcon
+            sportName={selectedSport?.name ?? 'tennis'}
+            size={64}
+            color={colors.textMuted}
+          />
+        ) : (
+          <Ionicons name={icon} size={64} color={colors.textMuted} />
+        )}
+        <Text style={[styles.emptyTitle, { color: colors.text }]}>{title}</Text>
+        <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>{subtitle}</Text>
       </View>
     );
   }, [isLoading, colors, searchQuery, activeTab, t, selectedSport?.name, chatFilters]);
@@ -498,6 +514,7 @@ const Chat = () => {
 
   // Render archived chats row at the top of the list
   const renderListHeader = useCallback(() => {
+    // Don't show archived row if searching or no archived chats
     if (searchQuery.trim() || archivedCount === 0) return null;
 
     return (
@@ -527,16 +544,6 @@ const Chat = () => {
       </>
     );
   }, [searchQuery, archivedCount, colors, isDark, handleArchivedPress, t]);
-
-  // Render footer loading indicator for pagination
-  const renderFooter = useCallback(() => {
-    if (!isFetchingNextPage) return null;
-    return (
-      <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color={primary[500]} />
-      </View>
-    );
-  }, [isFetchingNextPage]);
 
   // Show loading spinner while auth state is being determined
   if (isLoadingAuth) {
@@ -588,7 +595,7 @@ const Chat = () => {
         </Text>
       </View>
 
-      {/* Search bar */}
+      {/* Search bar - Wrapped with CopilotStep for tour */}
       <CopilotStep text={t('tour.chatScreen.search.description')} order={30} name="chat_search">
         <WalkthroughableView style={styles.searchContainer}>
           <SearchBar
@@ -681,24 +688,25 @@ const Chat = () => {
         </View>
       ) : (
         <FlatList
-          data={conversations}
+          data={filteredConversations}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
           ListHeaderComponent={renderListHeader}
           ItemSeparatorComponent={renderSeparator}
           ListEmptyComponent={renderEmpty}
-          ListFooterComponent={renderFooter}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.5}
           refreshControl={
             <RefreshControl
-              refreshing={isManualRefreshing}
-              onRefresh={handleManualRefresh}
+              refreshing={isRefetching}
+              onRefresh={refetch}
               colors={[primary[500]]}
               tintColor={primary[500]}
             />
           }
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={
+            filteredConversations?.length === 0 && archivedCount === 0
+              ? styles.emptyListContent
+              : undefined
+          }
           keyboardShouldPersistTaps="handled"
         />
       )}
@@ -770,7 +778,7 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 1,
-    marginLeft: 66 + spacingPixels[4],
+    marginLeft: 66 + spacingPixels[4], // Avatar width + container padding
   },
   archivedRow: {
     flexDirection: 'row',
@@ -807,8 +815,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacingPixels[8],
   },
-  listContent: {
-    flexGrow: 1,
+  emptyListContent: {
+    flex: 1,
   },
   emptyTitle: {
     fontSize: fontSizePixels.lg,
@@ -821,9 +829,51 @@ const styles = StyleSheet.create({
     marginTop: spacingPixels[2],
     textAlign: 'center',
   },
-  footerLoader: {
+  // Tab bar styles (pill container – matches Communities)
+  tabContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 12,
+    borderRadius: 12,
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: spacingPixels[4],
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  activeTab: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  tabIcon: {
+    marginRight: 6,
+  },
+  tabLabel: {
+    fontSize: fontSizePixels.sm,
+  },
+  tabBadge: {
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacingPixels[1],
+    paddingHorizontal: spacingPixels[1],
+  },
+  tabBadgeText: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    ...(Platform.OS === 'android' && { textAlignVertical: 'center' as const }),
   },
 });
 
