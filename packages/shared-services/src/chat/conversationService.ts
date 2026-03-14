@@ -558,96 +558,121 @@ interface FilteredConversationRPCRow {
 }
 
 /**
+ * Input parameters for filtered conversations query
+ */
+export interface GetFilteredConversationsInput {
+  playerId: string;
+  filter?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * Paginated result for filtered conversations
+ */
+export interface FilteredConversationsPage {
+  conversations: ConversationPreview[];
+  nextOffset: number | null;
+  hasMore: boolean;
+}
+
+/**
  * Get filtered and paginated conversations for a player
  * Uses a single RPC call with filters for efficient loading
  *
- * @param playerId - Player's UUID
- * @param filter - Filter type: 'all', 'unread', 'direct', 'group_chat', 'player_group', 'community', 'club', 'match'
- * @param search - Search string for title/participant names
- * @param limit - Max results (default 20)
- * @param offset - Pagination offset (default 0)
+ * @param options - Object containing playerId, filter, search, limit, offset
+ * @returns Paginated result with conversations, nextOffset, and hasMore flag
  */
 export async function getPlayerConversationsFiltered(
-  playerId: string,
-  filter: string = 'all',
-  search: string = '',
-  limit: number = 20,
-  offset: number = 0
-): Promise<ConversationPreview[]> {
+  options: GetFilteredConversationsInput
+): Promise<FilteredConversationsPage> {
+  const { playerId, filter = 'all', search = '', limit = 20, offset = 0 } = options;
+
   try {
     const { data, error } = await supabase.rpc('get_player_conversations_filtered', {
       p_player_id: playerId,
       p_filter: filter,
       p_search: search,
-      p_limit: limit,
+      p_limit: limit + 1, // Fetch one extra to determine if there are more
       p_offset: offset,
     });
 
     if (error) {
       console.error('Error fetching filtered conversations from RPC:', error);
-      return [];
+      return { conversations: [], nextOffset: null, hasMore: false };
     }
 
     if (!data || (data as FilteredConversationRPCRow[]).length === 0) {
-      return [];
+      return { conversations: [], nextOffset: null, hasMore: false };
     }
 
     const rows = data as FilteredConversationRPCRow[];
 
+    // Check if there are more results
+    const hasMore = rows.length > limit;
+    const rowsToProcess = hasMore ? rows.slice(0, limit) : rows;
+
     // Transform RPC results to ConversationPreview format
-    const previews: ConversationPreview[] = rows.map((row: FilteredConversationRPCRow) => {
-      // Build other_participant for direct chats
-      let otherParticipant: ConversationPreview['other_participant'] | undefined;
-      if (row.other_participant_id) {
-        const isOnline = row.other_participant_last_seen_at
-          ? new Date(row.other_participant_last_seen_at) > new Date(Date.now() - 5 * 60 * 1000)
-          : false;
+    const conversations: ConversationPreview[] = rowsToProcess.map(
+      (row: FilteredConversationRPCRow) => {
+        // Build other_participant for direct chats
+        let otherParticipant: ConversationPreview['other_participant'] | undefined;
+        if (row.other_participant_id) {
+          const isOnline = row.other_participant_last_seen_at
+            ? new Date(row.other_participant_last_seen_at) > new Date(Date.now() - 5 * 60 * 1000)
+            : false;
 
-        otherParticipant = {
-          id: row.other_participant_id,
-          first_name: row.other_participant_first_name || '',
-          last_name: row.other_participant_last_name,
-          profile_picture_url: row.other_participant_picture_url,
-          is_online: isOnline,
-          last_seen_at: row.other_participant_last_seen_at,
+          otherParticipant = {
+            id: row.other_participant_id,
+            first_name: row.other_participant_first_name || '',
+            last_name: row.other_participant_last_name,
+            profile_picture_url: row.other_participant_picture_url,
+            is_online: isOnline,
+            last_seen_at: row.other_participant_last_seen_at,
+          };
+        }
+
+        // Build match_info for match-linked chats
+        let matchInfo: ConversationPreview['match_info'] = null;
+        if (row.match_id && row.match_sport_name) {
+          matchInfo = {
+            sport_name: row.match_sport_name,
+            match_date: row.match_date || '',
+            format: (row.match_format as 'singles' | 'doubles') || 'singles',
+          };
+        }
+
+        return {
+          id: row.id,
+          conversation_type: row.conversation_type as ConversationType,
+          title: row.title,
+          last_message_content: row.last_message_content,
+          last_message_at: row.last_message_at,
+          last_message_sender_name: row.last_message_sender_first_name,
+          unread_count: row.unread_count || 0,
+          participant_count: row.participant_count || 0,
+          other_participant: otherParticipant,
+          cover_image_url: row.network_cover_image_url || row.picture_url,
+          is_pinned: row.is_pinned || false,
+          is_muted: row.is_muted || false,
+          is_archived: row.is_archived || false,
+          match_id: row.match_id,
+          match_info: matchInfo,
+          network_id: row.network_id,
+          network_type: row.network_type,
         };
       }
+    );
 
-      // Build match_info for match-linked chats
-      let matchInfo: ConversationPreview['match_info'] = null;
-      if (row.match_id && row.match_sport_name) {
-        matchInfo = {
-          sport_name: row.match_sport_name,
-          match_date: row.match_date || '',
-          format: (row.match_format as 'singles' | 'doubles') || 'singles',
-        };
-      }
-
-      return {
-        id: row.id,
-        conversation_type: row.conversation_type as ConversationType,
-        title: row.title,
-        last_message_content: row.last_message_content,
-        last_message_at: row.last_message_at,
-        last_message_sender_name: row.last_message_sender_first_name,
-        unread_count: row.unread_count || 0,
-        participant_count: row.participant_count || 0,
-        other_participant: otherParticipant,
-        cover_image_url: row.network_cover_image_url || row.picture_url,
-        is_pinned: row.is_pinned || false,
-        is_muted: row.is_muted || false,
-        is_archived: row.is_archived || false,
-        match_id: row.match_id,
-        match_info: matchInfo,
-        network_id: row.network_id,
-        network_type: row.network_type,
-      };
-    });
-
-    return previews;
+    return {
+      conversations,
+      nextOffset: hasMore ? offset + limit : null,
+      hasMore,
+    };
   } catch (error) {
     console.error('Error in getPlayerConversationsFiltered:', error);
-    return [];
+    return { conversations: [], nextOffset: null, hasMore: false };
   }
 }
 
