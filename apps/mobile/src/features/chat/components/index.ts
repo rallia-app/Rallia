@@ -9,7 +9,7 @@ export type { MessageListRef } from './MessageList';
 export { ChatHeader } from './ChatHeader';
 export { ConversationItem } from './ConversationItem';
 export { EmojiReactionPicker } from './EmojiReactionPicker';
-export { ChatAgreementModal } from './ChatAgreementModal';
+export { ChatAgreementActionSheet as ChatAgreementModal } from './ChatAgreementModal';
 
 // Enhanced chat components
 export { TypingIndicator } from './TypingIndicator';

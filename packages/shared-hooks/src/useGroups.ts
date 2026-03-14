@@ -34,6 +34,7 @@ import {
   submitMatchResultForMatch,
   getPendingScoreConfirmations,
   confirmMatchScore,
+  proposeRebuttalScore,
   acceptRebuttalScore,
   disputeRebuttalScore,
   getNetworkMemberUpcomingMatches,
@@ -644,6 +645,33 @@ export function useConfirmMatchScore() {
       });
       // Invalidate all leaderboards (we don't know which group this affects)
       queryClient.invalidateQueries({ queryKey: [...groupKeys.all, 'detail'] });
+    },
+  });
+}
+
+/**
+ * Propose a rebuttal score (opponent disagrees and suggests different score)
+ */
+export function useProposeRebuttalScore() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      matchResultId,
+      playerId,
+      winningTeam,
+      sets,
+    }: {
+      matchResultId: string;
+      playerId: string;
+      winningTeam: 1 | 2 | null;
+      sets: Array<{ team1_score: number; team2_score: number }>;
+    }) => proposeRebuttalScore(matchResultId, playerId, winningTeam, sets),
+    onSuccess: (_, variables) => {
+      // Invalidate pending confirmations
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.pendingConfirmations(variables.playerId),
+      });
     },
   });
 }

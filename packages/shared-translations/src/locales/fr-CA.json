@@ -1724,6 +1724,7 @@
     },
     "newConversation": "Nouvelle conversation",
     "selectAPlayer": "Sélectionner un joueur",
+    "selectMembers": "Sélectionner des membres",
     "pleaseSelectMember": "Veuillez sélectionner au moins un membre pour le groupe.",
     "photoAccessRequired": "Veuillez autoriser l'accès à vos photos pour ajouter une image de groupe.",
     "failedToPickImage": "Échec de la sélection de l'image",

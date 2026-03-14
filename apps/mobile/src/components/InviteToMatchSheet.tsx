@@ -90,7 +90,8 @@ interface MatchCardProps {
     buttonTextActive: string;
   };
   isDark: boolean;
-  t: (key: string) => string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  t: (key: any) => string;
   locale: string;
 }
 
@@ -155,8 +156,8 @@ const MatchCard: React.FC<MatchCardProps> = ({
 
         {/* Spots Available */}
         <View style={styles.matchRow}>
-          <Ionicons name="people-outline" size={14} color={status.success} />
-          <Text style={[styles.spotsText, { color: status.success }]}>
+          <Ionicons name="people-outline" size={14} color={status.success.DEFAULT} />
+          <Text style={[styles.spotsText, { color: status.success.DEFAULT }]}>
             {t('inviteToMatch.spotsAvailable').replace('{count}', String(match.spotsLeft))}
           </Text>
         </View>
@@ -287,7 +288,7 @@ export function InviteToMatchActionSheet({ payload }: SheetProps<'invite-to-matc
   );
 
   // Invite hook - we'll call this for each match
-  const { invitePlayers, isLoading: isInviteLoading } = useInviteToMatch({
+  const { invitePlayers, isInviting: isInviteLoading } = useInviteToMatch({
     matchId: invitingMatchId ?? '',
     hostId: currentUserId,
     onSuccess: handleInviteSuccess,
@@ -366,7 +367,7 @@ export function InviteToMatchActionSheet({ payload }: SheetProps<'invite-to-matc
       <Ionicons
         name="alert-circle-outline"
         size={48}
-        color={status.error}
+        color={status.error.DEFAULT}
         style={styles.emptyIcon}
       />
       <Text style={[styles.emptyTitle, { color: colors.text }]}>
@@ -486,7 +487,7 @@ const styles = StyleSheet.create({
     marginBottom: spacingPixels[2],
   },
   sportName: {
-    fontSize: fontSizePixels.md,
+    fontSize: fontSizePixels.base,
     fontWeight: fontWeightNumeric.semibold,
     flex: 1,
   },

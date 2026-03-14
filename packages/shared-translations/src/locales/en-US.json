@@ -1703,6 +1703,7 @@
     },
     "newConversation": "New Conversation",
     "selectAPlayer": "Select a player",
+    "selectMembers": "Select Members",
     "pleaseSelectMember": "Please select at least one member for the group.",
     "photoAccessRequired": "Please allow access to your photos to add a group image.",
     "failedToPickImage": "Failed to pick image",
