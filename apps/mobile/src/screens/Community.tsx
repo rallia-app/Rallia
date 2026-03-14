@@ -26,6 +26,7 @@ import {
   useThemeStyles,
   useTranslation,
   useNavigateToPlayerProfile,
+  useRequireOnboarding,
   type TranslationKey,
 } from '../hooks';
 import { useSport } from '../context';
@@ -55,6 +56,7 @@ const Community = () => {
   const { selectedSport } = useSport();
   const navigation = useNavigation<CommunityNavigationProp>();
   const { t } = useTranslation();
+  const { guardAction } = useRequireOnboarding();
 
   // Theme colors for components
   const themeColors = useMemo(
@@ -139,9 +141,11 @@ const Community = () => {
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
   const handlePlayerPress = useCallback(
     (player: PlayerSearchResult) => {
+      // Guard: prompt sign-in/onboarding if user is not authenticated or not onboarded
+      if (!guardAction()) return;
       navigateToPlayerProfile(player.id, selectedSport?.id);
     },
-    [navigateToPlayerProfile, selectedSport?.id]
+    [navigateToPlayerProfile, selectedSport?.id, guardAction]
   );
 
   // Render action buttons row
