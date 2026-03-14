@@ -8,7 +8,6 @@
 
 import { useState, useCallback } from 'react';
 import { Alert } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
 import { useQueryClient } from '@tanstack/react-query';
 import { chatKeys } from '@rallia/shared-hooks';
 import {
@@ -16,7 +15,9 @@ import {
   updateGroup,
   getNetworkByConversationId,
 } from '@rallia/shared-services';
+
 import { uploadImage } from '../../services/imageUpload';
+import { pickImageWithCropper } from '../../utils/imagePicker';
 
 interface NetworkInfo {
   id: string;
@@ -24,7 +25,7 @@ interface NetworkInfo {
   cover_image_url: string | null;
   description: string | null;
   member_count: number;
-  type: 'community' | 'player_group' | string | null;
+  type: string | null;
 }
 
 interface UseGroupEditActionsProps {
@@ -42,7 +43,7 @@ interface UseGroupEditActionsReturn {
   editedName: string;
   setEditedName: (name: string) => void;
   isUpdating: boolean;
-  
+
   // Actions
   handleStartEditName: () => void;
   handleSaveName: () => Promise<void>;
@@ -60,7 +61,7 @@ export function useGroupEditActions({
   onNetworkInfoUpdate,
 }: UseGroupEditActionsProps): UseGroupEditActionsReturn {
   const queryClient = useQueryClient();
-  
+
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
@@ -102,24 +103,22 @@ export function useGroupEditActions({
   // Handle image picker
   const handleChangeImage = useCallback(async () => {
     try {
-      const { status: permStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (permStatus !== 'granted') {
+      const { uri, error } = await pickImageWithCropper({
+        aspectRatio: [1, 1],
+        quality: 0.8,
+        source: 'gallery',
+      });
+
+      if (error) {
         Alert.alert('Permission Required', 'Please allow access to your photos.');
         return;
       }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]) {
+      if (uri) {
         setIsUpdating(true);
         try {
-          const { url, error } = await uploadImage(result.assets[0].uri, 'group-images');
-          if (error) throw error;
+          const { url, error: uploadError } = await uploadImage(uri, 'group-images');
+          if (uploadError) throw uploadError;
           if (url) {
             // For network-linked groups, update the network cover image
             if (networkInfo?.id && playerId) {
@@ -134,18 +133,20 @@ export function useGroupEditActions({
             // Refetch conversation and invalidate conversations list for preview updates
             await onRefetch();
             if (playerId) {
-              queryClient.invalidateQueries({ queryKey: chatKeys.playerConversations(playerId) });
+              void queryClient.invalidateQueries({
+                queryKey: chatKeys.playerConversations(playerId),
+              });
             }
           }
-        } catch (error) {
-          console.error('Error updating group image:', error);
+        } catch (err) {
+          console.error('Error updating group image:', err);
           Alert.alert('Error', 'Failed to update group image');
         } finally {
           setIsUpdating(false);
         }
       }
-    } catch (error) {
-      console.error('Error picking image:', error);
+    } catch (err) {
+      console.error('Error picking image:', err);
     }
   }, [conversationId, onRefetch, networkInfo, playerId, queryClient, onNetworkInfoUpdate]);
 
@@ -155,7 +156,7 @@ export function useGroupEditActions({
     editedName,
     setEditedName,
     isUpdating,
-    
+
     // Actions
     handleStartEditName,
     handleSaveName,

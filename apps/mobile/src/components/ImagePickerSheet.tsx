@@ -35,28 +35,20 @@ export function ImagePickerActionSheet({ payload }: SheetProps<'image-picker'>) 
   const themeColors = isDark ? darkTheme : lightTheme;
 
   const handleClose = useCallback(() => {
-    lightHaptic();
-    SheetManager.hide('image-picker');
+    void lightHaptic();
+    void SheetManager.hide('image-picker');
   }, []);
 
-  const handleTakePhoto = useCallback(async () => {
-    lightHaptic();
-    try {
-      // Launch picker while sheet is still visible so native camera can present correctly
-      await onTakePhoto?.();
-    } finally {
-      SheetManager.hide('image-picker');
-    }
+  const handleTakePhoto = useCallback(() => {
+    void lightHaptic();
+    onTakePhoto?.();
+    void SheetManager.hide('image-picker');
   }, [onTakePhoto]);
 
-  const handleChooseGallery = useCallback(async () => {
-    lightHaptic();
-    try {
-      // Launch picker while sheet is still visible so native gallery can present correctly
-      await onChooseFromGallery?.();
-    } finally {
-      SheetManager.hide('image-picker');
-    }
+  const handleChooseGallery = useCallback(() => {
+    void lightHaptic();
+    onChooseFromGallery?.();
+    void SheetManager.hide('image-picker');
   }, [onChooseFromGallery]);
 
   const colors = {
@@ -163,7 +155,6 @@ export default ImagePickerSheet;
 
 const styles = StyleSheet.create({
   sheetBackground: {
-    flex: 1,
     borderTopLeftRadius: radiusPixels['2xl'],
     borderTopRightRadius: radiusPixels['2xl'],
   },

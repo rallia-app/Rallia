@@ -33,6 +33,7 @@ export async function getMessages(
       sender_id,
       content,
       status,
+      read_by,
       created_at,
       updated_at,
       reply_to_message_id,
@@ -105,7 +106,7 @@ export async function getMessages(
   return messagesWithReplies.map(msg => ({
     ...msg,
     status: (msg.status || 'sent') as MessageStatus,
-    read_by: null,
+    read_by: msg.read_by as string[] | null,
     sender: msg.sender as unknown as MessageWithSender['sender'],
     reply_to: msg.reply_to_message_id ? (replyToMap.get(msg.reply_to_message_id) ?? null) : null,
   }));
@@ -132,13 +133,17 @@ export async function sendMessage(input: SendMessageInput): Promise<MessageWithS
     insertData.reply_to_message_id = input.reply_to_message_id;
   }
 
-  // Build the select query — include reply_to data inline if this is a reply
-  const selectFields = `
+  const { data, error } = await supabase
+    .from('message')
+    .insert(insertData)
+    .select(
+      `
       id,
       conversation_id,
       sender_id,
       content,
       status,
+      read_by,
       created_at,
       updated_at,
       reply_to_message_id,
@@ -154,12 +159,8 @@ export async function sendMessage(input: SendMessageInput): Promise<MessageWithS
           profile_picture_url
         )
       )
-    `;
-
-  const { data, error } = await supabase
-    .from('message')
-    .insert(insertData)
-    .select(selectFields)
+    `
+    )
     .single();
 
   if (error) {
@@ -167,9 +168,13 @@ export async function sendMessage(input: SendMessageInput): Promise<MessageWithS
     throw error;
   }
 
-  // conversation.updated_at is handled by trigger_update_conversation_on_message
+  // Update conversation's updated_at
+  await supabase
+    .from('conversation')
+    .update({ updated_at: new Date().toISOString() })
+    .eq('id', input.conversation_id);
 
-  // Fetch reply_to data only if this is a reply
+  // Build reply_to data if this is a reply
   let replyTo: { id: string; content: string; sender_name: string } | null = null;
 
   if (input.reply_to_message_id) {
@@ -202,7 +207,7 @@ export async function sendMessage(input: SendMessageInput): Promise<MessageWithS
   return {
     ...data,
     status: (data.status || 'sent') as MessageStatus,
-    read_by: null,
+    read_by: data.read_by as string[] | null,
     sender: data.sender as unknown as MessageWithSender['sender'],
     reply_to: replyTo,
   };
@@ -325,7 +330,7 @@ export async function editMessage(
     ? {
         ...data,
         status: (data.status || 'sent') as MessageStatus,
-        read_by: null,
+        read_by: data.read_by as string[] | null,
       }
     : null;
 }

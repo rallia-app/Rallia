@@ -58,6 +58,11 @@ export {
   getConversationUnreadCount,
 } from './conversationService';
 
+export type {
+  GetFilteredConversationsInput,
+  FilteredConversationsPage,
+} from './conversationService';
+
 // ============================================================================
 // MESSAGE OPERATIONS
 // ============================================================================

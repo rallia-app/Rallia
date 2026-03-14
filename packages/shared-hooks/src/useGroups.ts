@@ -4,7 +4,7 @@
  */
 
 import { useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import {
   getPlayerGroups,
   getGroup,
@@ -37,6 +37,7 @@ import {
   proposeRebuttalScore,
   acceptRebuttalScore,
   disputeRebuttalScore,
+  getNetworkMemberUpcomingMatches,
   // Realtime functions
   subscribeToGroupMembers,
   subscribeToGroupActivity,
@@ -58,6 +59,7 @@ import {
   type CreatePlayedMatchInput,
   type SubmitMatchResultForMatchParams,
   type PendingScoreConfirmation,
+  type NetworkMemberMatch,
 } from '@rallia/shared-services';
 import { matchKeys } from './useCreateMatch';
 
@@ -84,6 +86,17 @@ export const groupKeys = {
     [...groupKeys.detail(groupId), 'leaderboard', daysBack] as const,
   pendingConfirmations: (playerId: string) =>
     [...groupKeys.all, 'pendingConfirmations', playerId] as const,
+  memberUpcomingMatches: (
+    networkId: string,
+    networkType: 'community' | 'group',
+    sportId?: string | null
+  ) =>
+    [
+      ...groupKeys.detail(networkId),
+      'memberUpcomingMatches',
+      networkType,
+      sportId ?? 'all',
+    ] as const,
 };
 
 // =============================================================================
@@ -440,6 +453,37 @@ export function useGroupLeaderboard(groupId: string | undefined, daysBack: numbe
 }
 
 /**
+ * Get upcoming public matches of network (community/group) members.
+ * Returns matches where a network member is either the creator or a participant.
+ *
+ * @param networkId - The network (community or group) ID
+ * @param networkType - 'community' or 'group' for proper visibility filtering
+ * @param sportId - Optional sport ID to filter (null/undefined = all sports)
+ * @param excludePlayerId - Player ID to exclude from results (current user's matches)
+ * @param limit - Maximum matches to return (default 20)
+ */
+export function useNetworkMemberUpcomingMatches(
+  networkId: string | undefined,
+  networkType: 'community' | 'group',
+  excludePlayerId?: string,
+  sportId?: string,
+  limit: number = 20
+): UseQueryResult<NetworkMemberMatch[]> {
+  return useQuery({
+    queryKey: groupKeys.memberUpcomingMatches(networkId!, networkType, sportId ?? null),
+    queryFn: () =>
+      getNetworkMemberUpcomingMatches(
+        networkId!,
+        networkType,
+        sportId ?? null,
+        excludePlayerId ?? null,
+        limit
+      ),
+    enabled: !!networkId,
+  });
+}
+
+/**
  * Post a match to a group
  */
 export function usePostMatchToGroup() {
@@ -606,7 +650,7 @@ export function useConfirmMatchScore() {
 }
 
 /**
- * Propose a rebuttal score (opponent suggests a different score)
+ * Propose a rebuttal score (opponent disagrees and suggests different score)
  */
 export function useProposeRebuttalScore() {
   const queryClient = useQueryClient();
@@ -624,10 +668,10 @@ export function useProposeRebuttalScore() {
       sets: Array<{ team1_score: number; team2_score: number }>;
     }) => proposeRebuttalScore(matchResultId, playerId, winningTeam, sets),
     onSuccess: (_, variables) => {
+      // Invalidate pending confirmations
       queryClient.invalidateQueries({
         queryKey: groupKeys.pendingConfirmations(variables.playerId),
       });
-      queryClient.invalidateQueries({ queryKey: [...groupKeys.all, 'detail'] });
     },
   });
 }
@@ -642,9 +686,11 @@ export function useAcceptRebuttalScore() {
     mutationFn: ({ matchResultId, playerId }: { matchResultId: string; playerId: string }) =>
       acceptRebuttalScore(matchResultId, playerId),
     onSuccess: (_, variables) => {
+      // Invalidate pending confirmations
       queryClient.invalidateQueries({
         queryKey: groupKeys.pendingConfirmations(variables.playerId),
       });
+      // Invalidate all leaderboards (we don't know which group this affects)
       queryClient.invalidateQueries({ queryKey: [...groupKeys.all, 'detail'] });
     },
   });
@@ -660,28 +706,13 @@ export function useDisputeRebuttalScore() {
     mutationFn: ({ matchResultId, playerId }: { matchResultId: string; playerId: string }) =>
       disputeRebuttalScore(matchResultId, playerId),
     onSuccess: (_, variables) => {
+      // Invalidate pending confirmations
       queryClient.invalidateQueries({
         queryKey: groupKeys.pendingConfirmations(variables.playerId),
       });
     },
   });
 }
-
-// Re-export types
-export type {
-  Group,
-  GroupWithMembers,
-  GroupMember,
-  GroupActivity,
-  GroupStats,
-  CreateGroupInput,
-  UpdateGroupInput,
-  GroupMatch,
-  MatchSet,
-  LeaderboardEntry,
-  CreatePlayedMatchInput,
-  PendingScoreConfirmation,
-};
 
 // =============================================================================
 // REALTIME HOOKS
@@ -808,3 +839,21 @@ export function useScoreConfirmationsRealtime(playerId: string | undefined) {
     };
   }, [playerId, queryClient]);
 }
+
+// =============================================================================
+// TYPE RE-EXPORTS
+// =============================================================================
+
+export type {
+  Group,
+  GroupWithMembers,
+  GroupMember,
+  GroupActivity,
+  GroupStats,
+  GroupMatch,
+  MatchSet,
+  LeaderboardEntry,
+  CreatePlayedMatchInput,
+  PendingScoreConfirmation,
+  NetworkMemberMatch,
+};

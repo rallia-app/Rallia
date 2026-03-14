@@ -1125,7 +1125,24 @@
       "noSportError": "Impossible de déterminer le sport pour la demande de référence.",
       "noRatingError": "Vous devez avoir une cote dans ce sport pour demander une référence.",
       "playerLevelTooLow": "Le niveau de ce joueur est inférieur au vôtre. Les références doivent provenir de joueurs de votre niveau ou supérieur."
-    }
+    },
+    "unknownPlayer": "Joueur"
+  },
+  "inviteToMatch": {
+    "title": "Inviter à un match",
+    "subtitle": "Sélectionnez un match pour inviter {name}",
+    "sendInvite": "Envoyer l'invitation",
+    "inviteSent": "Invitation envoyée à {name}!",
+    "inviteError": "Échec de l'envoi de l'invitation. Veuillez réessayer.",
+    "spotsAvailable": "{count} place(s) disponible(s)",
+    "doubles": "Doubles",
+    "singles": "Simple",
+    "noMatches": "Aucun match disponible",
+    "noMatchesDescription": "Vous n'avez aucun match à venir avec des places disponibles. Créez d'abord un match pour inviter des joueurs.",
+    "loadingMatches": "Chargement de vos matchs...",
+    "errorLoading": "Impossible de charger les matchs",
+    "errorLoadingDescription": "Une erreur s'est produite. Veuillez réessayer plus tard.",
+    "unknownLocation": "Lieu à déterminer"
   },
   "photoEditor": {
     "title": "Modifier la photo",
@@ -1606,7 +1623,19 @@
       "playerGroup": "Groupes de joueurs",
       "community": "Communautés",
       "club": "Clubs",
-      "match": "Matchs"
+      "match": "Matchs",
+      "blocked": "Bloqués",
+      "favorites": "Favoris",
+      "archived": "Archivés",
+      "muted": "En sourdine",
+      "pinned": "Épinglés",
+      "reset": "Réinitialiser",
+      "emptyBlocked": "Aucune conversation bloquée",
+      "emptyUnread": "Tout est à jour!",
+      "emptyFavorites": "Aucune conversation favorite",
+      "emptyArchived": "Aucune conversation archivée",
+      "emptyMuted": "Aucune conversation en sourdine",
+      "emptyPinned": "Aucune conversation épinglée"
     },
     "emptyFiltered": {
       "title": "Aucune conversation trouvée",
@@ -1695,6 +1724,7 @@
     },
     "newConversation": "Nouvelle conversation",
     "selectAPlayer": "Sélectionner un joueur",
+    "selectMembers": "Sélectionner des membres",
     "pleaseSelectMember": "Veuillez sélectionner au moins un membre pour le groupe.",
     "photoAccessRequired": "Veuillez autoriser l'accès à vos photos pour ajouter une image de groupe.",
     "failedToPickImage": "Échec de la sélection de l'image",
@@ -1896,6 +1926,13 @@
       "title": "Activité",
       "recentGames": "Parties récentes",
       "noActivity": "Aucune activité pour le moment"
+    },
+    "matches": {
+      "title": "Matchs des membres",
+      "empty": {
+        "title": "Aucun match à venir",
+        "description": "Les membres n'ont pas encore partagé de matchs publics"
+      }
     },
     "detail": {
       "last7DaysActivities": "Activités des 7 derniers jours",
@@ -2204,6 +2241,13 @@
       "gamesCreated_one": "{count} partie créée",
       "newMessages": "{count} nouveaux messages dans\nle clavardage du groupe"
     },
+    "matches": {
+      "title": "Matchs des membres",
+      "empty": {
+        "title": "Aucun match à venir",
+        "description": "Les membres n'ont pas encore partagé de matchs publics"
+      }
+    },
     "home": {
       "about": "À propos",
       "viewAll": "Voir tout"
@@ -2496,6 +2540,8 @@
   "match": {
     "placeholder": "Écran de partie - Prêt pour votre implémentation",
     "host": "Hôte",
+    "hostedBy": "Organisé par",
+    "full": "Complet",
     "pickMatchType": "Choisir le type de partie",
     "format": {
       "singles": "Simple",
@@ -3604,6 +3650,7 @@
       "spotsAvailable": {
         "label": "Places",
         "all": "Toutes",
+        "undefined": "Toutes",
         "1": "1 place",
         "2": "2 places",
         "3": "3 places"

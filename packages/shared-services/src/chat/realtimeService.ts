@@ -3,9 +3,11 @@
  * Real-time subscriptions for messages, conversations, and typing indicators
  */
 
-import { supabase } from '../supabase';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import type { Message, MessageStatus, TypingIndicator } from './chatTypes';
+
+import { supabase } from '../supabase';
+
+import type { Message, TypingIndicator } from './chatTypes';
 
 // ============================================================================
 // MESSAGE SUBSCRIPTIONS
@@ -49,7 +51,7 @@ export function subscribeToMessages(
         const msg = payload.new as Message;
         callbacks.onInsert?.({
           ...msg,
-          status: (msg.status || 'sent') as MessageStatus,
+          status: msg.status || 'sent',
         });
       }
     )
@@ -66,7 +68,7 @@ export function subscribeToMessages(
         const msg = payload.new as Message;
         callbacks.onUpdate?.({
           ...msg,
-          status: (msg.status || 'sent') as MessageStatus,
+          status: msg.status || 'sent',
         });
       }
     )
@@ -127,19 +129,17 @@ export function subscribeToReactions(
 
 /**
  * Subscribe to conversation updates (new messages in any conversation)
- * Listens to conversation UPDATE events — triggered automatically by the
- * update_conversation_on_new_message trigger when a message is inserted.
- * RLS ensures only conversations the player participates in are delivered.
  */
 export function subscribeToConversations(playerId: string, onUpdate: () => void): RealtimeChannel {
+  // Subscribe to conversation updates
   const channel = supabase
     .channel(`conversations:${playerId}`)
     .on(
       'postgres_changes',
       {
-        event: 'UPDATE',
+        event: '*',
         schema: 'public',
-        table: 'conversation',
+        table: 'message',
       },
       () => {
         onUpdate();
@@ -154,7 +154,7 @@ export function subscribeToConversations(playerId: string, onUpdate: () => void)
  * Unsubscribe from a channel
  */
 export function unsubscribeFromChannel(channel: RealtimeChannel): void {
-  supabase.removeChannel(channel);
+  void supabase.removeChannel(channel);
 }
 
 // ============================================================================
@@ -179,7 +179,7 @@ export function subscribeToTypingIndicators(
   // Clean up existing channel if any
   const existingChannel = typingChannels.get(channelName);
   if (existingChannel) {
-    supabase.removeChannel(existingChannel);
+    void supabase.removeChannel(existingChannel);
   }
 
   const channel = supabase.channel(channelName, {
@@ -202,7 +202,8 @@ export function subscribeToTypingIndicators(
             timestamp?: number;
             is_typing?: boolean;
           };
-          if (presence?.is_typing) {
+          // Only include users who are actively typing
+          if (presence && presence.is_typing === true) {
             typingUsers.push({
               player_id: key,
               player_name: presence.player_name || 'Someone',
@@ -215,10 +216,10 @@ export function subscribeToTypingIndicators(
 
       onTypingChange(typingUsers);
     })
-    .subscribe(async status => {
-      if (status === 'SUBSCRIBED') {
+    .subscribe(status => {
+      if ((status as string) === 'SUBSCRIBED') {
         // Track presence with player info
-        await channel.track({
+        void channel.track({
           player_name: playerName,
           timestamp: Date.now(),
           is_typing: false,
@@ -259,7 +260,7 @@ export function unsubscribeFromTypingIndicators(conversationId: string): void {
   const channel = typingChannels.get(channelName);
 
   if (channel) {
-    supabase.removeChannel(channel);
+    void supabase.removeChannel(channel);
     typingChannels.delete(channelName);
   }
 }

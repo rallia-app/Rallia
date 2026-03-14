@@ -17,9 +17,7 @@ import {
   ActivityIndicator,
   Image,
   Alert,
-  ScrollView as RNScrollView,
 } from 'react-native';
-import { SearchBar } from '../../../components/SearchBar';
 import ActionSheet, {
   SheetManager,
   SheetProps,
@@ -27,30 +25,17 @@ import ActionSheet, {
   ScrollView,
 } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-
 import { Text } from '@rallia/shared-components';
 import { useGetOrCreateDirectConversation } from '@rallia/shared-hooks';
+import { primary, spacingPixels, fontSizePixels, radiusPixels } from '@rallia/design-system';
+
+import { SearchBar } from '../../../components/SearchBar';
 import { useThemeStyles, useAuth, useTranslation } from '../../../hooks';
+import { supabase } from '../../../lib/supabase';
 import { uploadImage } from '../../../services/imageUpload';
-import {
-  primary,
-  darkTheme,
-  lightTheme,
-  spacingPixels,
-  fontSizePixels,
-  radiusPixels,
-} from '@rallia/design-system';
-import {
-  selectionHaptic,
-  lightHaptic,
-  mediumHaptic,
-  successHaptic,
-  errorHaptic,
-} from '../../../utils/haptics';
+import { pickImageWithCropper } from '../../../utils/imagePicker';
 
 const BASE_WHITE = '#ffffff';
-import { supabase } from '../../../lib/supabase';
 
 interface SelectedMember {
   id: string;
@@ -69,12 +54,6 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
   const { t } = useTranslation();
   const { session } = useAuth();
   const currentUserId = session?.user?.id;
-
-  // Theme colors (match MatchCreationWizard)
-  const themeColors = isDark ? darkTheme : lightTheme;
-  const buttonActive = isDark ? primary[500] : primary[600];
-  const buttonTextActive = BASE_WHITE;
-  const buttonInactive = themeColors.muted;
 
   // Step state
   const [step, setStep] = useState<Step>('select-members');
@@ -108,8 +87,6 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
   const [groupImage, setGroupImage] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mediaPermissionStatus, setMediaPermissionStatus] =
-    useState<ImagePicker.PermissionStatus | null>(null);
 
   // Load all active players when modal opens
   const loadPlayers = useCallback(async () => {
@@ -171,16 +148,9 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
   // Load players when component mounts and user is authenticated
   useEffect(() => {
     if (!hasLoadedPlayers && currentUserId) {
-      loadPlayers();
+      void loadPlayers();
     }
   }, [hasLoadedPlayers, loadPlayers, currentUserId]);
-
-  // Pre-check media library permissions when component mounts
-  useEffect(() => {
-    ImagePicker.getMediaLibraryPermissionsAsync().then(({ status }) => {
-      setMediaPermissionStatus(status);
-    });
-  }, []);
 
   // Filter players based on search
   const filteredPlayers = useMemo(() => {
@@ -204,7 +174,6 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
 
   // Member selection handlers
   const handleSelectMember = useCallback((player: SelectedMember) => {
-    selectionHaptic();
     setSelectedMembers(prev => {
       if (prev.some(p => p.id === player.id)) {
         return prev.filter(p => p.id !== player.id);
@@ -218,25 +187,21 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
 
   const handleContinueToDetails = useCallback(async () => {
     if (selectedMembers.length === 0) {
-      errorHaptic();
-      Alert.alert(t('chat.newConversation'), t('chat.pleaseSelectMember'));
+      Alert.alert(t('chat.selectMembers'), t('chat.pleaseSelectMember'));
       return;
     }
 
     // If only 1 member selected, create a direct chat instead of a group
     if (selectedMembers.length === 1 && currentUserId) {
-      lightHaptic();
       setIsCreating(true);
       try {
         const conversation = await getOrCreateDirectConversation.mutateAsync({
           playerId1: currentUserId,
           playerId2: selectedMembers[0].id,
         });
-        successHaptic();
         await handleClose();
         onSuccess?.(conversation.id);
       } catch (err) {
-        errorHaptic();
         console.error('Error creating direct conversation:', err);
         Alert.alert(t('common.error'), t('chat.failedToCreateConversation'));
       } finally {
@@ -246,68 +211,53 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
     }
 
     // 2+ members: continue to group details
-    lightHaptic();
     setStep('group-details');
   }, [selectedMembers, currentUserId, t, getOrCreateDirectConversation, handleClose, onSuccess]);
 
   const handleBackToMembers = useCallback(() => {
-    lightHaptic();
     setStep('select-members');
   }, []);
 
   // Image picker
   const handlePickImage = useCallback(async () => {
     try {
-      // Use cached permission status if available, otherwise check
-      let hasPermission = mediaPermissionStatus === 'granted';
-
-      if (!hasPermission) {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        setMediaPermissionStatus(status);
-        if (status !== 'granted') {
-          Alert.alert(t('common.permissionRequired'), t('chat.photoAccessRequired'));
-          return;
-        }
-        hasPermission = true;
-      }
-
-      mediumHaptic();
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
+      const { uri, error } = await pickImageWithCropper({
+        aspectRatio: [1, 1],
         quality: 0.8,
+        source: 'gallery',
       });
 
-      if (!result.canceled && result.assets[0]) {
-        setGroupImage(result.assets[0].uri);
+      if (error) {
+        Alert.alert(t('common.permissionRequired'), t('chat.photoAccessRequired'));
+        return;
+      }
+
+      if (uri) {
+        setGroupImage(uri);
       }
     } catch (err) {
       console.error('Error picking image:', err);
       Alert.alert(t('common.error'), t('chat.failedToPickImage'));
     }
-  }, [t, mediaPermissionStatus]);
+  }, [t]);
 
-  const handleRemoveImage = useCallback(() => {
+  const _handleRemoveImage = useCallback(() => {
     setGroupImage(null);
   }, []);
 
   // Create group chat (simple group conversation without network)
   const handleCreateGroup = useCallback(async () => {
     if (!groupName.trim()) {
-      errorHaptic();
       setError(t('chat.groupNameRequired'));
       return;
     }
 
     if (groupName.trim().length < 2) {
-      errorHaptic();
       setError(t('chat.groupNameTooShort'));
       return;
     }
 
     if (!currentUserId) {
-      errorHaptic();
       Alert.alert(t('common.error'), t('chat.mustBeLoggedIn'));
       return;
     }
@@ -333,7 +283,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
       const { data: conversation, error: convError } = await supabase
         .from('conversation')
         .insert({
-          conversation_type: 'group_chat',
+          conversation_type: 'group',
           title: groupName.trim(),
           created_by: currentUserId,
           picture_url: pictureUrl || null,
@@ -345,24 +295,24 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
         throw new Error('Failed to create conversation');
       }
 
+      const conversationId = conversation.id as string;
+
       // 2. Add creator as conversation participant
       await supabase
         .from('conversation_participant')
-        .insert({ conversation_id: conversation.id, player_id: currentUserId });
+        .insert({ conversation_id: conversationId, player_id: currentUserId });
 
       // 3. Add selected members to conversation
       for (const member of selectedMembers) {
         await supabase
           .from('conversation_participant')
-          .insert({ conversation_id: conversation.id, player_id: member.id });
+          .insert({ conversation_id: conversationId, player_id: member.id });
       }
 
       // Success - close modal first, then return the conversation ID
-      successHaptic();
       await handleClose();
-      onSuccess?.(conversation.id);
+      onSuccess?.(conversationId);
     } catch (err) {
-      errorHaptic();
       console.error('Error creating group:', err);
       Alert.alert(t('common.error'), t('chat.failedToCreateGroup'));
     } finally {
@@ -374,49 +324,43 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
   const renderPlayerItem = useCallback(
     ({ item }: { item: SelectedMember }) => {
       const isSelected = selectedMembers.some(p => p.id === item.id);
-      const displayName = `${item.firstName} ${item.lastName || ''}`.trim();
+      const displayName = item.displayName || `${item.firstName} ${item.lastName || ''}`.trim();
 
       return (
         <TouchableOpacity
           style={[
             styles.playerItem,
             {
-              backgroundColor: isSelected ? `${buttonActive}15` : buttonInactive,
-              borderColor: isSelected ? buttonActive : colors.border,
+              backgroundColor: isSelected
+                ? isDark
+                  ? 'rgba(64, 156, 255, 0.1)'
+                  : 'rgba(64, 156, 255, 0.1)'
+                : colors.cardBackground,
+              borderColor: isSelected ? primary[500] : colors.border,
             },
           ]}
           onPress={() => handleSelectMember(item)}
           activeOpacity={0.7}
         >
-          <View
-            style={[
-              styles.playerAvatar,
-              { backgroundColor: isSelected ? buttonActive : colors.border },
-            ]}
-          >
+          <View style={[styles.playerAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
             {item.profilePictureUrl ? (
               <Image source={{ uri: item.profilePictureUrl }} style={styles.avatarImage} />
             ) : (
-              <Ionicons
-                name="person-outline"
-                size={22}
-                color={isSelected ? buttonTextActive : colors.textMuted}
-              />
+              <Ionicons name="person-outline" size={24} color={colors.textMuted} />
             )}
           </View>
           <View style={styles.playerInfo}>
-            <Text
-              weight={isSelected ? 'semibold' : 'regular'}
-              style={{ color: isSelected ? buttonActive : colors.text }}
-            >
+            <Text weight="medium" style={{ color: colors.text }}>
               {displayName}
             </Text>
           </View>
-          {isSelected && <Ionicons name="checkmark-circle" size={22} color={buttonActive} />}
+          {isSelected && (
+            <Ionicons name="checkmark-circle-outline" size={24} color={primary[500]} />
+          )}
         </TouchableOpacity>
       );
     },
-    [colors, handleSelectMember, selectedMembers, buttonActive, buttonTextActive, buttonInactive]
+    [colors, isDark, handleSelectMember, selectedMembers]
   );
 
   // Render selected member chips
@@ -424,12 +368,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
     if (selectedMembers.length === 0) return null;
 
     return (
-      <RNScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.selectedChipsScroll}
-        contentContainerStyle={styles.selectedChipsRow}
-      >
+      <View style={styles.selectedChipsRow}>
         {selectedMembers.map(member => (
           <TouchableOpacity
             key={member.id}
@@ -465,7 +404,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
             </Text>
           </TouchableOpacity>
         ))}
-      </RNScrollView>
+      </View>
     );
   };
 
@@ -516,6 +455,10 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
     </View>
   );
 
+  // Navigation button colors (match MatchCreationWizard)
+  const buttonActive = isDark ? primary[500] : primary[600];
+  const buttonTextActive = BASE_WHITE;
+
   // Render Step 1 Footer
   const renderSelectMembersFooter = () => {
     const isDisabled = selectedMembers.length === 0 || isCreating;
@@ -529,20 +472,25 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
             { backgroundColor: buttonActive },
             isDisabled && styles.navButtonDisabled,
           ]}
-          onPress={handleContinueToDetails}
+          onPress={() => void handleContinueToDetails()}
           disabled={isDisabled}
           activeOpacity={0.8}
         >
           {isCreating ? (
             <ActivityIndicator color={buttonTextActive} />
           ) : (
-            <Text size="lg" weight="semibold" color={buttonTextActive}>
-              {selectedMembers.length === 0
-                ? t('chat.selectAPlayer')
-                : isSingleMember
+            <>
+              <Text size="lg" weight="semibold" color={buttonTextActive}>
+                {isSingleMember
                   ? t('chat.startChat')
-                  : t('common.continue')}
-            </Text>
+                  : t('chat.continueSelected', { count: selectedMembers.length })}
+              </Text>
+              <Ionicons
+                name={isSingleMember ? 'chatbubble-outline' : 'arrow-forward-outline'}
+                size={20}
+                color={buttonTextActive}
+              />
+            </>
           )}
         </TouchableOpacity>
       </View>
@@ -561,7 +509,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
         {/* Group Image */}
         <View style={styles.imageContainer}>
           {groupImage ? (
-            <TouchableOpacity onPress={handlePickImage} activeOpacity={0.8}>
+            <TouchableOpacity onPress={() => void handlePickImage()} activeOpacity={0.8}>
               <Image source={{ uri: groupImage }} style={styles.groupImagePreview} />
               <View style={[styles.editImageBadge, { backgroundColor: primary[500] }]}>
                 <Ionicons name="camera-outline" size={14} color="#fff" />
@@ -570,7 +518,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
           ) : (
             <TouchableOpacity
               style={[styles.imagePicker, { backgroundColor: isDark ? colors.card : '#F5F5F5' }]}
-              onPress={handlePickImage}
+              onPress={() => void handlePickImage()}
               activeOpacity={0.7}
             >
               <Ionicons name="camera-outline" size={28} color={colors.textMuted} />
@@ -633,7 +581,8 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
 
           {/* Selected members */}
           {selectedMembers.map(member => {
-            const displayName = `${member.firstName} ${member.lastName || ''}`.trim();
+            const displayName =
+              member.displayName || `${member.firstName} ${member.lastName || ''}`.trim();
             return (
               <View key={member.id} style={styles.memberRow}>
                 <View
@@ -673,7 +622,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
           { backgroundColor: buttonActive },
           (isCreating || !groupName.trim()) && styles.navButtonDisabled,
         ]}
-        onPress={handleCreateGroup}
+        onPress={() => void handleCreateGroup()}
         disabled={isCreating || !groupName.trim()}
         activeOpacity={0.8}
       >
@@ -681,10 +630,10 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
           <ActivityIndicator color={buttonTextActive} />
         ) : (
           <>
-            <Ionicons name="checkmark-outline" size={20} color={buttonTextActive} />
             <Text size="lg" weight="semibold" color={buttonTextActive}>
               {t('chat.createGroup')}
             </Text>
+            <Ionicons name="checkmark-outline" size={20} color={buttonTextActive} />
           </>
         )}
       </TouchableOpacity>
@@ -692,9 +641,9 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
   );
 
   // Handler for when sheet opens - ensure players are loaded
-  const handleSheetOpen = useCallback(() => {
+  const _handleSheetOpen = useCallback(() => {
     if (!hasLoadedPlayers && currentUserId) {
-      loadPlayers();
+      void loadPlayers();
     }
   }, [hasLoadedPlayers, currentUserId, loadPlayers]);
 
@@ -707,21 +656,19 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
       <View style={styles.modalContent}>
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <View style={styles.headerLeft}>
-            {step === 'group-details' && (
-              <TouchableOpacity onPress={handleBackToMembers} style={styles.headerButton}>
-                <Ionicons name="chevron-back-outline" size={24} color={buttonActive} />
-              </TouchableOpacity>
-            )}
-          </View>
-          <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-            {step === 'select-members' ? t('chat.newConversation') : t('chat.groupDetails')}
-          </Text>
-          <View style={styles.headerRight}>
-            <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
-              <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+          {step === 'group-details' ? (
+            <TouchableOpacity onPress={handleBackToMembers} style={styles.backButton}>
+              <Ionicons name="chevron-back-outline" size={24} color={colors.primary} />
             </TouchableOpacity>
-          </View>
+          ) : (
+            <View style={styles.headerPlaceholder} />
+          )}
+          <Text weight="semibold" size="lg" style={{ color: colors.text }}>
+            {step === 'select-members' ? t('chat.selectMembers') : t('chat.groupDetails')}
+          </Text>
+          <TouchableOpacity onPress={() => void handleClose()} style={styles.closeButton}>
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
 
         {/* Content */}
@@ -756,18 +703,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: spacingPixels[3],
+    paddingVertical: spacingPixels[4],
     paddingHorizontal: spacingPixels[4],
     borderBottomWidth: 1,
   },
-  headerLeft: {
-    width: 40,
+  backButton: {
+    padding: spacingPixels[1],
   },
-  headerRight: {
-    width: 40,
-    alignItems: 'flex-end',
+  headerPlaceholder: {
+    width: 32,
   },
-  headerButton: {
+  closeButton: {
     padding: spacingPixels[1],
   },
   stepContainer: {
@@ -787,13 +733,10 @@ const styles = StyleSheet.create({
   searchContainer: {
     marginBottom: spacingPixels[3],
   },
-  selectedChipsScroll: {
-    flexGrow: 0,
-    paddingTop: spacingPixels[3],
-    marginBottom: spacingPixels[3],
-  },
   selectedChipsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: spacingPixels[3],
     gap: spacingPixels[2],
   },
   selectedChip: {
@@ -848,32 +791,32 @@ const styles = StyleSheet.create({
   playerItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacingPixels[4],
-    borderRadius: radiusPixels.xl,
+    padding: spacingPixels[3],
+    borderRadius: 12,
     borderWidth: 1,
     marginBottom: spacingPixels[2],
-    gap: spacingPixels[3],
   },
   playerAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: radiusPixels.full,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
   },
   avatarImage: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   playerInfo: {
     flex: 1,
+    marginLeft: spacingPixels[3],
   },
   footer: {
     padding: spacingPixels[4],
     borderTopWidth: 1,
-    paddingBottom: spacingPixels[8],
+    paddingBottom: spacingPixels[4],
   },
   navButton: {
     flexDirection: 'row',

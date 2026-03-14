@@ -362,7 +362,7 @@ export const CommunityFavoriteFacilitiesSelector: React.FC<
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}>
       {/* Section Header */}
       <View style={styles.sectionHeader}>
         <View style={styles.sectionTitleRow}>
@@ -538,6 +538,10 @@ export const CommunityFavoriteFacilitiesSelector: React.FC<
 const styles = StyleSheet.create({
   container: {
     width: '100%',
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginTop: 16,
   },
   sectionHeader: {
     flexDirection: 'row',

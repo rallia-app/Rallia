@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { SheetManager } from 'react-native-actions-sheet';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -776,10 +777,20 @@ const PlayerProfile = () => {
     return t('playerProfile.rating.descriptions.professional' as TranslationKey);
   };
 
-  const handleInviteToMatch = () => {
-    // TODO: Implement invite to match functionality
-    Alert.alert('Invite to Match', 'This feature is coming soon!');
-  };
+  const handleInviteToMatch = useCallback(() => {
+    if (!currentUserId || !profile) return;
+
+    void lightHaptic();
+    void SheetManager.show('invite-to-match', {
+      payload: {
+        playerId,
+        playerName:
+          profile.first_name ||
+          profile.display_name ||
+          t('playerProfile.unknownPlayer' as TranslationKey),
+      },
+    });
+  }, [currentUserId, playerId, profile, t]);
 
   const handleRequestReference = useCallback(async () => {
     if (!currentUserId || referenceLoading) return;

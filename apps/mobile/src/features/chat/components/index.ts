@@ -9,7 +9,7 @@ export type { MessageListRef } from './MessageList';
 export { ChatHeader } from './ChatHeader';
 export { ConversationItem } from './ConversationItem';
 export { EmojiReactionPicker } from './EmojiReactionPicker';
-export { ChatAgreementActionSheet } from './ChatAgreementModal';
+export { ChatAgreementActionSheet as ChatAgreementModal } from './ChatAgreementModal';
 
 // Enhanced chat components
 export { TypingIndicator } from './TypingIndicator';
@@ -23,4 +23,6 @@ export { CreateGroupChatModal } from './CreateGroupChatModal';
 export { AddMembersToGroupModal } from './AddMembersToGroupModal';
 export { ReportUserModal } from './ReportUserModal';
 export { ChatMemberOptionsModal } from './ChatMemberOptionsModal';
-export { default as ConversationFilterChips } from './ConversationFilterChips';
+export { ChatFiltersBar } from './ChatFiltersBar';
+export type { ChatFilters } from './ChatFiltersBar';
+export { DEFAULT_CHAT_FILTERS } from './ChatFiltersBar';
