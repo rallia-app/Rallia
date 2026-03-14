@@ -149,6 +149,7 @@ export default function CommunityDetailScreen() {
   }, []);
 
   const { data: community, isLoading, refetch } = useCommunityWithMembers(communityId);
+
   const { data: isModerator } = useIsCommunityModerator(communityId, playerId);
   const {
     data: accessInfo,
@@ -216,15 +217,96 @@ export default function CommunityDetailScreen() {
     }
   }, [playerId, community, guardAction, communityId, requestToJoinMutation, refetchAccess]);
 
+  // Helper to show join prompt for logged-in non-members
+  const showJoinPrompt = useCallback(() => {
+    Alert.alert(t('community.joinCommunity'), t('community.nonMember.joinToAccessContent'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('community.pendingRequests.requestToJoin'),
+        onPress: () => {
+          void handleRequestToJoin();
+        },
+      },
+    ]);
+  }, [t, handleRequestToJoin]);
+
+  // Guarded navigation callbacks
+  // - Logged-out users: prompt sign-in via guardAction()
+  // - Logged-in non-members: show "Request to Join" prompt
+  // - Active members: allow navigation
+  const handleNavigateToPlayer = useCallback(
+    (targetPlayerId: string) => {
+      if (!guardAction()) return;
+      if (!isActiveMember) {
+        showJoinPrompt();
+        return;
+      }
+      navigateToPlayerProfile(targetPlayerId);
+    },
+    [guardAction, isActiveMember, showJoinPrompt, navigateToPlayerProfile]
+  );
+
+  const handleNavigateToMatch = useCallback(
+    (match: GroupMatch) => {
+      if (!guardAction()) return;
+      if (!isActiveMember) {
+        showJoinPrompt();
+        return;
+      }
+      navigation.navigate('PlayedMatchDetail', { match });
+    },
+    [guardAction, isActiveMember, showJoinPrompt, navigation]
+  );
+
+  const handleNavigateToFacility = useCallback(
+    (facilityId: string) => {
+      if (!guardAction()) return;
+      if (!isActiveMember) {
+        showJoinPrompt();
+        return;
+      }
+      navigation.navigate('FacilityDetail', { facilityId });
+    },
+    [guardAction, isActiveMember, showJoinPrompt, navigation]
+  );
+
+  // Guarded navigation to network matches
+  const handleNavigateToNetworkMatches = useCallback(() => {
+    if (!guardAction()) return;
+    if (!isActiveMember) {
+      showJoinPrompt();
+      return;
+    }
+    lightHaptic();
+    navigation.navigate('NetworkMatches', {
+      networkId: communityId,
+      networkType: 'community',
+      networkName: community?.name,
+      sportId: community?.sport_id ?? undefined,
+    });
+  }, [
+    guardAction,
+    isActiveMember,
+    showJoinPrompt,
+    navigation,
+    communityId,
+    community?.name,
+    community?.sport_id,
+  ]);
+
   const handleOpenChat = useCallback(() => {
     if (!community?.conversation_id) return;
     if (!guardAction()) return;
+    if (!isActiveMember) {
+      showJoinPrompt();
+      return;
+    }
     lightHaptic();
     navigation.navigate('ChatConversation', {
       conversationId: community.conversation_id,
       title: community.name,
     });
-  }, [community, guardAction, navigation]);
+  }, [community, guardAction, isActiveMember, showJoinPrompt, navigation]);
 
   const handleLeaveCommunity = useCallback(() => {
     Alert.alert(t('community.leaveCommunity'), t('community.confirmations.leave'), [
@@ -671,9 +753,7 @@ export default function CommunityDetailScreen() {
               longitude={player?.longitude ?? null}
               colors={colors}
               t={t}
-              onNavigateToFacility={facilityId =>
-                navigation.navigate('FacilityDetail', { facilityId })
-              }
+              onNavigateToFacility={handleNavigateToFacility}
             />
 
             {/* Member Upcoming Matches Preview */}
@@ -691,17 +771,7 @@ export default function CommunityDetailScreen() {
                   </Text>
                 </View>
                 {memberUpcomingMatches && memberUpcomingMatches.length > 0 && (
-                  <TouchableOpacity
-                    onPress={() => {
-                      lightHaptic();
-                      navigation.navigate('NetworkMatches', {
-                        networkId: communityId,
-                        networkType: 'community',
-                        networkName: community?.name,
-                        sportId: community?.sport_id ?? undefined,
-                      });
-                    }}
-                  >
+                  <TouchableOpacity onPress={handleNavigateToNetworkMatches}>
                     <Text size="sm" style={{ color: colors.primary }}>
                       {t('community.detail.viewAll')}
                     </Text>
@@ -1024,11 +1094,11 @@ export default function CommunityDetailScreen() {
                         matches: allMatches || [],
                         onMatchPress: (match: unknown) => {
                           SheetManager.hide('recent-games');
-                          navigation.navigate('PlayedMatchDetail', { match: match as GroupMatch });
+                          handleNavigateToMatch(match as GroupMatch);
                         },
-                        onPlayerPress: (playerId: string) => {
+                        onPlayerPress: (targetPlayerId: string) => {
                           SheetManager.hide('recent-games');
-                          navigateToPlayerProfile(playerId);
+                          handleNavigateToPlayer(targetPlayerId);
                         },
                       },
                     })
@@ -1047,9 +1117,7 @@ export default function CommunityDetailScreen() {
                     styles.matchCard,
                     { backgroundColor: isDark ? '#1C1C1E' : '#F8F8F8', borderColor: colors.border },
                   ]}
-                  onPress={() => {
-                    navigation.navigate('PlayedMatchDetail', { match: recentMatch });
-                  }}
+                  onPress={() => handleNavigateToMatch(recentMatch)}
                   activeOpacity={0.7}
                 >
                   {/* Match Header */}
@@ -1145,7 +1213,7 @@ export default function CommunityDetailScreen() {
                                 ]}
                                 onPress={() =>
                                   participant.player_id &&
-                                  navigateToPlayerProfile(participant.player_id)
+                                  handleNavigateToPlayer(participant.player_id)
                                 }
                                 activeOpacity={0.7}
                               >
@@ -1241,7 +1309,7 @@ export default function CommunityDetailScreen() {
                                 ]}
                                 onPress={() =>
                                   participant.player_id &&
-                                  navigateToPlayerProfile(participant.player_id)
+                                  handleNavigateToPlayer(participant.player_id)
                                 }
                                 activeOpacity={0.7}
                               >
@@ -1356,7 +1424,7 @@ export default function CommunityDetailScreen() {
                         borderBottomColor: colors.border,
                       },
                     ]}
-                    onPress={() => navigateToPlayerProfile(entry.player_id)}
+                    onPress={() => handleNavigateToPlayer(entry.player_id)}
                   >
                     <View style={styles.leaderboardRank}>
                       {index < 3 ? (
@@ -1490,7 +1558,7 @@ export default function CommunityDetailScreen() {
                       onPress={() => {
                         // Navigate to player profile if actor exists
                         if (activity.actor?.id) {
-                          navigateToPlayerProfile(activity.actor.id);
+                          handleNavigateToPlayer(activity.actor.id);
                         }
                       }}
                       activeOpacity={0.7}
@@ -1931,7 +1999,7 @@ export default function CommunityDetailScreen() {
                   onMemberRemoved: () => refetch(),
                   onPlayerPress: (memberId: string) => {
                     SheetManager.hide('member-list');
-                    navigateToPlayerProfile(memberId);
+                    handleNavigateToPlayer(memberId);
                   },
                 },
               })
@@ -1977,48 +2045,50 @@ export default function CommunityDetailScreen() {
             </View>
           </TouchableOpacity>
 
-          {/* Action Buttons Row */}
-          <View style={styles.actionButtonsRow}>
-            <TouchableOpacity
-              style={[styles.addMemberButton, { borderColor: colors.primary, flex: 1 }]}
-              onPress={() =>
-                SheetManager.show('add-community-member', {
-                  payload: {
-                    communityId,
-                    currentMemberIds: community?.members.map(m => m.player_id) ?? [],
-                    onSuccess: () => refetch(),
-                  },
-                })
-              }
-            >
-              <Ionicons name="person-add-outline" size={18} color={colors.primary} />
-              <Text weight="semibold" style={{ color: colors.primary, marginLeft: 8 }}>
-                {t('community.members.addMember')}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.menuButton, { borderColor: colors.primary }]}
-              onPress={() =>
-                SheetManager.show('invite-link', {
-                  payload: {
-                    groupId: communityId,
-                    groupName: community?.name ?? '',
-                    currentUserId: playerId ?? '',
-                    isModerator: isModerator ?? false,
-                    type: 'community',
-                  },
-                })
-              }
-            >
-              <Ionicons name="share-outline" size={20} color={colors.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.menuButton, { borderColor: colors.border }]}
-              onPress={handleShowOptions}
-            >
-              <Ionicons name="ellipsis-horizontal-outline" size={20} color={colors.text} />
-            </TouchableOpacity>
-          </View>
+          {/* Action Buttons Row - Only show for active members */}
+          {isActiveMember && (
+            <View style={styles.actionButtonsRow}>
+              <TouchableOpacity
+                style={[styles.addMemberButton, { borderColor: colors.primary, flex: 1 }]}
+                onPress={() =>
+                  SheetManager.show('add-community-member', {
+                    payload: {
+                      communityId,
+                      currentMemberIds: community?.members.map(m => m.player_id) ?? [],
+                      onSuccess: () => refetch(),
+                    },
+                  })
+                }
+              >
+                <Ionicons name="person-add-outline" size={18} color={colors.primary} />
+                <Text weight="semibold" style={{ color: colors.primary, marginLeft: 8 }}>
+                  {t('community.members.addMember')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.menuButton, { borderColor: colors.primary }]}
+                onPress={() =>
+                  SheetManager.show('invite-link', {
+                    payload: {
+                      groupId: communityId,
+                      groupName: community?.name ?? '',
+                      currentUserId: playerId ?? '',
+                      isModerator: isModerator ?? false,
+                      type: 'community',
+                    },
+                  })
+                }
+              >
+                <Ionicons name="share-outline" size={20} color={colors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.menuButton, { borderColor: colors.border }]}
+                onPress={handleShowOptions}
+              >
+                <Ionicons name="ellipsis-horizontal-outline" size={20} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Tab Bar */}
@@ -2127,7 +2197,7 @@ export default function CommunityDetailScreen() {
                       style={styles.requestHeader}
                       onPress={() => {
                         setShowPendingRequestsModal(false);
-                        navigateToPlayerProfile(request.player_id);
+                        handleNavigateToPlayer(request.player_id);
                       }}
                     >
                       <View
