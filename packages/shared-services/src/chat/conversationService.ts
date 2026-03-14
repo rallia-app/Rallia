@@ -518,6 +518,211 @@ export async function getNetworkByConversationId(conversationId: string): Promis
   };
 }
 
+// ============================================================================
+// FILTERED CONVERSATIONS
+// ============================================================================
+
+/**
+ * FilteredConversationsRPC row type
+ */
+interface FilteredConversationRPCRow {
+  id: string;
+  conversation_type: string;
+  title: string | null;
+  picture_url: string | null;
+  match_id: string | null;
+  created_at: string;
+  updated_at: string;
+  last_message_id: string | null;
+  last_message_content: string | null;
+  last_message_at: string | null;
+  last_message_sender_id: string | null;
+  last_message_sender_first_name: string | null;
+  is_pinned: boolean;
+  is_muted: boolean;
+  is_archived: boolean;
+  last_read_at: string | null;
+  participant_count: number;
+  unread_count: number;
+  other_participant_id: string | null;
+  other_participant_first_name: string | null;
+  other_participant_last_name: string | null;
+  other_participant_picture_url: string | null;
+  other_participant_last_seen_at: string | null;
+  network_id: string | null;
+  network_type: string | null;
+  network_cover_image_url: string | null;
+  match_format: string | null;
+  match_date: string | null;
+  match_sport_name: string | null;
+}
+
+/**
+ * Get filtered and paginated conversations for a player
+ * Uses a single RPC call with filters for efficient loading
+ *
+ * @param playerId - Player's UUID
+ * @param filter - Filter type: 'all', 'unread', 'direct', 'group_chat', 'player_group', 'community', 'club', 'match'
+ * @param search - Search string for title/participant names
+ * @param limit - Max results (default 20)
+ * @param offset - Pagination offset (default 0)
+ */
+export async function getPlayerConversationsFiltered(
+  playerId: string,
+  filter: string = 'all',
+  search: string = '',
+  limit: number = 20,
+  offset: number = 0
+): Promise<ConversationPreview[]> {
+  try {
+    const { data, error } = await supabase.rpc('get_player_conversations_filtered', {
+      p_player_id: playerId,
+      p_filter: filter,
+      p_search: search,
+      p_limit: limit,
+      p_offset: offset,
+    });
+
+    if (error) {
+      console.error('Error fetching filtered conversations from RPC:', error);
+      return [];
+    }
+
+    if (!data || (data as FilteredConversationRPCRow[]).length === 0) {
+      return [];
+    }
+
+    const rows = data as FilteredConversationRPCRow[];
+
+    // Transform RPC results to ConversationPreview format
+    const previews: ConversationPreview[] = rows.map((row: FilteredConversationRPCRow) => {
+      // Build other_participant for direct chats
+      let otherParticipant: ConversationPreview['other_participant'] | undefined;
+      if (row.other_participant_id) {
+        const isOnline = row.other_participant_last_seen_at
+          ? new Date(row.other_participant_last_seen_at) > new Date(Date.now() - 5 * 60 * 1000)
+          : false;
+
+        otherParticipant = {
+          id: row.other_participant_id,
+          first_name: row.other_participant_first_name || '',
+          last_name: row.other_participant_last_name,
+          profile_picture_url: row.other_participant_picture_url,
+          is_online: isOnline,
+          last_seen_at: row.other_participant_last_seen_at,
+        };
+      }
+
+      // Build match_info for match-linked chats
+      let matchInfo: ConversationPreview['match_info'] = null;
+      if (row.match_id && row.match_sport_name) {
+        matchInfo = {
+          sport_name: row.match_sport_name,
+          match_date: row.match_date || '',
+          format: (row.match_format as 'singles' | 'doubles') || 'singles',
+        };
+      }
+
+      return {
+        id: row.id,
+        conversation_type: row.conversation_type as ConversationType,
+        title: row.title,
+        last_message_content: row.last_message_content,
+        last_message_at: row.last_message_at,
+        last_message_sender_name: row.last_message_sender_first_name,
+        unread_count: row.unread_count || 0,
+        participant_count: row.participant_count || 0,
+        other_participant: otherParticipant,
+        cover_image_url: row.network_cover_image_url || row.picture_url,
+        is_pinned: row.is_pinned || false,
+        is_muted: row.is_muted || false,
+        is_archived: row.is_archived || false,
+        match_id: row.match_id,
+        match_info: matchInfo,
+        network_id: row.network_id,
+        network_type: row.network_type,
+      };
+    });
+
+    return previews;
+  } catch (error) {
+    console.error('Error in getPlayerConversationsFiltered:', error);
+    return [];
+  }
+}
+
+// ============================================================================
+// MATCH CONVERSATION SYNC
+// ============================================================================
+
+/**
+ * Sync match conversation title when match details change
+ * Updates the conversation title to reflect current match info
+ *
+ * @param matchId - Match UUID
+ * @param format - Match format (singles/doubles)
+ * @param matchDate - Match date string
+ * @param createdBy - Host player ID (for fetching sport)
+ */
+export async function syncMatchConversationTitle(
+  matchId: string,
+  format: 'singles' | 'doubles',
+  matchDate: string | null,
+  createdBy: string
+): Promise<void> {
+  try {
+    // Get the conversation for this match
+    const conversation = await getMatchChat(matchId);
+    if (!conversation) {
+      console.log('[syncMatchConversationTitle] No conversation found for match:', matchId);
+      return;
+    }
+
+    // Get match details including sport name
+    const { data: matchData, error: matchError } = await supabase
+      .from('match')
+      .select(
+        `
+        id,
+        format,
+        match_date,
+        sport:sport_id (name)
+      `
+      )
+      .eq('id', matchId)
+      .single();
+
+    if (matchError || !matchData) {
+      console.error('[syncMatchConversationTitle] Failed to fetch match:', matchError);
+      return;
+    }
+
+    // Build new title
+    const sportName = (matchData.sport as { name?: string } | null)?.name || 'Match';
+    const dateStr = matchDate
+      ? new Date(matchDate).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+        })
+      : '';
+    const formatLabel = format === 'doubles' ? 'Doubles' : 'Singles';
+
+    const newTitle = dateStr
+      ? `${sportName} ${formatLabel} - ${dateStr}`
+      : `${sportName} ${formatLabel}`;
+
+    // Update conversation title
+    await updateConversation(conversation.id, { title: newTitle });
+    console.log('[syncMatchConversationTitle] Updated conversation title to:', newTitle);
+  } catch (error) {
+    console.error('[syncMatchConversationTitle] Error:', error);
+  }
+}
+
+// ============================================================================
+// UNREAD COUNT
+// ============================================================================
+
 /**
  * Get unread message count for a specific conversation for a player
  */
