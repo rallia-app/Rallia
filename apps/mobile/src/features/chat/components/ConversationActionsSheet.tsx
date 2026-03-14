@@ -9,6 +9,7 @@ import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-shee
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
+import { isGroupConversationType } from '@rallia/shared-services';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import {
   spacingPixels,
@@ -38,7 +39,7 @@ function ConversationActionsSheetComponent({ payload }: SheetProps<'conversation
   const isPinned = conversation.is_pinned ?? false;
   const isMuted = conversation.is_muted ?? false;
   const isArchived = conversation.is_archived ?? false;
-  const isGroup = conversation.conversation_type === 'group';
+  const isGroup = isGroupConversationType(conversation.conversation_type);
 
   // Get conversation name for display
   const conversationName =

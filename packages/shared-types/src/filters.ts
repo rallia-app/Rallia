@@ -24,7 +24,7 @@ export type JoinModeFilter = 'all' | MatchJoinModeEnum;
 export type CourtStatusFilter = 'all' | CourtStatusEnum;
 
 /** Date range presets for match search */
-export type DateRangeFilter = 'all' | 'today' | 'week' | 'weekend';
+export type DateRangeFilter = 'all' | 'today' | 'tomorrow' | 'week' | 'weekend';
 
 /** Time of day presets */
 export type TimeOfDayFilter = 'all' | 'morning' | 'afternoon' | 'evening';
@@ -46,6 +46,12 @@ export type MatchTierFilter = 'all' | 'mostWanted' | 'covetedPlayers' | 'courtBo
 
 /** Specific date filter — ISO date string (YYYY-MM-DD) or null */
 export type SpecificDateFilter = string | null;
+
+/** Spots available filter */
+export type SpotsAvailableFilter = 'all' | '1' | '2' | '3';
+
+/** Specific time filter — HH:MM format or null */
+export type SpecificTimeFilter = string | null;
 
 // ============================================
 // PLAYER MATCH FILTERS
@@ -72,3 +78,18 @@ export type PastMatchFilter =
 
 /** Union type for all player match filters */
 export type PlayerMatchFilter = UpcomingMatchFilter | PastMatchFilter;
+
+// ============================================
+// CONVERSATION FILTERS
+// ============================================
+
+/** Filter values for conversation inbox */
+export type ConversationFilter =
+  | 'all'
+  | 'unread'
+  | 'direct'
+  | 'group_chat'
+  | 'player_group'
+  | 'community'
+  | 'club'
+  | 'match';

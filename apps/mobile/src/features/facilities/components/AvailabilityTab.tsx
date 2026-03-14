@@ -160,8 +160,8 @@ function FilterChips({ activeFilter, onFilterChange, colors, isDark, t }: Filter
             style={[
               styles.filterChip,
               {
-                backgroundColor: isActive ? primary[500] : isDark ? neutral[800] : colors.card,
-                borderColor: isActive ? primary[500] : isDark ? neutral[700] : neutral[200],
+                backgroundColor: isActive ? primary[500] : colors.primary + '10',
+                borderColor: isActive ? primary[500] : colors.primary + '25',
               },
             ]}
           >
@@ -314,12 +314,7 @@ function EmptyState({ facility, colors, isDark, t }: EmptyStateProps) {
         ]}
       >
         {/* Icon */}
-        <View
-          style={[
-            styles.emptyIconWrapper,
-            { backgroundColor: isDark ? neutral[700] : primary[50] },
-          ]}
-        >
+        <View style={[styles.emptyIconWrapper, { backgroundColor: colors.primary + '15' }]}>
           <Ionicons name="calendar-outline" size={48} color={colors.primary} />
         </View>
 
@@ -334,9 +329,7 @@ function EmptyState({ facility, colors, isDark, t }: EmptyStateProps) {
         </Text>
 
         {/* Suggestions */}
-        <View
-          style={[styles.suggestionsList, { backgroundColor: isDark ? neutral[800] : neutral[50] }]}
-        >
+        <View style={[styles.suggestionsList, { backgroundColor: colors.primary + '10' }]}>
           <View style={styles.suggestionItem}>
             <Ionicons name="refresh-outline" size={18} color={colors.primary} />
             <Text size="sm" color={colors.text}>
@@ -617,7 +610,7 @@ export default function AvailabilityTab({
 
       {/* Payment unavailable banner */}
       {hasDisabledPaidSlots && (
-        <View style={[styles.banner, { backgroundColor: isDark ? neutral[800] : neutral[100] }]}>
+        <View style={[styles.banner, { backgroundColor: colors.primary + '10' }]}>
           <Ionicons name="information-circle" size={16} color={colors.textMuted} />
           <Text size="sm" color={colors.textMuted} style={styles.bannerText}>
             {t('facilityDetail.paidSlotsDisabled')}
@@ -630,9 +623,7 @@ export default function AvailabilityTab({
         <Text size="lg" weight="bold" color={colors.text}>
           {dateItems.find(d => d.dateKey === selectedDateKey)?.label ?? ''}
         </Text>
-        <View
-          style={[styles.slotCountBadge, { backgroundColor: isDark ? neutral[700] : primary[50] }]}
-        >
+        <View style={[styles.slotCountBadge, { backgroundColor: colors.primary + '15' }]}>
           <Text size="xs" weight="semibold" color={colors.primary}>
             {filteredSlots.length} {filteredSlots.length === 1 ? 'slot' : 'slots'}
           </Text>
@@ -676,12 +667,7 @@ export default function AvailabilityTab({
 
         {/* No slots for filtered time */}
         {filteredSlots.length === 0 && selectedDateSlots.length > 0 && (
-          <View
-            style={[
-              styles.noFilteredSlots,
-              { backgroundColor: isDark ? neutral[800] : neutral[50] },
-            ]}
-          >
+          <View style={[styles.noFilteredSlots, { backgroundColor: colors.primary + '10' }]}>
             <Ionicons name="filter-outline" size={24} color={colors.textMuted} />
             <Text size="sm" color={colors.textMuted} style={styles.noFilteredText}>
               {t('facilityDetail.noSlotsForFilter')}

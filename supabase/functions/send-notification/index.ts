@@ -11,6 +11,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+
 import { sendEmail, sendOrgEmail } from './handlers/email.ts';
 import { sendPush } from './handlers/push.ts';
 import { sendSms, isValidPhoneNumber } from './handlers/sms.ts';
@@ -220,6 +221,25 @@ function hasValidContact(
 }
 
 /**
+ * Get unread notification count for a user (for push badge)
+ */
+async function getUnreadNotificationCount(userId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('notification')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .is('read_at', null)
+    .or('expires_at.is.null,expires_at.gt.now()');
+
+  if (error) {
+    console.error('Failed to fetch unread count:', error);
+    return 0;
+  }
+
+  return count ?? 0;
+}
+
+/**
  * Send notification via a specific channel
  */
 async function sendViaChannel(
@@ -227,20 +247,21 @@ async function sendViaChannel(
   notification: NotificationRecord,
   contact: UserContactInfo,
   organization?: OrganizationInfo | null,
+  badgeCount?: number
 ): Promise<DeliveryResult> {
   switch (channel) {
     case 'email':
       // Use org-branded email template if this is an org notification
       if (organization && isOrgNotification(notification.type)) {
-        return sendOrgEmail(notification, contact.email!, organization, contact.preferred_locale);
+        return sendOrgEmail(notification, contact.email, organization, contact.preferred_locale);
       }
-      return sendEmail(notification, contact.email!, contact.preferred_locale);
+      return sendEmail(notification, contact.email, contact.preferred_locale);
 
     case 'push':
-      return sendPush(notification, contact.expo_push_token!);
+      return sendPush(notification, contact.expo_push_token, badgeCount);
 
     case 'sms':
-      return sendSms(notification, contact.phone!);
+      return sendSms(notification, contact.phone);
 
     default:
       return {
@@ -325,7 +346,18 @@ async function handleNotification(notification: NotificationRecord): Promise<voi
       } else {
         // Actually send the notification
         console.log(`Sending via ${channel}...`);
-        const result = await sendViaChannel(channel, notification, contact, organization);
+        // For push channel, fetch unread count for badge
+        let badgeCount: number | undefined;
+        if (channel === 'push') {
+          badgeCount = await getUnreadNotificationCount(userId);
+        }
+        const result = await sendViaChannel(
+          channel,
+          notification,
+          contact,
+          organization,
+          badgeCount
+        );
         status = result.status;
         errorMessage = result.errorMessage ?? null;
         providerResponse = result.providerResponse ?? null;

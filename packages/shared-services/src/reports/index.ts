@@ -4,3 +4,4 @@
  */
 
 export * from './reportService';
+export * from './facilityReportService';

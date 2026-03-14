@@ -3,6 +3,8 @@ import {
   View,
   SectionList,
   TouchableOpacity,
+  TouchableWithoutFeedback,
+  Modal,
   ActivityIndicator,
   RefreshControl,
   StyleSheet,
@@ -14,13 +16,15 @@ import { useTheme, useMatch } from '@rallia/shared-hooks';
 import { useAuth, useRequireOnboarding } from '../hooks';
 import { useTranslation, type TranslationOptions } from '../hooks/useTranslation';
 import type { TranslationKey } from '@rallia/shared-translations';
-import { useActionsSheet, useMatchDetailSheet } from '../context';
+import { useActionsSheet, useMatchDetailSheet, useSport } from '../context';
 import { useCommunityNavigation } from '../navigation';
 import SignInPrompt from '../components/SignInPrompt';
+import { SportIcon } from '../components/SportIcon';
 import {
   Notification,
   NOTIFICATION_TYPE_ICONS,
   NOTIFICATION_TYPE_COLORS,
+  NOTIFICATION_TYPE_CATEGORIES,
   ExtendedNotificationTypeEnum,
 } from '@rallia/shared-types';
 import { useNotificationsWithActions } from '@rallia/shared-hooks';
@@ -47,8 +51,10 @@ const MATCH_NOTIFICATION_TYPES: ExtendedNotificationTypeEnum[] = [
   'match_cancelled',
   'match_updated',
   'match_starting_soon',
-  'match_completed',
+  'match_check_in_available',
   'match_new_available',
+  'match_spot_opened',
+  'nearby_match_available',
   'player_kicked',
   'player_left',
   'score_confirmation',
@@ -66,7 +72,7 @@ const COMMUNITY_NOTIFICATION_TYPES: string[] = [
 ];
 
 const BASE_WHITE = '#ffffff';
-import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
+import { lightHaptic, mediumHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
 
 // Helper function to format relative time
 function formatRelativeTime(
@@ -301,6 +307,7 @@ const Notifications: React.FC = () => {
   const { t, locale } = useTranslation();
   const { openSheet } = useActionsSheet();
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
+  const { selectedSport, setSelectedSport } = useSport();
   const { isReady: isOnboarded } = useRequireOnboarding();
   const communityNavigation = useCommunityNavigation();
   const isDark = theme === 'dark';
@@ -314,15 +321,49 @@ const Notifications: React.FC = () => {
     { enabled: !!selectedMatchId }
   );
 
+  // State for sport switch confirmation
+  const [showSportSwitchConfirm, setShowSportSwitchConfirm] = React.useState(false);
+  const [pendingMatch, setPendingMatch] = React.useState<typeof selectedMatch>(null);
+
   // Open match detail sheet when match data is loaded
   React.useEffect(() => {
     if (selectedMatch && !isLoadingMatch && selectedMatchId) {
-      Logger.logUserAction('notification_match_opened', { matchId: selectedMatchId });
-      openMatchDetail(selectedMatch);
-      // Clear the selected match ID after opening
-      setSelectedMatchId(null);
+      const matchSportId = selectedMatch.sport?.id;
+      const needsSportSwitch = matchSportId && selectedSport && matchSportId !== selectedSport.id;
+
+      if (needsSportSwitch) {
+        // Different sport — show confirmation before switching
+        setPendingMatch(selectedMatch);
+        setShowSportSwitchConfirm(true);
+        setSelectedMatchId(null);
+      } else {
+        // Same sport — open directly
+        Logger.logUserAction('notification_match_opened', { matchId: selectedMatchId });
+        openMatchDetail(selectedMatch);
+        setSelectedMatchId(null);
+      }
     }
-  }, [selectedMatch, isLoadingMatch, selectedMatchId, openMatchDetail]);
+  }, [selectedMatch, isLoadingMatch, selectedMatchId, openMatchDetail, selectedSport]);
+
+  const handleConfirmSportSwitch = async () => {
+    if (!pendingMatch) return;
+    mediumHaptic();
+    Logger.logUserAction('notification_sport_switched', {
+      matchId: pendingMatch.id,
+      fromSport: selectedSport?.id,
+      toSport: pendingMatch.sport?.id,
+    });
+    await setSelectedSport(pendingMatch.sport);
+    openMatchDetail(pendingMatch);
+    setShowSportSwitchConfirm(false);
+    setPendingMatch(null);
+  };
+
+  const handleCancelSportSwitch = () => {
+    lightHaptic();
+    setShowSportSwitchConfirm(false);
+    setPendingMatch(null);
+  };
 
   // Theme-aware colors from design system
   const themeColors = isDark ? darkTheme : lightTheme;
@@ -359,8 +400,31 @@ const Notifications: React.FC = () => {
     isMarkingAllAsRead,
   } = useNotificationsWithActions(userId);
 
+  // Filter notifications by selected sport:
+  // Show notifications that match the selected sport, OR that have no sportName (system/social)
+  const filteredNotifications = useMemo(() => {
+    if (!selectedSport) return notifications;
+    return notifications.filter(n => {
+      const payload = n.payload as Record<string, unknown> | null;
+      const notifSportName = payload?.sportName as string | undefined;
+      // If no sportName in payload, it's a system/social notification — always show
+      if (!notifSportName) return true;
+      // Only show match notifications for the currently selected sport
+      return notifSportName === selectedSport.name;
+    });
+  }, [notifications, selectedSport]);
+
+  // Unread count matching the filtered (sport-specific) list
+  const filteredUnreadCount = useMemo(
+    () => filteredNotifications.filter(n => !n.read_at).length,
+    [filteredNotifications]
+  );
+
   // Group notifications by date
-  const sections = useMemo(() => groupNotificationsByDate(notifications, t), [notifications, t]);
+  const sections = useMemo(
+    () => groupNotificationsByDate(filteredNotifications, t),
+    [filteredNotifications, t]
+  );
 
   const handleNotificationPress = useCallback(
     (notification: Notification) => {
@@ -461,11 +525,11 @@ const Notifications: React.FC = () => {
   };
 
   const renderHeader = () => {
-    if (unreadCount === 0) return null;
+    if (filteredUnreadCount === 0) return null;
     return (
       <View style={styles.headerContainer}>
         <Text size="sm" color={colors.textMuted}>
-          {unreadCount} {t('notifications.unread')}
+          {filteredUnreadCount} {t('notifications.unread')}
         </Text>
         <TouchableOpacity
           onPress={() => {
@@ -518,43 +582,119 @@ const Notifications: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-      {isLoadingAuth ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.buttonActive} />
-        </View>
-      ) : isLoadingNotifications ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.buttonActive} />
-        </View>
-      ) : (
-        <SectionList
-          sections={sections}
-          renderItem={renderNotificationCard}
-          renderSectionHeader={renderSectionHeader}
-          keyExtractor={item => item.id}
-          contentContainerStyle={[
-            styles.listContent,
-            sections.length === 0 && styles.emptyListContent,
-          ]}
-          ListHeaderComponent={sections.length > 0 ? renderHeader : null}
-          ListEmptyComponent={renderEmptyState}
-          ListFooterComponent={renderFooter}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.5}
-          stickySectionHeadersEnabled={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={isFetching && !isFetchingNextPage}
-              onRefresh={refetch}
-              tintColor={colors.buttonActive}
-              colors={[colors.buttonActive]}
-            />
-          }
-          showsVerticalScrollIndicator={false}
-        />
-      )}
-    </SafeAreaView>
+    <>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+        {isLoadingAuth ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.buttonActive} />
+          </View>
+        ) : isLoadingNotifications ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.buttonActive} />
+          </View>
+        ) : (
+          <SectionList
+            sections={sections}
+            renderItem={renderNotificationCard}
+            renderSectionHeader={renderSectionHeader}
+            keyExtractor={item => item.id}
+            contentContainerStyle={[
+              styles.listContent,
+              sections.length === 0 && styles.emptyListContent,
+            ]}
+            ListHeaderComponent={sections.length > 0 ? renderHeader : null}
+            ListEmptyComponent={renderEmptyState}
+            ListFooterComponent={renderFooter}
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.5}
+            stickySectionHeadersEnabled={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={isFetching && !isFetchingNextPage}
+                onRefresh={refetch}
+                tintColor={colors.buttonActive}
+                colors={[colors.buttonActive]}
+              />
+            }
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+      </SafeAreaView>
+
+      {/* Sport switch confirmation modal */}
+      <Modal
+        visible={showSportSwitchConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelSportSwitch}
+        statusBarTranslucent
+      >
+        <TouchableWithoutFeedback onPress={handleCancelSportSwitch}>
+          <View style={styles.confirmationBackdrop}>
+            <TouchableWithoutFeedback>
+              <View style={[styles.confirmationModal, { backgroundColor: themeColors.card }]}>
+                <View style={styles.confirmationIconRow}>
+                  {pendingMatch?.sport && (
+                    <SportIcon sportName={pendingMatch.sport.name} size={32} color={primary[500]} />
+                  )}
+                  <Text
+                    size="lg"
+                    weight="semibold"
+                    style={{ color: themeColors.foreground, textAlign: 'center' }}
+                  >
+                    {t('notifications.sportSwitch.title' as TranslationKey)}
+                  </Text>
+                </View>
+                <Text
+                  size="base"
+                  style={[styles.confirmationMessage, { color: themeColors.mutedForeground }]}
+                >
+                  {t('notifications.sportSwitch.message' as TranslationKey, {
+                    sportName: pendingMatch?.sport?.display_name ?? '',
+                  })}
+                </Text>
+                <View style={styles.confirmationButtonContainer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.confirmationButton,
+                      styles.confirmationCancelButton,
+                      { borderColor: themeColors.border },
+                    ]}
+                    onPress={handleCancelSportSwitch}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      size="base"
+                      weight="medium"
+                      style={{ color: themeColors.foreground, textAlign: 'center' }}
+                    >
+                      {t('common.cancel' as TranslationKey)}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.confirmationButton,
+                      styles.confirmationConfirmButton,
+                      { backgroundColor: primary[500] },
+                    ]}
+                    onPress={handleConfirmSportSwitch}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      size="base"
+                      weight="medium"
+                      style={{ color: '#ffffff', textAlign: 'center' }}
+                    >
+                      {t('notifications.sportSwitch.confirm' as TranslationKey)}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    </>
   );
 };
 
@@ -659,6 +799,54 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacingPixels[4],
   },
+  confirmationBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[5],
+  },
+  confirmationModal: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: radiusPixels.xl,
+    paddingTop: spacingPixels[6],
+    paddingHorizontal: spacingPixels[5],
+    paddingBottom: spacingPixels[5],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  confirmationIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[3],
+    marginBottom: spacingPixels[2],
+  },
+  confirmationMessage: {
+    textAlign: 'center',
+    marginBottom: spacingPixels[4],
+    lineHeight: 22,
+  },
+  confirmationButtonContainer: {
+    flexDirection: 'row',
+    gap: spacingPixels[3],
+  },
+  confirmationButton: {
+    flex: 1,
+    paddingVertical: spacingPixels[3],
+    borderRadius: radiusPixels.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  confirmationCancelButton: {
+    borderWidth: 1,
+  },
+  confirmationConfirmButton: {},
 });
 
 export default Notifications;

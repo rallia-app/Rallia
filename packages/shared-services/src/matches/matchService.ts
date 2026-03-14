@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '../supabase';
+import { Logger } from '../logger';
 import {
   notifyMatchJoinRequest,
   notifyJoinRequestAccepted,
@@ -14,6 +15,7 @@ import {
   notifyMatchUpdated,
   notifyPlayerKicked,
   notifyMatchInvitation,
+  notifyMatchSpotOpened,
 } from '../notifications/notificationFactory';
 import {
   createReputationEvent,
@@ -23,6 +25,8 @@ import { calculateCancellationPenalty } from '../reputation/reputationPenalties'
 import {
   createMatchChat,
   getMatchChat,
+  syncMatchConversationTitle,
+  updateConversation,
   removeConversationParticipant,
   addConversationParticipant,
 } from '../chat/chatService';
@@ -58,6 +62,8 @@ import type {
   DurationFilter,
   CourtStatusFilter,
   MatchTierFilter,
+  SpotsAvailableFilter,
+  SpecificTimeFilter,
 } from '@rallia/shared-types';
 import { calculateDistanceMeters } from '@rallia/shared-utils';
 
@@ -238,6 +244,7 @@ export async function getMatchWithDetails(matchId: string) {
         team_number,
         feedback_completed,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
@@ -267,6 +274,13 @@ export async function getMatchWithDetails(matchId: string) {
         verified_at,
         created_at,
         updated_at,
+        rebuttal_team1_score,
+        rebuttal_team2_score,
+        rebuttal_winning_team,
+        rebuttal_sets,
+        rebuttal_submitted_by,
+        rebuttal_submitted_at,
+        rebuttal_deadline,
         sets:match_set (
           set_number,
           team1_score,
@@ -351,7 +365,7 @@ export async function getMatchWithDetails(matchId: string) {
       .in('player_id', profileIds);
 
     if (ratingsError) {
-      console.error('[getMatchWithDetails] Error fetching ratings:', ratingsError);
+      Logger.error('[getMatchWithDetails] Error fetching ratings:', ratingsError);
     }
 
     if (!ratingsError && ratingsData) {
@@ -492,6 +506,7 @@ export async function getMatchesWithDetails(
         team_number,
         feedback_completed,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
@@ -640,7 +655,11 @@ export async function getMatchesByCreator(
  * Error codes for match update validation
  * These are translated on the frontend
  */
-export type UpdateMatchErrorCode = 'MATCH_NOT_FOUND' | 'FORMAT_CHANGE_BLOCKED' | 'UNKNOWN_ERROR';
+export type UpdateMatchErrorCode =
+  | 'MATCH_NOT_FOUND'
+  | 'FORMAT_CHANGE_BLOCKED'
+  | 'GENDER_CHANGE_BLOCKED'
+  | 'UNKNOWN_ERROR';
 
 /**
  * Result of match update validation
@@ -701,14 +720,15 @@ export async function validateMatchUpdate(
   // ========================================
   // FORMAT VALIDATION
   // ========================================
-  // Block format change from doubles to singles if 2+ participants joined
+  // Block format change from doubles to singles if more than 2 participants joined
+  // (singles supports up to 2: creator + 1 opponent)
   if (updates.format !== undefined && updates.format !== match.format) {
-    if (match.format === 'doubles' && updates.format === 'singles' && joinedCount >= 2) {
+    if (match.format === 'doubles' && updates.format === 'singles' && joinedCount > 2) {
       return {
         canUpdate: false,
         errorCode: 'FORMAT_CHANGE_BLOCKED',
         error:
-          'Cannot change from doubles to singles with 2 or more participants. Remove participants first or cancel the match.',
+          'Cannot change from doubles to singles with more than 2 participants. Remove participants first or cancel the match.',
       };
     }
   }
@@ -716,13 +736,29 @@ export async function validateMatchUpdate(
   // ========================================
   // GENDER PREFERENCE VALIDATION
   // ========================================
-  // Warn if changing gender preference would affect joined participants
+  // Gender change is allowed when:
+  // 1. No participants have joined
+  // 2. Widening (specific → any) — always allowed
+  // 3. Narrowing from "any" to a specific gender AND all joined participants match that gender
+  // Otherwise: blocked
   if (updates.preferredOpponentGender !== undefined && joinedCount > 0) {
+    const currentGender = match.preferred_opponent_gender; // null means "any"
     const newGender =
       updates.preferredOpponentGender === 'any' ? null : updates.preferredOpponentGender;
 
-    // Only check if setting a specific gender (not clearing it)
+    // Only validate if setting a specific gender (widening to "any" is always fine)
     if (newGender) {
+      // Block if changing from one specific gender to a different specific gender
+      if (currentGender && currentGender !== newGender) {
+        return {
+          canUpdate: false,
+          errorCode: 'GENDER_CHANGE_BLOCKED',
+          error:
+            'Cannot change gender preference when participants have joined. Only narrowing from "all" is allowed when all participants match.',
+        };
+      }
+
+      // Narrowing from "any" to specific — check that all participants match
       const mismatchedParticipants = joinedParticipants.filter(
         (p: { player: { gender: string } | { gender: string }[] | null }) => {
           // Handle both array and object formats from Supabase
@@ -732,13 +768,11 @@ export async function validateMatchUpdate(
       );
 
       if (mismatchedParticipants.length > 0) {
-        warnings.push({
-          type: 'gender_mismatch',
-          affectedParticipantIds: mismatchedParticipants.map(
-            (p: { player_id: string }) => p.player_id
-          ),
-          message: `${mismatchedParticipants.length} participant(s) do not match the new gender preference`,
-        });
+        return {
+          canUpdate: false,
+          errorCode: 'GENDER_CHANGE_BLOCKED',
+          error: `${mismatchedParticipants.length} participant(s) do not match the new gender preference.`,
+        };
       }
     }
   }
@@ -764,6 +798,13 @@ export async function updateMatch(
     }
     // Note: Warnings are returned but not blocking - caller can check them first
   }
+
+  // Fetch original match details BEFORE applying updates (for notification with original date)
+  const { data: originalMatch } = await supabase
+    .from('match')
+    .select('sport:sport_id (name), match_date, start_time')
+    .eq('id', matchId)
+    .single();
 
   // Map costSplitType to database enum values (same as createMatch)
   const costSplitMap: Record<string, 'host_pays' | 'split_equal' | 'custom'> = {
@@ -907,11 +948,33 @@ export async function updateMatch(
 
       if (participantIds.length > 0) {
         // Send notifications (fire and forget - don't block on notification)
-        notifyMatchUpdated(participantIds, matchId, updatedFields).catch(err => {
-          console.error('Failed to send match updated notifications:', err);
+        notifyMatchUpdated(participantIds, matchId, updatedFields, {
+          sportName: (originalMatch?.sport as { name?: string } | null)?.name,
+          matchDate: originalMatch?.match_date,
+          startTime: originalMatch?.start_time,
+        }).catch(err => {
+          Logger.error('Failed to send match updated notifications:', err);
         });
       }
     }
+  }
+
+  // ========================================
+  // SYNC MATCH CONVERSATION TITLE
+  // ========================================
+  const titleAffectingFields = ['format', 'matchDate'];
+  const hasTitleChanges = updatedFields.some(field => titleAffectingFields.includes(field));
+
+  if (hasTitleChanges) {
+    const updatedMatch = data as Match;
+    syncMatchConversationTitle(
+      matchId,
+      updatedMatch.format as 'singles' | 'doubles',
+      updatedMatch.match_date,
+      updatedMatch.created_by
+    ).catch(err => {
+      console.error('[updateMatch] Failed to sync conversation title:', err);
+    });
   }
 
   return data as Match;
@@ -1036,11 +1099,11 @@ export async function cancelMatch(matchId: string, userId?: string): Promise<Mat
         customImpact: penalty,
         metadata: { hoursUntilMatch, courtStatus: match.court_status, recentOffenses },
       }).catch(err => {
-        console.error('[cancelMatch] Failed to create reputation event:', err);
+        Logger.error('[cancelMatch] Failed to create reputation event:', err);
       });
     } else {
       createReputationEvent(userId, 'match_cancelled_early', { matchId }).catch(err => {
-        console.error('[cancelMatch] Failed to create reputation event:', err);
+        Logger.error('[cancelMatch] Failed to create reputation event:', err);
       });
     }
   }
@@ -1080,7 +1143,7 @@ export async function cancelMatch(matchId: string, userId?: string): Promise<Mat
         startTime,
         locationName
       ).catch(err => {
-        console.error('Failed to send match cancelled notifications:', err);
+        Logger.error('Failed to send match cancelled notifications:', err);
       });
     }
   }
@@ -1098,6 +1161,10 @@ export async function deleteMatch(matchId: string): Promise<void> {
     throw new Error(`Failed to delete match: ${error.message}`);
   }
 }
+
+// =============================================================================
+// MATCH CHAT HELPERS
+// =============================================================================
 
 // =============================================================================
 // MATCH PARTICIPANT ACTIONS
@@ -1147,7 +1214,7 @@ async function ensureMatchChat(matchId: string, newPlayerId: string): Promise<vo
       .single();
 
     if (matchError || !match) {
-      console.error('[ensureMatchChat] Failed to fetch match:', matchError);
+      Logger.error('[ensureMatchChat] Failed to fetch match:', matchError);
       return;
     }
 
@@ -1182,7 +1249,10 @@ async function ensureMatchChat(matchId: string, newPlayerId: string): Promise<vo
       conversation.id
     );
   } catch (error) {
-    console.error('[ensureMatchChat] Error:', error);
+    Logger.error(
+      '[ensureMatchChat] Error',
+      error instanceof Error ? error : new Error(String(error))
+    );
   }
 }
 
@@ -1200,7 +1270,10 @@ async function removePlayerFromMatchChat(matchId: string, playerId: string): Pro
       `[removePlayerFromMatchChat] Removed player ${playerId} from chat for match ${matchId}`
     );
   } catch (error) {
-    console.error('[removePlayerFromMatchChat] Error:', error);
+    Logger.error(
+      '[removePlayerFromMatchChat] Error',
+      error instanceof Error ? error : new Error(String(error))
+    );
   }
 }
 
@@ -1409,7 +1482,7 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
     notifyMatchJoinRequest(match.created_by, matchId, playerName, sportName, match.match_date, {
       playerAvatarUrl,
     }).catch(err => {
-      console.error('Failed to send join request notification:', err);
+      Logger.error('Failed to send join request notification:', err);
     });
   }
 
@@ -1490,12 +1563,18 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
           longitude: matchDetails?.custom_longitude ?? undefined,
         }
       ).catch(err => {
-        console.error('Failed to send player joined notifications:', err);
+        Logger.error('Failed to send player joined notifications:', err);
       });
     }
 
     // Ensure match chat exists and add the new player
-    ensureMatchChat(matchId, playerId);
+    ensureMatchChat(matchId, playerId).catch(err => {
+      Logger.error(
+        '[joinMatch] Failed to ensure match chat',
+        err instanceof Error ? err : new Error(String(err)),
+        { matchId, playerId }
+      );
+    });
   }
 
   return {
@@ -1650,7 +1729,7 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
           customImpact: penalty,
           metadata: { hoursUntilMatch, recentOffenses },
         }).catch(err => {
-          console.error('[leaveMatch] Failed to create reputation event:', err);
+          Logger.error('[leaveMatch] Failed to create reputation event:', err);
         });
       }
     }
@@ -1691,14 +1770,29 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
 
       // Notify all users (fire and forget - don't block on notification)
       notifyPlayerLeft(uniqueUserIds, matchId, playerName, sportName, spotsLeft).catch(err => {
-        console.error('Failed to send player left notifications:', err);
+        Logger.error('Failed to send player left notifications:', err);
+      });
+    }
+
+    // Notify waitlisted players that a spot opened up
+    const waitlistedPlayers =
+      match.participants?.filter(
+        (p: { player_id: string; status: string }) => p.status === 'waitlisted'
+      ) ?? [];
+
+    if (waitlistedPlayers.length > 0) {
+      const waitlistedUserIds = waitlistedPlayers.map((p: { player_id: string }) => p.player_id);
+      const startTime = match.start_time ? match.start_time.slice(0, 5) : undefined;
+
+      notifyMatchSpotOpened(waitlistedUserIds, matchId, sportName, { startTime }).catch(err => {
+        Logger.error('Failed to send spot opened notifications:', err);
       });
     }
   }
 
   // Remove the player from the match chat (fire and forget)
   removePlayerFromMatchChat(matchId, playerId).catch(err => {
-    console.error('[leaveMatch] Failed to remove player from match chat:', err);
+    Logger.error('[leaveMatch] Failed to remove player from match chat:', err);
   });
 }
 
@@ -1850,11 +1944,17 @@ export async function acceptJoinRequest(
     sportName,
     locationName
   ).catch(err => {
-    console.error('Failed to send join accepted notification:', err);
+    Logger.error('Failed to send join accepted notification:', err);
   });
 
   // Ensure match chat exists and add the accepted player
-  ensureMatchChat(matchId, participant.player_id);
+  ensureMatchChat(matchId, participant.player_id).catch(err => {
+    Logger.error(
+      '[acceptJoinRequest] Failed to ensure match chat',
+      err instanceof Error ? err : new Error(String(err)),
+      { matchId, playerId: participant.player_id }
+    );
+  });
 
   return updatedParticipant as MatchParticipant;
 }
@@ -1967,7 +2067,7 @@ export async function rejectJoinRequest(
       sportName,
       match.match_date
     ).catch(err => {
-      console.error('Failed to send join rejected notification:', err);
+      Logger.error('Failed to send join rejected notification:', err);
     });
   }
 
@@ -2129,12 +2229,27 @@ export async function kickParticipant(
       match.match_date,
       startTime
     ).catch(err => {
-      console.error('Failed to send kicked notification:', err);
+      Logger.error('Failed to send kicked notification:', err);
     });
+
+    // Notify waitlisted players that a spot opened up
+    const waitlistedPlayers =
+      match.participants?.filter(
+        (p: { id: string; player_id: string; status: string }) =>
+          p.status === 'waitlisted' && p.id !== participantId
+      ) ?? [];
+
+    if (waitlistedPlayers.length > 0) {
+      const waitlistedUserIds = waitlistedPlayers.map((p: { player_id: string }) => p.player_id);
+
+      notifyMatchSpotOpened(waitlistedUserIds, matchId, sportName, { startTime }).catch(err => {
+        Logger.error('Failed to send spot opened notifications:', err);
+      });
+    }
 
     // Remove the kicked player from the match chat (fire and forget)
     removePlayerFromMatchChat(matchId, participantRecord.player_id).catch(err => {
-      console.error('[kickParticipant] Failed to remove player from match chat:', err);
+      Logger.error('[kickParticipant] Failed to remove player from match chat:', err);
     });
   }
 
@@ -2446,7 +2561,7 @@ export async function resendInvitation(
       startTime,
       locationName
     ).catch(err => {
-      console.error('Failed to send invitation notification:', err);
+      Logger.error('Failed to send invitation notification:', err);
     });
   }
 
@@ -2565,6 +2680,7 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
         team_number,
         feedback_completed,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
@@ -2594,6 +2710,13 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
         verified_at,
         created_at,
         updated_at,
+        rebuttal_team1_score,
+        rebuttal_team2_score,
+        rebuttal_winning_team,
+        rebuttal_sets,
+        rebuttal_submitted_by,
+        rebuttal_submitted_at,
+        rebuttal_deadline,
         sets:match_set (
           set_number,
           team1_score,
@@ -2884,6 +3007,7 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
         team_number,
         feedback_completed,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
@@ -2913,6 +3037,13 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
         verified_at,
         created_at,
         updated_at,
+        rebuttal_team1_score,
+        rebuttal_team2_score,
+        rebuttal_winning_team,
+        rebuttal_sets,
+        rebuttal_submitted_by,
+        rebuttal_submitted_at,
+        rebuttal_deadline,
         sets:match_set (
           set_number,
           team1_score,
@@ -3009,7 +3140,7 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
         .in('player_id', profileIds);
 
       if (ratingsError) {
-        console.error('[getPlayerMatchesWithDetails] Error fetching ratings:', ratingsError);
+        Logger.error('[getPlayerMatchesWithDetails] Error fetching ratings:', ratingsError);
       }
 
       if (!ratingsError && ratingsData) {
@@ -3125,6 +3256,10 @@ export interface SearchPublicMatchesParams {
   matchTier?: MatchTierFilter;
   /** Specific date filter (ISO date string YYYY-MM-DD), overrides dateRange when set */
   specificDate?: string | null;
+  /** Spots available filter */
+  spotsAvailable?: SpotsAvailableFilter;
+  /** Specific time filter (HH:MM format), overrides timeOfDay when set */
+  specificTime?: SpecificTimeFilter;
   /** The viewing user's gender for eligibility filtering */
   userGender?: string | null;
   /** Filter by specific facility ID - when set, only returns matches at that facility */
@@ -3167,6 +3302,8 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     courtStatus = 'all',
     matchTier = 'all',
     specificDate,
+    spotsAvailable = 'all',
+    specificTime,
     userGender,
     facilityId,
     limit = 20,
@@ -3199,6 +3336,8 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     p_user_gender: userGender || null, // Pass user's gender for eligibility filtering
     p_facility_id: facilityId || null, // Filter by specific facility
     p_match_tier: matchTier === 'all' ? null : matchTier,
+    p_spots_available: spotsAvailable === 'all' ? null : spotsAvailable,
+    p_specific_time: specificTime || null,
   });
 
   if (rpcError) {
@@ -3257,6 +3396,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
         team_number,
         feedback_completed,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
@@ -3286,6 +3426,13 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
         verified_at,
         created_at,
         updated_at,
+        rebuttal_team1_score,
+        rebuttal_team2_score,
+        rebuttal_winning_team,
+        rebuttal_sets,
+        rebuttal_submitted_by,
+        rebuttal_submitted_at,
+        rebuttal_deadline,
         sets:match_set (
           set_number,
           team1_score,
@@ -3624,7 +3771,7 @@ export async function invitePlayersToMatch(
       .single();
 
     if (updateError) {
-      console.error('[invitePlayersToMatch] Update error for re-invite:', updateError);
+      Logger.error('[invitePlayersToMatch] Update error for re-invite:', updateError);
       failed.push(playerId);
     } else if (updatedParticipant) {
       invited.push(updatedParticipant as MatchParticipant);
@@ -3646,7 +3793,7 @@ export async function invitePlayersToMatch(
       .select();
 
     if (insertError) {
-      console.error('[invitePlayersToMatch] Insert error:', insertError);
+      Logger.error('[invitePlayersToMatch] Insert error:', insertError);
       // Add all toInvite players to failed
       failed.push(...toInvite);
     } else {
@@ -3676,7 +3823,7 @@ export async function invitePlayersToMatch(
       startTime,
       locationName
     ).catch(err => {
-      console.error('[invitePlayersToMatch] Notification error:', err);
+      Logger.error('[invitePlayersToMatch] Notification error:', err);
     });
   }
 
@@ -3734,7 +3881,7 @@ export async function checkInToMatch(
       .single();
 
     if (matchError || !match) {
-      console.error('[checkInToMatch] Failed to fetch match:', matchError);
+      Logger.error('[checkInToMatch] Failed to fetch match:', matchError);
       return { success: false, error: 'unknown' };
     }
 
@@ -3754,7 +3901,7 @@ export async function checkInToMatch(
 
     // 3. Validate we have location coordinates
     if (targetLat === null || targetLng === null) {
-      console.error('[checkInToMatch] Match has no valid location coordinates:', {
+      Logger.error('[checkInToMatch] Match has no valid location coordinates', undefined, {
         matchId,
         locationType: match.location_type,
       });
@@ -3771,7 +3918,7 @@ export async function checkInToMatch(
       .single();
 
     if (participantError || !participant) {
-      console.error('[checkInToMatch] Player is not a participant:', {
+      Logger.error('[checkInToMatch] Player is not a participant', undefined, {
         matchId,
         playerId,
         error: participantError,
@@ -3798,13 +3945,16 @@ export async function checkInToMatch(
       .eq('id', participant.id);
 
     if (updateError) {
-      console.error('[checkInToMatch] Failed to update checked_in_at:', updateError);
+      Logger.error('[checkInToMatch] Failed to update checked_in_at:', updateError);
       return { success: false, error: 'unknown' };
     }
 
     return { success: true, distanceMeters };
   } catch (err) {
-    console.error('[checkInToMatch] Unexpected error:', err);
+    Logger.error(
+      '[checkInToMatch] Unexpected error',
+      err instanceof Error ? err : new Error(String(err))
+    );
     return { success: false, error: 'unknown' };
   }
 }
@@ -3852,18 +4002,18 @@ export async function getMatchNeedingFeedback(
 
   // Retry once on upstream/invalid response (common after db reset or transient PostgREST issues)
   if (rpcError?.message?.includes('upstream') || rpcError?.message?.includes('invalid response')) {
-    console.warn('[getMatchNeedingFeedback] RPC upstream error, retrying once:', rpcError.message);
+    Logger.warn('[getMatchNeedingFeedback] RPC upstream error, retrying once', {
+      message: rpcError.message,
+    });
     const retry = await callGetPlayerMatchesForFeedback(userId);
     rpcError = retry.error;
     matchIdResults = retry.data;
   }
 
   if (rpcError) {
-    console.error(
-      '[getMatchNeedingFeedback] RPC error:',
-      rpcError?.message,
-      rpcError?.details ?? rpcError
-    );
+    Logger.error('[getMatchNeedingFeedback] RPC error', new Error(rpcError.message), {
+      details: rpcError.details,
+    });
     return null;
   }
 
@@ -3907,6 +4057,7 @@ export async function getMatchNeedingFeedback(
         feedback_completed,
         match_outcome,
         checked_in_at,
+        joined_at,
         created_at,
         updated_at,
         player:player_id (
@@ -3929,7 +4080,7 @@ export async function getMatchNeedingFeedback(
     .is('cancelled_at', null); // Exclude cancelled matches
 
   if (error) {
-    console.error('[getMatchNeedingFeedback] Query error:', error);
+    Logger.error('[getMatchNeedingFeedback] Query error:', error);
     return null;
   }
 
@@ -4052,6 +4203,97 @@ export async function getMatchNeedingFeedback(
   return bestMatch;
 }
 
+export interface GetCustomLocationMatchesParams {
+  sportIds: string[];
+  latitude: number;
+  longitude: number;
+  maxDistanceKm?: number;
+}
+
+/**
+ * Get upcoming public matches with custom locations for the map view.
+ * Filters to matches where location_type='custom' with valid coordinates
+ * within a bounding box around the user's position.
+ */
+export async function getCustomLocationMatches(
+  params: GetCustomLocationMatchesParams
+): Promise<MatchWithDetails[]> {
+  const { sportIds, latitude, longitude, maxDistanceKm = 25 } = params;
+
+  // Approximate bounding box (~1 degree latitude ≈ 111 km)
+  const latDelta = maxDistanceKm / 111;
+  const lngDelta = maxDistanceKm / (111 * Math.cos((latitude * Math.PI) / 180));
+
+  const { data, error } = await supabase
+    .from('match')
+    .select(
+      `
+      *,
+      sport:sport_id (*),
+      facility:facility_id (*),
+      court:court_id (*),
+      created_by_player:created_by (
+        id,
+        gender,
+        playing_hand,
+        max_travel_distance,
+        player_reputation (reputation_score),
+        notification_match_requests,
+        notification_messages,
+        notification_reminders,
+        privacy_show_age,
+        privacy_show_location,
+        privacy_show_stats
+      ),
+      participants:match_participant (
+        id,
+        match_id,
+        player_id,
+        status,
+        is_host,
+        score,
+        team_number,
+        feedback_completed,
+        checked_in_at,
+        joined_at,
+        created_at,
+        updated_at,
+        player:player_id (
+          id,
+          gender,
+          playing_hand,
+          max_travel_distance,
+          player_reputation (reputation_score),
+          notification_match_requests,
+          notification_messages,
+          notification_reminders,
+          privacy_show_age,
+          privacy_show_location,
+          privacy_show_stats
+        )
+      )
+    `
+    )
+    .in('sport_id', sportIds)
+    .eq('location_type', 'custom')
+    .eq('visibility', 'public')
+    .is('cancelled_at', null)
+    .not('custom_latitude', 'is', null)
+    .not('custom_longitude', 'is', null)
+    .gte('custom_latitude', latitude - latDelta)
+    .lte('custom_latitude', latitude + latDelta)
+    .gte('custom_longitude', longitude - lngDelta)
+    .lte('custom_longitude', longitude + lngDelta)
+    .gte('match_date', new Date().toISOString().split('T')[0])
+    .limit(100);
+
+  if (error) {
+    throw new Error(`Failed to get custom location matches: ${error.message}`);
+  }
+
+  return (data ?? []) as unknown as MatchWithDetails[];
+}
+
 /**
  * Match service object for grouped exports
  */
@@ -4063,6 +4305,7 @@ export const matchService = {
   getPlayerMatchesWithDetails,
   getNearbyMatches,
   getPublicMatches,
+  getCustomLocationMatches,
   updateMatch,
   cancelMatch,
   deleteMatch,

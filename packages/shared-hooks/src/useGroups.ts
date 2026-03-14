@@ -34,7 +34,8 @@ import {
   submitMatchResultForMatch,
   getPendingScoreConfirmations,
   confirmMatchScore,
-  disputeMatchScore,
+  acceptRebuttalScore,
+  disputeRebuttalScore,
   getNetworkMemberUpcomingMatches,
   // Realtime functions
   subscribeToGroupMembers,
@@ -648,21 +649,34 @@ export function useConfirmMatchScore() {
 }
 
 /**
- * Dispute a match score
+ * Accept a rebuttal score (original team agrees with opponent's proposed score)
  */
-export function useDisputeMatchScore() {
+export function useAcceptRebuttalScore() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      matchResultId,
-      playerId,
-      reason,
-    }: {
-      matchResultId: string;
-      playerId: string;
-      reason?: string;
-    }) => disputeMatchScore(matchResultId, playerId, reason),
+    mutationFn: ({ matchResultId, playerId }: { matchResultId: string; playerId: string }) =>
+      acceptRebuttalScore(matchResultId, playerId),
+    onSuccess: (_, variables) => {
+      // Invalidate pending confirmations
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.pendingConfirmations(variables.playerId),
+      });
+      // Invalidate all leaderboards (we don't know which group this affects)
+      queryClient.invalidateQueries({ queryKey: [...groupKeys.all, 'detail'] });
+    },
+  });
+}
+
+/**
+ * Dispute a rebuttal score (original team disagrees → score becomes unsettled)
+ */
+export function useDisputeRebuttalScore() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ matchResultId, playerId }: { matchResultId: string; playerId: string }) =>
+      disputeRebuttalScore(matchResultId, playerId),
     onSuccess: (_, variables) => {
       // Invalidate pending confirmations
       queryClient.invalidateQueries({

@@ -53,7 +53,8 @@ function getCategoryId(type: string): string | undefined {
  */
 export async function sendPush(
   notification: NotificationRecord,
-  expoPushToken: string
+  expoPushToken: string,
+  badgeCount?: number
 ): Promise<DeliveryResult> {
   try {
     // Validate token format
@@ -68,7 +69,7 @@ export async function sendPush(
       };
     }
 
-    const pushPayload = buildPushPayload(notification, expoPushToken);
+    const pushPayload = buildPushPayload(notification, expoPushToken, badgeCount);
 
     const response = await fetch(EXPO_PUSH_URL, {
       method: 'POST',
@@ -119,7 +120,11 @@ export async function sendPush(
 /**
  * Build the Expo push notification payload
  */
-function buildPushPayload(notification: NotificationRecord, expoPushToken: string) {
+function buildPushPayload(
+  notification: NotificationRecord,
+  expoPushToken: string,
+  badgeCount?: number
+) {
   const { title, body, type, target_id, payload, priority } = notification;
 
   // Map priority to Expo priority
@@ -168,8 +173,8 @@ function buildPushPayload(notification: NotificationRecord, expoPushToken: strin
     channelId,
     // iOS category for notification actions
     ...(categoryId && { categoryId }),
-    // Badge count could be managed here if needed
-    // badge: 1,
+    // Badge count - set from server-side unread notification count
+    ...(badgeCount != null && { badge: badgeCount }),
     // TTL for message expiry (24 hours for normal, 1 hour for urgent)
     ttl: priority === 'urgent' ? 3600 : 86400,
     // Collapse key for grouping similar notifications
@@ -185,7 +190,8 @@ function buildPushPayload(notification: NotificationRecord, expoPushToken: strin
  */
 export async function sendPushBatch(
   notification: NotificationRecord,
-  expoPushTokens: string[]
+  expoPushTokens: string[],
+  badgeCount?: number
 ): Promise<DeliveryResult[]> {
   if (expoPushTokens.length === 0) {
     return [];
@@ -195,7 +201,7 @@ export async function sendPushBatch(
     // Build payloads for all tokens
     const payloads = expoPushTokens
       .filter(token => token.startsWith('ExponentPushToken[') || token.startsWith('ExpoPushToken['))
-      .map(token => buildPushPayload(notification, token));
+      .map(token => buildPushPayload(notification, token, badgeCount));
 
     if (payloads.length === 0) {
       return expoPushTokens.map(() => ({

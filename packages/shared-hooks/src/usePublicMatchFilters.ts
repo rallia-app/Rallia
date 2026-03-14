@@ -20,6 +20,8 @@ import type {
   CourtStatusFilter,
   MatchTierFilter,
   SpecificDateFilter,
+  SpotsAvailableFilter,
+  SpecificTimeFilter,
 } from '@rallia/shared-types';
 
 // Re-export filter types for consumers that import from this hook
@@ -37,6 +39,8 @@ export type {
   CourtStatusFilter,
   MatchTierFilter,
   SpecificDateFilter,
+  SpotsAvailableFilter,
+  SpecificTimeFilter,
 };
 
 /**
@@ -117,6 +121,9 @@ export interface PublicMatchFilters {
   courtStatus: CourtStatusFilter;
   matchTier: MatchTierFilter;
   specificDate: SpecificDateFilter;
+  spotsAvailable: SpotsAvailableFilter;
+  favoritesOnly: boolean;
+  specificTime: SpecificTimeFilter;
 }
 
 /**
@@ -169,6 +176,12 @@ export interface UsePublicMatchFiltersReturn {
   setMatchTier: (matchTier: MatchTierFilter) => void;
   /** Set the specific date filter */
   setSpecificDate: (specificDate: SpecificDateFilter) => void;
+  /** Set the spots available filter */
+  setSpotsAvailable: (spotsAvailable: SpotsAvailableFilter) => void;
+  /** Set the favorites only toggle */
+  setFavoritesOnly: (favoritesOnly: boolean) => void;
+  /** Set the specific time filter */
+  setSpecificTime: (specificTime: SpecificTimeFilter) => void;
   /** Reset all filters to defaults */
   resetFilters: () => void;
   /** Clear just the search query */
@@ -203,6 +216,9 @@ export function usePublicMatchFilters(
     courtStatus: 'all',
     matchTier: 'all',
     specificDate: null,
+    spotsAvailable: 'all',
+    favoritesOnly: false,
+    specificTime: null,
   };
 
   // Initialize filters with defaults merged with any initial values
@@ -233,7 +249,10 @@ export function usePublicMatchFilters(
       filters.duration !== 'all' ||
       filters.courtStatus !== 'all' ||
       filters.matchTier !== 'all' ||
-      filters.specificDate !== null
+      filters.specificDate !== null ||
+      filters.spotsAvailable !== 'all' ||
+      filters.favoritesOnly !== false ||
+      filters.specificTime !== null
     );
   }, [filters]);
 
@@ -252,6 +271,9 @@ export function usePublicMatchFilters(
     if (filters.courtStatus !== 'all') count++;
     if (filters.matchTier !== 'all') count++;
     if (filters.specificDate !== null) count++;
+    if (filters.spotsAvailable !== 'all') count++;
+    if (filters.favoritesOnly) count++;
+    if (filters.specificTime !== null) count++;
     return count;
   }, [filters]);
 
@@ -312,6 +334,18 @@ export function usePublicMatchFilters(
     setFilters(prev => ({ ...prev, specificDate }));
   }, []);
 
+  const setSpotsAvailable = useCallback((spotsAvailable: SpotsAvailableFilter) => {
+    setFilters(prev => ({ ...prev, spotsAvailable }));
+  }, []);
+
+  const setFavoritesOnly = useCallback((favoritesOnly: boolean) => {
+    setFilters(prev => ({ ...prev, favoritesOnly }));
+  }, []);
+
+  const setSpecificTime = useCallback((specificTime: SpecificTimeFilter) => {
+    setFilters(prev => ({ ...prev, specificTime }));
+  }, []);
+
   // Reset all filters to defaults (uses player's initial distance preference)
   const resetFilters = useCallback(() => {
     setFilters({
@@ -329,6 +363,9 @@ export function usePublicMatchFilters(
       courtStatus: 'all',
       matchTier: 'all',
       specificDate: null,
+      spotsAvailable: 'all',
+      favoritesOnly: false,
+      specificTime: null,
     });
   }, [defaultDistance]);
 
@@ -356,6 +393,9 @@ export function usePublicMatchFilters(
     setCourtStatus,
     setMatchTier,
     setSpecificDate,
+    setSpotsAvailable,
+    setFavoritesOnly,
+    setSpecificTime,
     resetFilters,
     clearSearch,
   };

@@ -18,6 +18,7 @@ import {
   ViewStyle,
   GestureResponderEvent,
   Text as RNText,
+  Platform,
 } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
@@ -40,7 +41,12 @@ import SportSelector from '../components/SportSelector';
 import TennisIcon from '../../assets/icons/tennis.svg';
 import PickleballIcon from '../../assets/icons/pickleball.svg';
 import TennisCourtIcon from '../../assets/icons/tennis-court.svg';
-import { useUnreadNotificationCount, useProfile, useTotalUnreadCount } from '@rallia/shared-hooks';
+import {
+  useUnreadCountForSport,
+  useProfile,
+  useTotalUnreadCount,
+  useOtherSportsUnreadCount,
+} from '@rallia/shared-hooks';
 import { useAuth, useThemeStyles, useTranslation, useRequireOnboarding } from '../hooks';
 import { useTheme } from '@rallia/shared-hooks';
 import { useAppNavigation } from './hooks';
@@ -113,6 +119,7 @@ import type {
   CourtsStackParamList,
   CommunityStackParamList,
   ChatStackParamList,
+  MapStackParamList,
 } from './types';
 import PublicMatches from '../features/matches/screens/PublicMatches';
 import PlayerMatches from '../features/matches/screens/PlayerMatches';
@@ -130,6 +137,7 @@ const HomeStackNavigator = createNativeStackNavigator<HomeStackParamList>();
 const CourtsStackNavigator = createNativeStackNavigator<CourtsStackParamList>();
 const CommunityStackNavigator = createNativeStackNavigator<CommunityStackParamList>();
 const ChatStackNavigator = createNativeStackNavigator<ChatStackParamList>();
+const MapStackNavigator = createNativeStackNavigator<MapStackParamList>();
 
 // =============================================================================
 // SHARED HEADER COMPONENTS
@@ -141,7 +149,8 @@ const ChatStackNavigator = createNativeStackNavigator<ChatStackParamList>();
 function NotificationButtonWithBadge({ color }: { color?: string }) {
   const navigation = useAppNavigation();
   const { session } = useAuth();
-  const { data: unreadCount } = useUnreadNotificationCount(session?.user?.id);
+  const { selectedSport } = useSport();
+  const { data: unreadCount } = useUnreadCountForSport(session?.user?.id, selectedSport?.name);
   const { colors } = useThemeStyles();
 
   return (
@@ -170,6 +179,13 @@ function SportSelectorWithContext() {
   const { refetch } = useProfile();
   const { t } = useTranslation();
   const isDark = theme === 'dark';
+
+  // Fetch unread counts for other sports to show badge on selector
+  const { otherSportsUnreadCount } = useOtherSportsUnreadCount(
+    session?.user?.id,
+    userSports,
+    selectedSport?.name
+  );
 
   // Determine if user is a guest (not signed in)
   // const isGuest = !session?.user;
@@ -218,6 +234,7 @@ function SportSelectorWithContext() {
           isDark={isDark}
           confirmBeforeSwitch
           t={t as (key: string) => string}
+          otherSportsUnreadCount={otherSportsUnreadCount}
         />
       </WalkthroughableView>
     </CopilotStep>
@@ -881,9 +898,9 @@ function BottomTabs() {
   const { colors } = useThemeStyles();
   const insets = useSafeAreaInsets();
 
-  // Add bottom safe area inset to handle Android software navigation bar
-  // This prevents the system nav bar from overlapping the tab bar
-  const bottomInset = insets.bottom;
+  // Add bottom safe area inset only on Android to handle software navigation bar
+  // iOS already handles safe area natively, so adding it causes excessive bottom spacing
+  const bottomInset = Platform.OS === 'android' ? insets.bottom : 0;
   const tabBarHeight = spacingPixels[20] + bottomInset;
 
   return (
@@ -987,6 +1004,35 @@ function ThemedBackButton({
         color={colors.headerForeground}
       />
     </TouchableOpacity>
+  );
+}
+
+/**
+ * Map Stack - Map view with facility detail drill-down
+ * Presented as a fullScreenModal from the root stack, with FacilityDetail
+ * pushing as a regular card inside the modal.
+ */
+function MapStack() {
+  const { t } = useTranslation();
+  const sharedOptions = getSharedScreenOptions();
+
+  return (
+    <MapStackNavigator.Navigator id="MapStack" screenOptions={fastAnimationOptions}>
+      <MapStackNavigator.Screen
+        name="MapView"
+        component={MapScreen}
+        options={{ headerShown: false }}
+      />
+      <MapStackNavigator.Screen
+        name="FacilityDetail"
+        component={FacilityDetail}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('facilitiesTab.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+    </MapStackNavigator.Navigator>
   );
 }
 
@@ -1247,7 +1293,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="Map"
-        component={MapScreen}
+        component={MapStack}
         options={{
           headerShown: false,
           presentation: 'fullScreenModal' as const,

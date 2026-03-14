@@ -108,6 +108,8 @@ export interface OpponentForFeedback {
   hasExistingFeedback: boolean;
   /** Whether this opponent already has a report from this reviewer */
   hasExistingReport: boolean;
+  /** When the opponent checked in (location-verified), null if not checked in */
+  checkedInAt?: string | null;
 }
 
 /**
