@@ -972,7 +972,7 @@ export async function updateMatch(
       updatedMatch.format as 'singles' | 'doubles',
       updatedMatch.match_date,
       updatedMatch.created_by
-    ).catch(err => {
+    ).catch((err: unknown) => {
       console.error('[updateMatch] Failed to sync conversation title:', err);
     });
   }

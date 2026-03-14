@@ -81,6 +81,7 @@ import GroupChatInfo from '../screens/GroupChatInfo';
 import PlayedMatchDetail from '../screens/PlayedMatchDetail';
 import Communities from '../screens/Communities';
 import CommunityDetail from '../screens/CommunityDetail';
+import NetworkMatches from '../screens/NetworkMatches';
 import FeedbackScreen from '../screens/FeedbackScreen';
 import AdminPanelScreen from '../screens/AdminPanelScreen';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
@@ -1360,6 +1361,14 @@ export default function AppNavigator() {
       <RootStack.Screen
         name="PlayedMatchDetail"
         component={PlayedMatchDetail}
+        options={{
+          headerShown: false,
+        }}
+      />
+
+      <RootStack.Screen
+        name="NetworkMatches"
+        component={NetworkMatches}
         options={{
           headerShown: false,
         }}
