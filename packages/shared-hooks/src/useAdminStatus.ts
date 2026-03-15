@@ -156,11 +156,7 @@ export function useAdminStatus(options?: UseAdminStatusOptions): AdminStatus {
           error: authError,
         } = await supabase.auth.getUser();
 
-        if (authError) {
-          throw new Error(authError.message);
-        }
-
-        if (!user) {
+        if (authError || !user) {
           // Not authenticated - not an admin
           setIsAdmin(false);
           setAdminId(null);

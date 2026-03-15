@@ -6,7 +6,7 @@
  * - Promote to admin
  * - Demote to member
  * - Leave group
- * 
+ *
  * Refactored to use modals instead of Alert.alert for better UX
  */
 
@@ -67,29 +67,29 @@ interface UseGroupMemberManagementReturn {
   isUpdating: boolean;
   showAddMemberModal: boolean;
   setShowAddMemberModal: (show: boolean) => void;
-  
+
   // Member options modal state
   showMemberOptionsModal: boolean;
   selectedMember: SelectedMemberInfo | null;
   closeMemberOptionsModal: () => void;
-  
+
   // Confirmation modal state
   showConfirmationModal: boolean;
   confirmationConfig: ConfirmationConfig | null;
   closeConfirmationModal: () => void;
-  
+
   // Action handlers
   handleAddMember: () => void;
   handleMembersAdded: (memberIds: string[]) => Promise<void>;
   handleMemberPress: (member: SelectedMemberInfo) => void;
-  
+
   // Member option actions (called from options modal)
   handleViewProfile: () => void;
   handleRemoveMember: () => void;
   handlePromoteMember: () => void;
   handleDemoteMember: () => void;
   handleLeaveGroup: () => void;
-  
+
   // Build options for current selected member
   getMemberOptions: () => Array<{
     id: string;
@@ -98,7 +98,7 @@ interface UseGroupMemberManagementReturn {
     onPress: () => void;
     destructive?: boolean;
   }>;
-  
+
   // Error handling
   error: string | null;
   clearError: () => void;
@@ -116,11 +116,11 @@ export function useGroupMemberManagement({
   const [isUpdating, setIsUpdating] = useState(false);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Member options modal state
   const [showMemberOptionsModal, setShowMemberOptionsModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState<SelectedMemberInfo | null>(null);
-  
+
   // Confirmation modal state
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [confirmationConfig, setConfirmationConfig] = useState<ConfirmationConfig | null>(null);
@@ -142,29 +142,32 @@ export function useGroupMemberManagement({
     setShowAddMemberModal(true);
   }, []);
 
-  const handleMembersAdded = useCallback(async (memberIds: string[]) => {
-    setShowAddMemberModal(false);
-    setIsUpdating(true);
-    try {
-      for (const memberId of memberIds) {
-        await addConversationParticipant(conversationId, memberId);
-        
-        if (networkInfo?.id && playerId) {
-          try {
-            await addGroupMember(networkInfo.id, playerId, memberId);
-          } catch (networkError) {
-            console.log('Member may already be in network:', networkError);
+  const handleMembersAdded = useCallback(
+    async (memberIds: string[]) => {
+      setShowAddMemberModal(false);
+      setIsUpdating(true);
+      try {
+        for (const memberId of memberIds) {
+          await addConversationParticipant(conversationId, memberId);
+
+          if (networkInfo?.id && playerId) {
+            try {
+              await addGroupMember(networkInfo.id, playerId, memberId);
+            } catch (_networkError) {
+              // Member may already be in network — safe to ignore
+            }
           }
         }
+        await onRefetch();
+      } catch (err) {
+        console.error('Error adding members:', err);
+        setError('Failed to add some members');
+      } finally {
+        setIsUpdating(false);
       }
-      await onRefetch();
-    } catch (err) {
-      console.error('Error adding members:', err);
-      setError('Failed to add some members');
-    } finally {
-      setIsUpdating(false);
-    }
-  }, [conversationId, onRefetch, networkInfo, playerId]);
+    },
+    [conversationId, onRefetch, networkInfo, playerId]
+  );
 
   // Handle member press - show options modal
   const handleMemberPress = useCallback((member: SelectedMemberInfo) => {
@@ -191,12 +194,12 @@ export function useGroupMemberManagement({
         try {
           if (playerId) {
             await removeConversationParticipant(conversationId, playerId);
-            
+
             if (networkInfo?.id) {
               try {
                 await leaveGroup(networkInfo.id, playerId);
-              } catch (networkError) {
-                console.log('Error leaving network (may not be a member):', networkError);
+              } catch (_networkError) {
+                // May not be a network member — safe to ignore
               }
             }
           }
@@ -212,15 +215,22 @@ export function useGroupMemberManagement({
       },
     });
     setShowConfirmationModal(true);
-  }, [conversationId, playerId, networkInfo, onLeaveGroup, closeMemberOptionsModal, closeConfirmationModal]);
+  }, [
+    conversationId,
+    playerId,
+    networkInfo,
+    onLeaveGroup,
+    closeMemberOptionsModal,
+    closeConfirmationModal,
+  ]);
 
   // Remove member action
   const handleRemoveMemberAction = useCallback(() => {
     if (!selectedMember) return;
-    
+
     const memberName = selectedMember.name;
     const memberId = selectedMember.playerId;
-    
+
     closeMemberOptionsModal();
     setConfirmationConfig({
       title: 'Remove Member',
@@ -231,15 +241,15 @@ export function useGroupMemberManagement({
         setIsUpdating(true);
         try {
           await removeConversationParticipant(conversationId, memberId);
-          
+
           if (networkInfo?.id && playerId) {
             try {
               await removeGroupMember(networkInfo.id, playerId, memberId);
-            } catch (networkError) {
-              console.log('Error removing from network:', networkError);
+            } catch (_networkError) {
+              // May not be a network member — safe to ignore
             }
           }
-          
+
           await onRefetch();
           closeConfirmationModal();
         } catch (err) {
@@ -252,15 +262,23 @@ export function useGroupMemberManagement({
       },
     });
     setShowConfirmationModal(true);
-  }, [selectedMember, conversationId, playerId, networkInfo, onRefetch, closeMemberOptionsModal, closeConfirmationModal]);
+  }, [
+    selectedMember,
+    conversationId,
+    playerId,
+    networkInfo,
+    onRefetch,
+    closeMemberOptionsModal,
+    closeConfirmationModal,
+  ]);
 
   // Promote member action
   const handlePromoteMemberAction = useCallback(() => {
     if (!selectedMember || !networkInfo?.id || !playerId) return;
-    
+
     const memberName = selectedMember.name;
     const memberId = selectedMember.playerId;
-    
+
     closeMemberOptionsModal();
     setConfirmationConfig({
       title: 'Promote to Admin',
@@ -283,15 +301,22 @@ export function useGroupMemberManagement({
       },
     });
     setShowConfirmationModal(true);
-  }, [selectedMember, networkInfo, playerId, onRefetchNetworkInfo, closeMemberOptionsModal, closeConfirmationModal]);
+  }, [
+    selectedMember,
+    networkInfo,
+    playerId,
+    onRefetchNetworkInfo,
+    closeMemberOptionsModal,
+    closeConfirmationModal,
+  ]);
 
   // Demote member action
   const handleDemoteMemberAction = useCallback(() => {
     if (!selectedMember || !networkInfo?.id || !playerId) return;
-    
+
     const memberName = selectedMember.name;
     const memberId = selectedMember.playerId;
-    
+
     closeMemberOptionsModal();
     setConfirmationConfig({
       title: 'Demote to Member',
@@ -314,12 +339,19 @@ export function useGroupMemberManagement({
       },
     });
     setShowConfirmationModal(true);
-  }, [selectedMember, networkInfo, playerId, onRefetchNetworkInfo, closeMemberOptionsModal, closeConfirmationModal]);
+  }, [
+    selectedMember,
+    networkInfo,
+    playerId,
+    onRefetchNetworkInfo,
+    closeMemberOptionsModal,
+    closeConfirmationModal,
+  ]);
 
   // Build options for the selected member
   const getMemberOptions = useCallback(() => {
     if (!selectedMember) return [];
-    
+
     const options: Array<{
       id: string;
       label: string;
@@ -337,7 +369,7 @@ export function useGroupMemberManagement({
     });
 
     const isSelf = selectedMember.playerId === playerId;
-    
+
     if (isSelf) {
       // Self - show leave option
       options.push({

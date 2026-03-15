@@ -86,3 +86,4 @@ logs
 
 .cursor/plans
 .claude
+.worktreerc
