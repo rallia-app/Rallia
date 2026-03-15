@@ -55,7 +55,7 @@ interface TennisPreferencesOverlayProps {
 }
 
 /**
- * Format a database name into a display label
+ * Format a database name into a display label (fallback)
  * e.g., 'aggressive_baseliner' -> 'Aggressive Baseliner'
  */
 const formatName = (name: string): string => {
@@ -63,6 +63,34 @@ const formatName = (name: string): string => {
     .split('_')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
+};
+
+/**
+ * Get translated play style name with fallback
+ */
+const getPlayStyleLabel = (name: string, t: (key: TranslationKey) => string): string => {
+  const key = `profile.preferences.playStyles.${name}` as TranslationKey;
+  const translated = t(key);
+  // If translation returns the key itself, use formatName as fallback
+  return translated === key ? formatName(name) : translated;
+};
+
+/**
+ * Get translated play attribute name with fallback
+ */
+const getPlayAttributeLabel = (name: string, t: (key: TranslationKey) => string): string => {
+  const key = `profile.preferences.playAttributes.${name}` as TranslationKey;
+  const translated = t(key);
+  return translated === key ? formatName(name) : translated;
+};
+
+/**
+ * Get translated category name with fallback
+ */
+const getCategoryLabel = (category: string, t: (key: TranslationKey) => string): string => {
+  const key = `profile.preferences.playAttributeCategories.${category}` as TranslationKey;
+  const translated = t(key);
+  return translated === key ? category : translated;
 };
 
 export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-preferences'>) {
@@ -92,10 +120,10 @@ export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-pre
     { value: 'both', label: t('profile.preferences.matchTypes.both') },
   ];
 
-  // Build PLAY_STYLES from dynamic options
+  // Build PLAY_STYLES from dynamic options with translations
   const PLAY_STYLES = playStyleOptions.map(style => ({
     value: style.name,
-    label: formatName(style.name),
+    label: getPlayStyleLabel(style.name, t),
     description: style.description,
   }));
 
@@ -368,7 +396,7 @@ export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-pre
               Object.entries(playAttributesByCategory).map(([category, attributes]) => (
                 <View key={category} style={styles.categorySection}>
                   <Text style={[styles.categoryLabel, { color: colors.textMuted }]}>
-                    {category}
+                    {getCategoryLabel(category, t)}
                   </Text>
                   <View style={styles.chipsContainer}>
                     {attributes.map(attribute => (
@@ -393,7 +421,7 @@ export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-pre
                               : []),
                           ]}
                         >
-                          {formatName(attribute.name)}
+                          {getPlayAttributeLabel(attribute.name, t)}
                         </Text>
                       </TouchableOpacity>
                     ))}
