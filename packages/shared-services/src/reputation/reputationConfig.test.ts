@@ -21,14 +21,14 @@ import type { ReputationEventType, ReputationTier } from './reputationTypes';
 
 describe('getTierForScore', () => {
   describe('returns "unknown" when below minimum events', () => {
-    it.each([0, 1, 5, 9])('totalEvents=%i → unknown', events => {
+    it.each([0, 1, 2, 4])('totalEvents=%i → unknown', events => {
       expect(getTierForScore(100, events)).toBe('unknown');
       expect(getTierForScore(50, events)).toBe('unknown');
       expect(getTierForScore(0, events)).toBe('unknown');
     });
   });
 
-  describe('returns correct tier at threshold (totalEvents >= 10)', () => {
+  describe('returns correct tier at threshold (totalEvents >= MIN_EVENTS_FOR_PUBLIC)', () => {
     const sufficient = MIN_EVENTS_FOR_PUBLIC;
 
     it.each([
@@ -126,7 +126,7 @@ describe('formatScore', () => {
 
 describe('isGoodReputation', () => {
   describe('gives benefit of the doubt to new players (< MIN_EVENTS_FOR_PUBLIC)', () => {
-    it.each([0, 1, 5, 9])('returns true for totalEvents=%i regardless of score', events => {
+    it.each([0, 1, 2, 4])('returns true for totalEvents=%i regardless of score', events => {
       expect(isGoodReputation(100, events)).toBe(true);
       expect(isGoodReputation(50, events)).toBe(true);
       expect(isGoodReputation(0, events)).toBe(true);
