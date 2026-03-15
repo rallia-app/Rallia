@@ -473,16 +473,16 @@ const RatingProofs: React.FC = () => {
     <View style={styles.emptyContainer}>
       <Ionicons name="folder-open-outline" size={64} color={colors.textMuted} />
       <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
-        No Proofs Yet
+        {t('profile.ratingProofs.noProofsYet')}
       </Text>
       <Text size="sm" color={colors.textMuted} style={styles.emptyText}>
         {isOwnProfile
-          ? 'Add proof of your rating to help others verify your skill level'
-          : 'This user has not added any rating proofs yet'}
+          ? t('profile.ratingProofs.noProofsDescription')
+          : t('profile.ratingProofs.noProofsOtherUser')}
       </Text>
       {isOwnProfile && (
         <Button variant="primary" onPress={handleAddProof} style={styles.emptyButton}>
-          Add Your First Proof
+          {t('profile.ratingProofs.addFirstProof')}
         </Button>
       )}
     </View>
@@ -542,7 +542,7 @@ const RatingProofs: React.FC = () => {
           {/* Title Section */}
           <View style={[styles.titleSection, { backgroundColor: colors.card }]}>
             <Text size="lg" weight="bold" color={colors.text}>
-              My Rating Proofs
+              {t('profile.ratingProofs.myProofs')}
             </Text>
           </View>
 

@@ -784,3 +784,59 @@ export async function getConversationUnreadCount(
     return count || 0;
   }
 }
+
+/**
+ * Get unread message count for a specific conversation for a player, limited to last 7 days
+ */
+export async function getConversationUnreadCountLast7Days(
+  conversationId: string,
+  playerId: string
+): Promise<number> {
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const sevenDaysAgoISO = sevenDaysAgo.toISOString();
+
+  // Get player's last_read_at timestamp for this conversation
+  const { data: participation, error: participationError } = await supabase
+    .from('conversation_participant')
+    .select('last_read_at')
+    .eq('conversation_id', conversationId)
+    .eq('player_id', playerId)
+    .single();
+
+  // If no participation record exists, that's fine - means they've never read any messages
+  if (participationError && participationError.code !== 'PGRST116') {
+    console.error('Error fetching conversation participation:', participationError);
+  }
+
+  const lastReadAt = participation?.last_read_at;
+
+  if (lastReadAt) {
+    // Count messages after the last read timestamp, from the last 7 days, excluding player's own messages
+    const { count, error } = await supabase
+      .from('message')
+      .select('*', { count: 'exact', head: true })
+      .eq('conversation_id', conversationId)
+      .neq('sender_id', playerId)
+      .gt('created_at', lastReadAt)
+      .gte('created_at', sevenDaysAgoISO);
+    if (error) {
+      console.error('Error counting unread messages (with lastReadAt):', error);
+      return 0;
+    }
+    return count || 0;
+  } else {
+    // Never read - count all messages from last 7 days not from this player
+    const { count, error } = await supabase
+      .from('message')
+      .select('*', { count: 'exact', head: true })
+      .eq('conversation_id', conversationId)
+      .neq('sender_id', playerId)
+      .gte('created_at', sevenDaysAgoISO);
+    if (error) {
+      console.error('Error counting unread messages (no lastReadAt):', error);
+      return 0;
+    }
+    return count || 0;
+  }
+}

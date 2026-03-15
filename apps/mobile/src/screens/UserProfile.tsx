@@ -321,6 +321,7 @@ const UserProfile = () => {
     // Reference requests count
     const fetchReferenceRequests = async () => {
       try {
+        Logger.info('Fetching reference requests count', { userId: user.id });
         const referenceRequestsResult = await withTimeout(
           (async () =>
             supabase
@@ -331,8 +332,17 @@ const UserProfile = () => {
           15000,
           'Failed to load reference requests - connection timeout'
         );
+
+        Logger.info('Reference requests result', {
+          count: referenceRequestsResult.count,
+          error: referenceRequestsResult.error?.message,
+          userId: user.id,
+        });
+
         if (!referenceRequestsResult.error) {
           setPendingReferenceRequestsCount(referenceRequestsResult.count || 0);
+        } else {
+          Logger.error('Reference requests query error', referenceRequestsResult.error);
         }
       } catch (error) {
         Logger.error('Failed to fetch reference requests', error as Error);

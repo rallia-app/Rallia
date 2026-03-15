@@ -117,7 +117,7 @@
     "authFailed": "Authentication failed. Please try again."
   },
   "splash": {
-    "slogan": "Play More, Plan Less."
+    "slogan": "The Power to Play Whenever You Want!"
   },
   "navigation": {
     "home": "Home",
@@ -187,6 +187,9 @@
       "player_left": "Player\nLeft",
       "new_message": "New\nMessage",
       "rating_verified": "Rating\nVerified",
+      "reference_request_received": "Reference\nRequested",
+      "reference_request_accepted": "Reference\nAccepted",
+      "reference_request_declined": "Reference\nDeclined",
       "reminder": "Reminder",
       "payment": "Payment",
       "support": "Support",
@@ -1033,7 +1036,21 @@
         "counterpuncher": "Counterpuncher",
         "aggressive_baseliner": "Aggressive Baseliner",
         "serve_and_volley": "Serve and Volley",
-        "all_court": "All Court"
+        "all_court": "All Court",
+        "banger": "Banger",
+        "soft_game": "Soft Game",
+        "hybrid": "Hybrid",
+        "speedup_specialist": "Speedup Specialist"
+      },
+      "playAttributeCategories": {
+        "Serve": "Serve",
+        "Forehand": "Forehand",
+        "Backhand": "Backhand",
+        "Net Game": "Net Game",
+        "Physical": "Physical",
+        "Mental": "Mental",
+        "Soft Game": "Soft Game",
+        "Power Game": "Power Game"
       },
       "playAttributes": {
         "serve_speed_and_placement": "Serve Speed & Placement",
@@ -1041,7 +1058,35 @@
         "court_coverage": "Court Coverage",
         "forehand_power": "Forehand Power",
         "shot_selection": "Shot Selection",
-        "spin_control": "Spin Control"
+        "spin_control": "Spin Control",
+        "big_serve": "Big Serve",
+        "kick_serve": "Kick Serve",
+        "accurate_placement": "Accurate Placement",
+        "heavy_topspin_forehand": "Heavy Topspin Forehand",
+        "flat_forehand": "Flat Forehand",
+        "inside_out_forehand": "Inside-Out Forehand",
+        "one_handed_backhand": "One-Handed Backhand",
+        "two_handed_backhand": "Two-Handed Backhand",
+        "backhand_slice": "Backhand Slice",
+        "strong_volleyer": "Strong Volleyer",
+        "overhead_smash": "Overhead Smash",
+        "endurance": "Endurance",
+        "quick_reflexes": "Quick Reflexes",
+        "clutch_performer": "Clutch Performer",
+        "consistent": "Consistent",
+        "power_serve": "Power Serve",
+        "spin_serve": "Spin Serve",
+        "dink_master": "Dink Master",
+        "drop_shot": "Drop Shot",
+        "reset_specialist": "Reset Specialist",
+        "drive_specialist": "Drive Specialist",
+        "speedup_attack": "Speedup Attack",
+        "erne_specialist": "Erne Specialist",
+        "quick_hands": "Quick Hands",
+        "court_mobility": "Court Mobility",
+        "stamina": "Stamina",
+        "patient": "Patient",
+        "strategic": "Strategic"
       },
       "favoriteFacilities": "Favorite Courts",
       "selectUpTo3": "Select up to 3 facilities",
@@ -2993,7 +3038,13 @@
     "sportNotAdded": "{sport} not added",
     "preferencesUpdated": "Preferences updated successfully",
     "cannotDeactivate": "Cannot Deactivate Sport",
-    "mustHaveOneSport": "You must have at least one active sport. Please activate another sport before deactivating this one."
+    "mustHaveOneSport": "You must have at least one active sport. Please activate another sport before deactivating this one.",
+    "sportSetupRequired": "Sport Profile Setup Required",
+    "sportSetupRequiredMessage": "To activate {sport}, you must complete your rating and all preferences. If you close any step without saving, the sport profile will not be created.",
+    "sportSetupCancelled": "Sport profile setup cancelled",
+    "sportSetupIncomplete": "Please complete all required fields to save your preferences",
+    "continueSetup": "Continue",
+    "cancelSetup": "Cancel"
   },
   "sportSelector": {
     "selectSport": "Select a sport",
@@ -3338,6 +3389,10 @@
     "crossSportBanner": {
       "unreadNotifications": "You have {count} pending notification(s) in {sportName}",
       "switch": "Switch"
+    },
+    "secondSportBanner": {
+      "message": "Ready to expand your game? Activate your {sportName} profile!",
+      "activate": "Activate"
     },
     "header": {
       "ctaButton": "Become a Beta Tester"

@@ -26,15 +26,13 @@ export async function logGroupActivity(
     return;
   }
 
-  const { error } = await supabase
-    .from('group_activity')
-    .insert({
-      network_id: groupId,
-      activity_type: activityType,
-      player_id: actorId,
-      related_entity_id: targetId || null,
-      metadata: metadata || null,
-    });
+  const { error } = await supabase.from('group_activity').insert({
+    network_id: groupId,
+    activity_type: activityType,
+    player_id: actorId,
+    related_entity_id: targetId || null,
+    metadata: metadata || null,
+  });
 
   if (error) {
     console.error('Error logging activity:', error);
@@ -55,7 +53,8 @@ export async function getGroupActivity(
 ): Promise<GroupActivity[]> {
   const { data, error } = await supabase
     .from('group_activity')
-    .select(`
+    .select(
+      `
       id,
       network_id,
       player_id,
@@ -71,7 +70,8 @@ export async function getGroupActivity(
           profile_picture_url
         )
       )
-    `)
+    `
+    )
     .eq('network_id', groupId)
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -179,18 +179,30 @@ export async function getGroupStats(groupId: string): Promise<GroupStats> {
     .eq('activity_type', 'game_created')
     .gte('created_at', sevenDaysAgoISO);
 
-  // Get message count in last 7 days (from activity log)
-  const { count: messages } = await supabase
-    .from('group_activity')
-    .select('*', { count: 'exact', head: true })
-    .eq('network_id', groupId)
-    .eq('activity_type', 'message_sent')
-    .gte('created_at', sevenDaysAgoISO);
+  // Get message count in last 7 days from actual message table
+  // First, get the network's conversation_id
+  let messageCount = 0;
+  const { data: network } = await supabase
+    .from('network')
+    .select('conversation_id')
+    .eq('id', groupId)
+    .single();
+
+  if (network?.conversation_id) {
+    const { count: messages } = await supabase
+      .from('message')
+      .select('*', { count: 'exact', head: true })
+      .eq('conversation_id', network.conversation_id)
+      .is('deleted_at', null)
+      .gte('created_at', sevenDaysAgoISO);
+
+    messageCount = messages || 0;
+  }
 
   return {
     memberCount: memberCount || 0,
     newMembersLast7Days: newMembers || 0,
     gamesCreatedLast7Days: gamesCreated || 0,
-    messagesLast7Days: messages || 0,
+    messagesLast7Days: messageCount,
   };
 }

@@ -1,6 +1,11 @@
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+﻿export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: '13.0.5';
+  };
   graphql_public: {
     Tables: {
       [_ in never]: never;
@@ -278,6 +283,44 @@ export type Database = {
             columns: ['admin_id'];
             isOneToOne: false;
             referencedRelation: 'admin';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      admin_settings: {
+        Row: {
+          created_at: string | null;
+          description: string | null;
+          id: string;
+          key: string;
+          updated_at: string | null;
+          updated_by: string | null;
+          value: Json;
+        };
+        Insert: {
+          created_at?: string | null;
+          description?: string | null;
+          id?: string;
+          key: string;
+          updated_at?: string | null;
+          updated_by?: string | null;
+          value: Json;
+        };
+        Update: {
+          created_at?: string | null;
+          description?: string | null;
+          id?: string;
+          key?: string;
+          updated_at?: string | null;
+          updated_by?: string | null;
+          value?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'admin_settings_updated_by_fkey';
+            columns: ['updated_by'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
             referencedColumns: ['id'];
           },
         ];
@@ -1298,6 +1341,73 @@ export type Database = {
           },
         ];
       };
+      facility_report: {
+        Row: {
+          admin_notes: string | null;
+          created_at: string;
+          description: string | null;
+          facility_id: string;
+          id: string;
+          priority: string | null;
+          reason: Database['public']['Enums']['facility_report_reason_enum'];
+          reporter_id: string;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          status: Database['public']['Enums']['report_status_enum'];
+          updated_at: string;
+        };
+        Insert: {
+          admin_notes?: string | null;
+          created_at?: string;
+          description?: string | null;
+          facility_id: string;
+          id?: string;
+          priority?: string | null;
+          reason: Database['public']['Enums']['facility_report_reason_enum'];
+          reporter_id: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Database['public']['Enums']['report_status_enum'];
+          updated_at?: string;
+        };
+        Update: {
+          admin_notes?: string | null;
+          created_at?: string;
+          description?: string | null;
+          facility_id?: string;
+          id?: string;
+          priority?: string | null;
+          reason?: Database['public']['Enums']['facility_report_reason_enum'];
+          reporter_id?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Database['public']['Enums']['report_status_enum'];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'facility_report_facility_id_fkey';
+            columns: ['facility_id'];
+            isOneToOne: false;
+            referencedRelation: 'facility';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'facility_report_reporter_id_fkey';
+            columns: ['reporter_id'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'facility_report_reviewed_by_fkey';
+            columns: ['reviewed_by'];
+            isOneToOne: false;
+            referencedRelation: 'admin';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       facility_sport: {
         Row: {
           created_at: string;
@@ -2117,6 +2227,13 @@ export type Database = {
           id: string;
           is_verified: boolean | null;
           match_id: string;
+          rebuttal_deadline: string | null;
+          rebuttal_sets: Json | null;
+          rebuttal_submitted_at: string | null;
+          rebuttal_submitted_by: string | null;
+          rebuttal_team1_score: number | null;
+          rebuttal_team2_score: number | null;
+          rebuttal_winning_team: number | null;
           submitted_by: string | null;
           team1_score: number | null;
           team2_score: number | null;
@@ -2133,6 +2250,13 @@ export type Database = {
           id?: string;
           is_verified?: boolean | null;
           match_id: string;
+          rebuttal_deadline?: string | null;
+          rebuttal_sets?: Json | null;
+          rebuttal_submitted_at?: string | null;
+          rebuttal_submitted_by?: string | null;
+          rebuttal_team1_score?: number | null;
+          rebuttal_team2_score?: number | null;
+          rebuttal_winning_team?: number | null;
           submitted_by?: string | null;
           team1_score?: number | null;
           team2_score?: number | null;
@@ -2149,6 +2273,13 @@ export type Database = {
           id?: string;
           is_verified?: boolean | null;
           match_id?: string;
+          rebuttal_deadline?: string | null;
+          rebuttal_sets?: Json | null;
+          rebuttal_submitted_at?: string | null;
+          rebuttal_submitted_by?: string | null;
+          rebuttal_team1_score?: number | null;
+          rebuttal_team2_score?: number | null;
+          rebuttal_winning_team?: number | null;
           submitted_by?: string | null;
           team1_score?: number | null;
           team2_score?: number | null;
@@ -2169,6 +2300,13 @@ export type Database = {
             columns: ['match_id'];
             isOneToOne: true;
             referencedRelation: 'match';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'match_result_rebuttal_submitted_by_fkey';
+            columns: ['rebuttal_submitted_by'];
+            isOneToOne: false;
+            referencedRelation: 'player';
             referencedColumns: ['id'];
           },
           {
@@ -2461,6 +2599,9 @@ export type Database = {
       network: {
         Row: {
           archived_at: string | null;
+          certification_notes: string | null;
+          certified_at: string | null;
+          certified_by: string | null;
           conversation_id: string | null;
           cover_image_url: string | null;
           created_at: string | null;
@@ -2468,15 +2609,20 @@ export type Database = {
           description: string | null;
           id: string;
           invite_code: string | null;
+          is_certified: boolean | null;
           is_private: boolean | null;
           max_members: number | null;
           member_count: number | null;
           name: string;
           network_type_id: string;
+          sport_id: string | null;
           updated_at: string | null;
         };
         Insert: {
           archived_at?: string | null;
+          certification_notes?: string | null;
+          certified_at?: string | null;
+          certified_by?: string | null;
           conversation_id?: string | null;
           cover_image_url?: string | null;
           created_at?: string | null;
@@ -2484,15 +2630,20 @@ export type Database = {
           description?: string | null;
           id?: string;
           invite_code?: string | null;
+          is_certified?: boolean | null;
           is_private?: boolean | null;
           max_members?: number | null;
           member_count?: number | null;
           name: string;
           network_type_id: string;
+          sport_id?: string | null;
           updated_at?: string | null;
         };
         Update: {
           archived_at?: string | null;
+          certification_notes?: string | null;
+          certified_at?: string | null;
+          certified_by?: string | null;
           conversation_id?: string | null;
           cover_image_url?: string | null;
           created_at?: string | null;
@@ -2500,14 +2651,23 @@ export type Database = {
           description?: string | null;
           id?: string;
           invite_code?: string | null;
+          is_certified?: boolean | null;
           is_private?: boolean | null;
           max_members?: number | null;
           member_count?: number | null;
           name?: string;
           network_type_id?: string;
+          sport_id?: string | null;
           updated_at?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: 'network_certified_by_fkey';
+            columns: ['certified_by'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
+          },
           {
             foreignKeyName: 'network_conversation_id_fkey';
             columns: ['conversation_id'];
@@ -2527,6 +2687,107 @@ export type Database = {
             columns: ['network_type_id'];
             isOneToOne: false;
             referencedRelation: 'network_type';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'network_sport_id_fkey';
+            columns: ['sport_id'];
+            isOneToOne: false;
+            referencedRelation: 'sport';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      network_activity: {
+        Row: {
+          activity_type: string;
+          actor_id: string | null;
+          created_at: string;
+          id: string;
+          metadata: Json | null;
+          network_id: string;
+          target_id: string | null;
+        };
+        Insert: {
+          activity_type: string;
+          actor_id?: string | null;
+          created_at?: string;
+          id?: string;
+          metadata?: Json | null;
+          network_id: string;
+          target_id?: string | null;
+        };
+        Update: {
+          activity_type?: string;
+          actor_id?: string | null;
+          created_at?: string;
+          id?: string;
+          metadata?: Json | null;
+          network_id?: string;
+          target_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'network_activity_actor_id_fkey';
+            columns: ['actor_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'network_activity_network_id_fkey';
+            columns: ['network_id'];
+            isOneToOne: false;
+            referencedRelation: 'network';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'network_activity_target_id_fkey';
+            columns: ['target_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      network_favorite_facility: {
+        Row: {
+          created_at: string;
+          display_order: number;
+          facility_id: string;
+          id: string;
+          network_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          display_order?: number;
+          facility_id: string;
+          id?: string;
+          network_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          display_order?: number;
+          facility_id?: string;
+          id?: string;
+          network_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'network_favorite_facility_facility_id_fkey';
+            columns: ['facility_id'];
+            isOneToOne: false;
+            referencedRelation: 'facility';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'network_favorite_facility_network_id_fkey';
+            columns: ['network_id'];
+            isOneToOne: false;
+            referencedRelation: 'network';
             referencedColumns: ['id'];
           },
         ];
@@ -4811,6 +5072,20 @@ export type Database = {
         };
         Relationships: [
           {
+            foreignKeyName: 'rating_reference_request_referee_id_fkey';
+            columns: ['referee_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'rating_reference_request_requester_id_fkey';
+            columns: ['requester_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+          {
             foreignKeyName: 'rating_reference_requests_player_rating_score_id_fkey';
             columns: ['player_rating_score_id'];
             isOneToOne: false;
@@ -5023,60 +5298,6 @@ export type Database = {
           {
             foreignKeyName: 'referral_fingerprint_matched_player_id_fkey';
             columns: ['matched_player_id'];
-            isOneToOne: false;
-            referencedRelation: 'profile';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-      referral_invite: {
-        Row: {
-          channel: string;
-          converted_player_id: string | null;
-          created_at: string;
-          id: string;
-          recipient_email: string | null;
-          recipient_name: string | null;
-          recipient_phone: string | null;
-          referrer_id: string;
-          status: string;
-          updated_at: string;
-        };
-        Insert: {
-          channel: string;
-          converted_player_id?: string | null;
-          created_at?: string;
-          id?: string;
-          recipient_email?: string | null;
-          recipient_name?: string | null;
-          recipient_phone?: string | null;
-          referrer_id: string;
-          status?: string;
-          updated_at?: string;
-        };
-        Update: {
-          channel?: string;
-          converted_player_id?: string | null;
-          created_at?: string;
-          id?: string;
-          recipient_email?: string | null;
-          recipient_name?: string | null;
-          recipient_phone?: string | null;
-          referrer_id?: string;
-          status?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'referral_invite_converted_player_id_fkey';
-            columns: ['converted_player_id'];
-            isOneToOne: false;
-            referencedRelation: 'profile';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'referral_invite_referrer_id_fkey';
-            columns: ['referrer_id'];
             isOneToOne: false;
             referencedRelation: 'profile';
             referencedColumns: ['id'];
@@ -5694,6 +5915,22 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      accept_rebuttal_score: {
+        Args: { p_match_result_id: string; p_player_id: string };
+        Returns: boolean;
+      };
+      admin_certify_network: {
+        Args: {
+          p_is_certified: boolean;
+          p_network_id: string;
+          p_notes?: string;
+        };
+        Returns: Json;
+      };
+      admin_delete_network: {
+        Args: { p_network_id: string; p_reason?: string };
+        Returns: Json;
+      };
       approve_community_member: {
         Args: {
           p_approver_id?: string;
@@ -5732,10 +5969,6 @@ export type Database = {
           membership_status: string;
         }[];
       };
-      check_existing_players_by_email: {
-        Args: { p_emails: string[] };
-        Returns: string[];
-      };
       check_peer_verification_threshold: {
         Args: { p_player_id: string; p_sport_id: string; p_threshold?: number };
         Returns: {
@@ -5771,15 +6004,15 @@ export type Database = {
         Args: { p_admin_id: string; p_alert_id: string };
         Returns: boolean;
       };
-      dispute_match_score: {
-        Args: {
-          p_match_result_id: string;
-          p_player_id: string;
-          p_reason?: string;
-        };
+      dispute_rebuttal_score: {
+        Args: { p_match_result_id: string; p_player_id: string };
         Returns: boolean;
       };
       expire_old_reference_requests: { Args: never; Returns: number };
+      find_direct_conversation: {
+        Args: { p_player1: string; p_player2: string };
+        Returns: string;
+      };
       generate_daily_analytics_snapshot: { Args: never; Returns: undefined };
       generate_unique_invite_code: { Args: never; Returns: string };
       generate_unique_referral_code: { Args: never; Returns: string };
@@ -5794,11 +6027,10 @@ export type Database = {
       generate_weekly_matches_for_player: {
         Args: { p_player_id: string; p_target_match_count?: number };
         Returns: {
-          end_time: string;
           facility_name: string;
-          host_name: string;
           match_date: string;
           match_id: string;
+          opponent_name: string;
           sport_name: string;
           start_time: string;
         }[];
@@ -5847,16 +6079,51 @@ export type Database = {
           admin_email: string;
           admin_id: string;
           admin_name: string;
-          admin_role: string;
           created_at: string;
           entity_id: string;
           entity_name: string;
           entity_type: string;
           id: string;
+          ip_address: unknown;
           metadata: Json;
           new_data: Json;
           old_data: Json;
           severity: string;
+          user_agent: string;
+        }[];
+      };
+      get_admin_network_detail: {
+        Args: { p_network_id: string };
+        Returns: Json;
+      };
+      get_admin_networks: {
+        Args: {
+          p_is_certified?: boolean;
+          p_is_private?: boolean;
+          p_limit?: number;
+          p_network_type?: string;
+          p_offset?: number;
+          p_search?: string;
+          p_sport_id?: string;
+        };
+        Returns: {
+          certified_at: string;
+          cover_image_url: string;
+          created_at: string;
+          created_by: string;
+          creator_name: string;
+          description: string;
+          id: string;
+          is_certified: boolean;
+          is_private: boolean;
+          max_members: number;
+          member_count: number;
+          name: string;
+          network_type: string;
+          network_type_display: string;
+          sport_id: string;
+          sport_name: string;
+          total_count: number;
         }[];
       };
       get_admin_push_tokens: {
@@ -5867,6 +6134,7 @@ export type Database = {
           push_token: string;
         }[];
       };
+      get_admin_setting: { Args: { p_key: string }; Returns: Json };
       get_alert_counts: {
         Args: { p_admin_id: string };
         Returns: {
@@ -6148,18 +6416,6 @@ export type Database = {
         Args: { p_player_id: string };
         Returns: string;
       };
-      get_org_notification_recipients: {
-        Args: {
-          p_channel?: Database['public']['Enums']['delivery_channel_enum'];
-          p_notification_type: Database['public']['Enums']['notification_type_enum'];
-          p_organization_id: string;
-        };
-        Returns: {
-          email: string;
-          full_name: string;
-          user_id: string;
-        }[];
-      };
       get_participants_for_check_in_reminder: {
         Args: { p_window_end: string; p_window_start: string };
         Returns: {
@@ -6270,18 +6526,111 @@ export type Database = {
         }[];
       };
       get_player_communities: {
-        Args: { p_player_id: string };
+        Args: { p_player_id: string; p_sport_id?: string };
         Returns: {
           cover_image_url: string;
           created_at: string;
           created_by: string;
           description: string;
           id: string;
+          is_certified: boolean;
           is_private: boolean;
           member_count: number;
           membership_role: string;
           membership_status: string;
           name: string;
+          sport_id: string;
+        }[];
+      };
+      get_player_conversations_filtered: {
+        Args: {
+          p_filter?: string;
+          p_limit?: number;
+          p_offset?: number;
+          p_player_id: string;
+          p_search?: string;
+        };
+        Returns: {
+          conversation_type: string;
+          created_at: string;
+          id: string;
+          is_archived: boolean;
+          is_muted: boolean;
+          is_pinned: boolean;
+          last_message_at: string;
+          last_message_content: string;
+          last_message_id: string;
+          last_message_sender_first_name: string;
+          last_message_sender_id: string;
+          last_read_at: string;
+          match_date: string;
+          match_format: string;
+          match_id: string;
+          match_sport_name: string;
+          network_cover_image_url: string;
+          network_id: string;
+          network_type: string;
+          other_participant_first_name: string;
+          other_participant_id: string;
+          other_participant_last_name: string;
+          other_participant_last_seen_at: string;
+          other_participant_picture_url: string;
+          participant_count: number;
+          picture_url: string;
+          title: string;
+          unread_count: number;
+          updated_at: string;
+        }[];
+      };
+      get_player_conversations_optimized: {
+        Args: { p_player_id: string };
+        Returns: {
+          conversation_type: string;
+          created_at: string;
+          id: string;
+          is_archived: boolean;
+          is_muted: boolean;
+          is_pinned: boolean;
+          last_message_at: string;
+          last_message_content: string;
+          last_message_id: string;
+          last_message_sender_first_name: string;
+          last_message_sender_id: string;
+          last_read_at: string;
+          match_date: string;
+          match_format: string;
+          match_id: string;
+          match_sport_name: string;
+          network_cover_image_url: string;
+          network_id: string;
+          network_type: string;
+          other_participant_first_name: string;
+          other_participant_id: string;
+          other_participant_last_name: string;
+          other_participant_last_seen_at: string;
+          other_participant_picture_url: string;
+          participant_count: number;
+          picture_url: string;
+          title: string;
+          unread_count: number;
+          updated_at: string;
+        }[];
+      };
+      get_player_groups: {
+        Args: { p_player_id: string; p_sport_id?: string };
+        Returns: {
+          conversation_id: string;
+          cover_image_url: string;
+          created_at: string;
+          created_by: string;
+          description: string;
+          id: string;
+          is_private: boolean;
+          max_members: number;
+          member_count: number;
+          name: string;
+          sport_id: string;
+          updated_at: string;
         }[];
       };
       get_player_matches: {
@@ -6388,18 +6737,21 @@ export type Database = {
         }[];
       };
       get_public_communities: {
-        Args: { p_player_id?: string };
+        Args: { p_player_id?: string; p_sport_id?: string };
         Returns: {
           cover_image_url: string;
           created_at: string;
           created_by: string;
           description: string;
           id: string;
+          is_certified: boolean;
           is_member: boolean;
+          is_private: boolean;
           member_count: number;
           membership_role: string;
           membership_status: string;
           name: string;
+          sport_id: string;
         }[];
       };
       get_rating_distribution: {
@@ -6543,25 +6895,15 @@ export type Database = {
           unique_players: number;
         }[];
       };
-      get_sport_distribution:
-        | {
-            Args: never;
-            Returns: {
-              percentage: number;
-              player_count: number;
-              sport_id: string;
-              sport_name: string;
-            }[];
-          }
-        | {
-            Args: { p_end_date?: string; p_start_date?: string };
-            Returns: {
-              percentage: number;
-              sport_id: string;
-              sport_name: string;
-              user_count: number;
-            }[];
-          };
+      get_sport_distribution: {
+        Args: { p_end_date?: string; p_start_date?: string };
+        Returns: {
+          percentage: number;
+          sport_id: string;
+          sport_name: string;
+          user_count: number;
+        }[];
+      };
       get_sport_facility_data: {
         Args: { p_sport_id?: string };
         Returns: {
@@ -6613,6 +6955,10 @@ export type Database = {
           network_id: string;
           network_name: string;
         }[];
+      };
+      get_unread_conversations_count: {
+        Args: { p_player_id: string };
+        Returns: number;
       };
       get_user_conversation_ids: {
         Args: { user_id: string };
@@ -6824,6 +7170,18 @@ export type Database = {
         Args: { p_participant_ids: string[] };
         Returns: number;
       };
+      mark_message_as_delivered: {
+        Args: { p_message_id: string };
+        Returns: undefined;
+      };
+      mark_messages_as_delivered: {
+        Args: { p_conversation_id: string; p_recipient_id: string };
+        Returns: undefined;
+      };
+      mark_messages_as_read: {
+        Args: { p_conversation_id: string; p_reader_id: string };
+        Returns: undefined;
+      };
       match_referral_fingerprint: {
         Args: {
           p_device_fingerprint: string;
@@ -6835,6 +7193,15 @@ export type Database = {
       parse_match_duration_to_minutes: {
         Args: { p_duration: string };
         Returns: number;
+      };
+      propose_rebuttal_score: {
+        Args: {
+          p_match_result_id: string;
+          p_player_id: string;
+          p_sets: Json;
+          p_winning_team: number;
+        };
+        Returns: boolean;
       };
       recalculate_player_reputation: {
         Args: {
@@ -6949,6 +7316,8 @@ export type Database = {
           facility_type: string;
           id: string;
           is_first_come_first_serve: boolean;
+          latitude: number;
+          longitude: number;
           membership_required: boolean;
           name: string;
           sport_ids: string[];
@@ -7006,7 +7375,9 @@ export type Database = {
           p_search_query?: string;
           p_skill_level?: string;
           p_specific_date?: string;
+          p_specific_time?: string;
           p_sport_id: string;
+          p_spots_available?: string;
           p_time_of_day?: string;
           p_user_gender?: string;
         };
@@ -7056,6 +7427,10 @@ export type Database = {
       unregister_admin_device: {
         Args: { p_admin_id: string; p_push_token: string };
         Returns: boolean;
+      };
+      update_admin_setting: {
+        Args: { p_key: string; p_value: Json };
+        Returns: Json;
       };
       update_registration_paid_amount: {
         Args: { p_registration_id: string };
@@ -7112,7 +7487,15 @@ export type Database = {
         | 'awaiting_approval';
       booking_type_enum: 'player' | 'program_session' | 'maintenance';
       cancellation_reason_enum: 'weather' | 'court_unavailable' | 'emergency' | 'other';
-      conversation_type: 'direct' | 'group' | 'match' | 'announcement';
+      conversation_type:
+        | 'direct'
+        | 'group'
+        | 'match'
+        | 'announcement'
+        | 'group_chat'
+        | 'player_group'
+        | 'community'
+        | 'club';
       cost_split_type_enum: 'host_pays' | 'split_equal' | 'custom';
       country_enum: 'Canada' | 'United States';
       court_status_enum: 'reserved' | 'to_reserve';
@@ -7135,6 +7518,14 @@ export type Database = {
         | 'skipped_preference'
         | 'skipped_missing_contact';
       facility_contact_type_enum: 'general' | 'reservation' | 'maintenance' | 'other';
+      facility_report_reason_enum:
+        | 'wrong_address'
+        | 'incorrect_hours'
+        | 'wrong_court_count'
+        | 'wrong_surface_types'
+        | 'outdated_contact_info'
+        | 'wrong_amenities'
+        | 'other';
       facility_type_enum:
         | 'park'
         | 'club'
@@ -7215,9 +7606,11 @@ export type Database = {
         | 'match_cancelled'
         | 'match_updated'
         | 'match_starting_soon'
+        | 'match_completed'
         | 'player_kicked'
         | 'player_left'
         | 'new_message'
+        | 'friend_request'
         | 'rating_verified'
         | 'feedback_request'
         | 'score_confirmation'
@@ -7248,6 +7641,12 @@ export type Database = {
         | 'program_payment_received'
         | 'match_check_in_available'
         | 'match_spot_opened'
+        | 'community_join_request'
+        | 'community_join_accepted'
+        | 'community_join_rejected'
+        | 'reference_request_received'
+        | 'reference_request_accepted'
+        | 'reference_request_declined'
         | 'nearby_match_available';
       organization_nature_enum: 'public' | 'private';
       organization_type: 'club' | 'facility' | 'league' | 'academy' | 'association';
@@ -7519,7 +7918,16 @@ export const Constants = {
       ],
       booking_type_enum: ['player', 'program_session', 'maintenance'],
       cancellation_reason_enum: ['weather', 'court_unavailable', 'emergency', 'other'],
-      conversation_type: ['direct', 'group', 'match', 'announcement'],
+      conversation_type: [
+        'direct',
+        'group',
+        'match',
+        'announcement',
+        'group_chat',
+        'player_group',
+        'community',
+        'club',
+      ],
       cost_split_type_enum: ['host_pays', 'split_equal', 'custom'],
       country_enum: ['Canada', 'United States'],
       court_status_enum: ['reserved', 'to_reserve'],
@@ -7536,6 +7944,15 @@ export const Constants = {
         'skipped_missing_contact',
       ],
       facility_contact_type_enum: ['general', 'reservation', 'maintenance', 'other'],
+      facility_report_reason_enum: [
+        'wrong_address',
+        'incorrect_hours',
+        'wrong_court_count',
+        'wrong_surface_types',
+        'outdated_contact_info',
+        'wrong_amenities',
+        'other',
+      ],
       facility_type_enum: [
         'park',
         'club',
@@ -7611,9 +8028,11 @@ export const Constants = {
         'match_cancelled',
         'match_updated',
         'match_starting_soon',
+        'match_completed',
         'player_kicked',
         'player_left',
         'new_message',
+        'friend_request',
         'rating_verified',
         'feedback_request',
         'score_confirmation',
@@ -7644,6 +8063,12 @@ export const Constants = {
         'program_payment_received',
         'match_check_in_available',
         'match_spot_opened',
+        'community_join_request',
+        'community_join_accepted',
+        'community_join_rejected',
+        'reference_request_received',
+        'reference_request_accepted',
+        'reference_request_declined',
         'nearby_match_available',
       ],
       organization_nature_enum: ['public', 'private'],

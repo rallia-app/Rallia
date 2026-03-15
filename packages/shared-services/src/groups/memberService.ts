@@ -275,34 +275,67 @@ export async function removeGroupMember(
 
 /**
  * Leave a group (self-removal)
+ * If the leaving member is the LAST moderator, all remaining active members will be promoted to moderator.
  */
 export async function leaveGroup(groupId: string, playerId: string): Promise<void> {
-  const memberInfo = await getGroupMemberInfo(groupId, playerId);
+  // Check if the player is a moderator by querying their own membership directly
+  // This avoids the problematic getGroupMemberInfo which can fail due to RLS edge cases
+  const { data: ownMembership, error: membershipError } = await supabase
+    .from('network_member')
+    .select('id, role, status')
+    .eq('network_id', groupId)
+    .eq('player_id', playerId)
+    .eq('status', 'active')
+    .maybeSingle();
 
-  if (!memberInfo || memberInfo.status !== 'active') {
-    throw new Error('You are not a member of this group');
-  }
+  // If we can't find an active membership, try the update anyway (like community leave)
+  // The update will fail if the user isn't actually a member
+  const isModerator = ownMembership?.role === 'moderator';
 
-  // Check if last moderator
-  if (memberInfo.role === 'moderator') {
-    const group = await getGroupWithMembersInternal(groupId);
-    const moderators = group?.members.filter(m => m.role === 'moderator') || [];
-    if (moderators.length <= 1) {
-      throw new Error(
-        'Cannot leave as the last moderator. Transfer moderator role first or delete the group.'
-      );
+  // If leaving as moderator, check if there are other moderators remaining
+  if (isModerator) {
+    // Count other active moderators (excluding the leaving player)
+    const { count: otherModeratorCount, error: countError } = await supabase
+      .from('network_member')
+      .select('id', { count: 'exact', head: true })
+      .eq('network_id', groupId)
+      .eq('role', 'moderator')
+      .eq('status', 'active')
+      .neq('player_id', playerId);
+
+    // Only promote all remaining members if this is the LAST moderator
+    if (!countError && (otherModeratorCount === null || otherModeratorCount === 0)) {
+      const { error: promoteError } = await supabase
+        .from('network_member')
+        .update({ role: 'moderator', updated_at: new Date().toISOString() })
+        .eq('network_id', groupId)
+        .eq('status', 'active')
+        .neq('player_id', playerId);
+
+      if (promoteError) {
+        console.error('Error promoting remaining members to moderator:', promoteError);
+        // Continue with leave - promotion failure shouldn't block leaving
+      }
     }
   }
 
-  const { error } = await supabase
+  // Perform the leave operation (set status to 'removed')
+  const { data: updateData, error } = await supabase
     .from('network_member')
     .update({ status: 'removed', updated_at: new Date().toISOString() })
     .eq('network_id', groupId)
-    .eq('player_id', playerId);
+    .eq('player_id', playerId)
+    .eq('status', 'active')
+    .select('id');
 
   if (error) {
     console.error('Error leaving group:', error);
     throw new Error(error.message);
+  }
+
+  // If no rows were updated, the player wasn't an active member
+  if (!updateData || updateData.length === 0) {
+    throw new Error('You are not a member of this group');
   }
 }
 

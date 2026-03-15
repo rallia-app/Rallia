@@ -84,6 +84,11 @@ const IncomingReferenceRequests: React.FC = () => {
       } = await supabase.auth.getUser();
       if (!user) return;
 
+      Logger.info('Fetching incoming reference requests', {
+        userId: user.id,
+        currentDate: new Date().toISOString(),
+      });
+
       // Fetch pending reference requests where current user is the referee
       const { data: requestsData, error } = await supabase
         .from('rating_reference_request')
@@ -102,6 +107,12 @@ const IncomingReferenceRequests: React.FC = () => {
         .eq('status', 'pending')
         .gte('expires_at', new Date().toISOString()) // Not expired
         .order('created_at', { ascending: false });
+
+      Logger.info('Incoming reference requests result', {
+        count: requestsData?.length || 0,
+        error: error?.message,
+        userId: user.id,
+      });
 
       if (error) throw error;
 
