@@ -135,7 +135,7 @@ export const TIER_CONFIGS: Record<ReputationTier, TierConfig> = {
  * This is more comprehensive than matches alone as it includes reviews,
  * reports, and other interactions.
  */
-export const MIN_EVENTS_FOR_PUBLIC = 10;
+export const MIN_EVENTS_FOR_PUBLIC = 5;
 
 /**
  * Base reputation score for new players

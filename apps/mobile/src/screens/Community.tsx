@@ -98,14 +98,15 @@ const Community = () => {
     navigation.navigate('Communities');
   }, [navigation]);
 
-  // const handleTournaments = useCallback(() => {
-  //   lightHaptic();
-  //   // TODO: Implement tournaments functionality
-  //   Alert.alert(
-  //     t('community.tournaments'),
-  //     t('community.tournamentsComingSoon')
-  //   );
-  // }, [t]);
+  const handleTournaments = useCallback(() => {
+    lightHaptic();
+    Alert.alert(t('community.tournaments'), t('community.tournamentsComingSoon'));
+  }, [t]);
+
+  const handleLeagues = useCallback(() => {
+    lightHaptic();
+    Alert.alert(t('community.leagues'), t('community.leaguesComingSoon'));
+  }, [t]);
 
   // Action buttons configuration
   const actionButtons: ActionButton[] = useMemo(
@@ -128,14 +129,20 @@ const Community = () => {
         label: t('community.communities'),
         onPress: handleCommunities,
       },
-      // {
-      //   id: 'tournaments',
-      //   icon: 'trophy-outline',
-      //   label: t('community.tournaments'),
-      //   onPress: handleTournaments,
-      // },
+      {
+        id: 'tournaments',
+        icon: 'trophy-outline',
+        label: t('community.tournaments'),
+        onPress: handleTournaments,
+      },
+      {
+        id: 'leagues',
+        icon: 'podium-outline',
+        label: t('community.leagues'),
+        onPress: handleLeagues,
+      },
     ],
-    [handleShareLists, handleGroups, handleCommunities, t]
+    [handleShareLists, handleGroups, handleCommunities, handleTournaments, handleLeagues, t]
   );
 
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
@@ -154,7 +161,7 @@ const Community = () => {
       horizontal
       showsHorizontalScrollIndicator={false}
       style={styles.actionButtonsScrollView}
-      contentContainerStyle={[styles.actionButtonsContainer, { minWidth: windowWidth }]}
+      contentContainerStyle={styles.actionButtonsContainer}
     >
       {actionButtons.map(button => (
         <TouchableOpacity
@@ -166,7 +173,15 @@ const Community = () => {
           <View style={[styles.actionButtonIcon, { backgroundColor: buttonColors.background }]}>
             <Ionicons name={button.icon} size={28} color={buttonColors.iconColor} />
           </View>
-          <Text size="xs" weight="medium" color={colors.text} style={styles.actionButtonLabel}>
+          <Text
+            size="xs"
+            weight="medium"
+            color={colors.text}
+            style={styles.actionButtonLabel}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+          >
             {button.label}
           </Text>
         </TouchableOpacity>
@@ -209,13 +224,14 @@ const styles = StyleSheet.create({
   },
   actionButtonsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-evenly',
-    paddingHorizontal: spacingPixels[2],
+    gap: spacingPixels[6],
+    paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[2],
     paddingBottom: spacingPixels[2],
   },
   actionButton: {
     alignItems: 'center',
+    width: 80,
   },
   actionButtonIcon: {
     width: 64,
