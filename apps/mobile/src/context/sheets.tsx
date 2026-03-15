@@ -426,6 +426,7 @@ declare module 'react-native-actions-sheet' {
         mode?: 'onboarding' | 'edit';
         initialRating?: string;
         onSave?: (ratingId: string) => void;
+        onDismiss?: () => void;
         onContinue?: (rating: string) => void;
         onBack?: () => void;
         currentStep?: number;
@@ -437,6 +438,7 @@ declare module 'react-native-actions-sheet' {
         mode?: 'onboarding' | 'edit';
         initialRating?: string;
         onSave?: (ratingId: string) => void;
+        onDismiss?: () => void;
         onContinue?: (rating: string) => void;
         onBack?: () => void;
         currentStep?: number;
@@ -462,6 +464,8 @@ declare module 'react-native-actions-sheet' {
           playStyle?: string;
           playAttributes?: string[];
         }) => void;
+        onDismiss?: () => void;
+        requireAllFields?: boolean;
         initialPreferences?: {
           matchDuration?: string;
           matchType?: string;
@@ -494,6 +498,8 @@ declare module 'react-native-actions-sheet' {
           playStyle?: string;
           playAttributes?: string[];
         }) => void;
+        onDismiss?: () => void;
+        requireAllFields?: boolean;
         initialPreferences?: {
           matchDuration?: string;
           matchType?: string;

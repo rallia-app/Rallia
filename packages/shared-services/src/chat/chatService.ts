@@ -56,6 +56,7 @@ export {
   getConversationByNetworkId,
   getNetworkByConversationId,
   getConversationUnreadCount,
+  getConversationUnreadCountLast7Days,
 } from './conversationService';
 
 export type {

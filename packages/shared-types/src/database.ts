@@ -244,15 +244,18 @@ export type MatchReport = TableRow<'match_report'>;
 
 /** Match result with nested set scores and confirmations (from getMatchWithDetails) */
 export interface MatchResultWithSets extends MatchResult {
+  // Additional fields not in base MatchResult
   sets?: MatchSet[];
   confirmations?: Array<{ player_id: string; action: 'confirmed' | 'disputed' }>;
-  rebuttal_submitted_by?: string | null;
-  rebuttal_team1_score?: number | null;
-  rebuttal_team2_score?: number | null;
-  rebuttal_winning_team?: number | null;
-  rebuttal_sets?: Array<{ set_number: number; team1_score: number; team2_score: number }> | null;
-  rebuttal_deadline?: string | null;
+  // Rebuttal fields are inherited from MatchResult - only adding typed overrides as intersection
 }
+
+/** Helper type for typed rebuttal sets */
+export type MatchResultRebuttalSets = Array<{
+  set_number: number;
+  team1_score: number;
+  team2_score: number;
+}>;
 
 // Notification
 export type Notification = TableRow<'notification'>;

@@ -47,6 +47,7 @@ import {
   useGroupRealtime,
   useScoreConfirmationsRealtime,
   useConversationUnreadCount,
+  useConversationUnreadCountLast7Days,
   useConversationUnreadRealtime,
   useSports,
   usePlayer,
@@ -164,8 +165,14 @@ export default function GroupDetailScreen() {
       20
     );
 
-  // Get unread message count for the group chat
+  // Get unread message count for the group chat badge (all unread)
   const { data: unreadChatCount } = useConversationUnreadCount(
+    group?.conversation_id ?? undefined,
+    playerId
+  );
+
+  // Get unread message count for the last 7 days stats section
+  const { data: unreadChatCountLast7Days } = useConversationUnreadCountLast7Days(
     group?.conversation_id ?? undefined,
     playerId
   );
@@ -454,7 +461,8 @@ export default function GroupDetailScreen() {
     // Calculate activity ring segments
     const membersCount = stats?.newMembersLast7Days || 0;
     const gamesCount = stats?.gamesCreatedLast7Days || 0;
-    const messagesCount = stats?.messagesLast7Days || 0;
+    // Use actual unread count from last 7 days for "new messages" stat
+    const messagesCount = unreadChatCountLast7Days ?? 0;
     const totalActivities = membersCount + gamesCount + messagesCount;
 
     // SVG circle properties

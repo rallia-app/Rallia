@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -67,10 +67,10 @@ const getNtrpDescriptionKey = (scoreValue: number): TranslationKey => {
 
 export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>) {
   const mode = payload?.mode || 'onboarding';
-  const onClose = () => SheetManager.hide('tennis-rating');
   const onBack = payload?.onBack;
   const onContinue = payload?.onContinue;
   const onSave = payload?.onSave;
+  const onDismiss = payload?.onDismiss;
   const currentStep = payload?.currentStep || 1;
   const totalSteps = payload?.totalSteps || 8;
   const initialRating = payload?.initialRating;
@@ -80,6 +80,14 @@ export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Track if save was called to distinguish between saved close and dismissed close
+  const didSaveRef = useRef(false);
+
+  const onClose = () => {
+    // onBeforeClose will handle calling onDismiss if not saved
+    SheetManager.hide('tennis-rating');
+  };
 
   // Load ratings from database when component mounts
   useEffect(() => {
@@ -151,6 +159,7 @@ export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>
 
     // Edit mode: use the onSave callback
     if (mode === 'edit' && onSave) {
+      didSaveRef.current = true; // Mark as saved before closing
       onSave(selectedRating);
       SheetManager.hide('tennis-rating');
       return;
@@ -219,6 +228,12 @@ export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>
       gestureEnabled
       containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+      onBeforeClose={() => {
+        // Call onDismiss if sheet is closed without saving (in edit mode with onDismiss callback)
+        if (mode === 'edit' && onDismiss && !didSaveRef.current) {
+          onDismiss();
+        }
+      }}
     >
       <View style={styles.modalContent}>
         {/* Header */}

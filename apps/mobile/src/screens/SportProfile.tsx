@@ -639,6 +639,152 @@ const SportProfile = () => {
     });
   };
 
+  /**
+   * Starts the mandatory sport setup flow for first-time sport activation.
+   * Creates player_sport entry, then shows rating overlay, then preferences overlay.
+   * If user dismisses any step, the player_sport entry is deleted.
+   */
+  const startMandatorySportSetup = async (playerId: string) => {
+    try {
+      // Step 1: Create player_sport entry
+      const insertResult = await withTimeout(
+        (async () =>
+          supabase
+            .from('player_sport')
+            .insert({
+              player_id: playerId,
+              sport_id: sportId,
+              is_active: true,
+              is_primary: false,
+            })
+            .select('id')
+            .single())(),
+        10000,
+        'Failed to create sport profile - connection timeout'
+      );
+
+      if (insertResult.error) throw insertResult.error;
+      const { data: newRecord } = insertResult;
+      const newPlayerSportId = newRecord?.id;
+      if (!newPlayerSportId) {
+        throw new Error('Failed to create player sport entry');
+      }
+
+      // IMPORTANT: Set playerSportId immediately so handleSavePreferences can use it
+      setPlayerSportId(newPlayerSportId);
+
+      // Track the new player sport ID for potential cleanup
+      let setupCompleted = false;
+
+      // Cleanup function to delete player_sport if setup is cancelled
+      const cleanupOnCancel = async () => {
+        if (setupCompleted) return; // Don't cleanup if already completed
+        try {
+          await supabase.from('player_sport').delete().eq('id', newPlayerSportId);
+          toast.info(t('alerts.sportSetupCancelled'));
+          // Reset UI state
+          setPlayerSportId(null);
+          setIsActive(false);
+        } catch (cleanupError) {
+          Logger.error('Failed to cleanup player_sport on cancel', cleanupError as Error, {
+            playerSportId: newPlayerSportId,
+          });
+        }
+      };
+
+      // Step 2: Show rating overlay (mandatory)
+      const showRatingOverlay = () => {
+        const handleRatingSaved = async (ratingScoreId: string) => {
+          // Save the rating
+          await handleSaveRating(ratingScoreId);
+
+          // Step 3: Show preferences overlay (mandatory) after rating is saved
+          setTimeout(() => {
+            const handlePreferencesSaved = () => {
+              // Mark setup as completed
+              setupCompleted = true;
+
+              // Update UI state
+              setPlayerSportId(newPlayerSportId);
+              setIsActive(true);
+
+              // Show success message
+              toast.success(t('alerts.sportAdded', { sport: sportName }));
+
+              // Refresh context and data
+              refetchSportContext();
+              fetchSportProfileData();
+            };
+
+            if (sportName.toLowerCase() === 'tennis') {
+              SheetManager.show('tennis-preferences', {
+                payload: {
+                  onSave: async preferences => {
+                    await handleSavePreferences(preferences, newPlayerSportId);
+                    handlePreferencesSaved();
+                  },
+                  onDismiss: cleanupOnCancel,
+                  requireAllFields: true,
+                  initialPreferences: {},
+                  playStyleOptions,
+                  playAttributesByCategory,
+                  loadingPlayOptions,
+                  playerId,
+                  sportId,
+                  latitude: location?.latitude ?? null,
+                  longitude: location?.longitude ?? null,
+                },
+              });
+            } else if (sportName.toLowerCase() === 'pickleball') {
+              SheetManager.show('pickleball-preferences', {
+                payload: {
+                  onSave: async preferences => {
+                    await handleSavePreferences(preferences, newPlayerSportId);
+                    handlePreferencesSaved();
+                  },
+                  onDismiss: cleanupOnCancel,
+                  requireAllFields: true,
+                  initialPreferences: {},
+                  playStyleOptions,
+                  playAttributesByCategory,
+                  loadingPlayOptions,
+                  playerId,
+                  sportId,
+                  latitude: location?.latitude ?? null,
+                  longitude: location?.longitude ?? null,
+                },
+              });
+            }
+          }, 500);
+        };
+
+        if (sportName.toLowerCase() === 'tennis') {
+          SheetManager.show('tennis-rating', {
+            payload: {
+              mode: 'edit',
+              onSave: handleRatingSaved,
+              onDismiss: cleanupOnCancel,
+            },
+          });
+        } else if (sportName.toLowerCase() === 'pickleball') {
+          SheetManager.show('pickleball-rating', {
+            payload: {
+              mode: 'edit',
+              onSave: handleRatingSaved,
+              onDismiss: cleanupOnCancel,
+            },
+          });
+        }
+      };
+
+      // Start the flow
+      showRatingOverlay();
+    } catch (error) {
+      Logger.error('Failed to start mandatory sport setup', error as Error, { sportId, sportName });
+      toast.error(getNetworkErrorMessage(error));
+    }
+  };
+
   const handleToggleActive = async (newValue: boolean) => {
     try {
       mediumHaptic();
@@ -711,101 +857,22 @@ const SportProfile = () => {
       } else {
         // No entry exists
         if (newValue) {
-          // User wants to play this sport: Create new entry with is_active = true
-          const insertResult = await withTimeout(
-            (async () =>
-              supabase
-                .from('player_sport')
-                .insert({
-                  player_id: user.id,
-                  sport_id: sportId,
-                  is_active: true,
-                  is_primary: false,
-                })
-                .select('id')
-                .single())(),
-            10000,
-            'Failed to create sport profile - connection timeout'
+          // First-time sport activation from SportProfile view
+          // Show mandatory setup flow with Alert
+          Alert.alert(
+            t('alerts.sportSetupRequired'),
+            t('alerts.sportSetupRequiredMessage', { sport: sportName }),
+            [
+              {
+                text: t('alerts.cancelSetup'),
+                style: 'cancel',
+              },
+              {
+                text: t('alerts.continueSetup'),
+                onPress: () => startMandatorySportSetup(user.id),
+              },
+            ]
           );
-
-          if (insertResult.error) throw insertResult.error;
-          const { data: newRecord } = insertResult;
-          const newPlayerSportId = newRecord?.id;
-          if (newPlayerSportId) setPlayerSportId(newPlayerSportId);
-
-          setIsActive(true);
-
-          // Show success message
-          const message = t('alerts.sportAdded', { sport: sportName });
-          toast.success(message);
-
-          // Refresh SportContext to update userSports across the app
-          refetchSportContext();
-
-          // Refresh data to load ratings and preferences
-          await fetchSportProfileData();
-
-          // Prompt user to set up their rating level for this new sport
-          // This ensures the profile is complete rather than showing "Not set"
-          const showRatingOverlayForNewSport = () => {
-            const handleRatingSavedForNewSport = async (ratingScoreId: string) => {
-              // Save the rating using the existing logic
-              await handleSaveRating(ratingScoreId);
-
-              // After rating is saved, prompt for preferences
-              // Small delay to let the rating overlay close
-              setTimeout(() => {
-                if (sportName.toLowerCase() === 'tennis') {
-                  SheetManager.show('tennis-preferences', {
-                    payload: {
-                      onSave: handleSavePreferences,
-                      initialPreferences: {},
-                      playStyleOptions,
-                      playAttributesByCategory,
-                      loadingPlayOptions,
-                      playerId: user.id,
-                      sportId,
-                      latitude: location?.latitude ?? null,
-                      longitude: location?.longitude ?? null,
-                    },
-                  });
-                } else if (sportName.toLowerCase() === 'pickleball') {
-                  SheetManager.show('pickleball-preferences', {
-                    payload: {
-                      onSave: handleSavePreferences,
-                      initialPreferences: {},
-                      playStyleOptions,
-                      playAttributesByCategory,
-                      loadingPlayOptions,
-                      playerId: user.id,
-                      sportId,
-                      latitude: location?.latitude ?? null,
-                      longitude: location?.longitude ?? null,
-                    },
-                  });
-                }
-              }, 500);
-            };
-
-            if (sportName.toLowerCase() === 'tennis') {
-              SheetManager.show('tennis-rating', {
-                payload: {
-                  mode: 'edit',
-                  onSave: handleRatingSavedForNewSport,
-                },
-              });
-            } else if (sportName.toLowerCase() === 'pickleball') {
-              SheetManager.show('pickleball-rating', {
-                payload: {
-                  mode: 'edit',
-                  onSave: handleRatingSavedForNewSport,
-                },
-              });
-            }
-          };
-
-          // Small delay to let the toast appear first, then show rating overlay
-          setTimeout(showRatingOverlayForNewSport, 300);
         } else {
           // User doesn't want to play this sport: Don't create entry, just update UI
           setIsActive(false);
@@ -970,15 +1037,21 @@ const SportProfile = () => {
     }
   };
 
-  const handleSavePreferences = async (updatedPreferences: {
-    matchDuration?: string;
-    matchType?: string;
-    court?: string;
-    playStyle?: string;
-    playAttributes?: string[];
-  }) => {
+  const handleSavePreferences = async (
+    updatedPreferences: {
+      matchDuration?: string;
+      matchType?: string;
+      court?: string;
+      playStyle?: string;
+      playAttributes?: string[];
+    },
+    playerSportIdOverride?: string
+  ) => {
     try {
-      if (!playerSportId) {
+      // Use override if provided (for first-time setup flow), otherwise use state
+      const effectivePlayerSportId = playerSportIdOverride || playerSportId;
+
+      if (!effectivePlayerSportId) {
         Alert.alert(t('alerts.error'), t('errors.notFound'));
         return;
       }
@@ -992,7 +1065,7 @@ const SportProfile = () => {
               preferred_match_duration: updatedPreferences.matchDuration,
               preferred_match_type: updatedPreferences.matchType,
             })
-            .eq('id', playerSportId))(),
+            .eq('id', effectivePlayerSportId))(),
         10000,
         'Failed to save preferences - connection timeout'
       );
@@ -1005,7 +1078,7 @@ const SportProfile = () => {
         await supabase
           .from('player_sport_play_style')
           .delete()
-          .eq('player_sport_id', playerSportId);
+          .eq('player_sport_id', effectivePlayerSportId);
 
         // Find the play_style record by name for this sport
         const { data: playStyleData } = await supabase
@@ -1018,7 +1091,7 @@ const SportProfile = () => {
         if (playStyleData) {
           // Insert new play style
           await supabase.from('player_sport_play_style').insert({
-            player_sport_id: playerSportId,
+            player_sport_id: effectivePlayerSportId,
             play_style_id: playStyleData.id,
           });
         }
@@ -1027,7 +1100,7 @@ const SportProfile = () => {
         await supabase
           .from('player_sport_play_style')
           .delete()
-          .eq('player_sport_id', playerSportId);
+          .eq('player_sport_id', effectivePlayerSportId);
       }
 
       // 3. Save play attributes to junction table (if provided)
@@ -1035,7 +1108,7 @@ const SportProfile = () => {
       await supabase
         .from('player_sport_play_attribute')
         .delete()
-        .eq('player_sport_id', playerSportId);
+        .eq('player_sport_id', effectivePlayerSportId);
 
       if (updatedPreferences.playAttributes && updatedPreferences.playAttributes.length > 0) {
         // Find the play_attribute records by name for this sport
@@ -1048,7 +1121,7 @@ const SportProfile = () => {
         if (playAttributeData && playAttributeData.length > 0) {
           // Insert new play attributes
           const attributeInserts = playAttributeData.map(attr => ({
-            player_sport_id: playerSportId,
+            player_sport_id: effectivePlayerSportId,
             play_attribute_id: attr.id,
           }));
 

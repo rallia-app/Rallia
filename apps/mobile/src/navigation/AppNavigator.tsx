@@ -1335,7 +1335,7 @@ export default function AppNavigator() {
         component={CommunityDetail}
         options={({ route, navigation }) => ({
           ...sharedOptions,
-          headerTitle: route.params?.communityName || 'Community',
+          headerTitle: route.params?.communityName || t('community.title'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />

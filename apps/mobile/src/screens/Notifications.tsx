@@ -17,7 +17,7 @@ import { useAuth, useRequireOnboarding } from '../hooks';
 import { useTranslation, type TranslationOptions } from '../hooks/useTranslation';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { useActionsSheet, useMatchDetailSheet, useSport } from '../context';
-import { useCommunityNavigation } from '../navigation';
+import { useCommunityNavigation, useAppNavigation } from '../navigation';
 import SignInPrompt from '../components/SignInPrompt';
 import { SportIcon } from '../components/SportIcon';
 import {
@@ -69,6 +69,15 @@ const COMMUNITY_NOTIFICATION_TYPES: string[] = [
   'community_join_request',
   'community_join_accepted',
   'community_join_rejected',
+];
+
+/**
+ * Reference request notification types that should navigate to incoming reference requests
+ */
+const REFERENCE_NOTIFICATION_TYPES: string[] = [
+  'reference_request_received',
+  'reference_request_accepted',
+  'reference_request_declined',
 ];
 
 const BASE_WHITE = '#ffffff';
@@ -310,6 +319,7 @@ const Notifications: React.FC = () => {
   const { selectedSport, setSelectedSport } = useSport();
   const { isReady: isOnboarded } = useRequireOnboarding();
   const communityNavigation = useCommunityNavigation();
+  const appNavigation = useAppNavigation();
   const isDark = theme === 'dark';
 
   // State for handling match detail opening
@@ -466,10 +476,23 @@ const Notifications: React.FC = () => {
           return;
         }
 
+        // Handle reference request notifications - navigate to IncomingReferenceRequests screen
+        const isReferenceNotification = REFERENCE_NOTIFICATION_TYPES.includes(notification.type);
+
+        if (isReferenceNotification) {
+          Logger.logUserAction('notification_reference_request_tapped', {
+            notificationId: notification.id,
+            requestId: notification.target_id,
+            type: notification.type,
+          });
+          appNavigation.navigate('IncomingReferenceRequests');
+          return;
+        }
+
         // TODO: Handle other notification types (messages, friend requests, etc.)
       }
     },
-    [markAsRead, communityNavigation]
+    [markAsRead, communityNavigation, appNavigation]
   );
 
   const handleLoadMore = useCallback(() => {

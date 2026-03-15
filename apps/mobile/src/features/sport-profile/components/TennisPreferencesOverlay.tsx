@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
@@ -55,7 +55,7 @@ interface TennisPreferencesOverlayProps {
 }
 
 /**
- * Format a database name into a display label
+ * Format a database name into a display label (fallback)
  * e.g., 'aggressive_baseliner' -> 'Aggressive Baseliner'
  */
 const formatName = (name: string): string => {
@@ -65,9 +65,38 @@ const formatName = (name: string): string => {
     .join(' ');
 };
 
+/**
+ * Get translated play style name with fallback
+ */
+const getPlayStyleLabel = (name: string, t: (key: TranslationKey) => string): string => {
+  const key = `profile.preferences.playStyles.${name}` as TranslationKey;
+  const translated = t(key);
+  // If translation returns the key itself, use formatName as fallback
+  return translated === key ? formatName(name) : translated;
+};
+
+/**
+ * Get translated play attribute name with fallback
+ */
+const getPlayAttributeLabel = (name: string, t: (key: TranslationKey) => string): string => {
+  const key = `profile.preferences.playAttributes.${name}` as TranslationKey;
+  const translated = t(key);
+  return translated === key ? formatName(name) : translated;
+};
+
+/**
+ * Get translated category name with fallback
+ */
+const getCategoryLabel = (category: string, t: (key: TranslationKey) => string): string => {
+  const key = `profile.preferences.playAttributeCategories.${category}` as TranslationKey;
+  const translated = t(key);
+  return translated === key ? category : translated;
+};
+
 export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-preferences'>) {
-  const onClose = () => SheetManager.hide('tennis-preferences');
   const onSave = payload?.onSave;
+  const onDismiss = payload?.onDismiss;
+  const requireAllFields = payload?.requireAllFields || false;
   const initialPreferences = payload?.initialPreferences || {};
   const playStyleOptions = payload?.playStyleOptions || [];
   const playAttributesByCategory = payload?.playAttributesByCategory || {};
@@ -78,6 +107,14 @@ export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-pre
   const longitude = payload?.longitude;
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
+
+  // Track if save was called to distinguish between saved close and dismissed close
+  const didSaveRef = useRef(false);
+
+  const onClose = () => {
+    // onBeforeClose will handle calling onDismiss if not saved
+    SheetManager.hide('tennis-preferences');
+  };
 
   const MATCH_DURATIONS: Array<{ value: '30' | '60' | '90' | '120'; label: string }> = [
     { value: '30', label: t('profile.preferences.durations.30') },
@@ -92,10 +129,10 @@ export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-pre
     { value: 'both', label: t('profile.preferences.matchTypes.both') },
   ];
 
-  // Build PLAY_STYLES from dynamic options
+  // Build PLAY_STYLES from dynamic options with translations
   const PLAY_STYLES = playStyleOptions.map(style => ({
     value: style.name,
-    label: formatName(style.name),
+    label: getPlayStyleLabel(style.name, t),
     description: style.description,
   }));
 
@@ -126,6 +163,7 @@ export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-pre
 
   const handleSave = () => {
     mediumHaptic();
+    didSaveRef.current = true; // Mark as saved before closing
     onSave?.({
       matchDuration,
       matchType,
@@ -135,13 +173,22 @@ export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-pre
     SheetManager.hide('tennis-preferences');
   };
 
-  const canSave = matchDuration && matchType;
+  // When requireAllFields is true, all fields are mandatory
+  const canSave = requireAllFields
+    ? matchDuration && matchType && playStyle && playAttributes.length > 0
+    : matchDuration && matchType;
 
   return (
     <ActionSheet
       gestureEnabled
       containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+      onBeforeClose={() => {
+        // Call onDismiss if sheet is closed without saving
+        if (onDismiss && !didSaveRef.current) {
+          onDismiss();
+        }
+      }}
     >
       <View style={styles.modalContent}>
         {/* Header */}
@@ -368,7 +415,7 @@ export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-pre
               Object.entries(playAttributesByCategory).map(([category, attributes]) => (
                 <View key={category} style={styles.categorySection}>
                   <Text style={[styles.categoryLabel, { color: colors.textMuted }]}>
-                    {category}
+                    {getCategoryLabel(category, t)}
                   </Text>
                   <View style={styles.chipsContainer}>
                     {attributes.map(attribute => (
@@ -393,7 +440,7 @@ export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-pre
                               : []),
                           ]}
                         >
-                          {formatName(attribute.name)}
+                          {getPlayAttributeLabel(attribute.name, t)}
                         </Text>
                       </TouchableOpacity>
                     ))}
