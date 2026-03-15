@@ -214,16 +214,16 @@ After: min(100, 88 + 27) = 100%
 
 **Note:** System detects repeat matchups and rewards both players
 
-## Initial Calculation (First 10 Events)
+## Initial Calculation (First 5 Events)
 
-New players start with **unknown** reputation until 10 reputation events have been recorded.
+New players start with **unknown** reputation until 5 reputation events have been recorded.
 
-**First calculation (after 10th event):**
+**First calculation (after 5th event):**
 
 ```
 Starting Base = 100%
 
-Apply all events from first 10 events:
+Apply all events from first 5 events:
 Example:
 - Match 1: completed (+12), on_time (+3), 5star (+10) = +25
 - Match 2: completed (+12), on_time (+3), 4star (+5) = +20
@@ -240,7 +240,7 @@ Result: Platinum tier (90-100%)
 ```
 Starting Base = 100%
 
-Example with 10 events:
+Example with 5 events:
 - Event 1-3: Match 1: completed (+12), on_time (+3), 4star (+5) = +20
 - Event 4: no_show (-50) = -50
 - Event 5-7: Match 2: completed (+12), late (-10), 2star (-5) = -3
@@ -275,7 +275,7 @@ After calculating the score, the tier is assigned:
 
 ```javascript
 function calculateTier(score: number, eventCount: number): ReputationTier {
-  if (eventCount < 10) return "unknown";
+  if (eventCount < 5) return "unknown";
   if (score >= 90) return "platinum";
   if (score >= 75) return "gold";
   if (score >= 60) return "silver";
@@ -283,13 +283,13 @@ function calculateTier(score: number, eventCount: number): ReputationTier {
 }
 ```
 
-| Score       | Tier     |
-| ----------- | -------- |
-| < 10 events | Unknown  |
-| 0-59%       | Bronze   |
-| 60-74%      | Silver   |
-| 75-89%      | Gold     |
-| 90-100%     | Platinum |
+| Score      | Tier     |
+| ---------- | -------- |
+| < 5 events | Unknown  |
+| 0-59%      | Bronze   |
+| 60-74%     | Silver   |
+| 75-89%     | Gold     |
+| 90-100%    | Platinum |
 
 ## Data Collection
 

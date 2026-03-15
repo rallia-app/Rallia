@@ -10,7 +10,7 @@ Unlike the original MVP which only had a single "High Reputation" badge at 90%+,
 
 **Criteria:**
 
-- Player has recorded fewer than 10 reputation events
+- Player has recorded fewer than 5 reputation events
 - Reputation score not yet calculated
 
 **Badge Display:**
@@ -30,7 +30,7 @@ Unlike the original MVP which only had a single "High Reputation" badge at 90%+,
 
 ```
 Reputation: New Player
-Record 10 reputation events to establish your reputation
+Record 5 reputation events to establish your reputation
 ```
 
 ---
@@ -39,7 +39,7 @@ Record 10 reputation events to establish your reputation
 
 **Criteria:**
 
-- 10+ reputation events recorded
+- 5+ reputation events recorded
 - Reputation score: **0-59%**
 
 **Badge Display:**
@@ -75,7 +75,7 @@ Bronze • Work on reliability to improve
 
 **Criteria:**
 
-- 10+ reputation events recorded
+- 5+ reputation events recorded
 - Reputation score: **60-74%**
 
 **Badge Display:**
@@ -111,7 +111,7 @@ Silver • Good progress!
 
 **Criteria:**
 
-- 10+ reputation events recorded
+- 5+ reputation events recorded
 - Reputation score: **75-89%**
 
 **Badge Display:**
@@ -147,7 +147,7 @@ Gold • Very reliable player
 
 **Criteria:**
 
-- 10+ reputation events recorded
+- 5+ reputation events recorded
 - Reputation score: **90-100%**
 
 **Badge Display:**
@@ -189,10 +189,10 @@ Platinum • Excellent reliability!
 stateDiagram-v2
     [*] --> Unknown: New player
 
-    Unknown --> Bronze: 10 events, 0-59%
-    Unknown --> Silver: 10 events, 60-74%
-    Unknown --> Gold: 10 events, 75-89%
-    Unknown --> Platinum: 10 events, 90-100%
+    Unknown --> Bronze: 5 events, 0-59%
+    Unknown --> Silver: 5 events, 60-74%
+    Unknown --> Gold: 5 events, 75-89%
+    Unknown --> Platinum: 5 events, 90-100%
 
     Bronze --> Silver: Score ≥ 60%
     Silver --> Gold: Score ≥ 75%
@@ -207,7 +207,7 @@ stateDiagram-v2
 
 Tiers are awarded **automatically and immediately** when:
 
-1. Player has 10+ reputation events recorded (if moving from Unknown)
+1. Player has 5+ reputation events recorded (if moving from Unknown)
 2. Reputation score crosses tier threshold
 3. Reputation is recalculated after any event
 
@@ -291,7 +291,7 @@ Get your rating certified to unlock it.
 
 ```
 🎯 Reputation Established!
-You've recorded 10 reputation events and earned [Tier] tier (XX%)!
+You've recorded 5 reputation events and earned [Tier] tier (XX%)!
 
 Your reputation is now visible to other players.
 
@@ -485,7 +485,7 @@ Use tier colors consistently across the app:
 │ Tennis • NTRP 3.5           │
 │ Montreal • 4.1 km away      │
 │                             │
-│ Record 10 reputation events │
+│ Record 5 reputation events  │
 │ to establish reputation     │
 └─────────────────────────────┘
 ```
@@ -510,7 +510,7 @@ Use tier colors consistently across the app:
 | ----------- | ------------------------------------------------- |
 | Tiers       | 5 tiers (Unknown, Bronze, Silver, Gold, Platinum) |
 | Badges      | Distinct badge for each tier                      |
-| All Levels  | Everyone has a tier (after 10 events)             |
+| All Levels  | Everyone has a tier (after 5 events)              |
 | Thresholds  | Progressive: 60%, 75%, 90%                        |
 | Progression | Clear path: Bronze → Silver → Gold → Platinum     |
 
@@ -576,6 +576,6 @@ skill levels - the most reliable opponents you can find!
 2. **Platinum (90%+)** replaces "High Reputation" badge
 3. **Progressive system** motivates all players, not just top performers
 4. **Clear milestones** at 60%, 75%, and 90%
-5. **Unknown tier** protects new players (< 10 events)
+5. **Unknown tier** protects new players (< 5 events)
 6. **Integration** with Most Wanted Player super-badge
 7. **Visual hierarchy** with distinct icons and colors

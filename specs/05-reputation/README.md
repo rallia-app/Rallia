@@ -67,7 +67,7 @@ Final Score = clamp(Base Score + sum(weighted_impacts), 0, 100)
 
 | Tier     | Score Range | Badge         | Description                       |
 | -------- | ----------- | ------------- | --------------------------------- |
-| Unknown  | N/A         | Gray "?"      | Fewer than 10 reputation events   |
+| Unknown  | N/A         | Gray "?"      | Fewer than 5 reputation events    |
 | Bronze   | 0-59%       | Bronze shield | Below average reliability         |
 | Silver   | 60-74%      | Silver shield | Average reliability               |
 | Gold     | 75-89%      | Gold shield   | Good reliability                  |
