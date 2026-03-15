@@ -940,7 +940,7 @@ describe('getReviewEventType', () => {
 
 describe('calculateTierLocally', () => {
   it('returns unknown tier with isVisible=false when below minimum events', () => {
-    const result = calculateTierLocally(85, 5);
+    const result = calculateTierLocally(85, 4);
     expect(result.tier).toBe('unknown');
     expect(result.isVisible).toBe(false);
     expect(result.tierLabel).toBe(TIER_CONFIGS.unknown.label);
