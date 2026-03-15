@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
@@ -94,8 +94,9 @@ const getCategoryLabel = (category: string, t: (key: TranslationKey) => string):
 };
 
 export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-preferences'>) {
-  const onClose = () => SheetManager.hide('tennis-preferences');
   const onSave = payload?.onSave;
+  const onDismiss = payload?.onDismiss;
+  const requireAllFields = payload?.requireAllFields || false;
   const initialPreferences = payload?.initialPreferences || {};
   const playStyleOptions = payload?.playStyleOptions || [];
   const playAttributesByCategory = payload?.playAttributesByCategory || {};
@@ -106,6 +107,14 @@ export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-pre
   const longitude = payload?.longitude;
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
+
+  // Track if save was called to distinguish between saved close and dismissed close
+  const didSaveRef = useRef(false);
+
+  const onClose = () => {
+    // onBeforeClose will handle calling onDismiss if not saved
+    SheetManager.hide('tennis-preferences');
+  };
 
   const MATCH_DURATIONS: Array<{ value: '30' | '60' | '90' | '120'; label: string }> = [
     { value: '30', label: t('profile.preferences.durations.30') },
@@ -154,6 +163,7 @@ export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-pre
 
   const handleSave = () => {
     mediumHaptic();
+    didSaveRef.current = true; // Mark as saved before closing
     onSave?.({
       matchDuration,
       matchType,
@@ -163,13 +173,22 @@ export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-pre
     SheetManager.hide('tennis-preferences');
   };
 
-  const canSave = matchDuration && matchType;
+  // When requireAllFields is true, all fields are mandatory
+  const canSave = requireAllFields
+    ? matchDuration && matchType && playStyle && playAttributes.length > 0
+    : matchDuration && matchType;
 
   return (
     <ActionSheet
       gestureEnabled
       containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+      onBeforeClose={() => {
+        // Call onDismiss if sheet is closed without saving
+        if (onDismiss && !didSaveRef.current) {
+          onDismiss();
+        }
+      }}
     >
       <View style={styles.modalContent}>
         {/* Header */}

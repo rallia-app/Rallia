@@ -117,7 +117,7 @@
     "authFailed": "L'authentification a échoué. Veuillez réessayer."
   },
   "splash": {
-    "slogan": "Ta prochaine partie t'attend."
+    "slogan": "Le Pouvoir de Jouer Quand tu le Veux"
   },
   "navigation": {
     "home": "Accueil",
@@ -187,6 +187,9 @@
       "player_left": "Joueur\nparti",
       "new_message": "Nouveau\nmessage",
       "rating_verified": "Classement\nvérifié",
+      "reference_request_received": "Référence\ndemandée",
+      "reference_request_accepted": "Référence\nacceptée",
+      "reference_request_declined": "Référence\nrefusée",
       "reminder": "Rappel",
       "payment": "Paiement",
       "support": "Support",
@@ -3035,7 +3038,13 @@
     "sportNotAdded": "{sport} non ajouté",
     "preferencesUpdated": "Préférences mises à jour avec succès",
     "cannotDeactivate": "Impossible de désactiver le sport",
-    "mustHaveOneSport": "Vous devez avoir au moins un sport actif. Veuillez activer un autre sport avant de désactiver celui-ci."
+    "mustHaveOneSport": "Vous devez avoir au moins un sport actif. Veuillez activer un autre sport avant de désactiver celui-ci.",
+    "sportSetupRequired": "Configuration du profil sportif requise",
+    "sportSetupRequiredMessage": "Pour activer {sport}, vous devez compléter votre classement et toutes vos préférences. Si vous fermez une étape sans enregistrer, le profil sportif ne sera pas créé.",
+    "sportSetupCancelled": "Configuration du profil sportif annulée",
+    "sportSetupIncomplete": "Veuillez compléter tous les champs requis pour enregistrer vos préférences",
+    "continueSetup": "Continuer",
+    "cancelSetup": "Annuler"
   },
   "sportSelector": {
     "selectSport": "Sélectionnez un sport",
@@ -3380,6 +3389,10 @@
     "crossSportBanner": {
       "unreadNotifications": "Vous avez {count} notification(s) en attente pour {sportName}",
       "switch": "Changer"
+    },
+    "secondSportBanner": {
+      "message": "Prêt à élargir vos horizons? Activez votre profil {sportName}!",
+      "activate": "Activer"
     },
     "header": {
       "ctaButton": "Devenir bêta-testeur"

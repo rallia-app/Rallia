@@ -10,7 +10,11 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { registerPushToken, unregisterPushToken } from '@rallia/shared-services';
 import { Logger } from '@rallia/shared-services';
-import { navigateFromOutside, navigateToCommunityScreen } from '../navigation';
+import {
+  navigateFromOutside,
+  navigateToCommunityScreen,
+  navigateToIncomingReferenceRequestsFromOutside,
+} from '../navigation';
 
 // =============================================================================
 // TYPES
@@ -58,6 +62,15 @@ const COMMUNITY_NOTIFICATION_TYPES = [
   'community_join_request',
   'community_join_accepted',
   'community_join_rejected',
+] as const;
+
+/**
+ * Reference request notification types that should navigate to incoming reference requests
+ */
+const REFERENCE_NOTIFICATION_TYPES = [
+  'reference_request_received',
+  'reference_request_accepted',
+  'reference_request_declined',
 ] as const;
 
 /**
@@ -331,6 +344,23 @@ export function usePushNotifications(
 
         Logger.logUserAction('push_notification_deep_link', {
           communityId: data.communityId,
+          type: notificationType,
+        });
+      }
+    }
+
+    // Handle reference request notifications
+    if (notificationType) {
+      const isReferenceNotification = REFERENCE_NOTIFICATION_TYPES.includes(
+        notificationType as (typeof REFERENCE_NOTIFICATION_TYPES)[number]
+      );
+
+      if (isReferenceNotification) {
+        // Navigate to IncomingReferenceRequests screen
+        navigateToIncomingReferenceRequestsFromOutside();
+
+        Logger.logUserAction('push_notification_deep_link', {
+          requestId: data.requestId,
           type: notificationType,
         });
       }

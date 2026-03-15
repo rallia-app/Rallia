@@ -48,7 +48,9 @@ import {
   useSortedNearbyMatches,
   useFavoriteFacilities,
   useOtherSportsUnreadCount,
+  useSports,
 } from '@rallia/shared-hooks';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NearbyMatch, MatchScoringPreferences } from '@rallia/shared-hooks';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import { Logger } from '@rallia/shared-services';
@@ -132,6 +134,54 @@ const crossBannerStyles = StyleSheet.create({
   },
 });
 
+/** Banner encouraging users with only one sport to activate their second sport */
+const SecondSportBanner: React.FC<{
+  sportName: string;
+  displayName: string;
+  onActivate: () => void;
+  onDismiss: () => void;
+  fadeAnim: Animated.Value;
+  colors: { card: string; text: string; textMuted: string; primary: string; border: string };
+  t: (key: string, options?: Record<string, string | number | boolean>) => string;
+}> = ({ sportName, displayName, onActivate, onDismiss, fadeAnim, colors, t }) => (
+  <Animated.View
+    style={[
+      crossBannerStyles.container,
+      { backgroundColor: colors.card, borderColor: colors.border, opacity: fadeAnim },
+    ]}
+  >
+    <View style={crossBannerStyles.content}>
+      <SportIcon
+        sportName={sportName}
+        size={20}
+        color={colors.primary}
+        style={{ marginRight: 8 }}
+      />
+      <Text size="sm" color={colors.text} style={crossBannerStyles.text} numberOfLines={2}>
+        {t('home.secondSportBanner.message', { sportName: displayName })}
+      </Text>
+    </View>
+    <View style={crossBannerStyles.actions}>
+      <TouchableOpacity
+        onPress={onActivate}
+        style={[crossBannerStyles.switchButton, { backgroundColor: colors.primary }]}
+      >
+        <Text size="xs" weight="semibold" color="#ffffff">
+          {t('home.secondSportBanner.activate')}
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={onDismiss} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <Ionicons name="close" size={18} color={colors.textMuted} />
+      </TouchableOpacity>
+    </View>
+  </Animated.View>
+);
+
+// AsyncStorage key for second sport banner cooldown
+const SECOND_SPORT_BANNER_COOLDOWN_KEY = '@rallia/second-sport-banner-cooldown';
+const SECOND_SPORT_BANNER_COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2 hours
+const SECOND_SPORT_BANNER_FADE_MS = 10 * 60 * 1000; // 10 minutes
+
 const Home = () => {
   // Use custom hooks for auth, profile, and overlay context
   const { session, loading: authLoading } = useAuth();
@@ -174,6 +224,100 @@ const Home = () => {
     selectedSport?.name
   );
   const [dismissedBannerSports, setDismissedBannerSports] = useState<Set<string>>(new Set());
+
+  // Second sport activation banner state
+  const { sports: allSports } = useSports();
+  const [showSecondSportBanner, setShowSecondSportBanner] = useState(false);
+  const [secondSportBannerDismissed, setSecondSportBannerDismissed] = useState(false);
+  const secondSportFadeAnim = useRef(new Animated.Value(1)).current;
+
+  // Find inactive sports (sports user hasn't activated yet)
+  const inactiveSports = useMemo(() => {
+    if (!allSports || !userSports) return [];
+    const activeSportIds = new Set(userSports.map(s => s.id));
+    return allSports.filter(sport => !activeSportIds.has(sport.id));
+  }, [allSports, userSports]);
+
+  // Show banner only for users with exactly 1 sport and at least 1 inactive sport
+  const shouldShowSecondSportBanner = useMemo(() => {
+    return (
+      isOnboarded &&
+      userSports.length === 1 &&
+      inactiveSports.length > 0 &&
+      showSecondSportBanner &&
+      !secondSportBannerDismissed
+    );
+  }, [
+    isOnboarded,
+    userSports.length,
+    inactiveSports.length,
+    showSecondSportBanner,
+    secondSportBannerDismissed,
+  ]);
+
+  // Check cooldown and set up auto-fade timer for second sport banner
+  useEffect(() => {
+    if (!isOnboarded || userSports.length !== 1 || inactiveSports.length === 0) {
+      return;
+    }
+
+    const checkCooldownAndShow = async () => {
+      try {
+        const lastShown = await AsyncStorage.getItem(SECOND_SPORT_BANNER_COOLDOWN_KEY);
+        const now = Date.now();
+
+        if (!lastShown || now - parseInt(lastShown, 10) >= SECOND_SPORT_BANNER_COOLDOWN_MS) {
+          // Cooldown passed, show banner
+          setShowSecondSportBanner(true);
+          setSecondSportBannerDismissed(false);
+          secondSportFadeAnim.setValue(1);
+
+          // Save current time as last shown
+          await AsyncStorage.setItem(SECOND_SPORT_BANNER_COOLDOWN_KEY, now.toString());
+
+          // Set up 10-minute auto-fade timer
+          const fadeTimer = setTimeout(() => {
+            Animated.timing(secondSportFadeAnim, {
+              toValue: 0,
+              duration: 500,
+              useNativeDriver: true,
+            }).start(() => {
+              setSecondSportBannerDismissed(true);
+            });
+          }, SECOND_SPORT_BANNER_FADE_MS);
+
+          return () => clearTimeout(fadeTimer);
+        }
+      } catch {
+        // Ignore storage errors
+      }
+    };
+
+    void checkCooldownAndShow();
+  }, [isOnboarded, userSports.length, inactiveSports.length, secondSportFadeAnim]);
+
+  // Handle second sport banner dismiss
+  const handleDismissSecondSportBanner = useCallback(() => {
+    Animated.timing(secondSportFadeAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setSecondSportBannerDismissed(true);
+    });
+  }, [secondSportFadeAnim]);
+
+  // Handle activate second sport
+  const handleActivateSecondSport = useCallback(() => {
+    if (inactiveSports.length > 0) {
+      const sportToActivate = inactiveSports[0];
+      handleDismissSecondSportBanner();
+      appNavigation.navigate('SportProfile', {
+        sportId: sportToActivate.id,
+        sportName: sportToActivate.name as 'tennis' | 'pickleball',
+      });
+    }
+  }, [inactiveSports, handleDismissSecondSportBanner, appNavigation]);
   const currentPlayerSport = useMemo(
     () => playerSports.find(ps => ps.sport_id === selectedSport?.id),
     [playerSports, selectedSport?.id]
@@ -744,6 +888,23 @@ const Home = () => {
         }
       });
 
+      // Second sport activation banner (for users with only 1 sport)
+      if (shouldShowSecondSportBanner && inactiveSports.length > 0) {
+        const sportToActivate = inactiveSports[0];
+        headerComponents.push(
+          <SecondSportBanner
+            key="second-sport-banner"
+            sportName={sportToActivate.name}
+            displayName={sportToActivate.display_name.toLowerCase()}
+            onActivate={handleActivateSecondSport}
+            onDismiss={handleDismissSecondSportBanner}
+            fadeAnim={secondSportFadeAnim}
+            colors={colors}
+            t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
+          />
+        );
+      }
+
       // Add "My Matches" section for fully onboarded users
       headerComponents.push(<View key="my-matches">{renderMyMatchesSection()}</View>);
     }
@@ -776,6 +937,11 @@ const Home = () => {
     userSports,
     setSelectedSport,
     colors.primary,
+    shouldShowSecondSportBanner,
+    inactiveSports,
+    handleActivateSecondSport,
+    handleDismissSecondSportBanner,
+    secondSportFadeAnim,
   ]);
 
   // Show loading if auth is loading, or if player/sport data is loading initially

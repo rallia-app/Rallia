@@ -863,15 +863,28 @@ const PlayerProfile = () => {
       expiresAt.setDate(expiresAt.getDate() + 14);
 
       // Insert the reference request
-      const { error: insertError } = await supabase.from('rating_reference_request').insert({
+      const insertPayload = {
         player_rating_score_id: currentUserRatingScoreId,
         requester_id: currentUserId,
         referee_id: playerId,
         status: 'pending',
         expires_at: expiresAt.toISOString(),
+      };
+
+      Logger.info('Sending reference request', {
+        ...insertPayload,
+        targetSportId,
+        viewedPlayerRatingValue: viewedPlayerSport.ratingValue,
       });
 
+      const { data: insertData, error: insertError } = await supabase
+        .from('rating_reference_request')
+        .insert(insertPayload)
+        .select('id')
+        .single();
+
       if (insertError) {
+        Logger.error('Reference request insert failed', insertError, insertPayload);
         // Check for unique constraint violation (already requested)
         if (insertError.code === '23505') {
           toast.warning(t('profile.certification.referenceRequest.alreadyRequested'));
@@ -882,6 +895,7 @@ const PlayerProfile = () => {
         Logger.logUserAction('reference_request_sent', {
           refereeId: playerId,
           sportId: targetSportId,
+          insertedId: insertData?.id,
         });
         toast.success(t('playerProfile.referenceRequest.success'));
       }

@@ -117,7 +117,7 @@
     "authFailed": "Authentication failed. Please try again."
   },
   "splash": {
-    "slogan": "Play More, Plan Less."
+    "slogan": "The Power to Play Whenever You Want!"
   },
   "navigation": {
     "home": "Home",
@@ -187,6 +187,9 @@
       "player_left": "Player\nLeft",
       "new_message": "New\nMessage",
       "rating_verified": "Rating\nVerified",
+      "reference_request_received": "Reference\nRequested",
+      "reference_request_accepted": "Reference\nAccepted",
+      "reference_request_declined": "Reference\nDeclined",
       "reminder": "Reminder",
       "payment": "Payment",
       "support": "Support",
@@ -3035,7 +3038,13 @@
     "sportNotAdded": "{sport} not added",
     "preferencesUpdated": "Preferences updated successfully",
     "cannotDeactivate": "Cannot Deactivate Sport",
-    "mustHaveOneSport": "You must have at least one active sport. Please activate another sport before deactivating this one."
+    "mustHaveOneSport": "You must have at least one active sport. Please activate another sport before deactivating this one.",
+    "sportSetupRequired": "Sport Profile Setup Required",
+    "sportSetupRequiredMessage": "To activate {sport}, you must complete your rating and all preferences. If you close any step without saving, the sport profile will not be created.",
+    "sportSetupCancelled": "Sport profile setup cancelled",
+    "sportSetupIncomplete": "Please complete all required fields to save your preferences",
+    "continueSetup": "Continue",
+    "cancelSetup": "Cancel"
   },
   "sportSelector": {
     "selectSport": "Select a sport",
@@ -3380,6 +3389,10 @@
     "crossSportBanner": {
       "unreadNotifications": "You have {count} pending notification(s) in {sportName}",
       "switch": "Switch"
+    },
+    "secondSportBanner": {
+      "message": "Ready to expand your game? Activate your {sportName} profile!",
+      "activate": "Activate"
     },
     "header": {
       "ctaButton": "Become a Beta Tester"

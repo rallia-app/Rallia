@@ -310,6 +310,10 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   // Social types
   new_message: 'chatbubble-ellipses-outline',
   rating_verified: 'ribbon-outline',
+  // Reference request types
+  reference_request_received: 'person-circle-outline',
+  reference_request_accepted: 'checkmark-circle-outline',
+  reference_request_declined: 'close-circle-outline',
   // Feedback types
   feedback_request: 'star-outline',
   feedback_reminder: 'notifications-outline',
@@ -370,6 +374,10 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   // Social types
   new_message: '#9C27B0', // Purple
   rating_verified: '#4CAF50', // Green
+  // Reference request types
+  reference_request_received: '#4DB8A8', // Teal - incoming request
+  reference_request_accepted: '#4CAF50', // Green - positive outcome
+  reference_request_declined: '#F44336', // Red - declined
   // Feedback types
   feedback_request: '#FFC107', // Amber
   feedback_reminder: '#FF9800', // Orange
@@ -427,6 +435,10 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   player_left: 'Player Left',
   new_message: 'New Message',
   rating_verified: 'Rating Verified',
+  // Reference request types
+  reference_request_received: 'Reference Request Received',
+  reference_request_accepted: 'Reference Request Accepted',
+  reference_request_declined: 'Reference Request Declined',
   feedback_request: 'Feedback Request',
   feedback_reminder: 'Feedback Reminder',
   score_confirmation: 'Score Confirmation',
@@ -486,6 +498,10 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   chat: 'social',
   new_message: 'social',
   rating_verified: 'social',
+  // Reference request types (social)
+  reference_request_received: 'social',
+  reference_request_accepted: 'social',
+  reference_request_declined: 'social',
   // System category
   reminder: 'system',
   payment: 'system',

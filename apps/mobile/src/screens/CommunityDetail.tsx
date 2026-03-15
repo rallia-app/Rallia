@@ -54,6 +54,7 @@ import {
   useCommunityAccess,
   useRequestToJoinCommunity,
   useConversationUnreadCount,
+  useConversationUnreadCountLast7Days,
   useConversationUnreadRealtime,
   useSports,
   usePlayer,
@@ -179,8 +180,14 @@ export default function CommunityDetailScreen() {
       20
     );
 
-  // Get unread message count for the community chat
+  // Get unread message count for the community chat badge (all unread)
   const { data: unreadChatCount } = useConversationUnreadCount(
+    community?.conversation_id ?? undefined,
+    playerId
+  );
+
+  // Get unread message count for the last 7 days stats section
+  const { data: unreadChatCountLast7Days } = useConversationUnreadCountLast7Days(
     community?.conversation_id ?? undefined,
     playerId
   );
@@ -505,7 +512,8 @@ export default function CommunityDetailScreen() {
     // Calculate activity ring segments for Last 7 days
     const membersCountLast7Days = stats?.newMembersLast7Days || 0;
     const gamesCountLast7Days = stats?.gamesCreatedLast7Days || 0;
-    const messagesCountLast7Days = stats?.messagesLast7Days || 0;
+    // Use actual unread count from last 7 days for "new messages" stat
+    const messagesCountLast7Days = unreadChatCountLast7Days ?? 0;
     const totalActivities = membersCountLast7Days + gamesCountLast7Days + messagesCountLast7Days;
 
     // SVG circle properties

@@ -30,6 +30,7 @@ import {
   getUnreadConversationsCount,
   getConversationByNetworkId,
   getConversationUnreadCount,
+  getConversationUnreadCountLast7Days,
   hasAgreedToChatRules,
   agreeToChatRules,
   // New enhanced functions
@@ -68,6 +69,8 @@ export const chatKeys = {
   unreadCount: (playerId: string) => [...chatKeys.all, 'unreadCount', playerId] as const,
   conversationUnreadCount: (conversationId: string, playerId: string) =>
     [...chatKeys.all, 'conversationUnreadCount', conversationId, playerId] as const,
+  conversationUnreadCountLast7Days: (conversationId: string, playerId: string) =>
+    [...chatKeys.all, 'conversationUnreadCountLast7Days', conversationId, playerId] as const,
   networkConversation: (networkId: string) =>
     [...chatKeys.all, 'networkConversation', networkId] as const,
   chatAgreement: (playerId: string) => [...chatKeys.all, 'chatAgreement', playerId] as const,
@@ -593,6 +596,22 @@ export function useConversationUnreadCount(
 }
 
 /**
+ * Get unread message count for a specific conversation, limited to last 7 days
+ * Useful for showing unread count in "Last 7 Days Activities" section
+ */
+export function useConversationUnreadCountLast7Days(
+  conversationId: string | undefined,
+  playerId: string | undefined
+) {
+  return useQuery({
+    queryKey: chatKeys.conversationUnreadCountLast7Days(conversationId || '', playerId || ''),
+    queryFn: () => getConversationUnreadCountLast7Days(conversationId!, playerId!),
+    enabled: !!conversationId && !!playerId,
+    staleTime: 5 * 1000, // 5 seconds - quick refresh for accurate badge count
+  });
+}
+
+/**
  * Subscribe to real-time updates for a specific conversation's unread count
  * Invalidates the unread count query when messages change
  */
@@ -607,9 +626,12 @@ export function useConversationUnreadRealtime(
 
     const channel = subscribeToMessages(conversationId, {
       onInsert: () => {
-        // Invalidate unread count when a new message arrives
+        // Invalidate both unread count queries when a new message arrives
         queryClient.invalidateQueries({
           queryKey: chatKeys.conversationUnreadCount(conversationId, playerId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: chatKeys.conversationUnreadCountLast7Days(conversationId, playerId),
         });
       },
     });
