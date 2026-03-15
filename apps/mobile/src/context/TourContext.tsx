@@ -500,17 +500,6 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   const offset = Math.max(androidStatusBarHeight, insets.top);
   const verticalOffset = Platform.OS === 'android' ? -offset : 0;
 
-  // Debug logging
-  if (__DEV__) {
-    console.log('[Tour] Config:', {
-      platform: Platform.OS,
-      statusBarHeight: androidStatusBarHeight,
-      safeAreaTop: insets.top,
-      usedOffset: offset,
-      calculatedOffset: verticalOffset,
-    });
-  }
-
   return (
     <CopilotProvider
       tooltipComponent={CustomTooltip}
