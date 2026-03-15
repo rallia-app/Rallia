@@ -141,54 +141,6 @@ const SettingsScreen: React.FC = () => {
     Logger.logUserAction('admin_panel_pressed');
   };
 
-  // DEBUG: Make current user an admin (for testing only)
-  const [makingAdmin, setMakingAdmin] = useState(false);
-  const handleMakeAdmin = async () => {
-    if (!profile?.id) {
-      toast.error('No user profile found');
-      return;
-    }
-
-    Alert.alert('Make Admin (DEBUG)', 'This will make you a super_admin. Continue?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Make Admin',
-        onPress: async () => {
-          try {
-            setMakingAdmin(true);
-            // Check if already admin
-            const { data: existing } = await supabase
-              .from('admin')
-              .select('id')
-              .eq('id', profile.id)
-              .single();
-
-            if (existing) {
-              toast.info('You are already an admin!');
-              return;
-            }
-
-            // Insert admin record (id references profile.id)
-            const { error } = await supabase.from('admin').insert({
-              id: profile.id,
-              role: 'super_admin',
-            });
-
-            if (error) throw error;
-
-            toast.success('You are now a super_admin! Restart the app to see Admin Panel.');
-            Logger.logUserAction('debug_make_admin', { userId: profile.id });
-          } catch (error) {
-            console.error('Failed to make admin:', error);
-            toast.error('Failed to make admin: ' + (error as Error).message);
-          } finally {
-            setMakingAdmin(false);
-          }
-        },
-      },
-    ]);
-  };
-
   const handleResetTour = () => {
     lightHaptic();
     Alert.alert(t('tour.settings.restartTour'), t('tour.settings.restartTourDescription'), [
@@ -385,34 +337,6 @@ const SettingsScreen: React.FC = () => {
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.iconMuted} />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* DEBUG: Make Admin Button - Only in non-production builds */}
-        {isAuthenticated && !isAdmin && appEnv !== 'production' && (
-          <View style={[styles.settingsGroup, { backgroundColor: colors.cardBackground }]}>
-            <TouchableOpacity
-              style={[
-                styles.debugButton,
-                {
-                  backgroundColor: isDark ? `${status.error.DEFAULT}20` : `${status.error.light}15`,
-                },
-              ]}
-              onPress={handleMakeAdmin}
-              disabled={makingAdmin}
-              activeOpacity={0.7}
-            >
-              {makingAdmin ? (
-                <ActivityIndicator size="small" color={status.error.DEFAULT} />
-              ) : (
-                <>
-                  <Ionicons name="bug" size={20} color={status.error.DEFAULT} />
-                  <Text size="base" weight="semibold" color={status.error.DEFAULT}>
-                    DEBUG: Make Me Admin
-                  </Text>
-                </>
-              )}
             </TouchableOpacity>
           </View>
         )}

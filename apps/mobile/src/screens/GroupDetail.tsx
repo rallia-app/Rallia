@@ -1762,17 +1762,7 @@ export default function GroupDetailScreen() {
       </ScrollView>
 
       {/* Bottom Action Button - changes based on active tab */}
-      {activeTab === 'leaderboard' ? (
-        <TouchableOpacity
-          style={[styles.chatButton, { backgroundColor: colors.primary }]}
-          onPress={handleAddGame}
-        >
-          <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
-          <Text weight="semibold" style={styles.chatButtonText}>
-            {t('community.leaderboard.addPlayedGame')}
-          </Text>
-        </TouchableOpacity>
-      ) : activeTab === 'home' ? (
+      {activeTab === 'home' ? (
         <TouchableOpacity
           style={[styles.chatButton, { backgroundColor: colors.primary }]}
           onPress={handleOpenChat}

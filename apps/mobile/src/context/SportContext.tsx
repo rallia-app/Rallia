@@ -166,13 +166,9 @@ export function SportProvider({ children, userId }: SportProviderProps) {
     if (playerSportsLoading) return; // Wait until loading is complete
     if (userSports.length === 0) return; // Don't overwrite with empty array
 
-    AsyncStorage.setItem(GUEST_SPORTS_STORAGE_KEY, JSON.stringify(userSports))
-      .then(() => {
-        console.log('[SportProvider] Synced user sports to AsyncStorage:', userSports.length);
-      })
-      .catch(error => {
-        console.error('[SportProvider] Failed to sync user sports to AsyncStorage:', error);
-      });
+    AsyncStorage.setItem(GUEST_SPORTS_STORAGE_KEY, JSON.stringify(userSports)).catch(error => {
+      console.error('[SportProvider] Failed to sync user sports to AsyncStorage:', error);
+    });
   }, [userId, userSports, playerSportsLoading]);
 
   const setSelectedSport = useCallback(async (sport: Sport) => {
