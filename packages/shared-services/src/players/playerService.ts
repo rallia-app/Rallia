@@ -76,6 +76,8 @@ export interface PlayerSearchResult {
     value: number | null;
     /** Whether the player is certified at this rating level */
     is_certified: boolean;
+    /** Badge status: self_declared, certified, or disputed */
+    badge_status: 'self_declared' | 'certified' | 'disputed';
   } | null;
   /** Player's latitude (from home location) */
   latitude: number | null;
@@ -318,8 +320,15 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
   }
 
   // Step 6: Apply skill level filter - we need to fetch ratings first
-  const ratingsMap: Record<string, { label: string; value: number | null; is_certified: boolean }> =
-    {};
+  const ratingsMap: Record<
+    string,
+    {
+      label: string;
+      value: number | null;
+      is_certified: boolean;
+      badge_status: 'self_declared' | 'certified' | 'disputed';
+    }
+  > = {};
   let skillFilteredPlayerIds = playerIds;
 
   // Always fetch ratings (we need them for the result anyway)
@@ -329,6 +338,7 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
       `
       player_id,
       is_certified,
+      badge_status,
       rating_score!player_rating_scores_rating_score_id_fkey!inner (
         label,
         value,
@@ -348,6 +358,7 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     type RatingResult = {
       player_id: string;
       is_certified: boolean;
+      badge_status: string | null;
       rating_score: {
         label: string;
         value: number | null;
@@ -360,10 +371,18 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
       const ratingSystem = ratingScore?.rating_system;
       // Only include ratings for the requested sport
       if (ratingSystem?.sport_id === sportId && ratingScore?.label) {
+        const rawBadgeStatus = rating.badge_status as string | null;
+        let badgeStatus: 'self_declared' | 'certified' | 'disputed' = 'self_declared';
+        if (rawBadgeStatus === 'disputed') {
+          badgeStatus = 'disputed';
+        } else if (rawBadgeStatus === 'certified' || rating.is_certified) {
+          badgeStatus = 'certified';
+        }
         ratingsMap[rating.player_id] = {
           label: ratingScore.label,
           value: ratingScore.value,
           is_certified: rating.is_certified ?? false,
+          badge_status: badgeStatus,
         };
       }
     });
