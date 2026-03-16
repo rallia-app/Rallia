@@ -717,10 +717,6 @@ export const RatingScoreService = {
         return { data: [], error };
       }
 
-      console.log(
-        `✅ Rating scores loaded from database for ${sportName} ${ratingSystemCode}:`,
-        data
-      );
       return { data: data || [], error: null };
     } catch (error) {
       console.error('Error fetching rating scores:', error);
