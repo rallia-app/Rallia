@@ -441,6 +441,12 @@
     "privacyPolicy": "Politique de confidentialité",
     "logout": "Se déconnecter",
     "deleteAccount": "Supprimer le compte",
+    "appInfo": "Info de l'app",
+    "version": "Version",
+    "environment": "Environnement",
+    "channel": "Canal",
+    "update": "Mise à jour",
+    "embeddedBundle": "Intégrée",
     "general": {
       "title": "Paramètres généraux",
       "description": "Gérez les paramètres de votre organisation.",
