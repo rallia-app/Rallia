@@ -110,7 +110,7 @@
     "postcss": "^8.5.8",
     "prettier-plugin-tailwindcss": "^0.5.14",
     "react-native-svg-transformer": "^1.5.2",
-    "tailwindcss": "4.1.16",
+    "tailwindcss": "4.2.1",
     "typescript": "^5.9.3"
   },
   "private": true
