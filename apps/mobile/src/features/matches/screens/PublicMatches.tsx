@@ -142,6 +142,7 @@ export default function PublicMatches() {
   // Fetch public matches - use distance from filters and user's gender for eligibility
   const {
     matches,
+    totalCount,
     isLoading,
     isFetching,
     isRefetching,
@@ -261,8 +262,8 @@ export default function PublicMatches() {
     [isDark, t, locale, openMatchDetail, player?.id]
   );
 
-  // Check if we're loading due to filter/search changes (not initial load)
-  const isSearching = isFetching && !isLoading && !isRefetching;
+  // Check if we're loading due to filter/search changes (not initial load or pagination)
+  const isSearching = isFetching && !isLoading && !isRefetching && !isFetchingNextPage;
 
   // Render results count or loading indicator in list
   const renderResultsInfo = useCallback(() => {
@@ -276,14 +277,16 @@ export default function PublicMatches() {
     }
 
     // Show results count when we have matches
-    if (!isLoading && sortedMatches.length > 0) {
+    // Use totalCount from database if available, otherwise fall back to displayed count
+    const count = totalCount ?? sortedMatches.length;
+    if (!isLoading && count > 0) {
       return (
         <View style={styles.resultsContainer}>
           <Text size="sm" color={colors.textMuted}>
-            {sortedMatches.length === 1
+            {count === 1
               ? t('publicMatches.results.countSingular')
               : t('publicMatches.results.count', {
-                  count: sortedMatches.length,
+                  count,
                 })}
           </Text>
         </View>
@@ -291,7 +294,15 @@ export default function PublicMatches() {
     }
 
     return null;
-  }, [isSearching, isLoading, sortedMatches.length, colors.primary, colors.textMuted, t]);
+  }, [
+    isSearching,
+    isLoading,
+    totalCount,
+    sortedMatches.length,
+    colors.primary,
+    colors.textMuted,
+    t,
+  ]);
 
   // Render empty state
   const renderEmptyComponent = useCallback(() => {
@@ -406,7 +417,7 @@ export default function PublicMatches() {
         </View>
       ) : (
         <FlatList
-          data={isSearching ? [] : sortedMatches}
+          data={sortedMatches}
           renderItem={renderMatchCard}
           keyExtractor={item => item.id}
           ListHeaderComponent={renderResultsInfo}
@@ -416,7 +427,7 @@ export default function PublicMatches() {
           onEndReachedThreshold={0.3}
           contentContainerStyle={[
             styles.listContent,
-            (sortedMatches.length === 0 || isSearching) && styles.emptyListContent,
+            sortedMatches.length === 0 && styles.emptyListContent,
           ]}
           showsVerticalScrollIndicator={false}
           refreshControl={
