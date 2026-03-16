@@ -6,13 +6,7 @@
  */
 
 import React, { useMemo, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-} from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -21,19 +15,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme, useAnalyticsTimeRange, type TimeRangeOption } from '@rallia/shared-hooks';
 import { useTranslation } from '../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
-import {
-  Text,
-  TimeRangeSelector,
-  LineChart,
-  BarChart,
-} from '@rallia/shared-components';
-import {
-  primary,
-  neutral,
-  status,
-  spacingPixels,
-  radiusPixels,
-} from '@rallia/design-system';
+import { Text, TimeRangeSelector, LineChart, BarChart } from '@rallia/shared-components';
+import { primary, neutral, status, spacingPixels, radiusPixels } from '@rallia/design-system';
 import {
   getSessionMetrics,
   getFeatureAdoption,
@@ -98,7 +81,10 @@ function useEngagementAnalytics(selectedOption: TimeRangeOption) {
         setSessionMetrics(sessionsResult);
 
         // Calculate summary metrics
-        const totalSessions = sessionsResult.reduce((sum: number, s: SessionMetrics) => sum + s.sessionsCount, 0);
+        const totalSessions = sessionsResult.reduce(
+          (sum: number, s: SessionMetrics) => sum + s.sessionsCount,
+          0
+        );
         const totalDuration = sessionsResult.reduce(
           (sum: number, s: SessionMetrics) => sum + s.avgSessionDuration * s.sessionsCount,
           0
@@ -107,13 +93,15 @@ function useEngagementAnalytics(selectedOption: TimeRangeOption) {
           (sum: number, s: SessionMetrics) => sum + s.screensPerSession * s.sessionsCount,
           0
         );
-        const totalBounceRate = sessionsResult.reduce((sum: number, s: SessionMetrics) => sum + s.bounceRate, 0);
+        const totalBounceRate = sessionsResult.reduce(
+          (sum: number, s: SessionMetrics) => sum + s.bounceRate,
+          0
+        );
 
         setSummaryMetrics({
           avgSessions: Math.round(totalSessions / sessionsResult.length),
           avgDuration: totalSessions > 0 ? Math.round(totalDuration / totalSessions) : 0,
-          avgScreens:
-            totalSessions > 0 ? Math.round((totalScreens / totalSessions) * 10) / 10 : 0,
+          avgScreens: totalSessions > 0 ? Math.round((totalScreens / totalSessions) * 10) / 10 : 0,
           avgBounceRate: Math.round(totalBounceRate / sessionsResult.length),
         });
       }
@@ -163,15 +151,8 @@ const AdminEngagementAnalyticsScreen: React.FC = () => {
   const isDark = theme === 'dark';
 
   const { selectedOption, setRange } = useAnalyticsTimeRange();
-  const {
-    loading,
-    error,
-    sessionMetrics,
-    featureAdoption,
-    screenStats,
-    summaryMetrics,
-    refetch,
-  } = useEngagementAnalytics(selectedOption);
+  const { loading, error, sessionMetrics, featureAdoption, screenStats, summaryMetrics, refetch } =
+    useEngagementAnalytics(selectedOption);
 
   const colors = useMemo(
     () => ({
@@ -191,14 +172,14 @@ const AdminEngagementAnalyticsScreen: React.FC = () => {
 
   // Transform session metrics for LineChart
   const sessionChartData = useMemo(() => {
-    return sessionMetrics.map((session) => ({
+    return sessionMetrics.map(session => ({
       label: session.date.slice(5), // MM-DD
       value: session.sessionsCount,
     }));
   }, [sessionMetrics]);
 
   const durationChartData = useMemo(() => {
-    return sessionMetrics.map((session) => ({
+    return sessionMetrics.map(session => ({
       label: session.date.slice(5),
       value: Math.round(session.avgSessionDuration / 60), // Convert to minutes
     }));
@@ -206,7 +187,7 @@ const AdminEngagementAnalyticsScreen: React.FC = () => {
 
   // Transform feature adoption for horizontal bar chart
   const featureChartData = useMemo(() => {
-    return featureAdoption.map((feature) => ({
+    return featureAdoption.map(feature => ({
       label: formatFeatureName(feature.featureName),
       value: feature.adoptionRate,
     }));
@@ -214,14 +195,17 @@ const AdminEngagementAnalyticsScreen: React.FC = () => {
 
   // Transform screen stats for bar chart
   const screenChartData = useMemo(() => {
-    return screenStats.slice(0, 8).map((screen) => ({
+    return screenStats.slice(0, 8).map(screen => ({
       label: formatScreenName(screen.screenName),
       value: screen.totalViews,
     }));
   }, [screenStats]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['top', 'bottom']}
+    >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
@@ -251,7 +235,7 @@ const AdminEngagementAnalyticsScreen: React.FC = () => {
         <View style={styles.timeRangeContainer}>
           <TimeRangeSelector
             value={selectedOption}
-            onChange={(range) => setRange(range as TimeRangeOption)}
+            onChange={range => setRange(range as TimeRangeOption)}
             options={[
               { value: '7d', label: '7D', days: 7 },
               { value: '30d', label: '30D', days: 30 },
@@ -429,8 +413,7 @@ const AdminEngagementAnalyticsScreen: React.FC = () => {
         {/* Most Viewed Screens */}
         <View style={[styles.chartCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.chartTitle, { color: colors.text }]}>
-            {t('admin.analytics.screens.engagement.topScreens' as TranslationKey) ||
-              'Top Screens'}
+            {t('admin.analytics.screens.engagement.topScreens' as TranslationKey) || 'Top Screens'}
           </Text>
           <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>
             {t('admin.analytics.screens.engagement.topScreensDesc' as TranslationKey) ||
@@ -539,7 +522,7 @@ function formatFeatureName(name: string): string {
     rating_verification: 'Rating Verification',
     match_sharing: 'Match Sharing',
   };
-  return names[name] || name.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+  return names[name] || name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 
 function formatScreenName(name: string): string {

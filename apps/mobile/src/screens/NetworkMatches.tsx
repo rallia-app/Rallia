@@ -28,7 +28,6 @@ import {
 import type { TranslationKey } from '@rallia/shared-translations';
 import { Logger } from '@rallia/shared-services';
 
-import { getSafeAreaEdges } from '../utils';
 import { useThemeStyles, useTranslation, useAuth } from '../hooks';
 import { useMatchDetailSheet, useSport } from '../context';
 import { SportIcon } from '../components/SportIcon';
@@ -408,7 +407,7 @@ export default function NetworkMatchesScreen() {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={getSafeAreaEdges(['top'])}
+      edges={['top', 'bottom']}
     >
       {/* Header - green background like CommunityDetail/GroupDetail */}
       <View style={[styles.header, { backgroundColor: isDark ? primary[900] : primary[100] }]}>

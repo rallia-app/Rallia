@@ -57,7 +57,10 @@ export const InviteReferralScreen: React.FC<RootStackScreenProps<'InviteReferral
   }, [handleReferral]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['top', 'bottom']}
+    >
       <View style={styles.content}>
         <Ionicons name="gift-outline" size={64} color={colors.primary} />
         <Text size="xl" weight="bold" color={colors.text} style={styles.title}>

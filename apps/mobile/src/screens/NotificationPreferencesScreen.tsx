@@ -468,7 +468,10 @@ const NotificationPreferencesScreen: React.FC = () => {
 
   if (isLoadingAuth || isLoadingPreferences) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['bottom']}
+      >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.buttonActive} />
         </View>
@@ -478,7 +481,10 @@ const NotificationPreferencesScreen: React.FC = () => {
 
   if (!isAuthenticated) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['bottom']}
+      >
         <View style={styles.emptyContainer}>
           <Ionicons name="lock-closed-outline" size={64} color={colors.iconMuted} />
           <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
@@ -490,7 +496,10 @@ const NotificationPreferencesScreen: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['bottom']}
+    >
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}

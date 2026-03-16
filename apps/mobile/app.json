@@ -26,6 +26,10 @@
       "usesAppleSignIn": true,
       "associatedDomains": ["applinks:rallia.app"]
     },
+    "androidStatusBar": {
+      "translucent": true,
+      "style": "auto"
+    },
     "android": {
       "softwareKeyboardLayoutMode": "pan",
       "adaptiveIcon": {
@@ -73,6 +77,9 @@
         {
           "ios": {
             "ccacheEnabled": true
+          },
+          "android": {
+            "enableEdgeToEdge": true
           }
         }
       ],

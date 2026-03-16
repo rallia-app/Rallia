@@ -56,7 +56,6 @@ import { lightHaptic } from '@rallia/shared-utils';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-
 // =============================================================================
 // COMPONENT
 // =============================================================================
@@ -95,7 +94,8 @@ const AdminDashboardScreen: React.FC = () => {
       lightHaptic();
       await setRange(option);
       // Refetch trends with new day count
-      const days = option === '7d' ? 7 : option === '30d' ? 30 : option === '90d' ? 90 : timeRange.days;
+      const days =
+        option === '7d' ? 7 : option === '30d' ? 30 : option === '90d' ? 90 : timeRange.days;
       await refetchTrends(days);
     },
     [setRange, refetchTrends, timeRange.days]
@@ -183,7 +183,8 @@ const AdminDashboardScreen: React.FC = () => {
         ]}
       >
         <Text style={[styles.widgetTitle, { color: colors.textSecondary }]}>
-          {t(`admin.analytics.widgets.${widget.id.replace(/-/g, '_')}` as TranslationKey) || widget.title}
+          {t(`admin.analytics.widgets.${widget.id.replace(/-/g, '_')}` as TranslationKey) ||
+            widget.title}
         </Text>
         <View style={styles.widgetValueRow}>
           <Text style={[styles.widgetValue, { color: colors.text }]}>
@@ -192,12 +193,7 @@ const AdminDashboardScreen: React.FC = () => {
           {/* Sparkline chart */}
           {trendData.length > 0 && (
             <View style={styles.sparklineContainer}>
-              <SparklineChart
-                data={trendData}
-                width={60}
-                height={28}
-                trend={getTrendType()}
-              />
+              <SparklineChart data={trendData} width={60} height={28} trend={getTrendType()} />
             </View>
           )}
         </View>
@@ -205,7 +201,8 @@ const AdminDashboardScreen: React.FC = () => {
           <View style={styles.widgetChange}>
             <Ionicons name={getChangeIcon()} size={14} color={getChangeColor()} />
             <Text style={[styles.widgetChangeText, { color: getChangeColor() }]}>
-              {widget.change > 0 ? '+' : ''}{widget.change}
+              {widget.change > 0 ? '+' : ''}
+              {widget.change}
             </Text>
           </View>
         )}
@@ -229,9 +226,7 @@ const AdminDashboardScreen: React.FC = () => {
             size={24}
             color={colors.accent}
           />
-          <Text style={[styles.sportName, { color: colors.text }]}>
-            {sport.sportName}
-          </Text>
+          <Text style={[styles.sportName, { color: colors.text }]}>{sport.sportName}</Text>
         </View>
         <View style={styles.sportStats}>
           <View style={styles.sportStatItem}>
@@ -266,20 +261,20 @@ const AdminDashboardScreen: React.FC = () => {
   // Render onboarding funnel step
   const renderFunnelStep = (step: OnboardingFunnelStep, index: number) => {
     const completionWidth = Math.min(step.completionRate, 100);
-    const barColor = step.completionRate >= 70
-      ? colors.successText
-      : step.completionRate >= 40
-        ? colors.warningText
-        : colors.errorText;
+    const barColor =
+      step.completionRate >= 70
+        ? colors.successText
+        : step.completionRate >= 40
+          ? colors.warningText
+          : colors.errorText;
 
     return (
       <View key={step.screenName} style={styles.funnelStep}>
         <View style={styles.funnelStepHeader}>
-          <Text style={[styles.funnelStepNumber, { color: colors.textMuted }]}>
-            {index + 1}.
-          </Text>
+          <Text style={[styles.funnelStepNumber, { color: colors.textMuted }]}>{index + 1}.</Text>
           <Text style={[styles.funnelStepName, { color: colors.text }]}>
-            {t(`admin.analytics.onboarding.${step.screenName}` as TranslationKey) || step.screenName}
+            {t(`admin.analytics.onboarding.${step.screenName}` as TranslationKey) ||
+              step.screenName}
           </Text>
           <Text style={[styles.funnelStepRate, { color: colors.textSecondary }]}>
             {step.completionRate.toFixed(1)}%
@@ -306,7 +301,10 @@ const AdminDashboardScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['bottom']}
+    >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
@@ -344,7 +342,7 @@ const AdminDashboardScreen: React.FC = () => {
         <View style={styles.timeRangeSection}>
           <TimeRangeSelector
             value={selectedOption as '7d' | '30d' | '90d' | 'ytd'}
-            onChange={(range) => handleTimeRangeChange(range as '7d' | '30d' | '90d' | 'ytd')}
+            onChange={range => handleTimeRangeChange(range as '7d' | '30d' | '90d' | 'ytd')}
             size="md"
             disabled={trendsLoading}
           />
@@ -365,9 +363,7 @@ const AdminDashboardScreen: React.FC = () => {
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
             {t('admin.analytics.overview' as TranslationKey)}
           </Text>
-          <View style={styles.widgetsGrid}>
-            {widgets.slice(0, 5).map(renderWidgetCard)}
-          </View>
+          <View style={styles.widgetsGrid}>{widgets.slice(0, 5).map(renderWidgetCard)}</View>
         </View>
 
         {/* Sport Statistics Section */}
@@ -455,7 +451,8 @@ const AdminDashboardScreen: React.FC = () => {
                   <Text style={[styles.matchStatValue, { color: colors.successText }]}>
                     {kpi.matches.totalMatches > 0
                       ? ((kpi.matches.completedMatches / kpi.matches.totalMatches) * 100).toFixed(1)
-                      : 0}%
+                      : 0}
+                    %
                   </Text>
                 </View>
               </View>
@@ -468,11 +465,14 @@ const AdminDashboardScreen: React.FC = () => {
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
             {t('admin.analytics.quickActions' as TranslationKey)}
           </Text>
-          
+
           {/* Analytics Section Navigation Cards - Full Width Layout */}
           <AnalyticsSectionCard
             title={t('admin.analytics.sections.users' as TranslationKey) || 'User Analytics'}
-            description={t('admin.analytics.sections.usersFullDesc' as TranslationKey) || 'Monitor user growth, retention, and activity patterns across the platform.'}
+            description={
+              t('admin.analytics.sections.usersFullDesc' as TranslationKey) ||
+              'Monitor user growth, retention, and activity patterns across the platform.'
+            }
             icon="people"
             onPress={() => {
               lightHaptic();
@@ -482,7 +482,10 @@ const AdminDashboardScreen: React.FC = () => {
           />
           <AnalyticsSectionCard
             title={t('admin.analytics.sections.matches' as TranslationKey) || 'Match Analytics'}
-            description={t('admin.analytics.sections.matchesFullDesc' as TranslationKey) || 'Track match creation, completion rates, and scheduling trends.'}
+            description={
+              t('admin.analytics.sections.matchesFullDesc' as TranslationKey) ||
+              'Track match creation, completion rates, and scheduling trends.'
+            }
             icon="tennisball"
             onPress={() => {
               lightHaptic();
@@ -491,8 +494,13 @@ const AdminDashboardScreen: React.FC = () => {
             size="fullWidth"
           />
           <AnalyticsSectionCard
-            title={t('admin.analytics.sections.onboarding' as TranslationKey) || 'Onboarding Analytics'}
-            description={t('admin.analytics.sections.onboardingFullDesc' as TranslationKey) || 'Analyze the user journey funnel and identify drop-off points.'}
+            title={
+              t('admin.analytics.sections.onboarding' as TranslationKey) || 'Onboarding Analytics'
+            }
+            description={
+              t('admin.analytics.sections.onboardingFullDesc' as TranslationKey) ||
+              'Analyze the user journey funnel and identify drop-off points.'
+            }
             icon="git-branch"
             onPress={() => {
               lightHaptic();
@@ -501,8 +509,13 @@ const AdminDashboardScreen: React.FC = () => {
             size="fullWidth"
           />
           <AnalyticsSectionCard
-            title={t('admin.analytics.sections.engagement' as TranslationKey) || 'Engagement Analytics'}
-            description={t('admin.analytics.sections.engagementFullDesc' as TranslationKey) || 'Understand user behavior, session metrics, and feature adoption.'}
+            title={
+              t('admin.analytics.sections.engagement' as TranslationKey) || 'Engagement Analytics'
+            }
+            description={
+              t('admin.analytics.sections.engagementFullDesc' as TranslationKey) ||
+              'Understand user behavior, session metrics, and feature adoption.'
+            }
             icon="analytics"
             onPress={() => {
               lightHaptic();
@@ -511,8 +524,13 @@ const AdminDashboardScreen: React.FC = () => {
             size="fullWidth"
           />
           <AnalyticsSectionCard
-            title={t('admin.analytics.sections.messaging' as TranslationKey) || 'Messaging Analytics'}
-            description={t('admin.analytics.sections.messagingFullDesc' as TranslationKey) || 'Review communication patterns, message volume, and chat health.'}
+            title={
+              t('admin.analytics.sections.messaging' as TranslationKey) || 'Messaging Analytics'
+            }
+            description={
+              t('admin.analytics.sections.messagingFullDesc' as TranslationKey) ||
+              'Review communication patterns, message volume, and chat health.'
+            }
             icon="chatbubbles"
             onPress={() => {
               lightHaptic();
@@ -522,7 +540,10 @@ const AdminDashboardScreen: React.FC = () => {
           />
           <AnalyticsSectionCard
             title={t('admin.analytics.sections.rating' as TranslationKey) || 'Rating & Reputation'}
-            description={t('admin.analytics.sections.ratingFullDesc' as TranslationKey) || 'Explore player ratings, certification progress, and reputation trends.'}
+            description={
+              t('admin.analytics.sections.ratingFullDesc' as TranslationKey) ||
+              'Explore player ratings, certification progress, and reputation trends.'
+            }
             icon="star"
             onPress={() => {
               lightHaptic();
@@ -531,8 +552,13 @@ const AdminDashboardScreen: React.FC = () => {
             size="fullWidth"
           />
           <AnalyticsSectionCard
-            title={t('admin.analytics.sections.moderation' as TranslationKey) || 'Moderation & Safety'}
-            description={t('admin.analytics.sections.moderationFullDesc' as TranslationKey) || 'Monitor reports, bans, and platform safety metrics.'}
+            title={
+              t('admin.analytics.sections.moderation' as TranslationKey) || 'Moderation & Safety'
+            }
+            description={
+              t('admin.analytics.sections.moderationFullDesc' as TranslationKey) ||
+              'Monitor reports, bans, and platform safety metrics.'
+            }
             icon="shield-checkmark"
             onPress={() => {
               lightHaptic();
@@ -541,8 +567,13 @@ const AdminDashboardScreen: React.FC = () => {
             size="fullWidth"
           />
           <AnalyticsSectionCard
-            title={t('admin.analytics.sections.community' as TranslationKey) || 'Community Analytics'}
-            description={t('admin.analytics.sections.communityFullDesc' as TranslationKey) || 'Analyze network growth, group activity, and community engagement.'}
+            title={
+              t('admin.analytics.sections.community' as TranslationKey) || 'Community Analytics'
+            }
+            description={
+              t('admin.analytics.sections.communityFullDesc' as TranslationKey) ||
+              'Analyze network growth, group activity, and community engagement.'
+            }
             icon="people-circle"
             onPress={() => {
               lightHaptic();
@@ -552,7 +583,10 @@ const AdminDashboardScreen: React.FC = () => {
           />
           <AnalyticsSectionCard
             title={t('admin.analytics.sections.sports' as TranslationKey) || 'Sport Analytics'}
-            description={t('admin.analytics.sections.sportsFullDesc' as TranslationKey) || 'Compare sport popularity, facility usage, and growth trends.'}
+            description={
+              t('admin.analytics.sections.sportsFullDesc' as TranslationKey) ||
+              'Compare sport popularity, facility usage, and growth trends.'
+            }
             icon="tennisball"
             onPress={() => {
               lightHaptic();
@@ -562,7 +596,10 @@ const AdminDashboardScreen: React.FC = () => {
           />
           <AnalyticsSectionCard
             title={t('admin.analytics.sections.settings' as TranslationKey) || 'Admin Panel'}
-            description={t('admin.analytics.sections.settingsFullDesc' as TranslationKey) || 'Access system settings, user management, and admin configuration.'}
+            description={
+              t('admin.analytics.sections.settingsFullDesc' as TranslationKey) ||
+              'Access system settings, user management, and admin configuration.'
+            }
             icon="settings"
             onPress={() => {
               lightHaptic();
