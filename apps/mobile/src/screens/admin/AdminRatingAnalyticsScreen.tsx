@@ -221,7 +221,10 @@ export default function AdminRatingAnalyticsScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: bgColor }]}
+      edges={['top', 'bottom']}
+    >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: borderColor }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>

@@ -280,7 +280,7 @@ const AdminAlertsScreen: React.FC = () => {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['top']}
+      edges={['top', 'bottom']}
     >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>

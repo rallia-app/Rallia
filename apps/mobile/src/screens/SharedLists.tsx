@@ -18,7 +18,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { SheetManager } from 'react-native-actions-sheet';
 import { Text, Skeleton, SkeletonCard } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
-import { getSafeAreaEdges } from '../utils';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { primary } from '@rallia/design-system';
 import {
@@ -165,10 +164,7 @@ const SharedLists: React.FC = () => {
   // Loading state
   if (isLoading) {
     return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        edges={getSafeAreaEdges(['bottom'])}
-      >
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         <View style={styles.loadingContainer}>
           {/* Share Match CTA Skeleton */}
           <Skeleton
@@ -210,10 +206,7 @@ const SharedLists: React.FC = () => {
   }
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={getSafeAreaEdges(['bottom'])}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       {/* Share Match CTA - Always visible at top */}
       <TouchableOpacity
         style={[

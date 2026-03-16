@@ -9,7 +9,6 @@ import { supabase, Logger } from '@rallia/shared-services';
 import { RatingProofWithFile, RatingProofsScreenParams } from '@rallia/shared-types';
 import { SheetManager } from 'react-native-actions-sheet';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
-import { getSafeAreaEdges } from '../utils';
 import { useThemeStyles, useTranslation } from '../hooks';
 import { formatDateShort } from '../utils/dateFormatting';
 import {
@@ -491,7 +490,7 @@ const RatingProofs: React.FC = () => {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={getSafeAreaEdges(['bottom'])}
+      edges={['bottom']}
     >
       {/* Content */}
       {loading ? (

@@ -35,7 +35,6 @@ import {
   useRequireOnboarding,
   useAuth,
 } from '../../../hooks';
-import { getSafeAreaEdges } from '../../../utils';
 import { useSport } from '../../../context';
 import { SportIcon } from '../../../components/SportIcon';
 import { useRoute } from '@react-navigation/native';
@@ -277,7 +276,7 @@ export default function FacilityDetail() {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={getSafeAreaEdges(['bottom'])}
+        edges={['bottom']}
       >
         <View style={styles.loadingContainer}>
           {/* Header skeleton */}
@@ -355,7 +354,7 @@ export default function FacilityDetail() {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={getSafeAreaEdges(['bottom'])}
+        edges={['bottom']}
       >
         <View style={styles.emptyContainer}>
           <View
@@ -508,7 +507,10 @@ export default function FacilityDetail() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['bottom']}
+    >
       {/* Tab Bar at top */}
       <View style={[styles.tabBar, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
         {visibleTabs.map(tab => {

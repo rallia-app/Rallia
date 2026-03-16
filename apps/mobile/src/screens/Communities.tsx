@@ -24,7 +24,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Text, Skeleton } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
-import { getSafeAreaEdges } from '../utils';
 import {
   useThemeStyles,
   useAuth,
@@ -525,10 +524,7 @@ export default function CommunitiesScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        edges={getSafeAreaEdges(['bottom'])}
-      >
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         {/* Only show tabs when authenticated */}
         {playerId && renderTabs}
         <View style={styles.loadingContainer}>
@@ -568,10 +564,7 @@ export default function CommunitiesScreen() {
   }
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={getSafeAreaEdges(['bottom'])}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       {/* Only show tabs when authenticated (to switch between Discover and My Communities) */}
       {playerId && renderTabs}
 

@@ -606,7 +606,10 @@ const Notifications: React.FC = () => {
 
   return (
     <>
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['bottom']}
+      >
         {isLoadingAuth ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.buttonActive} />

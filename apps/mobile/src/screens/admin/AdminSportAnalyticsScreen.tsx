@@ -6,13 +6,7 @@
  */
 
 import React, { useMemo, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-} from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -22,18 +16,8 @@ import { BarChart, PieChart } from 'react-native-gifted-charts';
 import { useTheme, useAnalyticsTimeRange, type TimeRangeOption } from '@rallia/shared-hooks';
 import { useTranslation } from '../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
-import {
-  Text,
-  TimeRangeSelector,
-  LineChart,
-} from '@rallia/shared-components';
-import {
-  primary,
-  neutral,
-  status,
-  spacingPixels,
-  radiusPixels,
-} from '@rallia/design-system';
+import { Text, TimeRangeSelector, LineChart } from '@rallia/shared-components';
+import { primary, neutral, status, spacingPixels, radiusPixels } from '@rallia/design-system';
 import {
   getSportPopularity,
   getSportActivityComparison,
@@ -102,7 +86,9 @@ function useSportAnalytics(selectedOption: TimeRangeOption) {
 
         // Calculate summary metrics from popularity data
         const totalMatches = popularityResult.reduce((sum, s) => sum + (s.totalMatches || 0), 0);
-        const avgGrowth = popularityResult.reduce((sum, s) => sum + (s.growthPercent || 0), 0) / popularityResult.length;
+        const avgGrowth =
+          popularityResult.reduce((sum, s) => sum + (s.growthPercent || 0), 0) /
+          popularityResult.length;
         setSummaryMetrics(prev => ({
           totalSports: popularityResult.length,
           totalMatches,
@@ -130,7 +116,7 @@ function useSportAnalytics(selectedOption: TimeRangeOption) {
 
         // Calculate total facilities
         const totalFacilities = facilityResult.reduce((sum, f) => sum + (f.facilityCount || 0), 0);
-        setSummaryMetrics(prev => prev ? { ...prev, totalFacilities } : null);
+        setSummaryMetrics(prev => (prev ? { ...prev, totalFacilities } : null));
       }
     } catch (err) {
       console.error('Error fetching sport analytics:', err);
@@ -192,20 +178,31 @@ export default function AdminSportAnalyticsScreen() {
   );
 
   // Chart colors
-  const chartColors = useMemo(() => ({
-    primary: primary[500],
-    secondary: status.success.DEFAULT,
-    tertiary: status.warning.DEFAULT,
-    quaternary: status.error.DEFAULT,
-    neutral: neutral[400],
-  }), []);
+  const chartColors = useMemo(
+    () => ({
+      primary: primary[500],
+      secondary: status.success.DEFAULT,
+      tertiary: status.warning.DEFAULT,
+      quaternary: status.error.DEFAULT,
+      neutral: neutral[400],
+    }),
+    []
+  );
 
   // Sport popularity pie chart data
   const popularityChartData = useMemo(() => {
     if (!sportPopularity || sportPopularity.length === 0) return [];
 
-    const pieColors = [chartColors.primary, chartColors.secondary, chartColors.tertiary, chartColors.quaternary, chartColors.neutral, primary[300], primary[700]];
-    
+    const pieColors = [
+      chartColors.primary,
+      chartColors.secondary,
+      chartColors.tertiary,
+      chartColors.quaternary,
+      chartColors.neutral,
+      primary[300],
+      primary[700],
+    ];
+
     return sportPopularity.slice(0, 6).map((sport, index) => ({
       value: sport.playerCount,
       text: sport.sportName,
@@ -216,12 +213,11 @@ export default function AdminSportAnalyticsScreen() {
   // Activity comparison bar chart data
   const activityChartData = useMemo(() => {
     if (!activityComparison || activityComparison.length === 0) return [];
-    
+
     return activityComparison.slice(0, 6).map(sport => ({
       value: sport.totalMatches,
-      label: sport.sportName.length > 10 
-        ? sport.sportName.substring(0, 10) + '...' 
-        : sport.sportName,
+      label:
+        sport.sportName.length > 10 ? sport.sportName.substring(0, 10) + '...' : sport.sportName,
       frontColor: chartColors.primary,
     }));
   }, [activityComparison, chartColors]);
@@ -235,7 +231,9 @@ export default function AdminSportAnalyticsScreen() {
       const totalMatches = trend.sports?.reduce((sum, s) => sum + (s.matchCount || 0), 0) || 0;
       return {
         value: totalMatches,
-        label: new Date(trend.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).split(' ')[0],
+        label: new Date(trend.date)
+          .toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          .split(' ')[0],
       };
     });
   }, [growthTrends]);
@@ -243,12 +241,10 @@ export default function AdminSportAnalyticsScreen() {
   // Growth rates bar chart - use sportPopularity growth data
   const growthRatesChartData = useMemo(() => {
     if (!sportPopularity || sportPopularity.length === 0) return [];
-    
+
     return sportPopularity.map(sport => ({
       value: Math.max(0, sport.growthPercent || 0), // Only positive for bar chart
-      label: sport.sportName.length > 8 
-        ? sport.sportName.substring(0, 8) + '...' 
-        : sport.sportName,
+      label: sport.sportName.length > 8 ? sport.sportName.substring(0, 8) + '...' : sport.sportName,
       frontColor: (sport.growthPercent || 0) >= 0 ? chartColors.secondary : chartColors.quaternary,
     }));
   }, [sportPopularity, chartColors]);
@@ -256,20 +252,27 @@ export default function AdminSportAnalyticsScreen() {
   // Facility utilization chart data
   const facilityChartData = useMemo(() => {
     if (!facilityData || facilityData.length === 0) return [];
-    
+
     return facilityData.map(facility => ({
       value: facility.avgUtilization,
-      label: facility.sportName.length > 8 
-        ? facility.sportName.substring(0, 8) + '...' 
-        : facility.sportName,
-      frontColor: facility.avgUtilization >= 70 ? chartColors.secondary : 
-                  facility.avgUtilization >= 40 ? chartColors.tertiary : 
-                  chartColors.quaternary,
+      label:
+        facility.sportName.length > 8
+          ? facility.sportName.substring(0, 8) + '...'
+          : facility.sportName,
+      frontColor:
+        facility.avgUtilization >= 70
+          ? chartColors.secondary
+          : facility.avgUtilization >= 40
+            ? chartColors.tertiary
+            : chartColors.quaternary,
     }));
   }, [facilityData, chartColors]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['top', 'bottom']}
+    >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -286,14 +289,18 @@ export default function AdminSportAnalyticsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={refetch} tintColor={chartColors.primary} />
+          <RefreshControl
+            refreshing={loading}
+            onRefresh={refetch}
+            tintColor={chartColors.primary}
+          />
         }
       >
         {/* Time Range Selector */}
         <View style={styles.timeRangeContainer}>
           <TimeRangeSelector
             value={selectedOption}
-            onChange={(range) => setRange(range as TimeRangeOption)}
+            onChange={range => setRange(range as TimeRangeOption)}
             options={[
               { value: '7d', label: '7D', days: 7 },
               { value: '30d', label: '30D', days: 30 },
@@ -348,7 +355,8 @@ export default function AdminSportAnalyticsScreen() {
               <View style={[styles.metricCard, { backgroundColor: colors.card }]}>
                 <Ionicons name="trending-up" size={24} color={chartColors.quaternary} />
                 <Text style={[styles.metricValue, { color: colors.text }]}>
-                  {(summaryMetrics.avgGrowth || 0) >= 0 ? '+' : ''}{(summaryMetrics.avgGrowth || 0).toFixed(1)}%
+                  {(summaryMetrics.avgGrowth || 0) >= 0 ? '+' : ''}
+                  {(summaryMetrics.avgGrowth || 0).toFixed(1)}%
                 </Text>
                 <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
                   {t('admin.analytics.sports.avgGrowth' as TranslationKey) || 'Avg Growth'}
@@ -374,7 +382,9 @@ export default function AdminSportAnalyticsScreen() {
                   centerLabelComponent={() => (
                     <View style={styles.pieCenter}>
                       <Text style={[styles.pieCenterValue, { color: colors.text }]}>
-                        {sportPopularity.reduce((sum, s) => sum + s.playerCount, 0).toLocaleString()}
+                        {sportPopularity
+                          .reduce((sum, s) => sum + s.playerCount, 0)
+                          .toLocaleString()}
                       </Text>
                       <Text style={[styles.pieCenterLabel, { color: colors.textSecondary }]}>
                         {t('admin.analytics.sports.players' as TranslationKey) || 'Players'}
@@ -401,7 +411,8 @@ export default function AdminSportAnalyticsScreen() {
         {activityChartData.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('admin.analytics.sports.activityComparison' as TranslationKey) || 'Activity Comparison'}
+              {t('admin.analytics.sports.activityComparison' as TranslationKey) ||
+                'Activity Comparison'}
             </Text>
             <View style={[styles.chartCard, { backgroundColor: colors.card }]}>
               <BarChart
@@ -415,7 +426,12 @@ export default function AdminSportAnalyticsScreen() {
                 yAxisThickness={0}
                 xAxisColor={colors.border}
                 yAxisTextStyle={{ color: colors.textSecondary, fontSize: 10 }}
-                xAxisLabelTextStyle={{ color: colors.textSecondary, fontSize: 9, width: 50, textAlign: 'center' }}
+                xAxisLabelTextStyle={{
+                  color: colors.textSecondary,
+                  fontSize: 9,
+                  width: 50,
+                  textAlign: 'center',
+                }}
                 noOfSections={4}
                 maxValue={Math.max(...activityChartData.map(d => d.value)) * 1.2}
                 isAnimated
@@ -472,7 +488,12 @@ export default function AdminSportAnalyticsScreen() {
                 yAxisThickness={0}
                 xAxisColor={colors.border}
                 yAxisTextStyle={{ color: colors.textSecondary, fontSize: 10 }}
-                xAxisLabelTextStyle={{ color: colors.textSecondary, fontSize: 8, width: 45, textAlign: 'center' }}
+                xAxisLabelTextStyle={{
+                  color: colors.textSecondary,
+                  fontSize: 8,
+                  width: 45,
+                  textAlign: 'center',
+                }}
                 noOfSections={4}
                 maxValue={Math.max(...growthRatesChartData.map(d => d.value), 20) * 1.2}
                 isAnimated
@@ -499,7 +520,8 @@ export default function AdminSportAnalyticsScreen() {
         {facilityChartData.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('admin.analytics.sports.facilityUtilization' as TranslationKey) || 'Facility Utilization'}
+              {t('admin.analytics.sports.facilityUtilization' as TranslationKey) ||
+                'Facility Utilization'}
             </Text>
             <View style={[styles.chartCard, { backgroundColor: colors.card }]}>
               <BarChart
@@ -513,13 +535,19 @@ export default function AdminSportAnalyticsScreen() {
                 yAxisThickness={0}
                 xAxisColor={colors.border}
                 yAxisTextStyle={{ color: colors.textSecondary, fontSize: 10 }}
-                xAxisLabelTextStyle={{ color: colors.textSecondary, fontSize: 9, width: 50, textAlign: 'center' }}
+                xAxisLabelTextStyle={{
+                  color: colors.textSecondary,
+                  fontSize: 9,
+                  width: 50,
+                  textAlign: 'center',
+                }}
                 noOfSections={4}
                 maxValue={100}
                 isAnimated
               />
               <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>
-                {t('admin.analytics.sports.utilizationPercent' as TranslationKey) || 'Utilization %'}
+                {t('admin.analytics.sports.utilizationPercent' as TranslationKey) ||
+                  'Utilization %'}
               </Text>
             </View>
           </View>
@@ -537,7 +565,10 @@ export default function AdminSportAnalyticsScreen() {
                   key={sport.sportId}
                   style={[
                     styles.listItem,
-                    index !== sportPopularity.length - 1 && { borderBottomColor: colors.border, borderBottomWidth: 1 },
+                    index !== sportPopularity.length - 1 && {
+                      borderBottomColor: colors.border,
+                      borderBottomWidth: 1,
+                    },
                   ]}
                 >
                   <View style={styles.listItemLeft}>
@@ -549,13 +580,25 @@ export default function AdminSportAnalyticsScreen() {
                         {sport.sportName}
                       </Text>
                       <Text style={[styles.listItemSubtitle, { color: colors.textSecondary }]}>
-                        {sport.playerCount.toLocaleString()} players • {sport.totalMatches.toLocaleString()} matches
+                        {sport.playerCount.toLocaleString()} players •{' '}
+                        {sport.totalMatches.toLocaleString()} matches
                       </Text>
                     </View>
                   </View>
                   <View style={styles.listItemRight}>
-                    <Text style={[styles.listItemStat, { color: sport.growthPercent >= 0 ? chartColors.secondary : chartColors.quaternary }]}>
-                      {sport.growthPercent >= 0 ? '+' : ''}{sport.growthPercent.toFixed(1)}%
+                    <Text
+                      style={[
+                        styles.listItemStat,
+                        {
+                          color:
+                            sport.growthPercent >= 0
+                              ? chartColors.secondary
+                              : chartColors.quaternary,
+                        },
+                      ]}
+                    >
+                      {sport.growthPercent >= 0 ? '+' : ''}
+                      {sport.growthPercent.toFixed(1)}%
                     </Text>
                     <Text style={[styles.listItemStatLabel, { color: colors.textSecondary }]}>
                       growth
@@ -579,16 +622,23 @@ export default function AdminSportAnalyticsScreen() {
                   key={facility.sportId}
                   style={[
                     styles.listItem,
-                    index !== facilityData.length - 1 && { borderBottomColor: colors.border, borderBottomWidth: 1 },
+                    index !== facilityData.length - 1 && {
+                      borderBottomColor: colors.border,
+                      borderBottomWidth: 1,
+                    },
                   ]}
                 >
                   <View style={styles.listItemLeft}>
-                    <Ionicons 
-                      name="location" 
-                      size={20} 
-                      color={facility.avgUtilization >= 70 ? chartColors.secondary : 
-                             facility.avgUtilization >= 40 ? chartColors.tertiary : 
-                             chartColors.quaternary} 
+                    <Ionicons
+                      name="location"
+                      size={20}
+                      color={
+                        facility.avgUtilization >= 70
+                          ? chartColors.secondary
+                          : facility.avgUtilization >= 40
+                            ? chartColors.tertiary
+                            : chartColors.quaternary
+                      }
                     />
                     <View>
                       <Text style={[styles.listItemTitle, { color: colors.text }]}>
