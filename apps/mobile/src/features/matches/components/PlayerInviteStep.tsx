@@ -24,12 +24,14 @@ import {
   successHaptic,
   getProfilePictureUrl,
 } from '@rallia/shared-utils';
-import { usePlayerSearch, useInviteToMatch } from '@rallia/shared-hooks';
+import { usePlayerSearch, useInviteToMatch, useMultipleReputations } from '@rallia/shared-hooks';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import type { MatchParticipantWithPlayer } from '@rallia/shared-types';
 import type { TranslationKey, TranslationOptions } from '../../../hooks/useTranslation';
 import { SearchBar } from '../../../components/SearchBar';
 import RatingBadge from '../../../components/RatingBadge';
+import ReputationBadge from '../../../components/ReputationBadge';
+import type { ReputationDisplay } from '@rallia/shared-services';
 import { InviteFromListsStep } from '../../shared-lists/components/InviteFromListsStep';
 
 // =============================================================================
@@ -96,6 +98,7 @@ interface PlayerCardProps {
   onToggle: (player: PlayerSearchResult) => void;
   colors: PlayerInviteStepProps['colors'];
   isDark: boolean;
+  reputationDisplay?: ReputationDisplay;
 }
 
 const PlayerCard: React.FC<PlayerCardProps> = ({
@@ -104,6 +107,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   onToggle,
   colors,
   isDark,
+  reputationDisplay,
 }) => {
   const handlePress = () => {
     selectionHaptic();
@@ -157,15 +161,20 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
         >
           {player.first_name} {player.last_name}
         </Text>
-        {player.rating && (
-          <RatingBadge
-            ratingValue={player.rating.value}
-            ratingLabel={player.rating.label}
-            certificationStatus={player.rating.is_certified ? 'certified' : 'self_declared'}
-            isDark={isDark}
-            size="sm"
-          />
-        )}
+        <View style={styles.badgesRow}>
+          {player.rating && (
+            <RatingBadge
+              ratingValue={player.rating.value}
+              ratingLabel={player.rating.label}
+              certificationStatus={player.rating.badge_status}
+              isDark={isDark}
+              size="sm"
+            />
+          )}
+          {reputationDisplay && (
+            <ReputationBadge reputationDisplay={reputationDisplay} isDark={isDark} size="sm" />
+          )}
+        </View>
       </View>
 
       {/* Selection indicator */}
@@ -387,6 +396,10 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
     setIsRefreshing(false);
   }, [refetch]);
 
+  // Fetch reputation data for visible players
+  const playerIds = useMemo(() => (players || []).map(p => p.id), [players]);
+  const { reputations } = useMultipleReputations(playerIds);
+
   // Render player item
   const renderPlayer = useCallback(
     ({ item }: { item: PlayerSearchResult }) => (
@@ -396,9 +409,10 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
         onToggle={handleTogglePlayer}
         colors={colors}
         isDark={isDark}
+        reputationDisplay={reputations.get(item.id)}
       />
     ),
-    [selectedPlayerIds, handleTogglePlayer, colors, isDark]
+    [selectedPlayerIds, handleTogglePlayer, colors, isDark, reputations]
   );
 
   // Render footer (loading indicator for infinite scroll)
@@ -765,6 +779,12 @@ const styles = StyleSheet.create({
   playerInfo: {
     flex: 1,
     gap: spacingPixels[1],
+  },
+  badgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    flexWrap: 'wrap',
   },
   ratingBadge: {
     alignSelf: 'flex-start',

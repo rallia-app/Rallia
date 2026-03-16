@@ -21,7 +21,9 @@ import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import { isPlayerOnline } from '@rallia/shared-services';
+import type { ReputationDisplay } from '@rallia/shared-services';
 import RatingBadge from '../../../components/RatingBadge';
+import ReputationBadge from '../../../components/ReputationBadge';
 import { useTranslation, type TranslationKey } from '../../../hooks';
 
 interface ThemeColors {
@@ -41,6 +43,7 @@ interface PlayerCardProps {
   isFavorite?: boolean;
   onToggleFavorite?: (playerId: string) => void;
   showFavorite?: boolean;
+  reputationDisplay?: ReputationDisplay;
 }
 
 function formatDistance(meters: number | null, nearbyLabel: string): string {
@@ -61,6 +64,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   isFavorite = false,
   onToggleFavorite,
   showFavorite = false,
+  reputationDisplay,
 }) => {
   const { t } = useTranslation();
   const colorScheme = useColorScheme();
@@ -144,26 +148,25 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
 
         {/* Player Info */}
         <View style={styles.infoContainer}>
-          <View style={styles.nameRow}>
-            <Text
-              size="base"
-              weight="semibold"
-              color={colors.text}
-              numberOfLines={1}
-              style={{ flexShrink: 1 }}
-            >
-              {displayName}
-            </Text>
-            {player.rating && (
-              <RatingBadge
-                ratingValue={player.rating.value}
-                ratingLabel={player.rating.label}
-                certificationStatus={player.rating.is_certified ? 'certified' : 'self_declared'}
-                isDark={isDark}
-                size="sm"
-              />
-            )}
-          </View>
+          <Text size="base" weight="semibold" color={colors.text} numberOfLines={1}>
+            {displayName}
+          </Text>
+          {(player.rating || reputationDisplay) && (
+            <View style={styles.badgesRow}>
+              {player.rating && (
+                <RatingBadge
+                  ratingValue={player.rating.value}
+                  ratingLabel={player.rating.label}
+                  certificationStatus={player.rating.badge_status}
+                  isDark={isDark}
+                  size="sm"
+                />
+              )}
+              {reputationDisplay && (
+                <ReputationBadge reputationDisplay={reputationDisplay} isDark={isDark} size="sm" />
+              )}
+            </View>
+          )}
 
           {(player.city || distanceText) && (
             <View style={styles.locationRow}>
@@ -243,10 +246,12 @@ const styles = StyleSheet.create({
   locationText: {
     marginLeft: spacingPixels[1],
   },
-  nameRow: {
+  badgesRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacingPixels[1],
+    marginTop: spacingPixels[0.5],
+    flexWrap: 'wrap',
   },
 });
 

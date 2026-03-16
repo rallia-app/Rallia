@@ -11,7 +11,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, SkeletonPlayerCard, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { usePlayerSearch, usePlayer } from '@rallia/shared-hooks';
+import { usePlayerSearch, usePlayer, useMultipleReputations } from '@rallia/shared-hooks';
 import { useTranslation } from '../../../hooks';
 import { useEffectiveLocation } from '../../../hooks/useEffectiveLocation';
 import { useUserHomeLocation } from '../../../context';
@@ -338,6 +338,10 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     }
   }, [players, filters.sortBy]);
 
+  // Fetch reputation data for visible players
+  const playerIds = useMemo(() => (sortedPlayers || []).map(p => p.id), [sortedPlayers]);
+  const { reputations } = useMultipleReputations(playerIds);
+
   // Toggle favorite handler
   const handleToggleFavorite = useCallback(
     async (playerId: string) => {
@@ -408,9 +412,10 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
         isFavorite={favoritePlayerIds.includes(item.id)}
         onToggleFavorite={handleToggleFavorite}
         showFavorite={!!currentUserId && currentUserId !== item.id}
+        reputationDisplay={reputations.get(item.id)}
       />
     ),
-    [colors, onPlayerPress, favoritePlayerIds, handleToggleFavorite, currentUserId]
+    [colors, onPlayerPress, favoritePlayerIds, handleToggleFavorite, currentUserId, reputations]
   );
 
   const renderEmpty = () => {
