@@ -1589,11 +1589,11 @@ export default function GroupDetailScreen() {
               if (!group.sport_id) {
                 return (
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
-                    <MaterialCommunityIcons name="tennis" size={18} color={colors.textMuted} />
+                    <SportIcon sportName="tennis" size={18} color={colors.textMuted} />
                     <Text style={{ color: colors.textMuted, marginHorizontal: 2, fontSize: 12 }}>
                       +
                     </Text>
-                    <MaterialCommunityIcons name="badminton" size={18} color={colors.textMuted} />
+                    <SportIcon sportName="pickleball" size={18} color={colors.textMuted} />
                   </View>
                 );
               }
@@ -1601,7 +1601,7 @@ export default function GroupDetailScreen() {
               if (sportName?.toLowerCase() === 'tennis') {
                 return (
                   <View style={{ marginLeft: 8 }}>
-                    <MaterialCommunityIcons name="tennis" size={20} color={colors.textMuted} />
+                    <SportIcon sportName="tennis" size={20} color={colors.textMuted} />
                   </View>
                 );
               }
@@ -1609,7 +1609,7 @@ export default function GroupDetailScreen() {
               if (sportName?.toLowerCase() === 'pickleball') {
                 return (
                   <View style={{ marginLeft: 8 }}>
-                    <MaterialCommunityIcons name="badminton" size={20} color={colors.textMuted} />
+                    <SportIcon sportName="pickleball" size={20} color={colors.textMuted} />
                   </View>
                 );
               }

@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { SportIcon } from '../../../components/SportIcon';
 import { Text, useToast } from '@rallia/shared-components';
 import { useUpdateGroup, useSports, type Group } from '@rallia/shared-hooks';
 import { primary, radiusPixels, spacingPixels } from '@rallia/design-system';
@@ -472,14 +473,14 @@ export function EditGroupActionSheet({ payload }: SheetProps<'edit-group'>) {
                 onPress={() => setSelectedSportOption('both')}
               >
                 <View style={styles.sportOptionIcons}>
-                  <MaterialCommunityIcons
-                    name="tennis"
+                  <SportIcon
+                    sportName="tennis"
                     size={18}
                     color={selectedSportOption === 'both' ? colors.primary : colors.textMuted}
                   />
                   <Text style={{ color: colors.textMuted, marginHorizontal: 2 }}>+</Text>
-                  <MaterialCommunityIcons
-                    name="badminton"
+                  <SportIcon
+                    sportName="pickleball"
                     size={18}
                     color={selectedSportOption === 'both' ? colors.primary : colors.textMuted}
                   />
@@ -517,8 +518,8 @@ export function EditGroupActionSheet({ payload }: SheetProps<'edit-group'>) {
                 ]}
                 onPress={() => setSelectedSportOption('tennis')}
               >
-                <MaterialCommunityIcons
-                  name="tennis"
+                <SportIcon
+                  sportName="tennis"
                   size={24}
                   color={selectedSportOption === 'tennis' ? colors.primary : colors.textMuted}
                 />
@@ -556,8 +557,8 @@ export function EditGroupActionSheet({ payload }: SheetProps<'edit-group'>) {
                 ]}
                 onPress={() => setSelectedSportOption('pickleball')}
               >
-                <MaterialCommunityIcons
-                  name="badminton"
+                <SportIcon
+                  sportName="pickleball"
                   size={24}
                   color={selectedSportOption === 'pickleball' ? colors.primary : colors.textMuted}
                 />

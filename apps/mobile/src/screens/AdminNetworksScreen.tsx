@@ -34,6 +34,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { SportIcon } from '../components/SportIcon';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
@@ -91,6 +92,7 @@ interface FilterChipProps {
   isDark: boolean;
   icon?: keyof typeof Ionicons.glyphMap;
   materialIcon?: keyof typeof MaterialCommunityIcons.glyphMap;
+  sportName?: string;
   showBothSportsIcon?: boolean;
 }
 
@@ -101,6 +103,7 @@ const FilterChip = memo(function FilterChip({
   isDark,
   icon,
   materialIcon,
+  sportName,
   showBothSportsIcon,
 }: FilterChipProps) {
   const scaleAnim = useMemo(() => new Animated.Value(1), []);
@@ -130,10 +133,20 @@ const FilterChip = memo(function FilterChip({
     if (showBothSportsIcon) {
       return (
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <MaterialCommunityIcons name="tennis" size={12} color={textColor} />
+          <SportIcon sportName="tennis" size={12} color={textColor} />
           <Text style={{ color: textColor, marginHorizontal: 1, fontSize: 8 }}>+</Text>
-          <MaterialCommunityIcons name="badminton" size={12} color={textColor} />
+          <SportIcon sportName="pickleball" size={12} color={textColor} />
         </View>
+      );
+    }
+    if (sportName) {
+      return (
+        <SportIcon
+          sportName={sportName}
+          size={14}
+          color={textColor}
+          style={styles.filterChipIcon}
+        />
       );
     }
     if (materialIcon) {
@@ -189,6 +202,7 @@ interface FilterDropdownOption<T> {
   label: string;
   icon?: keyof typeof Ionicons.glyphMap;
   materialIcon?: keyof typeof MaterialCommunityIcons.glyphMap;
+  sportName?: string;
 }
 
 interface FilterDropdownProps<T extends string> {
@@ -283,7 +297,14 @@ function FilterDropdown<T extends string>({
                   onPress={() => handleSelect(option.value)}
                   activeOpacity={0.7}
                 >
-                  {option.materialIcon ? (
+                  {option.sportName ? (
+                    <SportIcon
+                      sportName={option.sportName}
+                      size={18}
+                      color={isSelected ? colors.itemTextSelected : colors.itemText}
+                      style={styles.dropdownItemIcon}
+                    />
+                  ) : option.materialIcon ? (
                     <MaterialCommunityIcons
                       name={option.materialIcon}
                       size={18}
@@ -430,7 +451,7 @@ const AdminNetworksScreen: React.FC = () => {
       options.push({
         value: sport.id,
         label: sport.display_name,
-        materialIcon: isTennis ? 'tennis' : 'badminton',
+        sportName: isTennis ? 'tennis' : 'pickleball',
       });
     });
     return options;
@@ -772,13 +793,9 @@ const AdminNetworksScreen: React.FC = () => {
                   return (
                     <View style={styles.statItem}>
                       <View style={styles.sportIconContainer}>
-                        <MaterialCommunityIcons name="tennis" size={14} color={colors.textMuted} />
+                        <SportIcon sportName="tennis" size={14} color={colors.textMuted} />
                         <Text style={[styles.sportIconPlus, { color: colors.textMuted }]}>+</Text>
-                        <MaterialCommunityIcons
-                          name="badminton"
-                          size={14}
-                          color={colors.textMuted}
-                        />
+                        <SportIcon sportName="pickleball" size={14} color={colors.textMuted} />
                       </View>
                     </View>
                   );
@@ -787,7 +804,7 @@ const AdminNetworksScreen: React.FC = () => {
                 if (item.sport_name?.toLowerCase() === 'tennis') {
                   return (
                     <View style={styles.statItem}>
-                      <MaterialCommunityIcons name="tennis" size={14} color={colors.textMuted} />
+                      <SportIcon sportName="tennis" size={14} color={colors.textMuted} />
                       <Text size="xs" color={colors.textMuted}>
                         {item.sport_name}
                       </Text>
@@ -798,7 +815,7 @@ const AdminNetworksScreen: React.FC = () => {
                 if (item.sport_name?.toLowerCase() === 'pickleball') {
                   return (
                     <View style={styles.statItem}>
-                      <MaterialCommunityIcons name="badminton" size={14} color={colors.textMuted} />
+                      <SportIcon sportName="pickleball" size={14} color={colors.textMuted} />
                       <Text size="xs" color={colors.textMuted}>
                         {item.sport_name}
                       </Text>
@@ -1038,14 +1055,14 @@ const AdminNetworksScreen: React.FC = () => {
         <FilterChip
           label={getSportLabel()}
           showBothSportsIcon={sportFilter === 'all'}
-          materialIcon={
+          sportName={
             sportFilter !== 'all'
               ? sports
                   .find((s: Sport) => s.id === sportFilter)
                   ?.name.toLowerCase()
                   .includes('tennis')
                 ? 'tennis'
-                : 'badminton'
+                : 'pickleball'
               : undefined
           }
           isActive={sportFilter !== 'all'}
