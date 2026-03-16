@@ -28,6 +28,8 @@ import { useGetOrCreateDirectConversation, usePlayerReputation } from '@rallia/s
 import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
 import { useSport } from '../context';
 import { SportIcon } from '../components/SportIcon';
+import RatingBadge from '../components/RatingBadge';
+import ReputationBadge from '../components/ReputationBadge';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import {
   getProfilePictureUrl,
@@ -1205,6 +1207,19 @@ const PlayerProfile = () => {
             </Text>
           </View>
 
+          {/* Rating & Reputation Badges */}
+          <View style={styles.profileBadgesRow}>
+            <RatingBadge
+              ratingValue={primarySport?.ratingValue}
+              ratingLabel={primarySport?.ratingLabel}
+              certificationStatus={
+                primarySport?.badgeStatus as 'self_declared' | 'certified' | 'disputed' | undefined
+              }
+              isDark={isDark}
+            />
+            <ReputationBadge reputationDisplay={reputationDisplay} isDark={isDark} />
+          </View>
+
           {/* Last Seen / Active Status */}
           <View style={styles.lastSeenContainer}>
             <Ionicons
@@ -1536,35 +1551,6 @@ const PlayerProfile = () => {
             />
           </View>
         )}
-
-        {/* Reputation Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="shield-checkmark-outline" size={18} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('playerProfile.sections.reputation')}
-            </Text>
-          </View>
-
-          <View style={[styles.card, { backgroundColor: colors.card }]}>
-            <View style={styles.reputationBar}>
-              <View
-                style={[
-                  styles.reputationFill,
-                  {
-                    backgroundColor: reputationDisplay.tierColor,
-                    width: `${reputationDisplay.score}%`,
-                  },
-                ]}
-              />
-            </View>
-            <Text style={[styles.reputationScore, { color: colors.text }]}>
-              {reputationDisplay.isVisible
-                ? `${reputationDisplay.score}% — ${reputationDisplay.tierLabel}`
-                : reputationDisplay.tierLabel}
-            </Text>
-          </View>
-        </View>
 
         {/* Statistics Section */}
         <View style={styles.section}>
@@ -1975,21 +1961,11 @@ const styles = StyleSheet.create({
     fontSize: fontSizePixels.xs,
     fontWeight: fontWeightNumeric.medium,
   },
-  reputationBar: {
-    height: 8,
-    backgroundColor: neutral[200],
-    borderRadius: radiusPixels.full,
-    overflow: 'hidden',
-    marginBottom: spacingPixels[2],
-  },
-  reputationFill: {
-    height: '100%',
-    borderRadius: radiusPixels.full,
-  },
-  reputationScore: {
-    fontSize: fontSizePixels.sm,
-    fontWeight: fontWeightNumeric.semibold,
-    textAlign: 'right',
+  profileBadgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    marginBottom: spacingPixels[1],
   },
   statsGrid: {
     flexDirection: 'row',

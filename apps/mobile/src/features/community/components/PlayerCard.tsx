@@ -14,12 +14,16 @@ import {
   Animated,
   TouchableWithoutFeedback,
   TouchableOpacity,
+  useColorScheme,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import { isPlayerOnline } from '@rallia/shared-services';
+import type { ReputationDisplay } from '@rallia/shared-services';
+import RatingBadge from '../../../components/RatingBadge';
+import ReputationBadge from '../../../components/ReputationBadge';
 import { useTranslation, type TranslationKey } from '../../../hooks';
 
 interface ThemeColors {
@@ -39,6 +43,7 @@ interface PlayerCardProps {
   isFavorite?: boolean;
   onToggleFavorite?: (playerId: string) => void;
   showFavorite?: boolean;
+  reputationDisplay?: ReputationDisplay;
 }
 
 function formatDistance(meters: number | null, nearbyLabel: string): string {
@@ -52,19 +57,6 @@ function formatDistance(meters: number | null, nearbyLabel: string): string {
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
-/**
- * Get level description based on rating value
- * Maps NTRP/DUPR rating values to skill level descriptions
- */
-function getLevelDescription(value: number | null | undefined, t: (key: string) => string): string {
-  if (value === null || value === undefined) return t('playerProfile.rating.unrated');
-  if (value <= 2.0) return t('playerProfile.rating.beginner');
-  if (value <= 3.0) return t('playerProfile.rating.intermediate');
-  if (value <= 4.0) return t('playerProfile.rating.intermediateAdvanced');
-  if (value <= 5.0) return t('playerProfile.rating.advanced');
-  return t('playerProfile.rating.professional');
-}
-
 const PlayerCard: React.FC<PlayerCardProps> = ({
   player,
   colors,
@@ -72,20 +64,17 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   isFavorite = false,
   onToggleFavorite,
   showFavorite = false,
+  reputationDisplay,
 }) => {
   const { t } = useTranslation();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   // Always use first + last name
   const displayName = `${player.first_name || ''} ${player.last_name || ''}`.trim() || 'Unknown';
   const distanceText = formatDistance(player.distance_meters, t('playerDirectory.nearby'));
   const [isOnline, setIsOnline] = useState(false);
   // Animation value - using useMemo for stable instance
   const scaleAnim = useMemo(() => new Animated.Value(1), []);
-
-  // Get level description for the rating
-  const levelDescription =
-    player.rating?.value != null
-      ? getLevelDescription(player.rating.value, t as (key: string) => string)
-      : null;
 
   // Check online status
   useEffect(() => {
@@ -159,25 +148,25 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
 
         {/* Player Info */}
         <View style={styles.infoContainer}>
-          <View style={styles.nameRow}>
-            <Text
-              size="base"
-              weight="semibold"
-              color={colors.text}
-              numberOfLines={1}
-              style={{ flexShrink: 1 }}
-            >
-              {displayName}
-            </Text>
-            {player.rating?.is_certified && (
-              <View style={styles.certifiedBadge}>
-                <Ionicons name="checkmark-circle" size={12} color="#4CAF50" />
-                <Text size="xs" weight="semibold" style={styles.certifiedBadgeText}>
-                  {t('community.certified')}
-                </Text>
-              </View>
-            )}
-          </View>
+          <Text size="base" weight="semibold" color={colors.text} numberOfLines={1}>
+            {displayName}
+          </Text>
+          {(player.rating || reputationDisplay) && (
+            <View style={styles.badgesRow}>
+              {player.rating && (
+                <RatingBadge
+                  ratingValue={player.rating.value}
+                  ratingLabel={player.rating.label}
+                  certificationStatus={player.rating.badge_status}
+                  isDark={isDark}
+                  size="sm"
+                />
+              )}
+              {reputationDisplay && (
+                <ReputationBadge reputationDisplay={reputationDisplay} isDark={isDark} size="sm" />
+              )}
+            </View>
+          )}
 
           {(player.city || distanceText) && (
             <View style={styles.locationRow}>
@@ -189,21 +178,6 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                 numberOfLines={1}
               >
                 {[player.city, distanceText].filter(Boolean).join(' · ')}
-              </Text>
-            </View>
-          )}
-
-          {player.rating && (
-            <View style={styles.ratingRow}>
-              <Ionicons name="star" size={14} color={colors.primary} />
-              <Text
-                size="sm"
-                weight="medium"
-                color={colors.textSecondary}
-                style={styles.ratingText}
-              >
-                {player.rating.label}
-                {levelDescription && ` (${levelDescription})`}
               </Text>
             </View>
           )}
@@ -272,34 +246,12 @@ const styles = StyleSheet.create({
   locationText: {
     marginLeft: spacingPixels[1],
   },
-  ratingRow: {
+  badgesRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacingPixels[1],
-  },
-  ratingText: {
-    marginLeft: spacingPixels[1],
-    flex: 1,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  certifiedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E8F5E9',
-    borderWidth: 1,
-    borderColor: '#4CAF50',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: radiusPixels.full,
-    gap: 3,
-  },
-  certifiedBadgeText: {
-    color: '#4CAF50',
-    fontSize: 10,
+    gap: spacingPixels[1],
+    marginTop: spacingPixels[0.5],
+    flexWrap: 'wrap',
   },
 });
 

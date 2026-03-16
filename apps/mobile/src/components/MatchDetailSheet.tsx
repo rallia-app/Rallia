@@ -94,6 +94,8 @@ import { shareMatch } from '../utils';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import { ConfirmationModal } from './ConfirmationModal';
 import { SportIcon } from './SportIcon';
+import RatingBadge from './RatingBadge';
+import ReputationBadge from './ReputationBadge';
 import { useAppNavigation } from '../navigation';
 import type { PlayerWithProfile, OpponentForFeedback } from '@rallia/shared-types';
 
@@ -1970,6 +1972,15 @@ export const MatchDetailSheet: React.FC = () => {
           repTier && repTier !== 'unknown'
             ? TIER_COLORS[repTier as keyof typeof TIER_COLORS]
             : null;
+        // Build a ReputationDisplay-compatible object for the badge component
+        const repDisplay: import('@rallia/shared-services').ReputationDisplay = {
+          tier: (repTier as import('@rallia/shared-services').ReputationTier) ?? 'unknown',
+          score: repScore ?? 0,
+          isVisible: repTierConfig != null,
+          tierLabel: repTierConfig?.label ?? '',
+          tierColor: repTierConfig?.color ?? '',
+          tierIcon: repTierConfig?.icon ?? '',
+        };
         return {
           id: p.id,
           playerId: p.player_id,
@@ -1981,6 +1992,7 @@ export const MatchDetailSheet: React.FC = () => {
           certificationStatus: playerWithRating?.sportCertificationStatus,
           repTierConfig,
           repTierPalette,
+          repDisplay,
         };
       }) ?? [];
 
@@ -3803,79 +3815,18 @@ export const MatchDetailSheet: React.FC = () => {
                       >
                         {request.name}
                       </Text>
-                      {request.ratingDisplay &&
-                        (() => {
-                          const reqCertColors =
-                            request.certificationStatus &&
-                            request.certificationStatus !== 'self_declared'
-                              ? CERTIFICATION_BADGE_COLORS[request.certificationStatus]
-                              : null;
-                          const reqBadgeBg = reqCertColors
-                            ? `${reqCertColors.bg}25`
-                            : isDark
-                              ? `${primary[400]}30`
-                              : `${primary[500]}15`;
-                          const reqBadgeText = reqCertColors
-                            ? reqCertColors.bg
-                            : isDark
-                              ? primary[400]
-                              : primary[500];
-                          const reqBadgeIcon = reqCertColors
-                            ? (reqCertColors.icon as keyof typeof Ionicons.glyphMap)
-                            : 'analytics';
-                          return (
-                            <View
-                              style={[
-                                styles.pendingRequestRatingBadge,
-                                { backgroundColor: reqBadgeBg },
-                              ]}
-                            >
-                              <Ionicons
-                                name={reqBadgeIcon}
-                                size={10}
-                                color={reqBadgeText}
-                                style={styles.pendingRequestRatingIcon}
-                              />
-                              <Text size="xs" weight="medium" color={reqBadgeText}>
-                                {request.ratingDisplay}
-                              </Text>
-                            </View>
-                          );
-                        })()}
-                      {request.repTierPalette && request.repTierConfig && (
-                        <View
-                          style={[
-                            styles.pendingRequestRatingBadge,
-                            {
-                              backgroundColor: isDark
-                                ? request.repTierPalette.text
-                                : request.repTierPalette.background,
-                            },
-                          ]}
-                        >
-                          <Ionicons
-                            name={request.repTierConfig.icon as keyof typeof Ionicons.glyphMap}
-                            size={10}
-                            color={
-                              isDark
-                                ? request.repTierPalette.background
-                                : request.repTierPalette.text
-                            }
-                            style={styles.pendingRequestRatingIcon}
-                          />
-                          <Text
-                            size="xs"
-                            weight="medium"
-                            color={
-                              isDark
-                                ? request.repTierPalette.background
-                                : request.repTierPalette.text
-                            }
-                          >
-                            {request.repTierConfig.label}
-                          </Text>
-                        </View>
-                      )}
+                      <RatingBadge
+                        ratingValue={request.ratingValue}
+                        ratingLabel={request.ratingLabel}
+                        certificationStatus={request.certificationStatus}
+                        isDark={isDark}
+                        size="sm"
+                      />
+                      <ReputationBadge
+                        reputationDisplay={request.repDisplay}
+                        isDark={isDark}
+                        size="sm"
+                      />
                     </View>
                   </View>
                   <View style={styles.pendingRequestActions}>
@@ -4183,70 +4134,20 @@ export const MatchDetailSheet: React.FC = () => {
                   {creatorName}
                 </Text>
                 <View style={styles.hostedByReputationRow}>
-                  {(() => {
-                    const creatorPlayer = match.created_by_player as PlayerWithProfile | undefined;
-                    const ratingValue = creatorPlayer?.sportRatingValue;
-                    const ratingLabel = creatorPlayer?.sportRatingLabel;
-                    const ratingDisplay =
-                      ratingValue !== undefined && ratingValue !== null
-                        ? ratingValue.toFixed(1)
-                        : ratingLabel;
-                    if (!ratingDisplay) return null;
-                    const certStatus = creatorPlayer?.sportCertificationStatus;
-                    const certBadgeColors =
-                      certStatus && certStatus !== 'self_declared'
-                        ? CERTIFICATION_BADGE_COLORS[certStatus]
-                        : null;
-                    const badgeBg = certBadgeColors
-                      ? `${certBadgeColors.bg}25`
-                      : isDark
-                        ? `${primary[400]}30`
-                        : `${primary[500]}15`;
-                    const badgeTextColor = certBadgeColors
-                      ? certBadgeColors.bg
-                      : isDark
-                        ? primary[400]
-                        : primary[500];
-                    const badgeIcon = certBadgeColors
-                      ? (certBadgeColors.icon as keyof typeof Ionicons.glyphMap)
-                      : 'analytics';
-                    return (
-                      <View style={[styles.hostedByRatingBadge, { backgroundColor: badgeBg }]}>
-                        <Ionicons name={badgeIcon} size={12} color={badgeTextColor} />
-                        <Text size="xs" weight="semibold" color={badgeTextColor}>
-                          {ratingDisplay}
-                        </Text>
-                      </View>
-                    );
-                  })()}
-                  {creatorReputationDisplay.isVisible &&
-                    (() => {
-                      const tierKey = creatorReputationDisplay.tier as keyof typeof TIER_COLORS;
-                      const tierPalette = TIER_COLORS[tierKey] ?? TIER_COLORS.unknown;
-                      return (
-                        <View
-                          style={[
-                            styles.hostedByTierBadge,
-                            { backgroundColor: isDark ? tierPalette.text : tierPalette.background },
-                          ]}
-                        >
-                          <Ionicons
-                            name={
-                              creatorReputationDisplay.tierIcon as keyof typeof Ionicons.glyphMap
-                            }
-                            size={12}
-                            color={isDark ? tierPalette.background : tierPalette.text}
-                          />
-                          <Text
-                            size="xs"
-                            weight="semibold"
-                            color={isDark ? tierPalette.background : tierPalette.text}
-                          >
-                            {creatorReputationDisplay.tierLabel}
-                          </Text>
-                        </View>
-                      );
-                    })()}
+                  <RatingBadge
+                    ratingValue={
+                      (match.created_by_player as PlayerWithProfile | undefined)?.sportRatingValue
+                    }
+                    ratingLabel={
+                      (match.created_by_player as PlayerWithProfile | undefined)?.sportRatingLabel
+                    }
+                    certificationStatus={
+                      (match.created_by_player as PlayerWithProfile | undefined)
+                        ?.sportCertificationStatus
+                    }
+                    isDark={isDark}
+                  />
+                  <ReputationBadge reputationDisplay={creatorReputationDisplay} isDark={isDark} />
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.iconMuted} />

@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { SportIcon } from '../components/SportIcon';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SheetManager } from 'react-native-actions-sheet';
@@ -90,9 +91,9 @@ const GroupCard: React.FC<{
     if (!item.sport_id) {
       return (
         <View style={styles.sportIconContainer}>
-          <MaterialCommunityIcons name="tennis" size={14} color={colors.textMuted} />
+          <SportIcon sportName="tennis" size={14} color={colors.textMuted} />
           <Text style={[styles.sportIconPlus, { color: colors.textMuted }]}>+</Text>
-          <MaterialCommunityIcons name="badminton" size={14} color={colors.textMuted} />
+          <SportIcon sportName="pickleball" size={14} color={colors.textMuted} />
         </View>
       );
     }
@@ -100,7 +101,7 @@ const GroupCard: React.FC<{
     if (sportName?.toLowerCase() === 'tennis') {
       return (
         <View style={styles.sportIconContainer}>
-          <MaterialCommunityIcons name="tennis" size={16} color={colors.textMuted} />
+          <SportIcon sportName="tennis" size={16} color={colors.textMuted} />
         </View>
       );
     }
@@ -108,7 +109,7 @@ const GroupCard: React.FC<{
     if (sportName?.toLowerCase() === 'pickleball') {
       return (
         <View style={styles.sportIconContainer}>
-          <MaterialCommunityIcons name="badminton" size={16} color={colors.textMuted} />
+          <SportIcon sportName="pickleball" size={16} color={colors.textMuted} />
         </View>
       );
     }

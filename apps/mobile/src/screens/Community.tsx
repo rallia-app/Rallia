@@ -7,14 +7,7 @@
  */
 
 import React, { useMemo, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-  ScrollView,
-  useWindowDimensions,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -50,7 +43,6 @@ interface ActionButton {
 }
 
 const Community = () => {
-  const { width: windowWidth } = useWindowDimensions();
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
   const { selectedSport } = useSport();
@@ -84,14 +76,16 @@ const Community = () => {
 
   // Action button handlers
   const handleShareLists = useCallback(() => {
+    if (!guardAction()) return;
     lightHaptic();
     navigation.navigate('ShareLists');
-  }, [navigation]);
+  }, [navigation, guardAction]);
 
   const handleGroups = useCallback(() => {
+    if (!guardAction()) return;
     lightHaptic();
     navigation.navigate('Groups');
-  }, [navigation]);
+  }, [navigation, guardAction]);
 
   const handleCommunities = useCallback(() => {
     lightHaptic();
@@ -155,59 +149,60 @@ const Community = () => {
     [navigateToPlayerProfile, selectedSport?.id, guardAction]
   );
 
-  // Render action buttons row
-  const renderActionButtons = () => (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={styles.actionButtonsScrollView}
-      contentContainerStyle={styles.actionButtonsContainer}
-    >
-      {actionButtons.map(button => (
-        <TouchableOpacity
-          key={button.id}
-          style={styles.actionButton}
-          onPress={button.onPress}
-          activeOpacity={0.7}
+  // List header with action buttons and section title
+  const listHeader = useMemo(
+    () => (
+      <>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.actionButtonsScrollView}
+          contentContainerStyle={styles.actionButtonsContainer}
         >
-          <View style={[styles.actionButtonIcon, { backgroundColor: buttonColors.background }]}>
-            <Ionicons name={button.icon} size={28} color={buttonColors.iconColor} />
-          </View>
-          <Text
-            size="xs"
-            weight="medium"
-            color={colors.text}
-            style={styles.actionButtonLabel}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.8}
-          >
-            {button.label}
+          {actionButtons.map(button => (
+            <TouchableOpacity
+              key={button.id}
+              style={styles.actionButton}
+              onPress={button.onPress}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.actionButtonIcon, { backgroundColor: buttonColors.background }]}>
+                <Ionicons name={button.icon} size={28} color={buttonColors.iconColor} />
+              </View>
+              <Text
+                size="xs"
+                weight="medium"
+                color={colors.text}
+                style={styles.actionButtonLabel}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+              >
+                {button.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        <View style={styles.sectionHeader}>
+          <Text size="xl" weight="bold" color={colors.text} style={styles.sectionTitle}>
+            {t('community.players')}
           </Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
+        </View>
+      </>
+    ),
+    [actionButtons, buttonColors, colors.text, t]
   );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-      {/* Action Buttons */}
-      {renderActionButtons()}
-
-      {/* Find a Partner Section Header */}
-      <View style={styles.sectionHeader}>
-        <Text size="lg" weight="bold" color={colors.text} style={styles.sectionTitle}>
-          {t('community.findPartner')}
-        </Text>
-      </View>
-
-      {/* Player Directory */}
       <PlayerDirectory
         sportId={selectedSport?.id}
         sportName={selectedSport?.name}
         currentUserId={session?.user?.id}
         colors={themeColors}
         onPlayerPress={handlePlayerPress}
+        ListHeaderComponent={listHeader}
       />
     </SafeAreaView>
   );

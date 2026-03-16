@@ -3313,8 +3313,8 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
   // Convert 'all' to null for the RPC (null means no distance filter)
   const distanceForRpc = maxDistanceKm === 'all' || maxDistanceKm === null ? null : maxDistanceKm;
 
-  // Step 1: Get match IDs using RPC with filters
-  const { data: matchResults, error: rpcError } = await supabase.rpc('search_public_matches', {
+  // Common RPC params (shared between search and count)
+  const rpcFilterParams = {
     p_latitude: latitude,
     p_longitude: longitude,
     p_max_distance_km: distanceForRpc,
@@ -3331,18 +3331,31 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     p_duration: duration === 'all' ? null : duration,
     p_court_status: courtStatus === 'all' ? null : courtStatus,
     p_specific_date: specificDate || null,
-    p_limit: limit + 1, // Fetch one extra to check if more exist
-    p_offset: offset,
-    p_user_gender: userGender || null, // Pass user's gender for eligibility filtering
-    p_facility_id: facilityId || null, // Filter by specific facility
+    p_user_gender: userGender || null,
+    p_facility_id: facilityId || null,
     p_match_tier: matchTier === 'all' ? null : matchTier,
     p_spots_available: spotsAvailable === 'all' ? null : spotsAvailable,
     p_specific_time: specificTime || null,
-  });
+  };
 
-  if (rpcError) {
-    throw new Error(`Failed to search public matches: ${rpcError.message}`);
+  // Step 1: Get match IDs using RPC with filters + count on first page
+  const [searchResult, countResult] = await Promise.all([
+    supabase.rpc('search_public_matches', {
+      ...rpcFilterParams,
+      p_limit: limit + 1, // Fetch one extra to check if more exist
+      p_offset: offset,
+    }),
+    // Only fetch count on first page to avoid unnecessary queries
+    offset === 0
+      ? supabase.rpc('search_public_matches_count', rpcFilterParams)
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+
+  if (searchResult.error) {
+    throw new Error(`Failed to search public matches: ${searchResult.error.message}`);
   }
+
+  const { data: matchResults } = searchResult;
 
   const results = (matchResults ?? []) as PublicMatchResult[];
   const hasMore = results.length > limit;
@@ -3357,6 +3370,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
       matches: [],
       hasMore: false,
       nextOffset: null,
+      totalCount: countResult.data ?? undefined,
     };
   }
 
@@ -3604,6 +3618,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     matches: orderedMatches,
     hasMore,
     nextOffset: hasMore ? offset + limit : null,
+    totalCount: countResult.data ?? undefined,
   };
 }
 

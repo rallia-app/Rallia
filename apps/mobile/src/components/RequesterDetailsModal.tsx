@@ -286,14 +286,7 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                 <View style={styles.badgesRow}>
                   {/* Reputation Badge */}
                   {playerId && (
-                    <ReputationBadge
-                      tier={reputationDisplay.tier}
-                      score={reputationDisplay.score}
-                      isVisible={reputationDisplay.isVisible}
-                      size="md"
-                      showLabel
-                      showScore={reputationDisplay.isVisible}
-                    />
+                    <ReputationBadge reputationDisplay={reputationDisplay} isDark={isDark} />
                   )}
 
                   {/* Rating Badge */}

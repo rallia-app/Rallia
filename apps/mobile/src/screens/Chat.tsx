@@ -37,7 +37,6 @@ import { SearchBar } from '../components/SearchBar';
 import {
   spacingPixels,
   fontSizePixels,
-  fontWeightNumeric,
   primary,
   neutral,
   radiusPixels,
@@ -511,38 +510,145 @@ const Chat = () => {
     [colors]
   );
 
-  // Render archived chats row at the top of the list
+  // Render full list header with header, search, filters, tabs, and archived row
   const renderListHeader = useCallback(() => {
-    // Don't show archived row if searching or no archived chats
-    if (searchQuery.trim() || archivedCount === 0) return null;
-
     return (
       <>
-        <TouchableOpacity
-          style={styles.archivedRow}
-          onPress={handleArchivedPress}
-          activeOpacity={0.7}
-        >
-          <View
-            style={[
-              styles.archivedIconContainer,
-              { backgroundColor: isDark ? colors.card : '#F0F0F0' },
-            ]}
+        {/* Header */}
+        <View style={styles.header}>
+          <Text size="xl" weight="bold" color={colors.text}>
+            {t('chat.inbox')}
+          </Text>
+        </View>
+
+        {/* Search bar - Wrapped with CopilotStep for tour */}
+        <CopilotStep text={t('tour.chatScreen.search.description')} order={30} name="chat_search">
+          <WalkthroughableView style={styles.searchContainer}>
+            <SearchBar
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder={t('chat.searchConversations')}
+              style={styles.searchBar}
+            />
+          </WalkthroughableView>
+        </CopilotStep>
+
+        {/* Chat Filters Bar - below search, before tabs */}
+        <ChatFiltersBar
+          filters={chatFilters}
+          onFiltersChange={setChatFilters}
+          onReset={handleResetFilters}
+        />
+
+        {/* Tab Bar - Wrapped with CopilotStep for tour */}
+        <CopilotStep text={t('tour.chatScreen.tabs.description')} order={31} name="chat_tabs">
+          <WalkthroughableView
+            style={[styles.tabContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}
           >
-            <Ionicons name="archive-outline" size={20} color={colors.textMuted} />
-          </View>
-          <View style={styles.archivedContent}>
-            <Text style={[styles.archivedText, { color: colors.text }]}>{t('chat.archived')}</Text>
-          </View>
-          <View style={styles.archivedBadge}>
-            <Text style={[styles.archivedCount, { color: colors.textMuted }]}>{archivedCount}</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-          </View>
-        </TouchableOpacity>
-        <View style={[styles.separator, { backgroundColor: colors.border }]} />
+            {TAB_CONFIGS.map(tab => {
+              const isActive = activeTab === tab.key;
+              const count = tabCounts[tab.key];
+              const label = t(`chat.tabs.${tab.key}`);
+              return (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[
+                    styles.tab,
+                    isActive && [styles.activeTab, { backgroundColor: colors.cardBackground }],
+                  ]}
+                  onPress={() => {
+                    selectionHaptic();
+                    setActiveTab(tab.key);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  {tab.key === 'matches' ? (
+                    <SportIcon
+                      sportName={selectedSport?.name ?? 'tennis'}
+                      size={18}
+                      color={isActive ? colors.primary : colors.textMuted}
+                      style={styles.tabIcon}
+                    />
+                  ) : (
+                    <Ionicons
+                      name={tab.icon}
+                      size={18}
+                      color={isActive ? colors.primary : colors.textMuted}
+                      style={styles.tabIcon}
+                    />
+                  )}
+                  <Text
+                    size="sm"
+                    weight={isActive ? 'semibold' : 'medium'}
+                    style={[
+                      styles.tabLabel,
+                      { color: isActive ? colors.primary : colors.textMuted },
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                  {count > 0 && (
+                    <View
+                      style={[
+                        styles.tabBadge,
+                        { backgroundColor: isActive ? colors.primary : neutral[400] },
+                      ]}
+                    >
+                      <Text style={styles.tabBadgeText}>{count > 99 ? '99+' : count}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </WalkthroughableView>
+        </CopilotStep>
+
+        {/* Archived chats row */}
+        {!searchQuery.trim() && archivedCount > 0 && (
+          <>
+            <TouchableOpacity
+              style={styles.archivedRow}
+              onPress={handleArchivedPress}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[
+                  styles.archivedIconContainer,
+                  { backgroundColor: isDark ? colors.card : '#F0F0F0' },
+                ]}
+              >
+                <Ionicons name="archive-outline" size={20} color={colors.textMuted} />
+              </View>
+              <View style={styles.archivedContent}>
+                <Text style={[styles.archivedText, { color: colors.text }]}>
+                  {t('chat.archived')}
+                </Text>
+              </View>
+              <View style={styles.archivedBadge}>
+                <Text style={[styles.archivedCount, { color: colors.textMuted }]}>
+                  {archivedCount}
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+              </View>
+            </TouchableOpacity>
+            <View style={[styles.separator, { backgroundColor: colors.border }]} />
+          </>
+        )}
       </>
     );
-  }, [searchQuery, archivedCount, colors, isDark, handleArchivedPress, t]);
+  }, [
+    searchQuery,
+    archivedCount,
+    colors,
+    isDark,
+    handleArchivedPress,
+    t,
+    chatFilters,
+    handleResetFilters,
+    activeTab,
+    tabCounts,
+    selectedSport?.name,
+  ]);
 
   // Show loading spinner while auth state is being determined
   if (isLoadingAuth) {
@@ -584,128 +690,44 @@ const Chat = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.headerForeground }]}>
-          {t('chat.inbox')}
-        </Text>
-      </View>
-
-      {/* Search bar - Wrapped with CopilotStep for tour */}
-      <CopilotStep text={t('tour.chatScreen.search.description')} order={30} name="chat_search">
-        <WalkthroughableView style={styles.searchContainer}>
-          <SearchBar
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder={t('chat.searchConversations')}
-            style={styles.searchBar}
+      {/* Full-screen scrollable list with header, search, filters, tabs */}
+      <FlatList
+        data={isLoading ? [] : filteredConversations}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        ListHeaderComponent={renderListHeader}
+        ItemSeparatorComponent={renderSeparator}
+        ListEmptyComponent={
+          isLoading ? (
+            <View style={styles.loadingContainer}>
+              {[1, 2, 3, 4, 5, 6].map(i => (
+                <SkeletonConversation
+                  key={i}
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                  style={{ paddingHorizontal: spacingPixels[4] }}
+                />
+              ))}
+            </View>
+          ) : (
+            renderEmpty()
+          )
+        }
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={refetch}
+            colors={[primary[500]]}
+            tintColor={primary[500]}
           />
-        </WalkthroughableView>
-      </CopilotStep>
-
-      {/* Chat Filters Bar - below search, before tabs */}
-      <ChatFiltersBar
-        filters={chatFilters}
-        onFiltersChange={setChatFilters}
-        onReset={handleResetFilters}
+        }
+        contentContainerStyle={
+          !isLoading && filteredConversations?.length === 0 && archivedCount === 0
+            ? styles.emptyListContent
+            : undefined
+        }
+        keyboardShouldPersistTaps="handled"
       />
-
-      {/* Tab Bar - Wrapped with CopilotStep for tour */}
-      <CopilotStep text={t('tour.chatScreen.tabs.description')} order={31} name="chat_tabs">
-        <WalkthroughableView
-          style={[styles.tabContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}
-        >
-          {TAB_CONFIGS.map(tab => {
-            const isActive = activeTab === tab.key;
-            const count = tabCounts[tab.key];
-            const label = t(`chat.tabs.${tab.key}`);
-            return (
-              <TouchableOpacity
-                key={tab.key}
-                style={[
-                  styles.tab,
-                  isActive && [styles.activeTab, { backgroundColor: colors.cardBackground }],
-                ]}
-                onPress={() => {
-                  selectionHaptic();
-                  setActiveTab(tab.key);
-                }}
-                activeOpacity={0.7}
-              >
-                {tab.key === 'matches' ? (
-                  <SportIcon
-                    sportName={selectedSport?.name ?? 'tennis'}
-                    size={18}
-                    color={isActive ? colors.primary : colors.textMuted}
-                    style={styles.tabIcon}
-                  />
-                ) : (
-                  <Ionicons
-                    name={tab.icon}
-                    size={18}
-                    color={isActive ? colors.primary : colors.textMuted}
-                    style={styles.tabIcon}
-                  />
-                )}
-                <Text
-                  size="sm"
-                  weight={isActive ? 'semibold' : 'medium'}
-                  style={[styles.tabLabel, { color: isActive ? colors.primary : colors.textMuted }]}
-                >
-                  {label}
-                </Text>
-                {count > 0 && (
-                  <View
-                    style={[
-                      styles.tabBadge,
-                      { backgroundColor: isActive ? colors.primary : neutral[400] },
-                    ]}
-                  >
-                    <Text style={styles.tabBadgeText}>{count > 99 ? '99+' : count}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </WalkthroughableView>
-      </CopilotStep>
-
-      {/* Content - Conversations List */}
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          {[1, 2, 3, 4, 5, 6].map(i => (
-            <SkeletonConversation
-              key={i}
-              backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-              highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-              style={{ paddingHorizontal: spacingPixels[4] }}
-            />
-          ))}
-        </View>
-      ) : (
-        <FlatList
-          data={filteredConversations}
-          renderItem={renderItem}
-          keyExtractor={keyExtractor}
-          ListHeaderComponent={renderListHeader}
-          ItemSeparatorComponent={renderSeparator}
-          ListEmptyComponent={renderEmpty}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={refetch}
-              colors={[primary[500]]}
-              tintColor={primary[500]}
-            />
-          }
-          contentContainerStyle={
-            filteredConversations?.length === 0 && archivedCount === 0
-              ? styles.emptyListContent
-              : undefined
-          }
-          keyboardShouldPersistTaps="handled"
-        />
-      )}
 
       {/* New group FAB */}
       <TouchableOpacity
@@ -743,12 +765,9 @@ const styles = StyleSheet.create({
     paddingTop: spacingPixels[4],
     paddingBottom: spacingPixels[2],
   },
-  headerTitle: {
-    fontSize: fontSizePixels.lg,
-    fontWeight: String(fontWeightNumeric.semibold) as '600',
-  },
   searchContainer: {
     paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[2],
     paddingBottom: spacingPixels[2],
   },
   searchBar: {
