@@ -14,12 +14,14 @@ import {
   Animated,
   TouchableWithoutFeedback,
   TouchableOpacity,
+  useColorScheme,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import { isPlayerOnline } from '@rallia/shared-services';
+import RatingBadge from '../../../components/RatingBadge';
 import { useTranslation, type TranslationKey } from '../../../hooks';
 
 interface ThemeColors {
@@ -52,19 +54,6 @@ function formatDistance(meters: number | null, nearbyLabel: string): string {
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
-/**
- * Get level description based on rating value
- * Maps NTRP/DUPR rating values to skill level descriptions
- */
-function getLevelDescription(value: number | null | undefined, t: (key: string) => string): string {
-  if (value === null || value === undefined) return t('playerProfile.rating.unrated');
-  if (value <= 2.0) return t('playerProfile.rating.beginner');
-  if (value <= 3.0) return t('playerProfile.rating.intermediate');
-  if (value <= 4.0) return t('playerProfile.rating.intermediateAdvanced');
-  if (value <= 5.0) return t('playerProfile.rating.advanced');
-  return t('playerProfile.rating.professional');
-}
-
 const PlayerCard: React.FC<PlayerCardProps> = ({
   player,
   colors,
@@ -74,18 +63,14 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   showFavorite = false,
 }) => {
   const { t } = useTranslation();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   // Always use first + last name
   const displayName = `${player.first_name || ''} ${player.last_name || ''}`.trim() || 'Unknown';
   const distanceText = formatDistance(player.distance_meters, t('playerDirectory.nearby'));
   const [isOnline, setIsOnline] = useState(false);
   // Animation value - using useMemo for stable instance
   const scaleAnim = useMemo(() => new Animated.Value(1), []);
-
-  // Get level description for the rating
-  const levelDescription =
-    player.rating?.value != null
-      ? getLevelDescription(player.rating.value, t as (key: string) => string)
-      : null;
 
   // Check online status
   useEffect(() => {
@@ -169,13 +154,14 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
             >
               {displayName}
             </Text>
-            {player.rating?.is_certified && (
-              <View style={styles.certifiedBadge}>
-                <Ionicons name="checkmark-circle" size={12} color="#4CAF50" />
-                <Text size="xs" weight="semibold" style={styles.certifiedBadgeText}>
-                  {t('community.certified')}
-                </Text>
-              </View>
+            {player.rating && (
+              <RatingBadge
+                ratingValue={player.rating.value}
+                ratingLabel={player.rating.label}
+                certificationStatus={player.rating.is_certified ? 'certified' : 'self_declared'}
+                isDark={isDark}
+                size="sm"
+              />
             )}
           </View>
 
@@ -189,21 +175,6 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                 numberOfLines={1}
               >
                 {[player.city, distanceText].filter(Boolean).join(' · ')}
-              </Text>
-            </View>
-          )}
-
-          {player.rating && (
-            <View style={styles.ratingRow}>
-              <Ionicons name="star" size={14} color={colors.primary} />
-              <Text
-                size="sm"
-                weight="medium"
-                color={colors.textSecondary}
-                style={styles.ratingText}
-              >
-                {player.rating.label}
-                {levelDescription && ` (${levelDescription})`}
               </Text>
             </View>
           )}
@@ -272,34 +243,10 @@ const styles = StyleSheet.create({
   locationText: {
     marginLeft: spacingPixels[1],
   },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacingPixels[1],
-  },
-  ratingText: {
-    marginLeft: spacingPixels[1],
-    flex: 1,
-  },
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-  },
-  certifiedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E8F5E9',
-    borderWidth: 1,
-    borderColor: '#4CAF50',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: radiusPixels.full,
-    gap: 3,
-  },
-  certifiedBadgeText: {
-    color: '#4CAF50',
-    fontSize: 10,
   },
 });
 

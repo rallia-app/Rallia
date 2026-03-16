@@ -36,6 +36,8 @@ import {
   neutral,
   shadowsNative,
 } from '@rallia/design-system';
+import RatingBadge from '../components/RatingBadge';
+import ReputationBadge from '../components/ReputationBadge';
 import PortfolioSection, {
   type PortfolioProof,
   type PortfolioSport,
@@ -742,6 +744,15 @@ const UserProfile = () => {
                     {t('profile.joined')} {formatJoinedDate(player?.created_at || null)}
                   </Text>
                 </View>
+
+                {/* Rating & Reputation Badges */}
+                <View style={styles.profileBadgesRow}>
+                  <RatingBadge
+                    ratingLabel={sports.find(s => s.isPrimary && s.isActive)?.ratingLabel}
+                    isDark={isDark}
+                  />
+                  <ReputationBadge reputationDisplay={reputationDisplay} isDark={isDark} />
+                </View>
               </>
             )}
           </WalkthroughableView>
@@ -1415,34 +1426,6 @@ const UserProfile = () => {
           </WalkthroughableView>
         </CopilotStep>
 
-        {/* Reputation Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
-              {t('profile.sections.reputation')}
-            </Text>
-          </View>
-
-          <View style={[styles.card, { backgroundColor: colors.card }]}>
-            <View style={styles.reputationBar}>
-              <View
-                style={[
-                  styles.reputationFill,
-                  {
-                    backgroundColor: reputationDisplay.tierColor,
-                    width: `${reputationDisplay.score}%`,
-                  },
-                ]}
-              />
-            </View>
-            <Text style={[styles.reputationScore, { color: colors.text }]}>
-              {reputationDisplay.isVisible
-                ? `${reputationDisplay.score}% — ${reputationDisplay.tierLabel}`
-                : reputationDisplay.tierLabel}
-            </Text>
-          </View>
-        </View>
-
         {/* Reference Requests Section - Only show when loaded; show card if count > 0 */}
         {!loadingReferenceRequests && pendingReferenceRequestsCount > 0 && (
           <View style={styles.section}>
@@ -1582,25 +1565,11 @@ const styles = StyleSheet.create({
     fontSize: fontSizePixels.sm,
     marginBottom: spacingPixels[2],
   },
-  reputationContainer: {
-    marginTop: spacingPixels[2],
-    marginBottom: spacingPixels[1],
-  },
-  reputationBar: {
-    height: 8,
-    backgroundColor: neutral[200],
-    borderRadius: radiusPixels.full,
-    overflow: 'hidden',
-    marginBottom: spacingPixels[2],
-  },
-  reputationFill: {
-    height: '100%',
-    borderRadius: radiusPixels.full,
-  },
-  reputationScore: {
-    fontSize: fontSizePixels.sm,
-    fontWeight: fontWeightNumeric.semibold,
-    textAlign: 'right',
+  profileBadgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    marginTop: spacingPixels[1],
   },
   joinedContainer: {
     flexDirection: 'row',

@@ -29,6 +29,7 @@ import type { PlayerSearchResult } from '@rallia/shared-services';
 import type { MatchParticipantWithPlayer } from '@rallia/shared-types';
 import type { TranslationKey, TranslationOptions } from '../../../hooks/useTranslation';
 import { SearchBar } from '../../../components/SearchBar';
+import RatingBadge from '../../../components/RatingBadge';
 import { InviteFromListsStep } from '../../shared-lists/components/InviteFromListsStep';
 
 // =============================================================================
@@ -94,9 +95,16 @@ interface PlayerCardProps {
   isSelected: boolean;
   onToggle: (player: PlayerSearchResult) => void;
   colors: PlayerInviteStepProps['colors'];
+  isDark: boolean;
 }
 
-const PlayerCard: React.FC<PlayerCardProps> = ({ player, isSelected, onToggle, colors }) => {
+const PlayerCard: React.FC<PlayerCardProps> = ({
+  player,
+  isSelected,
+  onToggle,
+  colors,
+  isDark,
+}) => {
   const handlePress = () => {
     selectionHaptic();
     onToggle(player);
@@ -150,23 +158,13 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isSelected, onToggle, c
           {player.first_name} {player.last_name}
         </Text>
         {player.rating && (
-          <View
-            style={[
-              styles.ratingBadge,
-              {
-                backgroundColor: isSelected ? `${colors.buttonActive}25` : colors.buttonInactive,
-                borderColor: isSelected ? colors.buttonActive : colors.border,
-              },
-            ]}
-          >
-            <Text
-              size="xs"
-              weight="medium"
-              color={isSelected ? colors.buttonActive : colors.textSecondary}
-            >
-              {player.rating.label}
-            </Text>
-          </View>
+          <RatingBadge
+            ratingValue={player.rating.value}
+            ratingLabel={player.rating.label}
+            certificationStatus={player.rating.is_certified ? 'certified' : 'self_declared'}
+            isDark={isDark}
+            size="sm"
+          />
         )}
       </View>
 
@@ -397,9 +395,10 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
         isSelected={selectedPlayerIds.has(item.id)}
         onToggle={handleTogglePlayer}
         colors={colors}
+        isDark={isDark}
       />
     ),
-    [selectedPlayerIds, handleTogglePlayer, colors]
+    [selectedPlayerIds, handleTogglePlayer, colors, isDark]
   );
 
   // Render footer (loading indicator for infinite scroll)
