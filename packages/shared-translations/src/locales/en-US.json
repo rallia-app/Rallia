@@ -441,6 +441,12 @@
     "privacyPolicy": "Privacy Policy",
     "logout": "Sign Out",
     "deleteAccount": "Delete Account",
+    "appInfo": "App Info",
+    "version": "Version",
+    "environment": "Environment",
+    "channel": "Channel",
+    "update": "Update",
+    "embeddedBundle": "Embedded",
     "general": {
       "title": "General Settings",
       "description": "Manage your organization settings.",
