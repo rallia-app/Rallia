@@ -76,14 +76,16 @@ const Community = () => {
 
   // Action button handlers
   const handleShareLists = useCallback(() => {
+    if (!guardAction()) return;
     lightHaptic();
     navigation.navigate('ShareLists');
-  }, [navigation]);
+  }, [navigation, guardAction]);
 
   const handleGroups = useCallback(() => {
+    if (!guardAction()) return;
     lightHaptic();
     navigation.navigate('Groups');
-  }, [navigation]);
+  }, [navigation, guardAction]);
 
   const handleCommunities = useCallback(() => {
     lightHaptic();
