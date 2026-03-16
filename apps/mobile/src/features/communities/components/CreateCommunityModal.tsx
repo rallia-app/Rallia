@@ -17,6 +17,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { SportIcon } from '../../../components/SportIcon';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { Text, useToast } from '@rallia/shared-components';
@@ -483,14 +484,14 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
               onPress={() => setSelectedSport('both')}
             >
               <View style={styles.sportOptionIcons}>
-                <MaterialCommunityIcons
-                  name="tennis"
+                <SportIcon
+                  sportName="tennis"
                   size={20}
                   color={selectedSport === 'both' ? colors.primary : colors.textMuted}
                 />
                 <Text style={{ color: colors.textMuted, marginHorizontal: 2 }}>+</Text>
-                <MaterialCommunityIcons
-                  name="badminton"
+                <SportIcon
+                  sportName="pickleball"
                   size={20}
                   color={selectedSport === 'both' ? colors.primary : colors.textMuted}
                 />
@@ -527,8 +528,8 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
               ]}
               onPress={() => setSelectedSport('tennis')}
             >
-              <MaterialCommunityIcons
-                name="tennis"
+              <SportIcon
+                sportName="tennis"
                 size={24}
                 color={selectedSport === 'tennis' ? colors.primary : colors.textMuted}
               />
@@ -564,8 +565,8 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
               ]}
               onPress={() => setSelectedSport('pickleball')}
             >
-              <MaterialCommunityIcons
-                name="badminton"
+              <SportIcon
+                sportName="pickleball"
                 size={24}
                 color={selectedSport === 'pickleball' ? colors.primary : colors.textMuted}
               />

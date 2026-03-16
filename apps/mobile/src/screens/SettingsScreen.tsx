@@ -18,7 +18,7 @@ import { useTheme, useAdminStatus } from '@rallia/shared-hooks';
 import { useAppNavigation } from '../navigation/hooks';
 import { useLocale } from '../context';
 import { useAuth, useTranslation } from '../hooks';
-import type { Locale, TranslationKey } from '@rallia/shared-translations';
+import type { Locale } from '@rallia/shared-translations';
 import { useProfile } from '@rallia/shared-hooks';
 import {
   lightTheme,
@@ -52,7 +52,7 @@ const SettingsScreen: React.FC = () => {
 
   const { isAuthenticated, loading: authLoading, signOut } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
-  const { isAdmin, role: adminRole } = useAdminStatus();
+  const { isAdmin } = useAdminStatus();
 
   // User is fully onboarded only if authenticated AND onboarding is complete
   const isOnboarded = isAuthenticated && profile?.onboarding_completed;
@@ -303,41 +303,12 @@ const SettingsScreen: React.FC = () => {
 
         {/* Admin Panel - Only visible to admin users */}
         {isAuthenticated && isAdmin && (
-          <View style={[styles.settingsGroup, { backgroundColor: colors.cardBackground }]}>
-            <TouchableOpacity
-              style={[
-                styles.adminPanelButton,
-                { backgroundColor: colors.cardBackground, borderBottomColor: colors.border },
-              ]}
+          <View style={[styles.settingsGroup, { backgroundColor: colors.background }]}>
+            <SettingsItem
+              icon="construct-outline"
+              title={t('admin.panelButton')}
               onPress={handleAdminPanel}
-              activeOpacity={0.7}
-            >
-              <View style={styles.settingsItemLeft}>
-                <View
-                  style={[
-                    styles.adminIconContainer,
-                    {
-                      backgroundColor: isDark
-                        ? `${status.warning.DEFAULT}20`
-                        : `${status.warning.light}15`,
-                    },
-                  ]}
-                >
-                  <Ionicons name="construct" size={18} color={status.warning.DEFAULT} />
-                </View>
-                <View style={styles.adminTextContainer}>
-                  <Text size="base" weight="semibold" color={colors.text}>
-                    {t('admin.panelButton')}
-                  </Text>
-                  {adminRole && (
-                    <Text size="xs" color={colors.textSecondary}>
-                      {t(`admin.roles.${adminRole}` as TranslationKey)}
-                    </Text>
-                  )}
-                </View>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.iconMuted} />
-            </TouchableOpacity>
+            />
           </View>
         )}
 
@@ -552,24 +523,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[3],
-  },
-  adminPanelButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacingPixels[5],
-    paddingVertical: spacingPixels[4],
-    borderBottomWidth: 1,
-  },
-  adminIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: radiusPixels.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  adminTextContainer: {
-    gap: spacingPixels[0.5],
   },
   preferenceSection: {
     paddingHorizontal: spacingPixels[5],

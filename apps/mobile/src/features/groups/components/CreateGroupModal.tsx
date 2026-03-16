@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { SportIcon } from '../../../components/SportIcon';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { Text, useToast } from '@rallia/shared-components';
 import { primary, radiusPixels, spacingPixels } from '@rallia/design-system';
@@ -454,14 +455,14 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
               onPress={() => setSelectedSportOption('both')}
             >
               <View style={styles.sportOptionIcons}>
-                <MaterialCommunityIcons
-                  name="tennis"
+                <SportIcon
+                  sportName="tennis"
                   size={18}
                   color={selectedSportOption === 'both' ? colors.primary : colors.textMuted}
                 />
                 <Text style={{ color: colors.textMuted, marginHorizontal: 2 }}>+</Text>
-                <MaterialCommunityIcons
-                  name="badminton"
+                <SportIcon
+                  sportName="pickleball"
                   size={18}
                   color={selectedSportOption === 'both' ? colors.primary : colors.textMuted}
                 />
@@ -499,8 +500,8 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
               ]}
               onPress={() => setSelectedSportOption('tennis')}
             >
-              <MaterialCommunityIcons
-                name="tennis"
+              <SportIcon
+                sportName="tennis"
                 size={24}
                 color={selectedSportOption === 'tennis' ? colors.primary : colors.textMuted}
               />
@@ -538,8 +539,8 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
               ]}
               onPress={() => setSelectedSportOption('pickleball')}
             >
-              <MaterialCommunityIcons
-                name="badminton"
+              <SportIcon
+                sportName="pickleball"
                 size={24}
                 color={selectedSportOption === 'pickleball' ? colors.primary : colors.textMuted}
               />
