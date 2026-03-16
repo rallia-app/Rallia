@@ -28,6 +28,7 @@ interface PublicMatchesPage {
   matches: PublicMatch[];
   nextOffset: number | null;
   hasMore: boolean;
+  totalCount?: number;
 }
 
 /**
@@ -173,6 +174,7 @@ export function usePublicMatches(options: UsePublicMatchesOptions) {
         matches: result.matches as PublicMatch[],
         nextOffset: result.nextOffset,
         hasMore: result.hasMore,
+        totalCount: result.totalCount,
       };
     },
     getNextPageParam: lastPage => lastPage.nextOffset,
@@ -189,6 +191,9 @@ export function usePublicMatches(options: UsePublicMatchesOptions) {
     return query.data.pages.flatMap(page => page.matches);
   }, [query.data]);
 
+  // Get total count from first page (only fetched on first page)
+  const totalCount = query.data?.pages[0]?.totalCount;
+
   // Stable refetch callback for pull-to-refresh
   const refresh = useCallback(async () => {
     await query.refetch();
@@ -199,6 +204,11 @@ export function usePublicMatches(options: UsePublicMatchesOptions) {
      * The flattened list of all public matches across pages
      */
     matches,
+
+    /**
+     * Total number of matches matching the current filters (from first page)
+     */
+    totalCount,
 
     /**
      * Whether the initial load is in progress
