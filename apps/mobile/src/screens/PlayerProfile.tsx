@@ -1038,7 +1038,10 @@ const PlayerProfile = () => {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['bottom']}
+      >
         <View style={styles.loadingContainer}>
           {/* Player Profile Skeleton */}
           <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
@@ -1128,7 +1131,10 @@ const PlayerProfile = () => {
     `${profile?.first_name?.toLowerCase() || ''}${profile?.last_name?.toLowerCase() || ''}`;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['bottom']}
+    >
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Profile Header */}
         <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>

@@ -26,7 +26,6 @@ import { SheetManager } from 'react-native-actions-sheet';
 
 import { Text, Skeleton } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
-import { getSafeAreaEdges } from '../utils';
 import { useThemeStyles, useAuth, useTranslation, useRequireOnboarding } from '../hooks';
 import { useSport } from '../context';
 import {
@@ -309,10 +308,7 @@ export default function GroupsScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        edges={getSafeAreaEdges(['bottom'])}
-      >
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         <View style={styles.loadingContainer}>
           {/* Header skeleton */}
           <View style={styles.headerSkeleton}>
@@ -377,10 +373,7 @@ export default function GroupsScreen() {
   }
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={getSafeAreaEdges(['bottom'])}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <FlatList
         data={groups}
         renderItem={renderGroupItem}

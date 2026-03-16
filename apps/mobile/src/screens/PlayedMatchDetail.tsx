@@ -15,7 +15,7 @@ import { Text } from '@rallia/shared-components';
 import type { MatchFormatEnum, MatchTypeEnum } from '@rallia/shared-types';
 import { useThemeStyles, useNavigateToPlayerProfile } from '../hooks';
 import { SportIcon } from '../components/SportIcon';
-import { getSafeAreaEdges } from '../utils';
+
 import {
   spacingPixels,
   fontSizePixels,
@@ -258,7 +258,7 @@ export default function PlayedMatchDetailScreen() {
         <View style={styles.headerOverlay} />
 
         {/* Back button */}
-        <SafeAreaView edges={getSafeAreaEdges(['top'])} style={styles.headerContent}>
+        <SafeAreaView edges={['top', 'bottom']} style={styles.headerContent}>
           <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>

@@ -18,7 +18,6 @@ import {
   ViewStyle,
   GestureResponderEvent,
   Text as RNText,
-  Platform,
 } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
@@ -896,12 +895,6 @@ const resetStackOnBlur = ({
 
 function BottomTabs() {
   const { colors } = useThemeStyles();
-  const insets = useSafeAreaInsets();
-
-  // Add bottom safe area inset only on Android to handle software navigation bar
-  // iOS already handles safe area natively, so adding it causes excessive bottom spacing
-  const bottomInset = Platform.OS === 'android' ? insets.bottom : 0;
-  const tabBarHeight = spacingPixels[20] + bottomInset;
 
   return (
     <Tab.Navigator
@@ -914,9 +907,9 @@ function BottomTabs() {
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
-          height: tabBarHeight,
-          paddingBottom: spacingPixels[2] + bottomInset,
-          paddingTop: spacingPixels[2],
+        },
+        tabBarItemStyle: {
+          paddingVertical: spacingPixels[2],
         },
         tabBarButton: props => <TabButtonWithHaptic {...props} />,
       }}

@@ -79,7 +79,10 @@ function useMessagingAnalytics(selectedOption: TimeRangeOption) {
       const volumeResult = await getMessageVolume(startDate, endDate);
       if (volumeResult && volumeResult.length > 0) {
         setMessageVolume(volumeResult);
-        const total = volumeResult.reduce((sum: number, v: MessageVolume) => sum + v.totalMessages, 0);
+        const total = volumeResult.reduce(
+          (sum: number, v: MessageVolume) => sum + v.totalMessages,
+          0
+        );
         setTotalMessages(total);
       }
 
@@ -201,7 +204,7 @@ const AdminMessagingAnalyticsScreen: React.FC = () => {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['top']}
+      edges={['top', 'bottom']}
     >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>

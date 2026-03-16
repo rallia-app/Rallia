@@ -10,7 +10,6 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Text, SkeletonConversation } from '@rallia/shared-components';
 import { useThemeStyles, useAuth, useTranslation, type TranslationKey } from '../hooks';
-import { getSafeAreaEdges } from '../utils';
 import { spacingPixels, fontSizePixels, primary } from '@rallia/design-system';
 import {
   usePlayerConversations,
@@ -148,10 +147,7 @@ const ArchivedChats = () => {
   );
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={getSafeAreaEdges(['bottom'])}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       {isLoading ? (
         <View style={styles.loadingContainer}>
           {[...Array(5)].map((_, index) => (

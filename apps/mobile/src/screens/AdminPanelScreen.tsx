@@ -286,7 +286,10 @@ const AdminPanelScreen: React.FC = () => {
   // Loading state
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['bottom']}
+      >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.accent} />
           <Text size="base" color={colors.textSecondary} style={styles.loadingText}>
@@ -300,7 +303,10 @@ const AdminPanelScreen: React.FC = () => {
   // Error state
   if (error) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['bottom']}
+      >
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.errorText} />
           <Text size="lg" weight="semibold" color={colors.text} style={styles.errorTitle}>
@@ -317,7 +323,10 @@ const AdminPanelScreen: React.FC = () => {
   // Not an admin - should not happen if navigation is properly gated
   if (!isAdmin) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['bottom']}
+      >
         <View style={styles.errorContainer}>
           <Ionicons name="lock-closed-outline" size={48} color={colors.errorText} />
           <Text size="lg" weight="semibold" color={colors.text} style={styles.errorTitle}>
@@ -334,7 +343,10 @@ const AdminPanelScreen: React.FC = () => {
   const roleBadgeStyle = getRoleBadgeStyle(role);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['bottom']}
+    >
       <ScrollView
         style={styles.scrollContent}
         contentContainerStyle={styles.scrollContentContainer}

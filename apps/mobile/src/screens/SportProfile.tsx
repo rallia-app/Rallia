@@ -1158,7 +1158,10 @@ const SportProfile = () => {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['bottom']}
+      >
         <View style={styles.loadingContainer}>
           {/* Sport Profile Skeleton */}
           <View style={[styles.card, { backgroundColor: colors.card }]}>
@@ -1241,7 +1244,10 @@ const SportProfile = () => {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['bottom']}
+    >
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Do you play this sport? Toggle */}
         <View style={[styles.card, { backgroundColor: colors.card }]}>
