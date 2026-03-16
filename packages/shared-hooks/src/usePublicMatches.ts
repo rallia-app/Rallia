@@ -185,10 +185,17 @@ export function usePublicMatches(options: UsePublicMatchesOptions) {
     refetchOnReconnect: true,
   });
 
-  // Flatten all pages into a single array of matches
+  // Flatten all pages into a single array of matches, deduplicating by ID
   const matches = useMemo(() => {
     if (!query.data?.pages) return [];
-    return query.data.pages.flatMap(page => page.matches);
+    const seen = new Set<string>();
+    return query.data.pages
+      .flatMap(page => page.matches)
+      .filter(match => {
+        if (seen.has(match.id)) return false;
+        seen.add(match.id);
+        return true;
+      });
   }, [query.data]);
 
   // Get total count from first page (only fetched on first page)

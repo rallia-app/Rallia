@@ -128,16 +128,22 @@ export function useNearbyMatches(options: UseNearbyMatchesOptions) {
     getNextPageParam: lastPage => lastPage.nextOffset,
     initialPageParam: 0,
     enabled: enabled && hasRequiredParams,
-    staleTime: 0, // Always refetch in background when query is accessed
-    refetchOnWindowFocus: true, // Refetch when app/screen is focused so expired matches don't stay visible
+    staleTime: 1000 * 60 * 2, // 2 minutes - data stays fresh
+    refetchOnWindowFocus: false, // Use pull-to-refresh instead
     refetchOnReconnect: true,
-    refetchInterval: 1000 * 60, // Refetch every minute so the home screen stays up to date
   });
 
-  // Flatten all pages into a single array of matches
+  // Flatten all pages into a single array of matches, deduplicating by ID
   const matches = useMemo(() => {
     if (!query.data?.pages) return [];
-    return query.data.pages.flatMap(page => page.matches);
+    const seen = new Set<string>();
+    return query.data.pages
+      .flatMap(page => page.matches)
+      .filter(match => {
+        if (seen.has(match.id)) return false;
+        seen.add(match.id);
+        return true;
+      });
   }, [query.data]);
 
   // Stable refetch callback for pull-to-refresh
