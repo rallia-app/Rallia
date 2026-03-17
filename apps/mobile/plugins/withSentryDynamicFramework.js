@@ -4,9 +4,9 @@ const path = require('path');
 
 /**
  * Expo config plugin to fix Sentry _SentryPrivate module error
- * Forces Sentry pod to build as a dynamic framework to properly generate Swift modules
+ * Sets APPLICATION_EXTENSION_API_ONLY=NO for Sentry pod
  *
- * Based on: https://github.com/getsentry/sentry-react-native/issues/3322
+ * Based on: https://docs.sentry.io/platforms/react-native/troubleshooting/
  */
 const withSentryDynamicFramework = config => {
   return withDangerousMod(config, [
@@ -18,35 +18,35 @@ const withSentryDynamicFramework = config => {
         let podfileContent = fs.readFileSync(podfilePath, 'utf8');
 
         // Check if we already added the fix
-        if (podfileContent.includes('Force Sentry to use dynamic framework')) {
+        if (podfileContent.includes('Fix Sentry _SentryPrivate')) {
           return config;
         }
 
-        // Add pre_install hook to configure Sentry as dynamic framework
-        const preInstallFix = `
-  # Force Sentry to use dynamic framework to fix _SentryPrivate module error
-  pre_install do |installer|
-    installer.pod_targets.each do |pod|
-      if pod.name.eql?('Sentry') || pod.name.start_with?('Sentry/')
-        def pod.build_type
-          Pod::BuildType.dynamic_framework
-        end
+        // Add post_install hook to set APPLICATION_EXTENSION_API_ONLY for Sentry
+        const sentryFix = `
+      # Fix Sentry _SentryPrivate module error
+      if target.name == 'Sentry'
+        config.build_settings['APPLICATION_EXTENSION_API_ONLY'] = 'NO'
+      end`;
+
+        // Find and modify the post_install block
+        if (podfileContent.includes('post_install do |installer|')) {
+          // Insert after "target.build_configurations.each do |config|"
+          podfileContent = podfileContent.replace(
+            /(target\.build_configurations\.each do \|config\|)/,
+            `$1${sentryFix}`
+          );
+        } else {
+          // No post_install exists, add one before final 'end'
+          podfileContent = podfileContent.replace(
+            /^end\s*$/m,
+            `  post_install do |installer|
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|${sentryFix}
       end
     end
   end
-`;
-
-        // Insert before the target block
-        if (podfileContent.includes('target ')) {
-          podfileContent = podfileContent.replace(
-            /(target\s+['"][^'"]+['"]\s+do)/,
-            `${preInstallFix}\n$1`
-          );
-        } else {
-          // Fallback: add after platform declaration
-          podfileContent = podfileContent.replace(
-            /(platform\s+:ios[^\n]+\n)/,
-            `$1${preInstallFix}\n`
+end`
           );
         }
 
