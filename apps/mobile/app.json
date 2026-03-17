@@ -84,7 +84,6 @@
         }
       ],
       "./plugins/withFollyFix.js",
-      "./plugins/withSentryDynamicFramework.js",
       [
         "expo-image-picker",
         {
@@ -110,13 +109,6 @@
         "@rnmapbox/maps",
         {
           "RNMapboxMapsImpl": "mapbox"
-        }
-      ],
-      [
-        "@sentry/react-native/expo",
-        {
-          "organization": "rallia",
-          "project": "react-native"
         }
       ]
     ],
