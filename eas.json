@@ -15,6 +15,9 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_APP_ENV": "preview"
+      },
+      "ios": {
+        "simulator": false
       }
     },
     "production": {
