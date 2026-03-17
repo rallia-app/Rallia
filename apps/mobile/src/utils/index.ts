@@ -4,4 +4,3 @@
 
 export * from './validators';
 export * from './shareUtils';
-export * from './safeAreaEdges';

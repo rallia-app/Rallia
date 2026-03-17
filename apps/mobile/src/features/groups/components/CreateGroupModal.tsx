@@ -16,13 +16,9 @@ import {
   TextInput,
 } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-
 import { Text, useToast } from '@rallia/shared-components';
-import { useRequireOnboarding, useThemeStyles, useTranslation } from '../../../hooks';
-import { uploadImage } from '../../../services/imageUpload';
 import { primary, radiusPixels, spacingPixels } from '@rallia/design-system';
 import {
   useCreateGroup,
@@ -33,10 +29,12 @@ import {
 } from '@rallia/shared-hooks';
 import { supabase, Logger } from '@rallia/shared-services';
 import type { FacilitySearchResult } from '@rallia/shared-types';
-import type { RootStackParamList } from '../../../navigation/types';
 
-// Sport selection option type
-type SportOption = 'both' | 'tennis' | 'pickleball';
+import { useRequireOnboarding, useThemeStyles, useTranslation } from '../../../hooks';
+import { useSport } from '../../../context';
+import type { RootStackParamList } from '../../../navigation/types';
+import { uploadImage } from '../../../services/imageUpload';
+import { pickImageWithCropper } from '../../../utils/imagePicker';
 
 export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) {
   const playerId = payload?.playerId;
@@ -48,6 +46,7 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
   const { sports } = useSports();
   const { player } = usePlayer();
   const { limits } = useNetworkLimits();
+  const { selectedSport } = useSport();
   const toast = useToast();
 
   const [name, setName] = useState('');
@@ -56,7 +55,6 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedSportOption, setSelectedSportOption] = useState<SportOption>('both');
 
   // Facility selection state
   const [selectedFacilities, setSelectedFacilities] = useState<FacilitySearchResult[]>([]);
@@ -91,14 +89,10 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
     [allSportIds, sportNames]
   );
 
-  // Get sport IDs for facility search based on selection
+  // Get sport IDs for facility search based on current sport context
   const facilitySearchSportIds = useMemo(() => {
-    if (selectedSportOption === 'both') {
-      return sports?.map(s => s.id) ?? [];
-    }
-    const sport = sports?.find(s => s.name.toLowerCase() === selectedSportOption.toLowerCase());
-    return sport ? [sport.id] : [];
-  }, [selectedSportOption, sports]);
+    return selectedSport ? [selectedSport.id] : (sports?.map(s => s.id) ?? []);
+  }, [selectedSport, sports]);
 
   // Use facility search hook - enabled when search is open (shows all nearby by default)
   const { facilities: searchResults, isLoading: facilitySearchLoading } = useFacilitySearch({
@@ -109,34 +103,11 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
     enabled: showFacilitySearch,
   });
 
-  // Get sport IDs from the sports list
-  const sportIds = useMemo(() => {
-    const tennis = sports.find(s => s.name.toLowerCase() === 'tennis');
-    const pickleball = sports.find(s => s.name.toLowerCase() === 'pickleball');
-    return {
-      tennis: tennis?.id || null,
-      pickleball: pickleball?.id || null,
-    };
-  }, [sports]);
-
-  // Get the sport_id based on selection
-  const getSportId = useCallback((): string | null => {
-    switch (selectedSportOption) {
-      case 'tennis':
-        return sportIds.tennis;
-      case 'pickleball':
-        return sportIds.pickleball;
-      default:
-        return null; // both sports
-    }
-  }, [selectedSportOption, sportIds]);
-
   const resetForm = useCallback(() => {
     setName('');
     setDescription('');
     setCoverImage(null);
     setError(null);
-    setSelectedSportOption('both');
     setSelectedFacilities([]);
     setFacilitySearchQuery('');
     setShowFacilitySearch(false);
@@ -162,26 +133,24 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
 
   const handleClose = useCallback(() => {
     resetForm();
-    SheetManager.hide('create-group');
+    void SheetManager.hide('create-group');
   }, [resetForm]);
 
   const handlePickImage = useCallback(async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
+      const { uri, error } = await pickImageWithCropper({
+        aspectRatio: [16, 9],
+        quality: 0.8,
+        source: 'gallery',
+      });
+
+      if (error) {
         Alert.alert(t('groups.permissionRequired'), t('groups.photoAccessRequired'));
         return;
       }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [16, 9],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        setCoverImage(result.assets[0].uri);
+      if (uri) {
+        setCoverImage(uri);
       }
     } catch (err) {
       console.error('Error picking image:', err);
@@ -241,7 +210,7 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
           name: name.trim(),
           description: description.trim() || undefined,
           cover_image_url: coverImageUrl,
-          sport_id: getSportId(),
+          sport_id: selectedSport?.id ?? null,
         },
       });
 
@@ -285,7 +254,7 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
     guardAction,
     name,
     description,
-    getSportId,
+    selectedSport,
     coverImage,
     playerId,
     createGroupMutation,
@@ -343,7 +312,7 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.changeImageButton, { backgroundColor: colors.primary }]}
-                onPress={handlePickImage}
+                onPress={() => void handlePickImage()}
               >
                 <Ionicons name="camera-outline" size={16} color="#FFFFFF" />
                 <Text size="xs" weight="semibold" style={{ color: '#FFFFFF', marginLeft: 4 }}>
@@ -360,7 +329,7 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
                   borderColor: colors.border,
                 },
               ]}
-              onPress={handlePickImage}
+              onPress={() => void handlePickImage()}
             >
               <View style={[styles.imagePickerIcon, { backgroundColor: colors.cardBackground }]}>
                 <Ionicons name="camera-outline" size={24} color={colors.primary} />
@@ -431,140 +400,6 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
             numberOfLines={3}
             textAlignVertical="top"
           />
-        </View>
-
-        {/* Sport Selection */}
-        <View style={styles.inputGroup}>
-          <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
-            {t('groups.sportSelection')}
-          </Text>
-          <View style={styles.sportOptions}>
-            {/* Both Sports Option */}
-            <TouchableOpacity
-              style={[
-                styles.sportOption,
-                {
-                  backgroundColor:
-                    selectedSportOption === 'both'
-                      ? isDark
-                        ? primary[900]
-                        : primary[100]
-                      : colors.inputBackground,
-                  borderColor: selectedSportOption === 'both' ? colors.primary : colors.border,
-                },
-              ]}
-              onPress={() => setSelectedSportOption('both')}
-            >
-              <View style={styles.sportOptionIcons}>
-                <MaterialCommunityIcons
-                  name="tennis"
-                  size={18}
-                  color={selectedSportOption === 'both' ? colors.primary : colors.textMuted}
-                />
-                <Text style={{ color: colors.textMuted, marginHorizontal: 2 }}>+</Text>
-                <MaterialCommunityIcons
-                  name="badminton"
-                  size={18}
-                  color={selectedSportOption === 'both' ? colors.primary : colors.textMuted}
-                />
-              </View>
-              <Text
-                size="xs"
-                weight={selectedSportOption === 'both' ? 'semibold' : 'regular'}
-                style={{
-                  color: selectedSportOption === 'both' ? colors.primary : colors.text,
-                  marginTop: 4,
-                }}
-              >
-                {t('groups.sportBoth')}
-              </Text>
-              {selectedSportOption === 'both' && (
-                <View style={[styles.sportOptionCheck, { backgroundColor: colors.primary }]}>
-                  <Ionicons name="checkmark" size={10} color="#FFFFFF" />
-                </View>
-              )}
-            </TouchableOpacity>
-
-            {/* Tennis Only Option */}
-            <TouchableOpacity
-              style={[
-                styles.sportOption,
-                {
-                  backgroundColor:
-                    selectedSportOption === 'tennis'
-                      ? isDark
-                        ? primary[900]
-                        : primary[100]
-                      : colors.inputBackground,
-                  borderColor: selectedSportOption === 'tennis' ? colors.primary : colors.border,
-                },
-              ]}
-              onPress={() => setSelectedSportOption('tennis')}
-            >
-              <MaterialCommunityIcons
-                name="tennis"
-                size={24}
-                color={selectedSportOption === 'tennis' ? colors.primary : colors.textMuted}
-              />
-              <Text
-                size="xs"
-                weight={selectedSportOption === 'tennis' ? 'semibold' : 'regular'}
-                style={{
-                  color: selectedSportOption === 'tennis' ? colors.primary : colors.text,
-                  marginTop: 4,
-                }}
-              >
-                {t('groups.sportTennis')}
-              </Text>
-              {selectedSportOption === 'tennis' && (
-                <View style={[styles.sportOptionCheck, { backgroundColor: colors.primary }]}>
-                  <Ionicons name="checkmark" size={10} color="#FFFFFF" />
-                </View>
-              )}
-            </TouchableOpacity>
-
-            {/* Pickleball Only Option */}
-            <TouchableOpacity
-              style={[
-                styles.sportOption,
-                {
-                  backgroundColor:
-                    selectedSportOption === 'pickleball'
-                      ? isDark
-                        ? primary[900]
-                        : primary[100]
-                      : colors.inputBackground,
-                  borderColor:
-                    selectedSportOption === 'pickleball' ? colors.primary : colors.border,
-                },
-              ]}
-              onPress={() => setSelectedSportOption('pickleball')}
-            >
-              <MaterialCommunityIcons
-                name="badminton"
-                size={24}
-                color={selectedSportOption === 'pickleball' ? colors.primary : colors.textMuted}
-              />
-              <Text
-                size="xs"
-                weight={selectedSportOption === 'pickleball' ? 'semibold' : 'regular'}
-                style={{
-                  color: selectedSportOption === 'pickleball' ? colors.primary : colors.text,
-                  marginTop: 4,
-                }}
-              >
-                {t('groups.sportPickleball')}
-              </Text>
-              {selectedSportOption === 'pickleball' && (
-                <View style={[styles.sportOptionCheck, { backgroundColor: colors.primary }]}>
-                  <Ionicons name="checkmark" size={10} color="#FFFFFF" />
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
-          <Text size="xs" style={{ color: colors.textMuted, marginTop: 6 }}>
-            {t('groups.sportSelectionHint')}
-          </Text>
         </View>
 
         {/* Favorite Facilities Section (Optional) */}
@@ -756,7 +591,7 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
             { backgroundColor: colors.primary },
             isSubmitting && { opacity: 0.7 },
           ]}
-          onPress={handleSubmit}
+          onPress={() => void handleSubmit()}
           disabled={isSubmitting || !name.trim()}
         >
           {isSubmitting ? (
@@ -885,35 +720,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     padding: 12,
     borderRadius: 10,
-  },
-  sportOptions: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  sportOption: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    position: 'relative',
-    minHeight: 70,
-  },
-  sportOptionIcons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sportOptionCheck: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   footer: {
     padding: spacingPixels[4],

@@ -3,7 +3,7 @@
  * Modal for editing group name, description, and cover image
  */
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -14,17 +14,14 @@ import {
   Image,
 } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-
+import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
-import { useThemeStyles, useAuth, useTranslation } from '../../../hooks';
-import { useUpdateGroup, useSports, type Group } from '@rallia/shared-hooks';
-
-type SportOption = 'both' | 'tennis' | 'pickleball';
-import { uploadImage, replaceImage } from '../../../services/imageUpload';
+import { useUpdateGroup, type Group } from '@rallia/shared-hooks';
 import { primary, radiusPixels, spacingPixels } from '@rallia/design-system';
-import { supabase, Logger } from '@rallia/shared-services';
+
+import { useThemeStyles, useAuth, useTranslation } from '../../../hooks';
+import { uploadImage, replaceImage } from '../../../services/imageUpload';
+import { pickImageWithCropper } from '../../../utils/imagePicker';
 
 export function EditGroupActionSheet({ payload }: SheetProps<'edit-group'>) {
   const group = payload?.group as Group;
@@ -34,7 +31,6 @@ export function EditGroupActionSheet({ payload }: SheetProps<'edit-group'>) {
   const { session } = useAuth();
   const { t } = useTranslation();
   const playerId = session?.user?.id;
-  const { sports } = useSports();
   const toast = useToast();
 
   const [name, setName] = useState(group?.name ?? '');
@@ -43,128 +39,8 @@ export function EditGroupActionSheet({ payload }: SheetProps<'edit-group'>) {
   const [newCoverImage, setNewCoverImage] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedSportOption, setSelectedSportOption] = useState<SportOption>('both');
 
   const updateGroupMutation = useUpdateGroup();
-
-  // Get sport IDs from the sports list
-  const sportIds = useMemo(() => {
-    const tennis = sports.find(s => s.name.toLowerCase() === 'tennis');
-    const pickleball = sports.find(s => s.name.toLowerCase() === 'pickleball');
-    return {
-      tennis: tennis?.id || null,
-      pickleball: pickleball?.id || null,
-    };
-  }, [sports]);
-
-  // Get the sport_id based on selection
-  const getSportId = useCallback((): string | null => {
-    switch (selectedSportOption) {
-      case 'tennis':
-        return sportIds.tennis;
-      case 'pickleball':
-        return sportIds.pickleball;
-      default:
-        return null; // both sports
-    }
-  }, [selectedSportOption, sportIds]);
-
-  // Get the sport option from sport_id
-  const getSportOptionFromId = useCallback(
-    (sportId: string | null): SportOption => {
-      if (!sportId) return 'both';
-      if (sportId === sportIds.tennis) return 'tennis';
-      if (sportId === sportIds.pickleball) return 'pickleball';
-      return 'both';
-    },
-    [sportIds]
-  );
-
-  /**
-   * Cleanup favorite facilities when sport changes.
-   * - If changing to "both" (null) -> no cleanup (expanding scope)
-   * - If changing from one sport to another or from "both" to specific ->
-   *   remove facilities that don't support the new sport
-   */
-  const cleanupIncompatibleFacilities = useCallback(
-    async (oldSportId: string | null, newSportId: string | null) => {
-      // If new sport is "both" (null), no cleanup needed - we're expanding, not restricting
-      if (newSportId === null) {
-        return;
-      }
-
-      // If sport didn't actually change, no cleanup needed
-      if (oldSportId === newSportId) {
-        return;
-      }
-
-      try {
-        // Get all favorite facilities for this group with their sport associations
-        const { data: favorites, error: fetchError } = await supabase
-          .from('network_favorite_facility')
-          .select(
-            `
-            id,
-            facility_id,
-            facility:facility_id (
-              id,
-              facility_sport (
-                sport_id
-              )
-            )
-          `
-          )
-          .eq('network_id', group.id);
-
-        if (fetchError) {
-          Logger.error('Error fetching favorite facilities for cleanup:', fetchError);
-          return;
-        }
-
-        if (!favorites || favorites.length === 0) {
-          return;
-        }
-
-        // Find facilities that don't support the new sport
-        const facilitiesToRemove = favorites.filter(fav => {
-          // Supabase returns nested joins as objects
-          const facility = fav.facility as unknown as {
-            id: string;
-            facility_sport: { sport_id: string }[];
-          } | null;
-          if (!facility) return true; // Remove if facility data is missing
-          const facilitySportIds = facility.facility_sport?.map(fs => fs.sport_id) ?? [];
-          // Keep if facility supports the new sport
-          return !facilitySportIds.includes(newSportId);
-        });
-
-        if (facilitiesToRemove.length === 0) {
-          return;
-        }
-
-        // Remove incompatible facilities
-        const idsToRemove = facilitiesToRemove.map(f => f.id as string);
-        const { error: deleteError } = await supabase
-          .from('network_favorite_facility')
-          .delete()
-          .in('id', idsToRemove);
-
-        if (deleteError) {
-          Logger.error('Error removing incompatible facilities:', deleteError);
-        } else {
-          Logger.info(
-            `Removed ${idsToRemove.length} incompatible favorite facilities after sport change`
-          );
-        }
-      } catch (err) {
-        Logger.error(
-          'Error in cleanupIncompatibleFacilities:',
-          err instanceof Error ? err : undefined
-        );
-      }
-    },
-    [group.id]
-  );
 
   // Reset form when group changes
   useEffect(() => {
@@ -174,33 +50,30 @@ export function EditGroupActionSheet({ payload }: SheetProps<'edit-group'>) {
       setCoverImage(group.cover_image_url || null);
       setNewCoverImage(null);
       setError(null);
-      setSelectedSportOption(getSportOptionFromId(group.sport_id));
     }
-  }, [group, getSportOptionFromId]);
+  }, [group]);
 
   const handleClose = useCallback(() => {
     setError(null);
     setNewCoverImage(null);
-    SheetManager.hide('edit-group');
+    void SheetManager.hide('edit-group');
   }, []);
 
   const handlePickImage = useCallback(async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
+      const { uri, error } = await pickImageWithCropper({
+        aspectRatio: [16, 9],
+        quality: 0.8,
+        source: 'gallery',
+      });
+
+      if (error) {
         Alert.alert(t('groups.permissionRequired'), t('groups.photoAccessRequiredEdit'));
         return;
       }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [16, 9],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        setNewCoverImage(result.assets[0].uri);
+      if (uri) {
+        setNewCoverImage(uri);
       }
     } catch (err) {
       console.error('Error picking image:', err);
@@ -273,22 +146,15 @@ export function EditGroupActionSheet({ payload }: SheetProps<'edit-group'>) {
     }
 
     try {
-      const newSportId = getSportId();
-      const oldSportId = group.sport_id;
-
       await updateGroupMutation.mutateAsync({
         groupId: group.id,
         playerId,
         input: {
           name: name.trim(),
           description: description.trim() || undefined,
-          sport_id: newSportId,
           ...(coverImageUrl !== undefined && { cover_image_url: coverImageUrl || undefined }),
         },
       });
-
-      // Cleanup incompatible facilities if sport changed
-      await cleanupIncompatibleFacilities(oldSportId, newSportId);
 
       // Close modal first
       await SheetManager.hide('edit-group');
@@ -306,14 +172,11 @@ export function EditGroupActionSheet({ payload }: SheetProps<'edit-group'>) {
     description,
     group.id,
     group.cover_image_url,
-    group.sport_id,
     playerId,
     updateGroupMutation,
     onSuccess,
     newCoverImage,
     coverImage,
-    getSportId,
-    cleanupIncompatibleFacilities,
     toast,
     t,
   ]);
@@ -321,7 +184,6 @@ export function EditGroupActionSheet({ payload }: SheetProps<'edit-group'>) {
   const hasChanges =
     name !== group.name ||
     description !== (group.description || '') ||
-    getSportId() !== group.sport_id ||
     newCoverImage !== null ||
     (coverImage === null && group.cover_image_url !== null);
 
@@ -369,7 +231,7 @@ export function EditGroupActionSheet({ payload }: SheetProps<'edit-group'>) {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.changeImageButton, { backgroundColor: colors.primary }]}
-                  onPress={handlePickImage}
+                  onPress={() => void handlePickImage()}
                 >
                   <Ionicons name="camera-outline" size={16} color="#FFFFFF" />
                   <Text size="xs" weight="semibold" style={{ color: '#FFFFFF', marginLeft: 4 }}>
@@ -386,7 +248,7 @@ export function EditGroupActionSheet({ payload }: SheetProps<'edit-group'>) {
                     borderColor: colors.border,
                   },
                 ]}
-                onPress={handlePickImage}
+                onPress={() => void handlePickImage()}
               >
                 <View style={[styles.imagePickerIcon, { backgroundColor: colors.cardBackground }]}>
                   <Ionicons name="camera-outline" size={24} color={colors.primary} />
@@ -450,140 +312,6 @@ export function EditGroupActionSheet({ payload }: SheetProps<'edit-group'>) {
               {description.length}/200
             </Text>
           </View>
-
-          {/* Sport Selection */}
-          <View style={styles.inputGroup}>
-            <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
-              {t('groups.sportSelection')}
-            </Text>
-            <View style={styles.sportOptions}>
-              {/* Both Sports Option */}
-              <TouchableOpacity
-                style={[
-                  styles.sportOption,
-                  {
-                    backgroundColor:
-                      selectedSportOption === 'both'
-                        ? isDark
-                          ? primary[900]
-                          : primary[100]
-                        : colors.inputBackground,
-                    borderColor: selectedSportOption === 'both' ? colors.primary : colors.border,
-                  },
-                ]}
-                onPress={() => setSelectedSportOption('both')}
-              >
-                <View style={styles.sportOptionIcons}>
-                  <MaterialCommunityIcons
-                    name="tennis"
-                    size={18}
-                    color={selectedSportOption === 'both' ? colors.primary : colors.textMuted}
-                  />
-                  <Text style={{ color: colors.textMuted, marginHorizontal: 2 }}>+</Text>
-                  <MaterialCommunityIcons
-                    name="badminton"
-                    size={18}
-                    color={selectedSportOption === 'both' ? colors.primary : colors.textMuted}
-                  />
-                </View>
-                <Text
-                  size="xs"
-                  weight={selectedSportOption === 'both' ? 'semibold' : 'regular'}
-                  style={{
-                    color: selectedSportOption === 'both' ? colors.primary : colors.text,
-                    marginTop: 4,
-                  }}
-                >
-                  {t('groups.sportBoth')}
-                </Text>
-                {selectedSportOption === 'both' && (
-                  <View style={[styles.sportOptionCheck, { backgroundColor: colors.primary }]}>
-                    <Ionicons name="checkmark" size={10} color="#FFFFFF" />
-                  </View>
-                )}
-              </TouchableOpacity>
-
-              {/* Tennis Only Option */}
-              <TouchableOpacity
-                style={[
-                  styles.sportOption,
-                  {
-                    backgroundColor:
-                      selectedSportOption === 'tennis'
-                        ? isDark
-                          ? primary[900]
-                          : primary[100]
-                        : colors.inputBackground,
-                    borderColor: selectedSportOption === 'tennis' ? colors.primary : colors.border,
-                  },
-                ]}
-                onPress={() => setSelectedSportOption('tennis')}
-              >
-                <MaterialCommunityIcons
-                  name="tennis"
-                  size={24}
-                  color={selectedSportOption === 'tennis' ? colors.primary : colors.textMuted}
-                />
-                <Text
-                  size="xs"
-                  weight={selectedSportOption === 'tennis' ? 'semibold' : 'regular'}
-                  style={{
-                    color: selectedSportOption === 'tennis' ? colors.primary : colors.text,
-                    marginTop: 4,
-                  }}
-                >
-                  {t('groups.sportTennis')}
-                </Text>
-                {selectedSportOption === 'tennis' && (
-                  <View style={[styles.sportOptionCheck, { backgroundColor: colors.primary }]}>
-                    <Ionicons name="checkmark" size={10} color="#FFFFFF" />
-                  </View>
-                )}
-              </TouchableOpacity>
-
-              {/* Pickleball Only Option */}
-              <TouchableOpacity
-                style={[
-                  styles.sportOption,
-                  {
-                    backgroundColor:
-                      selectedSportOption === 'pickleball'
-                        ? isDark
-                          ? primary[900]
-                          : primary[100]
-                        : colors.inputBackground,
-                    borderColor:
-                      selectedSportOption === 'pickleball' ? colors.primary : colors.border,
-                  },
-                ]}
-                onPress={() => setSelectedSportOption('pickleball')}
-              >
-                <MaterialCommunityIcons
-                  name="badminton"
-                  size={24}
-                  color={selectedSportOption === 'pickleball' ? colors.primary : colors.textMuted}
-                />
-                <Text
-                  size="xs"
-                  weight={selectedSportOption === 'pickleball' ? 'semibold' : 'regular'}
-                  style={{
-                    color: selectedSportOption === 'pickleball' ? colors.primary : colors.text,
-                    marginTop: 4,
-                  }}
-                >
-                  {t('groups.sportPickleball')}
-                </Text>
-                {selectedSportOption === 'pickleball' && (
-                  <View style={[styles.sportOptionCheck, { backgroundColor: colors.primary }]}>
-                    <Ionicons name="checkmark" size={10} color="#FFFFFF" />
-                  </View>
-                )}
-              </TouchableOpacity>
-            </View>
-            <Text size="xs" style={{ color: colors.textMuted, marginTop: 6 }}>
-              {t('groups.sportSelectionHint')}
-            </Text>
-          </View>
         </ScrollView>
 
         {/* Footer */}
@@ -601,7 +329,7 @@ export function EditGroupActionSheet({ payload }: SheetProps<'edit-group'>) {
               { backgroundColor: colors.primary },
               (!hasChanges || isSubmitting) && { opacity: 0.7 },
             ]}
-            onPress={handleSubmit}
+            onPress={() => void handleSubmit()}
             disabled={!hasChanges || isSubmitting || !name.trim()}
           >
             {isSubmitting ? (
@@ -740,34 +468,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     gap: spacingPixels[2],
-  },
-  sportOptions: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  sportOption: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    position: 'relative',
-    minHeight: 70,
-  },
-  sportOptionIcons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sportOptionCheck: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

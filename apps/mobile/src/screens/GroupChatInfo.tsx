@@ -152,7 +152,7 @@ export default function GroupChatInfoScreen() {
   // Handle invite via QR code / link
   const handleInviteViaQR = useCallback(() => {
     if (!networkInfo?.id) return;
-    
+
     SheetManager.show('invite-link', {
       payload: {
         groupId: networkInfo.id,
@@ -184,65 +184,74 @@ export default function GroupChatInfoScreen() {
   }, [selectedMember, closeMemberOptionsModal, navigation]);
 
   // Handle member item tap - show options modal
-  const handleMemberItemPress = useCallback((item: ParticipantInfo) => {
-    const profile = item.player?.profile;
-    const displayName = profile
-      ? `${profile.first_name}${profile.last_name ? ` ${profile.last_name}` : ''}`
-      : 'Unknown User';
+  const handleMemberItemPress = useCallback(
+    (item: ParticipantInfo) => {
+      const profile = item.player?.profile;
+      const displayName = profile
+        ? `${profile.first_name}${profile.last_name ? ` ${profile.last_name}` : ''}`
+        : 'Unknown User';
 
-    handleMemberPress({
-      playerId: item.player_id,
-      name: displayName,
-      profilePictureUrl: profile?.profile_picture_url || null,
-      isAdmin: isParticipantAdmin(item.player_id),
-    });
-  }, [handleMemberPress, isParticipantAdmin]);
+      handleMemberPress({
+        playerId: item.player_id,
+        name: displayName,
+        profilePictureUrl: profile?.profile_picture_url || null,
+        isAdmin: isParticipantAdmin(item.player_id),
+      });
+    },
+    [handleMemberPress, isParticipantAdmin]
+  );
 
   // Render member item
-  const renderMemberItem = useCallback(({ item }: { item: ParticipantInfo }) => {
-    const profile = item.player?.profile;
-    const isMemberAdmin = isParticipantAdmin(item.player_id);
-    const isCurrentUser = item.player_id === playerId;
-    const displayName = profile
-      ? `${profile.first_name}${profile.last_name ? ` ${profile.last_name}` : ''}`
-      : 'Unknown User';
+  const renderMemberItem = useCallback(
+    ({ item }: { item: ParticipantInfo }) => {
+      const profile = item.player?.profile;
+      const isMemberAdmin = isParticipantAdmin(item.player_id);
+      const isCurrentUser = item.player_id === playerId;
+      const displayName = profile
+        ? `${profile.first_name}${profile.last_name ? ` ${profile.last_name}` : ''}`
+        : 'Unknown User';
 
-    return (
-      <TouchableOpacity
-        style={[styles.memberItem, { borderBottomColor: colors.border }]}
-        onPress={() => handleMemberItemPress(item)}
-      >
-        {/* Avatar */}
-        {profile?.profile_picture_url ? (
-          <Image source={{ uri: profile.profile_picture_url }} style={styles.memberAvatar} />
-        ) : (
-          <View style={[styles.memberAvatarPlaceholder, { backgroundColor: primary[100] }]}>
-            <Ionicons name="person" size={20} color={primary[500]} />
-          </View>
-        )}
-
-        {/* Name and role */}
-        <View style={styles.memberInfo}>
-          <Text style={[styles.memberName, { color: colors.text }]}>
-            {displayName}
-            {isCurrentUser && <Text style={{ color: primary[500] }}> (You)</Text>}
-          </Text>
-          {isMemberAdmin && (
-            <View style={[styles.adminBadge, { backgroundColor: primary[500] }]}>
-              <Text style={styles.adminBadgeText}>Admin</Text>
+      return (
+        <TouchableOpacity
+          style={[styles.memberItem, { borderBottomColor: colors.border }]}
+          onPress={() => handleMemberItemPress(item)}
+        >
+          {/* Avatar */}
+          {profile?.profile_picture_url ? (
+            <Image source={{ uri: profile.profile_picture_url }} style={styles.memberAvatar} />
+          ) : (
+            <View style={[styles.memberAvatarPlaceholder, { backgroundColor: primary[100] }]}>
+              <Ionicons name="person" size={20} color={primary[500]} />
             </View>
           )}
-        </View>
 
-        {/* More options icon */}
-        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-      </TouchableOpacity>
-    );
-  }, [colors, playerId, isParticipantAdmin, handleMemberItemPress]);
+          {/* Name and role */}
+          <View style={styles.memberInfo}>
+            <Text style={[styles.memberName, { color: colors.text }]}>
+              {displayName}
+              {isCurrentUser && <Text style={{ color: primary[500] }}> (You)</Text>}
+            </Text>
+            {isMemberAdmin && (
+              <View style={[styles.adminBadge, { backgroundColor: primary[500] }]}>
+                <Text style={styles.adminBadgeText}>Admin</Text>
+              </View>
+            )}
+          </View>
+
+          {/* More options icon */}
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
+      );
+    },
+    [colors, playerId, isParticipantAdmin, handleMemberItemPress]
+  );
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['top', 'bottom']}
+      >
         <View style={styles.loadingContainer}>
           {/* Group Chat Info Skeleton */}
           <View style={{ alignItems: 'center', paddingVertical: 24 }}>
@@ -312,7 +321,10 @@ export default function GroupChatInfoScreen() {
 
   if (!conversation) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['top', 'bottom']}
+      >
         <View style={styles.loadingContainer}>
           <Text style={{ color: colors.text }}>Conversation not found</Text>
         </View>
@@ -321,7 +333,10 @@ export default function GroupChatInfoScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['top', 'bottom']}
+    >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
@@ -407,7 +422,9 @@ export default function GroupChatInfoScreen() {
               <Ionicons name="person-add" size={20} color={primary[500]} />
             </View>
             <View style={styles.sectionContent}>
-              <Text style={[styles.sectionLabel, { color: colors.text }]}>{t('chat.groupChat.addMembers' as TranslationKey)}</Text>
+              <Text style={[styles.sectionLabel, { color: colors.text }]}>
+                {t('chat.groupChat.addMembers' as TranslationKey)}
+              </Text>
             </View>
           </TouchableOpacity>
 
@@ -420,7 +437,9 @@ export default function GroupChatInfoScreen() {
               <Ionicons name="qr-code" size={20} color={primary[500]} />
             </View>
             <View style={styles.sectionContent}>
-              <Text style={[styles.sectionLabel, { color: colors.text }]}>{t('chat.groupChat.inviteViaLinkOrQR' as TranslationKey)}</Text>
+              <Text style={[styles.sectionLabel, { color: colors.text }]}>
+                {t('chat.groupChat.inviteViaLinkOrQR' as TranslationKey)}
+              </Text>
             </View>
           </TouchableOpacity>
         </View>

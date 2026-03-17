@@ -18,7 +18,6 @@ import {
   Image,
   Alert,
 } from 'react-native';
-import { SearchBar } from '../../../components/SearchBar';
 import ActionSheet, {
   SheetManager,
   SheetProps,
@@ -26,16 +25,17 @@ import ActionSheet, {
   ScrollView,
 } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-
 import { Text } from '@rallia/shared-components';
 import { useGetOrCreateDirectConversation } from '@rallia/shared-hooks';
-import { useThemeStyles, useAuth, useTranslation } from '../../../hooks';
-import { uploadImage } from '../../../services/imageUpload';
 import { primary, spacingPixels, fontSizePixels, radiusPixels } from '@rallia/design-system';
 
-const BASE_WHITE = '#ffffff';
+import { SearchBar } from '../../../components/SearchBar';
+import { useThemeStyles, useAuth, useTranslation } from '../../../hooks';
 import { supabase } from '../../../lib/supabase';
+import { uploadImage } from '../../../services/imageUpload';
+import { pickImageWithCropper } from '../../../utils/imagePicker';
+
+const BASE_WHITE = '#ffffff';
 
 interface SelectedMember {
   id: string;
@@ -87,8 +87,6 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
   const [groupImage, setGroupImage] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mediaPermissionStatus, setMediaPermissionStatus] =
-    useState<ImagePicker.PermissionStatus | null>(null);
 
   // Load all active players when modal opens
   const loadPlayers = useCallback(async () => {
@@ -150,16 +148,9 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
   // Load players when component mounts and user is authenticated
   useEffect(() => {
     if (!hasLoadedPlayers && currentUserId) {
-      loadPlayers();
+      void loadPlayers();
     }
   }, [hasLoadedPlayers, loadPlayers, currentUserId]);
-
-  // Pre-check media library permissions when component mounts
-  useEffect(() => {
-    ImagePicker.getMediaLibraryPermissionsAsync().then(({ status }) => {
-      setMediaPermissionStatus(status);
-    });
-  }, []);
 
   // Filter players based on search
   const filteredPlayers = useMemo(() => {
@@ -230,36 +221,27 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
   // Image picker
   const handlePickImage = useCallback(async () => {
     try {
-      // Use cached permission status if available, otherwise check
-      let hasPermission = mediaPermissionStatus === 'granted';
-
-      if (!hasPermission) {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        setMediaPermissionStatus(status);
-        if (status !== 'granted') {
-          Alert.alert(t('common.permissionRequired'), t('chat.photoAccessRequired'));
-          return;
-        }
-        hasPermission = true;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
+      const { uri, error } = await pickImageWithCropper({
+        aspectRatio: [1, 1],
         quality: 0.8,
+        source: 'gallery',
       });
 
-      if (!result.canceled && result.assets[0]) {
-        setGroupImage(result.assets[0].uri);
+      if (error) {
+        Alert.alert(t('common.permissionRequired'), t('chat.photoAccessRequired'));
+        return;
+      }
+
+      if (uri) {
+        setGroupImage(uri);
       }
     } catch (err) {
       console.error('Error picking image:', err);
       Alert.alert(t('common.error'), t('chat.failedToPickImage'));
     }
-  }, [t, mediaPermissionStatus]);
+  }, [t]);
 
-  const handleRemoveImage = useCallback(() => {
+  const _handleRemoveImage = useCallback(() => {
     setGroupImage(null);
   }, []);
 
@@ -313,21 +295,23 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
         throw new Error('Failed to create conversation');
       }
 
+      const conversationId = conversation.id as string;
+
       // 2. Add creator as conversation participant
       await supabase
         .from('conversation_participant')
-        .insert({ conversation_id: conversation.id, player_id: currentUserId });
+        .insert({ conversation_id: conversationId, player_id: currentUserId });
 
       // 3. Add selected members to conversation
       for (const member of selectedMembers) {
         await supabase
           .from('conversation_participant')
-          .insert({ conversation_id: conversation.id, player_id: member.id });
+          .insert({ conversation_id: conversationId, player_id: member.id });
       }
 
       // Success - close modal first, then return the conversation ID
       await handleClose();
-      onSuccess?.(conversation.id);
+      onSuccess?.(conversationId);
     } catch (err) {
       console.error('Error creating group:', err);
       Alert.alert(t('common.error'), t('chat.failedToCreateGroup'));
@@ -488,7 +472,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
             { backgroundColor: buttonActive },
             isDisabled && styles.navButtonDisabled,
           ]}
-          onPress={handleContinueToDetails}
+          onPress={() => void handleContinueToDetails()}
           disabled={isDisabled}
           activeOpacity={0.8}
         >
@@ -525,7 +509,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
         {/* Group Image */}
         <View style={styles.imageContainer}>
           {groupImage ? (
-            <TouchableOpacity onPress={handlePickImage} activeOpacity={0.8}>
+            <TouchableOpacity onPress={() => void handlePickImage()} activeOpacity={0.8}>
               <Image source={{ uri: groupImage }} style={styles.groupImagePreview} />
               <View style={[styles.editImageBadge, { backgroundColor: primary[500] }]}>
                 <Ionicons name="camera-outline" size={14} color="#fff" />
@@ -534,7 +518,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
           ) : (
             <TouchableOpacity
               style={[styles.imagePicker, { backgroundColor: isDark ? colors.card : '#F5F5F5' }]}
-              onPress={handlePickImage}
+              onPress={() => void handlePickImage()}
               activeOpacity={0.7}
             >
               <Ionicons name="camera-outline" size={28} color={colors.textMuted} />
@@ -638,7 +622,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
           { backgroundColor: buttonActive },
           (isCreating || !groupName.trim()) && styles.navButtonDisabled,
         ]}
-        onPress={handleCreateGroup}
+        onPress={() => void handleCreateGroup()}
         disabled={isCreating || !groupName.trim()}
         activeOpacity={0.8}
       >
@@ -657,9 +641,9 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
   );
 
   // Handler for when sheet opens - ensure players are loaded
-  const handleSheetOpen = useCallback(() => {
+  const _handleSheetOpen = useCallback(() => {
     if (!hasLoadedPlayers && currentUserId) {
-      loadPlayers();
+      void loadPlayers();
     }
   }, [hasLoadedPlayers, currentUserId, loadPlayers]);
 
@@ -682,7 +666,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
           <Text weight="semibold" size="lg" style={{ color: colors.text }}>
             {step === 'select-members' ? t('chat.selectMembers') : t('chat.groupDetails')}
           </Text>
-          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+          <TouchableOpacity onPress={() => void handleClose()} style={styles.closeButton}>
             <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>

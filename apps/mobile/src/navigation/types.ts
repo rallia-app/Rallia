@@ -48,6 +48,12 @@ export type RootStackParamList = {
   GroupChatInfo: { conversationId: string }; // Group chat info/settings view
   ChatConversation: { conversationId: string; title?: string }; // Direct chat navigation
   PlayedMatchDetail: { match: unknown }; // Played match detail view
+  NetworkMatches: {
+    networkId: string;
+    networkType: 'community' | 'group';
+    networkName?: string;
+    sportId?: string | null;
+  }; // Network member upcoming matches view
   MyBookings: undefined; // My Bookings screen (court bookings management)
   BookingDetail: { bookingId: string }; // Booking detail screen (deep link / notification target)
   InviteReferral: { referralCode: string }; // Referral deep link handler

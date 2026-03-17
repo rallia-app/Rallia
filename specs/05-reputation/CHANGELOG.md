@@ -51,7 +51,7 @@ This document summarizes the changes between the original MVP specification and 
 
 **Change:**
 
-- Unknown reputation threshold changed from **3 completed matches** to **10 reputation events**
+- Unknown reputation threshold changed from **3 completed matches** to **5 reputation events**
 
 **Rationale:**
 
@@ -62,9 +62,9 @@ This document summarizes the changes between the original MVP specification and 
 
 **Impact:**
 
-- Players need to accumulate 10 reputation events (not just 3 matches) before their reputation becomes visible
-- Since matches typically generate 3-5 events each, this usually means 2-4 matches
-- All tier criteria updated to reflect "10+ events" instead of "3+ matches"
+- Players need to accumulate 5 reputation events (not just 3 matches) before their reputation becomes visible
+- Since matches typically generate 3-5 events each, this usually means 1-2 matches
+- All tier criteria updated to reflect "5+ events" instead of "3+ matches"
 
 ---
 
@@ -133,7 +133,7 @@ The reputation system evolved from a simple percentage-based calculation to a so
 **Implemented Design:**
 
 - **5-tier progressive system:**
-  - **Unknown:** < 10 events (gray "?")
+  - **Unknown:** < 5 events (gray "?")
   - **Bronze:** 0-59% (bronze shield 🥉)
   - **Silver:** 60-74% (silver shield 🥈)
   - **Gold:** 75-89% (gold shield 🥇)
@@ -313,13 +313,13 @@ Final Score = clamp(Base Score + sum(weighted_impacts), 0, 100)
 
 ### Implemented System
 
-| Threshold   | Tier     | Badge            |
-| ----------- | -------- | ---------------- |
-| < 10 events | Unknown  | Gray "?"         |
-| 0-59%       | Bronze   | Bronze shield 🥉 |
-| 60-74%      | Silver   | Silver shield 🥈 |
-| 75-89%      | Gold     | Gold shield 🥇   |
-| 90-100%     | Platinum | Platinum star ⭐ |
+| Threshold  | Tier     | Badge            |
+| ---------- | -------- | ---------------- |
+| < 5 events | Unknown  | Gray "?"         |
+| 0-59%      | Bronze   | Bronze shield 🥉 |
+| 60-74%     | Silver   | Silver shield 🥈 |
+| 75-89%     | Gold     | Gold shield 🥇   |
+| 90-100%    | Platinum | Platinum star ⭐ |
 
 **Benefits:**
 
@@ -378,8 +378,8 @@ CREATE TABLE player_reputation (
     positive_events INT NOT NULL,
     negative_events INT NOT NULL,
     matches_completed INT NOT NULL,
-    min_events_for_public INT NOT NULL DEFAULT 10,
-    is_public BOOLEAN GENERATED ALWAYS AS (total_events >= 10) STORED,
+    min_events_for_public INT NOT NULL DEFAULT 5,
+    is_public BOOLEAN GENERATED ALWAYS AS (total_events >= 5) STORED,
     last_decay_calculation TIMESTAMPTZ,
     calculated_at TIMESTAMPTZ NOT NULL
 );
@@ -431,7 +431,7 @@ If reputation system is being added to existing app:
 ### For New Players
 
 - Start with `tier = unknown`
-- After 10 events, calculate initial reputation
+- After 5 events, calculate initial reputation
 - Assign tier based on score
 - Send welcome notification explaining tiers
 

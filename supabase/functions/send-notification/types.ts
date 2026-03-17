@@ -30,6 +30,10 @@ export type NotificationType =
   | 'community_join_request'
   | 'community_join_accepted'
   | 'community_join_rejected'
+  // Reference request notifications
+  | 'reference_request_received'
+  | 'reference_request_accepted'
+  | 'reference_request_declined'
   // Organization staff notifications
   | 'booking_created'
   | 'booking_cancelled_by_player'
@@ -193,6 +197,14 @@ export const DEFAULT_PREFERENCES: Record<NotificationType, Record<DeliveryChanne
   feedback_request: { email: true, push: true, sms: false },
   feedback_reminder: { email: true, push: true, sms: false },
   score_confirmation: { email: true, push: true, sms: false },
+  // Reference request notifications
+  reference_request_received: { email: false, push: true, sms: false },
+  reference_request_accepted: { email: false, push: true, sms: false },
+  reference_request_declined: { email: false, push: true, sms: false },
+  // Community notifications
+  community_join_request: { email: false, push: true, sms: false },
+  community_join_accepted: { email: false, push: true, sms: false },
+  community_join_rejected: { email: false, push: true, sms: false },
   // Organization staff notifications - email only by default
   booking_created: { email: true, push: false, sms: false },
   booking_cancelled_by_player: { email: true, push: false, sms: false },

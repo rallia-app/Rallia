@@ -125,7 +125,6 @@ export function UserLocationProvider({ children }: UserLocationProviderProps) {
   const syncToDatabase = useCallback(
     async (playerId: string): Promise<boolean> => {
       if (!homeLocation) {
-        console.log('[UserLocationContext] No home location to sync');
         return false;
       }
 
@@ -136,9 +135,7 @@ export function UserLocationProvider({ children }: UserLocationProviderProps) {
         longitude: homeLocation.longitude,
       });
 
-      if (result.success) {
-        console.log('[UserLocationContext] Home location synced to database');
-      } else {
+      if (!result.success) {
         console.error('[UserLocationContext] Failed to sync:', result.error);
       }
 

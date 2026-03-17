@@ -19,13 +19,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { SportIcon } from '../components/SportIcon';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SheetManager } from 'react-native-actions-sheet';
 
 import { Text, Skeleton } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
-import { getSafeAreaEdges } from '../utils';
 import { useThemeStyles, useAuth, useTranslation, useRequireOnboarding } from '../hooks';
 import { useSport } from '../context';
 import {
@@ -91,9 +91,9 @@ const GroupCard: React.FC<{
     if (!item.sport_id) {
       return (
         <View style={styles.sportIconContainer}>
-          <MaterialCommunityIcons name="tennis" size={14} color={colors.textMuted} />
+          <SportIcon sportName="tennis" size={14} color={colors.textMuted} />
           <Text style={[styles.sportIconPlus, { color: colors.textMuted }]}>+</Text>
-          <MaterialCommunityIcons name="badminton" size={14} color={colors.textMuted} />
+          <SportIcon sportName="pickleball" size={14} color={colors.textMuted} />
         </View>
       );
     }
@@ -101,7 +101,7 @@ const GroupCard: React.FC<{
     if (sportName?.toLowerCase() === 'tennis') {
       return (
         <View style={styles.sportIconContainer}>
-          <MaterialCommunityIcons name="tennis" size={16} color={colors.textMuted} />
+          <SportIcon sportName="tennis" size={16} color={colors.textMuted} />
         </View>
       );
     }
@@ -109,7 +109,7 @@ const GroupCard: React.FC<{
     if (sportName?.toLowerCase() === 'pickleball') {
       return (
         <View style={styles.sportIconContainer}>
-          <MaterialCommunityIcons name="badminton" size={16} color={colors.textMuted} />
+          <SportIcon sportName="pickleball" size={16} color={colors.textMuted} />
         </View>
       );
     }
@@ -308,10 +308,7 @@ export default function GroupsScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        edges={getSafeAreaEdges(['bottom'])}
-      >
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         <View style={styles.loadingContainer}>
           {/* Header skeleton */}
           <View style={styles.headerSkeleton}>
@@ -376,10 +373,7 @@ export default function GroupsScreen() {
   }
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={getSafeAreaEdges(['bottom'])}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <FlatList
         data={groups}
         renderItem={renderGroupItem}

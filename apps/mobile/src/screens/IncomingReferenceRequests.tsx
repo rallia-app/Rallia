@@ -26,7 +26,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
-import { getSafeAreaEdges } from '../utils';
 import { useThemeStyles, useTranslation, useNavigateToPlayerProfile } from '../hooks';
 import { lightHaptic } from '@rallia/shared-utils';
 import {
@@ -84,6 +83,11 @@ const IncomingReferenceRequests: React.FC = () => {
       } = await supabase.auth.getUser();
       if (!user) return;
 
+      Logger.info('Fetching incoming reference requests', {
+        userId: user.id,
+        currentDate: new Date().toISOString(),
+      });
+
       // Fetch pending reference requests where current user is the referee
       const { data: requestsData, error } = await supabase
         .from('rating_reference_request')
@@ -102,6 +106,12 @@ const IncomingReferenceRequests: React.FC = () => {
         .eq('status', 'pending')
         .gte('expires_at', new Date().toISOString()) // Not expired
         .order('created_at', { ascending: false });
+
+      Logger.info('Incoming reference requests result', {
+        count: requestsData?.length || 0,
+        error: error?.message,
+        userId: user.id,
+      });
 
       if (error) throw error;
 
@@ -377,7 +387,7 @@ const IncomingReferenceRequests: React.FC = () => {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={getSafeAreaEdges(['bottom'])}
+        edges={['bottom']}
       >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -392,7 +402,7 @@ const IncomingReferenceRequests: React.FC = () => {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={getSafeAreaEdges(['bottom'])}
+      edges={['bottom']}
     >
       {/* Header info */}
       <View style={[styles.headerInfo, { backgroundColor: colors.card }]}>

@@ -117,7 +117,7 @@
     "authFailed": "L'authentification a échoué. Veuillez réessayer."
   },
   "splash": {
-    "slogan": "Ta prochaine partie t'attend."
+    "slogan": "Le Pouvoir de Jouer Quand tu le Veux"
   },
   "navigation": {
     "home": "Accueil",
@@ -187,6 +187,9 @@
       "player_left": "Joueur\nparti",
       "new_message": "Nouveau\nmessage",
       "rating_verified": "Classement\nvérifié",
+      "reference_request_received": "Référence\ndemandée",
+      "reference_request_accepted": "Référence\nacceptée",
+      "reference_request_declined": "Référence\nrefusée",
       "reminder": "Rappel",
       "payment": "Paiement",
       "support": "Support",
@@ -438,6 +441,12 @@
     "privacyPolicy": "Politique de confidentialité",
     "logout": "Se déconnecter",
     "deleteAccount": "Supprimer le compte",
+    "appInfo": "Info de l'app",
+    "version": "Version",
+    "environment": "Environnement",
+    "channel": "Canal",
+    "update": "Mise à jour",
+    "embeddedBundle": "Intégrée",
     "general": {
       "title": "Paramètres généraux",
       "description": "Gérez les paramètres de votre organisation.",
@@ -1033,7 +1042,21 @@
         "counterpuncher": "Contre-attaqueur",
         "aggressive_baseliner": "Fond de court agressif",
         "serve_and_volley": "Service et volée",
-        "all_court": "Tous terrains"
+        "all_court": "Tous terrains",
+        "banger": "Frappeur",
+        "soft_game": "Jeu en douceur",
+        "hybrid": "Hybride",
+        "speedup_specialist": "Spécialiste de l'accélération"
+      },
+      "playAttributeCategories": {
+        "Serve": "Service",
+        "Forehand": "Coup droit",
+        "Backhand": "Revers",
+        "Net Game": "Jeu au filet",
+        "Physical": "Physique",
+        "Mental": "Mental",
+        "Soft Game": "Jeu en douceur",
+        "Power Game": "Jeu de puissance"
       },
       "playAttributes": {
         "serve_speed_and_placement": "Vitesse et placement du service",
@@ -1041,7 +1064,35 @@
         "court_coverage": "Couverture du terrain",
         "forehand_power": "Puissance du coup droit",
         "shot_selection": "Sélection des coups",
-        "spin_control": "Contrôle de l'effet"
+        "spin_control": "Contrôle de l'effet",
+        "big_serve": "Service puissant",
+        "kick_serve": "Service lifté",
+        "accurate_placement": "Placement précis",
+        "heavy_topspin_forehand": "Coup droit lifté",
+        "flat_forehand": "Coup droit à plat",
+        "inside_out_forehand": "Coup droit décroisé",
+        "one_handed_backhand": "Revers à une main",
+        "two_handed_backhand": "Revers à deux mains",
+        "backhand_slice": "Slice de revers",
+        "strong_volleyer": "Volleyeur solide",
+        "overhead_smash": "Smash",
+        "endurance": "Endurance",
+        "quick_reflexes": "Réflexes rapides",
+        "clutch_performer": "Performant sous pression",
+        "consistent": "Constant",
+        "power_serve": "Service puissant",
+        "spin_serve": "Service avec effet",
+        "dink_master": "Maître du dink",
+        "drop_shot": "Amorti",
+        "reset_specialist": "Spécialiste du reset",
+        "drive_specialist": "Spécialiste du drive",
+        "speedup_attack": "Attaque en accélération",
+        "erne_specialist": "Spécialiste de l'erne",
+        "quick_hands": "Mains rapides",
+        "court_mobility": "Mobilité sur le terrain",
+        "stamina": "Endurance",
+        "patient": "Patient",
+        "strategic": "Stratégique"
       },
       "favoriteFacilities": "Terrains préférés",
       "selectUpTo3": "Sélectionner jusqu'à 3 sites de jeu",
@@ -1125,7 +1176,24 @@
       "noSportError": "Impossible de déterminer le sport pour la demande de référence.",
       "noRatingError": "Vous devez avoir une cote dans ce sport pour demander une référence.",
       "playerLevelTooLow": "Le niveau de ce joueur est inférieur au vôtre. Les références doivent provenir de joueurs de votre niveau ou supérieur."
-    }
+    },
+    "unknownPlayer": "Joueur"
+  },
+  "inviteToMatch": {
+    "title": "Inviter à un match",
+    "subtitle": "Sélectionnez un match pour inviter {name}",
+    "sendInvite": "Envoyer l'invitation",
+    "inviteSent": "Invitation envoyée à {name}!",
+    "inviteError": "Échec de l'envoi de l'invitation. Veuillez réessayer.",
+    "spotsAvailable": "{count} place(s) disponible(s)",
+    "doubles": "Doubles",
+    "singles": "Simple",
+    "noMatches": "Aucun match disponible",
+    "noMatchesDescription": "Vous n'avez aucun match à venir avec des places disponibles. Créez d'abord un match pour inviter des joueurs.",
+    "loadingMatches": "Chargement de vos matchs...",
+    "errorLoading": "Impossible de charger les matchs",
+    "errorLoadingDescription": "Une erreur s'est produite. Veuillez réessayer plus tard.",
+    "unknownLocation": "Lieu à déterminer"
   },
   "photoEditor": {
     "title": "Modifier la photo",
@@ -1598,19 +1666,44 @@
       "groups": "Groupes",
       "matches": "Matchs"
     },
+    "filters": {
+      "all": "Tout",
+      "unread": "Non lus",
+      "direct": "Direct",
+      "groupChat": "Groupes",
+      "playerGroup": "Groupes de joueurs",
+      "community": "Communautés",
+      "club": "Clubs",
+      "match": "Matchs",
+      "blocked": "Bloqués",
+      "favorites": "Favoris",
+      "archived": "Archivés",
+      "muted": "En sourdine",
+      "pinned": "Épinglés",
+      "reset": "Réinitialiser",
+      "emptyBlocked": "Aucune conversation bloquée",
+      "emptyUnread": "Tout est à jour!",
+      "emptyFavorites": "Aucune conversation favorite",
+      "emptyArchived": "Aucune conversation archivée",
+      "emptyMuted": "Aucune conversation en sourdine",
+      "emptyPinned": "Aucune conversation épinglée"
+    },
+    "emptyFiltered": {
+      "title": "Aucune conversation trouvée",
+      "description": "Aucune conversation ne correspond au filtre sélectionné"
+    },
     "typeMessage": "Tapez votre message",
     "today": "Aujourd'hui",
     "yesterday": "Hier",
     "participants": "{{count}} participant",
     "participants_plural": "{{count}} participants",
     "agreement": {
-      "welcome": "Bienvenue dans",
-      "welcomeDirect": "Démarrage de la conversation avec",
-      "description": "Ceci est une discussion de groupe - tous les membres de cette communauté verront vos messages",
-      "descriptionDirect": "Ceci est une conversation privée. Veuillez être respectueux et suivre nos règles communautaires.",
+      "welcome": "Bienvenue sur Rallia Chat",
+      "description": "Veuillez être respectueux et suivre nos règles communautaires dans toutes les conversations.",
       "chatRules": "Règles de discussion",
       "warning": "Le contenu sera supprimé et les utilisateurs bannis en cas de violation de nos règles communautaires",
-      "agree": "J'accepte"
+      "agree": "J'accepte",
+      "decline": "Refuser"
     },
     "rules": {
       "noHarassment": "Pas de harcèlement, de discours haineux ou de langage sexuel",
@@ -1648,7 +1741,7 @@
       "edited": "modifié",
       "replyingTo": "Réponse à {name}"
     },
-    "createGroup": "Créer le groupe",
+    "createGroup": "Créer la discussion de groupe",
     "blocked": {
       "title": "Vous avez bloqué {name}",
       "description": "Vous devez débloquer cet utilisateur pour continuer la conversation. Si vous avez rencontré des problèmes graves, vous pouvez le signaler.",
@@ -1680,7 +1773,9 @@
       "maxImages": "Vous pouvez ajouter jusqu'à 3 images",
       "uploadingImages": "Téléchargement des images..."
     },
-    "selectMembers": "Sélectionner les membres",
+    "newConversation": "Nouvelle conversation",
+    "selectAPlayer": "Sélectionner un joueur",
+    "selectMembers": "Sélectionner des membres",
     "pleaseSelectMember": "Veuillez sélectionner au moins un membre pour le groupe.",
     "photoAccessRequired": "Veuillez autoriser l'accès à vos photos pour ajouter une image de groupe.",
     "failedToPickImage": "Échec de la sélection de l'image",
@@ -1693,7 +1788,7 @@
     "noPlayersFoundMatching": "Aucun joueur trouvé pour \"{query}\"",
     "noPlayersAvailable": "Aucun joueur disponible",
     "continueSelected": "Continuer ({count} sélectionné(s))",
-    "startChat": "Démarrer la discussion",
+    "startChat": "Envoyer un message",
     "failedToCreateConversation": "Échec de la création de la conversation. Veuillez réessayer.",
     "groupDetails": "Détails du groupe",
     "addPhoto": "Ajouter une photo",
@@ -1784,7 +1879,10 @@
     "shareLists": "Listes de partage",
     "tournaments": "Tournois",
     "tournamentsComingSoon": "Cette fonctionnalité arrive bientôt!",
+    "leagues": "Ligues",
+    "leaguesComingSoon": "Cette fonctionnalité arrive bientôt!",
     "findPartner": "Trouver un partenaire",
+    "players": "Joueurs",
     "myCommunities": "Mes communautés",
     "createCommunity": "Créer une communauté",
     "editCommunity": "Modifier la communauté",
@@ -1882,6 +1980,13 @@
       "title": "Activité",
       "recentGames": "Parties récentes",
       "noActivity": "Aucune activité pour le moment"
+    },
+    "matches": {
+      "title": "Matchs des membres",
+      "empty": {
+        "title": "Aucun match à venir",
+        "description": "Les membres n'ont pas encore partagé de matchs publics"
+      }
     },
     "detail": {
       "last7DaysActivities": "Activités des 7 derniers jours",
@@ -2190,6 +2295,13 @@
       "gamesCreated_one": "{count} partie créée",
       "newMessages": "{count} nouveaux messages dans\nle clavardage du groupe"
     },
+    "matches": {
+      "title": "Matchs des membres",
+      "empty": {
+        "title": "Aucun match à venir",
+        "description": "Les membres n'ont pas encore partagé de matchs publics"
+      }
+    },
     "home": {
       "about": "À propos",
       "viewAll": "Voir tout"
@@ -2482,6 +2594,8 @@
   "match": {
     "placeholder": "Écran de partie - Prêt pour votre implémentation",
     "host": "Hôte",
+    "hostedBy": "Organisé par",
+    "full": "Complet",
     "pickMatchType": "Choisir le type de partie",
     "format": {
       "singles": "Simple",
@@ -2933,7 +3047,13 @@
     "sportNotAdded": "{sport} non ajouté",
     "preferencesUpdated": "Préférences mises à jour avec succès",
     "cannotDeactivate": "Impossible de désactiver le sport",
-    "mustHaveOneSport": "Vous devez avoir au moins un sport actif. Veuillez activer un autre sport avant de désactiver celui-ci."
+    "mustHaveOneSport": "Vous devez avoir au moins un sport actif. Veuillez activer un autre sport avant de désactiver celui-ci.",
+    "sportSetupRequired": "Configuration du profil sportif requise",
+    "sportSetupRequiredMessage": "Pour activer {sport}, vous devez compléter votre classement et toutes vos préférences. Si vous fermez une étape sans enregistrer, le profil sportif ne sera pas créé.",
+    "sportSetupCancelled": "Configuration du profil sportif annulée",
+    "sportSetupIncomplete": "Veuillez compléter tous les champs requis pour enregistrer vos préférences",
+    "continueSetup": "Continuer",
+    "cancelSetup": "Annuler"
   },
   "sportSelector": {
     "selectSport": "Sélectionnez un sport",
@@ -3279,6 +3399,10 @@
       "unreadNotifications": "Vous avez {count} notification(s) en attente pour {sportName}",
       "switch": "Changer"
     },
+    "secondSportBanner": {
+      "message": "Prêt à élargir vos horizons? Activez votre profil {sportName}!",
+      "activate": "Activer"
+    },
     "header": {
       "ctaButton": "Devenir bêta-testeur"
     },
@@ -3590,6 +3714,7 @@
       "spotsAvailable": {
         "label": "Places",
         "all": "Toutes",
+        "undefined": "Toutes",
         "1": "1 place",
         "2": "2 places",
         "3": "3 places"

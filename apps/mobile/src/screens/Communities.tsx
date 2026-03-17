@@ -19,12 +19,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { SportIcon } from '../components/SportIcon';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Text, Skeleton } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
-import { getSafeAreaEdges } from '../utils';
 import {
   useThemeStyles,
   useAuth,
@@ -119,9 +119,9 @@ const CommunityCard: React.FC<{
     if (!item.sport_id) {
       return (
         <View style={styles.sportIconContainer}>
-          <MaterialCommunityIcons name="tennis" size={14} color={colors.textMuted} />
+          <SportIcon sportName="tennis" size={14} color={colors.textMuted} />
           <Text style={[styles.sportIconPlus, { color: colors.textMuted }]}>+</Text>
-          <MaterialCommunityIcons name="badminton" size={14} color={colors.textMuted} />
+          <SportIcon sportName="pickleball" size={14} color={colors.textMuted} />
         </View>
       );
     }
@@ -129,7 +129,7 @@ const CommunityCard: React.FC<{
     if (sportName?.toLowerCase() === 'tennis') {
       return (
         <View style={styles.sportIconContainer}>
-          <MaterialCommunityIcons name="tennis" size={16} color={colors.textMuted} />
+          <SportIcon sportName="tennis" size={16} color={colors.textMuted} />
         </View>
       );
     }
@@ -137,7 +137,7 @@ const CommunityCard: React.FC<{
     if (sportName?.toLowerCase() === 'pickleball') {
       return (
         <View style={styles.sportIconContainer}>
-          <MaterialCommunityIcons name="badminton" size={16} color={colors.textMuted} />
+          <SportIcon sportName="pickleball" size={16} color={colors.textMuted} />
         </View>
       );
     }
@@ -199,18 +199,19 @@ const CommunityCard: React.FC<{
               >
                 {item.name}
               </Text>
-              {/* Certification badge for verified communities */}
-              {item.is_certified && (
-                <View style={styles.certifiedBadge}>
-                  <MaterialCommunityIcons name="check-decagram" size={12} color="#22c55e" />
-                  <Text size="xs" weight="semibold" style={{ color: '#22c55e' }}>
-                    {t('community.certified')}
-                  </Text>
-                </View>
-              )}
             </View>
             {renderSportIcon()}
           </View>
+
+          {/* Certification badge for verified communities - displayed under the name */}
+          {item.is_certified && (
+            <View style={styles.certifiedBadge}>
+              <MaterialCommunityIcons name="check-decagram" size={12} color="#22c55e" />
+              <Text size="xs" weight="semibold" style={{ color: '#22c55e' }}>
+                {t('community.certified')}
+              </Text>
+            </View>
+          )}
 
           {/* Member count + Status */}
           <View style={styles.bottomRow}>
@@ -524,10 +525,7 @@ export default function CommunitiesScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        edges={getSafeAreaEdges(['bottom'])}
-      >
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         {/* Only show tabs when authenticated */}
         {playerId && renderTabs}
         <View style={styles.loadingContainer}>
@@ -567,10 +565,7 @@ export default function CommunitiesScreen() {
   }
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={getSafeAreaEdges(['bottom'])}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       {/* Only show tabs when authenticated (to switch between Discover and My Communities) */}
       {playerId && renderTabs}
 
@@ -742,13 +737,13 @@ const styles = StyleSheet.create({
   certifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
     backgroundColor: '#dcfce7',
     borderWidth: 1,
     borderColor: '#22c55e',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
-    marginLeft: 6,
     gap: 3,
   },
   nameWithBadge: {

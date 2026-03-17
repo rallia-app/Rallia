@@ -21,7 +21,6 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Text, SkeletonConversation } from '@rallia/shared-components';
 import { lightHaptic, selectionHaptic } from '@rallia/shared-utils';
-import { getSafeAreaEdges } from '../utils';
 import {
   useThemeStyles,
   useAuth,
@@ -38,7 +37,6 @@ import { SearchBar } from '../components/SearchBar';
 import {
   spacingPixels,
   fontSizePixels,
-  fontWeightNumeric,
   primary,
   neutral,
   radiusPixels,
@@ -51,9 +49,15 @@ import {
   useToggleArchiveConversation,
   useUpdateLastSeen,
   useBlockedUserIds,
+  useFavoriteUserIds,
   type ConversationPreview,
 } from '@rallia/shared-hooks';
-import { ConversationItem } from '../features/chat';
+import {
+  ConversationItem,
+  ChatFiltersBar,
+  DEFAULT_CHAT_FILTERS,
+  type ChatFilters,
+} from '../features/chat';
 import { SheetManager } from 'react-native-actions-sheet';
 import { useAppNavigation, useChatNavigation } from '../navigation/hooks';
 
@@ -78,6 +82,7 @@ const Chat = () => {
   const playerId = session?.user?.id;
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<TabKey>('direct');
+  const [chatFilters, setChatFilters] = useState<ChatFilters>(DEFAULT_CHAT_FILTERS);
 
   // Chat screen tour - triggers after main navigation tour is completed
   const { shouldShowTour: _shouldShowChatTour } = useTourSequence({
@@ -115,6 +120,17 @@ const Chat = () => {
   // Fetch blocked user IDs to show "You blocked this user" in conversation preview
   const { data: blockedUserIds = new Set<string>() } = useBlockedUserIds(playerId);
 
+  // Fetch favorite user IDs for filtering by favorites
+  const { data: favoriteUserIds = new Set<string>() } = useFavoriteUserIds(playerId);
+
+  // Check if any chat filter is active (used for empty state messages)
+  const _hasActiveChatFilters = chatFilters.blocked || chatFilters.unread || chatFilters.favorites;
+
+  // Reset chat filters handler
+  const handleResetFilters = useCallback(() => {
+    setChatFilters(DEFAULT_CHAT_FILTERS);
+  }, []);
+
   // Categorize conversations into tabs
   const categorizedConversations = useMemo(() => {
     if (!conversations) return { direct: [], groups: [], matches: [] };
@@ -144,16 +160,22 @@ const Chat = () => {
     return { direct, groups, matches };
   }, [conversations]);
 
-  // Get counts for each tab (excluding archived)
+  // Get unread message counts for each tab (excluding archived)
   const tabCounts = useMemo(() => {
     return {
-      direct: categorizedConversations.direct.filter(c => !c.is_archived).length,
-      groups: categorizedConversations.groups.filter(c => !c.is_archived).length,
-      matches: categorizedConversations.matches.filter(c => !c.is_archived).length,
+      direct: categorizedConversations.direct
+        .filter(c => !c.is_archived)
+        .reduce((sum, c) => sum + (c.unread_count || 0), 0),
+      groups: categorizedConversations.groups
+        .filter(c => !c.is_archived)
+        .reduce((sum, c) => sum + (c.unread_count || 0), 0),
+      matches: categorizedConversations.matches
+        .filter(c => !c.is_archived)
+        .reduce((sum, c) => sum + (c.unread_count || 0), 0),
     };
   }, [categorizedConversations]);
 
-  // Filter conversations based on active tab, search query and exclude archived
+  // Filter conversations based on active tab, search query, chat filters and exclude archived
   const { filteredConversations, archivedCount } = useMemo(() => {
     if (!conversations) return { filteredConversations: [], archivedCount: 0 };
 
@@ -161,12 +183,65 @@ const Chat = () => {
     const archivedCount = conversations.filter(c => c.is_archived).length;
 
     // Get conversations for active tab
-    const tabConversations = categorizedConversations[activeTab];
+    let tabConversations = categorizedConversations[activeTab];
 
-    // When searching, search across current tab only
+    // Apply chat filters (only for direct messages tab where we have other_participant)
+    if (
+      chatFilters.blocked ||
+      chatFilters.unread ||
+      chatFilters.favorites ||
+      chatFilters.archived ||
+      chatFilters.muted ||
+      chatFilters.pinned
+    ) {
+      tabConversations = tabConversations.filter(conversation => {
+        // For blocked filter - show only conversations with blocked users (direct chats only)
+        if (chatFilters.blocked) {
+          if (conversation.conversation_type === 'direct' && conversation.other_participant?.id) {
+            return blockedUserIds.has(conversation.other_participant.id);
+          }
+          return false; // Non-direct chats don't match blocked filter
+        }
+
+        // For unread filter - show only conversations with unread messages
+        if (chatFilters.unread) {
+          return (conversation.unread_count || 0) > 0;
+        }
+
+        // For favorites filter - show only conversations with favorite users (direct chats only)
+        if (chatFilters.favorites) {
+          if (conversation.conversation_type === 'direct' && conversation.other_participant?.id) {
+            return favoriteUserIds.has(conversation.other_participant.id);
+          }
+          return false; // Non-direct chats don't match favorites filter
+        }
+
+        // For archived filter - show only archived conversations
+        if (chatFilters.archived) {
+          return conversation.is_archived === true;
+        }
+
+        // For muted filter - show only muted conversations
+        if (chatFilters.muted) {
+          return conversation.is_muted === true;
+        }
+
+        // For pinned filter - show only pinned conversations
+        if (chatFilters.pinned) {
+          return conversation.is_pinned === true;
+        }
+
+        return true;
+      });
+    }
+
+    // When searching, search across current tab only (after applying chat filters)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       const filtered = tabConversations.filter(conversation => {
+        // Don't include archived in search results (unless archived filter is active)
+        if (conversation.is_archived && !chatFilters.archived) return false;
+
         // Search by conversation title (group name)
         if (conversation.title?.toLowerCase().includes(query)) {
           return true;
@@ -192,10 +267,23 @@ const Chat = () => {
       return { filteredConversations: filtered, archivedCount };
     }
 
-    // Filter out archived conversations for normal view
+    // Filter out archived conversations for normal view (unless archived filter is active)
+    if (chatFilters.archived) {
+      // When archived filter is active, we've already filtered to only archived ones
+      return { filteredConversations: tabConversations, archivedCount };
+    }
+
     const filtered = tabConversations.filter(c => !c.is_archived);
     return { filteredConversations: filtered, archivedCount };
-  }, [conversations, categorizedConversations, activeTab, searchQuery]);
+  }, [
+    conversations,
+    categorizedConversations,
+    activeTab,
+    searchQuery,
+    chatFilters,
+    blockedUserIds,
+    favoriteUserIds,
+  ]);
 
   // Navigate to archived chats
   const handleArchivedPress = useCallback(() => {
@@ -312,6 +400,73 @@ const Chat = () => {
       );
     }
 
+    // Show different message when filter is active
+    if (chatFilters.blocked) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="ban-outline" size={64} color={colors.textMuted} />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            {t('chat.filters.emptyBlocked')}
+          </Text>
+        </View>
+      );
+    }
+
+    if (chatFilters.unread) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="mail-open-outline" size={64} color={colors.textMuted} />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            {t('chat.filters.emptyUnread')}
+          </Text>
+        </View>
+      );
+    }
+
+    if (chatFilters.favorites) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="star-outline" size={64} color={colors.textMuted} />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            {t('chat.filters.emptyFavorites')}
+          </Text>
+        </View>
+      );
+    }
+
+    if (chatFilters.archived) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="archive-outline" size={64} color={colors.textMuted} />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            {t('chat.filters.emptyArchived')}
+          </Text>
+        </View>
+      );
+    }
+
+    if (chatFilters.muted) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="volume-mute-outline" size={64} color={colors.textMuted} />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            {t('chat.filters.emptyMuted')}
+          </Text>
+        </View>
+      );
+    }
+
+    if (chatFilters.pinned) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="pin-outline" size={64} color={colors.textMuted} />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            {t('chat.filters.emptyPinned')}
+          </Text>
+        </View>
+      );
+    }
+
     // Tab-specific empty messages
     const emptyMessages = {
       direct: {
@@ -348,45 +503,152 @@ const Chat = () => {
         <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>{subtitle}</Text>
       </View>
     );
-  }, [isLoading, colors, searchQuery, activeTab, t, selectedSport?.name]);
+  }, [isLoading, colors, searchQuery, activeTab, t, selectedSport?.name, chatFilters]);
 
   const renderSeparator = useCallback(
     () => <View style={[styles.separator, { backgroundColor: colors.border }]} />,
     [colors]
   );
 
-  // Render archived chats row at the top of the list
+  // Render full list header with header, search, filters, tabs, and archived row
   const renderListHeader = useCallback(() => {
-    // Don't show archived row if searching or no archived chats
-    if (searchQuery.trim() || archivedCount === 0) return null;
-
     return (
       <>
-        <TouchableOpacity
-          style={styles.archivedRow}
-          onPress={handleArchivedPress}
-          activeOpacity={0.7}
-        >
-          <View
-            style={[
-              styles.archivedIconContainer,
-              { backgroundColor: isDark ? colors.card : '#F0F0F0' },
-            ]}
+        {/* Header */}
+        <View style={styles.header}>
+          <Text size="xl" weight="bold" color={colors.text}>
+            {t('chat.inbox')}
+          </Text>
+        </View>
+
+        {/* Search bar - Wrapped with CopilotStep for tour */}
+        <CopilotStep text={t('tour.chatScreen.search.description')} order={30} name="chat_search">
+          <WalkthroughableView style={styles.searchContainer}>
+            <SearchBar
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder={t('chat.searchConversations')}
+              style={styles.searchBar}
+            />
+          </WalkthroughableView>
+        </CopilotStep>
+
+        {/* Chat Filters Bar - below search, before tabs */}
+        <ChatFiltersBar
+          filters={chatFilters}
+          onFiltersChange={setChatFilters}
+          onReset={handleResetFilters}
+        />
+
+        {/* Tab Bar - Wrapped with CopilotStep for tour */}
+        <CopilotStep text={t('tour.chatScreen.tabs.description')} order={31} name="chat_tabs">
+          <WalkthroughableView
+            style={[styles.tabContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}
           >
-            <Ionicons name="archive-outline" size={20} color={colors.textMuted} />
-          </View>
-          <View style={styles.archivedContent}>
-            <Text style={[styles.archivedText, { color: colors.text }]}>{t('chat.archived')}</Text>
-          </View>
-          <View style={styles.archivedBadge}>
-            <Text style={[styles.archivedCount, { color: colors.textMuted }]}>{archivedCount}</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-          </View>
-        </TouchableOpacity>
-        <View style={[styles.separator, { backgroundColor: colors.border }]} />
+            {TAB_CONFIGS.map(tab => {
+              const isActive = activeTab === tab.key;
+              const count = tabCounts[tab.key];
+              const label = t(`chat.tabs.${tab.key}`);
+              return (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[
+                    styles.tab,
+                    isActive && [styles.activeTab, { backgroundColor: colors.cardBackground }],
+                  ]}
+                  onPress={() => {
+                    selectionHaptic();
+                    setActiveTab(tab.key);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  {tab.key === 'matches' ? (
+                    <SportIcon
+                      sportName={selectedSport?.name ?? 'tennis'}
+                      size={18}
+                      color={isActive ? colors.primary : colors.textMuted}
+                      style={styles.tabIcon}
+                    />
+                  ) : (
+                    <Ionicons
+                      name={tab.icon}
+                      size={18}
+                      color={isActive ? colors.primary : colors.textMuted}
+                      style={styles.tabIcon}
+                    />
+                  )}
+                  <Text
+                    size="sm"
+                    weight={isActive ? 'semibold' : 'medium'}
+                    style={[
+                      styles.tabLabel,
+                      { color: isActive ? colors.primary : colors.textMuted },
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                  {count > 0 && (
+                    <View
+                      style={[
+                        styles.tabBadge,
+                        { backgroundColor: isActive ? colors.primary : neutral[400] },
+                      ]}
+                    >
+                      <Text style={styles.tabBadgeText}>{count > 99 ? '99+' : count}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </WalkthroughableView>
+        </CopilotStep>
+
+        {/* Archived chats row */}
+        {!searchQuery.trim() && archivedCount > 0 && (
+          <>
+            <TouchableOpacity
+              style={styles.archivedRow}
+              onPress={handleArchivedPress}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[
+                  styles.archivedIconContainer,
+                  { backgroundColor: isDark ? colors.card : '#F0F0F0' },
+                ]}
+              >
+                <Ionicons name="archive-outline" size={20} color={colors.textMuted} />
+              </View>
+              <View style={styles.archivedContent}>
+                <Text style={[styles.archivedText, { color: colors.text }]}>
+                  {t('chat.archived')}
+                </Text>
+              </View>
+              <View style={styles.archivedBadge}>
+                <Text style={[styles.archivedCount, { color: colors.textMuted }]}>
+                  {archivedCount}
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+              </View>
+            </TouchableOpacity>
+            <View style={[styles.separator, { backgroundColor: colors.border }]} />
+          </>
+        )}
       </>
     );
-  }, [searchQuery, archivedCount, colors, isDark, handleArchivedPress, t]);
+  }, [
+    searchQuery,
+    archivedCount,
+    colors,
+    isDark,
+    handleArchivedPress,
+    t,
+    chatFilters,
+    handleResetFilters,
+    activeTab,
+    tabCounts,
+    selectedSport?.name,
+  ]);
 
   // Show loading spinner while auth state is being determined
   if (isLoadingAuth) {
@@ -427,125 +689,45 @@ const Chat = () => {
   }
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={getSafeAreaEdges(['top'])}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.headerForeground }]}>
-          {t('chat.inbox')}
-        </Text>
-      </View>
-
-      {/* Search bar - Wrapped with CopilotStep for tour */}
-      <CopilotStep text={t('tour.chatScreen.search.description')} order={30} name="chat_search">
-        <WalkthroughableView style={styles.searchContainer}>
-          <SearchBar
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder={t('chat.searchConversations')}
-            style={styles.searchBar}
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      {/* Full-screen scrollable list with header, search, filters, tabs */}
+      <FlatList
+        data={isLoading ? [] : filteredConversations}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        ListHeaderComponent={renderListHeader}
+        ItemSeparatorComponent={renderSeparator}
+        ListEmptyComponent={
+          isLoading ? (
+            <View style={styles.loadingContainer}>
+              {[1, 2, 3, 4, 5, 6].map(i => (
+                <SkeletonConversation
+                  key={i}
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                  style={{ paddingHorizontal: spacingPixels[4] }}
+                />
+              ))}
+            </View>
+          ) : (
+            renderEmpty()
+          )
+        }
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={refetch}
+            colors={[primary[500]]}
+            tintColor={primary[500]}
           />
-        </WalkthroughableView>
-      </CopilotStep>
-
-      {/* Tab Bar - Wrapped with CopilotStep for tour */}
-      <CopilotStep text={t('tour.chatScreen.tabs.description')} order={31} name="chat_tabs">
-        <WalkthroughableView
-          style={[styles.tabContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}
-        >
-          {TAB_CONFIGS.map(tab => {
-            const isActive = activeTab === tab.key;
-            const count = tabCounts[tab.key];
-            const label = t(`chat.tabs.${tab.key}`);
-            return (
-              <TouchableOpacity
-                key={tab.key}
-                style={[
-                  styles.tab,
-                  isActive && [styles.activeTab, { backgroundColor: colors.cardBackground }],
-                ]}
-                onPress={() => {
-                  selectionHaptic();
-                  setActiveTab(tab.key);
-                }}
-                activeOpacity={0.7}
-              >
-                {tab.key === 'matches' ? (
-                  <SportIcon
-                    sportName={selectedSport?.name ?? 'tennis'}
-                    size={18}
-                    color={isActive ? colors.primary : colors.textMuted}
-                    style={styles.tabIcon}
-                  />
-                ) : (
-                  <Ionicons
-                    name={tab.icon}
-                    size={18}
-                    color={isActive ? colors.primary : colors.textMuted}
-                    style={styles.tabIcon}
-                  />
-                )}
-                <Text
-                  size="sm"
-                  weight={isActive ? 'semibold' : 'medium'}
-                  style={[styles.tabLabel, { color: isActive ? colors.primary : colors.textMuted }]}
-                >
-                  {label}
-                </Text>
-                {count > 0 && (
-                  <View
-                    style={[
-                      styles.tabBadge,
-                      { backgroundColor: isActive ? colors.primary : neutral[400] },
-                    ]}
-                  >
-                    <Text style={styles.tabBadgeText}>{count > 99 ? '99+' : count}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </WalkthroughableView>
-      </CopilotStep>
-
-      {/* Content - Conversations List */}
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          {[1, 2, 3, 4, 5, 6].map(i => (
-            <SkeletonConversation
-              key={i}
-              backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-              highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-              style={{ paddingHorizontal: spacingPixels[4] }}
-            />
-          ))}
-        </View>
-      ) : (
-        <FlatList
-          data={filteredConversations}
-          renderItem={renderItem}
-          keyExtractor={keyExtractor}
-          ListHeaderComponent={renderListHeader}
-          ItemSeparatorComponent={renderSeparator}
-          ListEmptyComponent={renderEmpty}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={refetch}
-              colors={[primary[500]]}
-              tintColor={primary[500]}
-            />
-          }
-          contentContainerStyle={
-            filteredConversations?.length === 0 && archivedCount === 0
-              ? styles.emptyListContent
-              : undefined
-          }
-          keyboardShouldPersistTaps="handled"
-        />
-      )}
+        }
+        contentContainerStyle={
+          !isLoading && filteredConversations?.length === 0 && archivedCount === 0
+            ? styles.emptyListContent
+            : undefined
+        }
+        keyboardShouldPersistTaps="handled"
+      />
 
       {/* New group FAB */}
       <TouchableOpacity
@@ -583,12 +765,9 @@ const styles = StyleSheet.create({
     paddingTop: spacingPixels[4],
     paddingBottom: spacingPixels[2],
   },
-  headerTitle: {
-    fontSize: fontSizePixels.lg,
-    fontWeight: String(fontWeightNumeric.semibold) as '600',
-  },
   searchContainer: {
     paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[2],
     paddingBottom: spacingPixels[2],
   },
   searchBar: {

@@ -518,6 +518,236 @@ export async function getNetworkByConversationId(conversationId: string): Promis
   };
 }
 
+// ============================================================================
+// FILTERED CONVERSATIONS
+// ============================================================================
+
+/**
+ * FilteredConversationsRPC row type
+ */
+interface FilteredConversationRPCRow {
+  id: string;
+  conversation_type: string;
+  title: string | null;
+  picture_url: string | null;
+  match_id: string | null;
+  created_at: string;
+  updated_at: string;
+  last_message_id: string | null;
+  last_message_content: string | null;
+  last_message_at: string | null;
+  last_message_sender_id: string | null;
+  last_message_sender_first_name: string | null;
+  is_pinned: boolean;
+  is_muted: boolean;
+  is_archived: boolean;
+  last_read_at: string | null;
+  participant_count: number;
+  unread_count: number;
+  other_participant_id: string | null;
+  other_participant_first_name: string | null;
+  other_participant_last_name: string | null;
+  other_participant_picture_url: string | null;
+  other_participant_last_seen_at: string | null;
+  network_id: string | null;
+  network_type: string | null;
+  network_cover_image_url: string | null;
+  match_format: string | null;
+  match_date: string | null;
+  match_sport_name: string | null;
+}
+
+/**
+ * Input parameters for filtered conversations query
+ */
+export interface GetFilteredConversationsInput {
+  playerId: string;
+  filter?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * Paginated result for filtered conversations
+ */
+export interface FilteredConversationsPage {
+  conversations: ConversationPreview[];
+  nextOffset: number | null;
+  hasMore: boolean;
+}
+
+/**
+ * Get filtered and paginated conversations for a player
+ * Uses a single RPC call with filters for efficient loading
+ *
+ * @param options - Object containing playerId, filter, search, limit, offset
+ * @returns Paginated result with conversations, nextOffset, and hasMore flag
+ */
+export async function getPlayerConversationsFiltered(
+  options: GetFilteredConversationsInput
+): Promise<FilteredConversationsPage> {
+  const { playerId, filter = 'all', search = '', limit = 20, offset = 0 } = options;
+
+  try {
+    const { data, error } = await supabase.rpc('get_player_conversations_filtered', {
+      p_player_id: playerId,
+      p_filter: filter,
+      p_search: search,
+      p_limit: limit + 1, // Fetch one extra to determine if there are more
+      p_offset: offset,
+    });
+
+    if (error) {
+      console.error('Error fetching filtered conversations from RPC:', error);
+      return { conversations: [], nextOffset: null, hasMore: false };
+    }
+
+    if (!data || (data as FilteredConversationRPCRow[]).length === 0) {
+      return { conversations: [], nextOffset: null, hasMore: false };
+    }
+
+    const rows = data as FilteredConversationRPCRow[];
+
+    // Check if there are more results
+    const hasMore = rows.length > limit;
+    const rowsToProcess = hasMore ? rows.slice(0, limit) : rows;
+
+    // Transform RPC results to ConversationPreview format
+    const conversations: ConversationPreview[] = rowsToProcess.map(
+      (row: FilteredConversationRPCRow) => {
+        // Build other_participant for direct chats
+        let otherParticipant: ConversationPreview['other_participant'] | undefined;
+        if (row.other_participant_id) {
+          const isOnline = row.other_participant_last_seen_at
+            ? new Date(row.other_participant_last_seen_at) > new Date(Date.now() - 5 * 60 * 1000)
+            : false;
+
+          otherParticipant = {
+            id: row.other_participant_id,
+            first_name: row.other_participant_first_name || '',
+            last_name: row.other_participant_last_name,
+            profile_picture_url: row.other_participant_picture_url,
+            is_online: isOnline,
+            last_seen_at: row.other_participant_last_seen_at,
+          };
+        }
+
+        // Build match_info for match-linked chats
+        let matchInfo: ConversationPreview['match_info'] = null;
+        if (row.match_id && row.match_sport_name) {
+          matchInfo = {
+            sport_name: row.match_sport_name,
+            match_date: row.match_date || '',
+            format: (row.match_format as 'singles' | 'doubles') || 'singles',
+          };
+        }
+
+        return {
+          id: row.id,
+          conversation_type: row.conversation_type as ConversationType,
+          title: row.title,
+          last_message_content: row.last_message_content,
+          last_message_at: row.last_message_at,
+          last_message_sender_name: row.last_message_sender_first_name,
+          unread_count: row.unread_count || 0,
+          participant_count: row.participant_count || 0,
+          other_participant: otherParticipant,
+          cover_image_url: row.network_cover_image_url || row.picture_url,
+          is_pinned: row.is_pinned || false,
+          is_muted: row.is_muted || false,
+          is_archived: row.is_archived || false,
+          match_id: row.match_id,
+          match_info: matchInfo,
+          network_id: row.network_id,
+          network_type: row.network_type,
+        };
+      }
+    );
+
+    return {
+      conversations,
+      nextOffset: hasMore ? offset + limit : null,
+      hasMore,
+    };
+  } catch (error) {
+    console.error('Error in getPlayerConversationsFiltered:', error);
+    return { conversations: [], nextOffset: null, hasMore: false };
+  }
+}
+
+// ============================================================================
+// MATCH CONVERSATION SYNC
+// ============================================================================
+
+/**
+ * Sync match conversation title when match details change
+ * Updates the conversation title to reflect current match info
+ *
+ * @param matchId - Match UUID
+ * @param format - Match format (singles/doubles)
+ * @param matchDate - Match date string
+ * @param createdBy - Host player ID (for fetching sport)
+ */
+export async function syncMatchConversationTitle(
+  matchId: string,
+  format: 'singles' | 'doubles',
+  matchDate: string | null,
+  createdBy: string
+): Promise<void> {
+  try {
+    // Get the conversation for this match
+    const conversation = await getMatchChat(matchId);
+    if (!conversation) {
+      console.log('[syncMatchConversationTitle] No conversation found for match:', matchId);
+      return;
+    }
+
+    // Get match details including sport name
+    const { data: matchData, error: matchError } = await supabase
+      .from('match')
+      .select(
+        `
+        id,
+        format,
+        match_date,
+        sport:sport_id (name)
+      `
+      )
+      .eq('id', matchId)
+      .single();
+
+    if (matchError || !matchData) {
+      console.error('[syncMatchConversationTitle] Failed to fetch match:', matchError);
+      return;
+    }
+
+    // Build new title
+    const sportName = (matchData.sport as { name?: string } | null)?.name || 'Match';
+    const dateStr = matchDate
+      ? new Date(matchDate).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+        })
+      : '';
+    const formatLabel = format === 'doubles' ? 'Doubles' : 'Singles';
+
+    const newTitle = dateStr
+      ? `${sportName} ${formatLabel} - ${dateStr}`
+      : `${sportName} ${formatLabel}`;
+
+    // Update conversation title
+    await updateConversation(conversation.id, { title: newTitle });
+    console.log('[syncMatchConversationTitle] Updated conversation title to:', newTitle);
+  } catch (error) {
+    console.error('[syncMatchConversationTitle] Error:', error);
+  }
+}
+
+// ============================================================================
+// UNREAD COUNT
+// ============================================================================
+
 /**
  * Get unread message count for a specific conversation for a player
  */
@@ -551,6 +781,62 @@ export async function getConversationUnreadCount(
       .select('*', { count: 'exact', head: true })
       .eq('conversation_id', conversationId)
       .neq('sender_id', playerId);
+    return count || 0;
+  }
+}
+
+/**
+ * Get unread message count for a specific conversation for a player, limited to last 7 days
+ */
+export async function getConversationUnreadCountLast7Days(
+  conversationId: string,
+  playerId: string
+): Promise<number> {
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const sevenDaysAgoISO = sevenDaysAgo.toISOString();
+
+  // Get player's last_read_at timestamp for this conversation
+  const { data: participation, error: participationError } = await supabase
+    .from('conversation_participant')
+    .select('last_read_at')
+    .eq('conversation_id', conversationId)
+    .eq('player_id', playerId)
+    .single();
+
+  // If no participation record exists, that's fine - means they've never read any messages
+  if (participationError && participationError.code !== 'PGRST116') {
+    console.error('Error fetching conversation participation:', participationError);
+  }
+
+  const lastReadAt = participation?.last_read_at;
+
+  if (lastReadAt) {
+    // Count messages after the last read timestamp, from the last 7 days, excluding player's own messages
+    const { count, error } = await supabase
+      .from('message')
+      .select('*', { count: 'exact', head: true })
+      .eq('conversation_id', conversationId)
+      .neq('sender_id', playerId)
+      .gt('created_at', lastReadAt)
+      .gte('created_at', sevenDaysAgoISO);
+    if (error) {
+      console.error('Error counting unread messages (with lastReadAt):', error);
+      return 0;
+    }
+    return count || 0;
+  } else {
+    // Never read - count all messages from last 7 days not from this player
+    const { count, error } = await supabase
+      .from('message')
+      .select('*', { count: 'exact', head: true })
+      .eq('conversation_id', conversationId)
+      .neq('sender_id', playerId)
+      .gte('created_at', sevenDaysAgoISO);
+    if (error) {
+      console.error('Error counting unread messages (no lastReadAt):', error);
+      return 0;
+    }
     return count || 0;
   }
 }

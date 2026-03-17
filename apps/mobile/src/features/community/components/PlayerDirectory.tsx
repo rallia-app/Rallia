@@ -11,7 +11,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, SkeletonPlayerCard, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { usePlayerSearch, usePlayer } from '@rallia/shared-hooks';
+import { usePlayerSearch, usePlayer, useMultipleReputations } from '@rallia/shared-hooks';
 import { useTranslation } from '../../../hooks';
 import { useEffectiveLocation } from '../../../hooks/useEffectiveLocation';
 import { useUserHomeLocation } from '../../../context';
@@ -39,6 +39,7 @@ interface PlayerDirectoryProps {
   currentUserId: string | undefined;
   colors: ThemeColors;
   onPlayerPress: (player: PlayerSearchResult) => void;
+  ListHeaderComponent?: React.ReactElement | null;
 }
 
 const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
@@ -47,6 +48,7 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
   currentUserId,
   colors,
   onPlayerPress,
+  ListHeaderComponent,
 }) => {
   const { t } = useTranslation();
   const toast = useToast();
@@ -338,6 +340,10 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     }
   }, [players, filters.sortBy]);
 
+  // Fetch reputation data for visible players
+  const playerIds = useMemo(() => (sortedPlayers || []).map(p => p.id), [sortedPlayers]);
+  const { reputations } = useMultipleReputations(playerIds);
+
   // Toggle favorite handler
   const handleToggleFavorite = useCallback(
     async (playerId: string) => {
@@ -408,9 +414,10 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
         isFavorite={favoritePlayerIds.includes(item.id)}
         onToggleFavorite={handleToggleFavorite}
         showFavorite={!!currentUserId && currentUserId !== item.id}
+        reputationDisplay={reputations.get(item.id)}
       />
     ),
-    [colors, onPlayerPress, favoritePlayerIds, handleToggleFavorite, currentUserId]
+    [colors, onPlayerPress, favoritePlayerIds, handleToggleFavorite, currentUserId, reputations]
   );
 
   const renderEmpty = () => {
@@ -497,16 +504,78 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     </View>
   );
 
+  // Results count between filters and list
+  const renderResultsInfo = () => {
+    if (isLoading || !sportId) return null;
+
+    const count = totalCount ?? sortedPlayers.length;
+    const countText =
+      count === 1
+        ? t('playerDirectory.results.countSingular')
+        : t('playerDirectory.results.count').replace('{count}', String(count));
+
+    return (
+      <View style={styles.resultsInfo}>
+        <Text size="sm" color={colors.textMuted}>
+          {countText}
+        </Text>
+      </View>
+    );
+  };
+
+  // Search bar and filters - rendered inside list header so everything scrolls together
+  const renderSearchAndFilters = () => (
+    <>
+      <SearchBar
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder={t('playerDirectory.searchPlaceholder')}
+        colors={{
+          text: colors.text,
+          textMuted: colors.textMuted,
+          border: colors.border,
+          buttonInactive: colors.inputBackground ?? colors.cardBackground,
+        }}
+        style={styles.searchContainer}
+      />
+      <PlayerFiltersBar
+        filters={filters}
+        sportName={sportName}
+        maxTravelDistance={maxTravelDistanceKm ?? 50}
+        onFiltersChange={handleFiltersChange}
+        onReset={handleResetFilters}
+        isAuthenticated={!!currentUserId}
+        showLocationSelector={hasBothLocationOptions}
+        locationMode={locationMode}
+        onLocationModeChange={setLocationMode}
+        hasHomeLocation={hasHomeLocation}
+        homeLocationLabel={homeLocationLabel}
+      />
+    </>
+  );
+
   // Determine what to render in the list area
   const renderListContent = () => {
     // Initial loading - show skeleton
     if (isLoading) {
-      return renderListSkeleton();
+      return (
+        <>
+          {ListHeaderComponent}
+          {renderSearchAndFilters()}
+          {renderListSkeleton()}
+        </>
+      );
     }
 
     // Error with no data - show error
     if (error && !players.length) {
-      return renderErrorContent();
+      return (
+        <>
+          {ListHeaderComponent}
+          {renderSearchAndFilters()}
+          {renderErrorContent()}
+        </>
+      );
     }
 
     // Normal state - show FlatList
@@ -515,6 +584,13 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
         data={sortedPlayers}
         renderItem={renderPlayer}
         keyExtractor={item => item.id}
+        ListHeaderComponent={
+          <>
+            {ListHeaderComponent}
+            {renderSearchAndFilters()}
+            {renderResultsInfo()}
+          </>
+        }
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={renderFooter}
         contentContainerStyle={[
@@ -541,42 +617,8 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     );
   };
 
-  // Main render - SearchBar and Filters ALWAYS stay mounted
-  return (
-    <View style={styles.container}>
-      {/* Search Bar - ALWAYS rendered to prevent keyboard dismiss */}
-      <SearchBar
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-        placeholder={t('playerDirectory.searchPlaceholder')}
-        colors={{
-          text: colors.text,
-          textMuted: colors.textMuted,
-          border: colors.border,
-          buttonInactive: colors.inputBackground ?? colors.cardBackground,
-        }}
-        style={styles.searchContainer}
-      />
-
-      {/* Filters Bar - ALWAYS rendered */}
-      <PlayerFiltersBar
-        filters={filters}
-        sportName={sportName}
-        maxTravelDistance={maxTravelDistanceKm ?? 50}
-        onFiltersChange={handleFiltersChange}
-        onReset={handleResetFilters}
-        isAuthenticated={!!currentUserId}
-        showLocationSelector={hasBothLocationOptions}
-        locationMode={locationMode}
-        onLocationModeChange={setLocationMode}
-        hasHomeLocation={hasHomeLocation}
-        homeLocationLabel={homeLocationLabel}
-      />
-
-      {/* List content - changes based on loading/error/data state */}
-      {renderListContent()}
-    </View>
-  );
+  // Main render
+  return <View style={styles.container}>{renderListContent()}</View>;
 };
 
 const styles = StyleSheet.create({
@@ -589,11 +631,16 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[3],
-    paddingBottom: spacingPixels[3],
+    paddingTop: spacingPixels[2],
+    paddingBottom: spacingPixels[2],
+  },
+  resultsInfo: {
+    paddingHorizontal: spacingPixels[4],
+    paddingBottom: spacingPixels[2],
   },
   listContent: {
-    paddingBottom: spacingPixels[5],
+    paddingTop: spacingPixels[2],
+    paddingBottom: spacingPixels[4],
   },
   emptyListContent: {
     flexGrow: 1,

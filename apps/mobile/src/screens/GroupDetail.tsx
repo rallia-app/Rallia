@@ -24,7 +24,6 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { Text } from '@rallia/shared-components';
 import { lightHaptic, selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { getSafeAreaEdges } from '../utils';
 import {
   useThemeStyles,
   useAuth,
@@ -32,7 +31,7 @@ import {
   useNavigateToPlayerProfile,
   useRequireOnboarding,
 } from '../hooks';
-import { useSport } from '../context';
+import { useSport, useMatchDetailSheet } from '../context';
 import { SportIcon } from '../components/SportIcon';
 import {
   useGroupWithMembers,
@@ -47,11 +46,14 @@ import {
   useGroupRealtime,
   useScoreConfirmationsRealtime,
   useConversationUnreadCount,
+  useConversationUnreadCountLast7Days,
   useConversationUnreadRealtime,
   useSports,
   usePlayer,
+  useNetworkMemberUpcomingMatches,
   type GroupActivity as GroupActivityType,
   type GroupMatch,
+  type NetworkMemberMatch,
 } from '@rallia/shared-hooks';
 import type { RootStackParamList } from '../navigation/types';
 import { SheetManager } from 'react-native-actions-sheet';
@@ -93,6 +95,7 @@ export default function GroupDetailScreen() {
   const { player } = usePlayer();
   const playerId = session?.user?.id;
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
+  const { openSheet: openMatchDetail } = useMatchDetailSheet();
 
   // Get all sport IDs and names for displaying sport tags on facilities
   const { allSportIds, sportNames } = useMemo(() => {
@@ -151,8 +154,24 @@ export default function GroupDetailScreen() {
     leaderboardPeriod === 0 ? 3650 : leaderboardPeriod
   );
 
-  // Get unread message count for the group chat
+  // Get upcoming public matches from network members
+  const { data: memberUpcomingMatches, refetch: refetchMemberMatches } =
+    useNetworkMemberUpcomingMatches(
+      groupId,
+      'group',
+      playerId ?? undefined,
+      group?.sport_id ?? undefined,
+      20
+    );
+
+  // Get unread message count for the group chat badge (all unread)
   const { data: unreadChatCount } = useConversationUnreadCount(
+    group?.conversation_id ?? undefined,
+    playerId
+  );
+
+  // Get unread message count for the last 7 days stats section
+  const { data: unreadChatCountLast7Days } = useConversationUnreadCountLast7Days(
     group?.conversation_id ?? undefined,
     playerId
   );
@@ -182,6 +201,35 @@ export default function GroupDetailScreen() {
     setSelectedMatchType(type);
     setShowAddScoreModal(true);
   }, []);
+
+  // Handle network match card press - open match detail sheet
+  const handleNetworkMatchPress = useCallback(
+    (match: NetworkMemberMatch) => {
+      lightHaptic();
+      // Transform to minimal format for match detail sheet
+      // The sheet will load full details from the match ID
+      openMatchDetail({
+        id: match.id,
+        sport_id: match.sport_id,
+        match_date: match.match_date,
+        start_time: match.start_time,
+        end_time: match.end_time,
+        format: match.format,
+        player_expectation: match.player_expectation,
+        visibility: match.visibility,
+        join_mode: match.join_mode,
+        location_type: match.location_type,
+        location_name: match.location_name,
+        facility_id: match.facility_id,
+        created_by: match.created_by,
+        cancelled_at: match.cancelled_at,
+        sport: match.sport,
+        facility: match.facility,
+        participants: match.participants,
+      } as unknown as Parameters<typeof openMatchDetail>[0]);
+    },
+    [openMatchDetail]
+  );
 
   const handleAddGame = useCallback(() => {
     if (!guardAction()) return;
@@ -412,7 +460,8 @@ export default function GroupDetailScreen() {
     // Calculate activity ring segments
     const membersCount = stats?.newMembersLast7Days || 0;
     const gamesCount = stats?.gamesCreatedLast7Days || 0;
-    const messagesCount = stats?.messagesLast7Days || 0;
+    // Use actual unread count from last 7 days for "new messages" stat
+    const messagesCount = unreadChatCountLast7Days ?? 0;
     const totalActivities = membersCount + gamesCount + messagesCount;
 
     // SVG circle properties
@@ -624,26 +673,160 @@ export default function GroupDetailScreen() {
             )}
 
             {/* Favorite Facilities Section */}
+            <GroupFavoriteFacilitiesSelector
+              groupId={groupId}
+              currentPlayerId={playerId ?? null}
+              sportId={group?.sport_id ?? null}
+              allSportIds={allSportIds}
+              sportNames={sportNames}
+              latitude={player?.latitude ?? null}
+              longitude={player?.longitude ?? null}
+              colors={colors}
+              t={t}
+              onNavigateToFacility={facilityId =>
+                navigation.navigate('FacilityDetail', { facilityId })
+              }
+            />
+
+            {/* Member Upcoming Matches Preview */}
             <View
               style={[
-                styles.facilitiesCard,
+                styles.matchesPreview,
                 { backgroundColor: colors.cardBackground, borderColor: colors.border },
               ]}
             >
-              <GroupFavoriteFacilitiesSelector
-                groupId={groupId}
-                currentPlayerId={playerId ?? null}
-                sportId={group?.sport_id ?? null}
-                allSportIds={allSportIds}
-                sportNames={sportNames}
-                latitude={player?.latitude ?? null}
-                longitude={player?.longitude ?? null}
-                colors={colors}
-                t={t}
-                onNavigateToFacility={facilityId =>
-                  navigation.navigate('FacilityDetail', { facilityId })
-                }
-              />
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionTitle}>
+                  <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+                  <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
+                    {t('groups.matches.title')}
+                  </Text>
+                </View>
+                {memberUpcomingMatches && memberUpcomingMatches.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      lightHaptic();
+                      navigation.navigate('NetworkMatches', {
+                        networkId: groupId,
+                        networkType: 'group',
+                        networkName: group?.name,
+                        sportId: group?.sport_id ?? undefined,
+                      });
+                    }}
+                  >
+                    <Text size="sm" style={{ color: colors.primary }}>
+                      {t('groups.home.viewAll')}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              {memberUpcomingMatches && memberUpcomingMatches.length > 0 ? (
+                <View style={styles.matchesPreviewList}>
+                  {memberUpcomingMatches.slice(0, 2).map((match: NetworkMemberMatch) => {
+                    const matchDate = new Date(match.match_date);
+                    const formattedDate = matchDate.toLocaleDateString(undefined, {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                    });
+                    const formattedTime = matchDate.toLocaleTimeString(undefined, {
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    });
+                    const slotsAvailable = match.max_players - match.current_players;
+                    const isFull = slotsAvailable <= 0;
+
+                    return (
+                      <TouchableOpacity
+                        key={match.id}
+                        style={[
+                          styles.matchPreviewCard,
+                          { backgroundColor: isDark ? '#2C2C2E' : '#F5F5F5' },
+                        ]}
+                        onPress={() => {
+                          handleNetworkMatchPress(match);
+                        }}
+                      >
+                        <View style={styles.matchPreviewHeader}>
+                          <SportIcon
+                            sportName={match.sport?.name ?? 'padel'}
+                            size={18}
+                            color={colors.primary}
+                          />
+                          <Text
+                            size="sm"
+                            weight="semibold"
+                            style={{ color: colors.text, marginLeft: 6, flex: 1 }}
+                          >
+                            {match.sport?.name ?? 'Match'}
+                          </Text>
+                          <View
+                            style={[
+                              styles.matchSlotBadge,
+                              { backgroundColor: isFull ? colors.textMuted : colors.primary },
+                            ]}
+                          >
+                            <Text size="xs" weight="semibold" style={{ color: '#FFFFFF' }}>
+                              {isFull
+                                ? t('match.slots.full')
+                                : slotsAvailable === 1
+                                  ? t('match.slots.oneLeft')
+                                  : t('match.slots.left', { count: slotsAvailable })}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.matchPreviewDetails}>
+                          <View style={styles.matchPreviewRow}>
+                            <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
+                            <Text size="xs" style={{ color: colors.textSecondary, marginLeft: 4 }}>
+                              {formattedDate} • {formattedTime}
+                            </Text>
+                          </View>
+                          {match.facility && (
+                            <View style={styles.matchPreviewRow}>
+                              <Ionicons
+                                name="location-outline"
+                                size={14}
+                                color={colors.textMuted}
+                              />
+                              <Text
+                                size="xs"
+                                style={{ color: colors.textSecondary, marginLeft: 4 }}
+                                numberOfLines={1}
+                              >
+                                {match.facility.name}
+                              </Text>
+                            </View>
+                          )}
+                          <View style={styles.matchPreviewRow}>
+                            <Ionicons name="person-outline" size={14} color={colors.textMuted} />
+                            <Text size="xs" style={{ color: colors.textSecondary, marginLeft: 4 }}>
+                              {t('match.hostedBy')}{' '}
+                              {match.creator?.first_name ?? t('common.player')}
+                            </Text>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ) : (
+                <View style={styles.matchesEmptyState}>
+                  <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
+                  <Text
+                    size="sm"
+                    style={{ color: colors.textSecondary, marginTop: 8, textAlign: 'center' }}
+                  >
+                    {t('groups.matches.empty.title')}
+                  </Text>
+                  <Text
+                    size="xs"
+                    style={{ color: colors.textMuted, marginTop: 4, textAlign: 'center' }}
+                  >
+                    {t('groups.matches.empty.description')}
+                  </Text>
+                </View>
+              )}
             </View>
 
             {/* Leaderboard Preview */}
@@ -1323,7 +1506,7 @@ export default function GroupDetailScreen() {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={getSafeAreaEdges(['top'])}
+        edges={['bottom']}
       >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -1336,7 +1519,7 @@ export default function GroupDetailScreen() {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={getSafeAreaEdges(['top'])}
+        edges={['bottom']}
       >
         <View style={styles.errorContainer}>
           <Ionicons name="warning-outline" size={64} color={colors.textMuted} />
@@ -1353,11 +1536,21 @@ export default function GroupDetailScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['bottom']}
+    >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={false} onRefresh={refetch} tintColor={colors.primary} />
+          <RefreshControl
+            refreshing={false}
+            onRefresh={() => {
+              refetch();
+              refetchMemberMatches();
+            }}
+            tintColor={colors.primary}
+          />
         }
       >
         {/* Header Section - with cover image or default icon */}
@@ -1398,11 +1591,11 @@ export default function GroupDetailScreen() {
               if (!group.sport_id) {
                 return (
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
-                    <MaterialCommunityIcons name="tennis" size={18} color={colors.textMuted} />
+                    <SportIcon sportName="tennis" size={18} color={colors.textMuted} />
                     <Text style={{ color: colors.textMuted, marginHorizontal: 2, fontSize: 12 }}>
                       +
                     </Text>
-                    <MaterialCommunityIcons name="badminton" size={18} color={colors.textMuted} />
+                    <SportIcon sportName="pickleball" size={18} color={colors.textMuted} />
                   </View>
                 );
               }
@@ -1410,7 +1603,7 @@ export default function GroupDetailScreen() {
               if (sportName?.toLowerCase() === 'tennis') {
                 return (
                   <View style={{ marginLeft: 8 }}>
-                    <MaterialCommunityIcons name="tennis" size={20} color={colors.textMuted} />
+                    <SportIcon sportName="tennis" size={20} color={colors.textMuted} />
                   </View>
                 );
               }
@@ -1418,7 +1611,7 @@ export default function GroupDetailScreen() {
               if (sportName?.toLowerCase() === 'pickleball') {
                 return (
                   <View style={{ marginLeft: 8 }}>
-                    <MaterialCommunityIcons name="badminton" size={20} color={colors.textMuted} />
+                    <SportIcon sportName="pickleball" size={20} color={colors.textMuted} />
                   </View>
                 );
               }
@@ -1571,17 +1764,7 @@ export default function GroupDetailScreen() {
       </ScrollView>
 
       {/* Bottom Action Button - changes based on active tab */}
-      {activeTab === 'leaderboard' ? (
-        <TouchableOpacity
-          style={[styles.chatButton, { backgroundColor: colors.primary }]}
-          onPress={handleAddGame}
-        >
-          <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
-          <Text weight="semibold" style={styles.chatButtonText}>
-            {t('community.leaderboard.addPlayedGame')}
-          </Text>
-        </TouchableOpacity>
-      ) : activeTab === 'home' ? (
+      {activeTab === 'home' ? (
         <TouchableOpacity
           style={[styles.chatButton, { backgroundColor: colors.primary }]}
           onPress={handleOpenChat}
@@ -1829,11 +2012,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  facilitiesCard: {
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
   leaderboardPreview: {
     padding: 20,
     borderRadius: 16,
@@ -1947,6 +2125,42 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
+  },
+  // Matches Preview styles
+  matchesPreview: {
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  matchesPreviewList: {
+    marginTop: 16,
+    gap: 12,
+  },
+  matchPreviewCard: {
+    padding: 12,
+    borderRadius: 12,
+  },
+  matchPreviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  matchSlotBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  matchPreviewDetails: {
+    marginTop: 10,
+    gap: 4,
+  },
+  matchPreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  matchesEmptyState: {
+    alignItems: 'center',
+    paddingVertical: 24,
   },
   // Recent Games Card
   recentGamesCard: {

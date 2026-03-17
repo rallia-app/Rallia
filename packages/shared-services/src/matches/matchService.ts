@@ -25,6 +25,8 @@ import { calculateCancellationPenalty } from '../reputation/reputationPenalties'
 import {
   createMatchChat,
   getMatchChat,
+  syncMatchConversationTitle,
+  updateConversation,
   removeConversationParticipant,
   addConversationParticipant,
 } from '../chat/chatService';
@@ -718,14 +720,15 @@ export async function validateMatchUpdate(
   // ========================================
   // FORMAT VALIDATION
   // ========================================
-  // Block format change from doubles to singles if 2+ participants joined
+  // Block format change from doubles to singles if more than 2 participants joined
+  // (singles supports up to 2: creator + 1 opponent)
   if (updates.format !== undefined && updates.format !== match.format) {
-    if (match.format === 'doubles' && updates.format === 'singles' && joinedCount >= 2) {
+    if (match.format === 'doubles' && updates.format === 'singles' && joinedCount > 2) {
       return {
         canUpdate: false,
         errorCode: 'FORMAT_CHANGE_BLOCKED',
         error:
-          'Cannot change from doubles to singles with 2 or more participants. Remove participants first or cancel the match.',
+          'Cannot change from doubles to singles with more than 2 participants. Remove participants first or cancel the match.',
       };
     }
   }
@@ -795,6 +798,13 @@ export async function updateMatch(
     }
     // Note: Warnings are returned but not blocking - caller can check them first
   }
+
+  // Fetch original match details BEFORE applying updates (for notification with original date)
+  const { data: originalMatch } = await supabase
+    .from('match')
+    .select('sport:sport_id (name), match_date, start_time')
+    .eq('id', matchId)
+    .single();
 
   // Map costSplitType to database enum values (same as createMatch)
   const costSplitMap: Record<string, 'host_pays' | 'split_equal' | 'custom'> = {
@@ -938,11 +948,33 @@ export async function updateMatch(
 
       if (participantIds.length > 0) {
         // Send notifications (fire and forget - don't block on notification)
-        notifyMatchUpdated(participantIds, matchId, updatedFields).catch(err => {
+        notifyMatchUpdated(participantIds, matchId, updatedFields, {
+          sportName: (originalMatch?.sport as { name?: string } | null)?.name,
+          matchDate: originalMatch?.match_date,
+          startTime: originalMatch?.start_time,
+        }).catch(err => {
           Logger.error('Failed to send match updated notifications:', err);
         });
       }
     }
+  }
+
+  // ========================================
+  // SYNC MATCH CONVERSATION TITLE
+  // ========================================
+  const titleAffectingFields = ['format', 'matchDate'];
+  const hasTitleChanges = updatedFields.some(field => titleAffectingFields.includes(field));
+
+  if (hasTitleChanges) {
+    const updatedMatch = data as Match;
+    syncMatchConversationTitle(
+      matchId,
+      updatedMatch.format as 'singles' | 'doubles',
+      updatedMatch.match_date,
+      updatedMatch.created_by
+    ).catch((err: unknown) => {
+      console.error('[updateMatch] Failed to sync conversation title:', err);
+    });
   }
 
   return data as Match;
@@ -1129,6 +1161,10 @@ export async function deleteMatch(matchId: string): Promise<void> {
     throw new Error(`Failed to delete match: ${error.message}`);
   }
 }
+
+// =============================================================================
+// MATCH CHAT HELPERS
+// =============================================================================
 
 // =============================================================================
 // MATCH PARTICIPANT ACTIONS
@@ -3277,8 +3313,8 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
   // Convert 'all' to null for the RPC (null means no distance filter)
   const distanceForRpc = maxDistanceKm === 'all' || maxDistanceKm === null ? null : maxDistanceKm;
 
-  // Step 1: Get match IDs using RPC with filters
-  const { data: matchResults, error: rpcError } = await supabase.rpc('search_public_matches', {
+  // Common RPC params (shared between search and count)
+  const rpcFilterParams = {
     p_latitude: latitude,
     p_longitude: longitude,
     p_max_distance_km: distanceForRpc,
@@ -3295,18 +3331,31 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     p_duration: duration === 'all' ? null : duration,
     p_court_status: courtStatus === 'all' ? null : courtStatus,
     p_specific_date: specificDate || null,
-    p_limit: limit + 1, // Fetch one extra to check if more exist
-    p_offset: offset,
-    p_user_gender: userGender || null, // Pass user's gender for eligibility filtering
-    p_facility_id: facilityId || null, // Filter by specific facility
+    p_user_gender: userGender || null,
+    p_facility_id: facilityId || null,
     p_match_tier: matchTier === 'all' ? null : matchTier,
     p_spots_available: spotsAvailable === 'all' ? null : spotsAvailable,
     p_specific_time: specificTime || null,
-  });
+  };
 
-  if (rpcError) {
-    throw new Error(`Failed to search public matches: ${rpcError.message}`);
+  // Step 1: Get match IDs using RPC with filters + count on first page
+  const [searchResult, countResult] = await Promise.all([
+    supabase.rpc('search_public_matches', {
+      ...rpcFilterParams,
+      p_limit: limit + 1, // Fetch one extra to check if more exist
+      p_offset: offset,
+    }),
+    // Only fetch count on first page to avoid unnecessary queries
+    offset === 0
+      ? supabase.rpc('search_public_matches_count', rpcFilterParams)
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+
+  if (searchResult.error) {
+    throw new Error(`Failed to search public matches: ${searchResult.error.message}`);
   }
+
+  const { data: matchResults } = searchResult;
 
   const results = (matchResults ?? []) as PublicMatchResult[];
   const hasMore = results.length > limit;
@@ -3321,6 +3370,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
       matches: [],
       hasMore: false,
       nextOffset: null,
+      totalCount: countResult.data ?? undefined,
     };
   }
 
@@ -3568,6 +3618,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     matches: orderedMatches,
     hasMore,
     nextOffset: hasMore ? offset + limit : null,
+    totalCount: countResult.data ?? undefined,
   };
 }
 

@@ -87,23 +87,6 @@ const PortfolioSection: React.FC<PortfolioSectionProps> = ({
     return proof.proof_type || 'unknown';
   };
 
-  // Debug: log proof types to diagnose categorization issues
-  if (__DEV__ && proofs.length > 0) {
-    console.log('[Portfolio] Proofs received:', proofs.length);
-    console.log(
-      '[Portfolio] Proof details:',
-      proofs.map(p => ({
-        id: p.id,
-        proof_type: p.proof_type,
-        file_type: p.file?.file_type,
-        effective_type: getEffectiveType(p),
-        title: p.title,
-        has_file: !!p.file,
-        file_url: p.file?.url?.substring(0, 50),
-      }))
-    );
-  }
-
   // Group proofs by effective type (file.file_type takes precedence for file-based proofs)
   const videoProofs = filteredProofs.filter(p => getEffectiveType(p) === 'video');
   const imageProofs = filteredProofs.filter(p => getEffectiveType(p) === 'image');

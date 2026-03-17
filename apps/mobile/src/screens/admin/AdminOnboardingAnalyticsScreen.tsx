@@ -30,13 +30,7 @@ import {
   BarChart,
   LineChart,
 } from '@rallia/shared-components';
-import {
-  primary,
-  neutral,
-  status,
-  spacingPixels,
-  radiusPixels,
-} from '@rallia/design-system';
+import { primary, neutral, status, spacingPixels, radiusPixels } from '@rallia/design-system';
 import {
   getOnboardingFunnelRPC,
   getUserGrowthTrend,
@@ -173,7 +167,7 @@ function useOnboardingAnalytics(selectedOption: TimeRangeOption) {
 function formatStepName(name: string): string {
   return name
     .split('_')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 }
 
@@ -235,7 +229,10 @@ const AdminOnboardingAnalyticsScreen: React.FC = () => {
   }, [funnelData]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['top', 'bottom']}
+    >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
@@ -246,7 +243,8 @@ const AdminOnboardingAnalyticsScreen: React.FC = () => {
             {t('admin.analytics.sections.onboarding' as TranslationKey) || 'Onboarding Analytics'}
           </Text>
           <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-            {t('admin.analytics.sections.onboardingDesc' as TranslationKey) || 'User journey funnel'}
+            {t('admin.analytics.sections.onboardingDesc' as TranslationKey) ||
+              'User journey funnel'}
           </Text>
         </View>
       </View>
@@ -263,7 +261,7 @@ const AdminOnboardingAnalyticsScreen: React.FC = () => {
         <View style={styles.timeRangeContainer}>
           <TimeRangeSelector
             value={selectedOption}
-            onChange={(range) => setRange(range as TimeRangeOption)}
+            onChange={range => setRange(range as TimeRangeOption)}
             options={[
               { value: '7d', label: '7D', days: 7 },
               { value: '30d', label: '30D', days: 30 },
@@ -345,7 +343,10 @@ const AdminOnboardingAnalyticsScreen: React.FC = () => {
             <View style={[styles.chartCard, { backgroundColor: colors.surface }]}>
               <FunnelChart
                 data={funnelData}
-                title={t('admin.analytics.charts.funnelChart.defaultTitle' as TranslationKey) || 'Conversion Funnel'}
+                title={
+                  t('admin.analytics.charts.funnelChart.defaultTitle' as TranslationKey) ||
+                  'Conversion Funnel'
+                }
                 subtitle={`${selectedOption === '7d' ? 'Last 7 days' : selectedOption === '30d' ? 'Last 30 days' : selectedOption === '90d' ? 'Last 90 days' : 'Year to date'}`}
                 showConversion
                 showPercentOfTotal
@@ -396,7 +397,9 @@ const AdminOnboardingAnalyticsScreen: React.FC = () => {
                     <Ionicons name="alert-circle" size={16} color={status.error.DEFAULT} />
                     <Text style={[styles.insightText, { color: colors.text }]}>
                       {summaryMetrics.biggestDropoff.rate.toFixed(0)}% of users drop off at{' '}
-                      <Text style={{ fontWeight: '600' }}>{summaryMetrics.biggestDropoff.step}</Text>
+                      <Text style={{ fontWeight: '600' }}>
+                        {summaryMetrics.biggestDropoff.step}
+                      </Text>
                     </Text>
                   </View>
                 )}
@@ -412,7 +415,8 @@ const AdminOnboardingAnalyticsScreen: React.FC = () => {
                   <View style={styles.insightItem}>
                     <Ionicons name="checkmark-circle" size={16} color={status.success.DEFAULT} />
                     <Text style={[styles.insightText, { color: colors.text }]}>
-                      Onboarding conversion is healthy at {summaryMetrics.overallConversion.toFixed(0)}%
+                      Onboarding conversion is healthy at{' '}
+                      {summaryMetrics.overallConversion.toFixed(0)}%
                     </Text>
                   </View>
                 )}

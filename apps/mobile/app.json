@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "rallia-app",
+    "name": "Rallia",
     "slug": "rallia-app",
     "owner": "rallia-app",
     "version": "1.0.0",
@@ -25,6 +25,10 @@
       "appleTeamId": "587DRRMTV8",
       "usesAppleSignIn": true,
       "associatedDomains": ["applinks:rallia.app"]
+    },
+    "androidStatusBar": {
+      "translucent": true,
+      "style": "auto"
     },
     "android": {
       "softwareKeyboardLayoutMode": "pan",
@@ -73,6 +77,9 @@
         {
           "ios": {
             "ccacheEnabled": true
+          },
+          "android": {
+            "enableEdgeToEdge": true
           }
         }
       ],

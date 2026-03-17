@@ -117,7 +117,7 @@
     "authFailed": "Authentication failed. Please try again."
   },
   "splash": {
-    "slogan": "Play More, Plan Less."
+    "slogan": "The Power to Play Whenever You Want!"
   },
   "navigation": {
     "home": "Home",
@@ -187,6 +187,9 @@
       "player_left": "Player\nLeft",
       "new_message": "New\nMessage",
       "rating_verified": "Rating\nVerified",
+      "reference_request_received": "Reference\nRequested",
+      "reference_request_accepted": "Reference\nAccepted",
+      "reference_request_declined": "Reference\nDeclined",
       "reminder": "Reminder",
       "payment": "Payment",
       "support": "Support",
@@ -438,6 +441,12 @@
     "privacyPolicy": "Privacy Policy",
     "logout": "Sign Out",
     "deleteAccount": "Delete Account",
+    "appInfo": "App Info",
+    "version": "Version",
+    "environment": "Environment",
+    "channel": "Channel",
+    "update": "Update",
+    "embeddedBundle": "Embedded",
     "general": {
       "title": "General Settings",
       "description": "Manage your organization settings.",
@@ -1033,7 +1042,21 @@
         "counterpuncher": "Counterpuncher",
         "aggressive_baseliner": "Aggressive Baseliner",
         "serve_and_volley": "Serve and Volley",
-        "all_court": "All Court"
+        "all_court": "All Court",
+        "banger": "Banger",
+        "soft_game": "Soft Game",
+        "hybrid": "Hybrid",
+        "speedup_specialist": "Speedup Specialist"
+      },
+      "playAttributeCategories": {
+        "Serve": "Serve",
+        "Forehand": "Forehand",
+        "Backhand": "Backhand",
+        "Net Game": "Net Game",
+        "Physical": "Physical",
+        "Mental": "Mental",
+        "Soft Game": "Soft Game",
+        "Power Game": "Power Game"
       },
       "playAttributes": {
         "serve_speed_and_placement": "Serve Speed & Placement",
@@ -1041,7 +1064,35 @@
         "court_coverage": "Court Coverage",
         "forehand_power": "Forehand Power",
         "shot_selection": "Shot Selection",
-        "spin_control": "Spin Control"
+        "spin_control": "Spin Control",
+        "big_serve": "Big Serve",
+        "kick_serve": "Kick Serve",
+        "accurate_placement": "Accurate Placement",
+        "heavy_topspin_forehand": "Heavy Topspin Forehand",
+        "flat_forehand": "Flat Forehand",
+        "inside_out_forehand": "Inside-Out Forehand",
+        "one_handed_backhand": "One-Handed Backhand",
+        "two_handed_backhand": "Two-Handed Backhand",
+        "backhand_slice": "Backhand Slice",
+        "strong_volleyer": "Strong Volleyer",
+        "overhead_smash": "Overhead Smash",
+        "endurance": "Endurance",
+        "quick_reflexes": "Quick Reflexes",
+        "clutch_performer": "Clutch Performer",
+        "consistent": "Consistent",
+        "power_serve": "Power Serve",
+        "spin_serve": "Spin Serve",
+        "dink_master": "Dink Master",
+        "drop_shot": "Drop Shot",
+        "reset_specialist": "Reset Specialist",
+        "drive_specialist": "Drive Specialist",
+        "speedup_attack": "Speedup Attack",
+        "erne_specialist": "Erne Specialist",
+        "quick_hands": "Quick Hands",
+        "court_mobility": "Court Mobility",
+        "stamina": "Stamina",
+        "patient": "Patient",
+        "strategic": "Strategic"
       },
       "favoriteFacilities": "Favorite Courts",
       "selectUpTo3": "Select up to 3 facilities",
@@ -1125,7 +1176,24 @@
       "noSportError": "Unable to determine sport for reference request.",
       "noRatingError": "You need a rating in this sport to request a reference.",
       "playerLevelTooLow": "This player's level is below yours. References must come from players at your level or higher."
-    }
+    },
+    "unknownPlayer": "Player"
+  },
+  "inviteToMatch": {
+    "title": "Invite to Match",
+    "subtitle": "Select a match to invite {name}",
+    "sendInvite": "Send Invite",
+    "inviteSent": "Invitation sent to {name}!",
+    "inviteError": "Failed to send invite. Please try again.",
+    "spotsAvailable": "{count} spot(s) available",
+    "doubles": "Doubles",
+    "singles": "Singles",
+    "noMatches": "No Matches Available",
+    "noMatchesDescription": "You don't have any upcoming matches with open spots. Create a match first to invite players.",
+    "loadingMatches": "Loading your matches...",
+    "errorLoading": "Unable to Load Matches",
+    "errorLoadingDescription": "Something went wrong. Please try again later.",
+    "unknownLocation": "Location TBD"
   },
   "photoEditor": {
     "title": "Edit Photo",
@@ -1598,19 +1666,44 @@
       "groups": "Groups",
       "matches": "Matches"
     },
+    "filters": {
+      "all": "All",
+      "unread": "Unread",
+      "direct": "Direct",
+      "groupChat": "Group Chats",
+      "playerGroup": "Player Groups",
+      "community": "Communities",
+      "club": "Clubs",
+      "match": "Matches",
+      "blocked": "Blocked",
+      "favorites": "Favorites",
+      "archived": "Archived",
+      "muted": "Muted",
+      "pinned": "Pinned",
+      "reset": "Reset",
+      "emptyBlocked": "No blocked conversations",
+      "emptyUnread": "All caught up!",
+      "emptyFavorites": "No favorite conversations",
+      "emptyArchived": "No archived conversations",
+      "emptyMuted": "No muted conversations",
+      "emptyPinned": "No pinned conversations"
+    },
+    "emptyFiltered": {
+      "title": "No conversations found",
+      "description": "No conversations match the selected filter"
+    },
     "typeMessage": "Type your message",
     "today": "Today",
     "yesterday": "Yesterday",
     "participants": "{{count}} participant",
     "participants_plural": "{{count}} participants",
     "agreement": {
-      "welcome": "Welcome to",
-      "welcomeDirect": "Starting conversation with",
-      "description": "This is a group chat - all members of this community will see your messages",
-      "descriptionDirect": "This is a private conversation. Please be respectful and follow our community guidelines.",
+      "welcome": "Welcome to Rallia Chat",
+      "description": "Please be respectful and follow our community guidelines in all conversations.",
       "chatRules": "Chat rules",
       "warning": "Content will be removed and users banned for violations of our community guidelines",
-      "agree": "I agree"
+      "agree": "I agree",
+      "decline": "Decline"
     },
     "rules": {
       "noHarassment": "No harassment, hate speech, sexual language",
@@ -1659,6 +1752,8 @@
       "maxImages": "You can add up to 3 images",
       "uploadingImages": "Uploading images..."
     },
+    "newConversation": "New Conversation",
+    "selectAPlayer": "Select a player",
     "selectMembers": "Select Members",
     "pleaseSelectMember": "Please select at least one member for the group.",
     "photoAccessRequired": "Please allow access to your photos to add a group image.",
@@ -1672,7 +1767,7 @@
     "noPlayersFoundMatching": "No players found matching \"{query}\"",
     "noPlayersAvailable": "No players available",
     "continueSelected": "Continue ({count} selected)",
-    "startChat": "Start Chat",
+    "startChat": "Send Message",
     "failedToCreateConversation": "Failed to create conversation. Please try again.",
     "groupDetails": "Group Details",
     "addPhoto": "Add Photo",
@@ -1681,7 +1776,7 @@
     "members": "Members",
     "you": "You",
     "admin": "Admin",
-    "createGroup": "Create Group",
+    "createGroup": "Create Group Chat",
     "addMembers": "Add Members",
     "addCount": "Add ({count})",
     "noPlayersFound": "No players found",
@@ -1784,7 +1879,10 @@
     "shareLists": "Share Lists",
     "tournaments": "Tournaments",
     "tournamentsComingSoon": "This feature is coming soon!",
+    "leagues": "Leagues",
+    "leaguesComingSoon": "This feature is coming soon!",
     "findPartner": "Find a Partner",
+    "players": "Players",
     "myCommunities": "My Communities",
     "createCommunity": "Create Community",
     "editCommunity": "Edit Community",
@@ -1882,6 +1980,13 @@
       "title": "Activity",
       "recentGames": "Recent Games",
       "noActivity": "No activity yet"
+    },
+    "matches": {
+      "title": "Member Matches",
+      "empty": {
+        "title": "No Upcoming Matches",
+        "description": "Members haven't shared any public matches yet"
+      }
     },
     "detail": {
       "last7DaysActivities": "Last 7 days activities",
@@ -2190,6 +2295,13 @@
       "gamesCreated_one": "{count} game created",
       "newMessages": "{count} new messages in\ngroup chat"
     },
+    "matches": {
+      "title": "Member Matches",
+      "empty": {
+        "title": "No Upcoming Matches",
+        "description": "Members haven't shared any public matches yet"
+      }
+    },
     "home": {
       "about": "About",
       "viewAll": "View all"
@@ -2482,6 +2594,8 @@
   "match": {
     "placeholder": "Game Screen - Ready for your implementation",
     "host": "Host",
+    "hostedBy": "Hosted by",
+    "full": "Full",
     "pickMatchType": "Pick match type",
     "format": {
       "singles": "Singles",
@@ -2933,7 +3047,13 @@
     "sportNotAdded": "{sport} not added",
     "preferencesUpdated": "Preferences updated successfully",
     "cannotDeactivate": "Cannot Deactivate Sport",
-    "mustHaveOneSport": "You must have at least one active sport. Please activate another sport before deactivating this one."
+    "mustHaveOneSport": "You must have at least one active sport. Please activate another sport before deactivating this one.",
+    "sportSetupRequired": "Sport Profile Setup Required",
+    "sportSetupRequiredMessage": "To activate {sport}, you must complete your rating and all preferences. If you close any step without saving, the sport profile will not be created.",
+    "sportSetupCancelled": "Sport profile setup cancelled",
+    "sportSetupIncomplete": "Please complete all required fields to save your preferences",
+    "continueSetup": "Continue",
+    "cancelSetup": "Cancel"
   },
   "sportSelector": {
     "selectSport": "Select a sport",
@@ -3279,6 +3399,10 @@
       "unreadNotifications": "You have {count} pending notification(s) in {sportName}",
       "switch": "Switch"
     },
+    "secondSportBanner": {
+      "message": "Ready to expand your game? Activate your {sportName} profile!",
+      "activate": "Activate"
+    },
     "header": {
       "ctaButton": "Become a Beta Tester"
     },
@@ -3590,6 +3714,7 @@
       "spotsAvailable": {
         "label": "Spots",
         "all": "All",
+        "undefined": "All",
         "1": "1 spot",
         "2": "2 spots",
         "3": "3 spots"

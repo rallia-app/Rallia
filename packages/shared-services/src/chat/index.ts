@@ -21,16 +21,21 @@ export {
   type TypingIndicator,
   type SearchMessageResult,
 
+  // Helpers
+  isGroupConversationType,
+
   // Constants
   COMMON_REACTIONS,
 
   // Conversation Operations
   getPlayerConversations,
+  getPlayerConversationsFiltered,
   getConversation,
   createConversation,
   getOrCreateDirectConversation,
   createMatchChat,
   getMatchChat,
+  syncMatchConversationTitle,
 
   // Message Operations
   getMessages,
@@ -80,9 +85,11 @@ export {
 
   // Utility Functions
   getTotalUnreadCount,
+  getUnreadConversationsCount,
   getConversationByNetworkId,
   getNetworkByConversationId,
   getConversationUnreadCount,
+  getConversationUnreadCountLast7Days,
 
   // Chat Agreement
   hasAgreedToChatRules,

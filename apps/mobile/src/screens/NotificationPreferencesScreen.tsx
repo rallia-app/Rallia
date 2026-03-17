@@ -75,6 +75,10 @@ const ACTIVE_NOTIFICATION_TYPES = new Set<ExtendedNotificationTypeEnum>([
   // Social
   'new_message',
   'rating_verified',
+  // Reference requests
+  'reference_request_received',
+  'reference_request_accepted',
+  'reference_request_declined',
 ] as ExtendedNotificationTypeEnum[]);
 
 // Design-system colors for active notification types
@@ -101,6 +105,10 @@ const NOTIFICATION_DS_COLORS: Partial<Record<ExtendedNotificationTypeEnum, strin
   // Social
   new_message: primary[500],
   rating_verified: status.success.light,
+  // Reference requests
+  reference_request_received: primary[500],
+  reference_request_accepted: status.success.light,
+  reference_request_declined: secondary[500],
 };
 
 // Group notification types by category
@@ -428,6 +436,10 @@ const NotificationPreferencesScreen: React.FC = () => {
         chat: t('notifications.types.chat'),
         new_message: t('notifications.types.new_message'),
         rating_verified: t('notifications.types.rating_verified'),
+        // Reference request types
+        reference_request_received: t('notifications.types.reference_request_received'),
+        reference_request_accepted: t('notifications.types.reference_request_accepted'),
+        reference_request_declined: t('notifications.types.reference_request_declined'),
         // System category
         reminder: t('notifications.types.reminder'),
         payment: t('notifications.types.payment'),
@@ -456,7 +468,10 @@ const NotificationPreferencesScreen: React.FC = () => {
 
   if (isLoadingAuth || isLoadingPreferences) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['bottom']}
+      >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.buttonActive} />
         </View>
@@ -466,7 +481,10 @@ const NotificationPreferencesScreen: React.FC = () => {
 
   if (!isAuthenticated) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['bottom']}
+      >
         <View style={styles.emptyContainer}>
           <Ionicons name="lock-closed-outline" size={64} color={colors.iconMuted} />
           <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
@@ -478,7 +496,10 @@ const NotificationPreferencesScreen: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['bottom']}
+    >
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}

@@ -66,6 +66,16 @@ export function navigateToPlayerProfileFromOutside(playerId: string, sportId?: s
   }
 }
 
+/**
+ * Navigate to IncomingReferenceRequests from outside the NavigationContainer.
+ * Used for push notification tap handling.
+ */
+export function navigateToIncomingReferenceRequestsFromOutside() {
+  if (navigationRef.isReady()) {
+    navigationRef.navigate('IncomingReferenceRequests');
+  }
+}
+
 // Main navigator
 export { default as AppNavigator } from './AppNavigator';
 

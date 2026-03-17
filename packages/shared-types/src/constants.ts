@@ -305,11 +305,21 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   match_new_available: 'add-circle-outline',
   match_spot_opened: 'enter-outline',
   nearby_match_available: 'location-outline',
+  match_completed: 'trophy-outline',
   player_kicked: 'remove-circle-outline',
   player_left: 'exit-outline',
   // Social types
   new_message: 'chatbubble-ellipses-outline',
+  friend_request: 'person-add-outline',
   rating_verified: 'ribbon-outline',
+  // Community types
+  community_join_request: 'people-outline',
+  community_join_accepted: 'checkmark-circle-outline',
+  community_join_rejected: 'close-circle-outline',
+  // Reference request types
+  reference_request_received: 'person-circle-outline',
+  reference_request_accepted: 'checkmark-circle-outline',
+  reference_request_declined: 'close-circle-outline',
   // Feedback types
   feedback_request: 'star-outline',
   feedback_reminder: 'notifications-outline',
@@ -365,11 +375,21 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   match_new_available: '#4DB8A8', // Teal
   match_spot_opened: '#4CAF50', // Green
   nearby_match_available: '#2196F3', // Blue
+  match_completed: '#4CAF50', // Green
   player_kicked: '#F44336', // Red
   player_left: '#FF9800', // Orange
   // Social types
   new_message: '#9C27B0', // Purple
+  friend_request: '#9C27B0', // Purple
   rating_verified: '#4CAF50', // Green
+  // Community types
+  community_join_request: '#4DB8A8', // Teal
+  community_join_accepted: '#4CAF50', // Green
+  community_join_rejected: '#F44336', // Red
+  // Reference request types
+  reference_request_received: '#4DB8A8', // Teal - incoming request
+  reference_request_accepted: '#4CAF50', // Green - positive outcome
+  reference_request_declined: '#F44336', // Red - declined
   // Feedback types
   feedback_request: '#FFC107', // Amber
   feedback_reminder: '#FF9800', // Orange
@@ -423,10 +443,20 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   match_new_available: 'New Game in Group',
   match_spot_opened: 'Spot Opened',
   nearby_match_available: 'Nearby Match',
+  match_completed: 'Match Completed',
   player_kicked: 'Removed from Match',
   player_left: 'Player Left',
   new_message: 'New Message',
+  friend_request: 'Friend Request',
   rating_verified: 'Rating Verified',
+  // Community types
+  community_join_request: 'Community Join Request',
+  community_join_accepted: 'Community Join Accepted',
+  community_join_rejected: 'Community Join Rejected',
+  // Reference request types
+  reference_request_received: 'Reference Request Received',
+  reference_request_accepted: 'Reference Request Accepted',
+  reference_request_declined: 'Reference Request Declined',
   feedback_request: 'Feedback Request',
   feedback_reminder: 'Feedback Reminder',
   score_confirmation: 'Score Confirmation',
@@ -480,12 +510,22 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   match_new_available: 'match',
   match_spot_opened: 'match',
   nearby_match_available: 'match',
+  match_completed: 'match',
   player_kicked: 'match',
   player_left: 'match',
   // Social category
   chat: 'social',
   new_message: 'social',
+  friend_request: 'social',
   rating_verified: 'social',
+  // Community types (social)
+  community_join_request: 'social',
+  community_join_accepted: 'social',
+  community_join_rejected: 'social',
+  // Reference request types (social)
+  reference_request_received: 'social',
+  reference_request_accepted: 'social',
+  reference_request_declined: 'social',
   // System category
   reminder: 'system',
   payment: 'system',
@@ -584,10 +624,20 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   nearby_match_available: { email: false, push: true, sms: false },
   player_kicked: { email: true, push: true, sms: false },
   player_left: { email: false, push: true, sms: false }, // Push only for player leaves
+  match_completed: { email: true, push: true, sms: false },
   // Social types - push only by default
   chat: { email: false, push: true, sms: false },
   new_message: { email: false, push: true, sms: false },
+  friend_request: { email: true, push: true, sms: false },
   rating_verified: { email: true, push: true, sms: false },
+  // Community types
+  community_join_request: { email: true, push: true, sms: false },
+  community_join_accepted: { email: true, push: true, sms: false },
+  community_join_rejected: { email: true, push: true, sms: false },
+  // Reference request types
+  reference_request_received: { email: true, push: true, sms: false },
+  reference_request_accepted: { email: true, push: true, sms: false },
+  reference_request_declined: { email: true, push: true, sms: false },
   // System types - email only by default
   reminder: { email: false, push: true, sms: false },
   payment: { email: true, push: true, sms: false },

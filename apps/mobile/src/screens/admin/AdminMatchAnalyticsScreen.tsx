@@ -30,17 +30,8 @@ import {
   PieChart,
   FunnelChart,
 } from '@rallia/shared-components';
-import {
-  primary,
-  neutral,
-  status,
-  spacingPixels,
-  radiusPixels,
-} from '@rallia/design-system';
-import {
-  getMatchAnalyticsRPC,
-  type MatchAnalyticsRPC,
-} from '@rallia/shared-services';
+import { primary, neutral, status, spacingPixels, radiusPixels } from '@rallia/design-system';
+import { getMatchAnalyticsRPC, type MatchAnalyticsRPC } from '@rallia/shared-services';
 import type { RootStackParamList } from '../../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -109,12 +100,24 @@ function useMatchAnalytics(selectedOption: TimeRangeOption) {
         setDailyStats(matchResult);
 
         // Calculate totals
-        const totalCreated = matchResult.reduce((sum: number, day: MatchAnalyticsRPC) => sum + day.matchesCreated, 0);
-        const totalCompleted = matchResult.reduce((sum: number, day: MatchAnalyticsRPC) => sum + day.matchesCompleted, 0);
+        const totalCreated = matchResult.reduce(
+          (sum: number, day: MatchAnalyticsRPC) => sum + day.matchesCreated,
+          0
+        );
+        const totalCompleted = matchResult.reduce(
+          (sum: number, day: MatchAnalyticsRPC) => sum + day.matchesCompleted,
+          0
+        );
         const avgCancellationRate =
-          matchResult.reduce((sum: number, day: MatchAnalyticsRPC) => sum + day.cancellationRate, 0) / matchResult.length;
+          matchResult.reduce(
+            (sum: number, day: MatchAnalyticsRPC) => sum + day.cancellationRate,
+            0
+          ) / matchResult.length;
         const avgParticipants =
-          matchResult.reduce((sum: number, day: MatchAnalyticsRPC) => sum + day.avgParticipants, 0) / matchResult.length;
+          matchResult.reduce(
+            (sum: number, day: MatchAnalyticsRPC) => sum + day.avgParticipants,
+            0
+          ) / matchResult.length;
 
         setMatchStats({
           total: totalCreated,
@@ -210,16 +213,24 @@ const AdminMatchAnalyticsScreen: React.FC = () => {
 
     return [
       { label: 'Created', value: matchStats.total },
-      { label: 'Scheduled', value: scheduled, sublabel: `${Math.round((scheduled / matchStats.total) * 100)}%` },
+      {
+        label: 'Scheduled',
+        value: scheduled,
+        sublabel: `${Math.round((scheduled / matchStats.total) * 100)}%`,
+      },
       { label: 'Filled', value: filled, sublabel: `${Math.round((filled / scheduled) * 100)}%` },
       { label: 'Played', value: played, sublabel: `${Math.round((played / filled) * 100)}%` },
-      { label: 'Completed', value: matchStats.completed, sublabel: `${Math.round((matchStats.completed / played) * 100)}%` },
+      {
+        label: 'Completed',
+        value: matchStats.completed,
+        sublabel: `${Math.round((matchStats.completed / played) * 100)}%`,
+      },
     ];
   }, [matchStats]);
 
   // Match creation trend data
   const creationTrend = useMemo(() => {
-    return dailyStats.map((day) => ({
+    return dailyStats.map(day => ({
       date: day.date,
       value: day.matchesCreated,
     }));
@@ -227,7 +238,7 @@ const AdminMatchAnalyticsScreen: React.FC = () => {
 
   // Completion rate trend
   const completionRateTrend = useMemo(() => {
-    return dailyStats.map((day) => ({
+    return dailyStats.map(day => ({
       date: day.date,
       value: day.completionRate,
     }));
@@ -256,7 +267,10 @@ const AdminMatchAnalyticsScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['top', 'bottom']}
+    >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
@@ -284,7 +298,7 @@ const AdminMatchAnalyticsScreen: React.FC = () => {
         <View style={styles.timeRangeContainer}>
           <TimeRangeSelector
             value={selectedOption}
-            onChange={(range) => setRange(range as TimeRangeOption)}
+            onChange={range => setRange(range as TimeRangeOption)}
             options={[
               { value: '7d', label: '7D', days: 7 },
               { value: '30d', label: '30D', days: 30 },
@@ -316,7 +330,8 @@ const AdminMatchAnalyticsScreen: React.FC = () => {
               <View style={styles.statsGrid}>
                 <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
                   <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                    {t('admin.analytics.matchAnalytics.matchesCreated' as TranslationKey) || 'Total Matches'}
+                    {t('admin.analytics.matchAnalytics.matchesCreated' as TranslationKey) ||
+                      'Total Matches'}
                   </Text>
                   <Text style={[styles.statValue, { color: colors.text }]}>
                     {matchStats.total.toLocaleString()}
@@ -324,7 +339,8 @@ const AdminMatchAnalyticsScreen: React.FC = () => {
                 </View>
                 <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
                   <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                    {t('admin.analytics.matchAnalytics.matchesCompleted' as TranslationKey) || 'Completed'}
+                    {t('admin.analytics.matchAnalytics.matchesCompleted' as TranslationKey) ||
+                      'Completed'}
                   </Text>
                   <Text style={[styles.statValue, { color: status.success.DEFAULT }]}>
                     {matchStats.completed.toLocaleString()}
@@ -350,7 +366,8 @@ const AdminMatchAnalyticsScreen: React.FC = () => {
                 </View>
                 <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
                   <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                    {t('admin.analytics.matchAnalytics.avgParticipants' as TranslationKey) || 'Avg. Players'}
+                    {t('admin.analytics.matchAnalytics.avgParticipants' as TranslationKey) ||
+                      'Avg. Players'}
                   </Text>
                   <Text style={[styles.statValue, { color: colors.primary }]}>
                     {matchStats.avgParticipants.toFixed(1)}
@@ -451,7 +468,9 @@ const AdminMatchAnalyticsScreen: React.FC = () => {
                   <View style={styles.insightItem}>
                     <Ionicons name="close-circle" size={16} color={status.error.DEFAULT} />
                     <Text style={[styles.insightText, { color: colors.text }]}>
-                      High cancellation rate ({((matchStats.cancelled / matchStats.total) * 100).toFixed(0)}%) - weather is the top reason
+                      High cancellation rate (
+                      {((matchStats.cancelled / matchStats.total) * 100).toFixed(0)}%) - weather is
+                      the top reason
                     </Text>
                   </View>
                 )}

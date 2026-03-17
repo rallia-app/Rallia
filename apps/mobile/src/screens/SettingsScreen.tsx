@@ -10,6 +10,7 @@ import {
   Linking,
 } from 'react-native';
 import Constants from 'expo-constants';
+import * as Updates from 'expo-updates';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
@@ -18,7 +19,7 @@ import { useTheme, useAdminStatus } from '@rallia/shared-hooks';
 import { useAppNavigation } from '../navigation/hooks';
 import { useLocale } from '../context';
 import { useAuth, useTranslation } from '../hooks';
-import type { Locale, TranslationKey } from '@rallia/shared-translations';
+import type { Locale } from '@rallia/shared-translations';
 import { useProfile } from '@rallia/shared-hooks';
 import {
   lightTheme,
@@ -52,7 +53,7 @@ const SettingsScreen: React.FC = () => {
 
   const { isAuthenticated, loading: authLoading, signOut } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
-  const { isAdmin, role: adminRole } = useAdminStatus();
+  const { isAdmin } = useAdminStatus();
 
   // User is fully onboarded only if authenticated AND onboarding is complete
   const isOnboarded = isAuthenticated && profile?.onboarding_completed;
@@ -141,54 +142,6 @@ const SettingsScreen: React.FC = () => {
     Logger.logUserAction('admin_panel_pressed');
   };
 
-  // DEBUG: Make current user an admin (for testing only)
-  const [makingAdmin, setMakingAdmin] = useState(false);
-  const handleMakeAdmin = async () => {
-    if (!profile?.id) {
-      toast.error('No user profile found');
-      return;
-    }
-
-    Alert.alert('Make Admin (DEBUG)', 'This will make you a super_admin. Continue?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Make Admin',
-        onPress: async () => {
-          try {
-            setMakingAdmin(true);
-            // Check if already admin
-            const { data: existing } = await supabase
-              .from('admin')
-              .select('id')
-              .eq('id', profile.id)
-              .single();
-
-            if (existing) {
-              toast.info('You are already an admin!');
-              return;
-            }
-
-            // Insert admin record (id references profile.id)
-            const { error } = await supabase.from('admin').insert({
-              id: profile.id,
-              role: 'super_admin',
-            });
-
-            if (error) throw error;
-
-            toast.success('You are now a super_admin! Restart the app to see Admin Panel.');
-            Logger.logUserAction('debug_make_admin', { userId: profile.id });
-          } catch (error) {
-            console.error('Failed to make admin:', error);
-            toast.error('Failed to make admin: ' + (error as Error).message);
-          } finally {
-            setMakingAdmin(false);
-          }
-        },
-      },
-    ]);
-  };
-
   const handleResetTour = () => {
     lightHaptic();
     Alert.alert(t('tour.settings.restartTour'), t('tour.settings.restartTourDescription'), [
@@ -245,7 +198,10 @@ const SettingsScreen: React.FC = () => {
   // Show loading indicator until i18n is ready
   if (!isLocaleReady || authLoading || profileLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['bottom']}
+      >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.buttonActive} />
         </View>
@@ -254,7 +210,10 @@ const SettingsScreen: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['bottom']}
+    >
       <ScrollView
         style={[styles.scrollContent, { backgroundColor: colors.background }]}
         showsVerticalScrollIndicator={false}
@@ -351,69 +310,12 @@ const SettingsScreen: React.FC = () => {
 
         {/* Admin Panel - Only visible to admin users */}
         {isAuthenticated && isAdmin && (
-          <View style={[styles.settingsGroup, { backgroundColor: colors.cardBackground }]}>
-            <TouchableOpacity
-              style={[
-                styles.adminPanelButton,
-                { backgroundColor: colors.cardBackground, borderBottomColor: colors.border },
-              ]}
+          <View style={[styles.settingsGroup, { backgroundColor: colors.background }]}>
+            <SettingsItem
+              icon="construct-outline"
+              title={t('admin.panelButton')}
               onPress={handleAdminPanel}
-              activeOpacity={0.7}
-            >
-              <View style={styles.settingsItemLeft}>
-                <View
-                  style={[
-                    styles.adminIconContainer,
-                    {
-                      backgroundColor: isDark
-                        ? `${status.warning.DEFAULT}20`
-                        : `${status.warning.light}15`,
-                    },
-                  ]}
-                >
-                  <Ionicons name="construct" size={18} color={status.warning.DEFAULT} />
-                </View>
-                <View style={styles.adminTextContainer}>
-                  <Text size="base" weight="semibold" color={colors.text}>
-                    {t('admin.panelButton')}
-                  </Text>
-                  {adminRole && (
-                    <Text size="xs" color={colors.textSecondary}>
-                      {t(`admin.roles.${adminRole}` as TranslationKey)}
-                    </Text>
-                  )}
-                </View>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.iconMuted} />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* DEBUG: Make Admin Button - Only in non-production builds */}
-        {isAuthenticated && !isAdmin && appEnv !== 'production' && (
-          <View style={[styles.settingsGroup, { backgroundColor: colors.cardBackground }]}>
-            <TouchableOpacity
-              style={[
-                styles.debugButton,
-                {
-                  backgroundColor: isDark ? `${status.error.DEFAULT}20` : `${status.error.light}15`,
-                },
-              ]}
-              onPress={handleMakeAdmin}
-              disabled={makingAdmin}
-              activeOpacity={0.7}
-            >
-              {makingAdmin ? (
-                <ActivityIndicator size="small" color={status.error.DEFAULT} />
-              ) : (
-                <>
-                  <Ionicons name="bug" size={20} color={status.error.DEFAULT} />
-                  <Text size="base" weight="semibold" color={status.error.DEFAULT}>
-                    DEBUG: Make Me Admin
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
+            />
           </View>
         )}
 
@@ -556,6 +458,49 @@ const SettingsScreen: React.FC = () => {
           </View>
         )}
 
+        {/* App Info */}
+        <View style={[styles.preferenceSection, { backgroundColor: colors.background }]}>
+          <Text size="sm" color={colors.textSecondary} style={styles.preferenceSectionTitle}>
+            {t('settings.appInfo')}
+          </Text>
+          <View style={styles.appInfoGrid}>
+            <View style={styles.appInfoRow}>
+              <Text size="xs" color={colors.textMuted}>
+                {t('settings.version')}
+              </Text>
+              <Text size="xs" color={colors.text}>
+                {Constants.expoConfig?.version ?? '—'}
+              </Text>
+            </View>
+            <View style={styles.appInfoRow}>
+              <Text size="xs" color={colors.textMuted}>
+                {t('settings.environment')}
+              </Text>
+              <Text size="xs" color={colors.text}>
+                {appEnv}
+              </Text>
+            </View>
+            <View style={styles.appInfoRow}>
+              <Text size="xs" color={colors.textMuted}>
+                {t('settings.channel')}
+              </Text>
+              <Text size="xs" color={colors.text}>
+                {Updates.channel ?? '—'}
+              </Text>
+            </View>
+            <View style={styles.appInfoRow}>
+              <Text size="xs" color={colors.textMuted}>
+                {t('settings.update')}
+              </Text>
+              <Text size="xs" color={colors.text}>
+                {Updates.isEmbeddedLaunch
+                  ? t('settings.embeddedBundle')
+                  : (Updates.updateId?.slice(0, 8) ?? '—')}
+              </Text>
+            </View>
+          </View>
+        </View>
+
         <View style={styles.bottomSpacer} />
       </ScrollView>
     </SafeAreaView>
@@ -629,24 +574,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacingPixels[3],
   },
-  adminPanelButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacingPixels[5],
-    paddingVertical: spacingPixels[4],
-    borderBottomWidth: 1,
-  },
-  adminIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: radiusPixels.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  adminTextContainer: {
-    gap: spacingPixels[0.5],
-  },
   preferenceSection: {
     paddingHorizontal: spacingPixels[5],
     paddingVertical: spacingPixels[5],
@@ -706,6 +633,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     gap: spacingPixels[2],
+  },
+  appInfoGrid: {
+    gap: spacingPixels[2],
+  },
+  appInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   bottomSpacer: {
     height: spacingPixels[10],

@@ -6,13 +6,7 @@
  */
 
 import React, { useMemo, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-} from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -22,18 +16,8 @@ import { BarChart, PieChart } from 'react-native-gifted-charts';
 import { useTheme, useAnalyticsTimeRange, type TimeRangeOption } from '@rallia/shared-hooks';
 import { useTranslation } from '../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
-import {
-  Text,
-  TimeRangeSelector,
-  LineChart,
-} from '@rallia/shared-components';
-import {
-  primary,
-  neutral,
-  status,
-  spacingPixels,
-  radiusPixels,
-} from '@rallia/design-system';
+import { Text, TimeRangeSelector, LineChart } from '@rallia/shared-components';
+import { primary, neutral, status, spacingPixels, radiusPixels } from '@rallia/design-system';
 import {
   getNetworkGrowth,
   getNetworkSizeDistribution,
@@ -58,7 +42,9 @@ function useCommunityAnalytics(selectedOption: TimeRangeOption) {
   const [networkGrowth, setNetworkGrowth] = React.useState<NetworkGrowth[]>([]);
   const [sizeDistribution, setSizeDistribution] = React.useState<NetworkSizeDistribution[]>([]);
   const [topNetworks, setTopNetworks] = React.useState<NetworkActivity[]>([]);
-  const [matchIntegration, setMatchIntegration] = React.useState<NetworkMatchIntegration | null>(null);
+  const [matchIntegration, setMatchIntegration] = React.useState<NetworkMatchIntegration | null>(
+    null
+  );
   const [summaryMetrics, setSummaryMetrics] = React.useState<{
     totalNetworks: number;
     activeNetworks: number;
@@ -125,8 +111,12 @@ function useCommunityAnalytics(selectedOption: TimeRangeOption) {
 
         // Calculate average members
         if (topResult.length > 0) {
-          const avgMembers = topResult.reduce((sum: number, n: NetworkActivity) => sum + n.memberCount, 0) / topResult.length;
-          setSummaryMetrics(prev => prev ? { ...prev, avgMembers: Math.round(avgMembers) } : null);
+          const avgMembers =
+            topResult.reduce((sum: number, n: NetworkActivity) => sum + n.memberCount, 0) /
+            topResult.length;
+          setSummaryMetrics(prev =>
+            prev ? { ...prev, avgMembers: Math.round(avgMembers) } : null
+          );
         }
       }
 
@@ -134,7 +124,9 @@ function useCommunityAnalytics(selectedOption: TimeRangeOption) {
       const integrationResult = await getNetworkMatchIntegration();
       if (integrationResult) {
         setMatchIntegration(integrationResult);
-        setSummaryMetrics(prev => prev ? { ...prev, networkPostRate: integrationResult.networkPostRate } : null);
+        setSummaryMetrics(prev =>
+          prev ? { ...prev, networkPostRate: integrationResult.networkPostRate } : null
+        );
       }
     } catch (err) {
       console.error('Error fetching community analytics:', err);
@@ -196,18 +188,21 @@ export default function AdminCommunityAnalyticsScreen() {
   );
 
   // Chart colors
-  const chartColors = useMemo(() => ({
-    primary: primary[500],
-    secondary: status.success.DEFAULT,
-    tertiary: status.warning.DEFAULT,
-    quaternary: status.error.DEFAULT,
-    neutral: neutral[400],
-  }), []);
+  const chartColors = useMemo(
+    () => ({
+      primary: primary[500],
+      secondary: status.success.DEFAULT,
+      tertiary: status.warning.DEFAULT,
+      quaternary: status.error.DEFAULT,
+      neutral: neutral[400],
+    }),
+    []
+  );
 
   // Network growth line chart data
   const growthChartData = useMemo(() => {
     if (!networkGrowth || networkGrowth.length === 0) return [];
-    
+
     return networkGrowth.map(item => ({
       value: item.totalNetworks,
       label: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -217,7 +212,7 @@ export default function AdminCommunityAnalyticsScreen() {
   // Size distribution bar chart data
   const sizeChartData = useMemo(() => {
     if (!sizeDistribution || sizeDistribution.length === 0) return [];
-    
+
     return sizeDistribution.map((item, index) => ({
       value: item.count,
       label: item.bucket,
@@ -228,7 +223,7 @@ export default function AdminCommunityAnalyticsScreen() {
   // Pie chart data for network types
   const networkTypesData = useMemo(() => {
     if (!topNetworks || topNetworks.length === 0) return [];
-    
+
     // Group by network type
     const typeMap = new Map<string, number>();
     topNetworks.forEach(network => {
@@ -236,7 +231,13 @@ export default function AdminCommunityAnalyticsScreen() {
       typeMap.set(network.networkType, count + 1);
     });
 
-    const pieColors = [chartColors.primary, chartColors.secondary, chartColors.tertiary, chartColors.quaternary, chartColors.neutral];
+    const pieColors = [
+      chartColors.primary,
+      chartColors.secondary,
+      chartColors.tertiary,
+      chartColors.quaternary,
+      chartColors.neutral,
+    ];
     return Array.from(typeMap.entries()).map(([type, count], index) => ({
       value: count,
       text: type,
@@ -247,18 +248,22 @@ export default function AdminCommunityAnalyticsScreen() {
   // Top networks activity bar chart
   const topNetworksChartData = useMemo(() => {
     if (!topNetworks || topNetworks.length === 0) return [];
-    
+
     return topNetworks.slice(0, 6).map(network => ({
       value: network.activityScore,
-      label: network.networkName.length > 12 
-        ? network.networkName.substring(0, 12) + '...' 
-        : network.networkName,
+      label:
+        network.networkName.length > 12
+          ? network.networkName.substring(0, 12) + '...'
+          : network.networkName,
       frontColor: chartColors.primary,
     }));
   }, [topNetworks, chartColors]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['top', 'bottom']}
+    >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -275,14 +280,18 @@ export default function AdminCommunityAnalyticsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={refetch} tintColor={chartColors.primary} />
+          <RefreshControl
+            refreshing={loading}
+            onRefresh={refetch}
+            tintColor={chartColors.primary}
+          />
         }
       >
         {/* Time Range Selector */}
         <View style={styles.timeRangeContainer}>
           <TimeRangeSelector
             value={selectedOption}
-            onChange={(range) => setRange(range as TimeRangeOption)}
+            onChange={range => setRange(range as TimeRangeOption)}
             options={[
               { value: '7d', label: '7D', days: 7 },
               { value: '30d', label: '30D', days: 30 },
@@ -313,7 +322,8 @@ export default function AdminCommunityAnalyticsScreen() {
                   {summaryMetrics.totalNetworks}
                 </Text>
                 <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-                  {t('admin.analytics.community.totalNetworks' as TranslationKey) || 'Total Networks'}
+                  {t('admin.analytics.community.totalNetworks' as TranslationKey) ||
+                    'Total Networks'}
                 </Text>
               </View>
               <View style={[styles.metricCard, { backgroundColor: colors.card }]}>
@@ -322,7 +332,8 @@ export default function AdminCommunityAnalyticsScreen() {
                   {summaryMetrics.activeNetworks}
                 </Text>
                 <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-                  {t('admin.analytics.community.activeNetworks' as TranslationKey) || 'Active Networks'}
+                  {t('admin.analytics.community.activeNetworks' as TranslationKey) ||
+                    'Active Networks'}
                 </Text>
               </View>
               <View style={[styles.metricCard, { backgroundColor: colors.card }]}>
@@ -340,7 +351,8 @@ export default function AdminCommunityAnalyticsScreen() {
                   {summaryMetrics.networkPostRate.toFixed(1)}%
                 </Text>
                 <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-                  {t('admin.analytics.community.networkPostRate' as TranslationKey) || 'Network Post Rate'}
+                  {t('admin.analytics.community.networkPostRate' as TranslationKey) ||
+                    'Network Post Rate'}
                 </Text>
               </View>
             </View>
@@ -358,7 +370,8 @@ export default function AdminCommunityAnalyticsScreen() {
                 <View style={styles.legendItem}>
                   <View style={[styles.legendDot, { backgroundColor: chartColors.primary }]} />
                   <Text style={[styles.legendText, { color: colors.textSecondary }]}>
-                    {t('admin.analytics.community.totalNetworks' as TranslationKey) || 'Total Networks'}
+                    {t('admin.analytics.community.totalNetworks' as TranslationKey) ||
+                      'Total Networks'}
                   </Text>
                 </View>
               </View>
@@ -378,7 +391,8 @@ export default function AdminCommunityAnalyticsScreen() {
         {sizeChartData.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('admin.analytics.community.sizeDistribution' as TranslationKey) || 'Network Size Distribution'}
+              {t('admin.analytics.community.sizeDistribution' as TranslationKey) ||
+                'Network Size Distribution'}
             </Text>
             <View style={[styles.chartCard, { backgroundColor: colors.card }]}>
               <BarChart
@@ -392,7 +406,12 @@ export default function AdminCommunityAnalyticsScreen() {
                 yAxisThickness={0}
                 xAxisColor={colors.border}
                 yAxisTextStyle={{ color: colors.textSecondary, fontSize: 10 }}
-                xAxisLabelTextStyle={{ color: colors.textSecondary, fontSize: 9, width: 60, textAlign: 'center' }}
+                xAxisLabelTextStyle={{
+                  color: colors.textSecondary,
+                  fontSize: 9,
+                  width: 60,
+                  textAlign: 'center',
+                }}
                 noOfSections={4}
                 maxValue={Math.max(...sizeChartData.map(d => d.value)) * 1.2}
                 isAnimated
@@ -444,7 +463,8 @@ export default function AdminCommunityAnalyticsScreen() {
         {topNetworksChartData.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('admin.analytics.community.topNetworks' as TranslationKey) || 'Most Active Networks'}
+              {t('admin.analytics.community.topNetworks' as TranslationKey) ||
+                'Most Active Networks'}
             </Text>
             <View style={[styles.chartCard, { backgroundColor: colors.card }]}>
               <BarChart
@@ -458,13 +478,19 @@ export default function AdminCommunityAnalyticsScreen() {
                 yAxisThickness={0}
                 xAxisColor={colors.border}
                 yAxisTextStyle={{ color: colors.textSecondary, fontSize: 10 }}
-                xAxisLabelTextStyle={{ color: colors.textSecondary, fontSize: 8, width: 50, textAlign: 'center' }}
+                xAxisLabelTextStyle={{
+                  color: colors.textSecondary,
+                  fontSize: 8,
+                  width: 50,
+                  textAlign: 'center',
+                }}
                 noOfSections={4}
                 maxValue={100}
                 isAnimated
               />
               <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>
-                {t('admin.analytics.community.activityScore' as TranslationKey) || 'Activity Score (0-100)'}
+                {t('admin.analytics.community.activityScore' as TranslationKey) ||
+                  'Activity Score (0-100)'}
               </Text>
             </View>
           </View>
@@ -474,7 +500,8 @@ export default function AdminCommunityAnalyticsScreen() {
         {matchIntegration && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('admin.analytics.community.matchIntegration' as TranslationKey) || 'Match Integration'}
+              {t('admin.analytics.community.matchIntegration' as TranslationKey) ||
+                'Match Integration'}
             </Text>
             <View style={[styles.chartCard, { backgroundColor: colors.card }]}>
               <View style={styles.integrationGrid}>
@@ -483,7 +510,8 @@ export default function AdminCommunityAnalyticsScreen() {
                     {matchIntegration.matchesPostedToNetworks.toLocaleString()}
                   </Text>
                   <Text style={[styles.integrationLabel, { color: colors.textSecondary }]}>
-                    {t('admin.analytics.community.matchesPosted' as TranslationKey) || 'Matches Posted to Networks'}
+                    {t('admin.analytics.community.matchesPosted' as TranslationKey) ||
+                      'Matches Posted to Networks'}
                   </Text>
                 </View>
                 <View style={styles.integrationItem}>
@@ -491,7 +519,8 @@ export default function AdminCommunityAnalyticsScreen() {
                     {matchIntegration.networkPostRate.toFixed(1)}%
                   </Text>
                   <Text style={[styles.integrationLabel, { color: colors.textSecondary }]}>
-                    {t('admin.analytics.community.postRate' as TranslationKey) || 'Network Post Rate'}
+                    {t('admin.analytics.community.postRate' as TranslationKey) ||
+                      'Network Post Rate'}
                   </Text>
                 </View>
                 <View style={styles.integrationItem}>
@@ -499,7 +528,8 @@ export default function AdminCommunityAnalyticsScreen() {
                     {matchIntegration.networkOriginatedMatches.toLocaleString()}
                   </Text>
                   <Text style={[styles.integrationLabel, { color: colors.textSecondary }]}>
-                    {t('admin.analytics.community.networkOriginated' as TranslationKey) || 'Network-Originated Matches'}
+                    {t('admin.analytics.community.networkOriginated' as TranslationKey) ||
+                      'Network-Originated Matches'}
                   </Text>
                 </View>
                 <View style={styles.integrationItem}>
@@ -507,7 +537,8 @@ export default function AdminCommunityAnalyticsScreen() {
                     {matchIntegration.avgParticipantsFromNetwork.toFixed(1)}
                   </Text>
                   <Text style={[styles.integrationLabel, { color: colors.textSecondary }]}>
-                    {t('admin.analytics.community.avgParticipants' as TranslationKey) || 'Avg Participants from Network'}
+                    {t('admin.analytics.community.avgParticipants' as TranslationKey) ||
+                      'Avg Participants from Network'}
                   </Text>
                 </View>
               </View>
@@ -519,7 +550,8 @@ export default function AdminCommunityAnalyticsScreen() {
         {topNetworks.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('admin.analytics.community.networkActivity' as TranslationKey) || 'Network Activity Details'}
+              {t('admin.analytics.community.networkActivity' as TranslationKey) ||
+                'Network Activity Details'}
             </Text>
             <View style={[styles.listCard, { backgroundColor: colors.card }]}>
               {topNetworks.map((network, index) => (
@@ -527,7 +559,10 @@ export default function AdminCommunityAnalyticsScreen() {
                   key={network.networkId}
                   style={[
                     styles.listItem,
-                    index !== topNetworks.length - 1 && { borderBottomColor: colors.border, borderBottomWidth: 1 },
+                    index !== topNetworks.length - 1 && {
+                      borderBottomColor: colors.border,
+                      borderBottomWidth: 1,
+                    },
                   ]}
                 >
                   <View style={styles.listItemLeft}>

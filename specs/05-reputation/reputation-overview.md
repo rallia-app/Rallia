@@ -49,21 +49,21 @@ Unlike a simple formula, the reputation system uses an **event-driven architectu
 
 ### Tier System
 
-| Tier         | Score Range | Badge         | Meaning                                 |
-| ------------ | ----------- | ------------- | --------------------------------------- |
-| **Unknown**  | N/A         | Gray "?"      | New player, needs 10+ reputation events |
-| **Bronze**   | 0-59%       | Bronze shield | Below average reliability               |
-| **Silver**   | 60-74%      | Silver shield | Average reliability                     |
-| **Gold**     | 75-89%      | Gold shield   | Good reliability                        |
-| **Platinum** | 90-100%     | Platinum star | Excellent - consistently reliable       |
+| Tier         | Score Range | Badge         | Meaning                                |
+| ------------ | ----------- | ------------- | -------------------------------------- |
+| **Unknown**  | N/A         | Gray "?"      | New player, needs 5+ reputation events |
+| **Bronze**   | 0-59%       | Bronze shield | Below average reliability              |
+| **Silver**   | 60-74%      | Silver shield | Average reliability                    |
+| **Gold**     | 75-89%      | Gold shield   | Good reliability                       |
+| **Platinum** | 90-100%     | Platinum star | Excellent - consistently reliable      |
 
 ```mermaid
 stateDiagram-v2
     [*] --> Unknown: New player
-    Unknown --> Bronze: 10 events, score 0-59%
-    Unknown --> Silver: 10 events, score 60-74%
-    Unknown --> Gold: 10 events, score 75-89%
-    Unknown --> Platinum: 10 events, score 90-100%
+    Unknown --> Bronze: 5 events, score 0-59%
+    Unknown --> Silver: 5 events, score 60-74%
+    Unknown --> Gold: 5 events, score 75-89%
+    Unknown --> Platinum: 5 events, score 90-100%
 
     Bronze --> Silver: Improved behavior
     Silver --> Gold: Improved behavior
@@ -99,9 +99,9 @@ This means a no-show from 2 years ago barely affects current reputation, while r
 **On other players' profiles:**
 | Information | Visible? |
 |-------------|----------|
-| Reputation tier badge | ✅ Yes (if 10+ events) |
-| Exact score percentage | ✅ Yes (if 10+ events) |
-| "New Player" indicator | ✅ Yes (if < 10 events) |
+| Reputation tier badge | ✅ Yes (if 5+ events) |
+| Exact score percentage | ✅ Yes (if 5+ events) |
+| "New Player" indicator | ✅ Yes (if < 5 events) |
 
 **On their own profile:**
 | Information | Visible? |
@@ -135,7 +135,7 @@ This means a no-show from 2 years ago barely affects current reputation, while r
 
 ## Initial State
 
-All new players start with **unknown reputation** until 10 reputation events have been recorded.
+All new players start with **unknown reputation** until 5 reputation events have been recorded.
 
 **Rationale:**
 
@@ -144,7 +144,7 @@ All new players start with **unknown reputation** until 10 reputation events hav
 - Gives new players a fair start with sufficient data points
 - Ensures reputation score is statistically meaningful
 
-**After 10 events:**
+**After 5 events:**
 
 - Reputation becomes public
 - Tier badge appears
@@ -152,11 +152,11 @@ All new players start with **unknown reputation** until 10 reputation events hav
 
 ## Display Examples
 
-### Unknown Reputation (< 10 events)
+### Unknown Reputation (< 5 events)
 
 ```
 Reputation: New Player
-Record 10 reputation events to establish your reputation
+Record 5 reputation events to establish your reputation
 ```
 
 ### Bronze Tier (0-59%)

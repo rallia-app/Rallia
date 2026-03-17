@@ -80,6 +80,7 @@ import GroupChatInfo from '../screens/GroupChatInfo';
 import PlayedMatchDetail from '../screens/PlayedMatchDetail';
 import Communities from '../screens/Communities';
 import CommunityDetail from '../screens/CommunityDetail';
+import NetworkMatches from '../screens/NetworkMatches';
 import FeedbackScreen from '../screens/FeedbackScreen';
 import AdminPanelScreen from '../screens/AdminPanelScreen';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
@@ -894,12 +895,6 @@ const resetStackOnBlur = ({
 
 function BottomTabs() {
   const { colors } = useThemeStyles();
-  const insets = useSafeAreaInsets();
-
-  // Add bottom safe area inset to handle Android software navigation bar
-  // This prevents the system nav bar from overlapping the tab bar
-  const bottomInset = insets.bottom;
-  const tabBarHeight = spacingPixels[20] + bottomInset;
 
   return (
     <Tab.Navigator
@@ -912,9 +907,9 @@ function BottomTabs() {
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
-          height: tabBarHeight,
-          paddingBottom: spacingPixels[2] + bottomInset,
-          paddingTop: spacingPixels[2],
+        },
+        tabBarItemStyle: {
+          paddingVertical: spacingPixels[2],
         },
         tabBarButton: props => <TabButtonWithHaptic {...props} />,
       }}
@@ -1333,7 +1328,7 @@ export default function AppNavigator() {
         component={CommunityDetail}
         options={({ route, navigation }) => ({
           ...sharedOptions,
-          headerTitle: route.params?.communityName || 'Community',
+          headerTitle: route.params?.communityName || t('community.title'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />
@@ -1359,6 +1354,14 @@ export default function AppNavigator() {
       <RootStack.Screen
         name="PlayedMatchDetail"
         component={PlayedMatchDetail}
+        options={{
+          headerShown: false,
+        }}
+      />
+
+      <RootStack.Screen
+        name="NetworkMatches"
+        component={NetworkMatches}
         options={{
           headerShown: false,
         }}
