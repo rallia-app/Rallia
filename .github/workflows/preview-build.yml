@@ -1,11 +1,8 @@
-name: Scheduled Preview Build
+name: Preview Build
 
 on:
-  schedule:
-    # Tuesdays and Fridays at 11am EST (16:00 UTC)
-    - cron: '0 16 * * 2,5'
   workflow_dispatch:
-    # Allow manual trigger
+    # Manual trigger only
 
 concurrency:
   group: preview-build
