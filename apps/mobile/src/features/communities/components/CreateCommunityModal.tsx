@@ -104,7 +104,7 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
       description?: string,
       coverImageUrl?: string,
       isPublic: boolean = true,
-      sportId: string | null = null,
+      sportId: string,
       facilities: FacilitySearchResult[] = []
     ) => {
       if (!guardAction()) return;
@@ -217,6 +217,11 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
       return;
     }
 
+    if (!selectedSport?.id) {
+      setError('Please select a sport before creating a community');
+      return;
+    }
+
     setError(null);
 
     let coverImageUrl: string | undefined;
@@ -244,7 +249,7 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
       description.trim() || undefined,
       coverImageUrl,
       isPublic,
-      selectedSport?.id ?? null,
+      selectedSport.id,
       selectedFacilities
     );
     setName('');

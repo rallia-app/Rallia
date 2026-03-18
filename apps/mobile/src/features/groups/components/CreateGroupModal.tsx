@@ -180,6 +180,11 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
       return;
     }
 
+    if (!selectedSport?.id) {
+      setError('Please select a sport before creating a group');
+      return;
+    }
+
     setError(null);
     setIsLoading(true);
 
@@ -210,7 +215,7 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
           name: name.trim(),
           description: description.trim() || undefined,
           cover_image_url: coverImageUrl,
-          sport_id: selectedSport?.id ?? null,
+          sport_id: selectedSport.id,
         },
       });
 

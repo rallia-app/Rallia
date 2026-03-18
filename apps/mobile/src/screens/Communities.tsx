@@ -19,7 +19,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { SportIcon } from '../components/SportIcon';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -78,24 +77,12 @@ const CommunityCard: React.FC<{
   onPress: (community: CommunityWithStatus) => void;
   onRequestToJoin: (id: string, name: string) => void;
   isRequestPending: boolean;
-  getSportName: (sportId: string | null) => string | null;
-}> = ({
-  item,
-  index,
-  colors,
-  isDark,
-  activeTab,
-  onPress,
-  onRequestToJoin,
-  isRequestPending,
-  getSportName,
-}) => {
+}> = ({ item, index, colors, isDark, activeTab, onPress, onRequestToJoin, isRequestPending }) => {
   const scaleAnim = useMemo(() => new Animated.Value(1), []);
   const { t } = useTranslation();
   // Only show as member if they have active status (not pending)
   const isUserMember = item.is_member && item.membership_status === 'active';
   const isPending = item.membership_status === 'pending';
-  const sportName = getSportName(item.sport_id);
 
   const handlePressIn = useCallback(() => {
     Animated.timing(scaleAnim, {
@@ -112,37 +99,6 @@ const CommunityCard: React.FC<{
       useNativeDriver: true,
     }).start();
   }, [scaleAnim]);
-
-  // Get sport icon based on sport_id
-  const renderSportIcon = () => {
-    // null = both sports
-    if (!item.sport_id) {
-      return (
-        <View style={styles.sportIconContainer}>
-          <SportIcon sportName="tennis" size={14} color={colors.textMuted} />
-          <Text style={[styles.sportIconPlus, { color: colors.textMuted }]}>+</Text>
-          <SportIcon sportName="pickleball" size={14} color={colors.textMuted} />
-        </View>
-      );
-    }
-    // Tennis
-    if (sportName?.toLowerCase() === 'tennis') {
-      return (
-        <View style={styles.sportIconContainer}>
-          <SportIcon sportName="tennis" size={16} color={colors.textMuted} />
-        </View>
-      );
-    }
-    // Pickleball
-    if (sportName?.toLowerCase() === 'pickleball') {
-      return (
-        <View style={styles.sportIconContainer}>
-          <SportIcon sportName="pickleball" size={16} color={colors.textMuted} />
-        </View>
-      );
-    }
-    return null;
-  };
 
   return (
     <TouchableWithoutFeedback
@@ -200,7 +156,6 @@ const CommunityCard: React.FC<{
                 {item.name}
               </Text>
             </View>
-            {renderSportIcon()}
           </View>
 
           {/* Certification badge for verified communities - displayed under the name */}
@@ -311,19 +266,6 @@ export default function CommunitiesScreen() {
   usePlayerCommunitiesRealtime(playerId);
   usePublicCommunitiesRealtime(playerId);
 
-  // Sports data for icon display
-  const { sports } = useSports();
-
-  // Helper to get sport name from sport_id
-  const getSportName = useCallback(
-    (sportId: string | null): string | null => {
-      if (!sportId || !sports) return null;
-      const sport = sports.find(s => s.id === sportId);
-      return sport?.name ?? null;
-    },
-    [sports]
-  );
-
   // Mutations
   const requestToJoinMutation = useRequestToJoinCommunity();
 
@@ -400,7 +342,6 @@ export default function CommunitiesScreen() {
           onPress={handleCommunityPress}
           onRequestToJoin={handleRequestToJoin}
           isRequestPending={requestToJoinMutation.isPending}
-          getSportName={getSportName}
         />
       );
     },
@@ -411,7 +352,6 @@ export default function CommunitiesScreen() {
       handleCommunityPress,
       handleRequestToJoin,
       requestToJoinMutation.isPending,
-      getSportName,
     ]
   );
 
@@ -751,16 +691,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     flexWrap: 'wrap',
-  },
-  sportIconContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 4,
-  },
-  sportIconPlus: {
-    color: '#666666',
-    fontSize: 8,
-    marginHorizontal: 1,
   },
   communityInfo: {
     padding: 12,

@@ -108,16 +108,6 @@ export default function GroupDetailScreen() {
     };
   }, [sports]);
 
-  // Helper to get sport name from sport_id
-  const getSportName = useCallback(
-    (sportId: string | null): string | null => {
-      if (!sportId || !sports) return null;
-      const sport = sports.find(s => s.id === sportId);
-      return sport?.name ?? null;
-    },
-    [sports]
-  );
-
   const [activeTab, setActiveTab] = useState<TabKey>('home');
   const [leaderboardPeriod, setLeaderboardPeriod] = useState<30 | 90 | 180 | 0>(30);
   // Add Score flow state
@@ -1584,39 +1574,6 @@ export default function GroupDetailScreen() {
             <Text weight="bold" size="xl" style={{ color: colors.text }}>
               {group.name}
             </Text>
-            {/* Sport icon(s) - show both when null, single when specific */}
-            {(() => {
-              const sportName = getSportName(group.sport_id);
-              // null = both sports
-              if (!group.sport_id) {
-                return (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
-                    <SportIcon sportName="tennis" size={18} color={colors.textMuted} />
-                    <Text style={{ color: colors.textMuted, marginHorizontal: 2, fontSize: 12 }}>
-                      +
-                    </Text>
-                    <SportIcon sportName="pickleball" size={18} color={colors.textMuted} />
-                  </View>
-                );
-              }
-              // Tennis
-              if (sportName?.toLowerCase() === 'tennis') {
-                return (
-                  <View style={{ marginLeft: 8 }}>
-                    <SportIcon sportName="tennis" size={20} color={colors.textMuted} />
-                  </View>
-                );
-              }
-              // Pickleball
-              if (sportName?.toLowerCase() === 'pickleball') {
-                return (
-                  <View style={{ marginLeft: 8 }}>
-                    <SportIcon sportName="pickleball" size={20} color={colors.textMuted} />
-                  </View>
-                );
-              }
-              return null;
-            })()}
           </View>
 
           {/* Members Row */}
