@@ -15,14 +15,14 @@ import {
   ScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import Svg, { Circle } from 'react-native-svg';
 
-import { Text } from '@rallia/shared-components';
+import { Text, Button } from '@rallia/shared-components';
 import { lightHaptic, selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
 import {
   useThemeStyles,
@@ -96,6 +96,7 @@ export default function GroupDetailScreen() {
   const playerId = session?.user?.id;
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
+  const insets = useSafeAreaInsets();
 
   // Get all sport IDs and names for displaying sport tags on facilities
   const { allSportIds, sportNames } = useMemo(() => {
@@ -1638,8 +1639,9 @@ export default function GroupDetailScreen() {
           {/* Action Buttons Row */}
           <View style={styles.actionButtonsRow}>
             {group.member_count < (group.max_members ?? 20) && (
-              <TouchableOpacity
-                style={[styles.addMemberButton, { borderColor: colors.primary, flex: 1 }]}
+              <Button
+                variant="secondary"
+                size="md"
                 onPress={() =>
                   SheetManager.show('add-member', {
                     payload: {
@@ -1649,12 +1651,12 @@ export default function GroupDetailScreen() {
                     },
                   })
                 }
+                leftIcon={<Ionicons name="person-add-outline" size={18} color={colors.primary} />}
+                isDark={isDark}
+                style={{ flex: 1 }}
               >
-                <Ionicons name="person-add-outline" size={18} color={colors.primary} />
-                <Text weight="semibold" style={{ color: colors.primary, marginLeft: 8 }}>
-                  {t('groups.detail.addMember')}
-                </Text>
-              </TouchableOpacity>
+                {t('groups.detail.addMember')}
+              </Button>
             )}
             <TouchableOpacity
               style={[styles.menuButton, { borderColor: colors.primary }]}
@@ -1722,24 +1724,27 @@ export default function GroupDetailScreen() {
 
       {/* Bottom Action Button - changes based on active tab */}
       {activeTab === 'home' ? (
-        <TouchableOpacity
-          style={[styles.chatButton, { backgroundColor: colors.primary }]}
+        <Button
+          variant="primary"
+          size="lg"
           onPress={handleOpenChat}
+          leftIcon={
+            <View style={styles.chatIconContainer}>
+              <Ionicons name="chatbubbles-outline" size={20} color="#FFFFFF" />
+              {(unreadChatCount ?? 0) > 0 && (
+                <View style={styles.unreadBadge}>
+                  <Text size="xs" weight="bold" style={styles.unreadBadgeText}>
+                    {(unreadChatCount ?? 0) > 99 ? '99+' : unreadChatCount}
+                  </Text>
+                </View>
+              )}
+            </View>
+          }
+          isDark={isDark}
+          style={[styles.chatButton, { bottom: Math.max(insets.bottom, 20) + 12 }]}
         >
-          <View style={styles.chatIconContainer}>
-            <Ionicons name="chatbubbles-outline" size={20} color="#FFFFFF" />
-            {(unreadChatCount ?? 0) > 0 && (
-              <View style={styles.unreadBadge}>
-                <Text size="xs" weight="bold" style={styles.unreadBadgeText}>
-                  {(unreadChatCount ?? 0) > 99 ? '99+' : unreadChatCount}
-                </Text>
-              </View>
-            )}
-          </View>
-          <Text weight="semibold" style={styles.chatButtonText}>
-            {t('groups.chatWithMembers')}
-          </Text>
-        </TouchableOpacity>
+          {t('groups.chatWithMembers')}
+        </Button>
       ) : null}
 
       {/* Add Score Flow Modals */}
@@ -1859,14 +1864,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 16,
     gap: 12,
-  },
-  addMemberButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
   },
   menuButton: {
     width: 44,
@@ -2032,19 +2029,8 @@ const styles = StyleSheet.create({
   },
   chatButton: {
     position: 'absolute',
-    bottom: 24,
     left: 16,
     right: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 12,
-    gap: 8,
-  },
-  chatButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
   },
   chatIconContainer: {
     position: 'relative',

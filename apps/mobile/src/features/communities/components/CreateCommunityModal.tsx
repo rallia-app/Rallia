@@ -2,6 +2,10 @@
  * CreateCommunityModal
  * Modal for creating a new community with visibility toggle
  * Includes optional facility selection during creation
+ *
+ * Contains:
+ * - CreateCommunityForm: Standalone form component (used in ActionSheet and wizard)
+ * - CreateCommunityActionSheet: Thin ActionSheet wrapper
  */
 
 import { useState, useCallback, useMemo } from 'react';
@@ -15,12 +19,14 @@ import {
   Alert,
   Switch,
   ScrollView,
+  type ViewStyle,
+  type StyleProp,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { Text, useToast } from '@rallia/shared-components';
-import { primary, radiusPixels, spacingPixels } from '@rallia/design-system';
+import { neutral, primary, radiusPixels, spacingPixels } from '@rallia/design-system';
 import { useCreateCommunity, useSports, useFacilitySearch, usePlayer } from '@rallia/shared-hooks';
 import { supabase, Logger } from '@rallia/shared-services';
 import type { FacilitySearchResult } from '@rallia/shared-types';
@@ -31,13 +37,24 @@ import { CommunityStackParamList } from '../../../navigation/types';
 import { uploadImage } from '../../../services/imageUpload';
 import { pickImageWithCropper } from '../../../utils/imagePicker';
 
-export function CreateCommunityActionSheet({ payload }: SheetProps<'create-community'>) {
-  const playerId = payload?.playerId;
+// =============================================================================
+// FORM COMPONENT
+// =============================================================================
 
+interface CreateCommunityFormProps {
+  onSuccess?: (communityId: string) => void;
+  onCancel?: () => void;
+  containerStyle?: StyleProp<ViewStyle>;
+}
+
+export const CreateCommunityForm: React.FC<CreateCommunityFormProps> = ({
+  onSuccess,
+  onCancel,
+  containerStyle,
+}) => {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const { guardAction } = useRequireOnboarding();
-  const navigation = useNavigation<NavigationProp<CommunityStackParamList>>();
   const toast = useToast();
 
   const [name, setName] = useState('');
@@ -45,7 +62,7 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [isPublic, setIsPublic] = useState(true);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [isLoading, _setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Facility selection state
@@ -58,7 +75,8 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
   const { player } = usePlayer();
   const { selectedSport } = useSport();
 
-  // Get all sport IDs and names for displaying sport tags on facilities
+  const playerId = player?.id;
+
   const { allSportIds, sportNames } = useMemo(() => {
     if (!sports || sports.length === 0) {
       return { allSportIds: [], sportNames: [] };
@@ -69,7 +87,6 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
     };
   }, [sports]);
 
-  // Helper to get sport labels for a facility
   const getSportLabels = useCallback(
     (facility: FacilitySearchResult): string[] => {
       const facilitySpIds = facility.sport_ids ?? [];
@@ -84,12 +101,10 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
     [allSportIds, sportNames]
   );
 
-  // Get sport IDs for facility search based on current sport context
   const facilitySearchSportIds = useMemo(() => {
     return selectedSport ? [selectedSport.id] : (sports?.map(s => s.id) ?? []);
   }, [selectedSport, sports]);
 
-  // Use facility search hook - enabled when search is open (shows all nearby by default)
   const { facilities: searchResults, isLoading: facilitySearchLoading } = useFacilitySearch({
     searchQuery: facilitySearchQuery,
     latitude: player?.latitude ?? undefined,
@@ -98,62 +113,34 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
     enabled: showFacilitySearch,
   });
 
-  const handleCreateCommunity = useCallback(
-    async (
-      name: string,
-      description?: string,
-      coverImageUrl?: string,
-      isPublic: boolean = true,
-      sportId: string,
-      facilities: FacilitySearchResult[] = []
-    ) => {
-      if (!guardAction()) return;
+  const resetForm = useCallback(() => {
+    setName('');
+    setDescription('');
+    setCoverImage(null);
+    setIsPublic(true);
+    setSelectedFacilities([]);
+    setFacilitySearchQuery('');
+    setShowFacilitySearch(false);
+    setError(null);
+  }, []);
 
-      try {
-        const newCommunity = await createCommunityMutation.mutateAsync({
-          playerId: playerId!,
-          input: {
-            name,
-            description,
-            cover_image_url: coverImageUrl,
-            is_public: isPublic,
-            sport_id: sportId,
-          },
-        });
-
-        // Add selected facilities as favorites
-        if (facilities.length > 0) {
-          const facilityInserts = facilities.map((facility, index) => ({
-            network_id: newCommunity.id,
-            facility_id: facility.id,
-            display_order: index + 1,
-          }));
-
-          const { error: facilityError } = await supabase
-            .from('network_favorite_facility')
-            .insert(facilityInserts);
-
-          if (facilityError) {
-            Logger.warn('Failed to add favorite facilities during community creation', {
-              error: facilityError,
-              communityId: newCommunity.id,
-            });
-            // Don't fail creation, just log the warning
-          }
-        }
-
-        // Close modal first
-        await SheetManager.hide('create-community');
-        // Show success toast
-        toast.success(t('community.success.created'));
-        // Navigate to the new community
-        navigation.navigate('CommunityDetail', { communityId: newCommunity.id });
-      } catch (error) {
-        Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create community');
-      }
+  const handleAddFacility = useCallback(
+    (facility: FacilitySearchResult) => {
+      if (selectedFacilities.some(f => f.id === facility.id)) return;
+      setSelectedFacilities(prev => [...prev, facility]);
+      setFacilitySearchQuery('');
+      setShowFacilitySearch(false);
     },
-    [guardAction, playerId, createCommunityMutation, navigation, toast, t]
+    [selectedFacilities]
   );
+
+  const handleRemoveFacility = useCallback((facilityId: string) => {
+    setSelectedFacilities(prev => prev.filter(f => f.id !== facilityId));
+  }, []);
+
+  const filteredSearchResults = useMemo(() => {
+    return searchResults.filter(f => !selectedFacilities.some(sf => sf.id === f.id));
+  }, [searchResults, selectedFacilities]);
 
   const handlePickImage = useCallback(async () => {
     try {
@@ -181,27 +168,9 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
     setCoverImage(null);
   }, []);
 
-  // Facility selection handlers
-  const handleAddFacility = useCallback(
-    (facility: FacilitySearchResult) => {
-      if (selectedFacilities.some(f => f.id === facility.id)) return;
-      setSelectedFacilities(prev => [...prev, facility]);
-      setFacilitySearchQuery('');
-      setShowFacilitySearch(false);
-    },
-    [selectedFacilities]
-  );
-
-  const handleRemoveFacility = useCallback((facilityId: string) => {
-    setSelectedFacilities(prev => prev.filter(f => f.id !== facilityId));
-  }, []);
-
-  // Filter search results to exclude already selected facilities
-  const filteredSearchResults = useMemo(() => {
-    return searchResults.filter(f => !selectedFacilities.some(sf => sf.id === f.id));
-  }, [searchResults, selectedFacilities]);
-
   const handleSubmit = useCallback(async () => {
+    if (!guardAction()) return;
+
     if (!name.trim()) {
       setError(t('community.nameRequired'));
       return;
@@ -223,13 +192,13 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
     }
 
     setError(null);
+    setIsLoading(true);
 
     let coverImageUrl: string | undefined;
 
     if (coverImage) {
       setIsUploadingImage(true);
       try {
-        // Use 'group-images' bucket as it's shared for network cover images
         const { url, error: uploadError } = await uploadImage(coverImage, 'group-images');
         if (uploadError) {
           console.error('Error uploading image:', uploadError);
@@ -244,73 +213,70 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
       }
     }
 
-    await handleCreateCommunity(
-      name.trim(),
-      description.trim() || undefined,
-      coverImageUrl,
-      isPublic,
-      selectedSport.id,
-      selectedFacilities
-    );
-    setName('');
-    setDescription('');
-    setCoverImage(null);
-    setIsPublic(true);
-    setSelectedFacilities([]);
-    setFacilitySearchQuery('');
-    setShowFacilitySearch(false);
+    try {
+      const newCommunity = await createCommunityMutation.mutateAsync({
+        playerId: playerId!,
+        input: {
+          name: name.trim(),
+          description: description.trim() || undefined,
+          cover_image_url: coverImageUrl,
+          is_public: isPublic,
+          sport_id: selectedSport.id,
+        },
+      });
+
+      if (selectedFacilities.length > 0) {
+        const facilityInserts = selectedFacilities.map((facility, index) => ({
+          network_id: newCommunity.id,
+          facility_id: facility.id,
+          display_order: index + 1,
+        }));
+
+        const { error: facilityError } = await supabase
+          .from('network_favorite_facility')
+          .insert(facilityInserts);
+
+        if (facilityError) {
+          Logger.warn('Failed to add favorite facilities during community creation', {
+            error: facilityError,
+            communityId: newCommunity.id,
+          });
+        }
+      }
+
+      toast.success(t('community.success.created'));
+      resetForm();
+      onSuccess?.(newCommunity.id);
+    } catch (error) {
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create community');
+    } finally {
+      setIsLoading(false);
+    }
   }, [
+    guardAction,
     name,
     description,
     coverImage,
     isPublic,
-    t,
     selectedSport,
     selectedFacilities,
-    handleCreateCommunity,
+    playerId,
+    createCommunityMutation,
+    resetForm,
+    onSuccess,
+    toast,
+    t,
   ]);
-
-  const handleClose = useCallback(() => {
-    setName('');
-    setDescription('');
-    setCoverImage(null);
-    setIsPublic(true);
-    setSelectedFacilities([]);
-    setFacilitySearchQuery('');
-    setShowFacilitySearch(false);
-    setError(null);
-    void SheetManager.hide('create-community');
-  }, []);
 
   const isSubmitting = isLoading || isUploadingImage;
 
   return (
-    <ActionSheet
-      gestureEnabled
-      containerStyle={[
-        styles.sheetBackground,
-        styles.container,
-        { backgroundColor: colors.cardBackground },
-      ]}
-      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
-    >
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <View style={styles.headerCenter}>
-          <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-            {t('community.createCommunity')}
-          </Text>
-        </View>
-        <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-          <Ionicons name="close-outline" size={24} color={colors.textMuted} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Content */}
+    <View style={[styles.formContainer, containerStyle]}>
       <ScrollView
         style={styles.scrollContent}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         <View style={styles.inputGroup}>
           <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
@@ -340,7 +306,7 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
               style={[
                 styles.imagePicker,
                 {
-                  backgroundColor: isDark ? primary[900] : primary[100],
+                  backgroundColor: isDark ? neutral[800] : neutral[100],
                   borderColor: colors.border,
                 },
               ]}
@@ -463,7 +429,6 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
             )}
           </View>
 
-          {/* Selected facilities */}
           {selectedFacilities.length > 0 && (
             <View style={styles.selectedFacilitiesContainer}>
               {selectedFacilities.map((facility, index) => (
@@ -504,7 +469,6 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
             </View>
           )}
 
-          {/* Add facility search */}
           {!showFacilitySearch ? (
             <TouchableOpacity
               style={[
@@ -547,7 +511,6 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
                 </TouchableOpacity>
               </View>
 
-              {/* Search results - show immediately, filter as user types */}
               <View
                 style={[
                   styles.facilitySearchResults,
@@ -583,7 +546,6 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
                             {[facility.address, facility.city].filter(Boolean).join(', ')}
                           </Text>
                         )}
-                        {/* Sport tags */}
                         {getSportLabels(facility).length > 0 && (
                           <View style={styles.facilitySportTagsRow}>
                             {getSportLabels(facility).map(label => (
@@ -651,9 +613,65 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
           )}
         </TouchableOpacity>
       </View>
+    </View>
+  );
+};
+
+// =============================================================================
+// ACTION SHEET WRAPPER
+// =============================================================================
+
+export function CreateCommunityActionSheet({ payload }: SheetProps<'create-community'>) {
+  const { colors } = useThemeStyles();
+  const { t } = useTranslation();
+  const navigation = useNavigation<NavigationProp<CommunityStackParamList>>();
+  const toast = useToast();
+
+  const handleClose = useCallback(() => {
+    void SheetManager.hide('create-community');
+  }, []);
+
+  const handleSuccess = useCallback(
+    async (communityId: string) => {
+      await SheetManager.hide('create-community');
+      navigation.navigate('CommunityDetail', { communityId });
+    },
+    [navigation]
+  );
+
+  return (
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[
+        styles.sheetBackground,
+        styles.sheetContainer,
+        { backgroundColor: colors.cardBackground },
+      ]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    >
+      {/* Header */}
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={styles.headerCenter}>
+          <Text weight="semibold" size="lg" style={{ color: colors.text }}>
+            {t('community.createCommunity')}
+          </Text>
+        </View>
+        <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+          <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+
+      <CreateCommunityForm
+        onSuccess={communityId => void handleSuccess(communityId)}
+        onCancel={handleClose}
+      />
     </ActionSheet>
   );
 }
+
+// =============================================================================
+// STYLES
+// =============================================================================
 
 const styles = StyleSheet.create({
   sheetBackground: {
@@ -667,7 +685,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     alignSelf: 'center',
   },
-  container: {
+  sheetContainer: {
     flex: 1,
   },
   header: {
@@ -685,6 +703,9 @@ const styles = StyleSheet.create({
     padding: 4,
     position: 'absolute',
     right: 16,
+  },
+  formContainer: {
+    flex: 1,
   },
   scrollContent: {
     flex: 1,
@@ -796,7 +817,6 @@ const styles = StyleSheet.create({
   footer: {
     padding: spacingPixels[4],
     borderTopWidth: 1,
-    paddingBottom: spacingPixels[4],
   },
   submitButton: {
     flexDirection: 'row',

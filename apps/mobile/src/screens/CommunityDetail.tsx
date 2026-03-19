@@ -17,14 +17,14 @@ import {
   Modal,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import Svg, { Circle } from 'react-native-svg';
 
-import { Text } from '@rallia/shared-components';
+import { Text, Button } from '@rallia/shared-components';
 import { lightHaptic, mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
 import {
   useThemeStyles,
@@ -102,6 +102,7 @@ export default function CommunityDetailScreen() {
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
   const { player } = usePlayer();
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
+  const insets = useSafeAreaInsets();
 
   // Get all sport IDs and names for facility search when community has no specific sport
   const { allSportIds, sportNames } = useMemo(() => {
@@ -1785,26 +1786,21 @@ export default function CommunityDetailScreen() {
                   </Text>
                 </View>
               ) : (
-                <TouchableOpacity
-                  style={[styles.requestToJoinButton, { backgroundColor: colors.primary }]}
+                <Button
+                  variant="primary"
+                  size="lg"
+                  rounded
+                  loading={requestToJoinMutation.isPending}
                   onPress={handleRequestToJoin}
-                  disabled={requestToJoinMutation.isPending}
-                >
-                  {requestToJoinMutation.isPending ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <>
+                  leftIcon={
+                    !requestToJoinMutation.isPending ? (
                       <Ionicons name="person-add-outline" size={20} color="#FFFFFF" />
-                      <Text
-                        size="base"
-                        weight="semibold"
-                        style={{ color: '#FFFFFF', marginLeft: 8 }}
-                      >
-                        {t('community.pendingRequests.requestToJoin')}
-                      </Text>
-                    </>
-                  )}
-                </TouchableOpacity>
+                    ) : undefined
+                  }
+                  isDark={isDark}
+                >
+                  {t('community.pendingRequests.requestToJoin')}
+                </Button>
               )}
 
               <Text
@@ -1842,7 +1838,9 @@ export default function CommunityDetailScreen() {
             refreshing={false}
             onRefresh={() => {
               refetch();
-              refetchPendingRequests();
+              if (isModerator) {
+                refetchPendingRequests();
+              }
               refetchMemberMatches();
             }}
             tintColor={colors.primary}
@@ -1978,8 +1976,9 @@ export default function CommunityDetailScreen() {
           {/* Action Buttons Row - Only show for active members */}
           {isActiveMember && (
             <View style={styles.actionButtonsRow}>
-              <TouchableOpacity
-                style={[styles.addMemberButton, { borderColor: colors.primary, flex: 1 }]}
+              <Button
+                variant="secondary"
+                size="md"
                 onPress={() =>
                   SheetManager.show('add-community-member', {
                     payload: {
@@ -1989,12 +1988,12 @@ export default function CommunityDetailScreen() {
                     },
                   })
                 }
+                leftIcon={<Ionicons name="person-add-outline" size={18} color={colors.primary} />}
+                isDark={isDark}
+                style={{ flex: 1 }}
               >
-                <Ionicons name="person-add-outline" size={18} color={colors.primary} />
-                <Text weight="semibold" style={{ color: colors.primary, marginLeft: 8 }}>
-                  {t('community.members.addMember')}
-                </Text>
-              </TouchableOpacity>
+                {t('community.members.addMember')}
+              </Button>
               <TouchableOpacity
                 style={[styles.menuButton, { borderColor: colors.primary }]}
                 onPress={() =>
@@ -2063,24 +2062,27 @@ export default function CommunityDetailScreen() {
 
       {/* Bottom Action Button - changes based on active tab */}
       {activeTab === 'home' ? (
-        <TouchableOpacity
-          style={[styles.chatButton, { backgroundColor: colors.primary }]}
+        <Button
+          variant="primary"
+          size="lg"
           onPress={handleOpenChat}
+          leftIcon={
+            <View style={styles.chatIconContainer}>
+              <Ionicons name="chatbubbles-outline" size={20} color="#FFFFFF" />
+              {(unreadChatCount ?? 0) > 0 && (
+                <View style={styles.unreadBadge}>
+                  <Text size="xs" weight="bold" style={styles.unreadBadgeText}>
+                    {(unreadChatCount ?? 0) > 99 ? '99+' : unreadChatCount}
+                  </Text>
+                </View>
+              )}
+            </View>
+          }
+          isDark={isDark}
+          style={[styles.chatButton, { bottom: Math.max(insets.bottom, 20) + 12 }]}
         >
-          <View style={styles.chatIconContainer}>
-            <Ionicons name="chatbubbles-outline" size={20} color="#FFFFFF" />
-            {(unreadChatCount ?? 0) > 0 && (
-              <View style={styles.unreadBadge}>
-                <Text size="xs" weight="bold" style={styles.unreadBadgeText}>
-                  {(unreadChatCount ?? 0) > 99 ? '99+' : unreadChatCount}
-                </Text>
-              </View>
-            )}
-          </View>
-          <Text weight="semibold" style={styles.chatButtonText}>
-            {t('community.chat.chatWithMembers')}
-          </Text>
-        </TouchableOpacity>
+          {t('community.chat.chatWithMembers')}
+        </Button>
       ) : null}
 
       {/* Pending Requests Modal */}
@@ -2340,14 +2342,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
     gap: 12,
   },
-  addMemberButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
   menuButton: {
     width: 44,
     height: 44,
@@ -2465,19 +2459,8 @@ const styles = StyleSheet.create({
   },
   chatButton: {
     position: 'absolute',
-    bottom: 24,
     left: 16,
     right: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 12,
-    gap: 8,
-  },
-  chatButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
   },
   chatIconContainer: {
     position: 'relative',
@@ -2908,15 +2891,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pendingStatusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    width: '100%',
-  },
-  requestToJoinButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

@@ -23,7 +23,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SheetManager } from 'react-native-actions-sheet';
 
-import { Text, Skeleton } from '@rallia/shared-components';
+import { Text, Skeleton, Button } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useAuth, useTranslation, useRequireOnboarding } from '../hooks';
 import { useSport } from '../context';
@@ -227,33 +227,32 @@ export default function GroupsScreen() {
           {t('groups.empty.subtitle')}
         </Text>
         <View style={styles.emptyButtons}>
-          <TouchableOpacity
-            style={[styles.createButton, { backgroundColor: colors.primary }]}
+          <Button
+            variant="primary"
+            size="md"
+            rounded
             onPress={() => {
               if (!guardAction() || !playerId) return;
               SheetManager.show('create-group', { payload: { playerId } });
             }}
+            leftIcon={<Ionicons name="add-outline" size={20} color="#FFFFFF" />}
+            isDark={isDark}
           >
-            <Ionicons name="add-outline" size={20} color="#FFFFFF" />
-            <Text weight="semibold" style={styles.createButtonText}>
-              {t('groups.empty.createButton')}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.scanButton,
-              { backgroundColor: colors.cardBackground, borderColor: colors.border },
-            ]}
+            {t('groups.empty.createButton')}
+          </Button>
+          <Button
+            variant="outline"
+            size="md"
+            rounded
             onPress={() => {
               if (!guardAction()) return;
               setShowScannerModal(true);
             }}
+            leftIcon={<Ionicons name="qr-code-outline" size={20} color={colors.primary} />}
+            isDark={isDark}
           >
-            <Ionicons name="qr-code-outline" size={20} color={colors.primary} />
-            <Text weight="semibold" style={[styles.scanButtonText, { color: colors.primary }]}>
-              {t('groups.empty.scanButton')}
-            </Text>
-          </TouchableOpacity>
+            {t('groups.empty.scanButton')}
+          </Button>
         </View>
       </View>
     ),
@@ -531,18 +530,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 24,
   },
-  createButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 24,
-    gap: 8,
-  },
-  createButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-  },
   fabContainer: {
     position: 'absolute',
     bottom: 24,
@@ -579,18 +566,5 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     gap: 12,
     marginTop: 8,
-  },
-  scanButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 24,
-    gap: 8,
-    borderWidth: 1.5,
-  },
-  scanButtonText: {
-    fontSize: 16,
   },
 });

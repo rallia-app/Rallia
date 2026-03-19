@@ -22,7 +22,7 @@ import { SheetManager } from 'react-native-actions-sheet';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Text, Skeleton, SkeletonAvatar, useToast } from '@rallia/shared-components';
+import { Text, Skeleton, SkeletonAvatar, useToast, Button } from '@rallia/shared-components';
 import { supabase, Logger, isPlayerOnline } from '@rallia/shared-services';
 import { useGetOrCreateDirectConversation, usePlayerReputation } from '@rallia/shared-hooks';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
@@ -50,7 +50,6 @@ import {
   status,
 } from '@rallia/design-system';
 import { CertificationBadge, type BadgeStatus } from '../features/ratings/components';
-import PlayerPortfolioSection from '../features/profile/PlayerPortfolioSection';
 
 // Types
 type PlayerProfileRouteProp = RouteProp<RootStackParamList, 'PlayerProfile'>;
@@ -124,7 +123,7 @@ const PlayerProfile = () => {
   const { t, locale } = useTranslation();
   const { selectedSport } = useSport();
   const getOrCreateDirectConversation = useGetOrCreateDirectConversation();
-  const { display: reputationDisplay } = usePlayerReputation(playerId);
+  const { display: reputationDisplay, loading: reputationLoading } = usePlayerReputation(playerId);
   const toast = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -654,22 +653,22 @@ const PlayerProfile = () => {
 
   const formatGender = (gender: string | null): string => {
     if (!gender) return '-';
-    const genderMap: { [key: string]: string } = {
-      male: 'Male',
-      female: 'Female',
-      other: 'Other',
+    const genderMap: { [key: string]: TranslationKey } = {
+      male: 'common.gender.male',
+      female: 'common.gender.female',
+      other: 'common.gender.other',
     };
-    return genderMap[gender] || gender;
+    return genderMap[gender] ? t(genderMap[gender]) : gender;
   };
 
   const formatPlayingHand = (hand: string | null): string => {
     if (!hand) return '-';
-    const handMap: { [key: string]: string } = {
-      left: 'Left',
-      right: 'Right',
-      both: 'Both',
+    const handMap: { [key: string]: TranslationKey } = {
+      left: 'common.playingHand.left',
+      right: 'common.playingHand.right',
+      both: 'common.playingHand.both',
     };
-    return handMap[hand] || hand;
+    return handMap[hand] ? t(handMap[hand]) : hand;
   };
 
   const formatMatchDuration = (duration: string | null): string => {
@@ -925,15 +924,15 @@ const PlayerProfile = () => {
       // Use the other player's name as the title
       const playerName = profile
         ? `${(profile as unknown as { first_name?: string }).first_name || ''} ${(profile as unknown as { last_name?: string }).last_name || ''}`.trim() ||
-          'Player'
-        : 'Chat';
+          t('common.player')
+        : t('playerProfile.chat');
       navigation.navigate('ChatConversation', {
         conversationId: conversation.id,
         title: playerName,
       });
     } catch (error) {
       Logger.error('Failed to start chat', error as Error);
-      Alert.alert('Error', 'Failed to start conversation. Please try again.');
+      Alert.alert(t('alerts.error'), t('alerts.failedToStartConversation'));
     } finally {
       setChatLoading(false);
     }
@@ -972,7 +971,7 @@ const PlayerProfile = () => {
       Logger.error('Failed to toggle favorite', error as Error);
       Alert.alert(
         t('alerts.error'),
-        isFavorite ? 'Failed to remove from favorites' : 'Failed to add to favorites'
+        isFavorite ? t('alerts.failedToRemoveFavorite') : t('alerts.failedToAddFavorite')
       );
     } finally {
       setFavoriteLoading(false);
@@ -1021,7 +1020,7 @@ const PlayerProfile = () => {
       Logger.error('Failed to toggle block', error as Error);
       Alert.alert(
         t('alerts.error'),
-        isBlocked ? 'Failed to unblock player' : 'Failed to block player'
+        isBlocked ? t('alerts.failedToUnblockPlayer') : t('alerts.failedToBlockPlayer')
       );
     } finally {
       setBlockLoading(false);
@@ -1124,7 +1123,7 @@ const PlayerProfile = () => {
   const displayName =
     `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() ||
     profile?.display_name ||
-    'Player';
+    t('common.player');
 
   const username =
     profile?.display_name ||
@@ -1200,24 +1199,34 @@ const PlayerProfile = () => {
           <Text style={[styles.profileName, { color: colors.text }]}>{displayName}</Text>
           <Text style={[styles.username, { color: colors.textMuted }]}>@{username}</Text>
 
-          <View style={styles.joinedContainer}>
-            <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-            <Text style={[styles.joinedText, { color: colors.textMuted }]}>
-              {t('playerProfile.joined')} {formatJoinedDate(player?.created_at || null)}
-            </Text>
-          </View>
-
           {/* Rating & Reputation Badges */}
           <View style={styles.profileBadgesRow}>
             <RatingBadge
               ratingValue={primarySport?.ratingValue}
               ratingLabel={primarySport?.ratingLabel}
               certificationStatus={
-                primarySport?.badgeStatus as 'self_declared' | 'certified' | 'disputed' | undefined
+                primarySport?.badgeStatus as
+                  | 'self_declared'
+                  | 'certified'
+                  | 'disputed'
+                  | 'disputed'
+                  | undefined
               }
               isDark={isDark}
+              isLoading={loading}
             />
-            <ReputationBadge reputationDisplay={reputationDisplay} isDark={isDark} />
+            <ReputationBadge
+              reputationDisplay={reputationDisplay}
+              isDark={isDark}
+              isLoading={reputationLoading}
+            />
+          </View>
+
+          <View style={styles.joinedContainer}>
+            <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
+            <Text style={[styles.joinedText, { color: colors.textMuted }]}>
+              {t('playerProfile.joined')} {formatJoinedDate(player?.created_at || null)}
+            </Text>
           </View>
 
           {/* Last Seen / Active Status */}
@@ -1238,59 +1247,57 @@ const PlayerProfile = () => {
 
           {/* Action Buttons */}
           <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: colors.primary }]}
+            <Button
+              variant="primary"
+              size="md"
               onPress={handleInviteToMatch}
+              leftIcon={
+                <SportIcon
+                  sportName={selectedSport?.name ?? 'tennis'}
+                  size={18}
+                  color={colors.primaryForeground}
+                />
+              }
+              isDark={isDark}
+              style={{ flex: 1 }}
             >
-              <SportIcon
-                sportName={selectedSport?.name ?? 'tennis'}
-                size={18}
-                color={colors.primaryForeground}
-              />
-              <Text style={[styles.actionButtonText, { color: colors.primaryForeground }]}>
-                {t('playerProfile.inviteToMatch')}
-              </Text>
-            </TouchableOpacity>
+              {t('playerProfile.inviteToMatch')}
+            </Button>
 
-            <TouchableOpacity
-              style={[styles.actionButtonSecondary, { borderColor: colors.primary }]}
+            <Button
+              variant="secondary"
+              size="md"
               onPress={handleStartChat}
+              loading={chatLoading}
               disabled={chatLoading || !currentUserId}
-            >
-              {chatLoading ? (
-                <ActivityIndicator size="small" color={colors.primary} />
-              ) : (
-                <>
+              leftIcon={
+                !chatLoading ? (
                   <Ionicons name="chatbubble-outline" size={18} color={colors.primary} />
-                  <Text style={[styles.actionButtonTextSecondary, { color: colors.primary }]}>
-                    Chat
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
+                ) : undefined
+              }
+              isDark={isDark}
+              style={{ flex: 1 }}
+            >
+              {t('playerProfile.chat')}
+            </Button>
           </View>
 
           {/* Secondary Action */}
           <View style={styles.secondaryAction}>
-            <TouchableOpacity
-              style={[
-                styles.actionButtonSecondary,
-                { borderColor: colors.border, flex: 0, paddingHorizontal: spacingPixels[4] },
-              ]}
+            <Button
+              variant="outline"
+              size="sm"
               onPress={handleRequestReference}
-              disabled={referenceLoading}
-            >
-              {referenceLoading ? (
-                <ActivityIndicator size="small" color={colors.textSecondary} />
-              ) : (
-                <>
+              loading={referenceLoading}
+              leftIcon={
+                !referenceLoading ? (
                   <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
-                  <Text style={[styles.actionButtonTextSecondary, { color: colors.textSecondary }]}>
-                    {t('playerProfile.requestReference')}
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
+                ) : undefined
+              }
+              isDark={isDark}
+            >
+              {t('playerProfile.requestReference')}
+            </Button>
           </View>
         </View>
 
@@ -1303,7 +1310,7 @@ const PlayerProfile = () => {
             </Text>
           </View>
 
-          <View style={[styles.card, { backgroundColor: colors.card }]}>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.bioText, { color: colors.text }]}>
               {profile?.bio || t('playerProfile.noBio')}
             </Text>
@@ -1347,7 +1354,9 @@ const PlayerProfile = () => {
               </Text>
             </View>
 
-            <View style={[styles.card, { backgroundColor: colors.card }]}>
+            <View
+              style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+            >
               {/* Match Duration */}
               <View style={[styles.preferenceRow, { borderBottomColor: colors.border }]}>
                 <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
@@ -1483,7 +1492,9 @@ const PlayerProfile = () => {
               ))}
             </View>
           ) : (
-            <View style={[styles.card, { backgroundColor: colors.card }]}>
+            <View
+              style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+            >
               <Text style={[styles.noFacilitiesText, { color: colors.textMuted }]}>
                 {t('playerProfile.noPreferredCourts' as TranslationKey)}
               </Text>
@@ -1501,7 +1512,9 @@ const PlayerProfile = () => {
               </Text>
             </View>
 
-            <View style={[styles.card, { backgroundColor: colors.card }]}>
+            <View
+              style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+            >
               <View style={styles.ratingHeader}>
                 <View>
                   <Text style={[styles.ratingTitle, { color: colors.text }]}>
@@ -1541,14 +1554,6 @@ const PlayerProfile = () => {
                 </TouchableOpacity>
               </View>
             </View>
-
-            {/* Portfolio Section - Rating Proofs Gallery with approve/decline */}
-            <PlayerPortfolioSection
-              playerId={playerId}
-              sports={sports.map(s => ({ id: s.id, display_name: s.display_name }))}
-              skeletonBg={skeletonBg}
-              skeletonHighlight={skeletonHighlight}
-            />
           </View>
         )}
 
@@ -1562,19 +1567,34 @@ const PlayerProfile = () => {
           </View>
 
           <View style={styles.statsGrid}>
-            <View style={[styles.statCard, { backgroundColor: colors.card }]}>
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
+            >
               <Text style={[styles.statValue, { color: colors.primary }]}>{stats.hoursPlayed}</Text>
               <Text style={[styles.statLabel, { color: colors.textMuted }]}>
                 {t('playerProfile.stats.hoursPlayed')}
               </Text>
             </View>
-            <View style={[styles.statCard, { backgroundColor: colors.card }]}>
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
+            >
               <Text style={[styles.statValue, { color: colors.primary }]}>{stats.gamesHosted}</Text>
               <Text style={[styles.statLabel, { color: colors.textMuted }]}>
                 {t('playerProfile.stats.gamesHosted')}
               </Text>
             </View>
-            <View style={[styles.statCard, { backgroundColor: colors.card }]}>
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
+            >
               <Text style={[styles.statValue, { color: colors.primary }]}>{stats.weekStreak}</Text>
               <Text style={[styles.statLabel, { color: colors.textMuted }]}>
                 {t('playerProfile.stats.weekStreak')}
@@ -1593,7 +1613,9 @@ const PlayerProfile = () => {
               </Text>
             </View>
 
-            <View style={[styles.card, { backgroundColor: colors.card }]}>
+            <View
+              style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+            >
               <View style={styles.availabilityGrid}>
                 {/* Day Rows */}
                 {Object.keys(availabilities).map(day => (
@@ -1741,33 +1763,6 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: spacingPixels[4],
   },
-  actionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[2],
-    paddingVertical: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-  },
-  actionButtonText: {
-    fontSize: fontSizePixels.sm,
-    fontWeight: fontWeightNumeric.semibold,
-  },
-  actionButtonSecondary: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[2],
-    paddingVertical: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1.5,
-  },
-  actionButtonTextSecondary: {
-    fontSize: fontSizePixels.sm,
-    fontWeight: fontWeightNumeric.semibold,
-  },
   secondaryAction: {
     width: '100%',
     paddingHorizontal: spacingPixels[4],
@@ -1789,8 +1784,9 @@ const styles = StyleSheet.create({
     fontWeight: fontWeightNumeric.semibold,
   },
   card: {
-    borderRadius: radiusPixels.lg,
+    borderRadius: radiusPixels.xl,
     padding: spacingPixels[4],
+    borderWidth: 1,
   },
   bioText: {
     fontSize: fontSizePixels.sm,
@@ -1975,7 +1971,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingVertical: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
+    borderRadius: radiusPixels.xl,
+    borderWidth: 1,
   },
   statValue: {
     fontSize: fontSizePixels['2xl'],

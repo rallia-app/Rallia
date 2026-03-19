@@ -60,7 +60,8 @@
     "playingHand": {
       "label": "Playing Hand",
       "left": "Left",
-      "right": "Right"
+      "right": "Right",
+      "both": "Both"
     },
     "player": "Player",
     "verified": "Verified",
@@ -704,6 +705,7 @@
     "profilePicture": "Profile Picture",
     "changePhoto": "Change Photo",
     "tapToChangePhoto": "Tap to change photo",
+    "tapCameraToChangePhoto": "Tap camera icon to change photo",
     "takePhoto": "Take Photo",
     "chooseFromGallery": "Choose from Gallery",
     "removePhoto": "Remove Photo",
@@ -767,11 +769,21 @@
     "sportsHint": "You can activate additional sports anytime",
     "addMoreSports": "Add more sports",
     "addMoreSportsHint": "Try another sport today!",
+    "sport": {
+      "tapToActivate": "Tap to activate",
+      "deactivateSport": "Deactivate Sport",
+      "confirmDeactivation": "Deactivate {sport}?",
+      "confirmDeactivationMessage": "You can reactivate this sport at any time from your profile.",
+      "reactivateTitle": "Reactivate Sport",
+      "reactivateMessage": "Would you like to reactivate {sport}?",
+      "reactivateConfirm": "Reactivate"
+    },
     "loading": {
       "profile": "Loading profile...",
       "sportProfile": "Loading {sport} profile..."
     },
     "uploading": "Uploading...",
+    "profilePictureUpdated": "Profile picture updated successfully!",
     "joined": "Joined",
     "username": "username",
     "user": "User",
@@ -858,13 +870,15 @@
       "noProofsYet": "No Proofs Yet",
       "noProofsDescription": "Add proof of your rating to help others verify your skill level",
       "noProofsOtherUser": "This user has not added any rating proofs yet",
+      "descriptionLabel": "Description",
       "proofTypes": {
         "externalLink": {
           "title": "External Link",
           "description": "Link to your rating on an official platform (e.g., FFT, WTN, YouTube)",
           "placeholder": "https://www.example.com/your-rating",
           "urlLabel": "Rating URL",
-          "urlHint": "Enter the URL where your rating can be verified"
+          "urlHint": "Enter the URL where your rating can be verified",
+          "popularPlatforms": "Popular platforms:"
         },
         "video": {
           "title": "Video Recording",
@@ -872,8 +886,8 @@
           "uploadVideo": "Upload Video",
           "recordVideo": "Record Video",
           "selectFromGallery": "Select from Gallery",
-          "maxDuration": "Maximum duration: 5 minutes",
-          "maxSize": "Maximum size: 500 MB"
+          "maxDuration": "Maximum duration: 1 minute",
+          "maxSize": "Maximum size: 250 MB"
         },
         "image": {
           "title": "Screenshot / Image",
@@ -914,8 +928,8 @@
         "fileTooLarge": "File size exceeds the maximum allowed",
         "invalidFormat": "Unsupported file format",
         "selectFile": "Select a file to upload",
-        "maxSize": "Max file size: {{size}} MB",
-        "progress": "Uploading... {{percent}}%"
+        "maxSize": "Max file size: {size} MB",
+        "progress": "Uploading... {percent}%"
       },
       "delete": {
         "title": "Delete Proof",
@@ -990,19 +1004,19 @@
       "all": "All",
       "noProofsForSport": "No proofs for this sport",
       "approveTitle": "Approve Proof",
-      "approveMessage": "Are you sure you want to approve \"{{title}}\"?",
+      "approveMessage": "Are you sure you want to approve \"{title}\"?",
       "approve": "Approve",
       "approvedSuccess": "Proof approved successfully",
       "declineTitle": "Decline Proof",
-      "declineMessage": "Are you sure you want to decline \"{{title}}\"?",
+      "declineMessage": "Are you sure you want to decline \"{title}\"?",
       "decline": "Decline",
       "declinedSuccess": "Proof declined",
       "endorsedSuccess": "Endorsement recorded",
       "alreadyEndorsed": "You've already voted on this proof",
-      "changeEndorsementMessage": "You've already voted on \"{{title}}\". Do you want to change your vote?",
+      "changeEndorsementMessage": "You've already voted on \"{title}\". Do you want to change your vote?",
       "proofCertified": "Proof certified! Endorsement threshold reached.",
-      "endorsementThresholdInfo": "Proofs are certified when {{threshold}} players endorse them",
-      "pendingCount": "{{count}} pending",
+      "endorsementThresholdInfo": "Proofs are certified when {threshold} players endorse them",
+      "pendingCount": "{count} pending",
       "youEndorsed": "Endorsed",
       "youDeclined": "Declined"
     },
@@ -1695,8 +1709,8 @@
     "typeMessage": "Type your message",
     "today": "Today",
     "yesterday": "Yesterday",
-    "participants": "{{count}} participant",
-    "participants_plural": "{{count}} participants",
+    "participants": "{count} participant",
+    "participants_plural": "{count} participants",
     "agreement": {
       "welcome": "Welcome to Rallia Chat",
       "description": "Please be respectful and follow our community guidelines in all conversations.",
@@ -1748,7 +1762,7 @@
       "addEvidence": "Add Evidence (Optional)",
       "evidenceHint": "Screenshots can help our team review this report faster.",
       "addPhoto": "Add Photo",
-      "maxPhotos": "{{current}}/{{max}} photos",
+      "maxPhotos": "{current}/{max} photos",
       "maxImages": "You can add up to 3 images",
       "uploadingImages": "Uploading images..."
     },
@@ -3053,7 +3067,18 @@
     "sportSetupCancelled": "Sport profile setup cancelled",
     "sportSetupIncomplete": "Please complete all required fields to save your preferences",
     "continueSetup": "Continue",
-    "cancelSetup": "Cancel"
+    "cancelSetup": "Cancel",
+    "failedToStartConversation": "Failed to start conversation. Please try again.",
+    "failedToAddFavorite": "Failed to add to favorites",
+    "failedToRemoveFavorite": "Failed to remove from favorites",
+    "failedToBlockPlayer": "Failed to block player",
+    "failedToUnblockPlayer": "Failed to unblock player",
+    "ratingUpdated": "Rating updated successfully"
+  },
+  "sportSetup": {
+    "wizardTitle": "Sport Setup",
+    "cancelTitle": "Cancel Setup?",
+    "cancelMessage": "Your progress will be lost and the sport will not be activated."
   },
   "sportSelector": {
     "selectSport": "Select a sport",
@@ -4057,7 +4082,7 @@
       "externalProviderId": "External Provider ID",
       "editButton": "Edit Facility",
       "courtsSection": "Courts",
-      "courtsSummary": "{count} {count, plural, one {court} other {courts}} at this facility",
+      "courtsSummary": "{count} {count, plural, one {court} other {courts} at this facility",
       "manageCourts": "Manage Courts",
       "viewAllCourts": "View All Courts",
       "stats": {
@@ -4589,7 +4614,7 @@
       "empty": "No new notifications",
       "emptyDescription": "You have no {filter} at the moment.",
       "allCaughtUp": "All caught up!",
-      "unreadCount": "You have {count} unread {count, plural, one {notification} other {notifications}}",
+      "unreadCount": "You have {count} unread {count, plural, one {notification} other {notifications}",
       "viewAll": "View all notifications",
       "markAllRead": "Mark all as read",
       "newBooking": "New booking",
@@ -4869,10 +4894,10 @@
       },
       "createButton": "Create Organization",
       "bulkActions": {
-        "selected": "{count, plural, =0 {No organizations selected} one {# organization selected} other {# organizations selected}}",
+        "selected": "{count, plural, =0 {No organizations selected} one {# organization selected} other {# organizations selected}",
         "delete": "Delete Selected",
         "confirmTitle": "Delete Organizations",
-        "confirmDescription": "Are you sure you want to permanently delete {count, plural, one {this organization} other {these # organizations}}? This action cannot be undone and will delete all associated facilities, courts, contacts, and images.",
+        "confirmDescription": "Are you sure you want to permanently delete {count, plural, one {this organization} other {these # organizations}? This action cannot be undone and will delete all associated facilities, courts, contacts, and images.",
         "cancel": "Cancel",
         "confirmDelete": "Delete",
         "deleting": "Deleting..."
@@ -5066,7 +5091,7 @@
         "searchFacilitiesPlaceholder": "Search facilities...",
         "allSports": "All Sports",
         "clearFilters": "Clear Filters",
-        "facilitiesFiltered": "{filtered} of {total} {total, plural, one {Facility} other {Facilities}}",
+        "facilitiesFiltered": "{filtered} of {total} {total, plural, one {Facility} other {Facilities}",
         "noMatchingFacilities": "No facilities match your search",
         "backToOrganizations": "Back to Organizations",
         "facilityDetail": {
@@ -5467,7 +5492,7 @@
       "searchPlaceholder": "Search networks...",
       "noResults": "No networks found",
       "noResultsDescription": "Try adjusting your search or filters",
-      "totalNetworks": "{count, plural, one {# network} other {# networks}}",
+      "totalNetworks": "{count, plural, one {# network} other {# networks}",
       "empty": "No networks yet",
       "emptyDescription": "Networks will appear here once created",
       "tryDifferentSearch": "Try a different search term",
@@ -5506,7 +5531,7 @@
         "allSports": "All Sports"
       },
       "card": {
-        "members": "{count, plural, one {# member} other {# members}}",
+        "members": "{count, plural, one {# member} other {# members}",
         "group": "Group",
         "community": "Community",
         "certified": "Certified",
@@ -5816,9 +5841,9 @@
           "referenceSupportRate": "Reference Support Rate",
           "positiveEvents": "Positive Events",
           "negativeEvents": "Negative Events",
-          "insightCertification": "{{percentage}}% of users have submitted rating proof",
-          "insightReputation": "{{percentage}}% of users have Good or better reputation",
-          "insightPeerRating": "Peer rating completion rate: {{rate}}%"
+          "insightCertification": "{percentage}% of users have submitted rating proof",
+          "insightReputation": "{percentage}% of users have Good or better reputation",
+          "insightPeerRating": "Peer rating completion rate: {rate}%"
         },
         "moderation": {
           "title": "Moderation & Safety",
@@ -5839,7 +5864,7 @@
           "hours": " hrs",
           "withinSlaTarget": "Within SLA Target",
           "escalationRate": "Escalation Rate",
-          "slaTarget": "SLA Target: {{hours}} hours",
+          "slaTarget": "SLA Target: {hours} hours",
           "banStatistics": "Ban Statistics",
           "banStatisticsDesc": "Active bans and recidivism tracking",
           "temporaryBans": "Temporary",
@@ -5855,9 +5880,9 @@
           "inProgress": "in progress",
           "resolved": "resolved",
           "actionItems": "Action Items",
-          "actionOpenReports": "{{count}} reports pending review",
-          "actionHighEscalation": "High escalation rate ({{rate}}%) - Review moderation guidelines",
-          "actionRecidivism": "Recidivism rate at {{rate}}% - Consider ban policy review",
+          "actionOpenReports": "{count} reports pending review",
+          "actionHighEscalation": "High escalation rate ({rate}%) - Review moderation guidelines",
+          "actionRecidivism": "Recidivism rate at {rate}% - Consider ban policy review",
           "actionAllGood": "All moderation metrics are within healthy ranges"
         },
         "community": {
@@ -6864,7 +6889,7 @@
       "addInstructor": "Add Instructor",
       "assignedInstructors": "Assigned Instructors",
       "noInstructorsAssigned": "No instructors assigned to this program",
-      "instructorCount": "{count, plural, one {# instructor assigned} other {# instructors assigned}}",
+      "instructorCount": "{count, plural, one {# instructor assigned} other {# instructors assigned}",
       "addFirst": "Add your first instructor",
       "primary": "Lead",
       "setPrimary": "Set as lead instructor",
@@ -6875,7 +6900,7 @@
         "description": "Select instructors to assign to this program.",
         "noAvailable": "All instructors are already assigned to this program.",
         "createNew": "Create New Instructor",
-        "add": "Add {count, plural, one {# instructor} other {# instructors}}"
+        "add": "Add {count, plural, one {# instructor} other {# instructors}"
       },
       "errors": {
         "failedToLoad": "Failed to load instructors",
@@ -7522,16 +7547,16 @@
     "subjectPlaceholder": "Brief summary of your feedback",
     "messageLabel": "Message",
     "messagePlaceholder": "Tell us more details...",
-    "minCharsHint": "Minimum {{min}} characters",
+    "minCharsHint": "Minimum {min} characters",
     "screenshotsLabel": "Screenshots",
-    "screenshotsHint": "Add up to {{max}} screenshots (optional)",
+    "screenshotsHint": "Add up to {max} screenshots (optional)",
     "addScreenshot": "Add Screenshot",
     "identifiedNotice": "Your feedback will be submitted with your account info so we can follow up if needed.",
     "anonymousNotice": "Your feedback will be submitted anonymously.",
     "submitButton": "Submit Feedback",
     "submitError": "Failed to submit feedback. Please try again.",
     "screenshotUploadError": "Failed to upload screenshot. Please try again.",
-    "maxScreenshotsReached": "Maximum {{max}} screenshots allowed",
+    "maxScreenshotsReached": "Maximum {max} screenshots allowed",
     "successTitle": "Thank You!",
     "successMessage": "Your feedback has been submitted successfully. We appreciate your input!",
     "referenceId": "Reference ID",

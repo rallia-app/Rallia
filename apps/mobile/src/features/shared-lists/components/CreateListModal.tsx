@@ -1,6 +1,10 @@
 /**
  * CreateListModal Component
  * Modal for creating or editing a shared contact list
+ *
+ * Contains:
+ * - CreateListForm: Standalone form component (used in ActionSheet and wizard)
+ * - CreateListActionSheet: Thin ActionSheet wrapper
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -12,6 +16,8 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  type ViewStyle,
+  type StyleProp,
 } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,9 +31,23 @@ import {
   type SharedContactList,
 } from '@rallia/shared-services';
 
-export function CreateListActionSheet({ payload }: SheetProps<'create-list'>) {
-  const editingList = payload?.editingList ?? null;
+// =============================================================================
+// FORM COMPONENT
+// =============================================================================
 
+interface CreateListFormProps {
+  editingList?: SharedContactList | null;
+  onSuccess?: (listId: string) => void;
+  onCancel?: () => void;
+  containerStyle?: StyleProp<ViewStyle>;
+}
+
+export const CreateListForm: React.FC<CreateListFormProps> = ({
+  editingList,
+  onSuccess,
+  onCancel,
+  containerStyle,
+}) => {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
 
@@ -37,7 +57,6 @@ export function CreateListActionSheet({ payload }: SheetProps<'create-list'>) {
 
   const isEditing = !!editingList;
 
-  // Reset form when sheet opens with new data
   useEffect(() => {
     if (editingList) {
       setName(editingList.name);
@@ -48,39 +67,10 @@ export function CreateListActionSheet({ payload }: SheetProps<'create-list'>) {
     }
   }, [editingList]);
 
-  // Check if there are unsaved changes
-  const hasUnsavedChanges = useCallback(() => {
-    if (isEditing && editingList) {
-      return (
-        name.trim() !== editingList.name || description.trim() !== (editingList.description || '')
-      );
-    }
-    return name.trim() !== '' || description.trim() !== '';
-  }, [isEditing, editingList, name, description]);
-
   const resetForm = useCallback(() => {
     setName('');
     setDescription('');
   }, []);
-
-  const handleClose = useCallback(() => {
-    if (hasUnsavedChanges()) {
-      Alert.alert(t('sharedLists.discardChanges'), t('sharedLists.discardChangesMessage'), [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('sharedLists.discard'),
-          style: 'destructive',
-          onPress: () => {
-            resetForm();
-            SheetManager.hide('create-list');
-          },
-        },
-      ]);
-    } else {
-      resetForm();
-      SheetManager.hide('create-list');
-    }
-  }, [hasUnsavedChanges, resetForm, t]);
 
   const handleSubmit = useCallback(async () => {
     const trimmedName = name.trim();
@@ -97,14 +87,16 @@ export function CreateListActionSheet({ payload }: SheetProps<'create-list'>) {
           name: trimmedName,
           description: description.trim() || undefined,
         });
+        resetForm();
+        onSuccess?.(editingList.id);
       } else {
-        await createSharedContactList({
+        const newList = await createSharedContactList({
           name: trimmedName,
           description: description.trim() || undefined,
         });
+        resetForm();
+        onSuccess?.(newList.id);
       }
-      resetForm();
-      SheetManager.hide('create-list');
     } catch (error) {
       console.error('Failed to save list:', error);
       Alert.alert(
@@ -114,35 +106,15 @@ export function CreateListActionSheet({ payload }: SheetProps<'create-list'>) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [name, description, isEditing, editingList, resetForm, t]);
+  }, [name, description, isEditing, editingList, resetForm, onSuccess, t]);
 
   return (
-    <ActionSheet
-      gestureEnabled
-      containerStyle={[
-        styles.sheetBackground,
-        styles.container,
-        { backgroundColor: colors.cardBackground },
-      ]}
-      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
-    >
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <View style={styles.headerCenter}>
-          <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-            {isEditing ? t('sharedLists.editList') : t('sharedLists.newList')}
-          </Text>
-        </View>
-        <TouchableOpacity onPress={handleClose} style={styles.closeButton} disabled={isSubmitting}>
-          <Ionicons name="close-outline" size={24} color={colors.textMuted} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Content */}
+    <View style={[styles.formContainer, containerStyle]}>
       <ScrollView
         style={styles.scrollContent}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Name Input */}
         <View style={styles.inputGroup}>
@@ -222,7 +194,7 @@ export function CreateListActionSheet({ payload }: SheetProps<'create-list'>) {
             { backgroundColor: colors.primary },
             (isSubmitting || !name.trim()) && { opacity: 0.7 },
           ]}
-          onPress={handleSubmit}
+          onPress={() => void handleSubmit()}
           disabled={isSubmitting || !name.trim()}
         >
           {isSubmitting ? (
@@ -234,9 +206,95 @@ export function CreateListActionSheet({ payload }: SheetProps<'create-list'>) {
           )}
         </TouchableOpacity>
       </View>
+    </View>
+  );
+};
+
+// =============================================================================
+// ACTION SHEET WRAPPER
+// =============================================================================
+
+export function CreateListActionSheet({ payload }: SheetProps<'create-list'>) {
+  const editingList = payload?.editingList ?? null;
+  const { colors } = useThemeStyles();
+  const { t } = useTranslation();
+
+  const isEditing = !!editingList;
+
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+
+  // Track form state for unsaved changes check
+  useEffect(() => {
+    if (editingList) {
+      setName(editingList.name);
+      setDescription(editingList.description || '');
+    } else {
+      setName('');
+      setDescription('');
+    }
+  }, [editingList]);
+
+  const hasUnsavedChanges = useCallback(() => {
+    if (isEditing && editingList) {
+      return (
+        name.trim() !== editingList.name || description.trim() !== (editingList.description || '')
+      );
+    }
+    return name.trim() !== '' || description.trim() !== '';
+  }, [isEditing, editingList, name, description]);
+
+  const handleClose = useCallback(() => {
+    if (hasUnsavedChanges()) {
+      Alert.alert(t('sharedLists.discardChanges'), t('sharedLists.discardChangesMessage'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('sharedLists.discard'),
+          style: 'destructive',
+          onPress: () => {
+            SheetManager.hide('create-list');
+          },
+        },
+      ]);
+    } else {
+      SheetManager.hide('create-list');
+    }
+  }, [hasUnsavedChanges, t]);
+
+  const handleSuccess = useCallback((_listId: string) => {
+    SheetManager.hide('create-list');
+  }, []);
+
+  return (
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[
+        styles.sheetBackground,
+        styles.sheetContainer,
+        { backgroundColor: colors.cardBackground },
+      ]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    >
+      {/* Header */}
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={styles.headerCenter}>
+          <Text weight="semibold" size="lg" style={{ color: colors.text }}>
+            {isEditing ? t('sharedLists.editList') : t('sharedLists.newList')}
+          </Text>
+        </View>
+        <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+          <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+
+      <CreateListForm editingList={editingList} onSuccess={handleSuccess} onCancel={handleClose} />
     </ActionSheet>
   );
 }
+
+// =============================================================================
+// STYLES
+// =============================================================================
 
 const styles = StyleSheet.create({
   sheetBackground: {
@@ -250,7 +308,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     alignSelf: 'center',
   },
-  container: {
+  sheetContainer: {
     flex: 1,
   },
   header: {
@@ -268,6 +326,9 @@ const styles = StyleSheet.create({
     padding: 4,
     position: 'absolute',
     right: 16,
+  },
+  formContainer: {
+    flex: 1,
   },
   scrollContent: {
     flex: 1,
@@ -307,7 +368,6 @@ const styles = StyleSheet.create({
   footer: {
     padding: spacingPixels[4],
     borderTopWidth: 1,
-    paddingBottom: spacingPixels[4],
   },
   submitButton: {
     flexDirection: 'row',

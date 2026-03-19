@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[4],
-    paddingBottom: spacingPixels[8],
+    paddingBottom: spacingPixels[4],
     borderTopWidth: 1,
   },
   submitButton: {

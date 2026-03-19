@@ -1239,6 +1239,115 @@ BEGIN
 END $$;
 
 -- ============================================================================
+-- 9b. Lucas Therrien – one proof of each type (tennis)
+-- ============================================================================
+DO $$
+DECLARE
+  lucas_id UUID := 'a1000000-0000-0000-0000-000000000021';
+  lucas_prs_id UUID;
+  lucas_rs_id UUID;
+  img_file_id UUID := 'f1000000-aaaa-0000-0000-000000000001';
+  vid_file_id UUID := 'f1000000-aaaa-0000-0000-000000000002';
+  doc_file_id UUID := 'f1000000-aaaa-0000-0000-000000000003';
+BEGIN
+  ALTER TABLE rating_proof DISABLE TRIGGER trigger_certification_proof_change;
+  ALTER TABLE rating_proof DISABLE TRIGGER trigger_update_approved_proofs_count;
+
+  -- Get Lucas's tennis player_rating_score
+  SELECT prs.id, prs.rating_score_id INTO lucas_prs_id, lucas_rs_id
+  FROM player_rating_score prs
+  JOIN rating_score rs ON rs.id = prs.rating_score_id
+  JOIN rating_system rsys ON rsys.id = rs.rating_system_id
+  WHERE prs.player_id = lucas_id AND rsys.code = 'ntrp'
+  LIMIT 1;
+
+  IF lucas_prs_id IS NULL THEN
+    RAISE NOTICE 'Lucas tennis rating not found, skipping proof seeding';
+    RETURN;
+  END IF;
+
+  -- Seed fake file rows for image, video, and document proofs
+  INSERT INTO file (id, uploaded_by, storage_key, url, thumbnail_url, original_name, file_type, mime_type, file_size)
+  VALUES
+    (img_file_id, lucas_id, 'seed/lucas-proof-image.jpg',
+     'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800', NULL,
+     'tennis-rating-screenshot.jpg', 'image', 'image/jpeg', 245000),
+    (vid_file_id, lucas_id, 'seed/lucas-proof-video.mp4',
+     'https://www.example.com/seed-video.mp4',
+     'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=400',
+     'match-highlight.mp4', 'video', 'video/mp4', 12500000),
+    (doc_file_id, lucas_id, 'seed/lucas-proof-doc.pdf',
+     'https://www.example.com/seed-certificate.pdf', NULL,
+     'NTRP-Certificate-2025.pdf', 'document', 'application/pdf', 520000)
+  ON CONFLICT DO NOTHING;
+
+  -- Delete any previous Lucas-specific proofs (idempotent re-seed)
+  DELETE FROM rating_proof WHERE id IN (
+    'f1000000-aaaa-0000-0000-000000000011'::uuid,
+    'f1000000-aaaa-0000-0000-000000000012'::uuid,
+    'f1000000-aaaa-0000-0000-000000000013'::uuid,
+    'f1000000-aaaa-0000-0000-000000000014'::uuid
+  );
+
+  -- 1. External link proof
+  INSERT INTO rating_proof (
+    id, player_rating_score_id, proof_type, external_url,
+    title, description, status, is_active, rating_score_id
+  ) VALUES (
+    'f1000000-aaaa-0000-0000-000000000011', lucas_prs_id,
+    'external_link', 'https://www.usta.com/en/home/play/player-search.html',
+    'USTA Player Profile', 'Link to my official USTA player profile showing 4.5 NTRP rating.',
+    'approved', true, lucas_rs_id
+  );
+
+  -- 2. Image proof
+  INSERT INTO rating_proof (
+    id, player_rating_score_id, proof_type, file_id,
+    title, description, status, is_active, rating_score_id
+  ) VALUES (
+    'f1000000-aaaa-0000-0000-000000000012', lucas_prs_id,
+    'file', img_file_id,
+    'Rating Screenshot', 'Screenshot of my NTRP 4.5 rating from the USTA website.',
+    'approved', true, lucas_rs_id
+  );
+
+  -- 3. Video proof
+  INSERT INTO rating_proof (
+    id, player_rating_score_id, proof_type, file_id,
+    title, description, status, is_active, rating_score_id
+  ) VALUES (
+    'f1000000-aaaa-0000-0000-000000000013', lucas_prs_id,
+    'file', vid_file_id,
+    'Tournament Match Highlight', 'Singles match from the Montreal Open 4.5 division.',
+    'pending', true, lucas_rs_id
+  );
+
+  -- 4. Document proof
+  INSERT INTO rating_proof (
+    id, player_rating_score_id, proof_type, file_id,
+    title, description, status, is_active, rating_score_id
+  ) VALUES (
+    'f1000000-aaaa-0000-0000-000000000014', lucas_prs_id,
+    'file', doc_file_id,
+    'NTRP Certificate', 'Official NTRP certificate issued after league season.',
+    'approved', true, lucas_rs_id
+  );
+
+  -- Update approved proofs count for Lucas
+  UPDATE player_rating_score
+  SET approved_proofs_count = (
+    SELECT COUNT(*) FROM rating_proof
+    WHERE player_rating_score_id = lucas_prs_id AND status = 'approved' AND is_active = true
+  )
+  WHERE id = lucas_prs_id;
+
+  ALTER TABLE rating_proof ENABLE TRIGGER trigger_certification_proof_change;
+  ALTER TABLE rating_proof ENABLE TRIGGER trigger_update_approved_proofs_count;
+
+  RAISE NOTICE 'Created Lucas Therrien rating proofs (4 types)';
+END $$;
+
+-- ============================================================================
 -- 10. Rating Reference Requests (~50 requests)
 -- ============================================================================
 DO $$
@@ -1247,6 +1356,7 @@ DECLARE
   requester_id UUID;
   referee_id UUID;
   prs_id UUID;
+  rs_id UUID;
   status_val rating_request_status_enum;
   statuses rating_request_status_enum[] := ARRAY[
     'pending', 'completed', 'completed', 'declined', 'completed',
@@ -1279,12 +1389,13 @@ BEGIN
     referee_id := ('a1000000-0000-0000-0000-00000000' || LPAD(pairs[req_idx][2]::text, 4, '0'))::uuid;
     status_val := statuses[req_idx];
 
-    -- Get requester's first rating score
-    SELECT id INTO prs_id FROM player_rating_score WHERE player_id = requester_id LIMIT 1;
+    -- Get requester's first rating score and its rating_score_id
+    SELECT id, rating_score_id INTO prs_id, rs_id FROM player_rating_score WHERE player_id = requester_id LIMIT 1;
     IF prs_id IS NULL THEN CONTINUE; END IF;
 
     INSERT INTO rating_reference_request (
       id, requester_id, player_rating_score_id, referee_id,
+      rating_score_id,
       message, status, rating_supported, response_message,
       responded_at, expires_at
     ) VALUES (
@@ -1292,6 +1403,7 @@ BEGIN
       requester_id,
       prs_id,
       referee_id,
+      rs_id,
       'Could you confirm my rating level? We''ve played together several times.',
       status_val,
       CASE WHEN status_val = 'completed' THEN (req_idx % 3 != 0) ELSE false END,

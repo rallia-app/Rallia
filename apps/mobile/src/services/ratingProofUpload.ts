@@ -622,7 +622,7 @@ export function getSupportedDocumentFormats(): string[] {
  */
 export function getMaxFileSizes(): Record<ProofFileType, number> {
   return {
-    video: 500 * 1024 * 1024, // 500 MB
+    video: 250 * 1024 * 1024, // 250 MB
     image: 10 * 1024 * 1024, // 10 MB
     document: 25 * 1024 * 1024, // 25 MB
   };

@@ -40,13 +40,7 @@ import { SportIcon } from '../../../components/SportIcon';
 import { useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { FacilityDetailScreenParams } from '@rallia/shared-types';
-import {
-  spacingPixels,
-  radiusPixels,
-  shadowsNative,
-  primary,
-  neutral,
-} from '@rallia/design-system';
+import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import { SheetManager } from 'react-native-actions-sheet';
 
@@ -381,8 +375,7 @@ export default function FacilityDetail() {
     <View
       style={[
         styles.header,
-        { backgroundColor: colors.card },
-        isDark ? shadowsNative.sm : shadowsNative.DEFAULT,
+        { backgroundColor: colors.card, borderColor: colors.border },
         hasHeaderImages && styles.headerWithImages,
       ]}
     >
@@ -673,6 +666,7 @@ const styles = StyleSheet.create({
     marginHorizontal: spacingPixels[4],
     marginBottom: spacingPixels[4],
     borderRadius: radiusPixels.xl,
+    borderWidth: 1,
   },
   headerWithImages: {
     flexDirection: 'column',

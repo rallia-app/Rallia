@@ -16,7 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { SheetManager } from 'react-native-actions-sheet';
-import { Text, Skeleton, SkeletonCard } from '@rallia/shared-components';
+import { Text, Skeleton, SkeletonCard, Button } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { primary } from '@rallia/design-system';
@@ -147,16 +147,17 @@ const SharedLists: React.FC = () => {
         <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
           {t('sharedLists.noListsDescription')}
         </Text>
-        <TouchableOpacity
-          style={[styles.emptyButton, { backgroundColor: primary[500] }]}
+        <Button
+          variant="primary"
+          size="md"
+          rounded
           onPress={handleCreateList}
-          activeOpacity={0.8}
+          leftIcon={<Ionicons name="add-outline" size={20} color="#fff" />}
+          isDark={isDark}
+          style={styles.emptyButton}
         >
-          <Ionicons name="add-outline" size={20} color="#fff" />
-          <Text size="sm" weight="semibold" color="#fff">
-            {t('sharedLists.createFirstList')}
-          </Text>
-        </TouchableOpacity>
+          {t('sharedLists.createFirstList')}
+        </Button>
       </View>
     );
   };
@@ -245,18 +246,6 @@ const SharedLists: React.FC = () => {
         <Text weight="semibold" style={{ color: colors.text }}>
           {t('sharedLists.yourLists')}
         </Text>
-        {lists.length > 0 && (
-          <TouchableOpacity
-            style={[styles.createButton, { backgroundColor: primary[500] }]}
-            onPress={handleCreateList}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="add-outline" size={18} color="#fff" />
-            <Text size="sm" weight="semibold" color="#fff">
-              {t('sharedLists.newList')}
-            </Text>
-          </TouchableOpacity>
-        )}
       </View>
 
       {/* Search Bar - only show when there are lists */}
@@ -286,6 +275,17 @@ const SharedLists: React.FC = () => {
           />
         }
       />
+
+      {/* Create List FAB */}
+      {lists.length > 0 && (
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: colors.primary }]}
+          onPress={handleCreateList}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add-outline" size={28} color="#FFFFFF" />
+        </TouchableOpacity>
+      )}
     </SafeAreaView>
   );
 };
@@ -326,21 +326,13 @@ const styles = StyleSheet.create({
     paddingTop: spacingPixels[4],
     paddingBottom: spacingPixels[2],
   },
-  createButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[2],
-    borderRadius: radiusPixels.lg,
-    gap: spacingPixels[1],
-  },
   searchContainer: {
     paddingHorizontal: spacingPixels[4],
     paddingBottom: spacingPixels[2],
   },
   listContent: {
     paddingHorizontal: spacingPixels[4],
-    paddingBottom: spacingPixels[4],
+    paddingBottom: 100,
   },
   emptyListContent: {
     flex: 1,
@@ -361,13 +353,22 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   emptyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
     marginTop: spacingPixels[6],
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    gap: spacingPixels[2],
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
 });
 

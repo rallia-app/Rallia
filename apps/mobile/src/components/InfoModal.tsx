@@ -7,9 +7,9 @@
 
 import * as React from 'react';
 import { useCallback } from 'react';
-import { View, StyleSheet, Modal, TouchableOpacity, TouchableWithoutFeedback } from 'react-native';
+import { View, StyleSheet, Modal, TouchableWithoutFeedback } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, Button } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -20,8 +20,7 @@ import {
 } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useTheme } from '@rallia/shared-hooks';
-
-const BASE_WHITE = '#ffffff';
+import { useTranslation } from '../hooks';
 
 // =============================================================================
 // TYPES
@@ -69,12 +68,16 @@ export const InfoModal: React.FC<InfoModalProps> = ({
   onClose,
   title,
   message,
-  closeLabel = 'Got it',
+  closeLabel,
   iconName = 'information-circle',
 }) => {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const isDark = theme === 'dark';
   const themeColors = isDark ? darkTheme : lightTheme;
+
+  // Use translated default if no closeLabel provided
+  const buttonLabel = closeLabel || t('common.gotIt');
 
   // Theme-aware colors
   const colors = {
@@ -121,19 +124,9 @@ export const InfoModal: React.FC<InfoModalProps> = ({
               </Text>
 
               {/* Close Button */}
-              <TouchableOpacity
-                style={[styles.button, { backgroundColor: colors.primary }]}
-                onPress={handleClose}
-                activeOpacity={0.7}
-              >
-                <Text
-                  size="base"
-                  weight="medium"
-                  style={{ color: BASE_WHITE, textAlign: 'center' }}
-                >
-                  {closeLabel}
-                </Text>
-              </TouchableOpacity>
+              <Button variant="primary" size="lg" fullWidth onPress={handleClose} isDark={isDark}>
+                {buttonLabel}
+              </Button>
             </View>
           </TouchableWithoutFeedback>
         </View>
@@ -184,14 +177,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacingPixels[5],
     lineHeight: 22,
-  },
-  button: {
-    width: '100%',
-    paddingVertical: spacingPixels[3],
-    borderRadius: radiusPixels.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
   },
 });
 

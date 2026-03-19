@@ -41,6 +41,7 @@ import { PlayerInviteActionSheet } from '../components/PlayerInviteSheet';
 import { InviteToMatchActionSheet } from '../components/InviteToMatchSheet';
 // Sport profile components
 import { PeerRatingRequestActionSheet } from '../features/sport-profile/components/PeerRatingRequestOverlay';
+import { SportSetupWizardActionSheet } from '../features/sport-profile/components/SportSetupWizardSheet';
 // Chat components
 import { MessageActionsActionSheet } from '../features/chat/components/MessageActionsSheet';
 import { ConversationActionsActionSheet } from '../features/chat/components/ConversationActionsSheet';
@@ -431,6 +432,7 @@ declare module 'react-native-actions-sheet' {
         onBack?: () => void;
         currentStep?: number;
         totalSteps?: number;
+        stepName?: string;
       };
     }>;
     'pickleball-rating': SheetDefinition<{
@@ -443,6 +445,7 @@ declare module 'react-native-actions-sheet' {
         onBack?: () => void;
         currentStep?: number;
         totalSteps?: number;
+        stepName?: string;
       };
     }>;
     'reference-request': SheetDefinition<{
@@ -487,6 +490,9 @@ declare module 'react-native-actions-sheet' {
         sportId?: string;
         latitude?: number | null;
         longitude?: number | null;
+        currentStep?: number;
+        totalSteps?: number;
+        stepName?: string;
       };
     }>;
     'pickleball-preferences': SheetDefinition<{
@@ -521,12 +527,29 @@ declare module 'react-native-actions-sheet' {
         sportId?: string;
         latitude?: number | null;
         longitude?: number | null;
+        currentStep?: number;
+        totalSteps?: number;
+        stepName?: string;
+      };
+    }>;
+    // Sport setup wizard
+    'sport-setup-wizard': SheetDefinition<{
+      payload: {
+        sportName: 'tennis' | 'pickleball';
+        sportId: string;
+        playerSportId: string;
+        userId: string;
+        latitude: number | null;
+        longitude: number | null;
+        onComplete?: () => void;
+        onCancel?: () => void;
       };
     }>;
     // Rating proof sheets
     'add-rating-proof': SheetDefinition<{
       payload: {
-        onSelectProofType?: (type: 'external_link' | 'video' | 'image' | 'document') => void;
+        playerRatingScoreId: string;
+        onSuccess?: () => void;
       };
     }>;
     'external-link-proof': SheetDefinition<{
@@ -609,6 +632,7 @@ export const Sheets = () => {
         'invite-to-match': InviteToMatchActionSheet,
         // Sport profile sheets
         'peer-rating-request': PeerRatingRequestActionSheet,
+        'sport-setup-wizard': SportSetupWizardActionSheet,
         // Profile/Onboarding sheets
         'personal-information': PersonalInformationActionSheet,
         'player-information': PlayerInformationActionSheet,

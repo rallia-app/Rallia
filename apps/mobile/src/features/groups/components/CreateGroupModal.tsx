@@ -2,6 +2,10 @@
  * CreateGroupModal
  * Modal for creating a new player group with optional cover image
  * Includes optional facility selection during creation
+ *
+ * Contains:
+ * - CreateGroupForm: Standalone form component (used in ActionSheet and wizard)
+ * - CreateGroupActionSheet: Thin ActionSheet wrapper
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
@@ -14,12 +18,14 @@ import {
   Alert,
   ScrollView,
   TextInput,
+  type ViewStyle,
+  type StyleProp,
 } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { Text, useToast } from '@rallia/shared-components';
-import { primary, radiusPixels, spacingPixels } from '@rallia/design-system';
+import { neutral, primary, radiusPixels, spacingPixels } from '@rallia/design-system';
 import {
   useCreateGroup,
   useSports,
@@ -36,13 +42,24 @@ import type { RootStackParamList } from '../../../navigation/types';
 import { uploadImage } from '../../../services/imageUpload';
 import { pickImageWithCropper } from '../../../utils/imagePicker';
 
-export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) {
-  const playerId = payload?.playerId;
+// =============================================================================
+// FORM COMPONENT
+// =============================================================================
 
+interface CreateGroupFormProps {
+  onSuccess?: (groupId: string) => void;
+  onCancel?: () => void;
+  containerStyle?: StyleProp<ViewStyle>;
+}
+
+export const CreateGroupForm: React.FC<CreateGroupFormProps> = ({
+  onSuccess,
+  onCancel,
+  containerStyle,
+}) => {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const { guardAction } = useRequireOnboarding();
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { sports } = useSports();
   const { player } = usePlayer();
   const { limits } = useNetworkLimits();
@@ -63,7 +80,8 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
 
   const createGroupMutation = useCreateGroup();
 
-  // Get all sport IDs and names for displaying sport tags on facilities
+  const playerId = player?.id;
+
   const { allSportIds, sportNames } = useMemo(() => {
     if (!sports || sports.length === 0) {
       return { allSportIds: [] as string[], sportNames: [] as string[] };
@@ -74,7 +92,6 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
     };
   }, [sports]);
 
-  // Helper to get sport labels for a facility
   const getSportLabels = useCallback(
     (facility: FacilitySearchResult): string[] => {
       const facilitySpIds = facility.sport_ids ?? [];
@@ -89,12 +106,10 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
     [allSportIds, sportNames]
   );
 
-  // Get sport IDs for facility search based on current sport context
   const facilitySearchSportIds = useMemo(() => {
     return selectedSport ? [selectedSport.id] : (sports?.map(s => s.id) ?? []);
   }, [selectedSport, sports]);
 
-  // Use facility search hook - enabled when search is open (shows all nearby by default)
   const { facilities: searchResults, isLoading: facilitySearchLoading } = useFacilitySearch({
     searchQuery: facilitySearchQuery,
     latitude: player?.latitude ?? undefined,
@@ -113,7 +128,6 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
     setShowFacilitySearch(false);
   }, []);
 
-  // Facility selection handlers
   const handleAddFacility = useCallback(
     (facility: FacilitySearchResult) => {
       if (selectedFacilities.some(f => f.id === facility.id)) return;
@@ -126,15 +140,9 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
     setSelectedFacilities(prev => prev.filter(f => f.id !== facilityId));
   }, []);
 
-  // Filter out already selected facilities from search results
   const filteredSearchResults = useMemo(() => {
     return searchResults.filter(f => !selectedFacilities.some(sf => sf.id === f.id));
   }, [searchResults, selectedFacilities]);
-
-  const handleClose = useCallback(() => {
-    resetForm();
-    void SheetManager.hide('create-group');
-  }, [resetForm]);
 
   const handlePickImage = useCallback(async () => {
     try {
@@ -190,7 +198,6 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
 
     let coverImageUrl: string | undefined;
 
-    // Upload image if selected
     if (coverImage) {
       setIsUploadingImage(true);
       try {
@@ -219,7 +226,6 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
         },
       });
 
-      // Add selected facilities as favorites
       if (selectedFacilities.length > 0) {
         const facilityInserts = selectedFacilities.map((facility, index) => ({
           network_id: newGroup.id,
@@ -236,17 +242,12 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
             error: facilityError,
             groupId: newGroup.id,
           });
-          // Don't fail creation, just log the warning
         }
       }
 
-      resetForm();
-      // Hide modal first, then navigate
-      await SheetManager.hide('create-group');
-      // Show success toast
       toast.success(t('groups.success.created'));
-      // Navigate to the new group after modal is dismissed
-      navigation.navigate('GroupDetail', { groupId: newGroup.id });
+      resetForm();
+      onSuccess?.(newGroup.id);
     } catch (error) {
       Alert.alert(
         t('common.error'),
@@ -265,7 +266,7 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
     createGroupMutation,
     selectedFacilities,
     resetForm,
-    navigation,
+    onSuccess,
     toast,
     t,
   ]);
@@ -273,28 +274,7 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
   const isSubmitting = isLoading || isUploadingImage;
 
   return (
-    <ActionSheet
-      gestureEnabled
-      containerStyle={[
-        styles.sheetBackground,
-        styles.container,
-        { backgroundColor: colors.cardBackground },
-      ]}
-      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
-    >
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <View style={styles.headerCenter}>
-          <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-            {t('groups.createNewGroup')}
-          </Text>
-        </View>
-        <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-          <Ionicons name="close-outline" size={24} color={colors.textMuted} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Content */}
+    <View style={[styles.formContainer, containerStyle]}>
       <ScrollView
         style={styles.scrollContent}
         contentContainerStyle={styles.content}
@@ -330,7 +310,7 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
               style={[
                 styles.imagePicker,
                 {
-                  backgroundColor: isDark ? primary[900] : primary[100],
+                  backgroundColor: isDark ? neutral[800] : neutral[100],
                   borderColor: colors.border,
                 },
               ]}
@@ -420,7 +400,6 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
             )}
           </View>
 
-          {/* Selected facilities */}
           {selectedFacilities.length > 0 && (
             <View style={styles.selectedFacilitiesContainer}>
               {selectedFacilities.map((facility, index) => (
@@ -461,7 +440,6 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
             </View>
           )}
 
-          {/* Add facility search */}
           {!showFacilitySearch ? (
             <TouchableOpacity
               style={[
@@ -504,7 +482,6 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
                 </TouchableOpacity>
               </View>
 
-              {/* Search results - show immediately, filter as user types */}
               <View
                 style={[
                   styles.facilitySearchResults,
@@ -540,7 +517,6 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
                             {[facility.address, facility.city].filter(Boolean).join(', ')}
                           </Text>
                         )}
-                        {/* Sport tags */}
                         {getSportLabels(facility).length > 0 && (
                           <View style={styles.facilitySportTagsRow}>
                             {getSportLabels(facility).map(label => (
@@ -608,9 +584,62 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
           )}
         </TouchableOpacity>
       </View>
+    </View>
+  );
+};
+
+// =============================================================================
+// ACTION SHEET WRAPPER
+// =============================================================================
+
+export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) {
+  const { colors } = useThemeStyles();
+  const { t } = useTranslation();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const toast = useToast();
+
+  const handleClose = useCallback(() => {
+    void SheetManager.hide('create-group');
+  }, []);
+
+  const handleSuccess = useCallback(
+    async (groupId: string) => {
+      await SheetManager.hide('create-group');
+      navigation.navigate('GroupDetail', { groupId });
+    },
+    [navigation]
+  );
+
+  return (
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[
+        styles.sheetBackground,
+        styles.sheetContainer,
+        { backgroundColor: colors.cardBackground },
+      ]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    >
+      {/* Header */}
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={styles.headerCenter}>
+          <Text weight="semibold" size="lg" style={{ color: colors.text }}>
+            {t('groups.createNewGroup')}
+          </Text>
+        </View>
+        <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+          <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+
+      <CreateGroupForm onSuccess={groupId => void handleSuccess(groupId)} onCancel={handleClose} />
     </ActionSheet>
   );
 }
+
+// =============================================================================
+// STYLES
+// =============================================================================
 
 const styles = StyleSheet.create({
   sheetBackground: {
@@ -624,7 +653,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     alignSelf: 'center',
   },
-  container: {
+  sheetContainer: {
     flex: 1,
   },
   header: {
@@ -642,6 +671,9 @@ const styles = StyleSheet.create({
     padding: 4,
     position: 'absolute',
     right: 16,
+  },
+  formContainer: {
+    flex: 1,
   },
   scrollContent: {
     flex: 1,
@@ -729,7 +761,6 @@ const styles = StyleSheet.create({
   footer: {
     padding: spacingPixels[4],
     borderTopWidth: 1,
-    paddingBottom: spacingPixels[4],
   },
   submitButton: {
     flexDirection: 'row',

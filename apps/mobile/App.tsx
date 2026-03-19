@@ -50,9 +50,9 @@ ErrorUtils.setGlobalHandler((error, isFatal) => {
   previousGlobalHandler(error, isFatal);
 });
 
-import { useEffect, useState, useCallback, useRef, type PropsWithChildren } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef, type PropsWithChildren } from 'react';
 import { AppState, Linking } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
@@ -404,6 +404,19 @@ function AppContent() {
   const { setSplashComplete, isSplashComplete, permissionsHandled } = useOverlay();
   const { showCompletionModal, dismissCompletionModal, lastCompletedTourId } = useTour();
 
+  // Build a React Navigation theme so the screen container background
+  // (including behind the status bar / Dynamic Island) uses the correct color.
+  const navigationTheme = useMemo(() => {
+    const base = theme === 'dark' ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        background: theme === 'dark' ? '#0a0a0a' : '#fafafa',
+      },
+    };
+  }, [theme]);
+
   // Register the navigation container with Sentry for screen tracking
   useEffect(() => {
     if (navigationRef.current) {
@@ -417,6 +430,7 @@ function AppContent() {
       <NavigationContainer
         ref={navigationRef}
         linking={linking}
+        theme={navigationTheme}
         onStateChange={() => {
           // Notify React Query of navigation state changes so stale queries
           // refetch when the user navigates back to a screen.
@@ -490,7 +504,7 @@ function App() {
   };
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#fafafa' }}>
       <ErrorBoundary onError={handleError} translations={errorBoundaryTranslations}>
         <SafeAreaProvider>
           <QueryClientProvider client={queryClient}>

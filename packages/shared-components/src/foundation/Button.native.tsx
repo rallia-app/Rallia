@@ -33,9 +33,10 @@ import {
   ViewStyle,
   TextStyle,
   StyleProp,
+  GestureResponderEvent,
 } from 'react-native';
 import { typography, spacing, borderRadius } from '../theme';
-import { primary, neutral, lightTheme, darkTheme } from '@rallia/design-system';
+import { primary, neutral, lightTheme, darkTheme, status } from '@rallia/design-system';
 
 export interface ButtonProps {
   /** Button style variant */
@@ -48,8 +49,12 @@ export interface ButtonProps {
   loading?: boolean;
   /** Full width button */
   fullWidth?: boolean;
+  /** Pill-shaped button (borderRadius: full) */
+  rounded?: boolean;
+  /** Destructive action styling (red/error colors) */
+  destructive?: boolean;
   /** Press handler */
-  onPress?: () => void;
+  onPress?: (event?: GestureResponderEvent) => void;
   /** Icon to show on left side */
   leftIcon?: React.ReactNode;
   /** Icon to show on right side */
@@ -85,6 +90,8 @@ export const Button: React.FC<ButtonProps> = ({
   disabled = false,
   loading = false,
   fullWidth = false,
+  rounded = false,
+  destructive = false,
   onPress,
   leftIcon,
   rightIcon,
@@ -99,17 +106,19 @@ export const Button: React.FC<ButtonProps> = ({
 
   // Use theme colors if provided, otherwise use design system defaults
   // Note: Using string literals for base colors to avoid runtime import issues
+  const basePrimary = destructive ? status.error.DEFAULT : isDark ? primary[500] : primary[600];
+
   const colors = themeColors || {
-    primary: isDark ? primary[500] : primary[600],
+    primary: basePrimary,
     primaryForeground: '#ffffff', // base.white
-    buttonActive: isDark ? primary[500] : primary[600],
-    buttonInactive: neutral[300],
+    buttonActive: basePrimary,
+    buttonInactive: isDark ? neutral[700] : neutral[300],
     buttonTextActive: '#ffffff', // base.white
-    buttonTextInactive: neutral[500],
-    text: isDark ? lightTheme.foreground : darkTheme.foreground,
-    textMuted: isDark ? lightTheme.mutedForeground : darkTheme.mutedForeground,
-    border: isDark ? darkTheme.border : lightTheme.border, // Fixed: light mode should use lightTheme.border
-    background: isDark ? darkTheme.background : lightTheme.background, // Fixed: light mode should use lightTheme.background
+    buttonTextInactive: isDark ? neutral[400] : neutral[500],
+    text: isDark ? darkTheme.foreground : lightTheme.foreground,
+    textMuted: isDark ? darkTheme.mutedForeground : lightTheme.mutedForeground,
+    border: destructive ? status.error.DEFAULT : isDark ? darkTheme.border : lightTheme.border,
+    background: isDark ? darkTheme.background : lightTheme.background,
   };
 
   // Get variant styles
@@ -129,6 +138,7 @@ export const Button: React.FC<ButtonProps> = ({
         variantStyles.container,
         sizeStyles.container,
         fullWidth && styles.fullWidth,
+        rounded && styles.rounded,
         isDisabled && styles.disabled,
         style,
       ]}
@@ -312,6 +322,9 @@ const styles = StyleSheet.create({
   },
   fullWidth: {
     width: '100%',
+  },
+  rounded: {
+    borderRadius: borderRadius.full,
   },
   disabled: {
     opacity: 0.6,

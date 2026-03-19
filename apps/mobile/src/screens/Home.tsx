@@ -86,14 +86,9 @@ const CrossSportBanner: React.FC<{
       </Text>
     </View>
     <View style={crossBannerStyles.actions}>
-      <TouchableOpacity
-        onPress={onSwitch}
-        style={[crossBannerStyles.switchButton, { backgroundColor: colors.primary }]}
-      >
-        <Text size="xs" weight="semibold" color="#ffffff">
-          {t('home.crossSportBanner.switch')}
-        </Text>
-      </TouchableOpacity>
+      <Button variant="primary" size="xs" onPress={onSwitch}>
+        {t('home.crossSportBanner.switch')}
+      </Button>
       <TouchableOpacity onPress={onDismiss} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
         <Ionicons name="close" size={18} color={colors.textMuted} />
       </TouchableOpacity>
@@ -127,11 +122,6 @@ const crossBannerStyles = StyleSheet.create({
     alignItems: 'center',
     gap: spacingPixels[2],
   },
-  switchButton: {
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[1.5],
-    borderRadius: radiusPixels.md,
-  },
 });
 
 /** Banner encouraging users with only one sport to activate their second sport */
@@ -162,14 +152,9 @@ const SecondSportBanner: React.FC<{
       </Text>
     </View>
     <View style={crossBannerStyles.actions}>
-      <TouchableOpacity
-        onPress={onActivate}
-        style={[crossBannerStyles.switchButton, { backgroundColor: colors.primary }]}
-      >
-        <Text size="xs" weight="semibold" color="#ffffff">
-          {t('home.secondSportBanner.activate')}
-        </Text>
-      </TouchableOpacity>
+      <Button variant="primary" size="xs" onPress={onActivate}>
+        {t('home.secondSportBanner.activate')}
+      </Button>
       <TouchableOpacity onPress={onDismiss} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
         <Ionicons name="close" size={18} color={colors.textMuted} />
       </TouchableOpacity>

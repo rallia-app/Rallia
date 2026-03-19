@@ -23,6 +23,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Video, ResizeMode } from 'expo-av';
 import { WebView } from 'react-native-webview';
+import { File, Paths } from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { Text } from '@rallia/shared-components';
 import { Logger } from '@rallia/shared-services';
 import { useThemeStyles, useTranslation } from '../../../hooks';
@@ -93,6 +95,25 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
         Logger.error('Failed to open external link', err as Error);
         setError(t('profile.ratingProofs.gallery.failedToOpenLink'));
       }
+    }
+  };
+
+  const handleShareDocument = async (url: string, fileName: string) => {
+    try {
+      setLoading(true);
+      const extension = fileName?.split('.').pop() || 'pdf';
+      const localFile = new File(Paths.cache, `proof_${proof.id}.${extension}`);
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const arrayBuffer = await blob.arrayBuffer();
+      await localFile.write(new Uint8Array(arrayBuffer));
+      await Sharing.shareAsync(localFile.uri);
+    } catch (err) {
+      Logger.error('Failed to share document', err as Error);
+      // Fallback to opening in browser
+      await Linking.openURL(url);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -182,39 +203,60 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
             </View>
           );
         }
-        // For PDFs, use WebView with Google Docs viewer or native WebView
-        const isPDF =
-          proof.file.mime_type?.includes('pdf') || proof.file.file_type?.includes('pdf');
-        const docUrl = isPDF
-          ? `https://docs.google.com/viewer?url=${encodeURIComponent(proof.file.url)}&embedded=true`
-          : proof.file.url;
 
-        return (
-          <View style={styles.documentContainer}>
-            {loading && (
-              <View style={styles.loadingOverlay}>
-                <ActivityIndicator size="large" color={colors.primary} />
-              </View>
-            )}
-            <WebView
-              source={{ uri: docUrl }}
-              style={styles.webview}
-              onLoadStart={() => setLoading(true)}
-              onLoad={() => setLoading(false)}
-              onError={() => {
-                setError(t('profile.ratingProofs.gallery.failedToLoadDocument'));
-                setLoading(false);
-              }}
-              startInLoadingState
-              renderLoading={() => (
-                <View style={[styles.loadingOverlay, { backgroundColor: colors.background }]}>
+        // iOS WebView renders PDFs natively — load directly
+        // Android cannot, so show a download/open button instead
+        if (Platform.OS === 'ios') {
+          return (
+            <View style={styles.documentContainer}>
+              {loading && (
+                <View style={styles.loadingOverlay}>
                   <ActivityIndicator size="large" color={colors.primary} />
                 </View>
               )}
-            />
+              <WebView
+                source={{ uri: proof.file.url }}
+                style={styles.webview}
+                onLoadStart={() => setLoading(true)}
+                onLoad={() => setLoading(false)}
+                onError={() => {
+                  setError(t('profile.ratingProofs.gallery.failedToLoadDocument'));
+                  setLoading(false);
+                }}
+                startInLoadingState
+                renderLoading={() => (
+                  <View style={[styles.loadingOverlay, { backgroundColor: '#000' }]}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                  </View>
+                )}
+              />
+              <TouchableOpacity
+                style={[styles.openExternalButton, { backgroundColor: colors.primary }]}
+                onPress={() => handleShareDocument(proof.file!.url, proof.file!.original_name)}
+              >
+                <Ionicons name="share-outline" size={20} color="#fff" />
+                <Text style={styles.openExternalButtonText}>
+                  {t('profile.ratingProofs.gallery.openInBrowser')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          );
+        }
+
+        // Android: show a prominent open/share button
+        return (
+          <View style={styles.errorContainer}>
+            <View
+              style={[styles.documentPlaceholderIcon, { backgroundColor: `${colors.primary}15` }]}
+            >
+              <Ionicons name="document-text" size={48} color={colors.primary} />
+            </View>
+            <Text style={[styles.documentFileName, { color: '#fff' }]} numberOfLines={2}>
+              {proof.file.original_name || t('profile.ratingProofs.proofTypes.document.title')}
+            </Text>
             <TouchableOpacity
               style={[styles.openExternalButton, { backgroundColor: colors.primary }]}
-              onPress={() => Linking.openURL(proof.file!.url)}
+              onPress={() => handleShareDocument(proof.file!.url, proof.file!.original_name)}
             >
               <Ionicons name="open-outline" size={20} color="#fff" />
               <Text style={styles.openExternalButtonText}>
@@ -348,7 +390,8 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
         {/* Footer with description */}
         {proof.description && proof.proof_type !== 'external_link' && (
           <View style={styles.footer}>
-            <ScrollView style={styles.footerScroll}>
+            <Text style={styles.footerLabel}>{t('profile.ratingProofs.descriptionLabel')}</Text>
+            <ScrollView style={styles.footerScroll} showsVerticalScrollIndicator={false}>
               <Text style={styles.footerDescription}>{proof.description}</Text>
             </ScrollView>
           </View>
@@ -458,6 +501,21 @@ const styles = StyleSheet.create({
     fontSize: fontSizePixels.base,
     fontWeight: fontWeightNumeric.semibold,
   },
+  documentPlaceholderIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacingPixels[4],
+  },
+  documentFileName: {
+    fontSize: fontSizePixels.base,
+    fontWeight: fontWeightNumeric.medium,
+    textAlign: 'center',
+    marginBottom: spacingPixels[4],
+    paddingHorizontal: spacingPixels[6],
+  },
   // External link styles
   externalLinkContainer: {
     flex: 1,
@@ -541,18 +599,30 @@ const styles = StyleSheet.create({
   },
   // Footer
   footer: {
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: 'rgba(30,30,30,0.85)',
+    marginHorizontal: spacingPixels[3],
+    marginBottom: Platform.OS === 'ios' ? 34 : spacingPixels[3],
+    borderRadius: radiusPixels.xl,
     paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
-    maxHeight: 100,
+    paddingTop: spacingPixels[3],
+    paddingBottom: spacingPixels[4],
+    maxHeight: 160,
+  },
+  footerLabel: {
+    fontSize: fontSizePixels.xs,
+    color: 'rgba(255,255,255,0.5)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontWeight: fontWeightNumeric.semibold,
+    marginBottom: spacingPixels[1],
   },
   footerScroll: {
-    maxHeight: 80,
+    maxHeight: 110,
   },
   footerDescription: {
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(255,255,255,0.85)',
     fontSize: fontSizePixels.sm,
-    lineHeight: fontSizePixels.sm * 1.5,
+    lineHeight: fontSizePixels.sm * 1.6,
   },
 });
 

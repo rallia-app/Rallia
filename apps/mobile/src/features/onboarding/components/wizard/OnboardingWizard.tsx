@@ -1271,7 +1271,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[4],
     borderTopWidth: 1,
-    paddingBottom: spacingPixels[8],
+    paddingBottom: spacingPixels[4],
     // Footer is fixed at the bottom
   },
   nextButton: {

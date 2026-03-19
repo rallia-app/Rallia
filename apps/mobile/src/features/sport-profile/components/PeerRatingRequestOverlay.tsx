@@ -495,7 +495,6 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[4],
-    paddingBottom: spacingPixels[8],
     borderTopWidth: 1,
   },
   sendButton: {

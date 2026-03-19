@@ -5,8 +5,8 @@
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Modal } from 'react-native';
-import { Text } from '@rallia/shared-components';
+import { View, StyleSheet, TouchableOpacity, Modal } from 'react-native';
+import { Text, Button } from '@rallia/shared-components';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useThemeStyles, useTranslation } from '../../../hooks';
@@ -238,39 +238,27 @@ export default function CancelBookingModal({
 
           {/* Action buttons */}
           <View style={styles.actions}>
-            <TouchableOpacity
-              style={[
-                styles.cancelButton,
-                { backgroundColor: colors.error, opacity: isCancelling ? 0.7 : 1 },
-              ]}
+            <Button
+              variant="primary"
+              size="lg"
+              fullWidth
+              destructive
+              loading={isCancelling}
               onPress={handleCancel}
-              disabled={isCancelling}
-              activeOpacity={0.8}
+              isDark={isDark}
             >
-              {isCancelling ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text size="base" weight="semibold" color="#fff">
-                  {t('myBookings.cancel.cancelButton')}
-                </Text>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.keepButton,
-                {
-                  backgroundColor: isDark ? colors.background : colors.cardBackground,
-                  borderColor: colors.border,
-                },
-              ]}
+              {t('myBookings.cancel.cancelButton')}
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              fullWidth
+              disabled={isCancelling}
               onPress={onClose}
-              disabled={isCancelling}
-              activeOpacity={0.8}
+              isDark={isDark}
             >
-              <Text size="base" weight="semibold" color={colors.text}>
-                {t('myBookings.cancel.keepButton')}
-              </Text>
-            </TouchableOpacity>
+              {t('myBookings.cancel.keepButton')}
+            </Button>
           </View>
         </View>
       </View>
@@ -340,20 +328,5 @@ const styles = StyleSheet.create({
   },
   actions: {
     gap: spacingPixels[2],
-  },
-  cancelButton: {
-    paddingVertical: spacingPixels[3],
-    borderRadius: radiusPixels.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-  },
-  keepButton: {
-    paddingVertical: spacingPixels[3],
-    borderRadius: radiusPixels.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    minHeight: 48,
   },
 });

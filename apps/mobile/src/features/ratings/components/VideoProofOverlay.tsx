@@ -23,6 +23,7 @@ import {
 import { isBackblazeConfigured, getBackblazeConfigStatus } from '../../../services/backblazeUpload';
 import { Logger, supabase } from '@rallia/shared-services';
 import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
+import type { ProofFormProps } from './AddRatingProofOverlay';
 
 interface VideoProofOverlayProps {
   visible: boolean;
@@ -31,16 +32,14 @@ interface VideoProofOverlayProps {
   playerRatingScoreId: string;
 }
 
-const MAX_VIDEO_DURATION_SECONDS = 300; // 5 minutes
+const MAX_VIDEO_DURATION_SECONDS = 60; // 1 minute
 
-export function VideoProofActionSheet({ payload }: SheetProps<'video-proof'>) {
-  const onClose = () => {
-    if (isSubmitting) return;
-    resetForm();
-    SheetManager.hide('video-proof');
-  };
-  const onSuccess = payload?.onSuccess;
-  const playerRatingScoreId = payload?.playerRatingScoreId || '';
+export function VideoProofForm({
+  onBack,
+  onClose,
+  onSuccess,
+  playerRatingScoreId,
+}: ProofFormProps) {
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
   const toast = useToast();
@@ -64,15 +63,6 @@ export function VideoProofActionSheet({ payload }: SheetProps<'video-proof'>) {
     setUploadProgress(0);
   };
 
-  // Reset form when sheet closes
-  useEffect(() => {
-    return () => {
-      if (!isSubmitting) {
-        resetForm();
-      }
-    };
-  }, [isSubmitting]);
-
   const handleVideoSelected = (
     uri: string,
     fileName: string,
@@ -80,14 +70,12 @@ export function VideoProofActionSheet({ payload }: SheetProps<'video-proof'>) {
     mimeType: string,
     duration?: number
   ) => {
-    // Validate file
     const validation = validateProofFile(fileName, fileSize, 'video');
     if (!validation.valid) {
       toast.error(validation.error || t('profile.ratingProofs.upload.invalidFormat'));
       return;
     }
 
-    // Check duration
     if (duration && duration > MAX_VIDEO_DURATION_SECONDS) {
       toast.error(t('profile.ratingProofs.proofTypes.video.maxDuration'));
       return;
@@ -100,6 +88,12 @@ export function VideoProofActionSheet({ payload }: SheetProps<'video-proof'>) {
     lightHaptic();
 
     try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        toast.error(t('errors.permissionsDenied'));
+        return;
+      }
+
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ['videos'],
         allowsEditing: true,
@@ -112,7 +106,7 @@ export function VideoProofActionSheet({ payload }: SheetProps<'video-proof'>) {
         const fileName = asset.fileName || `video_${Date.now()}.mp4`;
         const fileSize = asset.fileSize || 0;
         const mimeType = asset.mimeType || 'video/mp4';
-        const duration = asset.duration ? asset.duration / 1000 : undefined; // Convert ms to seconds
+        const duration = asset.duration ? asset.duration / 1000 : undefined;
 
         handleVideoSelected(asset.uri, fileName, fileSize, mimeType, duration);
       }
@@ -126,6 +120,12 @@ export function VideoProofActionSheet({ payload }: SheetProps<'video-proof'>) {
     lightHaptic();
 
     try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        toast.error(t('errors.permissionsDenied'));
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['videos'],
         allowsEditing: true,
@@ -164,10 +164,8 @@ export function VideoProofActionSheet({ payload }: SheetProps<'video-proof'>) {
       return;
     }
 
-    // Check if Backblaze is configured (for videos)
     if (!isBackblazeConfigured()) {
       Logger.warn('Backblaze not configured', getBackblazeConfigStatus());
-      // Fall back to Supabase for video upload (will work but less optimal)
     }
 
     mediumHaptic();
@@ -175,7 +173,6 @@ export function VideoProofActionSheet({ payload }: SheetProps<'video-proof'>) {
     setUploadProgress(0);
 
     try {
-      // Get current user
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -183,7 +180,6 @@ export function VideoProofActionSheet({ payload }: SheetProps<'video-proof'>) {
         throw new Error('User not authenticated');
       }
 
-      // Get actual file size if not available
       let fileSize = selectedVideo.fileSize;
       if (!fileSize || fileSize === 0) {
         const response = await fetch(selectedVideo.uri);
@@ -207,8 +203,8 @@ export function VideoProofActionSheet({ payload }: SheetProps<'video-proof'>) {
       if (result.success) {
         toast.success(t('profile.ratingProofs.upload.success'));
         resetForm();
-        onSuccess?.();
-        SheetManager.hide('video-proof');
+        onSuccess();
+        onClose();
       } else {
         throw new Error(result.error || 'Unknown error');
       }
@@ -236,254 +232,283 @@ export function VideoProofActionSheet({ payload }: SheetProps<'video-proof'>) {
   const supportedFormats = getSupportedVideoFormats().join(', ').toUpperCase();
 
   return (
-    <ActionSheet
-      gestureEnabled
-      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
-      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
-    >
-      <View style={styles.modalContent}>
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <View style={styles.headerCenter}>
-            <Text
-              weight="semibold"
-              size="lg"
-              style={{ color: colors.text }}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
-              {t('profile.ratingProofs.proofTypes.video.title')}
-            </Text>
+    <View style={styles.modalContent}>
+      {/* Handle indicator */}
+      <View style={styles.handleIndicatorRow}>
+        <View style={[styles.handleIndicator, { backgroundColor: colors.border }]} />
+      </View>
+
+      {/* Header */}
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <TouchableOpacity
+          onPress={onBack}
+          style={styles.backButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <Text
+            weight="semibold"
+            size="lg"
+            style={{ color: colors.text }}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {t('profile.ratingProofs.proofTypes.video.title')}
+          </Text>
+        </View>
+        <TouchableOpacity onPress={onClose} style={styles.closeButton} disabled={isSubmitting}>
+          <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Scrollable Content */}
+      <ScrollView
+        style={styles.scrollContent}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.iconHeaderContainer}>
+          <View style={[styles.iconHeader, { backgroundColor: colors.primary + '20' }]}>
+            <Ionicons name="videocam-outline" size={32} color={colors.primary} />
           </View>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton} disabled={isSubmitting}>
-            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
-          </TouchableOpacity>
+          <Text size="sm" color={colors.textMuted} style={styles.subtitle}>
+            {t('profile.ratingProofs.proofTypes.video.description')}
+          </Text>
         </View>
 
-        {/* Scrollable Content */}
-        <ScrollView
-          style={styles.scrollContent}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.iconHeaderContainer}>
-            <View style={[styles.iconHeader, { backgroundColor: colors.primary + '20' }]}>
-              <Ionicons name="videocam-outline" size={32} color={colors.primary} />
-            </View>
-            <Text size="sm" color={colors.textMuted} style={styles.subtitle}>
-              {t('profile.ratingProofs.proofTypes.video.description')}
-            </Text>
-          </View>
-
-          {/* Video Selection */}
-          {!selectedVideo ? (
-            <View style={styles.selectionContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.selectionButton,
-                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                ]}
-                onPress={handleRecordVideo}
-                activeOpacity={0.7}
-                disabled={isSubmitting}
-              >
-                <View style={[styles.selectionIcon, { backgroundColor: colors.primary + '20' }]}>
-                  <Ionicons name="videocam" size={28} color={colors.primary} />
-                </View>
-                <View style={styles.selectionContent}>
-                  <Text size="base" weight="semibold" color={colors.text}>
-                    {t('profile.ratingProofs.proofTypes.video.recordVideo')}
-                  </Text>
-                  <Text size="xs" color={colors.textMuted}>
-                    Record a new video now
-                  </Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.selectionButton,
-                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                ]}
-                onPress={handleSelectFromGallery}
-                activeOpacity={0.7}
-                disabled={isSubmitting}
-              >
-                <View style={[styles.selectionIcon, { backgroundColor: colors.primary + '20' }]}>
-                  <Ionicons name="folder-open-outline" size={28} color={colors.primary} />
-                </View>
-                <View style={styles.selectionContent}>
-                  <Text size="base" weight="semibold" color={colors.text}>
-                    {t('profile.ratingProofs.proofTypes.video.selectFromGallery')}
-                  </Text>
-                  <Text size="xs" color={colors.textMuted}>
-                    Choose an existing video
-                  </Text>
-                </View>
-              </TouchableOpacity>
-
-              <View style={styles.infoContainer}>
-                <View style={styles.infoRow}>
-                  <Ionicons name="time-outline" size={14} color={colors.textMuted} />
-                  <Text size="xs" color={colors.textMuted}>
-                    {t('profile.ratingProofs.proofTypes.video.maxDuration')}
-                  </Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Ionicons name="cloud-upload-outline" size={14} color={colors.textMuted} />
-                  <Text size="xs" color={colors.textMuted}>
-                    Max size: {maxSizeMB} MB
-                  </Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Ionicons name="document-outline" size={14} color={colors.textMuted} />
-                  <Text size="xs" color={colors.textMuted}>
-                    Formats: {supportedFormats}
-                  </Text>
-                </View>
+        {/* Video Selection */}
+        {!selectedVideo ? (
+          <View style={styles.selectionContainer}>
+            <TouchableOpacity
+              style={[
+                styles.selectionButton,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+              onPress={handleRecordVideo}
+              activeOpacity={0.7}
+              disabled={isSubmitting}
+            >
+              <View style={[styles.selectionIcon, { backgroundColor: colors.primary + '20' }]}>
+                <Ionicons name="videocam" size={28} color={colors.primary} />
               </View>
-            </View>
-          ) : (
-            <View style={styles.previewContainer}>
-              <View style={styles.videoPreviewWrapper}>
-                <Video
-                  source={{ uri: selectedVideo.uri }}
-                  style={styles.videoPreview}
-                  resizeMode={ResizeMode.COVER}
-                  useNativeControls
-                  isLooping={false}
-                />
-                <TouchableOpacity
-                  style={[styles.removeButton, { backgroundColor: colors.error }]}
-                  onPress={handleRemoveVideo}
-                  disabled={isSubmitting}
-                >
-                  <Ionicons name="close-outline" size={20} color="#fff" />
-                </TouchableOpacity>
-              </View>
-              <View style={styles.videoInfo}>
-                <Text size="sm" color={colors.text} weight="medium">
-                  {selectedVideo.fileName}
+              <View style={styles.selectionContent}>
+                <Text size="base" weight="semibold" color={colors.text}>
+                  {t('profile.ratingProofs.proofTypes.video.recordVideo')}
                 </Text>
-                <View style={styles.videoMeta}>
-                  {selectedVideo.duration && (
-                    <View style={styles.metaItem}>
-                      <Ionicons name="time-outline" size={12} color={colors.textMuted} />
-                      <Text size="xs" color={colors.textMuted}>
-                        {formatDuration(selectedVideo.duration)}
-                      </Text>
-                    </View>
-                  )}
+                <Text size="xs" color={colors.textMuted}>
+                  Record a new video now
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.selectionButton,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+              onPress={handleSelectFromGallery}
+              activeOpacity={0.7}
+              disabled={isSubmitting}
+            >
+              <View style={[styles.selectionIcon, { backgroundColor: colors.primary + '20' }]}>
+                <Ionicons name="folder-open-outline" size={28} color={colors.primary} />
+              </View>
+              <View style={styles.selectionContent}>
+                <Text size="base" weight="semibold" color={colors.text}>
+                  {t('profile.ratingProofs.proofTypes.video.selectFromGallery')}
+                </Text>
+                <Text size="xs" color={colors.textMuted}>
+                  Choose an existing video
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <View style={styles.infoContainer}>
+              <View style={styles.infoRow}>
+                <Ionicons name="time-outline" size={14} color={colors.textMuted} />
+                <Text size="xs" color={colors.textMuted}>
+                  {t('profile.ratingProofs.proofTypes.video.maxDuration')}
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Ionicons name="cloud-upload-outline" size={14} color={colors.textMuted} />
+                <Text size="xs" color={colors.textMuted}>
+                  Max size: {maxSizeMB} MB
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Ionicons name="document-outline" size={14} color={colors.textMuted} />
+                <Text size="xs" color={colors.textMuted}>
+                  Formats: {supportedFormats}
+                </Text>
+              </View>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.previewContainer}>
+            <View style={styles.videoPreviewWrapper}>
+              <Video
+                source={{ uri: selectedVideo.uri }}
+                style={styles.videoPreview}
+                resizeMode={ResizeMode.COVER}
+                useNativeControls
+                isLooping={false}
+              />
+              <TouchableOpacity
+                style={[styles.removeButton, { backgroundColor: colors.error }]}
+                onPress={handleRemoveVideo}
+                disabled={isSubmitting}
+              >
+                <Ionicons name="close-outline" size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.videoInfo}>
+              <Text size="sm" color={colors.text} weight="medium">
+                {selectedVideo.fileName}
+              </Text>
+              <View style={styles.videoMeta}>
+                {selectedVideo.duration && (
                   <View style={styles.metaItem}>
-                    <Ionicons name="document-outline" size={12} color={colors.textMuted} />
+                    <Ionicons name="time-outline" size={12} color={colors.textMuted} />
                     <Text size="xs" color={colors.textMuted}>
-                      {formatFileSize(selectedVideo.fileSize)}
+                      {formatDuration(selectedVideo.duration)}
                     </Text>
                   </View>
+                )}
+                <View style={styles.metaItem}>
+                  <Ionicons name="document-outline" size={12} color={colors.textMuted} />
+                  <Text size="xs" color={colors.textMuted}>
+                    {formatFileSize(selectedVideo.fileSize)}
+                  </Text>
                 </View>
               </View>
             </View>
-          )}
-
-          {/* Title Input */}
-          <View style={styles.inputGroup}>
-            <Text size="sm" weight="medium" color={colors.text} style={styles.label}>
-              {t('profile.ratingProofs.form.title')} *
-            </Text>
-            <TextInput
-              style={[
-                styles.textInput,
-                {
-                  backgroundColor: colors.inputBackground,
-                  borderColor: colors.border,
-                  color: colors.text,
-                },
-              ]}
-              value={title}
-              onChangeText={setTitle}
-              placeholder={t('profile.ratingProofs.form.titlePlaceholder')}
-              placeholderTextColor={colors.textMuted}
-              maxLength={100}
-              returnKeyType="next"
-              editable={!isSubmitting}
-            />
           </View>
+        )}
 
-          {/* Description Input */}
-          <View style={styles.inputGroup}>
-            <Text size="sm" weight="medium" color={colors.text} style={styles.label}>
-              {t('profile.ratingProofs.form.description')}
+        {/* Title Input */}
+        <View style={styles.inputGroup}>
+          <Text size="sm" weight="medium" color={colors.text} style={styles.label}>
+            {t('profile.ratingProofs.form.title')} *
+          </Text>
+          <TextInput
+            style={[
+              styles.textInput,
+              {
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.border,
+                color: colors.text,
+              },
+            ]}
+            value={title}
+            onChangeText={setTitle}
+            placeholder={t('profile.ratingProofs.form.titlePlaceholder')}
+            placeholderTextColor={colors.textMuted}
+            maxLength={100}
+            returnKeyType="next"
+            editable={!isSubmitting}
+          />
+        </View>
+
+        {/* Description Input */}
+        <View style={styles.inputGroup}>
+          <Text size="sm" weight="medium" color={colors.text} style={styles.label}>
+            {t('profile.ratingProofs.form.description')}
+          </Text>
+          <TextInput
+            style={[
+              styles.textInput,
+              styles.textArea,
+              {
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.border,
+                color: colors.text,
+              },
+            ]}
+            value={description}
+            onChangeText={setDescription}
+            placeholder={t('profile.ratingProofs.form.descriptionPlaceholder')}
+            placeholderTextColor={colors.textMuted}
+            maxLength={500}
+            multiline
+            numberOfLines={3}
+            textAlignVertical="top"
+            editable={!isSubmitting}
+          />
+        </View>
+      </ScrollView>
+
+      {/* Sticky Footer */}
+      <View style={[styles.footer, { borderTopColor: colors.border }]}>
+        {/* Upload Progress */}
+        {isSubmitting && (
+          <View style={styles.progressContainer}>
+            <View style={[styles.progressBar, { backgroundColor: colors.border }]}>
+              <View
+                style={[
+                  styles.progressFill,
+                  { backgroundColor: colors.primary, width: `${uploadProgress}%` },
+                ]}
+              />
+            </View>
+            <Text size="xs" color={colors.textMuted} style={styles.progressText}>
+              {uploadProgress < 100
+                ? `${t('profile.ratingProofs.upload.uploading')} ${uploadProgress}%`
+                : t('profile.ratingProofs.upload.processing')}
             </Text>
-            <TextInput
-              style={[
-                styles.textInput,
-                styles.textArea,
-                {
-                  backgroundColor: colors.inputBackground,
-                  borderColor: colors.border,
-                  color: colors.text,
-                },
-              ]}
-              value={description}
-              onChangeText={setDescription}
-              placeholder={t('profile.ratingProofs.form.descriptionPlaceholder')}
-              placeholderTextColor={colors.textMuted}
-              maxLength={500}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-              editable={!isSubmitting}
-            />
           </View>
-        </ScrollView>
-
-        {/* Sticky Footer */}
-        <View style={[styles.footer, { borderTopColor: colors.border }]}>
-          {/* Upload Progress */}
-          {isSubmitting && (
-            <View style={styles.progressContainer}>
-              <View style={[styles.progressBar, { backgroundColor: colors.border }]}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    { backgroundColor: colors.primary, width: `${uploadProgress}%` },
-                  ]}
-                />
-              </View>
-              <Text size="xs" color={colors.textMuted} style={styles.progressText}>
+        )}
+        <Button
+          variant="primary"
+          onPress={handleSubmit}
+          disabled={isSubmitting || !selectedVideo || !title.trim()}
+          style={styles.submitButton}
+        >
+          {isSubmitting ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color={colors.primaryForeground} />
+              <Text
+                size="base"
+                weight="semibold"
+                color={colors.primaryForeground}
+                style={styles.loadingText}
+              >
                 {uploadProgress < 100
-                  ? `${t('profile.ratingProofs.upload.uploading')} ${uploadProgress}%`
+                  ? t('profile.ratingProofs.upload.uploading')
                   : t('profile.ratingProofs.upload.processing')}
               </Text>
             </View>
+          ) : (
+            t('profile.ratingProofs.form.submit')
           )}
-          <Button
-            variant="primary"
-            onPress={handleSubmit}
-            disabled={isSubmitting || !selectedVideo || !title.trim()}
-            style={styles.submitButton}
-          >
-            {isSubmitting ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color={colors.primaryForeground} />
-                <Text
-                  size="base"
-                  weight="semibold"
-                  color={colors.primaryForeground}
-                  style={styles.loadingText}
-                >
-                  {uploadProgress < 100
-                    ? t('profile.ratingProofs.upload.uploading')
-                    : t('profile.ratingProofs.upload.processing')}
-                </Text>
-              </View>
-            ) : (
-              t('profile.ratingProofs.form.submit')
-            )}
-          </Button>
-        </View>
+        </Button>
       </View>
+    </View>
+  );
+}
+
+export function VideoProofActionSheet({ payload }: SheetProps<'video-proof'>) {
+  const onClose = () => {
+    SheetManager.hide('video-proof');
+  };
+  const onSuccess = payload?.onSuccess;
+  const playerRatingScoreId = payload?.playerRatingScoreId || '';
+
+  return (
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: 'transparent' }]}
+      indicatorStyle={[styles.handleIndicator]}
+    >
+      <VideoProofForm
+        onBack={onClose}
+        onClose={onClose}
+        onSuccess={() => onSuccess?.()}
+        playerRatingScoreId={playerRatingScoreId}
+      />
     </ActionSheet>
   );
 }
@@ -521,14 +546,17 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radiusPixels['2xl'],
     borderTopRightRadius: radiusPixels['2xl'],
   },
+  modalContent: {
+    flex: 1,
+  },
+  handleIndicatorRow: {
+    alignItems: 'center',
+    paddingTop: spacingPixels[2],
+  },
   handleIndicator: {
     width: spacingPixels[10],
     height: 4,
     borderRadius: 4,
-    alignSelf: 'center',
-  },
-  modalContent: {
-    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -543,6 +571,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: spacingPixels[12],
+  },
+  backButton: {
+    padding: spacingPixels[1],
+    position: 'absolute',
+    left: spacingPixels[4],
+    zIndex: 1,
   },
   closeButton: {
     padding: spacingPixels[1],

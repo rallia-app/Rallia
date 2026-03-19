@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, useToast } from '@rallia/shared-components';
+import { Text, useToast, Button } from '@rallia/shared-components';
 import QRCode from 'react-native-qrcode-svg';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
@@ -278,15 +278,17 @@ export const ShareLinkStep: React.FC<ShareLinkStepProps> = ({
           </View>
 
           {/* Share Button */}
-          <TouchableOpacity
-            style={[styles.shareButton, { backgroundColor: colors.buttonActive }]}
+          <Button
+            variant="primary"
+            size="md"
+            fullWidth
             onPress={handleShare}
+            leftIcon={<Ionicons name="share-outline" size={20} color="#FFFFFF" />}
+            isDark={isDark}
+            style={styles.shareButtonSpacing}
           >
-            <Ionicons name="share-outline" size={20} color="#FFFFFF" />
-            <Text weight="semibold" color="#FFFFFF" style={styles.shareButtonText}>
-              {t('referral.shareInvite')}
-            </Text>
-          </TouchableOpacity>
+            {t('referral.shareInvite')}
+          </Button>
 
           {/* Referral Stats */}
           <View style={[styles.statsContainer, { backgroundColor: colors.buttonInactive }]}>
@@ -414,16 +416,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginLeft: 12,
   },
-  shareButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 14,
-    borderRadius: radiusPixels.lg,
+  shareButtonSpacing: {
     marginBottom: spacingPixels[6],
-  },
-  shareButtonText: {
-    marginLeft: 8,
   },
   statsContainer: {
     padding: spacingPixels[4],

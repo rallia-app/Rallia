@@ -22,7 +22,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { Text, Skeleton } from '@rallia/shared-components';
+import { Text, Skeleton, Button } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
 import {
   useThemeStyles,
@@ -180,18 +180,20 @@ const CommunityCard: React.FC<{
 
           {/* Join button for non-members in discover tab */}
           {activeTab === 'discover' && !isUserMember && !isPending && (
-            <TouchableOpacity
-              style={[styles.joinButton, { backgroundColor: colors.primary }]}
+            <Button
+              variant="primary"
+              size="xs"
+              fullWidth
               onPress={e => {
-                e.stopPropagation();
+                e?.stopPropagation();
                 onRequestToJoin(item.id, item.name);
               }}
               disabled={isRequestPending}
+              isDark={isDark}
+              style={styles.joinButton}
             >
-              <Text size="xs" weight="semibold" style={{ color: '#FFFFFF' }}>
-                {t('community.pendingRequests.requestToJoin')}
-              </Text>
-            </TouchableOpacity>
+              {t('community.pendingRequests.requestToJoin')}
+            </Button>
           )}
 
           {/* Pending indicator */}
@@ -374,26 +376,28 @@ export default function CommunitiesScreen() {
             : t('community.empty.myCommunities.subtitle')}
         </Text>
         {activeTab === 'discover' && (
-          <TouchableOpacity
-            style={[styles.createButton, { backgroundColor: colors.primary }]}
+          <Button
+            variant="primary"
+            size="md"
+            rounded
             onPress={handleOpenCreateCommunityActionSheet}
+            leftIcon={<Ionicons name="add-outline" size={20} color="#FFFFFF" />}
+            isDark={isDark}
           >
-            <Ionicons name="add-outline" size={20} color="#FFFFFF" />
-            <Text weight="semibold" style={styles.createButtonText}>
-              {t('community.createCommunity')}
-            </Text>
-          </TouchableOpacity>
+            {t('community.createCommunity')}
+          </Button>
         )}
         {activeTab === 'my-communities' && (
-          <TouchableOpacity
-            style={[styles.createButton, { backgroundColor: colors.primary }]}
+          <Button
+            variant="primary"
+            size="md"
+            rounded
             onPress={() => handleTabChange('discover')}
+            leftIcon={<Ionicons name="compass-outline" size={20} color="#FFFFFF" />}
+            isDark={isDark}
           >
-            <Ionicons name="compass-outline" size={20} color="#FFFFFF" />
-            <Text weight="semibold" style={styles.createButtonText}>
-              {t('community.discoverCommunities')}
-            </Text>
-          </TouchableOpacity>
+            {t('community.discoverCommunities')}
+          </Button>
         )}
       </View>
     ),
@@ -714,10 +718,6 @@ const styles = StyleSheet.create({
   },
   joinButton: {
     marginTop: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    alignItems: 'center',
   },
   pendingBadge: {
     marginTop: 8,
@@ -750,18 +750,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,
-  },
-  createButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 24,
-    gap: 8,
-  },
-  createButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
   },
   fabContainer: {
     position: 'absolute',

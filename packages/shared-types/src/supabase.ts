@@ -1,11 +1,6 @@
-﻿export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: '13.0.5';
-  };
   graphql_public: {
     Tables: {
       [_ in never]: never;
@@ -5034,6 +5029,7 @@ export type Database = {
           id: string;
           message: string | null;
           player_rating_score_id: string;
+          rating_score_id: string | null;
           rating_supported: boolean;
           referee_id: string;
           requester_id: string;
@@ -5048,6 +5044,7 @@ export type Database = {
           id?: string;
           message?: string | null;
           player_rating_score_id: string;
+          rating_score_id?: string | null;
           rating_supported?: boolean;
           referee_id: string;
           requester_id: string;
@@ -5062,6 +5059,7 @@ export type Database = {
           id?: string;
           message?: string | null;
           player_rating_score_id?: string;
+          rating_score_id?: string | null;
           rating_supported?: boolean;
           referee_id?: string;
           requester_id?: string;
@@ -5071,6 +5069,13 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: 'rating_reference_request_rating_score_id_fkey';
+            columns: ['rating_score_id'];
+            isOneToOne: false;
+            referencedRelation: 'rating_score';
+            referencedColumns: ['id'];
+          },
           {
             foreignKeyName: 'rating_reference_request_referee_id_fkey';
             columns: ['referee_id'];
@@ -6079,17 +6084,16 @@ export type Database = {
           admin_email: string;
           admin_id: string;
           admin_name: string;
+          admin_role: string;
           created_at: string;
           entity_id: string;
           entity_name: string;
           entity_type: string;
           id: string;
-          ip_address: unknown;
           metadata: Json;
           new_data: Json;
           old_data: Json;
           severity: string;
-          user_agent: string;
         }[];
       };
       get_admin_network_detail: {
@@ -6895,15 +6899,25 @@ export type Database = {
           unique_players: number;
         }[];
       };
-      get_sport_distribution: {
-        Args: { p_end_date?: string; p_start_date?: string };
-        Returns: {
-          percentage: number;
-          sport_id: string;
-          sport_name: string;
-          user_count: number;
-        }[];
-      };
+      get_sport_distribution:
+        | {
+            Args: never;
+            Returns: {
+              percentage: number;
+              player_count: number;
+              sport_id: string;
+              sport_name: string;
+            }[];
+          }
+        | {
+            Args: { p_end_date?: string; p_start_date?: string };
+            Returns: {
+              percentage: number;
+              sport_id: string;
+              sport_name: string;
+              user_count: number;
+            }[];
+          };
       get_sport_facility_data: {
         Args: { p_sport_id?: string };
         Returns: {
@@ -7386,6 +7400,32 @@ export type Database = {
           match_id: string;
         }[];
       };
+      search_public_matches_count: {
+        Args: {
+          p_cost?: string;
+          p_court_status?: string;
+          p_date_range?: string;
+          p_duration?: string;
+          p_facility_id?: string;
+          p_format?: string;
+          p_gender?: string;
+          p_join_mode?: string;
+          p_latitude: number;
+          p_longitude: number;
+          p_match_tier?: string;
+          p_match_type?: string;
+          p_max_distance_km?: number;
+          p_search_query?: string;
+          p_skill_level?: string;
+          p_specific_date?: string;
+          p_specific_time?: string;
+          p_sport_id?: string;
+          p_spots_available?: string;
+          p_time_of_day?: string;
+          p_user_gender?: string;
+        };
+        Returns: number;
+      };
       seed_org_notification_defaults: {
         Args: { p_organization_id: string };
         Returns: undefined;
@@ -7644,6 +7684,7 @@ export type Database = {
         | 'community_join_request'
         | 'community_join_accepted'
         | 'community_join_rejected'
+        | 'network_deleted'
         | 'reference_request_received'
         | 'reference_request_accepted'
         | 'reference_request_declined'
@@ -8066,6 +8107,7 @@ export const Constants = {
         'community_join_request',
         'community_join_accepted',
         'community_join_rejected',
+        'network_deleted',
         'reference_request_received',
         'reference_request_accepted',
         'reference_request_declined',
