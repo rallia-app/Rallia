@@ -6,19 +6,22 @@
  * Includes subject field and screenshot support for better bug reports.
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   ActivityIndicator,
   Platform,
-  KeyboardAvoidingView,
   Image,
   Modal,
 } from 'react-native';
-import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import {
+  BottomSheetModal,
+  BottomSheetBackdrop,
+  BottomSheetScrollView,
+  BottomSheetTextInput,
+} from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import * as Application from 'expo-application';
@@ -74,13 +77,14 @@ const QUICK_MODULES: QuickModuleOption[] = [
 ];
 
 export const BugReportSheet: React.FC = () => {
-  const { sheetRef, closeBugReport, trigger } = useBugReportSheet();
+  const { sheetRef, closeBugReport, onSheetDismiss, trigger } = useBugReportSheet();
   const { theme } = useTheme();
   const { session } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
   const isDark = theme === 'dark';
   const { pickFromGallery, pickFromCamera } = useImagePicker();
+  const scrollViewRef = useRef<any>(null);
 
   // Form state
   const [subject, setSubject] = useState('');
@@ -146,6 +150,11 @@ export const BugReportSheet: React.FC = () => {
       }, 300);
     }
   }, []);
+
+  // Called when the BottomSheetModal finishes its dismiss animation
+  const handleDismiss = useCallback(() => {
+    onSheetDismiss();
+  }, [onSheetDismiss]);
 
   // Handle module selection
   const handleModuleSelect = useCallback((mod: UserFeedbackModule) => {
@@ -292,227 +301,232 @@ export const BugReportSheet: React.FC = () => {
         backdropComponent={renderBackdrop}
         enablePanDownToClose
         onChange={handleSheetChange}
+        onDismiss={handleDismiss}
         handleIndicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
         backgroundStyle={[styles.sheetBackground, { backgroundColor: colors.background }]}
-        keyboardBehavior="interactive"
+        keyboardBehavior="extend"
         keyboardBlurBehavior="restore"
+        android_keyboardInputMode="adjustResize"
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.keyboardView}
+        <BottomSheetScrollView
+          ref={scrollViewRef}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
         >
-          <BottomSheetScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-          >
-            {/* Header */}
-            <View style={styles.header}>
-              <View style={styles.headerIcon}>
-                <Ionicons name="bug" size={28} color={status.error.DEFAULT} />
-              </View>
-              <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
-                {t('bugReport.title' as TranslationKey)}
-              </Text>
-              <Text size="sm" color={colors.textSecondary} style={styles.subtitle}>
-                {trigger === 'shake'
-                  ? t('bugReport.subtitle' as TranslationKey)
-                  : t('bugReport.subtitleMenu' as TranslationKey)}
-              </Text>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.headerIcon}>
+              <Ionicons name="bug" size={28} color={status.error.DEFAULT} />
             </View>
+            <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
+              {t('bugReport.title' as TranslationKey)}
+            </Text>
+            <Text size="sm" color={colors.textSecondary} style={styles.subtitle}>
+              {trigger === 'shake'
+                ? t('bugReport.subtitle' as TranslationKey)
+                : t('bugReport.subtitleMenu' as TranslationKey)}
+            </Text>
+          </View>
 
-            {/* Module Selection */}
-            <View style={styles.moduleSection}>
-              <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.label}>
-                {t('bugReport.moduleLabel' as TranslationKey)}
-              </Text>
-              <View style={styles.moduleChips}>
-                {QUICK_MODULES.map(mod => {
-                  const isActive = selectedModule === mod.value;
-                  return (
-                    <TouchableOpacity
-                      key={mod.value}
-                      style={[
-                        styles.moduleChip,
-                        {
-                          backgroundColor: isActive ? colors.chipActive : colors.chipInactive,
-                          borderColor: isActive ? colors.chipActive : colors.border,
-                        },
-                      ]}
-                      onPress={() => handleModuleSelect(mod.value)}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons
-                        name={mod.icon}
-                        size={16}
-                        color={isActive ? colors.chipTextActive : colors.chipTextInactive}
-                      />
-                      <Text
-                        size="xs"
-                        weight={isActive ? 'semibold' : 'medium'}
-                        color={isActive ? colors.chipTextActive : colors.chipTextInactive}
-                      >
-                        {t(mod.labelKey as TranslationKey)}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            {/* Subject Input */}
-            <View style={styles.inputSection}>
-              <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.label}>
-                {t('bugReport.subjectLabel' as TranslationKey)}
-              </Text>
-              <TextInput
-                style={[
-                  styles.subjectInput,
-                  {
-                    backgroundColor: colors.inputBackground,
-                    borderColor: colors.inputBorder,
-                    color: colors.inputText,
-                  },
-                ]}
-                placeholder={t('bugReport.subjectPlaceholder' as TranslationKey)}
-                placeholderTextColor={colors.inputPlaceholder}
-                value={subject}
-                onChangeText={setSubject}
-                maxLength={MAX_SUBJECT_LENGTH}
-              />
-              <Text
-                size="xs"
-                color={
-                  subject.length < MIN_SUBJECT_LENGTH ? status.warning.DEFAULT : colors.textMuted
-                }
-                style={styles.charCount}
-              >
-                {subject.length}/{MAX_SUBJECT_LENGTH}
-              </Text>
-            </View>
-
-            {/* Message Input */}
-            <View style={styles.inputSection}>
-              <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.label}>
-                {t('bugReport.descriptionLabel' as TranslationKey)}
-              </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: colors.inputBackground,
-                    borderColor: colors.inputBorder,
-                    color: colors.inputText,
-                  },
-                ]}
-                placeholder={t('bugReport.descriptionPlaceholder' as TranslationKey)}
-                placeholderTextColor={colors.inputPlaceholder}
-                value={message}
-                onChangeText={setMessage}
-                multiline
-                numberOfLines={4}
-                maxLength={MAX_MESSAGE_LENGTH}
-                textAlignVertical="top"
-              />
-              <Text
-                size="xs"
-                color={
-                  message.length < MIN_MESSAGE_LENGTH ? status.warning.DEFAULT : colors.textMuted
-                }
-                style={styles.charCount}
-              >
-                {message.length}/{MAX_MESSAGE_LENGTH} • {t('bugReport.minChars' as TranslationKey)}
-              </Text>
-            </View>
-
-            {/* Screenshots Section */}
-            <View style={styles.screenshotsSection}>
-              <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.label}>
-                {t('feedback.screenshotsLabel' as TranslationKey)}
-              </Text>
-              <Text size="xs" color={colors.textMuted} style={styles.screenshotsHint}>
-                {t('feedback.screenshotsHint' as TranslationKey, { max: MAX_SCREENSHOTS })}
-              </Text>
-
-              <View style={styles.screenshotsRow}>
-                {screenshots.map((uri, index) => (
-                  <View key={uri} style={styles.screenshotContainer}>
-                    <Image source={{ uri }} style={styles.screenshotImage} />
-                    <TouchableOpacity
-                      style={[
-                        styles.removeScreenshotBtn,
-                        { backgroundColor: status.error.DEFAULT },
-                      ]}
-                      onPress={() => handleRemoveScreenshot(index)}
-                    >
-                      <Ionicons name="close" size={14} color={BASE_WHITE} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-
-                {screenshots.length < MAX_SCREENSHOTS && (
+          {/* Module Selection */}
+          <View style={styles.moduleSection}>
+            <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.label}>
+              {t('bugReport.moduleLabel' as TranslationKey)}
+            </Text>
+            <View style={styles.moduleChips}>
+              {QUICK_MODULES.map(mod => {
+                const isActive = selectedModule === mod.value;
+                return (
                   <TouchableOpacity
+                    key={mod.value}
                     style={[
-                      styles.addScreenshotBtn,
+                      styles.moduleChip,
                       {
-                        backgroundColor: colors.inputBackground,
-                        borderColor: colors.border,
+                        backgroundColor: isActive ? colors.chipActive : colors.chipInactive,
+                        borderColor: isActive ? colors.chipActive : colors.border,
                       },
                     ]}
-                    onPress={handleAddScreenshot}
-                    disabled={isUploadingImage}
+                    onPress={() => handleModuleSelect(mod.value)}
+                    activeOpacity={0.7}
                   >
-                    {isUploadingImage ? (
-                      <ActivityIndicator size="small" color={colors.textSecondary} />
-                    ) : (
-                      <>
-                        <Ionicons name="camera-outline" size={24} color={colors.textSecondary} />
-                        <Text size="xs" color={colors.textSecondary}>
-                          {t('feedback.addScreenshot' as TranslationKey)}
-                        </Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-
-            {/* Actions */}
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={[styles.cancelButton, { borderColor: colors.border }]}
-                onPress={handleCancel}
-                activeOpacity={0.7}
-              >
-                <Text size="sm" weight="medium" color={colors.text}>
-                  {t('bugReport.cancel' as TranslationKey)}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.submitButton,
-                  {
-                    backgroundColor: isValid ? colors.buttonPrimary : colors.buttonDisabled,
-                  },
-                ]}
-                onPress={() => void handleSubmit()}
-                disabled={!isValid || isSubmitting}
-                activeOpacity={0.7}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator size="small" color={colors.buttonPrimaryText} />
-                ) : (
-                  <>
-                    <Ionicons name="send" size={18} color={colors.buttonPrimaryText} />
-                    <Text size="sm" weight="semibold" color={colors.buttonPrimaryText}>
-                      {t('bugReport.submit' as TranslationKey)}
+                    <Ionicons
+                      name={mod.icon}
+                      size={16}
+                      color={isActive ? colors.chipTextActive : colors.chipTextInactive}
+                    />
+                    <Text
+                      size="xs"
+                      weight={isActive ? 'semibold' : 'medium'}
+                      color={isActive ? colors.chipTextActive : colors.chipTextInactive}
+                    >
+                      {t(mod.labelKey as TranslationKey)}
                     </Text>
-                  </>
-                )}
-              </TouchableOpacity>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-          </BottomSheetScrollView>
-        </KeyboardAvoidingView>
+          </View>
+
+          {/* Subject Input */}
+          <View style={styles.inputSection}>
+            <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.label}>
+              {t('bugReport.subjectLabel' as TranslationKey)}
+            </Text>
+            <BottomSheetTextInput
+              style={[
+                styles.subjectInput,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.inputBorder,
+                  color: colors.inputText,
+                },
+              ]}
+              placeholder={t('bugReport.subjectPlaceholder' as TranslationKey)}
+              placeholderTextColor={colors.inputPlaceholder}
+              value={subject}
+              onChangeText={setSubject}
+              maxLength={MAX_SUBJECT_LENGTH}
+              onFocus={() => {
+                setTimeout(() => {
+                  scrollViewRef.current?.scrollTo({ y: 280, animated: true });
+                }, 300);
+              }}
+            />
+            <Text
+              size="xs"
+              color={
+                subject.length < MIN_SUBJECT_LENGTH ? status.warning.DEFAULT : colors.textMuted
+              }
+              style={styles.charCount}
+            >
+              {subject.length}/{MAX_SUBJECT_LENGTH}
+            </Text>
+          </View>
+
+          {/* Message Input */}
+          <View style={styles.inputSection}>
+            <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.label}>
+              {t('bugReport.descriptionLabel' as TranslationKey)}
+            </Text>
+            <BottomSheetTextInput
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.inputBorder,
+                  color: colors.inputText,
+                },
+              ]}
+              placeholder={t('bugReport.descriptionPlaceholder' as TranslationKey)}
+              placeholderTextColor={colors.inputPlaceholder}
+              value={message}
+              onChangeText={setMessage}
+              multiline
+              numberOfLines={4}
+              maxLength={MAX_MESSAGE_LENGTH}
+              textAlignVertical="top"
+              onFocus={() => {
+                setTimeout(() => {
+                  scrollViewRef.current?.scrollTo({ y: 420, animated: true });
+                }, 300);
+              }}
+            />
+            <Text
+              size="xs"
+              color={
+                message.length < MIN_MESSAGE_LENGTH ? status.warning.DEFAULT : colors.textMuted
+              }
+              style={styles.charCount}
+            >
+              {message.length}/{MAX_MESSAGE_LENGTH} • {t('bugReport.minChars' as TranslationKey)}
+            </Text>
+          </View>
+
+          {/* Screenshots Section */}
+          <View style={styles.screenshotsSection}>
+            <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.label}>
+              {t('feedback.screenshotsLabel' as TranslationKey)}
+            </Text>
+            <Text size="xs" color={colors.textMuted} style={styles.screenshotsHint}>
+              {t('feedback.screenshotsHint' as TranslationKey, { max: MAX_SCREENSHOTS })}
+            </Text>
+
+            <View style={styles.screenshotsRow}>
+              {screenshots.map((uri, index) => (
+                <View key={uri} style={styles.screenshotContainer}>
+                  <Image source={{ uri }} style={styles.screenshotImage} />
+                  <TouchableOpacity
+                    style={[styles.removeScreenshotBtn, { backgroundColor: status.error.DEFAULT }]}
+                    onPress={() => handleRemoveScreenshot(index)}
+                  >
+                    <Ionicons name="close" size={14} color={BASE_WHITE} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              {screenshots.length < MAX_SCREENSHOTS && (
+                <TouchableOpacity
+                  style={[
+                    styles.addScreenshotBtn,
+                    {
+                      backgroundColor: colors.inputBackground,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                  onPress={handleAddScreenshot}
+                  disabled={isUploadingImage}
+                >
+                  {isUploadingImage ? (
+                    <ActivityIndicator size="small" color={colors.textSecondary} />
+                  ) : (
+                    <>
+                      <Ionicons name="camera-outline" size={24} color={colors.textSecondary} />
+                      <Text size="xs" color={colors.textSecondary}>
+                        {t('feedback.addScreenshot' as TranslationKey)}
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {/* Actions */}
+          <View style={styles.actions}>
+            <TouchableOpacity
+              style={[styles.cancelButton, { borderColor: colors.border }]}
+              onPress={handleCancel}
+              activeOpacity={0.7}
+            >
+              <Text size="sm" weight="medium" color={colors.text}>
+                {t('bugReport.cancel' as TranslationKey)}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.submitButton,
+                {
+                  backgroundColor: isValid ? colors.buttonPrimary : colors.buttonDisabled,
+                },
+              ]}
+              onPress={() => void handleSubmit()}
+              disabled={!isValid || isSubmitting}
+              activeOpacity={0.7}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color={colors.buttonPrimaryText} />
+              ) : (
+                <>
+                  <Ionicons name="send" size={18} color={colors.buttonPrimaryText} />
+                  <Text size="sm" weight="semibold" color={colors.buttonPrimaryText}>
+                    {t('bugReport.submit' as TranslationKey)}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </BottomSheetScrollView>
       </BottomSheetModal>
 
       {/* Image Source Modal */}
@@ -578,12 +592,9 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     marginTop: spacingPixels[2],
   },
-  keyboardView: {
-    flex: 1,
-  },
   scrollContent: {
     paddingHorizontal: spacingPixels[6],
-    paddingBottom: spacingPixels[8],
+    paddingBottom: 350,
   },
   header: {
     alignItems: 'center',
