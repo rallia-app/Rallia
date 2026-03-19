@@ -46,8 +46,12 @@ interface UseFavoriteFacilitiesResult {
 /**
  * Fetches and manages player's favorite facilities
  * @param playerId - The player's UUID (required)
+ * @param sportId - Optional sport UUID to filter favorites to only facilities linked to this sport
  */
-export function useFavoriteFacilities(playerId: string | null): UseFavoriteFacilitiesResult {
+export function useFavoriteFacilities(
+  playerId: string | null,
+  sportId?: string | null
+): UseFavoriteFacilitiesResult {
   const [favorites, setFavorites] = useState<FavoriteFacility[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -62,6 +66,9 @@ export function useFavoriteFacilities(playerId: string | null): UseFavoriteFacil
     setError(null);
 
     try {
+      // Always include facility_sport so we can filter by sport when needed.
+      // PostgREST uses a LEFT JOIN by default, so facility_sport is [] for
+      // facilities not linked to any sport — no rows are lost.
       const { data, error: fetchError } = await supabase
         .from('player_favorite_facility')
         .select(
@@ -75,7 +82,10 @@ export function useFavoriteFacilities(playerId: string | null): UseFavoriteFacil
             address,
             city,
             latitude,
-            longitude
+            longitude,
+            facility_sport (
+              sport_id
+            )
           )
         `
         )
@@ -84,16 +94,32 @@ export function useFavoriteFacilities(playerId: string | null): UseFavoriteFacil
 
       if (fetchError) throw fetchError;
 
-      const mappedFavorites: FavoriteFacility[] = (data || []).map(item => {
-        // Supabase returns the joined relation as an object (single) when using FK reference
-        const facilityData = item.facility as unknown as FavoriteFacility['facility'];
-        return {
-          id: item.id,
-          facilityId: item.facility_id,
-          facility: facilityData,
-          displayOrder: item.display_order,
-        };
-      });
+      // Filter by sport if sportId provided — only show facilities linked to this sport
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let filteredData: any[] = data || [];
+      if (sportId) {
+        filteredData = filteredData.filter(item => {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          const facilitySports = (item.facility as { facility_sport?: Array<{ sport_id: string }> })
+            ?.facility_sport;
+          return (
+            Array.isArray(facilitySports) && facilitySports.some(fs => fs.sport_id === sportId)
+          );
+        });
+      }
+
+      const mappedFavorites: FavoriteFacility[] = filteredData.map(
+        (item: { id: string; facility_id: string; display_order: number; facility: unknown }) => {
+          // Supabase returns the joined relation as an object (single) when using FK reference
+          const facilityData = item.facility as FavoriteFacility['facility'];
+          return {
+            id: item.id,
+            facilityId: item.facility_id,
+            facility: facilityData,
+            displayOrder: item.display_order,
+          };
+        }
+      );
 
       setFavorites(mappedFavorites);
     } catch (err) {
@@ -102,7 +128,7 @@ export function useFavoriteFacilities(playerId: string | null): UseFavoriteFacil
     } finally {
       setLoading(false);
     }
-  }, [playerId]);
+  }, [playerId, sportId]);
 
   useEffect(() => {
     fetchFavorites();
@@ -115,8 +141,21 @@ export function useFavoriteFacilities(playerId: string | null): UseFavoriteFacil
       if (favorites.some(f => f.facilityId === facility.id)) return false;
 
       try {
-        // Calculate next display_order (1-based)
-        const nextDisplayOrder = favorites.length + 1;
+        // Calculate next display_order — when sport-filtered, query global max
+        // to avoid display_order conflicts with other sports' favorites
+        let nextDisplayOrder: number;
+        if (sportId) {
+          const { data: maxOrderData } = await supabase
+            .from('player_favorite_facility')
+            .select('display_order')
+            .eq('player_id', playerId)
+            .order('display_order', { ascending: false })
+            .limit(1);
+          nextDisplayOrder =
+            ((maxOrderData?.[0] as { display_order?: number } | undefined)?.display_order || 0) + 1;
+        } else {
+          nextDisplayOrder = favorites.length + 1;
+        }
 
         const { data, error: insertError } = await supabase
           .from('player_favorite_facility')
@@ -163,7 +202,7 @@ export function useFavoriteFacilities(playerId: string | null): UseFavoriteFacil
         return false;
       }
     },
-    [playerId, favorites]
+    [playerId, favorites, sportId]
   );
 
   const removeFavorite = useCallback(

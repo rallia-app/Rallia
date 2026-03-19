@@ -7,3 +7,5 @@ coverage
 .turbo
 *.log
 package-lock.json
+packages/shared-types/src/supabase.ts
+supabase/types.ts

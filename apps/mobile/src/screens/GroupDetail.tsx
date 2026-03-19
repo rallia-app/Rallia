@@ -22,7 +22,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import Svg, { Circle } from 'react-native-svg';
 
-import { Text } from '@rallia/shared-components';
+import { Text, MatchCard } from '@rallia/shared-components';
 import { lightHaptic, selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
 import {
   useThemeStyles,
@@ -57,7 +57,7 @@ import {
 } from '@rallia/shared-hooks';
 import type { RootStackParamList } from '../navigation/types';
 import { SheetManager } from 'react-native-actions-sheet';
-import { primary } from '@rallia/design-system';
+import { primary, neutral } from '@rallia/design-system';
 import {
   AddScoreIntroModal,
   AddScoreModal,
@@ -88,7 +88,7 @@ export default function GroupDetailScreen() {
 
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { guardAction } = useRequireOnboarding();
   const { selectedSport } = useSport();
   const { sports } = useSports();
@@ -202,33 +202,116 @@ export default function GroupDetailScreen() {
     setShowAddScoreModal(true);
   }, []);
 
+  // Transform NetworkMemberMatch to a format compatible with MatchCard
+  const transformMatchForCard = useCallback((match: NetworkMemberMatch) => {
+    return {
+      id: match.id,
+      sport_id: match.sport_id,
+      match_date: match.match_date,
+      start_time: match.start_time,
+      end_time: match.end_time,
+      format: match.format,
+      player_expectation: match.player_expectation,
+      visibility: match.visibility,
+      join_mode: match.join_mode,
+      location_type: match.location_type,
+      location_name: match.location_name,
+      facility_id: match.facility_id,
+      created_by: match.created_by,
+      cancelled_at: match.cancelled_at,
+      status: 'scheduled' as const,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      sport: match.sport
+        ? {
+            id: match.sport.id,
+            name: match.sport.name,
+            display_name: match.sport.display_name,
+            icon_url: match.sport.icon_url,
+            is_active: true,
+            created_at: '',
+            updated_at: '',
+          }
+        : null,
+      facility: match.facility
+        ? {
+            id: match.facility.id,
+            name: match.facility.name,
+            city: match.facility.city,
+            address: match.facility.address,
+            latitude: null,
+            longitude: null,
+            phone: null,
+            email: null,
+            website: null,
+            timezone: null,
+            created_at: '',
+            updated_at: '',
+          }
+        : undefined,
+      created_by_player: match.created_by_player
+        ? {
+            id: match.created_by_player.id,
+            profile: match.created_by_player.profile
+              ? {
+                  id: match.created_by,
+                  first_name: match.created_by_player.profile.first_name,
+                  last_name: match.created_by_player.profile.last_name,
+                  display_name: match.created_by_player.profile.display_name,
+                  profile_picture_url: match.created_by_player.profile.profile_picture_url,
+                }
+              : undefined,
+          }
+        : {
+            id: match.created_by,
+            profile: match.creator
+              ? {
+                  id: match.created_by,
+                  first_name: match.creator.first_name,
+                  last_name: match.creator.last_name,
+                  display_name: null,
+                  profile_picture_url: match.creator.profile_picture_url,
+                }
+              : undefined,
+          },
+      participants: match.participants?.map(p => ({
+        id: p.id,
+        match_id: match.id,
+        player_id: p.player_id,
+        team_number: p.team_number,
+        is_host: p.is_host,
+        status: p.status,
+        joined_at: null,
+        created_at: '',
+        updated_at: '',
+        player: p.player
+          ? {
+              id: p.player.id,
+              profile: p.player.profile
+                ? {
+                    id: p.player_id,
+                    first_name: p.player.profile.first_name,
+                    last_name: p.player.profile.last_name,
+                    display_name: p.player.profile.display_name,
+                    profile_picture_url: p.player.profile.profile_picture_url,
+                  }
+                : undefined,
+            }
+          : { id: p.player_id },
+      })),
+      distance_meters: null,
+    };
+  }, []);
+
   // Handle network match card press - open match detail sheet
   const handleNetworkMatchPress = useCallback(
     (match: NetworkMemberMatch) => {
       lightHaptic();
-      // Transform to minimal format for match detail sheet
-      // The sheet will load full details from the match ID
-      openMatchDetail({
-        id: match.id,
-        sport_id: match.sport_id,
-        match_date: match.match_date,
-        start_time: match.start_time,
-        end_time: match.end_time,
-        format: match.format,
-        player_expectation: match.player_expectation,
-        visibility: match.visibility,
-        join_mode: match.join_mode,
-        location_type: match.location_type,
-        location_name: match.location_name,
-        facility_id: match.facility_id,
-        created_by: match.created_by,
-        cancelled_at: match.cancelled_at,
-        sport: match.sport,
-        facility: match.facility,
-        participants: match.participants,
-      } as unknown as Parameters<typeof openMatchDetail>[0]);
+      // Transform and open the match detail sheet
+      const transformed = transformMatchForCard(match);
+      openMatchDetail(transformed as unknown as Parameters<typeof openMatchDetail>[0]);
     },
-    [openMatchDetail]
+    [openMatchDetail, transformMatchForCard]
   );
 
   const handleAddGame = useCallback(() => {
@@ -723,90 +806,29 @@ export default function GroupDetailScreen() {
               {memberUpcomingMatches && memberUpcomingMatches.length > 0 ? (
                 <View style={styles.matchesPreviewList}>
                   {memberUpcomingMatches.slice(0, 2).map((match: NetworkMemberMatch) => {
-                    const matchDate = new Date(match.match_date);
-                    const formattedDate = matchDate.toLocaleDateString(undefined, {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric',
-                    });
-                    const formattedTime = matchDate.toLocaleTimeString(undefined, {
-                      hour: 'numeric',
-                      minute: '2-digit',
-                    });
-                    const slotsAvailable = match.max_players - match.current_players;
-                    const isFull = slotsAvailable <= 0;
-
+                    const transformed = transformMatchForCard(match);
                     return (
-                      <TouchableOpacity
+                      <MatchCard
                         key={match.id}
-                        style={[
-                          styles.matchPreviewCard,
-                          { backgroundColor: isDark ? '#2C2C2E' : '#F5F5F5' },
-                        ]}
-                        onPress={() => {
-                          handleNetworkMatchPress(match);
-                        }}
-                      >
-                        <View style={styles.matchPreviewHeader}>
+                        match={transformed as unknown as Parameters<typeof MatchCard>[0]['match']}
+                        isDark={isDark}
+                        t={
+                          t as (
+                            key: string,
+                            options?: Record<string, string | number | boolean>
+                          ) => string
+                        }
+                        locale={locale}
+                        currentPlayerId={playerId}
+                        sportIcon={
                           <SportIcon
-                            sportName={match.sport?.name ?? 'padel'}
-                            size={18}
-                            color={colors.primary}
+                            sportName={match.sport?.name ?? selectedSport?.name ?? 'tennis'}
+                            size={100}
+                            color={isDark ? neutral[600] : neutral[400]}
                           />
-                          <Text
-                            size="sm"
-                            weight="semibold"
-                            style={{ color: colors.text, marginLeft: 6, flex: 1 }}
-                          >
-                            {match.sport?.name ?? 'Match'}
-                          </Text>
-                          <View
-                            style={[
-                              styles.matchSlotBadge,
-                              { backgroundColor: isFull ? colors.textMuted : colors.primary },
-                            ]}
-                          >
-                            <Text size="xs" weight="semibold" style={{ color: '#FFFFFF' }}>
-                              {isFull
-                                ? t('match.slots.full')
-                                : slotsAvailable === 1
-                                  ? t('match.slots.oneLeft')
-                                  : t('match.slots.left', { count: slotsAvailable })}
-                            </Text>
-                          </View>
-                        </View>
-                        <View style={styles.matchPreviewDetails}>
-                          <View style={styles.matchPreviewRow}>
-                            <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-                            <Text size="xs" style={{ color: colors.textSecondary, marginLeft: 4 }}>
-                              {formattedDate} • {formattedTime}
-                            </Text>
-                          </View>
-                          {match.facility && (
-                            <View style={styles.matchPreviewRow}>
-                              <Ionicons
-                                name="location-outline"
-                                size={14}
-                                color={colors.textMuted}
-                              />
-                              <Text
-                                size="xs"
-                                style={{ color: colors.textSecondary, marginLeft: 4 }}
-                                numberOfLines={1}
-                              >
-                                {match.facility.name}
-                              </Text>
-                            </View>
-                          )}
-                          <View style={styles.matchPreviewRow}>
-                            <Ionicons name="person-outline" size={14} color={colors.textMuted} />
-                            <Text size="xs" style={{ color: colors.textSecondary, marginLeft: 4 }}>
-                              {t('match.hostedBy')}{' '}
-                              {match.creator?.first_name ?? t('common.player')}
-                            </Text>
-                          </View>
-                        </View>
-                      </TouchableOpacity>
+                        }
+                        onPress={() => handleNetworkMatchPress(match)}
+                      />
                     );
                   })}
                 </View>

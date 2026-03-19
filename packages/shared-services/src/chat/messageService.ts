@@ -219,7 +219,20 @@ export async function sendMessage(input: SendMessageInput): Promise<MessageWithS
  * Uses RPC function to bypass RLS (since recipient is not the sender)
  */
 export async function markMessagesAsRead(conversationId: string, playerId: string): Promise<void> {
-  // Update the participant's last_read_at
+  // IMPORTANT: Call RPC FIRST to mark messages as read
+  // The RPC uses last_read_at to bound which messages to update,
+  // so we must not update last_read_at until after the RPC runs
+  const { error: messageError } = await supabase.rpc('mark_messages_as_read', {
+    p_conversation_id: conversationId,
+    p_reader_id: playerId,
+  });
+
+  if (messageError) {
+    console.error('Error updating message status to read:', messageError);
+    // Continue anyway - still update last_read_at for unread count calculations
+  }
+
+  // THEN update the participant's last_read_at
   const { error: participantError } = await supabase
     .from('conversation_participant')
     .update({ last_read_at: new Date().toISOString() })
@@ -229,19 +242,6 @@ export async function markMessagesAsRead(conversationId: string, playerId: strin
   if (participantError) {
     console.error('Error updating participant last_read_at:', participantError);
     throw participantError;
-  }
-
-  // Use RPC function to update message status to 'read'
-  // This bypasses RLS which only allows sender to update their own messages
-  const { error: messageError } = await supabase.rpc('mark_messages_as_read', {
-    p_conversation_id: conversationId,
-    p_reader_id: playerId,
-  });
-
-  if (messageError) {
-    console.error('Error updating message status to read:', messageError);
-    // Don't throw here - the participant update succeeded,
-    // and this is a secondary update for status display
   }
 }
 
