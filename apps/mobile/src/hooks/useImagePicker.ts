@@ -11,6 +11,11 @@ export interface ImagePickerResult {
   error?: string;
 }
 
+export interface MultiImagePickerResult {
+  uris: string[];
+  error?: string;
+}
+
 export interface ImagePickerPermissions {
   camera: boolean;
   library: boolean;
@@ -152,6 +157,32 @@ export const useImagePicker = (options?: UseImagePickerOptions) => {
     }
   }, [useNativeEditing, skipEditing, aspectRatio, showCustomCropper]);
 
+  const pickMultipleFromGallery = useCallback(
+    async (selectionLimit?: number): Promise<MultiImagePickerResult> => {
+      try {
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          allowsMultipleSelection: true,
+          selectionLimit: selectionLimit ?? 0,
+          quality: 0.8,
+        });
+
+        if (!result.canceled && result.assets.length > 0) {
+          const uris = result.assets.map(asset => asset.uri);
+          return { uris };
+        }
+
+        return { uris: [] };
+      } catch (error) {
+        Logger.error('Failed to pick multiple images from gallery', error as Error, {
+          source: 'gallery',
+        });
+        return { uris: [], error: 'Failed to select images' };
+      }
+    },
+    []
+  );
+
   /**
    * Opens the image picker sheet (custom UI)
    * Uses SheetManager to show the globally registered ImagePickerSheet
@@ -251,6 +282,7 @@ export const useImagePicker = (options?: UseImagePickerOptions) => {
     openPicker,
     pickFromCamera,
     pickFromGallery,
+    pickMultipleFromGallery,
     permissions,
     // Utility
     clearImage,

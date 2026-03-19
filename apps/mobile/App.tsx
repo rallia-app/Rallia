@@ -71,7 +71,6 @@ import { linking } from './src/navigation/linking';
 import { ActionsBottomSheet } from './src/components/ActionsBottomSheet';
 import { FeedbackSheet } from './src/components/FeedbackSheet';
 import { BugReportSheet } from './src/components/BugReportSheet';
-import { BugReportFAB } from './src/components/BugReportFAB';
 import { SplashOverlay } from './src/components/SplashOverlay';
 import {
   ThemeProvider,
@@ -459,8 +458,6 @@ function AppContent() {
         <FeedbackSheet />
         {/* Bug Report Bottom Sheet - shows on shake or help menu */}
         <BugReportSheet />
-        {/* Bug Report FAB - centralized floating button for quick bug reports */}
-        <BugReportFAB />
       </NavigationContainer>
 
       {/* Deep Link Handler - opens match detail sheet when a deep link is received */}

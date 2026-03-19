@@ -33,6 +33,7 @@ import { useActionsSheet, useSport } from '../context';
 import { SportIcon } from '../components/SportIcon';
 import { CopilotStep, WalkthroughableView } from '../context/TourContext';
 import SignInPrompt from '../components/SignInPrompt';
+import { BugReportFAB } from '../components/BugReportFAB';
 import { SearchBar } from '../components/SearchBar';
 import {
   spacingPixels,
@@ -750,21 +751,25 @@ const Chat = () => {
         keyboardShouldPersistTaps="handled"
       />
 
-      {/* New group FAB */}
-      <TouchableOpacity
+      {/* FAB Container - Bug Report + New Group */}
+      <View
         style={[
-          styles.fab,
+          styles.fabContainer,
           {
-            backgroundColor: primary[500],
             bottom: Platform.OS === 'android' ? insets.bottom + 16 : 16,
             right: spacingPixels[5],
           },
         ]}
-        onPress={handleNewGroupPress}
-        activeOpacity={0.8}
       >
-        <Ionicons name="add-outline" size={28} color="#fff" />
-      </TouchableOpacity>
+        <BugReportFAB />
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: primary[500] }]}
+          onPress={handleNewGroupPress}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add-outline" size={28} color="#fff" />
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };
@@ -794,8 +799,12 @@ const styles = StyleSheet.create({
   searchBar: {
     width: '100%',
   },
-  fab: {
+  fabContainer: {
     position: 'absolute',
+    alignItems: 'center',
+    gap: 12,
+  },
+  fab: {
     width: 56,
     height: 56,
     borderRadius: 28,

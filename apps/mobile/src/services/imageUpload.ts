@@ -103,7 +103,9 @@ export async function uploadImage(
     // Create unique filename with folder structure for RLS policy
     // RLS policy expects: (storage.foldername(name))[1] = auth.uid()::text
     // So we must upload to: {userId}/{filename}.ext
-    const fileExt = imageUri.split('.').pop()?.split('?')[0] || 'jpg';
+    const rawExt = (imageUri.split('.').pop()?.split('?')[0] || 'jpg').toLowerCase();
+    // Normalize HEIC/HEIF to JPEG — Supabase Storage doesn't support HEIC
+    const fileExt = rawExt === 'heic' || rawExt === 'heif' ? 'jpg' : rawExt;
     const fileName = `${Date.now()}.${fileExt}`;
     const filePath = `${userId}/${fileName}`;
     const contentType = `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;

@@ -37,6 +37,7 @@ import {
   useUserHomeLocation,
 } from '../context';
 import { CopilotStep, WalkthroughableView } from '../context/TourContext';
+import { BugReportFAB } from '../components/BugReportFAB';
 import {
   useProfile,
   useTheme,
@@ -1097,7 +1098,10 @@ const Home = () => {
           }
         />
       )}
-      {/* All overlays are now managed by OverlayProvider in App.tsx */}
+      {/* Bug Report FAB */}
+      <View style={styles.fabContainer}>
+        <BugReportFAB />
+      </View>
     </SafeAreaView>
   );
 };
@@ -1105,6 +1109,12 @@ const Home = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  fabContainer: {
+    position: 'absolute',
+    bottom: spacingPixels[6],
+    right: spacingPixels[4],
+    alignItems: 'center',
   },
   loadingContainer: {
     flex: 1,
