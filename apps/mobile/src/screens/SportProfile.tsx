@@ -276,17 +276,30 @@ const SportProfile = () => {
   }, [userId]);
 
   // Refresh proof counts when returning to this screen
-  const refreshProofCounts = useCallback(async () => {
+  const refreshProofAndCertificationData = useCallback(async () => {
     if (!playerRatingScoreId || !ratingInfo?.ratingScoreId) return;
 
-    // Fetch all proofs for this player_rating_score (total count)
-    const { data: proofs, error } = await supabase
-      .from('rating_proof')
-      .select('rating_score_id')
-      .eq('player_rating_score_id', playerRatingScoreId)
-      .eq('is_active', true);
+    // Fetch proof counts and certification status in parallel
+    const [proofsResult, certResult] = await Promise.all([
+      // Fetch all proofs for this player_rating_score (total count)
+      supabase
+        .from('rating_proof')
+        .select('rating_score_id')
+        .eq('player_rating_score_id', playerRatingScoreId)
+        .eq('is_active', true),
+      // Fetch updated certification status from DB (may have been updated by triggers)
+      supabase
+        .from('player_rating_score')
+        .select(
+          'badge_status, referrals_count, is_certified, peer_evaluation_average, peer_evaluation_count'
+        )
+        .eq('id', playerRatingScoreId)
+        .single(),
+    ]);
 
-    if (!error && proofs) {
+    // Update proof counts
+    if (!proofsResult.error && proofsResult.data) {
+      const proofs = proofsResult.data;
       // Total count: all proofs for this sport
       setTotalProofsCount(proofs.length);
 
@@ -317,8 +330,8 @@ const SportProfile = () => {
 
   useFocusEffect(
     useCallback(() => {
-      refreshProofCounts();
-    }, [refreshProofCounts])
+      refreshProofAndCertificationData();
+    }, [refreshProofAndCertificationData])
   );
 
   const fetchSportProfileData = async () => {

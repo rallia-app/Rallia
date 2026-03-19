@@ -5,7 +5,7 @@
  * Shows current favorites and allows adding/removing them.
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -51,6 +51,8 @@ interface FavoriteFacilitiesSelectorProps {
   t: (key: TranslationKey) => string;
   /** Maximum number of favorites allowed */
   maxFavorites?: number;
+  /** Callback when the sport-filtered favorites count changes */
+  onFavoritesCountChange?: (count: number) => void;
 }
 
 // =============================================================================
@@ -182,11 +184,13 @@ export const FavoriteFacilitiesSelector: React.FC<FavoriteFacilitiesSelectorProp
   colors,
   t,
   maxFavorites = DEFAULT_MAX_FAVORITES,
+  onFavoritesCountChange,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Fetch user's current favorites
+  // Fetch user's current favorites — filtered by sport so only
+  // facilities linked to this sport appear as "already favorite"
   const {
     favorites,
     loading: favoritesLoading,
@@ -194,7 +198,12 @@ export const FavoriteFacilitiesSelector: React.FC<FavoriteFacilitiesSelectorProp
     removeFavorite,
     isFavorite,
     isMaxReached,
-  } = useFavoriteFacilities(playerId);
+  } = useFavoriteFacilities(playerId, sportId);
+
+  // Notify parent of favorites count changes (used for min-3 enforcement)
+  useEffect(() => {
+    onFavoritesCountChange?.(favorites.length);
+  }, [favorites.length, onFavoritesCountChange]);
 
   // Facility search
   const { facilities: searchResults, isLoading: searchLoading } = useFacilitySearch({

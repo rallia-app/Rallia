@@ -18,21 +18,20 @@ import {
   Image,
   Alert,
   Switch,
-  ScrollView,
   type ViewStyle,
   type StyleProp,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { Text, useToast } from '@rallia/shared-components';
-import { neutral, primary, radiusPixels, spacingPixels } from '@rallia/design-system';
+import { neutral, radiusPixels, spacingPixels } from '@rallia/design-system';
 import { useCreateCommunity, useSports, useFacilitySearch, usePlayer } from '@rallia/shared-hooks';
 import { supabase, Logger } from '@rallia/shared-services';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 
 import { useRequireOnboarding, useThemeStyles, useTranslation } from '../../../hooks';
-import { useSport } from '../../../context';
+import { useSport } from '../../../context/SportContext';
 import { CommunityStackParamList } from '../../../navigation/types';
 import { uploadImage } from '../../../services/imageUpload';
 import { pickImageWithCropper } from '../../../utils/imagePicker';
@@ -55,6 +54,7 @@ export const CreateCommunityForm: React.FC<CreateCommunityFormProps> = ({
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const { guardAction } = useRequireOnboarding();
+  const { selectedSport } = useSport();
   const toast = useToast();
 
   const [name, setName] = useState('');
@@ -73,7 +73,6 @@ export const CreateCommunityForm: React.FC<CreateCommunityFormProps> = ({
   const createCommunityMutation = useCreateCommunity();
   const { sports } = useSports();
   const { player } = usePlayer();
-  const { selectedSport } = useSport();
 
   const playerId = player?.id;
 
@@ -186,11 +185,6 @@ export const CreateCommunityForm: React.FC<CreateCommunityFormProps> = ({
       return;
     }
 
-    if (!selectedSport?.id) {
-      setError('Please select a sport before creating a community');
-      return;
-    }
-
     setError(null);
     setIsLoading(true);
 
@@ -221,7 +215,7 @@ export const CreateCommunityForm: React.FC<CreateCommunityFormProps> = ({
           description: description.trim() || undefined,
           cover_image_url: coverImageUrl,
           is_public: isPublic,
-          sport_id: selectedSport.id,
+          sport_id: selectedSport?.id ?? null,
         },
       });
 
@@ -511,11 +505,13 @@ export const CreateCommunityForm: React.FC<CreateCommunityFormProps> = ({
                 </TouchableOpacity>
               </View>
 
-              <View
+              <ScrollView
                 style={[
                   styles.facilitySearchResults,
                   { backgroundColor: colors.cardBackground, borderColor: colors.border },
                 ]}
+                nestedScrollEnabled
+                keyboardShouldPersistTaps="handled"
               >
                 {facilitySearchLoading ? (
                   <View style={styles.facilitySearchLoading}>
@@ -576,7 +572,7 @@ export const CreateCommunityForm: React.FC<CreateCommunityFormProps> = ({
                     </Text>
                   </View>
                 )}
-              </View>
+              </ScrollView>
             </View>
           )}
 

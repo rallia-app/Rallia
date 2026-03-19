@@ -16,16 +16,15 @@ import {
   ActivityIndicator,
   Image,
   Alert,
-  ScrollView,
   TextInput,
   type ViewStyle,
   type StyleProp,
 } from 'react-native';
-import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { Text, useToast } from '@rallia/shared-components';
-import { neutral, primary, radiusPixels, spacingPixels } from '@rallia/design-system';
+import { neutral, radiusPixels, spacingPixels } from '@rallia/design-system';
 import {
   useCreateGroup,
   useSports,
@@ -37,7 +36,7 @@ import { supabase, Logger } from '@rallia/shared-services';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 
 import { useRequireOnboarding, useThemeStyles, useTranslation } from '../../../hooks';
-import { useSport } from '../../../context';
+import { useSport } from '../../../context/SportContext';
 import type { RootStackParamList } from '../../../navigation/types';
 import { uploadImage } from '../../../services/imageUpload';
 import { pickImageWithCropper } from '../../../utils/imagePicker';
@@ -60,10 +59,10 @@ export const CreateGroupForm: React.FC<CreateGroupFormProps> = ({
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const { guardAction } = useRequireOnboarding();
+  const { selectedSport } = useSport();
   const { sports } = useSports();
   const { player } = usePlayer();
   const { limits } = useNetworkLimits();
-  const { selectedSport } = useSport();
   const toast = useToast();
 
   const [name, setName] = useState('');
@@ -188,11 +187,6 @@ export const CreateGroupForm: React.FC<CreateGroupFormProps> = ({
       return;
     }
 
-    if (!selectedSport?.id) {
-      setError('Please select a sport before creating a group');
-      return;
-    }
-
     setError(null);
     setIsLoading(true);
 
@@ -222,7 +216,7 @@ export const CreateGroupForm: React.FC<CreateGroupFormProps> = ({
           name: name.trim(),
           description: description.trim() || undefined,
           cover_image_url: coverImageUrl,
-          sport_id: selectedSport.id,
+          sport_id: selectedSport?.id ?? null,
         },
       });
 
@@ -259,8 +253,8 @@ export const CreateGroupForm: React.FC<CreateGroupFormProps> = ({
   }, [
     guardAction,
     name,
-    description,
     selectedSport,
+    description,
     coverImage,
     playerId,
     createGroupMutation,
@@ -482,11 +476,13 @@ export const CreateGroupForm: React.FC<CreateGroupFormProps> = ({
                 </TouchableOpacity>
               </View>
 
-              <View
+              <ScrollView
                 style={[
                   styles.facilitySearchResults,
                   { backgroundColor: colors.cardBackground, borderColor: colors.border },
                 ]}
+                nestedScrollEnabled
+                keyboardShouldPersistTaps="handled"
               >
                 {facilitySearchLoading ? (
                   <View style={styles.facilitySearchLoading}>
@@ -547,7 +543,7 @@ export const CreateGroupForm: React.FC<CreateGroupFormProps> = ({
                     </Text>
                   </View>
                 )}
-              </View>
+              </ScrollView>
             </View>
           )}
 

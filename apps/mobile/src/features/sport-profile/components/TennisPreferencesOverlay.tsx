@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Text } from '@rallia/shared-components';
 import { PreferencesInfo } from '@rallia/shared-types';
 import { selectionHaptic, mediumHaptic } from '../../../utils/haptics';
@@ -149,6 +149,7 @@ export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-pre
     initialPreferences.playAttributes || []
   );
   const [showPlayStyleDropdown, setShowPlayStyleDropdown] = useState(false);
+  const [favoritesCount, setFavoritesCount] = useState(0);
 
   const handleTogglePlayAttribute = (attributeName: string) => {
     selectionHaptic();
@@ -177,9 +178,14 @@ export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-pre
     SheetManager.hide('tennis-preferences');
   };
 
-  // When requireAllFields is true, all fields are mandatory
+  // When requireAllFields is true, all fields are mandatory (including min 3 favorites)
+  const MIN_FAVORITES_REQUIRED = 3;
   const canSave = requireAllFields
-    ? matchDuration && matchType && playStyle && playAttributes.length > 0
+    ? matchDuration &&
+      matchType &&
+      playStyle &&
+      playAttributes.length > 0 &&
+      favoritesCount >= MIN_FAVORITES_REQUIRED
     : matchDuration && matchType;
 
   return (
@@ -329,6 +335,7 @@ export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-pre
                   card: colors.card,
                 }}
                 t={(key: string) => t(key as Parameters<typeof t>[0])}
+                onFavoritesCountChange={setFavoritesCount}
               />
             ) : (
               <Text style={{ color: colors.textMuted, fontStyle: 'italic' }}>Loading...</Text>

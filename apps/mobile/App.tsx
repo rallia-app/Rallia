@@ -4,32 +4,33 @@
  * to ensure the supabase client is properly configured before any hooks use it.
  */
 import './src/lib/supabase';
-import * as Sentry from '@sentry/react-native';
-import { isRunningInExpoGo } from 'expo';
+// import * as Sentry from '@sentry/react-native';
+// import { isRunningInExpoGo } from 'expo';
 import Mapbox from '@rnmapbox/maps';
 
 Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? '');
 
+// SENTRY DISABLED - uncomment to re-enable
 // Set up Sentry navigation integration (must be created before Sentry.init)
-const sentryNavigationIntegration = Sentry.reactNavigationIntegration({
-  enableTimeToInitialDisplay: !isRunningInExpoGo(),
-});
-
-Sentry.init({
-  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
-  // Disable in development, active for preview + production builds
-  enabled: !__DEV__,
-  tracesSampleRate: 0.2,
-  replaysOnErrorSampleRate: 1.0,
-  replaysSessionSampleRate: 0.1,
-  integrations: [sentryNavigationIntegration, Sentry.mobileReplayIntegration()],
-  enableNativeFramesTracking: !isRunningInExpoGo(),
-  sendDefaultPii: true,
-});
+// const sentryNavigationIntegration = Sentry.reactNavigationIntegration({
+//   enableTimeToInitialDisplay: !isRunningInExpoGo(),
+// });
+//
+// Sentry.init({
+//   dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+//   // Disable in development, active for preview + production builds
+//   enabled: !__DEV__,
+//   tracesSampleRate: 0.2,
+//   replaysOnErrorSampleRate: 1.0,
+//   replaysSessionSampleRate: 0.1,
+//   integrations: [sentryNavigationIntegration, Sentry.mobileReplayIntegration()],
+//   enableNativeFramesTracking: !isRunningInExpoGo(),
+//   sendDefaultPii: true,
+// });
 
 // Wire up the shared logger's SentryTransport so Logger.error() calls also go to Sentry
-import { SentryTransport } from '@rallia/shared-services';
-SentryTransport.configure(Sentry);
+// import { SentryTransport } from '@rallia/shared-services';
+// SentryTransport.configure(Sentry);
 
 // Global handler for unhandled JS errors outside the React tree
 // (e.g. setTimeout callbacks, event listeners, native module errors)
@@ -43,10 +44,11 @@ ErrorUtils.setGlobalHandler((error, isFatal) => {
   // Import Logger lazily to avoid circular dependency at module init
   const { Logger: L } = require('./src/services/logger');
   L.error('Unhandled JS error (global)', error, { isFatal });
+  // SENTRY DISABLED
   // Sentry captures via SentryTransport through Logger, but also send directly for fatal errors
-  if (isFatal) {
-    Sentry.captureException(error, { level: 'fatal', extra: { isFatal } });
-  }
+  // if (isFatal) {
+  //   Sentry.captureException(error, { level: 'fatal', extra: { isFatal } });
+  // }
   previousGlobalHandler(error, isFatal);
 });
 
@@ -56,7 +58,12 @@ import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import * as SystemUI from 'expo-system-ui';
 import { StatusBar } from 'expo-status-bar';
+
+// Set the native root view background color immediately so it's visible
+// behind the React tree (e.g. area above the Dynamic Island).
+SystemUI.setBackgroundColorAsync('#fafafa');
 import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AppNavigator from './src/navigation/AppNavigator';
 import { navigationRef } from './src/navigation';
@@ -64,6 +71,7 @@ import { linking } from './src/navigation/linking';
 import { ActionsBottomSheet } from './src/components/ActionsBottomSheet';
 import { FeedbackSheet } from './src/components/FeedbackSheet';
 import { BugReportSheet } from './src/components/BugReportSheet';
+import { BugReportFAB } from './src/components/BugReportFAB';
 import { SplashOverlay } from './src/components/SplashOverlay';
 import {
   ThemeProvider,
@@ -115,7 +123,7 @@ import type { MatchDetailData } from './src/context/MatchDetailSheetContext';
 import { attemptFirstLaunchAttribution } from './src/utils/referralAttribution';
 
 // Import NativeWind global styles
-import './global.css';
+// import './global.css';
 import MatchDetailSheet from './src/components/MatchDetailSheet';
 
 // Connect React Query's focusManager to React Native's AppState.
@@ -417,12 +425,13 @@ function AppContent() {
     };
   }, [theme]);
 
+  // SENTRY DISABLED
   // Register the navigation container with Sentry for screen tracking
-  useEffect(() => {
-    if (navigationRef.current) {
-      sentryNavigationIntegration.registerNavigationContainer(navigationRef);
-    }
-  }, []);
+  // useEffect(() => {
+  //   if (navigationRef.current) {
+  //     sentryNavigationIntegration.registerNavigationContainer(navigationRef);
+  //   }
+  // }, []);
 
   return (
     <>
@@ -450,6 +459,8 @@ function AppContent() {
         <FeedbackSheet />
         {/* Bug Report Bottom Sheet - shows on shake or help menu */}
         <BugReportSheet />
+        {/* Bug Report FAB - centralized floating button for quick bug reports */}
+        <BugReportFAB />
       </NavigationContainer>
 
       {/* Deep Link Handler - opens match detail sheet when a deep link is received */}
@@ -497,10 +508,11 @@ function App() {
     Logger.error('Unhandled app error', error, {
       componentStack: errorInfo.componentStack,
     });
+    // SENTRY DISABLED
     // Also capture in Sentry with component stack context
-    Sentry.captureException(error, {
-      contexts: { react: { componentStack: errorInfo.componentStack } },
-    });
+    // Sentry.captureException(error, {
+    //   contexts: { react: { componentStack: errorInfo.componentStack } },
+    // });
   };
 
   return (
@@ -553,4 +565,5 @@ function App() {
   );
 }
 
-export default Sentry.wrap(App);
+// SENTRY DISABLED
+export default App; // Sentry.wrap(App);

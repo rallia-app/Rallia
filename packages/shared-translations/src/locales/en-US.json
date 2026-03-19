@@ -118,7 +118,7 @@
     "authFailed": "Authentication failed. Please try again."
   },
   "splash": {
-    "slogan": "The Power to Play Whenever You Want!"
+    "slogan": "Play More, Plan Less."
   },
   "navigation": {
     "home": "Home",
@@ -7577,6 +7577,10 @@
       "matches": "Matches",
       "chat": "Chat",
       "profile": "Profile",
+      "ratingSystem": "Rating System",
+      "playerDirectory": "Player Directory",
+      "notifications": "Notifications",
+      "performance": "Performance",
       "other": "Other"
     },
     "minChars": "Minimum 10 characters",
