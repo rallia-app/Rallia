@@ -117,7 +117,7 @@
     "authFailed": "L'authentification a échoué. Veuillez réessayer."
   },
   "splash": {
-    "slogan": "Le Pouvoir de Jouer Quand tu le Veux"
+    "slogan": "Ta prochaine partie t'attend."
   },
   "navigation": {
     "home": "Accueil",
@@ -7554,6 +7554,10 @@
       "matches": "Matchs",
       "chat": "Messages",
       "profile": "Profil",
+      "ratingSystem": "Système de classement",
+      "playerDirectory": "Répertoire des joueurs",
+      "notifications": "Notifications",
+      "performance": "Performance",
       "other": "Autre"
     },
     "minChars": "Minimum 10 caractères",

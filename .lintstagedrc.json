@@ -1,6 +1,6 @@
 {
-  "*.{ts,tsx}": ["eslint --fix", "prettier --write"],
-  "*.{js,jsx}": ["eslint --fix", "prettier --write"],
+  "*.{ts,tsx}": ["eslint --no-warn-ignored --fix", "prettier --write"],
+  "*.{js,jsx}": ["eslint --no-warn-ignored --fix", "prettier --write"],
   "*.{json,md}": ["prettier --write"],
   "packages/shared-translations/**/*.json": ["node scripts/dev/validate-translations.js"]
 }

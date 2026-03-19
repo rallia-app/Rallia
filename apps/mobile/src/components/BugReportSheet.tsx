@@ -47,7 +47,7 @@ const MIN_MESSAGE_LENGTH = 10;
 const MAX_MESSAGE_LENGTH = 500;
 const MAX_SCREENSHOTS = 3;
 
-// Quick module options for bug context
+// Quick module options for bug context - matches FeedbackScreen MODULE_OPTIONS
 interface QuickModuleOption {
   value: UserFeedbackModule;
   icon: keyof typeof Ionicons.glyphMap;
@@ -58,6 +58,18 @@ const QUICK_MODULES: QuickModuleOption[] = [
   { value: 'match_features', icon: 'people-outline', labelKey: 'bugReport.modules.matches' },
   { value: 'messaging', icon: 'chatbubble-outline', labelKey: 'bugReport.modules.chat' },
   { value: 'profile_settings', icon: 'person-outline', labelKey: 'bugReport.modules.profile' },
+  { value: 'rating_system', icon: 'star-outline', labelKey: 'bugReport.modules.ratingSystem' },
+  {
+    value: 'player_directory',
+    icon: 'search-outline',
+    labelKey: 'bugReport.modules.playerDirectory',
+  },
+  {
+    value: 'notifications',
+    icon: 'notifications-outline',
+    labelKey: 'bugReport.modules.notifications',
+  },
+  { value: 'performance', icon: 'speedometer-outline', labelKey: 'bugReport.modules.performance' },
   { value: 'other', icon: 'apps-outline', labelKey: 'bugReport.modules.other' },
 ];
 
@@ -604,16 +616,20 @@ const styles = StyleSheet.create({
   moduleChips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacingPixels[2],
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+    marginTop: spacingPixels[2],
+    marginBottom: spacingPixels[2],
   },
   moduleChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacingPixels[1],
-    paddingVertical: spacingPixels[2],
-    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[1],
+    paddingHorizontal: spacingPixels[2],
     borderRadius: radiusPixels.full,
     borderWidth: 1,
+    marginRight: spacingPixels[1], // minimal space between chips
+    marginBottom: spacingPixels[1], // minimal space between lines
   },
   inputSection: {
     marginBottom: spacingPixels[4],

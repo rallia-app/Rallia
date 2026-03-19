@@ -3,7 +3,7 @@
  * Modal for editing community name, description, cover image, and visibility
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -16,13 +16,18 @@ import {
 } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
+import TennisIcon from '../../../../assets/icons/tennis.svg';
+import PickleballIcon from '../../../../assets/icons/pickleball.svg';
 import { Text, useToast } from '@rallia/shared-components';
-import { useUpdateCommunity, type Community } from '@rallia/shared-hooks';
+import { useUpdateCommunity, useSports, type Community } from '@rallia/shared-hooks';
 import { primary, radiusPixels, spacingPixels } from '@rallia/design-system';
+import { supabase, Logger } from '@rallia/shared-services';
 
 import { useThemeStyles, useAuth, useTranslation } from '../../../hooks';
 import { uploadImage, replaceImage } from '../../../services/imageUpload';
 import { pickImageWithCropper } from '../../../utils/imagePicker';
+
+type SportOption = 'both' | 'tennis' | 'pickleball';
 
 export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community'>) {
   const community = payload?.community as Community;
@@ -32,6 +37,7 @@ export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community
   const { t } = useTranslation();
   const { session } = useAuth();
   const playerId = session?.user?.id;
+  const { sports } = useSports();
   const toast = useToast();
 
   const [name, setName] = useState(community?.name ?? '');
@@ -41,8 +47,128 @@ export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community
   const [newCoverImage, setNewCoverImage] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedSportOption, setSelectedSportOption] = useState<SportOption>('both');
 
   const updateCommunityMutation = useUpdateCommunity();
+
+  // Get sport IDs from the sports list
+  const sportIds = useMemo(() => {
+    const tennis = sports.find(s => s.name.toLowerCase() === 'tennis');
+    const pickleball = sports.find(s => s.name.toLowerCase() === 'pickleball');
+    return {
+      tennis: tennis?.id || null,
+      pickleball: pickleball?.id || null,
+    };
+  }, [sports]);
+
+  // Get the sport_id based on selection
+  const getSportId = useCallback((): string | null => {
+    switch (selectedSportOption) {
+      case 'tennis':
+        return sportIds.tennis;
+      case 'pickleball':
+        return sportIds.pickleball;
+      default:
+        return null; // both sports
+    }
+  }, [selectedSportOption, sportIds]);
+
+  // Get the sport option from sport_id
+  const getSportOptionFromId = useCallback(
+    (sportId: string | null): SportOption => {
+      if (!sportId) return 'both';
+      if (sportId === sportIds.tennis) return 'tennis';
+      if (sportId === sportIds.pickleball) return 'pickleball';
+      return 'both';
+    },
+    [sportIds]
+  );
+
+  /**
+   * Cleanup favorite facilities when sport changes.
+   * - If changing to "both" (null) -> no cleanup (expanding scope)
+   * - If changing from one sport to another or from "both" to specific ->
+   *   remove facilities that don't support the new sport
+   */
+  const cleanupIncompatibleFacilities = useCallback(
+    async (oldSportId: string | null, newSportId: string | null) => {
+      // If new sport is "both" (null), no cleanup needed - we're expanding, not restricting
+      if (newSportId === null) {
+        return;
+      }
+
+      // If sport didn't actually change, no cleanup needed
+      if (oldSportId === newSportId) {
+        return;
+      }
+
+      try {
+        // Get all favorite facilities for this community with their sport associations
+        const { data: favorites, error: fetchError } = await supabase
+          .from('network_favorite_facility')
+          .select(
+            `
+            id,
+            facility_id,
+            facility:facility_id (
+              id,
+              facility_sport (
+                sport_id
+              )
+            )
+          `
+          )
+          .eq('network_id', community.id);
+
+        if (fetchError) {
+          Logger.error('Error fetching favorite facilities for cleanup:', fetchError);
+          return;
+        }
+
+        if (!favorites || favorites.length === 0) {
+          return;
+        }
+
+        // Find facilities that don't support the new sport
+        const facilitiesToRemove = favorites.filter(fav => {
+          // Supabase returns nested joins as objects
+          const facility = fav.facility as unknown as {
+            id: string;
+            facility_sport: { sport_id: string }[];
+          } | null;
+          if (!facility) return true; // Remove if facility data is missing
+          const facilitySportIds = facility.facility_sport?.map(fs => fs.sport_id) ?? [];
+          // Keep if facility supports the new sport
+          return !facilitySportIds.includes(newSportId);
+        });
+
+        if (facilitiesToRemove.length === 0) {
+          return;
+        }
+
+        // Remove incompatible facilities
+        const idsToRemove = facilitiesToRemove.map(f => f.id as string);
+        const { error: deleteError } = await supabase
+          .from('network_favorite_facility')
+          .delete()
+          .in('id', idsToRemove);
+
+        if (deleteError) {
+          Logger.error('Error removing incompatible facilities:', deleteError);
+        } else {
+          Logger.info(
+            `Removed ${idsToRemove.length} incompatible favorite facilities after sport change`
+          );
+        }
+      } catch (err) {
+        Logger.error(
+          'Error in cleanupIncompatibleFacilities:',
+          err instanceof Error ? err : undefined
+        );
+      }
+    },
+    [community.id]
+  );
 
   // Reset form when community changes
   useEffect(() => {
@@ -53,8 +179,9 @@ export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community
       setCoverImage(community.cover_image_url || null);
       setNewCoverImage(null);
       setError(null);
+      setSelectedSportOption(getSportOptionFromId(community.sport_id));
     }
-  }, [community]);
+  }, [community, getSportOptionFromId]);
 
   const handleClose = useCallback(() => {
     setError(null);
@@ -149,6 +276,9 @@ export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community
     }
 
     try {
+      const newSportId = getSportId();
+      const oldSportId = community.sport_id;
+
       await updateCommunityMutation.mutateAsync({
         communityId: community.id,
         playerId,
@@ -156,9 +286,13 @@ export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community
           name: name.trim(),
           description: description.trim() || undefined,
           is_public: isPublic,
+          sport_id: newSportId,
           ...(coverImageUrl !== undefined && { cover_image_url: coverImageUrl || undefined }),
         },
       });
+
+      // Cleanup incompatible facilities if sport changed
+      await cleanupIncompatibleFacilities(oldSportId, newSportId);
 
       // Close modal first
       await SheetManager.hide('edit-community');
@@ -178,11 +312,14 @@ export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community
     isPublic,
     community.id,
     community.cover_image_url,
+    community.sport_id,
     playerId,
     updateCommunityMutation,
     onSuccess,
     newCoverImage,
     coverImage,
+    getSportId,
+    cleanupIncompatibleFacilities,
     toast,
     t,
   ]);
@@ -191,6 +328,7 @@ export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community
     name !== community.name ||
     description !== (community.description || '') ||
     isPublic !== (community.is_public ?? true) ||
+    getSportId() !== community.sport_id ||
     newCoverImage !== null ||
     (coverImage === null && community.cover_image_url !== null);
 
@@ -320,6 +458,140 @@ export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community
             />
             <Text size="xs" style={{ color: colors.textMuted, marginTop: 4, textAlign: 'right' }}>
               {description.length}/200
+            </Text>
+          </View>
+
+          {/* Sport Selection */}
+          <View style={styles.inputGroup}>
+            <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
+              {t('community.sportSelection')}
+            </Text>
+            <View style={styles.sportOptions}>
+              {/* Both Sports Option */}
+              <TouchableOpacity
+                style={[
+                  styles.sportOption,
+                  {
+                    backgroundColor:
+                      selectedSportOption === 'both'
+                        ? isDark
+                          ? primary[900]
+                          : primary[100]
+                        : colors.inputBackground,
+                    borderColor: selectedSportOption === 'both' ? colors.primary : colors.border,
+                  },
+                ]}
+                onPress={() => setSelectedSportOption('both')}
+              >
+                <View style={styles.sportOptionIcons}>
+                  <TennisIcon
+                    width={18}
+                    height={18}
+                    fill={selectedSportOption === 'both' ? colors.primary : colors.textMuted}
+                  />
+                  <Text style={{ color: colors.textMuted, marginHorizontal: 2 }}>+</Text>
+                  <PickleballIcon
+                    width={18}
+                    height={18}
+                    fill={selectedSportOption === 'both' ? colors.primary : colors.textMuted}
+                  />
+                </View>
+                <Text
+                  size="xs"
+                  weight={selectedSportOption === 'both' ? 'semibold' : 'regular'}
+                  style={{
+                    color: selectedSportOption === 'both' ? colors.primary : colors.text,
+                    marginTop: 4,
+                  }}
+                >
+                  {t('community.sportBoth')}
+                </Text>
+                {selectedSportOption === 'both' && (
+                  <View style={[styles.sportOptionCheck, { backgroundColor: colors.primary }]}>
+                    <Ionicons name="checkmark" size={10} color="#FFFFFF" />
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              {/* Tennis Only Option */}
+              <TouchableOpacity
+                style={[
+                  styles.sportOption,
+                  {
+                    backgroundColor:
+                      selectedSportOption === 'tennis'
+                        ? isDark
+                          ? primary[900]
+                          : primary[100]
+                        : colors.inputBackground,
+                    borderColor: selectedSportOption === 'tennis' ? colors.primary : colors.border,
+                  },
+                ]}
+                onPress={() => setSelectedSportOption('tennis')}
+              >
+                <TennisIcon
+                  width={24}
+                  height={24}
+                  fill={selectedSportOption === 'tennis' ? colors.primary : colors.textMuted}
+                />
+                <Text
+                  size="xs"
+                  weight={selectedSportOption === 'tennis' ? 'semibold' : 'regular'}
+                  style={{
+                    color: selectedSportOption === 'tennis' ? colors.primary : colors.text,
+                    marginTop: 4,
+                  }}
+                >
+                  {t('community.sportTennis')}
+                </Text>
+                {selectedSportOption === 'tennis' && (
+                  <View style={[styles.sportOptionCheck, { backgroundColor: colors.primary }]}>
+                    <Ionicons name="checkmark" size={10} color="#FFFFFF" />
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              {/* Pickleball Only Option */}
+              <TouchableOpacity
+                style={[
+                  styles.sportOption,
+                  {
+                    backgroundColor:
+                      selectedSportOption === 'pickleball'
+                        ? isDark
+                          ? primary[900]
+                          : primary[100]
+                        : colors.inputBackground,
+                    borderColor:
+                      selectedSportOption === 'pickleball' ? colors.primary : colors.border,
+                  },
+                ]}
+                onPress={() => setSelectedSportOption('pickleball')}
+              >
+                <PickleballIcon
+                  width={24}
+                  height={24}
+                  fill={selectedSportOption === 'pickleball' ? colors.primary : colors.textMuted}
+                />
+                <Text
+                  size="xs"
+                  weight={selectedSportOption === 'pickleball' ? 'semibold' : 'regular'}
+                  style={{
+                    color: selectedSportOption === 'pickleball' ? colors.primary : colors.text,
+                    marginTop: 4,
+                  }}
+                >
+                  {t('community.sportPickleball')}
+                </Text>
+                {selectedSportOption === 'pickleball' && (
+                  <View style={[styles.sportOptionCheck, { backgroundColor: colors.primary }]}>
+                    <Ionicons name="checkmark" size={10} color="#FFFFFF" />
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+            <Text size="xs" style={{ color: colors.textMuted, marginTop: 6 }}>
+              {t('community.sportSelectionHint')}
             </Text>
           </View>
 
@@ -540,5 +812,34 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     gap: spacingPixels[2],
+  },
+  sportOptions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  sportOption: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    position: 'relative',
+    minHeight: 70,
+  },
+  sportOptionIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sportOptionCheck: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

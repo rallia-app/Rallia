@@ -12,7 +12,7 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 // TYPES
 // =============================================================================
 
-export type BugReportTrigger = 'shake' | 'help_menu' | 'settings';
+export type BugReportTrigger = 'shake' | 'help_menu' | 'settings' | 'fab';
 
 interface BugReportSheetContextType {
   /** Open the bug report sheet */

@@ -6,7 +6,7 @@
  * - Match Chats: Chats linked to matches (both singles and doubles)
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -50,6 +50,7 @@ import {
   useUpdateLastSeen,
   useBlockedUserIds,
   useFavoriteUserIds,
+  useMarkMessagesAsDelivered,
   type ConversationPreview,
 } from '@rallia/shared-hooks';
 import {
@@ -122,6 +123,26 @@ const Chat = () => {
 
   // Fetch favorite user IDs for filtering by favorites
   const { data: favoriteUserIds = new Set<string>() } = useFavoriteUserIds(playerId);
+
+  // Mark messages as delivered when conversations are loaded
+  const { mutate: markAsDelivered } = useMarkMessagesAsDelivered();
+
+  // Mark messages as delivered for all conversations with unread messages
+  // This runs whenever conversations change (including realtime updates)
+  useEffect(() => {
+    if (!playerId || !conversations || conversations.length === 0) return;
+
+    // Mark messages as delivered for conversations with unread messages
+    // The RPC function is idempotent - only updates messages with status 'sent'
+    conversations.forEach(conv => {
+      if (conv.unread_count > 0) {
+        markAsDelivered({
+          conversationId: conv.id,
+          recipientId: playerId,
+        });
+      }
+    });
+  }, [conversations, playerId, markAsDelivered]);
 
   // Check if any chat filter is active (used for empty state messages)
   const _hasActiveChatFilters = chatFilters.blocked || chatFilters.unread || chatFilters.favorites;
