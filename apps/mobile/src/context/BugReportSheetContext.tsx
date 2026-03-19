@@ -12,7 +12,7 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 // TYPES
 // =============================================================================
 
-export type BugReportTrigger = 'shake' | 'help_menu' | 'settings';
+export type BugReportTrigger = 'shake' | 'help_menu' | 'settings' | 'fab';
 
 interface BugReportSheetContextType {
   /** Open the bug report sheet */
@@ -20,6 +20,9 @@ interface BugReportSheetContextType {
 
   /** Close the bug report sheet */
   closeBugReport: () => void;
+
+  /** Called when the sheet finishes dismissing (resets isOpen state) */
+  onSheetDismiss: () => void;
 
   /** Whether the sheet is currently open */
   isOpen: boolean;
@@ -64,16 +67,22 @@ export const BugReportSheetProvider: React.FC<BugReportSheetProviderProps> = ({ 
    */
   const closeBugReport = useCallback(() => {
     sheetRef.current?.dismiss();
-    // Clear state after dismiss animation
-    setTimeout(() => {
-      setIsOpen(false);
-      setTrigger(null);
-    }, 300);
+  }, []);
+
+  /**
+   * Called when the sheet finishes its dismiss animation.
+   * This reliably resets open state regardless of how the sheet was closed
+   * (swipe down, submit, cancel button, etc.).
+   */
+  const onSheetDismiss = useCallback(() => {
+    setIsOpen(false);
+    setTrigger(null);
   }, []);
 
   const contextValue: BugReportSheetContextType = {
     openBugReport,
     closeBugReport,
+    onSheetDismiss,
     isOpen,
     trigger,
     sheetRef,

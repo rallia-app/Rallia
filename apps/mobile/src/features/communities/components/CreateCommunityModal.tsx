@@ -14,10 +14,9 @@ import {
   Image,
   Alert,
   Switch,
-  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { Text, useToast } from '@rallia/shared-components';
 import { primary, radiusPixels, spacingPixels } from '@rallia/design-system';
@@ -25,11 +24,14 @@ import { useCreateCommunity, useSports, useFacilitySearch, usePlayer } from '@ra
 import { supabase, Logger } from '@rallia/shared-services';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 
+import TennisIcon from '../../../../assets/icons/tennis.svg';
+import PickleballIcon from '../../../../assets/icons/pickleball.svg';
 import { useRequireOnboarding, useThemeStyles, useTranslation } from '../../../hooks';
-import { useSport } from '../../../context';
 import { CommunityStackParamList } from '../../../navigation/types';
 import { uploadImage } from '../../../services/imageUpload';
 import { pickImageWithCropper } from '../../../utils/imagePicker';
+
+type SportOption = 'both' | 'tennis' | 'pickleball';
 
 export function CreateCommunityActionSheet({ payload }: SheetProps<'create-community'>) {
   const playerId = payload?.playerId;
@@ -44,6 +46,7 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
   const [description, setDescription] = useState('');
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [isPublic, setIsPublic] = useState(true);
+  const [selectedSport, setSelectedSport] = useState<SportOption>('both');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isLoading, _setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +59,6 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
   const createCommunityMutation = useCreateCommunity();
   const { sports } = useSports();
   const { player } = usePlayer();
-  const { selectedSport } = useSport();
 
   // Get all sport IDs and names for displaying sport tags on facilities
   const { allSportIds, sportNames } = useMemo(() => {
@@ -84,9 +86,22 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
     [allSportIds, sportNames]
   );
 
-  // Get sport IDs for facility search based on current sport context
+  // Get sport IDs for facility search based on selection
   const facilitySearchSportIds = useMemo(() => {
-    return selectedSport ? [selectedSport.id] : (sports?.map(s => s.id) ?? []);
+    if (selectedSport === 'both') {
+      return sports?.map(s => s.id) ?? [];
+    }
+    const sport = sports?.find(s => s.name.toLowerCase() === selectedSport.toLowerCase());
+    return sport ? [sport.id] : [];
+  }, [selectedSport, sports]);
+
+  // Get the sport_id based on selection (null = both sports)
+  const getSportId = useMemo(() => {
+    return () => {
+      if (selectedSport === 'both') return null;
+      const sport = sports?.find(s => s.name.toLowerCase() === selectedSport.toLowerCase());
+      return sport?.id ?? null;
+    };
   }, [selectedSport, sports]);
 
   // Use facility search hook - enabled when search is open (shows all nearby by default)
@@ -244,13 +259,14 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
       description.trim() || undefined,
       coverImageUrl,
       isPublic,
-      selectedSport?.id ?? null,
+      getSportId(),
       selectedFacilities
     );
     setName('');
     setDescription('');
     setCoverImage(null);
     setIsPublic(true);
+    setSelectedSport('both');
     setSelectedFacilities([]);
     setFacilitySearchQuery('');
     setShowFacilitySearch(false);
@@ -260,7 +276,7 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
     coverImage,
     isPublic,
     t,
-    selectedSport,
+    getSportId,
     selectedFacilities,
     handleCreateCommunity,
   ]);
@@ -270,6 +286,7 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
     setDescription('');
     setCoverImage(null);
     setIsPublic(true);
+    setSelectedSport('both');
     setSelectedFacilities([]);
     setFacilitySearchQuery('');
     setShowFacilitySearch(false);
@@ -445,6 +462,139 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
           />
         </View>
 
+        {/* Sport Selection Section */}
+        <View style={styles.inputGroup}>
+          <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
+            {t('community.sportSelection')}
+          </Text>
+          <View style={styles.sportOptions}>
+            {/* Both Sports Option */}
+            <TouchableOpacity
+              style={[
+                styles.sportOption,
+                {
+                  backgroundColor:
+                    selectedSport === 'both'
+                      ? isDark
+                        ? primary[900]
+                        : primary[100]
+                      : colors.inputBackground,
+                  borderColor: selectedSport === 'both' ? colors.primary : colors.border,
+                },
+              ]}
+              onPress={() => setSelectedSport('both')}
+            >
+              <View style={styles.sportOptionIcons}>
+                <TennisIcon
+                  width={18}
+                  height={18}
+                  fill={selectedSport === 'both' ? colors.primary : colors.textMuted}
+                />
+                <Text style={{ color: colors.textMuted, marginHorizontal: 2 }}>+</Text>
+                <PickleballIcon
+                  width={18}
+                  height={18}
+                  fill={selectedSport === 'both' ? colors.primary : colors.textMuted}
+                />
+              </View>
+              <Text
+                size="xs"
+                weight={selectedSport === 'both' ? 'semibold' : 'regular'}
+                style={{
+                  color: selectedSport === 'both' ? colors.primary : colors.text,
+                  marginTop: 4,
+                }}
+              >
+                {t('community.sportBoth')}
+              </Text>
+              {selectedSport === 'both' && (
+                <View style={[styles.sportOptionCheck, { backgroundColor: colors.primary }]}>
+                  <Ionicons name="checkmark" size={10} color="#FFFFFF" />
+                </View>
+              )}
+            </TouchableOpacity>
+
+            {/* Tennis Only Option */}
+            <TouchableOpacity
+              style={[
+                styles.sportOption,
+                {
+                  backgroundColor:
+                    selectedSport === 'tennis'
+                      ? isDark
+                        ? primary[900]
+                        : primary[100]
+                      : colors.inputBackground,
+                  borderColor: selectedSport === 'tennis' ? colors.primary : colors.border,
+                },
+              ]}
+              onPress={() => setSelectedSport('tennis')}
+            >
+              <TennisIcon
+                width={24}
+                height={24}
+                fill={selectedSport === 'tennis' ? colors.primary : colors.textMuted}
+              />
+              <Text
+                size="xs"
+                weight={selectedSport === 'tennis' ? 'semibold' : 'regular'}
+                style={{
+                  color: selectedSport === 'tennis' ? colors.primary : colors.text,
+                  marginTop: 4,
+                }}
+              >
+                {t('community.sportTennis')}
+              </Text>
+              {selectedSport === 'tennis' && (
+                <View style={[styles.sportOptionCheck, { backgroundColor: colors.primary }]}>
+                  <Ionicons name="checkmark" size={10} color="#FFFFFF" />
+                </View>
+              )}
+            </TouchableOpacity>
+
+            {/* Pickleball Only Option */}
+            <TouchableOpacity
+              style={[
+                styles.sportOption,
+                {
+                  backgroundColor:
+                    selectedSport === 'pickleball'
+                      ? isDark
+                        ? primary[900]
+                        : primary[100]
+                      : colors.inputBackground,
+                  borderColor: selectedSport === 'pickleball' ? colors.primary : colors.border,
+                },
+              ]}
+              onPress={() => setSelectedSport('pickleball')}
+            >
+              <PickleballIcon
+                width={24}
+                height={24}
+                fill={selectedSport === 'pickleball' ? colors.primary : colors.textMuted}
+              />
+              <Text
+                size="xs"
+                weight={selectedSport === 'pickleball' ? 'semibold' : 'regular'}
+                style={{
+                  color: selectedSport === 'pickleball' ? colors.primary : colors.text,
+                  marginTop: 4,
+                }}
+              >
+                {t('community.sportPickleball')}
+              </Text>
+              {selectedSport === 'pickleball' && (
+                <View style={[styles.sportOptionCheck, { backgroundColor: colors.primary }]}>
+                  <Ionicons name="checkmark" size={10} color="#FFFFFF" />
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+          <Text size="xs" style={{ color: colors.textMuted, marginTop: 6 }}>
+            {t('community.sportSelectionHint')}
+          </Text>
+        </View>
+
         {/* Favorite Facilities Section (Optional) */}
         <View style={styles.inputGroup}>
           <View style={styles.labelRow}>
@@ -543,11 +693,13 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
               </View>
 
               {/* Search results - show immediately, filter as user types */}
-              <View
+              <ScrollView
                 style={[
                   styles.facilitySearchResults,
                   { backgroundColor: colors.cardBackground, borderColor: colors.border },
                 ]}
+                nestedScrollEnabled
+                keyboardShouldPersistTaps="handled"
               >
                 {facilitySearchLoading ? (
                   <View style={styles.facilitySearchLoading}>
@@ -609,7 +761,7 @@ export function CreateCommunityActionSheet({ payload }: SheetProps<'create-commu
                     </Text>
                   </View>
                 )}
-              </View>
+              </ScrollView>
             </View>
           )}
 
@@ -915,5 +1067,34 @@ const styles = StyleSheet.create({
   },
   facilityNoResultsText: {
     fontSize: 13,
+  },
+  sportOptions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  sportOption: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    position: 'relative',
+    minHeight: 70,
+  },
+  sportOptionIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sportOptionCheck: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
