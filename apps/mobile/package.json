@@ -109,7 +109,7 @@
     "@types/react": "^19.2.0",
     "lightningcss": "1.30.2",
     "postcss": "^8.5.8",
-    "prettier-plugin-tailwindcss": "^0.5.14",
+    "prettier-plugin-tailwindcss": "^0.7.2",
     "react-native-svg-transformer": "^1.5.2",
     "tailwindcss": "4.1.16",
     "typescript": "^5.9.3"

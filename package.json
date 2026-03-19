@@ -150,7 +150,7 @@
     "@ide/backoff": "^1.0.0",
     "expo": "~54.0.27",
     "expo-application": "^55.0.8",
-    "prettier-plugin-tailwindcss": "^0.5.14",
+    "prettier-plugin-tailwindcss": "^0.7.2",
     "react": "19.1.0",
     "react-native": "0.81.5",
     "react-native-fbsdk-next": "^13.4.1"
