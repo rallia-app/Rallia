@@ -1205,12 +1205,7 @@ const PlayerProfile = () => {
               ratingValue={primarySport?.ratingValue}
               ratingLabel={primarySport?.ratingLabel}
               certificationStatus={
-                primarySport?.badgeStatus as
-                  | 'self_declared'
-                  | 'certified'
-                  | 'disputed'
-                  | 'disputed'
-                  | undefined
+                primarySport?.badgeStatus as 'self_declared' | 'certified' | 'disputed' | undefined
               }
               isDark={isDark}
               isLoading={loading}

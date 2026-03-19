@@ -8,7 +8,7 @@
  * Styled to match ReportFacilitySheet / ReportIssueSheet design language.
  */
 
-import React, { useState, useCallback, useMemo, useRef, type TextInput } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
   Platform,
   Image,
+  TextInput,
 } from 'react-native';
 import {
   BottomSheetModal,
@@ -99,8 +100,8 @@ export const BugReportSheet: React.FC = () => {
   // Form state — use refs for text values to avoid re-renders on every keystroke
   const subjectRef = useRef('');
   const messageRef = useRef('');
-  const subjectInputRef = useRef<TextInput>(null);
-  const messageInputRef = useRef<TextInput>(null);
+  const subjectInputRef = useRef<TextInput | null>(null);
+  const messageInputRef = useRef<TextInput | null>(null);
   const [subjectLength, setSubjectLength] = useState(0);
   const [messageLength, setMessageLength] = useState(0);
   const [selectedModule, setSelectedModule] = useState<UserFeedbackModule | null>(null);
@@ -394,7 +395,7 @@ export const BugReportSheet: React.FC = () => {
               {t('bugReport.subjectLabel' as TranslationKey)}
             </Text>
             <BottomSheetTextInput
-              ref={subjectInputRef}
+              ref={subjectInputRef as any}
               style={[
                 styles.textInput,
                 {
@@ -428,7 +429,7 @@ export const BugReportSheet: React.FC = () => {
               {t('bugReport.descriptionLabel' as TranslationKey)}
             </Text>
             <BottomSheetTextInput
-              ref={messageInputRef}
+              ref={messageInputRef as any}
               style={[
                 styles.textInput,
                 styles.multilineInput,
