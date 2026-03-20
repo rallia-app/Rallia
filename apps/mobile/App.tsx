@@ -114,12 +114,16 @@ import {
 } from './src/context';
 import { usePushNotifications, useShakeDetection } from './src/hooks';
 import { StripeProvider } from '@stripe/stripe-react-native';
-import { SheetProvider } from 'react-native-actions-sheet';
+import { SheetManager, SheetProvider } from 'react-native-actions-sheet';
 import { Sheets } from './src/context/sheets';
 import { useToast } from '@rallia/shared-components';
 import { getMatchWithDetails } from '@rallia/shared-services';
 import type { MatchDetailData } from './src/context/MatchDetailSheetContext';
 import { attemptFirstLaunchAttribution } from './src/utils/referralAttribution';
+import {
+  shouldShowReferralInvite,
+  updateLastPromptTimestamp,
+} from './src/utils/referralInviteFrequency';
 
 // Import NativeWind global styles
 // import './global.css';
@@ -406,6 +410,34 @@ function ShakeHandler() {
   return null;
 }
 
+function ReferralInviteHandler() {
+  const { user } = useAuth();
+  const { isSplashComplete, isSportSelectionComplete, permissionsHandled } = useOverlay();
+  const { feedbackData } = useFeedbackSheet();
+  const hasCheckedRef = useRef(false);
+
+  useEffect(() => {
+    if (hasCheckedRef.current) return;
+    if (!user?.id || !isSplashComplete || !isSportSelectionComplete || !permissionsHandled) return;
+    // Don't show if the feedback sheet is already visible
+    if (feedbackData) return;
+
+    hasCheckedRef.current = true;
+
+    (async () => {
+      const shouldShow = await shouldShowReferralInvite();
+      if (!shouldShow) return;
+
+      await updateLastPromptTimestamp();
+      setTimeout(() => {
+        SheetManager.show('referral-invite');
+      }, 1000);
+    })();
+  }, [user?.id, isSplashComplete, isSportSelectionComplete, permissionsHandled, feedbackData]);
+
+  return null;
+}
+
 function AppContent() {
   const { theme } = useTheme();
   const { setSplashComplete, isSplashComplete, permissionsHandled } = useOverlay();
@@ -468,6 +500,8 @@ function AppContent() {
       <SessionExpiryHandler />
       {/* Shake Handler - detects shakes and opens bug report sheet */}
       <ShakeHandler />
+      {/* Referral Invite Handler - periodically prompts users to invite friends */}
+      <ReferralInviteHandler />
 
       {/* Welcome Tour Modal - shows for new users after splash/permissions */}
       <WelcomeTourModal splashComplete={isSplashComplete} permissionsHandled={permissionsHandled} />
