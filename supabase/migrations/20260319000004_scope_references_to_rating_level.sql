@@ -15,13 +15,6 @@
 ALTER TABLE rating_reference_request
 ADD COLUMN IF NOT EXISTS rating_score_id UUID REFERENCES rating_score(id);
 
--- Backfill existing rows: set rating_score_id from player_rating_score
-UPDATE rating_reference_request rrr
-SET rating_score_id = prs.rating_score_id
-FROM player_rating_score prs
-WHERE rrr.player_rating_score_id = prs.id
-AND rrr.rating_score_id IS NULL;
-
 -- ============================================================================
 -- 2. Auto-populate rating_score_id on INSERT
 -- ============================================================================
@@ -390,3 +383,13 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+-- ============================================================================
+-- 8. Backfill existing rows (after trigger functions are fixed above)
+-- ============================================================================
+
+UPDATE rating_reference_request rrr
+SET rating_score_id = prs.rating_score_id
+FROM player_rating_score prs
+WHERE rrr.player_rating_score_id = prs.id
+AND rrr.rating_score_id IS NULL;
