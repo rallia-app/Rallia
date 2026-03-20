@@ -3154,6 +3154,22 @@
       "invitesSent": "{count} invite(s) sent!",
       "failedToLoad": "Failed to load contacts",
       "failedToSend": "Failed to send invites"
+    },
+    "inviteModal": {
+      "title": "Invite Friends to Rallia",
+      "subtitle": "Know someone who'd love to play? Send them an invite!",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "friend@example.com",
+      "addAnother": "Add another",
+      "submit": "Send Invites",
+      "skip": "Maybe later",
+      "submitting": "Sending...",
+      "successTitle": "Invites Sent!",
+      "successMessage": "Your friends will receive an invitation to join Rallia.",
+      "errorInvalidEmail": "Please enter a valid email address",
+      "errorDuplicateEmail": "This email has already been invited",
+      "errorGeneric": "Something went wrong. Please try again.",
+      "gotIt": "Got it"
     }
   },
   "matchCreation": {

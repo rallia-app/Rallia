@@ -67,6 +67,8 @@ import { ImageProofActionSheet } from '../features/ratings/components/ImageProof
 import { VideoProofActionSheet } from '../features/ratings/components/VideoProofOverlay';
 import { DocumentProofActionSheet } from '../features/ratings/components/DocumentProofOverlay';
 import { EditProofActionSheet } from '../features/ratings/components/EditProofOverlay';
+// Referral
+import { ReferralInviteActionSheet } from '../components/ReferralInviteSheet';
 // Define WeeklyAvailability inline to avoid circular dependencies
 type DayOfWeek = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
 interface DayAvailability {
@@ -587,6 +589,9 @@ declare module 'react-native-actions-sheet' {
         booking: import('@rallia/shared-services').BookingWithDetails;
       };
     }>;
+    'referral-invite': SheetDefinition<{
+      payload?: Record<string, never>;
+    }>;
   }
 }
 
@@ -652,6 +657,8 @@ export const Sheets = () => {
         'edit-proof': EditProofActionSheet,
         // Booking sheets
         'booking-detail': BookingDetailActionSheet,
+        // Referral sheets
+        'referral-invite': ReferralInviteActionSheet,
       }}
     />
   );
