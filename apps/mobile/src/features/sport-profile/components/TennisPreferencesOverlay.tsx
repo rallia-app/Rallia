@@ -9,6 +9,7 @@ import { useThemeStyles } from '../../../hooks';
 import { useTranslation, type TranslationKey } from '../../../hooks';
 import { FavoriteFacilitiesSelector } from './FavoriteFacilitiesSelector';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
+import ProgressIndicator from '../../onboarding/components/ProgressIndicator';
 
 /**
  * Dynamic play style option fetched from database
@@ -105,6 +106,9 @@ export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-pre
   const sportId = payload?.sportId;
   const latitude = payload?.latitude;
   const longitude = payload?.longitude;
+  const currentStep = payload?.currentStep;
+  const totalSteps = payload?.totalSteps;
+  const stepName = payload?.stepName;
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
 
@@ -222,6 +226,15 @@ export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-pre
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          {/* Progress Indicator - show when step info is provided */}
+          {currentStep != null && totalSteps != null && (
+            <ProgressIndicator
+              currentStep={currentStep}
+              totalSteps={totalSteps}
+              stepName={stepName}
+            />
+          )}
+
           {/* Match Duration */}
           <View style={styles.section}>
             <Text style={[styles.label, { color: colors.text }]}>

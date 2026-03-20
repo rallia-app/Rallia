@@ -10,20 +10,12 @@
  * Content mode is managed by ActionsSheetContext as the single source of truth,
  * eliminating race conditions and complex state synchronization.
  *
- * When "Create Match" is pressed, the MatchCreationWizard slides in.
+ * All four actions slide in their respective wizard panels.
  */
 
 import * as React from 'react';
 import { useCallback, useMemo, useState, useEffect } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  Dimensions,
-  Keyboard,
-  Modal,
-  Alert,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions, Keyboard } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -53,9 +45,11 @@ import { useTheme } from '@rallia/shared-hooks';
 import { getMatchWithDetails } from '@rallia/shared-services';
 import { MatchCreationWizard } from '../features/matches';
 import { InvitePlayersWizard } from '../features/referral';
+import { CreateShareListWizard } from '../features/shared-lists';
+import { CreateNetworkWizard } from '../features/groups';
 import { AuthWizard } from '../features/auth';
 import { OnboardingWizard } from '../features/onboarding/components/wizard';
-import { navigateFromOutside, navigateToCommunityScreen } from '../navigation';
+import { navigateFromOutside, navigateToCommunityScreen, navigationRef } from '../navigation';
 
 // =============================================================================
 // TYPES
@@ -138,6 +132,8 @@ interface ActionsContentProps {
   onClose: () => void;
   onCreateMatch: () => void;
   onInvitePlayers: () => void;
+  onCreateShareList: () => void;
+  onCreateNetwork: () => void;
   colors: ThemeColors;
   t: (key: TranslationKey) => string;
 }
@@ -146,39 +142,11 @@ const ActionsContent: React.FC<ActionsContentProps> = ({
   onClose,
   onCreateMatch,
   onInvitePlayers,
+  onCreateShareList,
+  onCreateNetwork,
   colors,
   t,
 }) => {
-  const [showNetworkModal, setShowNetworkModal] = useState(false);
-
-  const handleCreateShareList = () => {
-    onClose();
-    navigateToCommunityScreen('ShareLists');
-  };
-
-  const handleCreateNetwork = () => {
-    lightHaptic();
-    setShowNetworkModal(true);
-  };
-
-  const handleSelectGroup = () => {
-    setShowNetworkModal(false);
-    onClose();
-    navigateToCommunityScreen('Groups');
-  };
-
-  const handleSelectCommunity = () => {
-    setShowNetworkModal(false);
-    onClose();
-    navigateToCommunityScreen('Communities');
-  };
-
-  const handleCreateEvent = () => {
-    // TODO: Navigate to create event flow (combines tournaments and leagues)
-    onClose();
-    Alert.alert('Create Event', 'This feature is coming soon!');
-  };
-
   return (
     <View style={styles.contentContainer}>
       <View style={styles.actionsList}>
@@ -202,7 +170,7 @@ const ActionsContent: React.FC<ActionsContentProps> = ({
           icon="share-outline"
           title={t('actions.createShareList')}
           description={t('actions.createShareListDescription')}
-          onPress={handleCreateShareList}
+          onPress={onCreateShareList}
           colors={colors}
         />
 
@@ -210,91 +178,10 @@ const ActionsContent: React.FC<ActionsContentProps> = ({
           icon="people-outline"
           title={t('actions.createNetwork')}
           description={t('actions.createNetworkDescription')}
-          onPress={handleCreateNetwork}
+          onPress={onCreateNetwork}
           colors={colors}
         />
-
-        {/* <ActionItem
-          icon="trophy-outline"
-          title={t('actions.createEvent')}
-          description={t('actions.createEventDescription')}
-          onPress={handleCreateEvent}
-          colors={colors}
-        /> */}
       </View>
-
-      {/* Network Type Selection Modal */}
-      <Modal
-        visible={showNetworkModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowNetworkModal(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowNetworkModal(false)}
-        >
-          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-            <Text size="lg" weight="bold" color={colors.text} style={styles.modalTitle}>
-              {t('actions.selectNetworkType')}
-            </Text>
-            <Text size="sm" color={colors.textMuted} style={styles.modalSubtitle}>
-              {t('actions.selectNetworkTypeDescription')}
-            </Text>
-
-            <View style={styles.modalOptions}>
-              <TouchableOpacity
-                style={[
-                  styles.modalOption,
-                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                ]}
-                onPress={handleSelectGroup}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.modalOptionIcon, { backgroundColor: primary[100] }]}>
-                  <Ionicons name="people-outline" size={28} color={primary[600]} />
-                </View>
-                <Text size="base" weight="semibold" color={colors.text}>
-                  {t('actions.group')}
-                </Text>
-                <Text size="xs" color={colors.textMuted} style={styles.modalOptionDescription}>
-                  {t('actions.groupDescription')}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.modalOption,
-                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                ]}
-                onPress={handleSelectCommunity}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.modalOptionIcon, { backgroundColor: primary[100] }]}>
-                  <Ionicons name="globe-outline" size={28} color={primary[600]} />
-                </View>
-                <Text size="base" weight="semibold" color={colors.text}>
-                  {t('actions.community')}
-                </Text>
-                <Text size="xs" color={colors.textMuted} style={styles.modalOptionDescription}>
-                  {t('actions.communityDescription')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.modalCancelButton, { borderColor: colors.border }]}
-              onPress={() => setShowNetworkModal(false)}
-              activeOpacity={0.7}
-            >
-              <Text size="base" weight="medium" color={colors.textMuted}>
-                {t('common.cancel')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </View>
   );
 };
@@ -326,15 +213,37 @@ export const ActionsBottomSheet: React.FC = () => {
   const { t } = useTranslation();
   const isDark = theme === 'dark';
 
-  // Wizard state for match creation and invite players (local, only for slide animation)
+  // Wizard state for all sliding panels (local, only for slide animation)
   const [showWizard, setShowWizard] = useState(false);
   const [showInviteWizard, setShowInviteWizard] = useState(false);
+  const [showShareListWizard, setShowShareListWizard] = useState(false);
+  const [showNetworkWizard, setShowNetworkWizard] = useState(false);
 
   // If we have editMatchData, we're in edit mode - show wizard immediately
   const isEditMode = !!editMatchData;
 
   // Animation value for slide transition
   const slideProgress = useSharedValue(0);
+
+  // Helper to slide wizard in
+  const slideIn = useCallback(() => {
+    // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
+    slideProgress.value = withSpring(1, { damping: 80, stiffness: 600, overshootClamping: false });
+  }, [slideProgress]);
+
+  // Helper to slide wizard out with callback
+  const slideOut = useCallback(
+    (onComplete: () => void) => {
+      // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
+      slideProgress.value = withSpring(0, {
+        damping: 80,
+        stiffness: 600,
+        overshootClamping: false,
+      });
+      setTimeout(onComplete, 300);
+    },
+    [slideProgress]
+  );
 
   // Effect to automatically open match creation wizard when flag is set
   useEffect(() => {
@@ -344,12 +253,7 @@ export const ActionsBottomSheet: React.FC = () => {
       // Then trigger the wizard with a small delay to ensure sheet is fully presented
       setTimeout(() => {
         setShowWizard(true);
-        // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
-        slideProgress.value = withSpring(1, {
-          damping: 80,
-          stiffness: 600,
-          overshootClamping: false,
-        });
+        slideIn();
       }, 100);
     }
   }, [
@@ -358,7 +262,7 @@ export const ActionsBottomSheet: React.FC = () => {
     showWizard,
     isEditMode,
     clearMatchCreationFlag,
-    slideProgress,
+    slideIn,
   ]);
 
   // Theme-aware colors from design system
@@ -431,26 +335,44 @@ export const ActionsBottomSheet: React.FC = () => {
   const handleCreateMatch = useCallback(() => {
     lightHaptic();
     setShowWizard(true);
-    // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
-    slideProgress.value = withSpring(1, { damping: 80, stiffness: 600, overshootClamping: false });
-  }, [slideProgress]);
+    slideIn();
+  }, [slideIn]);
 
   // Handle invite players - show invite wizard with slide animation
   const handleInvitePlayers = useCallback(() => {
     lightHaptic();
     setShowInviteWizard(true);
-    // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
-    slideProgress.value = withSpring(1, { damping: 80, stiffness: 600, overshootClamping: false });
-  }, [slideProgress]);
+    slideIn();
+  }, [slideIn]);
+
+  // Handle create share list - show share list wizard with slide animation
+  const handleCreateShareList = useCallback(() => {
+    lightHaptic();
+    setShowShareListWizard(true);
+    slideIn();
+  }, [slideIn]);
+
+  // Handle create network - show network wizard with slide animation
+  const handleCreateNetwork = useCallback(() => {
+    lightHaptic();
+    setShowNetworkWizard(true);
+    slideIn();
+  }, [slideIn]);
 
   // Handle invite wizard close - slide back to actions list
   const handleInviteWizardClose = useCallback(() => {
-    // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
-    slideProgress.value = withSpring(0, { damping: 80, stiffness: 600, overshootClamping: false });
-    setTimeout(() => {
-      setShowInviteWizard(false);
-    }, 300);
-  }, [slideProgress]);
+    slideOut(() => setShowInviteWizard(false));
+  }, [slideOut]);
+
+  // Handle share list wizard close - slide back to actions list
+  const handleShareListWizardClose = useCallback(() => {
+    slideOut(() => setShowShareListWizard(false));
+  }, [slideOut]);
+
+  // Handle network wizard close - slide back to actions list
+  const handleNetworkWizardClose = useCallback(() => {
+    slideOut(() => setShowNetworkWizard(false));
+  }, [slideOut]);
 
   // Handle wizard close - slide back to actions list
   const handleWizardClose = useCallback(() => {
@@ -461,14 +383,8 @@ export const ActionsBottomSheet: React.FC = () => {
       return;
     }
 
-    // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
-    // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
-    slideProgress.value = withSpring(0, { damping: 80, stiffness: 600, overshootClamping: false });
-    // Wait for animation to complete before hiding wizard
-    setTimeout(() => {
-      setShowWizard(false);
-    }, 300);
-  }, [slideProgress, isEditMode, clearEditMatch, closeSheet]);
+    slideOut(() => setShowWizard(false));
+  }, [slideOut, isEditMode, clearEditMatch, closeSheet]);
 
   // Handle wizard success
   const handleWizardSuccess = useCallback(
@@ -501,10 +417,47 @@ export const ActionsBottomSheet: React.FC = () => {
     [closeSheet, slideProgress, openMatchDetail, clearEditMatch]
   );
 
+  // Handle share list wizard success - navigate to created list
+  const handleShareListSuccess = useCallback(
+    (listId: string) => {
+      successHaptic();
+      closeSheet();
+      setShowShareListWizard(false);
+      // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
+      slideProgress.value = 0;
+      navigateToCommunityScreen('SharedListDetail', { listId, listName: '' });
+    },
+    [closeSheet, slideProgress]
+  );
+
+  // Handle network wizard success - navigate to created group or community
+  const handleNetworkSuccess = useCallback(
+    (type: 'group' | 'community', id: string) => {
+      successHaptic();
+      closeSheet();
+      setShowNetworkWizard(false);
+      // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
+      slideProgress.value = 0;
+
+      if (type === 'group') {
+        if (navigationRef.isReady()) {
+          navigationRef.navigate('GroupDetail', { groupId: id });
+        }
+      } else {
+        if (navigationRef.isReady()) {
+          navigationRef.navigate('CommunityDetail', { communityId: id });
+        }
+      }
+    },
+    [closeSheet, slideProgress]
+  );
+
   // Handle sheet dismiss - just reset local wizard state
   const handleSheetDismiss = useCallback(() => {
     setShowWizard(false);
     setShowInviteWizard(false);
+    setShowShareListWizard(false);
+    setShowNetworkWizard(false);
     // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
     slideProgress.value = 0;
     clearEditMatch();
@@ -516,6 +469,8 @@ export const ActionsBottomSheet: React.FC = () => {
     const isWizardActive =
       showWizard ||
       showInviteWizard ||
+      showShareListWizard ||
+      showNetworkWizard ||
       contentMode === 'auth' ||
       contentMode === 'onboarding' ||
       contentMode === 'loading';
@@ -549,7 +504,7 @@ export const ActionsBottomSheet: React.FC = () => {
       keyboardWillHideListener.remove();
       keyboardDidHideListener.remove();
     };
-  }, [showWizard, showInviteWizard, contentMode, sheetRef]);
+  }, [showWizard, showInviteWizard, showShareListWizard, showNetworkWizard, contentMode, sheetRef]);
 
   // Animated styles for content sliding
   const actionsAnimatedStyle = useAnimatedStyle(() => ({
@@ -664,6 +619,8 @@ export const ActionsBottomSheet: React.FC = () => {
             onClose={closeSheet}
             onCreateMatch={handleCreateMatch}
             onInvitePlayers={handleInvitePlayers}
+            onCreateShareList={handleCreateShareList}
+            onCreateNetwork={handleCreateNetwork}
             colors={colors}
             t={t}
           />
@@ -688,6 +645,28 @@ export const ActionsBottomSheet: React.FC = () => {
             <InvitePlayersWizard onClose={closeSheet} onBackToLanding={handleInviteWizardClose} />
           </Animated.View>
         )}
+
+        {/* Share list wizard */}
+        {showShareListWizard && (
+          <Animated.View style={[styles.slidePanel, styles.wizardPanel, wizardAnimatedStyle]}>
+            <CreateShareListWizard
+              onClose={closeSheet}
+              onBackToLanding={handleShareListWizardClose}
+              onSuccess={handleShareListSuccess}
+            />
+          </Animated.View>
+        )}
+
+        {/* Network wizard (Group / Community) */}
+        {showNetworkWizard && (
+          <Animated.View style={[styles.slidePanel, styles.wizardPanel, wizardAnimatedStyle]}>
+            <CreateNetworkWizard
+              onClose={closeSheet}
+              onBackToLanding={handleNetworkWizardClose}
+              onSuccess={handleNetworkSuccess}
+            />
+          </Animated.View>
+        )}
       </View>
     );
   };
@@ -696,6 +675,8 @@ export const ActionsBottomSheet: React.FC = () => {
   const isWizardMode =
     showWizard ||
     showInviteWizard ||
+    showShareListWizard ||
+    showNetworkWizard ||
     isEditMode ||
     contentMode === 'auth' ||
     contentMode === 'onboarding';
@@ -797,60 +778,6 @@ const styles = StyleSheet.create({
   },
   actionDescription: {
     marginTop: spacingPixels[0.5],
-  },
-  // Network Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacingPixels[6],
-  },
-  modalContent: {
-    width: '100%',
-    maxWidth: 340,
-    borderRadius: radiusPixels.xl,
-    padding: spacingPixels[6],
-    alignItems: 'center',
-  },
-  modalTitle: {
-    marginBottom: spacingPixels[2],
-    textAlign: 'center',
-  },
-  modalSubtitle: {
-    marginBottom: spacingPixels[6],
-    textAlign: 'center',
-  },
-  modalOptions: {
-    flexDirection: 'row',
-    gap: spacingPixels[3],
-    marginBottom: spacingPixels[4],
-  },
-  modalOption: {
-    flex: 1,
-    alignItems: 'center',
-    padding: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-  },
-  modalOptionIcon: {
-    width: spacingPixels[14],
-    height: spacingPixels[14],
-    borderRadius: radiusPixels.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacingPixels[3],
-  },
-  modalOptionDescription: {
-    marginTop: spacingPixels[1],
-    textAlign: 'center',
-  },
-  modalCancelButton: {
-    width: '100%',
-    paddingVertical: spacingPixels[3],
-    alignItems: 'center',
-    borderTopWidth: 1,
-    marginTop: spacingPixels[2],
   },
 });
 

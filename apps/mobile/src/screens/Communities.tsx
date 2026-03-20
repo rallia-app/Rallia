@@ -19,11 +19,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { SportIcon } from '../components/SportIcon';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { Text, Skeleton } from '@rallia/shared-components';
+import { Text, Skeleton, Button } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
 import {
   useThemeStyles,
@@ -78,24 +77,12 @@ const CommunityCard: React.FC<{
   onPress: (community: CommunityWithStatus) => void;
   onRequestToJoin: (id: string, name: string) => void;
   isRequestPending: boolean;
-  getSportName: (sportId: string | null) => string | null;
-}> = ({
-  item,
-  index,
-  colors,
-  isDark,
-  activeTab,
-  onPress,
-  onRequestToJoin,
-  isRequestPending,
-  getSportName,
-}) => {
+}> = ({ item, index, colors, isDark, activeTab, onPress, onRequestToJoin, isRequestPending }) => {
   const scaleAnim = useMemo(() => new Animated.Value(1), []);
   const { t } = useTranslation();
   // Only show as member if they have active status (not pending)
   const isUserMember = item.is_member && item.membership_status === 'active';
   const isPending = item.membership_status === 'pending';
-  const sportName = getSportName(item.sport_id);
 
   const handlePressIn = useCallback(() => {
     Animated.timing(scaleAnim, {
@@ -112,37 +99,6 @@ const CommunityCard: React.FC<{
       useNativeDriver: true,
     }).start();
   }, [scaleAnim]);
-
-  // Get sport icon based on sport_id
-  const renderSportIcon = () => {
-    // null = both sports
-    if (!item.sport_id) {
-      return (
-        <View style={styles.sportIconContainer}>
-          <SportIcon sportName="tennis" size={14} color={colors.textMuted} />
-          <Text style={[styles.sportIconPlus, { color: colors.textMuted }]}>+</Text>
-          <SportIcon sportName="pickleball" size={14} color={colors.textMuted} />
-        </View>
-      );
-    }
-    // Tennis
-    if (sportName?.toLowerCase() === 'tennis') {
-      return (
-        <View style={styles.sportIconContainer}>
-          <SportIcon sportName="tennis" size={16} color={colors.textMuted} />
-        </View>
-      );
-    }
-    // Pickleball
-    if (sportName?.toLowerCase() === 'pickleball') {
-      return (
-        <View style={styles.sportIconContainer}>
-          <SportIcon sportName="pickleball" size={16} color={colors.textMuted} />
-        </View>
-      );
-    }
-    return null;
-  };
 
   return (
     <TouchableWithoutFeedback
@@ -200,7 +156,6 @@ const CommunityCard: React.FC<{
                 {item.name}
               </Text>
             </View>
-            {renderSportIcon()}
           </View>
 
           {/* Certification badge for verified communities - displayed under the name */}
@@ -225,18 +180,20 @@ const CommunityCard: React.FC<{
 
           {/* Join button for non-members in discover tab */}
           {activeTab === 'discover' && !isUserMember && !isPending && (
-            <TouchableOpacity
-              style={[styles.joinButton, { backgroundColor: colors.primary }]}
+            <Button
+              variant="primary"
+              size="xs"
+              fullWidth
               onPress={e => {
-                e.stopPropagation();
+                e?.stopPropagation();
                 onRequestToJoin(item.id, item.name);
               }}
               disabled={isRequestPending}
+              isDark={isDark}
+              style={styles.joinButton}
             >
-              <Text size="xs" weight="semibold" style={{ color: '#FFFFFF' }}>
-                {t('community.pendingRequests.requestToJoin')}
-              </Text>
-            </TouchableOpacity>
+              {t('community.pendingRequests.requestToJoin')}
+            </Button>
           )}
 
           {/* Pending indicator */}
@@ -310,19 +267,6 @@ export default function CommunitiesScreen() {
   // Real-time subscriptions
   usePlayerCommunitiesRealtime(playerId);
   usePublicCommunitiesRealtime(playerId);
-
-  // Sports data for icon display
-  const { sports } = useSports();
-
-  // Helper to get sport name from sport_id
-  const getSportName = useCallback(
-    (sportId: string | null): string | null => {
-      if (!sportId || !sports) return null;
-      const sport = sports.find(s => s.id === sportId);
-      return sport?.name ?? null;
-    },
-    [sports]
-  );
 
   // Mutations
   const requestToJoinMutation = useRequestToJoinCommunity();
@@ -400,7 +344,6 @@ export default function CommunitiesScreen() {
           onPress={handleCommunityPress}
           onRequestToJoin={handleRequestToJoin}
           isRequestPending={requestToJoinMutation.isPending}
-          getSportName={getSportName}
         />
       );
     },
@@ -411,7 +354,6 @@ export default function CommunitiesScreen() {
       handleCommunityPress,
       handleRequestToJoin,
       requestToJoinMutation.isPending,
-      getSportName,
     ]
   );
 
@@ -434,26 +376,28 @@ export default function CommunitiesScreen() {
             : t('community.empty.myCommunities.subtitle')}
         </Text>
         {activeTab === 'discover' && (
-          <TouchableOpacity
-            style={[styles.createButton, { backgroundColor: colors.primary }]}
+          <Button
+            variant="primary"
+            size="md"
+            rounded
             onPress={handleOpenCreateCommunityActionSheet}
+            leftIcon={<Ionicons name="add-outline" size={20} color="#FFFFFF" />}
+            isDark={isDark}
           >
-            <Ionicons name="add-outline" size={20} color="#FFFFFF" />
-            <Text weight="semibold" style={styles.createButtonText}>
-              {t('community.createCommunity')}
-            </Text>
-          </TouchableOpacity>
+            {t('community.createCommunity')}
+          </Button>
         )}
         {activeTab === 'my-communities' && (
-          <TouchableOpacity
-            style={[styles.createButton, { backgroundColor: colors.primary }]}
+          <Button
+            variant="primary"
+            size="md"
+            rounded
             onPress={() => handleTabChange('discover')}
+            leftIcon={<Ionicons name="compass-outline" size={20} color="#FFFFFF" />}
+            isDark={isDark}
           >
-            <Ionicons name="compass-outline" size={20} color="#FFFFFF" />
-            <Text weight="semibold" style={styles.createButtonText}>
-              {t('community.discoverCommunities')}
-            </Text>
-          </TouchableOpacity>
+            {t('community.discoverCommunities')}
+          </Button>
         )}
       </View>
     ),
@@ -752,16 +696,6 @@ const styles = StyleSheet.create({
     flex: 1,
     flexWrap: 'wrap',
   },
-  sportIconContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 4,
-  },
-  sportIconPlus: {
-    color: '#666666',
-    fontSize: 8,
-    marginHorizontal: 1,
-  },
   communityInfo: {
     padding: 12,
     gap: 6,
@@ -784,10 +718,6 @@ const styles = StyleSheet.create({
   },
   joinButton: {
     marginTop: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    alignItems: 'center',
   },
   pendingBadge: {
     marginTop: 8,
@@ -820,18 +750,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,
-  },
-  createButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 24,
-    gap: 8,
-  },
-  createButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
   },
   fabContainer: {
     position: 'absolute',

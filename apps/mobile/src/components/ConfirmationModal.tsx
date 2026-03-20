@@ -7,15 +7,8 @@
 
 import * as React from 'react';
 import { useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  Modal,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  ActivityIndicator,
-} from 'react-native';
-import { Text } from '@rallia/shared-components';
+import { View, StyleSheet, Modal, TouchableWithoutFeedback } from 'react-native';
+import { Text, Button } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -26,8 +19,6 @@ import {
 } from '@rallia/design-system';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { useTheme } from '@rallia/shared-hooks';
-
-const BASE_WHITE = '#ffffff';
 
 // =============================================================================
 // TYPES
@@ -125,13 +116,10 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     text: themeColors.foreground,
     textMuted: themeColors.mutedForeground,
     border: isDark ? neutral[700] : themeColors.border,
-    destructive: status.error.DEFAULT,
-    destructiveLight: isDark ? status.error.dark : status.error.light,
     // Warning box uses amber/warning colors for better readability
     warningBackground: isDark ? 'rgba(251, 191, 36, 0.15)' : 'rgba(245, 158, 11, 0.1)',
     warningBorder: isDark ? status.warning.light : status.warning.DEFAULT,
     warningText: isDark ? status.warning.light : status.warning.dark,
-    confirmText: isDark ? themeColors.primaryForeground : BASE_WHITE,
   };
 
   // Handle confirm with haptic
@@ -147,20 +135,6 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     lightHaptic();
     onClose();
   }, [isLoading, onClose]);
-
-  // Button theme colors for the Button component
-  const buttonThemeColors = {
-    primary: destructive ? colors.destructive : themeColors.primary,
-    primaryForeground: BASE_WHITE,
-    buttonActive: destructive ? colors.destructive : themeColors.primary,
-    buttonInactive: neutral[300],
-    buttonTextActive: BASE_WHITE,
-    buttonTextInactive: neutral[500],
-    text: colors.text,
-    textMuted: colors.textMuted,
-    border: colors.border,
-    background: colors.background,
-  };
 
   return (
     <Modal
@@ -213,53 +187,28 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
               {/* Buttons */}
               <View style={styles.buttonContainer}>
-                {/* Cancel Button */}
-                <TouchableOpacity
-                  style={[
-                    styles.button,
-                    styles.cancelButton,
-                    { borderColor: colors.border },
-                    isLoading && styles.buttonDisabled,
-                  ]}
-                  onPress={handleCancel}
+                <Button
+                  variant="outline"
+                  size="lg"
                   disabled={isLoading}
-                  activeOpacity={0.7}
+                  onPress={handleCancel}
+                  isDark={isDark}
+                  style={styles.buttonFlex}
                 >
-                  <Text
-                    size="base"
-                    weight="medium"
-                    style={{ color: colors.text, textAlign: 'center' }}
-                  >
-                    {cancelLabel}
-                  </Text>
-                </TouchableOpacity>
-
-                {/* Confirm Button */}
-                <TouchableOpacity
-                  style={[
-                    styles.button,
-                    styles.confirmButton,
-                    {
-                      backgroundColor: destructive ? colors.destructive : buttonThemeColors.primary,
-                    },
-                    isDisabled && styles.buttonDisabled,
-                  ]}
-                  onPress={handleConfirm}
+                  {cancelLabel}
+                </Button>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  destructive={destructive}
+                  loading={isLoading}
                   disabled={isDisabled}
-                  activeOpacity={0.7}
+                  onPress={handleConfirm}
+                  isDark={isDark}
+                  style={styles.buttonFlex}
                 >
-                  {isLoading ? (
-                    <ActivityIndicator size="small" color={colors.confirmText} />
-                  ) : (
-                    <Text
-                      size="base"
-                      weight="medium"
-                      style={{ color: colors.confirmText, textAlign: 'center' }}
-                    >
-                      {confirmLabel}
-                    </Text>
-                  )}
-                </TouchableOpacity>
+                  {confirmLabel}
+                </Button>
               </View>
             </View>
           </TouchableWithoutFeedback>
@@ -314,22 +263,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacingPixels[3],
   },
-  button: {
+  buttonFlex: {
     flex: 1,
-    paddingVertical: spacingPixels[3],
-    borderRadius: radiusPixels.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-  },
-  cancelButton: {
-    borderWidth: 1,
-  },
-  confirmButton: {
-    // Background color is set dynamically
-  },
-  buttonDisabled: {
-    opacity: 0.6,
   },
 });
 

@@ -52,13 +52,18 @@ ErrorUtils.setGlobalHandler((error, isFatal) => {
   previousGlobalHandler(error, isFatal);
 });
 
-import { useEffect, useState, useCallback, useRef, type PropsWithChildren } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef, type PropsWithChildren } from 'react';
 import { AppState, Linking } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import * as SystemUI from 'expo-system-ui';
 import { StatusBar } from 'expo-status-bar';
+
+// Set the native root view background color immediately so it's visible
+// behind the React tree (e.g. area above the Dynamic Island).
+SystemUI.setBackgroundColorAsync('#fafafa');
 import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AppNavigator from './src/navigation/AppNavigator';
 import { navigationRef } from './src/navigation';
@@ -66,7 +71,6 @@ import { linking } from './src/navigation/linking';
 import { ActionsBottomSheet } from './src/components/ActionsBottomSheet';
 import { FeedbackSheet } from './src/components/FeedbackSheet';
 import { BugReportSheet } from './src/components/BugReportSheet';
-import { BugReportFAB } from './src/components/BugReportFAB';
 import { SplashOverlay } from './src/components/SplashOverlay';
 import {
   ThemeProvider,
@@ -118,7 +122,7 @@ import type { MatchDetailData } from './src/context/MatchDetailSheetContext';
 import { attemptFirstLaunchAttribution } from './src/utils/referralAttribution';
 
 // Import NativeWind global styles
-import './global.css';
+// import './global.css';
 import MatchDetailSheet from './src/components/MatchDetailSheet';
 
 // Connect React Query's focusManager to React Native's AppState.
@@ -407,6 +411,19 @@ function AppContent() {
   const { setSplashComplete, isSplashComplete, permissionsHandled } = useOverlay();
   const { showCompletionModal, dismissCompletionModal, lastCompletedTourId } = useTour();
 
+  // Build a React Navigation theme so the screen container background
+  // (including behind the status bar / Dynamic Island) uses the correct color.
+  const navigationTheme = useMemo(() => {
+    const base = theme === 'dark' ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        background: theme === 'dark' ? '#0a0a0a' : '#fafafa',
+      },
+    };
+  }, [theme]);
+
   // SENTRY DISABLED
   // Register the navigation container with Sentry for screen tracking
   // useEffect(() => {
@@ -421,6 +438,7 @@ function AppContent() {
       <NavigationContainer
         ref={navigationRef}
         linking={linking}
+        theme={navigationTheme}
         onStateChange={() => {
           // Notify React Query of navigation state changes so stale queries
           // refetch when the user navigates back to a screen.
@@ -440,8 +458,6 @@ function AppContent() {
         <FeedbackSheet />
         {/* Bug Report Bottom Sheet - shows on shake or help menu */}
         <BugReportSheet />
-        {/* Bug Report FAB - centralized floating button for quick bug reports */}
-        <BugReportFAB />
       </NavigationContainer>
 
       {/* Deep Link Handler - opens match detail sheet when a deep link is received */}
@@ -497,7 +513,7 @@ function App() {
   };
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#fafafa' }}>
       <ErrorBoundary onError={handleError} translations={errorBoundaryTranslations}>
         <SafeAreaProvider>
           <QueryClientProvider client={queryClient}>

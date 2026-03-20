@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, Button } from '@rallia/shared-components';
 import { useTheme } from '@rallia/shared-hooks';
 import { useTranslation } from '../hooks';
 import {
@@ -107,6 +107,8 @@ const PermissionRow: React.FC<PermissionRowProps> = ({
   label,
   statusLabel,
 }) => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const getStatusColor = () => {
     switch (permission.status) {
       case 'granted':
@@ -159,31 +161,25 @@ const PermissionRow: React.FC<PermissionRowProps> = ({
         {permission.status === 'loading' ? (
           <ActivityIndicator size="small" color={colors.buttonActive} />
         ) : canRequest ? (
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: colors.buttonActive }]}
+          <Button
+            variant="primary"
+            size="sm"
+            loading={isRequesting}
             onPress={onRequest}
-            disabled={isRequesting}
-            activeOpacity={0.7}
+            isDark={isDark}
           >
-            {isRequesting ? (
-              <ActivityIndicator size="small" color={colors.buttonTextActive} />
-            ) : (
-              <Text size="sm" weight="medium" color={colors.buttonTextActive}>
-                Allow
-              </Text>
-            )}
-          </TouchableOpacity>
+            Allow
+          </Button>
         ) : needsSettings ? (
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: colors.buttonInactive }]}
+          <Button
+            variant="ghost"
+            size="sm"
             onPress={onOpenSettings}
-            activeOpacity={0.7}
+            leftIcon={<Ionicons name="settings-outline" size={16} color={colors.text} />}
+            isDark={isDark}
           >
-            <Ionicons name="settings-outline" size={16} color={colors.text} />
-            <Text size="sm" weight="medium" color={colors.text}>
-              Settings
-            </Text>
-          </TouchableOpacity>
+            Settings
+          </Button>
         ) : (
           <View style={[styles.grantedBadge, { backgroundColor: `${colors.success}20` }]}>
             <Ionicons name="checkmark-outline" size={16} color={colors.success} />
@@ -481,14 +477,6 @@ const styles = StyleSheet.create({
   },
   actionContainer: {
     marginLeft: spacingPixels[3],
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[2],
-    borderRadius: radiusPixels.md,
-    gap: spacingPixels[1],
   },
   grantedBadge: {
     width: spacingPixels[8],

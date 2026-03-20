@@ -207,11 +207,17 @@ export function EditProofActionSheet({ payload }: SheetProps<'edit-proof'>) {
   const handleRecordVideo = async () => {
     lightHaptic();
     try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        toast.error(t('errors.permissionsDenied'));
+        return;
+      }
+
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ['videos'],
         allowsEditing: true,
         quality: 0.8,
-        videoMaxDuration: 300,
+        videoMaxDuration: 60,
       });
 
       if (!result.canceled && result.assets[0]) {
@@ -241,11 +247,17 @@ export function EditProofActionSheet({ payload }: SheetProps<'edit-proof'>) {
   const handleSelectVideoFromGallery = async () => {
     lightHaptic();
     try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        toast.error(t('errors.permissionsDenied'));
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['videos'],
         allowsEditing: true,
         quality: 0.8,
-        videoMaxDuration: 300,
+        videoMaxDuration: 60,
       });
 
       if (!result.canceled && result.assets[0]) {
@@ -636,7 +648,7 @@ export function EditProofActionSheet({ payload }: SheetProps<'edit-proof'>) {
           {/* Proof Type Header */}
           <View style={styles.proofTypeHeader}>
             <View style={[styles.iconHeader, { backgroundColor: colors.primary + '20' }]}>
-              <Ionicons name={getProofTypeIcon()} size={28} color={colors.primary} />
+              <Ionicons name={getProofTypeIcon()} size={32} color={colors.primary} />
             </View>
             <View style={styles.proofTypeInfo}>
               <Text size="base" weight="medium" color={colors.text}>
@@ -647,15 +659,42 @@ export function EditProofActionSheet({ payload }: SheetProps<'edit-proof'>) {
                   styles.statusBadge,
                   {
                     backgroundColor:
-                      proof.status === 'approved'
+                      (proof.status === 'approved'
                         ? status.success.DEFAULT
                         : proof.status === 'rejected'
                           ? status.error.DEFAULT
-                          : status.warning.DEFAULT,
+                          : status.warning.DEFAULT) + '18',
                   },
                 ]}
               >
-                <Text size="xs" weight="medium" color="#FFFFFF">
+                <Ionicons
+                  name={
+                    proof.status === 'approved'
+                      ? 'checkmark-circle'
+                      : proof.status === 'rejected'
+                        ? 'close-circle'
+                        : 'time-outline'
+                  }
+                  size={14}
+                  color={
+                    proof.status === 'approved'
+                      ? status.success.DEFAULT
+                      : proof.status === 'rejected'
+                        ? status.error.DEFAULT
+                        : status.warning.DEFAULT
+                  }
+                />
+                <Text
+                  size="xs"
+                  weight="medium"
+                  color={
+                    proof.status === 'approved'
+                      ? status.success.DEFAULT
+                      : proof.status === 'rejected'
+                        ? status.error.DEFAULT
+                        : status.warning.DEFAULT
+                  }
+                >
                   {proof.status === 'approved'
                     ? t('profile.ratingProofs.status.approved')
                     : proof.status === 'rejected'
@@ -863,44 +902,45 @@ export function EditProofActionSheet({ payload }: SheetProps<'edit-proof'>) {
 
 const styles = StyleSheet.create({
   sheetBackground: {
-    borderTopLeftRadius: radiusPixels.xl,
-    borderTopRightRadius: radiusPixels.xl,
+    flex: 1,
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
   handleIndicator: {
-    width: 40,
+    width: spacingPixels[10],
     height: 4,
-    borderRadius: 2,
-    marginTop: spacingPixels[2],
+    borderRadius: 4,
+    alignSelf: 'center',
   },
   modalContent: {
-    maxHeight: '92%',
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
+    padding: spacingPixels[4],
     borderBottomWidth: 1,
     position: 'relative',
+    minHeight: 56,
   },
   headerCenter: {
     flex: 1,
     alignItems: 'center',
+    paddingHorizontal: spacingPixels[12],
   },
   closeButton: {
+    padding: spacingPixels[1],
     position: 'absolute',
     right: spacingPixels[4],
-    padding: spacingPixels[1],
+    zIndex: 1,
   },
   scrollContent: {
-    flexGrow: 0,
-    maxHeight: 500,
+    flex: 1,
   },
   content: {
-    paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[4],
-    paddingBottom: spacingPixels[3],
+    padding: spacingPixels[4],
+    paddingBottom: spacingPixels[6],
   },
   proofTypeHeader: {
     flexDirection: 'row',
@@ -909,9 +949,9 @@ const styles = StyleSheet.create({
     gap: spacingPixels[3],
   },
   iconHeader: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -920,10 +960,13 @@ const styles = StyleSheet.create({
     gap: spacingPixels[1],
   },
   statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     alignSelf: 'flex-start',
+    gap: spacingPixels[1],
     paddingHorizontal: spacingPixels[2],
-    paddingVertical: 2,
-    borderRadius: radiusPixels.sm,
+    paddingVertical: spacingPixels[0.5],
+    borderRadius: radiusPixels.full,
   },
   inputGroup: {
     marginBottom: spacingPixels[3],
@@ -935,12 +978,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radiusPixels.md,
     paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[2],
+    paddingVertical: spacingPixels[3],
     fontSize: fontSizePixels.base,
   },
   textArea: {
     minHeight: 80,
-    paddingTop: spacingPixels[2],
+    paddingTop: spacingPixels[3],
   },
   urlInputContainer: {
     flexDirection: 'row',
@@ -952,7 +995,7 @@ const styles = StyleSheet.create({
   urlInput: {
     flex: 1,
     paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[2],
+    paddingVertical: spacingPixels[3],
     fontSize: fontSizePixels.base,
   },
   urlPreviewButton: {
@@ -1009,8 +1052,8 @@ const styles = StyleSheet.create({
     top: spacingPixels[2],
     left: spacingPixels[2],
     paddingHorizontal: spacingPixels[2],
-    paddingVertical: 2,
-    borderRadius: radiusPixels.sm,
+    paddingVertical: spacingPixels[0.5],
+    borderRadius: radiusPixels.full,
     zIndex: 10,
   },
   currentFileBadge: {
@@ -1018,8 +1061,8 @@ const styles = StyleSheet.create({
     top: spacingPixels[2],
     left: spacingPixels[2],
     paddingHorizontal: spacingPixels[2],
-    paddingVertical: 2,
-    borderRadius: radiusPixels.sm,
+    paddingVertical: spacingPixels[0.5],
+    borderRadius: radiusPixels.full,
     zIndex: 10,
   },
   removeButton: {
@@ -1101,8 +1144,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     borderTopWidth: 1,
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
+    padding: spacingPixels[4],
   },
   submitButton: {
     width: '100%',

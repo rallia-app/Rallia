@@ -27,6 +27,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { CopilotStep } from 'react-native-copilot';
 import { WalkthroughableView } from '../context/TourContext';
 import { lightHaptic } from '@rallia/shared-utils';
+import { SheetManager } from 'react-native-actions-sheet';
 
 // WalkthroughableView is now imported from TourContext with collapsable={false} for reliable Android measurement
 import {
@@ -525,6 +526,24 @@ function CourtsStack() {
   );
 }
 
+function CreateListHeaderButton() {
+  const { colors } = useThemeStyles();
+  const { guardAction } = useRequireOnboarding();
+  return (
+    <TouchableOpacity
+      onPress={() => {
+        if (!guardAction()) return;
+        lightHaptic();
+        SheetManager.show('create-list', { payload: { editingList: null } });
+      }}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      style={{ marginRight: spacingPixels[2] }}
+    >
+      <Ionicons name="add" size={28} color={colors.headerForeground} />
+    </TouchableOpacity>
+  );
+}
+
 /**
  * Community Stack - Social features
  */
@@ -547,6 +566,7 @@ function CommunityStack() {
           ...sharedOptions,
           headerTitle: t('community.shareLists') || 'Shared Lists',
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
+          headerRight: () => <CreateListHeaderButton />,
         })}
       />
       <CommunityStackNavigator.Screen
@@ -895,10 +915,14 @@ const resetStackOnBlur = ({
 
 function BottomTabs() {
   const { colors } = useThemeStyles();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tab.Navigator
       id="BottomTabs"
+      safeAreaInsets={{
+        bottom: insets.bottom + spacingPixels[2],
+      }}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
@@ -1087,7 +1111,9 @@ export default function AppNavigator() {
         component={SportProfile}
         options={({ route, navigation }) => ({
           ...sharedOptions,
-          headerTitle: route.params?.sportName || t('screens.sportProfile'),
+          headerTitle: route.params?.sportName
+            ? route.params.sportName.charAt(0).toUpperCase() + route.params.sportName.slice(1)
+            : t('screens.sportProfile'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />

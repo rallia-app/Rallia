@@ -60,7 +60,8 @@
     "playingHand": {
       "label": "Playing Hand",
       "left": "Left",
-      "right": "Right"
+      "right": "Right",
+      "both": "Both"
     },
     "player": "Player",
     "verified": "Verified",
@@ -704,6 +705,7 @@
     "profilePicture": "Profile Picture",
     "changePhoto": "Change Photo",
     "tapToChangePhoto": "Tap to change photo",
+    "tapCameraToChangePhoto": "Tap camera icon to change photo",
     "takePhoto": "Take Photo",
     "chooseFromGallery": "Choose from Gallery",
     "removePhoto": "Remove Photo",
@@ -767,11 +769,21 @@
     "sportsHint": "You can activate additional sports anytime",
     "addMoreSports": "Add more sports",
     "addMoreSportsHint": "Try another sport today!",
+    "sport": {
+      "tapToActivate": "Tap to activate",
+      "deactivateSport": "Deactivate Sport",
+      "confirmDeactivation": "Deactivate {sport}?",
+      "confirmDeactivationMessage": "You can reactivate this sport at any time from your profile.",
+      "reactivateTitle": "Reactivate Sport",
+      "reactivateMessage": "Would you like to reactivate {sport}?",
+      "reactivateConfirm": "Reactivate"
+    },
     "loading": {
       "profile": "Loading profile...",
       "sportProfile": "Loading {sport} profile..."
     },
     "uploading": "Uploading...",
+    "profilePictureUpdated": "Profile picture updated successfully!",
     "joined": "Joined",
     "username": "username",
     "user": "User",
@@ -858,13 +870,15 @@
       "noProofsYet": "No Proofs Yet",
       "noProofsDescription": "Add proof of your rating to help others verify your skill level",
       "noProofsOtherUser": "This user has not added any rating proofs yet",
+      "descriptionLabel": "Description",
       "proofTypes": {
         "externalLink": {
           "title": "External Link",
           "description": "Link to your rating on an official platform (e.g., FFT, WTN, YouTube)",
           "placeholder": "https://www.example.com/your-rating",
           "urlLabel": "Rating URL",
-          "urlHint": "Enter the URL where your rating can be verified"
+          "urlHint": "Enter the URL where your rating can be verified",
+          "popularPlatforms": "Popular platforms:"
         },
         "video": {
           "title": "Video Recording",
@@ -872,8 +886,8 @@
           "uploadVideo": "Upload Video",
           "recordVideo": "Record Video",
           "selectFromGallery": "Select from Gallery",
-          "maxDuration": "Maximum duration: 5 minutes",
-          "maxSize": "Maximum size: 500 MB"
+          "maxDuration": "Maximum duration: 1 minute",
+          "maxSize": "Maximum size: 250 MB"
         },
         "image": {
           "title": "Screenshot / Image",
@@ -3053,7 +3067,18 @@
     "sportSetupCancelled": "Sport profile setup cancelled",
     "sportSetupIncomplete": "Please complete all required fields to save your preferences",
     "continueSetup": "Continue",
-    "cancelSetup": "Cancel"
+    "cancelSetup": "Cancel",
+    "failedToStartConversation": "Failed to start conversation. Please try again.",
+    "failedToAddFavorite": "Failed to add to favorites",
+    "failedToRemoveFavorite": "Failed to remove from favorites",
+    "failedToBlockPlayer": "Failed to block player",
+    "failedToUnblockPlayer": "Failed to unblock player",
+    "ratingUpdated": "Rating updated successfully"
+  },
+  "sportSetup": {
+    "wizardTitle": "Sport Setup",
+    "cancelTitle": "Cancel Setup?",
+    "cancelMessage": "Your progress will be lost and the sport will not be activated."
   },
   "sportSelector": {
     "selectSport": "Select a sport",
@@ -4057,7 +4082,7 @@
       "externalProviderId": "External Provider ID",
       "editButton": "Edit Facility",
       "courtsSection": "Courts",
-      "courtsSummary": "{count} {count, plural, one {court} other {courts}} at this facility",
+      "courtsSummary": "{count} {count, plural, one {court} other {courts} at this facility",
       "manageCourts": "Manage Courts",
       "viewAllCourts": "View All Courts",
       "stats": {
@@ -4589,7 +4614,7 @@
       "empty": "No new notifications",
       "emptyDescription": "You have no {filter} at the moment.",
       "allCaughtUp": "All caught up!",
-      "unreadCount": "You have {count} unread {count, plural, one {notification} other {notifications}}",
+      "unreadCount": "You have {count} unread {count, plural, one {notification} other {notifications}",
       "viewAll": "View all notifications",
       "markAllRead": "Mark all as read",
       "newBooking": "New booking",
@@ -4869,10 +4894,10 @@
       },
       "createButton": "Create Organization",
       "bulkActions": {
-        "selected": "{count, plural, =0 {No organizations selected} one {# organization selected} other {# organizations selected}}",
+        "selected": "{count, plural, =0 {No organizations selected} one {# organization selected} other {# organizations selected}",
         "delete": "Delete Selected",
         "confirmTitle": "Delete Organizations",
-        "confirmDescription": "Are you sure you want to permanently delete {count, plural, one {this organization} other {these # organizations}}? This action cannot be undone and will delete all associated facilities, courts, contacts, and images.",
+        "confirmDescription": "Are you sure you want to permanently delete {count, plural, one {this organization} other {these # organizations}? This action cannot be undone and will delete all associated facilities, courts, contacts, and images.",
         "cancel": "Cancel",
         "confirmDelete": "Delete",
         "deleting": "Deleting..."
@@ -5066,7 +5091,7 @@
         "searchFacilitiesPlaceholder": "Search facilities...",
         "allSports": "All Sports",
         "clearFilters": "Clear Filters",
-        "facilitiesFiltered": "{filtered} of {total} {total, plural, one {Facility} other {Facilities}}",
+        "facilitiesFiltered": "{filtered} of {total} {total, plural, one {Facility} other {Facilities}",
         "noMatchingFacilities": "No facilities match your search",
         "backToOrganizations": "Back to Organizations",
         "facilityDetail": {
@@ -5467,7 +5492,7 @@
       "searchPlaceholder": "Search networks...",
       "noResults": "No networks found",
       "noResultsDescription": "Try adjusting your search or filters",
-      "totalNetworks": "{count, plural, one {# network} other {# networks}}",
+      "totalNetworks": "{count, plural, one {# network} other {# networks}",
       "empty": "No networks yet",
       "emptyDescription": "Networks will appear here once created",
       "tryDifferentSearch": "Try a different search term",
@@ -5506,7 +5531,7 @@
         "allSports": "All Sports"
       },
       "card": {
-        "members": "{count, plural, one {# member} other {# members}}",
+        "members": "{count, plural, one {# member} other {# members}",
         "group": "Group",
         "community": "Community",
         "certified": "Certified",
@@ -6864,7 +6889,7 @@
       "addInstructor": "Add Instructor",
       "assignedInstructors": "Assigned Instructors",
       "noInstructorsAssigned": "No instructors assigned to this program",
-      "instructorCount": "{count, plural, one {# instructor assigned} other {# instructors assigned}}",
+      "instructorCount": "{count, plural, one {# instructor assigned} other {# instructors assigned}",
       "addFirst": "Add your first instructor",
       "primary": "Lead",
       "setPrimary": "Set as lead instructor",
@@ -6875,7 +6900,7 @@
         "description": "Select instructors to assign to this program.",
         "noAvailable": "All instructors are already assigned to this program.",
         "createNew": "Create New Instructor",
-        "add": "Add {count, plural, one {# instructor} other {# instructors}}"
+        "add": "Add {count, plural, one {# instructor} other {# instructors}"
       },
       "errors": {
         "failedToLoad": "Failed to load instructors",

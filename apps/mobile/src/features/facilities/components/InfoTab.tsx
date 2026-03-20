@@ -146,52 +146,13 @@ function InfoTabSkeleton({ colors, isDark }: { colors: InfoTabProps['colors']; i
           highlightColor={highlightColor}
           style={{ borderRadius: radiusPixels.md }}
         />
-        <View style={{ gap: spacingPixels[3] }}>
-          <View style={styles.iconRow}>
-            <Skeleton
-              width={20}
-              height={20}
-              circle
-              backgroundColor={bgColor}
-              highlightColor={highlightColor}
-            />
-            <Skeleton
-              width={200}
-              height={14}
-              backgroundColor={bgColor}
-              highlightColor={highlightColor}
-            />
-          </View>
-          <View style={styles.iconRow}>
-            <Skeleton
-              width={20}
-              height={20}
-              circle
-              backgroundColor={bgColor}
-              highlightColor={highlightColor}
-            />
-            <Skeleton
-              width={80}
-              height={14}
-              backgroundColor={bgColor}
-              highlightColor={highlightColor}
-            />
-          </View>
-          <Skeleton
-            width="100%"
-            height={150}
-            borderRadius={radiusPixels.xl}
-            backgroundColor={bgColor}
-            highlightColor={highlightColor}
-          />
-          <Skeleton
-            width="100%"
-            height={44}
-            borderRadius={12}
-            backgroundColor={bgColor}
-            highlightColor={highlightColor}
-          />
-        </View>
+        <Skeleton
+          width="100%"
+          height={200}
+          borderRadius={radiusPixels.xl}
+          backgroundColor={bgColor}
+          highlightColor={highlightColor}
+        />
       </View>
 
       {/* Courts section skeleton */}
@@ -371,40 +332,41 @@ export default function InfoTab({
           {t('facilityDetail.locationContact')}
         </Text>
 
-        <View style={styles.locationContent}>
-          {/* Address row */}
-          {fullAddress && (
-            <View style={styles.iconRow}>
-              <Ionicons
-                name="location-outline"
-                size={20}
-                color={colors.textMuted}
-                style={styles.rowIcon}
-              />
-              <Text size="sm" color={colors.text} style={styles.iconRowText}>
-                {fullAddress}
-              </Text>
-              <TouchableOpacity
-                onPress={handleCopyAddress}
-                style={[styles.copyButton, { backgroundColor: colors.primary + '15' }]}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name={addressCopied ? 'checkmark' : 'copy-outline'}
-                  size={14}
-                  color={addressCopied ? status.success.DEFAULT : colors.primary}
-                />
-              </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.locationCard,
+            { backgroundColor: isDark ? neutral[800] : neutral[50], borderColor: colors.border },
+          ]}
+          onPress={onOpenInMaps}
+          activeOpacity={0.7}
+        >
+          <View style={styles.locationRow}>
+            <View style={{ flex: 1 }}>
+              {fullAddress && (
+                <Text size="sm" color={colors.text}>
+                  {fullAddress}
+                </Text>
+              )}
             </View>
-          )}
+            <TouchableOpacity
+              onPress={handleCopyAddress}
+              style={[styles.copyButton, { backgroundColor: colors.primary + '15' }]}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={addressCopied ? 'checkmark' : 'copy-outline'}
+                size={14}
+                color={addressCopied ? status.success.DEFAULT : colors.primary}
+              />
+            </TouchableOpacity>
+            <View style={styles.locationChevron}>
+              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+            </View>
+          </View>
 
           {/* Map preview */}
           {hasCoordinates && (
-            <TouchableOpacity
-              onPress={onOpenInMaps}
-              activeOpacity={0.9}
-              style={[styles.mapContainer, { borderColor: colors.border }]}
-            >
+            <View style={[styles.mapContainer, { borderColor: colors.border }]}>
               {Platform.OS === 'android' ? (
                 <Image
                   source={{
@@ -484,21 +446,9 @@ export default function InfoTab({
                   </Marker>
                 </MapView>
               )}
-            </TouchableOpacity>
+            </View>
           )}
-
-          {/* Open in Maps button */}
-          <TouchableOpacity
-            onPress={onOpenInMaps}
-            style={[styles.mapsButton, { backgroundColor: colors.primary + '15' }]}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="navigate-outline" size={16} color={colors.primary} />
-            <Text size="sm" weight="semibold" color={colors.primary}>
-              {t('facilityDetail.openInMaps')}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* Courts Section */}
@@ -612,20 +562,18 @@ const styles = StyleSheet.create({
   },
 
   // Location Section
-  locationContent: {
-    gap: spacingPixels[3],
+  locationCard: {
+    borderRadius: radiusPixels.xl,
+    borderWidth: 1,
+    padding: spacingPixels[3],
   },
-  iconRow: {
+  locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacingPixels[2.5],
   },
-  rowIcon: {
-    width: 20,
+  locationChevron: {
+    marginLeft: spacingPixels[2],
     flexShrink: 0,
-  },
-  iconRowText: {
-    flex: 1,
   },
   copyButton: {
     width: 32,
@@ -634,8 +582,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
+    marginLeft: spacingPixels[2],
   },
   mapContainer: {
+    marginTop: spacingPixels[3],
     borderRadius: radiusPixels.xl,
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
@@ -686,15 +636,6 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
   },
-  mapsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[2],
-    paddingVertical: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-  },
-
   // Courts Section
   courtsList: {
     gap: spacingPixels[3],

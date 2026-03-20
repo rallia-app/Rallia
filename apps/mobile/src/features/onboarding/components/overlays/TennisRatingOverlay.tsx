@@ -72,6 +72,7 @@ export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>
   const onDismiss = payload?.onDismiss;
   const currentStep = payload?.currentStep || 1;
   const totalSteps = payload?.totalSteps || 8;
+  const stepName = payload?.stepName;
   const initialRating = payload?.initialRating;
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
@@ -211,6 +212,7 @@ export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>
         }
 
         Logger.debug('tennis_rating_saved', { ratingData });
+        didSaveRef.current = true; // Mark as saved before closing
         onContinue?.(selectedRating);
       } catch (error) {
         Logger.error('Unexpected error saving tennis rating', error as Error);
@@ -228,8 +230,8 @@ export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>
       containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
       onBeforeClose={() => {
-        // Call onDismiss if sheet is closed without saving (in edit mode with onDismiss callback)
-        if (mode === 'edit' && onDismiss && !didSaveRef.current) {
+        // Call onDismiss if sheet is closed without saving
+        if (onDismiss && !didSaveRef.current) {
           onDismiss();
         }
       }}
@@ -264,7 +266,11 @@ export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>
         >
           {/* Progress Indicator - only show in onboarding mode */}
           {mode === 'onboarding' && (
-            <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
+            <ProgressIndicator
+              currentStep={currentStep}
+              totalSteps={totalSteps}
+              stepName={stepName}
+            />
           )}
 
           {/* Back Button - Only show in onboarding mode */}

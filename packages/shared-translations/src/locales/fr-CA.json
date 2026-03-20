@@ -50,7 +50,8 @@
     "playingHand": {
       "label": "Main de jeu",
       "left": "Gauche",
-      "right": "Droite"
+      "right": "Droite",
+      "both": "Les deux"
     },
     "player": "Joueur",
     "verified": "Vérifié",
@@ -704,6 +705,7 @@
     "profilePicture": "Photo de profil",
     "changePhoto": "Changer la photo",
     "tapToChangePhoto": "Appuyez pour changer la photo",
+    "tapCameraToChangePhoto": "Appuyez sur l'icône de caméra pour changer la photo",
     "takePhoto": "Prendre une photo",
     "chooseFromGallery": "Choisir dans la galerie",
     "removePhoto": "Supprimer la photo",
@@ -767,11 +769,21 @@
     "sportsHint": "Vous pouvez activer d'autres sports à tout moment",
     "addMoreSports": "Ajouter d'autres sports",
     "addMoreSportsHint": "Essayez un autre sport!",
+    "sport": {
+      "tapToActivate": "Appuyez pour activer",
+      "deactivateSport": "Désactiver le sport",
+      "confirmDeactivation": "Désactiver {sport}?",
+      "confirmDeactivationMessage": "Vous pouvez réactiver ce sport à tout moment depuis votre profil.",
+      "reactivateTitle": "Réactiver le sport",
+      "reactivateMessage": "Souhaitez-vous réactiver {sport}?",
+      "reactivateConfirm": "Réactiver"
+    },
     "loading": {
       "profile": "Chargement du profil...",
       "sportProfile": "Chargement du profil {sport}..."
     },
     "uploading": "Téléversement...",
+    "profilePictureUpdated": "Photo de profil mise à jour avec succès!",
     "joined": "Rejoint",
     "username": "nom d'utilisateur",
     "user": "Utilisateur",
@@ -858,13 +870,15 @@
       "noProofsYet": "Aucune preuve",
       "noProofsDescription": "Ajoutez une preuve de votre classement pour aider les autres joueurs à vérifier votre niveau",
       "noProofsOtherUser": "Cet utilisateur n'a pas encore ajouté de preuve de niveau",
+      "descriptionLabel": "Description",
       "proofTypes": {
         "externalLink": {
           "title": "Lien externe",
           "description": "Lien vers votre classement sur une plateforme officielle (ex: FFT, WTN, YouTube)",
           "placeholder": "https://www.exemple.com/votre-classement",
           "urlLabel": "URL du classement",
-          "urlHint": "Entrez l'URL où votre classement peut être vérifié"
+          "urlHint": "Entrez l'URL où votre classement peut être vérifié",
+          "popularPlatforms": "Plateformes populaires :"
         },
         "video": {
           "title": "Enregistrement vidéo",
@@ -872,8 +886,8 @@
           "uploadVideo": "Téléverser une vidéo",
           "recordVideo": "Enregistrer une vidéo",
           "selectFromGallery": "Sélectionner depuis la galerie",
-          "maxDuration": "Durée maximale: 5 minutes",
-          "maxSize": "Taille maximale: 500 Mo"
+          "maxDuration": "Durée maximale: 1 minute",
+          "maxSize": "Taille maximale: 250 Mo"
         },
         "image": {
           "title": "Capture d'écran / Image",
@@ -1155,7 +1169,7 @@
     },
     "availability": {
       "am": "MAT",
-      "pm": "APM",
+      "pm": "PM",
       "eve": "SOIR",
       "days": {
         "monday": "Lun",
@@ -2113,17 +2127,17 @@
     "sportTennis": "Tennis",
     "sportPickleball": "Pickleball",
     "sportSelectionHint": "Choisissez un sport pour filtrer qui voit cette communauté",
-    "favoriteFacilities": "Installations favorites",
-    "favoriteFacilitiesOptional": "Installations favorites (Optionnel)",
-    "noFavoriteFacilities": "Aucune installation favorite pour le moment",
-    "addFavoriteFacilitiesHint": "Ajoutez les installations où votre communauté joue",
-    "addFavoriteFacility": "Ajouter une installation favorite",
-    "favoriteFacilitiesHint": "Vous pouvez toujours ajouter ou modifier les installations plus tard",
-    "searchFacilityToAdd": "Rechercher une installation...",
-    "addAnotherFacility": "Ajouter une autre installation",
-    "noFacilitiesFound": "Aucune installation trouvée",
-    "typeToSearchFacility": "Tapez pour rechercher des installations",
-    "locationRequiredForFacilities": "Emplacement requis pour rechercher des installations"
+    "favoriteFacilities": "Sites de jeu favoris",
+    "favoriteFacilitiesOptional": "Sites de jeu favoris (Optionnel)",
+    "noFavoriteFacilities": "Aucun site de jeu favori pour le moment",
+    "addFavoriteFacilitiesHint": "Ajoutez les sites de jeu où votre communauté joue",
+    "addFavoriteFacility": "Ajouter un site de jeu favori",
+    "favoriteFacilitiesHint": "Vous pouvez toujours ajouter ou modifier les sites de jeu plus tard",
+    "searchFacilityToAdd": "Rechercher un site de jeu...",
+    "addAnotherFacility": "Ajouter un autre site de jeu",
+    "noFacilitiesFound": "Aucun site de jeu trouvé",
+    "typeToSearchFacility": "Tapez pour rechercher des sites de jeu",
+    "locationRequiredForFacilities": "Emplacement requis pour rechercher des sites de jeu"
   },
   "groups": {
     "title": "Groupes",
@@ -2386,17 +2400,17 @@
     "sportTennis": "Tennis",
     "sportPickleball": "Pickleball",
     "sportSelectionHint": "Choisissez un sport pour filtrer qui voit ce groupe",
-    "favoriteFacilities": "Terrains favoris",
-    "favoriteFacilitiesOptional": "Terrains favoris (Optionnel)",
-    "noFavoriteFacilities": "Aucun terrain favori",
-    "addFavoriteFacilitiesHint": "Ajoutez les terrains où votre groupe joue",
-    "addFavoriteFacility": "Ajouter un terrain favori",
-    "addAnotherFacility": "Ajouter un autre terrain",
-    "searchFacilityToAdd": "Rechercher un terrain à ajouter",
-    "noFacilitiesFound": "Aucun terrain trouvé",
-    "typeToSearchFacility": "Tapez pour rechercher des terrains",
-    "locationRequiredForFacilities": "La localisation est requise pour rechercher des terrains",
-    "favoriteFacilitiesHint": "Vous pouvez toujours ajouter ou changer les terrains plus tard"
+    "favoriteFacilities": "Sites de jeu favoris",
+    "favoriteFacilitiesOptional": "Sites de jeu favoris (Optionnel)",
+    "noFavoriteFacilities": "Aucun site de jeu favori",
+    "addFavoriteFacilitiesHint": "Ajoutez les sites de jeu où votre groupe joue",
+    "addFavoriteFacility": "Ajouter un site de jeu favori",
+    "addAnotherFacility": "Ajouter un autre site de jeu",
+    "searchFacilityToAdd": "Rechercher un site de jeu à ajouter",
+    "noFacilitiesFound": "Aucun site de jeu trouvé",
+    "typeToSearchFacility": "Tapez pour rechercher des sites de jeu",
+    "locationRequiredForFacilities": "La localisation est requise pour rechercher des sites de jeu",
+    "favoriteFacilitiesHint": "Vous pouvez toujours ajouter ou changer les sites de jeu plus tard"
   },
   "playerDirectory": {
     "title": "Répertoire des joueurs",
@@ -3053,7 +3067,18 @@
     "sportSetupCancelled": "Configuration du profil sportif annulée",
     "sportSetupIncomplete": "Veuillez compléter tous les champs requis pour enregistrer vos préférences",
     "continueSetup": "Continuer",
-    "cancelSetup": "Annuler"
+    "cancelSetup": "Annuler",
+    "failedToStartConversation": "Échec du démarrage de la conversation. Veuillez réessayer.",
+    "failedToAddFavorite": "Échec de l'ajout aux favoris",
+    "failedToRemoveFavorite": "Échec de la suppression des favoris",
+    "failedToBlockPlayer": "Échec du blocage du joueur",
+    "failedToUnblockPlayer": "Échec du déblocage du joueur",
+    "ratingUpdated": "Classement mis à jour avec succès"
+  },
+  "sportSetup": {
+    "wizardTitle": "Configuration du sport",
+    "cancelTitle": "Annuler la configuration?",
+    "cancelMessage": "Votre progression sera perdue et le sport ne sera pas activé."
   },
   "sportSelector": {
     "selectSport": "Sélectionnez un sport",
@@ -4057,7 +4082,7 @@
       "externalProviderId": "ID du fournisseur externe",
       "editButton": "Modifier le site de jeu",
       "courtsSection": "Terrains",
-      "courtsSummary": "{count} {count, plural, one {terrain} other {terrains}} dans ce site",
+      "courtsSummary": "{count} {count, plural, one {terrain} other {terrains} dans ce site",
       "manageCourts": "Gérer les terrains",
       "viewAllCourts": "Voir tous les terrains",
       "stats": {
@@ -4591,7 +4616,7 @@
       "empty": "Aucune nouvelle notification",
       "emptyDescription": "Vous n'avez aucune {filter} pour le moment.",
       "allCaughtUp": "Vous êtes à jour!",
-      "unreadCount": "Vous avez {count} {count, plural, one {notification non lue} other {notifications non lues}}",
+      "unreadCount": "Vous avez {count} {count, plural, one {notification non lue} other {notifications non lues}",
       "viewAll": "Voir toutes les notifications",
       "markAllRead": "Tout marquer comme lu",
       "newBooking": "Nouvelle réservation",
@@ -4871,10 +4896,10 @@
       },
       "createButton": "Créer une organisation",
       "bulkActions": {
-        "selected": "{count, plural, =0 {Aucune organisation sélectionnée} one {# organisation sélectionnée} other {# organisations sélectionnées}}",
+        "selected": "{count, plural, =0 {Aucune organisation sélectionnée} one {# organisation sélectionnée} other {# organisations sélectionnées}",
         "delete": "Supprimer la sélection",
         "confirmTitle": "Supprimer les organisations",
-        "confirmDescription": "Êtes-vous sûr de vouloir supprimer définitivement {count, plural, one {cette organisation} other {ces # organisations}}? Cette action est irréversible et supprimera tous les sites de jeu, terrains, contacts et images associés.",
+        "confirmDescription": "Êtes-vous sûr de vouloir supprimer définitivement {count, plural, one {cette organisation} other {ces # organisations}? Cette action est irréversible et supprimera tous les sites de jeu, terrains, contacts et images associés.",
         "cancel": "Annuler",
         "confirmDelete": "Supprimer",
         "deleting": "Suppression..."
@@ -5068,7 +5093,7 @@
         "searchFacilitiesPlaceholder": "Rechercher des sites de jeu...",
         "allSports": "Tous les sports",
         "clearFilters": "Effacer les filtres",
-        "facilitiesFiltered": "{filtered} sur {total} {total, plural, one {site de jeu} other {sites de jeu}}",
+        "facilitiesFiltered": "{filtered} sur {total} {total, plural, one {site de jeu} other {sites de jeu}",
         "noMatchingFacilities": "Aucun site de jeu ne correspond à votre recherche",
         "backToOrganizations": "Retour aux organisations",
         "facilityDetail": {
@@ -5469,7 +5494,7 @@
       "searchPlaceholder": "Rechercher des réseaux...",
       "noResults": "Aucun réseau trouvé",
       "noResultsDescription": "Essayez d'ajuster votre recherche ou vos filtres",
-      "totalNetworks": "{count, plural, one {# réseau} other {# réseaux}}",
+      "totalNetworks": "{count, plural, one {# réseau} other {# réseaux}",
       "empty": "Aucun réseau pour le moment",
       "emptyDescription": "Les réseaux apparaîtront ici une fois créés",
       "tryDifferentSearch": "Essayez un autre terme de recherche",
@@ -5485,7 +5510,7 @@
       "updatedAt": "Mis à jour",
       "inviteCode": "Code d'invitation",
       "membersList": "Liste des membres",
-      "favoriteFacilities": "Installations favorites",
+      "favoriteFacilities": "Sites de jeu favoris",
       "about": "À propos",
       "accessDeniedDescription": "Vous n'avez pas la permission de voir cette section",
       "types": {
@@ -5508,7 +5533,7 @@
         "allSports": "Tous les sports"
       },
       "card": {
-        "members": "{count, plural, one {# membre} other {# membres}}",
+        "members": "{count, plural, one {# membre} other {# membres}",
         "group": "Groupe",
         "community": "Communauté",
         "certified": "Certifié",
@@ -6866,7 +6891,7 @@
       "addInstructor": "Ajouter un instructeur",
       "assignedInstructors": "Instructeurs assignés",
       "noInstructorsAssigned": "Aucun instructeur assigné à ce programme",
-      "instructorCount": "{count, plural, one {# instructeur assigné} other {# instructeurs assignés}}",
+      "instructorCount": "{count, plural, one {# instructeur assigné} other {# instructeurs assignés}",
       "addFirst": "Ajouter votre premier instructeur",
       "primary": "Principal",
       "setPrimary": "Définir comme instructeur principal",
@@ -6877,7 +6902,7 @@
         "description": "Sélectionnez les instructeurs à assigner à ce programme.",
         "noAvailable": "Tous les instructeurs sont déjà assignés à ce programme.",
         "createNew": "Créer un nouvel instructeur",
-        "add": "Ajouter {count, plural, one {# instructeur} other {# instructeurs}}"
+        "add": "Ajouter {count, plural, one {# instructeur} other {# instructeurs}"
       },
       "errors": {
         "failedToLoad": "Échec du chargement des instructeurs",

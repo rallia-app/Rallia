@@ -12,7 +12,6 @@ import {
   radiusPixels,
   fontSizePixels,
   fontWeightNumeric,
-  shadowsNative,
   primary,
   accent,
 } from '@rallia/design-system';
@@ -41,7 +40,7 @@ export default function CourtCard({ court, colors, isDark, t }: CourtCardProps) 
     : null;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.card }, shadowsNative.sm]}>
+    <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <View style={styles.left}>
         <Text style={[styles.courtName, { color: colors.text }]}>{courtName}</Text>
 
@@ -86,7 +85,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderRadius: radiusPixels.xl,
     padding: spacingPixels[4],
-    ...shadowsNative.sm,
+    borderWidth: 1,
   },
   left: {
     flexDirection: 'row',

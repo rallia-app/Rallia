@@ -19,7 +19,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Application from 'expo-application';
-import { Text, useToast } from '@rallia/shared-components';
+import { Text, useToast, Button } from '@rallia/shared-components';
 import { useTheme } from '@rallia/shared-hooks';
 import {
   submitUserFeedback,
@@ -558,37 +558,20 @@ const FeedbackScreen: React.FC = () => {
           </View>
 
           {/* Submit Button */}
-          <TouchableOpacity
-            style={[
-              styles.submitButton,
-              {
-                backgroundColor:
-                  isFormValid && !isSubmitting ? colors.buttonPrimary : colors.buttonDisabled,
-              },
-            ]}
-            onPress={handleSubmit}
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            loading={isSubmitting}
             disabled={!isFormValid || isSubmitting}
-            activeOpacity={0.7}
+            onPress={handleSubmit}
+            leftIcon={
+              !isSubmitting ? <Ionicons name="send-outline" size={18} color="#FFFFFF" /> : undefined
+            }
+            isDark={isDark}
           >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color={colors.buttonPrimaryText} />
-            ) : (
-              <>
-                <Ionicons
-                  name="send-outline"
-                  size={18}
-                  color={isFormValid ? colors.buttonPrimaryText : colors.buttonDisabledText}
-                />
-                <Text
-                  size="base"
-                  weight="semibold"
-                  color={isFormValid ? colors.buttonPrimaryText : colors.buttonDisabledText}
-                >
-                  {t('feedback.submitButton' as TranslationKey)}
-                </Text>
-              </>
-            )}
-          </TouchableOpacity>
+            {t('feedback.submitButton' as TranslationKey)}
+          </Button>
 
           <View style={styles.bottomSpacer} />
         </ScrollView>
@@ -632,25 +615,24 @@ const FeedbackScreen: React.FC = () => {
 
             {/* Action Buttons */}
             <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButtonSecondary, { borderColor: colors.border }]}
+              <Button
+                variant="outline"
+                size="lg"
                 onPress={handleSubmitAnother}
-                activeOpacity={0.7}
+                isDark={isDark}
+                style={styles.modalButtonFlex}
               >
-                <Text size="sm" weight="medium" color={colors.text}>
-                  {t('feedback.submitAnother' as TranslationKey)}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.modalButtonPrimary, { backgroundColor: colors.buttonPrimary }]}
+                {t('feedback.submitAnother' as TranslationKey)}
+              </Button>
+              <Button
+                variant="primary"
+                size="lg"
                 onPress={handleSuccessClose}
-                activeOpacity={0.7}
+                isDark={isDark}
+                style={styles.modalButtonFlex}
               >
-                <Text size="sm" weight="semibold" color={colors.buttonPrimaryText}>
-                  {t('common.done')}
-                </Text>
-              </TouchableOpacity>
+                {t('common.done')}
+              </Button>
             </View>
           </View>
         </View>
@@ -801,14 +783,6 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 18,
   },
-  submitButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    gap: spacingPixels[2],
-  },
   bottomSpacer: {
     height: spacingPixels[10],
   },
@@ -860,18 +834,8 @@ const styles = StyleSheet.create({
     gap: spacingPixels[3],
     width: '100%',
   },
-  modalButtonSecondary: {
+  modalButtonFlex: {
     flex: 1,
-    paddingVertical: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  modalButtonPrimary: {
-    flex: 1,
-    paddingVertical: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    alignItems: 'center',
   },
   // Screenshot styles
   screenshotHint: {

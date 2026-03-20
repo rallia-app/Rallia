@@ -39,16 +39,24 @@ export function ImagePickerActionSheet({ payload }: SheetProps<'image-picker'>) 
     void SheetManager.hide('image-picker');
   }, []);
 
-  const handleTakePhoto = useCallback(() => {
+  const handleTakePhoto = useCallback(async () => {
     void lightHaptic();
-    onTakePhoto?.();
-    void SheetManager.hide('image-picker');
+    // Hide the sheet first with a small delay to allow smooth transition
+    await SheetManager.hide('image-picker');
+    // Small delay to ensure sheet is fully hidden before launching native picker
+    setTimeout(() => {
+      onTakePhoto?.();
+    }, 300);
   }, [onTakePhoto]);
 
-  const handleChooseGallery = useCallback(() => {
+  const handleChooseGallery = useCallback(async () => {
     void lightHaptic();
-    onChooseFromGallery?.();
-    void SheetManager.hide('image-picker');
+    // Hide the sheet first with a small delay to allow smooth transition
+    await SheetManager.hide('image-picker');
+    // Small delay to ensure sheet is fully hidden before launching native picker
+    setTimeout(() => {
+      onChooseFromGallery?.();
+    }, 300);
   }, [onChooseFromGallery]);
 
   const colors = {

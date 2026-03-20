@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacingPixels[3],
     marginHorizontal: spacingPixels[4],
-    marginBottom: spacingPixels[2],
+    marginBottom: spacingPixels[3],
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
     position: 'relative',
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   badgesRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacingPixels[1],
+    gap: spacingPixels[2],
     marginTop: spacingPixels[0.5],
     flexWrap: 'wrap',
   },

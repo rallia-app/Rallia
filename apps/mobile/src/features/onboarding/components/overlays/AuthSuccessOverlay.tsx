@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { Button } from '@rallia/shared-components';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
 import { Logger } from '@rallia/shared-services';
@@ -14,7 +15,7 @@ interface AuthSuccessOverlayProps {
 }
 
 const AuthSuccessOverlay: React.FC<AuthSuccessOverlayProps> = ({ visible, onClose }) => {
-  const { colors } = useThemeStyles();
+  const { colors, isDark } = useThemeStyles();
   const { selectedSport } = useSport();
   // Animation values (useState so we don't read refs during render)
   const [fadeAnim] = useState(() => new Animated.Value(0));
@@ -150,13 +151,9 @@ const AuthSuccessOverlay: React.FC<AuthSuccessOverlayProps> = ({ visible, onClos
         </View>
 
         {/* Close Button */}
-        <TouchableOpacity
-          style={[styles.closeButton, { backgroundColor: colors.primary }]}
-          onPress={handleClose}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.closeButtonText, { color: colors.primaryForeground }]}>Close</Text>
-        </TouchableOpacity>
+        <Button variant="primary" size="lg" fullWidth onPress={handleClose} isDark={isDark}>
+          Close
+        </Button>
       </Animated.View>
     </Overlay>
   );
@@ -212,26 +209,6 @@ const styles = StyleSheet.create({
   actionDescription: {
     fontSize: 13,
     lineHeight: 18,
-    // color will be set dynamically
-  },
-  closeButton: {
-    borderRadius: 10,
-    paddingVertical: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: 'rgba(0, 0, 0, 0.2)',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-    // backgroundColor will be set dynamically
-  },
-  closeButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
     // color will be set dynamically
   },
 });

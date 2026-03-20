@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, Skeleton } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
 
 export const CERTIFICATION_BADGE_COLORS: Record<
@@ -24,6 +24,8 @@ interface RatingBadgeProps {
   isDark: boolean;
   /** Optional size variant */
   size?: 'sm' | 'md';
+  /** Whether the badge is loading */
+  isLoading?: boolean;
 }
 
 const RatingBadge: React.FC<RatingBadgeProps> = ({
@@ -32,7 +34,23 @@ const RatingBadge: React.FC<RatingBadgeProps> = ({
   certificationStatus,
   isDark,
   size = 'md',
+  isLoading = false,
 }) => {
+  const height = size === 'sm' ? 20 : 24;
+
+  // Show skeleton while loading
+  if (isLoading) {
+    return (
+      <Skeleton
+        width={60}
+        height={height}
+        borderRadius={radiusPixels.full}
+        backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+        highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+      />
+    );
+  }
+
   const ratingDisplay =
     ratingValue !== undefined && ratingValue !== null ? ratingValue.toFixed(1) : ratingLabel;
 

@@ -30,6 +30,7 @@ import {
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import MapView, { Marker } from 'react-native-maps';
 import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button, useToast } from '@rallia/shared-components';
@@ -704,6 +705,7 @@ export const MatchDetailSheet: React.FC = () => {
   const { player } = usePlayer();
   const { location: locationPermission } = usePermissions();
   const isDark = theme === 'dark';
+  const insets = useSafeAreaInsets();
   const toast = useToast();
   const playerId = player?.id;
   const navigation = useAppNavigation();
@@ -4424,6 +4426,7 @@ export const MatchDetailSheet: React.FC = () => {
           {
             backgroundColor: colors.cardBackground,
             borderTopColor: colors.border,
+            paddingBottom: insets.bottom + spacingPixels[4],
           },
           needsScoreConfirmAndFeedback && hasTwoScoreActions && { flexDirection: 'column' },
         ]}
@@ -5148,8 +5151,7 @@ const styles = StyleSheet.create({
   stickyFooter: {
     flexDirection: 'row',
     paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[4],
-    paddingBottom: spacingPixels[8],
+    paddingTop: spacingPixels[4],
     gap: spacingPixels[2],
     borderTopWidth: StyleSheet.hairlineWidth,
     alignItems: 'stretch',

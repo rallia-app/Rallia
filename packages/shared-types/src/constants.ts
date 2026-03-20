@@ -316,6 +316,7 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   community_join_request: 'people-outline',
   community_join_accepted: 'checkmark-circle-outline',
   community_join_rejected: 'close-circle-outline',
+  network_deleted: 'trash-outline',
   // Reference request types
   reference_request_received: 'person-circle-outline',
   reference_request_accepted: 'checkmark-circle-outline',
@@ -386,6 +387,7 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   community_join_request: '#4DB8A8', // Teal
   community_join_accepted: '#4CAF50', // Green
   community_join_rejected: '#F44336', // Red
+  network_deleted: '#F44336', // Red
   // Reference request types
   reference_request_received: '#4DB8A8', // Teal - incoming request
   reference_request_accepted: '#4CAF50', // Green - positive outcome
@@ -453,6 +455,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   community_join_request: 'Community Join Request',
   community_join_accepted: 'Community Join Accepted',
   community_join_rejected: 'Community Join Rejected',
+  network_deleted: 'Network Deleted',
   // Reference request types
   reference_request_received: 'Reference Request Received',
   reference_request_accepted: 'Reference Request Accepted',
@@ -522,6 +525,7 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   community_join_request: 'social',
   community_join_accepted: 'social',
   community_join_rejected: 'social',
+  network_deleted: 'social',
   // Reference request types (social)
   reference_request_received: 'social',
   reference_request_accepted: 'social',
@@ -634,6 +638,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   community_join_request: { email: true, push: true, sms: false },
   community_join_accepted: { email: true, push: true, sms: false },
   community_join_rejected: { email: true, push: true, sms: false },
+  network_deleted: { email: true, push: true, sms: false },
   // Reference request types
   reference_request_received: { email: true, push: true, sms: false },
   reference_request_accepted: { email: true, push: true, sms: false },

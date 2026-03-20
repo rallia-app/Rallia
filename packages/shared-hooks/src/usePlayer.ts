@@ -7,7 +7,7 @@
  *
  * @example
  * ```tsx
- * const { player, maxTravelDistanceKm, loading, refetch } = usePlayer();
+ * const { player, primaryRating, maxTravelDistanceKm, loading, refetch } = usePlayer();
  *
  * if (loading) return <Spinner />;
  *
@@ -17,4 +17,4 @@
 
 // Re-export from PlayerContext for backward compatibility
 export { usePlayer, PlayerProvider } from './PlayerContext';
-export type { PlayerContextType } from './PlayerContext';
+export type { PlayerContextType, PrimaryRating, SportPreferences } from './PlayerContext';

@@ -831,7 +831,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[4],
-    paddingBottom: spacingPixels[8],
     borderTopWidth: 1,
   },
   sendButton: {

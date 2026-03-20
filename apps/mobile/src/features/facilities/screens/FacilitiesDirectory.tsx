@@ -45,6 +45,7 @@ import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { FacilityCard, FacilityFiltersBar } from '../components';
 import { SportIcon } from '../../../components/SportIcon';
 import { lightHaptic } from '@rallia/shared-utils';
+import { BugReportFAB } from '../../../components/BugReportFAB';
 import { MyBookingCard } from '../../bookings/components';
 import { SheetManager } from 'react-native-actions-sheet';
 import type { FormattedSlot, CourtOption } from '@rallia/shared-hooks';
@@ -777,23 +778,27 @@ export default function FacilitiesDirectory() {
         ]}
         showsVerticalScrollIndicator={false}
       />
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: colors.primary }]}
-        onPress={() => {
-          lightHaptic();
-          rootNavigation.navigate('Map', {
-            screen: 'MapView',
-            params: location
-              ? { focusLocation: { lat: location.latitude, lng: location.longitude } }
-              : undefined,
-          });
-        }}
-        activeOpacity={0.8}
-        accessible
-        accessibilityLabel={t('navigation.map')}
-      >
-        <Ionicons name="map" size={24} color="#FFFFFF" />
-      </TouchableOpacity>
+      {/* FAB Container - Bug Report + Map */}
+      <View style={styles.fabContainer}>
+        <BugReportFAB />
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: colors.primary }]}
+          onPress={() => {
+            lightHaptic();
+            rootNavigation.navigate('Map', {
+              screen: 'MapView',
+              params: location
+                ? { focusLocation: { lat: location.latitude, lng: location.longitude } }
+                : undefined,
+            });
+          }}
+          activeOpacity={0.8}
+          accessible
+          accessibilityLabel={t('navigation.map')}
+        >
+          <Ionicons name="map" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -957,10 +962,14 @@ const styles = StyleSheet.create({
   myBookingsMatchesSectionButton: {
     marginTop: spacingPixels[2],
   },
-  fab: {
+  fabContainer: {
     position: 'absolute',
     bottom: spacingPixels[6],
     right: spacingPixels[4],
+    alignItems: 'center',
+    gap: 12,
+  },
+  fab: {
     width: 56,
     height: 56,
     borderRadius: 28,

@@ -19,12 +19,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { SportIcon } from '../components/SportIcon';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SheetManager } from 'react-native-actions-sheet';
 
-import { Text, Skeleton } from '@rallia/shared-components';
+import { Text, Skeleton, Button } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useAuth, useTranslation, useRequireOnboarding } from '../hooks';
 import { useSport } from '../context';
@@ -62,12 +61,10 @@ const GroupCard: React.FC<{
   colors: ThemeColors;
   isDark: boolean;
   onPress: (group: Group) => void;
-  getSportName: (sportId: string | null) => string | null;
-}> = ({ item, index, colors, isDark, onPress, getSportName }) => {
+}> = ({ item, index, colors, isDark, onPress }) => {
   const scaleAnim = useMemo(() => new Animated.Value(1), []);
   const { t } = useTranslation();
   const hasBooking = false; // TODO: Add booking feature indicator
-  const sportName = getSportName(item.sport_id);
 
   const handlePressIn = useCallback(() => {
     Animated.timing(scaleAnim, {
@@ -84,37 +81,6 @@ const GroupCard: React.FC<{
       useNativeDriver: true,
     }).start();
   }, [scaleAnim]);
-
-  // Get sport icon based on sport_id
-  const renderSportIcon = () => {
-    // null = both sports
-    if (!item.sport_id) {
-      return (
-        <View style={styles.sportIconContainer}>
-          <SportIcon sportName="tennis" size={14} color={colors.textMuted} />
-          <Text style={[styles.sportIconPlus, { color: colors.textMuted }]}>+</Text>
-          <SportIcon sportName="pickleball" size={14} color={colors.textMuted} />
-        </View>
-      );
-    }
-    // Tennis
-    if (sportName?.toLowerCase() === 'tennis') {
-      return (
-        <View style={styles.sportIconContainer}>
-          <SportIcon sportName="tennis" size={16} color={colors.textMuted} />
-        </View>
-      );
-    }
-    // Pickleball
-    if (sportName?.toLowerCase() === 'pickleball') {
-      return (
-        <View style={styles.sportIconContainer}>
-          <SportIcon sportName="pickleball" size={16} color={colors.textMuted} />
-        </View>
-      );
-    }
-    return null;
-  };
 
   return (
     <TouchableWithoutFeedback
@@ -169,7 +135,6 @@ const GroupCard: React.FC<{
             >
               {item.name}
             </Text>
-            {renderSportIcon()}
           </View>
 
           {/* Verified indicator + Member count */}
@@ -211,16 +176,6 @@ export default function GroupsScreen() {
   const { sports } = useSports();
   const { limits } = useNetworkLimits();
 
-  // Helper to get sport name from sport_id
-  const getSportName = useCallback(
-    (sportId: string | null): string | null => {
-      if (!sportId || !sports) return null;
-      const sport = sports.find(s => s.id === sportId);
-      return sport?.name ?? null;
-    },
-    [sports]
-  );
-
   // Subscribe to real-time updates for player's groups
   usePlayerGroupsRealtime(playerId);
 
@@ -255,11 +210,10 @@ export default function GroupsScreen() {
           colors={colors}
           isDark={isDark}
           onPress={handleGroupPress}
-          getSportName={getSportName}
         />
       );
     },
-    [colors, isDark, handleGroupPress, getSportName]
+    [colors, isDark, handleGroupPress]
   );
 
   const renderEmptyState = useMemo(
@@ -273,33 +227,32 @@ export default function GroupsScreen() {
           {t('groups.empty.subtitle')}
         </Text>
         <View style={styles.emptyButtons}>
-          <TouchableOpacity
-            style={[styles.createButton, { backgroundColor: colors.primary }]}
+          <Button
+            variant="primary"
+            size="md"
+            rounded
             onPress={() => {
               if (!guardAction() || !playerId) return;
               SheetManager.show('create-group', { payload: { playerId } });
             }}
+            leftIcon={<Ionicons name="add-outline" size={20} color="#FFFFFF" />}
+            isDark={isDark}
           >
-            <Ionicons name="add-outline" size={20} color="#FFFFFF" />
-            <Text weight="semibold" style={styles.createButtonText}>
-              {t('groups.empty.createButton')}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.scanButton,
-              { backgroundColor: colors.cardBackground, borderColor: colors.border },
-            ]}
+            {t('groups.empty.createButton')}
+          </Button>
+          <Button
+            variant="outline"
+            size="md"
+            rounded
             onPress={() => {
               if (!guardAction()) return;
               setShowScannerModal(true);
             }}
+            leftIcon={<Ionicons name="qr-code-outline" size={20} color={colors.primary} />}
+            isDark={isDark}
           >
-            <Ionicons name="qr-code-outline" size={20} color={colors.primary} />
-            <Text weight="semibold" style={[styles.scanButtonText, { color: colors.primary }]}>
-              {t('groups.empty.scanButton')}
-            </Text>
-          </TouchableOpacity>
+            {t('groups.empty.scanButton')}
+          </Button>
         </View>
       </View>
     ),
@@ -540,16 +493,6 @@ const styles = StyleSheet.create({
   badgeText: {
     color: '#FFFFFF',
   },
-  sportIconContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 4,
-  },
-  sportIconPlus: {
-    color: '#666666',
-    fontSize: 8,
-    marginHorizontal: 1,
-  },
   groupInfo: {
     padding: 12,
     gap: 6,
@@ -587,18 +530,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 24,
   },
-  createButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 24,
-    gap: 8,
-  },
-  createButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-  },
   fabContainer: {
     position: 'absolute',
     bottom: 24,
@@ -635,18 +566,5 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     gap: 12,
     marginTop: 8,
-  },
-  scanButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 24,
-    gap: 8,
-    borderWidth: 1.5,
-  },
-  scanButtonText: {
-    fontSize: 16,
   },
 });

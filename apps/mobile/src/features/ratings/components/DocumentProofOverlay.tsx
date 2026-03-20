@@ -17,10 +17,10 @@ import {
   uploadRatingProofFile,
   validateProofFile,
   getMaxFileSizes,
-  getSupportedDocumentFormats,
 } from '../../../services/ratingProofUpload';
 import { Logger, supabase } from '@rallia/shared-services';
 import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
+import type { ProofFormProps } from './AddRatingProofOverlay';
 
 interface DocumentProofOverlayProps {
   visible: boolean;
@@ -29,14 +29,12 @@ interface DocumentProofOverlayProps {
   playerRatingScoreId: string;
 }
 
-export function DocumentProofActionSheet({ payload }: SheetProps<'document-proof'>) {
-  const onClose = () => {
-    if (isSubmitting) return;
-    resetForm();
-    SheetManager.hide('document-proof');
-  };
-  const onSuccess = payload?.onSuccess;
-  const playerRatingScoreId = payload?.playerRatingScoreId || '';
+export function DocumentProofForm({
+  onBack,
+  onClose,
+  onSuccess,
+  playerRatingScoreId,
+}: ProofFormProps) {
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
   const toast = useToast();
@@ -59,15 +57,6 @@ export function DocumentProofActionSheet({ payload }: SheetProps<'document-proof
     setUploadProgress(0);
   };
 
-  // Reset form when sheet closes
-  useEffect(() => {
-    return () => {
-      if (!isSubmitting) {
-        resetForm();
-      }
-    };
-  }, [isSubmitting]);
-
   const handleSelectDocument = async () => {
     lightHaptic();
 
@@ -85,7 +74,6 @@ export function DocumentProofActionSheet({ payload }: SheetProps<'document-proof
       if (!result.canceled && result.assets && result.assets[0]) {
         const doc = result.assets[0];
 
-        // Validate file
         const validation = validateProofFile(doc.name, doc.size || 0, 'document');
         if (!validation.valid) {
           toast.error(validation.error || t('profile.ratingProofs.upload.invalidFormat'));
@@ -126,7 +114,6 @@ export function DocumentProofActionSheet({ payload }: SheetProps<'document-proof
     setUploadProgress(0);
 
     try {
-      // Get current user
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -134,7 +121,6 @@ export function DocumentProofActionSheet({ payload }: SheetProps<'document-proof
         throw new Error('User not authenticated');
       }
 
-      // Get actual file size if not available
       let fileSize = selectedDocument.fileSize;
       if (!fileSize || fileSize === 0) {
         const response = await fetch(selectedDocument.uri);
@@ -158,8 +144,8 @@ export function DocumentProofActionSheet({ payload }: SheetProps<'document-proof
       if (result.success) {
         toast.success(t('profile.ratingProofs.upload.success'));
         resetForm();
-        onSuccess?.();
-        SheetManager.hide('document-proof');
+        onSuccess();
+        onClose();
       } else {
         throw new Error(result.error || 'Unknown error');
       }
@@ -195,257 +181,283 @@ export function DocumentProofActionSheet({ payload }: SheetProps<'document-proof
   const maxSizeMB = Math.round(getMaxFileSizes().document / (1024 * 1024));
 
   return (
-    <ActionSheet
-      gestureEnabled
-      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
-      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
-    >
-      <View style={styles.modalContent}>
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <View style={styles.headerCenter}>
-            <Text
-              weight="semibold"
-              size="lg"
-              style={{ color: colors.text }}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
-              {t('profile.ratingProofs.proofTypes.document.title')}
-            </Text>
+    <View style={styles.modalContent}>
+      {/* Handle indicator */}
+      <View style={styles.handleIndicatorRow}>
+        <View style={[styles.handleIndicator, { backgroundColor: colors.border }]} />
+      </View>
+
+      {/* Header */}
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <TouchableOpacity
+          onPress={onBack}
+          style={styles.backButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <Text
+            weight="semibold"
+            size="lg"
+            style={{ color: colors.text }}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {t('profile.ratingProofs.proofTypes.document.title')}
+          </Text>
+        </View>
+        <TouchableOpacity onPress={onClose} style={styles.closeButton} disabled={isSubmitting}>
+          <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Scrollable Content */}
+      <ScrollView
+        style={styles.scrollContent}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.iconHeaderContainer}>
+          <View style={[styles.iconHeader, { backgroundColor: colors.primary + '20' }]}>
+            <Ionicons name="document-text-outline" size={32} color={colors.primary} />
           </View>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton} disabled={isSubmitting}>
-            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
-          </TouchableOpacity>
+          <Text size="sm" color={colors.textMuted} style={styles.subtitle}>
+            {t('profile.ratingProofs.proofTypes.document.description')}
+          </Text>
         </View>
 
-        {/* Scrollable Content */}
-        <ScrollView
-          style={styles.scrollContent}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.iconHeaderContainer}>
-            <View style={[styles.iconHeader, { backgroundColor: colors.primary + '20' }]}>
-              <Ionicons name="document-text-outline" size={32} color={colors.primary} />
-            </View>
-            <Text size="sm" color={colors.textMuted} style={styles.subtitle}>
-              {t('profile.ratingProofs.proofTypes.document.description')}
-            </Text>
-          </View>
-
-          {/* Document Selection */}
-          {!selectedDocument ? (
-            <View style={styles.selectionContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.uploadArea,
-                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                ]}
-                onPress={handleSelectDocument}
-                activeOpacity={0.7}
-                disabled={isSubmitting}
-              >
-                <View style={[styles.uploadIcon, { backgroundColor: colors.primary + '20' }]}>
-                  <Ionicons name="cloud-upload-outline" size={32} color={colors.primary} />
-                </View>
-                <Text size="base" weight="semibold" color={colors.text} style={styles.uploadTitle}>
-                  {t('profile.ratingProofs.proofTypes.document.selectDocument')}
-                </Text>
-                <Text size="sm" color={colors.textMuted} style={styles.uploadSubtitle}>
-                  Tap to browse your files
-                </Text>
-              </TouchableOpacity>
-
-              <View style={styles.supportedFormatsContainer}>
-                <Text size="xs" weight="medium" color={colors.textMuted} style={styles.formatLabel}>
-                  Supported formats
-                </Text>
-                <View style={styles.formatTags}>
-                  {['PDF', 'DOC', 'DOCX', 'TXT'].map(format => (
-                    <View
-                      key={format}
-                      style={[styles.formatTag, { backgroundColor: colors.border }]}
-                    >
-                      <Text size="xs" color={colors.textMuted}>
-                        {format}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
+        {/* Document Selection */}
+        {!selectedDocument ? (
+          <View style={styles.selectionContainer}>
+            <TouchableOpacity
+              style={[
+                styles.uploadArea,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+              onPress={handleSelectDocument}
+              activeOpacity={0.7}
+              disabled={isSubmitting}
+            >
+              <View style={[styles.uploadIcon, { backgroundColor: colors.primary + '20' }]}>
+                <Ionicons name="cloud-upload-outline" size={32} color={colors.primary} />
               </View>
+              <Text size="base" weight="semibold" color={colors.text} style={styles.uploadTitle}>
+                {t('profile.ratingProofs.proofTypes.document.selectDocument')}
+              </Text>
+              <Text size="sm" color={colors.textMuted} style={styles.uploadSubtitle}>
+                Tap to browse your files
+              </Text>
+            </TouchableOpacity>
 
-              <View style={styles.infoContainer}>
-                <View style={styles.infoRow}>
-                  <Ionicons name="cloud-upload-outline" size={14} color={colors.textMuted} />
-                  <Text size="xs" color={colors.textMuted}>
-                    Max size: {maxSizeMB} MB
-                  </Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Ionicons name="shield-checkmark-outline" size={14} color={colors.textMuted} />
-                  <Text size="xs" color={colors.textMuted}>
-                    Documents are stored securely
-                  </Text>
-                </View>
-              </View>
-            </View>
-          ) : (
-            <View style={styles.previewContainer}>
-              <View
-                style={[
-                  styles.documentPreview,
-                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                ]}
-              >
-                <View
-                  style={[styles.documentIconWrapper, { backgroundColor: colors.primary + '20' }]}
-                >
-                  <Ionicons
-                    name={
-                      getDocumentIcon(selectedDocument.mimeType) as keyof typeof Ionicons.glyphMap
-                    }
-                    size={40}
-                    color={colors.primary}
-                  />
-                </View>
-                <View style={styles.documentInfo}>
-                  <Text size="sm" weight="medium" color={colors.text} numberOfLines={2}>
-                    {selectedDocument.fileName}
-                  </Text>
-                  <View style={styles.documentMeta}>
+            <View style={styles.supportedFormatsContainer}>
+              <Text size="xs" weight="medium" color={colors.textMuted} style={styles.formatLabel}>
+                Supported formats
+              </Text>
+              <View style={styles.formatTags}>
+                {['PDF', 'DOC', 'DOCX', 'TXT'].map(format => (
+                  <View key={format} style={[styles.formatTag, { backgroundColor: colors.border }]}>
                     <Text size="xs" color={colors.textMuted}>
-                      {getDocumentTypeLabel(selectedDocument.mimeType)}
-                    </Text>
-                    <Text size="xs" color={colors.textMuted}>
-                      •
-                    </Text>
-                    <Text size="xs" color={colors.textMuted}>
-                      {formatFileSize(selectedDocument.fileSize)}
+                      {format}
                     </Text>
                   </View>
-                </View>
-                <TouchableOpacity
-                  style={[styles.removeButton, { backgroundColor: colors.error }]}
-                  onPress={handleRemoveDocument}
-                  disabled={isSubmitting}
-                >
-                  <Ionicons name="close-outline" size={18} color="#fff" />
-                </TouchableOpacity>
+                ))}
               </View>
-
-              <TouchableOpacity
-                style={styles.changeButton}
-                onPress={handleSelectDocument}
-                disabled={isSubmitting}
-              >
-                <Ionicons name="swap-horizontal-outline" size={16} color={colors.primary} />
-                <Text size="sm" color={colors.primary}>
-                  Choose different file
-                </Text>
-              </TouchableOpacity>
             </View>
-          )}
 
-          {/* Title Input */}
-          <View style={styles.inputGroup}>
-            <Text size="sm" weight="medium" color={colors.text} style={styles.label}>
-              {t('profile.ratingProofs.form.title')} *
-            </Text>
-            <TextInput
-              style={[
-                styles.textInput,
-                {
-                  backgroundColor: colors.inputBackground,
-                  borderColor: colors.border,
-                  color: colors.text,
-                },
-              ]}
-              value={title}
-              onChangeText={setTitle}
-              placeholder={t('profile.ratingProofs.form.titlePlaceholder')}
-              placeholderTextColor={colors.textMuted}
-              maxLength={100}
-              returnKeyType="next"
-              editable={!isSubmitting}
-            />
+            <View style={styles.infoContainer}>
+              <View style={styles.infoRow}>
+                <Ionicons name="cloud-upload-outline" size={14} color={colors.textMuted} />
+                <Text size="xs" color={colors.textMuted}>
+                  Max size: {maxSizeMB} MB
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Ionicons name="shield-checkmark-outline" size={14} color={colors.textMuted} />
+                <Text size="xs" color={colors.textMuted}>
+                  Documents are stored securely
+                </Text>
+              </View>
+            </View>
           </View>
-
-          {/* Description Input */}
-          <View style={styles.inputGroup}>
-            <Text size="sm" weight="medium" color={colors.text} style={styles.label}>
-              {t('profile.ratingProofs.form.description')}
-            </Text>
-            <TextInput
+        ) : (
+          <View style={styles.previewContainer}>
+            <View
               style={[
-                styles.textInput,
-                styles.textArea,
-                {
-                  backgroundColor: colors.inputBackground,
-                  borderColor: colors.border,
-                  color: colors.text,
-                },
+                styles.documentPreview,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
               ]}
-              value={description}
-              onChangeText={setDescription}
-              placeholder={t('profile.ratingProofs.form.descriptionPlaceholder')}
-              placeholderTextColor={colors.textMuted}
-              maxLength={500}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-              editable={!isSubmitting}
-            />
-          </View>
-        </ScrollView>
-
-        {/* Sticky Footer */}
-        <View style={[styles.footer, { borderTopColor: colors.border }]}>
-          {/* Upload Progress */}
-          {isSubmitting && (
-            <View style={styles.progressContainer}>
-              <View style={[styles.progressBar, { backgroundColor: colors.border }]}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    { backgroundColor: colors.primary, width: `${uploadProgress}%` },
-                  ]}
+            >
+              <View
+                style={[styles.documentIconWrapper, { backgroundColor: colors.primary + '20' }]}
+              >
+                <Ionicons
+                  name={
+                    getDocumentIcon(selectedDocument.mimeType) as keyof typeof Ionicons.glyphMap
+                  }
+                  size={40}
+                  color={colors.primary}
                 />
               </View>
-              <Text size="xs" color={colors.textMuted} style={styles.progressText}>
+              <View style={styles.documentInfo}>
+                <Text size="sm" weight="medium" color={colors.text} numberOfLines={2}>
+                  {selectedDocument.fileName}
+                </Text>
+                <View style={styles.documentMeta}>
+                  <Text size="xs" color={colors.textMuted}>
+                    {getDocumentTypeLabel(selectedDocument.mimeType)}
+                  </Text>
+                  <Text size="xs" color={colors.textMuted}>
+                    •
+                  </Text>
+                  <Text size="xs" color={colors.textMuted}>
+                    {formatFileSize(selectedDocument.fileSize)}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={[styles.removeButton, { backgroundColor: colors.error }]}
+                onPress={handleRemoveDocument}
+                disabled={isSubmitting}
+              >
+                <Ionicons name="close-outline" size={18} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.changeButton}
+              onPress={handleSelectDocument}
+              disabled={isSubmitting}
+            >
+              <Ionicons name="swap-horizontal-outline" size={16} color={colors.primary} />
+              <Text size="sm" color={colors.primary}>
+                Choose different file
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Title Input */}
+        <View style={styles.inputGroup}>
+          <Text size="sm" weight="medium" color={colors.text} style={styles.label}>
+            {t('profile.ratingProofs.form.title')} *
+          </Text>
+          <TextInput
+            style={[
+              styles.textInput,
+              {
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.border,
+                color: colors.text,
+              },
+            ]}
+            value={title}
+            onChangeText={setTitle}
+            placeholder={t('profile.ratingProofs.form.titlePlaceholder')}
+            placeholderTextColor={colors.textMuted}
+            maxLength={100}
+            returnKeyType="next"
+            editable={!isSubmitting}
+          />
+        </View>
+
+        {/* Description Input */}
+        <View style={styles.inputGroup}>
+          <Text size="sm" weight="medium" color={colors.text} style={styles.label}>
+            {t('profile.ratingProofs.form.description')}
+          </Text>
+          <TextInput
+            style={[
+              styles.textInput,
+              styles.textArea,
+              {
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.border,
+                color: colors.text,
+              },
+            ]}
+            value={description}
+            onChangeText={setDescription}
+            placeholder={t('profile.ratingProofs.form.descriptionPlaceholder')}
+            placeholderTextColor={colors.textMuted}
+            maxLength={500}
+            multiline
+            numberOfLines={3}
+            textAlignVertical="top"
+            editable={!isSubmitting}
+          />
+        </View>
+      </ScrollView>
+
+      {/* Sticky Footer */}
+      <View style={[styles.footer, { borderTopColor: colors.border }]}>
+        {/* Upload Progress */}
+        {isSubmitting && (
+          <View style={styles.progressContainer}>
+            <View style={[styles.progressBar, { backgroundColor: colors.border }]}>
+              <View
+                style={[
+                  styles.progressFill,
+                  { backgroundColor: colors.primary, width: `${uploadProgress}%` },
+                ]}
+              />
+            </View>
+            <Text size="xs" color={colors.textMuted} style={styles.progressText}>
+              {uploadProgress < 100
+                ? `${t('profile.ratingProofs.upload.uploading')} ${uploadProgress}%`
+                : t('profile.ratingProofs.upload.processing')}
+            </Text>
+          </View>
+        )}
+        <Button
+          variant="primary"
+          onPress={handleSubmit}
+          disabled={isSubmitting || !selectedDocument || !title.trim()}
+          style={styles.submitButton}
+        >
+          {isSubmitting ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color={colors.primaryForeground} />
+              <Text
+                size="base"
+                weight="semibold"
+                color={colors.primaryForeground}
+                style={styles.loadingText}
+              >
                 {uploadProgress < 100
-                  ? `${t('profile.ratingProofs.upload.uploading')} ${uploadProgress}%`
+                  ? t('profile.ratingProofs.upload.uploading')
                   : t('profile.ratingProofs.upload.processing')}
               </Text>
             </View>
+          ) : (
+            t('profile.ratingProofs.form.submit')
           )}
-          <Button
-            variant="primary"
-            onPress={handleSubmit}
-            disabled={isSubmitting || !selectedDocument || !title.trim()}
-            style={styles.submitButton}
-          >
-            {isSubmitting ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color={colors.primaryForeground} />
-                <Text
-                  size="base"
-                  weight="semibold"
-                  color={colors.primaryForeground}
-                  style={styles.loadingText}
-                >
-                  {uploadProgress < 100
-                    ? t('profile.ratingProofs.upload.uploading')
-                    : t('profile.ratingProofs.upload.processing')}
-                </Text>
-              </View>
-            ) : (
-              t('profile.ratingProofs.form.submit')
-            )}
-          </Button>
-        </View>
+        </Button>
       </View>
+    </View>
+  );
+}
+
+export function DocumentProofActionSheet({ payload }: SheetProps<'document-proof'>) {
+  const onClose = () => {
+    SheetManager.hide('document-proof');
+  };
+  const onSuccess = payload?.onSuccess;
+  const playerRatingScoreId = payload?.playerRatingScoreId || '';
+
+  return (
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: 'transparent' }]}
+      indicatorStyle={[styles.handleIndicator]}
+    >
+      <DocumentProofForm
+        onBack={onClose}
+        onClose={onClose}
+        onSuccess={() => onSuccess?.()}
+        playerRatingScoreId={playerRatingScoreId}
+      />
     </ActionSheet>
   );
 }
@@ -483,14 +495,17 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radiusPixels['2xl'],
     borderTopRightRadius: radiusPixels['2xl'],
   },
+  modalContent: {
+    flex: 1,
+  },
+  handleIndicatorRow: {
+    alignItems: 'center',
+    paddingTop: spacingPixels[2],
+  },
   handleIndicator: {
     width: spacingPixels[10],
     height: 4,
     borderRadius: 4,
-    alignSelf: 'center',
-  },
-  modalContent: {
-    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -505,6 +520,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: spacingPixels[12],
+  },
+  backButton: {
+    padding: spacingPixels[1],
+    position: 'absolute',
+    left: spacingPixels[4],
+    zIndex: 1,
   },
   closeButton: {
     padding: spacingPixels[1],
