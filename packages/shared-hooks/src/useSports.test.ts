@@ -1,6 +1,6 @@
 /**
  * Tests for useSports hook
- * 
+ *
  * Tests cover:
  * - Initial loading state
  * - Successful sports fetch
@@ -44,9 +44,11 @@ describe('useSports', () => {
       (supabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
-            order: jest.fn().mockImplementation(() => 
-              new Promise(resolve => setTimeout(() => resolve({ data: mockSports }), 100))
-            ),
+            order: jest
+              .fn()
+              .mockImplementation(
+                () => new Promise(resolve => setTimeout(() => resolve({ data: mockSports }), 100))
+              ),
           }),
         }),
       });

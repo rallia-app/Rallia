@@ -46,7 +46,7 @@ function analyzeDirectory(dir, results = { files: [], totalSize: 0 }) {
     } else if (stats.isFile()) {
       const ext = path.extname(item);
       const size = stats.size;
-      
+
       results.files.push({
         path: fullPath,
         name: item,
@@ -62,14 +62,22 @@ function analyzeDirectory(dir, results = { files: [], totalSize: 0 }) {
 }
 
 function analyzeBundle() {
-  console.log(`\n${colors.bright}${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
-  console.log(`${colors.bright}${colors.cyan}  📊 Rallia Mobile App - Bundle Analysis${colors.reset}`);
-  console.log(`${colors.bright}${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}\n`);
+  console.log(
+    `\n${colors.bright}${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`
+  );
+  console.log(
+    `${colors.bright}${colors.cyan}  📊 Rallia Mobile App - Bundle Analysis${colors.reset}`
+  );
+  console.log(
+    `${colors.bright}${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}\n`
+  );
 
   const distDir = path.join(__dirname, 'dist');
-  
+
   if (!fs.existsSync(distDir)) {
-    console.log(`${colors.red}❌ No dist folder found. Please run: npx expo export first${colors.reset}\n`);
+    console.log(
+      `${colors.red}❌ No dist folder found. Please run: npx expo export first${colors.reset}\n`
+    );
     return;
   }
 
@@ -98,13 +106,17 @@ function analyzeBundle() {
     }));
 
   // Print summary
-  console.log(`${colors.bright}📦 Total Bundle Size:${colors.reset} ${colors.green}${formatBytes(totalSize)}${colors.reset}`);
+  console.log(
+    `${colors.bright}📦 Total Bundle Size:${colors.reset} ${colors.green}${formatBytes(totalSize)}${colors.reset}`
+  );
   console.log(`${colors.bright}📁 Total Files:${colors.reset} ${files.length}\n`);
 
   // Print by file type
   console.log(`${colors.bright}${colors.blue}File Type Breakdown:${colors.reset}`);
   console.log(`${'─'.repeat(80)}`);
-  console.log(`${colors.bright}Type${' '.repeat(12)}Count${' '.repeat(5)}Size${' '.repeat(12)}Percentage${colors.reset}`);
+  console.log(
+    `${colors.bright}Type${' '.repeat(12)}Count${' '.repeat(5)}Size${' '.repeat(12)}Percentage${colors.reset}`
+  );
   console.log(`${'─'.repeat(80)}`);
 
   sortedTypes.forEach(({ type, count, size, percentage }) => {
@@ -112,7 +124,7 @@ function analyzeBundle() {
     const countStr = count.toString().padEnd(10);
     const sizeStr = formatBytes(size).padEnd(15);
     const percStr = formatPercentage(percentage);
-    
+
     const color = percentage > 0.3 ? colors.red : percentage > 0.1 ? colors.yellow : colors.green;
     console.log(`${typeStr}${countStr}${color}${sizeStr}${percStr}${colors.reset}`);
   });
@@ -137,7 +149,7 @@ function analyzeBundle() {
     const nameStr = (name.length > 50 ? '...' + name.slice(-47) : name).padEnd(50);
     const sizeStr = formatBytes(size).padEnd(12);
     const percStr = formatPercentage(percentage);
-    
+
     const color = percentage > 0.05 ? colors.red : percentage > 0.02 ? colors.yellow : colors.green;
     console.log(`${nameStr}${color}${sizeStr}${percStr}${colors.reset}`);
   });
@@ -149,7 +161,9 @@ function analyzeBundle() {
   const totalJsSize = jsBundles.reduce((sum, f) => sum + f.size, 0);
 
   console.log(`${colors.bright}${colors.blue}JavaScript Bundle Analysis:${colors.reset}`);
-  console.log(`${colors.bright}Total JS Size:${colors.reset} ${colors.yellow}${formatBytes(totalJsSize)}${colors.reset} (${formatPercentage(totalJsSize / totalSize)} of total)`);
+  console.log(
+    `${colors.bright}Total JS Size:${colors.reset} ${colors.yellow}${formatBytes(totalJsSize)}${colors.reset} (${formatPercentage(totalJsSize / totalSize)} of total)`
+  );
   console.log(`${colors.bright}JS Files:${colors.reset} ${jsBundles.length}\n`);
 
   // Recommendations
@@ -158,28 +172,38 @@ function analyzeBundle() {
   const recommendations = [];
 
   if (totalJsSize / totalSize > 0.5) {
-    recommendations.push(`${colors.yellow}⚠${colors.reset}  JavaScript bundles are >50% of total size. Consider code splitting or lazy loading.`);
+    recommendations.push(
+      `${colors.yellow}⚠${colors.reset}  JavaScript bundles are >50% of total size. Consider code splitting or lazy loading.`
+    );
   }
 
   const largeJsFiles = jsBundles.filter(f => f.size > 500000); // >500KB
   if (largeJsFiles.length > 0) {
-    recommendations.push(`${colors.yellow}⚠${colors.reset}  ${largeJsFiles.length} JavaScript file(s) >500KB detected. Review for unused dependencies.`);
+    recommendations.push(
+      `${colors.yellow}⚠${colors.reset}  ${largeJsFiles.length} JavaScript file(s) >500KB detected. Review for unused dependencies.`
+    );
   }
 
   const imageFiles = files.filter(f => ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(f.ext));
   const totalImageSize = imageFiles.reduce((sum, f) => sum + f.size, 0);
   if (totalImageSize / totalSize > 0.3) {
-    recommendations.push(`${colors.yellow}⚠${colors.reset}  Images are >30% of total size. Consider optimization or using WebP format.`);
+    recommendations.push(
+      `${colors.yellow}⚠${colors.reset}  Images are >30% of total size. Consider optimization or using WebP format.`
+    );
   }
 
   const fontFiles = files.filter(f => ['.ttf', '.otf', '.woff', '.woff2'].includes(f.ext));
   const totalFontSize = fontFiles.reduce((sum, f) => sum + f.size, 0);
   if (totalFontSize > 1000000) {
-    recommendations.push(`${colors.yellow}⚠${colors.reset}  Font files are >${formatBytes(1000000)}. Consider subsetting or using system fonts.`);
+    recommendations.push(
+      `${colors.yellow}⚠${colors.reset}  Font files are >${formatBytes(1000000)}. Consider subsetting or using system fonts.`
+    );
   }
 
   if (recommendations.length === 0) {
-    console.log(`${colors.green}✅ Bundle size looks good! No major optimization opportunities detected.${colors.reset}\n`);
+    console.log(
+      `${colors.green}✅ Bundle size looks good! No major optimization opportunities detected.${colors.reset}\n`
+    );
   } else {
     recommendations.forEach(rec => console.log(rec));
     console.log();
@@ -187,21 +211,44 @@ function analyzeBundle() {
 
   // Performance metrics
   console.log(`${colors.bright}${colors.cyan}📈 Performance Metrics:${colors.reset}\n`);
-  
+
   const metrics = [
-    { label: 'Bundle Size', value: formatBytes(totalSize), status: totalSize < 10000000 ? 'good' : totalSize < 20000000 ? 'warning' : 'critical' },
-    { label: 'JS Bundle', value: formatBytes(totalJsSize), status: totalJsSize < 5000000 ? 'good' : totalJsSize < 10000000 ? 'warning' : 'critical' },
-    { label: 'Asset Files', value: files.length.toString(), status: files.length < 200 ? 'good' : files.length < 500 ? 'warning' : 'critical' },
+    {
+      label: 'Bundle Size',
+      value: formatBytes(totalSize),
+      status: totalSize < 10000000 ? 'good' : totalSize < 20000000 ? 'warning' : 'critical',
+    },
+    {
+      label: 'JS Bundle',
+      value: formatBytes(totalJsSize),
+      status: totalJsSize < 5000000 ? 'good' : totalJsSize < 10000000 ? 'warning' : 'critical',
+    },
+    {
+      label: 'Asset Files',
+      value: files.length.toString(),
+      status: files.length < 200 ? 'good' : files.length < 500 ? 'warning' : 'critical',
+    },
   ];
 
   metrics.forEach(({ label, value, status }) => {
-    const statusIcon = status === 'good' ? `${colors.green}✅` : status === 'warning' ? `${colors.yellow}⚠️` : `${colors.red}❌`;
+    const statusIcon =
+      status === 'good'
+        ? `${colors.green}✅`
+        : status === 'warning'
+          ? `${colors.yellow}⚠️`
+          : `${colors.red}❌`;
     console.log(`${statusIcon}  ${label.padEnd(15)} ${value}${colors.reset}`);
   });
 
-  console.log(`\n${colors.bright}${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
-  console.log(`${colors.bright}${colors.cyan}  📝 Report generated: ${new Date().toLocaleString()}${colors.reset}`);
-  console.log(`${colors.bright}${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}\n`);
+  console.log(
+    `\n${colors.bright}${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`
+  );
+  console.log(
+    `${colors.bright}${colors.cyan}  📝 Report generated: ${new Date().toLocaleString()}${colors.reset}`
+  );
+  console.log(
+    `${colors.bright}${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}\n`
+  );
 
   // Generate JSON report
   const report = {
@@ -228,10 +275,7 @@ function analyzeBundle() {
     recommendations: recommendations.map(rec => rec.replace(/\x1b\[[0-9;]*m/g, '')), // Remove color codes
   };
 
-  fs.writeFileSync(
-    path.join(__dirname, 'bundle-report.json'),
-    JSON.stringify(report, null, 2)
-  );
+  fs.writeFileSync(path.join(__dirname, 'bundle-report.json'), JSON.stringify(report, null, 2));
 
   console.log(`${colors.green}✅ JSON report saved to: bundle-report.json${colors.reset}\n`);
 }

@@ -66,11 +66,13 @@ async function getEligibleTokens(
     // Get all active devices with their admin preferences
     let query = supabase
       .from('admin_device')
-      .select(`
+      .select(
+        `
         admin_id,
         push_token,
         platform
-      `)
+      `
+      )
       .eq('is_active', true);
 
     // If specific admins are targeted
@@ -92,7 +94,7 @@ async function getEligibleTokens(
 
     // Get alert preferences for these admins
     const adminIdsToCheck = [...new Set(devices.map(d => d.admin_id))];
-    
+
     const { data: preferences, error: prefError } = await supabase
       .from('admin_alert_preference')
       .select('admin_id, alert_type, push_enabled')
@@ -113,7 +115,7 @@ async function getEligibleTokens(
     if (severity === 'critical') {
       // Send to all active devices unless explicitly disabled
       const disabledAdmins = new Set<string>();
-      
+
       const { data: disabledPrefs } = await supabase
         .from('admin_alert_preference')
         .select('admin_id')
@@ -169,12 +171,12 @@ async function sendExpoPush(
 
     for (let i = 0; i < messages.length; i += chunkSize) {
       const chunk = messages.slice(i, i + chunkSize);
-      
+
       const response = await fetch(EXPO_PUSH_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
+          Accept: 'application/json',
           'Accept-Encoding': 'gzip, deflate',
         },
         body: JSON.stringify(chunk),
@@ -187,7 +189,7 @@ async function sendExpoPush(
       }
 
       const result: ExpoPushResponse = await response.json();
-      
+
       for (const ticket of result.data) {
         if (ticket.status === 'ok') {
           sent++;
@@ -253,7 +255,7 @@ serve(async (req: Request) => {
 
     // Get eligible device tokens
     const devices = await getEligibleTokens(alertType, severity, adminIds);
-    
+
     if (devices.length === 0) {
       console.log('No eligible devices for notification');
       return new Response(
@@ -266,28 +268,26 @@ serve(async (req: Request) => {
     console.log(`Sending to ${tokens.length} devices`);
 
     // Send push notifications
-    const { sent, failed } = await sendExpoPush(
-      tokens,
-      title,
-      message,
+    const { sent, failed } = await sendExpoPush(tokens, title, message, severity, {
+      alertId,
+      alertType,
       severity,
-      { alertId, alertType, severity, ...data }
-    );
+      ...data,
+    });
 
     // Log attempt
     await logPushAttempt(alertId, tokens.length, sent, failed);
 
     console.log(`Push notification complete: ${sent} sent, ${failed} failed`);
 
-    return new Response(
-      JSON.stringify({ success: true, sent, failed, total: tokens.length }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ success: true, sent, failed, total: tokens.length }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (err) {
     console.error('Error processing push request:', err);
-    return new Response(
-      JSON.stringify({ success: false, error: (err as Error).message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ success: false, error: (err as Error).message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

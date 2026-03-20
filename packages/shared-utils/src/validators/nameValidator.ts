@@ -11,12 +11,12 @@ export const isValidFullName = (name: string): boolean => {
   if (!name || name.trim().length === 0) {
     return false;
   }
-  
+
   // Must contain at least 2 characters
   if (name.trim().length < 2) {
     return false;
   }
-  
+
   // Only letters and spaces allowed
   const nameRegex = /^[a-zA-Z\s]+$/;
   return nameRegex.test(name);
@@ -37,12 +37,12 @@ export const isValidName = (name: string): boolean => {
   if (!name || name.trim().length === 0) {
     return false;
   }
-  
+
   // Must be at least 1 character
   if (name.trim().length < 1) {
     return false;
   }
-  
+
   // Only letters allowed
   const nameRegex = /^[a-zA-Z]+$/;
   return nameRegex.test(name.trim());
@@ -53,5 +53,5 @@ export const isValidName = (name: string): boolean => {
  */
 export const hasFirstAndLastName = (fullName: string): boolean => {
   const parts = fullName.trim().split(/\s+/);
-  return parts.length >= 2 && parts.every((part) => part.length > 0);
+  return parts.length >= 2 && parts.every(part => part.length > 0);
 };

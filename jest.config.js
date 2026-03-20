@@ -1,6 +1,6 @@
 /**
  * Jest Configuration for Rallia Monorepo
- * 
+ *
  * Root configuration that delegates to package-specific configs
  */
 
@@ -12,7 +12,7 @@ module.exports = {
     '<rootDir>/packages/shared-utils',
     '<rootDir>/packages/shared-components',
   ],
-  
+
   // Coverage configuration
   collectCoverageFrom: [
     'packages/*/src/**/*.{ts,tsx}',
@@ -20,7 +20,7 @@ module.exports = {
     '!packages/*/src/**/*.stories.tsx',
     '!packages/*/src/index.ts',
   ],
-  
+
   coverageThresholds: {
     global: {
       branches: 70,
@@ -29,12 +29,7 @@ module.exports = {
       statements: 70,
     },
   },
-  
+
   // Ignore patterns
-  testPathIgnorePatterns: [
-    '/node_modules/',
-    '/apps/',
-    '/dist/',
-    '/build/',
-  ],
+  testPathIgnorePatterns: ['/node_modules/', '/apps/', '/dist/', '/build/'],
 };

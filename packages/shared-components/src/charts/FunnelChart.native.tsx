@@ -22,16 +22,8 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { useTheme } from '@rallia/shared-hooks';
-import Animated, {
-  FadeInRight,
-} from 'react-native-reanimated';
-import {
-  primary,
-  neutral,
-  status,
-  spacingPixels,
-  radiusPixels,
-} from '@rallia/design-system';
+import Animated, { FadeInRight } from 'react-native-reanimated';
+import { primary, neutral, status, spacingPixels, radiusPixels } from '@rallia/design-system';
 
 export interface FunnelChartDataPoint {
   /** Stage label */
@@ -86,12 +78,7 @@ export interface FunnelChartProps {
 }
 
 // Color gradient from primary to status colors
-const DEFAULT_GRADIENT = [
-  primary[500],
-  primary[400],
-  status.warning.DEFAULT,
-  status.error.DEFAULT,
-];
+const DEFAULT_GRADIENT = [primary[500], primary[400], status.warning.DEFAULT, status.error.DEFAULT];
 
 export const FunnelChart: React.FC<FunnelChartProps> = ({
   data,
@@ -141,7 +128,7 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
         width = minWidth + (maxBarWidth - minWidth) * ratio;
       } else {
         // Linear decrease
-        const ratio = 1 - (index / Math.max(data.length - 1, 1));
+        const ratio = 1 - index / Math.max(data.length - 1, 1);
         width = minWidth + (maxBarWidth - minWidth) * ratio;
       }
 
@@ -171,13 +158,9 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
       {/* Header */}
       {(title || subtitle) && (
         <View style={styles.header}>
-          {title && (
-            <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
-          )}
+          {title && <Text style={[styles.title, { color: colors.text }]}>{title}</Text>}
           {subtitle && (
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-              {subtitle}
-            </Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
           )}
         </View>
       )}
@@ -190,10 +173,7 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
             {showConversion && !item.isFirst && (
               <Animated.View
                 entering={animated ? FadeInRight.delay(index * 120) : undefined}
-                style={[
-                  styles.conversionConnector,
-                  { backgroundColor: colors.conversionBg },
-                ]}
+                style={[styles.conversionConnector, { backgroundColor: colors.conversionBg }]}
               >
                 <Text
                   style={[
@@ -213,10 +193,7 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
             >
               {/* Label */}
               <View style={styles.labelContainer}>
-                <Text
-                  style={[styles.stageLabel, { color: colors.text }]}
-                  numberOfLines={1}
-                >
+                <Text style={[styles.stageLabel, { color: colors.text }]} numberOfLines={1}>
                   {item.label}
                 </Text>
                 {item.sublabel && (
@@ -243,9 +220,7 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
                 <View style={styles.barContent}>
                   <Text style={styles.barValue}>{formatValue(item.value)}</Text>
                   {showPercentOfTotal && !item.isFirst && (
-                    <Text style={styles.barPercent}>
-                      {item.percentOfTotal.toFixed(0)}%
-                    </Text>
+                    <Text style={styles.barPercent}>{item.percentOfTotal.toFixed(0)}%</Text>
                   )}
                 </View>
               </Animated.View>

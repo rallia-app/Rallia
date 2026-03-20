@@ -189,19 +189,15 @@ export function AddMembersToGroupActionSheet({ payload }: SheetProps<'add-member
   const renderPlayerItem = useCallback(
     ({ item }: { item: PlayerItem }) => {
       const isSelected = selectedIds.includes(item.id);
-      const displayName = item.displayName || `${item.firstName} ${item.lastName || ''}`.trim();
+      const displayName = `${item.firstName} ${item.lastName || ''}`.trim();
 
       return (
         <TouchableOpacity
           style={[
             styles.playerItem,
             {
-              backgroundColor: isSelected
-                ? isDark
-                  ? 'rgba(64, 156, 255, 0.1)'
-                  : 'rgba(64, 156, 255, 0.1)'
-                : colors.cardBackground,
-              borderColor: isSelected ? primary[500] : colors.border,
+              backgroundColor: isSelected ? `${colors.buttonActive}15` : colors.buttonInactive,
+              borderColor: isSelected ? colors.buttonActive : colors.border,
             },
           ]}
           onPress={() => handleToggleSelect(item.id)}
@@ -224,9 +220,7 @@ export function AddMembersToGroupActionSheet({ payload }: SheetProps<'add-member
           </View>
 
           {/* Selection indicator */}
-          {isSelected && (
-            <Ionicons name="checkmark-circle-outline" size={24} color={primary[500]} />
-          )}
+          {isSelected && <Ionicons name="checkmark-circle" size={22} color={colors.buttonActive} />}
         </TouchableOpacity>
       );
     },

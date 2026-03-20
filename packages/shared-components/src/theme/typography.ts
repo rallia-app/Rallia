@@ -1,6 +1,6 @@
 /**
  * Typography System
- * 
+ *
  * Provides consistent font sizes, weights, and line heights
  * across the component library
  */

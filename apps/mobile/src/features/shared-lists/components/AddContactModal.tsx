@@ -185,7 +185,6 @@ export function AddContactActionSheet({ payload }: SheetProps<'add-contact'>) {
               onChangeText={setName}
               placeholder={t('sharedLists.contacts.contactNamePlaceholder')}
               placeholderTextColor={colors.textMuted}
-              autoFocus
               maxLength={150}
               editable={!isSubmitting}
             />

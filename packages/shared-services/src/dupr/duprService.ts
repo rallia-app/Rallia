@@ -1,9 +1,9 @@
 /**
  * DUPR API Service
- * 
+ *
  * Integrates with DUPR (Dynamic Universal Pickleball Rating) API to fetch player ratings.
  * DUPR provides ratings for both Tennis and Pickleball, with separate Singles/Doubles ratings.
- * 
+ *
  * Documentation: https://backend.mydupr.com/swagger-ui/
  */
 
@@ -56,7 +56,7 @@ class DUPRService {
 
   /**
    * Fetch DUPR rating for a player
-   * 
+   *
    * @param userId - DUPR user ID
    * @returns Player's DUPR rating information or null if not found
    */
@@ -67,7 +67,7 @@ class DUPRService {
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json',
           'x-api-key': this.config.apiKey,
           // Include userId in query or header as per actual API requirements
           // This may need adjustment based on actual DUPR API specification
@@ -87,8 +87,8 @@ class DUPRService {
         throw new Error(`DUPR API error: ${response.statusText}`);
       }
 
-      const data = await response.json() as DUPRApiResponse<DUPRRating>;
-      
+      const data = (await response.json()) as DUPRApiResponse<DUPRRating>;
+
       if (data.status === 'FAILURE') {
         throw new Error(data.message || 'DUPR API request failed');
       }
@@ -103,7 +103,7 @@ class DUPRService {
   /**
    * Search for a player by name or email
    * Note: Endpoint may vary - adjust based on actual DUPR API docs
-   * 
+   *
    * @param query - Search query (name or email)
    * @returns Array of matching players
    */
@@ -115,7 +115,7 @@ class DUPRService {
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json',
           'x-api-key': this.config.apiKey,
         },
       });
@@ -124,8 +124,8 @@ class DUPRService {
         throw new Error(`DUPR API error: ${response.statusText}`);
       }
 
-      const data = await response.json() as DUPRApiResponse<DUPRPlayerProfile[]>;
-      
+      const data = (await response.json()) as DUPRApiResponse<DUPRPlayerProfile[]>;
+
       if (data.status === 'FAILURE') {
         throw new Error(data.message || 'DUPR search failed');
       }
@@ -139,7 +139,7 @@ class DUPRService {
 
   /**
    * Verify a player's rating and profile information
-   * 
+   *
    * @param userId - DUPR user ID
    * @returns Rating data or null if not found
    */
@@ -159,18 +159,14 @@ class DUPRService {
    * Check if a rating is provisional (still being established)
    */
   isRatingProvisional(rating: DUPRRating, type: 'singles' | 'doubles'): boolean {
-    return type === 'singles' 
-      ? rating.singlesProvisional 
-      : rating.doublesProvisional;
+    return type === 'singles' ? rating.singlesProvisional : rating.doublesProvisional;
   }
 
   /**
    * Get the verified rating (more stable than current rating)
    */
   getVerifiedRating(rating: DUPRRating, type: 'singles' | 'doubles'): number {
-    const verifiedString = type === 'singles' 
-      ? rating.singlesVerified 
-      : rating.doublesVerified;
+    const verifiedString = type === 'singles' ? rating.singlesVerified : rating.doublesVerified;
     return parseFloat(verifiedString);
   }
 
@@ -178,9 +174,7 @@ class DUPRService {
    * Get the current rating (can fluctuate more)
    */
   getCurrentRating(rating: DUPRRating, type: 'singles' | 'doubles'): number {
-    const ratingString = type === 'singles' 
-      ? rating.singles 
-      : rating.doubles;
+    const ratingString = type === 'singles' ? rating.singles : rating.doubles;
     return parseFloat(ratingString);
   }
 
@@ -188,9 +182,7 @@ class DUPRService {
    * Get reliability score for a specific type
    */
   getReliabilityScore(rating: DUPRRating, type: 'singles' | 'doubles'): number {
-    return type === 'singles' 
-      ? rating.singlesReliabilityScore 
-      : rating.doublesReliabilityScore;
+    return type === 'singles' ? rating.singlesReliabilityScore : rating.doublesReliabilityScore;
   }
 
   /**
@@ -203,17 +195,17 @@ class DUPRService {
     const isProvisional = this.isRatingProvisional(rating, type);
 
     let display = `${current.toFixed(2)}`;
-    
+
     if (isProvisional) {
       display += ' (Provisional)';
     }
-    
+
     if (Math.abs(current - verified) > 0.1) {
       display += ` • Verified: ${verified.toFixed(2)}`;
     }
-    
+
     display += ` • Reliability: ${reliability}/10`;
-    
+
     return display;
   }
 }

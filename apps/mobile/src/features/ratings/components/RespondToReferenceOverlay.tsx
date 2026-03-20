@@ -388,7 +388,7 @@ export const RespondToReferenceOverlay: React.FC<RespondToReferenceOverlayProps>
             ) : (
               <>
                 <Ionicons
-                  name="send"
+                  name="paper-plane-outline"
                   size={18}
                   color={selectedResponse ? colors.primaryForeground : colors.textMuted}
                 />

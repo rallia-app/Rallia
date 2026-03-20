@@ -1,9 +1,9 @@
 /**
  * Heading Component
- * 
+ *
  * Semantic heading component for hierarchical text structure.
  * Supports levels 1-6 (H1-H6) with appropriate sizing and weights.
- * 
+ *
  * @example
  * ```tsx
  * <Heading level={1}>Main Title</Heading>
@@ -22,37 +22,37 @@ export interface HeadingProps extends Omit<RNTextProps, 'style'> {
    * Heading level (1-6, where 1 is largest)
    */
   level: 1 | 2 | 3 | 4 | 5 | 6;
-  
+
   /**
    * Text color - defaults to theme dark color
    */
   color?: string;
-  
+
   /**
    * Font weight - defaults to bold for H1-H3, semibold for H4-H6
    */
   weight?: 'regular' | 'medium' | 'semibold' | 'bold';
-  
+
   /**
    * Text alignment
    */
   align?: 'left' | 'center' | 'right' | 'justify';
-  
+
   /**
    * Line height multiplier
    */
   lineHeight?: 'tight' | 'normal' | 'relaxed';
-  
+
   /**
    * Custom style overrides
    */
   style?: TextStyle | TextStyle[];
-  
+
   /**
    * Heading text content
    */
   children: React.ReactNode;
-  
+
   /**
    * Accessibility label
    */
@@ -112,7 +112,10 @@ const getFontWeight = (weight: HeadingProps['weight']): TextStyle['fontWeight'] 
 /**
  * Get line height multiplier
  */
-const getLineHeight = (lineHeight: HeadingProps['lineHeight'], fontSize: number): number | undefined => {
+const getLineHeight = (
+  lineHeight: HeadingProps['lineHeight'],
+  fontSize: number
+): number | undefined => {
   if (!lineHeight) return undefined;
   return fontSize * typography.lineHeight[lineHeight];
 };
@@ -130,9 +133,9 @@ export const Heading: React.FC<HeadingProps> = ({
 }) => {
   // Base styles for heading level
   const headingStyles = getHeadingStyles(level);
-  
+
   // Calculate line height if specified
-  const calculatedLineHeight = lineHeight 
+  const calculatedLineHeight = lineHeight
     ? getLineHeight(lineHeight, headingStyles.fontSize as number)
     : undefined;
 

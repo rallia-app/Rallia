@@ -21,12 +21,7 @@ export type ReportType =
   | 'unsportsmanlike'
   | 'other';
 
-export type ReportStatus =
-  | 'pending'
-  | 'under_review'
-  | 'dismissed'
-  | 'action_taken'
-  | 'escalated';
+export type ReportStatus = 'pending' | 'under_review' | 'dismissed' | 'action_taken' | 'escalated';
 
 export type ReportPriority = 'low' | 'normal' | 'high' | 'urgent';
 
@@ -271,7 +266,8 @@ export async function getPlayerBans(
     // Note: player_ban.player_id references player(id), which in turn references profile(id)
     let query = supabase
       .from('player_ban')
-      .select(`
+      .select(
+        `
         id,
         player_id,
         banned_by_admin_id,
@@ -284,7 +280,8 @@ export async function getPlayerBans(
         lifted_by_admin_id,
         lift_reason,
         created_at
-      `)
+      `
+      )
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -316,7 +313,9 @@ export async function getPlayerBans(
         id: ban.id,
         player_id: ban.player_id,
         player_name: playerProfile
-          ? `${playerProfile.first_name || ''} ${playerProfile.last_name || ''}`.trim() || playerProfile.display_name || 'Unknown'
+          ? `${playerProfile.first_name || ''} ${playerProfile.last_name || ''}`.trim() ||
+            playerProfile.display_name ||
+            'Unknown'
           : 'Unknown',
         player_avatar: playerProfile?.profile_picture_url || null,
         banned_by: ban.banned_by_admin_id,
@@ -332,7 +331,7 @@ export async function getPlayerBans(
         created_at: ban.created_at,
       });
     }
-    
+
     return results;
   } catch (error) {
     Logger.error('Failed to get player bans', error as Error);
@@ -409,11 +408,7 @@ export async function createBan(
  * Revoke a ban
  * Uses column names from migration: 20260222000000_add_admin_management_tables.sql
  */
-export async function revokeBan(
-  banId: string,
-  adminId: string,
-  reason?: string
-): Promise<boolean> {
+export async function revokeBan(banId: string, adminId: string, reason?: string): Promise<boolean> {
   try {
     const { error } = await supabase
       .from('player_ban')
@@ -531,14 +526,14 @@ export const moderationService = {
   dismissReport,
   escalateReport,
   createReport,
-  
+
   // Bans
   getPlayerBans,
   getActiveBansCount,
   createBan,
   revokeBan,
   isPlayerBanned,
-  
+
   // Utilities
   getReportTypeLabel,
   getReportTypeIcon,

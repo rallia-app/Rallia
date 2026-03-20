@@ -42,6 +42,7 @@ export function AddMemberActionSheet({ payload }: SheetProps<'add-member'>) {
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [addedMemberIds, setAddedMemberIds] = useState<string[]>([]);
+  const [addingMemberId, setAddingMemberId] = useState<string | null>(null);
   const debouncedSearch = useDebounce(searchQuery, 300);
 
   const addMemberMutation = useAddGroupMember();
@@ -50,6 +51,7 @@ export function AddMemberActionSheet({ payload }: SheetProps<'add-member'>) {
     setSearchQuery('');
     setSearchResults([]);
     setAddedMemberIds([]);
+    setAddingMemberId(null);
     SheetManager.hide('add-member');
   }, []);
 
@@ -162,6 +164,7 @@ export function AddMemberActionSheet({ payload }: SheetProps<'add-member'>) {
       if (!playerId) return;
 
       lightHaptic();
+      setAddingMemberId(memberPlayerId);
       try {
         await addMemberMutation.mutateAsync({
           groupId,
@@ -175,47 +178,52 @@ export function AddMemberActionSheet({ payload }: SheetProps<'add-member'>) {
         onSuccess?.();
       } catch (error) {
         toast.error(error instanceof Error ? error.message : t('groups.failedToAddMember'));
+      } finally {
+        setAddingMemberId(null);
       }
     },
     [groupId, playerId, addMemberMutation, onSuccess, toast, t]
   );
 
   const renderPlayerItem = useCallback(
-    ({ item }: { item: PlayerProfile }) => (
-      <View style={[styles.playerItem, { borderBottomColor: colors.border }]}>
-        <View style={[styles.playerAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-          {item.profile_picture_url ? (
-            <Image source={{ uri: item.profile_picture_url }} style={styles.avatarImage} />
-          ) : (
-            <Ionicons name="person-outline" size={24} color={colors.textMuted} />
-          )}
-        </View>
-        <View style={styles.playerInfo}>
-          <Text weight="medium" style={{ color: colors.text }}>
-            {item.display_name ||
-              `${item.first_name || ''} ${item.last_name || ''}`.trim() ||
-              'Unknown'}
-          </Text>
-          {item.city && (
-            <Text size="sm" style={{ color: colors.textSecondary }}>
-              {item.city}
+    ({ item }: { item: PlayerProfile }) => {
+      const isAddingThis = addingMemberId === item.id;
+      const fullName = `${item.first_name || ''} ${item.last_name || ''}`.trim() || 'Unknown';
+
+      return (
+        <View style={[styles.playerItem, { borderBottomColor: colors.border }]}>
+          <View style={[styles.playerAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+            {item.profile_picture_url ? (
+              <Image source={{ uri: item.profile_picture_url }} style={styles.avatarImage} />
+            ) : (
+              <Ionicons name="person-outline" size={24} color={colors.textMuted} />
+            )}
+          </View>
+          <View style={styles.playerInfo}>
+            <Text weight="medium" style={{ color: colors.text }}>
+              {fullName}
             </Text>
-          )}
+            {item.city && (
+              <Text size="sm" style={{ color: colors.textSecondary }}>
+                {item.city}
+              </Text>
+            )}
+          </View>
+          <TouchableOpacity
+            style={[styles.addButton, { backgroundColor: colors.primary }]}
+            onPress={() => handleAddMember(item.id)}
+            disabled={addingMemberId !== null}
+          >
+            {isAddingThis ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Ionicons name="add-outline" size={20} color="#FFFFFF" />
+            )}
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={[styles.addButton, { backgroundColor: colors.primary }]}
-          onPress={() => handleAddMember(item.id)}
-          disabled={addMemberMutation.isPending}
-        >
-          {addMemberMutation.isPending ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Ionicons name="add-outline" size={20} color="#FFFFFF" />
-          )}
-        </TouchableOpacity>
-      </View>
-    ),
-    [colors, isDark, handleAddMember, addMemberMutation.isPending]
+      );
+    },
+    [colors, isDark, handleAddMember, addingMemberId]
   );
 
   return (
@@ -227,6 +235,7 @@ export function AddMemberActionSheet({ payload }: SheetProps<'add-member'>) {
       <View style={styles.container}>
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerPlaceholder} />
           <Text weight="semibold" size="lg" style={{ color: colors.text }}>
             {t('groups.addMember')}
           </Text>
@@ -242,7 +251,7 @@ export function AddMemberActionSheet({ payload }: SheetProps<'add-member'>) {
             onChangeText={setSearchQuery}
             placeholder={t('groups.searchPlayers')}
             colors={colors}
-            autoFocus
+            autoFocus={false}
           />
         </View>
 
@@ -314,6 +323,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
+  },
+  headerPlaceholder: {
+    width: 32,
   },
   closeButton: {
     padding: 4,

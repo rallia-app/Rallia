@@ -70,7 +70,7 @@ let storageAdapter: TourStorageAdapter = inMemoryStorageAdapter;
 /**
  * Set the storage adapter for tour persistence.
  * Call this early in app initialization with your platform-specific storage.
- * 
+ *
  * @example Mobile (with AsyncStorage):
  * ```ts
  * import AsyncStorage from '@react-native-async-storage/async-storage';

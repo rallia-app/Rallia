@@ -42,8 +42,13 @@ export async function joinGroupByInviteCode(
     throw new Error(error.message);
   }
 
-  const result = data as { success: boolean; group_id?: string; group_name?: string; error?: string };
-  
+  const result = data as {
+    success: boolean;
+    group_id?: string;
+    group_name?: string;
+    error?: string;
+  };
+
   return {
     success: result.success,
     groupId: result.group_id,
@@ -56,10 +61,7 @@ export async function joinGroupByInviteCode(
  * Reset (regenerate) the invite code for a group
  * Only moderators can do this
  */
-export async function resetGroupInviteCode(
-  groupId: string,
-  moderatorId: string
-): Promise<string> {
+export async function resetGroupInviteCode(groupId: string, moderatorId: string): Promise<string> {
   const { data, error } = await supabase.rpc('reset_group_invite_code', {
     p_group_id: groupId,
     p_moderator_id: moderatorId,

@@ -1131,11 +1131,11 @@
     "joined": "Inscrit",
     "inviteToMatch": "Inviter à une partie",
     "requestReference": "Demander une référence",
-    "chat": "Discussion",
+    "chat": "Chat",
     "sections": {
       "playerInformation": "Informations du joueur",
       "preferences": "Préférences",
-      "preferredCourts": "Terrains préférés",
+      "preferredCourts": "Sites de jeu préférés",
       "rating": "Classement",
       "reputation": "Réputation",
       "statistics": "Statistiques",
@@ -2561,7 +2561,7 @@
       "contactCountSingular": "{count} contact"
     },
     "contact": {
-      "fromContacts": "Depuis les contacts",
+      "fromContacts": "Répertoire",
       "manual": "Manuel"
     },
     "import": {
@@ -2599,7 +2599,13 @@
       "contactsSelected": "{count} contact(s) sélectionné(s)",
       "howToShare": "Comment souhaitez-vous partager?",
       "recipients": "{count} destinataire(s)",
-      "selectContactsButton": "Sélectionner les contacts"
+      "selectContactsButton": "Sélectionner les contacts",
+      "step": "Étape {current} de {total}",
+      "stepNames": {
+        "selectMatch": "Partie",
+        "selectContacts": "Contacts",
+        "confirm": "Partage"
+      }
     },
     "confirmations": {
       "deleteList": "Êtes-vous sûr de vouloir supprimer \"{name}\"? Cela supprimera également tous les contacts de cette liste."

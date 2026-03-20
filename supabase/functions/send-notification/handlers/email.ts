@@ -4,6 +4,7 @@
  */
 
 import { Resend } from 'resend';
+
 import type { NotificationRecord, DeliveryResult, OrganizationInfo } from '../types.ts';
 import { renderOrgEmail } from '../templates/organization.ts';
 import { generateEmailHtml, generateEmailSubject } from '../templates/match.ts';
@@ -17,7 +18,7 @@ const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'noreply@rallia.com';
 export async function sendEmail(
   notification: NotificationRecord,
   recipientEmail: string,
-  locale: string = 'en-US',
+  locale: string = 'en-US'
 ): Promise<DeliveryResult> {
   if (!RESEND_API_KEY) {
     return {

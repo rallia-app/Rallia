@@ -2,7 +2,7 @@
  * useAdminPush Hook
  *
  * Manages push notification registration and handling for admin users.
- * 
+ *
  * NOTE: This hook is mobile-specific and should not be in shared-hooks.
  * It uses native modules (expo-notifications, expo-device, react-native).
  */
@@ -37,7 +37,7 @@ export interface UseAdminPushResult {
 
 // Configure how notifications appear when app is foregrounded
 Notifications.setNotificationHandler({
-  handleNotification: async (notification) => {
+  handleNotification: async notification => {
     const data = notification.request.content.data;
     const severity = data?.severity as string;
 
@@ -206,7 +206,7 @@ export function useAdminPush(options: UseAdminPushOptions): UseAdminPushResult {
 
     // Listener for notifications received while app is foregrounded
     notificationListenerRef.current = Notifications.addNotificationReceivedListener(
-      (notification) => {
+      notification => {
         Logger.debug('Admin notification received:', notification.request.content);
         onNotificationReceived?.(notification);
       }
@@ -214,7 +214,7 @@ export function useAdminPush(options: UseAdminPushOptions): UseAdminPushResult {
 
     // Listener for when user taps on notification
     responseListenerRef.current = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
+      response => {
         Logger.debug('Admin notification pressed:', response.notification.request.content);
         onNotificationPressed?.(response);
       }

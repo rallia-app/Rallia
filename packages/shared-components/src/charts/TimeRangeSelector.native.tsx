@@ -14,20 +14,9 @@
  */
 
 import React, { useCallback } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ViewStyle,
-  Platform,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ViewStyle, Platform } from 'react-native';
 import { useThemeStyles } from '@rallia/shared-hooks';
-import {
-  primary,
-  neutral,
-  spacingPixels,
-} from '@rallia/design-system';
+import { primary, neutral, spacingPixels } from '@rallia/design-system';
 import * as Haptics from 'expo-haptics';
 
 export type TimeRange = '7d' | '30d' | '90d' | 'ytd' | 'all';
@@ -116,14 +105,8 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
   };
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: themeColors.containerBackground },
-        style,
-      ]}
-    >
-      {options.map((option) => {
+    <View style={[styles.container, { backgroundColor: themeColors.containerBackground }, style]}>
+      {options.map(option => {
         const isSelected = value === option.value;
         return (
           <TouchableOpacity

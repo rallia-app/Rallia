@@ -139,7 +139,7 @@ export const CreateListForm: React.FC<CreateListFormProps> = ({
             onChangeText={setName}
             placeholder={t('sharedLists.listNamePlaceholder')}
             placeholderTextColor={colors.textMuted}
-            autoFocus
+            autoFocus={false}
             maxLength={100}
             editable={!isSubmitting}
           />

@@ -56,11 +56,7 @@ export function useEffectiveLocation(): UseEffectiveLocationReturn {
   } = useUserLocation();
 
   // Get home location from context
-  const {
-    homeLocation,
-    hasHomeLocation,
-    isLoading: homeLoading,
-  } = useUserHomeLocation();
+  const { homeLocation, hasHomeLocation, isLoading: homeLoading } = useUserHomeLocation();
 
   // Get user's location mode preference
   const { locationMode, setLocationMode, isLoading: modeLoading } = useLocationMode();

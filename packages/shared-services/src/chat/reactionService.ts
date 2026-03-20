@@ -27,13 +27,11 @@ export async function addReaction(
   playerId: string,
   emoji: string
 ): Promise<void> {
-  const { error } = await supabase
-    .from('message_reaction')
-    .insert({
-      message_id: messageId,
-      player_id: playerId,
-      emoji: emoji,
-    });
+  const { error } = await supabase.from('message_reaction').insert({
+    message_id: messageId,
+    player_id: playerId,
+    emoji: emoji,
+  });
 
   if (error) {
     // Ignore duplicate error (user already reacted with this emoji)
@@ -120,7 +118,8 @@ export async function getMessageReactions(
 ): Promise<ReactionSummary[]> {
   const { data, error } = await supabase
     .from('message_reaction')
-    .select(`
+    .select(
+      `
       id,
       emoji,
       player_id,
@@ -130,7 +129,8 @@ export async function getMessageReactions(
           first_name
         )
       )
-    `)
+    `
+    )
     .eq('message_id', messageId);
 
   if (error) {
@@ -163,7 +163,7 @@ export async function getMessageReactions(
       id: player.id,
       first_name: player.profile?.first_name || 'Unknown',
     });
-    
+
     if (reaction.player_id === currentPlayerId) {
       summary.hasReacted = true;
     }
@@ -181,7 +181,8 @@ export async function getMessagesReactions(
 ): Promise<Map<string, ReactionSummary[]>> {
   const { data, error } = await supabase
     .from('message_reaction')
-    .select(`
+    .select(
+      `
       id,
       message_id,
       emoji,
@@ -192,7 +193,8 @@ export async function getMessagesReactions(
           first_name
         )
       )
-    `)
+    `
+    )
     .in('message_id', messageIds);
 
   if (error) {

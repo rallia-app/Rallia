@@ -9,10 +9,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useConversation } from '@rallia/shared-hooks';
-import {
-  getNetworkByConversationId,
-  getGroupModeratorIds,
-} from '@rallia/shared-services';
+import { getNetworkByConversationId, getGroupModeratorIds } from '@rallia/shared-services';
 
 interface NetworkInfo {
   id: string;
@@ -45,14 +42,14 @@ interface UseGroupChatInfoReturn {
   participants: ParticipantInfo[];
   groupImageUrl: string | null;
   memberCount: number;
-  
+
   // Loading states
   isLoading: boolean;
-  
+
   // Actions
   refetch: () => Promise<unknown>;
   refetchNetworkInfo: () => Promise<void>;
-  
+
   // Admin checks
   isAdmin: boolean;
   isParticipantAdmin: (participantPlayerId: string) => boolean;
@@ -74,7 +71,7 @@ export function useGroupChatInfo(
     try {
       const info = await getNetworkByConversationId(conversationId);
       setNetworkInfo(info);
-      
+
       // If network-linked, fetch moderator IDs
       if (info?.id) {
         const moderatorIds = await getGroupModeratorIds(info.id);
@@ -102,28 +99,31 @@ export function useGroupChatInfo(
   // For simple groups: admin is the conversation creator
   const isAdmin = useMemo(() => {
     if (!playerId || !conversation) return false;
-    
+
     // For network-linked groups, check if user is a network moderator
     if (networkInfo?.id && networkModeratorIds.length > 0) {
       return networkModeratorIds.includes(playerId);
     }
-    
+
     // For simple groups, check if user is the creator
     return conversation.created_by === playerId;
   }, [playerId, conversation, networkInfo, networkModeratorIds]);
 
   // Check if a participant is an admin
-  const isParticipantAdmin = useCallback((participantPlayerId: string) => {
-    if (!conversation) return false;
-    
-    // For network-linked groups, check if participant is a network moderator
-    if (networkInfo?.id && networkModeratorIds.length > 0) {
-      return networkModeratorIds.includes(participantPlayerId);
-    }
-    
-    // For simple groups, check if participant is the creator
-    return conversation.created_by === participantPlayerId;
-  }, [conversation, networkInfo, networkModeratorIds]);
+  const isParticipantAdmin = useCallback(
+    (participantPlayerId: string) => {
+      if (!conversation) return false;
+
+      // For network-linked groups, check if participant is a network moderator
+      if (networkInfo?.id && networkModeratorIds.length > 0) {
+        return networkModeratorIds.includes(participantPlayerId);
+      }
+
+      // For simple groups, check if participant is the creator
+      return conversation.created_by === participantPlayerId;
+    },
+    [conversation, networkInfo, networkModeratorIds]
+  );
 
   // Get group image URL
   const groupImageUrl = useMemo(() => {
@@ -147,14 +147,14 @@ export function useGroupChatInfo(
     participants,
     groupImageUrl,
     memberCount,
-    
+
     // Loading states
     isLoading,
-    
+
     // Actions
     refetch,
     refetchNetworkInfo: fetchNetworkInfo,
-    
+
     // Admin checks
     isAdmin,
     isParticipantAdmin,

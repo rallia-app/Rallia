@@ -23,8 +23,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Video, ResizeMode } from 'expo-av';
 import { WebView } from 'react-native-webview';
-import { File, Paths } from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import { Text } from '@rallia/shared-components';
 import { Logger } from '@rallia/shared-services';
 import { useThemeStyles, useTranslation } from '../../../hooks';
@@ -59,7 +57,7 @@ interface ProofViewerProps {
 }
 
 const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) => {
-  const { colors } = useThemeStyles();
+  const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const videoRef = useRef<Video>(null);
   const [loading, setLoading] = useState(true);
@@ -95,25 +93,6 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
         Logger.error('Failed to open external link', err as Error);
         setError(t('profile.ratingProofs.gallery.failedToOpenLink'));
       }
-    }
-  };
-
-  const handleShareDocument = async (url: string, fileName: string) => {
-    try {
-      setLoading(true);
-      const extension = fileName?.split('.').pop() || 'pdf';
-      const localFile = new File(Paths.cache, `proof_${proof.id}.${extension}`);
-      const response = await fetch(url);
-      const blob = await response.blob();
-      const arrayBuffer = await blob.arrayBuffer();
-      await localFile.write(new Uint8Array(arrayBuffer));
-      await Sharing.shareAsync(localFile.uri);
-    } catch (err) {
-      Logger.error('Failed to share document', err as Error);
-      // Fallback to opening in browser
-      await Linking.openURL(url);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -225,25 +204,16 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
                 }}
                 startInLoadingState
                 renderLoading={() => (
-                  <View style={[styles.loadingOverlay, { backgroundColor: '#000' }]}>
+                  <View style={[styles.loadingOverlay, { backgroundColor: colors.background }]}>
                     <ActivityIndicator size="large" color={colors.primary} />
                   </View>
                 )}
               />
-              <TouchableOpacity
-                style={[styles.openExternalButton, { backgroundColor: colors.primary }]}
-                onPress={() => handleShareDocument(proof.file!.url, proof.file!.original_name)}
-              >
-                <Ionicons name="share-outline" size={20} color="#fff" />
-                <Text style={styles.openExternalButtonText}>
-                  {t('profile.ratingProofs.gallery.openInBrowser')}
-                </Text>
-              </TouchableOpacity>
             </View>
           );
         }
 
-        // Android: show a prominent open/share button
+        // Android: show document info (WebView can't render PDFs on Android)
         return (
           <View style={styles.errorContainer}>
             <View
@@ -251,18 +221,9 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
             >
               <Ionicons name="document-text" size={48} color={colors.primary} />
             </View>
-            <Text style={[styles.documentFileName, { color: '#fff' }]} numberOfLines={2}>
+            <Text style={[styles.documentFileName, { color: colors.text }]} numberOfLines={2}>
               {proof.file.original_name || t('profile.ratingProofs.proofTypes.document.title')}
             </Text>
-            <TouchableOpacity
-              style={[styles.openExternalButton, { backgroundColor: colors.primary }]}
-              onPress={() => handleShareDocument(proof.file!.url, proof.file!.original_name)}
-            >
-              <Ionicons name="open-outline" size={20} color="#fff" />
-              <Text style={styles.openExternalButtonText}>
-                {t('profile.ratingProofs.gallery.openInBrowser')}
-              </Text>
-            </TouchableOpacity>
           </View>
         );
       }
@@ -280,9 +241,6 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
                   {proof.description}
                 </Text>
               )}
-              <Text style={[styles.linkUrl, { color: colors.primary }]} numberOfLines={2}>
-                {proof.external_url}
-              </Text>
               <TouchableOpacity
                 style={[styles.openLinkButton, { backgroundColor: colors.primary }]}
                 onPress={handleOpenExternalLink}
@@ -342,42 +300,51 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
     <Modal
       visible={visible}
       animationType="fade"
-      presentationStyle="fullScreen"
+      transparent
+      statusBarTranslucent
       onRequestClose={onClose}
     >
-      <StatusBar barStyle="light-content" />
-      <View style={[styles.container, { backgroundColor: '#000' }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close-outline" size={28} color="#fff" />
-          </TouchableOpacity>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerSpacer} />
           <View style={styles.headerCenter}>
             <View style={styles.headerTitleRow}>
-              <Ionicons name={getTypeIcon()} size={18} color="#fff" style={{ marginRight: 6 }} />
-              <Text style={styles.headerType}>{getTypeLabel()}</Text>
+              <Ionicons
+                name={getTypeIcon()}
+                size={18}
+                color={colors.textMuted}
+                style={{ marginRight: 6 }}
+              />
+              <Text style={[styles.headerType, { color: colors.textMuted }]}>{getTypeLabel()}</Text>
             </View>
-            <Text style={styles.headerTitle} numberOfLines={1}>
+            <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
               {proof.title}
             </Text>
           </View>
-          <View style={styles.headerRight} />
+          <TouchableOpacity
+            onPress={onClose}
+            style={[styles.closeButton, { backgroundColor: colors.inputBackground }]}
+          >
+            <Ionicons name="close-outline" size={28} color={colors.text} />
+          </TouchableOpacity>
         </View>
 
         {/* Content */}
         <View style={styles.content}>
           {error ? (
             <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle" size={48} color="#ff6b6b" />
-              <Text style={styles.errorText}>{error}</Text>
+              <Ionicons name="alert-circle" size={48} color={colors.error} />
+              <Text style={[styles.errorText, { color: colors.textMuted }]}>{error}</Text>
               <TouchableOpacity
-                style={styles.retryButton}
+                style={[styles.retryButton, { backgroundColor: colors.inputBackground }]}
                 onPress={() => {
                   setError(null);
                   setLoading(true);
                 }}
               >
-                <Text style={styles.retryButtonText}>
+                <Text style={[styles.retryButtonText, { color: colors.text }]}>
                   {t('profile.ratingProofs.gallery.retry')}
                 </Text>
               </TouchableOpacity>
@@ -389,10 +356,16 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
 
         {/* Footer with description */}
         {proof.description && proof.proof_type !== 'external_link' && (
-          <View style={styles.footer}>
-            <Text style={styles.footerLabel}>{t('profile.ratingProofs.descriptionLabel')}</Text>
+          <View
+            style={[styles.footer, { backgroundColor: colors.card, borderColor: colors.border }]}
+          >
+            <Text style={[styles.footerLabel, { color: colors.textMuted }]}>
+              {t('profile.ratingProofs.descriptionLabel')}
+            </Text>
             <ScrollView style={styles.footerScroll} showsVerticalScrollIndicator={false}>
-              <Text style={styles.footerDescription}>{proof.description}</Text>
+              <Text style={[styles.footerDescription, { color: colors.text }]}>
+                {proof.description}
+              </Text>
             </ScrollView>
           </View>
         )}
@@ -417,7 +390,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -433,16 +405,14 @@ const styles = StyleSheet.create({
   },
   headerType: {
     fontSize: fontSizePixels.xs,
-    color: 'rgba(255,255,255,0.7)',
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
   headerTitle: {
     fontSize: fontSizePixels.base,
-    color: '#fff',
     fontWeight: fontWeightNumeric.semibold,
   },
-  headerRight: {
+  headerSpacer: {
     width: 44,
   },
   content: {
@@ -485,21 +455,6 @@ const styles = StyleSheet.create({
   },
   webview: {
     flex: 1,
-  },
-  openExternalButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacingPixels[3],
-    paddingHorizontal: spacingPixels[6],
-    margin: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    gap: spacingPixels[2],
-  },
-  openExternalButtonText: {
-    color: '#fff',
-    fontSize: fontSizePixels.base,
-    fontWeight: fontWeightNumeric.semibold,
   },
   documentPlaceholderIcon: {
     width: 96,
@@ -554,11 +509,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacingPixels[3],
   },
-  linkUrl: {
-    fontSize: fontSizePixels.xs,
-    textAlign: 'center',
-    marginBottom: spacingPixels[4],
-  },
   openLinkButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -567,12 +517,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[6],
     borderRadius: radiusPixels.lg,
     gap: spacingPixels[2],
-    width: '100%',
+    alignSelf: 'stretch',
   },
   openLinkButtonText: {
     color: '#fff',
     fontSize: fontSizePixels.base,
     fontWeight: fontWeightNumeric.semibold,
+    flexShrink: 0,
   },
   // Error styles
   errorContainer: {
@@ -581,7 +532,6 @@ const styles = StyleSheet.create({
     padding: spacingPixels[6],
   },
   errorText: {
-    color: 'rgba(255,255,255,0.7)',
     fontSize: fontSizePixels.base,
     marginTop: spacingPixels[3],
     textAlign: 'center',
@@ -590,19 +540,17 @@ const styles = StyleSheet.create({
     marginTop: spacingPixels[4],
     paddingVertical: spacingPixels[2],
     paddingHorizontal: spacingPixels[4],
-    backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: radiusPixels.md,
   },
   retryButtonText: {
-    color: '#fff',
     fontSize: fontSizePixels.sm,
   },
   // Footer
   footer: {
-    backgroundColor: 'rgba(30,30,30,0.85)',
     marginHorizontal: spacingPixels[3],
     marginBottom: Platform.OS === 'ios' ? 34 : spacingPixels[3],
     borderRadius: radiusPixels.xl,
+    borderWidth: 1,
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[3],
     paddingBottom: spacingPixels[4],
@@ -610,7 +558,6 @@ const styles = StyleSheet.create({
   },
   footerLabel: {
     fontSize: fontSizePixels.xs,
-    color: 'rgba(255,255,255,0.5)',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     fontWeight: fontWeightNumeric.semibold,
@@ -620,7 +567,6 @@ const styles = StyleSheet.create({
     maxHeight: 110,
   },
   footerDescription: {
-    color: 'rgba(255,255,255,0.85)',
     fontSize: fontSizePixels.sm,
     lineHeight: fontSizePixels.sm * 1.6,
   },

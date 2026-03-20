@@ -164,8 +164,8 @@ export function MatchResultConfirmModal({
                       color={isFriendly ? colors.friendlyBorder : colors.winnerBorder}
                       style={styles.teamIcon}
                     />
-                    <Text 
-                      weight="semibold" 
+                    <Text
+                      weight="semibold"
                       style={[styles.teamNameCentered, { color: colors.text }]}
                       numberOfLines={2}
                     >
@@ -174,7 +174,11 @@ export function MatchResultConfirmModal({
                     {!isFriendly && (
                       <View style={[styles.winnerLabel, { backgroundColor: colors.winnerBorder }]}>
                         <Ionicons name="trophy" size={10} color={BASE_WHITE} />
-                        <Text size="xs" weight="medium" style={{ color: BASE_WHITE, marginLeft: 2 }}>
+                        <Text
+                          size="xs"
+                          weight="medium"
+                          style={{ color: BASE_WHITE, marginLeft: 2 }}
+                        >
                           Winner
                         </Text>
                       </View>
@@ -191,8 +195,8 @@ export function MatchResultConfirmModal({
                   {/* Loser/Right Team */}
                   <View style={styles.teamColumn}>
                     <View style={styles.teamIconPlaceholder} />
-                    <Text 
-                      weight="regular" 
+                    <Text
+                      weight="regular"
                       style={[styles.teamNameCentered, { color: colors.textSecondary }]}
                       numberOfLines={2}
                     >
@@ -229,7 +233,11 @@ export function MatchResultConfirmModal({
               {isFriendly && (
                 <View style={[styles.friendlyBadge, { backgroundColor: colors.friendlyBg }]}>
                   <Ionicons name="heart-outline" size={16} color={colors.friendlyBorder} />
-                  <Text size="sm" weight="medium" style={{ color: colors.friendlyBorder, marginLeft: 6 }}>
+                  <Text
+                    size="sm"
+                    weight="medium"
+                    style={{ color: colors.friendlyBorder, marginLeft: 6 }}
+                  >
                     {labels.friendlyMatch}
                   </Text>
                 </View>

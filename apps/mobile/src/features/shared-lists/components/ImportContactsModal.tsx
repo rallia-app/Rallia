@@ -21,7 +21,7 @@ import { selectionHaptic, lightHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { SearchBar } from '../../../components/SearchBar';
-import { primary, neutral } from '@rallia/design-system';
+import { primary } from '@rallia/design-system';
 import { bulkCreateSharedContacts, type SharedContact } from '@rallia/shared-services';
 
 interface DeviceContact {
@@ -206,6 +206,13 @@ export function ImportContactsActionSheet({ payload }: SheetProps<'import-contac
     Linking.openSettings();
   }, []);
 
+  // Get initials from contact name
+  const getInitials = useCallback((name: string) => {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return name.substring(0, 2).toUpperCase();
+  }, []);
+
   // Render contact item
   const renderContact = useCallback(
     ({ item }: { item: DeviceContact }) => (
@@ -213,26 +220,34 @@ export function ImportContactsActionSheet({ payload }: SheetProps<'import-contac
         style={[
           styles.contactItem,
           {
-            backgroundColor: item.selected ? (isDark ? primary[900] : primary[50]) : 'transparent',
+            backgroundColor: item.selected ? `${colors.buttonActive}15` : colors.buttonInactive,
+            borderColor: item.selected ? colors.buttonActive : colors.border,
           },
         ]}
         onPress={() => toggleContact(item.id)}
         activeOpacity={0.7}
       >
-        <View style={[styles.checkbox, item.selected && styles.checkboxSelected]}>
-          {item.selected && <Ionicons name="checkmark-outline" size={14} color="#fff" />}
+        <View style={[styles.contactAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+          <Text size="sm" weight="semibold" style={{ color: colors.textMuted }}>
+            {getInitials(item.name)}
+          </Text>
         </View>
         <View style={styles.contactInfo}>
-          <Text size="base" weight="medium" style={{ color: colors.text }} numberOfLines={1}>
+          <Text weight="medium" style={{ color: colors.text }} numberOfLines={1}>
             {item.name}
           </Text>
-          <Text size="sm" style={{ color: colors.textSecondary }} numberOfLines={1}>
-            {[item.phone, item.email].filter(Boolean).join(' • ')}
-          </Text>
+          {(item.phone || item.email) && (
+            <Text size="sm" style={{ color: colors.textSecondary }} numberOfLines={1}>
+              {[item.phone, item.email].filter(Boolean).join(' • ')}
+            </Text>
+          )}
         </View>
+        {item.selected && (
+          <Ionicons name="checkmark-circle" size={22} color={colors.buttonActive} />
+        )}
       </TouchableOpacity>
     ),
-    [colors, isDark, toggleContact]
+    [colors, isDark, toggleContact, getInitials]
   );
 
   // Render permission denied state
@@ -330,16 +345,15 @@ export function ImportContactsActionSheet({ payload }: SheetProps<'import-contac
               onPress={toggleSelectAll}
               activeOpacity={0.7}
             >
-              <View
-                style={[
-                  styles.checkbox,
-                  filteredContacts.every(c => c.selected) && styles.checkboxSelected,
-                ]}
-              >
-                {filteredContacts.every(c => c.selected) && (
-                  <Ionicons name="checkmark-outline" size={14} color="#fff" />
-                )}
-              </View>
+              <Ionicons
+                name={
+                  filteredContacts.every(c => c.selected) ? 'checkmark-circle' : 'ellipse-outline'
+                }
+                size={22}
+                color={
+                  filteredContacts.every(c => c.selected) ? colors.buttonActive : colors.textMuted
+                }
+              />
               <Text size="sm" weight="medium" style={{ color: colors.text }}>
                 {t('sharedLists.import.selectAll')} ({filteredContacts.length})
               </Text>
@@ -441,6 +455,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
     paddingBottom: spacingPixels[4],
   },
   emptyListContent: {
@@ -449,27 +464,22 @@ const styles = StyleSheet.create({
   contactItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacingPixels[3],
-    paddingHorizontal: spacingPixels[2],
-    borderRadius: radiusPixels.md,
-    marginBottom: spacingPixels[1],
-    gap: spacingPixels[3],
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
+    padding: spacingPixels[3],
     borderRadius: 12,
-    borderWidth: 2,
-    borderColor: neutral[400],
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderWidth: 1,
+    marginBottom: spacingPixels[2],
   },
-  checkboxSelected: {
-    backgroundColor: primary[500],
-    borderColor: primary[500],
+  contactAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
   },
   contactInfo: {
     flex: 1,
+    marginLeft: spacingPixels[3],
   },
   centerContainer: {
     flex: 1,

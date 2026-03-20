@@ -57,19 +57,14 @@ export function ChatMemberOptionsModal({
   if (!member) return null;
 
   return (
-    <Modal
-      visible={visible}
-      animationType="fade"
-      transparent
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
             <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
               {/* Member Header */}
               <View style={[styles.memberHeader, { borderBottomColor: colors.border }]}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.avatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}
                   onPress={() => {
                     if (member.playerId && onAvatarPress) {
@@ -81,10 +76,7 @@ export function ChatMemberOptionsModal({
                   disabled={!member.playerId || !onAvatarPress}
                 >
                   {member.profilePictureUrl ? (
-                    <Image
-                      source={{ uri: member.profilePictureUrl }}
-                      style={styles.avatarImage}
-                    />
+                    <Image source={{ uri: member.profilePictureUrl }} style={styles.avatarImage} />
                   ) : (
                     <Ionicons name="person" size={32} color={colors.textMuted} />
                   )}
@@ -94,7 +86,12 @@ export function ChatMemberOptionsModal({
                     {member.name}
                   </Text>
                   {member.isAdmin && (
-                    <View style={[styles.badge, { backgroundColor: isDark ? colors.primary : '#E8F5E9' }]}>
+                    <View
+                      style={[
+                        styles.badge,
+                        { backgroundColor: isDark ? colors.primary : '#E8F5E9' },
+                      ]}
+                    >
                       <Text size="xs" style={{ color: isDark ? '#FFFFFF' : colors.primary }}>
                         {t('chat.groupChat.admin' as any)}
                       </Text>
@@ -120,7 +117,10 @@ export function ChatMemberOptionsModal({
                     key={option.id}
                     style={[
                       styles.optionItem,
-                      index < options.length - 1 && { borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth },
+                      index < options.length - 1 && {
+                        borderBottomColor: colors.border,
+                        borderBottomWidth: StyleSheet.hairlineWidth,
+                      },
                     ]}
                     onPress={() => {
                       option.onPress();
@@ -133,13 +133,20 @@ export function ChatMemberOptionsModal({
                         styles.optionIcon,
                         {
                           backgroundColor: option.destructive
-                            ? isDark ? 'rgba(255, 59, 48, 0.15)' : 'rgba(255, 59, 48, 0.1)'
-                            : isDark ? 'rgba(0, 122, 255, 0.15)' : 'rgba(0, 122, 255, 0.1)',
+                            ? isDark
+                              ? 'rgba(255, 59, 48, 0.15)'
+                              : 'rgba(255, 59, 48, 0.1)'
+                            : isDark
+                              ? 'rgba(0, 122, 255, 0.15)'
+                              : 'rgba(0, 122, 255, 0.1)',
                         },
                       ]}
                     >
                       {option.isLoading ? (
-                        <ActivityIndicator size="small" color={option.destructive ? '#FF3B30' : colors.primary} />
+                        <ActivityIndicator
+                          size="small"
+                          color={option.destructive ? '#FF3B30' : colors.primary}
+                        />
                       ) : (
                         <Ionicons
                           name={option.icon}

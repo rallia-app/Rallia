@@ -111,7 +111,7 @@ export const SparklineChart: React.FC<SparklineChartProps> = ({
       return [{ value: 0 }];
     }
 
-    return data.map((item) => {
+    return data.map(item => {
       if (typeof item === 'number') {
         return { value: item };
       }
@@ -120,7 +120,7 @@ export const SparklineChart: React.FC<SparklineChartProps> = ({
   }, [data]);
 
   // Calculate min/max for better scaling
-  const values = chartData.map((d) => d.value);
+  const values = chartData.map(d => d.value);
   const minValue = Math.min(...values);
   const maxValue = Math.max(...values);
   const range = maxValue - minValue;

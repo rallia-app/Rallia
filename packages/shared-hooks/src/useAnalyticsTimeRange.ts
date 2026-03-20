@@ -1,6 +1,6 @@
 /**
  * useAnalyticsTimeRange Hook
- * 
+ *
  * Manages time range state for analytics views with persistence.
  * Supports 7d, 30d, 90d, and YTD (year-to-date) ranges.
  */
@@ -38,7 +38,7 @@ const TIME_RANGE_LABELS: Record<TimeRangeOption, string> = {
   '7d': 'Last 7 days',
   '30d': 'Last 30 days',
   '90d': 'Last 90 days',
-  'ytd': 'Year to date',
+  ytd: 'Year to date',
 };
 
 /**
@@ -46,7 +46,7 @@ const TIME_RANGE_LABELS: Record<TimeRangeOption, string> = {
  */
 function getDaysForOption(option: TimeRangeOption): number {
   const now = new Date();
-  
+
   switch (option) {
     case '7d':
       return 7;
@@ -70,7 +70,7 @@ function getDaysForOption(option: TimeRangeOption): number {
 function getStartDate(option: TimeRangeOption): Date {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
-  
+
   switch (option) {
     case '7d':
       return new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
@@ -91,7 +91,7 @@ function getStartDate(option: TimeRangeOption): Date {
 function buildTimeRange(option: TimeRangeOption): TimeRange {
   const endDate = new Date();
   endDate.setHours(23, 59, 59, 999);
-  
+
   return {
     option,
     startDate: getStartDate(option),
@@ -105,11 +105,7 @@ function buildTimeRange(option: TimeRangeOption): TimeRange {
  * Hook for managing analytics time range state
  */
 export function useAnalyticsTimeRange(options: UseAnalyticsTimeRangeOptions = {}) {
-  const {
-    storageKey = STORAGE_KEY,
-    defaultRange = '7d',
-    onRangeChange,
-  } = options;
+  const { storageKey = STORAGE_KEY, defaultRange = '7d', onRangeChange } = options;
 
   const [selectedOption, setSelectedOption] = useState<TimeRangeOption>(defaultRange);
   const [isLoading, setIsLoading] = useState(true);
@@ -133,19 +129,22 @@ export function useAnalyticsTimeRange(options: UseAnalyticsTimeRangeOptions = {}
   }, [storageKey]);
 
   // Persist and update range
-  const setRange = useCallback(async (option: TimeRangeOption) => {
-    setSelectedOption(option);
-    
-    try {
-      const storage = getStorageAdapter();
-      await storage.setItem(storageKey, option);
-    } catch (error) {
-      console.error('Error persisting time range:', error);
-    }
+  const setRange = useCallback(
+    async (option: TimeRangeOption) => {
+      setSelectedOption(option);
 
-    const newRange = buildTimeRange(option);
-    onRangeChange?.(newRange);
-  }, [storageKey, onRangeChange]);
+      try {
+        const storage = getStorageAdapter();
+        await storage.setItem(storageKey, option);
+      } catch (error) {
+        console.error('Error persisting time range:', error);
+      }
+
+      const newRange = buildTimeRange(option);
+      onRangeChange?.(newRange);
+    },
+    [storageKey, onRangeChange]
+  );
 
   // Initialize on mount
   useState(() => {
@@ -159,12 +158,15 @@ export function useAnalyticsTimeRange(options: UseAnalyticsTimeRangeOptions = {}
   const selectYearToDate = useCallback(() => setRange('ytd'), [setRange]);
 
   // Get all available options with labels
-  const availableOptions = useMemo(() => [
-    { value: '7d' as const, label: TIME_RANGE_LABELS['7d'], days: 7 },
-    { value: '30d' as const, label: TIME_RANGE_LABELS['30d'], days: 30 },
-    { value: '90d' as const, label: TIME_RANGE_LABELS['90d'], days: 90 },
-    { value: 'ytd' as const, label: TIME_RANGE_LABELS['ytd'], days: getDaysForOption('ytd') },
-  ], []);
+  const availableOptions = useMemo(
+    () => [
+      { value: '7d' as const, label: TIME_RANGE_LABELS['7d'], days: 7 },
+      { value: '30d' as const, label: TIME_RANGE_LABELS['30d'], days: 30 },
+      { value: '90d' as const, label: TIME_RANGE_LABELS['90d'], days: 90 },
+      { value: 'ytd' as const, label: TIME_RANGE_LABELS['ytd'], days: getDaysForOption('ytd') },
+    ],
+    []
+  );
 
   // Format date for display
   const formatDateRange = useCallback(() => {
@@ -184,14 +186,14 @@ export function useAnalyticsTimeRange(options: UseAnalyticsTimeRangeOptions = {}
     selectedOption,
     timeRange,
     isLoading,
-    
+
     // Actions
     setRange,
     selectLast7Days,
     selectLast30Days,
     selectLast90Days,
     selectYearToDate,
-    
+
     // Utilities
     availableOptions,
     formatDateRange,

@@ -16,21 +16,10 @@
  */
 
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ViewStyle,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@rallia/shared-hooks';
-import {
-  primary,
-  neutral,
-  spacingPixels,
-  radiusPixels,
-} from '@rallia/design-system';
+import { primary, neutral, spacingPixels, radiusPixels } from '@rallia/design-system';
 import * as Haptics from 'expo-haptics';
 
 export interface AnalyticsSectionCardProps {
@@ -225,11 +214,7 @@ export const AnalyticsSectionCard: React.FC<AnalyticsSectionCardProps> = ({
               },
             ]}
           >
-            <Ionicons
-              name={icon}
-              size={fullWidthSize.iconSize}
-              color={colors.icon}
-            />
+            <Ionicons name={icon} size={fullWidthSize.iconSize} color={colors.icon} />
           </View>
 
           {/* Text Content */}
@@ -260,11 +245,7 @@ export const AnalyticsSectionCard: React.FC<AnalyticsSectionCardProps> = ({
           </View>
 
           {/* Chevron */}
-          <Ionicons
-            name="chevron-forward"
-            size={20}
-            color={colors.chevron}
-          />
+          <Ionicons name="chevron-forward" size={20} color={colors.chevron} />
         </View>
       </TouchableOpacity>
     );
@@ -305,10 +286,7 @@ export const AnalyticsSectionCard: React.FC<AnalyticsSectionCardProps> = ({
         {/* Text Content */}
         <View style={styles.textContent}>
           <Text
-            style={[
-              styles.title,
-              { color: colors.text, fontSize: currentSize.titleSize },
-            ]}
+            style={[styles.title, { color: colors.text, fontSize: currentSize.titleSize }]}
             numberOfLines={1}
           >
             {title}
@@ -330,14 +308,9 @@ export const AnalyticsSectionCard: React.FC<AnalyticsSectionCardProps> = ({
         {metricValue !== undefined && (
           <View style={styles.metricContainer}>
             <Text
-              style={[
-                styles.metricValue,
-                { color: colors.text, fontSize: currentSize.metricSize },
-              ]}
+              style={[styles.metricValue, { color: colors.text, fontSize: currentSize.metricSize }]}
             >
-              {typeof metricValue === 'number'
-                ? metricValue.toLocaleString()
-                : metricValue}
+              {typeof metricValue === 'number' ? metricValue.toLocaleString() : metricValue}
             </Text>
             {metricLabel && (
               <Text
@@ -351,13 +324,10 @@ export const AnalyticsSectionCard: React.FC<AnalyticsSectionCardProps> = ({
             )}
             {trend && trendValue !== undefined && (
               <View style={styles.trendContainer}>
-                <Ionicons
-                  name={getTrendIcon()}
-                  size={12}
-                  color={getTrendColor()}
-                />
+                <Ionicons name={getTrendIcon()} size={12} color={getTrendColor()} />
                 <Text style={[styles.trendText, { color: getTrendColor() }]}>
-                  {trendValue > 0 ? '+' : ''}{trendValue}%
+                  {trendValue > 0 ? '+' : ''}
+                  {trendValue}%
                 </Text>
               </View>
             )}
@@ -365,12 +335,7 @@ export const AnalyticsSectionCard: React.FC<AnalyticsSectionCardProps> = ({
         )}
 
         {/* Chevron */}
-        <Ionicons
-          name="chevron-forward"
-          size={20}
-          color={colors.chevron}
-          style={styles.chevron}
-        />
+        <Ionicons name="chevron-forward" size={20} color={colors.chevron} style={styles.chevron} />
       </View>
     </TouchableOpacity>
   );

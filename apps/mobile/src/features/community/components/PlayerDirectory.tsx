@@ -9,7 +9,7 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { View, StyleSheet, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, SkeletonPlayerCard, useToast } from '@rallia/shared-components';
+import { Text, Skeleton, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { usePlayerSearch, usePlayer, useMultipleReputations } from '@rallia/shared-hooks';
 import { useTranslation } from '../../../hooks';
@@ -446,11 +446,74 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     if (!isFetchingNextPage) return null;
     return (
       <View style={styles.footerLoader}>
-        <SkeletonPlayerCard
-          backgroundColor={colors.inputBackground}
-          highlightColor={colors.border}
-          style={{ paddingHorizontal: spacingPixels[4] }}
-        />
+        <View
+          style={[
+            styles.skeletonCard,
+            {
+              backgroundColor: colors.cardBackground,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <View style={styles.skeletonAvatarContainer}>
+            <Skeleton
+              width={48}
+              height={48}
+              circle
+              backgroundColor={skeletonBg}
+              highlightColor={skeletonHighlight}
+            />
+          </View>
+          <View style={styles.skeletonInfoContainer}>
+            <Skeleton
+              width="60%"
+              height={16}
+              borderRadius={4}
+              backgroundColor={skeletonBg}
+              highlightColor={skeletonHighlight}
+            />
+            <View style={styles.skeletonBadgesRow}>
+              <Skeleton
+                width={64}
+                height={20}
+                borderRadius={radiusPixels.full}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+              />
+              <Skeleton
+                width={56}
+                height={20}
+                borderRadius={radiusPixels.full}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+              />
+            </View>
+            <View style={styles.skeletonLocationRow}>
+              <Skeleton
+                width={14}
+                height={14}
+                borderRadius={7}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+              />
+              <Skeleton
+                width="45%"
+                height={14}
+                borderRadius={4}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+                style={{ marginLeft: spacingPixels[1] }}
+              />
+            </View>
+          </View>
+          <Skeleton
+            width={20}
+            height={20}
+            borderRadius={4}
+            backgroundColor={skeletonBg}
+            highlightColor={skeletonHighlight}
+          />
+        </View>
       </View>
     );
   };
@@ -469,16 +532,99 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     );
   }
 
+  // Theme-aware skeleton colors
+  const skeletonBg = colors.inputBackground;
+  const skeletonHighlight = colors.border;
+
   // Render loading skeleton for list content only
   const renderListSkeleton = () => (
     <View style={styles.loadingContainer}>
-      {[1, 2, 3, 4, 5].map(i => (
-        <SkeletonPlayerCard
-          key={i}
-          backgroundColor={colors.inputBackground}
-          highlightColor={colors.border}
-          style={{ marginBottom: spacingPixels[3], paddingHorizontal: spacingPixels[4] }}
+      {/* Results count skeleton */}
+      <View style={styles.resultsInfo}>
+        <Skeleton
+          width={100}
+          height={14}
+          borderRadius={4}
+          backgroundColor={skeletonBg}
+          highlightColor={skeletonHighlight}
         />
+      </View>
+      {[1, 2, 3, 4].map(i => (
+        <View
+          key={i}
+          style={[
+            styles.skeletonCard,
+            {
+              backgroundColor: colors.cardBackground,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          {/* Avatar */}
+          <View style={styles.skeletonAvatarContainer}>
+            <Skeleton
+              width={48}
+              height={48}
+              circle
+              backgroundColor={skeletonBg}
+              highlightColor={skeletonHighlight}
+            />
+          </View>
+          {/* Info */}
+          <View style={styles.skeletonInfoContainer}>
+            {/* Name */}
+            <Skeleton
+              width="60%"
+              height={16}
+              borderRadius={4}
+              backgroundColor={skeletonBg}
+              highlightColor={skeletonHighlight}
+            />
+            {/* Badges row */}
+            <View style={styles.skeletonBadgesRow}>
+              <Skeleton
+                width={64}
+                height={20}
+                borderRadius={radiusPixels.full}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+              />
+              <Skeleton
+                width={56}
+                height={20}
+                borderRadius={radiusPixels.full}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+              />
+            </View>
+            {/* Location row */}
+            <View style={styles.skeletonLocationRow}>
+              <Skeleton
+                width={14}
+                height={14}
+                borderRadius={7}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+              />
+              <Skeleton
+                width="45%"
+                height={14}
+                borderRadius={4}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+                style={{ marginLeft: spacingPixels[1] }}
+              />
+            </View>
+          </View>
+          {/* Chevron */}
+          <Skeleton
+            width={20}
+            height={20}
+            borderRadius={4}
+            backgroundColor={skeletonBg}
+            highlightColor={skeletonHighlight}
+          />
+        </View>
       ))}
     </View>
   );
@@ -668,8 +814,35 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.md,
   },
   footerLoader: {
-    alignItems: 'center',
     paddingVertical: spacingPixels[4],
+  },
+  skeletonCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacingPixels[3],
+    marginHorizontal: spacingPixels[4],
+    marginBottom: spacingPixels[3],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+  },
+  skeletonAvatarContainer: {
+    marginRight: spacingPixels[3],
+  },
+  skeletonInfoContainer: {
+    flex: 1,
+    marginRight: spacingPixels[2],
+    gap: spacingPixels[0.5],
+  },
+  skeletonBadgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    marginTop: spacingPixels[0.5],
+  },
+  skeletonLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacingPixels[1],
   },
 });
 

@@ -9,12 +9,14 @@ Successfully implemented profile picture upload functionality that persists imag
 ## 🔧 What Was Fixed
 
 ### Issue
+
 - Selecting a profile picture in UserProfile screen did not persist
 - Image was only stored locally in state
 - Navigating away lost the selected image
 - No upload to database/storage
 
 ### Solution Implemented
+
 Added complete profile picture upload workflow:
 
 1. **Image Selection** - Uses existing `useImagePicker` hook
@@ -31,11 +33,13 @@ Added complete profile picture upload workflow:
 ### File Modified: `apps/mobile/src/screens/UserProfile.tsx`
 
 **Added State:**
+
 ```typescript
 const [uploadingImage, setUploadingImage] = useState(false);
 ```
 
 **Added Upload Function:**
+
 ```typescript
 const uploadProfilePicture = async (imageUri: string) => {
   // 1. Create unique filename
@@ -49,6 +53,7 @@ const uploadProfilePicture = async (imageUri: string) => {
 ```
 
 **Added Auto-Upload Effect:**
+
 ```typescript
 useEffect(() => {
   if (newProfileImage && profile?.id) {
@@ -58,6 +63,7 @@ useEffect(() => {
 ```
 
 **Added UI Feedback:**
+
 ```typescript
 {uploadingImage && (
   <View style={styles.uploadingOverlay}>
@@ -72,22 +78,26 @@ useEffect(() => {
 ## 🎯 Features
 
 ### ✅ Automatic Upload
+
 - Uploads immediately when image is selected
 - No separate "Save" button needed
 - Seamless user experience
 
 ### ✅ Network Resilience
+
 - 30-second timeout for upload (large files)
 - 10-second timeout for database update
 - Automatic retry logic (from networkTimeout utility)
 - Friendly error messages
 
 ### ✅ Platform Support
+
 - **Mobile (iOS/Android):** Uploads from file URI
 - **Web:** Converts data URI to blob
 - Uses FormData for mobile, Blob for web
 
 ### ✅ Visual Feedback
+
 - Semi-transparent overlay during upload
 - Spinner animation
 - "Uploading..." text
@@ -105,6 +115,7 @@ useEffect(() => {
 2. Create new bucket: `profile-pictures`
 3. Set bucket to **PUBLIC** (or configure RLS policies)
 4. Recommended policies:
+
    ```sql
    -- Allow authenticated users to upload their own profile picture
    CREATE POLICY "Users can upload own profile picture"
@@ -114,13 +125,13 @@ useEffect(() => {
      bucket_id = 'profile-pictures' AND
      (storage.foldername(name))[1] = auth.uid()::text
    );
-   
+
    -- Allow public read access
    CREATE POLICY "Public profile pictures are publicly accessible"
    ON storage.objects FOR SELECT
    TO public
    USING (bucket_id = 'profile-pictures');
-   
+
    -- Allow users to update/delete their own profile picture
    CREATE POLICY "Users can update own profile picture"
    ON storage.objects FOR UPDATE
@@ -129,7 +140,7 @@ useEffect(() => {
      bucket_id = 'profile-pictures' AND
      (storage.foldername(name))[1] = auth.uid()::text
    );
-   
+
    CREATE POLICY "Users can delete own profile picture"
    ON storage.objects FOR DELETE
    TO authenticated
@@ -144,13 +155,15 @@ useEffect(() => {
 ## 📊 User Flow
 
 ### Before
+
 1. User taps profile picture
 2. Selects image from gallery/camera
 3. Image shows locally ✅
 4. Navigate away → **Image lost** ❌
 5. Refresh → **Back to old picture** ❌
 
-### After  
+### After
+
 1. User taps profile picture
 2. Selects image from gallery/camera
 3. Image shows with "Uploading..." overlay ✅
@@ -167,7 +180,7 @@ useEffect(() => {
 ### Manual Testing
 
 - [ ] **Select from gallery** - Image uploads and persists
-- [ ] **Take photo** - Camera photo uploads and persists  
+- [ ] **Take photo** - Camera photo uploads and persists
 - [ ] **Navigate away and back** - Image still there
 - [ ] **Refresh app** - Image loads from database
 - [ ] **Check other screens** - Home/SportProfile show new picture
@@ -189,12 +202,14 @@ useEffect(() => {
 ## 🚀 Performance
 
 ### Upload Time
+
 - **Small image (< 500KB):** 1-2 seconds
 - **Medium image (500KB - 2MB):** 2-4 seconds
 - **Large image (2MB - 5MB):** 4-10 seconds
 - **Very large (> 5MB):** Up to 30 seconds (timeout)
 
 ### Optimization Applied
+
 - Image picker crops to 1:1 aspect ratio
 - Quality set to 0.8 (80%) in useImagePicker
 - Reduces file size significantly
@@ -205,12 +220,14 @@ useEffect(() => {
 ## 🔒 Security
 
 ### Access Control
+
 - Users can only upload to their own profile folder
 - Filename includes user ID: `{userId}-{timestamp}.{ext}`
 - Public read access for profile pictures
 - Write access restricted to owner
 
 ### File Validation
+
 - Only image types allowed (handled by ImagePicker)
 - File extension validated
 - Unique filenames prevent conflicts
@@ -219,38 +236,43 @@ useEffect(() => {
 
 ## 🐛 Error Scenarios Handled
 
-| Scenario | Behavior |
-|----------|----------|
-| No network | "Network error - Please check your connection" |
-| Slow upload | 30s timeout, then error message |
-| Storage full | Supabase error message shown |
-| Invalid bucket | "Failed to upload image" error |
-| Database update fails | "Failed to update profile" error |
-| User not authenticated | "User not authenticated" alert |
+| Scenario               | Behavior                                       |
+| ---------------------- | ---------------------------------------------- |
+| No network             | "Network error - Please check your connection" |
+| Slow upload            | 30s timeout, then error message                |
+| Storage full           | Supabase error message shown                   |
+| Invalid bucket         | "Failed to upload image" error                 |
+| Database update fails  | "Failed to update profile" error               |
+| User not authenticated | "User not authenticated" alert                 |
 
 ---
 
 ## 📈 Future Enhancements (Optional)
 
 ### Image Compression
+
 - Compress before upload to reduce size further
 - Use expo-image-manipulator or similar
 
 ### Old Image Cleanup
+
 - Delete old profile pictures when new one is uploaded
 - Background job to clean up orphaned images
 - Save storage costs
 
 ### Progress Indicator
+
 - Show upload progress percentage
 - Use Supabase Storage upload progress callback
 
 ### Optimistic Update
+
 - Show new image immediately
 - Upload in background
 - Rollback if upload fails
 
 ### Image Validation
+
 - Check file size before upload (e.g., max 5MB)
 - Validate image dimensions
 - Show clear error if too large
@@ -260,6 +282,7 @@ useEffect(() => {
 ## ✅ Deployment Ready
 
 Profile picture upload is now:
+
 - ✅ Fully functional
 - ✅ Network resilient
 - ✅ Cross-platform (iOS/Android/Web)
@@ -276,4 +299,3 @@ Profile picture upload is now:
 - `apps/mobile/src/hooks/useImagePicker.ts` - Image selection
 - `apps/mobile/src/utils/networkTimeout.ts` - Network resilience
 - `packages/shared-types/src/types/Profile.ts` - Profile type definition
-

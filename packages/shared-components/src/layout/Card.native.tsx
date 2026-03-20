@@ -59,29 +59,29 @@ export interface CardProps {
 
 /**
  * Card component for grouping related content in an elevated container
- * 
+ *
  * @example
  * ```tsx
  * // Basic card
  * <Card>
  *   <Text>Card content</Text>
  * </Card>
- * 
+ *
  * // Outlined card
  * <Card variant="outlined">
  *   <Text>Outlined card</Text>
  * </Card>
- * 
+ *
  * // Elevated card with custom padding
  * <Card variant="elevated" padding={24}>
  *   <Text>More elevated</Text>
  * </Card>
- * 
+ *
  * // Tappable card
  * <Card onPress={() => console.log('Tapped')}>
  *   <Text>Tap me!</Text>
  * </Card>
- * 
+ *
  * // Card with custom background
  * <Card backgroundColor="#f0f0f0">
  *   <Text>Custom background</Text>

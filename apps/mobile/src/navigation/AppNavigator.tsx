@@ -34,7 +34,6 @@ import {
   ProfilePictureButton,
   NotificationButton,
   SettingsButton,
-  HelpButton,
 } from '@rallia/shared-components';
 import { useActionsSheet, useSport, useOverlay } from '../context';
 import SportSelector from '../components/SportSelector';
@@ -350,7 +349,6 @@ function HeaderRightButtons() {
       >
         <NotificationButtonWithBadge color={colors.headerForeground} />
         <SettingsButton color={colors.headerForeground} />
-        <HelpButton color={colors.headerForeground} />
       </WalkthroughableView>
     </CopilotStep>
   );

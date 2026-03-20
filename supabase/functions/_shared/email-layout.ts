@@ -45,7 +45,7 @@ export function escapeHtml(text: string): string {
     '"': '&quot;',
     "'": '&#39;',
   };
-  return text.replace(/[&<>"']/g, (char) => htmlEscapes[char] || char);
+  return text.replace(/[&<>"']/g, char => htmlEscapes[char] || char);
 }
 
 export interface LayoutOptions {
@@ -159,8 +159,12 @@ export function wrapInLayout(options: LayoutOptions): string {
   const isFr = locale === 'fr-CA' || locale === 'fr';
   const needHelpText = isFr ? "Besoin d'aide ?" : 'Need help?';
   const supportText = isFr
-    ? 'En cas de problème, contactez-nous à <a href="mailto:contact@rallia.ca" style="color: ' + T.primary600 + '; text-decoration: none;">contact@rallia.ca</a>'
-    : 'If you\'re having trouble, contact us at <a href="mailto:contact@rallia.ca" style="color: ' + T.primary600 + '; text-decoration: none;">contact@rallia.ca</a>';
+    ? 'En cas de problème, contactez-nous à <a href="mailto:contact@rallia.ca" style="color: ' +
+      T.primary600 +
+      '; text-decoration: none;">contact@rallia.ca</a>'
+    : 'If you\'re having trouble, contact us at <a href="mailto:contact@rallia.ca" style="color: ' +
+      T.primary600 +
+      '; text-decoration: none;">contact@rallia.ca</a>';
   const rightsText = isFr ? 'Tous droits réservés.' : 'All rights reserved.';
 
   const subtitleHtml = headerSubtitle
@@ -294,7 +298,7 @@ export function renderDetailCard(rows: Array<{ label: string; value: string }>):
 
   const rowsHtml = rows
     .map(
-      (row) => `
+      row => `
                       <tr>
                         <td class="email-detail-label" style="padding: 8px 0; color: ${T.neutral600}; font-size: 14px; width: 120px;">${escapeHtml(row.label)}</td>
                         <td class="email-detail-value" style="padding: 8px 0; color: ${T.neutral900}; font-size: 14px; font-weight: 500;">${row.value}</td>
@@ -358,10 +362,7 @@ export function renderDividerAndDisclaimer(text: string): string {
 }
 
 /** Render a colored status badge */
-export function renderStatusBadge(
-  text: string,
-  color: 'red' | 'amber' | 'green'
-): string {
+export function renderStatusBadge(text: string, color: 'red' | 'amber' | 'green'): string {
   const colorMap = {
     red: { bg: '#fef2f2', text: T.statusRed, border: '#fecaca' },
     amber: { bg: '#fffbeb', text: T.statusAmber, border: '#fde68a' },

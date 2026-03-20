@@ -178,7 +178,7 @@ export async function getEntityAuditHistory(
   return getAuditLog({
     entityType,
     limit,
-  }).then((logs) => logs.filter((log) => log.entity_id === entityId));
+  }).then(logs => logs.filter(log => log.entity_id === entityId));
 }
 
 /**
