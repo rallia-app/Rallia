@@ -16,6 +16,7 @@ import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { createExternalLinkProof } from '../../../services/ratingProofUpload';
 import { Logger } from '@rallia/shared-services';
 import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
+import type { ProofFormProps } from './AddRatingProofOverlay';
 
 interface ExternalLinkProofOverlayProps {
   visible: boolean;
@@ -33,13 +34,12 @@ const SUGGESTED_PLATFORMS = [
   { name: 'DUPR', icon: 'globe-outline', baseUrl: 'mydupr.com' },
 ];
 
-export function ExternalLinkProofActionSheet({ payload }: SheetProps<'external-link-proof'>) {
-  const onClose = () => {
-    resetForm();
-    SheetManager.hide('external-link-proof');
-  };
-  const onSuccess = payload?.onSuccess;
-  const playerRatingScoreId = payload?.playerRatingScoreId || '';
+export function ExternalLinkProofForm({
+  onBack,
+  onClose,
+  onSuccess,
+  playerRatingScoreId,
+}: ProofFormProps) {
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
   const toast = useToast();
@@ -57,13 +57,6 @@ export function ExternalLinkProofActionSheet({ payload }: SheetProps<'external-l
     setUrlError(null);
   };
 
-  // Reset form when sheet closes
-  useEffect(() => {
-    return () => {
-      resetForm();
-    };
-  }, []);
-
   const validateUrl = (urlString: string): boolean => {
     if (!urlString.trim()) {
       setUrlError(t('profile.ratingProofs.errors.invalidUrl'));
@@ -71,7 +64,6 @@ export function ExternalLinkProofActionSheet({ payload }: SheetProps<'external-l
     }
 
     try {
-      // Add https:// if no protocol specified
       let normalizedUrl = urlString.trim();
       if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
         normalizedUrl = 'https://' + normalizedUrl;
@@ -123,8 +115,8 @@ export function ExternalLinkProofActionSheet({ payload }: SheetProps<'external-l
       if (result.success) {
         toast.success(t('profile.ratingProofs.upload.success'));
         resetForm();
-        onSuccess?.();
-        SheetManager.hide('external-link-proof');
+        onSuccess();
+        onClose();
       } else {
         throw new Error(result.error || 'Unknown error');
       }
@@ -149,199 +141,228 @@ export function ExternalLinkProofActionSheet({ payload }: SheetProps<'external-l
   };
 
   return (
-    <ActionSheet
-      gestureEnabled
-      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
-      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
-    >
-      <View style={styles.modalContent}>
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <View style={styles.headerCenter}>
-            <Text
-              weight="semibold"
-              size="lg"
-              style={{ color: colors.text }}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
-              {t('profile.ratingProofs.proofTypes.externalLink.title')}
-            </Text>
+    <View style={styles.modalContent}>
+      {/* Handle indicator */}
+      <View style={styles.handleIndicatorRow}>
+        <View style={[styles.handleIndicator, { backgroundColor: colors.border }]} />
+      </View>
+
+      {/* Header */}
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <TouchableOpacity
+          onPress={onBack}
+          style={styles.backButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <Text
+            weight="semibold"
+            size="lg"
+            style={{ color: colors.text }}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {t('profile.ratingProofs.proofTypes.externalLink.title')}
+          </Text>
+        </View>
+        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+          <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Scrollable Content */}
+      <ScrollView
+        style={styles.scrollContent}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.iconHeaderContainer}>
+          <View style={[styles.iconHeader, { backgroundColor: colors.primary + '20' }]}>
+            <Ionicons name="link-outline" size={32} color={colors.primary} />
           </View>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
-          </TouchableOpacity>
+          <Text size="sm" color={colors.textMuted} style={styles.subtitle}>
+            {t('profile.ratingProofs.proofTypes.externalLink.urlHint')}
+          </Text>
         </View>
 
-        {/* Scrollable Content */}
-        <ScrollView
-          style={styles.scrollContent}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.iconHeaderContainer}>
-            <View style={[styles.iconHeader, { backgroundColor: colors.primary + '20' }]}>
-              <Ionicons name="link-outline" size={32} color={colors.primary} />
-            </View>
-            <Text size="sm" color={colors.textMuted} style={styles.subtitle}>
-              {t('profile.ratingProofs.proofTypes.externalLink.urlHint')}
-            </Text>
-          </View>
+        {/* Platform Suggestions */}
+        <View style={styles.suggestionsContainer}>
+          <Text size="xs" color={colors.textMuted} style={styles.suggestionsLabel}>
+            {t('profile.ratingProofs.proofTypes.externalLink.popularPlatforms')}
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.suggestionsScroll}
+          >
+            {SUGGESTED_PLATFORMS.map(platform => (
+              <TouchableOpacity
+                key={platform.name}
+                style={[
+                  styles.suggestionChip,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                ]}
+                onPress={() => handlePlatformSuggestion(platform.baseUrl)}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={platform.icon as keyof typeof Ionicons.glyphMap}
+                  size={14}
+                  color={colors.textMuted}
+                />
+                <Text size="xs" color={colors.text} style={styles.suggestionText}>
+                  {platform.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
 
-          {/* Platform Suggestions */}
-          <View style={styles.suggestionsContainer}>
-            <Text size="xs" color={colors.textMuted} style={styles.suggestionsLabel}>
-              Popular platforms:
-            </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.suggestionsScroll}
-            >
-              {SUGGESTED_PLATFORMS.map(platform => (
-                <TouchableOpacity
-                  key={platform.name}
-                  style={[
-                    styles.suggestionChip,
-                    { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                  ]}
-                  onPress={() => handlePlatformSuggestion(platform.baseUrl)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons
-                    name={platform.icon as keyof typeof Ionicons.glyphMap}
-                    size={14}
-                    color={colors.textMuted}
-                  />
-                  <Text size="xs" color={colors.text} style={styles.suggestionText}>
-                    {platform.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-
-          {/* URL Input */}
-          <View style={styles.inputGroup}>
-            <Text size="sm" weight="medium" color={colors.text} style={styles.label}>
-              {t('profile.ratingProofs.proofTypes.externalLink.urlLabel')} *
-            </Text>
-            <View
-              style={[
-                styles.urlInputContainer,
-                {
-                  backgroundColor: colors.inputBackground,
-                  borderColor: urlError ? colors.error : colors.border,
-                },
-              ]}
-            >
-              <TextInput
-                style={[styles.urlInput, { color: colors.text }]}
-                value={url}
-                onChangeText={text => {
-                  setUrl(text);
-                  setUrlError(null);
-                }}
-                placeholder={t('profile.ratingProofs.proofTypes.externalLink.placeholder')}
-                placeholderTextColor={colors.textMuted}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-                returnKeyType="next"
-                editable={!isSubmitting}
-              />
-              {url.length > 0 && (
-                <TouchableOpacity onPress={handleOpenUrl} style={styles.urlPreviewButton}>
-                  <Ionicons name="open-outline" size={20} color={colors.primary} />
-                </TouchableOpacity>
-              )}
-            </View>
-            {urlError && (
-              <Text size="xs" color={colors.error} style={styles.errorText}>
-                {urlError}
-              </Text>
-            )}
-          </View>
-
-          {/* Title Input */}
-          <View style={styles.inputGroup}>
-            <Text size="sm" weight="medium" color={colors.text} style={styles.label}>
-              {t('profile.ratingProofs.form.title')} *
-            </Text>
+        {/* URL Input */}
+        <View style={styles.inputGroup}>
+          <Text size="sm" weight="medium" color={colors.text} style={styles.label}>
+            {t('profile.ratingProofs.proofTypes.externalLink.urlLabel')} *
+          </Text>
+          <View
+            style={[
+              styles.urlInputContainer,
+              {
+                backgroundColor: colors.inputBackground,
+                borderColor: urlError ? colors.error : colors.border,
+              },
+            ]}
+          >
             <TextInput
-              style={[
-                styles.textInput,
-                {
-                  backgroundColor: colors.inputBackground,
-                  borderColor: colors.border,
-                  color: colors.text,
-                },
-              ]}
-              value={title}
-              onChangeText={setTitle}
-              placeholder={t('profile.ratingProofs.form.titlePlaceholder')}
+              style={[styles.urlInput, { color: colors.text }]}
+              value={url}
+              onChangeText={text => {
+                setUrl(text);
+                setUrlError(null);
+              }}
+              placeholder={t('profile.ratingProofs.proofTypes.externalLink.placeholder')}
               placeholderTextColor={colors.textMuted}
-              maxLength={100}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
               returnKeyType="next"
               editable={!isSubmitting}
             />
-          </View>
-
-          {/* Description Input */}
-          <View style={styles.inputGroup}>
-            <Text size="sm" weight="medium" color={colors.text} style={styles.label}>
-              {t('profile.ratingProofs.form.description')}
-            </Text>
-            <TextInput
-              style={[
-                styles.textInput,
-                styles.textArea,
-                {
-                  backgroundColor: colors.inputBackground,
-                  borderColor: colors.border,
-                  color: colors.text,
-                },
-              ]}
-              value={description}
-              onChangeText={setDescription}
-              placeholder={t('profile.ratingProofs.form.descriptionPlaceholder')}
-              placeholderTextColor={colors.textMuted}
-              maxLength={500}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-              editable={!isSubmitting}
-            />
-          </View>
-        </ScrollView>
-
-        {/* Sticky Footer */}
-        <View style={[styles.footer, { borderTopColor: colors.border }]}>
-          <Button
-            variant="primary"
-            onPress={handleSubmit}
-            disabled={isSubmitting || !url.trim() || !title.trim()}
-            style={styles.submitButton}
-          >
-            {isSubmitting ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color={colors.primaryForeground} />
-                <Text
-                  size="base"
-                  weight="semibold"
-                  color={colors.primaryForeground}
-                  style={styles.loadingText}
-                >
-                  {t('profile.ratingProofs.upload.uploading')}
-                </Text>
-              </View>
-            ) : (
-              t('profile.ratingProofs.form.submit')
+            {url.length > 0 && (
+              <TouchableOpacity onPress={handleOpenUrl} style={styles.urlPreviewButton}>
+                <Ionicons name="open-outline" size={20} color={colors.primary} />
+              </TouchableOpacity>
             )}
-          </Button>
+          </View>
+          {urlError && (
+            <Text size="xs" color={colors.error} style={styles.errorText}>
+              {urlError}
+            </Text>
+          )}
         </View>
+
+        {/* Title Input */}
+        <View style={styles.inputGroup}>
+          <Text size="sm" weight="medium" color={colors.text} style={styles.label}>
+            {t('profile.ratingProofs.form.title')} *
+          </Text>
+          <TextInput
+            style={[
+              styles.textInput,
+              {
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.border,
+                color: colors.text,
+              },
+            ]}
+            value={title}
+            onChangeText={setTitle}
+            placeholder={t('profile.ratingProofs.form.titlePlaceholder')}
+            placeholderTextColor={colors.textMuted}
+            maxLength={100}
+            returnKeyType="next"
+            editable={!isSubmitting}
+          />
+        </View>
+
+        {/* Description Input */}
+        <View style={styles.inputGroup}>
+          <Text size="sm" weight="medium" color={colors.text} style={styles.label}>
+            {t('profile.ratingProofs.form.description')}
+          </Text>
+          <TextInput
+            style={[
+              styles.textInput,
+              styles.textArea,
+              {
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.border,
+                color: colors.text,
+              },
+            ]}
+            value={description}
+            onChangeText={setDescription}
+            placeholder={t('profile.ratingProofs.form.descriptionPlaceholder')}
+            placeholderTextColor={colors.textMuted}
+            maxLength={500}
+            multiline
+            numberOfLines={3}
+            textAlignVertical="top"
+            editable={!isSubmitting}
+          />
+        </View>
+      </ScrollView>
+
+      {/* Sticky Footer */}
+      <View style={[styles.footer, { borderTopColor: colors.border }]}>
+        <Button
+          variant="primary"
+          onPress={handleSubmit}
+          disabled={isSubmitting || !url.trim() || !title.trim()}
+          style={styles.submitButton}
+        >
+          {isSubmitting ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color={colors.primaryForeground} />
+              <Text
+                size="base"
+                weight="semibold"
+                color={colors.primaryForeground}
+                style={styles.loadingText}
+              >
+                {t('profile.ratingProofs.upload.uploading')}
+              </Text>
+            </View>
+          ) : (
+            t('profile.ratingProofs.form.submit')
+          )}
+        </Button>
       </View>
+    </View>
+  );
+}
+
+export function ExternalLinkProofActionSheet({ payload }: SheetProps<'external-link-proof'>) {
+  const onClose = () => {
+    SheetManager.hide('external-link-proof');
+  };
+  const onSuccess = payload?.onSuccess;
+  const playerRatingScoreId = payload?.playerRatingScoreId || '';
+
+  return (
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: 'transparent' }]}
+      indicatorStyle={[styles.handleIndicator]}
+    >
+      <ExternalLinkProofForm
+        onBack={onClose}
+        onClose={onClose}
+        onSuccess={() => onSuccess?.()}
+        playerRatingScoreId={playerRatingScoreId}
+      />
     </ActionSheet>
   );
 }
@@ -379,14 +400,17 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radiusPixels['2xl'],
     borderTopRightRadius: radiusPixels['2xl'],
   },
+  modalContent: {
+    flex: 1,
+  },
+  handleIndicatorRow: {
+    alignItems: 'center',
+    paddingTop: spacingPixels[2],
+  },
   handleIndicator: {
     width: spacingPixels[10],
     height: 4,
     borderRadius: 4,
-    alignSelf: 'center',
-  },
-  modalContent: {
-    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -401,6 +425,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: spacingPixels[12],
+  },
+  backButton: {
+    padding: spacingPixels[1],
+    position: 'absolute',
+    left: spacingPixels[4],
+    zIndex: 1,
   },
   closeButton: {
     padding: spacingPixels[1],

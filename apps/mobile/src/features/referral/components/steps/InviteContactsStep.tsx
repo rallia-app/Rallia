@@ -17,7 +17,7 @@ import {
 import * as SMS from 'expo-sms';
 import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, useToast } from '@rallia/shared-components';
+import { Text, useToast, Button } from '@rallia/shared-components';
 import { selectionHaptic, lightHaptic } from '@rallia/shared-utils';
 import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
 import { SearchBar } from '../../../../components/SearchBar';
@@ -319,20 +319,17 @@ export const InviteContactsStep: React.FC<InviteContactsStepProps> = ({
 
       {/* Footer */}
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
-        <TouchableOpacity
-          style={[
-            styles.sendButton,
-            { backgroundColor: colors.buttonActive },
-            selectedCount === 0 && { opacity: 0.5 },
-          ]}
-          onPress={handleSendInvites}
+        <Button
+          variant="primary"
+          size="lg"
+          fullWidth
           disabled={selectedCount === 0}
+          onPress={handleSendInvites}
+          isDark={isDark}
         >
-          <Text size="lg" weight="semibold" color="#FFFFFF">
-            {t('referral.contacts.sendInvites')}
-            {selectedCount > 0 ? ` (${selectedCount})` : ''}
-          </Text>
-        </TouchableOpacity>
+          {t('referral.contacts.sendInvites')}
+          {selectedCount > 0 ? ` (${selectedCount})` : ''}
+        </Button>
       </View>
     </View>
   );
@@ -423,14 +420,5 @@ const styles = StyleSheet.create({
   footer: {
     padding: spacingPixels[4],
     borderTopWidth: 1,
-    paddingBottom: spacingPixels[8],
-  },
-  sendButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    gap: spacingPixels[2],
   },
 });

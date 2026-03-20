@@ -345,6 +345,7 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
   community_join_request: 'high',
   community_join_accepted: 'high',
   community_join_rejected: 'normal',
+  network_deleted: 'high',
   // Reference request notifications
   reference_request_received: 'high',
   reference_request_accepted: 'normal',
@@ -420,6 +421,7 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   community_join_request: 'Join request',
   community_join_accepted: 'Request accepted',
   community_join_rejected: 'Request declined',
+  network_deleted: 'Network deleted',
   // Reference request notifications
   reference_request_received: 'Reference requested',
   reference_request_accepted: 'Reference provided',
@@ -499,6 +501,7 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   community_join_request: '{playerName} wants to join {communityName}.',
   community_join_accepted: 'Your request to join {communityName} has been accepted.',
   community_join_rejected: 'Your request to join {communityName} was declined.',
+  network_deleted: 'A network you were part of has been deleted.',
   // Reference request notifications
   reference_request_received: '{playerName} would like you to verify their {sportName} rating.',
   reference_request_accepted: '{playerName} verified your {sportName} rating.',

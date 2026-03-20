@@ -26,7 +26,7 @@ import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { SheetManager } from 'react-native-actions-sheet';
-import { Text } from '@rallia/shared-components';
+import { Text, Button } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
 import { primary, neutral } from '@rallia/design-system';
 import {
@@ -161,27 +161,29 @@ const SharedListDetail: React.FC = () => {
         </Text>
 
         <View style={styles.emptyButtons}>
-          <TouchableOpacity
-            style={[styles.emptyButton, { backgroundColor: primary[500] }]}
+          <Button
+            variant="primary"
+            size="md"
+            rounded
+            fullWidth
             onPress={handleImportFromPhoneBook}
-            activeOpacity={0.8}
+            leftIcon={<Ionicons name="phone-portrait-outline" size={20} color="#fff" />}
+            isDark={isDark}
           >
-            <Ionicons name="phone-portrait-outline" size={20} color="#fff" />
-            <Text size="sm" weight="semibold" color="#fff">
-              {t('sharedLists.importFromPhone')}
-            </Text>
-          </TouchableOpacity>
+            {t('sharedLists.importFromPhone')}
+          </Button>
 
-          <TouchableOpacity
-            style={[styles.emptyButton, styles.emptyButtonOutline, { borderColor: colors.border }]}
+          <Button
+            variant="outline"
+            size="md"
+            rounded
+            fullWidth
             onPress={handleAddManually}
-            activeOpacity={0.8}
+            leftIcon={<Ionicons name="add-outline" size={20} color={colors.text} />}
+            isDark={isDark}
           >
-            <Ionicons name="add-outline" size={20} color={colors.text} />
-            <Text size="sm" weight="semibold" color={colors.text}>
-              {t('sharedLists.addManually')}
-            </Text>
-          </TouchableOpacity>
+            {t('sharedLists.addManually')}
+          </Button>
         </View>
       </View>
     );
@@ -322,19 +324,6 @@ const styles = StyleSheet.create({
     gap: spacingPixels[3],
     width: '100%',
     maxWidth: 280,
-  },
-  emptyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    gap: spacingPixels[2],
-  },
-  emptyButtonOutline: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
   },
 });
 

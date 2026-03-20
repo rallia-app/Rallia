@@ -6,6 +6,7 @@ import {
   ScrollView,
   Image,
   ActivityIndicator,
+  useColorScheme,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
@@ -13,9 +14,9 @@ import { Text } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
 import { selectionHaptic, mediumHaptic } from '../../../utils/haptics';
 import { useThemeStyles, useTranslation } from '../../../hooks';
-import { CertificationBadge } from '../../ratings/components';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
 import { SearchBar } from '../../../components/SearchBar';
+import RatingBadge from '../../../components/RatingBadge';
 
 interface ReferenceRequestOverlayProps {
   visible: boolean;
@@ -132,7 +133,7 @@ export function ReferenceRequestActionSheet({ payload }: SheetProps<'reference-r
 
       if (ratingsError) throw ratingsError;
 
-      // Filter by sport and level (same or higher than current user)
+      // Filter by sport, certified status, and level (same or higher than current user)
       const sportEligibleRatings = ((allRatings || []) as RatingResponse[]).filter(rating => {
         const ratingScore = Array.isArray(rating.rating_score)
           ? rating.rating_score[0]
@@ -143,6 +144,10 @@ export function ReferenceRequestActionSheet({ payload }: SheetProps<'reference-r
 
         // Must be same sport
         if (ratingSystem?.sport_id !== sportId) return false;
+
+        // Must be certified
+        const isCertified = rating.is_certified || rating.badge_status === 'certified';
+        if (!isCertified) return false;
 
         // If current user has a rating, only show players at same or higher level
         if (currentUserRatingScore && ratingScore?.value) {
@@ -276,19 +281,21 @@ export function ReferenceRequestActionSheet({ payload }: SheetProps<'reference-r
     }
   };
 
+  const isDark = useColorScheme() === 'dark';
+
   const renderPlayerCard = (player: Player) => {
     const isSelected = selectedPlayers.has(player.id);
+    const displayName = `${player.first_name || ''} ${player.last_name || ''}`.trim() || 'Unknown';
 
     return (
       <TouchableOpacity
         key={player.id}
         style={[
           styles.playerCard,
-          { backgroundColor: colors.inputBackground },
-          isSelected && [
-            styles.playerCardSelected,
-            { borderColor: colors.primary, backgroundColor: colors.inputBackground },
-          ],
+          {
+            backgroundColor: colors.cardBackground,
+            borderColor: isSelected ? colors.primary : colors.border,
+          },
         ]}
         onPress={() => togglePlayerSelection(player.id)}
         activeOpacity={0.8}
@@ -299,43 +306,37 @@ export function ReferenceRequestActionSheet({ payload }: SheetProps<'reference-r
             <Image source={{ uri: player.profile_picture_url }} style={styles.avatar} />
           ) : (
             <View
-              style={[styles.avatar, styles.avatarPlaceholder, { backgroundColor: colors.divider }]}
+              style={[styles.avatar, styles.avatarPlaceholder, { backgroundColor: colors.border }]}
             >
               <Ionicons name="person-outline" size={24} color={colors.textMuted} />
-            </View>
-          )}
-          {isSelected && (
-            <View style={[styles.checkmarkContainer, { backgroundColor: colors.card }]}>
-              <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
             </View>
           )}
         </View>
 
         {/* Player Info */}
         <View style={styles.playerInfo}>
-          <View style={styles.playerNameRow}>
-            <Text style={[styles.playerName, { color: colors.text }]}>
-              {player.first_name} {player.last_name}
-            </Text>
-            {player.isCertified && (
-              <CertificationBadge status="certified" size="sm" showLabel={false} />
-            )}
-          </View>
-          {player.display_name && (
-            <Text style={[styles.playerUsername, { color: colors.textMuted }]}>
-              @{player.display_name}
-            </Text>
+          <Text size="base" weight="semibold" color={colors.text} numberOfLines={1}>
+            {displayName}
+          </Text>
+          {player.rating && (
+            <View style={styles.badgesRow}>
+              <RatingBadge
+                ratingValue={player.ratingScore}
+                ratingLabel={player.rating}
+                certificationStatus={player.isCertified ? 'certified' : 'self_declared'}
+                isDark={isDark}
+                size="sm"
+              />
+            </View>
           )}
         </View>
 
-        {/* Rating Badge */}
-        {player.rating && (
-          <View style={[styles.ratingBadge, { backgroundColor: colors.primary }]}>
-            <Text style={[styles.ratingText, { color: colors.primaryForeground }]}>
-              {player.rating}
-            </Text>
-          </View>
-        )}
+        {/* Selection chevron */}
+        <Ionicons
+          name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+          size={22}
+          color={isSelected ? colors.primary : colors.textMuted}
+        />
       </TouchableOpacity>
     );
   };
@@ -551,23 +552,18 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   playersGrid: {
-    gap: 12,
+    gap: spacingPixels[2],
   },
   playerCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  playerCardSelected: {
-    // borderColor and backgroundColor applied inline
+    padding: spacingPixels[3],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
   },
   avatarContainer: {
     position: 'relative',
-    marginRight: 12,
+    marginRight: spacingPixels[3],
   },
   avatar: {
     width: 48,
@@ -578,36 +574,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  checkmarkContainer: {
-    position: 'absolute',
-    bottom: -4,
-    right: -4,
-    borderRadius: 12,
-  },
   playerInfo: {
     flex: 1,
+    marginRight: spacingPixels[2],
   },
-  playerNameRow: {
+  badgesRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 2,
-  },
-  playerName: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  playerUsername: {
-    fontSize: 13,
-  },
-  ratingBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  ratingText: {
-    fontSize: 14,
-    fontWeight: '600',
+    gap: spacingPixels[2],
+    marginTop: spacingPixels[0.5],
+    flexWrap: 'wrap',
   },
   footer: {
     padding: spacingPixels[4],

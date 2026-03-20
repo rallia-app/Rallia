@@ -1,8 +1,8 @@
 /**
  * Bug Report FAB (Floating Action Button)
  *
- * A centralized floating action button that appears on all screens
- * to provide quick access to the bug report sheet.
+ * A floating action button for quick access to the bug report sheet.
+ * Designed to be placed inside screen-level FAB containers.
  */
 
 import React, { useCallback } from 'react';
@@ -22,7 +22,7 @@ import { useBugReportSheet } from '../context/BugReportSheetContext';
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 export const BugReportFAB: React.FC = () => {
-  const { openBugReport, isOpen } = useBugReportSheet();
+  const { openBugReport } = useBugReportSheet();
 
   // Animation values
   const scale = useSharedValue(1);
@@ -43,18 +43,12 @@ export const BugReportFAB: React.FC = () => {
     transform: [{ scale: scale.value }],
   }));
 
-  // Don't show FAB when bug report sheet is open
-  if (isOpen) {
-    return null;
-  }
-
   return (
     <AnimatedTouchable
       style={[
         styles.fab,
         {
           backgroundColor: status.error.DEFAULT,
-          // Platform-specific shadow
           ...Platform.select({
             ios: {
               shadowColor: '#000',
@@ -82,15 +76,11 @@ export const BugReportFAB: React.FC = () => {
 
 const styles = StyleSheet.create({
   fab: {
-    position: 'absolute',
-    bottom: 100, // Above tab bar
-    left: 24,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 9998, // Below bug report sheet but above other content
   },
 });
 

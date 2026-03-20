@@ -6,14 +6,7 @@
  */
 
 import React, { useEffect, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  Modal,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  Dimensions,
-} from 'react-native';
+import { View, StyleSheet, Modal, TouchableWithoutFeedback, Dimensions } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -25,7 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import LottieView from 'lottie-react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, Button } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -226,15 +219,9 @@ export function ScoreSubmittedSuccessModal({
 
             {/* Done Button */}
             <Animated.View style={[styles.buttonContainer, buttonAnimatedStyle]}>
-              <TouchableOpacity
-                style={[styles.doneButton, { backgroundColor: colors.primary }]}
-                onPress={handleClose}
-                activeOpacity={0.8}
-              >
-                <Text size="base" weight="semibold" color={BASE_WHITE}>
-                  {t('common.done')}
-                </Text>
-              </TouchableOpacity>
+              <Button variant="primary" size="lg" fullWidth onPress={handleClose} isDark={isDark}>
+                {t('common.done')}
+              </Button>
             </Animated.View>
           </View>
         </TouchableWithoutFeedback>
@@ -325,12 +312,6 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     width: '100%',
-  },
-  doneButton: {
-    height: 52,
-    borderRadius: radiusPixels.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
 

@@ -12,7 +12,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Card } from '@rallia/shared-components';
+import { Text, Card, Button } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
 import { CertificationBadge, type BadgeStatus } from './CertificationBadge';
@@ -99,7 +99,7 @@ export const CertificationSection: React.FC<CertificationSectionProps> = ({
   onRequestReference,
   onManageProofs,
 }) => {
-  const { colors } = useThemeStyles();
+  const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const [showProofInfoModal, setShowProofInfoModal] = useState(false);
 
@@ -280,29 +280,29 @@ export const CertificationSection: React.FC<CertificationSectionProps> = ({
       {isOwnProfile && (
         <View style={styles.actionsSection}>
           {onRequestReference && (
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: colors.primary }]}
+            <Button
+              variant="primary"
+              size="md"
+              fullWidth
               onPress={onRequestReference}
-              activeOpacity={0.7}
+              leftIcon={<Ionicons name="person-add-outline" size={18} color="#FFFFFF" />}
+              isDark={isDark}
             >
-              <Ionicons name="person-add-outline" size={18} color="#FFFFFF" />
-              <Text style={[styles.actionButtonText, { color: '#FFFFFF' }]}>
-                {t('profile.rating.requestReference')}
-              </Text>
-            </TouchableOpacity>
+              {t('profile.rating.requestReference')}
+            </Button>
           )}
 
           {onManageProofs && (
-            <TouchableOpacity
-              style={[styles.actionButton, styles.secondaryButton, { borderColor: colors.primary }]}
+            <Button
+              variant="secondary"
+              size="md"
+              fullWidth
               onPress={onManageProofs}
-              activeOpacity={0.7}
+              leftIcon={<Ionicons name="document-text-outline" size={18} color={colors.primary} />}
+              isDark={isDark}
             >
-              <Ionicons name="document-text-outline" size={18} color={colors.primary} />
-              <Text style={[styles.actionButtonText, { color: colors.primary }]}>
-                {t('profile.rating.manageRatingProofs')}
-              </Text>
-            </TouchableOpacity>
+              {t('profile.rating.manageRatingProofs')}
+            </Button>
           )}
         </View>
       )}
@@ -453,23 +453,6 @@ const styles = StyleSheet.create({
   actionsSection: {
     gap: spacingPixels[2], // 8px
     marginBottom: spacingPixels[3], // 12px
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacingPixels[2], // 8px
-    paddingHorizontal: spacingPixels[3], // 12px
-    borderRadius: radiusPixels.md,
-    gap: spacingPixels[1], // 4px
-  },
-  secondaryButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-  },
-  actionButtonText: {
-    fontSize: fontSizePixels.base,
-    fontWeight: '500',
   },
   statsRow: {
     flexDirection: 'row',

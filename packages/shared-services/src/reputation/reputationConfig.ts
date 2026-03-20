@@ -60,8 +60,8 @@ export const TIER_COLORS = {
   },
   bronze: {
     primary: '#CD7F32', // bronze
-    background: '#FEF3C7', // amber-100
-    text: '#92400E', // amber-800
+    background: '#F0E0D0', // warm brown-100
+    text: '#78350F', // brown-800
   },
   silver: {
     primary: '#C0C0C0', // silver

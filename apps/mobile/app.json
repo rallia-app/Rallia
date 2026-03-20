@@ -8,6 +8,10 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "backgroundColor": "#fafafa",
+    "statusBar": {
+      "style": "dark"
+    },
     "scheme": "rallia",
     "splash": {
       "image": "./assets/splash-icon.png",

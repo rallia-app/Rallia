@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,12 +21,15 @@ import {
   useThemeStyles,
   useTranslation,
   useTourSequence,
+  useSportSetup,
   type TranslationKey,
 } from '../hooks';
+import { useSport } from '../context';
 import { CopilotStep, WalkthroughableView } from '../context/TourContext';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { formatDate as formatDateUtil, formatDateMonthYear } from '../utils/dateFormatting';
+import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
 import type { Sport } from '@rallia/shared-types';
 import {
   spacingPixels,
@@ -34,14 +38,11 @@ import {
   fontWeightNumeric,
   primary,
   neutral,
-  shadowsNative,
 } from '@rallia/design-system';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 import RatingBadge from '../components/RatingBadge';
 import ReputationBadge from '../components/ReputationBadge';
-import PortfolioSection, {
-  type PortfolioProof,
-  type PortfolioSport,
-} from '../features/profile/PortfolioSection';
+import SportIcon from '../components/SportIcon';
 
 interface SportWithRating extends Sport {
   isActive: boolean;
@@ -79,8 +80,17 @@ const UserProfile = () => {
   const { t, locale } = useTranslation();
   const toast = useToast();
   const { profile, loading: profileLoading, refetch: refetchProfile } = useProfile();
-  const { player, loading: playerLoading, refetch: refetchPlayer } = usePlayer();
-  const { display: reputationDisplay } = usePlayerReputation(player?.id);
+  const {
+    player,
+    primaryRating,
+    sportRatings,
+    loading: playerLoading,
+    refetch: refetchPlayer,
+  } = usePlayer();
+  const { display: reputationDisplay, loading: reputationLoading } = usePlayerReputation(
+    player?.id
+  );
+  const { userSports, refetch: refetchSportContext } = useSport();
   const loadingCore = profileLoading || playerLoading;
 
   // Theme-aware skeleton colors (aligned with FacilitiesDirectory for consistent, sleek loading UI)
@@ -88,14 +98,29 @@ const UserProfile = () => {
   const skeletonHighlight = isDark ? '#404040' : '#F2F8FC';
 
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [sports, setSports] = useState<SportWithRating[]>([]);
+  const [allSports, setAllSports] = useState<Sport[]>([]);
+  const [loadingAllSports, setLoadingAllSports] = useState(true);
   const [availabilities, setAvailabilities] = useState<AvailabilityGrid>({});
   const [pendingReferenceRequestsCount, setPendingReferenceRequestsCount] = useState(0);
-  const [portfolioProofs, setPortfolioProofs] = useState<PortfolioProof[]>([]);
-  const [loadingSports, setLoadingSports] = useState(true);
   const [loadingAvailabilities, setLoadingAvailabilities] = useState(true);
   const [loadingReferenceRequests, setLoadingReferenceRequests] = useState(true);
-  const [loadingPortfolio, setLoadingPortfolio] = useState(true);
+  const [reactivateConfirm, setReactivateConfirm] = useState<{
+    visible: boolean;
+    sport: SportWithRating | null;
+    recordId: string | null;
+  }>({ visible: false, sport: null, recordId: null });
+
+  // Derive sport cards from shared contexts (updated automatically by SportProfile)
+  const sports: SportWithRating[] = useMemo(() => {
+    if (allSports.length === 0) return [];
+    const activeIds = new Set(userSports.map(s => s.id));
+    return allSports.map(sport => ({
+      ...sport,
+      isActive: activeIds.has(sport.id),
+      isPrimary: false, // Not displayed in sport cards
+      ratingLabel: sportRatings[sport.id]?.label,
+    }));
+  }, [allSports, userSports, sportRatings]);
 
   // Profile screen tour - triggers after main navigation tour is completed
   useTourSequence({
@@ -112,8 +137,107 @@ const UserProfile = () => {
     galleryLabel: t('profile.chooseFromGallery'),
   });
 
+  // Sport activation setup hook (first-time activation flow)
+  const { startSetup, isSettingUp } = useSportSetup({
+    userId: player?.id || '',
+    onComplete: (sportId, sportName) => {
+      navigation.navigate('SportProfile', {
+        sportId,
+        sportName: sportName as 'tennis' | 'pickleball',
+      });
+    },
+    onCancel: () => {
+      // Sport setup was cancelled — nothing extra needed
+    },
+  });
+
+  // Handle sport card press — activation logic for inactive sports
+  const handleSportCardPress = useCallback(
+    async (sport: SportWithRating) => {
+      if (sport.isActive) {
+        // Active sport — navigate to SportProfile
+        navigation.navigate('SportProfile', {
+          sportId: sport.id,
+          sportName: sport.name as 'tennis' | 'pickleball',
+        });
+        return;
+      }
+
+      // Inactive sport — attempt activation
+      void mediumHaptic();
+
+      if (!player?.id) {
+        Alert.alert(t('alerts.error'), t('errors.userNotAuthenticated'));
+        return;
+      }
+
+      try {
+        // Check if a player_sport record exists (previously active but deactivated)
+        const { data: existingRecord, error } = await withTimeout(
+          (async () =>
+            supabase
+              .from('player_sport')
+              .select('id, is_active')
+              .eq('player_id', player.id)
+              .eq('sport_id', sport.id)
+              .maybeSingle())(),
+          10000,
+          'Failed to check sport status - connection timeout'
+        );
+
+        if (error) throw error;
+
+        if (existingRecord) {
+          // Previously active — ask for confirmation before reactivating
+          setReactivateConfirm({ visible: true, sport, recordId: existingRecord.id });
+        } else {
+          // Never activated — start mandatory setup flow
+          startSetup(sport.id, sport.name as 'tennis' | 'pickleball');
+        }
+      } catch (err) {
+        Logger.error('Failed to activate sport', err as Error, { sportId: sport.id });
+        toast.error(getNetworkErrorMessage(err));
+      }
+    },
+    [player?.id, navigation, startSetup, refetchSportContext, refetchPlayer, toast, t]
+  );
+
+  // Confirm reactivation of a previously active sport
+  const [reactivating, setReactivating] = useState(false);
+  const handleConfirmReactivate = useCallback(async () => {
+    const { sport, recordId } = reactivateConfirm;
+    if (!sport || !recordId) return;
+
+    try {
+      setReactivating(true);
+      const updateResult = await withTimeout(
+        (async () =>
+          supabase.from('player_sport').update({ is_active: true }).eq('id', recordId))(),
+        10000,
+        'Failed to activate sport - connection timeout'
+      );
+
+      if (updateResult.error) throw updateResult.error;
+
+      await refetchSportContext();
+      await refetchPlayer();
+      toast.success(t('alerts.sportActivated', { sport: sport.display_name }));
+      setReactivateConfirm({ visible: false, sport: null, recordId: null });
+      navigation.navigate('SportProfile', {
+        sportId: sport.id,
+        sportName: sport.name as 'tennis' | 'pickleball',
+      });
+    } catch (err) {
+      Logger.error('Failed to reactivate sport', err as Error, { sportId: sport.id });
+      toast.error(getNetworkErrorMessage(err));
+    } finally {
+      setReactivating(false);
+    }
+  }, [reactivateConfirm, refetchSportContext, refetchPlayer, toast, t, navigation]);
+
   // Check authentication on mount and fetch section data once. Profile/player come from
-  // context (fetched by providers). We only refetch after mutations (onSave in sheets, etc.).
+  // context (fetched by providers). Sports active/rating state comes from shared contexts
+  // (SportContext + PlayerContext) which SportProfile updates after changes.
   useEffect(() => {
     const checkAuth = async () => {
       const {
@@ -174,14 +298,60 @@ const UserProfile = () => {
 
       if (updateResult.error) throw updateResult.error;
 
-      await refetchProfile();
-
-      toast.success(t('profile.changePhoto'));
+      toast.success(t('profile.profilePictureUpdated'));
     } catch (error) {
       Logger.error('Failed to upload profile picture', error as Error, { userId: profile?.id });
       toast.error(getNetworkErrorMessage(error));
     } finally {
       setUploadingImage(false);
+    }
+  };
+
+  // Fetch only availabilities (used after saving to avoid full screen reload)
+  const refetchAvailabilities = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    try {
+      setLoadingAvailabilities(true);
+      const availResult = await withTimeout(
+        (async () =>
+          supabase
+            .from('player_availability')
+            .select('day, period, is_active')
+            .eq('player_id', user.id)
+            .eq('is_active', true))(),
+        15000,
+        'Failed to load availability - connection timeout'
+      );
+      if (availResult.error && availResult.error.code !== 'PGRST116') {
+        throw availResult.error;
+      }
+      const availData = availResult.data;
+      const availGrid: AvailabilityGrid = {
+        monday: { morning: false, afternoon: false, evening: false },
+        tuesday: { morning: false, afternoon: false, evening: false },
+        wednesday: { morning: false, afternoon: false, evening: false },
+        thursday: { morning: false, afternoon: false, evening: false },
+        friday: { morning: false, afternoon: false, evening: false },
+        saturday: { morning: false, afternoon: false, evening: false },
+        sunday: { morning: false, afternoon: false, evening: false },
+      };
+      (availData || []).forEach(avail => {
+        const day = avail.day as keyof AvailabilityGrid;
+        const period = avail.period as keyof AvailabilityGrid[keyof AvailabilityGrid];
+        if (availGrid[day] && period in availGrid[day]) {
+          availGrid[day][period] = true;
+        }
+      });
+      setAvailabilities(availGrid);
+    } catch (error) {
+      Logger.error('Failed to fetch availabilities', error as Error);
+      toast.error(getNetworkErrorMessage(error));
+    } finally {
+      setLoadingAvailabilities(false);
     }
   };
 
@@ -191,90 +361,25 @@ const UserProfile = () => {
     } = await supabase.auth.getUser();
     if (!user) return;
 
-    setLoadingSports(true);
+    setLoadingAllSports(true);
     setLoadingAvailabilities(true);
     setLoadingReferenceRequests(true);
-    setLoadingPortfolio(true);
 
-    // Sports: all sports + player_sport + ratings, then merge
+    // Fetch all sports (static data). Active/rating status is derived from shared contexts.
     const fetchSports = async () => {
       try {
-        const [sportsResult, playerSportsResult, ratingsResult] = await Promise.all([
-          withTimeout(
-            (async () => supabase.from('sport').select('*').eq('is_active', true).order('name'))(),
-            15000,
-            'Failed to load sports - connection timeout'
-          ),
-          withTimeout(
-            (async () =>
-              supabase
-                .from('player_sport')
-                .select('sport_id, is_primary, is_active')
-                .eq('player_id', user.id))(),
-            15000,
-            'Failed to load player sports - connection timeout'
-          ),
-          withTimeout(
-            (async () =>
-              supabase
-                .from('player_rating_score')
-                .select(
-                  `
-                  *,
-                  rating_score!player_rating_scores_rating_score_id_fkey (
-                    label,
-                    rating_system ( sport_id )
-                  )
-                `
-                )
-                .eq('player_id', user.id)
-                .order('is_certified', { ascending: false })
-                .order('created_at', { ascending: false }))(),
-            15000,
-            'Failed to load ratings - connection timeout'
-          ),
-        ]);
-        if (sportsResult.error) throw sportsResult.error;
-        if (playerSportsResult.error && playerSportsResult.error.code !== 'PGRST116') {
-          throw playerSportsResult.error;
-        }
-        if (ratingsResult.error && ratingsResult.error.code !== 'PGRST116') {
-          throw ratingsResult.error;
-        }
-        const allSports = sportsResult.data;
-        const playerSports = playerSportsResult.data;
-        const ratingsData = ratingsResult.data;
-        const playerSportsMap = new Map(
-          (playerSports || []).map(ps => [
-            ps.sport_id,
-            { isPrimary: ps.is_primary || false, isActive: ps.is_active || false },
-          ])
+        const sportsResult = await withTimeout(
+          (async () => supabase.from('sport').select('*').eq('is_active', true).order('name'))(),
+          15000,
+          'Failed to load sports - connection timeout'
         );
-        const ratingsMap = new Map<string, string>();
-        (ratingsData || []).forEach(rating => {
-          const ratingScore = rating.rating_score as {
-            label?: string;
-            rating_system?: { sport_id?: string };
-          } | null;
-          const sportId = ratingScore?.rating_system?.sport_id;
-          const displayLabel = ratingScore?.label || '';
-          if (sportId && !ratingsMap.has(sportId)) ratingsMap.set(sportId, displayLabel);
-        });
-        const sportsWithStatus: SportWithRating[] = (allSports || []).map(sport => {
-          const sportInfo = playerSportsMap.get(sport.id);
-          return {
-            ...sport,
-            isActive: sportInfo?.isActive || false,
-            isPrimary: sportInfo?.isPrimary || false,
-            ratingLabel: ratingsMap.get(sport.id),
-          };
-        });
-        setSports(sportsWithStatus);
+        if (sportsResult.error) throw sportsResult.error;
+        setAllSports(sportsResult.data || []);
       } catch (error) {
         Logger.error('Failed to fetch sports', error as Error);
         toast.error(getNetworkErrorMessage(error));
       } finally {
-        setLoadingSports(false);
+        setLoadingAllSports(false);
       }
     };
 
@@ -354,103 +459,7 @@ const UserProfile = () => {
       }
     };
 
-    // Portfolio - all rating proofs across all sports
-    const fetchPortfolio = async () => {
-      try {
-        // First get all player_rating_scores for this user
-        const ratingsResult = await withTimeout(
-          (async () =>
-            supabase
-              .from('player_rating_score')
-              .select(
-                `
-                id,
-                rating_score!player_rating_scores_rating_score_id_fkey (
-                  rating_system (
-                    sport:sport_id (
-                      id,
-                      display_name
-                    )
-                  )
-                )
-              `
-              )
-              .eq('player_id', user.id))(),
-          15000,
-          'Failed to load ratings for portfolio'
-        );
-
-        if (ratingsResult.error) throw ratingsResult.error;
-
-        const ratingIds = (ratingsResult.data || []).map(r => r.id);
-
-        if (ratingIds.length === 0) {
-          setPortfolioProofs([]);
-          return;
-        }
-
-        // Create maps of rating_score_id to sport name and sport id
-        const sportNameMap = new Map<string, string>();
-        const sportIdMap = new Map<string, string>();
-        (ratingsResult.data || []).forEach(rating => {
-          const ratingScore = rating.rating_score as {
-            rating_system?: {
-              sport?: { id?: string; display_name?: string };
-            };
-          } | null;
-          const sport = ratingScore?.rating_system?.sport;
-          if (sport?.display_name) {
-            sportNameMap.set(rating.id, sport.display_name);
-          }
-          if (sport?.id) {
-            sportIdMap.set(rating.id, sport.id);
-          }
-        });
-
-        // Fetch all proofs for these ratings (exclude rejected)
-        const proofsResult = await withTimeout(
-          (async () =>
-            supabase
-              .from('rating_proof')
-              .select(
-                `
-                *,
-                file:file(*)
-              `
-              )
-              .in('player_rating_score_id', ratingIds)
-              .eq('is_active', true)
-              .neq('status', 'rejected')
-              .order('created_at', { ascending: false }))(),
-          15000,
-          'Failed to load portfolio proofs'
-        );
-
-        if (proofsResult.error) throw proofsResult.error;
-
-        // Map proofs with sport names and IDs
-        const portfolioData = (proofsResult.data || []).map((item: Record<string, unknown>) => ({
-          ...item,
-          file: Array.isArray(item.file) && item.file.length > 0 ? item.file[0] : item.file,
-          sport_name: sportNameMap.get(item.player_rating_score_id as string),
-          sport_id: sportIdMap.get(item.player_rating_score_id as string),
-        })) as PortfolioProof[];
-
-        setPortfolioProofs(portfolioData);
-      } catch (error) {
-        Logger.error('Failed to fetch portfolio', error as Error);
-        toast.error(getNetworkErrorMessage(error));
-      } finally {
-        setLoadingPortfolio(false);
-      }
-    };
-
-    await Promise.all([
-      fetchSports(),
-      fetchAvailabilities(),
-      fetchReferenceRequests(),
-      fetchPortfolio(),
-    ]);
+    await Promise.all([fetchSports(), fetchAvailabilities(), fetchReferenceRequests()]);
   };
 
   // Convert DB format to UI format for the overlay
@@ -526,13 +535,6 @@ const UserProfile = () => {
         EVE: 'evening',
       };
 
-      // Get the user's primary sport to save availabilities for
-      const primarySport = sports.find(s => s.isPrimary && s.isActive);
-      if (!primarySport) {
-        toast.error(t('errors.noPrimarySport'));
-        return;
-      }
-
       // Delete existing availabilities for this player
       const deleteResult = await withTimeout(
         (async () => supabase.from('player_availability').delete().eq('player_id', user.id))(),
@@ -593,8 +595,40 @@ const UserProfile = () => {
 
       if (privacyResult.error) throw privacyResult.error;
 
-      await fetchProfileSections();
-      await refetchPlayer(); // Refresh player data to get updated privacy setting
+      // Update local state directly from the saved data
+      const dayMapReverse: Record<string, string> = {
+        Mon: 'monday',
+        Tue: 'tuesday',
+        Wed: 'wednesday',
+        Thu: 'thursday',
+        Fri: 'friday',
+        Sat: 'saturday',
+        Sun: 'sunday',
+      };
+      const timeMapReverse: Record<string, PeriodKey> = {
+        AM: 'morning',
+        PM: 'afternoon',
+        EVE: 'evening',
+      };
+      const newGrid: AvailabilityGrid = {
+        monday: { morning: false, afternoon: false, evening: false },
+        tuesday: { morning: false, afternoon: false, evening: false },
+        wednesday: { morning: false, afternoon: false, evening: false },
+        thursday: { morning: false, afternoon: false, evening: false },
+        friday: { morning: false, afternoon: false, evening: false },
+        saturday: { morning: false, afternoon: false, evening: false },
+        sunday: { morning: false, afternoon: false, evening: false },
+      };
+      (Object.keys(uiAvailabilities) as DayOfWeek[]).forEach(day => {
+        const dbDay = dayMapReverse[day];
+        (Object.keys(uiAvailabilities[day]) as TimeSlot[]).forEach(slot => {
+          const period = timeMapReverse[slot];
+          if (dbDay && period) {
+            newGrid[dbDay][period] = uiAvailabilities[day][slot];
+          }
+        });
+      });
+      setAvailabilities(newGrid);
 
       SheetManager.hide('player-availabilities');
 
@@ -661,7 +695,7 @@ const UserProfile = () => {
             {loadingCore ? (
               <>
                 <SkeletonAvatar
-                  size={120}
+                  size={spacingPixels[20]}
                   backgroundColor={skeletonBg}
                   highlightColor={skeletonHighlight}
                 />
@@ -684,14 +718,11 @@ const UserProfile = () => {
             ) : (
               <>
                 <View style={styles.profilePicWrapper}>
-                  <TouchableOpacity
+                  <View
                     style={[
                       styles.profilePicContainer,
                       { borderColor: colors.primary, backgroundColor: colors.inputBackground },
                     ]}
-                    activeOpacity={0.8}
-                    onPress={openPicker}
-                    disabled={uploadingImage}
                   >
                     {profile?.profile_picture_url || newProfileImage ? (
                       <Image
@@ -702,32 +733,36 @@ const UserProfile = () => {
                             '',
                         }}
                         style={styles.profileImage}
+                        resizeMode="cover"
                       />
                     ) : (
                       <Ionicons name="camera-outline" size={32} color={colors.primary} />
                     )}
                     {uploadingImage && (
                       <View style={styles.uploadingOverlay}>
-                        <ActivityIndicator size="large" color={colors.primaryForeground} />
-                        <Text style={[styles.uploadingText, { color: colors.primaryForeground }]}>
-                          {t('profile.uploading')}
-                        </Text>
+                        <ActivityIndicator size="small" color="#FFFFFF" />
                       </View>
                     )}
-                  </TouchableOpacity>
+                  </View>
                   {!uploadingImage && (
-                    <View
+                    <TouchableOpacity
                       style={[
                         styles.profilePicEditBadge,
                         { backgroundColor: colors.primary, borderColor: colors.card },
                       ]}
+                      onPress={() => {
+                        void lightHaptic();
+                        openPicker();
+                      }}
+                      activeOpacity={0.7}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
                       <Ionicons name="camera-outline" size={14} color={colors.primaryForeground} />
-                    </View>
+                    </TouchableOpacity>
                   )}
                 </View>
                 <Text style={[styles.profilePicHint, { color: colors.textMuted }]}>
-                  {t('profile.tapToChangePhoto')}
+                  {t('profile.tapCameraToChangePhoto')}
                 </Text>
 
                 {/* First and last name first, then username */}
@@ -751,10 +786,17 @@ const UserProfile = () => {
                 {/* Rating & Reputation Badges */}
                 <View style={styles.profileBadgesRow}>
                   <RatingBadge
-                    ratingLabel={sports.find(s => s.isPrimary && s.isActive)?.ratingLabel}
+                    ratingValue={primaryRating?.value}
+                    ratingLabel={primaryRating?.label}
+                    certificationStatus={primaryRating?.badge_status}
                     isDark={isDark}
+                    isLoading={playerLoading}
                   />
-                  <ReputationBadge reputationDisplay={reputationDisplay} isDark={isDark} />
+                  <ReputationBadge
+                    reputationDisplay={reputationDisplay}
+                    isDark={isDark}
+                    isLoading={reputationLoading}
+                  />
                 </View>
               </>
             )}
@@ -799,11 +841,7 @@ const UserProfile = () => {
 
           {loadingCore ? (
             <View
-              style={[
-                styles.card,
-                styles.skeletonCard,
-                { backgroundColor: colors.card, borderColor: colors.border },
-              ]}
+              style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
             >
               <Skeleton
                 width={120}
@@ -836,7 +874,9 @@ const UserProfile = () => {
               </View>
             </View>
           ) : (
-            <View style={[styles.card, { backgroundColor: colors.card }]}>
+            <View
+              style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+            >
               <View style={styles.compactRow}>
                 <Text style={[styles.label, { color: colors.textMuted }]}>
                   {t('profile.fields.firstName')}
@@ -923,11 +963,7 @@ const UserProfile = () => {
 
           {loadingCore ? (
             <View
-              style={[
-                styles.card,
-                styles.skeletonCard,
-                { backgroundColor: colors.card, borderColor: colors.border },
-              ]}
+              style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
             >
               <Skeleton
                 width={80}
@@ -964,7 +1000,9 @@ const UserProfile = () => {
               </View>
             </View>
           ) : (
-            <View style={[styles.card, { backgroundColor: colors.card }]}>
+            <View
+              style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+            >
               {/* Bio - Vertical Layout */}
               <View style={styles.verticalField}>
                 <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>
@@ -1032,11 +1070,7 @@ const UserProfile = () => {
 
           {loadingCore ? (
             <View
-              style={[
-                styles.card,
-                styles.skeletonCard,
-                { backgroundColor: colors.card, borderColor: colors.border },
-              ]}
+              style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
             >
               <Skeleton
                 width={80}
@@ -1080,7 +1114,9 @@ const UserProfile = () => {
               </View>
             </View>
           ) : (
-            <View style={[styles.card, { backgroundColor: colors.card }]}>
+            <View
+              style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+            >
               {player?.address ? (
                 <View style={styles.compactRow}>
                   <Text style={[styles.label, { color: colors.textMuted }]}>
@@ -1115,19 +1151,6 @@ const UserProfile = () => {
           )}
         </View>
 
-        {/* Portfolio - Gallery of all rating proofs */}
-        <PortfolioSection
-          proofs={portfolioProofs}
-          sports={
-            sports
-              .filter(s => s.isActive)
-              .map(s => ({ id: s.id, display_name: s.display_name })) as PortfolioSport[]
-          }
-          loading={loadingPortfolio}
-          skeletonBg={skeletonBg}
-          skeletonHighlight={skeletonHighlight}
-        />
-
         {/* My Sports - Horizontal Cards with Chevrons - Wrapped with CopilotStep */}
         <CopilotStep
           text={t('tour.profileScreen.sports.description')}
@@ -1136,33 +1159,18 @@ const UserProfile = () => {
         >
           <WalkthroughableView style={styles.section}>
             <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleRow}>
-                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
-                  {t('profile.sections.sports')}
-                </Text>
-                {sports.filter(s => !s.isActive).length > 0 && (
-                  <View style={styles.sportsHintInline}>
-                    <Ionicons
-                      name="information-circle-outline"
-                      size={16}
-                      color={colors.textMuted}
-                    />
-                    <Text style={[styles.sportsHintText, { color: colors.textMuted }]}>
-                      {t('profile.sportsHint')}
-                    </Text>
-                  </View>
-                )}
-              </View>
+              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                {t('profile.sections.sports')}
+              </Text>
             </View>
 
-            {loadingSports ? (
+            {loadingAllSports ? (
               <View style={styles.sportsCardsContainer}>
-                {[1, 2, 3].map(i => (
+                {[1, 2].map(i => (
                   <View
                     key={i}
                     style={[
                       styles.sportCard,
-                      styles.skeletonCard,
                       { backgroundColor: colors.card, borderColor: colors.border },
                     ]}
                   >
@@ -1192,18 +1200,20 @@ const UserProfile = () => {
                       styles.sportCard,
                       {
                         backgroundColor: sport.isActive ? colors.card : colors.inputBackground,
+                        borderColor: colors.border,
                       },
                       !sport.isActive && styles.sportCardInactive,
                     ]}
                     activeOpacity={0.7}
-                    onPress={() => {
-                      navigation.navigate('SportProfile', {
-                        sportId: sport.id,
-                        sportName: sport.display_name as 'tennis' | 'pickleball',
-                      });
-                    }}
+                    disabled={isSettingUp}
+                    onPress={() => handleSportCardPress(sport)}
                   >
                     <View style={styles.sportCardLeft}>
+                      <SportIcon
+                        sportName={sport.display_name}
+                        size={20}
+                        color={sport.isActive ? colors.text : colors.textMuted}
+                      />
                       <Text
                         style={[
                           styles.sportName,
@@ -1215,88 +1225,55 @@ const UserProfile = () => {
                         {sport.display_name}
                       </Text>
                       {sport.isActive ? (
-                        <View
-                          style={[
-                            styles.activeBadge,
-                            { backgroundColor: isDark ? primary[900] : primary[100] },
-                          ]}
-                        >
-                          <Text
+                        <>
+                          <View
                             style={[
-                              styles.activeBadgeText,
-                              { color: isDark ? primary[100] : primary[600] },
+                              styles.activeBadge,
+                              { backgroundColor: isDark ? primary[900] : primary[100] },
                             ]}
                           >
-                            {t('profile.status.active')}
-                          </Text>
-                        </View>
+                            <Text
+                              style={[
+                                styles.activeBadgeText,
+                                { color: isDark ? primary[100] : primary[600] },
+                              ]}
+                            >
+                              {t('profile.status.active')}
+                            </Text>
+                          </View>
+                          {sport.ratingLabel && (
+                            <View
+                              style={[
+                                styles.ratingBadge,
+                                { backgroundColor: isDark ? primary[900] : primary[100] },
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.ratingBadgeText,
+                                  { color: isDark ? primary[100] : primary[600] },
+                                ]}
+                              >
+                                {sport.ratingLabel}
+                              </Text>
+                            </View>
+                          )}
+                        </>
                       ) : (
-                        <View
-                          style={[
-                            styles.inactiveBadge,
-                            { backgroundColor: colors.inputBackground },
-                          ]}
-                        >
-                          <Text style={[styles.inactiveBadgeText, { color: colors.textMuted }]}>
-                            {t('profile.status.inactive')}
-                          </Text>
-                        </View>
-                      )}
-                      {sport.isActive && sport.ratingLabel && (
-                        <View
-                          style={[
-                            styles.ratingBadge,
-                            { backgroundColor: isDark ? primary[900] : primary[100] },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.ratingBadgeText,
-                              { color: isDark ? primary[100] : primary[600] },
-                            ]}
-                          >
-                            {sport.ratingLabel}
+                        <View style={styles.inactiveBadge}>
+                          <Text style={[styles.tapToActivateText, { color: colors.textMuted }]}>
+                            {t('profile.sport.tapToActivate')}
                           </Text>
                         </View>
                       )}
                     </View>
-                    <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                    {sport.isActive ? (
+                      <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                    ) : (
+                      <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
+                    )}
                   </TouchableOpacity>
                 ))}
-                {/* Add more sports card - shown when user has < 2 active sports and inactive sports exist */}
-                {sports.filter(s => s.isActive).length < 2 &&
-                  sports.filter(s => !s.isActive).length > 0 && (
-                    <TouchableOpacity
-                      style={[
-                        styles.sportCard,
-                        styles.addMoreSportsCard,
-                        { backgroundColor: colors.inputBackground, borderColor: colors.border },
-                      ]}
-                      activeOpacity={0.7}
-                      onPress={() => {
-                        const firstInactiveSport = sports.find(s => !s.isActive);
-                        if (firstInactiveSport) {
-                          navigation.navigate('SportProfile', {
-                            sportId: firstInactiveSport.id,
-                            sportName: firstInactiveSport.display_name as 'tennis' | 'pickleball',
-                          });
-                        }
-                      }}
-                    >
-                      <View style={styles.addMoreSportsContent}>
-                        <Ionicons name="add-circle-outline" size={24} color={primary[500]} />
-                        <View style={styles.addMoreSportsText}>
-                          <Text style={[styles.addMoreSportsTitle, { color: colors.text }]}>
-                            {t('profile.addMoreSports')}
-                          </Text>
-                          <Text style={[styles.addMoreSportsHint, { color: colors.textMuted }]}>
-                            {t('profile.addMoreSportsHint')}
-                          </Text>
-                        </View>
-                      </View>
-                      <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-                    </TouchableOpacity>
-                  )}
                 {sports.length === 0 && (
                   <Text style={[styles.noDataText, { color: colors.textMuted }]}>
                     {t('profile.status.noSports')}
@@ -1339,11 +1316,7 @@ const UserProfile = () => {
 
             {loadingAvailabilities ? (
               <View
-                style={[
-                  styles.card,
-                  styles.skeletonCard,
-                  { backgroundColor: colors.card, borderColor: colors.border },
-                ]}
+                style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
               >
                 <View style={styles.gridContainer}>
                   {[1, 2, 3, 4, 5, 6, 7].map(row => (
@@ -1370,19 +1343,24 @@ const UserProfile = () => {
                 </View>
               </View>
             ) : (
-              <View style={[styles.card, { backgroundColor: colors.card }]}>
+              <View
+                style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+              >
                 {/* Availability Grid - Same as PlayerAvailabilitiesOverlay */}
                 <View style={styles.gridContainer}>
                   {/* Header Row */}
                   <View style={styles.gridRow}>
                     <View style={styles.dayCell} />
-                    {['AM', 'PM', 'EVE'].map(slot => (
-                      <View key={slot} style={styles.headerCell}>
-                        <Text size="xs" weight="semibold" color={colors.textMuted}>
-                          {slot}
-                        </Text>
-                      </View>
-                    ))}
+                    {(['AM', 'PM', 'EVE'] as const).map(slot => {
+                      const labelKey = slot === 'AM' ? 'am' : slot === 'PM' ? 'pm' : 'eve';
+                      return (
+                        <View key={slot} style={styles.headerCell}>
+                          <Text size="xs" weight="semibold" color={colors.textMuted}>
+                            {t(`playerProfile.availability.${labelKey}` as TranslationKey)}
+                          </Text>
+                        </View>
+                      );
+                    })}
                   </View>
 
                   {/* Day Rows */}
@@ -1439,7 +1417,7 @@ const UserProfile = () => {
             </View>
 
             <TouchableOpacity
-              style={[styles.card, { backgroundColor: colors.card }]}
+              style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
               onPress={() => navigation.navigate('IncomingReferenceRequests')}
               activeOpacity={0.7}
             >
@@ -1487,6 +1465,20 @@ const UserProfile = () => {
         {/* Bottom Spacing */}
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Reactivate sport confirmation */}
+      <ConfirmationModal
+        visible={reactivateConfirm.visible}
+        onClose={() => setReactivateConfirm({ visible: false, sport: null, recordId: null })}
+        onConfirm={handleConfirmReactivate}
+        title={t('profile.sport.reactivateTitle')}
+        message={t('profile.sport.reactivateMessage', {
+          sport: reactivateConfirm.sport?.display_name ?? '',
+        })}
+        confirmLabel={t('profile.sport.reactivateConfirm')}
+        cancelLabel={t('common.cancel')}
+        isLoading={reactivating}
+      />
     </SafeAreaView>
   );
 };
@@ -1537,6 +1529,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
+    overflow: 'hidden',
   },
   profilePicEditBadge: {
     position: 'absolute',
@@ -1599,29 +1592,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: spacingPixels[2],
-  },
-  sportsHintInline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[1],
-  },
-  sportsHintText: {
-    fontSize: fontSizePixels.xs,
-  },
   editIconButton: {
     padding: spacingPixels[1],
   },
   card: {
     borderRadius: radiusPixels.xl,
     padding: spacingPixels[4],
-    ...shadowsNative.sm,
-  },
-  skeletonCard: {
     borderWidth: 1,
   },
   compactRow: {
@@ -1685,31 +1661,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderRadius: radiusPixels.xl,
     padding: spacingPixels[4],
-    ...shadowsNative.sm,
+    minHeight: spacingPixels[14],
+    borderWidth: 1,
   },
   sportCardInactive: {
     opacity: 0.7,
-  },
-  addMoreSportsCard: {
-    borderWidth: 1,
-    borderStyle: 'dashed',
-  },
-  addMoreSportsContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[3],
-    flex: 1,
-  },
-  addMoreSportsText: {
-    flex: 1,
-  },
-  addMoreSportsTitle: {
-    fontSize: fontSizePixels.base,
-    fontWeight: fontWeightNumeric.semibold,
-  },
-  addMoreSportsHint: {
-    fontSize: fontSizePixels.xs,
-    marginTop: spacingPixels[0.5],
   },
   sportCardLeft: {
     flexDirection: 'row',
@@ -1734,11 +1690,10 @@ const styles = StyleSheet.create({
   inactiveBadge: {
     paddingHorizontal: spacingPixels[2.5],
     paddingVertical: spacingPixels[1],
-    borderRadius: radiusPixels.xl,
   },
-  inactiveBadgeText: {
+  tapToActivateText: {
     fontSize: fontSizePixels.xs,
-    fontWeight: fontWeightNumeric.semibold,
+    fontWeight: fontWeightNumeric.medium,
   },
   ratingBadge: {
     paddingHorizontal: spacingPixels[2.5],
@@ -1786,17 +1741,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    width: spacingPixels[20],
+    height: spacingPixels[20],
     borderRadius: radiusPixels.full,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  uploadingText: {
-    marginTop: spacingPixels[2],
-    fontSize: fontSizePixels.xs,
-    fontWeight: fontWeightNumeric.semibold,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   // Reference Request Styles
   referenceRequestRow: {

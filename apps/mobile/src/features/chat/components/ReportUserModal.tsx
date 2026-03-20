@@ -4,18 +4,10 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-  TextInput,
-  Image,
-} from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Alert, TextInput, Image } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, Button } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation, useImagePicker } from '../../../hooks';
 import { createUserReport, type ReportReason, REPORT_REASON_LABELS } from '@rallia/shared-services';
 import { radiusPixels, primary, status, spacingPixels } from '@rallia/design-system';
@@ -295,34 +287,25 @@ export function ReportUserActionSheet({ payload }: SheetProps<'report-user'>) {
 
           {/* Sticky footer */}
           <View style={[styles.footer, { borderTopColor: colors.border }]}>
-            <TouchableOpacity
-              style={[
-                styles.submitButton,
-                {
-                  backgroundColor: selectedReason ? status.error.DEFAULT : colors.textMuted,
-                  opacity: isSubmitting ? 0.6 : 1,
-                },
-              ]}
-              onPress={handleSubmit}
+            <Button
+              variant="primary"
+              size="lg"
+              fullWidth
+              destructive
+              loading={isSubmitting}
               disabled={!selectedReason || isSubmitting}
-              activeOpacity={0.8}
+              onPress={handleSubmit}
+              isDark={isDark}
+              leftIcon={
+                !isSubmitting ? <Ionicons name="flag-outline" size={18} color="#fff" /> : undefined
+              }
             >
-              {isSubmitting ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
-                  <Text size="lg" weight="semibold" color="#fff">
-                    {isUploadingImages ? t('chat.report.uploadingImages') : t('common.submitting')}
-                  </Text>
-                </View>
-              ) : (
-                <>
-                  <Ionicons name="flag-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
-                  <Text size="lg" weight="semibold" color="#fff">
-                    {t('chat.report.submit')}
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
+              {isSubmitting
+                ? isUploadingImages
+                  ? t('chat.report.uploadingImages')
+                  : t('common.submitting')
+                : t('chat.report.submit')}
+            </Button>
           </View>
         </View>
       </ActionSheet>
@@ -432,13 +415,5 @@ const styles = StyleSheet.create({
     padding: spacingPixels[4],
     borderTopWidth: 1,
     paddingBottom: spacingPixels[4],
-  },
-  submitButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    gap: spacingPixels[2],
   },
 });

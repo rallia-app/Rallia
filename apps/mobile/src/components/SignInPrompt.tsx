@@ -4,9 +4,9 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Animated, Dimensions } from 'react-native';
+import { View, StyleSheet, Animated, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, Button } from '@rallia/shared-components';
 import { spacingPixels, fontSizePixels, radiusPixels, primary } from '@rallia/design-system';
 import { useThemeStyles } from '../hooks';
 
@@ -130,16 +130,16 @@ const SignInPrompt: React.FC<SignInPromptProps> = ({
         </Text>
 
         {/* Sign In Button */}
-        <TouchableOpacity
+        <Button
+          variant="primary"
+          size="md"
+          rounded
           onPress={onSignIn}
-          activeOpacity={0.85}
-          style={[styles.button, { backgroundColor: primary[500] }]}
+          leftIcon={<Ionicons name="log-in-outline" size={20} color="#FFFFFF" />}
+          isDark={isDark}
         >
-          <Ionicons name="log-in-outline" size={20} color="#FFFFFF" />
-          <Text size="base" weight="semibold" color="#FFFFFF" style={styles.buttonText}>
-            {buttonText}
-          </Text>
-        </TouchableOpacity>
+          {buttonText}
+        </Button>
       </Animated.View>
     </View>
   );
@@ -183,18 +183,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: fontSizePixels.base * 1.6,
     marginBottom: spacingPixels[8],
-  },
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacingPixels[4],
-    paddingHorizontal: spacingPixels[10],
-    borderRadius: radiusPixels.xl,
-    gap: spacingPixels[2],
-  },
-  buttonText: {
-    letterSpacing: 0.3,
   },
 });
 
