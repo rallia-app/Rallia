@@ -56,12 +56,12 @@ export const formatCompactNumber = (num: number): string => {
 export const formatPhoneNumber = (phone: string): string => {
   // Remove all non-digits
   const cleaned = phone.replace(/\D/g, '');
-  
+
   // Format as (XXX) XXX-XXXX
   if (cleaned.length === 10) {
     return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
   }
-  
+
   // Return as-is if not 10 digits
   return phone;
 };
@@ -79,7 +79,7 @@ export const formatRating = (rating: number): string => {
 export const formatOrdinal = (num: number): string => {
   const j = num % 10;
   const k = num % 100;
-  
+
   if (j === 1 && k !== 11) {
     return `${num}st`;
   }

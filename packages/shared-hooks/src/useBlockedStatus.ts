@@ -1,6 +1,6 @@
 /**
  * useBlockedStatus Hook
- * 
+ *
  * Manages the blocked status between two users.
  * Used in both PlayerProfile and Chat screens.
  */
@@ -28,15 +28,15 @@ interface UseBlockedStatusResult {
 
 /**
  * Hook to check and manage blocked status between the current user and another user
- * 
+ *
  * @param currentUserId - The current authenticated user's ID
  * @param otherUserId - The other user's ID to check block status for
  * @returns Object containing block status and mutation functions
- * 
+ *
  * @example
  * ```tsx
  * const { isBlocked, toggleBlock, isToggling } = useBlockedStatus(myUserId, otherUserId);
- * 
+ *
  * <Button onPress={toggleBlock} disabled={isToggling}>
  *   {isBlocked ? 'Unblock' : 'Block'}
  * </Button>
@@ -50,23 +50,27 @@ export const useBlockedStatus = (
   const queryKey = ['blockedStatus', currentUserId, otherUserId];
 
   // Query to check if current user has blocked the other user
-  const { data: isBlocked = false, isLoading, refetch } = useQuery({
+  const {
+    data: isBlocked = false,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey,
     queryFn: async () => {
       if (!currentUserId || !otherUserId) return false;
-      
+
       const { data, error } = await supabase
         .from('player_block')
         .select('id')
         .eq('player_id', currentUserId)
         .eq('blocked_player_id', otherUserId)
         .maybeSingle();
-      
+
       if (error) {
         console.error('Error checking blocked status:', error);
         return false;
       }
-      
+
       return !!data;
     },
     enabled: !!currentUserId && !!otherUserId,
@@ -80,12 +84,10 @@ export const useBlockedStatus = (
         throw new Error('Missing user IDs');
       }
 
-      const { error } = await supabase
-        .from('player_block')
-        .insert({
-          player_id: currentUserId,
-          blocked_player_id: otherUserId,
-        });
+      const { error } = await supabase.from('player_block').insert({
+        player_id: currentUserId,
+        blocked_player_id: otherUserId,
+      });
 
       if (error) throw error;
     },
@@ -184,17 +186,17 @@ export const useBlockedUserIds = (currentUserId: string | undefined) => {
     queryKey: ['blockedUserIds', currentUserId],
     queryFn: async () => {
       if (!currentUserId) return new Set<string>();
-      
+
       const { data, error } = await supabase
         .from('player_block')
         .select('blocked_player_id')
         .eq('player_id', currentUserId);
-      
+
       if (error) {
         console.error('Error fetching blocked user IDs:', error);
         return new Set<string>();
       }
-      
+
       return new Set(data?.map(row => row.blocked_player_id) || []);
     },
     enabled: !!currentUserId,

@@ -52,6 +52,7 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
   const [isSearching, setIsSearching] = useState(false);
   const [addAsModerator, setAddAsModerator] = useState(false);
   const [addedMemberIds, setAddedMemberIds] = useState<string[]>([]);
+  const [addingMemberId, setAddingMemberId] = useState<string | null>(null);
   const debouncedSearch = useDebounce(searchQuery, 300);
 
   // Mutations
@@ -66,6 +67,7 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
     setSearchResults([]);
     setAddAsModerator(false);
     setAddedMemberIds([]);
+    setAddingMemberId(null);
     SheetManager.hide('add-community-member');
   }, []);
 
@@ -178,6 +180,7 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
       if (!playerId) return;
 
       lightHaptic();
+      setAddingMemberId(memberPlayerId);
       try {
         if (isModerator) {
           // Moderator: Direct add
@@ -218,6 +221,8 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
           addAsModerator,
         });
         toast.error(errorMessage);
+      } finally {
+        setAddingMemberId(null);
       }
     },
     [
@@ -233,44 +238,45 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
     ]
   );
 
-  const isPending = addMemberMutation.isPending || referMemberMutation.isPending;
-
   const renderPlayerItem = useCallback(
-    ({ item }: { item: PlayerProfile }) => (
-      <View style={[styles.playerItem, { borderBottomColor: colors.border }]}>
-        <View style={[styles.playerAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-          {item.profile_picture_url ? (
-            <Image source={{ uri: item.profile_picture_url }} style={styles.avatarImage} />
-          ) : (
-            <Ionicons name="person-outline" size={24} color={colors.textMuted} />
-          )}
-        </View>
-        <View style={styles.playerInfo}>
-          <Text weight="medium" style={{ color: colors.text }}>
-            {item.display_name ||
-              `${item.first_name || ''} ${item.last_name || ''}`.trim() ||
-              'Unknown'}
-          </Text>
-          {item.city && (
-            <Text size="sm" style={{ color: colors.textSecondary }}>
-              {item.city}
+    ({ item }: { item: PlayerProfile }) => {
+      const isAddingThis = addingMemberId === item.id;
+      const fullName = `${item.first_name || ''} ${item.last_name || ''}`.trim() || 'Unknown';
+
+      return (
+        <View style={[styles.playerItem, { borderBottomColor: colors.border }]}>
+          <View style={[styles.playerAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+            {item.profile_picture_url ? (
+              <Image source={{ uri: item.profile_picture_url }} style={styles.avatarImage} />
+            ) : (
+              <Ionicons name="person-outline" size={24} color={colors.textMuted} />
+            )}
+          </View>
+          <View style={styles.playerInfo}>
+            <Text weight="medium" style={{ color: colors.text }}>
+              {fullName}
             </Text>
-          )}
+            {item.city && (
+              <Text size="sm" style={{ color: colors.textSecondary }}>
+                {item.city}
+              </Text>
+            )}
+          </View>
+          <TouchableOpacity
+            style={[styles.addButton, { backgroundColor: colors.primary }]}
+            onPress={() => handleAddOrReferMember(item.id)}
+            disabled={addingMemberId !== null}
+          >
+            {isAddingThis ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Ionicons name="add-outline" size={20} color="#FFFFFF" />
+            )}
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={[styles.addButton, { backgroundColor: colors.primary }]}
-          onPress={() => handleAddOrReferMember(item.id)}
-          disabled={isPending}
-        >
-          {isPending ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Ionicons name="add-outline" size={20} color="#FFFFFF" />
-          )}
-        </TouchableOpacity>
-      </View>
-    ),
-    [colors, isDark, handleAddOrReferMember, isPending]
+      );
+    },
+    [colors, isDark, handleAddOrReferMember, addingMemberId]
   );
 
   return (
@@ -282,6 +288,7 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
       <View style={styles.container}>
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerPlaceholder} />
           <Text weight="semibold" size="lg" style={{ color: colors.text }}>
             {isModerator ? t('community.addCommunityMember') : t('community.referAPlayer')}
           </Text>
@@ -380,6 +387,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
+  },
+  headerPlaceholder: {
+    width: 32,
   },
   closeButton: {
     padding: 4,

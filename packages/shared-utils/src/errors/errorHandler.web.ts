@@ -8,11 +8,7 @@
 /**
  * Show error message to user
  */
-export const showError = (
-  title: string,
-  message: string,
-  onDismiss?: () => void
-): void => {
+export const showError = (title: string, message: string, onDismiss?: () => void): void => {
   alert(`${title}\n\n${message}`);
   onDismiss?.();
 };
@@ -20,11 +16,7 @@ export const showError = (
 /**
  * Show success message to user
  */
-export const showSuccess = (
-  title: string,
-  message: string,
-  onDismiss?: () => void
-): void => {
+export const showSuccess = (title: string, message: string, onDismiss?: () => void): void => {
   alert(`${title}\n\n${message}`);
   onDismiss?.();
 };
@@ -32,11 +24,7 @@ export const showSuccess = (
 /**
  * Show warning message to user
  */
-export const showWarning = (
-  title: string,
-  message: string,
-  onDismiss?: () => void
-): void => {
+export const showWarning = (title: string, message: string, onDismiss?: () => void): void => {
   alert(`${title}\n\n${message}`);
   onDismiss?.();
 };

@@ -83,12 +83,13 @@ function generateShareToken(): string {
 }
 
 /**
- * Generate share link from token
+ * Generate share link for a match.
+ * Uses the same /match/{id} deep link format as the social share from MatchDetailSheet.
+ * The optional ref param preserves the share token for per-recipient analytics.
  */
-function generateShareLink(token: string): string {
-  // This will be the deep link that opens the app or web page
-  // TODO: Configure this with your actual app scheme and domain
-  return `https://rallia.app/join/${token}`;
+function generateShareLink(matchId: string, token?: string): string {
+  const base = `https://rallia.app/match/${matchId}`;
+  return token ? `${base}?ref=${token}` : base;
 }
 
 /**
@@ -99,35 +100,65 @@ async function generateShareMessage(
   shareLink: string,
   senderName?: string
 ): Promise<string> {
-  // Fetch match details
+  // Fetch match details including participant count
   const { data: match, error } = await supabase
     .from('match')
     .select(
       `
       *,
-      sport:sport_id (name)
+      sport:sport_id (name),
+      participants:match_participant!match_id (status)
     `
     )
     .eq('id', matchId)
     .single();
 
   if (error || !match) {
-    // Fallback message
-    return `Join me for a game! ${shareLink}`;
+    return senderName
+      ? `${senderName} invited you to play on Rallia!\n\n${shareLink}`
+      : `You're invited to play on Rallia!\n\n${shareLink}`;
   }
 
   const sportName = match.sport?.name || 'game';
-  const matchDate = new Date(match.match_date).toLocaleDateString('en-US', {
-    weekday: 'long',
+
+  // Parse date without timezone shift (YYYY-MM-DD)
+  const [year, month, day] = (match.match_date as string).split('-').map(Number);
+  const dateObj = new Date(year, month - 1, day);
+  const matchDate = dateObj.toLocaleDateString('en-US', {
+    weekday: 'short',
     month: 'short',
     day: 'numeric',
   });
+
   const matchTime = match.start_time?.substring(0, 5) || '';
-  const location = match.location_name || 'TBD';
+  const location = match.location_name || match.facility?.name || 'TBD';
 
-  const greeting = senderName ? `${senderName} invites you` : "You're invited";
+  // Compute open spots
+  const totalSlots = match.format === 'doubles' ? 4 : 2;
+  const joinedCount =
+    (match.participants as Array<{ status: string }> | null)?.filter(p => p.status === 'joined')
+      .length ?? 0;
+  const spotsLeft = Math.max(0, totalSlots - joinedCount);
 
-  return `🎾 ${greeting} to play ${sportName}!\n\n📅 ${matchDate} at ${matchTime}\n📍 ${location}\n\nJoin the game: ${shareLink}`;
+  // Build message matching the social share format from shareUtils
+  const inviteText = senderName
+    ? `${senderName} invited you to play ${sportName}!`
+    : `Join me for ${sportName}!`;
+
+  const lines: string[] = [inviteText, '', `📅 ${matchDate} at ${matchTime}`, `📍 ${location}`];
+
+  if (match.format) {
+    const formatLabel = match.format === 'doubles' ? 'Doubles' : 'Singles';
+    lines.push(`👥 ${formatLabel}`);
+  }
+
+  if (spotsLeft > 0) {
+    lines.push(`🎯 ${spotsLeft} ${spotsLeft === 1 ? 'spot' : 'spots'} left`);
+  }
+
+  lines.push('', shareLink);
+
+  return lines.join('\n');
 }
 
 // ============================================================================
@@ -156,10 +187,9 @@ export async function shareMatchWithContacts(input: ShareMatchInput): Promise<Sh
     .single();
 
   const senderName =
-    profile?.display_name ||
     (profile?.first_name && profile?.last_name
       ? `${profile.first_name} ${profile.last_name}`
-      : profile?.first_name);
+      : profile?.first_name) || profile?.display_name;
 
   // Create the share record
   const { data: share, error: shareError } = await supabase
@@ -198,7 +228,7 @@ export async function shareMatchWithContacts(input: ShareMatchInput): Promise<Sh
     throw new Error(`Failed to create recipients: ${recipientsError.message}`);
   }
 
-  const shareLink = generateShareLink(token);
+  const shareLink = generateShareLink(input.matchId, token);
   const shareMessage = await generateShareMessage(input.matchId, shareLink, senderName);
 
   return {

@@ -58,10 +58,7 @@ function escapeCSVValue(value: unknown): string {
 /**
  * Convert an array of objects to CSV format
  */
-export function toCSV<T>(
-  data: T[],
-  columns: ExportColumn<T>[]
-): string {
+export function toCSV<T>(data: T[], columns: ExportColumn<T>[]): string {
   // Create header row
   const headers = columns.map(col => escapeCSVValue(col.header));
   const headerRow = headers.join(',');
@@ -71,9 +68,10 @@ export function toCSV<T>(
     const values = columns.map(col => {
       const key = col.key as keyof T;
       const rowRecord = row as Record<string, unknown>;
-      const value = typeof key === 'string' && (key as string).includes('.')
-        ? getNestedValue(rowRecord, key as string)
-        : rowRecord[key as string];
+      const value =
+        typeof key === 'string' && (key as string).includes('.')
+          ? getNestedValue(rowRecord, key as string)
+          : rowRecord[key as string];
 
       if (col.formatter) {
         return escapeCSVValue(col.formatter(value, row));
@@ -113,30 +111,36 @@ function generateHTMLTable<T>(
   options: PDFExportOptions
 ): string {
   const headerCells = columns
-    .map(col => `<th style="border: 1px solid #ddd; padding: 8px; background-color: #4a90d9; color: white; text-align: left;">${escapeHTML(col.header)}</th>`)
+    .map(
+      col =>
+        `<th style="border: 1px solid #ddd; padding: 8px; background-color: #4a90d9; color: white; text-align: left;">${escapeHTML(col.header)}</th>`
+    )
     .join('');
 
-  const rows = data.map((row, index) => {
-    const rowRecord = row as Record<string, unknown>;
-    const cells = columns.map(col => {
-      const key = col.key as keyof T;
-      const value = typeof key === 'string' && (key as string).includes('.')
-        ? getNestedValue(rowRecord, key as string)
-        : rowRecord[key as string];
-      
-      const displayValue = col.formatter 
-        ? col.formatter(value, row)
-        : (value ?? '');
-      
-      return `<td style="border: 1px solid #ddd; padding: 8px;">${escapeHTML(String(displayValue))}</td>`;
-    }).join('');
-    
-    const bgColor = index % 2 === 0 ? '#ffffff' : '#f9f9f9';
-    return `<tr style="background-color: ${bgColor};">${cells}</tr>`;
-  }).join('');
+  const rows = data
+    .map((row, index) => {
+      const rowRecord = row as Record<string, unknown>;
+      const cells = columns
+        .map(col => {
+          const key = col.key as keyof T;
+          const value =
+            typeof key === 'string' && (key as string).includes('.')
+              ? getNestedValue(rowRecord, key as string)
+              : rowRecord[key as string];
+
+          const displayValue = col.formatter ? col.formatter(value, row) : (value ?? '');
+
+          return `<td style="border: 1px solid #ddd; padding: 8px;">${escapeHTML(String(displayValue))}</td>`;
+        })
+        .join('');
+
+      const bgColor = index % 2 === 0 ? '#ffffff' : '#f9f9f9';
+      return `<tr style="background-color: ${bgColor};">${cells}</tr>`;
+    })
+    .join('');
 
   const timestamp = new Date().toLocaleString();
-  
+
   return `
     <!DOCTYPE html>
     <html>
@@ -267,10 +271,10 @@ export async function exportData<T>(
     // Generate filename with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const filename = `${options.filename}_${timestamp}.${fileExtension}`;
-    
+
     // Create file in cache directory
     const file = new File(Paths.cache, filename);
-    
+
     // Write file content
     await file.write(content);
 
@@ -376,18 +380,18 @@ export const userExportColumns: ExportColumn<UserExportData>[] = [
   {
     key: 'created_at',
     header: 'Created At',
-    formatter: (value) => value ? new Date(value as string).toLocaleDateString() : '',
+    formatter: value => (value ? new Date(value as string).toLocaleDateString() : ''),
   },
   {
     key: 'last_active',
     header: 'Last Active',
-    formatter: (value) => value ? new Date(value as string).toLocaleDateString() : 'Never',
+    formatter: value => (value ? new Date(value as string).toLocaleDateString() : 'Never'),
   },
   { key: 'status', header: 'Status' },
   {
     key: 'email_verified',
     header: 'Email Verified',
-    formatter: (value) => value ? 'Yes' : 'No',
+    formatter: value => (value ? 'Yes' : 'No'),
   },
 ];
 
@@ -431,7 +435,7 @@ export const auditLogExportColumns: ExportColumn<AuditLogExportData>[] = [
   {
     key: 'created_at',
     header: 'Timestamp',
-    formatter: (value) => value ? new Date(value as string).toLocaleString() : '',
+    formatter: value => (value ? new Date(value as string).toLocaleString() : ''),
   },
   { key: 'admin_name', header: 'Admin' },
   { key: 'action_type', header: 'Action' },

@@ -1,6 +1,6 @@
 /**
  * Jest Setup for shared-hooks package
- * 
+ *
  * Mocks and global test configuration
  */
 

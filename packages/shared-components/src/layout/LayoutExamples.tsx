@@ -11,7 +11,7 @@ import { Button } from '../foundation/Button.native';
 
 /**
  * Example 1: Basic Container Usage
- * 
+ *
  * Demonstrates how Container provides consistent padding and max-width
  */
 export const ContainerExample: React.FC = () => {
@@ -55,7 +55,7 @@ export const ContainerExample: React.FC = () => {
 
 /**
  * Example 2: Stack Layouts
- * 
+ *
  * Demonstrates VStack and HStack for consistent spacing
  */
 export const StackExample: React.FC = () => {
@@ -125,7 +125,7 @@ export const StackExample: React.FC = () => {
 
 /**
  * Example 3: Card Variants
- * 
+ *
  * Demonstrates different card styles
  */
 export const CardExample: React.FC = () => {
@@ -179,7 +179,9 @@ export const CardExample: React.FC = () => {
         {/* Card with custom padding and border radius */}
         <Card padding={24} borderRadius={20} backgroundColor="#F3E5F5">
           <Heading level={3}>Custom Styled Card</Heading>
-          <Text>This card has custom padding (24px), border radius (20px), and background color.</Text>
+          <Text>
+            This card has custom padding (24px), border radius (20px), and background color.
+          </Text>
         </Card>
       </VStack>
     </Container>
@@ -188,7 +190,7 @@ export const CardExample: React.FC = () => {
 
 /**
  * Example 4: Divider Usage
- * 
+ *
  * Demonstrates horizontal and vertical dividers
  */
 export const DividerExample: React.FC = () => {
@@ -236,7 +238,7 @@ export const DividerExample: React.FC = () => {
 
 /**
  * Example 5: Spacer Usage
- * 
+ *
  * Demonstrates fixed and flexible spacers
  */
 export const SpacerExample: React.FC = () => {
@@ -288,7 +290,7 @@ export const SpacerExample: React.FC = () => {
 
 /**
  * Example 6: Real-World Profile Screen
- * 
+ *
  * Demonstrates combining all layout components
  */
 export const ProfileScreenExample: React.FC = () => {
@@ -299,14 +301,13 @@ export const ProfileScreenExample: React.FC = () => {
         <Card variant="elevated" padding={20}>
           <VStack spacing={16} align="center">
             {/* Profile picture placeholder */}
-            <Card
-              style={styles.profilePicture}
-              backgroundColor="#E0E0E0"
-            >
+            <Card style={styles.profilePicture} backgroundColor="#E0E0E0">
               <Text>👤</Text>
             </Card>
             <Heading level={2}>John Doe</Heading>
-            <Text variant="caption" color="#666">john.doe@example.com</Text>
+            <Text variant="caption" color="#666">
+              john.doe@example.com
+            </Text>
           </VStack>
         </Card>
 
@@ -343,25 +344,25 @@ export const ProfileScreenExample: React.FC = () => {
             <Spacer size={12} />
             <Divider />
             <Spacer size={12} />
-            
+
             <Card variant="outlined" onPress={() => {}}>
               <HStack justify="space-between" align="center">
                 <Text>Edit Profile</Text>
                 <Text>→</Text>
               </HStack>
             </Card>
-            
+
             <Spacer size={8} />
-            
+
             <Card variant="outlined" onPress={() => {}}>
               <HStack justify="space-between" align="center">
                 <Text>Change Password</Text>
                 <Text>→</Text>
               </HStack>
             </Card>
-            
+
             <Spacer size={8} />
-            
+
             <Card variant="outlined" onPress={() => {}}>
               <HStack justify="space-between" align="center">
                 <Text>Notification Preferences</Text>

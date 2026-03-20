@@ -11,7 +11,7 @@ import type { EmailContent, InvitationEmailPayload } from '../types.ts';
 export function renderInvitationEmail(
   payload: InvitationEmailPayload,
   locale: string = 'en-US',
-  siteUrl?: string,
+  siteUrl?: string
 ): EmailContent {
   const T = EMAIL_TOKENS;
 

@@ -59,15 +59,15 @@ export interface SkeletonProps {
 /**
  * Skeleton component for loading states
  * Displays an animated shimmer effect to indicate content is loading
- * 
+ *
  * @example
  * ```tsx
  * // Text skeleton
  * <Skeleton width={200} height={16} />
- * 
+ *
  * // Avatar skeleton
  * <Skeleton width={48} height={48} circle />
- * 
+ *
  * // Card skeleton
  * <Skeleton width="100%" height={120} borderRadius={12} />
  * ```
@@ -121,26 +121,12 @@ export function Skeleton({
   };
 
   if (!animated) {
-    return (
-      <View
-        style={[
-          styles.skeleton,
-          skeletonStyle,
-          { backgroundColor },
-          style,
-        ]}
-      />
-    );
+    return <View style={[styles.skeleton, skeletonStyle, { backgroundColor }, style]} />;
   }
 
   return (
     <Animated.View
-      style={[
-        styles.skeleton,
-        skeletonStyle,
-        { backgroundColor: animatedBackground },
-        style,
-      ]}
+      style={[styles.skeleton, skeletonStyle, { backgroundColor: animatedBackground }, style]}
     />
   );
 }
@@ -383,7 +369,7 @@ export function SkeletonMatchCard({
           style={styles.matchCardType}
         />
       </View>
-      
+
       {/* Date and time */}
       <Skeleton
         width={120}
@@ -392,7 +378,7 @@ export function SkeletonMatchCard({
         highlightColor={highlightColor}
         style={styles.matchCardDate}
       />
-      
+
       {/* Location */}
       <View style={styles.matchCardLocation}>
         <Skeleton
@@ -410,11 +396,20 @@ export function SkeletonMatchCard({
           style={{ marginLeft: 8 }}
         />
       </View>
-      
+
       {/* Players */}
       <View style={styles.matchCardPlayers}>
-        <SkeletonAvatar size={32} backgroundColor={backgroundColor} highlightColor={highlightColor} />
-        <SkeletonAvatar size={32} backgroundColor={backgroundColor} highlightColor={highlightColor} style={{ marginLeft: -8 }} />
+        <SkeletonAvatar
+          size={32}
+          backgroundColor={backgroundColor}
+          highlightColor={highlightColor}
+        />
+        <SkeletonAvatar
+          size={32}
+          backgroundColor={backgroundColor}
+          highlightColor={highlightColor}
+          style={{ marginLeft: -8 }}
+        />
         <Skeleton
           width={60}
           height={12}

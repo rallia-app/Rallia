@@ -1,6 +1,6 @@
 /**
  * Spacing System
- * 
+ *
  * Provides consistent spacing scale for margins, paddings, and gaps
  * Based on 4px base unit
  */

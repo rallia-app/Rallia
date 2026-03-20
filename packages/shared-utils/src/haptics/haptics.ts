@@ -16,4 +16,3 @@ export {
   errorHaptic,
   selectionHaptic,
 } from './haptics.web';
-

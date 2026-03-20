@@ -11,24 +11,15 @@
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-  RefreshControl,
-} from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { SheetManager } from 'react-native-actions-sheet';
-import { Text, Button } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
-import { primary, neutral } from '@rallia/design-system';
+import { Text, Skeleton, Button } from '@rallia/shared-components';
+import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import {
   useSharedContacts,
   useDeleteSharedContact,
@@ -76,13 +67,6 @@ const SharedListDetail: React.FC = () => {
   // Subscribe to real-time updates for this list's contacts
   useSharedContactsRealtime(listId);
 
-  // Set header title
-  useEffect(() => {
-    navigation.setOptions({
-      title: listName,
-    });
-  }, [navigation, listName]);
-
   // Refresh handler
   const handleRefresh = useCallback(() => {
     refetch();
@@ -97,6 +81,41 @@ const SharedListDetail: React.FC = () => {
   const handleImportFromPhoneBook = useCallback(() => {
     SheetManager.show('import-contacts', { payload: { listId, existingContacts: contacts } });
   }, [listId, contacts]);
+
+  // Set header title and add button
+  useEffect(() => {
+    navigation.setOptions({
+      headerTitle: listName,
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={() => {
+            Alert.alert(t('sharedLists.contacts.addContact'), undefined, [
+              {
+                text: t('sharedLists.importFromPhone'),
+                onPress: handleImportFromPhoneBook,
+              },
+              {
+                text: t('sharedLists.addManually'),
+                onPress: handleAddManually,
+              },
+              { text: t('common.cancel'), style: 'cancel' },
+            ]);
+          }}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={{ marginRight: spacingPixels[2] }}
+        >
+          <Ionicons name="add" size={28} color={colors.headerForeground} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [
+    navigation,
+    listName,
+    colors.headerForeground,
+    handleImportFromPhoneBook,
+    handleAddManually,
+    t,
+  ]);
 
   // Edit contact
   const handleEditContact = useCallback(
@@ -189,79 +208,151 @@ const SharedListDetail: React.FC = () => {
     );
   };
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-      {/* Header with Search and Add Buttons */}
-      {contacts.length > 0 && (
-        <View style={styles.header}>
-          {/* Search Bar */}
-          <SearchBar
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder={t('sharedLists.searchContacts')}
+      {/* Search Bar - always visible */}
+      <View style={styles.header}>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder={t('sharedLists.searchContacts')}
+        />
+        {isLoading ? (
+          <Skeleton
+            width={100}
+            height={14}
+            borderRadius={4}
+            backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+            highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
           />
+        ) : contacts.length > 0 ? (
+          <Text size="sm" color={colors.textSecondary}>
+            {t('sharedLists.contactCount', { count: filteredContacts.length })}
+            {searchQuery &&
+              contacts.length !== filteredContacts.length &&
+              ` (${t('sharedLists.ofTotal', { total: contacts.length })})`}
+          </Text>
+        ) : null}
+      </View>
 
-          {/* Count and Buttons Row */}
-          <View style={styles.headerRow}>
-            <Text size="sm" color={colors.textSecondary}>
-              {t('sharedLists.contactCount', { count: filteredContacts.length })}
-              {searchQuery &&
-                contacts.length !== filteredContacts.length &&
-                ` (${t('sharedLists.ofTotal', { total: contacts.length })})`}
-            </Text>
-            <View style={styles.headerButtons}>
-              <TouchableOpacity
-                style={[
-                  styles.headerButton,
-                  { backgroundColor: isDark ? neutral[700] : neutral[100] },
-                ]}
-                onPress={handleImportFromPhoneBook}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="phone-portrait-outline" size={18} color={colors.text} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.headerButton, { backgroundColor: primary[500] }]}
-                onPress={handleAddManually}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="add-outline" size={20} color="#fff" />
-              </TouchableOpacity>
+      {/* Loading state */}
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          {[1, 2, 3].map(i => (
+            <View
+              key={i}
+              style={[
+                styles.skeletonCard,
+                {
+                  backgroundColor: colors.cardBackground,
+                  borderColor: colors.border,
+                  shadowColor: isDark ? 'transparent' : '#000',
+                },
+              ]}
+            >
+              {/* Top row: avatar + name + source badge */}
+              <View style={styles.skeletonTopRow}>
+                <Skeleton
+                  width={36}
+                  height={36}
+                  borderRadius={18}
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                />
+                <Skeleton
+                  width="50%"
+                  height={18}
+                  borderRadius={4}
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                  style={{ flex: 1 }}
+                />
+                <Skeleton
+                  width={80}
+                  height={22}
+                  borderRadius={radiusPixels.full}
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                />
+              </View>
+              {/* Info rows: phone + email */}
+              <View style={styles.skeletonInfoRow}>
+                <Skeleton
+                  width={14}
+                  height={14}
+                  borderRadius={2}
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                />
+                <Skeleton
+                  width="40%"
+                  height={14}
+                  borderRadius={4}
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                  style={{ marginLeft: spacingPixels[2] }}
+                />
+              </View>
+              <View style={styles.skeletonInfoRow}>
+                <Skeleton
+                  width={14}
+                  height={14}
+                  borderRadius={2}
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                />
+                <Skeleton
+                  width="55%"
+                  height={14}
+                  borderRadius={4}
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                  style={{ marginLeft: spacingPixels[2] }}
+                />
+              </View>
+              {/* Action row */}
+              <View style={[styles.skeletonActionRow, { borderTopColor: colors.border }]}>
+                <Skeleton
+                  width="30%"
+                  height={14}
+                  borderRadius={4}
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                  style={{ flex: 1 }}
+                />
+                <Skeleton
+                  width="30%"
+                  height={14}
+                  borderRadius={4}
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                  style={{ flex: 1 }}
+                />
+              </View>
             </View>
-          </View>
+          ))}
         </View>
+      ) : (
+        /* Contacts List */
+        <FlatList
+          data={filteredContacts}
+          keyExtractor={item => item.id}
+          renderItem={renderContactItem}
+          contentContainerStyle={[
+            styles.listContent,
+            filteredContacts.length === 0 && styles.emptyListContent,
+          ]}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={renderEmpty}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={handleRefresh}
+              tintColor={colors.primary}
+            />
+          }
+        />
       )}
-
-      {/* Contacts List */}
-      <FlatList
-        data={filteredContacts}
-        keyExtractor={item => item.id}
-        renderItem={renderContactItem}
-        contentContainerStyle={[
-          styles.listContent,
-          filteredContacts.length === 0 && styles.emptyListContent,
-        ]}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={renderEmpty}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={handleRefresh}
-            tintColor={colors.primary}
-          />
-        }
-      />
     </SafeAreaView>
   );
 };
@@ -272,30 +363,42 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  header: {
     paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
-    gap: spacingPixels[3],
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  skeletonCard: {
+    borderRadius: radiusPixels.lg,
+    padding: spacingPixels[4],
+    marginBottom: spacingPixels[3],
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  headerButtons: {
+  skeletonTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[2],
+    marginBottom: spacingPixels[2],
   },
-  headerButton: {
-    width: 36,
-    height: 36,
-    borderRadius: radiusPixels.md,
+  skeletonInfoRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    marginBottom: spacingPixels[1],
+  },
+  skeletonActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacingPixels[2],
+    paddingTop: spacingPixels[2],
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: spacingPixels[2],
+  },
+  header: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[2],
+    gap: spacingPixels[3],
   },
   listContent: {
     paddingHorizontal: spacingPixels[4],

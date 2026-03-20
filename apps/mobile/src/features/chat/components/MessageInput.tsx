@@ -169,7 +169,11 @@ function MessageInputComponent({
           onPress={handleSend}
           disabled={!canSend}
         >
-          <Ionicons name="send" size={18} color={canSend ? '#FFFFFF' : colors.textMuted} />
+          <Ionicons
+            name="paper-plane-outline"
+            size={18}
+            color={canSend ? '#FFFFFF' : colors.textMuted}
+          />
         </TouchableOpacity>
       </View>
     </View>

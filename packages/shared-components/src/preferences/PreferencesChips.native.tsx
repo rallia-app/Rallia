@@ -1,6 +1,6 @@
 /**
  * PreferencesChips Component
- * 
+ *
  * Reusable chip selection component for preferences (match duration, match type, etc.)
  * Supports single and multi-select modes.
  */
@@ -12,19 +12,19 @@ import { COLORS } from '@rallia/shared-constants';
 export interface PreferencesChipsProps {
   /** Array of options to display as chips */
   options: string[];
-  
+
   /** Currently selected value(s) - string for single-select, array for multi-select */
   selected?: string | string[];
-  
+
   /** Callback when an option is selected */
   onSelect: (value: string) => void;
-  
+
   /** Callback for haptic feedback (platform-specific) */
   onHapticFeedback?: () => void;
-  
+
   /** Additional styles for the container */
   containerStyle?: ViewStyle;
-  
+
   /** Additional styles for individual chips */
   chipStyle?: ViewStyle;
 }
@@ -53,23 +53,14 @@ export const PreferencesChips: React.FC<PreferencesChipsProps> = ({
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {options.map((option) => (
+      {options.map(option => (
         <TouchableOpacity
           key={option}
-          style={[
-            styles.chip,
-            chipStyle,
-            isSelected(option) && styles.chipSelected,
-          ]}
+          style={[styles.chip, chipStyle, isSelected(option) && styles.chipSelected]}
           onPress={() => handlePress(option)}
           activeOpacity={0.8}
         >
-          <Text
-            style={[
-              styles.chipText,
-              isSelected(option) && styles.chipTextSelected,
-            ]}
-          >
+          <Text style={[styles.chipText, isSelected(option) && styles.chipTextSelected]}>
             {option}
           </Text>
         </TouchableOpacity>

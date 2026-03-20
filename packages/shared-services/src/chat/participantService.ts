@@ -36,10 +36,7 @@ export async function toggleMuteConversation(
 /**
  * Leave a conversation (for group conversations)
  */
-export async function leaveConversation(
-  conversationId: string,
-  playerId: string
-): Promise<void> {
+export async function leaveConversation(conversationId: string, playerId: string): Promise<void> {
   const { error } = await supabase
     .from('conversation_participant')
     .delete()
@@ -55,16 +52,11 @@ export async function leaveConversation(
 /**
  * Add participant to a conversation
  */
-export async function addParticipant(
-  conversationId: string,
-  playerId: string
-): Promise<void> {
-  const { error } = await supabase
-    .from('conversation_participant')
-    .insert({
-      conversation_id: conversationId,
-      player_id: playerId,
-    });
+export async function addParticipant(conversationId: string, playerId: string): Promise<void> {
+  const { error } = await supabase.from('conversation_participant').insert({
+    conversation_id: conversationId,
+    player_id: playerId,
+  });
 
   if (error) {
     // Ignore if already a participant
@@ -94,12 +86,10 @@ export async function addConversationParticipant(
     return true; // Already a participant
   }
 
-  const { error } = await supabase
-    .from('conversation_participant')
-    .insert({
-      conversation_id: conversationId,
-      player_id: playerId,
-    });
+  const { error } = await supabase.from('conversation_participant').insert({
+    conversation_id: conversationId,
+    player_id: playerId,
+  });
 
   if (error) {
     console.error('Error adding participant:', error);
@@ -144,7 +134,7 @@ export async function togglePinConversation(
 ): Promise<void> {
   const { error } = await supabase
     .from('conversation_participant')
-    .update({ 
+    .update({
       is_pinned: isPinned,
       pinned_at: isPinned ? new Date().toISOString() : null,
     })
@@ -171,7 +161,7 @@ export async function toggleArchiveConversation(
 ): Promise<void> {
   const { error } = await supabase
     .from('conversation_participant')
-    .update({ 
+    .update({
       is_archived: isArchived,
       archived_at: isArchived ? new Date().toISOString() : null,
     })

@@ -42,33 +42,36 @@ export function useAuditLog(options: UseAuditLogOptions = {}): UseAuditLogReturn
   const [error, setError] = useState<Error | null>(null);
   const [hasMore, setHasMore] = useState(true);
 
-  const fetchLogs = useCallback(async (reset: boolean = true) => {
-    setIsLoading(true);
-    setError(null);
+  const fetchLogs = useCallback(
+    async (reset: boolean = true) => {
+      setIsLoading(true);
+      setError(null);
 
-    try {
-      const offset = reset ? 0 : logs.length;
-      const limit = filters.limit || 50;
+      try {
+        const offset = reset ? 0 : logs.length;
+        const limit = filters.limit || 50;
 
-      const data = await auditService.getAuditLog({
-        ...filters,
-        limit,
-        offset,
-      });
+        const data = await auditService.getAuditLog({
+          ...filters,
+          limit,
+          offset,
+        });
 
-      if (reset) {
-        setLogs(data);
-      } else {
-        setLogs((prev) => [...prev, ...data]);
+        if (reset) {
+          setLogs(data);
+        } else {
+          setLogs(prev => [...prev, ...data]);
+        }
+
+        setHasMore(data.length === limit);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Failed to fetch audit logs'));
+      } finally {
+        setIsLoading(false);
       }
-
-      setHasMore(data.length === limit);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch audit logs'));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [filters, logs.length]);
+    },
+    [filters, logs.length]
+  );
 
   const setFilters = useCallback((newFilters: AuditLogFilters) => {
     setFiltersState(newFilters);
@@ -200,44 +203,50 @@ export function useAdminAlerts(options: UseAdminAlertsOptions): UseAdminAlertsRe
     }
   }, [adminId, limit, includeRead]);
 
-  const markAsRead = useCallback(async (alertId: string): Promise<boolean> => {
-    const success = await alertService.markAlertRead(alertId, adminId);
-    if (success) {
-      setAlerts((prev) =>
-        prev.map((a) =>
-          a.id === alertId ? { ...a, is_read: true, read_at: new Date().toISOString() } : a
-        )
-      );
-      setCounts((prev: AlertCounts) => ({
-        ...prev,
-        total: Math.max(0, prev.total - 1),
-      }));
-    }
-    return success;
-  }, [adminId]);
+  const markAsRead = useCallback(
+    async (alertId: string): Promise<boolean> => {
+      const success = await alertService.markAlertRead(alertId, adminId);
+      if (success) {
+        setAlerts(prev =>
+          prev.map(a =>
+            a.id === alertId ? { ...a, is_read: true, read_at: new Date().toISOString() } : a
+          )
+        );
+        setCounts((prev: AlertCounts) => ({
+          ...prev,
+          total: Math.max(0, prev.total - 1),
+        }));
+      }
+      return success;
+    },
+    [adminId]
+  );
 
   const markAllAsRead = useCallback(async (): Promise<number> => {
     const count = await alertService.markAllAlertsRead(adminId);
     if (count > 0) {
-      setAlerts((prev) =>
-        prev.map((a) => ({ ...a, is_read: true, read_at: new Date().toISOString() }))
+      setAlerts(prev =>
+        prev.map(a => ({ ...a, is_read: true, read_at: new Date().toISOString() }))
       );
       setCounts({ total: 0, critical: 0, warning: 0, info: 0 });
     }
     return count;
   }, [adminId]);
 
-  const dismiss = useCallback(async (alertId: string): Promise<boolean> => {
-    const success = await alertService.dismissAlert(alertId, adminId);
-    if (success) {
-      setAlerts((prev) => prev.filter((a) => a.id !== alertId));
-      setCounts((prev: AlertCounts) => ({
-        ...prev,
-        total: Math.max(0, prev.total - 1),
-      }));
-    }
-    return success;
-  }, [adminId]);
+  const dismiss = useCallback(
+    async (alertId: string): Promise<boolean> => {
+      const success = await alertService.dismissAlert(alertId, adminId);
+      if (success) {
+        setAlerts(prev => prev.filter(a => a.id !== alertId));
+        setCounts((prev: AlertCounts) => ({
+          ...prev,
+          total: Math.max(0, prev.total - 1),
+        }));
+      }
+      return success;
+    },
+    [adminId]
+  );
 
   // Initial fetch
   useEffect(() => {

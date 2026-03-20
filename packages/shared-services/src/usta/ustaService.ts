@@ -1,9 +1,9 @@
 /**
  * USTA Connect API Service
- * 
+ *
  * Integrates with USTA's API to fetch player NTRP ratings and profile information.
  * Requires OAuth2 authentication with USTA Connect.
- * 
+ *
  * Documentation: https://developer.usta.com/
  */
 
@@ -105,8 +105,8 @@ class USTAService {
         throw new Error(`USTA authentication failed: ${response.statusText}`);
       }
 
-      const data = await response.json() as USTAAccessToken;
-      
+      const data = (await response.json()) as USTAAccessToken;
+
       // Store token with 5 minute buffer before expiry
       this.accessToken = data.access_token;
       this.tokenExpiry = Date.now() + (data.expires_in - 300) * 1000;
@@ -120,7 +120,7 @@ class USTAService {
 
   /**
    * Fetch NTRP rating for a player by their USTA ID (UAID)
-   * 
+   *
    * @param uaid - USTA Universal Account ID
    * @returns Player's NTRP rating information or null if not found
    */
@@ -132,8 +132,8 @@ class USTAService {
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
         },
       });
 
@@ -146,7 +146,7 @@ class USTAService {
         throw new Error(`USTA API error: ${response.statusText}`);
       }
 
-      const data = await response.json() as USTANTRPRating;
+      const data = (await response.json()) as USTANTRPRating;
       return data;
     } catch (error) {
       console.error('Error fetching NTRP rating:', error);
@@ -156,7 +156,7 @@ class USTAService {
 
   /**
    * Fetch limited profile information for a player by their USTA ID
-   * 
+   *
    * @param uaid - USTA Universal Account ID
    * @returns Player's profile information or null if not found
    */
@@ -168,8 +168,8 @@ class USTAService {
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
         },
       });
 
@@ -182,7 +182,7 @@ class USTAService {
         throw new Error(`USTA API error: ${response.statusText}`);
       }
 
-      const data = await response.json() as USTAPlayerProfile;
+      const data = (await response.json()) as USTAPlayerProfile;
       return data;
     } catch (error) {
       console.error('Error fetching player profile:', error);
@@ -192,7 +192,7 @@ class USTAService {
 
   /**
    * Verify a player's NTRP rating and profile information
-   * 
+   *
    * @param uaid - USTA Universal Account ID
    * @returns Combined rating and profile data, or null if not found
    */
@@ -221,10 +221,10 @@ class USTAService {
    */
   getRatingTypeDescription(ratingType: string): string {
     const types: Record<string, string> = {
-      'C': 'Computer Rated',
-      'A': 'Appeal Rated',
-      'S': 'Self Rated',
-      'D': 'Dynamic Rated',
+      C: 'Computer Rated',
+      A: 'Appeal Rated',
+      S: 'Self Rated',
+      D: 'Dynamic Rated',
     };
     return types[ratingType] || 'Unknown';
   }

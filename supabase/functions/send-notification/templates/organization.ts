@@ -65,10 +65,7 @@ function getOrgPreheaderKey(category: string): string {
 /**
  * Generate QR code image HTML for booking notifications
  */
-function generateQrCodeHtml(
-  bookingId: string,
-  locale: string
-): string {
+function generateQrCodeHtml(bookingId: string, locale: string): string {
   if (!bookingId) return '';
 
   const qrData = `rallia://booking/${bookingId}`;
@@ -90,10 +87,7 @@ function generateQrCodeHtml(
 /**
  * Generate booking details card
  */
-function generateBookingCard(
-  payload: Record<string, unknown>,
-  locale: string
-): string {
+function generateBookingCard(payload: Record<string, unknown>, locale: string): string {
   const courtName = payload.courtName as string | undefined;
   const facilityName = payload.facilityName as string | undefined;
   const bookingDate = payload.bookingDate as string | undefined;
@@ -140,10 +134,7 @@ function generateBookingCard(
 /**
  * Generate payment details card
  */
-function generatePaymentCard(
-  payload: Record<string, unknown>,
-  locale: string
-): string {
+function generatePaymentCard(payload: Record<string, unknown>, locale: string): string {
   const amountCents = payload.amountCents as number | undefined;
   const currency = (payload.currency as string) || 'CAD';
   const playerName = payload.playerName as string | undefined;
@@ -221,7 +212,7 @@ export function renderOrgEmail(
   notification: NotificationRecord,
   organization: OrganizationInfo,
   locale: string = 'en-US',
-  siteUrl?: string,
+  siteUrl?: string
 ): EmailContent {
   const { title, body, type, payload } = notification;
   const T = EMAIL_TOKENS;
@@ -237,9 +228,9 @@ export function renderOrgEmail(
   }
 
   // QR code for booking_confirmed and booking_reminder
-  const bookingId = (payload as Record<string, unknown>).bookingId as string | undefined;
+  const bookingId = payload.bookingId as string | undefined;
   const showQrCode = (type === 'booking_confirmed' || type === 'booking_reminder') && bookingId;
-  const qrCodeHtml = showQrCode ? generateQrCodeHtml(bookingId!, locale) : '';
+  const qrCodeHtml = showQrCode ? generateQrCodeHtml(bookingId, locale) : '';
 
   const bodyHtml = body
     ? `

@@ -553,7 +553,7 @@ export const BugReportSheet: React.FC = () => {
                   {t('bugReport.submit' as TranslationKey)}
                 </Text>
                 <Ionicons
-                  name="send"
+                  name="paper-plane-outline"
                   size={18}
                   color={isValid ? colors.buttonTextActive : colors.textMuted}
                 />

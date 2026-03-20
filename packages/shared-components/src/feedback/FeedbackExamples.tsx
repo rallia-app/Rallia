@@ -14,7 +14,7 @@ import { Button } from '../foundation/Button.native';
 
 /**
  * Example 1: Spinner Usage
- * 
+ *
  * Demonstrates different spinner sizes and colors
  */
 export const SpinnerExample: React.FC = () => {
@@ -116,7 +116,7 @@ export const SpinnerExample: React.FC = () => {
 
 /**
  * Example 2: ErrorMessage Usage
- * 
+ *
  * Demonstrates different error message variants
  */
 export const ErrorMessageExample: React.FC = () => {
@@ -136,10 +136,7 @@ export const ErrorMessageExample: React.FC = () => {
         <Card>
           <Heading level={3}>Default Variant</Heading>
           <Spacer size={16} />
-          <ErrorMessage
-            message="Failed to load data from the server."
-            onRetry={handleRetry}
-          />
+          <ErrorMessage message="Failed to load data from the server." onRetry={handleRetry} />
           {retryCount > 0 && (
             <>
               <Spacer size={8} />
@@ -229,7 +226,7 @@ export const ErrorMessageExample: React.FC = () => {
 
 /**
  * Example 3: Badge Usage
- * 
+ *
  * Demonstrates different badge variants and use cases
  */
 export const BadgeExample: React.FC = () => {
@@ -260,9 +257,15 @@ export const BadgeExample: React.FC = () => {
           <Heading level={3}>Sizes</Heading>
           <Spacer size={16} />
           <HStack spacing={8} align="center">
-            <Badge size="sm" variant="primary">Small</Badge>
-            <Badge size="md" variant="primary">Medium</Badge>
-            <Badge size="lg" variant="primary">Large</Badge>
+            <Badge size="sm" variant="primary">
+              Small
+            </Badge>
+            <Badge size="md" variant="primary">
+              Medium
+            </Badge>
+            <Badge size="lg" variant="primary">
+              Large
+            </Badge>
           </HStack>
         </Card>
 
@@ -273,11 +276,21 @@ export const BadgeExample: React.FC = () => {
           <Heading level={3}>Outline Style</Heading>
           <Spacer size={16} />
           <HStack spacing={8} wrap>
-            <Badge variant="primary" outline>Primary</Badge>
-            <Badge variant="success" outline>Success</Badge>
-            <Badge variant="warning" outline>Warning</Badge>
-            <Badge variant="error" outline>Error</Badge>
-            <Badge variant="info" outline>Info</Badge>
+            <Badge variant="primary" outline>
+              Primary
+            </Badge>
+            <Badge variant="success" outline>
+              Success
+            </Badge>
+            <Badge variant="warning" outline>
+              Warning
+            </Badge>
+            <Badge variant="error" outline>
+              Error
+            </Badge>
+            <Badge variant="info" outline>
+              Info
+            </Badge>
           </HStack>
         </Card>
 
@@ -288,10 +301,18 @@ export const BadgeExample: React.FC = () => {
           <Heading level={3}>With Icons</Heading>
           <Spacer size={16} />
           <HStack spacing={8} wrap>
-            <Badge variant="success" icon={<Text>✓</Text>}>Verified</Badge>
-            <Badge variant="warning" icon={<Text>⚠</Text>}>Pending</Badge>
-            <Badge variant="error" icon={<Text>✕</Text>}>Failed</Badge>
-            <Badge variant="info" icon={<Text>ℹ</Text>}>Info</Badge>
+            <Badge variant="success" icon={<Text>✓</Text>}>
+              Verified
+            </Badge>
+            <Badge variant="warning" icon={<Text>⚠</Text>}>
+              Pending
+            </Badge>
+            <Badge variant="error" icon={<Text>✕</Text>}>
+              Failed
+            </Badge>
+            <Badge variant="info" icon={<Text>ℹ</Text>}>
+              Info
+            </Badge>
           </HStack>
         </Card>
 
@@ -302,10 +323,18 @@ export const BadgeExample: React.FC = () => {
           <Heading level={3}>Custom Colors</Heading>
           <Spacer size={16} />
           <HStack spacing={8} wrap>
-            <Badge backgroundColor="#9C27B0" textColor="#fff">Purple</Badge>
-            <Badge backgroundColor="#00BCD4" textColor="#fff">Cyan</Badge>
-            <Badge backgroundColor="#CDDC39" textColor="#000">Lime</Badge>
-            <Badge backgroundColor="#795548" textColor="#fff">Brown</Badge>
+            <Badge backgroundColor="#9C27B0" textColor="#fff">
+              Purple
+            </Badge>
+            <Badge backgroundColor="#00BCD4" textColor="#fff">
+              Cyan
+            </Badge>
+            <Badge backgroundColor="#CDDC39" textColor="#000">
+              Lime
+            </Badge>
+            <Badge backgroundColor="#795548" textColor="#fff">
+              Brown
+            </Badge>
           </HStack>
         </Card>
 
@@ -315,13 +344,15 @@ export const BadgeExample: React.FC = () => {
         <Card>
           <Heading level={3}>Match Status Example</Heading>
           <Spacer size={16} />
-          
+
           {/* Match card with badges */}
           <Card variant="outlined">
             <VStack spacing={12}>
               <Heading level={4}>Saturday Tennis Match</Heading>
               <HStack spacing={8} wrap>
-                <Badge variant="info" icon={<Text>🎾</Text>}>Tennis</Badge>
+                <Badge variant="info" icon={<Text>🎾</Text>}>
+                  Tennis
+                </Badge>
                 <Badge variant="success">4/4 Players</Badge>
                 <Badge variant="warning">Intermediate</Badge>
                 <Badge variant="default">Outdoor</Badge>
@@ -329,7 +360,9 @@ export const BadgeExample: React.FC = () => {
               <Divider spacing={12} />
               <HStack justify="space-between" align="center">
                 <Text variant="caption">Tomorrow at 2:00 PM</Text>
-                <Badge variant="primary" size="sm">Confirmed</Badge>
+                <Badge variant="primary" size="sm">
+                  Confirmed
+                </Badge>
               </HStack>
             </VStack>
           </Card>
@@ -343,19 +376,27 @@ export const BadgeExample: React.FC = () => {
           <Spacer size={16} />
           <VStack spacing={12}>
             <HStack spacing={8}>
-              <Badge variant="success" size="sm">Beginner</Badge>
+              <Badge variant="success" size="sm">
+                Beginner
+              </Badge>
               <Text>John Doe</Text>
             </HStack>
             <HStack spacing={8}>
-              <Badge variant="warning" size="sm">Intermediate</Badge>
+              <Badge variant="warning" size="sm">
+                Intermediate
+              </Badge>
               <Text>Jane Smith</Text>
             </HStack>
             <HStack spacing={8}>
-              <Badge variant="error" size="sm">Advanced</Badge>
+              <Badge variant="error" size="sm">
+                Advanced
+              </Badge>
               <Text>Mike Johnson</Text>
             </HStack>
             <HStack spacing={8}>
-              <Badge variant="primary" size="sm">Professional</Badge>
+              <Badge variant="primary" size="sm">
+                Professional
+              </Badge>
               <Text>Sarah Williams</Text>
             </HStack>
           </VStack>
@@ -370,17 +411,23 @@ export const BadgeExample: React.FC = () => {
           <VStack spacing={16}>
             <HStack justify="space-between" align="center">
               <Text>New Messages</Text>
-              <Badge variant="error" size="sm" rounded>12</Badge>
+              <Badge variant="error" size="sm" rounded>
+                12
+              </Badge>
             </HStack>
             <Divider />
             <HStack justify="space-between" align="center">
               <Text>Pending Invitations</Text>
-              <Badge variant="warning" size="sm" rounded>3</Badge>
+              <Badge variant="warning" size="sm" rounded>
+                3
+              </Badge>
             </HStack>
             <Divider />
             <HStack justify="space-between" align="center">
               <Text>Upcoming Matches</Text>
-              <Badge variant="info" size="sm" rounded>5</Badge>
+              <Badge variant="info" size="sm" rounded>
+                5
+              </Badge>
             </HStack>
           </VStack>
         </Card>
@@ -393,7 +440,7 @@ export const BadgeExample: React.FC = () => {
 
 /**
  * Example 4: Combined Usage
- * 
+ *
  * Demonstrates using all feedback components together
  */
 export const CombinedFeedbackExample: React.FC = () => {
@@ -404,11 +451,11 @@ export const CombinedFeedbackExample: React.FC = () => {
   const loadData = () => {
     setIsLoading(true);
     setHasError(false);
-    
+
     // Simulate API call
     setTimeout(() => {
       const success = Math.random() > 0.3;
-      
+
       if (success) {
         setData({
           matches: [
@@ -420,7 +467,7 @@ export const CombinedFeedbackExample: React.FC = () => {
       } else {
         setHasError(true);
       }
-      
+
       setIsLoading(false);
     }, 2000);
   };
@@ -472,7 +519,9 @@ export const CombinedFeedbackExample: React.FC = () => {
                       </Badge>
                     </HStack>
                     <HStack spacing={8}>
-                      <Badge variant="info" size="sm">{match.players}/4 players</Badge>
+                      <Badge variant="info" size="sm">
+                        {match.players}/4 players
+                      </Badge>
                     </HStack>
                   </VStack>
                 </Card>

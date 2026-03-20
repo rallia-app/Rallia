@@ -2561,7 +2561,7 @@
       "contactCountSingular": "{count} contact"
     },
     "contact": {
-      "fromContacts": "From contacts",
+      "fromContacts": "Contacts",
       "manual": "Manual"
     },
     "import": {
@@ -2599,7 +2599,13 @@
       "contactsSelected": "{count} contact(s) selected",
       "howToShare": "How do you want to share?",
       "recipients": "{count} Recipient(s)",
-      "selectContactsButton": "Select Contacts"
+      "selectContactsButton": "Select Contacts",
+      "step": "Step {current} of {total}",
+      "stepNames": {
+        "selectMatch": "Match",
+        "selectContacts": "Contacts",
+        "confirm": "Share"
+      }
     },
     "confirmations": {
       "deleteList": "Are you sure you want to delete \"{name}\"? This will also delete all contacts in this list."

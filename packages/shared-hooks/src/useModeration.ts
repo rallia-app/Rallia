@@ -156,39 +156,33 @@ export function useReports(options: UseReportsOptions = {}): UseReportsResult {
   }, [fetchReports, isLoading, isLoadingMore, hasMore]);
 
   // Dismiss report
-  const dismissReport = useCallback(
-    async (reportId: string, reason?: string): Promise<boolean> => {
-      if (!adminIdRef.current) return false;
-      const success = await moderationService.dismissReport(reportId, adminIdRef.current, reason);
-      if (success) {
-        setReports(prev =>
-          prev.map(r => (r.id === reportId ? { ...r, status: 'dismissed' as ReportStatus } : r))
-        );
-        setCounts(prev => ({
-          ...prev,
-          pending: Math.max(0, prev.pending - 1),
-          total: Math.max(0, prev.total - 1),
-        }));
-      }
-      return success;
-    },
-    []
-  );
+  const dismissReport = useCallback(async (reportId: string, reason?: string): Promise<boolean> => {
+    if (!adminIdRef.current) return false;
+    const success = await moderationService.dismissReport(reportId, adminIdRef.current, reason);
+    if (success) {
+      setReports(prev =>
+        prev.map(r => (r.id === reportId ? { ...r, status: 'dismissed' as ReportStatus } : r))
+      );
+      setCounts(prev => ({
+        ...prev,
+        pending: Math.max(0, prev.pending - 1),
+        total: Math.max(0, prev.total - 1),
+      }));
+    }
+    return success;
+  }, []);
 
   // Escalate report
-  const escalateReport = useCallback(
-    async (reportId: string, notes?: string): Promise<boolean> => {
-      if (!adminIdRef.current) return false;
-      const success = await moderationService.escalateReport(reportId, adminIdRef.current, notes);
-      if (success) {
-        setReports(prev =>
-          prev.map(r => (r.id === reportId ? { ...r, status: 'escalated' as ReportStatus } : r))
-        );
-      }
-      return success;
-    },
-    []
-  );
+  const escalateReport = useCallback(async (reportId: string, notes?: string): Promise<boolean> => {
+    if (!adminIdRef.current) return false;
+    const success = await moderationService.escalateReport(reportId, adminIdRef.current, notes);
+    if (success) {
+      setReports(prev =>
+        prev.map(r => (r.id === reportId ? { ...r, status: 'escalated' as ReportStatus } : r))
+      );
+    }
+    return success;
+  }, []);
 
   // Review report
   const reviewReport = useCallback(

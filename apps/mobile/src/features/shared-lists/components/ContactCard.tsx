@@ -4,9 +4,9 @@
  */
 
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, Button } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { primary, neutral, status } from '@rallia/design-system';
 import type { SharedContact } from '@rallia/shared-services';
@@ -32,6 +32,7 @@ interface ContactCardProps {
 
 const ContactCard: React.FC<ContactCardProps> = ({ contact, colors, isDark, onEdit, onDelete }) => {
   const { t } = useTranslation();
+
   // Get initials from name
   const getInitials = (name: string) => {
     const parts = name.trim().split(' ');
@@ -41,131 +42,168 @@ const ContactCard: React.FC<ContactCardProps> = ({ contact, colors, isDark, onEd
     return name.substring(0, 2).toUpperCase();
   };
 
-  // Format contact info
-  const contactInfo = [];
-  if (contact.phone) contactInfo.push(contact.phone);
-  if (contact.email) contactInfo.push(contact.email);
-
   return (
     <View
       style={[
-        styles.container,
-        { backgroundColor: colors.cardBackground, borderColor: colors.border },
+        styles.card,
+        {
+          backgroundColor: colors.cardBackground,
+          borderColor: colors.border,
+          shadowColor: isDark ? 'transparent' : '#000',
+        },
       ]}
     >
-      {/* Avatar */}
-      <View style={[styles.avatar, { backgroundColor: isDark ? primary[900] : primary[100] }]}>
-        <Text size="base" weight="semibold" color={primary[500]}>
-          {getInitials(contact.name)}
-        </Text>
-      </View>
-
-      {/* Content */}
-      <View style={styles.content}>
-        <Text size="base" weight="semibold" color={colors.text} numberOfLines={1}>
+      {/* Top row: avatar + name + source badge */}
+      <View style={styles.topRow}>
+        <View style={[styles.avatar, { backgroundColor: isDark ? primary[900] : primary[100] }]}>
+          <Text size="sm" weight="semibold" color={primary[500]}>
+            {getInitials(contact.name)}
+          </Text>
+        </View>
+        <Text
+          size="base"
+          weight="semibold"
+          color={colors.text}
+          style={styles.cardTitle}
+          numberOfLines={1}
+        >
           {contact.name}
         </Text>
-        {contactInfo.length > 0 && (
-          <Text size="sm" color={colors.textSecondary} numberOfLines={1} style={styles.contactInfo}>
-            {contactInfo.join(' • ')}
+        <View
+          style={[styles.sourceBadge, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}
+        >
+          <Ionicons
+            name={contact.source === 'phone_book' ? 'phone-portrait-outline' : 'create-outline'}
+            size={12}
+            color={colors.textMuted}
+          />
+          <Text size="xs" color={colors.textMuted}>
+            {contact.source === 'phone_book'
+              ? t('sharedLists.contact.fromContacts')
+              : t('sharedLists.contact.manual')}
           </Text>
-        )}
-        {contact.notes && (
-          <Text size="xs" color={colors.textMuted} numberOfLines={1} style={styles.notes}>
-            {contact.notes}
-          </Text>
-        )}
-        {/* Source badge */}
-        <View style={styles.sourceContainer}>
-          <View
-            style={[styles.sourceBadge, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}
-          >
-            <Ionicons
-              name={contact.source === 'phone_book' ? 'phone-portrait-outline' : 'create-outline'}
-              size={12}
-              color={colors.textMuted}
-            />
-            <Text size="xs" color={colors.textMuted}>
-              {contact.source === 'phone_book'
-                ? t('sharedLists.contact.fromContacts')
-                : t('sharedLists.contact.manual')}
-            </Text>
-          </View>
         </View>
       </View>
 
-      {/* Actions */}
-      <View style={styles.actions}>
-        <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}
+      {/* Info rows */}
+      {contact.phone ? (
+        <View style={styles.infoRow}>
+          <Ionicons name="call-outline" size={14} color={colors.textMuted} />
+          <Text size="sm" color={colors.textMuted} style={styles.infoText} numberOfLines={1}>
+            {contact.phone}
+          </Text>
+        </View>
+      ) : null}
+
+      {contact.email ? (
+        <View style={styles.infoRow}>
+          <Ionicons name="mail-outline" size={14} color={colors.textMuted} />
+          <Text size="sm" color={colors.textMuted} style={styles.infoText} numberOfLines={1}>
+            {contact.email}
+          </Text>
+        </View>
+      ) : null}
+
+      {contact.notes ? (
+        <View style={styles.infoRow}>
+          <Ionicons name="document-text-outline" size={14} color={colors.textMuted} />
+          <Text
+            size="sm"
+            color={colors.textMuted}
+            style={[styles.infoText, styles.notesText]}
+            numberOfLines={1}
+          >
+            {contact.notes}
+          </Text>
+        </View>
+      ) : null}
+
+      {/* Action buttons row */}
+      <View style={[styles.actionRow, { borderTopColor: colors.border }]}>
+        <Button
+          variant="ghost"
+          size="xs"
+          style={styles.actionButton}
           onPress={onEdit}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          leftIcon={<Ionicons name="create-outline" size={14} color={colors.textMuted} />}
+          isDark={isDark}
+          textStyle={{ color: colors.textMuted }}
         >
-          <Ionicons name="pencil" size={16} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}
+          {t('common.edit' as TranslationKey)}
+        </Button>
+        <Button
+          variant="ghost"
+          size="xs"
+          style={styles.actionButton}
+          destructive
           onPress={onDelete}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          leftIcon={<Ionicons name="trash-outline" size={14} color={status.error.DEFAULT} />}
+          isDark={isDark}
         >
-          <Ionicons name="trash-outline" size={16} color={status.error.DEFAULT} />
-        </TouchableOpacity>
+          {t('common.delete' as TranslationKey)}
+        </Button>
       </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  card: {
+    borderRadius: radiusPixels.lg,
+    padding: spacingPixels[4],
+    marginBottom: spacingPixels[3],
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  topRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
+    gap: spacingPixels[2],
     marginBottom: spacingPixels[2],
   },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacingPixels[3],
   },
-  content: {
+  cardTitle: {
     flex: 1,
-    marginRight: spacingPixels[2],
-  },
-  contactInfo: {
-    marginTop: spacingPixels[0.5],
-  },
-  notes: {
-    marginTop: spacingPixels[0.5],
-    fontStyle: 'italic',
-  },
-  sourceContainer: {
-    marginTop: spacingPixels[1],
+    flexShrink: 1,
   },
   sourceBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
     paddingHorizontal: spacingPixels[2],
     paddingVertical: spacingPixels[0.5],
-    borderRadius: radiusPixels.sm,
+    borderRadius: radiusPixels.full,
     gap: spacingPixels[1],
   },
-  actions: {
+  infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacingPixels[2],
+    marginBottom: spacingPixels[1],
+  },
+  infoText: {
+    marginLeft: spacingPixels[2],
+  },
+  notesText: {
+    fontStyle: 'italic',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacingPixels[2],
+    paddingTop: spacingPixels[2],
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'transparent',
   },
   actionButton: {
-    width: 32,
-    height: 32,
-    borderRadius: radiusPixels.md,
-    alignItems: 'center',
-    justifyContent: 'center',
+    flex: 1,
   },
 });
 

@@ -62,7 +62,7 @@ export function ContactPickerModal({
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [permissionStatus, setPermissionStatus] = useState<Contacts.PermissionStatus | null>(null);
-  
+
   // Track if we've loaded contacts for this modal session
   const hasLoadedRef = useRef(false);
 

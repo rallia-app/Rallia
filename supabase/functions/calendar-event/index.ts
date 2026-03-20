@@ -34,13 +34,13 @@ function generateUid(title: string, start: string): string {
   const str = `${title}-${start}`;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32bit integer
   }
   return `${Math.abs(hash)}@rallia.com`;
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async req => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, {
@@ -68,26 +68,20 @@ Deno.serve(async (req) => {
   const description = url.searchParams.get('description') || '';
 
   if (!title || !start || !end) {
-    return new Response(
-      JSON.stringify({ error: 'Missing required params: title, start, end' }),
-      {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    return new Response(JSON.stringify({ error: 'Missing required params: title, start, end' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   // Validate date formats
   const startDate = new Date(start);
   const endDate = new Date(end);
   if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-    return new Response(
-      JSON.stringify({ error: 'Invalid date format. Use ISO 8601.' }),
-      {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    return new Response(JSON.stringify({ error: 'Invalid date format. Use ISO 8601.' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   const now = formatIcsDate(new Date().toISOString());

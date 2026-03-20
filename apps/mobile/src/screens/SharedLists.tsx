@@ -16,10 +16,9 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { SheetManager } from 'react-native-actions-sheet';
-import { Text, Skeleton, SkeletonCard, Button } from '@rallia/shared-components';
+import { Text, Skeleton, Button } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { primary } from '@rallia/design-system';
 import {
   useSharedLists,
   useDeleteSharedList,
@@ -162,129 +161,159 @@ const SharedLists: React.FC = () => {
     );
   };
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-        <View style={styles.loadingContainer}>
-          {/* Share Match CTA Skeleton */}
-          <Skeleton
-            width="100%"
-            height={80}
-            borderRadius={radiusPixels.lg}
-            backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-            highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-            style={{ marginBottom: spacingPixels[4] }}
-          />
-          {/* Search Skeleton */}
-          <Skeleton
-            width="100%"
-            height={44}
-            borderRadius={radiusPixels.lg}
-            backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-            highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-            style={{ marginBottom: spacingPixels[4] }}
-          />
-          {/* List Items Skeleton */}
-          {[1, 2, 3, 4].map(i => (
-            <SkeletonCard
-              key={i}
-              showAvatar={false}
-              lines={2}
-              backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-              highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-              style={{
-                backgroundColor: colors.cardBackground,
-                marginBottom: spacingPixels[3],
-                borderRadius: radiusPixels.lg,
-                padding: spacingPixels[4],
-              }}
-            />
-          ))}
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-      {/* Share Match CTA - Always visible at top */}
-      <TouchableOpacity
-        style={[
-          styles.shareMatchCta,
-          {
-            backgroundColor: isDark ? primary[800] : primary[50],
-            borderColor: isDark ? primary[700] : primary[200],
-          },
-        ]}
-        onPress={() => {
-          if (!guardAction()) return;
-          if (playerId) {
-            SheetManager.show('share-match', { payload: { playerId } });
-          }
-        }}
-        activeOpacity={0.8}
-      >
-        <View
-          style={[styles.shareMatchIcon, { backgroundColor: isDark ? primary[700] : primary[100] }]}
-        >
-          <Ionicons name="share-social" size={24} color={isDark ? primary[300] : primary[600]} />
-        </View>
-        <View style={styles.shareMatchContent}>
-          <Text weight="semibold" style={{ color: colors.text }}>
-            {t('sharedLists.shareMatch.title')}
-          </Text>
-          <Text size="sm" style={{ color: colors.textSecondary }}>
-            {t('sharedLists.shareMatch.subtitle')}
-          </Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-      </TouchableOpacity>
-
-      {/* Section Header */}
-      <View style={styles.sectionHeader}>
-        <Text weight="semibold" style={{ color: colors.text }}>
-          {t('sharedLists.yourLists')}
-        </Text>
+      {/* Search Bar - always visible */}
+      <View style={styles.searchContainer}>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder={t('sharedLists.searchLists')}
+        />
       </View>
 
-      {/* Search Bar - only show when there are lists */}
-      {lists.length > 0 && (
-        <View style={styles.searchContainer}>
-          <SearchBar
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder={t('sharedLists.searchLists')}
-          />
+      {/* Loading state */}
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          {[1, 2, 3].map(i => (
+            <View
+              key={i}
+              style={[
+                styles.skeletonCard,
+                {
+                  backgroundColor: colors.cardBackground,
+                  borderColor: colors.border,
+                  shadowColor: isDark ? 'transparent' : '#000',
+                },
+              ]}
+            >
+              {/* Top row: icon + title + chevron */}
+              <View style={styles.topRow}>
+                <Skeleton
+                  width={36}
+                  height={36}
+                  borderRadius={radiusPixels.md}
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                />
+                <Skeleton
+                  width="60%"
+                  height={18}
+                  borderRadius={4}
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                  style={{ flex: 1 }}
+                />
+                <Skeleton
+                  width={18}
+                  height={18}
+                  borderRadius={4}
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                />
+              </View>
+              {/* Info rows */}
+              <View style={styles.infoRow}>
+                <Skeleton
+                  width={14}
+                  height={14}
+                  borderRadius={2}
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                />
+                <Skeleton
+                  width="70%"
+                  height={14}
+                  borderRadius={4}
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                  style={{ marginLeft: spacingPixels[2] }}
+                />
+              </View>
+              <View style={styles.infoRow}>
+                <Skeleton
+                  width={14}
+                  height={14}
+                  borderRadius={2}
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                />
+                <Skeleton
+                  width="30%"
+                  height={14}
+                  borderRadius={4}
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                  style={{ marginLeft: spacingPixels[2] }}
+                />
+              </View>
+              {/* Action row */}
+              <View style={[styles.skeletonActionRow, { borderTopColor: colors.border }]}>
+                <Skeleton
+                  width="30%"
+                  height={14}
+                  borderRadius={4}
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                  style={{ flex: 1 }}
+                />
+                <Skeleton
+                  width="30%"
+                  height={14}
+                  borderRadius={4}
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                  style={{ flex: 1 }}
+                />
+              </View>
+            </View>
+          ))}
         </View>
+      ) : (
+        /* Lists */
+        <FlatList
+          data={filteredLists}
+          keyExtractor={item => item.id}
+          renderItem={renderListItem}
+          contentContainerStyle={[
+            styles.listContent,
+            lists.length === 0 && styles.emptyListContent,
+          ]}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={renderEmpty}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={handleRefresh}
+              tintColor={colors.primary}
+            />
+          }
+        />
       )}
 
-      {/* Lists */}
-      <FlatList
-        data={filteredLists}
-        keyExtractor={item => item.id}
-        renderItem={renderListItem}
-        contentContainerStyle={[styles.listContent, lists.length === 0 && styles.emptyListContent]}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={renderEmpty}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={handleRefresh}
-            tintColor={colors.primary}
-          />
-        }
-      />
-
-      {/* Create List FAB */}
+      {/* FAB buttons */}
       {lists.length > 0 && (
-        <TouchableOpacity
-          style={[styles.fab, { backgroundColor: colors.primary }]}
-          onPress={handleCreateList}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="add-outline" size={28} color="#FFFFFF" />
-        </TouchableOpacity>
+        <View style={styles.fabContainer}>
+          <TouchableOpacity
+            style={[styles.fab, { backgroundColor: colors.primary }]}
+            onPress={() => {
+              if (!guardAction()) return;
+              if (playerId) {
+                SheetManager.show('share-match', { payload: { playerId } });
+              }
+            }}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="paper-plane-outline" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.fab, { backgroundColor: colors.primary }]}
+            onPress={handleCreateList}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="add-outline" size={28} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
       )}
     </SafeAreaView>
   );
@@ -296,43 +325,47 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    padding: spacingPixels[4],
+    paddingTop: spacingPixels[2],
+    paddingHorizontal: spacingPixels[4],
   },
-  shareMatchCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: spacingPixels[4],
-    marginTop: spacingPixels[3],
-    padding: spacingPixels[3],
+  skeletonCard: {
     borderRadius: radiusPixels.lg,
+    padding: spacingPixels[4],
+    marginBottom: spacingPixels[3],
     borderWidth: 1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  shareMatchIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: radiusPixels.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacingPixels[3],
-  },
-  shareMatchContent: {
-    flex: 1,
-  },
-  sectionHeader: {
+  topRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: spacingPixels[2],
+    marginBottom: spacingPixels[2],
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacingPixels[1],
+  },
+  skeletonActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacingPixels[2],
+    paddingTop: spacingPixels[2],
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: spacingPixels[2],
+  },
+  searchContainer: {
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[4],
     paddingBottom: spacingPixels[2],
   },
-  searchContainer: {
-    paddingHorizontal: spacingPixels[4],
-    paddingBottom: spacingPixels[2],
-  },
   listContent: {
+    paddingTop: spacingPixels[2],
     paddingHorizontal: spacingPixels[4],
-    paddingBottom: 100,
+    paddingBottom: spacingPixels[4],
   },
   emptyListContent: {
     flex: 1,
@@ -355,10 +388,14 @@ const styles = StyleSheet.create({
   emptyButton: {
     marginTop: spacingPixels[6],
   },
-  fab: {
+  fabContainer: {
     position: 'absolute',
-    bottom: 24,
-    right: 24,
+    bottom: spacingPixels[6],
+    right: spacingPixels[4],
+    alignItems: 'center',
+    gap: spacingPixels[3],
+  },
+  fab: {
     width: 56,
     height: 56,
     borderRadius: 28,

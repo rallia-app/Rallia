@@ -9,11 +9,7 @@ import { Alert } from 'react-native';
 /**
  * Show error message to user
  */
-export const showError = (
-  title: string,
-  message: string,
-  onDismiss?: () => void
-): void => {
+export const showError = (title: string, message: string, onDismiss?: () => void): void => {
   Alert.alert(title, message, [
     {
       text: 'OK',
@@ -25,11 +21,7 @@ export const showError = (
 /**
  * Show success message to user
  */
-export const showSuccess = (
-  title: string,
-  message: string,
-  onDismiss?: () => void
-): void => {
+export const showSuccess = (title: string, message: string, onDismiss?: () => void): void => {
   Alert.alert(title, message, [
     {
       text: 'OK',
@@ -41,11 +33,7 @@ export const showSuccess = (
 /**
  * Show warning message to user
  */
-export const showWarning = (
-  title: string,
-  message: string,
-  onDismiss?: () => void
-): void => {
+export const showWarning = (title: string, message: string, onDismiss?: () => void): void => {
   Alert.alert(title, message, [
     {
       text: 'OK',
@@ -63,21 +51,17 @@ export const showConfirmation = (
   onConfirm: () => void,
   onCancel?: () => void
 ): void => {
-  Alert.alert(
-    title,
-    message,
-    [
-      {
-        text: 'Cancel',
-        style: 'cancel',
-        onPress: onCancel,
-      },
-      {
-        text: 'Confirm',
-        onPress: onConfirm,
-      },
-    ]
-  );
+  Alert.alert(title, message, [
+    {
+      text: 'Cancel',
+      style: 'cancel',
+      onPress: onCancel,
+    },
+    {
+      text: 'Confirm',
+      onPress: onConfirm,
+    },
+  ]);
 };
 
 /**
@@ -90,20 +74,16 @@ export const showDestructiveConfirmation = (
   onConfirm: () => void,
   onCancel?: () => void
 ): void => {
-  Alert.alert(
-    title,
-    message,
-    [
-      {
-        text: 'Cancel',
-        style: 'cancel',
-        onPress: onCancel,
-      },
-      {
-        text: confirmText,
-        style: 'destructive',
-        onPress: onConfirm,
-      },
-    ]
-  );
+  Alert.alert(title, message, [
+    {
+      text: 'Cancel',
+      style: 'cancel',
+      onPress: onCancel,
+    },
+    {
+      text: confirmText,
+      style: 'destructive',
+      onPress: onConfirm,
+    },
+  ]);
 };

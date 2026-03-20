@@ -6,11 +6,7 @@
  */
 
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
-import type {
-  MatchType,
-  AddScoreFormData,
-  AddScoreStep,
-} from './types';
+import type { MatchType, AddScoreFormData, AddScoreStep } from './types';
 import { SINGLES_SCORE_STEPS, DOUBLES_SCORE_STEPS } from './types';
 
 interface AddScoreContextType {
@@ -50,11 +46,7 @@ const initialFormData: Partial<AddScoreFormData> = {
   sets: [{ team1Score: null, team2Score: null }],
 };
 
-export function AddScoreProvider({
-  children,
-  initialMatchType,
-  networkId,
-}: AddScoreProviderProps) {
+export function AddScoreProvider({ children, initialMatchType, networkId }: AddScoreProviderProps) {
   const [formData, setFormData] = useState<Partial<AddScoreFormData>>({
     ...initialFormData,
     matchType: initialMatchType,
@@ -75,7 +67,7 @@ export function AddScoreProvider({
   const canGoNext = currentStepIndex < steps.length - 1;
 
   const updateFormData = useCallback((data: Partial<AddScoreFormData>) => {
-    setFormData((prev) => ({ ...prev, ...data }));
+    setFormData(prev => ({ ...prev, ...data }));
   }, []);
 
   const resetFormData = useCallback(() => {
@@ -89,12 +81,12 @@ export function AddScoreProvider({
 
   const setMatchType = useCallback((type: MatchType) => {
     setMatchTypeState(type);
-    setFormData((prev) => ({ ...prev, matchType: type }));
+    setFormData(prev => ({ ...prev, matchType: type }));
   }, []);
 
   const goToNextStep = useCallback(() => {
     if (currentStepIndex < steps.length - 1) {
-      setCurrentStepIndex((prev) => prev + 1);
+      setCurrentStepIndex(prev => prev + 1);
       return true;
     }
     return false;
@@ -102,7 +94,7 @@ export function AddScoreProvider({
 
   const goToPreviousStep = useCallback(() => {
     if (currentStepIndex > 0) {
-      setCurrentStepIndex((prev) => prev - 1);
+      setCurrentStepIndex(prev => prev - 1);
       return true;
     }
     return false;
@@ -124,11 +116,7 @@ export function AddScoreProvider({
     setMatchType,
   };
 
-  return (
-    <AddScoreContext.Provider value={value}>
-      {children}
-    </AddScoreContext.Provider>
-  );
+  return <AddScoreContext.Provider value={value}>{children}</AddScoreContext.Provider>;
 }
 
 export function useAddScore() {

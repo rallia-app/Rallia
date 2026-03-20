@@ -25,22 +25,22 @@ export interface SetScore {
 
 export interface AddScoreFormData {
   matchType: MatchType;
-  opponents: SelectedPlayer[];  // 1 for singles, 3 for doubles (you + 3 others = 4 players)
-  partner?: SelectedPlayer;     // Only for doubles - the teammate you select from the 3 players
+  opponents: SelectedPlayer[]; // 1 for singles, 3 for doubles (you + 3 others = 4 players)
+  partner?: SelectedPlayer; // Only for doubles - the teammate you select from the 3 players
   matchDate: Date;
   location?: string;
   sport: Sport;
   expectation: MatchExpectation;
-  winnerId: string;  // 'team1' or 'team2' 
+  winnerId: string; // 'team1' or 'team2'
   sets: SetScore[];
-  networkId?: string;  // If posting to a group
+  networkId?: string; // If posting to a group
 }
 
 export type AddScoreStep =
   | 'find-opponent'
   | 'match-details'
   | 'match-expectation'
-  | 'create-teams'      // Only for doubles - pick your partner
+  | 'create-teams' // Only for doubles - pick your partner
   | 'winner-scores';
 
 // Steps for singles matches

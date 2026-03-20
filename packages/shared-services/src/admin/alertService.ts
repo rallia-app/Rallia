@@ -241,22 +241,22 @@ export async function getAlertPreferences(adminId: string): Promise<AlertPrefere
 export async function updateAlertPreference(
   adminId: string,
   alertType: AlertType,
-  updates: Partial<Pick<AlertPreference, 'email_enabled' | 'push_enabled' | 'in_app_enabled' | 'min_severity'>>
+  updates: Partial<
+    Pick<AlertPreference, 'email_enabled' | 'push_enabled' | 'in_app_enabled' | 'min_severity'>
+  >
 ): Promise<boolean> {
   try {
-    const { error } = await supabase
-      .from('admin_alert_preference')
-      .upsert(
-        {
-          admin_id: adminId,
-          alert_type: alertType,
-          ...updates,
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: 'admin_id,alert_type',
-        }
-      );
+    const { error } = await supabase.from('admin_alert_preference').upsert(
+      {
+        admin_id: adminId,
+        alert_type: alertType,
+        ...updates,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: 'admin_id,alert_type',
+      }
+    );
 
     if (error) {
       console.error('[AlertService] Error updating preference:', error);

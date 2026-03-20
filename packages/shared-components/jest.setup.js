@@ -1,6 +1,6 @@
 /**
  * Jest setup for @rallia/shared-components
- * 
+ *
  * This file runs before each test file in the suite.
  */
 

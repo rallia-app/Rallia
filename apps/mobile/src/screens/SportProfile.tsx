@@ -310,6 +310,14 @@ const SportProfile = () => {
       setCurrentLevelProofsCount(currentLevelCount);
     }
 
+    // Update certification status (may have been changed by DB triggers)
+    if (!certResult.error && certResult.data) {
+      setCertificationStatus(certResult.data.badge_status || 'self_declared');
+      setReferencesCount(certResult.data.referrals_count ?? 0);
+      setPeerEvaluationAverage(certResult.data.peer_evaluation_average ?? undefined);
+      setPeerEvaluationCount(certResult.data.peer_evaluation_count ?? 0);
+    }
+
     // Refresh reference count (level-filtered)
     const { data: refs, error: refsError } = await supabase
       .from('rating_reference_request')

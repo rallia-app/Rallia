@@ -145,7 +145,7 @@ function MessageActionsSheetComponent({ payload }: SheetProps<'message-actions'>
           showEmojiPicker && { height: 0, opacity: 0 },
         ]}
         indicatorStyle={[
-          styles.handleIndicator, 
+          styles.handleIndicator,
           { backgroundColor: colors.border },
           showEmojiPicker && { opacity: 0 },
         ]}

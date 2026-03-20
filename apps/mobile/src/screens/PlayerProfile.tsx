@@ -15,6 +15,8 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  FlatList,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -49,7 +51,9 @@ import {
   neutral,
   status,
 } from '@rallia/design-system';
-import { CertificationBadge, type BadgeStatus } from '../features/ratings/components';
+import { CertificationBadge, ProofViewer, type BadgeStatus } from '../features/ratings/components';
+import { useVideoThumbnail } from '../hooks/useVideoThumbnail';
+import { useOgImage } from '../hooks/useOgImage';
 
 // Types
 type PlayerProfileRouteProp = RouteProp<RootStackParamList, 'PlayerProfile'>;
@@ -72,6 +76,27 @@ interface SportWithRating {
   totalProofsCount?: number; // All proofs for this sport
   currentLevelProofsCount?: number; // Proofs matching current rating level
 }
+
+interface RatingProofData {
+  id: string;
+  proof_type: 'external_link' | 'video' | 'image' | 'document';
+  title: string;
+  description: string | null;
+  external_url: string | null;
+  status: string;
+  created_at: string;
+  file?: {
+    id: string;
+    url: string;
+    thumbnail_url: string | null;
+    file_type: string;
+    original_name: string;
+    mime_type: string;
+  } | null;
+}
+
+const PROOF_CARD_WIDTH = 140;
+const PROOF_CARD_HEIGHT = 105;
 
 interface PlayerSportPreferences {
   playerSportId: string | null;
@@ -111,6 +136,64 @@ interface PlayerStats {
   weekStreak: number;
 }
 
+/** Small card component so thumbnail hooks can be called per proof. */
+const ProofGalleryCard: React.FC<{
+  item: RatingProofData;
+  effectiveType: string;
+  typeColor: string;
+  iconName: string;
+  backgroundColor: string;
+  onPress: () => void;
+}> = ({ item, effectiveType, typeColor, iconName, backgroundColor, onPress }) => {
+  const videoThumbnail = useVideoThumbnail(
+    effectiveType === 'video' && !item.file?.thumbnail_url ? item.file?.url : null
+  );
+  const ogImage = useOgImage(effectiveType === 'external_link' ? item.external_url : null);
+  const thumbnail =
+    item.file?.thumbnail_url ||
+    (effectiveType === 'video' ? videoThumbnail : null) ||
+    (effectiveType === 'image' ? item.file?.url : null) ||
+    (effectiveType === 'external_link' ? ogImage : null);
+
+  return (
+    <TouchableOpacity
+      style={[styles.proofGalleryCard, { backgroundColor }]}
+      activeOpacity={0.8}
+      onPress={onPress}
+    >
+      {thumbnail ? (
+        <Image
+          source={{ uri: thumbnail }}
+          style={styles.proofGalleryThumbnail}
+          resizeMode="cover"
+        />
+      ) : (
+        <View style={[styles.proofGalleryPlaceholder, { backgroundColor: `${typeColor}20` }]}>
+          <Ionicons name={iconName as any} size={28} color={typeColor} />
+        </View>
+      )}
+      {/* Type badge overlay */}
+      <View style={[styles.proofTypeBadge, { backgroundColor: typeColor }]}>
+        <Ionicons name={iconName as any} size={10} color="#fff" />
+      </View>
+      {/* Play icon for videos */}
+      {effectiveType === 'video' && (
+        <View style={styles.proofPlayOverlay}>
+          <View style={[styles.proofPlayButton, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+            <Ionicons name="play" size={16} color="#fff" />
+          </View>
+        </View>
+      )}
+      {/* Title */}
+      <View style={styles.proofGalleryTitleContainer}>
+        <Text style={styles.proofGalleryTitle} numberOfLines={1}>
+          {item.title}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+};
+
 const PlayerProfile = () => {
   const route = useRoute<PlayerProfileRouteProp>();
   const navigation = useNavigation<NavigationProp>();
@@ -147,6 +230,10 @@ const PlayerProfile = () => {
   const [favoriteFacilities, setFavoriteFacilities] = useState<FavoriteFacilityData[]>([]);
   const [favoriteFacilitiesLoading, setFavoriteFacilitiesLoading] = useState(true);
   const [referenceLoading, setReferenceLoading] = useState(false);
+  const [approvedProofs, setApprovedProofs] = useState<RatingProofData[]>([]);
+  const [proofsLoading, setProofsLoading] = useState(false);
+  const [selectedProof, setSelectedProof] = useState<RatingProofData | null>(null);
+  const [showProofViewer, setShowProofViewer] = useState(false);
 
   // Fetch favorite facilities for the player being viewed (separate from main data fetch)
   useEffect(() => {
@@ -245,6 +332,52 @@ const PlayerProfile = () => {
 
     fetchCurrentUserAndStatuses();
   }, [playerId]);
+
+  const handleStartChat = useCallback(async () => {
+    if (!currentUserId || chatLoading) return;
+
+    setChatLoading(true);
+    lightHaptic();
+
+    try {
+      const conversation = await getOrCreateDirectConversation.mutateAsync({
+        playerId1: currentUserId,
+        playerId2: playerId,
+      });
+
+      // Navigate to the chat conversation
+      // Use the other player's name as the title
+      const playerName = profile
+        ? `${(profile as unknown as { first_name?: string }).first_name || ''} ${(profile as unknown as { last_name?: string }).last_name || ''}`.trim() ||
+          t('common.player')
+        : t('playerProfile.chat');
+      navigation.navigate('ChatConversation', {
+        conversationId: conversation.id,
+        title: playerName,
+      });
+    } catch (error) {
+      Logger.error('Failed to start chat', error as Error);
+      Alert.alert(t('alerts.error'), t('alerts.failedToStartConversation'));
+    } finally {
+      setChatLoading(false);
+    }
+  }, [currentUserId, playerId, chatLoading, getOrCreateDirectConversation, navigation, profile]);
+
+  // Add chat icon to header right
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={handleStartChat}
+          disabled={!currentUserId}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={{ marginRight: spacingPixels[2] }}
+        >
+          <Ionicons name="chatbubble-outline" size={24} color={colors.headerForeground} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, currentUserId, handleStartChat, colors.headerForeground]);
 
   const fetchPlayerProfileData = async () => {
     try {
@@ -908,36 +1041,6 @@ const PlayerProfile = () => {
     }
   }, [currentUserId, referenceLoading, sportId, sports, playerId, t, toast]);
 
-  const handleStartChat = useCallback(async () => {
-    if (!currentUserId || chatLoading) return;
-
-    setChatLoading(true);
-    lightHaptic();
-
-    try {
-      const conversation = await getOrCreateDirectConversation.mutateAsync({
-        playerId1: currentUserId,
-        playerId2: playerId,
-      });
-
-      // Navigate to the chat conversation
-      // Use the other player's name as the title
-      const playerName = profile
-        ? `${(profile as unknown as { first_name?: string }).first_name || ''} ${(profile as unknown as { last_name?: string }).last_name || ''}`.trim() ||
-          t('common.player')
-        : t('playerProfile.chat');
-      navigation.navigate('ChatConversation', {
-        conversationId: conversation.id,
-        title: playerName,
-      });
-    } catch (error) {
-      Logger.error('Failed to start chat', error as Error);
-      Alert.alert(t('alerts.error'), t('alerts.failedToStartConversation'));
-    } finally {
-      setChatLoading(false);
-    }
-  }, [currentUserId, playerId, chatLoading, getOrCreateDirectConversation, navigation, profile]);
-
   const handleToggleFavorite = useCallback(async () => {
     if (!currentUserId || favoriteLoading) return;
 
@@ -1035,87 +1138,311 @@ const PlayerProfile = () => {
     return sports.find(s => s.isPrimary) || sports[0];
   }, [sports, sportId]);
 
+  // Fetch approved proofs for the primary sport rating
+  useEffect(() => {
+    const fetchApprovedProofs = async () => {
+      const prsId = primarySport?.playerRatingScoreId;
+      if (!prsId) {
+        setApprovedProofs([]);
+        return;
+      }
+      setProofsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('rating_proof')
+          .select(
+            `
+            id,
+            proof_type,
+            title,
+            description,
+            external_url,
+            status,
+            created_at,
+            file:file_id(id, url, thumbnail_url, file_type, original_name, mime_type)
+          `
+          )
+          .eq('player_rating_score_id', prsId)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (error) {
+          Logger.error('Failed to fetch approved proofs', error, { playerRatingScoreId: prsId });
+          return;
+        }
+
+        const proofsData = (data || []).map((item: Record<string, unknown>) => ({
+          ...item,
+          file: Array.isArray(item.file) && item.file.length > 0 ? item.file[0] : item.file,
+        })) as RatingProofData[];
+        setApprovedProofs(proofsData);
+      } catch (err) {
+        Logger.error('Failed to fetch approved proofs', err as Error);
+      } finally {
+        setProofsLoading(false);
+      }
+    };
+    fetchApprovedProofs();
+  }, [primarySport?.playerRatingScoreId]);
+
+  const getEffectiveProofType = useCallback((proof: RatingProofData): string => {
+    if (proof.proof_type === 'external_link') return 'external_link';
+    if (proof.file?.file_type && ['video', 'image', 'document'].includes(proof.file.file_type)) {
+      return proof.file.file_type;
+    }
+    return proof.proof_type;
+  }, []);
+
+  const getProofIcon = useCallback((type: string): string => {
+    switch (type) {
+      case 'video':
+        return 'videocam';
+      case 'image':
+        return 'image';
+      case 'document':
+        return 'document-text';
+      case 'external_link':
+        return 'link';
+      default:
+        return 'help-circle';
+    }
+  }, []);
+
+  const getProofTypeColor = useCallback((type: string): string => {
+    switch (type) {
+      case 'video':
+        return '#FF6B6B';
+      case 'image':
+        return '#4ECDC4';
+      case 'document':
+        return '#45B7D1';
+      case 'external_link':
+        return '#96CEB4';
+      default:
+        return '#888';
+    }
+  }, []);
+
   if (loading) {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
         edges={['bottom']}
       >
-        <View style={styles.loadingContainer}>
-          {/* Player Profile Skeleton */}
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          {/* Profile Header Skeleton */}
           <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
-            <SkeletonAvatar
-              size={120}
-              backgroundColor={colors.cardBackground}
-              highlightColor={colors.border}
+            <View style={{ marginBottom: spacingPixels[3] }}>
+              <SkeletonAvatar
+                size={100}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+              />
+            </View>
+            <Skeleton
+              width={150}
+              height={20}
+              borderRadius={4}
+              backgroundColor={skeletonBg}
+              highlightColor={skeletonHighlight}
+              style={{ marginBottom: spacingPixels[1] }}
             />
-            <View style={{ marginTop: 16, alignItems: 'center' }}>
+            <Skeleton
+              width={80}
+              height={14}
+              borderRadius={4}
+              backgroundColor={skeletonBg}
+              highlightColor={skeletonHighlight}
+              style={{ marginBottom: spacingPixels[2] }}
+            />
+            {/* Badges row */}
+            <View style={styles.profileBadgesRow}>
               <Skeleton
-                width={150}
+                width={70}
+                height={28}
+                borderRadius={14}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+              />
+              <Skeleton
+                width={70}
+                height={28}
+                borderRadius={14}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+              />
+            </View>
+            {/* Joined date */}
+            <View style={styles.joinedContainer}>
+              <Skeleton
+                width={120}
+                height={12}
+                borderRadius={4}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+              />
+            </View>
+            {/* Last seen */}
+            <View style={styles.lastSeenContainer}>
+              <Skeleton
+                width={90}
+                height={12}
+                borderRadius={4}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+              />
+            </View>
+            {/* Action button */}
+            <View style={styles.actionButtons}>
+              <View style={{ flex: 1 }}>
+                <Skeleton
+                  width="100%"
+                  height={44}
+                  borderRadius={22}
+                  backgroundColor={skeletonBg}
+                  highlightColor={skeletonHighlight}
+                />
+              </View>
+            </View>
+            {/* Request Reference button */}
+            <View style={styles.secondaryAction}>
+              <Skeleton
+                width={180}
+                height={36}
+                borderRadius={18}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+              />
+            </View>
+          </View>
+
+          {/* Statistics Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Skeleton
+                width={18}
                 height={18}
                 borderRadius={4}
-                backgroundColor={colors.cardBackground}
-                highlightColor={colors.border}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
               />
               <Skeleton
-                width={80}
-                height={14}
+                width={120}
+                height={16}
                 borderRadius={4}
-                backgroundColor={colors.cardBackground}
-                highlightColor={colors.border}
-                style={{ marginTop: 8 }}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
               />
             </View>
-            {/* Action buttons skeleton */}
-            <View style={{ flexDirection: 'row', marginTop: 16, gap: 12 }}>
-              <Skeleton
-                width={140}
-                height={44}
-                borderRadius={22}
-                backgroundColor={colors.cardBackground}
-                highlightColor={colors.border}
-              />
-              <Skeleton
-                width={140}
-                height={44}
-                borderRadius={22}
-                backgroundColor={colors.cardBackground}
-                highlightColor={colors.border}
-              />
+            <View style={styles.statsGrid}>
+              {[1, 2, 3].map(i => (
+                <View key={i} style={{ flex: 1 }}>
+                  <Skeleton
+                    width="100%"
+                    height={80}
+                    borderRadius={radiusPixels.xl}
+                    backgroundColor={skeletonBg}
+                    highlightColor={skeletonHighlight}
+                  />
+                </View>
+              ))}
             </View>
           </View>
-          {/* Stats cards skeleton */}
-          <View style={{ flexDirection: 'row', paddingHorizontal: 16, marginTop: 16, gap: 12 }}>
-            <View style={{ flex: 1 }}>
+
+          {/* Player Information Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
               <Skeleton
-                width="100%"
-                height={80}
-                borderRadius={12}
-                backgroundColor={colors.cardBackground}
-                highlightColor={colors.border}
+                width={18}
+                height={18}
+                borderRadius={4}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+              />
+              <Skeleton
+                width={160}
+                height={16}
+                borderRadius={4}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
               />
             </View>
-            <View style={{ flex: 1 }}>
-              <Skeleton
-                width="100%"
-                height={80}
-                borderRadius={12}
-                backgroundColor={colors.cardBackground}
-                highlightColor={colors.border}
-              />
-            </View>
-          </View>
-          {/* Info section skeleton */}
-          <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
             <Skeleton
               width="100%"
-              height={120}
-              borderRadius={12}
-              backgroundColor={colors.cardBackground}
-              highlightColor={colors.border}
+              height={140}
+              borderRadius={radiusPixels.xl}
+              backgroundColor={skeletonBg}
+              highlightColor={skeletonHighlight}
             />
           </View>
-        </View>
+
+          {/* Preferred Courts Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Skeleton
+                width={18}
+                height={18}
+                borderRadius={4}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+              />
+              <Skeleton
+                width={140}
+                height={16}
+                borderRadius={4}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+              />
+            </View>
+            <View style={styles.facilitiesSection}>
+              <Skeleton
+                width="100%"
+                height={70}
+                borderRadius={radiusPixels.lg}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+              />
+              <Skeleton
+                width="100%"
+                height={70}
+                borderRadius={radiusPixels.lg}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+              />
+            </View>
+          </View>
+
+          {/* Rating Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Skeleton
+                width={18}
+                height={18}
+                borderRadius={4}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+              />
+              <Skeleton
+                width={100}
+                height={16}
+                borderRadius={4}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+              />
+            </View>
+            <Skeleton
+              width="100%"
+              height={140}
+              borderRadius={radiusPixels.xl}
+              backgroundColor={skeletonBg}
+              highlightColor={skeletonHighlight}
+            />
+          </View>
+
+          {/* Bottom Spacing */}
+          <View style={{ height: 40 }} />
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -1258,23 +1585,6 @@ const PlayerProfile = () => {
             >
               {t('playerProfile.inviteToMatch')}
             </Button>
-
-            <Button
-              variant="secondary"
-              size="md"
-              onPress={handleStartChat}
-              loading={chatLoading}
-              disabled={chatLoading || !currentUserId}
-              leftIcon={
-                !chatLoading ? (
-                  <Ionicons name="chatbubble-outline" size={18} color={colors.primary} />
-                ) : undefined
-              }
-              isDark={isDark}
-              style={{ flex: 1 }}
-            >
-              {t('playerProfile.chat')}
-            </Button>
           </View>
 
           {/* Secondary Action */}
@@ -1295,6 +1605,142 @@ const PlayerProfile = () => {
             </Button>
           </View>
         </View>
+
+        {/* Statistics Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="stats-chart-outline" size={18} color={colors.primary} />
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              {t('playerProfile.sections.statistics')}
+            </Text>
+          </View>
+
+          <View style={styles.statsGrid}>
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
+            >
+              <Text style={[styles.statValue, { color: colors.primary }]}>{stats.hoursPlayed}</Text>
+              <Text style={[styles.statLabel, { color: colors.textMuted }]}>
+                {t('playerProfile.stats.hoursPlayed')}
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
+            >
+              <Text style={[styles.statValue, { color: colors.primary }]}>{stats.gamesHosted}</Text>
+              <Text style={[styles.statLabel, { color: colors.textMuted }]}>
+                {t('playerProfile.stats.gamesHosted')}
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
+            >
+              <Text style={[styles.statValue, { color: colors.primary }]}>{stats.weekStreak}</Text>
+              <Text style={[styles.statLabel, { color: colors.textMuted }]}>
+                {t('playerProfile.stats.weekStreak')}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Rating Section */}
+        {primarySport && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="star-outline" size={18} color={colors.primary} />
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                {t('playerProfile.sections.rating')}
+              </Text>
+            </View>
+
+            <View
+              style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+            >
+              <View style={styles.ratingHeader}>
+                <View>
+                  <Text style={[styles.ratingTitle, { color: colors.text }]}>
+                    {primarySport.ratingLabel
+                      ? getTranslatedRatingTitle(primarySport.ratingValue)
+                      : t('playerProfile.rating.unrated' as TranslationKey)}
+                  </Text>
+                  <Text style={[styles.ratingCode, { color: colors.primary }]}>
+                    {primarySport.ratingLabel ||
+                      (primarySport.name === 'tennis' ? 'NTRP -' : 'DUPR -')}
+                  </Text>
+                  {(primarySport.referencesCount ?? 0) > 0 && (
+                    <View
+                      style={[styles.referencesBadge, { backgroundColor: `${colors.primary}15` }]}
+                    >
+                      <Ionicons name="people-outline" size={14} color={colors.primary} />
+                      <Text style={[styles.referencesBadgeText, { color: colors.primary }]}>
+                        {t('profile.rating.references', {
+                          count: primarySport.referencesCount || 0,
+                        })}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <CertificationBadge
+                  status={primarySport.badgeStatus || 'self_declared'}
+                  size="md"
+                />
+              </View>
+              <Text style={[styles.ratingDescription, { color: colors.textMuted }]}>
+                {getTranslatedRatingDescription(primarySport.ratingValue)}
+              </Text>
+
+              {/* Proof Gallery */}
+              {proofsLoading ? (
+                <View style={styles.proofGalleryLoading}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                </View>
+              ) : approvedProofs.length > 0 ? (
+                <FlatList
+                  data={approvedProofs}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  keyExtractor={item => item.id}
+                  contentContainerStyle={styles.proofGalleryList}
+                  renderItem={({ item }) => {
+                    const effectiveType = getEffectiveProofType(item);
+                    return (
+                      <ProofGalleryCard
+                        item={item}
+                        effectiveType={effectiveType}
+                        typeColor={getProofTypeColor(effectiveType)}
+                        iconName={getProofIcon(effectiveType)}
+                        backgroundColor={colors.inputBackground}
+                        onPress={() => {
+                          setSelectedProof(item);
+                          setShowProofViewer(true);
+                        }}
+                      />
+                    );
+                  }}
+                />
+              ) : null}
+
+              {/* Proof Viewer Modal */}
+              <ProofViewer
+                visible={showProofViewer}
+                onClose={() => {
+                  setShowProofViewer(false);
+                  setSelectedProof(null);
+                }}
+                proof={selectedProof}
+              />
+            </View>
+          </View>
+        )}
 
         {/* Player Information Section */}
         <View style={styles.section}>
@@ -1370,30 +1816,6 @@ const PlayerProfile = () => {
                 <Text style={[styles.preferenceValue, { color: colors.text }]}>
                   {formatMatchType(sportPreferences.preferred_match_type)}
                 </Text>
-              </View>
-
-              {/* Favorite Facilities */}
-              <View style={[styles.preferenceRow, { borderBottomColor: colors.border }]}>
-                <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
-                  {t('profile.fields.favoriteFacilities')}
-                </Text>
-                <View style={styles.facilitiesContainer}>
-                  {favoriteFacilities.length > 0 ? (
-                    favoriteFacilities.map(fav => (
-                      <Text
-                        key={fav.id}
-                        style={[styles.facilityText, { color: colors.text }]}
-                        numberOfLines={1}
-                      >
-                        {fav.facility?.name || t('profile.notSet')}
-                      </Text>
-                    ))
-                  ) : (
-                    <Text style={[styles.preferenceValue, { color: colors.text }]}>
-                      {t('profile.notSet')}
-                    </Text>
-                  )}
-                </View>
               </View>
 
               {/* Playing Style */}
@@ -1495,107 +1917,6 @@ const PlayerProfile = () => {
               </Text>
             </View>
           )}
-        </View>
-
-        {/* Rating Section */}
-        {primarySport && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="star-outline" size={18} color={colors.primary} />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                {t('playerProfile.sections.rating')}
-              </Text>
-            </View>
-
-            <View
-              style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
-            >
-              <View style={styles.ratingHeader}>
-                <View>
-                  <Text style={[styles.ratingTitle, { color: colors.text }]}>
-                    {primarySport.ratingLabel
-                      ? getTranslatedRatingTitle(primarySport.ratingValue)
-                      : t('playerProfile.rating.unrated' as TranslationKey)}
-                  </Text>
-                  <Text style={[styles.ratingCode, { color: colors.primary }]}>
-                    {primarySport.ratingLabel ||
-                      (primarySport.name === 'tennis' ? 'NTRP -' : 'DUPR -')}
-                  </Text>
-                </View>
-                <CertificationBadge
-                  status={primarySport.badgeStatus || 'self_declared'}
-                  size="md"
-                />
-              </View>
-              <Text style={[styles.ratingDescription, { color: colors.textMuted }]}>
-                {getTranslatedRatingDescription(primarySport.ratingValue)}
-              </Text>
-
-              {/* Rating Actions */}
-              <View style={styles.ratingActions}>
-                <TouchableOpacity
-                  style={[styles.ratingActionButton, { borderColor: colors.border }]}
-                >
-                  <Text style={[styles.ratingActionText, { color: colors.primary }]}>
-                    {t('profile.rating.references', { count: primarySport.referencesCount || 0 })}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.ratingActionButton, { borderColor: colors.border }]}
-                >
-                  <Text style={[styles.ratingActionText, { color: colors.primary }]}>
-                    {t('profile.rating.ratingProof', { count: primarySport.totalProofsCount || 0 })}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* Statistics Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="stats-chart-outline" size={18} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('playerProfile.sections.statistics')}
-            </Text>
-          </View>
-
-          <View style={styles.statsGrid}>
-            <View
-              style={[
-                styles.statCard,
-                { backgroundColor: colors.card, borderColor: colors.border },
-              ]}
-            >
-              <Text style={[styles.statValue, { color: colors.primary }]}>{stats.hoursPlayed}</Text>
-              <Text style={[styles.statLabel, { color: colors.textMuted }]}>
-                {t('playerProfile.stats.hoursPlayed')}
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.statCard,
-                { backgroundColor: colors.card, borderColor: colors.border },
-              ]}
-            >
-              <Text style={[styles.statValue, { color: colors.primary }]}>{stats.gamesHosted}</Text>
-              <Text style={[styles.statLabel, { color: colors.textMuted }]}>
-                {t('playerProfile.stats.gamesHosted')}
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.statCard,
-                { backgroundColor: colors.card, borderColor: colors.border },
-              ]}
-            >
-              <Text style={[styles.statValue, { color: colors.primary }]}>{stats.weekStreak}</Text>
-              <Text style={[styles.statLabel, { color: colors.textMuted }]}>
-                {t('playerProfile.stats.weekStreak')}
-              </Text>
-            </View>
-          </View>
         </View>
 
         {/* Availabilities Section - Only show if player has made it public */}
@@ -1935,22 +2256,81 @@ const styles = StyleSheet.create({
   ratingDescription: {
     fontSize: fontSizePixels.sm,
     lineHeight: 20,
-    marginBottom: spacingPixels[4],
+    marginBottom: spacingPixels[3],
   },
-  ratingActions: {
+  referencesBadge: {
     flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: spacingPixels[1],
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: spacingPixels[1],
+    borderRadius: radiusPixels.full,
+    marginTop: spacingPixels[2],
+  },
+  referencesBadgeText: {
+    fontSize: fontSizePixels.xs,
+    fontWeight: fontWeightNumeric.semibold,
+  },
+  proofGalleryLoading: {
+    paddingVertical: spacingPixels[3],
+    alignItems: 'center',
+  },
+  proofGalleryList: {
     gap: spacingPixels[2],
   },
-  ratingActionButton: {
-    flex: 1,
-    paddingVertical: spacingPixels[2],
-    alignItems: 'center',
+  proofGalleryCard: {
+    width: PROOF_CARD_WIDTH,
+    height: PROOF_CARD_HEIGHT,
     borderRadius: radiusPixels.md,
-    borderWidth: 1,
+    overflow: 'hidden',
   },
-  ratingActionText: {
+  proofGalleryThumbnail: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+  },
+  proofGalleryPlaceholder: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  proofTypeBadge: {
+    position: 'absolute',
+    top: spacingPixels[1],
+    left: spacingPixels[1],
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  proofPlayOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  proofPlayButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  proofGalleryTitleContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: spacingPixels[1],
+    paddingVertical: spacingPixels[1],
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  proofGalleryTitle: {
     fontSize: fontSizePixels.xs,
     fontWeight: fontWeightNumeric.medium,
+    color: '#fff',
   },
   profileBadgesRow: {
     flexDirection: 'row',
@@ -1965,17 +2345,21 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: spacingPixels[4],
+    paddingHorizontal: spacingPixels[2],
     borderRadius: radiusPixels.xl,
     borderWidth: 1,
   },
   statValue: {
-    fontSize: fontSizePixels['2xl'],
+    fontSize: fontSizePixels['3xl'],
+    lineHeight: fontSizePixels['3xl'] * 1.2,
     fontWeight: fontWeightNumeric.bold,
     marginBottom: spacingPixels[1],
+    textAlign: 'center',
   },
   statLabel: {
-    fontSize: fontSizePixels.xs,
+    fontSize: 10,
     textAlign: 'center',
   },
   // Availability Grid Styles - Same as UserProfile

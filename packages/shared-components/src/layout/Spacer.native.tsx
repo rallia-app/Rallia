@@ -38,7 +38,7 @@ export interface SpacerProps {
 /**
  * Spacer component for adding space between elements
  * Can be used for fixed spacing or flexible spacing that fills available space
- * 
+ *
  * @example
  * ```tsx
  * // Vertical spacer (adds height)
@@ -47,28 +47,28 @@ export interface SpacerProps {
  *   <Spacer size={20} />
  *   <Text>Item 2</Text>
  * </VStack>
- * 
+ *
  * // Horizontal spacer (adds width)
  * <HStack>
  *   <Text>Left</Text>
  *   <Spacer size={20} direction="horizontal" />
  *   <Text>Right</Text>
  * </HStack>
- * 
+ *
  * // Flexible spacer (pushes items apart)
  * <HStack>
  *   <Text>Left</Text>
  *   <Spacer flex />
  *   <Text>Right</Text>
  * </HStack>
- * 
+ *
  * // Vertical flexible spacer
  * <VStack style={{ height: 400 }}>
  *   <Text>Top</Text>
  *   <Spacer flex />
  *   <Button>Bottom Button</Button>
  * </VStack>
- * 
+ *
  * // Custom size spacer
  * <VStack>
  *   <Heading>Title</Heading>
@@ -91,14 +91,14 @@ export const Spacer: React.FC<SpacerProps> = ({
         flex: 1,
       }
     : isVertical
-    ? {
-        height: size,
-        width: '100%',
-      }
-    : {
-        width: size,
-        height: '100%',
-      };
+      ? {
+          height: size,
+          width: '100%',
+        }
+      : {
+          width: size,
+          height: '100%',
+        };
 
   return <View style={[styles.spacer, spacerStyle, style]} testID={testID} />;
 };

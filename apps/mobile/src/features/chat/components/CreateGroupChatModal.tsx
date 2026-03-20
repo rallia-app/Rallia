@@ -324,19 +324,15 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
   const renderPlayerItem = useCallback(
     ({ item }: { item: SelectedMember }) => {
       const isSelected = selectedMembers.some(p => p.id === item.id);
-      const displayName = item.displayName || `${item.firstName} ${item.lastName || ''}`.trim();
+      const displayName = `${item.firstName} ${item.lastName || ''}`.trim();
 
       return (
         <TouchableOpacity
           style={[
             styles.playerItem,
             {
-              backgroundColor: isSelected
-                ? isDark
-                  ? 'rgba(64, 156, 255, 0.1)'
-                  : 'rgba(64, 156, 255, 0.1)'
-                : colors.cardBackground,
-              borderColor: isSelected ? primary[500] : colors.border,
+              backgroundColor: isSelected ? `${colors.buttonActive}15` : colors.buttonInactive,
+              borderColor: isSelected ? colors.buttonActive : colors.border,
             },
           ]}
           onPress={() => handleSelectMember(item)}
@@ -354,9 +350,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
               {displayName}
             </Text>
           </View>
-          {isSelected && (
-            <Ionicons name="checkmark-circle-outline" size={24} color={primary[500]} />
-          )}
+          {isSelected && <Ionicons name="checkmark-circle" size={22} color={colors.buttonActive} />}
         </TouchableOpacity>
       );
     },
@@ -581,8 +575,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
 
           {/* Selected members */}
           {selectedMembers.map(member => {
-            const displayName =
-              member.displayName || `${member.firstName} ${member.lastName || ''}`.trim();
+            const displayName = `${member.firstName} ${member.lastName || ''}`.trim();
             return (
               <View key={member.id} style={styles.memberRow}>
                 <View

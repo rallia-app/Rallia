@@ -17,6 +17,7 @@ Implemented a comprehensive **User Profile screen** that displays all user infor
 ### **Files Created/Modified**
 
 #### 1. **Created: `apps/mobile/src/screens/UserProfile.tsx`** ✅
+
 - **Lines**: ~600 lines
 - **Purpose**: Main User Profile screen component
 - **Features**:
@@ -29,6 +30,7 @@ Implemented a comprehensive **User Profile screen** that displays all user infor
   - Responsive layout
 
 #### 2. **Modified: `apps/mobile/src/navigation/AppNavigator.tsx`** ✅
+
 - **Added**: `UserProfile` screen route
 - **Configuration**:
   ```tsx
@@ -42,6 +44,7 @@ Implemented a comprehensive **User Profile screen** that displays all user infor
   ```
 
 #### 3. **Modified: `packages/shared-components/src/SettingsModal.native.tsx`** ✅
+
 - **Added**: Navigation hook import
 - **Updated**: Edit Profile button to navigate to UserProfile screen
 - **Behavior**: Closes settings modal before navigating
@@ -51,31 +54,35 @@ Implemented a comprehensive **User Profile screen** that displays all user infor
 ## 📊 Database Schema Mapping
 
 ### **Section 1: My Personal Information**
-| Field | Database Source | Column | Notes |
-|-------|-----------------|--------|-------|
-| **Profile Picture** | `profile` | `profile_picture_url` | With fallback icon |
-| **Full Name** | `profile` | `full_name` | Required field |
-| **Email** | `profile` | `email` | From auth + onboarding |
-| **Phone Number** | `profile` | `phone` | Synced to auth.users |
-| **Date of Birth** | `profile` | `birth_date` | Formatted display |
-| **Gender** | `player` | `gender` | Enum: male/female/other/prefer_not_to_say |
+
+| Field               | Database Source | Column                | Notes                                     |
+| ------------------- | --------------- | --------------------- | ----------------------------------------- |
+| **Profile Picture** | `profile`       | `profile_picture_url` | With fallback icon                        |
+| **Full Name**       | `profile`       | `full_name`           | Required field                            |
+| **Email**           | `profile`       | `email`               | From auth + onboarding                    |
+| **Phone Number**    | `profile`       | `phone`               | Synced to auth.users                      |
+| **Date of Birth**   | `profile`       | `birth_date`          | Formatted display                         |
+| **Gender**          | `player`        | `gender`              | Enum: male/female/other/prefer_not_to_say |
 
 ### **Section 2: My Player Information** (✅ Bio Added)
-| Field | Database Source | Column | Notes |
-|-------|-----------------|--------|-------|
-| **Bio** | `profile` | `bio` | Initially empty, multiline display |
-| **Playing Hand** | `player` | `playing_hand` | Enum: left/right/both |
-| **Max Travel Distance** | `player` | `max_travel_distance` | 1-50 km |
+
+| Field                   | Database Source | Column                | Notes                              |
+| ----------------------- | --------------- | --------------------- | ---------------------------------- |
+| **Bio**                 | `profile`       | `bio`                 | Initially empty, multiline display |
+| **Playing Hand**        | `player`        | `playing_hand`        | Enum: left/right/both              |
+| **Max Travel Distance** | `player`        | `max_travel_distance` | 1-50 km                            |
 
 ### **Section 3: My Sports**
-| Field | Database Source | Query | Notes |
-|-------|-----------------|-------|-------|
-| **Sport Buttons** | `sport` + `player_sport` | Complex join | Active/Inactive based on player selection |
-| **Sport Ratings** | `player_rating_score` + joins | 4-table join | Displays rating label if available |
+
+| Field             | Database Source               | Query        | Notes                                     |
+| ----------------- | ----------------------------- | ------------ | ----------------------------------------- |
+| **Sport Buttons** | `sport` + `player_sport`      | Complex join | Active/Inactive based on player selection |
+| **Sport Ratings** | `player_rating_score` + joins | 4-table join | Displays rating label if available        |
 
 **SQL Query Structure**:
+
 ```sql
-SELECT 
+SELECT
   s.id, s.display_name, s.name,
   ps.id as player_sport_id, ps.is_primary,
   prs.id as rating_id,
@@ -89,11 +96,13 @@ WHERE s.is_active = true
 ```
 
 ### **Section 4: My Availabilities**
-| Field | Database Source | Columns | Notes |
-|-------|-----------------|---------|-------|
+
+| Field                 | Database Source       | Columns                                   | Notes                 |
+| --------------------- | --------------------- | ----------------------------------------- | --------------------- |
 | **Availability Grid** | `player_availability` | `day_of_week`, `time_period`, `is_active` | 7 days × 3 time slots |
 
 **Enum Values**:
+
 - `day_of_week`: monday, tuesday, wednesday, thursday, friday, saturday, sunday
 - `time_period`: morning (AM), afternoon (PM), evening (EVE)
 
@@ -102,6 +111,7 @@ WHERE s.is_active = true
 ## 🎨 UI Design Specifications
 
 ### **Screen Structure**
+
 ```
 ┌─────────────────────────────┐
 │  ← Back    User Profile     │ ← Custom Header (Teal bg)
@@ -145,6 +155,7 @@ WHERE s.is_active = true
 ```
 
 ### **Color Scheme**
+
 - **Primary**: `#00B8A9` (Teal) - Active elements
 - **Secondary**: `#FF7B9C` (Pink) - Active sports
 - **Background**: `#F5F5F5` (Light gray)
@@ -152,6 +163,7 @@ WHERE s.is_active = true
 - **Header**: `#C8F2EF` (Light teal)
 
 ### **Typography**
+
 - **Screen Title**: Heading level 3 (20px, semibold)
 - **Section Titles**: Heading level 4 (18px, semibold)
 - **User Name**: Heading level 2 (24px, bold)
@@ -165,11 +177,15 @@ WHERE s.is_active = true
 ### **Data Fetching Process**
 
 1. **User Authentication Check**
+
    ```typescript
-   const { data: { user } } = await supabase.auth.getUser();
+   const {
+     data: { user },
+   } = await supabase.auth.getUser();
    ```
 
 2. **Profile Data** (`profile` table)
+
    ```typescript
    const { data: profileData } = await supabase
      .from('profile')
@@ -179,6 +195,7 @@ WHERE s.is_active = true
    ```
 
 3. **Player Data** (`player` table)
+
    ```typescript
    const { data: playerData } = await supabase
      .from('player')
@@ -194,6 +211,7 @@ WHERE s.is_active = true
    - Merge data to show active/inactive status + rating labels
 
 5. **Availability Data** (`player_availability` table)
+
    ```typescript
    const { data: availData } = await supabase
      .from('player_availability')
@@ -215,6 +233,7 @@ WHERE s.is_active = true
 ### **Entry Points**
 
 1. **From Settings Modal** (Primary)
+
    ```
    Settings Gear Icon → Settings Modal → Edit Profile Button → User Profile Screen
    ```
@@ -227,8 +246,9 @@ WHERE s.is_active = true
 ### **Navigation Implementation**
 
 **SettingsModal.native.tsx**:
+
 ```typescript
-<TouchableOpacity 
+<TouchableOpacity
   style={styles.editProfileButton}
   onPress={() => {
     onClose(); // Close settings modal first
@@ -242,6 +262,7 @@ WHERE s.is_active = true
 ```
 
 **AppNavigator.tsx**:
+
 ```typescript
 <Stack.Screen
   name="UserProfile"
@@ -377,6 +398,7 @@ interface AvailabilityGrid {
 ### **Scenarios Covered**
 
 1. **User Not Authenticated**
+
    ```typescript
    if (!user) {
      Alert.alert('Error', 'User not authenticated');
@@ -385,6 +407,7 @@ interface AvailabilityGrid {
    ```
 
 2. **Database Errors**
+
    ```typescript
    catch (error) {
      console.error('Error fetching user profile data:', error);
@@ -591,7 +614,7 @@ interface AvailabilityGrid {
 ✅ **Bio Field** - Added to Player Information section  
 ✅ **Error Handling** - Comprehensive try/catch with alerts  
 ✅ **Loading State** - Spinner with loading text  
-✅ **Scrolling** - Full-screen ScrollView for mobile  
+✅ **Scrolling** - Full-screen ScrollView for mobile
 
 ### **Key Features**
 
