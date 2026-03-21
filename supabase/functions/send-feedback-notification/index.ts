@@ -200,7 +200,7 @@ function renderFeedbackEmail(payload: FeedbackPayload): { subject: string; html:
     timeStyle: 'short',
   });
 
-  const subject = `[Rallia] ${categoryEmoji} ${categoryLabel}: ${payload.subject}`;
+  const subject = `[Feedback] ${categoryEmoji} ${categoryLabel}: ${payload.subject}`;
 
   // Build the details rows dynamically
   const playerName = payload.player_name || 'Anonymous User';
