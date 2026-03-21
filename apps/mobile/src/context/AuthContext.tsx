@@ -27,6 +27,17 @@ import { supabase } from '../lib/supabase';
 import type { Session, AuthError, Provider, User } from '@supabase/supabase-js';
 import { Logger } from '@rallia/shared-services';
 
+// =============================================================================
+// DEMO ACCOUNT FOR APP STORE REVIEW
+// =============================================================================
+const DEMO_ACCOUNT_EMAIL = 'demo@rallia.ca';
+const DEMO_ACCOUNT_OTP = '000000';
+const DEMO_ACCOUNT_PASSWORD = process.env.EXPO_PUBLIC_DEMO_ACCOUNT_PASSWORD;
+
+function isDemoAccount(email: string): boolean {
+  return email.trim().toLowerCase() === DEMO_ACCOUNT_EMAIL;
+}
+
 /** Supported OAuth providers */
 export type OAuthProvider = 'google' | 'apple' | 'facebook' | 'azure';
 
@@ -340,6 +351,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
    */
   const signInWithEmail = useCallback(
     async (email: string, options?: EmailOtpOptions): Promise<AuthResult> => {
+      // Demo account for App Store review — skip sending OTP
+      if (isDemoAccount(email)) {
+        Logger.debug('Demo account detected, skipping OTP send');
+        return { success: true };
+      }
+
       try {
         const { error } = await withRetry(
           () =>
@@ -377,6 +394,37 @@ export function AuthProvider({ children }: PropsWithChildren) {
    * Includes retry logic for network resilience
    */
   const verifyOtp = useCallback(async (email: string, token: string): Promise<AuthResult> => {
+    // Demo account for App Store review — use password auth instead of OTP
+    if (isDemoAccount(email) && token === DEMO_ACCOUNT_OTP) {
+      if (!DEMO_ACCOUNT_PASSWORD) {
+        Logger.error(
+          'Demo account password not configured',
+          new Error('Missing EXPO_PUBLIC_DEMO_ACCOUNT_PASSWORD')
+        );
+        return { success: false, error: new Error('Demo account not configured') };
+      }
+
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: DEMO_ACCOUNT_EMAIL,
+          password: DEMO_ACCOUNT_PASSWORD,
+        });
+
+        if (error) {
+          Logger.error('Demo account sign-in error', error);
+          return { success: false, error };
+        }
+
+        return { success: true, user: data.user ?? undefined };
+      } catch (error) {
+        Logger.error('Unexpected demo account sign-in error', error as Error);
+        return {
+          success: false,
+          error: error instanceof Error ? error : new Error('Unknown error'),
+        };
+      }
+    }
+
     try {
       const { data, error } = await withRetry(
         () =>
