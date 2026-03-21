@@ -98,14 +98,18 @@ interface QuickModuleOption {
 }
 
 const QUICK_MODULES: QuickModuleOption[] = [
-  { value: 'match_features', icon: 'people-outline', labelKey: 'bugReport.modules.matches' },
-  { value: 'messaging', icon: 'chatbubble-outline', labelKey: 'bugReport.modules.chat' },
   { value: 'profile_settings', icon: 'person-outline', labelKey: 'bugReport.modules.profile' },
-  { value: 'rating_system', icon: 'star-outline', labelKey: 'bugReport.modules.ratingSystem' },
+  { value: 'match_features', icon: 'people-outline', labelKey: 'bugReport.modules.matches' },
+  { value: 'facilities', icon: 'location-outline', labelKey: 'bugReport.modules.facilities' },
   {
     value: 'player_directory',
     icon: 'search-outline',
     labelKey: 'bugReport.modules.playerDirectory',
+  },
+  {
+    value: 'groups_communities',
+    icon: 'globe-outline',
+    labelKey: 'bugReport.modules.groupsCommunities',
   },
   {
     value: 'notifications',

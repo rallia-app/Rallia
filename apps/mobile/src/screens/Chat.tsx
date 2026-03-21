@@ -717,7 +717,7 @@ const Chat = () => {
         data={isLoading ? [] : filteredConversations}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
-        ListHeaderComponent={renderListHeader}
+        ListHeaderComponent={renderListHeader()}
         ItemSeparatorComponent={renderSeparator}
         ListEmptyComponent={
           isLoading ? (
