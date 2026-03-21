@@ -1,8 +1,8 @@
 /**
- * Bug Report Sheet Context
+ * Feedback Report Sheet Context
  *
- * Provides global control over the quick bug report bottom sheet.
- * Can be triggered via shake gesture or help menu.
+ * Provides global control over the feedback report bottom sheet.
+ * Can be triggered via shake gesture, FAB, or settings menu.
  */
 
 import React, { createContext, useContext, useRef, useCallback, useState, ReactNode } from 'react';
@@ -12,14 +12,14 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 // TYPES
 // =============================================================================
 
-export type BugReportTrigger = 'shake' | 'help_menu' | 'settings' | 'fab';
+export type FeedbackReportTrigger = 'shake' | 'help_menu' | 'settings' | 'fab';
 
-interface BugReportSheetContextType {
-  /** Open the bug report sheet */
-  openBugReport: (trigger?: BugReportTrigger) => void;
+interface FeedbackReportSheetContextType {
+  /** Open the feedback report sheet */
+  openFeedbackReport: (trigger?: FeedbackReportTrigger) => void;
 
-  /** Close the bug report sheet */
-  closeBugReport: () => void;
+  /** Close the feedback report sheet */
+  closeFeedbackReport: () => void;
 
   /** Called when the sheet finishes dismissing (resets isOpen state) */
   onSheetDismiss: () => void;
@@ -28,7 +28,7 @@ interface BugReportSheetContextType {
   isOpen: boolean;
 
   /** How the sheet was triggered (for analytics) */
-  trigger: BugReportTrigger | null;
+  trigger: FeedbackReportTrigger | null;
 
   /** Reference to the bottom sheet for direct control if needed */
   sheetRef: React.RefObject<BottomSheetModal | null>;
@@ -38,34 +38,38 @@ interface BugReportSheetContextType {
 // CONTEXT
 // =============================================================================
 
-const BugReportSheetContext = createContext<BugReportSheetContextType | undefined>(undefined);
+const FeedbackReportSheetContext = createContext<FeedbackReportSheetContextType | undefined>(
+  undefined
+);
 
 // =============================================================================
 // PROVIDER
 // =============================================================================
 
-interface BugReportSheetProviderProps {
+interface FeedbackReportSheetProviderProps {
   children: ReactNode;
 }
 
-export const BugReportSheetProvider: React.FC<BugReportSheetProviderProps> = ({ children }) => {
+export const FeedbackReportSheetProvider: React.FC<FeedbackReportSheetProviderProps> = ({
+  children,
+}) => {
   const sheetRef = useRef<BottomSheetModal>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [trigger, setTrigger] = useState<BugReportTrigger | null>(null);
+  const [trigger, setTrigger] = useState<FeedbackReportTrigger | null>(null);
 
   /**
-   * Open the bug report sheet
+   * Open the feedback report sheet
    */
-  const openBugReport = useCallback((triggerSource: BugReportTrigger = 'help_menu') => {
+  const openFeedbackReport = useCallback((triggerSource: FeedbackReportTrigger = 'help_menu') => {
     setTrigger(triggerSource);
     setIsOpen(true);
     sheetRef.current?.present();
   }, []);
 
   /**
-   * Close the bug report sheet
+   * Close the feedback report sheet
    */
-  const closeBugReport = useCallback(() => {
+  const closeFeedbackReport = useCallback(() => {
     sheetRef.current?.dismiss();
   }, []);
 
@@ -79,9 +83,9 @@ export const BugReportSheetProvider: React.FC<BugReportSheetProviderProps> = ({ 
     setTrigger(null);
   }, []);
 
-  const contextValue: BugReportSheetContextType = {
-    openBugReport,
-    closeBugReport,
+  const contextValue: FeedbackReportSheetContextType = {
+    openFeedbackReport,
+    closeFeedbackReport,
     onSheetDismiss,
     isOpen,
     trigger,
@@ -89,7 +93,9 @@ export const BugReportSheetProvider: React.FC<BugReportSheetProviderProps> = ({ 
   };
 
   return (
-    <BugReportSheetContext.Provider value={contextValue}>{children}</BugReportSheetContext.Provider>
+    <FeedbackReportSheetContext.Provider value={contextValue}>
+      {children}
+    </FeedbackReportSheetContext.Provider>
   );
 };
 
@@ -98,12 +104,12 @@ export const BugReportSheetProvider: React.FC<BugReportSheetProviderProps> = ({ 
 // =============================================================================
 
 /**
- * Hook to access the bug report sheet context
+ * Hook to access the feedback report sheet context
  */
-export const useBugReportSheet = (): BugReportSheetContextType => {
-  const context = useContext(BugReportSheetContext);
+export const useFeedbackReportSheet = (): FeedbackReportSheetContextType => {
+  const context = useContext(FeedbackReportSheetContext);
   if (!context) {
-    throw new Error('useBugReportSheet must be used within a BugReportSheetProvider');
+    throw new Error('useFeedbackReportSheet must be used within a FeedbackReportSheetProvider');
   }
   return context;
 };

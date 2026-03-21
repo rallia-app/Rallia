@@ -7555,12 +7555,13 @@
   },
   "feedback": {
     "title": "Feedback",
+    "sheetTitle": "Feedback",
     "description": "Help us improve Rallia! Share your thoughts, report bugs, or suggest new features.",
     "categoryLabel": "Category",
     "categories": {
       "bug": "Bug Report",
-      "feature": "Feature Request",
-      "improvement": "Improvement",
+      "feature": "Feature Suggestion",
+      "improvement": "Value Proposition",
       "other": "Other"
     },
     "moduleLabel": "Which area?",
@@ -7609,8 +7610,8 @@
     "submit": "Submit Bug Report",
     "submitting": "Submitting...",
     "cancel": "Cancel",
-    "success": "Bug report submitted! Thank you for helping improve Rallia.",
-    "error": "Failed to submit. Please try again.",
+    "success": "Feedback submitted! Thank you for helping improve Rallia.",
+    "error": "Failed to submit feedback. Please try again.",
     "fullFeedback": "More Options"
   }
 }

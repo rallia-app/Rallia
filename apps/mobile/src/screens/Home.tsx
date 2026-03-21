@@ -37,7 +37,7 @@ import {
   useUserHomeLocation,
 } from '../context';
 import { CopilotStep, WalkthroughableView } from '../context/TourContext';
-import { BugReportFAB } from '../components/BugReportFAB';
+import { FeedbackFAB } from '../components/BugReportFAB';
 import {
   useProfile,
   useTheme,
@@ -1100,7 +1100,7 @@ const Home = () => {
       )}
       {/* Bug Report FAB */}
       <View style={styles.fabContainer}>
-        <BugReportFAB />
+        <FeedbackFAB />
       </View>
     </SafeAreaView>
   );

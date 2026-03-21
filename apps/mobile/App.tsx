@@ -70,7 +70,7 @@ import { navigationRef } from './src/navigation';
 import { linking } from './src/navigation/linking';
 import { ActionsBottomSheet } from './src/components/ActionsBottomSheet';
 import { FeedbackSheet } from './src/components/FeedbackSheet';
-import { BugReportSheet } from './src/components/BugReportSheet';
+import { FeedbackReportSheet } from './src/components/BugReportSheet';
 import { SplashOverlay } from './src/components/SplashOverlay';
 import {
   ThemeProvider,
@@ -101,8 +101,8 @@ import {
   PlayerInviteSheetProvider,
   FeedbackSheetProvider,
   useFeedbackSheet,
-  BugReportSheetProvider,
-  useBugReportSheet,
+  FeedbackReportSheetProvider,
+  useFeedbackReportSheet,
   DeepLinkProvider,
   useDeepLink,
   useOverlay,
@@ -392,16 +392,16 @@ function DeepLinkHandler() {
 
 /**
  * ShakeHandler - Detects device shakes and opens the bug report sheet.
- * Must be inside BugReportSheetProvider.
+ * Must be inside FeedbackReportSheetProvider.
  */
 function ShakeHandler() {
-  const { openBugReport } = useBugReportSheet();
+  const { openFeedbackReport } = useFeedbackReportSheet();
   const { isSplashComplete } = useOverlay();
 
   useShakeDetection({
     onShake: () => {
-      Logger.logUserAction('shake_detected_bug_report');
-      openBugReport('shake');
+      Logger.logUserAction('shake_detected_feedback_report');
+      openFeedbackReport('shake');
     },
     // Only enable shake detection after splash is complete
     enabled: isSplashComplete,
@@ -488,8 +488,8 @@ function AppContent() {
         <ActionsBottomSheet />
         {/* Feedback Bottom Sheet - shows when providing post-match feedback */}
         <FeedbackSheet />
-        {/* Bug Report Bottom Sheet - shows on shake or help menu */}
-        <BugReportSheet />
+        {/* Feedback Report Bottom Sheet - shows on shake, FAB, or settings */}
+        <FeedbackReportSheet />
       </NavigationContainer>
 
       {/* Deep Link Handler - opens match detail sheet when a deep link is received */}
@@ -498,7 +498,7 @@ function AppContent() {
       <PendingFeedbackHandler />
       {/* Session Expiry Handler - shows toast when session expires */}
       <SessionExpiryHandler />
-      {/* Shake Handler - detects shakes and opens bug report sheet */}
+      {/* Shake Handler - detects shakes and opens feedback report sheet */}
       <ShakeHandler />
       {/* Referral Invite Handler - periodically prompts users to invite friends */}
       <ReferralInviteHandler />
@@ -564,7 +564,7 @@ function App() {
                                 <MatchDetailSheetProvider>
                                   <PlayerInviteSheetProvider>
                                     <FeedbackSheetProvider>
-                                      <BugReportSheetProvider>
+                                      <FeedbackReportSheetProvider>
                                         <StripeProvider
                                           publishableKey={
                                             process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
@@ -575,7 +575,7 @@ function App() {
                                             <AppContent />
                                           </BottomSheetModalProvider>
                                         </StripeProvider>
-                                      </BugReportSheetProvider>
+                                      </FeedbackReportSheetProvider>
                                     </FeedbackSheetProvider>
                                   </PlayerInviteSheetProvider>
                                 </MatchDetailSheetProvider>

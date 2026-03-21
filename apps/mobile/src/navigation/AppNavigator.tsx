@@ -81,7 +81,6 @@ import PlayedMatchDetail from '../screens/PlayedMatchDetail';
 import Communities from '../screens/Communities';
 import CommunityDetail from '../screens/CommunityDetail';
 import NetworkMatches from '../screens/NetworkMatches';
-import FeedbackScreen from '../screens/FeedbackScreen';
 import AdminPanelScreen from '../screens/AdminPanelScreen';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
 import AdminUsersScreen from '../screens/AdminUsersScreen';
@@ -1152,16 +1151,6 @@ export default function AppNavigator() {
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('screens.permissions'),
-          headerLeft: () => <ThemedBackButton navigation={navigation} />,
-        })}
-      />
-
-      <RootStack.Screen
-        name="Feedback"
-        component={FeedbackScreen}
-        options={({ navigation }) => ({
-          ...sharedOptions,
-          headerTitle: t('screens.feedback'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />
