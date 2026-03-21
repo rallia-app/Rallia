@@ -77,7 +77,7 @@
     "expo-updates": "~29.0.13",
     "expo-video-thumbnails": "~10.0.8",
     "expo-web-browser": "~15.0.10",
-    "i18next": "^25.7.2",
+    "i18next": "^25.8.20",
     "lottie-react-native": "^7.3.6",
     "nativewind": "5.0.0-preview.2",
     "react": "19.1.0",
