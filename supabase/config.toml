@@ -393,6 +393,12 @@ verify_jwt = false
 [functions.email-preview]
 verify_jwt = false
 
+[functions.send-admin-push]
+verify_jwt = false
+
+[functions.generate-weekly-matches]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

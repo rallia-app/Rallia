@@ -247,6 +247,19 @@ serve(async (req: Request) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  // Validate service role key - this function is only called by DB triggers/cron
+  const expectedServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (expectedServiceKey) {
+    const authHeader = req.headers.get('Authorization');
+    const token = authHeader?.replace(/^Bearer\s+/i, '').trim();
+    if (!token || token !== expectedServiceKey) {
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+  }
+
   try {
     const payload: AdminPushRequest = await req.json();
     const { alertId, alertType, title, message, severity, data, adminIds } = payload;

@@ -1,14 +1,16 @@
 import { Database } from '@/types';
 import { createClient } from '@supabase/supabase-js';
+import { timingSafeEqual } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
  * One-time endpoint to create the first super admin
  *
- * SECURITY: This endpoint should be:
- * 1. Protected by an environment variable (SUPER_ADMIN_SETUP_KEY)
- * 2. Disabled in production after first admin is created
- * 3. Only accessible during initial setup
+ * SECURITY:
+ * 1. Protected by SUPER_ADMIN_SETUP_KEY env var (timing-safe comparison)
+ * 2. Automatically disabled once any admin exists (one-time use)
+ * 3. Must be explicitly enabled via ALLOW_SUPER_ADMIN_SETUP=true
+ * 4. Logs creation to admin_audit_log
  *
  * Usage:
  *   POST /api/admin/create-super-admin
@@ -27,9 +29,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Super admin setup is disabled' }, { status: 403 });
   }
 
-  // Verify setup key
+  // Verify setup key with timing-safe comparison
   const setupKey = request.headers.get('X-Setup-Key');
-  if (!SUPER_ADMIN_SETUP_KEY || setupKey !== SUPER_ADMIN_SETUP_KEY) {
+  if (!SUPER_ADMIN_SETUP_KEY || !setupKey) {
+    return NextResponse.json({ error: 'Invalid setup key' }, { status: 401 });
+  }
+
+  const encoder = new TextEncoder();
+  const a = encoder.encode(setupKey);
+  const b = encoder.encode(SUPER_ADMIN_SETUP_KEY);
+  if (a.byteLength !== b.byteLength || !timingSafeEqual(a, b)) {
     return NextResponse.json({ error: 'Invalid setup key' }, { status: 401 });
   }
 
@@ -53,21 +62,22 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Check if any admins already exist
-    const { error: checkError } = await supabaseAdmin.from('admin').select('id').limit(1);
+    // One-time use: reject if any admin already exists
+    const { count, error: checkError } = await supabaseAdmin
+      .from('admin')
+      .select('*', { count: 'exact', head: true });
 
     if (checkError) {
       console.error('Error checking existing admins:', checkError);
+      return NextResponse.json({ error: 'Failed to verify admin state' }, { status: 500 });
     }
 
-    // Optional: Prevent creating multiple super admins
-    // Uncomment if you want to restrict to one super admin
-    // if (existingAdmins && existingAdmins.length > 0) {
-    //   return NextResponse.json(
-    //     { error: "Super admin already exists. Use the CLI script instead." },
-    //     { status: 409 }
-    //   );
-    // }
+    if (count && count > 0) {
+      return NextResponse.json(
+        { error: 'Setup already completed. Admins already exist.' },
+        { status: 403 }
+      );
+    }
 
     // Check if user exists in auth
     const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
@@ -123,7 +133,7 @@ export async function POST(request: NextRequest) {
         id: userId,
         role,
         permissions: {},
-        notes: 'Created via API endpoint',
+        notes: 'Created via setup endpoint',
       },
       { onConflict: 'id' }
     );
@@ -134,6 +144,15 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Audit log the super admin creation
+    await supabaseAdmin.from('admin_audit_log').insert({
+      admin_id: userId,
+      action_type: 'create',
+      entity_type: 'admin',
+      entity_id: userId,
+      metadata: { source: 'setup-endpoint', email },
+    });
 
     return NextResponse.json(
       {
