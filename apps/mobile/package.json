@@ -105,13 +105,13 @@
     "@babel/traverse": "^7.28.6",
     "@rallia/eslint-config": "*",
     "@react-native/babel-preset": "^0.84.1",
-    "@tailwindcss/postcss": "4.1.16",
+    "@tailwindcss/postcss": "4.2.2",
     "@types/react": "^19.2.0",
-    "lightningcss": "1.30.2",
+    "lightningcss": "1.32.0",
     "postcss": "^8.5.8",
     "prettier-plugin-tailwindcss": "^0.5.14",
     "react-native-svg-transformer": "^1.5.2",
-    "tailwindcss": "4.1.16",
+    "tailwindcss": "4.2.2",
     "typescript": "^5.9.3"
   },
   "private": true
