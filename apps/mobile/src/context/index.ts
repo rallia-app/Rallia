@@ -7,7 +7,7 @@ export { SportProvider, useSport, SportContext } from './SportContext';
 export { MatchDetailSheetProvider, useMatchDetailSheet } from './MatchDetailSheetContext';
 export { PlayerInviteSheetProvider, usePlayerInviteSheet } from './PlayerInviteSheetContext';
 export { FeedbackSheetProvider, useFeedbackSheet } from './FeedbackSheetContext';
-export { BugReportSheetProvider, useBugReportSheet } from './BugReportSheetContext';
+export { FeedbackReportSheetProvider, useFeedbackReportSheet } from './BugReportSheetContext';
 export { DeepLinkProvider, useDeepLink } from './DeepLinkContext';
 export {
   UserLocationProvider,
@@ -32,4 +32,4 @@ export type { Sport } from './SportContext';
 export type { MatchDetailData } from './MatchDetailSheetContext';
 export type { OverlaySport } from './OverlayContext';
 export type { TourContextType } from './TourContext';
-export type { BugReportTrigger } from './BugReportSheetContext';
+export type { FeedbackReportTrigger } from './BugReportSheetContext';

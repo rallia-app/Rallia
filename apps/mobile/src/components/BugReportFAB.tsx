@@ -1,7 +1,7 @@
 /**
- * Bug Report FAB (Floating Action Button)
+ * Feedback FAB (Floating Action Button)
  *
- * A floating action button for quick access to the bug report sheet.
+ * A floating action button for quick access to the feedback report sheet.
  * Designed to be placed inside screen-level FAB containers.
  */
 
@@ -15,14 +15,14 @@ import Animated, {
   withSequence,
 } from 'react-native-reanimated';
 import { lightHaptic } from '@rallia/shared-utils';
-import { status } from '@rallia/design-system';
+import { secondary } from '@rallia/design-system';
 
-import { useBugReportSheet } from '../context/BugReportSheetContext';
+import { useFeedbackReportSheet } from '../context/BugReportSheetContext';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
-export const BugReportFAB: React.FC = () => {
-  const { openBugReport } = useBugReportSheet();
+export const FeedbackFAB: React.FC = () => {
+  const { openFeedbackReport } = useFeedbackReportSheet();
 
   // Animation values
   const scale = useSharedValue(1);
@@ -34,9 +34,9 @@ export const BugReportFAB: React.FC = () => {
     // Animate press
     scale.value = withSequence(withSpring(0.9, { damping: 10 }), withSpring(1, { damping: 10 }));
 
-    // Open bug report sheet
-    openBugReport('fab');
-  }, [openBugReport, scale]);
+    // Open feedback report sheet
+    openFeedbackReport('fab');
+  }, [openFeedbackReport, scale]);
 
   // Animated style for press feedback
   const animatedStyle = useAnimatedStyle(() => ({
@@ -48,7 +48,7 @@ export const BugReportFAB: React.FC = () => {
       style={[
         styles.fab,
         {
-          backgroundColor: status.error.DEFAULT,
+          backgroundColor: secondary[500],
           ...Platform.select({
             ios: {
               shadowColor: '#000',
@@ -65,11 +65,11 @@ export const BugReportFAB: React.FC = () => {
       ]}
       onPress={handlePress}
       activeOpacity={0.8}
-      accessibilityLabel="Report a bug"
+      accessibilityLabel="Send feedback"
       accessibilityRole="button"
-      accessibilityHint="Opens the bug report form"
+      accessibilityHint="Opens the feedback form"
     >
-      <Ionicons name="bug-outline" size={24} color="#FFFFFF" />
+      <Ionicons name="chatbox-ellipses-outline" size={24} color="#FFFFFF" />
     </AnimatedTouchable>
   );
 };
@@ -84,4 +84,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default BugReportFAB;
+export default FeedbackFAB;

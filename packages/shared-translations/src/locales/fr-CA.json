@@ -7557,12 +7557,13 @@
   },
   "feedback": {
     "title": "Commentaires",
+    "sheetTitle": "Commentaires",
     "description": "Aidez-nous à améliorer Rallia ! Partagez vos idées, signalez des bogues ou suggérez de nouvelles fonctionnalités.",
     "categoryLabel": "Catégorie",
     "categories": {
       "bug": "Signaler un bogue",
-      "feature": "Demande de fonctionnalité",
-      "improvement": "Amélioration",
+      "feature": "Suggestion de fonctionnalité",
+      "improvement": "Proposition de valeur",
       "other": "Autre"
     },
     "moduleLabel": "Quelle section ?",
@@ -7611,8 +7612,8 @@
     "submit": "Envoyer le rapport",
     "submitting": "Envoi en cours...",
     "cancel": "Annuler",
-    "success": "Rapport de bogue envoyé ! Merci d'aider à améliorer Rallia.",
-    "error": "Échec de l'envoi. Veuillez réessayer.",
+    "success": "Commentaires envoyés ! Merci d'aider à améliorer Rallia.",
+    "error": "Échec de l'envoi des commentaires. Veuillez réessayer.",
     "fullFeedback": "Plus d'options"
   }
 }

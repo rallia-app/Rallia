@@ -33,7 +33,7 @@ import { useActionsSheet, useSport } from '../context';
 import { SportIcon } from '../components/SportIcon';
 import { CopilotStep, WalkthroughableView } from '../context/TourContext';
 import SignInPrompt from '../components/SignInPrompt';
-import { BugReportFAB } from '../components/BugReportFAB';
+import { FeedbackFAB } from '../components/BugReportFAB';
 import { SearchBar } from '../components/SearchBar';
 import {
   spacingPixels,
@@ -761,7 +761,7 @@ const Chat = () => {
           },
         ]}
       >
-        <BugReportFAB />
+        <FeedbackFAB />
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: primary[500] }]}
           onPress={handleNewGroupPress}

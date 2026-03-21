@@ -1,9 +1,9 @@
 /**
- * Bug Report Bottom Sheet
+ * Feedback Report Bottom Sheet
  *
- * A quick-access bottom sheet for reporting bugs.
- * Can be triggered via shake gesture or help menu.
- * Includes subject field and screenshot support for better bug reports.
+ * A unified bottom sheet for all user feedback: value proposition,
+ * bug reports, and feature suggestions.
+ * Can be triggered via shake gesture, FAB, or settings menu.
  *
  * Styled to match ReportFacilitySheet / ReportIssueSheet design language.
  */
@@ -30,7 +30,12 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Application from 'expo-application';
 import { Text, useToast } from '@rallia/shared-components';
 import { useTheme } from '@rallia/shared-hooks';
-import { submitUserFeedback, Logger, type UserFeedbackModule } from '@rallia/shared-services';
+import {
+  submitUserFeedback,
+  Logger,
+  type UserFeedbackModule,
+  type UserFeedbackCategory,
+} from '@rallia/shared-services';
 import { lightHaptic, successHaptic, warningHaptic, selectionHaptic } from '@rallia/shared-utils';
 import {
   lightTheme,
@@ -41,17 +46,46 @@ import {
   neutral,
   base,
   status,
+  secondary,
 } from '@rallia/design-system';
 
 import { useAuth, useTranslation, type TranslationKey, useImagePicker } from '../hooks';
-import { useBugReportSheet } from '../context/BugReportSheetContext';
+import { useFeedbackReportSheet } from '../context/BugReportSheetContext';
 import { uploadImage } from '../services/imageUpload';
 
 const MIN_SUBJECT_LENGTH = 3;
 const MAX_SUBJECT_LENGTH = 100;
 const MIN_MESSAGE_LENGTH = 10;
-const MAX_MESSAGE_LENGTH = 500;
+const MAX_MESSAGE_LENGTH = 2000;
 const MAX_SCREENSHOTS = 3;
+
+// =============================================================================
+// CATEGORY OPTIONS
+// =============================================================================
+
+interface CategoryOption {
+  value: UserFeedbackCategory;
+  icon: keyof typeof Ionicons.glyphMap;
+  labelKey: string;
+}
+
+const CATEGORY_OPTIONS: CategoryOption[] = [
+  {
+    value: 'improvement',
+    icon: 'heart-outline',
+    labelKey: 'feedback.categories.improvement',
+  },
+  {
+    value: 'bug',
+    icon: 'bug-outline',
+    labelKey: 'feedback.categories.bug',
+  },
+  {
+    value: 'feature',
+    icon: 'bulb-outline',
+    labelKey: 'feedback.categories.feature',
+  },
+];
 
 // =============================================================================
 // MODULE OPTIONS
@@ -86,8 +120,8 @@ const QUICK_MODULES: QuickModuleOption[] = [
 // MAIN COMPONENT
 // =============================================================================
 
-export const BugReportSheet: React.FC = () => {
-  const { sheetRef, closeBugReport, onSheetDismiss, trigger } = useBugReportSheet();
+export const FeedbackReportSheet: React.FC = () => {
+  const { sheetRef, closeFeedbackReport, onSheetDismiss, trigger } = useFeedbackReportSheet();
   const { theme } = useTheme();
   const { session } = useAuth();
   const { t } = useTranslation();
@@ -104,6 +138,7 @@ export const BugReportSheet: React.FC = () => {
   const messageInputRef = useRef<TextInput | null>(null);
   const [subjectLength, setSubjectLength] = useState(0);
   const [messageLength, setMessageLength] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState<UserFeedbackCategory | null>(null);
   const [selectedModule, setSelectedModule] = useState<UserFeedbackModule | null>(null);
   const [screenshots, setScreenshots] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -119,7 +154,7 @@ export const BugReportSheet: React.FC = () => {
       border: themeColors.border,
       muted: themeColors.muted,
       inputBackground: isDark ? neutral[800] : neutral[50],
-      buttonActive: status.error.DEFAULT,
+      buttonActive: secondary[500],
       buttonInactive: themeColors.muted,
       buttonTextActive: base.white,
     }),
@@ -129,7 +164,8 @@ export const BugReportSheet: React.FC = () => {
   // Validation
   const subjectValid = subjectLength >= MIN_SUBJECT_LENGTH;
   const messageValid = messageLength >= MIN_MESSAGE_LENGTH;
-  const isValid = subjectValid && messageValid && selectedModule !== null;
+  const isValid =
+    subjectValid && messageValid && selectedModule !== null && selectedCategory !== null;
 
   // Snap points
   const snapPoints = useMemo(() => ['90%'], []);
@@ -152,6 +188,7 @@ export const BugReportSheet: React.FC = () => {
         messageInputRef.current?.clear();
         setSubjectLength(0);
         setMessageLength(0);
+        setSelectedCategory(null);
         setSelectedModule(null);
         setScreenshots([]);
         setIsSubmitting(false);
@@ -165,8 +202,8 @@ export const BugReportSheet: React.FC = () => {
 
   const handleClose = useCallback(() => {
     lightHaptic();
-    closeBugReport();
-  }, [closeBugReport]);
+    closeFeedbackReport();
+  }, [closeFeedbackReport]);
 
   // Text input handlers — update ref immediately, length state for UI
   const handleSubjectChange = useCallback((text: string) => {
@@ -177,6 +214,12 @@ export const BugReportSheet: React.FC = () => {
   const handleMessageChange = useCallback((text: string) => {
     messageRef.current = text;
     setMessageLength(text.trim().length);
+  }, []);
+
+  // Handle category selection
+  const handleCategorySelect = useCallback((cat: UserFeedbackCategory) => {
+    selectionHaptic();
+    setSelectedCategory(cat);
   }, []);
 
   // Handle module selection
@@ -235,7 +278,7 @@ export const BugReportSheet: React.FC = () => {
 
       await submitUserFeedback({
         playerId: session?.user?.id,
-        category: 'bug',
+        category: selectedCategory!,
         module: selectedModule!,
         subject: subjectRef.current.trim(),
         message: messageRef.current.trim(),
@@ -250,15 +293,16 @@ export const BugReportSheet: React.FC = () => {
 
       void successHaptic();
       toast.success(t('bugReport.success' as TranslationKey));
-      Logger.logUserAction('quick_bug_report_submitted', {
+      Logger.logUserAction('feedback_report_submitted', {
         trigger,
+        category: selectedCategory,
         module: selectedModule,
         screenshotCount: screenshots.length,
         hasSubject: subjectRef.current.trim().length > 0,
       });
-      closeBugReport();
+      closeFeedbackReport();
     } catch (error) {
-      Logger.error('Failed to submit quick bug report', error as Error);
+      Logger.error('Failed to submit feedback report', error as Error);
       toast.error(t('bugReport.error' as TranslationKey));
     } finally {
       setIsSubmitting(false);
@@ -267,11 +311,12 @@ export const BugReportSheet: React.FC = () => {
     isValid,
     isSubmitting,
     session?.user?.id,
+    selectedCategory,
     selectedModule,
     screenshots,
     trigger,
     toast,
-    closeBugReport,
+    closeFeedbackReport,
     t,
   ]);
 
@@ -294,10 +339,10 @@ export const BugReportSheet: React.FC = () => {
       >
         {/* Header — matches ReportFacilitySheet badge + close button pattern */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <View style={[styles.badge, { backgroundColor: status.error.DEFAULT }]}>
-            <Ionicons name="bug" size={14} color={base.white} />
+          <View style={[styles.badge, { backgroundColor: secondary[500] }]}>
+            <Ionicons name="chatbox-ellipses-outline" size={14} color={base.white} />
             <Text size="sm" weight="semibold" color={base.white}>
-              {t('bugReport.title' as TranslationKey)}
+              {t('feedback.sheetTitle' as TranslationKey)}
             </Text>
           </View>
 
@@ -322,8 +367,67 @@ export const BugReportSheet: React.FC = () => {
           <Text size="sm" color={colors.textSecondary} style={styles.subtitle}>
             {trigger === 'shake'
               ? t('bugReport.subtitle' as TranslationKey)
-              : t('bugReport.subtitleMenu' as TranslationKey)}
+              : t('feedback.description' as TranslationKey)}
           </Text>
+
+          {/* Category Selection — card-based like module cards */}
+          <View style={styles.section}>
+            <Text
+              size="sm"
+              weight="semibold"
+              color={colors.textSecondary}
+              style={styles.sectionLabel}
+            >
+              {t('feedback.categoryLabel' as TranslationKey)}
+            </Text>
+            <View style={styles.moduleCards}>
+              {CATEGORY_OPTIONS.map(cat => {
+                const isActive = selectedCategory === cat.value;
+                return (
+                  <TouchableOpacity
+                    key={cat.value}
+                    style={[
+                      styles.moduleCard,
+                      {
+                        backgroundColor: isActive
+                          ? `${colors.buttonActive}15`
+                          : colors.buttonInactive,
+                        borderColor: isActive ? colors.buttonActive : colors.border,
+                      },
+                    ]}
+                    onPress={() => handleCategorySelect(cat.value)}
+                    activeOpacity={0.7}
+                  >
+                    <View
+                      style={[
+                        styles.moduleIconContainer,
+                        {
+                          backgroundColor: isActive ? colors.buttonActive : colors.border,
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name={cat.icon}
+                        size={18}
+                        color={isActive ? colors.buttonTextActive : colors.textMuted}
+                      />
+                    </View>
+                    <Text
+                      size="sm"
+                      weight={isActive ? 'semibold' : 'regular'}
+                      color={isActive ? colors.buttonActive : colors.text}
+                      style={styles.moduleLabel}
+                    >
+                      {t(cat.labelKey as TranslationKey)}
+                    </Text>
+                    {isActive && (
+                      <Ionicons name="checkmark-circle" size={18} color={colors.buttonActive} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
 
           {/* Module Selection — card-based like ReportFacilitySheet reasons */}
           <View style={styles.section}>
@@ -550,7 +654,7 @@ export const BugReportSheet: React.FC = () => {
                   weight="semibold"
                   color={isValid ? colors.buttonTextActive : colors.textMuted}
                 >
-                  {t('bugReport.submit' as TranslationKey)}
+                  {t('feedback.submitButton' as TranslationKey)}
                 </Text>
                 <Ionicons
                   name="paper-plane-outline"
@@ -737,4 +841,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default BugReportSheet;
+export default FeedbackReportSheet;

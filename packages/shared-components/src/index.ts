@@ -86,7 +86,6 @@ export {
   ProfilePictureButton,
   NotificationButton,
   SettingsButton,
-  HelpButton,
   SportSelector,
   LocationSelector,
 } from './headers';

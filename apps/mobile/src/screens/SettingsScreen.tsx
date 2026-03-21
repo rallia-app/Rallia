@@ -17,7 +17,7 @@ import { Text, useToast } from '@rallia/shared-components';
 import { Logger, tourService, supabase } from '@rallia/shared-services';
 import { useTheme, useAdminStatus } from '@rallia/shared-hooks';
 import { useAppNavigation } from '../navigation/hooks';
-import { useLocale } from '../context';
+import { useLocale, useFeedbackReportSheet } from '../context';
 import { useAuth, useTranslation } from '../hooks';
 import type { Locale } from '@rallia/shared-translations';
 import { useProfile } from '@rallia/shared-hooks';
@@ -51,6 +51,7 @@ const SettingsScreen: React.FC = () => {
   } = useLocale();
   const { t } = useTranslation();
 
+  const { openFeedbackReport } = useFeedbackReportSheet();
   const { isAuthenticated, loading: authLoading, signOut } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
   const { isAdmin } = useAdminStatus();
@@ -132,7 +133,7 @@ const SettingsScreen: React.FC = () => {
 
   const handleFeedback = () => {
     lightHaptic();
-    navigation.navigate('Feedback');
+    openFeedbackReport('settings');
     Logger.logUserAction('feedback_pressed');
   };
 
