@@ -7,6 +7,7 @@ import {
   FlatList,
   Dimensions,
   Keyboard,
+  Platform,
 } from 'react-native';
 import Animated, {
   FadeIn,
@@ -104,6 +105,23 @@ const Map = () => {
       ? [location.longitude, location.latitude]
       : [-73.5673, 45.5017]; // Default: Montreal
   const initialZoom = focusLocation ? 13 : 10;
+
+  // Fix for Android: Mapbox Camera defaultSettings may not apply reliably,
+  // causing the map to start at the wrong location/zoom. Imperatively set
+  // the camera once after mount to guarantee the correct initial position.
+  useEffect(() => {
+    if (Platform.OS === 'android' && cameraRef.current) {
+      const timer = setTimeout(() => {
+        cameraRef.current?.setCamera({
+          centerCoordinate: initialCenter,
+          zoomLevel: initialZoom,
+          animationDuration: 0,
+        });
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const sportIds = selectedSport?.id ? [selectedSport.id] : undefined;
 

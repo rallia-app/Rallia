@@ -10,7 +10,7 @@ import { Resend } from 'resend';
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'noreply@rallia.app';
-const ADMIN_EMAIL = 'apprallia@gmail.com';
+const ADMIN_EMAILS = ['apprallia@gmail.com', 'contact@rallia.ca'];
 
 interface FeedbackPayload {
   feedback_id: string;
@@ -456,7 +456,7 @@ Deno.serve(async req => {
     const resend = new Resend(RESEND_API_KEY);
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
-      to: ADMIN_EMAIL,
+      to: ADMIN_EMAILS,
       subject,
       html,
     });
