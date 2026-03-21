@@ -34,6 +34,31 @@ export const USER_FEEDBACK_MODULE_LABELS: Record<UserFeedbackModule, string> = {
   other: 'Other',
 };
 
+// Category-specific metadata types
+export interface BugFeedbackMetadata {
+  severity: 'minor' | 'major' | 'critical';
+  steps_to_reproduce: string;
+  expected_vs_actual: string;
+}
+
+export interface FeatureFeedbackMetadata {
+  feature_title: string;
+  description: string;
+  use_case: string;
+}
+
+export interface ImprovementFeedbackMetadata {
+  disappointment_score: 'very_disappointed' | 'somewhat_disappointed' | 'not_disappointed';
+  main_benefit: string;
+  ideal_user: string;
+  how_to_improve: string;
+}
+
+export type UserFeedbackMetadata =
+  | BugFeedbackMetadata
+  | FeatureFeedbackMetadata
+  | ImprovementFeedbackMetadata;
+
 export type UserFeedbackStatus = 'new' | 'reviewed' | 'in_progress' | 'resolved' | 'closed';
 
 export interface UserFeedbackSubmission {
@@ -46,6 +71,7 @@ export interface UserFeedbackSubmission {
   app_version: string | null;
   device_info: Record<string, unknown> | null;
   screenshot_urls: string[] | null;
+  metadata: UserFeedbackMetadata | null;
   status: UserFeedbackStatus;
   admin_notes: string | null;
   created_at: string;
@@ -55,9 +81,10 @@ export interface UserFeedbackSubmission {
 export interface CreateUserFeedbackParams {
   playerId?: string;
   category: UserFeedbackCategory;
-  module: UserFeedbackModule;
-  subject: string;
-  message: string;
+  module?: UserFeedbackModule;
+  subject?: string;
+  message?: string;
+  metadata?: UserFeedbackMetadata;
   screenshotUrls?: string[];
   /** Platform-specific device info (caller should provide) */
   deviceInfo?: Record<string, unknown>;
@@ -68,23 +95,31 @@ export interface CreateUserFeedbackParams {
 export async function submitUserFeedback(
   params: CreateUserFeedbackParams
 ): Promise<UserFeedbackSubmission> {
-  const { playerId, category, module, subject, message, screenshotUrls, deviceInfo, appVersion } =
-    params;
-  const { data, error } = await supabase
-    .from('feedback')
-    .insert({
-      player_id: playerId || null,
-      category,
-      module,
-      subject,
-      message,
-      app_version: appVersion || null,
-      device_info: deviceInfo || null,
-      screenshot_urls: screenshotUrls || [],
-      status: 'new',
-    })
-    .select()
-    .single();
+  const {
+    playerId,
+    category,
+    module,
+    subject,
+    message,
+    metadata,
+    screenshotUrls,
+    deviceInfo,
+    appVersion,
+  } = params;
+  const row = {
+    player_id: playerId || null,
+    category,
+    module: module || 'other',
+    subject: subject || '',
+    message: message || '',
+    metadata: metadata || null,
+    app_version: appVersion || null,
+    device_info: deviceInfo || null,
+    screenshot_urls: screenshotUrls || [],
+    status: 'new' as const,
+  };
+
+  const { data, error } = await supabase.from('feedback').insert(row).select().single();
   if (error) {
     console.error('Error submitting feedback:', error);
     throw new Error('Failed to submit feedback.');

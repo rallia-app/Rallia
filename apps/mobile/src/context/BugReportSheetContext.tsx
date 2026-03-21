@@ -8,6 +8,11 @@
 import React, { createContext, useContext, useRef, useCallback, useState, ReactNode } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 
+import { useProfile } from '@rallia/shared-hooks';
+
+import { useAuth } from '../hooks/useAuth';
+import { useActionsSheet } from './ActionsSheetContext';
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -56,15 +61,31 @@ export const FeedbackReportSheetProvider: React.FC<FeedbackReportSheetProviderPr
   const sheetRef = useRef<BottomSheetModal>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [trigger, setTrigger] = useState<FeedbackReportTrigger | null>(null);
+  const { session } = useAuth();
+  const { profile } = useProfile();
+  const { openSheet } = useActionsSheet();
 
   /**
-   * Open the feedback report sheet
+   * Open the feedback report sheet.
+   * Guards: requires signed-in + onboarded user.
+   * If not ready, opens the actions sheet (sign-in / onboarding) instead.
    */
-  const openFeedbackReport = useCallback((triggerSource: FeedbackReportTrigger = 'help_menu') => {
-    setTrigger(triggerSource);
-    setIsOpen(true);
-    sheetRef.current?.present();
-  }, []);
+  const openFeedbackReport = useCallback(
+    (triggerSource: FeedbackReportTrigger = 'help_menu') => {
+      const isSignedIn = Boolean(session?.user);
+      const isOnboarded = Boolean(profile?.onboarding_completed);
+
+      if (!isSignedIn || !isOnboarded) {
+        openSheet();
+        return;
+      }
+
+      setTrigger(triggerSource);
+      setIsOpen(true);
+      sheetRef.current?.present();
+    },
+    [session?.user, profile?.onboarding_completed, openSheet]
+  );
 
   /**
    * Close the feedback report sheet

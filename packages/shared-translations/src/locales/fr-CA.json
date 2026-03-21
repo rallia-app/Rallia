@@ -7587,7 +7587,37 @@
     "referenceId": "Numéro de référence",
     "selectImageSource": "Sélectionner la source de l'image",
     "submitAnother": "Soumettre un autre",
-    "backToSettings": "Retour aux paramètres"
+    "backToSettings": "Retour aux paramètres",
+    "bug": {
+      "severityLabel": "Sévérité",
+      "severityMinor": "Mineur",
+      "severityMajor": "Majeur",
+      "severityCritical": "Critique",
+      "stepsLabel": "Étapes pour reproduire",
+      "stepsPlaceholder": "1. Aller à...\n2. Appuyer sur...\n3. Voir l'erreur...",
+      "expectedLabel": "Résultat attendu vs réel",
+      "expectedPlaceholder": "Attendu : ...\nRéel : ..."
+    },
+    "feature": {
+      "titleLabel": "Titre de la fonctionnalité",
+      "titlePlaceholder": "Nommez votre idée de fonctionnalité",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Décrivez la fonctionnalité en détail...",
+      "useCaseLabel": "Cas d'utilisation",
+      "useCasePlaceholder": "Quand utiliseriez-vous cette fonctionnalité ?"
+    },
+    "pmf": {
+      "disappointmentLabel": "Comment vous sentiriez-vous si vous ne pouviez plus utiliser Rallia ?",
+      "veryDisappointed": "Très déçu(e)",
+      "somewhatDisappointed": "Quelque peu déçu(e)",
+      "notDisappointed": "Pas déçu(e)",
+      "mainBenefitLabel": "Quel est le principal avantage que vous tirez de Rallia ?",
+      "mainBenefitPlaceholder": "Le principal avantage que j'en tire est...",
+      "idealUserLabel": "Qui, selon vous, bénéficierait le plus de Rallia ?",
+      "idealUserPlaceholder": "L'utilisateur idéal est quelqu'un qui...",
+      "improveLabel": "Comment pouvons-nous améliorer Rallia pour vous ?",
+      "improvePlaceholder": "J'aimerais que Rallia..."
+    }
   },
   "bugReport": {
     "title": "Signaler un bogue",

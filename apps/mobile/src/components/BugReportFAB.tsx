@@ -34,7 +34,7 @@ export const FeedbackFAB: React.FC = () => {
     // Animate press
     scale.value = withSequence(withSpring(0.9, { damping: 10 }), withSpring(1, { damping: 10 }));
 
-    // Open feedback report sheet
+    // Open feedback report sheet (auth guard is handled in the context)
     openFeedbackReport('fab');
   }, [openFeedbackReport, scale]);
 
