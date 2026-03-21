@@ -12,12 +12,29 @@ const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'noreply@rallia.app';
 const ADMIN_EMAILS = ['apprallia@gmail.com', 'contact@rallia.ca'];
 
+interface FeedbackMetadata {
+  // Bug
+  severity?: 'minor' | 'major' | 'critical';
+  steps_to_reproduce?: string;
+  expected_vs_actual?: string;
+  // Feature
+  feature_title?: string;
+  description?: string;
+  use_case?: string;
+  // PMF / Improvement
+  disappointment_score?: 'very_disappointed' | 'somewhat_disappointed' | 'not_disappointed';
+  main_benefit?: string;
+  ideal_user?: string;
+  how_to_improve?: string;
+}
+
 interface FeedbackPayload {
   feedback_id: string;
   category: 'bug' | 'feature' | 'improvement' | 'other';
   module?: string | null;
   subject: string;
   message: string;
+  metadata?: FeedbackMetadata | null;
   player_id?: string | null;
   player_name?: string | null;
   player_email?: string | null;
@@ -191,6 +208,137 @@ function renderInfoRow(
   `;
 }
 
+function getSeverityLabel(severity: string): string {
+  const labels: Record<string, string> = {
+    minor: 'Minor',
+    major: 'Major',
+    critical: 'Critical',
+  };
+  return labels[severity] || severity;
+}
+
+function getSeverityColor(severity: string): string {
+  const colors: Record<string, string> = {
+    minor: '#F59E0B',
+    major: '#F97316',
+    critical: '#EF4444',
+  };
+  return colors[severity] || '#6B7280';
+}
+
+function getDisappointmentLabel(score: string): string {
+  const labels: Record<string, string> = {
+    very_disappointed: 'Very disappointed',
+    somewhat_disappointed: 'Somewhat disappointed',
+    not_disappointed: 'Not disappointed',
+  };
+  return labels[score] || score;
+}
+
+function escapeHtml(text: string): string {
+  return text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function renderMetadataBlock(
+  label: string,
+  content: string,
+  color: string = BRAND.neutral600
+): string {
+  return `
+    <tr>
+      <td style="padding: 20px 32px 0;">
+        <p style="margin: 0 0 8px; font-family: 'Poppins', 'Segoe UI', sans-serif; font-size: 11px; font-weight: 700; color: ${BRAND.neutral400}; text-transform: uppercase; letter-spacing: 1.2px;">
+          ${label}
+        </p>
+        <table role="presentation" style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="width: 4px; background-color: ${color}; border-radius: 4px;"></td>
+            <td style="padding: 16px 20px; background-color: ${BRAND.neutral50}; border-radius: 0 12px 12px 0;">
+              <p style="margin: 0; font-family: 'Inter', 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.6; color: ${BRAND.neutral600}; white-space: pre-wrap;">${escapeHtml(content)}</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  `;
+}
+
+function renderMetadataSection(payload: FeedbackPayload): string {
+  const meta = payload.metadata;
+  if (!meta) return '';
+
+  const categoryColor = getCategoryColor(payload.category);
+  const parts: string[] = [];
+
+  if (payload.category === 'bug' && meta.severity) {
+    const sevColor = getSeverityColor(meta.severity);
+    parts.push(`
+      <tr>
+        <td style="padding: 20px 32px 0;">
+          <p style="margin: 0 0 8px; font-family: 'Poppins', 'Segoe UI', sans-serif; font-size: 11px; font-weight: 700; color: ${BRAND.neutral400}; text-transform: uppercase; letter-spacing: 1.2px;">
+            Severity
+          </p>
+          <table role="presentation" style="border-collapse: collapse;">
+            <tr>
+              <td style="padding: 6px 18px; background-color: ${sevColor}18; border-radius: 24px; border: 1px solid ${sevColor}30;">
+                <span style="font-family: 'Poppins', 'Segoe UI', sans-serif; font-size: 13px; font-weight: 600; color: ${sevColor};">
+                  ${getSeverityLabel(meta.severity)}
+                </span>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    `);
+    if (meta.steps_to_reproduce) {
+      parts.push(renderMetadataBlock('Steps to Reproduce', meta.steps_to_reproduce, categoryColor));
+    }
+    if (meta.expected_vs_actual) {
+      parts.push(renderMetadataBlock('Expected vs Actual', meta.expected_vs_actual, categoryColor));
+    }
+  }
+
+  if (payload.category === 'feature') {
+    if (meta.use_case) {
+      parts.push(renderMetadataBlock('Use Case', meta.use_case, categoryColor));
+    }
+  }
+
+  if (payload.category === 'improvement') {
+    if (meta.disappointment_score) {
+      parts.push(`
+        <tr>
+          <td style="padding: 20px 32px 0;">
+            <p style="margin: 0 0 8px; font-family: 'Poppins', 'Segoe UI', sans-serif; font-size: 11px; font-weight: 700; color: ${BRAND.neutral400}; text-transform: uppercase; letter-spacing: 1.2px;">
+              Disappointment Score
+            </p>
+            <table role="presentation" style="border-collapse: collapse;">
+              <tr>
+                <td style="padding: 6px 18px; background-color: ${categoryColor}18; border-radius: 24px; border: 1px solid ${categoryColor}30;">
+                  <span style="font-family: 'Poppins', 'Segoe UI', sans-serif; font-size: 13px; font-weight: 600; color: ${categoryColor};">
+                    ${getDisappointmentLabel(meta.disappointment_score)}
+                  </span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      `);
+    }
+    if (meta.main_benefit) {
+      parts.push(renderMetadataBlock('Main Benefit', meta.main_benefit, categoryColor));
+    }
+    if (meta.ideal_user) {
+      parts.push(renderMetadataBlock('Ideal User', meta.ideal_user, categoryColor));
+    }
+    if (meta.how_to_improve) {
+      parts.push(renderMetadataBlock('How to Improve', meta.how_to_improve, categoryColor));
+    }
+  }
+
+  return parts.join('');
+}
+
 function renderFeedbackEmail(payload: FeedbackPayload): { subject: string; html: string } {
   const categoryLabel = getCategoryLabel(payload.category);
   const categoryEmoji = getCategoryEmoji(payload.category);
@@ -200,7 +348,8 @@ function renderFeedbackEmail(payload: FeedbackPayload): { subject: string; html:
     timeStyle: 'short',
   });
 
-  const subject = `[Feedback] ${categoryEmoji} ${categoryLabel}: ${payload.subject}`;
+  const subjectText = payload.subject || categoryLabel;
+  const subject = `[Feedback] ${categoryEmoji} ${categoryLabel}: ${subjectText}`;
 
   // Build the details rows dynamically
   const playerName = payload.player_name || 'Anonymous User';
@@ -331,13 +480,15 @@ function renderFeedbackEmail(payload: FeedbackPayload): { subject: string; html:
                   <td style="width: 4px; background-color: ${categoryColor}; border-radius: 4px;"></td>
                   <td style="padding: 20px 24px; background-color: ${BRAND.neutral50}; border-radius: 0 12px 12px 0;">
                     <p style="margin: 0; font-family: 'Inter', 'Segoe UI', sans-serif; font-size: 15px; line-height: 1.7; color: ${BRAND.neutral600}; white-space: pre-wrap;">
-${payload.message.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+${escapeHtml(payload.message)}
                     </p>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
+
+          ${renderMetadataSection(payload)}
 
           ${renderScreenshotsSection(payload.screenshot_urls)}
 
@@ -441,8 +592,8 @@ Deno.serve(async req => {
     // Parse request body
     const payload: FeedbackPayload = await req.json();
 
-    // Validate required fields
-    if (!payload.feedback_id || !payload.category || !payload.subject || !payload.message) {
+    // Validate required fields (subject/message may be empty for PMF category)
+    if (!payload.feedback_id || !payload.category) {
       return new Response(JSON.stringify({ success: false, error: 'Missing required fields' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },

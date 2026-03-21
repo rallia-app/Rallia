@@ -7585,7 +7585,37 @@
     "referenceId": "Reference ID",
     "selectImageSource": "Select Image Source",
     "submitAnother": "Submit Another",
-    "backToSettings": "Back to Settings"
+    "backToSettings": "Back to Settings",
+    "bug": {
+      "severityLabel": "Severity",
+      "severityMinor": "Minor",
+      "severityMajor": "Major",
+      "severityCritical": "Critical",
+      "stepsLabel": "Steps to Reproduce",
+      "stepsPlaceholder": "1. Go to...\n2. Tap on...\n3. See error...",
+      "expectedLabel": "Expected vs Actual",
+      "expectedPlaceholder": "Expected: ...\nActual: ..."
+    },
+    "feature": {
+      "titleLabel": "Feature Title",
+      "titlePlaceholder": "Name your feature idea",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Describe the feature in detail...",
+      "useCaseLabel": "Use Case",
+      "useCasePlaceholder": "When would you use this feature?"
+    },
+    "pmf": {
+      "disappointmentLabel": "How would you feel if you could no longer use Rallia?",
+      "veryDisappointed": "Very disappointed",
+      "somewhatDisappointed": "Somewhat disappointed",
+      "notDisappointed": "Not disappointed",
+      "mainBenefitLabel": "What is the main benefit you get from Rallia?",
+      "mainBenefitPlaceholder": "The main benefit I get is...",
+      "idealUserLabel": "Who do you think would benefit most from Rallia?",
+      "idealUserPlaceholder": "The ideal user is someone who...",
+      "improveLabel": "How can we improve Rallia for you?",
+      "improvePlaceholder": "I wish Rallia would..."
+    }
   },
   "bugReport": {
     "title": "Quick Bug Report",
