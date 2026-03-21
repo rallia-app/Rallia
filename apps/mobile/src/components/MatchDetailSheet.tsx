@@ -29,6 +29,7 @@ import {
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import MapView, { Marker } from 'react-native-maps';
+import { WebView } from 'react-native-webview';
 import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
@@ -4212,12 +4213,29 @@ export const MatchDetailSheet: React.FC = () => {
             {hasCoordinates && (
               <View style={[styles.mapContainer, { borderColor: colors.border }]}>
                 {Platform.OS === 'android' ? (
-                  <Image
-                    source={{
-                      uri: `https://maps.googleapis.com/maps/api/staticmap?center=${resolvedLatitude},${resolvedLongitude}&zoom=16&size=600x300&scale=2&markers=color:0x${(isDark ? primary[400] : primary[500]).replace('#', '')}%7C${resolvedLatitude},${resolvedLongitude}&style=feature:all%7Celement:geometry%7Ccolor:${isDark ? '0x242f3e' : '0xf5f5f5'}&key=${process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || ''}`,
-                    }}
+                  <WebView
                     style={styles.mapView}
-                    resizeMode="cover"
+                    originWhitelist={['*']}
+                    scrollEnabled={false}
+                    nestedScrollEnabled={false}
+                    overScrollMode="never"
+                    source={{
+                      html: `<!DOCTYPE html>
+<html><head>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>html,body,#map{margin:0;padding:0;width:100%;height:100%}</style>
+</head><body>
+<div id="map"></div>
+<script>
+var map=L.map('map',{zoomControl:false,attributionControl:false,dragging:false,scrollWheelZoom:false,doubleClickZoom:false,touchZoom:false}).setView([${resolvedLatitude},${resolvedLongitude}],16);
+L.tileLayer('https://{s}.${isDark ? 'basemaps.cartocdn.com/dark_all' : 'tile.openstreetmap.org'}/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+var markerColor='${isDark ? primary[400] : primary[500]}';
+var icon=L.divIcon({className:'',iconSize:[36,44],iconAnchor:[18,44],html:'<div style="display:flex;flex-direction:column;align-items:center"><div style="width:36px;height:36px;border-radius:50%;background:'+markerColor+';border:2px solid rgba(255,255,255,0.5);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px '+markerColor+'66"><svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div><div style="width:6px;height:6px;border-radius:50%;background:'+markerColor+';margin-top:2px;box-shadow:0 1px 3px '+markerColor+'99"></div></div>'});
+L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false}).addTo(map);
+</script></body></html>`,
+                    }}
                   />
                 ) : (
                   <MapView

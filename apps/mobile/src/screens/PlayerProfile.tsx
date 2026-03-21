@@ -28,7 +28,7 @@ import { Text, Skeleton, SkeletonAvatar, useToast, Button } from '@rallia/shared
 import { supabase, Logger, isPlayerOnline } from '@rallia/shared-services';
 import { useGetOrCreateDirectConversation, usePlayerReputation } from '@rallia/shared-hooks';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
-import { useSport } from '../context';
+import { useSport, useUserHomeLocation } from '../context';
 import { SportIcon } from '../components/SportIcon';
 import RatingBadge from '../components/RatingBadge';
 import ReputationBadge from '../components/ReputationBadge';
@@ -205,6 +205,7 @@ const PlayerProfile = () => {
   const skeletonHighlight = isDark ? '#404040' : '#F2F8FC';
   const { t, locale } = useTranslation();
   const { selectedSport } = useSport();
+  const { homeLocation } = useUserHomeLocation();
   const getOrCreateDirectConversation = useGetOrCreateDirectConversation();
   const { display: reputationDisplay, loading: reputationLoading } = usePlayerReputation(playerId);
   const toast = useToast();
@@ -234,6 +235,24 @@ const PlayerProfile = () => {
   const [proofsLoading, setProofsLoading] = useState(false);
   const [selectedProof, setSelectedProof] = useState<RatingProofData | null>(null);
   const [showProofViewer, setShowProofViewer] = useState(false);
+
+  // Calculate distance from current user to this player
+  const distanceText = useMemo(() => {
+    if (!homeLocation || !player?.latitude || !player?.longitude) return '';
+    const R = 6371000; // Earth's radius in meters
+    const lat1Rad = (homeLocation.latitude * Math.PI) / 180;
+    const lat2Rad = (player.latitude * Math.PI) / 180;
+    const deltaLat = ((player.latitude - homeLocation.latitude) * Math.PI) / 180;
+    const deltaLon = ((player.longitude - homeLocation.longitude) * Math.PI) / 180;
+    const a =
+      Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+      Math.cos(lat1Rad) * Math.cos(lat2Rad) * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const meters = R * c;
+    if (meters < 100) return t('playerDirectory.nearby');
+    if (meters < 1000) return `${Math.round(meters)} m`;
+    return `${(meters / 1000).toFixed(1)} km`;
+  }, [homeLocation, player?.latitude, player?.longitude, t]);
 
   // Fetch favorite facilities for the player being viewed (separate from main data fetch)
   useEffect(() => {
@@ -1526,6 +1545,16 @@ const PlayerProfile = () => {
           <Text style={[styles.profileName, { color: colors.text }]}>{displayName}</Text>
           <Text style={[styles.username, { color: colors.textMuted }]}>@{username}</Text>
 
+          {/* Location & Distance */}
+          {(player?.city || distanceText) ? (
+            <View style={styles.locationRow}>
+              <Ionicons name="location-outline" size={14} color={colors.textMuted} />
+              <Text style={[styles.locationText, { color: colors.textMuted }]}>
+                {[player?.city, distanceText].filter(Boolean).join(' · ')}
+              </Text>
+            </View>
+          ) : null}
+
           {/* Rating & Reputation Badges */}
           <View style={styles.profileBadgesRow}>
             <RatingBadge
@@ -2054,6 +2083,15 @@ const styles = StyleSheet.create({
   username: {
     fontSize: fontSizePixels.sm,
     marginBottom: spacingPixels[2],
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    marginBottom: spacingPixels[2],
+  },
+  locationText: {
+    fontSize: fontSizePixels.sm,
   },
   joinedContainer: {
     flexDirection: 'row',
