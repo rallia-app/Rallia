@@ -6,7 +6,7 @@
  * Provides smooth animations and professional UI.
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -26,6 +26,7 @@ import { WebView } from 'react-native-webview';
 import { Text } from '@rallia/shared-components';
 import { Logger } from '@rallia/shared-services';
 import { useThemeStyles, useTranslation } from '../../../hooks';
+import { resolveStorageUrl } from '../../../services/imageUpload';
 import {
   spacingPixels,
   radiusPixels,
@@ -63,6 +64,24 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
   const [loading, setLoading] = useState(true);
   const [, setVideoStatus] = useState<{ isPlaying: boolean }>({ isPlaying: false });
   const [error, setError] = useState<string | null>(null);
+  const [resolvedFileUrl, setResolvedFileUrl] = useState<string | null>(null);
+
+  // Resolve signed URLs for private storage buckets (rating-proof-*)
+  useEffect(() => {
+    if (!proof?.file?.url) {
+      setResolvedFileUrl(null);
+      return;
+    }
+
+    let cancelled = false;
+    resolveStorageUrl(proof.file.url).then(url => {
+      if (!cancelled) setResolvedFileUrl(url);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [proof?.file?.url]);
 
   if (!proof) return null;
 
@@ -99,7 +118,7 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
   const renderContent = () => {
     switch (effectiveType) {
       case 'video':
-        if (!proof.file?.url) {
+        if (!resolvedFileUrl) {
           return (
             <View style={styles.errorContainer}>
               <Ionicons name="alert-circle" size={48} color={colors.textMuted} />
@@ -113,7 +132,7 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
           <View style={styles.videoContainer}>
             <Video
               ref={videoRef}
-              source={{ uri: proof.file.url }}
+              source={{ uri: resolvedFileUrl }}
               style={styles.video}
               resizeMode={ResizeMode.CONTAIN}
               useNativeControls
@@ -140,7 +159,7 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
         );
 
       case 'image':
-        if (!proof.file?.url) {
+        if (!resolvedFileUrl) {
           return (
             <View style={styles.errorContainer}>
               <Ionicons name="alert-circle" size={48} color={colors.textMuted} />
@@ -158,7 +177,7 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
               </View>
             )}
             <Image
-              source={{ uri: proof.file.url }}
+              source={{ uri: resolvedFileUrl }}
               style={styles.image}
               resizeMode="contain"
               onLoadStart={() => setLoading(true)}
@@ -172,7 +191,7 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
         );
 
       case 'document': {
-        if (!proof.file?.url) {
+        if (!resolvedFileUrl) {
           return (
             <View style={styles.errorContainer}>
               <Ionicons name="alert-circle" size={48} color={colors.textMuted} />
@@ -194,7 +213,7 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
                 </View>
               )}
               <WebView
-                source={{ uri: proof.file.url }}
+                source={{ uri: resolvedFileUrl }}
                 style={styles.webview}
                 onLoadStart={() => setLoading(true)}
                 onLoad={() => setLoading(false)}
@@ -222,7 +241,7 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
               <Ionicons name="document-text" size={48} color={colors.primary} />
             </View>
             <Text style={[styles.documentFileName, { color: colors.text }]} numberOfLines={2}>
-              {proof.file.original_name || t('profile.ratingProofs.proofTypes.document.title')}
+              {proof.file?.original_name || t('profile.ratingProofs.proofTypes.document.title')}
             </Text>
           </View>
         );

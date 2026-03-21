@@ -22,6 +22,7 @@ import { Text } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import { withTimeout } from '../../../utils/networkTimeout';
+import { resolveStorageUrl, isPrivateBucketUrl } from '../../../services/imageUpload';
 import ProofViewer from './ProofViewer';
 import {
   spacingPixels,
@@ -70,6 +71,8 @@ const ProofGallerySection: React.FC<ProofGallerySectionProps> = ({
   const [loading, setLoading] = useState(true);
   const [selectedProof, setSelectedProof] = useState<RatingProofData | null>(null);
   const [showViewer, setShowViewer] = useState(false);
+  // Cache of resolved signed URLs keyed by original URL
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
 
   const fetchProofs = useCallback(async () => {
     if (!playerRatingScoreId) {
@@ -124,6 +127,38 @@ const ProofGallerySection: React.FC<ProofGallerySectionProps> = ({
     fetchProofs();
   }, [fetchProofs]);
 
+  // Resolve signed URLs for private bucket thumbnails
+  useEffect(() => {
+    if (proofs.length === 0) return;
+
+    const urlsToResolve: string[] = [];
+    for (const proof of proofs) {
+      const fileType = proof.file?.file_type || proof.proof_type;
+      const url = proof.file?.thumbnail_url || (fileType === 'image' ? proof.file?.url : null);
+      if (url && isPrivateBucketUrl(url) && !signedUrls[url]) {
+        urlsToResolve.push(url);
+      }
+    }
+
+    if (urlsToResolve.length === 0) return;
+
+    let cancelled = false;
+    Promise.all(
+      urlsToResolve.map(url => resolveStorageUrl(url).then(signed => ({ original: url, signed })))
+    ).then(results => {
+      if (cancelled) return;
+      const newUrls: Record<string, string> = {};
+      for (const { original, signed } of results) {
+        newUrls[original] = signed;
+      }
+      setSignedUrls(prev => ({ ...prev, ...newUrls }));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [proofs]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleProofPress = (proof: RatingProofData) => {
     setSelectedProof(proof);
     setShowViewer(true);
@@ -161,13 +196,15 @@ const ProofGallerySection: React.FC<ProofGallerySectionProps> = ({
 
   const getThumbnail = (proof: RatingProofData) => {
     // Use thumbnail_url if available, otherwise use full url for images
-    if (proof.file?.thumbnail_url) {
-      return proof.file.thumbnail_url;
+    // Note: proof_type is 'file' for all file-based proofs; actual type is in file.file_type
+    const fileType = proof.file?.file_type || proof.proof_type;
+    const url = proof.file?.thumbnail_url || (fileType === 'image' ? proof.file?.url : null);
+    if (!url) return null;
+    // For private buckets, only return the signed URL (null while resolving)
+    if (isPrivateBucketUrl(url)) {
+      return signedUrls[url] || null;
     }
-    if (proof.proof_type === 'image' && proof.file?.url) {
-      return proof.file.url;
-    }
-    return null;
+    return url;
   };
 
   const renderProofCard = ({ item }: { item: RatingProofData }) => {
@@ -280,6 +317,7 @@ const ProofGallerySection: React.FC<ProofGallerySectionProps> = ({
         scrollEnabled={false}
         contentContainerStyle={styles.grid}
         columnWrapperStyle={styles.row}
+        extraData={signedUrls}
       />
 
       {/* Proof Viewer Modal */}

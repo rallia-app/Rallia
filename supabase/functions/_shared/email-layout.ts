@@ -102,6 +102,10 @@ function getDarkModeCss(): string {
       [data-ogsc] .email-detail-label { color: ${T.darkMutedText} !important; }
       [data-ogsc] .email-detail-value { color: ${T.darkText} !important; }
       [data-ogsc] .email-footer p { color: ${T.darkMutedText} !important; }
+      /* Responsive */
+      @media (max-width: 620px) {
+        .email-container { width: 100% !important; }
+      }
     </style>`;
 }
 
@@ -150,7 +154,7 @@ export function wrapInLayout(options: LayoutOptions): string {
     content,
     footerNote = '',
     headerSubtitle,
-    siteUrl = Deno.env.get('SITE_URL') || 'https://rallia.com',
+    siteUrl = Deno.env.get('SITE_URL') || 'https://www.rallia.ca',
     locale = 'en-US',
     preheader,
     showUnsubscribe = false,
@@ -191,7 +195,7 @@ export function wrapInLayout(options: LayoutOptions): string {
           <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
             <tr>
               <td align="center" style="padding: 0 0 12px 0;">
-                <a href="rallia://settings/notifications" style="font-size: 12px; color: ${T.neutral500}; text-decoration: underline;">
+                <a href="${siteUrl}/settings/notifications" style="font-size: 12px; color: ${T.neutral500}; text-decoration: underline;">
                   ${isFr ? 'Gérer les préférences de notification' : 'Manage notification preferences'}
                 </a>
               </td>
@@ -206,7 +210,6 @@ export function wrapInLayout(options: LayoutOptions): string {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${escapeHtml(title)}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet" />
     <!--[if mso]>
       <style type="text/css">
         body, table, td { font-family: Arial, sans-serif !important; }
@@ -244,7 +247,7 @@ export function wrapInLayout(options: LayoutOptions): string {
                 </p>
                 ${getAppStoreBadgesHtml(siteUrl, locale)}
                 <p class="email-muted" style="margin: 0; padding: 16px 0 0 0; font-size: 12px; line-height: 1.5; color: ${T.neutral500};">
-                  &copy; Rallia. ${rightsText}
+                  &copy; ${new Date().getFullYear()} Rallia. ${rightsText}
                 </p>
               </td>
             </tr>

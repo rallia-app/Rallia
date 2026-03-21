@@ -226,6 +226,93 @@ export async function replaceImage(
  * @param bucket - Storage bucket name (default: 'profile-pictures')
  * @returns Success boolean
  */
+/**
+ * Extract bucket name and file path from a Supabase public storage URL.
+ * URL format: https://xxx.supabase.co/storage/v1/object/public/{bucket}/{path}
+ *
+ * @returns { bucket, filePath } or null if URL doesn't match
+ */
+export function parseStorageUrl(url: string): { bucket: string; filePath: string } | null {
+  const marker = '/storage/v1/object/public/';
+  const idx = url.indexOf(marker);
+  if (idx === -1) return null;
+
+  const rest = url.substring(idx + marker.length);
+  const slashIdx = rest.indexOf('/');
+  if (slashIdx === -1) return null;
+
+  return {
+    bucket: rest.substring(0, slashIdx),
+    filePath: rest.substring(slashIdx + 1),
+  };
+}
+
+/**
+ * Check if a URL points to a private storage bucket that needs signed URL resolution.
+ * Private buckets: rating-proof-images, rating-proof-documents, rating-proof-videos
+ */
+const PRIVATE_BUCKETS = new Set([
+  'rating-proof-images',
+  'rating-proof-documents',
+  'rating-proof-videos',
+]);
+
+export function isPrivateBucketUrl(url: string): boolean {
+  const parsed = parseStorageUrl(url);
+  return parsed !== null && PRIVATE_BUCKETS.has(parsed.bucket);
+}
+
+/**
+ * Create a signed URL for a file in a private Supabase storage bucket.
+ * Signed URLs are time-limited and work without authentication headers,
+ * making them compatible with React Native <Image> and <Video> components.
+ *
+ * @param bucket - Storage bucket name
+ * @param filePath - Path to file within the bucket (e.g. "{userId}/{filename}")
+ * @param expiresIn - URL validity in seconds (default: 1 hour)
+ * @returns Signed URL string, or null on error
+ */
+export async function createSignedStorageUrl(
+  bucket: string,
+  filePath: string,
+  expiresIn: number = 3600
+): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(filePath, expiresIn);
+
+    if (error) {
+      Logger.error('Failed to create signed URL', error, { bucket, filePath });
+      return null;
+    }
+
+    return data.signedUrl;
+  } catch (error) {
+    Logger.error('Error creating signed URL', error as Error, { bucket, filePath });
+    return null;
+  }
+}
+
+/**
+ * Resolve a storage URL to a signed URL if it points to a private bucket.
+ * Public bucket URLs are returned as-is. Private bucket URLs are resolved
+ * to time-limited signed URLs.
+ *
+ * @param url - The URL to resolve (may be public or private bucket URL)
+ * @param expiresIn - Signed URL validity in seconds (default: 1 hour)
+ * @returns Resolved URL (signed if private, original if public)
+ */
+export async function resolveStorageUrl(url: string, expiresIn: number = 3600): Promise<string> {
+  const parsed = parseStorageUrl(url);
+  if (!parsed || !PRIVATE_BUCKETS.has(parsed.bucket)) {
+    return url;
+  }
+
+  const signedUrl = await createSignedStorageUrl(parsed.bucket, parsed.filePath, expiresIn);
+  return signedUrl || url; // Fall back to original URL if signing fails
+}
+
 export async function deleteImage(
   imageUrl: string,
   bucket: string = 'profile-pictures'

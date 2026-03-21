@@ -20,6 +20,14 @@ export interface EmailContent {
 }
 
 /**
+ * Convert a rallia:// deep link to a universal link using siteUrl.
+ */
+function toUniversalLink(deepLink: string, siteUrl?: string): string {
+  if (!siteUrl || !deepLink.startsWith('rallia://')) return deepLink;
+  return deepLink.replace('rallia://', `${siteUrl}/`);
+}
+
+/**
  * Format currency amount from cents
  */
 function formatCurrency(
@@ -115,7 +123,7 @@ function generateBookingCard(payload: Record<string, unknown>, locale: string): 
     const timeStr = startTime && endTime ? `${startTime} - ${endTime}` : startTime || '';
     rows.push({
       label: t(locale, 'org.when'),
-      value: escapeHtml(bookingDate) + (timeStr ? ` at ${timeStr}` : ''),
+      value: escapeHtml(bookingDate) + (timeStr ? ` ${t(locale, 'org.dateAt')} ${timeStr}` : ''),
     });
   }
   if (playerName) {
@@ -165,7 +173,7 @@ function generatePaymentCard(payload: Record<string, unknown>, locale: string): 
 /**
  * Generate action button
  */
-function generateActionButton(type: OrgNotificationType, locale: string): string {
+function generateActionButton(type: OrgNotificationType, locale: string, siteUrl?: string): string {
   let buttonKey = 'org.button.viewDetails';
   let deepLink = 'rallia://dashboard';
 
@@ -202,7 +210,7 @@ function generateActionButton(type: OrgNotificationType, locale: string): string
       break;
   }
 
-  return renderCtaButton(t(locale, buttonKey), deepLink);
+  return renderCtaButton(t(locale, buttonKey), toUniversalLink(deepLink, siteUrl));
 }
 
 /**
@@ -239,7 +247,8 @@ export function renderOrgEmail(
                 </p>`
     : '';
 
-  const manageLink = `<a href="rallia://dashboard/settings/notifications" style="color: ${T.primary600}; text-decoration: none;">${t(locale, 'org.managePreferences')}</a>`;
+  const manageHref = toUniversalLink('rallia://dashboard/settings/notifications', siteUrl);
+  const manageLink = `<a href="${manageHref}" style="color: ${T.primary600}; text-decoration: none;">${t(locale, 'org.managePreferences')}</a>`;
   const websiteLink = organization.website
     ? `<br><a href="${organization.website}" style="color: ${T.primary600}; text-decoration: none;">${organization.website}</a>`
     : '';
@@ -255,7 +264,7 @@ export function renderOrgEmail(
 
                 ${qrCodeHtml}
 
-                ${generateActionButton(type as OrgNotificationType, locale)}
+                ${generateActionButton(type as OrgNotificationType, locale, siteUrl)}
 
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-top: 24px;">
                   <tr>

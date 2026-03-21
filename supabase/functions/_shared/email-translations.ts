@@ -124,6 +124,8 @@ const translations: Translations = {
     'org.button.viewAnnouncement': 'View Announcement',
     'org.button.viewDetails': 'View Details',
     'org.scanQrCode': 'Scan this QR code at the venue',
+    'match.dateAt': 'at',
+    'org.dateAt': 'at',
   },
 
   'fr-CA': {
@@ -248,6 +250,8 @@ const translations: Translations = {
     'org.button.viewAnnouncement': "Voir l'annonce",
     'org.button.viewDetails': 'Voir les détails',
     'org.scanQrCode': 'Scannez ce code QR sur place',
+    'match.dateAt': 'à',
+    'org.dateAt': 'à',
   },
 };
 

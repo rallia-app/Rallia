@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, Alert, Image, Linking } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  Alert,
+  Image,
+  Linking,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,6 +21,7 @@ import { RatingProofWithFile, RatingProofsScreenParams } from '@rallia/shared-ty
 import { SheetManager } from 'react-native-actions-sheet';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import { useThemeStyles, useTranslation } from '../hooks';
+import { resolveStorageUrl, isPrivateBucketUrl } from '../services/imageUpload';
 import RatingBadge from '../components/RatingBadge';
 import ProofViewer from '../features/ratings/components/ProofViewer';
 import { formatDateShort } from '../utils/dateFormatting';
@@ -29,6 +39,54 @@ interface RatingProofWithRatingScore extends RatingProofWithFile {
   } | null;
 }
 
+/** Resolve a storage URL to a signed URL if it's in a private bucket. */
+function useSignedUrl(url: string | null | undefined): string | null {
+  const [signed, setSigned] = useState<string | null>(null);
+  useEffect(() => {
+    if (!url) {
+      setSigned(null);
+      return;
+    }
+    if (!isPrivateBucketUrl(url)) {
+      setSigned(url);
+      return;
+    }
+    let cancelled = false;
+    resolveStorageUrl(url).then(resolved => {
+      if (!cancelled) setSigned(resolved);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
+  return signed;
+}
+
+/** Image preview with signed URL resolution for private buckets. */
+const ImagePreview: React.FC<{
+  imageUrl: string;
+  onPress: () => void;
+}> = ({ imageUrl, onPress }) => {
+  const resolvedUrl = useSignedUrl(imageUrl);
+
+  return (
+    <TouchableOpacity style={styles.previewContainer} onPress={onPress} activeOpacity={0.8}>
+      {resolvedUrl ? (
+        <Image source={{ uri: resolvedUrl }} style={styles.previewImage} resizeMode="cover" />
+      ) : (
+        <View style={[styles.previewImage, { justifyContent: 'center', alignItems: 'center' }]}>
+          <ActivityIndicator size="small" />
+        </View>
+      )}
+      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.5)']} style={styles.imageGradient}>
+        <View style={styles.imageExpandHint}>
+          <Ionicons name="expand-outline" size={16} color="white" />
+        </View>
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+};
+
 /** Small wrapper so the useVideoThumbnail hook can be called per video card. */
 const VideoThumbnailPreview: React.FC<{
   videoUrl: string;
@@ -36,8 +94,10 @@ const VideoThumbnailPreview: React.FC<{
   primaryColor: string;
   onPress: () => void;
 }> = ({ videoUrl, existingThumbnail, primaryColor, onPress }) => {
-  const generatedThumbnail = useVideoThumbnail(existingThumbnail ? null : videoUrl);
-  const thumbnailUri = existingThumbnail || generatedThumbnail;
+  const resolvedVideoUrl = useSignedUrl(videoUrl);
+  const resolvedThumbnail = useSignedUrl(existingThumbnail);
+  const generatedThumbnail = useVideoThumbnail(resolvedThumbnail ? null : resolvedVideoUrl);
+  const thumbnailUri = resolvedThumbnail || generatedThumbnail;
 
   return (
     <TouchableOpacity style={styles.previewContainer} onPress={onPress} activeOpacity={0.8}>
@@ -255,27 +315,7 @@ const RatingProofs: React.FC = () => {
     if (proof.file) {
       switch (proof.file.file_type) {
         case 'image':
-          return (
-            <TouchableOpacity
-              style={styles.previewContainer}
-              onPress={() => handleViewProof(proof)}
-              activeOpacity={0.8}
-            >
-              <Image
-                source={{ uri: proof.file.url }}
-                style={styles.previewImage}
-                resizeMode="cover"
-              />
-              <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.5)']}
-                style={styles.imageGradient}
-              >
-                <View style={styles.imageExpandHint}>
-                  <Ionicons name="expand-outline" size={16} color="white" />
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          );
+          return <ImagePreview imageUrl={proof.file.url} onPress={() => handleViewProof(proof)} />;
         case 'video':
           return (
             <VideoThumbnailPreview

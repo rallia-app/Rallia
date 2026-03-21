@@ -20,23 +20,15 @@ import { t } from '../../_shared/email-translations.ts';
 const GOOGLE_MAPS_API_KEY = Deno.env.get('GOOGLE_MAPS_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 
-/**
- * Sport-specific emoji for email subjects
- */
-const SPORT_EMOJI: Record<string, string> = {
-  tennis: '🎾',
-  pickleball: '',
-  badminton: '🏸',
-  default: '🏃',
-};
+/** Known sport icons available as hosted SVGs */
+const SPORT_ICONS = new Set(['tennis', 'pickleball']);
 
 /**
- * Get sport emoji
+ * Convert a rallia:// deep link to a universal link using siteUrl.
  */
-function getSportEmoji(sportName?: string): string {
-  if (!sportName) return SPORT_EMOJI.default;
-  const normalized = sportName.toLowerCase().trim();
-  return SPORT_EMOJI[normalized] || SPORT_EMOJI.default;
+function toUniversalLink(deepLink: string, siteUrl?: string): string {
+  if (!siteUrl || !deepLink.startsWith('rallia://')) return deepLink;
+  return deepLink.replace('rallia://', `${siteUrl}/`);
 }
 
 /**
@@ -45,12 +37,11 @@ function getSportEmoji(sportName?: string): string {
 export function generateEmailSubject(notification: NotificationRecord): string {
   const { title, type, payload } = notification;
   const sportName = payload?.sportName as string | undefined;
-  const emoji = getSportEmoji(sportName);
 
   if (type.startsWith('match_') || type === 'feedback_request' || type === 'reminder') {
     if (sportName) {
-      const normalizedSport = sportName.toLowerCase().trim();
-      return `${emoji} [${normalizedSport}] ${title}`;
+      const capitalized = sportName.charAt(0).toUpperCase() + sportName.slice(1).toLowerCase();
+      return `[${capitalized}] ${title}`;
     }
   }
 
@@ -180,7 +171,11 @@ function generateStatusBadge(type: string, locale: string): string {
 /**
  * Generate match details card for match-related emails
  */
-function generateMatchDetailsCard(payload: Record<string, unknown>, locale: string): string {
+function generateMatchDetailsCard(
+  payload: Record<string, unknown>,
+  locale: string,
+  siteUrl?: string
+): string {
   const sportName = payload.sportName as string | undefined;
   const matchDate = payload.matchDate as string | undefined;
   const startTime = payload.startTime as string | undefined;
@@ -195,15 +190,21 @@ function generateMatchDetailsCard(payload: Record<string, unknown>, locale: stri
     return '';
   }
 
-  const emoji = getSportEmoji(sportName);
   const rows: Array<{ label: string; value: string }> = [];
 
   if (sportName) {
-    rows.push({ label: t(locale, 'match.sport'), value: `${emoji} ${escapeHtml(sportName)}` });
+    const normalized = sportName.toLowerCase().trim();
+    const iconHtml =
+      siteUrl && SPORT_ICONS.has(normalized)
+        ? `<img src="${siteUrl}/icons/${normalized}.svg" alt="" width="20" height="20" style="vertical-align: middle; margin-right: 4px;" />`
+        : '';
+    rows.push({ label: t(locale, 'match.sport'), value: `${iconHtml}${escapeHtml(sportName)}` });
   }
 
   if (matchDate) {
-    const dateLabel = startTime ? `${matchDate} at ${startTime}` : matchDate;
+    const dateLabel = startTime
+      ? `${matchDate} ${t(locale, 'match.dateAt')} ${startTime}`
+      : matchDate;
     rows.push({ label: t(locale, 'match.when'), value: escapeHtml(dateLabel) });
   }
 
@@ -242,7 +243,8 @@ function generateMatchDetailsCard(payload: Record<string, unknown>, locale: stri
 function generateActionButton(
   type: string,
   payload: Record<string, unknown>,
-  locale: string
+  locale: string,
+  siteUrl?: string
 ): string {
   let buttonKey = 'match.button.openRallia';
   let deepLink = 'rallia://';
@@ -298,7 +300,7 @@ function generateActionButton(
       deepLink = 'rallia://';
   }
 
-  return renderCtaButton(t(locale, buttonKey), deepLink);
+  return renderCtaButton(t(locale, buttonKey), toUniversalLink(deepLink, siteUrl));
 }
 
 /**
@@ -314,7 +316,7 @@ export function generateEmailHtml(
 
   const isMatchRelated =
     type.startsWith('match_') || type === 'feedback_request' || type === 'reminder';
-  const matchDetailsCard = isMatchRelated ? generateMatchDetailsCard(payload, locale) : '';
+  const matchDetailsCard = isMatchRelated ? generateMatchDetailsCard(payload, locale, siteUrl) : '';
 
   const bodyHtml = body
     ? `
@@ -347,13 +349,14 @@ export function generateEmailHtml(
 
                 ${matchDetailsCard}
 
-                ${generateActionButton(type, payload, locale)}
+                ${generateActionButton(type, payload, locale, siteUrl)}
 
                 ${calendarHtml}
 
                 ${renderDividerAndDisclaimer(t(locale, 'match.disclaimer'))}`;
 
-  const manageLink = `<a href="rallia://settings/notifications" style="color: ${T.primary600}; text-decoration: none;">${t(locale, 'match.managePreferences')}</a>`;
+  const manageHref = toUniversalLink('rallia://settings/notifications', siteUrl);
+  const manageLink = `<a href="${manageHref}" style="color: ${T.primary600}; text-decoration: none;">${t(locale, 'match.managePreferences')}</a>`;
   const footerNote = `${t(locale, 'match.footerNote')}<br>${manageLink}`;
 
   // Build preheader text

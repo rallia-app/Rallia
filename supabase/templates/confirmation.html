@@ -4,10 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Rallia - Verification Code</title>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap"
-      rel="stylesheet"
-    />
     <!--[if mso]>
       <style type="text/css">
         body,
@@ -43,6 +39,10 @@
       [data-ogsc] .email-content h2 { color: #5eead4 !important; }
       [data-ogsc] .email-content p { color: #e5e5e5 !important; }
       [data-ogsc] .email-footer p { color: #a3a3a3 !important; }
+      /* Responsive */
+      @media (max-width: 620px) {
+        .email-container { width: 100% !important; }
+      }
     </style>
   </head>
   <body style="margin: 0; padding: 0">
@@ -94,6 +94,7 @@
               <td class="email-content" style="padding: 40px 40px 30px 40px">
                 <h2
                   style="
+                    margin: 0;
                     padding: 0 0 16px 0;
                     font-family: Poppins, Arial, Helvetica, sans-serif;
                     font-size: 24px;
@@ -109,6 +110,7 @@
                 <p
                   class="email-text"
                   style="
+                    margin: 0;
                     padding: 0 0 32px 0;
                     font-size: 16px;
                     line-height: 1.6;
@@ -144,6 +146,7 @@
                           <td align="center" style="padding: 32px 40px">
                             <p
                               style="
+                                margin: 0;
                                 padding: 0 0 8px 0;
                                 font-size: 14px;
                                 font-weight: bold;
@@ -156,6 +159,7 @@
                             </p>
                             <p
                               style="
+                                margin: 0;
                                 padding: 0;
                                 font-family: Poppins, Arial, Helvetica, sans-serif;
                                 font-size: 36px;
@@ -177,6 +181,7 @@
                 <p
                   class="email-muted"
                   style="
+                    margin: 0;
                     padding: 0 0 24px 0;
                     font-size: 14px;
                     line-height: 1.6;
@@ -202,6 +207,7 @@
                 <p
                   class="email-muted"
                   style="
+                    margin: 0;
                     padding: 0;
                     font-size: 13px;
                     line-height: 1.5;
@@ -228,6 +234,7 @@
               >
                 <p
                   style="
+                    margin: 0;
                     padding: 0 0 8px 0;
                     font-size: 14px;
                     font-weight: bold;
@@ -239,6 +246,7 @@
                 <p
                   class="email-muted"
                   style="
+                    margin: 0;
                     padding: 0;
                     font-size: 13px;
                     line-height: 1.5;
@@ -272,13 +280,14 @@
                 <p
                   class="email-muted"
                   style="
+                    margin: 0;
                     padding: 16px 0 0 0;
                     font-size: 12px;
                     line-height: 1.5;
                     color: #737373;
                   "
                 >
-                  &copy; Rallia. {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Tous droits réservés.{{ else }}All rights reserved.{{ end }}
+                  &copy; 2026 Rallia. {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Tous droits réservés.{{ else }}All rights reserved.{{ end }}
                 </p>
               </td>
             </tr>
@@ -297,6 +306,7 @@
                 <p
                   class="email-muted"
                   style="
+                    margin: 0;
                     padding: 0;
                     font-size: 12px;
                     line-height: 1.5;
