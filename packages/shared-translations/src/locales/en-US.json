@@ -7597,11 +7597,13 @@
     "descriptionPlaceholder": "Describe the issue you encountered...",
     "moduleLabel": "Where did it happen?",
     "modules": {
-      "matches": "Matches",
-      "chat": "Chat",
       "profile": "Profile",
-      "ratingSystem": "Rating System",
+      "matches": "Matches",
+      "facilities": "Facilities",
       "playerDirectory": "Player Directory",
+      "groupsCommunities": "Groups & Communities",
+      "chat": "Chat",
+      "ratingSystem": "Rating System",
       "notifications": "Notifications",
       "performance": "Performance",
       "other": "Other"

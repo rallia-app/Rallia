@@ -84,11 +84,11 @@ function getCategoryColor(category: string): string {
 function getModuleLabel(module: string | null | undefined): string {
   if (!module) return 'Not specified';
   const labels: Record<string, string> = {
-    match_features: 'Match Features',
     profile_settings: 'Profile & Settings',
-    messaging: 'Messaging',
-    rating_system: 'Rating System',
+    match_features: 'Match Features',
+    facilities: 'Facilities',
     player_directory: 'Player Directory',
+    groups_communities: 'Groups & Communities',
     notifications: 'Notifications',
     performance: 'Performance',
     other: 'Other',
@@ -99,11 +99,11 @@ function getModuleLabel(module: string | null | undefined): string {
 function getModuleEmoji(module: string | null | undefined): string {
   if (!module) return '📦';
   const emojis: Record<string, string> = {
-    match_features: '🎾',
     profile_settings: '👤',
-    messaging: '💬',
-    rating_system: '⭐',
+    match_features: '🎾',
+    facilities: '🏟️',
     player_directory: '📋',
+    groups_communities: '👥',
     notifications: '🔔',
     performance: '⚡',
     other: '📦',

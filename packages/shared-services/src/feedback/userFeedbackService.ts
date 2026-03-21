@@ -14,21 +14,21 @@ export const USER_FEEDBACK_CATEGORY_LABELS: Record<UserFeedbackCategory, string>
 
 /** App module/feature area for feedback categorization */
 export type UserFeedbackModule =
-  | 'match_features'
   | 'profile_settings'
-  | 'messaging'
-  | 'rating_system'
+  | 'match_features'
+  | 'facilities'
   | 'player_directory'
+  | 'groups_communities'
   | 'notifications'
   | 'performance'
   | 'other';
 
 export const USER_FEEDBACK_MODULE_LABELS: Record<UserFeedbackModule, string> = {
-  match_features: 'Match Features',
   profile_settings: 'Profile & Settings',
-  messaging: 'Messaging',
-  rating_system: 'Rating System',
+  match_features: 'Match Features',
+  facilities: 'Facilities',
   player_directory: 'Player Directory',
+  groups_communities: 'Groups & Communities',
   notifications: 'Notifications',
   performance: 'Performance',
   other: 'Other',

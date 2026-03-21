@@ -702,46 +702,32 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
 
   // Determine what to render in the list area
   const renderListContent = () => {
-    // Initial loading - show skeleton
-    if (isLoading) {
-      return (
-        <>
-          {ListHeaderComponent}
-          {renderSearchAndFilters()}
-          {renderListSkeleton()}
-        </>
-      );
-    }
+    // Resolve empty component based on current state
+    const emptyComponent = isLoading
+      ? renderListSkeleton()
+      : error && !players.length
+        ? renderErrorContent()
+        : renderEmpty();
 
-    // Error with no data - show error
-    if (error && !players.length) {
-      return (
-        <>
-          {ListHeaderComponent}
-          {renderSearchAndFilters()}
-          {renderErrorContent()}
-        </>
-      );
-    }
-
-    // Normal state - show FlatList
+    // Always render FlatList so the header (SearchBar) stays mounted
+    // and the TextInput keeps keyboard focus during search
     return (
       <FlatList
-        data={sortedPlayers}
+        data={isLoading ? [] : sortedPlayers}
         renderItem={renderPlayer}
         keyExtractor={item => item.id}
         ListHeaderComponent={
           <>
             {ListHeaderComponent}
             {renderSearchAndFilters()}
-            {renderResultsInfo()}
+            {!isLoading && !(error && !players.length) && renderResultsInfo()}
           </>
         }
-        ListEmptyComponent={renderEmpty}
+        ListEmptyComponent={emptyComponent}
         ListFooterComponent={renderFooter}
         contentContainerStyle={[
           styles.listContent,
-          sortedPlayers.length === 0 && styles.emptyListContent,
+          (isLoading || sortedPlayers.length === 0) && styles.emptyListContent,
         ]}
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
@@ -759,6 +745,7 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
         windowSize={10}
         initialNumToRender={10}
         getItemLayout={undefined}
+        keyboardShouldPersistTaps="handled"
       />
     );
   };
