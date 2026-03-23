@@ -10,6 +10,12 @@
       "channel": "development",
       "ios": {
         "image": "macos-sequoia-15.3-xcode-16.2"
+      },
+      "env": {
+        "EXPO_ASC_API_KEY_PATH": "./credentials/asc-api-key.p8",
+        "EXPO_ASC_API_KEY_ID": "K9JA2C2Q49",
+        "EXPO_ASC_ISSUER_ID": "629c1c4a-1257-452f-9a2e-1ac49cbb86aa",
+        "EXPO_APPLE_TEAM_ID": "587DRRMTV8"
       }
     },
     "preview": {
@@ -17,6 +23,12 @@
       "channel": "preview",
       "ios": {
         "image": "macos-sequoia-15.3-xcode-16.2"
+      },
+      "env": {
+        "EXPO_ASC_API_KEY_PATH": "./credentials/asc-api-key.p8",
+        "EXPO_ASC_API_KEY_ID": "K9JA2C2Q49",
+        "EXPO_ASC_ISSUER_ID": "629c1c4a-1257-452f-9a2e-1ac49cbb86aa",
+        "EXPO_APPLE_TEAM_ID": "587DRRMTV8"
       }
     },
     "production": {
@@ -24,6 +36,12 @@
       "channel": "production",
       "ios": {
         "image": "macos-sequoia-15.3-xcode-16.2"
+      },
+      "env": {
+        "EXPO_ASC_API_KEY_PATH": "./credentials/asc-api-key.p8",
+        "EXPO_ASC_API_KEY_ID": "K9JA2C2Q49",
+        "EXPO_ASC_ISSUER_ID": "629c1c4a-1257-452f-9a2e-1ac49cbb86aa",
+        "EXPO_APPLE_TEAM_ID": "587DRRMTV8"
       }
     }
   },
