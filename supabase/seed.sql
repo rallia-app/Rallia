@@ -266,6 +266,12 @@ BEGIN
     DELETE FROM player WHERE id = logged_in_user;
   END IF;
 
+  -- Delete files uploaded by fake users (must happen before profile cascade sets uploaded_by=NULL on NOT NULL column)
+  DELETE FROM file WHERE uploaded_by = ANY(fake_ids);
+  IF logged_in_user IS NOT NULL THEN
+    DELETE FROM file WHERE uploaded_by = logged_in_user;
+  END IF;
+
   -- Delete fake users from auth (cascades: profile → player → remaining FKs)
   DELETE FROM auth.identities WHERE user_id = ANY(fake_ids);
   DELETE FROM auth.users WHERE id = ANY(fake_ids);
@@ -1811,7 +1817,7 @@ DECLARE
   v_visible_communities BOOLEAN;
   v_host_edited_at TIMESTAMPTZ;
   v_is_auto BOOLEAN;
-  v_location extensions.geography;
+  -- v_location removed: match.location is a generated column
   ntrp_system_id UUID;
   dupr_system_id UUID;
   ntrp_scores UUID[];
@@ -1870,6 +1876,7 @@ BEGIN
   dupr_count := COALESCE(array_length(dupr_scores, 1), 0);
 
   ALTER TABLE match DISABLE TRIGGER match_notify_group_members_on_create;
+  ALTER TABLE match DISABLE TRIGGER match_notify_nearby_players_on_create;
 
   FOR i IN 1..500 LOOP
     -- Sport: pickleball ~40%, tennis ~60%
@@ -1999,11 +2006,12 @@ BEGIN
       END IF;
     END IF;
 
-    -- Is court free: false when there's a cost, ~10% otherwise
+    -- Is court free: false when there's a cost, ~10% otherwise (must have cost when not free)
     IF v_cost IS NOT NULL THEN
       v_is_court_free := false;
     ELSIF i % 10 = 4 THEN
       v_is_court_free := false;
+      v_cost := (15 + (i % 3) * 5)::numeric;
     ELSE
       v_is_court_free := true;
     END IF;
@@ -2029,12 +2037,6 @@ BEGIN
     -- Auto-generated: ~5% of matches
     v_is_auto := (i % 20 = 0);
 
-    -- Geography point from lat/lng
-    v_location := NULL;
-    IF v_lat IS NOT NULL AND v_lng IS NOT NULL THEN
-      v_location := extensions.ST_SetSRID(extensions.ST_MakePoint(v_lng::float, v_lat::float), 4326)::extensions.geography;
-    END IF;
-
     INSERT INTO match (
       id, sport_id, match_date, start_time, end_time, duration, format,
       location_type, facility_id, location_name, location_address,
@@ -2043,7 +2045,7 @@ BEGIN
       cancelled_at, mutually_cancelled, court_status,
       min_rating_score_id, preferred_opponent_gender, court_id, is_court_free,
       closed_at, visible_in_groups, visible_in_communities,
-      host_edited_at, is_auto_generated, location
+      host_edited_at, is_auto_generated
     ) VALUES (
       ('b1000000-0000-0000-0000-00000000' || LPAD(i::text, 4, '0'))::uuid,
       v_sport_id, v_date, v_start, v_end, v_dur, v_format,
@@ -2053,11 +2055,12 @@ BEGIN
       v_cancel, v_mutual, v_court,
       v_min_rating, v_pref_gender, v_court_id, v_is_court_free,
       v_closed_at, v_visible_groups, v_visible_communities,
-      v_host_edited_at, v_is_auto, v_location
+      v_host_edited_at, v_is_auto
     );
   END LOOP;
 
   ALTER TABLE match ENABLE TRIGGER match_notify_group_members_on_create;
+  ALTER TABLE match ENABLE TRIGGER match_notify_nearby_players_on_create;
   RAISE NOTICE 'Created 500 matches (250 upcoming + 175 past + 75 cancelled)';
 END $$;
 
@@ -3147,7 +3150,7 @@ DECLARE
   p TEXT := 'a1000000-0000-0000-0000-00000000';
   fb TEXT := 'c4000000-0000-0000-0000-00000000';
   categories TEXT[] := ARRAY['bug', 'feature', 'improvement', 'other'];
-  modules TEXT[] := ARRAY['match_features', 'profile_settings', 'messaging', 'rating_system', 'player_directory', 'notifications', 'performance', 'other'];
+  modules TEXT[] := ARRAY['match_features', 'profile_settings', 'facilities', 'groups_communities', 'player_directory', 'notifications', 'performance', 'other'];
   statuses TEXT[] := ARRAY['new', 'new', 'new', 'new', 'reviewed', 'reviewed', 'in_progress', 'in_progress', 'resolved', 'closed'];
   subjects TEXT[] := ARRAY[
     'App crashes on match search',
