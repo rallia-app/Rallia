@@ -1801,6 +1801,24 @@ DECLARE
   v_mutual BOOLEAN;
   v_court court_status_enum;
   ci INT := 0;
+  -- New variables for previously-unset attributes
+  v_min_rating UUID;
+  v_pref_gender gender_enum;
+  v_court_id UUID;
+  v_is_court_free BOOLEAN;
+  v_closed_at TIMESTAMPTZ;
+  v_visible_groups BOOLEAN;
+  v_visible_communities BOOLEAN;
+  v_host_edited_at TIMESTAMPTZ;
+  v_is_auto BOOLEAN;
+  v_location extensions.geography;
+  ntrp_system_id UUID;
+  dupr_system_id UUID;
+  ntrp_scores UUID[];
+  dupr_scores UUID[];
+  ntrp_count INT;
+  dupr_count INT;
+  fac_courts UUID[];
   -- Cycling arrays
   exps match_type_enum[] := ARRAY['casual','competitive','both'];
   durs match_duration_enum[] := ARRAY['60','90','120'];
@@ -1840,6 +1858,16 @@ BEGIN
   pf := COALESCE(array_length(pb_facs, 1), 0);
 
   c_count := array_length(c_names, 1);
+
+  -- Collect rating_score IDs for min_rating_score_id
+  SELECT id INTO ntrp_system_id FROM rating_system WHERE code = 'ntrp';
+  SELECT id INTO dupr_system_id FROM rating_system WHERE code = 'dupr';
+  SELECT array_agg(id ORDER BY value) INTO ntrp_scores
+  FROM rating_score WHERE rating_system_id = ntrp_system_id;
+  ntrp_count := COALESCE(array_length(ntrp_scores, 1), 0);
+  SELECT array_agg(id ORDER BY value) INTO dupr_scores
+  FROM rating_score WHERE rating_system_id = dupr_system_id;
+  dupr_count := COALESCE(array_length(dupr_scores, 1), 0);
 
   ALTER TABLE match DISABLE TRIGGER match_notify_group_members_on_create;
 
@@ -1940,19 +1968,92 @@ BEGIN
       v_court := NULL;
     END IF;
 
+    -- Min rating: ~20% of matches require a minimum rating
+    v_min_rating := NULL;
+    IF i % 5 = 2 THEN
+      IF v_is_pb AND dupr_count > 0 THEN
+        -- Pick a lower-mid DUPR score as minimum (cycle through first half)
+        v_min_rating := dupr_scores[1 + (i % (dupr_count / 2 + 1))];
+      ELSIF NOT v_is_pb AND ntrp_count > 0 THEN
+        -- Pick a lower-mid NTRP score as minimum (cycle through first half)
+        v_min_rating := ntrp_scores[1 + (i % (ntrp_count / 2 + 1))];
+      END IF;
+    END IF;
+
+    -- Preferred opponent gender: ~15% specify a preference
+    v_pref_gender := NULL;
+    IF i % 7 = 3 THEN
+      CASE i % 3
+        WHEN 0 THEN v_pref_gender := 'male';
+        WHEN 1 THEN v_pref_gender := 'female';
+        ELSE v_pref_gender := 'other';
+      END CASE;
+    END IF;
+
+    -- Court ID: assign a court for facility matches with court_status = 'reserved'
+    v_court_id := NULL;
+    IF v_loc_type = 'facility' AND v_court = 'reserved' AND v_fac_id IS NOT NULL THEN
+      SELECT array_agg(c.id) INTO fac_courts FROM court c WHERE c.facility_id = v_fac_id;
+      IF fac_courts IS NOT NULL AND array_length(fac_courts, 1) > 0 THEN
+        v_court_id := fac_courts[1 + (i % array_length(fac_courts, 1))];
+      END IF;
+    END IF;
+
+    -- Is court free: false when there's a cost, ~10% otherwise
+    IF v_cost IS NOT NULL THEN
+      v_is_court_free := false;
+    ELSIF i % 10 = 4 THEN
+      v_is_court_free := false;
+    ELSE
+      v_is_court_free := true;
+    END IF;
+
+    -- Closed at: past completed matches (251-425) closed 48h after match end
+    v_closed_at := NULL;
+    IF i > 250 AND i <= 425 THEN
+      v_closed_at := (v_date + v_end)::timestamptz + INTERVAL '48 hours';
+    END IF;
+
+    -- Visible in groups: ~10% false
+    v_visible_groups := (i % 11 != 0);
+
+    -- Visible in communities: ~8% false (offset from groups)
+    v_visible_communities := (i % 13 != 0);
+
+    -- Host edited at: ~15% of matches have been edited
+    v_host_edited_at := NULL;
+    IF i % 7 = 4 THEN
+      v_host_edited_at := NOW() - make_interval(days => (i % 14));
+    END IF;
+
+    -- Auto-generated: ~5% of matches
+    v_is_auto := (i % 20 = 0);
+
+    -- Geography point from lat/lng
+    v_location := NULL;
+    IF v_lat IS NOT NULL AND v_lng IS NOT NULL THEN
+      v_location := extensions.ST_SetSRID(extensions.ST_MakePoint(v_lng::float, v_lat::float), 4326)::extensions.geography;
+    END IF;
+
     INSERT INTO match (
       id, sport_id, match_date, start_time, end_time, duration, format,
       location_type, facility_id, location_name, location_address,
       player_expectation, visibility, join_mode, created_by, timezone,
       custom_latitude, custom_longitude, notes, estimated_cost, cost_split_type,
-      cancelled_at, mutually_cancelled, court_status
+      cancelled_at, mutually_cancelled, court_status,
+      min_rating_score_id, preferred_opponent_gender, court_id, is_court_free,
+      closed_at, visible_in_groups, visible_in_communities,
+      host_edited_at, is_auto_generated, location
     ) VALUES (
       ('b1000000-0000-0000-0000-00000000' || LPAD(i::text, 4, '0'))::uuid,
       v_sport_id, v_date, v_start, v_end, v_dur, v_format,
       v_loc_type, v_fac_id, v_loc_name, v_loc_addr,
       v_exp, v_vis, v_jm, v_host, 'America/Montreal',
       v_lat, v_lng, v_notes, v_cost, v_cost_split,
-      v_cancel, v_mutual, v_court
+      v_cancel, v_mutual, v_court,
+      v_min_rating, v_pref_gender, v_court_id, v_is_court_free,
+      v_closed_at, v_visible_groups, v_visible_communities,
+      v_host_edited_at, v_is_auto, v_location
     );
   END LOOP;
 
