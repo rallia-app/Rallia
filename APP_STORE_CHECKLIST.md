@@ -4,10 +4,10 @@
 
 ## Critical (Will cause rejection)
 
-- [-] **Account Deletion** — Button UI exists in `SettingsScreen.tsx:449-458` but is **commented out**. A stub `handleDeleteAccount` exists in `SettingsModal.native.tsx` but only logs to console. No backend deletion logic. No web-based deletion page (required by Google Data Safety form).
-  - [ ] Uncomment and wire up the delete button in SettingsScreen
-  - [ ] Implement actual data deletion (profile, chats, matches, etc.) via Supabase
-  - [ ] Build a web-based account deletion page for Google Play Data Safety form
+- [x] **Account Deletion** — Delete button in `SettingsScreen.tsx` with two-step confirmation dialog. Backend via `supabase/functions/delete-account` edge function (cascading deletion of all user data, storage cleanup, demo account guard). Web-based deletion instructions page at `rallia.ca/delete-account` for Google Data Safety form.
+  - [x] Uncomment and wire up the delete button in SettingsScreen
+  - [x] Implement actual data deletion (profile, chats, matches, etc.) via Supabase
+  - [x] Build a web-based account deletion page for Google Play Data Safety form
 
 - [x] **Report User/Content** — Fully implemented with three report types:
   - [x] Report player from chat (`ReportUserModal.tsx`) with reason selection + evidence uploads
@@ -20,12 +20,12 @@
   - [ ] Google requires credentials to be: **in English**, accessible at all times, reusable, valid regardless of reviewer location, and maintained without error
 
 - [-] **App Completeness** — 40% of Apple rejections are Guideline 2.1. Issues found:
-  - [ ] `Match.tsx` screen is a **placeholder stub** (just displays a translation key)
-  - [ ] `useGroupEditActions.ts:98` shows **"Coming Soon"** alert for group description editing
+  - [x] ~~`Match.tsx` screen~~ — **Deleted** (dead code, unused placeholder)
+  - [x] ~~`useGroupEditActions.ts:98` "Coming Soon" alert~~ — Fixed: description section is now read-only (only shown when description exists)
   - [ ] `useTourSequence.ts:57-73` is **completely disabled** (returns hardcoded false values)
-  - [ ] `AuthSuccessOverlay.tsx:50-64` has 3 navigation buttons that **do nothing** (TODO comments)
+  - [x] ~~`AuthSuccessOverlay.tsx:50-64`~~ — **Deleted** (dead code, never imported/rendered)
   - [ ] Multiple admin analytics screens fall back to **mock/generated data**
-  - [ ] `mockMatches.ts` still used — TODO says "Replace with actual Supabase queries"
+  - [x] ~~`mockMatches.ts`~~ — **Deleted** (both copies: `screens/` and `features/matches/data/`)
   - [ ] `backblazeUpload.ts:429` — video thumbnail generation is a placeholder
   - [ ] `PlayerProfile.tsx:790` — weekStreak hardcoded to 0
   - [ ] `SportProfile.tsx:814` — peer rating request logic not implemented
@@ -37,9 +37,9 @@
   - [ ] Google: Data Safety section in Play Console (same disclosures + account deletion web URL)
   - [ ] Ensure both match the actual privacy policy at rallia.ca/privacy
 
-- [-] **Privacy Policy & Terms of Service URLs** — Links are configured in-app (`rallia.ca/privacy` and `rallia.ca/terms`) but **both URLs currently return 404**. These pages must be live before submission — both stores will reject if the links are broken.
-  - [ ] Deploy a live privacy policy page at rallia.ca/privacy
-  - [ ] Deploy a live terms of service page at rallia.ca/terms
+- [x] **Privacy Policy & Terms of Service URLs** — Live pages deployed with Enzuzo embeds and dark mode support:
+  - [x] Privacy policy page at `rallia.ca/privacy` (Enzuzo embed)
+  - [x] Terms of service page at `rallia.ca/terms` (Enzuzo embed)
 
 ---
 
@@ -69,12 +69,11 @@
 
 ## Moderate (Could cause rejection or delays)
 
-- [-] **Terms of Use Acceptance at Signup** — Currently only a passive text disclaimer on the sign-in screen: _"By continuing, you agree to Rallia's Terms of Use."_ No checkbox, no explicit acceptance. Google requires users to accept Terms before creating UGC.
+- [-] **Terms of Use Acceptance at Signup** — Passive text disclaimer on the sign-in screen with clickable links to Terms and Privacy Policy pages. No checkbox or explicit acceptance yet. Google requires users to accept Terms before creating UGC.
+  - [x] Add links to the full legal documents in the acceptance flow (clickable links in EmailStep)
   - [ ] Add explicit Terms + Privacy Policy acceptance (checkbox or tap-to-agree) during signup
-  - [ ] Add links to the full legal documents in the acceptance flow
 
-- [-] **In-App Support Contact** — Feedback sheet exists in Settings (`useFeedbackReportSheet`), plus links to Terms/Privacy Policy. However, there is **no direct support email or contact form** visible in Settings. Apple requires published contact info accessible from within the app.
-  - [ ] Add a visible support email address or contact form to the Settings screen
+- [x] **In-App Support Contact** — Feedback sheet in Settings, plus a "Contact Support" item linking to `mailto:contact@rallia.ca` in SettingsScreen.
 
 - [x] **App Tracking Transparency (Apple)** — **Not needed.** Facebook sign-in is commented out in UI. No Facebook SDK tracking, no ad network SDKs, no cross-app tracking. `NSPrivacyTracking` is set to `false`. Internal referral attribution uses first-party data only.
 
@@ -109,7 +108,7 @@
 
 - [ ] **Staged Rollout (Google)** — Use staged rollout for the production release (start at 1-5% of users, monitor Android Vitals for crash rates and ANRs, then gradually increase to 100%).
 
-- [-] **Privacy Policy Content** — **Cannot verify — rallia.ca/privacy returns 404.** Once live, verify it covers:
+- [-] **Privacy Policy Content** — Live via Enzuzo embed at `rallia.ca/privacy`. Verify it covers:
   - [ ] Identifies ALL data collected (including third-party SDK data)
   - [ ] Explains HOW data is collected
   - [ ] Describes ALL uses of that data
