@@ -143,6 +143,54 @@ const SettingsScreen: React.FC = () => {
     Logger.logUserAction('admin_panel_pressed');
   };
 
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteAccount = () => {
+    warningHaptic();
+    Alert.alert(
+      t('settings.deleteAccountConfirmTitle'),
+      t('settings.deleteAccountConfirmMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('settings.deleteAccountConfirmButton'),
+          style: 'destructive',
+          onPress: () => {
+            // Second confirmation
+            Alert.alert(
+              t('settings.deleteAccountFinalTitle'),
+              t('settings.deleteAccountFinalMessage'),
+              [
+                { text: t('common.cancel'), style: 'cancel' },
+                {
+                  text: t('settings.deleteAccountConfirmButton'),
+                  style: 'destructive',
+                  onPress: async () => {
+                    setIsDeleting(true);
+                    try {
+                      const { data, error } = await supabase.functions.invoke('delete-account');
+                      if (error || !data?.success) {
+                        throw new Error(error?.message || data?.error || 'Deletion failed');
+                      }
+                      await signOut();
+                      navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+                      toast.success(t('settings.deleteAccountSuccess'));
+                    } catch (error) {
+                      Logger.error('Failed to delete account', error as Error);
+                      toast.error(t('errors.unknown'));
+                    } finally {
+                      setIsDeleting(false);
+                    }
+                  },
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
+  };
+
   const handleResetTour = () => {
     lightHaptic();
     Alert.alert(t('tour.settings.restartTour'), t('tour.settings.restartTourDescription'), [
@@ -307,6 +355,11 @@ const SettingsScreen: React.FC = () => {
             title={t('settings.privacyPolicy')}
             onPress={() => Linking.openURL('https://rallia.ca/privacy')}
           />
+          <SettingsItem
+            icon="mail-outline"
+            title={t('settings.contactSupport')}
+            onPress={() => Linking.openURL('mailto:contact@rallia.ca')}
+          />
         </View>
 
         {/* Admin Panel - Only visible to admin users */}
@@ -446,7 +499,7 @@ const SettingsScreen: React.FC = () => {
               </Text>
             </TouchableOpacity>
 
-            {/* <TouchableOpacity
+            <TouchableOpacity
               style={[styles.deleteAccountButton, { backgroundColor: colors.deleteButtonBg }]}
               onPress={handleDeleteAccount}
               activeOpacity={0.7}
@@ -455,7 +508,7 @@ const SettingsScreen: React.FC = () => {
               <Text size="base" weight="medium" color={colors.deleteButtonText}>
                 {t('settings.deleteAccount')}
               </Text>
-            </TouchableOpacity> */}
+            </TouchableOpacity>
           </View>
         )}
 

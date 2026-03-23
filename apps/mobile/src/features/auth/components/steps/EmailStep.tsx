@@ -14,7 +14,9 @@ import {
   ActivityIndicator,
   ScrollView,
   Platform,
+  Linking,
 } from 'react-native';
+import { primary } from '@rallia/design-system';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
@@ -228,7 +230,25 @@ export const EmailStep: React.FC<EmailStepProps> = ({
 
       {/* Terms Text */}
       <Text size="xs" color={colors.textMuted} style={styles.termsText}>
-        {t('auth.termsText')}
+        {t('auth.termsPrefix')}
+        <Text
+          size="xs"
+          color={primary[500]}
+          style={styles.termsLink}
+          onPress={() => Linking.openURL('https://rallia.ca/terms')}
+        >
+          {t('auth.termsLink')}
+        </Text>
+        {t('auth.termsMiddle')}
+        <Text
+          size="xs"
+          color={primary[500]}
+          style={styles.termsLink}
+          onPress={() => Linking.openURL('https://rallia.ca/privacy')}
+        >
+          {t('auth.privacyLink')}
+        </Text>
+        {t('auth.termsSuffix')}
       </Text>
     </ScrollView>
   );
@@ -307,6 +327,9 @@ const styles = StyleSheet.create({
   termsText: {
     textAlign: 'center',
     lineHeight: 18,
+  },
+  termsLink: {
+    textDecorationLine: 'underline',
   },
 });
 

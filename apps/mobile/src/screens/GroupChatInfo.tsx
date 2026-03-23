@@ -397,20 +397,19 @@ export default function GroupChatInfoScreen() {
           </Text>
         </View>
 
-        {/* Description - only for network-linked groups (Groups section) */}
-        {networkInfo && (
+        {/* Description - only for network-linked groups that have a description */}
+        {networkInfo?.description && (
           <View style={[styles.section, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
-            <TouchableOpacity style={styles.sectionRow} onPress={handleEditDescription}>
+            <View style={styles.sectionRow}>
               <View style={styles.sectionIcon}>
                 <Ionicons name="document-text-outline" size={22} color={primary[500]} />
               </View>
               <View style={styles.sectionContent}>
                 <Text style={[styles.sectionLabel, { color: colors.text }]}>
-                  {networkInfo.description || t('groupChat.addGroupDescription')}
+                  {networkInfo.description}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-            </TouchableOpacity>
+            </View>
           </View>
         )}
 

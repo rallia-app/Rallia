@@ -2,7 +2,6 @@
  * Onboarding Overlays - Barrel Export
  */
 
-export { default as AuthSuccessOverlay } from './AuthSuccessOverlay';
 export { default as PersonalInformationOverlay } from './PersonalInformationOverlay';
 export { default as SportSelectionOverlay } from './SportSelectionOverlay';
 export { default as TennisRatingOverlay } from './TennisRatingOverlay';
