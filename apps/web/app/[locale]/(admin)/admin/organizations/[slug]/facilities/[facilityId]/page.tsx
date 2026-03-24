@@ -76,7 +76,9 @@ export default async function AdminFacilityDetailPage({ params }: PageProps) {
         surface_type,
         indoor,
         lighting,
+        lines_marked_for_multiple_sports,
         availability_status,
+        notes,
         is_active,
         court_sport (
           sport_id,

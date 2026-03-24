@@ -4117,7 +4117,7 @@
       "externalProviderId": "External Provider ID",
       "editButton": "Edit Facility",
       "courtsSection": "Courts",
-      "courtsSummary": "{count} {count, plural, one {court} other {courts} at this facility",
+      "courtsSummary": "{count} {count, plural, one {court} other {courts}} at this facility",
       "manageCourts": "Manage Courts",
       "viewAllCourts": "View All Courts",
       "stats": {
@@ -4387,9 +4387,16 @@
       "sportsLabel": "Sports",
       "loadingSports": "Loading sports...",
       "sportsHint": "Select the sports that can be played on this court.",
+      "quantityLabel": "Quantity",
+      "startingNumberLabel": "Starting Court #",
+      "bulkPreview": "Will create {quantity} {quantity, plural, one {court} other {courts}} numbered #{startNumber} to #{endNumber}",
+      "bulkDescription": "Add {quantity} {quantity, plural, one {court} other {courts}} to this facility.",
+      "saveAndContinue": "Save & Add More",
       "addButton": "Add Court",
+      "addButtonBulk": "Add {count} {count, plural, one {Court} other {Courts}}",
       "adding": "Adding...",
       "success": "Court added successfully",
+      "bulkSuccess": "{count} {count, plural, one {court} other {courts}} added successfully",
       "error": "Failed to add court"
     },
     "edit": {
@@ -4402,6 +4409,15 @@
     "statusChange": {
       "success": "Court status updated",
       "error": "Failed to update court status"
+    },
+    "delete": {
+      "title": "Delete Court",
+      "description": "Are you sure you want to permanently delete \"{name}\"? This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete Court",
+      "deleting": "Deleting...",
+      "success": "Court deleted successfully",
+      "error": "Failed to delete court"
     }
   },
   "availability": {

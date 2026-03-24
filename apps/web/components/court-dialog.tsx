@@ -54,9 +54,16 @@ interface CourtDialogProps {
   onOpenChange: (open: boolean) => void;
   facilityId: string;
   initialData?: CourtInitialData;
+  existingCourtNumbers?: number[];
 }
 
-export function CourtDialog({ open, onOpenChange, facilityId, initialData }: CourtDialogProps) {
+export function CourtDialog({
+  open,
+  onOpenChange,
+  facilityId,
+  initialData,
+  existingCourtNumbers = [],
+}: CourtDialogProps) {
   const t = useTranslations('courts');
   const router = useRouter();
   const isEditMode = !!initialData;
@@ -79,6 +86,14 @@ export function CourtDialog({ open, onOpenChange, facilityId, initialData }: Cou
   const [multiSport, setMultiSport] = useState(false);
   const [availabilityStatus, setAvailabilityStatus] = useState<AvailabilityStatus>('available');
   const [notes, setNotes] = useState('');
+
+  // Bulk creation state (create mode only)
+  const [quantity, setQuantity] = useState(1);
+  const [continueAfterSave, setContinueAfterSave] = useState(false);
+
+  // Auto-numbering
+  const maxExistingNumber = Math.max(0, ...existingCourtNumbers);
+  const startingNumber = maxExistingNumber + 1;
 
   // Fetch sports on mount
   useEffect(() => {
@@ -138,6 +153,8 @@ export function CourtDialog({ open, onOpenChange, facilityId, initialData }: Cou
     setNotes('');
     setSelectedSports([]);
     setError(null);
+    setQuantity(1);
+    setContinueAfterSave(false);
   };
 
   const handleClose = () => {
@@ -201,32 +218,40 @@ export function CourtDialog({ open, onOpenChange, facilityId, initialData }: Cou
         onOpenChange(false);
         router.refresh();
       } else {
-        // Create mode
-        const { data: court, error: insertError } = await supabase
-          .from('court')
-          .insert({
+        // Create mode — batch insert
+        const startNum = maxExistingNumber + 1;
+        const courtsToInsert = [];
+
+        for (let i = 0; i < quantity; i++) {
+          courtsToInsert.push({
             facility_id: facilityId,
-            name: name || null,
-            court_number: courtNumber || null,
+            name: null,
+            court_number: startNum + i,
             surface_type: surfaceType || null,
             indoor,
             lighting,
             lines_marked_for_multiple_sports: multiSport,
-            notes: notes || null,
+            notes: null,
             availability_status: 'available' as const,
             is_active: true,
-          })
-          .select('id')
-          .single();
+          });
+        }
+
+        const { data: createdCourts, error: insertError } = await supabase
+          .from('court')
+          .insert(courtsToInsert)
+          .select('id');
 
         if (insertError) throw insertError;
 
-        // Insert court_sport records
-        if (selectedSports.length > 0 && court) {
-          const courtSportRecords = selectedSports.map(sportId => ({
-            court_id: court.id,
-            sport_id: sportId,
-          }));
+        // Batch insert court_sport records for all created courts
+        if (selectedSports.length > 0 && createdCourts && createdCourts.length > 0) {
+          const courtSportRecords = createdCourts.flatMap(court =>
+            selectedSports.map(sportId => ({
+              court_id: court.id,
+              sport_id: sportId,
+            }))
+          );
 
           const { error: sportError } = await supabase
             .from('court_sport')
@@ -235,9 +260,14 @@ export function CourtDialog({ open, onOpenChange, facilityId, initialData }: Cou
           if (sportError) throw sportError;
         }
 
-        resetForm();
-        onOpenChange(false);
-        router.refresh();
+        if (continueAfterSave) {
+          resetForm();
+          router.refresh();
+        } else {
+          resetForm();
+          onOpenChange(false);
+          router.refresh();
+        }
       }
     } catch (err) {
       console.error(`Error ${isEditMode ? 'updating' : 'adding'} court:`, err);
@@ -247,7 +277,7 @@ export function CourtDialog({ open, onOpenChange, facilityId, initialData }: Cou
     }
   };
 
-  const isValid = name.trim() || courtNumber;
+  const isValid = isEditMode ? name.trim() || courtNumber : quantity >= 1;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -257,7 +287,9 @@ export function CourtDialog({ open, onOpenChange, facilityId, initialData }: Cou
           <DialogDescription>
             {isEditMode
               ? initialData!.name || `Court ${initialData!.court_number}`
-              : t('add.description')}
+              : quantity > 1
+                ? t('add.bulkDescription', { quantity })
+                : t('add.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -268,70 +300,119 @@ export function CourtDialog({ open, onOpenChange, facilityId, initialData }: Cou
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="court-name">{t('add.nameLabel')}</Label>
-              <Input
-                id="court-name"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder={t('add.namePlaceholder')}
-                disabled={saving}
-              />
-            </div>
+          {isEditMode ? (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="court-name">{t('add.nameLabel')}</Label>
+                  <Input
+                    id="court-name"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    placeholder={t('add.namePlaceholder')}
+                    disabled={saving}
+                  />
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="court-number">{t('add.numberLabel')}</Label>
-              <Input
-                id="court-number"
-                type="number"
-                min="1"
-                value={courtNumber}
-                onChange={e => setCourtNumber(e.target.value ? parseInt(e.target.value) : '')}
-                placeholder={t('add.numberPlaceholder')}
-                disabled={saving}
-              />
-            </div>
-          </div>
-
-          <div className={isEditMode ? 'grid grid-cols-2 gap-4' : ''}>
-            <div className="space-y-2">
-              <Label htmlFor="court-surfaceType">{t('add.surfaceLabel')}</Label>
-              <select
-                id="court-surfaceType"
-                value={surfaceType}
-                onChange={e => setSurfaceType(e.target.value as SurfaceType | '')}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={saving}
-              >
-                <option value="">{t('add.surfacePlaceholder')}</option>
-                {SURFACE_TYPES.map(type => (
-                  <option key={type} value={type}>
-                    {t(`surface.${type}`)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {isEditMode && (
-              <div className="space-y-2">
-                <Label htmlFor="court-status">{t('table.status')}</Label>
-                <select
-                  id="court-status"
-                  value={availabilityStatus}
-                  onChange={e => setAvailabilityStatus(e.target.value as AvailabilityStatus)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={saving}
-                >
-                  {AVAILABILITY_STATUSES.map(status => (
-                    <option key={status} value={status}>
-                      {t(`status.${status}`)}
-                    </option>
-                  ))}
-                </select>
+                <div className="space-y-2">
+                  <Label htmlFor="court-number">{t('add.numberLabel')}</Label>
+                  <Input
+                    id="court-number"
+                    type="number"
+                    min="1"
+                    value={courtNumber}
+                    onChange={e => setCourtNumber(e.target.value ? parseInt(e.target.value) : '')}
+                    placeholder={t('add.numberPlaceholder')}
+                    disabled={saving}
+                  />
+                </div>
               </div>
-            )}
-          </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="court-surfaceType">{t('add.surfaceLabel')}</Label>
+                  <select
+                    id="court-surfaceType"
+                    value={surfaceType}
+                    onChange={e => setSurfaceType(e.target.value as SurfaceType | '')}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={saving}
+                  >
+                    <option value="">{t('add.surfacePlaceholder')}</option>
+                    {SURFACE_TYPES.map(type => (
+                      <option key={type} value={type}>
+                        {t(`surface.${type}`)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="court-status">{t('table.status')}</Label>
+                  <select
+                    id="court-status"
+                    value={availabilityStatus}
+                    onChange={e => setAvailabilityStatus(e.target.value as AvailabilityStatus)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={saving}
+                  >
+                    {AVAILABILITY_STATUSES.map(status => (
+                      <option key={status} value={status}>
+                        {t(`status.${status}`)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="court-quantity">{t('add.quantityLabel')}</Label>
+                  <Input
+                    id="court-quantity"
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={quantity}
+                    onChange={e =>
+                      setQuantity(Math.max(1, Math.min(50, parseInt(e.target.value) || 1)))
+                    }
+                    disabled={saving}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="court-surfaceType">{t('add.surfaceLabel')}</Label>
+                  <select
+                    id="court-surfaceType"
+                    value={surfaceType}
+                    onChange={e => setSurfaceType(e.target.value as SurfaceType | '')}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={saving}
+                  >
+                    <option value="">{t('add.surfacePlaceholder')}</option>
+                    {SURFACE_TYPES.map(type => (
+                      <option key={type} value={type}>
+                        {t(`surface.${type}`)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {quantity > 1 && (
+                <p className="text-sm text-muted-foreground">
+                  {t('add.bulkPreview', {
+                    quantity,
+                    startNumber: startingNumber,
+                    endNumber: startingNumber + quantity - 1,
+                  })}
+                </p>
+              )}
+            </>
+          )}
 
           <div className="space-y-3">
             <div className="flex items-center gap-3">
@@ -386,17 +467,19 @@ export function CourtDialog({ open, onOpenChange, facilityId, initialData }: Cou
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="court-notes">{t('add.notesLabel')}</Label>
-            <textarea
-              id="court-notes"
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder={t('add.notesPlaceholder')}
-              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={saving}
-            />
-          </div>
+          {isEditMode && (
+            <div className="space-y-2">
+              <Label htmlFor="court-notes">{t('add.notesLabel')}</Label>
+              <textarea
+                id="court-notes"
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder={t('add.notesPlaceholder')}
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={saving}
+              />
+            </div>
+          )}
 
           {/* Sports Selection */}
           <div className="space-y-2">
@@ -444,8 +527,29 @@ export function CourtDialog({ open, onOpenChange, facilityId, initialData }: Cou
             <Button type="button" variant="outline" onClick={handleClose} disabled={saving}>
               {t('add.cancel')}
             </Button>
-            <Button type="submit" disabled={saving || !isValid}>
-              {saving ? (
+            {!isEditMode && (
+              <Button
+                type="submit"
+                variant="outline"
+                disabled={saving || !isValid}
+                onClick={() => setContinueAfterSave(true)}
+              >
+                {saving && continueAfterSave ? (
+                  <>
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    {t('add.adding')}
+                  </>
+                ) : (
+                  t('add.saveAndContinue')
+                )}
+              </Button>
+            )}
+            <Button
+              type="submit"
+              disabled={saving || !isValid}
+              onClick={() => setContinueAfterSave(false)}
+            >
+              {saving && !continueAfterSave ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" />
                   {isEditMode ? t('edit.saving') : t('add.adding')}
@@ -453,7 +557,11 @@ export function CourtDialog({ open, onOpenChange, facilityId, initialData }: Cou
               ) : (
                 <>
                   {isEditMode ? <Save className="mr-2 size-4" /> : <Plus className="mr-2 size-4" />}
-                  {isEditMode ? t('edit.saveButton') : t('add.addButton')}
+                  {isEditMode
+                    ? t('edit.saveButton')
+                    : quantity > 1
+                      ? t('add.addButtonBulk', { count: quantity })
+                      : t('add.addButton')}
                 </>
               )}
             </Button>

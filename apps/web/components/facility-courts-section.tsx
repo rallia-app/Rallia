@@ -1,11 +1,20 @@
 'use client';
 
-import { CourtDialog } from '@/components/court-dialog';
+import { CourtDialog, CourtInitialData } from '@/components/court-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Link } from '@/i18n/navigation';
-import { Building2, ChevronRight, Lightbulb, Plus } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { createClient } from '@/lib/supabase/client';
+import { Link, useRouter } from '@/i18n/navigation';
+import { Building2, ChevronRight, Lightbulb, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
@@ -16,7 +25,9 @@ interface Court {
   surface_type: string | null;
   indoor: boolean | null;
   lighting: boolean | null;
+  lines_marked_for_multiple_sports: boolean | null;
   availability_status: string | null;
+  notes: string | null;
   is_active: boolean | null;
   court_sport?: Array<{
     sport_id: string;
@@ -42,12 +53,94 @@ export function FacilityCourtsSection({
 }: FacilityCourtsSectionProps) {
   const t = useTranslations('facilities');
   const tCourts = useTranslations('courts');
+  const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editCourt, setEditCourt] = useState<CourtInitialData | null>(null);
+  const [deleteCourt, setDeleteCourt] = useState<Court | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!deleteCourt) return;
+    setDeleting(true);
+    try {
+      const supabase = createClient();
+
+      // Delete court_sport records first
+      const { error: sportError } = await supabase
+        .from('court_sport')
+        .delete()
+        .eq('court_id', deleteCourt.id);
+      if (sportError) throw sportError;
+
+      // Delete the court
+      const { error: courtError } = await supabase.from('court').delete().eq('id', deleteCourt.id);
+      if (courtError) throw courtError;
+
+      setDeleteCourt(null);
+      router.refresh();
+    } catch (err) {
+      console.error('Error deleting court:', err);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <>
       {canEdit && (
-        <CourtDialog open={dialogOpen} onOpenChange={setDialogOpen} facilityId={facilityId} />
+        <>
+          <CourtDialog
+            open={dialogOpen}
+            onOpenChange={setDialogOpen}
+            facilityId={facilityId}
+            existingCourtNumbers={courts
+              .filter(c => c.court_number != null)
+              .map(c => c.court_number as number)}
+          />
+          <CourtDialog
+            open={!!editCourt}
+            onOpenChange={open => {
+              if (!open) setEditCourt(null);
+            }}
+            facilityId={facilityId}
+            initialData={editCourt ?? undefined}
+          />
+          <Dialog
+            open={!!deleteCourt}
+            onOpenChange={open => {
+              if (!open) setDeleteCourt(null);
+            }}
+          >
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>{tCourts('delete.title')}</DialogTitle>
+                <DialogDescription>
+                  {tCourts('delete.description', {
+                    name: deleteCourt?.name || `Court ${deleteCourt?.court_number}`,
+                  })}
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setDeleteCourt(null)} disabled={deleting}>
+                  {tCourts('delete.cancel')}
+                </Button>
+                <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+                  {deleting ? (
+                    <>
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                      {tCourts('delete.deleting')}
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="mr-2 size-4" />
+                      {tCourts('delete.confirm')}
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
       )}
 
       <Card>
@@ -93,7 +186,7 @@ export function FacilityCourtsSection({
                       <span className="font-semibold text-sm shrink-0">
                         {court.name || `Court ${court.court_number}`}
                       </span>
-                      {court.court_number && court.name && (
+                      {court.court_number != null && (
                         <span className="text-xs text-muted-foreground shrink-0">
                           #{court.court_number}
                         </span>
@@ -133,6 +226,32 @@ export function FacilityCourtsSection({
                       >
                         {tCourts(`status.${court.availability_status}`)}
                       </Badge>
+                      {canEdit && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={e => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setEditCourt(court);
+                            }}
+                            className="p-1 rounded hover:bg-muted transition-colors"
+                          >
+                            <Pencil className="size-3.5 text-muted-foreground" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={e => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setDeleteCourt(court);
+                            }}
+                            className="p-1 rounded hover:bg-destructive/10 transition-colors"
+                          >
+                            <Trash2 className="size-3.5 text-destructive" />
+                          </button>
+                        </>
+                      )}
                       {!disableCourtLinks && (
                         <ChevronRight className="size-4 text-muted-foreground" />
                       )}
