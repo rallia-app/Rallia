@@ -1418,6 +1418,7 @@
       "playerNotFound": "Joueur non trouvé. Veuillez réessayer.",
       "invalidRating": "Classement sélectionné invalide",
       "unexpectedError": "Une erreur inattendue s'est produite.",
+      "minimumAge": "Vous devez avoir au moins 13 ans et 1 mois pour utiliser cette application.",
       "selectDateOfBirth": "Veuillez sélectionner votre date de naissance",
       "selectGender": "Veuillez sélectionner une option de genre valide",
       "failedToUpdateProfile": "Échec de la mise à jour de vos informations. Veuillez réessayer.",

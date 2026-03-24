@@ -32,6 +32,14 @@ import type { GenderEnum } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
 
+// Calculate minimum date of birth (13 years and 1 month ago)
+const getMinimumDateOfBirth = (): Date => {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() - 13);
+  date.setMonth(date.getMonth() - 1);
+  return date;
+};
+
 export function PersonalInformationActionSheet({ payload }: SheetProps<'personal-information'>) {
   const mode = payload?.mode || 'onboarding';
   const onClose = () => SheetManager.hide('personal-information');
@@ -46,6 +54,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const { t } = useTranslation();
+  const minimumDateOfBirth = React.useMemo(() => getMinimumDateOfBirth(), []);
   const toast = useToast();
   const [firstName, setFirstName] = useState(initialData?.firstName || '');
   const [lastName, setLastName] = useState(initialData?.lastName || '');
@@ -120,6 +129,11 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
 
     if (!dateOfBirth) {
       toast.error(t('onboarding.validation.selectDateOfBirth'));
+      return;
+    }
+
+    if (dateOfBirth > minimumDateOfBirth) {
+      toast.error(t('onboarding.validation.minimumAge'));
       return;
     }
 
@@ -490,7 +504,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
                       setDateOfBirth(selectedDate);
                     }
                   }}
-                  max={new Date().toISOString().split('T')[0]}
+                  max={minimumDateOfBirth.toISOString().split('T')[0]}
                   min="1900-01-01"
                   placeholder={t('profile.fields.dateOfBirth')}
                 />
@@ -567,7 +581,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
                     mode="date"
                     display="spinner"
                     onChange={handleDateChange}
-                    maximumDate={new Date()}
+                    maximumDate={minimumDateOfBirth}
                     minimumDate={new Date(1900, 0, 1)}
                     themeVariant={isDark ? 'dark' : 'light'}
                     style={styles.datePicker}
@@ -584,7 +598,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
               mode="date"
               display="spinner"
               onChange={handleDateChange}
-              maximumDate={new Date()}
+              maximumDate={minimumDateOfBirth}
               minimumDate={new Date(1900, 0, 1)}
             />
           )}

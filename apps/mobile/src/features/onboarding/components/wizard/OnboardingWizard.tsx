@@ -418,11 +418,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           return false;
         }
 
-        // Check minimum age (13 years)
+        // Check minimum age (13 years and 1 month)
         const minimumDateOfBirth = new Date();
         minimumDateOfBirth.setFullYear(minimumDateOfBirth.getFullYear() - 13);
+        minimumDateOfBirth.setMonth(minimumDateOfBirth.getMonth() - 1);
         if (formData.dateOfBirth > minimumDateOfBirth) {
-          Alert.alert(t('alerts.error'), `You must be at least 13 years old`);
+          Alert.alert(t('alerts.error'), t('onboarding.validation.minimumAge'));
           warningHaptic();
           return false;
         }

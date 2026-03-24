@@ -562,7 +562,7 @@ BEGIN
     -- Birth years spread from 1970 to 2002
     birth_year := 1970 + ((idx * 17 + 3) % 33);
 
-    INSERT INTO profile (id, first_name, last_name, display_name, email, onboarding_completed, bio, birth_date, preferred_locale)
+    INSERT INTO profile (id, first_name, last_name, display_name, email, onboarding_completed, bio, birth_date, preferred_locale, profile_picture_url)
     SELECT
       id,
       raw_user_meta_data->>'first_name',
@@ -572,7 +572,11 @@ BEGIN
       true,
       bios[idx],
       (birth_year || '-' || LPAD(((idx * 7 % 12) + 1)::text, 2, '0') || '-' || LPAD(((idx * 13 % 28) + 1)::text, 2, '0'))::date,
-      locales[idx]
+      locales[idx],
+      CASE WHEN idx % 2 = 1
+        THEN 'https://randomuser.me/api/portraits/men/' || ((idx - 1) / 2) || '.jpg'
+        ELSE 'https://randomuser.me/api/portraits/women/' || ((idx - 1) / 2) || '.jpg'
+      END
     FROM auth.users WHERE id = fake_id
     ON CONFLICT (id) DO UPDATE SET
       first_name = EXCLUDED.first_name,
@@ -582,6 +586,7 @@ BEGIN
       bio = EXCLUDED.bio,
       birth_date = EXCLUDED.birth_date,
       preferred_locale = EXCLUDED.preferred_locale,
+      profile_picture_url = EXCLUDED.profile_picture_url,
       updated_at = NOW();
   END LOOP;
 

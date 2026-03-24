@@ -1418,6 +1418,7 @@
       "playerNotFound": "Player not found. Please try again.",
       "invalidRating": "Invalid rating selected",
       "unexpectedError": "An unexpected error occurred.",
+      "minimumAge": "You must be at least 13 years and 1 month old to use this app.",
       "selectDateOfBirth": "Please select your date of birth",
       "selectGender": "Please select a valid gender option",
       "failedToUpdateProfile": "Failed to update your information. Please try again.",

@@ -78,12 +78,14 @@ interface FieldErrors {
 
 type ValidationStatus = 'idle' | 'valid' | 'invalid' | 'checking';
 
-const MINIMUM_AGE = 13;
+const MINIMUM_AGE_YEARS = 13;
+const MINIMUM_AGE_MONTHS = 1;
 
-// Calculate minimum date of birth (13 years ago)
+// Calculate minimum date of birth (13 years and 1 month ago)
 const getMinimumDateOfBirth = (): Date => {
   const date = new Date();
-  date.setFullYear(date.getFullYear() - MINIMUM_AGE);
+  date.setFullYear(date.getFullYear() - MINIMUM_AGE_YEARS);
+  date.setMonth(date.getMonth() - MINIMUM_AGE_MONTHS);
   return date;
 };
 
@@ -206,7 +208,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
       return 'Date of birth is required';
     }
     if (date > minimumDateOfBirth) {
-      return `You must be at least ${MINIMUM_AGE} years old`;
+      return t('onboarding.validation.minimumAge' as TranslationKey);
     }
     return undefined;
   };
