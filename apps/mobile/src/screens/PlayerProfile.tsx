@@ -32,6 +32,7 @@ import { useSport, useUserHomeLocation } from '../context';
 import { SportIcon } from '../components/SportIcon';
 import RatingBadge from '../components/RatingBadge';
 import ReputationBadge from '../components/ReputationBadge';
+import CovetedBadge from '../components/CovetedBadge';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import {
   getProfilePictureUrl,
@@ -1546,7 +1547,7 @@ const PlayerProfile = () => {
           <Text style={[styles.username, { color: colors.textMuted }]}>@{username}</Text>
 
           {/* Location & Distance */}
-          {(player?.city || distanceText) ? (
+          {player?.city || distanceText ? (
             <View style={styles.locationRow}>
               <Ionicons name="location-outline" size={14} color={colors.textMuted} />
               <Text style={[styles.locationText, { color: colors.textMuted }]}>
@@ -1554,6 +1555,14 @@ const PlayerProfile = () => {
               </Text>
             </View>
           ) : null}
+
+          {/* Coveted Badge */}
+          <CovetedBadge
+            reputationScore={reputationDisplay?.score}
+            certificationStatus={primarySport?.badgeStatus}
+            isDark={isDark}
+            isLoading={loading || reputationLoading}
+          />
 
           {/* Rating & Reputation Badges */}
           <View style={styles.profileBadgesRow}>

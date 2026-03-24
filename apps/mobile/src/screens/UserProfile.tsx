@@ -42,6 +42,7 @@ import {
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import RatingBadge from '../components/RatingBadge';
 import ReputationBadge from '../components/ReputationBadge';
+import CovetedBadge from '../components/CovetedBadge';
 import SportIcon from '../components/SportIcon';
 
 interface SportWithRating extends Sport {
@@ -782,6 +783,14 @@ const UserProfile = () => {
                     {t('profile.joined')} {formatJoinedDate(player?.created_at || null)}
                   </Text>
                 </View>
+
+                {/* Coveted Badge */}
+                <CovetedBadge
+                  reputationScore={reputationDisplay?.score}
+                  certificationStatus={primaryRating?.badge_status}
+                  isDark={isDark}
+                  isLoading={playerLoading || reputationLoading}
+                />
 
                 {/* Rating & Reputation Badges */}
                 <View style={styles.profileBadgesRow}>
