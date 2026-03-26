@@ -152,7 +152,7 @@
     "expo": "~54.0.27",
     "expo-application": "^55.0.8",
     "import-in-the-middle": "3.0.0",
-    "prettier-plugin-tailwindcss": "^0.5.14",
+    "prettier-plugin-tailwindcss": "^0.7.2",
     "puppeteer": "^24.40.0",
     "react": "19.1.0",
     "react-native": "0.81.5",
