@@ -89,10 +89,10 @@ export function SportProvider({ children, userId }: SportProviderProps) {
   // Initialize selected sport from storage or use primary/first sport
   const initializeSelectedSport = useCallback(async (sports: Sport[], primary: Sport | null) => {
     try {
-      const savedSportId = await AsyncStorage.getItem(SPORT_STORAGE_KEY);
+      const savedSportName = await AsyncStorage.getItem(SPORT_STORAGE_KEY);
 
-      if (savedSportId) {
-        const savedSport = sports.find(s => s.id === savedSportId);
+      if (savedSportName) {
+        const savedSport = sports.find(s => s.name === savedSportName);
         if (savedSport) {
           setSelectedSportState(savedSport);
           return;
@@ -103,7 +103,7 @@ export function SportProvider({ children, userId }: SportProviderProps) {
       setSelectedSportState(defaultSport);
 
       if (defaultSport) {
-        await AsyncStorage.setItem(SPORT_STORAGE_KEY, defaultSport.id);
+        await AsyncStorage.setItem(SPORT_STORAGE_KEY, defaultSport.name);
       }
     } catch (error) {
       console.error('Failed to initialize selected sport:', error);
@@ -173,7 +173,7 @@ export function SportProvider({ children, userId }: SportProviderProps) {
 
   const setSelectedSport = useCallback(async (sport: Sport) => {
     try {
-      await AsyncStorage.setItem(SPORT_STORAGE_KEY, sport.id);
+      await AsyncStorage.setItem(SPORT_STORAGE_KEY, sport.name);
       setSelectedSportState(sport);
     } catch (error) {
       console.error('Failed to save selected sport:', error);
@@ -195,7 +195,7 @@ export function SportProvider({ children, userId }: SportProviderProps) {
 
       try {
         // Save the first selected sport as the current selection
-        await AsyncStorage.setItem(SPORT_STORAGE_KEY, primarySport.id);
+        await AsyncStorage.setItem(SPORT_STORAGE_KEY, primarySport.name);
         setSelectedSportState(primarySport);
 
         // For guest users, save and use only the selected sports
