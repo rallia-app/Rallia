@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>PostHog vs GA4</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="-" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">PostHog vs GA4</h1>
+</header>
+<h1 id="analytique-posthog-vs-google-analytics-4">Analytique : PostHog
+vs Google Analytics 4</h1>
+<p><strong>Contexte :</strong> Monorepo Expo/React Native + Next.js +
+Supabase</p>
+<hr />
+<h2 id="comparaison">Comparaison</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th></th>
+<th>PostHog</th>
+<th>GA4</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>SDK RN/Expo</strong></td>
+<td>Officiel (<code>posthog-react-native</code>)</td>
+<td>Communautaire (<code>@react-native-firebase/analytics</code>)</td>
+</tr>
+<tr>
+<td><strong>Next.js App Router</strong></td>
+<td>Officiel (<code>posthog-js</code> + <code>posthog-node</code>)</td>
+<td>Officiel (<code>@next/third-parties/google</code>)</td>
+</tr>
+<tr>
+<td><strong>Disponibilité des données</strong></td>
+<td>Temps réel</td>
+<td>Délai de 24–72h</td>
+</tr>
+<tr>
+<td><strong>Session replay</strong></td>
+<td>5K web + 2.5K mobile/mois gratuit</td>
+<td>Non</td>
+</tr>
+<tr>
+<td><strong>Feature flags</strong></td>
+<td>1M req/mois gratuit</td>
+<td>Non (nécessite Firebase Remote Config)</td>
+</tr>
+<tr>
+<td><strong>A/B testing</strong></td>
+<td>Intégré</td>
+<td>Non (nécessite Firebase A/B)</td>
+</tr>
+<tr>
+<td><strong>Heatmaps</strong></td>
+<td>Gratuit</td>
+<td>Non</td>
+</tr>
+<tr>
+<td><strong>Suivi d’erreurs</strong></td>
+<td>100K erreurs/mois gratuit</td>
+<td>Non (nécessite Firebase Crashlytics)</td>
+</tr>
+<tr>
+<td><strong>Intégration Supabase</strong></td>
+<td>Connecteur Data Warehouse direct</td>
+<td>Aucune</td>
+</tr>
+<tr>
+<td><strong>Hébergement EU</strong></td>
+<td>Oui (Francfort)</td>
+<td>Non (traitement aux États-Unis)</td>
+</tr>
+<tr>
+<td><strong>Tracking sans cookies</strong></td>
+<td>Intégré, aucune bannière de consentement requise</td>
+<td>Non (nécessite cookies + CMP)</td>
+</tr>
+<tr>
+<td><strong>Tier gratuit</strong></td>
+<td>1M événements/mois (limite stricte)</td>
+<td>Illimité (échantillonné à 10M)</td>
+</tr>
+<tr>
+<td><strong>Auto-hébergement</strong></td>
+<td>Oui (MIT)</td>
+<td>Non</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="pourquoi-posthog-est-le-meilleur-choix-pour-nous">Pourquoi
+PostHog est le meilleur choix pour nous</h2>
+<ul>
+<li><strong>Un seul outil au lieu de quatre</strong> — GA4 ne couvre que
+l’analytique événementielle. Pour égaler PostHog, il faudrait ajouter
+Hotjar (replay), LaunchDarkly (flags), Sentry (erreurs) et Optimizely
+(A/B). Plus de SDKs, plus de poids dans le bundle, plus de comptes
+fournisseurs.</li>
+<li><strong>Données en temps réel</strong> — PostHog est instantané. GA4
+a un délai de 24–72h, ce qui bloque l’itération et le débogage.</li>
+<li><strong>Connecteur Supabase</strong> — On peut joindre nos tables DB
+directement avec les données analytiques. GA4 nécessiterait un export
+BigQuery + un pipeline custom.</li>
+<li><strong>Vie privée simplifiée</strong> — Hébergement EU + mode sans
+cookies prêt à l’emploi. GA4 exige des cookies first-party, un CMP,
+Consent Mode v2, et achemine quand même les données via l’infrastructure
+américaine. Plusieurs autorités de protection des données européennes
+(Autriche, France, Italie, Danemark) ont jugé GA non conforme en 2022 ;
+le EU-US DPF (2023) améliore la situation mais n’est pas pleinement
+garanti.</li>
+<li><strong>Setup monorepo plus simple</strong> — Une seule clé API pour
+<code>apps/web</code> et <code>apps/mobile</code>. GA4 utilise des SDKs
+différents (gtag vs Firebase), des outils de débogage différents
+(DevTools vs DebugView), des flux de validation d’événements
+différents.</li>
+</ul>
+<h2 id="là-où-ga4-gagne">Là où GA4 gagne</h2>
+<ul>
+<li><strong>Attribution marketing</strong> — Référence pour Google Ads,
+UTMs et audiences de retargeting. Le support UTM de PostHog est
+basique.</li>
+<li><strong>Tier gratuit illimité</strong> — Pas de limite stricte
+d’événements. PostHog arrête l’ingestion à 1M/mois.</li>
+<li><strong>Familiarité</strong> — Les parties prenantes non techniques
+connaissent GA4. PostHog est orienté développeurs.</li>
+</ul>
+<hr />
+<h2 id="recommandation">Recommandation</h2>
+<p><strong>PostHog maintenant</strong> comme plateforme principale —
+couvre l’analytique, le replay, les flags et le suivi d’erreurs dans un
+seul outil avec support natif Expo + Next.js + Supabase.</p>
+<p><strong>GA4 plus tard (web seulement)</strong> si/quand on lance des
+campagnes publicitaires — un <code>gtag</code> sur Next.js prend 5
+minutes, sans Firebase côté mobile.</p>
+</body>
+</html>
