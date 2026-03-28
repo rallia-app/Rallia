@@ -82,8 +82,9 @@ import {
   useUpdateLastSeen,
 } from '@rallia/shared-hooks';
 import { useBadgeCountSync } from '@rallia/shared-hooks/src/useBadgeCountSync';
-import { WelcomeTourModal } from './src/components/WelcomeTourModal';
-import { TourCompleteModal } from './src/components/TourCompleteModal';
+// TEMPORARILY DISABLED: User walkthrough deactivated
+// import { WelcomeTourModal } from './src/components/WelcomeTourModal';
+// import { TourCompleteModal } from './src/components/TourCompleteModal';
 import { ErrorBoundary, ToastProvider, NetworkProvider } from '@rallia/shared-components';
 import type { ErrorBoundaryTranslations } from '@rallia/shared-components';
 import { getLocales } from 'expo-localization';
@@ -109,7 +110,7 @@ import {
   UserLocationProvider,
   useUserHomeLocation,
   LocationModeProvider,
-  useTour,
+  // useTour, // TEMPORARILY DISABLED: User walkthrough deactivated
   TourProvider,
 } from './src/context';
 import { usePushNotifications, useShakeDetection } from './src/hooks';
@@ -441,7 +442,8 @@ function ReferralInviteHandler() {
 function AppContent() {
   const { theme } = useTheme();
   const { setSplashComplete, isSplashComplete, permissionsHandled } = useOverlay();
-  const { showCompletionModal, dismissCompletionModal, lastCompletedTourId } = useTour();
+  // TEMPORARILY DISABLED: User walkthrough deactivated
+  // const { showCompletionModal, dismissCompletionModal, lastCompletedTourId } = useTour();
 
   // Build a React Navigation theme so the screen container background
   // (including behind the status bar / Dynamic Island) uses the correct color.
@@ -503,14 +505,14 @@ function AppContent() {
       {/* Referral Invite Handler - periodically prompts users to invite friends */}
       <ReferralInviteHandler />
 
-      {/* Welcome Tour Modal - shows for new users after splash/permissions */}
+      {/* TEMPORARILY DISABLED: User walkthrough deactivated
       <WelcomeTourModal splashComplete={isSplashComplete} permissionsHandled={permissionsHandled} />
-      {/* Tour Completion Modal - shows after completing main navigation tour */}
       <TourCompleteModal
         visible={showCompletionModal}
         onDismiss={dismissCompletionModal}
         tourId={lastCompletedTourId || undefined}
       />
+      */}
       {/* Splash overlay - renders on top of everything */}
       <SplashOverlay onAnimationComplete={() => setSplashComplete(true)} />
     </>
