@@ -2273,6 +2273,8 @@ DECLARE
   v_pg_type UUID;
   v_co_type UUID;
   v_net_id UUID;
+  tennis_id UUID;
+  pickleball_id UUID;
   req_types network_member_request_type[] := ARRAY['direct_add','join_request','invite_code','member_referral']::network_member_request_type[];
   member_idx INT;
 BEGIN
@@ -2280,11 +2282,15 @@ BEGIN
   SELECT id INTO v_pg_type FROM network_type WHERE name = 'player_group';
   SELECT id INTO v_co_type FROM network_type WHERE name = 'community';
 
+  -- Look up sport IDs
+  SELECT id INTO tennis_id FROM sport WHERE slug = 'tennis';
+  SELECT id INTO pickleball_id FROM sport WHERE slug = 'pickleball';
+
   -- ---- Network 1: Montreal Tennis Club (community, P1) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
   VALUES ((n||'0001')::uuid, v_co_type, 'Montreal Tennis Club',
           'The largest tennis community in Montreal. All levels welcome!',
-          false, 50, (p||'0001')::uuid);
+          false, 50, (p||'0001')::uuid, tennis_id);
   -- Additional members: P2,P4,P6,P8,P10,P14,P18
   member_idx := 0;
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
@@ -2298,10 +2304,10 @@ BEGIN
     ((n||'0001')::uuid, (p||'0018')::uuid, 'active', 'member',    req_types[1 + (2 % 4)]);
 
   -- ---- Network 2: Westmount Pickleball Gang (player_group, P3) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
   VALUES ((n||'0002')::uuid, v_pg_type, 'Westmount Pickleball Gang',
           'Weekly pickleball sessions in Westmount. Intermediate+',
-          false, 10, (p||'0003')::uuid);
+          false, 10, (p||'0003')::uuid, pickleball_id);
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
   VALUES
     ((n||'0002')::uuid, (p||'0001')::uuid, 'active', 'moderator', 'direct_add'),
@@ -2311,10 +2317,10 @@ BEGIN
     ((n||'0002')::uuid, (p||'0011')::uuid, 'active', 'member',    'direct_add');
 
   -- ---- Network 3: NDG Tennis Lovers (player_group, P5) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
   VALUES ((n||'0003')::uuid, v_pg_type, 'NDG Tennis Lovers',
           'Casual tennis group in Notre-Dame-de-Grace',
-          false, 8, (p||'0005')::uuid);
+          false, 8, (p||'0005')::uuid, tennis_id);
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
   VALUES
     ((n||'0003')::uuid, (p||'0002')::uuid, 'active', 'moderator', 'join_request'),
@@ -2323,10 +2329,10 @@ BEGIN
     ((n||'0003')::uuid, (p||'0015')::uuid, 'active', 'member',    'direct_add');
 
   -- ---- Network 4: Advanced Players Only (community, P2, private) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
   VALUES ((n||'0004')::uuid, v_co_type, 'Advanced Players Only',
           'For NTRP 4.0+ and DUPR 4.5+ players. Competitive matches only.',
-          true, 30, (p||'0002')::uuid);
+          true, 30, (p||'0002')::uuid, tennis_id);
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
   VALUES
     ((n||'0004')::uuid, (p||'0001')::uuid, 'active', 'moderator', 'direct_add'),
@@ -2337,10 +2343,10 @@ BEGIN
     ((n||'0004')::uuid, (p||'0020')::uuid, 'active', 'member',    'join_request');
 
   -- ---- Network 5: Casual Weekend Players (player_group, P8) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
   VALUES ((n||'0005')::uuid, v_pg_type, 'Casual Weekend Players',
           'Relaxed weekend games, all levels. Fun first!',
-          false, 10, (p||'0008')::uuid);
+          false, 10, (p||'0008')::uuid, tennis_id);
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
   VALUES
     ((n||'0005')::uuid, (p||'0003')::uuid, 'active', 'moderator', 'invite_code'),
@@ -2350,10 +2356,10 @@ BEGIN
     ((n||'0005')::uuid, (p||'0022')::uuid, 'active', 'member',    'invite_code');
 
   -- ---- Network 6: Parc La Fontaine Regulars (player_group, P10) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
   VALUES ((n||'0006')::uuid, v_pg_type, 'Parc La Fontaine Regulars',
           'Regular players at Parc La Fontaine courts',
-          false, 8, (p||'0010')::uuid);
+          false, 8, (p||'0010')::uuid, tennis_id);
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
   VALUES
     ((n||'0006')::uuid, (p||'0001')::uuid, 'active', 'moderator', 'direct_add'),
@@ -2362,10 +2368,10 @@ BEGIN
     ((n||'0006')::uuid, (p||'0020')::uuid, 'active', 'member',    'member_referral');
 
   -- ---- Network 7: Mixed Doubles Group (player_group, P12) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
   VALUES ((n||'0007')::uuid, v_pg_type, 'Mixed Doubles Group',
           'Looking for doubles partners? Join us!',
-          false, 8, (p||'0012')::uuid);
+          false, 8, (p||'0012')::uuid, tennis_id);
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
   VALUES
     ((n||'0007')::uuid, (p||'0003')::uuid, 'active', 'moderator', 'member_referral'),
@@ -2375,10 +2381,10 @@ BEGIN
     ((n||'0007')::uuid, (p||'0025')::uuid, 'active', 'member',    'member_referral');
 
   -- ---- Network 8: Plateau Tennis League (community, P15) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
   VALUES ((n||'0008')::uuid, v_co_type, 'Plateau Tennis League',
           'Organized league play on the Plateau. Season registration open!',
-          false, 40, (p||'0015')::uuid);
+          false, 40, (p||'0015')::uuid, tennis_id);
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
   VALUES
     ((n||'0008')::uuid, (p||'0001')::uuid, 'active', 'moderator', 'direct_add'),
@@ -2389,10 +2395,10 @@ BEGIN
     ((n||'0008')::uuid, (p||'0030')::uuid, 'active', 'member',    'join_request');
 
   -- ---- Network 9: Senior Pickleball (player_group, P20) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
   VALUES ((n||'0009')::uuid, v_pg_type, 'Senior Pickleball',
           'Pickleball for 50+ players. Weekday mornings.',
-          false, 10, (p||'0020')::uuid);
+          false, 10, (p||'0020')::uuid, pickleball_id);
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
   VALUES
     ((n||'0009')::uuid, (p||'0025')::uuid, 'active', 'moderator', 'invite_code'),
@@ -2401,10 +2407,10 @@ BEGIN
     ((n||'0009')::uuid, (p||'0040')::uuid, 'active', 'member',    'join_request');
 
   -- ---- Network 10: French Speakers Tennis (community, P25, private) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
   VALUES ((n||'0010')::uuid, v_co_type, 'French Speakers Tennis',
           'Tennis en français! Tous niveaux bienvenus.',
-          true, 8, (p||'0025')::uuid);
+          true, 8, (p||'0025')::uuid, tennis_id);
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
   VALUES
     ((n||'0010')::uuid, (p||'0010')::uuid, 'active', 'moderator', 'direct_add'),
@@ -2413,10 +2419,10 @@ BEGIN
     ((n||'0010')::uuid, (p||'0040')::uuid, 'active', 'member',    'member_referral');
 
   -- ---- Network 11: Villeray Tennis Group (player_group, P30) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
   VALUES ((n||'0011')::uuid, v_pg_type, 'Villeray Tennis Group',
           'Groupe de tennis du quartier Villeray. Matchs réguliers!',
-          false, 12, (p||'0030')::uuid);
+          false, 12, (p||'0030')::uuid, tennis_id);
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
   VALUES
     ((n||'0011')::uuid, (p||'0032')::uuid, 'active', 'moderator', 'direct_add'),
@@ -2428,10 +2434,10 @@ BEGIN
     ((n||'0011')::uuid, (p||'0051')::uuid, 'active', 'member',    'invite_code');
 
   -- ---- Network 12: Rosemont Pickleball (community, P35) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
   VALUES ((n||'0012')::uuid, v_co_type, 'Rosemont Pickleball',
           'Communauté pickleball de Rosemont-La Petite-Patrie',
-          false, 40, (p||'0035')::uuid);
+          false, 40, (p||'0035')::uuid, pickleball_id);
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
   VALUES
     ((n||'0012')::uuid, (p||'0037')::uuid, 'active', 'moderator', 'direct_add'),
@@ -2443,11 +2449,11 @@ BEGIN
     ((n||'0012')::uuid, (p||'0056')::uuid, 'active', 'member',    'invite_code'),
     ((n||'0012')::uuid, (p||'0060')::uuid, 'active', 'member',    'member_referral');
 
-  -- ---- Network 13: Mile End Mixed Sports (player_group, P40) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
-  VALUES ((n||'0013')::uuid, v_pg_type, 'Mile End Mixed Sports',
-          'Tennis and pickleball in the Mile End neighbourhood',
-          false, 10, (p||'0040')::uuid);
+  -- ---- Network 13: Mile End Tennis (player_group, P40) ----
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
+  VALUES ((n||'0013')::uuid, v_pg_type, 'Mile End Tennis',
+          'Tennis in the Mile End neighbourhood',
+          false, 10, (p||'0040')::uuid, tennis_id);
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
   VALUES
     ((n||'0013')::uuid, (p||'0042')::uuid, 'active', 'moderator', 'direct_add'),
@@ -2457,10 +2463,10 @@ BEGIN
     ((n||'0013')::uuid, (p||'0065')::uuid, 'active', 'member',    'direct_add');
 
   -- ---- Network 14: Hochelaga Tennis League (community, P45) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
   VALUES ((n||'0014')::uuid, v_co_type, 'Hochelaga Tennis League',
           'Ligue de tennis organisée dans Hochelaga-Maisonneuve',
-          false, 30, (p||'0045')::uuid);
+          false, 30, (p||'0045')::uuid, tennis_id);
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
   VALUES
     ((n||'0014')::uuid, (p||'0047')::uuid, 'active', 'moderator', 'direct_add'),
@@ -2470,11 +2476,11 @@ BEGIN
     ((n||'0014')::uuid, (p||'0065')::uuid, 'active', 'member',    'direct_add'),
     ((n||'0014')::uuid, (p||'0070')::uuid, 'active', 'member',    'join_request');
 
-  -- ---- Network 15: Verdun Racquet Club (player_group, P50) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
-  VALUES ((n||'0015')::uuid, v_pg_type, 'Verdun Racquet Club',
-          'Club de raquette de Verdun, tennis et pickleball',
-          false, 10, (p||'0050')::uuid);
+  -- ---- Network 15: Verdun Pickleball Club (player_group, P50) ----
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
+  VALUES ((n||'0015')::uuid, v_pg_type, 'Verdun Pickleball Club',
+          'Club de pickleball de Verdun',
+          false, 10, (p||'0050')::uuid, pickleball_id);
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
   VALUES
     ((n||'0015')::uuid, (p||'0052')::uuid, 'active', 'moderator', 'invite_code'),
@@ -2484,10 +2490,10 @@ BEGIN
     ((n||'0015')::uuid, (p||'0068')::uuid, 'active', 'member',    'direct_add');
 
   -- ---- Network 16: LaSalle Pickleball (player_group, P55) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
   VALUES ((n||'0016')::uuid, v_pg_type, 'LaSalle Pickleball',
           'Pickleball group in LaSalle area',
-          false, 10, (p||'0055')::uuid);
+          false, 10, (p||'0055')::uuid, pickleball_id);
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
   VALUES
     ((n||'0016')::uuid, (p||'0057')::uuid, 'active', 'moderator', 'direct_add'),
@@ -2497,10 +2503,10 @@ BEGIN
     ((n||'0016')::uuid, (p||'0075')::uuid, 'active', 'member',    'direct_add');
 
   -- ---- Network 17: St-Laurent Tennis (community, P60) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
   VALUES ((n||'0017')::uuid, v_co_type, 'St-Laurent Tennis',
           'Tennis community in Saint-Laurent borough',
-          false, 35, (p||'0060')::uuid);
+          false, 35, (p||'0060')::uuid, tennis_id);
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
   VALUES
     ((n||'0017')::uuid, (p||'0062')::uuid, 'active', 'moderator', 'direct_add'),
@@ -2512,10 +2518,10 @@ BEGIN
     ((n||'0017')::uuid, (p||'0080')::uuid, 'active', 'member',    'invite_code');
 
   -- ---- Network 18: Ahuntsic Doubles (player_group, P65) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
   VALUES ((n||'0018')::uuid, v_pg_type, 'Ahuntsic Doubles',
           'Doubles tennis group in Ahuntsic-Cartierville',
-          false, 8, (p||'0065')::uuid);
+          false, 8, (p||'0065')::uuid, tennis_id);
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
   VALUES
     ((n||'0018')::uuid, (p||'0067')::uuid, 'active', 'moderator', 'member_referral'),
@@ -2523,11 +2529,11 @@ BEGIN
     ((n||'0018')::uuid, (p||'0073')::uuid, 'active', 'member',    'join_request'),
     ((n||'0018')::uuid, (p||'0080')::uuid, 'active', 'member',    'invite_code');
 
-  -- ---- Network 19: Côte-des-Neiges Racquet Sports (community, P70, private) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
-  VALUES ((n||'0019')::uuid, v_co_type, 'CDN Racquet Sports',
-          'Private racquet sports community in Côte-des-Neiges',
-          true, 25, (p||'0070')::uuid);
+  -- ---- Network 19: CDN Pickleball (community, P70, private) ----
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
+  VALUES ((n||'0019')::uuid, v_co_type, 'CDN Pickleball',
+          'Private pickleball community in Côte-des-Neiges',
+          true, 25, (p||'0070')::uuid, pickleball_id);
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
   VALUES
     ((n||'0019')::uuid, (p||'0072')::uuid, 'active', 'moderator', 'direct_add'),
@@ -2538,10 +2544,10 @@ BEGIN
     ((n||'0019')::uuid, (p||'0088')::uuid, 'active', 'member',    'join_request');
 
   -- ---- Network 20: Lachine Morning Tennis (player_group, P75) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
   VALUES ((n||'0020')::uuid, v_pg_type, 'Lachine Morning Tennis',
           'Early morning tennis sessions in Lachine',
-          false, 8, (p||'0075')::uuid);
+          false, 8, (p||'0075')::uuid, tennis_id);
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
   VALUES
     ((n||'0020')::uuid, (p||'0078')::uuid, 'active', 'moderator', 'invite_code'),
@@ -2550,10 +2556,10 @@ BEGIN
     ((n||'0020')::uuid, (p||'0090')::uuid, 'active', 'member',    'join_request');
 
   -- ---- Network 21: Anjou Pickleball League (community, P80) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
   VALUES ((n||'0021')::uuid, v_co_type, 'Anjou Pickleball League',
           'Organized pickleball league in Anjou',
-          false, 30, (p||'0080')::uuid);
+          false, 30, (p||'0080')::uuid, pickleball_id);
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
   VALUES
     ((n||'0021')::uuid, (p||'0082')::uuid, 'active', 'moderator', 'direct_add'),
@@ -2564,10 +2570,10 @@ BEGIN
     ((n||'0021')::uuid, (p||'0095')::uuid, 'active', 'member',    'join_request');
 
   -- ---- Network 22: Pointe-Claire Tennis (player_group, P85) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
   VALUES ((n||'0022')::uuid, v_pg_type, 'Pointe-Claire Tennis',
           'West Island tennis group based in Pointe-Claire',
-          false, 10, (p||'0085')::uuid);
+          false, 10, (p||'0085')::uuid, tennis_id);
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
   VALUES
     ((n||'0022')::uuid, (p||'0087')::uuid, 'active', 'moderator', 'member_referral'),
@@ -2576,11 +2582,11 @@ BEGIN
     ((n||'0022')::uuid, (p||'0096')::uuid, 'active', 'member',    'invite_code'),
     ((n||'0022')::uuid, (p||'0099')::uuid, 'active', 'member',    'direct_add');
 
-  -- ---- Network 23: South Shore Racquet (community, P90, private) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
-  VALUES ((n||'0023')::uuid, v_co_type, 'South Shore Racquet',
-          'Racquet sports community for Rive-Sud players',
-          true, 20, (p||'0090')::uuid);
+  -- ---- Network 23: South Shore Tennis (community, P90, private) ----
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
+  VALUES ((n||'0023')::uuid, v_co_type, 'South Shore Tennis',
+          'Tennis community for Rive-Sud players',
+          true, 20, (p||'0090')::uuid, tennis_id);
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
   VALUES
     ((n||'0023')::uuid, (p||'0092')::uuid, 'active', 'moderator', 'direct_add'),
@@ -2590,10 +2596,10 @@ BEGIN
     ((n||'0023')::uuid, (p||'0001')::uuid, 'active', 'member',    'direct_add');
 
   -- ---- Network 24: Beginners Welcome Tennis (player_group, P95) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
   VALUES ((n||'0024')::uuid, v_pg_type, 'Beginners Welcome Tennis',
           'Beginner-friendly tennis group. No experience needed!',
-          false, 15, (p||'0095')::uuid);
+          false, 15, (p||'0095')::uuid, tennis_id);
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
   VALUES
     ((n||'0024')::uuid, (p||'0097')::uuid, 'active', 'moderator', 'direct_add'),
@@ -2603,11 +2609,11 @@ BEGIN
     ((n||'0024')::uuid, (p||'0016')::uuid, 'active', 'member',    'direct_add'),
     ((n||'0024')::uuid, (p||'0023')::uuid, 'active', 'member',    'join_request');
 
-  -- ---- Network 25: Weekend Warriors (community, P100) ----
-  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by)
-  VALUES ((n||'0025')::uuid, v_co_type, 'Weekend Warriors',
-          'For those who live for weekend matches. Tennis and pickleball.',
-          false, 50, (p||'0100')::uuid);
+  -- ---- Network 25: Weekend Warriors Pickleball (community, P100) ----
+  INSERT INTO network (id, network_type_id, name, description, is_private, max_members, created_by, sport_id)
+  VALUES ((n||'0025')::uuid, v_co_type, 'Weekend Warriors Pickleball',
+          'For those who live for weekend pickleball matches.',
+          false, 50, (p||'0100')::uuid, pickleball_id);
   INSERT INTO network_member (network_id, player_id, status, role, request_type)
   VALUES
     ((n||'0025')::uuid, (p||'0002')::uuid, 'active', 'moderator', 'direct_add'),

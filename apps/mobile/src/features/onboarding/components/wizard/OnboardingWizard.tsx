@@ -44,6 +44,7 @@ import {
   attributeReferral,
 } from '@rallia/shared-services';
 import { useProfile, usePlayer, usePostalCodeGeocode } from '@rallia/shared-hooks';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PENDING_REFERRAL_KEY_EXPORT } from '../../../../screens/InviteReferralScreen';
 import { replaceImage } from '../../../../services/imageUpload';
 import { useImagePicker } from '../../../../hooks';
@@ -278,6 +279,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     steps,
   } = useOnboardingWizard();
 
+  const insets = useSafeAreaInsets();
   const [isSaving, setIsSaving] = useState(false);
   // Track the last uploaded profile picture URL to clean up old uploads
   const [lastUploadedProfileUrl, setLastUploadedProfileUrl] = useState<string | null>(null);
@@ -1137,7 +1139,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       </View>
 
       {/* Fixed Footer */}
-      <View style={[styles.footer, { borderTopColor: colors.border }]}>
+      <View
+        style={[
+          styles.footer,
+          { borderTopColor: colors.border, paddingBottom: insets.bottom + spacingPixels[4] },
+        ]}
+      >
         {!isLastStep ? (
           <TouchableOpacity
             style={[
@@ -1272,8 +1279,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[4],
     borderTopWidth: 1,
-    paddingBottom: spacingPixels[4],
-    // Footer is fixed at the bottom
   },
   nextButton: {
     flexDirection: 'row',

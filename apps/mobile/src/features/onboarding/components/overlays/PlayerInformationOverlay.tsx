@@ -15,12 +15,14 @@ import { supabase, Logger } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, usePlayer, useProfile, useTranslation } from '../../../../hooks';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export function PlayerInformationActionSheet({ payload }: SheetProps<'player-information'>) {
   const onSave = payload?.onSave;
   const initialData = payload?.initialData;
   const onClose = () => SheetManager.hide('player-information');
   const { colors } = useThemeStyles();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const toast = useToast();
   const { refetch: refetchPlayer } = usePlayer();
@@ -282,7 +284,12 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
         </ScrollView>
 
         {/* Sticky Footer */}
-        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+        <View
+          style={[
+            styles.footer,
+            { borderTopColor: colors.border, paddingBottom: insets.bottom + spacingPixels[4] },
+          ]}
+        >
           <TouchableOpacity
             style={[
               styles.submitButton,
@@ -400,7 +407,6 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[4],
-    paddingBottom: spacingPixels[4],
     borderTopWidth: 1,
   },
   submitButton: {

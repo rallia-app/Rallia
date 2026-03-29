@@ -108,20 +108,28 @@ const Map = () => {
 
   // Fix for Android: Mapbox Camera defaultSettings may not apply reliably,
   // causing the map to start at the wrong location/zoom. Imperatively set
-  // the camera once after mount to guarantee the correct initial position.
+  // the camera once location is available to guarantee the correct position.
+  const hasSetInitialCamera = useRef(false);
   useEffect(() => {
-    if (Platform.OS === 'android' && cameraRef.current) {
-      const timer = setTimeout(() => {
-        cameraRef.current?.setCamera({
-          centerCoordinate: initialCenter,
-          zoomLevel: initialZoom,
-          animationDuration: 0,
-        });
-      }, 150);
-      return () => clearTimeout(timer);
-    }
+    if (Platform.OS !== 'android') return;
+    if (hasSetInitialCamera.current) return;
+    const center: [number, number] | null = focusLocation
+      ? [focusLocation.lng, focusLocation.lat]
+      : location
+        ? [location.longitude, location.latitude]
+        : null;
+    if (!center) return;
+    hasSetInitialCamera.current = true;
+    const timer = setTimeout(() => {
+      cameraRef.current?.setCamera({
+        centerCoordinate: center,
+        zoomLevel: initialZoom,
+        animationDuration: 0,
+      });
+    }, 150);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [location, focusLocation]);
 
   const sportIds = selectedSport?.id ? [selectedSport.id] : undefined;
 
@@ -716,7 +724,10 @@ const Map = () => {
       {showLegend && (
         <Animated.View
           entering={FadeIn.delay(500)}
-          style={[styles.legend, { backgroundColor: colors.card + 'E6' }]}
+          style={[
+            styles.legend,
+            { backgroundColor: colors.card + 'E6', bottom: insets.bottom + 16 },
+          ]}
           pointerEvents="none"
         >
           <View style={styles.legendItem}>
@@ -739,7 +750,7 @@ const Map = () => {
         <Animated.View
           entering={FadeInDown.duration(250)}
           exiting={FadeOutDown.duration(150)}
-          style={styles.facilityCardWrapper}
+          style={[styles.facilityCardWrapper, { bottom: insets.bottom + 24 }]}
         >
           <FacilityCard
             facility={selectedFacilities[0]}
@@ -766,7 +777,7 @@ const Map = () => {
         <Animated.View
           entering={FadeInDown.duration(250)}
           exiting={FadeOutDown.duration(150)}
-          style={styles.facilityCardWrapper}
+          style={[styles.facilityCardWrapper, { bottom: insets.bottom + 24 }]}
         >
           <FlatList
             ref={carouselRef}
@@ -964,7 +975,6 @@ const styles = StyleSheet.create({
   // Facility card
   facilityCardWrapper: {
     position: 'absolute',
-    bottom: 24,
     left: 0,
     right: 0,
     zIndex: 20,
@@ -985,7 +995,6 @@ const styles = StyleSheet.create({
   // Legend
   legend: {
     position: 'absolute',
-    bottom: 16,
     left: 16,
     flexDirection: 'row',
     alignItems: 'center',

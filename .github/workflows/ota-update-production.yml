@@ -39,7 +39,7 @@ jobs:
         run: |
           COMMIT_MSG=$(git log -1 --pretty=%s)
           cd apps/mobile
-          eas update --branch production --message "$COMMIT_MSG"
+          eas update --branch production --environment production --message "$COMMIT_MSG"
 
       - name: Notify Discord
         if: always()

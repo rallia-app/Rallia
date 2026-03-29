@@ -509,43 +509,53 @@ $$;
 GRANT EXECUTE ON FUNCTION get_group_activity(UUID, INTEGER) TO authenticated;
 
 -- get_public_communities function
-CREATE OR REPLACE FUNCTION get_public_communities(p_player_id UUID DEFAULT NULL)
+CREATE OR REPLACE FUNCTION get_public_communities(
+  p_player_id UUID DEFAULT NULL,
+  p_sport_id UUID DEFAULT NULL
+)
 RETURNS TABLE (
   id UUID,
   name TEXT,
   description TEXT,
   cover_image_url TEXT,
+  is_private BOOLEAN,
   member_count INTEGER,
   created_by UUID,
   created_at TIMESTAMPTZ,
   is_member BOOLEAN,
   membership_status TEXT,
-  membership_role TEXT
-) 
+  membership_role TEXT,
+  sport_id UUID,
+  is_certified BOOLEAN
+)
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 BEGIN
   RETURN QUERY
-  SELECT 
+  SELECT
     n.id,
     n.name,
     n.description,
     n.cover_image_url,
+    n.is_private,
     n.member_count,
     n.created_by,
     n.created_at,
     CASE WHEN nm.id IS NOT NULL THEN true ELSE false END as is_member,
     nm.status::TEXT as membership_status,
-    nm.role::TEXT as membership_role
+    nm.role::TEXT as membership_role,
+    n.sport_id,
+    COALESCE(n.is_certified, FALSE) as is_certified
   FROM public.network n
   JOIN public.network_type nt ON n.network_type_id = nt.id
-  LEFT JOIN public.network_member nm ON nm.network_id = n.id 
-    AND nm.player_id = COALESCE(p_player_id, auth.uid())
+  LEFT JOIN public.network_member nm ON nm.network_id = n.id
+    AND nm.player_id = p_player_id
   WHERE nt.name = 'community'
     AND n.is_private = false
     AND n.member_count > 0
     AND n.archived_at IS NULL
+    AND (p_sport_id IS NULL OR n.sport_id = p_sport_id)
   ORDER BY n.member_count DESC, n.created_at DESC;
 END;
 $$;

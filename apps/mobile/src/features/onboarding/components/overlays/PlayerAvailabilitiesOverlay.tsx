@@ -16,6 +16,7 @@ import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type TimeSlot = 'AM' | 'PM' | 'EVE';
 type DayOfWeek = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
@@ -40,6 +41,7 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
   const initialPrivacyShowAvailability = payload?.initialPrivacyShowAvailability ?? true;
   const _selectedSportIds = payload?.selectedSportIds;
   const { colors } = useThemeStyles();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const toast = useToast();
   const days: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -312,7 +314,12 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
         </ScrollView>
 
         {/* Sticky Footer */}
-        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+        <View
+          style={[
+            styles.footer,
+            { borderTopColor: colors.border, paddingBottom: insets.bottom + spacingPixels[4] },
+          ]}
+        >
           <TouchableOpacity
             style={[
               styles.submitButton,
@@ -435,7 +442,6 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[4],
-    paddingBottom: spacingPixels[4],
     borderTopWidth: 1,
   },
   submitButton: {

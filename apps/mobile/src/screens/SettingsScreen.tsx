@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Constants from 'expo-constants';
 import * as Updates from 'expo-updates';
+import * as Application from 'expo-application';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
@@ -144,6 +145,7 @@ const SettingsScreen: React.FC = () => {
   };
 
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showAppInfo, setShowAppInfo] = useState(false);
 
   const handleDeleteAccount = () => {
     warningHaptic();
@@ -514,45 +516,59 @@ const SettingsScreen: React.FC = () => {
 
         {/* App Info */}
         <View style={[styles.preferenceSection, { backgroundColor: colors.background }]}>
-          <Text size="sm" color={colors.textSecondary} style={styles.preferenceSectionTitle}>
-            {t('settings.appInfo')}
-          </Text>
-          <View style={styles.appInfoGrid}>
-            <View style={styles.appInfoRow}>
-              <Text size="xs" color={colors.textMuted}>
-                {t('settings.version')}
-              </Text>
-              <Text size="xs" color={colors.text}>
-                {Constants.expoConfig?.version ?? '—'}
-              </Text>
+          <TouchableOpacity
+            style={styles.appInfoToggle}
+            onPress={() => setShowAppInfo(!showAppInfo)}
+            activeOpacity={0.7}
+          >
+            <Text size="sm" color={colors.textSecondary} style={styles.preferenceSectionTitle}>
+              {t('settings.appInfo')}
+            </Text>
+            <Ionicons
+              name={showAppInfo ? 'chevron-up' : 'chevron-down'}
+              size={16}
+              color={colors.textSecondary}
+            />
+          </TouchableOpacity>
+          {showAppInfo && (
+            <View style={styles.appInfoGrid}>
+              <View style={styles.appInfoRow}>
+                <Text size="xs" color={colors.textMuted}>
+                  {t('settings.version')}
+                </Text>
+                <Text size="xs" color={colors.text}>
+                  {Constants.expoConfig?.version ?? '—'}
+                  {Application.nativeBuildVersion ? ` (${Application.nativeBuildVersion})` : ''}
+                </Text>
+              </View>
+              <View style={styles.appInfoRow}>
+                <Text size="xs" color={colors.textMuted}>
+                  {t('settings.environment')}
+                </Text>
+                <Text size="xs" color={colors.text}>
+                  {appEnv}
+                </Text>
+              </View>
+              <View style={styles.appInfoRow}>
+                <Text size="xs" color={colors.textMuted}>
+                  {t('settings.channel')}
+                </Text>
+                <Text size="xs" color={colors.text}>
+                  {Updates.channel ?? '—'}
+                </Text>
+              </View>
+              <View style={styles.appInfoRow}>
+                <Text size="xs" color={colors.textMuted}>
+                  {t('settings.update')}
+                </Text>
+                <Text size="xs" color={colors.text}>
+                  {Updates.isEmbeddedLaunch
+                    ? t('settings.embeddedBundle')
+                    : (Updates.updateId?.slice(0, 8) ?? '—')}
+                </Text>
+              </View>
             </View>
-            <View style={styles.appInfoRow}>
-              <Text size="xs" color={colors.textMuted}>
-                {t('settings.environment')}
-              </Text>
-              <Text size="xs" color={colors.text}>
-                {appEnv}
-              </Text>
-            </View>
-            <View style={styles.appInfoRow}>
-              <Text size="xs" color={colors.textMuted}>
-                {t('settings.channel')}
-              </Text>
-              <Text size="xs" color={colors.text}>
-                {Updates.channel ?? '—'}
-              </Text>
-            </View>
-            <View style={styles.appInfoRow}>
-              <Text size="xs" color={colors.textMuted}>
-                {t('settings.update')}
-              </Text>
-              <Text size="xs" color={colors.text}>
-                {Updates.isEmbeddedLaunch
-                  ? t('settings.embeddedBundle')
-                  : (Updates.updateId?.slice(0, 8) ?? '—')}
-              </Text>
-            </View>
-          </View>
+          )}
         </View>
 
         <View style={styles.bottomSpacer} />
@@ -687,6 +703,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     gap: spacingPixels[2],
+  },
+  appInfoToggle: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   appInfoGrid: {
     gap: spacingPixels[2],

@@ -28,6 +28,7 @@ import {
   type ShareChannel,
 } from '@rallia/shared-services';
 import { selectionHaptic, lightHaptic } from '@rallia/shared-utils';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { TranslationKey, TranslationOptions } from '../../../hooks/useTranslation';
 
 // =============================================================================
@@ -76,6 +77,7 @@ export function InviteFromListsStep({
   onShareSuccess,
 }: InviteFromListsStepProps) {
   const toast = useToast();
+  const insets = useSafeAreaInsets();
 
   const [lists, setLists] = useState<SharedContactList[]>([]);
   const [expandedListId, setExpandedListId] = useState<string | null>(null);
@@ -489,7 +491,12 @@ export function InviteFromListsStep({
 
       {/* Sticky footer with share buttons */}
       {selectedContacts.length > 0 && (
-        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+        <View
+          style={[
+            styles.footer,
+            { borderTopColor: colors.border, paddingBottom: insets.bottom + spacingPixels[4] },
+          ]}
+        >
           <View style={styles.shareOptions}>
             <TouchableOpacity
               style={[styles.shareOption, { backgroundColor: colors.buttonActive }]}
@@ -617,7 +624,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[4],
+    paddingTop: spacingPixels[4],
     borderTopWidth: 1,
   },
   emptyState: {

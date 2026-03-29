@@ -17,6 +17,7 @@ import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../../../hooks';
 import { primary, radiusPixels, spacingPixels } from '@rallia/design-system';
 import type { TranslationKey } from '@rallia/shared-translations';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface TennisRatingOverlayProps {
   visible: boolean;
@@ -75,6 +76,7 @@ export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>
   const stepName = payload?.stepName;
   const initialRating = payload?.initialRating;
   const { colors, isDark } = useThemeStyles();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const [selectedRating, setSelectedRating] = useState<string | null>(initialRating || null);
   const [ratings, setRatings] = useState<Rating[]>([]);
@@ -380,7 +382,12 @@ export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>
         </ScrollView>
 
         {/* Sticky Footer */}
-        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+        <View
+          style={[
+            styles.footer,
+            { borderTopColor: colors.border, paddingBottom: insets.bottom + spacingPixels[4] },
+          ]}
+        >
           <TouchableOpacity
             style={[
               styles.submitButton,
@@ -561,7 +568,8 @@ const styles = StyleSheet.create({
     // color applied inline
   },
   footer: {
-    padding: spacingPixels[4],
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[4],
     borderTopWidth: 1,
   },
   submitButton: {

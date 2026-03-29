@@ -17,6 +17,7 @@ import { useThemeStyles, useTranslation } from '../../../hooks';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
 import { SearchBar } from '../../../components/SearchBar';
 import RatingBadge from '../../../components/RatingBadge';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ReferenceRequestOverlayProps {
   visible: boolean;
@@ -72,6 +73,7 @@ export function ReferenceRequestActionSheet({ payload }: SheetProps<'reference-r
   const ratingSystemCode = payload?.ratingSystemCode;
   const onSendRequests = payload?.onSendRequests;
   const { colors } = useThemeStyles();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const [players, setPlayers] = useState<Player[]>([]);
   const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
@@ -414,7 +416,12 @@ export function ReferenceRequestActionSheet({ payload }: SheetProps<'reference-r
         </ScrollView>
 
         {/* Sticky Footer */}
-        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+        <View
+          style={[
+            styles.footer,
+            { borderTopColor: colors.border, paddingBottom: insets.bottom + spacingPixels[4] },
+          ]}
+        >
           <TouchableOpacity
             style={[
               styles.submitButton,
@@ -586,7 +593,8 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   footer: {
-    padding: spacingPixels[4],
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[4],
     borderTopWidth: 1,
   },
   submitButton: {

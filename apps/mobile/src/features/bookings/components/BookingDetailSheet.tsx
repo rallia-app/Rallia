@@ -343,6 +343,7 @@ export function BookingDetailActionSheet(props: SheetProps<'booking-detail'>) {
           styles.footer,
           {
             borderTopColor: colors.border,
+            paddingBottom: insets.bottom + spacingPixels[4],
           },
         ]}
       >
@@ -471,8 +472,7 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[4],
-    paddingBottom: spacingPixels[2],
+    paddingTop: spacingPixels[4],
     gap: spacingPixels[2],
     borderTopWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
