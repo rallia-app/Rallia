@@ -85,39 +85,59 @@ export abstract class BaseAvailabilityProvider {
       url = `${url}${separator}${params.toString()}`;
     }
 
-    const controller = new AbortController();
     const timeout = options.timeout ?? 10000; // Default 10s timeout
 
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    const allHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      ...options.headers,
+    };
 
-    try {
-      const response = await fetch(url, {
-        method: options.method,
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          ...options.headers,
-        },
-        body: options.method === 'POST' && options.body ? JSON.stringify(options.body) : undefined,
-        signal: controller.signal,
-      });
+    const body =
+      options.method === 'POST' && options.body ? JSON.stringify(options.body) : undefined;
 
-      clearTimeout(timeoutId);
+    // Use XMLHttpRequest instead of fetch — React Native's fetch on Android/Hermes
+    // truncates response bodies, causing JSON parse failures
+    return new Promise<T>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open(options.method, url, true);
+      xhr.timeout = timeout;
+      xhr.responseType = 'text';
 
-      if (!response.ok) {
-        throw new Error(`Provider API error: ${response.status} ${response.statusText}`);
+      for (const [key, value] of Object.entries(allHeaders)) {
+        xhr.setRequestHeader(key, value);
       }
 
-      return (await response.json()) as T;
-    } catch (error) {
-      clearTimeout(timeoutId);
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            resolve(JSON.parse(xhr.responseText) as T);
+          } catch {
+            reject(
+              new Error(
+                `Provider API returned non-JSON response (${xhr.responseText.length} chars): ${xhr.responseText.slice(0, 200)}`
+              )
+            );
+          }
+        } else {
+          reject(
+            new Error(
+              `Provider API error: ${xhr.status} ${xhr.statusText} - ${(xhr.responseText || '').slice(0, 200)}`
+            )
+          );
+        }
+      };
 
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error(`Provider API timeout after ${timeout}ms`);
-      }
+      xhr.ontimeout = () => {
+        reject(new Error(`Provider API timeout after ${timeout}ms`));
+      };
 
-      throw error;
-    }
+      xhr.onerror = () => {
+        reject(new Error(`Provider API network error`));
+      };
+
+      xhr.send(body);
+    });
   }
 
   /**

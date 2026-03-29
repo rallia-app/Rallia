@@ -49,12 +49,14 @@ interface CreateGroupFormProps {
   onSuccess?: (groupId: string) => void;
   onCancel?: () => void;
   containerStyle?: StyleProp<ViewStyle>;
+  bottomInset?: number;
 }
 
 export const CreateGroupForm: React.FC<CreateGroupFormProps> = ({
   onSuccess,
   onCancel,
   containerStyle,
+  bottomInset = 0,
 }) => {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
@@ -561,7 +563,12 @@ export const CreateGroupForm: React.FC<CreateGroupFormProps> = ({
       </ScrollView>
 
       {/* Footer */}
-      <View style={[styles.footer, { borderTopColor: colors.border }]}>
+      <View
+        style={[
+          styles.footer,
+          { borderTopColor: colors.border, paddingBottom: bottomInset + spacingPixels[4] },
+        ]}
+      >
         <TouchableOpacity
           style={[
             styles.submitButton,

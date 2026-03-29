@@ -10,6 +10,7 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ComponentProps } from 'react';
 import { Text, useToast } from '@rallia/shared-components';
 import {
@@ -131,6 +132,7 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
   const { t, locale } = useTranslation();
   const toast = useToast();
   const isDark = theme === 'dark';
+  const insets = useSafeAreaInsets();
 
   // State
   const [currentStep, setCurrentStep] = useState(0); // 0 = outcome step, 1+ = opponent steps
@@ -539,7 +541,12 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
       </View>
 
       {/* Navigation buttons */}
-      <View style={[styles.footer, { borderTopColor: colors.border }]}>
+      <View
+        style={[
+          styles.footer,
+          { borderTopColor: colors.border, paddingBottom: insets.bottom + spacingPixels[4] },
+        ]}
+      >
         {!isOnOutcomeStep && (
           <TouchableOpacity
             style={styles.skipButton}

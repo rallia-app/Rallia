@@ -38,6 +38,7 @@ import {
 
 const BASE_WHITE = '#ffffff';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useActionsSheet, useMatchDetailSheet, useSport } from '../context';
 import { useTranslation, type TranslationKey } from '../hooks';
 import { SportIcon } from './SportIcon';
@@ -136,6 +137,7 @@ interface ActionsContentProps {
   onCreateNetwork: () => void;
   colors: ThemeColors;
   t: (key: TranslationKey) => string;
+  bottomInset: number;
 }
 
 const ActionsContent: React.FC<ActionsContentProps> = ({
@@ -146,9 +148,10 @@ const ActionsContent: React.FC<ActionsContentProps> = ({
   onCreateNetwork,
   colors,
   t,
+  bottomInset,
 }) => {
   return (
-    <View style={styles.contentContainer}>
+    <View style={[styles.contentContainer, { paddingBottom: bottomInset + spacingPixels[4] }]}>
       <View style={styles.actionsList}>
         <ActionItem
           icon="sport"
@@ -211,6 +214,7 @@ export const ActionsBottomSheet: React.FC = () => {
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const isDark = theme === 'dark';
 
   // Wizard state for all sliding panels (local, only for slide animation)
@@ -535,7 +539,9 @@ export const ActionsBottomSheet: React.FC = () => {
       const ACTION_ITEMS_COUNT = 5;
       const iconSize = spacingPixels[11];
       return (
-        <View style={styles.contentContainer}>
+        <View
+          style={[styles.contentContainer, { paddingBottom: insets.bottom + spacingPixels[4] }]}
+        >
           <View style={styles.actionsList}>
             {Array.from({ length: ACTION_ITEMS_COUNT }).map((_, index) => (
               <View key={index} style={[styles.actionItem, { borderBottomColor: colors.border }]}>
@@ -623,6 +629,7 @@ export const ActionsBottomSheet: React.FC = () => {
             onCreateNetwork={handleCreateNetwork}
             colors={colors}
             t={t}
+            bottomInset={insets.bottom}
           />
         </Animated.View>
 
@@ -754,7 +761,6 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingHorizontal: spacingPixels[6],
     paddingTop: spacingPixels[2],
-    paddingBottom: spacingPixels[4],
   },
   actionsList: {
     paddingTop: spacingPixels[2],
