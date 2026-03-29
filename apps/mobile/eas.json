@@ -26,6 +26,7 @@
         "image": "macos-sequoia-15.6-xcode-26.2"
       },
       "env": {
+        "EXPO_PUBLIC_APP_ENV": "preview",
         "EXPO_ASC_API_KEY_PATH": "./credentials/asc-api-key.p8",
         "EXPO_ASC_KEY_ID": "K9JA2C2Q49",
         "EXPO_ASC_ISSUER_ID": "629c1c4a-1257-452f-9a2e-1ac49cbb86aa",
@@ -40,6 +41,7 @@
         "image": "macos-sequoia-15.6-xcode-26.2"
       },
       "env": {
+        "EXPO_PUBLIC_APP_ENV": "production",
         "EXPO_ASC_API_KEY_PATH": "./credentials/asc-api-key.p8",
         "EXPO_ASC_KEY_ID": "K9JA2C2Q49",
         "EXPO_ASC_ISSUER_ID": "629c1c4a-1257-452f-9a2e-1ac49cbb86aa",
