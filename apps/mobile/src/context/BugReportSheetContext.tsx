@@ -1,12 +1,12 @@
 /**
  * Feedback Report Sheet Context
  *
- * Provides global control over the feedback report bottom sheet.
+ * Provides global control over the feedback report action sheet.
  * Can be triggered via shake gesture, FAB, or settings menu.
  */
 
-import React, { createContext, useContext, useRef, useCallback, useState, ReactNode } from 'react';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import React, { createContext, useContext, useCallback, useState, ReactNode } from 'react';
+import { SheetManager } from 'react-native-actions-sheet';
 
 import { useProfile } from '@rallia/shared-hooks';
 
@@ -26,17 +26,11 @@ interface FeedbackReportSheetContextType {
   /** Close the feedback report sheet */
   closeFeedbackReport: () => void;
 
-  /** Called when the sheet finishes dismissing (resets isOpen state) */
-  onSheetDismiss: () => void;
-
   /** Whether the sheet is currently open */
   isOpen: boolean;
 
   /** How the sheet was triggered (for analytics) */
   trigger: FeedbackReportTrigger | null;
-
-  /** Reference to the bottom sheet for direct control if needed */
-  sheetRef: React.RefObject<BottomSheetModal | null>;
 }
 
 // =============================================================================
@@ -58,7 +52,6 @@ interface FeedbackReportSheetProviderProps {
 export const FeedbackReportSheetProvider: React.FC<FeedbackReportSheetProviderProps> = ({
   children,
 }) => {
-  const sheetRef = useRef<BottomSheetModal>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [trigger, setTrigger] = useState<FeedbackReportTrigger | null>(null);
   const { session } = useAuth();
@@ -82,7 +75,13 @@ export const FeedbackReportSheetProvider: React.FC<FeedbackReportSheetProviderPr
 
       setTrigger(triggerSource);
       setIsOpen(true);
-      sheetRef.current?.present();
+      SheetManager.show('feedback-report', {
+        payload: { trigger: triggerSource },
+        onClose: () => {
+          setIsOpen(false);
+          setTrigger(null);
+        },
+      });
     },
     [session?.user, profile?.onboarding_completed, openSheet]
   );
@@ -91,26 +90,14 @@ export const FeedbackReportSheetProvider: React.FC<FeedbackReportSheetProviderPr
    * Close the feedback report sheet
    */
   const closeFeedbackReport = useCallback(() => {
-    sheetRef.current?.dismiss();
-  }, []);
-
-  /**
-   * Called when the sheet finishes its dismiss animation.
-   * This reliably resets open state regardless of how the sheet was closed
-   * (swipe down, submit, cancel button, etc.).
-   */
-  const onSheetDismiss = useCallback(() => {
-    setIsOpen(false);
-    setTrigger(null);
+    SheetManager.hide('feedback-report');
   }, []);
 
   const contextValue: FeedbackReportSheetContextType = {
     openFeedbackReport,
     closeFeedbackReport,
-    onSheetDismiss,
     isOpen,
     trigger,
-    sheetRef,
   };
 
   return (

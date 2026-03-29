@@ -5,7 +5,7 @@
  * bug reports, and feature suggestions.
  * Can be triggered via shake gesture, FAB, or settings menu.
  *
- * Styled to match ReportFacilitySheet / ReportIssueSheet design language.
+ * Uses react-native-actions-sheet for cross-platform keyboard handling.
  */
 
 import React, { useState, useCallback, useMemo, useRef } from 'react';
@@ -17,15 +17,9 @@ import {
   Platform,
   Image,
   TextInput,
+  Keyboard,
 } from 'react-native';
-import {
-  BottomSheetModal,
-  BottomSheetBackdrop,
-  BottomSheetScrollView,
-  BottomSheetTextInput,
-} from '@gorhom/bottom-sheet';
-import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import * as Application from 'expo-application';
 import { Text, useToast } from '@rallia/shared-components';
@@ -46,7 +40,6 @@ import {
   darkTheme,
   spacingPixels,
   radiusPixels,
-  primary,
   neutral,
   base,
   status,
@@ -54,7 +47,6 @@ import {
 } from '@rallia/design-system';
 
 import { useAuth, useTranslation, type TranslationKey, useImagePicker } from '../hooks';
-import { useFeedbackReportSheet } from '../context/BugReportSheetContext';
 import { uploadImage } from '../services/imageUpload';
 
 const MIN_TEXT_LENGTH = 3;
@@ -155,16 +147,14 @@ const DISAPPOINTMENT_OPTIONS: {
 // MAIN COMPONENT
 // =============================================================================
 
-export const FeedbackReportSheet: React.FC = () => {
-  const { sheetRef, closeFeedbackReport, onSheetDismiss, trigger } = useFeedbackReportSheet();
+export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-report'>) {
+  const trigger = payload?.trigger ?? null;
   const { theme } = useTheme();
   const { session } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
   const isDark = theme === 'dark';
-  const insets = useSafeAreaInsets();
   const { pickMultipleFromGallery } = useImagePicker({ skipEditing: true });
-  const scrollViewRef = useRef<any>(null);
 
   // Shared state
   const [selectedCategory, setSelectedCategory] = useState<UserFeedbackCategory | null>(null);
@@ -204,7 +194,7 @@ export const FeedbackReportSheet: React.FC = () => {
   const [idealUserLength, setIdealUserLength] = useState(0);
   const [improveLength, setImproveLength] = useState(0);
 
-  // Theme colors — same pattern as ReportFacilitySheet & ReportIssueSheet
+  // Theme colors
   const themeColors = isDark ? darkTheme : lightTheme;
   const colors = useMemo(
     () => ({
@@ -228,26 +218,11 @@ export const FeedbackReportSheet: React.FC = () => {
 
     switch (selectedCategory) {
       case 'bug':
-        return (
-          selectedModule !== null &&
-          severity !== null &&
-          stepsLength >= MIN_TEXT_LENGTH &&
-          expectedLength >= MIN_TEXT_LENGTH
-        );
+        return selectedModule !== null && stepsLength >= MIN_TEXT_LENGTH;
       case 'feature':
-        return (
-          selectedModule !== null &&
-          featureTitleLength >= MIN_TEXT_LENGTH &&
-          featureDescLength >= MIN_TEXT_LENGTH &&
-          useCaseLength >= MIN_TEXT_LENGTH
-        );
+        return featureTitleLength >= MIN_TEXT_LENGTH && featureDescLength >= MIN_TEXT_LENGTH;
       case 'improvement':
-        return (
-          disappointment !== null &&
-          mainBenefitLength >= MIN_TEXT_LENGTH &&
-          idealUserLength >= MIN_TEXT_LENGTH &&
-          improveLength >= MIN_TEXT_LENGTH
-        );
+        return disappointment !== null && improveLength >= MIN_TEXT_LENGTH;
       default:
         return false;
     }
@@ -256,26 +231,11 @@ export const FeedbackReportSheet: React.FC = () => {
     selectedModule,
     severity,
     stepsLength,
-    expectedLength,
     featureTitleLength,
     featureDescLength,
-    useCaseLength,
     disappointment,
-    mainBenefitLength,
-    idealUserLength,
     improveLength,
   ]);
-
-  // Snap points
-  const snapPoints = useMemo(() => ['90%'], []);
-
-  // Backdrop
-  const renderBackdrop = useCallback(
-    (props: BottomSheetBackdropProps) => (
-      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.5} />
-    ),
-    []
-  );
 
   // Reset all category-specific fields
   const resetCategoryFields = useCallback(() => {
@@ -310,30 +270,22 @@ export const FeedbackReportSheet: React.FC = () => {
     setImproveLength(0);
   }, []);
 
-  // Reset form when sheet closes
-  const handleSheetChange = useCallback(
-    (index: number) => {
-      if (index === -1) {
-        setTimeout(() => {
-          setSelectedCategory(null);
-          setSelectedModule(null);
-          setScreenshots([]);
-          setIsSubmitting(false);
-          resetCategoryFields();
-        }, 300);
-      }
-    },
-    [resetCategoryFields]
-  );
-
-  const handleDismiss = useCallback(() => {
-    onSheetDismiss();
-  }, [onSheetDismiss]);
-
   const handleClose = useCallback(() => {
+    Keyboard.dismiss();
     lightHaptic();
-    closeFeedbackReport();
-  }, [closeFeedbackReport]);
+    SheetManager.hide('feedback-report');
+  }, []);
+
+  const handleSheetClose = useCallback(() => {
+    // Reset form when sheet closes
+    setTimeout(() => {
+      setSelectedCategory(null);
+      setSelectedModule(null);
+      setScreenshots([]);
+      setIsSubmitting(false);
+      resetCategoryFields();
+    }, 300);
+  }, [resetCategoryFields]);
 
   // Handle category selection — reset fields when switching
   const handleCategorySelect = useCallback(
@@ -355,7 +307,7 @@ export const FeedbackReportSheet: React.FC = () => {
     setSelectedModule(mod);
   }, []);
 
-  // Handle add screenshot — directly opens gallery with multi-select, stores local URIs
+  // Handle add screenshot
   const handleAddScreenshot = useCallback(async () => {
     const remaining = MAX_SCREENSHOTS - screenshots.length;
     if (remaining <= 0) {
@@ -385,21 +337,25 @@ export const FeedbackReportSheet: React.FC = () => {
     switch (selectedCategory) {
       case 'bug':
         return {
-          severity: severity!,
+          ...(severity && { severity }),
           steps_to_reproduce: stepsRef.current.trim(),
-          expected_vs_actual: expectedRef.current.trim(),
+          ...(expectedRef.current.trim() && {
+            expected_vs_actual: expectedRef.current.trim(),
+          }),
         } as BugFeedbackMetadata;
       case 'feature':
         return {
           feature_title: featureTitleRef.current.trim(),
           description: featureDescRef.current.trim(),
-          use_case: useCaseRef.current.trim(),
+          ...(useCaseRef.current.trim() && { use_case: useCaseRef.current.trim() }),
         } as FeatureFeedbackMetadata;
       case 'improvement':
         return {
           disappointment_score: disappointment!,
-          main_benefit: mainBenefitRef.current.trim(),
-          ideal_user: idealUserRef.current.trim(),
+          ...(mainBenefitRef.current.trim() && {
+            main_benefit: mainBenefitRef.current.trim(),
+          }),
+          ...(idealUserRef.current.trim() && { ideal_user: idealUserRef.current.trim() }),
           how_to_improve: improveRef.current.trim(),
         } as ImprovementFeedbackMetadata;
       default:
@@ -410,27 +366,39 @@ export const FeedbackReportSheet: React.FC = () => {
   // Build subject/message from category-specific fields for backward compat
   const buildSubjectAndMessage = useCallback((): { subject: string; message: string } => {
     switch (selectedCategory) {
-      case 'bug':
+      case 'bug': {
+        const parts = [`Steps: ${stepsRef.current.trim()}`];
+        if (expectedRef.current.trim())
+          parts.push(`Expected vs Actual: ${expectedRef.current.trim()}`);
         return {
-          subject: `[${severity}] Bug Report`,
-          message: `Steps: ${stepsRef.current.trim()}\n\nExpected vs Actual: ${expectedRef.current.trim()}`,
+          subject: severity ? `[${severity}] Bug Report` : 'Bug Report',
+          message: parts.join('\n\n'),
         };
-      case 'feature':
+      }
+      case 'feature': {
+        const parts = [featureDescRef.current.trim()];
+        if (useCaseRef.current.trim()) parts.push(`Use case: ${useCaseRef.current.trim()}`);
         return {
           subject: featureTitleRef.current.trim(),
-          message: `${featureDescRef.current.trim()}\n\nUse case: ${useCaseRef.current.trim()}`,
+          message: parts.join('\n\n'),
         };
-      case 'improvement':
+      }
+      case 'improvement': {
+        const parts = [];
+        if (mainBenefitRef.current.trim()) parts.push(`Benefit: ${mainBenefitRef.current.trim()}`);
+        if (idealUserRef.current.trim()) parts.push(`Ideal user: ${idealUserRef.current.trim()}`);
+        parts.push(`Improve: ${improveRef.current.trim()}`);
         return {
           subject: `PMF Survey — ${disappointment}`,
-          message: `Benefit: ${mainBenefitRef.current.trim()}\nIdeal user: ${idealUserRef.current.trim()}\nImprove: ${improveRef.current.trim()}`,
+          message: parts.join('\n'),
         };
+      }
       default:
         return { subject: '', message: '' };
     }
   }, [selectedCategory, severity, disappointment]);
 
-  // Handle submit — uploads screenshots then submits feedback
+  // Handle submit
   const handleSubmit = useCallback(async () => {
     if (!isValid || isSubmitting) return;
 
@@ -480,7 +448,7 @@ export const FeedbackReportSheet: React.FC = () => {
         module: selectedModule,
         screenshotCount: screenshots.length,
       });
-      closeFeedbackReport();
+      SheetManager.hide('feedback-report');
     } catch (error) {
       Logger.error('Failed to submit feedback report', error as Error);
       toast.error(t('bugReport.error' as TranslationKey));
@@ -496,7 +464,6 @@ export const FeedbackReportSheet: React.FC = () => {
     screenshots,
     trigger,
     toast,
-    closeFeedbackReport,
     t,
     buildSubjectAndMessage,
     buildMetadata,
@@ -623,13 +590,19 @@ export const FeedbackReportSheet: React.FC = () => {
     currentLength: number;
     multiline?: boolean;
     maxLength?: number;
+    optional?: boolean;
   }) => (
     <View style={styles.section}>
       <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.sectionLabel}>
         {opts.label}
+        {opts.optional && (
+          <Text size="xs" color={colors.textMuted}>
+            {'  '}({t('feedback.optional' as TranslationKey)})
+          </Text>
+        )}
       </Text>
-      <BottomSheetTextInput
-        ref={opts.inputRef as any}
+      <TextInput
+        ref={opts.inputRef}
         style={[
           styles.textInput,
           opts.multiline !== false && styles.multilineInput,
@@ -649,7 +622,11 @@ export const FeedbackReportSheet: React.FC = () => {
       />
       <Text
         size="xs"
-        color={opts.currentLength < MIN_TEXT_LENGTH ? status.warning.DEFAULT : colors.textMuted}
+        color={
+          !opts.optional && opts.currentLength < MIN_TEXT_LENGTH
+            ? status.warning.DEFAULT
+            : colors.textMuted
+        }
         style={styles.characterCount}
       >
         {opts.currentLength}/{opts.maxLength ?? MAX_TEXT_LENGTH}
@@ -720,6 +697,7 @@ export const FeedbackReportSheet: React.FC = () => {
           setExpectedLength(text.trim().length);
         },
         currentLength: expectedLength,
+        optional: true,
       })}
 
       {renderScreenshotsSection()}
@@ -763,6 +741,7 @@ export const FeedbackReportSheet: React.FC = () => {
           setUseCaseLength(text.trim().length);
         },
         currentLength: useCaseLength,
+        optional: true,
       })}
     </>
   );
@@ -833,17 +812,7 @@ export const FeedbackReportSheet: React.FC = () => {
           setMainBenefitLength(text.trim().length);
         },
         currentLength: mainBenefitLength,
-      })}
-
-      {renderTextInput({
-        label: t('feedback.pmf.idealUserLabel' as TranslationKey),
-        placeholder: t('feedback.pmf.idealUserPlaceholder' as TranslationKey),
-        inputRef: idealUserInputRef,
-        onChange: (text: string) => {
-          idealUserRef.current = text;
-          setIdealUserLength(text.trim().length);
-        },
-        currentLength: idealUserLength,
+        optional: true,
       })}
 
       {renderTextInput({
@@ -855,6 +824,18 @@ export const FeedbackReportSheet: React.FC = () => {
           setImproveLength(text.trim().length);
         },
         currentLength: improveLength,
+      })}
+
+      {renderTextInput({
+        label: t('feedback.pmf.idealUserLabel' as TranslationKey),
+        placeholder: t('feedback.pmf.idealUserPlaceholder' as TranslationKey),
+        inputRef: idealUserInputRef,
+        onChange: (text: string) => {
+          idealUserRef.current = text;
+          setIdealUserLength(text.trim().length);
+        },
+        currentLength: idealUserLength,
+        optional: true,
       })}
     </>
   );
@@ -873,45 +854,40 @@ export const FeedbackReportSheet: React.FC = () => {
   };
 
   return (
-    <>
-      <BottomSheetModal
-        ref={sheetRef}
-        snapPoints={snapPoints}
-        index={0}
-        enableDynamicSizing={false}
-        backdropComponent={renderBackdrop}
-        enablePanDownToClose
-        onChange={handleSheetChange}
-        onDismiss={handleDismiss}
-        handleIndicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
-        backgroundStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
-        keyboardBehavior="extend"
-        keyboardBlurBehavior="restore"
-        android_keyboardInputMode="adjustResize"
-      >
-        {/* Header — matches ReportFacilitySheet badge + close button pattern */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <View style={[styles.badge, { backgroundColor: secondary[500] }]}>
-            <Ionicons name="chatbox-ellipses-outline" size={14} color={base.white} />
-            <Text size="sm" weight="semibold" color={base.white}>
-              {t('feedback.sheetTitle' as TranslationKey)}
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            onPress={handleClose}
-            style={styles.closeButton}
-            activeOpacity={0.7}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
-          </TouchableOpacity>
+    <ActionSheet
+      gestureEnabled
+      onClose={handleSheetClose}
+      containerStyle={[
+        styles.sheetBackground,
+        styles.sheetContainer,
+        { backgroundColor: colors.cardBackground },
+      ]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    >
+      {/* Header */}
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={[styles.badge, { backgroundColor: secondary[500] }]}>
+          <Ionicons name="chatbox-ellipses-outline" size={14} color={base.white} />
+          <Text size="sm" weight="semibold" color={base.white}>
+            {t('feedback.sheetTitle' as TranslationKey)}
+          </Text>
         </View>
 
+        <TouchableOpacity
+          onPress={handleClose}
+          style={styles.closeButton}
+          activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.formContainer}>
         {/* Scrollable content */}
-        <BottomSheetScrollView
-          ref={scrollViewRef}
-          contentContainerStyle={styles.scrollContent}
+        <ScrollView
+          style={styles.scrollContent}
+          contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -922,7 +898,7 @@ export const FeedbackReportSheet: React.FC = () => {
               : t('feedback.description' as TranslationKey)}
           </Text>
 
-          {/* Category Selection — card-based like module cards */}
+          {/* Category Selection */}
           <View style={styles.section}>
             <Text
               size="sm"
@@ -983,15 +959,10 @@ export const FeedbackReportSheet: React.FC = () => {
 
           {/* Category-specific fields */}
           {renderCategoryFields()}
-        </BottomSheetScrollView>
+        </ScrollView>
 
-        {/* Footer — matches ReportFacilitySheet / ReportIssueSheet footer */}
-        <View
-          style={[
-            styles.footer,
-            { borderTopColor: colors.border, paddingBottom: insets.bottom + spacingPixels[4] },
-          ]}
-        >
+        {/* Footer */}
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
           <TouchableOpacity
             style={[
               styles.submitButton,
@@ -1024,10 +995,10 @@ export const FeedbackReportSheet: React.FC = () => {
             )}
           </TouchableOpacity>
         </View>
-      </BottomSheetModal>
-    </>
+      </View>
+    </ActionSheet>
   );
-};
+}
 
 // =============================================================================
 // STYLES
@@ -1035,16 +1006,21 @@ export const FeedbackReportSheet: React.FC = () => {
 
 const styles = StyleSheet.create({
   sheetBackground: {
+    flex: 1,
     borderTopLeftRadius: radiusPixels['2xl'],
     borderTopRightRadius: radiusPixels['2xl'],
+  },
+  sheetContainer: {
+    flex: 1,
   },
   handleIndicator: {
     width: spacingPixels[10],
     height: 4,
     borderRadius: 4,
+    alignSelf: 'center',
   },
 
-  // Header — mirrors ReportFacilitySheet header
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1068,7 +1044,14 @@ const styles = StyleSheet.create({
   },
 
   // Content
+  formContainer: {
+    flex: 1,
+  },
   scrollContent: {
+    flex: 1,
+  },
+  content: {
+    flex: 0,
     padding: spacingPixels[4],
     paddingBottom: spacingPixels[6],
   },
@@ -1082,7 +1065,7 @@ const styles = StyleSheet.create({
     marginBottom: spacingPixels[3],
   },
 
-  // Module cards — matches ReportFacilitySheet reason cards
+  // Module cards
   moduleCards: {
     gap: spacingPixels[2],
   },
@@ -1196,7 +1179,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  // Footer — matches ReportFacilitySheet / ReportIssueSheet footer
+  // Footer
   footer: {
     padding: spacingPixels[4],
     borderTopWidth: 1,
@@ -1214,4 +1197,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default FeedbackReportSheet;
+export default FeedbackReportActionSheet;

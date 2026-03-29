@@ -70,7 +70,6 @@ import { navigationRef } from './src/navigation';
 import { linking } from './src/navigation/linking';
 import { ActionsBottomSheet } from './src/components/ActionsBottomSheet';
 import { FeedbackSheet } from './src/components/FeedbackSheet';
-import { FeedbackReportSheet } from './src/components/BugReportSheet';
 import { SplashOverlay } from './src/components/SplashOverlay';
 import {
   ThemeProvider,
@@ -490,8 +489,6 @@ function AppContent() {
         <ActionsBottomSheet />
         {/* Feedback Bottom Sheet - shows when providing post-match feedback */}
         <FeedbackSheet />
-        {/* Feedback Report Bottom Sheet - shows on shake, FAB, or settings */}
-        <FeedbackReportSheet />
       </NavigationContainer>
 
       {/* Deep Link Handler - opens match detail sheet when a deep link is received */}

@@ -7607,6 +7607,7 @@
     "addScreenshot": "Ajouter une capture",
     "identifiedNotice": "Vos commentaires seront soumis avec les informations de votre compte afin que nous puissions faire un suivi si nécessaire.",
     "anonymousNotice": "Vos commentaires seront soumis de façon anonyme.",
+    "optional": "facultatif",
     "submitButton": "Soumettre",
     "submitError": "Échec de l'envoi des commentaires. Veuillez réessayer.",
     "screenshotUploadError": "Échec du téléchargement de la capture d'écran. Veuillez réessayer.",

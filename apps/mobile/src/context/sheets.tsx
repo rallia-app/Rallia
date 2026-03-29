@@ -6,6 +6,7 @@ import type {
   ConversationPreview,
 } from '@rallia/shared-services';
 
+import { FeedbackReportActionSheet } from '../components/BugReportSheet';
 import { CreateCommunityActionSheet } from '../features/communities/components/CreateCommunityModal';
 import { CreateListActionSheet } from '../features/shared-lists/components/CreateListModal';
 import { ShareMatchActionSheet } from '../features/shared-lists/components/ShareMatchModal';
@@ -82,6 +83,11 @@ type WeeklyAvailability = Record<DayOfWeek, DayAvailability>;
 // across the app for all registered sheets.
 declare module 'react-native-actions-sheet' {
   interface Sheets {
+    'feedback-report': SheetDefinition<{
+      payload: {
+        trigger?: import('./BugReportSheetContext').FeedbackReportTrigger | null;
+      };
+    }>;
     'create-community': SheetDefinition<{
       payload: {
         playerId: string;
@@ -599,6 +605,7 @@ export const Sheets = () => {
   return (
     <SheetRegister
       sheets={{
+        'feedback-report': FeedbackReportActionSheet,
         'create-community': CreateCommunityActionSheet,
         'create-list': CreateListActionSheet,
         'share-match': ShareMatchActionSheet,

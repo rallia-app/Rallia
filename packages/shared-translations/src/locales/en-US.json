@@ -7605,6 +7605,7 @@
     "addScreenshot": "Add Screenshot",
     "identifiedNotice": "Your feedback will be submitted with your account info so we can follow up if needed.",
     "anonymousNotice": "Your feedback will be submitted anonymously.",
+    "optional": "optional",
     "submitButton": "Submit Feedback",
     "submitError": "Failed to submit feedback. Please try again.",
     "screenshotUploadError": "Failed to upload screenshot. Please try again.",

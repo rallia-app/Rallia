@@ -36,21 +36,21 @@ export const USER_FEEDBACK_MODULE_LABELS: Record<UserFeedbackModule, string> = {
 
 // Category-specific metadata types
 export interface BugFeedbackMetadata {
-  severity: 'minor' | 'major' | 'critical';
+  severity?: 'minor' | 'major' | 'critical';
   steps_to_reproduce: string;
-  expected_vs_actual: string;
+  expected_vs_actual?: string;
 }
 
 export interface FeatureFeedbackMetadata {
   feature_title: string;
   description: string;
-  use_case: string;
+  use_case?: string;
 }
 
 export interface ImprovementFeedbackMetadata {
   disappointment_score: 'very_disappointed' | 'somewhat_disappointed' | 'not_disappointed';
-  main_benefit: string;
-  ideal_user: string;
+  main_benefit?: string;
+  ideal_user?: string;
   how_to_improve: string;
 }
 
@@ -121,8 +121,12 @@ export async function submitUserFeedback(
 
   const { data, error } = await supabase.from('feedback').insert(row).select().single();
   if (error) {
-    console.error('Error submitting feedback:', error);
-    throw new Error('Failed to submit feedback.');
+    console.error('[submitUserFeedback] Supabase error:', error.code, error.message, error.details);
+    throw new Error(`Failed to submit feedback: ${error.message}`);
+  }
+  if (!data) {
+    console.error('[submitUserFeedback] Insert returned no data (possible RLS or FK issue)');
+    throw new Error('Failed to submit feedback: no data returned');
   }
   return data;
 }

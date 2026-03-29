@@ -16,7 +16,7 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text, SkeletonConversation } from '@rallia/shared-components';
@@ -73,7 +73,7 @@ const TAB_CONFIGS: { key: TabKey; icon: keyof typeof Ionicons.glyphMap }[] = [
 
 const Chat = () => {
   const { colors, isDark } = useThemeStyles();
-  const insets = useSafeAreaInsets();
+
   const rootNavigation = useAppNavigation();
   const chatNavigation = useChatNavigation();
   const { session, isAuthenticated, loading: isLoadingAuth } = useAuth();
@@ -752,15 +752,7 @@ const Chat = () => {
       />
 
       {/* FAB Container - Bug Report + New Group */}
-      <View
-        style={[
-          styles.fabContainer,
-          {
-            bottom: Platform.OS === 'android' ? insets.bottom + 16 : 16,
-            right: spacingPixels[5],
-          },
-        ]}
-      >
+      <View style={styles.fabContainer}>
         <FeedbackFAB />
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: primary[500] }]}
@@ -801,6 +793,8 @@ const styles = StyleSheet.create({
   },
   fabContainer: {
     position: 'absolute',
+    bottom: spacingPixels[6],
+    right: spacingPixels[4],
     alignItems: 'center',
     gap: 12,
   },

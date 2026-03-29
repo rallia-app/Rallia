@@ -10,7 +10,7 @@ import { Resend } from 'resend';
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'noreply@rallia.app';
-const ADMIN_EMAILS = ['apprallia@gmail.com', 'contact@rallia.ca'];
+const ADMIN_EMAILS = ['contact@rallia.ca'];
 
 interface FeedbackMetadata {
   // Bug
