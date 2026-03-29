@@ -148,7 +148,6 @@ BEGIN
   ALTER TABLE reference_request DISABLE TRIGGER check_reference_threshold_trigger;
 
   -- Phase 3b cleanup
-  DELETE FROM feedback WHERE id::text LIKE 'c4000000-0000-0000-0000-%';
   DELETE FROM player_report WHERE id::text LIKE 'c5000000-0000-0000-0000-%';
   DELETE FROM referral_link_click WHERE referral_code LIKE 'SEED%';
   DELETE FROM referral_fingerprint WHERE referral_code LIKE 'SEED%';
@@ -3154,70 +3153,7 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- 24. Feedback (~250 rows)
--- ============================================================================
-DO $$
-DECLARE
-  p TEXT := 'a1000000-0000-0000-0000-00000000';
-  fb TEXT := 'c4000000-0000-0000-0000-00000000';
-  categories TEXT[] := ARRAY['bug', 'feature', 'improvement', 'other'];
-  modules TEXT[] := ARRAY['match_features', 'profile_settings', 'facilities', 'groups_communities', 'player_directory', 'notifications', 'performance', 'other'];
-  statuses TEXT[] := ARRAY['new', 'new', 'new', 'new', 'reviewed', 'reviewed', 'in_progress', 'in_progress', 'resolved', 'closed'];
-  subjects TEXT[] := ARRAY[
-    'App crashes on match search',
-    'Add dark mode support',
-    'Improve match filtering',
-    'Rating system is confusing',
-    'Cannot find nearby players',
-    'Push notifications not working',
-    'Slow loading on player directory',
-    'Would love a chat feature',
-    'Calendar integration request',
-    'Bug with score entry'
-  ];
-  messages TEXT[] := ARRAY[
-    'The app crashes every time I search for matches in my area. Happens on both wifi and cellular.',
-    'It would be great to have a dark mode option. The bright white screen is hard on the eyes at night.',
-    'The match filtering could use more options like filtering by skill level range and distance.',
-    'I find the NTRP vs DUPR rating system confusing. Can you add a comparison or explanation?',
-    'I live in a suburb and the player directory never shows anyone near me even with a 50km radius.',
-    'I stopped receiving push notifications about match invites about a week ago.',
-    'The player directory takes 10+ seconds to load. It used to be much faster.',
-    'Would love to be able to chat with potential opponents before committing to a match.',
-    'It would be useful to sync matches with Google Calendar or Apple Calendar.',
-    'When entering set scores, the keyboard covers the input field on smaller phones.'
-  ];
-  app_versions TEXT[] := ARRAY['1.0.0', '1.1.0', '1.2.0'];
-  i INT;
-  player_idx INT;
-BEGIN
-  FOR i IN 1..250 LOOP
-    player_idx := ((i - 1) % 50) + 1;
-
-    INSERT INTO feedback (
-      id, player_id, category, subject, message, app_version, device_info, status, module, created_at
-    ) VALUES (
-      (fb || LPAD(i::text, 4, '0'))::uuid,
-      (p || LPAD(player_idx::text, 4, '0'))::uuid,
-      categories[((i - 1) % 4) + 1],
-      subjects[((i - 1) % 10) + 1],
-      messages[((i - 1) % 10) + 1],
-      app_versions[((i - 1) % 3) + 1],
-      CASE WHEN i % 2 = 0
-        THEN '{"os": "iOS", "version": "17.4", "device": "iPhone 15"}'::jsonb
-        ELSE '{"os": "Android", "version": "14", "device": "Pixel 8"}'::jsonb
-      END,
-      statuses[((i - 1) % 10) + 1],
-      modules[((i - 1) % 8) + 1],
-      NOW() - ((50 - i) * INTERVAL '14 hours')
-    );
-  END LOOP;
-
-  RAISE NOTICE 'Created 250 feedback entries';
-END $$;
-
--- ============================================================================
--- 25. Player Reports (~50 rows)
+-- 24. Player Reports (~50 rows)
 -- ============================================================================
 DO $$
 DECLARE
@@ -3513,7 +3449,6 @@ BEGIN
   RAISE NOTICE '~1000 messages with ~250 reactions';
   RAISE NOTICE '500 notifications';
   RAISE NOTICE '~250 match feedback + 15 match reports';
-  RAISE NOTICE '250 feedback entries';
   RAISE NOTICE '50 player reports';
   RAISE NOTICE '~150 referral link clicks + ~50 fingerprints';
   RAISE NOTICE '~100 score confirmations';
