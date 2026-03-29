@@ -284,6 +284,19 @@ BEGIN
 END $$;
 
 -- ============================================================================
+-- Disable all email/notification-sending triggers for the duration of seeding.
+-- These triggers use pg_net to call edge functions (send-email, send-notification,
+-- send-feedback-notification, send-admin-push) which consume Resend email quota.
+-- They are re-enabled at the very end of this file.
+-- ============================================================================
+ALTER TABLE notification             DISABLE TRIGGER on_notification_insert;
+ALTER TABLE match                    DISABLE TRIGGER match_notify_group_members_on_create;
+ALTER TABLE match                    DISABLE TRIGGER match_notify_nearby_players_on_create;
+ALTER TABLE feedback                 DISABLE TRIGGER trigger_notify_new_feedback;
+ALTER TABLE rating_reference_request DISABLE TRIGGER trigger_notify_referee_on_reference_request;
+ALTER TABLE rating_reference_request DISABLE TRIGGER trigger_notify_requester_on_reference_response;
+
+-- ============================================================================
 -- 3. Create 100 Test Users in auth.users
 -- ============================================================================
 -- All token columns explicitly set to '' to prevent GoTrue scan errors.
@@ -1880,9 +1893,6 @@ BEGIN
   FROM rating_score WHERE rating_system_id = dupr_system_id;
   dupr_count := COALESCE(array_length(dupr_scores, 1), 0);
 
-  ALTER TABLE match DISABLE TRIGGER match_notify_group_members_on_create;
-  ALTER TABLE match DISABLE TRIGGER match_notify_nearby_players_on_create;
-
   FOR i IN 1..500 LOOP
     -- Sport: pickleball ~40%, tennis ~60%
     v_is_pb := (i % 5 IN (0, 3));
@@ -2064,8 +2074,6 @@ BEGIN
     );
   END LOOP;
 
-  ALTER TABLE match ENABLE TRIGGER match_notify_group_members_on_create;
-  ALTER TABLE match ENABLE TRIGGER match_notify_nearby_players_on_create;
   RAISE NOTICE 'Created 500 matches (250 upcoming + 175 past + 75 cancelled)';
 END $$;
 
@@ -3483,6 +3491,16 @@ BEGIN
 
   RAISE NOTICE 'Created % proof endorsements', endorsement_count;
 END $$;
+
+-- ============================================================================
+-- Re-enable all email/notification-sending triggers disabled at the top.
+-- ============================================================================
+ALTER TABLE notification             ENABLE TRIGGER on_notification_insert;
+ALTER TABLE match                    ENABLE TRIGGER match_notify_group_members_on_create;
+ALTER TABLE match                    ENABLE TRIGGER match_notify_nearby_players_on_create;
+ALTER TABLE feedback                 ENABLE TRIGGER trigger_notify_new_feedback;
+ALTER TABLE rating_reference_request ENABLE TRIGGER trigger_notify_referee_on_reference_request;
+ALTER TABLE rating_reference_request ENABLE TRIGGER trigger_notify_requester_on_reference_response;
 
 -- ============================================================================
 -- Done! Summary of seeded data
