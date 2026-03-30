@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Animated, Dimensions, Easing } from 'react-native';
 import RalliaLogoDark from '../../assets/images/logo-dark.svg';
 import RalliaLogoLight from '../../assets/images/logo-light.svg';
@@ -11,6 +11,8 @@ const { width } = Dimensions.get('window');
 interface SplashOverlayProps {
   /** Callback fired when the splash animation has completely finished */
   onAnimationComplete?: () => void;
+  /** When true, holds the splash visible until set back to false (e.g. waiting for OTA update) */
+  holdVisible?: boolean;
 }
 
 /**
@@ -19,10 +21,11 @@ interface SplashOverlayProps {
  * Renders on top of the entire app and fades out after the animation completes.
  * This avoids navigation transitions since it's an overlay, not a screen.
  */
-export function SplashOverlay({ onAnimationComplete }: SplashOverlayProps) {
+export function SplashOverlay({ onAnimationComplete, holdVisible = false }: SplashOverlayProps) {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(true);
+  const [minDurationElapsed, setMinDurationElapsed] = useState(false);
 
   // Logo animations (useState lazy init keeps stable refs without accessing refs during render)
   const [logoOpacity] = useState(() => new Animated.Value(0));
@@ -119,18 +122,9 @@ export function SplashOverlay({ onAnimationComplete }: SplashOverlayProps) {
       ]),
     ]).start();
 
-    // Exit animation after splash duration
+    // Mark minimum animation duration as elapsed
     const timer = setTimeout(() => {
-      Animated.timing(exitOpacity, {
-        toValue: 0,
-        duration: 300,
-        easing: Easing.in(Easing.ease),
-        useNativeDriver: true,
-      }).start(() => {
-        setIsVisible(false);
-        // Notify parent that splash animation is complete
-        onAnimationComplete?.();
-      });
+      setMinDurationElapsed(true);
     }, ANIMATION_DELAYS.SPLASH_DURATION);
 
     return () => clearTimeout(timer);
@@ -144,9 +138,24 @@ export function SplashOverlay({ onAnimationComplete }: SplashOverlayProps) {
     circle1Opacity,
     circle2Scale,
     circle2Opacity,
-    exitOpacity,
-    onAnimationComplete,
   ]);
+
+  // Run exit animation once minimum duration has elapsed AND hold is released
+  const hasExitedRef = useRef(false);
+  useEffect(() => {
+    if (!minDurationElapsed || holdVisible || hasExitedRef.current) return;
+    hasExitedRef.current = true;
+
+    Animated.timing(exitOpacity, {
+      toValue: 0,
+      duration: 300,
+      easing: Easing.in(Easing.ease),
+      useNativeDriver: true,
+    }).start(() => {
+      setIsVisible(false);
+      onAnimationComplete?.();
+    });
+  }, [minDurationElapsed, holdVisible, exitOpacity, onAnimationComplete]);
 
   // Don't render anything after animation completes
   if (!isVisible) {

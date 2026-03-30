@@ -54,6 +54,7 @@ ErrorUtils.setGlobalHandler((error, isFatal) => {
 
 import { useEffect, useMemo, useState, useCallback, useRef, type PropsWithChildren } from 'react';
 import { AppState, Linking } from 'react-native';
+import * as Updates from 'expo-updates';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -439,9 +440,50 @@ function ReferralInviteHandler() {
   return null;
 }
 
+/**
+ * useOTAUpdate - Check for OTA updates while the splash screen is visible.
+ * If an update is found, download it and reload before the user sees the app.
+ * Returns whether the check is still in progress (to hold the splash open).
+ */
+function useOTAUpdate() {
+  const [isChecking, setIsChecking] = useState(!__DEV__);
+
+  useEffect(() => {
+    if (__DEV__) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const { isAvailable } = await Updates.checkForUpdateAsync();
+        if (cancelled) return;
+
+        if (isAvailable) {
+          await Updates.fetchUpdateAsync();
+          if (!cancelled) {
+            // Reload immediately — splash is still visible so the restart is seamless
+            await Updates.reloadAsync();
+          }
+        }
+      } catch (e) {
+        Logger.warn('OTA update check failed', { error: e });
+      } finally {
+        if (!cancelled) setIsChecking(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return isChecking;
+}
+
 function AppContent() {
   const { theme } = useTheme();
   const { setSplashComplete, isSplashComplete, permissionsHandled } = useOverlay();
+  const isCheckingUpdate = useOTAUpdate();
   // TEMPORARILY DISABLED: User walkthrough deactivated
   // const { showCompletionModal, dismissCompletionModal, lastCompletedTourId } = useTour();
 
@@ -514,7 +556,10 @@ function AppContent() {
       />
       */}
       {/* Splash overlay - renders on top of everything */}
-      <SplashOverlay onAnimationComplete={() => setSplashComplete(true)} />
+      <SplashOverlay
+        onAnimationComplete={() => setSplashComplete(true)}
+        holdVisible={isCheckingUpdate}
+      />
     </>
   );
 }
