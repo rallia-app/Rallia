@@ -555,12 +555,12 @@ Deno.serve(async req => {
     });
   }
 
-  // Validate service role key - this function is only called by DB triggers/cron
-  const expectedServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (expectedServiceKey) {
+  // Validate anon key - this function is called by DB triggers using anon_key from Vault
+  const expectedAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+  if (expectedAnonKey) {
     const authHeader = req.headers.get('Authorization');
     const token = authHeader?.replace(/^Bearer\s+/i, '').trim();
-    if (!token || token !== expectedServiceKey) {
+    if (!token || token !== expectedAnonKey) {
       return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
