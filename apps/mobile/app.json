@@ -62,6 +62,14 @@
       "bundler": "metro"
     },
     "plugins": [
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "organization": "rallia",
+          "project": "react-native"
+        }
+      ],
       "expo-dev-client",
       "expo-apple-authentication",
       [
