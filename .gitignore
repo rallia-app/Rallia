@@ -20,6 +20,9 @@ coverage/
 build/
 .next/
 
+# MCP
+.mcp.json
+
 # Misc
 .DS_Store
 *.pem
