@@ -11,7 +11,7 @@
     "test:coverage": "jest --coverage"
   },
   "peerDependencies": {
-    "@react-navigation/native": "*",
+    "@react-navigation/native": "^7.2.2",
     "react": "*",
     "react-native": "*",
     "react-native-svg": "*"
@@ -22,9 +22,9 @@
     "@rallia/shared-types": "*"
   },
   "devDependencies": {
-    "@rallia/eslint-config": "*",
     "@babel/preset-react": "^7.28.5",
     "@babel/preset-typescript": "^7.28.5",
+    "@rallia/eslint-config": "*",
     "metro-react-native-babel-preset": "^0.77.0",
     "react-native-web": "^0.21.2",
     "react-test-renderer": "^19.1.0",
