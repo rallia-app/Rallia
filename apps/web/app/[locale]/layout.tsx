@@ -8,6 +8,7 @@ import { notFound } from 'next/navigation';
 import './globals.css';
 
 import { Analytics } from '@vercel/analytics/next';
+import { PostHogProvider } from '@/components/posthog-provider';
 
 // Theme A: Court Classic - Outfit for headlines
 const outfit = Outfit({
@@ -124,16 +125,18 @@ export default async function LocaleLayout({
         className={`${outfit.variable} ${poppins.variable} ${spaceGrotesk.variable} ${inter.variable} antialiased flex min-h-screen flex-col bg-[var(--primary-50)] dark:bg-[var(--primary-900)]`}
       >
         <Analytics />
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <NextIntlClientProvider locale={locale} messages={messages}>
-            {children}
-          </NextIntlClientProvider>
-        </ThemeProvider>
+        <PostHogProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <NextIntlClientProvider locale={locale} messages={messages}>
+              {children}
+            </NextIntlClientProvider>
+          </ThemeProvider>
+        </PostHogProvider>
       </body>
     </html>
   );

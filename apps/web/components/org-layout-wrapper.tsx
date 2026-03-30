@@ -6,6 +6,7 @@ import { OrganizationProvider } from '@/components/organization-context';
 import { QueryProvider } from '@/components/query-provider';
 import { usePathname } from '@/i18n/navigation';
 import { TooltipProvider } from './ui/tooltip';
+import { PostHogIdentify } from '@/components/posthog-identify';
 
 function LayoutContent({
   children,
@@ -37,9 +38,13 @@ function LayoutContent({
 export function OrgLayoutWrapper({
   children,
   hasOrg,
+  userId,
+  userEmail,
 }: {
   children: React.ReactNode;
   hasOrg: boolean;
+  userId: string;
+  userEmail: string;
 }) {
   const pathname = usePathname();
   const isOnboardingPage = pathname?.includes('/onboarding');
@@ -49,6 +54,7 @@ export function OrgLayoutWrapper({
 
   return (
     <QueryProvider>
+      <PostHogIdentify userId={userId} email={userEmail} />
       <SidebarProvider>
         <OrganizationProvider>
           <TooltipProvider delayDuration={100}>

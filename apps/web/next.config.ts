@@ -5,6 +5,7 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const isDev = process.env.NODE_ENV === 'development';
 
 const nextConfig: NextConfig = {
+  skipTrailingSlashRedirect: true,
   // Transpile shared monorepo packages
   transpilePackages: [
     '@rallia/design-system',
@@ -16,6 +17,18 @@ const nextConfig: NextConfig = {
     '@rallia/shared-types',
     '@rallia/shared-utils',
   ],
+  async rewrites() {
+    return [
+      {
+        source: '/ingest/static/:path*',
+        destination: 'https://us-assets.i.posthog.com/static/:path*',
+      },
+      {
+        source: '/ingest/:path*',
+        destination: 'https://us.i.posthog.com/:path*',
+      },
+    ];
+  },
   async headers() {
     return [
       {

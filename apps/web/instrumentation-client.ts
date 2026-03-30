@@ -28,4 +28,15 @@ Sentry.init({
 // Wire up the shared logger's SentryTransport so Logger.error() calls also go to Sentry
 SentryTransport.configure(Sentry);
 
+// Initialize PostHog for product analytics
+import posthog from 'posthog-js';
+
+if (process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+  posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
+    api_host: '/ingest',
+    ui_host: 'https://us.posthog.com',
+    defaults: '2026-01-30',
+  });
+}
+
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

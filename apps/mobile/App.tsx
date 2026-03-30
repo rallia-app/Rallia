@@ -111,6 +111,8 @@ import {
   TourProvider,
 } from './src/context';
 import { usePushNotifications, useShakeDetection } from './src/hooks';
+import { usePostHog } from 'posthog-react-native';
+import { PostHogProvider } from './src/providers/PostHogProvider';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { SheetManager, SheetProvider } from 'react-native-actions-sheet';
 import { Sheets } from './src/context/sheets';
@@ -194,6 +196,14 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
   // Track user activity app-wide by updating last_seen_at
   // This updates immediately on mount and every 2 minutes while the app is active
   useUpdateLastSeen(userId);
+
+  // Identify user in PostHog when authenticated
+  const posthog = usePostHog();
+  useEffect(() => {
+    if (user) {
+      posthog.identify(user.id, { email: user.email ?? null });
+    }
+  }, [user, posthog]);
 
   // Handle incoming deep link URL
   const handleDeepLink = useCallback(
@@ -589,46 +599,48 @@ function App() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#fafafa' }}>
       <ErrorBoundary onError={handleError} translations={errorBoundaryTranslations}>
         <SafeAreaProvider>
-          <QueryClientProvider client={queryClient}>
-            <LocaleProvider>
-              <ThemeProvider>
-                <TourProvider>
-                  <NetworkProvider>
-                    <ToastProvider>
-                      <DeepLinkProvider>
-                        <OverlayProvider>
-                          <AuthProvider>
-                            <AuthenticatedProviders>
-                              <ActionsSheetProvider>
-                                <MatchDetailSheetProvider>
-                                  <PlayerInviteSheetProvider>
-                                    <FeedbackSheetProvider>
-                                      <FeedbackReportSheetProvider>
-                                        <StripeProvider
-                                          publishableKey={
-                                            process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
-                                          }
-                                          merchantIdentifier="merchant.com.rallia"
-                                        >
-                                          <BottomSheetModalProvider>
-                                            <AppContent />
-                                          </BottomSheetModalProvider>
-                                        </StripeProvider>
-                                      </FeedbackReportSheetProvider>
-                                    </FeedbackSheetProvider>
-                                  </PlayerInviteSheetProvider>
-                                </MatchDetailSheetProvider>
-                              </ActionsSheetProvider>
-                            </AuthenticatedProviders>
-                          </AuthProvider>
-                        </OverlayProvider>
-                      </DeepLinkProvider>
-                    </ToastProvider>
-                  </NetworkProvider>
-                </TourProvider>
-              </ThemeProvider>
-            </LocaleProvider>
-          </QueryClientProvider>
+          <PostHogProvider>
+            <QueryClientProvider client={queryClient}>
+              <LocaleProvider>
+                <ThemeProvider>
+                  <TourProvider>
+                    <NetworkProvider>
+                      <ToastProvider>
+                        <DeepLinkProvider>
+                          <OverlayProvider>
+                            <AuthProvider>
+                              <AuthenticatedProviders>
+                                <ActionsSheetProvider>
+                                  <MatchDetailSheetProvider>
+                                    <PlayerInviteSheetProvider>
+                                      <FeedbackSheetProvider>
+                                        <FeedbackReportSheetProvider>
+                                          <StripeProvider
+                                            publishableKey={
+                                              process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
+                                            }
+                                            merchantIdentifier="merchant.com.rallia"
+                                          >
+                                            <BottomSheetModalProvider>
+                                              <AppContent />
+                                            </BottomSheetModalProvider>
+                                          </StripeProvider>
+                                        </FeedbackReportSheetProvider>
+                                      </FeedbackSheetProvider>
+                                    </PlayerInviteSheetProvider>
+                                  </MatchDetailSheetProvider>
+                                </ActionsSheetProvider>
+                              </AuthenticatedProviders>
+                            </AuthProvider>
+                          </OverlayProvider>
+                        </DeepLinkProvider>
+                      </ToastProvider>
+                    </NetworkProvider>
+                  </TourProvider>
+                </ThemeProvider>
+              </LocaleProvider>
+            </QueryClientProvider>
+          </PostHogProvider>
         </SafeAreaProvider>
       </ErrorBoundary>
     </GestureHandlerRootView>
