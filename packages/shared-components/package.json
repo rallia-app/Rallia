@@ -14,7 +14,7 @@
     "@react-navigation/native": "*",
     "react": "*",
     "react-native": "*",
-    "react-native-svg": "*"
+    "react-native-svg": "^15.15.4"
   },
   "dependencies": {
     "@rallia/shared-constants": "*",
@@ -22,9 +22,9 @@
     "@rallia/shared-types": "*"
   },
   "devDependencies": {
-    "@rallia/eslint-config": "*",
     "@babel/preset-react": "^7.28.5",
     "@babel/preset-typescript": "^7.28.5",
+    "@rallia/eslint-config": "*",
     "metro-react-native-babel-preset": "^0.77.0",
     "react-native-web": "^0.21.2",
     "react-test-renderer": "^19.1.0",
