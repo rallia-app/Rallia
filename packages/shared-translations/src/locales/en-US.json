@@ -3464,7 +3464,12 @@
       "activate": "Activate"
     },
     "header": {
-      "ctaButton": "Become a Beta Tester"
+      "ctaButton": "Become a Beta Tester",
+      "nav": {
+        "games": "Games",
+        "communities": "Communities",
+        "guides": "Guides"
+      }
     },
     "hero": {
       "badge": "Coming Early 2026",
@@ -4945,10 +4950,10 @@
       },
       "createButton": "Create Organization",
       "bulkActions": {
-        "selected": "{count, plural, =0 {No organizations selected} one {# organization selected} other {# organizations selected}",
+        "selected": "{count, plural, =0 {No organizations selected} one {# organization selected} other {# organizations selected}}",
         "delete": "Delete Selected",
         "confirmTitle": "Delete Organizations",
-        "confirmDescription": "Are you sure you want to permanently delete {count, plural, one {this organization} other {these # organizations}? This action cannot be undone and will delete all associated facilities, courts, contacts, and images.",
+        "confirmDescription": "Are you sure you want to permanently delete {count, plural, one {this organization} other {these # organizations}}? This action cannot be undone and will delete all associated facilities, courts, contacts, and images.",
         "cancel": "Cancel",
         "confirmDelete": "Delete",
         "deleting": "Deleting..."
@@ -5452,7 +5457,239 @@
       "noRating": "No rating set",
       "detail": {
         "title": "User Details",
-        "noUser": "No user found"
+        "backToUsers": "Back to Users",
+        "noUser": "User not found",
+        "error": "Failed to load user",
+        "sections": {
+          "profileInfo": "Profile Information",
+          "adminRole": "Admin Role",
+          "sportProfiles": "Sport Profiles",
+          "matchActivity": "Match Activity",
+          "rating": "Rating & Certification",
+          "matchFeedback": "Match Feedback Received",
+          "reports": "Reports About Player",
+          "feedback": "Feedback",
+          "banHistory": "Ban History",
+          "organizations": "Organization Memberships",
+          "settings": "Settings & Preferences"
+        },
+        "fields": {
+          "email": "Email",
+          "phone": "Phone",
+          "location": "Location",
+          "birthDate": "Birth Date",
+          "gender": "Gender",
+          "playingHand": "Playing Hand",
+          "reputation": "Reputation Score",
+          "maxTravel": "Max Travel Distance",
+          "createdAt": "Created",
+          "lastActive": "Last Active",
+          "lastSeen": "Last Seen",
+          "role": "Role",
+          "assignedAt": "Assigned At",
+          "notes": "Notes",
+          "onboarding": "Onboarding",
+          "emailVerified": "Email Verified",
+          "phoneVerified": "Phone Verified",
+          "bio": "Bio"
+        },
+        "gender": {
+          "male": "Male",
+          "female": "Female",
+          "other": "Other",
+          "prefer_not_to_say": "Prefer not to say"
+        },
+        "playingHand": {
+          "left": "Left",
+          "right": "Right",
+          "both": "Both"
+        },
+        "matchActivity": {
+          "totalMatches": "Total Matches",
+          "played": "Played",
+          "noShows": "No-Shows",
+          "lateArrivals": "Late Arrivals",
+          "cancellations": "Cancellations",
+          "avgRating": "Avg Rating",
+          "noMatches": "No match history"
+        },
+        "matchFeedback": {
+          "empty": "No match feedback received",
+          "showedUp": "Showed up",
+          "noShow": "No-show",
+          "late": "Late",
+          "onTime": "On time"
+        },
+        "report": {
+          "empty": "No reports",
+          "type": "Type",
+          "status": "Status",
+          "priority": "Priority",
+          "actionTaken": "Action Taken",
+          "reportTypes": {
+            "harassment": "Harassment",
+            "cheating": "Cheating",
+            "inappropriate_content": "Inappropriate Content",
+            "spam": "Spam",
+            "impersonation": "Impersonation",
+            "no_show": "No-Show",
+            "unsportsmanlike": "Unsportsmanlike",
+            "other": "Other"
+          },
+          "reportStatuses": {
+            "pending": "Pending",
+            "under_review": "Under Review",
+            "dismissed": "Dismissed",
+            "action_taken": "Action Taken",
+            "escalated": "Escalated"
+          }
+        },
+        "organization": {
+          "role": "Role",
+          "joinedAt": "Joined",
+          "empty": "Not a member of any organization"
+        },
+        "settings": {
+          "privacy": "Privacy",
+          "notifications": "Notifications",
+          "showAge": "Show Age",
+          "showLocation": "Show Location",
+          "showAvailability": "Show Availability",
+          "showStats": "Show Stats",
+          "matchRequests": "Match Requests",
+          "messages": "Messages",
+          "reminders": "Reminders",
+          "pushEnabled": "Push Notifications",
+          "locale": "Preferred Language",
+          "referralCode": "Referral Code",
+          "chatRulesAgreed": "Chat Rules Agreed",
+          "enabled": "Enabled",
+          "disabled": "Disabled"
+        },
+        "feedback": {
+          "empty": "No feedback submitted",
+          "count": "{count, plural, one {# entry} other {# entries}}",
+          "adminNotes": "Admin Notes",
+          "appVersion": "App Version",
+          "category": {
+            "bug": "Bug",
+            "feature": "Feature",
+            "improvement": "Improvement",
+            "other": "Other"
+          },
+          "status": {
+            "new": "New",
+            "reviewed": "Reviewed",
+            "in_progress": "In Progress",
+            "resolved": "Resolved",
+            "closed": "Closed"
+          }
+        },
+        "ban": {
+          "reason": "Reason",
+          "type": "Type",
+          "bannedAt": "Banned",
+          "expiresAt": "Expires",
+          "liftedAt": "Lifted",
+          "liftReason": "Lift Reason",
+          "active": "Active",
+          "lifted": "Lifted",
+          "empty": "No ban history",
+          "permanent": "Permanent",
+          "temporary": "Temporary"
+        },
+        "sport": {
+          "primary": "Primary",
+          "inactive": "Inactive",
+          "matchType": "Match Type",
+          "duration": "Duration",
+          "playStyle": "Play Style",
+          "attributes": "Strengths",
+          "court": "Preferred Court",
+          "facility": "Preferred Facility",
+          "rating": "Rating",
+          "certified": "Certified",
+          "empty": "No sport profiles",
+          "durationMinutes": "{minutes} min",
+          "matchTypes": {
+            "casual": "Casual",
+            "competitive": "Competitive",
+            "both": "Both"
+          },
+          "playStyles": {
+            "counterpuncher": "Counterpuncher",
+            "aggressive_baseliner": "Aggressive Baseliner",
+            "serve_and_volley": "Serve & Volley",
+            "all_court": "All-Court"
+          },
+          "playAttributes": {
+            "serve_speed_and_placement": "Serve",
+            "net_play": "Net Play",
+            "court_coverage": "Court Coverage",
+            "forehand_power": "Forehand Power",
+            "shot_selection": "Shot Selection",
+            "spin_control": "Spin Control"
+          },
+          "skillLevels": {
+            "beginner": "Beginner",
+            "intermediate": "Intermediate",
+            "advanced": "Advanced",
+            "professional": "Professional"
+          }
+        },
+        "rating": {
+          "system": "Rating System",
+          "currentLevel": "Current Level",
+          "previousLevel": "Previous Level",
+          "badgeStatus": "Badge Status",
+          "certifiedVia": "Certified Via",
+          "certifiedAt": "Certified At",
+          "expiresAt": "Expires",
+          "levelChangedAt": "Level Changed",
+          "assignedAt": "Assigned",
+          "source": "Source",
+          "peerEvaluation": "Peer Evaluation",
+          "peerEvalAvg": "Avg Score",
+          "peerEvalCount": "Evaluations",
+          "approvedProofs": "Approved Proofs",
+          "referrals": "Referrals",
+          "adminNotes": "Admin Notes",
+          "noRating": "No rating assigned",
+          "badgeStatuses": {
+            "self_declared": "Self-Declared",
+            "certified": "Certified",
+            "disputed": "Disputed"
+          },
+          "certificationMethods": {
+            "admin": "Admin",
+            "external_rating": "External Rating",
+            "proof": "Proof Submission",
+            "referrals": "Referrals"
+          },
+          "proofs": "Rating Proofs",
+          "proofEmpty": "No proofs submitted",
+          "proofStatuses": {
+            "pending": "Pending",
+            "approved": "Approved",
+            "rejected": "Rejected"
+          },
+          "proofTypes": {
+            "external_link": "External Link",
+            "file": "File Upload"
+          },
+          "reviewNotes": "Review Notes",
+          "references": "Rating References",
+          "refEmpty": "No reference requests",
+          "refStatuses": {
+            "pending": "Pending",
+            "completed": "Completed",
+            "declined": "Declined",
+            "expired": "Expired",
+            "cancelled": "Cancelled"
+          },
+          "supported": "Supported",
+          "notSupported": "Not Supported"
+        }
       },
       "edit": {
         "title": "Edit User",
@@ -5534,6 +5771,51 @@
         },
         "success": {
           "invitationSent": "Invitation sent successfully to {email}!"
+        }
+      },
+      "players": {
+        "table": {
+          "name": "Name",
+          "email": "Email",
+          "gender": "Gender",
+          "city": "City",
+          "reputation": "Reputation",
+          "status": "Status",
+          "lastSeen": "Last Seen",
+          "createdAt": "Created",
+          "noPlayers": "No players found.",
+          "error": "Failed to load players."
+        },
+        "gender": {
+          "male": "Male",
+          "female": "Female",
+          "other": "Other",
+          "prefer_not_to_say": "Prefer not to say"
+        },
+        "accountStatus": {
+          "active": "Active",
+          "suspended": "Suspended",
+          "deleted": "Deleted",
+          "pending_verification": "Pending"
+        },
+        "filters": {
+          "searchPlaceholder": "Search players...",
+          "allGenders": "All genders",
+          "allStatuses": "All statuses",
+          "clearFilters": "Clear filters"
+        },
+        "pagination": {
+          "showing": "Showing {start} to {end} of {total} players",
+          "page": "Page {current} of {total}"
+        },
+        "bulkActions": {
+          "selected": "{count, plural, =0 {No players selected} one {# player selected} other {# players selected}}",
+          "suspend": "Suspend Selected",
+          "confirmTitle": "Suspend Players",
+          "confirmDescription": "Are you sure you want to suspend {count, plural, one {this player} other {these # players}}?",
+          "cancel": "Cancel",
+          "confirmSuspend": "Suspend",
+          "suspending": "Suspending..."
         }
       }
     },
@@ -7565,6 +7847,54 @@
       "secure": "Secure data",
       "fast": "Quick signup",
       "premium": "Free premium access"
+    }
+  },
+  "gamesPage": {
+    "title": "Upcoming Games",
+    "subtitle": "Find public matches near you and join the action.",
+    "joinButton": "Join Game",
+    "loadMore": "Load More",
+    "noMatches": "No upcoming games right now. Check back soon!",
+    "kmAway": "{distance} km away",
+    "spotsLeft": "{count, plural, =1 {1 spot left} other {# spots left}}",
+    "matchFull": "Full",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "singles": "Singles",
+    "doubles": "Doubles",
+    "casual": "Casual",
+    "competitive": "Competitive",
+    "courtBooked": "Court Booked",
+    "free": "Free",
+    "costPerPlayer": "${amount}/player",
+    "locationTBD": "Location TBD",
+    "allSports": "All",
+    "copied": "Link copied!",
+    "emptyTitle": "No games nearby",
+    "emptyDescription": "There are no upcoming matches in your area right now. Check back soon or join our waitlist to be the first to know.",
+    "emptyCta": "Join the Waitlist",
+    "detail": {
+      "title": "Game Details",
+      "format": "Format",
+      "level": "Level",
+      "type": "Type",
+      "cost": "Cost",
+      "notes": "Notes",
+      "address": "Address",
+      "duration": "Duration",
+      "players": "Players",
+      "joinCta": "Join this Game"
+    },
+    "joinDialog": {
+      "title": "Join this game",
+      "description": "Leave your email and we'll send you the details to join this match.",
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@example.com",
+      "nameLabel": "Name (optional)",
+      "namePlaceholder": "Your name",
+      "submitButton": "Send me the details",
+      "successTitle": "You're in!",
+      "successMessage": "Check your inbox for next steps to join this game."
     }
   },
   "matchPage": {

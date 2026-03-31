@@ -3464,7 +3464,12 @@
       "activate": "Activer"
     },
     "header": {
-      "ctaButton": "Devenir bêta-testeur"
+      "ctaButton": "Devenir bêta-testeur",
+      "nav": {
+        "games": "Parties",
+        "communities": "Communautés",
+        "guides": "Guides"
+      }
     },
     "hero": {
       "badge": "Disponible début 2026",
@@ -4947,10 +4952,10 @@
       },
       "createButton": "Créer une organisation",
       "bulkActions": {
-        "selected": "{count, plural, =0 {Aucune organisation sélectionnée} one {# organisation sélectionnée} other {# organisations sélectionnées}",
+        "selected": "{count, plural, =0 {Aucune organisation sélectionnée} one {# organisation sélectionnée} other {# organisations sélectionnées}}",
         "delete": "Supprimer la sélection",
         "confirmTitle": "Supprimer les organisations",
-        "confirmDescription": "Êtes-vous sûr de vouloir supprimer définitivement {count, plural, one {cette organisation} other {ces # organisations}? Cette action est irréversible et supprimera tous les sites de jeu, terrains, contacts et images associés.",
+        "confirmDescription": "Êtes-vous sûr de vouloir supprimer définitivement {count, plural, one {cette organisation} other {ces # organisations}}? Cette action est irréversible et supprimera tous les sites de jeu, terrains, contacts et images associés.",
         "cancel": "Annuler",
         "confirmDelete": "Supprimer",
         "deleting": "Suppression..."
@@ -5454,7 +5459,239 @@
       "noRating": "Aucune évaluation définie",
       "detail": {
         "title": "Détails de l'utilisateur",
-        "noUser": "Aucun utilisateur trouvé"
+        "backToUsers": "Retour aux utilisateurs",
+        "noUser": "Utilisateur introuvable",
+        "error": "Échec du chargement de l'utilisateur",
+        "sections": {
+          "profileInfo": "Informations du profil",
+          "adminRole": "Rôle administrateur",
+          "sportProfiles": "Profils sportifs",
+          "rating": "Classement et certification",
+          "matchActivity": "Activité de matchs",
+          "matchFeedback": "Évaluations reçues",
+          "reports": "Signalements du joueur",
+          "feedback": "Commentaires",
+          "banHistory": "Historique des suspensions",
+          "organizations": "Organisations",
+          "settings": "Paramètres et préférences"
+        },
+        "fields": {
+          "email": "Courriel",
+          "phone": "Téléphone",
+          "location": "Emplacement",
+          "birthDate": "Date de naissance",
+          "gender": "Genre",
+          "playingHand": "Main de jeu",
+          "reputation": "Score de réputation",
+          "maxTravel": "Distance de déplacement max",
+          "createdAt": "Créé le",
+          "lastActive": "Dernière activité",
+          "lastSeen": "Dernière connexion",
+          "role": "Rôle",
+          "assignedAt": "Assigné le",
+          "notes": "Notes",
+          "onboarding": "Intégration",
+          "emailVerified": "Courriel vérifié",
+          "phoneVerified": "Téléphone vérifié",
+          "bio": "Bio"
+        },
+        "gender": {
+          "male": "Homme",
+          "female": "Femme",
+          "other": "Autre",
+          "prefer_not_to_say": "Préfère ne pas dire"
+        },
+        "playingHand": {
+          "left": "Gauche",
+          "right": "Droite",
+          "both": "Les deux"
+        },
+        "matchActivity": {
+          "totalMatches": "Total de matchs",
+          "played": "Joués",
+          "noShows": "Absences",
+          "lateArrivals": "Retards",
+          "cancellations": "Annulations",
+          "avgRating": "Note moyenne",
+          "noMatches": "Aucun historique de matchs"
+        },
+        "matchFeedback": {
+          "empty": "Aucune évaluation reçue",
+          "showedUp": "Présent",
+          "noShow": "Absent",
+          "late": "En retard",
+          "onTime": "À l'heure"
+        },
+        "report": {
+          "empty": "Aucun signalement",
+          "type": "Type",
+          "status": "Statut",
+          "priority": "Priorité",
+          "actionTaken": "Action prise",
+          "reportTypes": {
+            "harassment": "Harcèlement",
+            "cheating": "Tricherie",
+            "inappropriate_content": "Contenu inapproprié",
+            "spam": "Spam",
+            "impersonation": "Usurpation d'identité",
+            "no_show": "Absence",
+            "unsportsmanlike": "Antisportif",
+            "other": "Autre"
+          },
+          "reportStatuses": {
+            "pending": "En attente",
+            "under_review": "En examen",
+            "dismissed": "Rejeté",
+            "action_taken": "Action prise",
+            "escalated": "Escaladé"
+          }
+        },
+        "organization": {
+          "role": "Rôle",
+          "joinedAt": "Inscrit le",
+          "empty": "N'est membre d'aucune organisation"
+        },
+        "settings": {
+          "privacy": "Confidentialité",
+          "notifications": "Notifications",
+          "showAge": "Afficher l'âge",
+          "showLocation": "Afficher l'emplacement",
+          "showAvailability": "Afficher la disponibilité",
+          "showStats": "Afficher les stats",
+          "matchRequests": "Demandes de matchs",
+          "messages": "Messages",
+          "reminders": "Rappels",
+          "pushEnabled": "Notifications push",
+          "locale": "Langue préférée",
+          "referralCode": "Code de parrainage",
+          "chatRulesAgreed": "Règles de chat acceptées",
+          "enabled": "Activé",
+          "disabled": "Désactivé"
+        },
+        "feedback": {
+          "empty": "Aucun commentaire soumis",
+          "count": "{count, plural, one {# entrée} other {# entrées}}",
+          "adminNotes": "Notes de l'admin",
+          "appVersion": "Version de l'app",
+          "category": {
+            "bug": "Bogue",
+            "feature": "Fonctionnalité",
+            "improvement": "Amélioration",
+            "other": "Autre"
+          },
+          "status": {
+            "new": "Nouveau",
+            "reviewed": "Examiné",
+            "in_progress": "En cours",
+            "resolved": "Résolu",
+            "closed": "Fermé"
+          }
+        },
+        "ban": {
+          "reason": "Raison",
+          "type": "Type",
+          "bannedAt": "Suspendu le",
+          "expiresAt": "Expire le",
+          "liftedAt": "Levé le",
+          "liftReason": "Raison de la levée",
+          "active": "Active",
+          "lifted": "Levée",
+          "empty": "Aucun historique de suspension",
+          "permanent": "Permanente",
+          "temporary": "Temporaire"
+        },
+        "sport": {
+          "primary": "Principal",
+          "inactive": "Inactif",
+          "matchType": "Type de match",
+          "duration": "Durée",
+          "playStyle": "Style de jeu",
+          "attributes": "Points forts",
+          "court": "Terrain préféré",
+          "facility": "Site préféré",
+          "rating": "Classement",
+          "certified": "Certifié",
+          "empty": "Aucun profil sportif",
+          "durationMinutes": "{minutes} min",
+          "matchTypes": {
+            "casual": "Amical",
+            "competitive": "Compétitif",
+            "both": "Les deux"
+          },
+          "playStyles": {
+            "counterpuncher": "Contreur",
+            "aggressive_baseliner": "Attaquant de fond",
+            "serve_and_volley": "Service-volée",
+            "all_court": "Tout terrain"
+          },
+          "playAttributes": {
+            "serve_speed_and_placement": "Service",
+            "net_play": "Jeu au filet",
+            "court_coverage": "Couverture du terrain",
+            "forehand_power": "Puissance du coup droit",
+            "shot_selection": "Sélection de coups",
+            "spin_control": "Contrôle des effets"
+          },
+          "skillLevels": {
+            "beginner": "Débutant",
+            "intermediate": "Intermédiaire",
+            "advanced": "Avancé",
+            "professional": "Professionnel"
+          }
+        },
+        "rating": {
+          "system": "Système de classement",
+          "currentLevel": "Niveau actuel",
+          "previousLevel": "Niveau précédent",
+          "badgeStatus": "Statut du badge",
+          "certifiedVia": "Certifié via",
+          "certifiedAt": "Certifié le",
+          "expiresAt": "Expire le",
+          "levelChangedAt": "Niveau modifié le",
+          "assignedAt": "Assigné le",
+          "source": "Source",
+          "peerEvaluation": "Évaluation par les pairs",
+          "peerEvalAvg": "Score moyen",
+          "peerEvalCount": "Évaluations",
+          "approvedProofs": "Preuves approuvées",
+          "referrals": "Parrainages",
+          "adminNotes": "Notes de l'admin",
+          "noRating": "Aucun classement assigné",
+          "badgeStatuses": {
+            "self_declared": "Auto-déclaré",
+            "certified": "Certifié",
+            "disputed": "Contesté"
+          },
+          "certificationMethods": {
+            "admin": "Admin",
+            "external_rating": "Classement externe",
+            "proof": "Soumission de preuve",
+            "referrals": "Parrainages"
+          },
+          "proofs": "Preuves de classement",
+          "proofEmpty": "Aucune preuve soumise",
+          "proofStatuses": {
+            "pending": "En attente",
+            "approved": "Approuvée",
+            "rejected": "Rejetée"
+          },
+          "proofTypes": {
+            "external_link": "Lien externe",
+            "file": "Fichier téléversé"
+          },
+          "reviewNotes": "Notes de révision",
+          "references": "Références de classement",
+          "refEmpty": "Aucune demande de référence",
+          "refStatuses": {
+            "pending": "En attente",
+            "completed": "Complétée",
+            "declined": "Déclinée",
+            "expired": "Expirée",
+            "cancelled": "Annulée"
+          },
+          "supported": "Supporté",
+          "notSupported": "Non supporté"
+        }
       },
       "edit": {
         "title": "Modifier l'utilisateur",
@@ -5536,6 +5773,51 @@
         },
         "success": {
           "invitationSent": "Invitation envoyée avec succès à {email}!"
+        }
+      },
+      "players": {
+        "table": {
+          "name": "Nom",
+          "email": "Courriel",
+          "gender": "Genre",
+          "city": "Ville",
+          "reputation": "Réputation",
+          "status": "Statut",
+          "lastSeen": "Dernière activité",
+          "createdAt": "Créé le",
+          "noPlayers": "Aucun joueur trouvé.",
+          "error": "Échec du chargement des joueurs."
+        },
+        "gender": {
+          "male": "Homme",
+          "female": "Femme",
+          "other": "Autre",
+          "prefer_not_to_say": "Préfère ne pas dire"
+        },
+        "accountStatus": {
+          "active": "Actif",
+          "suspended": "Suspendu",
+          "deleted": "Supprimé",
+          "pending_verification": "En attente"
+        },
+        "filters": {
+          "searchPlaceholder": "Rechercher des joueurs...",
+          "allGenders": "Tous les genres",
+          "allStatuses": "Tous les statuts",
+          "clearFilters": "Effacer les filtres"
+        },
+        "pagination": {
+          "showing": "Affichage de {start} à {end} sur {total} joueurs",
+          "page": "Page {current} sur {total}"
+        },
+        "bulkActions": {
+          "selected": "{count, plural, =0 {Aucun joueur sélectionné} one {# joueur sélectionné} other {# joueurs sélectionnés}}",
+          "suspend": "Suspendre la sélection",
+          "confirmTitle": "Suspendre les joueurs",
+          "confirmDescription": "Êtes-vous sûr de vouloir suspendre {count, plural, one {ce joueur} other {ces # joueurs}} ?",
+          "cancel": "Annuler",
+          "confirmSuspend": "Suspendre",
+          "suspending": "Suspension en cours..."
         }
       }
     },
@@ -7567,6 +7849,54 @@
       "secure": "Données sécurisées",
       "fast": "Inscription rapide",
       "premium": "Accès premium gratuit"
+    }
+  },
+  "gamesPage": {
+    "title": "Parties à venir",
+    "subtitle": "Trouvez des parties publiques près de chez vous et rejoignez l'action.",
+    "joinButton": "Rejoindre la partie",
+    "loadMore": "Voir plus",
+    "noMatches": "Aucune partie à venir pour le moment. Revenez bientôt!",
+    "kmAway": "{distance} km",
+    "spotsLeft": "{count, plural, =1 {1 place restante} other {# places restantes}}",
+    "matchFull": "Complet",
+    "today": "Aujourd'hui",
+    "tomorrow": "Demain",
+    "singles": "Simple",
+    "doubles": "Double",
+    "casual": "Récréatif",
+    "competitive": "Compétitif",
+    "courtBooked": "Terrain réservé",
+    "free": "Gratuit",
+    "costPerPlayer": "{amount}$/joueur",
+    "locationTBD": "Lieu à déterminer",
+    "allSports": "Tous",
+    "copied": "Lien copié!",
+    "emptyTitle": "Aucune partie à proximité",
+    "emptyDescription": "Il n'y a pas de parties à venir dans votre secteur pour le moment. Revenez bientôt ou inscrivez-vous à la liste d'attente.",
+    "emptyCta": "Rejoindre la liste d'attente",
+    "detail": {
+      "title": "Détails de la partie",
+      "format": "Format",
+      "level": "Niveau",
+      "type": "Type",
+      "cost": "Coût",
+      "notes": "Notes",
+      "address": "Adresse",
+      "duration": "Durée",
+      "players": "Joueurs",
+      "joinCta": "Rejoindre cette partie"
+    },
+    "joinDialog": {
+      "title": "Rejoindre cette partie",
+      "description": "Laissez votre courriel et nous vous enverrons les détails pour rejoindre cette partie.",
+      "emailLabel": "Courriel",
+      "emailPlaceholder": "vous@exemple.com",
+      "nameLabel": "Nom (optionnel)",
+      "namePlaceholder": "Votre nom",
+      "submitButton": "Envoyez-moi les détails",
+      "successTitle": "C'est fait!",
+      "successMessage": "Consultez votre boîte de réception pour les prochaines étapes."
     }
   },
   "matchPage": {

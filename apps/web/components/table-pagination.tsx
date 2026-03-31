@@ -10,6 +10,7 @@ interface TablePaginationProps {
   totalPages: number;
   totalItems: number;
   pageSize: number;
+  translationNamespace?: string;
 }
 
 export function TablePagination({
@@ -17,10 +18,11 @@ export function TablePagination({
   totalPages,
   totalItems,
   pageSize,
+  translationNamespace = 'admin.organizations.pagination',
 }: TablePaginationProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const t = useTranslations('admin.organizations.pagination');
+  const t = useTranslations(translationNamespace);
 
   const handlePageChange = (newPage: number) => {
     const current = new URLSearchParams(Array.from(searchParams.entries()));

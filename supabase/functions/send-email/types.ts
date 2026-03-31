@@ -21,7 +21,7 @@ export type InviteSource =
 export type InviteStatus = 'pending' | 'sent' | 'accepted' | 'expired' | 'bounced' | 'cancelled';
 
 // Email type union
-export type EmailType = 'invitation' | 'notification';
+export type EmailType = 'invitation' | 'notification' | 'match_interest';
 
 // Raw database record from Supabase trigger (what we receive)
 export interface InvitationRecord {
@@ -88,8 +88,30 @@ export interface NotificationEmailPayload {
   payload?: Record<string, unknown>;
 }
 
+// Raw record from match_interest trigger
+export interface MatchInterestRecord {
+  emailType: 'match_interest';
+  id: number;
+  match_id: string;
+  email: string;
+  name: string | null;
+  created_at: string;
+}
+
+// Processed payload for match interest email rendering
+export interface MatchInterestEmailPayload {
+  type: 'match_interest';
+  email: string;
+  name: string | null;
+  sportName: string;
+  matchDate: string;
+  matchTime: string;
+  location: string;
+  matchUrl: string;
+}
+
 // Discriminated union for all email requests (raw records from triggers)
-export type EmailRequest = InvitationRecord | NotificationRecord;
+export type EmailRequest = InvitationRecord | NotificationRecord | MatchInterestRecord;
 
 // Email response types
 export interface EmailSuccessResponse {

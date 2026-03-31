@@ -1,6 +1,8 @@
 import { AdminOrganizationsHeader } from '@/components/admin-organizations-header';
-import { OrganizationsTableClient } from '@/components/organizations-table-client';
-import { OrganizationsTableFilters } from '@/components/organizations-table-filters';
+import {
+  OrganizationsDataTable,
+  OrganizationsFilters,
+} from '@/components/organizations-data-table';
 import { buildTableQuery } from '@/lib/supabase-table-query';
 import { createClient } from '@/lib/supabase/server';
 import { parseTableParams } from '@/lib/table-params';
@@ -67,14 +69,14 @@ export default async function AdminOrganizationsPage({
       />
 
       <div className="flex flex-col gap-3">
-        <OrganizationsTableFilters />
+        <OrganizationsFilters />
 
         {fetchError ? (
           <div className="grow overflow-hidden">
             <p className="text-destructive m-0">{fetchError}</p>
           </div>
         ) : result ? (
-          <OrganizationsTableClient
+          <OrganizationsDataTable
             organizations={result.data}
             currentPage={result.page}
             totalPages={result.totalPages}
