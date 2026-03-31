@@ -23,6 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import { useRequestToJoinCommunityByInviteCode } from '@rallia/shared-hooks';
+import * as Analytics from '../../../services/analytics';
 
 interface CommunityQRScannerModalProps {
   visible: boolean;
@@ -117,6 +118,7 @@ export function CommunityQRScannerModal({
         });
 
         if (result.success && result.communityId && result.communityName) {
+          Analytics.communityJoined({ source: 'qr' });
           onClose();
           onRequestSent(result.communityId, result.communityName);
         } else {

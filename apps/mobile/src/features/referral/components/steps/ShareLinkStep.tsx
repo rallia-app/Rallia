@@ -24,6 +24,7 @@ import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import type { TranslationKey } from '../../../../hooks';
 import { InviteContactsStep } from './InviteContactsStep';
+import * as Analytics from '../../../../services/analytics';
 
 // ============================================================================
 // TYPES
@@ -158,10 +159,13 @@ export const ShareLinkStep: React.FC<ShareLinkStepProps> = ({
   const handleShare = useCallback(async () => {
     if (!referralLink) return;
     try {
-      await Share.share({
+      const result = await Share.share({
         message: t('referral.shareMessage').replace('{link}', referralLink),
         title: t('referral.shareTitle'),
       });
+      if (result.action === Share.sharedAction) {
+        Analytics.referralInviteShared({ channel: 'share_sheet' });
+      }
     } catch (error) {
       if (error instanceof Error && error.message !== 'User did not share') {
         toast.error(t('common.error'));

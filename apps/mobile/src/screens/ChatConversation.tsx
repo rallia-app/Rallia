@@ -60,6 +60,7 @@ import { useMatchDetailSheet } from '../context/MatchDetailSheetContext';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import type { MessageListRef } from '../features/chat';
 import type { RootStackParamList } from '../navigation/types';
+import * as Analytics from '../services/analytics';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type ChatRouteProp = RouteProp<RootStackParamList, 'ChatConversation'>;
@@ -515,6 +516,10 @@ export default function ChatConversationScreen() {
     (content: string, replyToMessageId?: string) => {
       if (!playerId || !conversationId) return;
 
+      Analytics.messageSent({
+        conversation_type: conversation?.conversation_type ?? 'unknown',
+      });
+
       sendMessageMutation.mutate({
         conversation_id: conversationId,
         sender_id: playerId,
@@ -525,7 +530,7 @@ export default function ChatConversationScreen() {
       // Clear reply state after sending
       setReplyToMessage(null);
     },
-    [playerId, conversationId, sendMessageMutation]
+    [playerId, conversationId, sendMessageMutation, conversation?.conversation_type]
   );
 
   const handleReact = useCallback(

@@ -33,6 +33,7 @@ import RatingBadge from '../../../components/RatingBadge';
 import ReputationBadge from '../../../components/ReputationBadge';
 import type { ReputationDisplay } from '@rallia/shared-services';
 import { InviteFromListsStep } from '../../shared-lists/components/InviteFromListsStep';
+import * as Analytics from '../../../services/analytics';
 
 // =============================================================================
 // TYPES
@@ -372,6 +373,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
   // Handle send invitations
   const handleSendInvitations = useCallback(() => {
     if (selectedPlayers.length === 0) return;
+    Analytics.inviteToMatchSent({ invite_count: selectedPlayers.length });
     const playerIds = selectedPlayers.map(p => p.id);
     invitePlayers(playerIds);
   }, [selectedPlayers, invitePlayers]);

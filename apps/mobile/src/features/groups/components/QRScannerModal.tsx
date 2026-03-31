@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import { useJoinGroupByInviteCode } from '@rallia/shared-hooks';
+import * as Analytics from '../../../services/analytics';
 
 interface QRScannerModalProps {
   visible: boolean;
@@ -107,6 +108,7 @@ export function QRScannerModal({ visible, onClose, playerId, onGroupJoined }: QR
         });
 
         if (result.success && result.groupId && result.groupName) {
+          Analytics.groupJoined({ source: 'qr' });
           onClose();
           onGroupJoined(result.groupId, result.groupName);
         } else {

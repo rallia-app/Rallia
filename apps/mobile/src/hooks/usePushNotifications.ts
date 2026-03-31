@@ -15,6 +15,7 @@ import {
   navigateToCommunityScreen,
   navigateToIncomingReferenceRequestsFromOutside,
 } from '../navigation';
+import * as Analytics from '../services/analytics';
 
 // =============================================================================
 // TYPES
@@ -303,6 +304,7 @@ export function usePushNotifications(
     const notificationType = data.type as string | undefined;
 
     Logger.logUserAction('push_notification_tapped', { data, type: notificationType });
+    Analytics.pushNotificationOpened({ type: notificationType ?? 'unknown' });
 
     // Handle match-related notifications
     if (data.matchId && notificationType) {

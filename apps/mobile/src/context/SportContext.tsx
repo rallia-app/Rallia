@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePlayerSports } from '@rallia/shared-hooks';
+import * as Analytics from '../services/analytics';
 
 const SPORT_STORAGE_KEY = '@rallia/selected-sport';
 const GUEST_SPORTS_STORAGE_KEY = '@rallia/guest-selected-sports';
@@ -172,12 +173,12 @@ export function SportProvider({ children, userId }: SportProviderProps) {
   }, [userId, userSports, playerSportsLoading]);
 
   const setSelectedSport = useCallback(async (sport: Sport) => {
+    Analytics.sportModeSwitched({ sport_name: sport.name });
     try {
       await AsyncStorage.setItem(SPORT_STORAGE_KEY, sport.name);
       setSelectedSportState(sport);
     } catch (error) {
       console.error('Failed to save selected sport:', error);
-      // Still update state even if storage fails
       setSelectedSportState(sport);
     }
   }, []);

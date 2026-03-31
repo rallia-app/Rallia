@@ -21,6 +21,7 @@ import { useOverlay, useSport, useLocationMode } from '../../context';
 import { SportStep, type Sport } from './SportStep';
 import { PostalCodeStep } from './PostalCodeStep';
 import { LocationPermissionStep } from './LocationPermissionStep';
+import * as Analytics from '../../services/analytics';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -161,6 +162,7 @@ export function PreOnboardingScreen() {
   const handleLocationContinue = useCallback(
     async (_locationEnabled: boolean) => {
       mediumHaptic();
+      Analytics.preOnboardingCompleted({ sport_count: selectedSports.length });
       // Complete the pre-onboarding flow
       onSportSelectionComplete(selectedSports);
       // Set location mode to home so effective location uses the home location

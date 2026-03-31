@@ -1,22 +1,20 @@
 import { PostHogProvider as PHProvider } from 'posthog-react-native';
 
+const isProduction = process.env.EXPO_PUBLIC_APP_ENV === 'production';
+const apiKey = process.env.EXPO_PUBLIC_POSTHOG_KEY ?? 'phc_dummy';
+
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
-  const apiKey = process.env.EXPO_PUBLIC_POSTHOG_KEY;
-
-  if (process.env.EXPO_PUBLIC_APP_ENV !== 'production' || !apiKey) {
-    return <>{children}</>;
-  }
-
   return (
     <PHProvider
       apiKey={apiKey}
       options={{
         host: process.env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://us.i.posthog.com',
+        disabled: !isProduction || !process.env.EXPO_PUBLIC_POSTHOG_KEY,
         enableSessionReplay: false,
-        captureAppLifecycleEvents: true,
+        captureAppLifecycleEvents: isProduction,
       }}
       autocapture={{
-        captureTouches: true,
+        captureTouches: isProduction,
         captureScreens: false,
       }}
     >

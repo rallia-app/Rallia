@@ -41,6 +41,7 @@ import {
   formatRelativeTime,
 } from '@rallia/shared-utils';
 import { formatDateMonthYear } from '../utils/dateFormatting';
+import * as Analytics from '../services/analytics';
 import type { RootStackParamList } from '../navigation/types';
 import type { Profile, Player } from '@rallia/shared-types';
 import { MATCH_DURATION_ENUM_LABELS } from '@rallia/shared-types';
@@ -210,6 +211,10 @@ const PlayerProfile = () => {
   const getOrCreateDirectConversation = useGetOrCreateDirectConversation();
   const { display: reputationDisplay, loading: reputationLoading } = usePlayerReputation(playerId);
   const toast = useToast();
+
+  useEffect(() => {
+    Analytics.playerProfileViewed({ source: 'navigation' });
+  }, [playerId]);
 
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -1137,6 +1142,7 @@ const PlayerProfile = () => {
 
         if (error) throw error;
         setIsBlocked(true);
+        Analytics.playerBlocked();
         Logger.info('Player blocked', { playerId });
       }
     } catch (error) {

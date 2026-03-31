@@ -17,6 +17,7 @@ import { calculateRefundAmount } from '@rallia/shared-services';
 import { useCancelBooking, useCancellationPolicy, bookingKeys } from '@rallia/shared-hooks';
 import { lightHaptic, mediumHaptic } from '../../../utils/haptics';
 import type { CancellationReasonEnum } from '@rallia/shared-types';
+import * as Analytics from '../../../services/analytics';
 
 interface CancelBookingModalProps {
   visible: boolean;
@@ -119,6 +120,7 @@ export default function CancelBookingModal({
 
   const handleCancel = () => {
     lightHaptic();
+    Analytics.bookingCancelled({ reason: selectedReason ?? undefined });
     cancelBooking({
       bookingId: booking.id,
       reason: selectedReason ?? undefined,

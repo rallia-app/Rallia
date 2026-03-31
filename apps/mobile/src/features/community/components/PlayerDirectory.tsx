@@ -18,6 +18,7 @@ import { useUserHomeLocation } from '../../../context';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import { supabase, Logger } from '@rallia/shared-services';
 import { lightHaptic } from '@rallia/shared-utils';
+import * as Analytics from '../../../services/analytics';
 import { SearchBar } from '../../../components/SearchBar';
 import PlayerCard from './PlayerCard';
 import { PlayerFiltersBar, type PlayerFilters, DEFAULT_PLAYER_FILTERS } from './PlayerFiltersBar';
@@ -359,6 +360,7 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
       if (wasFavorite) {
         setFavoritePlayerIds(prev => prev.filter(id => id !== playerId));
       } else {
+        Analytics.playerFavorited();
         setFavoritePlayerIds(prev => [...prev, playerId]);
       }
 

@@ -40,6 +40,7 @@ import { useSport } from '../../../context/SportContext';
 import type { RootStackParamList } from '../../../navigation/types';
 import { uploadImage } from '../../../services/imageUpload';
 import { pickImageWithCropper } from '../../../utils/imagePicker';
+import * as Analytics from '../../../services/analytics';
 
 // =============================================================================
 // FORM COMPONENT
@@ -241,6 +242,7 @@ export const CreateGroupForm: React.FC<CreateGroupFormProps> = ({
         }
       }
 
+      Analytics.groupCreated({ sport: selectedSport?.name });
       toast.success(t('groups.success.created'));
       resetForm();
       onSuccess?.(newGroup.id);

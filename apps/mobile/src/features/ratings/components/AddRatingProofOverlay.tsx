@@ -11,6 +11,7 @@ import { ExternalLinkProofForm } from './ExternalLinkProofOverlay';
 import { ImageProofForm } from './ImageProofOverlay';
 import { VideoProofForm } from './VideoProofOverlay';
 import { DocumentProofForm } from './DocumentProofOverlay';
+import * as Analytics from '../../../services/analytics';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -89,6 +90,7 @@ export function AddRatingProofActionSheet({ payload }: SheetProps<'add-rating-pr
   }, [slideProgress]);
 
   const handleSuccess = useCallback(() => {
+    Analytics.ratingProofSubmitted({ sport: 'unknown' });
     onSuccessCallback?.();
   }, [onSuccessCallback]);
 

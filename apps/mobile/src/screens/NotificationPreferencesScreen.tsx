@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { useTheme, useNotificationPreferencesWithActions } from '@rallia/shared-hooks';
 import { useAuth, useTranslation } from '../hooks';
+import * as Analytics from '../services/analytics';
 import {
   lightTheme,
   darkTheme,
@@ -452,6 +453,11 @@ const NotificationPreferencesScreen: React.FC = () => {
   const handleToggle = useCallback(
     (type: ExtendedNotificationTypeEnum, channel: DeliveryChannelEnum, enabled: boolean) => {
       successHaptic();
+      Analytics.notificationPreferenceChanged({
+        notification_type: type,
+        channel,
+        enabled,
+      });
       setPreference({ notificationType: type, channel, enabled });
     },
     [setPreference]

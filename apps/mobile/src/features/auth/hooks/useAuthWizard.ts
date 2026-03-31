@@ -17,6 +17,7 @@ import { supabase } from '../../../lib/supabase';
 import { Logger } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
 import { checkOnboardingStatus, getFriendlyErrorMessage, RESEND_COOLDOWN_SECONDS } from '../utils';
+import * as Analytics from '../../../services/analytics';
 
 interface UseAuthWizardOptions {
   /**
@@ -219,6 +220,7 @@ export function useAuthWizard(options: UseAuthWizardOptions = {}): UseAuthWizard
     setErrorMessage('');
 
     try {
+      Analytics.signInStarted({ method: 'email' });
       Logger.debug('Sending OTP via Supabase SDK', { emailDomain: email.split('@')[1] });
 
       const result = await signInWithEmail(email, { data: { locale } });
@@ -361,6 +363,7 @@ export function useAuthWizard(options: UseAuthWizardOptions = {}): UseAuthWizard
 
       // Check onboarding status using shared utility
       const needsOnboarding = await checkOnboardingStatus(userId);
+      Analytics.signInCompleted({ method: 'email', is_new_user: needsOnboarding });
 
       Logger.logNavigation(
         needsOnboarding ? 'new_user_start_onboarding' : 'returning_user_skip_onboarding',

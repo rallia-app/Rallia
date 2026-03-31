@@ -471,7 +471,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         Logger.error('Error signing out', error);
         return { success: false, error };
       }
-      posthog.reset();
+      posthog?.reset();
       return { success: true };
     } catch (error) {
       Logger.error('Unexpected sign out error', error as Error);

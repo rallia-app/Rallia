@@ -17,6 +17,7 @@ import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Analytics from '../../../../services/analytics';
 
 type TimeSlot = 'AM' | 'PM' | 'EVE';
 type DayOfWeek = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
@@ -150,6 +151,7 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
         }
 
         Logger.debug('player_availabilities_saved', { availabilityData });
+        Analytics.availabilityScheduleUpdated();
 
         // Save the privacy setting to the player table
         const {

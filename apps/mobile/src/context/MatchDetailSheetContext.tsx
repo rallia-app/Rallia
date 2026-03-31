@@ -14,6 +14,7 @@ import React, { createContext, useContext, useRef, useCallback, useState, ReactN
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import { getMatchWithDetails } from '@rallia/shared-services';
+import * as Analytics from '../services/analytics';
 
 // =============================================================================
 // TYPES
@@ -83,6 +84,7 @@ export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> =
    */
   const openSheet = useCallback(
     (match: MatchDetailData, options?: { onMatchRemoved?: () => void }) => {
+      Analytics.matchViewed({ match_id: match.id, source: 'match_card' });
       onMatchRemovedRef.current = options?.onMatchRemoved ?? null;
       setSelectedMatch(match);
       sheetRef.current?.present();

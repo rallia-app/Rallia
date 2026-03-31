@@ -42,6 +42,7 @@ const BASE_WHITE = '#ffffff';
 import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
 import { useCreateMatch, useUpdateMatch } from '@rallia/shared-hooks';
 import { validateMatchUpdate, getMatchWithDetails } from '@rallia/shared-services';
+import * as Analytics from '../../../services/analytics';
 
 import { useTheme } from '@rallia/shared-hooks';
 import { useTranslation, type TranslationKey } from '../../../hooks/useTranslation';
@@ -296,6 +297,9 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   const lastSavedStep = useRef<number | null>(null);
   const hasUnsavedChanges = useRef(false);
 
+  // Analytics: track wizard start time for duration calculation
+  const wizardStartTimeRef = useRef(Date.now());
+
   // Confirmation modal states (replace native Alert.alert)
   const [showConfirmChangesModal, setShowConfirmChangesModal] = useState(false);
   const [confirmChangesInfo, setConfirmChangesInfo] = useState({
@@ -547,6 +551,12 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   // Match creation mutation
   const { createMatch, isCreating } = useCreateMatch({
     onSuccess: match => {
+      Analytics.matchCreated({
+        sport: values.sportId,
+        format: values.format,
+        is_public: values.visibility === 'public',
+        player_count: values.playerExpectation,
+      });
       // Add a small delay so the creation doesn't feel too instant
       // This gives the user time to see the loading state
       setTimeout(() => {
@@ -1015,6 +1025,10 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
           text: t('matchCreation.discardDraft'),
           style: 'destructive',
           onPress: () => {
+            Analytics.matchCreationAbandoned({
+              last_step: currentStep,
+              duration_seconds: Math.round((Date.now() - wizardStartTimeRef.current) / 1000),
+            });
             clearDraft();
             onClose();
           },

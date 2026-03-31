@@ -54,6 +54,7 @@ import type { TranslationKey, TranslationOptions } from '../../../../hooks/useTr
 import { useEffectiveLocation } from '../../../../hooks/useEffectiveLocation';
 import { useUserHomeLocation } from '../../../../context';
 import { usePlayer } from '@rallia/shared-hooks';
+import * as Analytics from '../../../../services/analytics';
 
 // =============================================================================
 // TYPES
@@ -811,6 +812,8 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       slot: FormattedSlot,
       data: { facilityId: string; courtId: string; courtNumber: number | null }
     ) => {
+      Analytics.courtBooked({ facility_id: data.facilityId, sport: sportId ?? 'unknown' });
+
       // Update form with facility
       setValue('facilityId', data.facilityId);
       setValue('courtId', data.courtId);
@@ -848,6 +851,8 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   // Handle slot press - different behavior for local vs external slots
   const handleSlotPress = useCallback(
     async (facility: FacilitySearchResult, slot: FormattedSlot) => {
+      Analytics.bookingInitiated({ facility_id: facility.id, sport: sportId ?? 'unknown' });
+
       // === LOCAL SLOT: Open court booking sheet ===
       if (slot.isLocalSlot) {
         lightHaptic();

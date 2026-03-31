@@ -18,6 +18,7 @@ import { supabase } from '../../../lib/supabase';
 import { Logger } from '@rallia/shared-services';
 import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
 import { checkOnboardingStatus, getFriendlyErrorMessage } from '../utils';
+import * as Analytics from '../../../services/analytics';
 
 // =============================================================================
 // TYPES
@@ -202,6 +203,7 @@ export function useSocialAuth(): UseSocialAuthReturn {
 
     try {
       Logger.logUserAction('social_signin_initiated', { provider: 'google' });
+      Analytics.signInStarted({ method: 'google' });
 
       // Check if Google Play Services are available (Android)
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
@@ -240,6 +242,7 @@ export function useSocialAuth(): UseSocialAuthReturn {
       successHaptic();
 
       const needsOnboarding = await checkOnboardingStatus(data.user.id);
+      Analytics.signInCompleted({ method: 'google', is_new_user: needsOnboarding });
 
       setIsLoading(false);
       setLoadingProvider(null);
@@ -293,6 +296,7 @@ export function useSocialAuth(): UseSocialAuthReturn {
 
     try {
       Logger.logUserAction('social_signin_initiated', { provider: 'apple' });
+      Analytics.signInStarted({ method: 'apple' });
 
       if (Platform.OS !== 'ios') {
         throw new Error('Apple Sign-In is only available on iOS');
@@ -344,6 +348,7 @@ export function useSocialAuth(): UseSocialAuthReturn {
       successHaptic();
 
       const needsOnboarding = await checkOnboardingStatus(data.user.id);
+      Analytics.signInCompleted({ method: 'apple', is_new_user: needsOnboarding });
 
       setIsLoading(false);
       setLoadingProvider(null);
@@ -383,6 +388,7 @@ export function useSocialAuth(): UseSocialAuthReturn {
 
     try {
       Logger.logUserAction('social_signin_initiated', { provider: 'facebook' });
+      Analytics.signInStarted({ method: 'facebook' });
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'facebook',
@@ -436,6 +442,7 @@ export function useSocialAuth(): UseSocialAuthReturn {
       successHaptic();
 
       const needsOnboarding = await checkOnboardingStatus(user.id);
+      Analytics.signInCompleted({ method: 'facebook', is_new_user: needsOnboarding });
 
       setIsLoading(false);
       setLoadingProvider(null);

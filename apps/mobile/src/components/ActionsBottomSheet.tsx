@@ -51,6 +51,7 @@ import { CreateNetworkWizard } from '../features/groups';
 import { AuthWizard } from '../features/auth';
 import { OnboardingWizard } from '../features/onboarding/components/wizard';
 import { navigateFromOutside, navigateToCommunityScreen, navigationRef } from '../navigation';
+import * as Analytics from '../services/analytics';
 
 // =============================================================================
 // TYPES
@@ -338,6 +339,7 @@ export const ActionsBottomSheet: React.FC = () => {
   // Handle create match - show wizard with slide animation
   const handleCreateMatch = useCallback(() => {
     lightHaptic();
+    Analytics.matchCreationStarted();
     setShowWizard(true);
     slideIn();
   }, [slideIn]);

@@ -100,6 +100,7 @@ import RatingBadge from './RatingBadge';
 import ReputationBadge from './ReputationBadge';
 import { useAppNavigation } from '../navigation';
 import type { PlayerWithProfile, OpponentForFeedback } from '@rallia/shared-types';
+import * as Analytics from '../services/analytics';
 
 // Use base.white from design system for consistency
 
@@ -652,6 +653,7 @@ const CheckInButton: React.FC<CheckInButtonProps> = ({
         });
       }
 
+      Analytics.matchCheckInCompleted({ sport: 'unknown' });
       checkIn({
         playerId,
         latitude: position.coords.latitude,
@@ -839,6 +841,12 @@ export const MatchDetailSheet: React.FC = () => {
   } = useMatchActions(selectedMatch?.id, {
     matchData: selectedMatch ?? undefined,
     onJoinSuccess: result => {
+      const sport = selectedMatch?.sport?.name ?? 'unknown';
+      if (result.status === 'joined' || result.status === 'waitlisted') {
+        Analytics.matchJoined({ sport });
+      } else {
+        Analytics.matchJoinRequested({ sport });
+      }
       successHaptic();
       closeSheet();
       if (result.status === 'joined') {
@@ -871,6 +879,7 @@ export const MatchDetailSheet: React.FC = () => {
       toast.error(error.message);
     },
     onCancelSuccess: () => {
+      Analytics.matchCancelled({ sport: selectedMatch?.sport?.name ?? 'unknown' });
       successHaptic();
       setShowCancelModal(false);
       onMatchRemovedRef.current?.();
@@ -1104,6 +1113,7 @@ export const MatchDetailSheet: React.FC = () => {
     lightHaptic();
     try {
       await shareMatch(selectedMatch, { t, locale });
+      Analytics.matchShared({ sport: selectedMatch.sport?.name ?? 'unknown' });
     } catch {
       // Silently handle errors
     }
@@ -1435,8 +1445,9 @@ export const MatchDetailSheet: React.FC = () => {
   // Confirm decline invitation
   const handleConfirmDeclineInvite = useCallback(() => {
     if (!playerId) return;
+    Analytics.matchDeclined({ sport: selectedMatch?.sport?.name ?? 'unknown' });
     declineInvite(playerId);
-  }, [playerId, declineInvite]);
+  }, [playerId, declineInvite, selectedMatch]);
 
   // Handle open in maps
   const handleOpenMaps = useCallback(() => {

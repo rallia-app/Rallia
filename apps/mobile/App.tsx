@@ -85,7 +85,9 @@ import { useBadgeCountSync } from '@rallia/shared-hooks/src/useBadgeCountSync';
 import { ErrorBoundary, ToastProvider, NetworkProvider } from '@rallia/shared-components';
 import type { ErrorBoundaryTranslations } from '@rallia/shared-components';
 import { getLocales } from 'expo-localization';
+import * as Application from 'expo-application';
 import { Logger } from './src/services/logger';
+import { setAnalyticsClient, appOpened, deepLinkOpened } from './src/services/analytics';
 import {
   AuthProvider,
   useAuth,
@@ -197,10 +199,20 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
   // This updates immediately on mount and every 2 minutes while the app is active
   useUpdateLastSeen(userId);
 
-  // Identify user in PostHog when authenticated
+  // Wire PostHog for analytics service and identify user when authenticated
   const posthog = usePostHog();
   useEffect(() => {
-    if (user) {
+    if (posthog) {
+      setAnalyticsClient(posthog);
+      posthog.register({
+        platform: 'mobile',
+        app_version: Application.nativeApplicationVersion ?? null,
+      });
+    }
+  }, [posthog]);
+
+  useEffect(() => {
+    if (user && posthog) {
       posthog.identify(user.id, { email: user.email ?? null });
     }
   }, [user, posthog]);
@@ -212,6 +224,7 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
       const matchId = parseMatchIdFromUrl(url);
       if (matchId) {
         Logger.logNavigation('deep_link_received', { url, matchId });
+        deepLinkOpened({ link_type: 'match' });
         setPendingMatchId(matchId);
       }
     },
@@ -490,8 +503,14 @@ function AppContent() {
   const { theme } = useTheme();
   const { setSplashComplete, isSplashComplete, permissionsHandled } = useOverlay();
   const isCheckingUpdate = useOTAUpdate();
+  const posthog = usePostHog();
   // TEMPORARILY DISABLED: User walkthrough deactivated
   // const { showCompletionModal, dismissCompletionModal, lastCompletedTourId } = useTour();
+
+  // Track app opened event on mount
+  useEffect(() => {
+    appOpened({ cold_start: true });
+  }, []);
 
   // Build a React Navigation theme so the screen container background
   // (including behind the status bar / Dynamic Island) uses the correct color.
@@ -525,6 +544,12 @@ function AppContent() {
           // refetch when the user navigates back to a screen.
           // Fresh queries (within staleTime) are not affected.
           focusManager.setFocused(true);
+
+          // Track screen views in PostHog
+          const currentRoute = navigationRef.current?.getCurrentRoute();
+          if (currentRoute?.name && posthog) {
+            posthog.screen(currentRoute.name);
+          }
         }}
       >
         <SheetProvider>

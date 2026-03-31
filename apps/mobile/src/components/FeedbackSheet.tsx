@@ -16,6 +16,7 @@ import { useTheme } from '@rallia/shared-hooks';
 import { useFeedbackSheet } from '../context/FeedbackSheetContext';
 import { useMatchDetailSheet } from '../context/MatchDetailSheetContext';
 import { MatchFeedbackWizard } from '../features/matches/components/MatchFeedbackWizard';
+import * as Analytics from '../services/analytics';
 
 // =============================================================================
 // MAIN COMPONENT
@@ -51,14 +52,18 @@ export const FeedbackSheet: React.FC = () => {
     []
   );
 
-  // Handle close
+  // Handle close (without completing feedback)
   const handleClose = useCallback(() => {
     selectionHaptic();
+    Analytics.feedbackAbandoned();
     closeSheet();
   }, [closeSheet]);
 
   // Handle complete - update the match context to reflect feedback_completed
   const handleComplete = useCallback(() => {
+    Analytics.matchFeedbackSubmitted({
+      sport: selectedMatch?.sport?.name ?? 'unknown',
+    });
     // Update the participant's feedback_completed flag in the match context
     // This ensures the MatchDetailSheet shows the updated UI state
     if (selectedMatch && feedbackData?.reviewerId) {

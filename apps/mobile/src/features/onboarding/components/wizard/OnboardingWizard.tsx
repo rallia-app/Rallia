@@ -14,7 +14,7 @@
  * 7. Success (final)
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -47,6 +47,7 @@ import { useProfile, usePlayer, usePostalCodeGeocode } from '@rallia/shared-hook
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PENDING_REFERRAL_KEY_EXPORT } from '../../../../screens/InviteReferralScreen';
 import { replaceImage } from '../../../../services/imageUpload';
+import * as Analytics from '../../../../services/analytics';
 import { useImagePicker } from '../../../../hooks';
 import { useSport, useUserHomeLocation } from '../../../../context';
 import type { TranslationKey } from '@rallia/shared-translations';
@@ -307,6 +308,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
   // Image picker hook
   const { image: profileImage, pickImage } = useImagePicker();
+
+  // Analytics: track onboarding start time for duration calculation
+  const onboardingStartTimeRef = useRef(Date.now());
+  useEffect(() => {
+    if (!isLoadingData) {
+      Analytics.onboardingStarted({ auth_provider: 'unknown' });
+    }
+  }, [isLoadingData]);
 
   // Sync picked image to form data
   useEffect(() => {
@@ -874,6 +883,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             message: 'Onboarding marked as completed in profile',
           });
 
+          Analytics.onboardingCompleted({
+            sports: formData.selectedSportIds,
+            duration_seconds: Math.round((Date.now() - onboardingStartTimeRef.current) / 1000),
+          });
+
           // Attribute pending referral if one was stored before signup
           try {
             const pendingCode = await AsyncStorage.getItem(PENDING_REFERRAL_KEY_EXPORT);
@@ -884,6 +898,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               } = await supabase.auth.getUser();
               if (userId) {
                 await attributeReferral(pendingCode, userId, user?.email ?? undefined);
+                Analytics.referralCodeUsed();
               }
               await AsyncStorage.removeItem(PENDING_REFERRAL_KEY_EXPORT);
             }
@@ -944,10 +959,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   // Handle back to landing
   const handleBackToLanding = useCallback(() => {
     Keyboard.dismiss();
-    // Could add confirmation dialog here if form has data
+    Analytics.onboardingAbandoned({
+      last_step: currentStepId,
+      step_index: currentStep,
+      duration_seconds: Math.round((Date.now() - onboardingStartTimeRef.current) / 1000),
+    });
     resetWizard();
     onBackToLanding();
-  }, [resetWizard, onBackToLanding]);
+  }, [resetWizard, onBackToLanding, currentStepId, currentStep]);
 
   // Animated styles for step container
   const animatedStepStyle = useAnimatedStyle(() => ({

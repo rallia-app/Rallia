@@ -9,6 +9,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import DatabaseService, { Logger, supabase } from '@rallia/shared-services';
 import type { FacilitySearchResult } from '@rallia/shared-types';
+import * as Analytics from '../../../services/analytics';
 
 export type OnboardingStepId =
   | 'personal'
@@ -571,6 +572,11 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
    */
   const goToNextStep = useCallback(() => {
     if (currentStepIndex < steps.length - 1) {
+      Analytics.onboardingStepCompleted({
+        step_name: steps[currentStepIndex],
+        step_index: currentStepIndex,
+      });
+
       Logger.logNavigation('onboarding_next_step', {
         from: steps[currentStepIndex],
         to: steps[currentStepIndex + 1],
