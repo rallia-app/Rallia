@@ -1,8 +1,12 @@
-import { AdminTableRow } from '@/components/admin-table-row';
-import { SortableTableHeader } from '@/components/sortable-table-header';
-import { TablePagination } from '@/components/table-pagination';
+import { AdminsDataTable, type TransformedAdmin } from '@/components/admins-data-table';
+import {
+  PlayersDataTable,
+  PlayersFilters,
+  type TransformedPlayer,
+} from '@/components/players-data-table';
+import { UrlTabs } from '@/components/url-tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TabsContent } from '@/components/ui/tabs';
 import { UserInvitationButton } from '@/components/user-invitation-button';
 import { buildTableQuery } from '@/lib/supabase-table-query';
 import { parseTableParams } from '@/lib/table-params';
@@ -27,16 +31,26 @@ interface AdminWithProfile {
   } | null;
 }
 
-interface TransformedAdmin {
+interface PlayerWithProfile {
   id: string;
-  role: 'super_admin' | 'moderator' | 'support';
-  assigned_at: string;
-  first_name: string | null;
-  last_name: string | null;
-  display_name: string | null;
-  is_active: boolean;
+  gender: string | null;
+  playing_hand: string | null;
+  city: string | null;
+  province: string | null;
+  country: string | null;
+  reputation_score: number;
+  last_seen_at: string | null;
   created_at: string;
-  email: string;
+  profile: {
+    first_name: string;
+    last_name: string | null;
+    display_name: string | null;
+    email: string;
+    phone: string | null;
+    is_active: boolean;
+    account_status: string | null;
+    onboarding_completed: boolean | null;
+  };
 }
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -66,15 +80,11 @@ export default async function AdminUsersPage({
 
   const userIsSuperAdmin = await isSuperAdmin(user.id);
 
+  const activeTab = (params.tab as string) || 'admins';
   const tableParams = parseTableParams(params);
+  tableParams.pageSize = 12;
 
-  // Set default sort if none specified (admins table doesn't have created_at)
-  if (!tableParams.sortBy) {
-    tableParams.sortBy = 'assigned_at';
-    tableParams.sortOrder = 'desc';
-  }
-
-  // Fetch admins with profile data
+  // --- Admins data ---
   let adminsResult: {
     data: TransformedAdmin[];
     total: number;
@@ -82,50 +92,156 @@ export default async function AdminUsersPage({
     pageSize: number;
     totalPages: number;
   } | null = null;
+  let adminsError: string | null = null;
 
-  try {
-    const query = supabase.from('admin').select(
-      `
-        id,
-        role,
-        assigned_at,
-        notes,
-        profile (
-          first_name,
-          last_name,
-          display_name,
-          is_active,
-          created_at
-        )
-      `,
-      { count: 'exact' }
-    );
+  if (activeTab === 'admins') {
+    if (!tableParams.sortBy) {
+      tableParams.sortBy = 'assigned_at';
+      tableParams.sortOrder = 'desc';
+    }
 
-    const result = await buildTableQuery<AdminWithProfile>(query, tableParams, {
-      allowedSortFields: ['role', 'assigned_at'],
-      allowedFilterFields: ['role'],
-    });
+    try {
+      const query = supabase.from('admin').select(
+        `
+          id,
+          role,
+          assigned_at,
+          notes,
+          profile (
+            first_name,
+            last_name,
+            display_name,
+            is_active,
+            created_at
+          )
+        `,
+        { count: 'exact' }
+      );
 
-    // Transform the data to flatten profiles
-    const transformedData = result.data.map(admin => ({
-      id: admin.id,
-      role: admin.role,
-      assigned_at: admin.assigned_at,
-      first_name: admin.profile?.first_name || null,
-      last_name: admin.profile?.last_name || null,
-      display_name: admin.profile?.display_name || null,
-      is_active: admin.profile?.is_active ?? true,
-      created_at: admin.profile?.created_at || admin.assigned_at,
-      email: '', // Email will need to be fetched separately via admin API if needed
-    }));
+      const result = await buildTableQuery<AdminWithProfile>(query, tableParams, {
+        allowedSortFields: ['role', 'assigned_at'],
+        allowedFilterFields: ['role'],
+      });
 
-    adminsResult = {
-      ...result,
-      data: transformedData,
-    };
-  } catch (error) {
-    console.error('Error fetching admins:', error);
+      adminsResult = {
+        ...result,
+        data: result.data.map(admin => ({
+          id: admin.id,
+          role: admin.role,
+          assigned_at: admin.assigned_at,
+          first_name: admin.profile?.first_name || null,
+          last_name: admin.profile?.last_name || null,
+          display_name: admin.profile?.display_name || null,
+          is_active: admin.profile?.is_active ?? true,
+          created_at: admin.profile?.created_at || admin.assigned_at,
+          email: '',
+        })),
+      };
+    } catch (error) {
+      console.error('Error fetching admins:', error);
+      adminsError = t('table.error');
+    }
   }
+
+  // --- Players data ---
+  let playersResult: {
+    data: TransformedPlayer[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  } | null = null;
+  let playersError: string | null = null;
+
+  if (activeTab === 'players') {
+    if (!tableParams.sortBy) {
+      tableParams.sortBy = 'created_at';
+      tableParams.sortOrder = 'desc';
+    }
+
+    try {
+      const query = supabase.from('player').select(
+        `
+          id,
+          gender,
+          playing_hand,
+          city,
+          province,
+          country,
+          reputation_score,
+          last_seen_at,
+          created_at,
+          profile!inner (
+            first_name,
+            last_name,
+            display_name,
+            email,
+            phone,
+            is_active,
+            account_status,
+            onboarding_completed
+          )
+        `,
+        { count: 'exact' }
+      );
+
+      // Apply joined-field filters manually (buildTableQuery can't filter on joined tables)
+      const nameFilter = tableParams.filters?.name_like;
+      if (nameFilter) {
+        query.or(`first_name.ilike.%${nameFilter}%,last_name.ilike.%${nameFilter}%`, {
+          referencedTable: 'profile',
+        });
+        // Remove from tableParams so buildTableQuery doesn't try to apply it
+        delete tableParams.filters.name_like;
+      }
+
+      const statusFilter = tableParams.filters?.account_status;
+      if (statusFilter) {
+        query.eq(
+          'profile.account_status',
+          statusFilter as 'active' | 'suspended' | 'deleted' | 'pending_verification'
+        );
+        delete tableParams.filters.account_status;
+      }
+
+      const result = await buildTableQuery<PlayerWithProfile>(query, tableParams, {
+        allowedSortFields: ['reputation_score', 'last_seen_at', 'created_at'],
+        allowedFilterFields: ['gender'],
+      });
+
+      playersResult = {
+        ...result,
+        data: result.data.map(player => ({
+          id: player.id,
+          first_name: player.profile?.first_name || null,
+          last_name: player.profile?.last_name || null,
+          display_name: player.profile?.display_name || null,
+          email: player.profile?.email || '',
+          phone: player.profile?.phone || null,
+          gender: player.gender,
+          playing_hand: player.playing_hand,
+          city: player.city,
+          province: player.province,
+          country: player.country,
+          reputation_score: player.reputation_score,
+          is_active: player.profile?.is_active ?? true,
+          account_status: player.profile?.account_status || null,
+          onboarding_completed: player.profile?.onboarding_completed || null,
+          last_seen_at: player.last_seen_at,
+          created_at: player.created_at,
+        })),
+      };
+    } catch (error) {
+      console.error('Error fetching players:', error);
+      playersError = t('players.table.error');
+    }
+  }
+
+  const tabs = [
+    { value: 'admins', label: t('tabs.admins') },
+    { value: 'players', label: t('tabs.players') },
+    { value: 'organizationMembers', label: t('tabs.organizationMembers') },
+  ];
 
   return (
     <div className="flex flex-col w-full gap-8 h-full">
@@ -137,89 +253,25 @@ export default async function AdminUsersPage({
         {userIsSuperAdmin && <UserInvitationButton />}
       </div>
 
-      <Tabs defaultValue="admins" className="w-full">
-        <TabsList>
-          <TabsTrigger value="admins">{t('tabs.admins')}</TabsTrigger>
-          <TabsTrigger value="organizationMembers">{t('tabs.organizationMembers')}</TabsTrigger>
-          <TabsTrigger value="players">{t('tabs.players')}</TabsTrigger>
-        </TabsList>
-
+      <UrlTabs tabs={tabs} activeTab={activeTab}>
         <TabsContent value="admins" className="mt-6">
-          {!adminsResult ? (
+          {adminsError ? (
             <Card className="overflow-hidden">
               <CardContent className="pt-6">
-                <p className="text-destructive m-0">{t('table.error')}</p>
+                <p className="text-destructive m-0">{adminsError}</p>
               </CardContent>
             </Card>
-          ) : adminsResult.data.length === 0 ? (
-            <Card className="overflow-hidden">
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <p className="text-muted-foreground m-0">{t('table.noAdmins')}</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="grow overflow-hidden flex flex-col">
-              <div className="overflow-x-auto flex-1">
-                <table className="w-full">
-                  <thead className="border-b bg-muted/50">
-                    <tr>
-                      <th className="text-left px-3 py-2 text-sm font-semibold">
-                        {t('table.name')}
-                      </th>
-                      <th className="text-left px-3 py-2 text-sm font-semibold">
-                        {t('table.email')}
-                      </th>
-                      <SortableTableHeader
-                        field="role"
-                        currentSortBy={tableParams.sortBy}
-                        currentSortOrder={tableParams.sortOrder}
-                      >
-                        {t('table.role')}
-                      </SortableTableHeader>
-                      <SortableTableHeader
-                        field="assigned_at"
-                        currentSortBy={tableParams.sortBy}
-                        currentSortOrder={tableParams.sortOrder}
-                      >
-                        {t('table.assignedAt')}
-                      </SortableTableHeader>
-                      <th className="text-left px-3 py-2 text-sm font-semibold">
-                        {t('table.status')}
-                      </th>
-                      <th className="text-left px-3 py-2 text-sm font-semibold">
-                        {t('table.createdAt')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {adminsResult.data.map(admin => (
-                      <AdminTableRow
-                        key={admin.id}
-                        admin={{
-                          id: admin.id,
-                          role: admin.role,
-                          assigned_at: admin.assigned_at,
-                          first_name: admin.first_name,
-                          last_name: admin.last_name,
-                          display_name: admin.display_name,
-                          email: admin.email,
-                          is_active: admin.is_active,
-                          created_at: admin.created_at,
-                        }}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <TablePagination
-                currentPage={adminsResult.page}
-                totalPages={adminsResult.totalPages}
-                totalItems={adminsResult.total}
-                pageSize={adminsResult.pageSize}
-              />
-            </Card>
-          )}
+          ) : adminsResult ? (
+            <AdminsDataTable
+              admins={adminsResult.data}
+              currentPage={adminsResult.page}
+              totalPages={adminsResult.totalPages}
+              totalItems={adminsResult.total}
+              pageSize={adminsResult.pageSize}
+              sortBy={tableParams.sortBy ?? undefined}
+              sortOrder={tableParams.sortOrder ?? undefined}
+            />
+          ) : null}
         </TabsContent>
 
         <TabsContent value="organizationMembers" className="mt-6">
@@ -232,14 +284,28 @@ export default async function AdminUsersPage({
         </TabsContent>
 
         <TabsContent value="players" className="mt-6">
-          <Card className="overflow-hidden">
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <p className="text-muted-foreground m-0">{t('tabs.comingSoon')}</p>
-            </CardContent>
-          </Card>
+          <div className="flex flex-col gap-3">
+            <PlayersFilters />
+            {playersError ? (
+              <Card className="overflow-hidden">
+                <CardContent className="pt-6">
+                  <p className="text-destructive m-0">{playersError}</p>
+                </CardContent>
+              </Card>
+            ) : playersResult ? (
+              <PlayersDataTable
+                players={playersResult.data}
+                currentPage={playersResult.page}
+                totalPages={playersResult.totalPages}
+                totalItems={playersResult.total}
+                pageSize={playersResult.pageSize}
+                sortBy={tableParams.sortBy ?? undefined}
+                sortOrder={tableParams.sortOrder ?? undefined}
+              />
+            ) : null}
+          </div>
         </TabsContent>
-      </Tabs>
+      </UrlTabs>
     </div>
   );
 }

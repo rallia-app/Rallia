@@ -84,7 +84,21 @@ export const NotificationRecordSchema = z.object({
   updated_at: z.string(),
 });
 
+// Match interest record schema (from match_interest trigger)
+export const MatchInterestRecordSchema = z.object({
+  emailType: z.literal('match_interest'),
+  id: z.number(),
+  match_id: z.string().uuid(),
+  email: z.string().email(),
+  name: z.string().nullable(),
+  created_at: z.string(),
+});
+
 // Union schema for all email types (raw records from triggers)
 // Using z.union() instead of z.discriminatedUnion() because InvitationRecordSchema
 // uses .refine() which wraps it in ZodEffects
-export const EmailRequestSchema = z.union([InvitationRecordSchema, NotificationRecordSchema]);
+export const EmailRequestSchema = z.union([
+  InvitationRecordSchema,
+  NotificationRecordSchema,
+  MatchInterestRecordSchema,
+]);

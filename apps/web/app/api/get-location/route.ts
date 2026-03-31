@@ -11,6 +11,8 @@ export async function GET(request: NextRequest) {
 
     let location = 'unknown, unknown';
     let country = 'unknown';
+    let latitude: number | null = null;
+    let longitude: number | null = null;
 
     // Skip geolocation for localhost/private IPs
     if (ipAddress !== 'unknown' && !isLocalOrPrivateIP(ipAddress)) {
@@ -30,6 +32,8 @@ export async function GET(request: NextRequest) {
           if (data.city && data.country_name) {
             location = `${data.city}, ${data.country_name}`;
             country = data.country_name;
+            latitude = data.latitude ?? null;
+            longitude = data.longitude ?? null;
           } else if (data.error) {
             console.warn('ipapi.co error:', data.error);
           }
@@ -45,6 +49,8 @@ export async function GET(request: NextRequest) {
       ipAddress,
       location,
       country,
+      latitude,
+      longitude,
     });
   } catch (error) {
     console.error('Error getting location:', error);
