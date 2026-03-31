@@ -27,6 +27,8 @@
 
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+import { reportHeartbeat } from '../_shared/heartbeat.ts';
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -303,6 +305,10 @@ Deno.serve(async req => {
     console.log(`Check-in reminder job complete: ${result.sent} notifications sent`);
 
     const httpStatus = result.errors.length > 0 && result.sent === 0 ? 500 : 200;
+
+    if (httpStatus === 200) {
+      await reportHeartbeat(Deno.env.get('BETTERSTACK_HEARTBEAT_CHECK_IN_REMINDERS'));
+    }
 
     return new Response(JSON.stringify(summary), {
       status: httpStatus,

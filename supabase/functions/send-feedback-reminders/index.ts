@@ -29,6 +29,8 @@
 
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+import { reportHeartbeat } from '../_shared/heartbeat.ts';
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -486,6 +488,10 @@ Deno.serve(async req => {
 
     // Return error status if there were errors but some succeeded
     const httpStatus = result.errors.length > 0 && summary.totalNotificationsSent === 0 ? 500 : 200;
+
+    if (httpStatus === 200) {
+      await reportHeartbeat(Deno.env.get('BETTERSTACK_HEARTBEAT_FEEDBACK_REMINDERS'));
+    }
 
     return new Response(JSON.stringify(summary), {
       status: httpStatus,

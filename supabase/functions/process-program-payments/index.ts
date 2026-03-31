@@ -10,6 +10,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import Stripe from 'https://esm.sh/stripe@14';
 
+import { reportHeartbeat } from '../_shared/heartbeat.ts';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-client-info, apikey',
@@ -237,6 +239,8 @@ Deno.serve(async req => {
     }
 
     console.log('Payment processing complete:', results);
+
+    await reportHeartbeat(Deno.env.get('BETTERSTACK_HEARTBEAT_PROGRAM_PAYMENTS'));
 
     return new Response(JSON.stringify(results), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

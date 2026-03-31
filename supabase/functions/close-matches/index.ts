@@ -12,6 +12,9 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+import { reportHeartbeat } from '../_shared/heartbeat.ts';
+
 import {
   type MatchParticipant,
   type MatchFeedback,
@@ -375,6 +378,7 @@ Deno.serve(async req => {
     console.log(`Found ${matches.length} matches ready for closure`);
 
     if (matches.length === 0) {
+      await reportHeartbeat(Deno.env.get('BETTERSTACK_HEARTBEAT_CLOSE_MATCHES'));
       return new Response(
         JSON.stringify({
           success: true,
@@ -415,6 +419,10 @@ Deno.serve(async req => {
 
     // Return error status if all matches failed
     const httpStatus = summary.errors === summary.matchesProcessed ? 500 : 200;
+
+    if (httpStatus === 200) {
+      await reportHeartbeat(Deno.env.get('BETTERSTACK_HEARTBEAT_CLOSE_MATCHES'));
+    }
 
     return new Response(JSON.stringify(summary), {
       status: httpStatus,

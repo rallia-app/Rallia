@@ -14,6 +14,8 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+import { reportHeartbeat } from '../_shared/heartbeat.ts';
+
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
@@ -76,7 +78,7 @@ Deno.serve(async req => {
     const failedPlayerIds = new Set<string>();
 
     // Loop in batches until no more stale players
-    // eslint-disable-next-line no-constant-condition
+
     while (true) {
       let query = supabase
         .from('player_reputation')
@@ -143,8 +145,14 @@ Deno.serve(async req => {
       `Decay recalculation complete: ${totalUpdated}/${totalProcessed} updated, ${errors.length} errors`
     );
 
+    const httpStatus = errors.length === totalProcessed && totalProcessed > 0 ? 500 : 200;
+
+    if (httpStatus === 200) {
+      await reportHeartbeat(Deno.env.get('BETTERSTACK_HEARTBEAT_REPUTATION_DECAY'));
+    }
+
     return new Response(JSON.stringify(summary), {
-      status: errors.length === totalProcessed && totalProcessed > 0 ? 500 : 200,
+      status: httpStatus,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
