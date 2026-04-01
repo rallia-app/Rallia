@@ -176,9 +176,9 @@ export default async function MatchPage({ params, searchParams }: Props) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-12 w-full max-w-3xl mx-auto">
+    <div className="grid grid-cols-1 md:grid-cols-2 items-stretch gap-8 py-12 w-full max-w-3xl mx-auto">
       {/* Match card — mirrors PublicMatchCard visual design */}
-      <div className="relative flex flex-col overflow-hidden rounded-xl border bg-card shadow-lg h-fit">
+      <div className="relative flex flex-col overflow-hidden rounded-xl border bg-card shadow-lg">
         {/* Accent strip */}
         <div className="h-1 w-full bg-gradient-to-r from-primary to-primary/60" />
 
@@ -302,7 +302,7 @@ export default async function MatchPage({ params, searchParams }: Props) {
       </div>
 
       {/* Download CTA */}
-      <section className="cta-gradient p-4 rounded-2xl shadow-luma animate-fade-in flex h-fit md:sticky md:top-8">
+      <section className="cta-gradient p-6 rounded-2xl shadow-luma animate-fade-in flex h-full">
         <div className="flex flex-col items-center justify-center gap-5 text-center flex-1">
           <h2 className="text-xl font-bold">{t('downloadTitle')}</h2>
           <p className="text-sm text-muted-foreground">{t('downloadDescription')}</p>
