@@ -91,6 +91,7 @@ export const MatchInterestRecordSchema = z.object({
   match_id: z.string().uuid(),
   email: z.string().email(),
   name: z.string().nullable(),
+  locale: z.string().default('en-US'),
   created_at: z.string(),
 });
 

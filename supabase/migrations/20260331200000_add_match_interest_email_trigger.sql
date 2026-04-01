@@ -43,6 +43,7 @@ BEGIN
         'match_id', NEW.match_id,
         'email', NEW.email,
         'name', NEW.name,
+        'locale', NEW.locale,
         'created_at', NEW.created_at
       ),
       headers := jsonb_build_object(

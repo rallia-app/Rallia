@@ -95,6 +95,7 @@ export interface MatchInterestRecord {
   match_id: string;
   email: string;
   name: string | null;
+  locale: string;
   created_at: string;
 }
 
@@ -103,6 +104,7 @@ export interface MatchInterestEmailPayload {
   type: 'match_interest';
   email: string;
   name: string | null;
+  locale: string;
   sportName: string;
   matchDate: string;
   matchTime: string;

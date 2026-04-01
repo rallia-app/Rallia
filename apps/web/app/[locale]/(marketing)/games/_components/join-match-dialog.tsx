@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
 
 interface JoinMatchDialogProps {
@@ -22,6 +22,7 @@ interface JoinMatchDialogProps {
 
 export default function JoinMatchDialog({ matchId, open, onOpenChange }: JoinMatchDialogProps) {
   const t = useTranslations('gamesPage.joinDialog');
+  const locale = useLocale();
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,6 +46,7 @@ export default function JoinMatchDialog({ matchId, open, onOpenChange }: JoinMat
           matchId,
           email,
           name: name || undefined,
+          locale,
           ipAddress: locationData?.ipAddress || 'unknown',
           location: locationData?.location || 'unknown',
         }),
