@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
         match_id: body.matchId,
         email: body.email,
         name: body.name || null,
+        locale: body.locale || 'en-US',
         ip_address: body.ipAddress || null,
         location: body.location || null,
       })

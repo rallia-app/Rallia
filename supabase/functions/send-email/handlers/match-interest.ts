@@ -34,17 +34,19 @@ export class MatchInterestHandler {
     const facility = match.facility as { name: string; city: string } | null;
     const location = facility ? `${facility.name}, ${facility.city}` : match.location_name || 'TBD';
 
+    const locale = record.locale || 'en-US';
     const dateObj = new Date(`${match.match_date}T${match.start_time}`);
-    const matchDate = dateObj.toLocaleDateString('en-US', { dateStyle: 'long' });
-    const matchTime = dateObj.toLocaleTimeString('en-US', { timeStyle: 'short' });
+    const matchDate = dateObj.toLocaleDateString(locale, { dateStyle: 'long' });
+    const matchTime = dateObj.toLocaleTimeString(locale, { timeStyle: 'short' });
 
     const baseUrl = Deno.env.get('NEXT_PUBLIC_BASE_URL') || 'https://rallia.app';
-    const matchUrl = `${baseUrl}/match/${record.match_id}`;
+    const matchUrl = `${baseUrl}/match/${record.match_id}?src=email`;
 
     return renderMatchInterestEmail({
       type: 'match_interest',
       email: record.email,
       name: record.name,
+      locale,
       sportName,
       matchDate,
       matchTime,

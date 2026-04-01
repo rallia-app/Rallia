@@ -126,6 +126,26 @@ const translations: Translations = {
     'org.scanQrCode': 'Scan this QR code at the venue',
     'match.dateAt': 'at',
     'org.dateAt': 'at',
+
+    // Match Interest (public visitor conversion email)
+    'matchInterest.subject': 'Join this {sportName} game on Rallia',
+    'matchInterest.preheader': 'Download Rallia to join the {sportName} game on {matchDate}',
+    'matchInterest.heading': 'Your Spot Is Waiting',
+    'matchInterest.greeting': 'Hi {name},',
+    'matchInterest.greetingDefault': 'Hi there,',
+    'matchInterest.body':
+      "You're one step away from joining this game. Download the Rallia app and create your free account to secure your spot.",
+    'matchInterest.ctaButton': 'Get Rallia & Join the Game',
+    'matchInterest.gameInfoLabel': 'Game info',
+    'matchInterest.sport': 'Sport',
+    'matchInterest.date': 'Date',
+    'matchInterest.time': 'Time',
+    'matchInterest.location': 'Location',
+    'matchInterest.valueProp':
+      "Once you're signed up, you'll also be able to discover more games near you, connect with local players, and organize your own matches.",
+    'matchInterest.disclaimer':
+      "You received this email because you expressed interest in a game on Rallia. If this wasn't you, you can safely ignore this email.",
+    'matchInterest.footerNote': 'Rallia — Find players, join games, play more',
   },
 
   'fr-CA': {
@@ -252,6 +272,27 @@ const translations: Translations = {
     'org.scanQrCode': 'Scannez ce code QR sur place',
     'match.dateAt': 'à',
     'org.dateAt': 'à',
+
+    // Match Interest (public visitor conversion email)
+    'matchInterest.subject': 'Rejoignez cette partie de {sportName} sur Rallia',
+    'matchInterest.preheader':
+      'Téléchargez Rallia pour rejoindre la partie de {sportName} le {matchDate}',
+    'matchInterest.heading': 'Votre place vous attend',
+    'matchInterest.greeting': 'Bonjour {name},',
+    'matchInterest.greetingDefault': 'Bonjour,',
+    'matchInterest.body':
+      "Vous n'êtes qu'à un pas de rejoindre cette partie. Téléchargez l'application Rallia et créez votre compte gratuit pour réserver votre place.",
+    'matchInterest.ctaButton': 'Télécharger Rallia et rejoindre',
+    'matchInterest.gameInfoLabel': 'Détails de la partie',
+    'matchInterest.sport': 'Sport',
+    'matchInterest.date': 'Date',
+    'matchInterest.time': 'Heure',
+    'matchInterest.location': 'Lieu',
+    'matchInterest.valueProp':
+      "Une fois inscrit(e), vous pourrez aussi découvrir d'autres parties près de chez vous, rencontrer des joueurs locaux et organiser vos propres matchs.",
+    'matchInterest.disclaimer':
+      "Vous recevez ce courriel car vous avez manifesté de l'intérêt pour une partie sur Rallia. Si ce n'était pas vous, ignorez simplement ce courriel.",
+    'matchInterest.footerNote': 'Rallia — Trouvez des joueurs, rejoignez des parties, jouez plus',
   },
 };
 
