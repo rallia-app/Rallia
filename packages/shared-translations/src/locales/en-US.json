@@ -7899,6 +7899,7 @@
   },
   "matchPage": {
     "title": "Match Details",
+    "subtitle": "Download Rallia to join this game and discover more matches near you.",
     "at": "at",
     "minutes": "min",
     "notFound": "Match not found",

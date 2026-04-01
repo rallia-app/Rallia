@@ -133,20 +133,34 @@ export default async function InvitePage({ params }: Props) {
       <div className="flex gap-4">
         <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
           <Image
+            src="/app-store-badge-light.svg"
+            alt={t('appStore')}
+            width={120}
+            height={40}
+            className="button-scale block dark:hidden"
+          />
+          <Image
             src="/app-store-badge.svg"
             alt={t('appStore')}
             width={120}
             height={40}
-            className="button-scale"
+            className="button-scale hidden dark:block"
           />
         </a>
         <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer">
+          <Image
+            src="/google-play-badge-light.svg"
+            alt={t('googlePlay')}
+            width={135}
+            height={40}
+            className="button-scale block dark:hidden"
+          />
           <Image
             src="/google-play-badge.svg"
             alt={t('googlePlay')}
             width={135}
             height={40}
-            className="button-scale"
+            className="button-scale hidden dark:block"
           />
         </a>
       </div>

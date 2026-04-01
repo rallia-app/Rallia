@@ -176,158 +176,178 @@ export default async function MatchPage({ params, searchParams }: Props) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 items-stretch gap-8 py-12 w-full max-w-3xl mx-auto">
-      {/* Match card — mirrors PublicMatchCard visual design */}
-      <div className="relative flex flex-col overflow-hidden rounded-xl border bg-card shadow-lg">
-        {/* Accent strip */}
-        <div className="h-1 w-full bg-gradient-to-r from-primary to-primary/60" />
-
-        <div className="flex flex-col gap-4 p-5">
-          {/* Header: Sport + Spots */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {match.sport && (
-                <Badge variant="default" className="capitalize text-xs font-semibold">
-                  {match.sport.name}
-                </Badge>
-              )}
-            </div>
-            <span
-              className={cn(
-                'text-xs font-semibold px-2 py-0.5 rounded-full',
-                isFull
-                  ? 'bg-destructive/10 text-destructive'
-                  : spotsLeft === 1
-                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-              )}
-            >
-              {isFull ? tGames('matchFull') : tGames('spotsLeft', { count: spotsLeft })}
-            </span>
-          </div>
-
-          {/* Date & Time row */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5 text-sm font-semibold">
-              <Calendar className="size-4 text-primary" />
-              <span>{dateLabel}</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <Clock className="size-3.5" />
-              <span>
-                {time}
-                {duration && <span className="text-muted-foreground/60"> · {duration}</span>}
-              </span>
-            </div>
-          </div>
-
-          {/* Location */}
-          <div className="flex items-start gap-1.5 text-sm text-muted-foreground">
-            <MapPin className="size-4 shrink-0 mt-0.5" />
-            <div className="min-w-0">
-              <span className="font-medium text-foreground truncate block">{location}</span>
-              {(city || courtName) && (
-                <span className="text-xs truncate block">
-                  {[courtName, city].filter(Boolean).join(' · ')}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Players */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center -space-x-1.5">
-              {slots.map((slot, i) => {
-                const avatarUrl = slot.participant?.player?.profile?.profile_picture_url;
-                const displayName = slot.participant?.player?.profile?.display_name;
-                return (
-                  <div key={i} className="relative" style={{ zIndex: i }}>
-                    <div
-                      className={cn(
-                        'size-9 rounded-full flex items-center justify-center overflow-hidden',
-                        'bg-card',
-                        slot.filled
-                          ? 'ring-2 ring-primary/20'
-                          : 'border-2 border-dashed border-muted-foreground/25'
-                      )}
-                    >
-                      {slot.filled ? (
-                        avatarUrl ? (
-                          <img
-                            src={avatarUrl}
-                            alt={displayName || ''}
-                            className="size-full object-cover"
-                          />
-                        ) : (
-                          <User className="size-4 text-primary" />
-                        )
-                      ) : (
-                        <span className="text-sm text-muted-foreground/40">+</span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Users className="size-3.5" />
-              <span>
-                {joinedCount}/{total}
-              </span>
-            </div>
-          </div>
-
-          {/* Badges */}
-          {badges.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {badges.map(badge => (
-                <Badge
-                  key={badge.key}
-                  variant={badge.variant}
-                  className="text-xs px-2.5 py-1 font-medium"
-                >
-                  {badge.key === 'expectation' && <Swords className="size-3.5 mr-1" />}
-                  {badge.key === 'cost' && <CircleDollarSign className="size-3.5 mr-1" />}
-                  {badge.label}
-                </Badge>
-              ))}
-            </div>
-          )}
-
-          {/* Notes */}
-          {match.notes && (
-            <p className="text-sm text-muted-foreground border-t pt-4">{match.notes}</p>
-          )}
-        </div>
+    <div className="flex flex-col gap-8 py-12 w-full max-w-3xl mx-auto">
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+        <p className="text-muted-foreground">{t('subtitle')}</p>
       </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 items-stretch gap-8">
+        {/* Match card — mirrors PublicMatchCard visual design */}
+        <div className="relative flex flex-col overflow-hidden rounded-xl border bg-card shadow-lg">
+          {/* Accent strip */}
+          <div className="h-1 w-full bg-gradient-to-r from-primary to-primary/60" />
 
-      {/* Download CTA */}
-      <section className="cta-gradient p-6 rounded-2xl shadow-luma animate-fade-in flex h-full">
-        <div className="flex flex-col items-center justify-center gap-5 text-center flex-1">
-          <h2 className="text-xl font-bold">{t('downloadTitle')}</h2>
-          <p className="text-sm text-muted-foreground">{t('downloadDescription')}</p>
-          <div className="flex gap-4">
-            <a href="https://apps.apple.com" target="_blank" rel="noopener noreferrer">
-              <Image
-                src="/app-store-badge.svg"
-                alt={t('appStore')}
-                width={120}
-                height={40}
-                className="button-scale"
-              />
-            </a>
-            <a href="https://play.google.com" target="_blank" rel="noopener noreferrer">
-              <Image
-                src="/google-play-badge.svg"
-                alt={t('googlePlay')}
-                width={135}
-                height={40}
-                className="button-scale"
-              />
-            </a>
+          <div className="flex flex-col gap-4 p-5">
+            {/* Header: Sport + Spots */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {match.sport && (
+                  <Badge variant="default" className="capitalize text-xs font-semibold">
+                    {match.sport.name}
+                  </Badge>
+                )}
+              </div>
+              <span
+                className={cn(
+                  'text-xs font-semibold px-2 py-0.5 rounded-full',
+                  isFull
+                    ? 'bg-destructive/10 text-destructive'
+                    : spotsLeft === 1
+                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                      : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                )}
+              >
+                {isFull ? tGames('matchFull') : tGames('spotsLeft', { count: spotsLeft })}
+              </span>
+            </div>
+
+            {/* Date & Time row */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5 text-sm font-semibold">
+                <Calendar className="size-4 text-primary" />
+                <span>{dateLabel}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Clock className="size-3.5" />
+                <span>
+                  {time}
+                  {duration && <span className="text-muted-foreground/60"> · {duration}</span>}
+                </span>
+              </div>
+            </div>
+
+            {/* Location */}
+            <div className="flex items-start gap-1.5 text-sm text-muted-foreground">
+              <MapPin className="size-4 shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <span className="font-medium text-foreground truncate block">{location}</span>
+                {(city || courtName) && (
+                  <span className="text-xs truncate block">
+                    {[courtName, city].filter(Boolean).join(' · ')}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Players */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center -space-x-1.5">
+                {slots.map((slot, i) => {
+                  const avatarUrl = slot.participant?.player?.profile?.profile_picture_url;
+                  const displayName = slot.participant?.player?.profile?.display_name;
+                  return (
+                    <div key={i} className="relative" style={{ zIndex: i }}>
+                      <div
+                        className={cn(
+                          'size-9 rounded-full flex items-center justify-center overflow-hidden',
+                          'bg-card',
+                          slot.filled
+                            ? 'ring-2 ring-primary/20'
+                            : 'border-2 border-dashed border-muted-foreground/25'
+                        )}
+                      >
+                        {slot.filled ? (
+                          avatarUrl ? (
+                            <img
+                              src={avatarUrl}
+                              alt={displayName || ''}
+                              className="size-full object-cover"
+                            />
+                          ) : (
+                            <User className="size-4 text-primary" />
+                          )
+                        ) : (
+                          <span className="text-sm text-muted-foreground/40">+</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Users className="size-3.5" />
+                <span>
+                  {joinedCount}/{total}
+                </span>
+              </div>
+            </div>
+
+            {/* Badges */}
+            {badges.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {badges.map(badge => (
+                  <Badge
+                    key={badge.key}
+                    variant={badge.variant}
+                    className="text-xs px-2.5 py-1 font-medium"
+                  >
+                    {badge.key === 'expectation' && <Swords className="size-3.5 mr-1" />}
+                    {badge.key === 'cost' && <CircleDollarSign className="size-3.5 mr-1" />}
+                    {badge.label}
+                  </Badge>
+                ))}
+              </div>
+            )}
+
+            {/* Notes */}
+            {match.notes && (
+              <p className="text-sm text-muted-foreground border-t pt-4">{match.notes}</p>
+            )}
           </div>
         </div>
-      </section>
+
+        {/* Download CTA */}
+        <section className="cta-gradient p-6 rounded-2xl shadow-luma animate-fade-in flex h-full">
+          <div className="flex flex-col items-center justify-center gap-5 text-center flex-1">
+            <h2 className="text-xl font-bold">{t('downloadTitle')}</h2>
+            <p className="text-sm text-muted-foreground">{t('downloadDescription')}</p>
+            <div className="flex gap-4">
+              <a href="https://apps.apple.com" target="_blank" rel="noopener noreferrer">
+                <Image
+                  src="/app-store-badge-light.svg"
+                  alt={t('appStore')}
+                  width={120}
+                  height={40}
+                  className="button-scale block dark:hidden"
+                />
+                <Image
+                  src="/app-store-badge.svg"
+                  alt={t('appStore')}
+                  width={120}
+                  height={40}
+                  className="button-scale hidden dark:block"
+                />
+              </a>
+              <a href="https://play.google.com" target="_blank" rel="noopener noreferrer">
+                <Image
+                  src="/google-play-badge-light.svg"
+                  alt={t('googlePlay')}
+                  width={135}
+                  height={40}
+                  className="button-scale block dark:hidden"
+                />
+                <Image
+                  src="/google-play-badge.svg"
+                  alt={t('googlePlay')}
+                  width={135}
+                  height={40}
+                  className="button-scale hidden dark:block"
+                />
+              </a>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
