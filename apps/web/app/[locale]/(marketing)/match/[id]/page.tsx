@@ -52,7 +52,7 @@ async function getMatch(id: string): Promise<MatchWithRelations | null> {
   const { data } = await supabase
     .from('match')
     .select(
-      '*, sport:sport_id (name, slug), facility:facility_id (name, city), court:court_id (name), min_rating_score:min_rating_score_id (label), participants:match_participant (id, status, is_host, player_id, player:player_id (profile:profile_id (display_name, profile_picture_url)))'
+      '*, sport:sport_id (name, slug), facility:facility_id (name, city), court:court_id (name), min_rating_score:min_rating_score_id (label), participants:match_participant (id, status, is_host, player_id, player:player_id (profile (display_name, profile_picture_url)))'
     )
     .eq('id', id)
     .single();
