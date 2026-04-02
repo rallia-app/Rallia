@@ -52,10 +52,14 @@ interface ConversationRPCRow {
  * Get all conversations for a player (OPTIMIZED)
  * Uses a single RPC call instead of N+1 queries for much faster loading
  */
-export async function getPlayerConversations(playerId: string): Promise<ConversationPreview[]> {
+export async function getPlayerConversations(
+  playerId: string,
+  sportId?: string
+): Promise<ConversationPreview[]> {
   try {
     const { data, error } = await supabase.rpc('get_player_conversations_optimized', {
       p_player_id: playerId,
+      ...(sportId ? { p_sport_id: sportId } : {}),
     });
 
     if (error) {
@@ -566,6 +570,7 @@ export interface GetFilteredConversationsInput {
   search?: string;
   limit?: number;
   offset?: number;
+  sportId?: string;
 }
 
 /**
@@ -587,7 +592,7 @@ export interface FilteredConversationsPage {
 export async function getPlayerConversationsFiltered(
   options: GetFilteredConversationsInput
 ): Promise<FilteredConversationsPage> {
-  const { playerId, filter = 'all', search = '', limit = 20, offset = 0 } = options;
+  const { playerId, filter = 'all', search = '', limit = 20, offset = 0, sportId } = options;
 
   try {
     const { data, error } = await supabase.rpc('get_player_conversations_filtered', {
@@ -596,6 +601,7 @@ export async function getPlayerConversationsFiltered(
       p_search: search,
       p_limit: limit + 1, // Fetch one extra to determine if there are more
       p_offset: offset,
+      ...(sportId ? { p_sport_id: sportId } : {}),
     });
 
     if (error) {

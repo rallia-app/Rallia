@@ -399,6 +399,21 @@ verify_jwt = false
 [functions.generate-weekly-matches]
 verify_jwt = false
 
+# Client-invoked functions: gateway JWT verification disabled because these
+# functions validate auth internally via supabaseUser.auth.getUser(token).
+# Gateway rejects ES256 tokens issued by current auth server config.
+[functions.delete-account]
+verify_jwt = false
+
+[functions.booking-create]
+verify_jwt = false
+
+[functions.booking-cancel]
+verify_jwt = false
+
+[functions.calendar-event]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327
