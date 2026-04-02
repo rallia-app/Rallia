@@ -775,12 +775,24 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             Logger.warn('Failed to delete existing favorites', { error: deleteError });
           }
 
-          // Insert new favorites with display order
-          const favoritesToInsert = formData.favoriteFacilities.map((facility, index) => ({
-            player_id: userId,
-            facility_id: facility.id,
-            display_order: index + 1,
-          }));
+          // Insert new favorites with display order, one row per (facility, sport) pair.
+          // Each facility may support multiple sports; create a favorite for each sport the player plays.
+          const playerSportIds = new Set(formData.selectedSportIds);
+          const perSportCounters: Record<string, number> = {};
+          const favoritesToInsert = formData.favoriteFacilities.flatMap(facility => {
+            const facilitySportIds = (facility.sport_ids ?? []).filter(sid =>
+              playerSportIds.has(sid)
+            );
+            return facilitySportIds.map(sid => {
+              perSportCounters[sid] = (perSportCounters[sid] ?? 0) + 1;
+              return {
+                player_id: userId,
+                facility_id: facility.id,
+                sport_id: sid,
+                display_order: perSportCounters[sid],
+              };
+            });
+          });
 
           const { error: insertError } = await supabase
             .from('player_favorite_facility')

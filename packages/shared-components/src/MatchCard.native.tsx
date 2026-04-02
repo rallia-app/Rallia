@@ -987,6 +987,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
   }));
   const baseTier = getMatchTier(match.court_status, participants, match.format);
   const tier: MatchTier = isExpired ? 'expired' : baseTier;
+
   const isMostWanted = tier === 'mostWanted';
   const isReadyToPlay = tier === 'readyToPlay';
   const isTopPlayer = tier === 'topPlayer';

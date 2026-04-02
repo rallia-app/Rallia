@@ -279,6 +279,7 @@ const PlayerProfile = () => {
           `
           )
           .eq('player_id', playerId)
+          .eq('sport_id', sportId)
           .order('display_order', { ascending: true });
 
         if (error) {

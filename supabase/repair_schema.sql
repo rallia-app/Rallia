@@ -106,10 +106,11 @@ CREATE TABLE IF NOT EXISTS player_favorite_facility (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   player_id UUID NOT NULL REFERENCES player(id) ON DELETE CASCADE,
   facility_id UUID NOT NULL REFERENCES facility(id) ON DELETE CASCADE,
+  sport_id UUID NOT NULL REFERENCES sport(id) ON DELETE CASCADE,
   display_order INT NOT NULL DEFAULT 1,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  CONSTRAINT player_favorite_facility_unique UNIQUE(player_id, facility_id),
+  CONSTRAINT player_favorite_facility_unique UNIQUE(player_id, facility_id, sport_id),
   CONSTRAINT player_favorite_facility_order_check CHECK (display_order >= 1 AND display_order <= 3)
 );
 
@@ -401,6 +402,7 @@ CREATE INDEX IF NOT EXISTS idx_player_block_blocked_player_id ON player_block(bl
 
 CREATE INDEX IF NOT EXISTS idx_player_favorite_facility_player_id ON player_favorite_facility(player_id);
 CREATE INDEX IF NOT EXISTS idx_player_favorite_facility_facility_id ON player_favorite_facility(facility_id);
+CREATE INDEX IF NOT EXISTS idx_player_favorite_facility_sport_id ON player_favorite_facility(sport_id);
 
 CREATE INDEX IF NOT EXISTS idx_shared_contact_list_player ON shared_contact_list(player_id);
 CREATE INDEX IF NOT EXISTS idx_shared_contact_list_id ON shared_contact(list_id);
