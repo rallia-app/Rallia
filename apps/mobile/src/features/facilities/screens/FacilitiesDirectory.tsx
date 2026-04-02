@@ -272,7 +272,7 @@ export default function FacilitiesDirectory() {
 
   // Favorites management
   const { favorites, isFavorite, addFavorite, removeFavorite, isMaxReached } =
-    useFavoriteFacilities(player?.id ?? null);
+    useFavoriteFacilities(player?.id ?? null, selectedSport?.id);
 
   // Sort facilities: favorites first, then by distance
   const sortedFacilities = useMemo(() => {

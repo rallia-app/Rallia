@@ -3542,10 +3542,15 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
         const ratingScore = rating.rating_score;
         const ratingSystem = ratingScore?.rating_system;
         if (ratingSystem?.sport_id === sportId && ratingScore?.label) {
+          const existing = publicRatingsMap[rating.player_id];
+          // Preserve 'certified' badge status — a player with any certified rating
+          // for this sport should keep that status (matches SQL EXISTS logic)
+          const badgeStatus =
+            existing?.badgeStatus === 'certified' ? 'certified' : rating.badge_status;
           publicRatingsMap[rating.player_id] = {
             label: ratingScore.label,
             value: ratingScore.value,
-            badgeStatus: rating.badge_status,
+            badgeStatus,
           };
         }
       });

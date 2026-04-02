@@ -1094,7 +1094,10 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   });
 
   // Favorites management
-  const { favorites, isFavorite: isFavoriteFacility } = useFavoriteFacilities(player?.id ?? null);
+  const { favorites, isFavorite: isFavoriteFacility } = useFavoriteFacilities(
+    player?.id ?? null,
+    sportId
+  );
 
   // Merge facilities list with preferred facility first, then favorites, deduplicating
   const facilities = React.useMemo(() => {

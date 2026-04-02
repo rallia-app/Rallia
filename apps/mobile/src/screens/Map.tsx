@@ -77,7 +77,8 @@ const Map = () => {
   const { openSheet } = useMatchDetailSheet();
   const { player } = usePlayer();
   const { isFavorite, addFavorite, removeFavorite, isMaxReached } = useFavoriteFacilities(
-    player?.id ?? null
+    player?.id ?? null,
+    selectedSport?.id
   );
   const insets = useSafeAreaInsets();
   const cameraRef = useRef<Mapbox.Camera>(null);

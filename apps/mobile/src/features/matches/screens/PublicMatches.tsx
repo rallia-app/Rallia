@@ -204,7 +204,7 @@ export default function PublicMatches() {
     if (!playerRatingScoreId) return null;
     return ratingScores.find(rs => rs.id === playerRatingScoreId)?.value ?? null;
   }, [ratingScores, playerRatingScoreId]);
-  const { favorites } = useFavoriteFacilities(session?.user?.id ?? null);
+  const { favorites } = useFavoriteFacilities(session?.user?.id ?? null, selectedSport?.id);
   const favoriteFacilityIds = useMemo(() => favorites.map(f => f.facilityId), [favorites]);
 
   // Build scoring preferences for relevance tiebreaking
@@ -270,15 +270,18 @@ export default function PublicMatches() {
     // Show loading indicator when searching/filtering
     if (isSearching) {
       return (
-        <View style={styles.listLoadingContainer}>
+        <View style={styles.headerLoadingContainer}>
           <ActivityIndicator size="small" color={colors.primary} />
         </View>
       );
     }
 
     // Show results count when we have matches
-    // Use totalCount from database if available, otherwise fall back to displayed count
-    const count = totalCount ?? sortedMatches.length;
+    // When client-side filtering is active (e.g. favoritesOnly), use displayed count
+    // otherwise use totalCount from database
+    const count = filters.favoritesOnly
+      ? sortedMatches.length
+      : (totalCount ?? sortedMatches.length);
     if (!isLoading && count > 0) {
       return (
         <View style={styles.resultsContainer}>
@@ -299,6 +302,7 @@ export default function PublicMatches() {
     isLoading,
     totalCount,
     sortedMatches.length,
+    filters.favoritesOnly,
     colors.primary,
     colors.textMuted,
     t,
@@ -463,6 +467,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: spacingPixels[8],
+  },
+  headerLoadingContainer: {
+    alignItems: 'center',
+    paddingVertical: spacingPixels[4],
   },
   noLocationText: {
     textAlign: 'center',

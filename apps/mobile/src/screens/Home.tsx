@@ -317,7 +317,7 @@ const Home = () => {
     if (!playerRatingScoreId) return null;
     return ratingScores.find(rs => rs.id === playerRatingScoreId)?.value ?? null;
   }, [ratingScores, playerRatingScoreId]);
-  const { favorites } = useFavoriteFacilities(session?.user?.id ?? null);
+  const { favorites } = useFavoriteFacilities(session?.user?.id ?? null, selectedSport?.id);
   const favoriteFacilityIds = useMemo(() => favorites.map(f => f.facilityId), [favorites]);
 
   // Default search radius for signed-out users (10km)

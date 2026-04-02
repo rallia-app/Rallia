@@ -217,7 +217,7 @@ const SportProfile = () => {
     favorites: favoriteFacilities,
     loading: loadingFavorites,
     refetch: refetchFavorites,
-  } = useFavoriteFacilities(userId);
+  } = useFavoriteFacilities(userId, sportId);
 
   // Always sync rating state from PlayerContext cache when it changes
   useEffect(() => {
