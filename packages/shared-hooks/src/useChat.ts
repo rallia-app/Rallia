@@ -60,7 +60,8 @@ import type { ConversationFilter } from '@rallia/shared-types';
 export const chatKeys = {
   all: ['chat'] as const,
   conversations: () => [...chatKeys.all, 'conversations'] as const,
-  playerConversations: (playerId: string) => [...chatKeys.conversations(), playerId] as const,
+  playerConversations: (playerId: string, sportId?: string) =>
+    [...chatKeys.conversations(), playerId, ...(sportId ? [sportId] : [])] as const,
   conversation: (conversationId: string) =>
     [...chatKeys.all, 'conversation', conversationId] as const,
   messages: (conversationId: string) => [...chatKeys.all, 'messages', conversationId] as const,
@@ -93,10 +94,10 @@ export const chatKeys = {
 /**
  * Get all conversations for the current player
  */
-export function usePlayerConversations(playerId: string | undefined) {
+export function usePlayerConversations(playerId: string | undefined, sportId?: string) {
   return useQuery({
-    queryKey: chatKeys.playerConversations(playerId || ''),
-    queryFn: () => getPlayerConversations(playerId!),
+    queryKey: chatKeys.playerConversations(playerId || '', sportId),
+    queryFn: () => getPlayerConversations(playerId!, sportId),
     enabled: !!playerId,
     staleTime: 30 * 1000, // 30 seconds
   });
@@ -121,6 +122,7 @@ export interface UseFilteredConversationsOptions {
   search?: string;
   limit?: number;
   enabled?: boolean;
+  sportId?: string;
 }
 
 export function useFilteredConversations(options: UseFilteredConversationsOptions) {
@@ -130,12 +132,13 @@ export function useFilteredConversations(options: UseFilteredConversationsOption
     search = '',
     limit = CONVERSATION_PAGE_SIZE,
     enabled = true,
+    sportId,
   } = options;
 
   const hasRequiredParams = !!playerId;
 
   const query = useInfiniteQuery<FilteredConversationsPage, Error>({
-    queryKey: chatKeys.filteredConversations(playerId || '', { filter, search, limit }),
+    queryKey: chatKeys.filteredConversations(playerId || '', { filter, search, limit, sportId }),
     queryFn: async ({ pageParam = 0 }) => {
       if (!hasRequiredParams) {
         return { conversations: [], nextOffset: null, hasMore: false };
@@ -147,6 +150,7 @@ export function useFilteredConversations(options: UseFilteredConversationsOption
         search,
         limit,
         offset: pageParam as number,
+        sportId,
       });
     },
     getNextPageParam: lastPage => lastPage.nextOffset,

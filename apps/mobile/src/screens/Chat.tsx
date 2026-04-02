@@ -106,7 +106,7 @@ const Chat = () => {
     isLoading,
     refetch,
     isRefetching,
-  } = usePlayerConversations(playerId);
+  } = usePlayerConversations(playerId, selectedSport?.id);
 
   // Subscribe to real-time updates
   useConversationsRealtime(playerId);
