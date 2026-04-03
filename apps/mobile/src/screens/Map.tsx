@@ -139,6 +139,7 @@ const Map = () => {
     latitude: location?.latitude,
     longitude: location?.longitude,
     maxDistanceKm: 25,
+    userGender: player?.gender,
     enabled: !!location,
   });
 

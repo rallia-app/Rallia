@@ -242,7 +242,6 @@ export async function createOrgNotification(
   }
 
   if (userIds.length === 0) {
-    console.log(`No recipients found for org notification: ${type} in org ${organizationId}`);
     return [];
   }
 

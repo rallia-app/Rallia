@@ -105,12 +105,7 @@ export class LoisirMontrealProvider extends BaseAvailabilityProvider {
       const response = await this.makeRequest<LoisirMontrealSearchResponse>(url, {
         method: 'POST',
         body: requestBody as unknown as Record<string, unknown>,
-        headers: {
-          // Additional headers that might be required by the API
-          'User-Agent': 'Rallia/1.0',
-          Origin: 'https://loisirs.montreal.ca',
-          Referer: 'https://loisirs.montreal.ca/',
-        },
+        headers: {},
         timeout: 30000, // 30s timeout for external API
       });
 

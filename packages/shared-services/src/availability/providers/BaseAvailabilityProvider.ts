@@ -133,7 +133,11 @@ export abstract class BaseAvailabilityProvider {
       };
 
       xhr.onerror = () => {
-        reject(new Error(`Provider API network error`));
+        reject(
+          new Error(
+            `Provider API network error (status: ${xhr.status}, readyState: ${xhr.readyState})`
+          )
+        );
       };
 
       xhr.send(body);

@@ -79,7 +79,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
 
   const handleDeleteAccount = () => {
     // TODO: Implement delete account functionality
-    console.log('Delete account pressed');
   };
 
   const SettingsItem = ({

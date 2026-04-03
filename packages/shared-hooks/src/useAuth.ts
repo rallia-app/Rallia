@@ -122,7 +122,6 @@ export const useAuth = (options?: UseAuthOptions) => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      console.log('Auth state change:', _event);
       // Update session on any auth state change
       // The subscription handles sign-in, sign-out, token refresh, etc.
       setSession(newSession);

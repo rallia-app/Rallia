@@ -193,14 +193,6 @@ export async function POST(request: NextRequest) {
     const shouldSkipPayment =
       skipPayment || isFreeSlot || (isStaffBooking && skipPayment !== false);
 
-    console.log('[Booking] Slot price check:', {
-      slotPriceCents,
-      isFreeSlot,
-      shouldSkipPayment,
-      skipPayment,
-      isStaffBooking,
-    });
-
     // Get Stripe account for the organization (only if payment is needed)
     let stripeAccountId: string | undefined;
     if (!shouldSkipPayment) {
