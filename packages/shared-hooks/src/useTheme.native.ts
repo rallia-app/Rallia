@@ -90,11 +90,6 @@ export function ThemeProvider({ children, defaultPreference = 'system' }: ThemeP
       const oldResolvedTheme = oldPreference === 'system' ? systemTheme : oldPreference;
       const newResolvedTheme = preference === 'system' ? systemTheme : preference;
 
-      // Log the transition
-      console.log(
-        `[Theme] Transition: ${oldPreference} → ${preference} | Resolved theme: ${oldResolvedTheme} → ${newResolvedTheme}`
-      );
-
       setThemePreferenceState(preference);
       previousPreferenceRef.current = preference;
 

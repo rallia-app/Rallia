@@ -100,13 +100,11 @@ export async function confirmBookingPayment(
     .single();
 
   if (findError || !booking) {
-    console.log(`No booking found for payment intent ${paymentIntentId}`);
     return { success: false };
   }
 
   // Only confirm if booking is still pending
   if (booking.status !== 'pending') {
-    console.log(`Booking ${booking.id} is already ${booking.status}, skipping confirmation`);
     return { success: true, bookingId: booking.id };
   }
 
@@ -144,13 +142,11 @@ export async function markBookingPaymentFailed(
     .single();
 
   if (findError || !booking) {
-    console.log(`No booking found for payment intent ${paymentIntentId}`);
     return { success: false };
   }
 
   // Only cancel if booking is pending
   if (booking.status !== 'pending') {
-    console.log(`Booking ${booking.id} is ${booking.status}, not marking as failed`);
     return { success: true, bookingId: booking.id };
   }
 
@@ -190,7 +186,6 @@ export async function updateBookingRefundStatus(
     .single();
 
   if (findError || !booking) {
-    console.log(`No booking found for charge ${chargeId}`);
     return { success: false };
   }
 

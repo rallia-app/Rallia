@@ -267,6 +267,7 @@ export default function FacilitiesDirectory() {
     longitude: location?.longitude,
     searchQuery: debouncedSearchQuery,
     filters,
+    userGender: player?.gender,
     enabled: showFacilities,
   });
 

@@ -123,11 +123,10 @@ export async function createPlayedMatch(
     if (existingMatch) {
       // Use the existing match
       matchId = existingMatch.matchId;
-      console.log(`Found existing match ${matchId}, adding result...`);
 
       // If the match already has a result, we shouldn't overwrite it
       if (existingMatch.hasResult) {
-        console.warn(`Match ${matchId} already has a result. Skipping result creation.`);
+        // Match already has a result — skip
 
         // Still post to group if requested
         if (networkId) {

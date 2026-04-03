@@ -92,7 +92,6 @@ async function getCurrentUserId(): Promise<string | null> {
       return null;
     }
 
-    console.log('User authenticated:', user.id);
     return user.id;
   } catch (error) {
     console.error('Unexpected error in getCurrentUserId:', error);
@@ -149,7 +148,6 @@ export const EnumService = {
         return { data: fallbackData, error: null };
       }
 
-      console.log('✅ Playing hand types loaded from database:', data);
       return { data: data || [], error: null };
     } catch (error) {
       const fallbackData = [
@@ -182,7 +180,6 @@ export const EnumService = {
         return { data: fallbackData, error: null };
       }
 
-      console.log('✅ Match duration types loaded from database:', data);
       return { data: data || [], error: null };
     } catch (error) {
       const fallbackData = [
@@ -213,7 +210,6 @@ export const EnumService = {
         return { data: fallbackData, error: null };
       }
 
-      console.log('✅ Match type types loaded from database:', data);
       return { data: data || [], error: null };
     } catch (error) {
       const fallbackData = [

@@ -1186,9 +1186,6 @@ async function ensureMatchChat(matchId: string, newPlayerId: string): Promise<vo
     if (existingConversation) {
       // Chat exists — just add the new player
       await addConversationParticipant(existingConversation.id, newPlayerId);
-      console.log(
-        `[ensureMatchChat] Added player ${newPlayerId} to existing chat for match ${matchId}`
-      );
       return;
     }
 
@@ -1243,11 +1240,6 @@ async function ensureMatchChat(matchId: string, newPlayerId: string): Promise<vo
     // Ensure the new player is a participant even if createMatchChat
     // returned an already-existing conversation (race condition safety)
     await addConversationParticipant(conversation.id, newPlayerId);
-
-    console.log(
-      `[ensureMatchChat] Created/joined ${matchFormat} chat for match ${matchId}:`,
-      conversation.id
-    );
   } catch (error) {
     Logger.error(
       '[ensureMatchChat] Error',
@@ -1266,9 +1258,6 @@ async function removePlayerFromMatchChat(matchId: string, playerId: string): Pro
     if (!conversation) return;
 
     await removeConversationParticipant(conversation.id, playerId);
-    console.log(
-      `[removePlayerFromMatchChat] Removed player ${playerId} from chat for match ${matchId}`
-    );
   } catch (error) {
     Logger.error(
       '[removePlayerFromMatchChat] Error',

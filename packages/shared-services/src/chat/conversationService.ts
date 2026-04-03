@@ -705,7 +705,6 @@ export async function syncMatchConversationTitle(
     // Get the conversation for this match
     const conversation = await getMatchChat(matchId);
     if (!conversation) {
-      console.log('[syncMatchConversationTitle] No conversation found for match:', matchId);
       return;
     }
 
@@ -744,7 +743,6 @@ export async function syncMatchConversationTitle(
 
     // Update conversation title
     await updateConversation(conversation.id, { title: newTitle });
-    console.log('[syncMatchConversationTitle] Updated conversation title to:', newTitle);
   } catch (error) {
     console.error('[syncMatchConversationTitle] Error:', error);
   }
