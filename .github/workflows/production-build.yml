@@ -51,7 +51,7 @@ jobs:
         if: success()
         run: |
           cd apps/mobile
-          eas submit --platform all --non-interactive
+          eas submit --platform all --latest --non-interactive
 
       - name: Notify Discord
         if: success() || failure()
