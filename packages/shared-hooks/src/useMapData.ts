@@ -24,6 +24,7 @@ interface UseMapDataOptions {
   latitude: number | undefined;
   longitude: number | undefined;
   maxDistanceKm?: number;
+  userGender?: string | null;
   enabled?: boolean;
 }
 
@@ -52,7 +53,7 @@ const mapKeys = {
 };
 
 export function useMapData(options: UseMapDataOptions): UseMapDataReturn {
-  const { sportIds, latitude, longitude, maxDistanceKm = 25, enabled = true } = options;
+  const { sportIds, latitude, longitude, maxDistanceKm = 25, userGender, enabled = true } = options;
 
   const hasRequiredParams = !!sportIds?.length && latitude !== undefined && longitude !== undefined;
 
@@ -64,6 +65,7 @@ export function useMapData(options: UseMapDataOptions): UseMapDataReturn {
         latitude: latitude!,
         longitude: longitude!,
         maxDistanceKm,
+        userGender,
       }),
     enabled: enabled && hasRequiredParams,
     staleTime: 1000 * 60 * 5, // 5 minutes

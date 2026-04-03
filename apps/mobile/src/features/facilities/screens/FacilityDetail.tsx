@@ -116,7 +116,8 @@ export default function FacilityDetail() {
 
   // Favorites management
   const { isFavorite, addFavorite, removeFavorite, isMaxReached } = useFavoriteFacilities(
-    player?.id ?? null
+    player?.id ?? null,
+    selectedSport?.id
   );
 
   const facilityIsFavorite = facility ? isFavorite(facility.id) : false;

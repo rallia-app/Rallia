@@ -1741,6 +1741,7 @@ DECLARE
   fac_count INT;
   fake_id UUID;
   fac_idx INT;
+  player_sport_id UUID;
 BEGIN
   -- Get up to 10 facility IDs
   SELECT array_agg(id) INTO fac_ids
@@ -1753,28 +1754,40 @@ BEGIN
 
   fac_count := array_length(fac_ids, 1);
 
-  -- ~50 players get 1-3 favorite facilities
+  -- ~50 players get 1-3 favorite facilities per their primary sport
   FOR idx IN 1..50 LOOP
     fake_id := ('a1000000-0000-0000-0000-00000000' || LPAD(idx::text, 4, '0'))::uuid;
 
+    -- Get the player's primary (or first) sport
+    SELECT ps.sport_id INTO player_sport_id
+    FROM player_sport ps
+    WHERE ps.player_id = fake_id AND ps.is_active = TRUE
+    ORDER BY ps.is_primary DESC, ps.created_at ASC
+    LIMIT 1;
+
+    -- Skip if player has no sport
+    IF player_sport_id IS NULL THEN
+      CONTINUE;
+    END IF;
+
     -- First favorite
-    INSERT INTO player_favorite_facility (player_id, facility_id, display_order)
-    VALUES (fake_id, fac_ids[((idx - 1) % fac_count) + 1], 1)
+    INSERT INTO player_favorite_facility (player_id, facility_id, sport_id, display_order)
+    VALUES (fake_id, fac_ids[((idx - 1) % fac_count) + 1], player_sport_id, 1)
     ON CONFLICT DO NOTHING;
 
     -- Second favorite for every other player
     IF idx % 2 = 0 THEN
       fac_idx := ((idx + 3) % fac_count) + 1;
-      INSERT INTO player_favorite_facility (player_id, facility_id, display_order)
-      VALUES (fake_id, fac_ids[fac_idx], 2)
+      INSERT INTO player_favorite_facility (player_id, facility_id, sport_id, display_order)
+      VALUES (fake_id, fac_ids[fac_idx], player_sport_id, 2)
       ON CONFLICT DO NOTHING;
     END IF;
 
     -- Third favorite for every 5th player
     IF idx % 5 = 0 THEN
       fac_idx := ((idx + 7) % fac_count) + 1;
-      INSERT INTO player_favorite_facility (player_id, facility_id, display_order)
-      VALUES (fake_id, fac_ids[fac_idx], 3)
+      INSERT INTO player_favorite_facility (player_id, facility_id, sport_id, display_order)
+      VALUES (fake_id, fac_ids[fac_idx], player_sport_id, 3)
       ON CONFLICT DO NOTHING;
     END IF;
   END LOOP;

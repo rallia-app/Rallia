@@ -60,6 +60,8 @@ export interface SearchFacilitiesParams {
   hasLighting?: boolean;
   /** Filter by membership requirement (true = members only, false = public) */
   membershipRequired?: boolean;
+  /** The viewing user's gender for match eligibility filtering */
+  userGender?: string | null;
   limit?: number;
   offset?: number;
 }
@@ -227,6 +229,7 @@ export async function searchFacilitiesNearby(
     courtTypes,
     hasLighting,
     membershipRequired,
+    userGender,
     limit = DEFAULT_PAGE_SIZE,
     offset = 0,
   } = params;
@@ -246,6 +249,7 @@ export async function searchFacilitiesNearby(
       p_membership_required: membershipRequired ?? null,
       p_limit: limit + 1, // Fetch one extra to check if more exist
       p_offset: offset,
+      p_user_gender: userGender || null,
     }),
     // Only fetch count on first page (offset === 0) to avoid unnecessary queries
     offset === 0
@@ -402,6 +406,7 @@ export interface GetMapFacilitiesParams {
   latitude: number;
   longitude: number;
   maxDistanceKm?: number;
+  userGender?: string | null;
 }
 
 /**
@@ -411,7 +416,7 @@ export interface GetMapFacilitiesParams {
 export async function getMapFacilities(
   params: GetMapFacilitiesParams
 ): Promise<FacilitySearchResult[]> {
-  const { sportIds, latitude, longitude, maxDistanceKm } = params;
+  const { sportIds, latitude, longitude, maxDistanceKm, userGender } = params;
 
   const { data, error } = await supabase.rpc('search_facilities_nearby', {
     p_sport_ids: sportIds,
@@ -426,6 +431,7 @@ export async function getMapFacilities(
     p_membership_required: null,
     p_limit: 500,
     p_offset: 0,
+    p_user_gender: userGender || null,
   });
 
   if (error) {

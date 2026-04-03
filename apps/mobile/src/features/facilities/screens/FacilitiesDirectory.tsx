@@ -267,12 +267,13 @@ export default function FacilitiesDirectory() {
     longitude: location?.longitude,
     searchQuery: debouncedSearchQuery,
     filters,
+    userGender: player?.gender,
     enabled: showFacilities,
   });
 
   // Favorites management
   const { favorites, isFavorite, addFavorite, removeFavorite, isMaxReached } =
-    useFavoriteFacilities(player?.id ?? null);
+    useFavoriteFacilities(player?.id ?? null, selectedSport?.id);
 
   // Sort facilities: favorites first, then by distance
   const sortedFacilities = useMemo(() => {

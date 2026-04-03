@@ -11,6 +11,7 @@ const MAX_FAVORITES = 3;
 export interface FavoriteFacility {
   id: string;
   facilityId: string;
+  sportId: string;
   facility: {
     id: string;
     name: string;
@@ -66,15 +67,13 @@ export function useFavoriteFacilities(
     setError(null);
 
     try {
-      // Always include facility_sport so we can filter by sport when needed.
-      // PostgREST uses a LEFT JOIN by default, so facility_sport is [] for
-      // facilities not linked to any sport — no rows are lost.
-      const { data, error: fetchError } = await supabase
+      let query = supabase
         .from('player_favorite_facility')
         .select(
           `
           id,
           facility_id,
+          sport_id,
           display_order,
           facility:facility_id (
             id,
@@ -82,39 +81,35 @@ export function useFavoriteFacilities(
             address,
             city,
             latitude,
-            longitude,
-            facility_sport (
-              sport_id
-            )
+            longitude
           )
         `
         )
         .eq('player_id', playerId)
         .order('display_order', { ascending: true });
 
-      if (fetchError) throw fetchError;
-
-      // Filter by sport if sportId provided — only show facilities linked to this sport
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let filteredData: any[] = data || [];
+      // Filter by sport at the DB level
       if (sportId) {
-        filteredData = filteredData.filter(item => {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-          const facilitySports = (item.facility as { facility_sport?: Array<{ sport_id: string }> })
-            ?.facility_sport;
-          return (
-            Array.isArray(facilitySports) && facilitySports.some(fs => fs.sport_id === sportId)
-          );
-        });
+        query = query.eq('sport_id', sportId);
       }
 
-      const mappedFavorites: FavoriteFacility[] = filteredData.map(
-        (item: { id: string; facility_id: string; display_order: number; facility: unknown }) => {
-          // Supabase returns the joined relation as an object (single) when using FK reference
+      const { data, error: fetchError } = await query;
+
+      if (fetchError) throw fetchError;
+
+      const mappedFavorites: FavoriteFacility[] = (data || []).map(
+        (item: {
+          id: string;
+          facility_id: string;
+          sport_id: string;
+          display_order: number;
+          facility: unknown;
+        }) => {
           const facilityData = item.facility as FavoriteFacility['facility'];
           return {
             id: item.id,
             facilityId: item.facility_id,
+            sportId: item.sport_id,
             facility: facilityData,
             displayOrder: item.display_order,
           };
@@ -136,38 +131,26 @@ export function useFavoriteFacilities(
 
   const addFavorite = useCallback(
     async (facility: FacilitySearchResult): Promise<boolean> => {
-      if (!playerId) return false;
+      if (!playerId || !sportId) return false;
       if (favorites.length >= MAX_FAVORITES) return false;
       if (favorites.some(f => f.facilityId === facility.id)) return false;
 
       try {
-        // Calculate next display_order — when sport-filtered, query global max
-        // to avoid display_order conflicts with other sports' favorites
-        let nextDisplayOrder: number;
-        if (sportId) {
-          const { data: maxOrderData } = await supabase
-            .from('player_favorite_facility')
-            .select('display_order')
-            .eq('player_id', playerId)
-            .order('display_order', { ascending: false })
-            .limit(1);
-          nextDisplayOrder =
-            ((maxOrderData?.[0] as { display_order?: number } | undefined)?.display_order || 0) + 1;
-        } else {
-          nextDisplayOrder = favorites.length + 1;
-        }
+        const nextDisplayOrder = favorites.length + 1;
 
         const { data, error: insertError } = await supabase
           .from('player_favorite_facility')
           .insert({
             player_id: playerId,
             facility_id: facility.id,
+            sport_id: sportId,
             display_order: nextDisplayOrder,
           })
           .select(
             `
           id,
           facility_id,
+          sport_id,
           display_order,
           facility:facility_id (
             id,
@@ -183,11 +166,11 @@ export function useFavoriteFacilities(
 
         if (insertError) throw insertError;
 
-        // Supabase returns the joined relation as an object (single) when using FK reference
         const facilityData = data.facility as unknown as FavoriteFacility['facility'];
         const newFavorite: FavoriteFacility = {
           id: data.id,
           facilityId: data.facility_id,
+          sportId: data.sport_id,
           facility: facilityData,
           displayOrder: data.display_order,
         };

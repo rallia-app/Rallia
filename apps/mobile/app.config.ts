@@ -50,6 +50,7 @@ export default ({ config: _config }: ConfigContext): ExpoConfig => {
     ...baseConfig,
     android: {
       ...baseConfig.android,
+      googleServicesFile: './google-services.json',
       config: {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ...((baseConfig.android as any)?.config || {}),

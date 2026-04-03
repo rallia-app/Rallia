@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS match_interest (
 
 ALTER TABLE match_interest ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "service role full access on match_interest" ON match_interest;
 CREATE POLICY "service role full access on match_interest"
   ON match_interest
   FOR ALL
@@ -18,5 +19,5 @@ CREATE POLICY "service role full access on match_interest"
   USING (true)
   WITH CHECK (true);
 
-CREATE INDEX match_interest_match_id_idx ON match_interest(match_id);
-CREATE INDEX match_interest_email_idx ON match_interest(email);
+CREATE INDEX IF NOT EXISTS match_interest_match_id_idx ON match_interest(match_id);
+CREATE INDEX IF NOT EXISTS match_interest_email_idx ON match_interest(email);
