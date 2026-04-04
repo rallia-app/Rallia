@@ -1,4 +1,4 @@
-name: Production Build & Submit
+name: Production Build
 
 on:
   workflow_dispatch:
@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   production-build:
-    name: EAS Production Build & Submit
+    name: EAS Production Build
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -46,13 +46,6 @@ jobs:
           eas build --platform all --profile production --non-interactive --json \
             | tee build-result.json
 
-      - name: Submit to app stores
-        id: submit
-        if: success()
-        run: |
-          cd apps/mobile
-          eas submit --platform all --latest --non-interactive
-
       - name: Notify Discord
         if: success() || failure()
         env:
@@ -64,13 +57,8 @@ jobs:
           RELEASE_NOTES="${{ github.event.inputs.release_notes }}"
 
           if [ "${{ steps.build.outcome }}" = "success" ]; then
-            if [ "${{ steps.submit.outcome }}" = "success" ]; then
-              COLOR=3066993
-              TITLE="Production Build & Submit Completed"
-            else
-              COLOR=15105570
-              TITLE="Production Build OK — Submit Failed"
-            fi
+            COLOR=3066993
+            TITLE="Production Build Completed"
           else
             COLOR=15158332
             TITLE="Production Build Failed"
