@@ -1,0 +1,79 @@
+name: Production Submit
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: production-submit
+  cancel-in-progress: false
+
+jobs:
+  production-submit:
+    name: EAS Production Submit
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: '16'
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Write Google Play service account key
+        run: |
+          mkdir -p apps/mobile/credentials
+          echo '${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}' > apps/mobile/credentials/play-store-service-account.json
+
+      - name: Submit to app stores
+        id: submit
+        run: |
+          cd apps/mobile
+          eas submit --platform all --latest --non-interactive
+
+      - name: Notify Discord
+        if: success() || failure()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          if [ "${{ steps.submit.outcome }}" = "success" ]; then
+            COLOR=3066993
+            TITLE="Production Submit Completed"
+            DESCRIPTION="Latest builds submitted to App Store & Google Play"
+          else
+            COLOR=15158332
+            TITLE="Production Submit Failed"
+            DESCRIPTION="Failed to submit builds to app stores"
+          fi
+
+          FIELDS="["
+          FIELDS="${FIELDS}{\"name\": \"Workflow\", \"value\": \"[View Logs](${RUN_URL})\", \"inline\": true}"
+          FIELDS="${FIELDS}]"
+
+          TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          PAYLOAD=$(jq -n \
+            --arg title "$TITLE" \
+            --argjson color "$COLOR" \
+            --arg timestamp "$TIMESTAMP" \
+            --arg description "$DESCRIPTION" \
+            --argjson fields "$FIELDS" \
+            '{embeds: [{title: $title, description: $description, color: $color, fields: $fields, timestamp: $timestamp, footer: {text: "Rallia Production Submit"}}]}')
+
+          curl -sf -H "Content-Type: application/json" -d "$PAYLOAD" "$DISCORD_WEBHOOK_URL"
