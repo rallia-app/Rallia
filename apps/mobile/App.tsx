@@ -87,7 +87,7 @@ import type { ErrorBoundaryTranslations } from '@rallia/shared-components';
 import { getLocales } from 'expo-localization';
 import * as Application from 'expo-application';
 import { Logger } from './src/services/logger';
-import { setAnalyticsClient, appOpened, deepLinkOpened } from './src/services/analytics';
+import { appOpened, deepLinkOpened } from './src/services/analytics';
 import {
   AuthProvider,
   useAuth,
@@ -113,8 +113,7 @@ import {
   TourProvider,
 } from './src/context';
 import { usePushNotifications, useShakeDetection } from './src/hooks';
-import { usePostHog } from 'posthog-react-native';
-import { PostHogProvider } from './src/providers/PostHogProvider';
+import { PostHogProvider, posthogClient } from './src/providers/PostHogProvider';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { SheetManager, SheetProvider } from 'react-native-actions-sheet';
 import { Sheets } from './src/context/sheets';
@@ -199,23 +198,19 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
   // This updates immediately on mount and every 2 minutes while the app is active
   useUpdateLastSeen(userId);
 
-  // Wire PostHog for analytics service and identify user when authenticated
-  const posthog = usePostHog();
+  // Register super properties and identify user when authenticated
   useEffect(() => {
-    if (posthog) {
-      setAnalyticsClient(posthog);
-      posthog.register({
-        platform: 'mobile',
-        app_version: Application.nativeApplicationVersion ?? null,
-      });
-    }
-  }, [posthog]);
+    posthogClient?.register({
+      platform: 'mobile',
+      app_version: Application.nativeApplicationVersion ?? null,
+    });
+  }, []);
 
   useEffect(() => {
-    if (user && posthog) {
-      posthog.identify(user.id, { email: user.email ?? null });
+    if (user) {
+      posthogClient?.identify(user.id, { email: user.email ?? null });
     }
-  }, [user, posthog]);
+  }, [user]);
 
   // Handle incoming deep link URL
   const handleDeepLink = useCallback(
@@ -503,7 +498,6 @@ function AppContent() {
   const { theme } = useTheme();
   const { setSplashComplete, isSplashComplete, permissionsHandled } = useOverlay();
   const isCheckingUpdate = useOTAUpdate();
-  const posthog = usePostHog();
   // TEMPORARILY DISABLED: User walkthrough deactivated
   // const { showCompletionModal, dismissCompletionModal, lastCompletedTourId } = useTour();
 
@@ -547,8 +541,8 @@ function AppContent() {
 
           // Track screen views in PostHog
           const currentRoute = navigationRef.current?.getCurrentRoute();
-          if (currentRoute?.name && posthog) {
-            posthog.screen(currentRoute.name);
+          if (currentRoute?.name) {
+            posthogClient?.screen(currentRoute.name);
           }
         }}
       >

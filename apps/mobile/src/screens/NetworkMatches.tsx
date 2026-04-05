@@ -4,7 +4,7 @@
  * Provides search and filtering similar to FacilityDetail's MatchesTab and PublicMatches.
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -132,6 +132,7 @@ export default function NetworkMatchesScreen() {
   } = usePublicMatchFilters();
 
   // Fetch network member upcoming matches
+  const isManualRefresh = useRef(false);
   const {
     data: matches,
     isLoading,
@@ -511,8 +512,13 @@ export default function NetworkMatchesScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={() => void refetch()}
+              refreshing={isRefetching && isManualRefresh.current}
+              onRefresh={() => {
+                isManualRefresh.current = true;
+                refetch().finally(() => {
+                  isManualRefresh.current = false;
+                });
+              }}
               tintColor={colors.primary}
               colors={[colors.primary]}
             />

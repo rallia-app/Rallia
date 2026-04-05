@@ -4,7 +4,7 @@
  * Mirrors PlayerMatches screen structure with infinite scroll, filter chips, and pull-to-refresh.
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -171,6 +171,7 @@ export default function MyBookingsScreen() {
   );
 
   // Fetch bookings
+  const isManualRefresh = useRef(false);
   const {
     bookings,
     isLoading,
@@ -327,8 +328,13 @@ export default function MyBookingsScreen() {
           stickySectionHeadersEnabled={false}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={refetch}
+              refreshing={isRefetching && isManualRefresh.current}
+              onRefresh={() => {
+                isManualRefresh.current = true;
+                refetch().finally(() => {
+                  isManualRefresh.current = false;
+                });
+              }}
               tintColor={colors.primary}
               colors={[colors.primary]}
             />

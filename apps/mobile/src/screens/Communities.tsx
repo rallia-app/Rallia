@@ -4,7 +4,7 @@
  * Features a segmented control to switch between "Discover" and "My Communities"
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   FlatList,
@@ -274,13 +274,14 @@ export default function CommunitiesScreen() {
   const isLoading = activeTab === 'discover' ? isLoadingPublic : isLoadingMy;
   const isRefetching = activeTab === 'discover' ? isRefetchingPublic : isRefetchingMy;
   const communities = activeTab === 'discover' ? publicCommunities : myCommunities;
+  const isManualRefresh = useRef(false);
 
   const handleRefresh = useCallback(() => {
-    if (activeTab === 'discover') {
-      refetchPublic();
-    } else {
-      refetchMy();
-    }
+    isManualRefresh.current = true;
+    const refetchFn = activeTab === 'discover' ? refetchPublic : refetchMy;
+    refetchFn().finally(() => {
+      isManualRefresh.current = false;
+    });
   }, [activeTab, refetchPublic, refetchMy]);
 
   const handleOpenCreateCommunityActionSheet = useCallback(() => {
@@ -528,7 +529,7 @@ export default function CommunitiesScreen() {
         ListEmptyComponent={renderEmptyState}
         refreshControl={
           <RefreshControl
-            refreshing={isRefetching}
+            refreshing={isRefetching && isManualRefresh.current}
             onRefresh={handleRefresh}
             tintColor={colors.primary}
           />

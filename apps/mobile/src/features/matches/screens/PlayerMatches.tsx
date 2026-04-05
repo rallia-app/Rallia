@@ -210,13 +210,6 @@ export default function PlayerMatches() {
     }
   }, [isInitialLoad, isLoading]);
 
-  // Clear manual refresh flag when refetching completes
-  useEffect(() => {
-    if (!isRefetching) {
-      isManualRefresh.current = false;
-    }
-  }, [isRefetching]);
-
   // Group matches by date
   const sections = useMemo(
     () => groupMatchesByDate(matches, activeTab, t),
@@ -445,10 +438,12 @@ export default function PlayerMatches() {
           stickySectionHeadersEnabled={false}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching}
+              refreshing={isRefetching && isManualRefresh.current}
               onRefresh={() => {
                 isManualRefresh.current = true;
-                refetch();
+                refetch().finally(() => {
+                  isManualRefresh.current = false;
+                });
               }}
               tintColor={colors.primary}
               colors={[colors.primary]}
