@@ -12,7 +12,7 @@ import fs from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const SCREENSHOTS = [
+const SCREENSHOTS_EN = [
   {
     id: 'screenshot-1-home',
     source: 'IMG_9786.PNG',
@@ -50,10 +50,53 @@ const SCREENSHOTS = [
   },
 ];
 
+const SCREENSHOTS_FR = [
+  {
+    id: 'screenshot-1-home',
+    source: 'IMG_9786.PNG',
+    headline: 'Trouvez et rejoignez\ndes parties près de vous',
+    subtitle: 'Parcourez les parties, les terrains disponibles\net les matchs ouverts en un coup d\'œil.',
+    gradient: ['#0d9488', '#14b8a6', '#2dd4bf'],
+  },
+  {
+    id: 'screenshot-2-players',
+    source: 'IMG_9784.PNG',
+    headline: 'Trouvez des joueurs\nprès de vous',
+    subtitle: 'Filtrez par niveau, sport et distance\npour trouver le partenaire idéal.',
+    gradient: ['#14b8a6', '#0ea5e9', '#38bdf8'],
+  },
+  {
+    id: 'screenshot-3-facilities',
+    source: 'IMG_9785.PNG',
+    headline: 'Explorez les terrains\nautour de vous',
+    subtitle: 'Consultez les disponibilités, distances\net types de surface.',
+    gradient: ['#f59e0b', '#fbbf24', '#fcd34d'],
+  },
+  {
+    id: 'screenshot-4-create',
+    source: 'IMG_9787.PNG',
+    headline: 'Créez une partie\nen quelques taps',
+    subtitle: 'Choisissez le lieu, l\'heure et le format.\nInvitez vos amis ou ouvrez-la à tous.',
+    gradient: ['#ed6a6d', '#f1888a', '#fca5a5'],
+  },
+  {
+    id: 'screenshot-5-detail',
+    source: 'IMG_9788.PNG',
+    headline: 'Toutes les infos\nsur chaque terrain',
+    subtitle: 'Carte, nombre de terrains, disponibilités\net parties à proximité.',
+    gradient: ['#7c3aed', '#8b5cf6', '#a78bfa'],
+  },
+];
+
+const LANG = process.argv.includes('--fr') ? 'fr' : 'en';
+const SCREENSHOTS = LANG === 'fr' ? SCREENSHOTS_FR : SCREENSHOTS_EN;
+
 const SIZES = {
-  phone:    { width: 1080, height: 1920, phoneW: 700, phoneH: 1460, fontSize: 56, subSize: 24, topPad: 50, gap: 60, radius: 56, screenRadius: 46, notchW: 160, notchH: 32, notchTop: 22, framePad: 12 },
-  tablet7:  { width: 1200, height: 1920, phoneW: 620, phoneH: 1300, fontSize: 52, subSize: 22, topPad: 50, gap: 50, radius: 50, screenRadius: 42, notchW: 140, notchH: 28, notchTop: 20, framePad: 11 },
-  tablet10: { width: 1600, height: 2560, phoneW: 820, phoneH: 1730, fontSize: 72, subSize: 32, topPad: 70, gap: 70, radius: 66, screenRadius: 56, notchW: 190, notchH: 38, notchTop: 26, framePad: 14 },
+  phone:     { width: 1080, height: 1920, phoneW: 700, phoneH: 1460, fontSize: 56, subSize: 24, topPad: 50, gap: 60, radius: 56, screenRadius: 46, notchW: 160, notchH: 32, notchTop: 22, framePad: 12 },
+  iphone65:  { width: 1284, height: 2778, phoneW: 832, phoneH: 2050, fontSize: 67, subSize: 29, topPad: 60, gap: 70, radius: 67, screenRadius: 55, notchW: 190, notchH: 38, notchTop: 26, framePad: 14 },
+  tablet7:   { width: 1200, height: 1920, phoneW: 620, phoneH: 1300, fontSize: 52, subSize: 22, topPad: 50, gap: 50, radius: 50, screenRadius: 42, notchW: 140, notchH: 28, notchTop: 20, framePad: 11 },
+  tablet10:  { width: 1600, height: 2560, phoneW: 820, phoneH: 1730, fontSize: 72, subSize: 32, topPad: 70, gap: 70, radius: 66, screenRadius: 56, notchW: 190, notchH: 38, notchTop: 26, framePad: 14 },
+  ipad13:    { width: 2048, height: 2732, phoneW: 1050, phoneH: 2050, fontSize: 82, subSize: 36, topPad: 70, gap: 80, radius: 72, screenRadius: 60, notchW: 220, notchH: 42, notchTop: 28, framePad: 16 },
 };
 
 function generateHTML(screenshot, imageDataUri, size) {
@@ -211,7 +254,12 @@ async function main() {
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
   });
 
+  const sizeFilter = process.argv.find(a => a.startsWith('--size='));
+  const onlySize = sizeFilter ? sizeFilter.split('=')[1] : null;
+
   for (const [sizeName, size] of Object.entries(SIZES)) {
+    if (onlySize && sizeName !== onlySize) continue;
+
     const dir = sizeName === 'phone' ? __dirname : path.join(__dirname, sizeName);
     if (sizeName !== 'phone') fs.mkdirSync(dir, { recursive: true });
 
