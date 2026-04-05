@@ -7851,6 +7851,85 @@
       "premium": "Accès premium gratuit"
     }
   },
+  "playerInterest": {
+    "title": "Jouez gratuitement - Rallia",
+    "hero": {
+      "badge": "Amis et famille",
+      "headline": "Aidez-nous à lancer Rallia",
+      "subheadline": "On cherche nos premiers joueurs pour lancer le bal. Dites-nous où vous jouez et quand vous êtes libre — on s'occupe des frais de terrain."
+    },
+    "formSection": {
+      "title": "Votre profil joueur",
+      "subtitle": "Ça nous aide à organiser des matchs aux bons endroits et aux bons moments pour vous."
+    },
+    "form": {
+      "firstNameLabel": "Prénom",
+      "firstNamePlaceholder": "Votre prénom",
+      "lastNameLabel": "Nom de famille",
+      "lastNamePlaceholder": "Votre nom de famille",
+      "emailLabel": "Courriel",
+      "emailPlaceholder": "votre.courriel@exemple.com",
+      "postalCodeLabel": "Code postal",
+      "postalCodePlaceholder": "ex: H2X 1Y4",
+      "playsTennisLabel": "Pratiquez-vous le tennis?",
+      "ntrpRatingLabel": "Votre cote NTRP",
+      "favoriteTennisFacilityLabel": "Où jouez-vous au tennis habituellement?",
+      "favoriteTennisFacilityPlaceholder": "Rechercher un centre...",
+      "playsPickleballLabel": "Pratiquez-vous le pickleball?",
+      "duprRatingLabel": "Votre cote DUPR",
+      "favoritePickleballFacilityLabel": "Où jouez-vous au pickleball habituellement?",
+      "favoritePickleballFacilityPlaceholder": "Rechercher un centre...",
+      "facilityCustomHint": "Vous ne trouvez pas votre centre? Tapez son nom.",
+      "facilityNoResults": "Aucun centre trouvé. Tapez un nom personnalisé.",
+      "availabilityTitle": "Quand pouvez-vous jouer?",
+      "availabilityDescription": "Sélectionnez les moments où vous êtes généralement libre. On s'en servira pour planifier des matchs.",
+      "days": {
+        "monday": "Lun",
+        "tuesday": "Mar",
+        "wednesday": "Mer",
+        "thursday": "Jeu",
+        "friday": "Ven",
+        "saturday": "Sam",
+        "sunday": "Dim"
+      },
+      "periods": {
+        "morning": "Matin",
+        "afternoon": "Après-midi",
+        "evening": "Soirée"
+      },
+      "periodRanges": {
+        "morning": "6h - 12h",
+        "afternoon": "12h - 17h",
+        "evening": "17h - 21h"
+      },
+      "availabilityCount": "{count} sélectionnés",
+      "submitButton": "Je suis partant",
+      "submitting": "Envoi en cours..."
+    },
+    "validation": {
+      "atLeastOneSport": "Veuillez sélectionner au moins un sport.",
+      "tennisRatingRequired": "Veuillez sélectionner votre cote NTRP.",
+      "pickleballRatingRequired": "Veuillez sélectionner votre cote DUPR.",
+      "tennisFacilityRequired": "Veuillez indiquer où vous jouez au tennis.",
+      "pickleballFacilityRequired": "Veuillez indiquer où vous jouez au pickleball.",
+      "availabilityMinimum": "Veuillez sélectionner au moins 3 plages de disponibilité.",
+      "postalCodeInvalid": "Veuillez entrer un code postal canadien valide (ex: H2X 1Y4)."
+    },
+    "success": {
+      "message": "C'est noté! On vous contacte bientôt pour vous mettre sur le terrain."
+    },
+    "alreadySubmitted": {
+      "message": "On dirait que vous êtes déjà inscrit! On vous contacte bientôt."
+    },
+    "error": {
+      "message": "Une erreur est survenue. Veuillez réessayer."
+    },
+    "trust": {
+      "secure": "Vos infos restent privées",
+      "fast": "Ça prend 2 minutes",
+      "premium": "Terrains à nos frais"
+    }
+  },
   "gamesPage": {
     "title": "Parties à venir",
     "subtitle": "Trouvez des parties publiques près de chez vous et rejoignez l'action.",
