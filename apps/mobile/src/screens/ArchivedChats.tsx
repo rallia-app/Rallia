@@ -3,7 +3,7 @@
  * Shows all archived conversations
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import { View, StyleSheet, FlatList, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,6 +40,7 @@ const ArchivedChats = () => {
     refetch,
     isRefetching,
   } = usePlayerConversations(playerId);
+  const isManualRefresh = useRef(false);
 
   // Mutations for conversation actions
   const { mutate: togglePin } = useTogglePinConversation();
@@ -163,8 +164,13 @@ const ArchivedChats = () => {
           ListEmptyComponent={renderEmpty}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={refetch}
+              refreshing={isRefetching && isManualRefresh.current}
+              onRefresh={() => {
+                isManualRefresh.current = true;
+                refetch().finally(() => {
+                  isManualRefresh.current = false;
+                });
+              }}
               colors={[primary[500]]}
               tintColor={primary[500]}
             />

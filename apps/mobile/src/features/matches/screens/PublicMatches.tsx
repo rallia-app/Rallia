@@ -3,7 +3,7 @@
  * Displays public matches with search, filtering, and infinite scroll.
  */
 
-import React, { useCallback, useMemo, useEffect, useState } from 'react';
+import React, { useCallback, useMemo, useEffect, useState, useRef } from 'react';
 import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -140,6 +140,7 @@ export default function PublicMatches() {
   const showMatches = !!location && !!selectedSport;
 
   // Fetch public matches - use distance from filters and user's gender for eligibility
+  const isManualRefresh = useRef(false);
   const {
     matches,
     totalCount,
@@ -436,8 +437,13 @@ export default function PublicMatches() {
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={refetch}
+              refreshing={isRefetching && isManualRefresh.current}
+              onRefresh={() => {
+                isManualRefresh.current = true;
+                refetch().finally(() => {
+                  isManualRefresh.current = false;
+                });
+              }}
               tintColor={colors.primary}
               colors={[colors.primary]}
             />

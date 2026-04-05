@@ -10,7 +10,7 @@
  * - Search contacts
  */
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -68,8 +68,12 @@ const SharedListDetail: React.FC = () => {
   useSharedContactsRealtime(listId);
 
   // Refresh handler
+  const isManualRefresh = useRef(false);
   const handleRefresh = useCallback(() => {
-    refetch();
+    isManualRefresh.current = true;
+    refetch().finally(() => {
+      isManualRefresh.current = false;
+    });
   }, [refetch]);
 
   // Add contact manually
@@ -346,7 +350,7 @@ const SharedListDetail: React.FC = () => {
           ListEmptyComponent={renderEmpty}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching}
+              refreshing={isRefetching && isManualRefresh.current}
               onRefresh={handleRefresh}
               tintColor={colors.primary}
             />

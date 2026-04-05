@@ -1,17 +1,11 @@
-import type { PostHog } from 'posthog-react-native';
 import type { JsonType } from '@posthog/core';
-
-let client: PostHog | null = null;
-
-export function setAnalyticsClient(posthog: PostHog): void {
-  client = posthog;
-}
+import { posthogClient } from '../providers/PostHogProvider';
 
 function capture(event: string, properties?: Record<string, JsonType>): void {
   if (__DEV__) {
     console.log(`[Analytics] ${event}`, properties ?? '');
   }
-  client?.capture(event, properties);
+  posthogClient?.capture(event, properties);
 }
 
 // ---- Auth ----

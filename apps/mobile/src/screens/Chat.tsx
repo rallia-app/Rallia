@@ -6,7 +6,7 @@
  * - Match Chats: Chats linked to matches (both singles and doubles)
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -85,6 +85,7 @@ const Chat = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<TabKey>('direct');
   const [chatFilters, setChatFilters] = useState<ChatFilters>(DEFAULT_CHAT_FILTERS);
+  const isManualRefresh = useRef(false);
 
   // Chat screen tour - triggers after main navigation tour is completed
   const { shouldShowTour: _shouldShowChatTour } = useTourSequence({
@@ -737,8 +738,13 @@ const Chat = () => {
         }
         refreshControl={
           <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={refetch}
+            refreshing={isRefetching && isManualRefresh.current}
+            onRefresh={() => {
+              isManualRefresh.current = true;
+              refetch().finally(() => {
+                isManualRefresh.current = false;
+              });
+            }}
             colors={[primary[500]]}
             tintColor={primary[500]}
           />

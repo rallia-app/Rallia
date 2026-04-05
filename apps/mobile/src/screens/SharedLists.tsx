@@ -9,7 +9,7 @@
  * - Share matches with contacts via SMS/Email/WhatsApp
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -67,8 +67,12 @@ const SharedLists: React.FC = () => {
   }, [lists, searchQuery]);
 
   // Refresh handler
+  const isManualRefresh = useRef(false);
   const handleRefresh = useCallback(() => {
-    refetch();
+    isManualRefresh.current = true;
+    refetch().finally(() => {
+      isManualRefresh.current = false;
+    });
   }, [refetch]);
 
   // Create list handler
@@ -283,7 +287,7 @@ const SharedLists: React.FC = () => {
           ListEmptyComponent={renderEmpty}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching}
+              refreshing={isRefetching && isManualRefresh.current}
               onRefresh={handleRefresh}
               tintColor={colors.primary}
             />
