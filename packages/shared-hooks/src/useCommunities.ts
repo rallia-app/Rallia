@@ -3,11 +3,12 @@
  * React Query hooks for managing communities
  */
 
-import { useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useCallback } from 'react';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   // CRUD operations
   getPublicCommunities,
+  type PublicCommunitiesPage,
   getPlayerCommunities,
   getCommunity,
   getCommunityWithMembers,
@@ -75,16 +76,48 @@ export const communityKeys = {
 // QUERY HOOKS
 // =============================================================================
 
+const PUBLIC_COMMUNITIES_PAGE_SIZE = 20;
+
 /**
- * Get all public communities for discovery
+ * Get public communities for discovery with infinite scrolling
  * @param playerId - Optional player ID to check membership status
  * @param sportId - Optional sport ID to filter by (null/undefined returns all communities)
  */
 export function usePublicCommunities(playerId?: string, sportId?: string | null) {
-  return useQuery({
+  const query = useInfiniteQuery<PublicCommunitiesPage, Error>({
     queryKey: communityKeys.publicCommunities(playerId, sportId),
-    queryFn: () => getPublicCommunities(playerId, sportId),
+    queryFn: async ({ pageParam = 0 }) => {
+      return getPublicCommunities(
+        playerId,
+        sportId,
+        pageParam as number,
+        PUBLIC_COMMUNITIES_PAGE_SIZE
+      );
+    },
+    getNextPageParam: lastPage => lastPage.nextOffset,
+    initialPageParam: 0,
+    staleTime: 1000 * 60 * 2,
   });
+
+  const communities = useMemo(
+    () => query.data?.pages.flatMap(page => page.communities) ?? [],
+    [query.data]
+  );
+
+  const refresh = useCallback(async () => {
+    await query.refetch();
+  }, [query]);
+
+  return {
+    data: communities,
+    isLoading: query.isLoading,
+    isFetching: query.isFetching,
+    isRefetching: query.isRefetching,
+    isFetchingNextPage: query.isFetchingNextPage,
+    hasNextPage: query.hasNextPage ?? false,
+    fetchNextPage: query.fetchNextPage,
+    refetch: refresh,
+  };
 }
 
 /**

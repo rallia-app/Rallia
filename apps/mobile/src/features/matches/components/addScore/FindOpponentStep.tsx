@@ -14,13 +14,16 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Button } from '@rallia/shared-components';
+import { Text, Button, Skeleton } from '@rallia/shared-components';
+import { usePlayerSearch } from '@rallia/shared-hooks';
+import type { PlayerSearchResult } from '@rallia/shared-services';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
+import { useAuth } from '../../../../hooks';
+import { useSport } from '../../../../context';
 import { useAddScore } from './AddScoreContext';
 import { ContactPickerModal } from './ContactPickerModal';
 import { SearchBar } from '../../../../components/SearchBar';
 import type { SelectedPlayer } from './types';
-import { supabase } from '../../../../lib/supabase';
 
 interface FindOpponentStepProps {
   onContinue: () => void;
@@ -29,117 +32,74 @@ interface FindOpponentStepProps {
 export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
+  const { session } = useAuth();
+  const { selectedSport } = useSport();
+  const currentUserId = session?.user?.id;
   const { formData, updateFormData, matchType } = useAddScore();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<SelectedPlayer[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const [selectedPlayers, setSelectedPlayers] = useState<SelectedPlayer[]>(
     formData.opponents || []
   );
   const [showContactPicker, setShowContactPicker] = useState(false);
 
-  const handleSearch = useCallback(async (query: string) => {
-    setSearchQuery(query);
-    if (query.length < 2) {
-      setSearchResults([]);
-      return;
+  // Use paginated player search — only enabled when there's a search query
+  const {
+    players,
+    isLoading: isSearching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = usePlayerSearch({
+    sportId: selectedSport?.id,
+    currentUserId,
+    searchQuery,
+    pageSize: 20,
+    enabled: !!selectedSport?.id && !!currentUserId && searchQuery.length >= 2,
+  });
+
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
     }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-    setIsSearching(true);
-    try {
-      // Query players with their profile info using inner join
-      // Use the specific foreign key hint for the player -> profile relationship
-      const { data, error } = await supabase
-        .from('player')
-        .select(
-          `
-          id,
-          profile:profile!player_id_fkey (
-            first_name,
-            last_name,
-            display_name,
-            profile_picture_url
-          )
-        `
-        )
-        .limit(50);
-
-      if (error) throw error;
-
-      // Filter by name in JavaScript since we can't filter on joined table
-      const queryLower = query.toLowerCase();
-      const filteredPlayers: SelectedPlayer[] = (data || [])
-        .filter((p: unknown) => {
-          const player = p as {
-            id: string;
-            profile: {
-              first_name?: string;
-              last_name?: string;
-              display_name?: string;
-              profile_picture_url?: string;
-            } | null;
-          };
-          if (!player.profile) return false;
-
-          const firstName = (player.profile.first_name || '').toLowerCase();
-          const lastName = (player.profile.last_name || '').toLowerCase();
-          const displayName = (player.profile.display_name || '').toLowerCase();
-
-          return (
-            firstName.includes(queryLower) ||
-            lastName.includes(queryLower) ||
-            displayName.includes(queryLower)
-          );
-        })
-        .slice(0, 20)
-        .map((p: unknown) => {
-          const player = p as {
-            id: string;
-            profile: {
-              first_name?: string;
-              last_name?: string;
-              display_name?: string;
-              profile_picture_url?: string;
-            };
-          };
-          return {
-            id: player.id,
-            firstName: player.profile.first_name || '',
-            lastName: player.profile.last_name,
-            displayName: player.profile.display_name,
-            profilePictureUrl: player.profile.profile_picture_url,
-          };
-        });
-
-      setSearchResults(filteredPlayers);
-    } catch (error) {
-      console.error('Error searching players:', error);
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
-    }
-  }, []);
+  // Map PlayerSearchResult to SelectedPlayer for the AddScore flow
+  const toSelectedPlayer = useCallback(
+    (player: PlayerSearchResult): SelectedPlayer => ({
+      id: player.id,
+      firstName: player.first_name,
+      lastName: player.last_name,
+      displayName: player.display_name ?? undefined,
+      profilePictureUrl: player.profile_picture_url ?? undefined,
+    }),
+    []
+  );
 
   const handleSelectPlayer = useCallback(
-    (player: SelectedPlayer) => {
+    (player: SelectedPlayer | PlayerSearchResult) => {
+      const member: SelectedPlayer =
+        'firstName' in player
+          ? (player as SelectedPlayer)
+          : toSelectedPlayer(player as PlayerSearchResult);
+
       setSelectedPlayers(prev => {
         // Check if already selected
-        if (prev.some(p => p.id === player.id)) {
-          return prev.filter(p => p.id !== player.id);
+        if (prev.some(p => p.id === member.id)) {
+          return prev.filter(p => p.id !== member.id);
         }
         // For singles, only allow 1 opponent
         if (matchType === 'single') {
-          return [player];
+          return [member];
         }
         // For doubles, allow up to 3 opponents (you + 3 others = 4 players total)
         if (prev.length < 3) {
-          return [...prev, player];
+          return [...prev, member];
         }
         return prev;
       });
     },
-    [matchType]
+    [matchType, toSelectedPlayer]
   );
 
   const handleAddFromContacts = useCallback(() => {
@@ -163,18 +123,57 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
   const canContinue =
     matchType === 'single' ? selectedPlayers.length >= 1 : selectedPlayers.length >= 3; // For doubles, need exactly 3 players (you + 3 others = 4 total)
 
-  const renderPlayerItem = ({ item }: { item: SelectedPlayer }) => {
+  // Theme-aware skeleton colors
+  const skeletonBg = isDark ? '#2C2C2E' : '#E1E9EE';
+  const skeletonHighlight = isDark ? '#3C3C3E' : '#F2F8FC';
+
+  const renderPlayerSkeleton = () => (
+    <View>
+      {[1, 2, 3, 4].map(i => (
+        <View
+          key={i}
+          style={[
+            styles.playerItem,
+            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+          ]}
+        >
+          <Skeleton
+            width={48}
+            height={48}
+            circle
+            backgroundColor={skeletonBg}
+            highlightColor={skeletonHighlight}
+          />
+          <View style={styles.playerInfo}>
+            <Skeleton
+              width="55%"
+              height={16}
+              backgroundColor={skeletonBg}
+              highlightColor={skeletonHighlight}
+            />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+
+  const renderListFooter = useCallback(() => {
+    if (!isFetchingNextPage) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color={colors.primary} />
+      </View>
+    );
+  }, [isFetchingNextPage, colors.primary]);
+
+  const renderPlayerItem = ({ item }: { item: PlayerSearchResult }) => {
     const isSelected = isPlayerSelected(item.id);
     return (
       <TouchableOpacity
         style={[
           styles.playerItem,
           {
-            backgroundColor: isSelected
-              ? isDark
-                ? 'rgba(64, 156, 255, 0.1)'
-                : 'rgba(64, 156, 255, 0.1)'
-              : colors.cardBackground,
+            backgroundColor: isSelected ? 'rgba(64, 156, 255, 0.1)' : colors.cardBackground,
             borderColor: isSelected ? colors.primary : colors.border,
           },
         ]}
@@ -182,21 +181,16 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
         activeOpacity={0.7}
       >
         <View style={[styles.playerAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-          {item.profilePictureUrl ? (
-            <Image source={{ uri: item.profilePictureUrl }} style={styles.avatarImage} />
+          {item.profile_picture_url ? (
+            <Image source={{ uri: item.profile_picture_url }} style={styles.avatarImage} />
           ) : (
             <Ionicons name="person-outline" size={24} color={colors.textMuted} />
           )}
         </View>
         <View style={styles.playerInfo}>
           <Text weight="medium" style={{ color: colors.text }}>
-            {item.displayName || `${item.firstName} ${item.lastName || ''}`.trim()}
+            {item.display_name || `${item.first_name} ${item.last_name || ''}`.trim()}
           </Text>
-          {item.isFromContacts && (
-            <Text size="sm" style={{ color: colors.textSecondary }}>
-              From Contacts
-            </Text>
-          )}
         </View>
         {isSelected && <Ionicons name="checkmark-circle" size={24} color={colors.primary} />}
       </TouchableOpacity>
@@ -220,7 +214,7 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
       {/* Search input */}
       <SearchBar
         value={searchQuery}
-        onChangeText={handleSearch}
+        onChangeText={setSearchQuery}
         placeholder={t('addScore.findOpponent.searchPlaceholder')}
         colors={colors}
         style={styles.searchBarWrapper}
@@ -288,11 +282,7 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
       )}
 
       {/* Search results or empty state */}
-      {isSearching ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      ) : searchQuery.length < 2 ? (
+      {searchQuery.length < 2 ? (
         <View style={styles.emptyState}>
           <View style={styles.emptyIcon}>
             <Ionicons name="search-outline" size={64} color={colors.textMuted} />
@@ -301,7 +291,9 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
             {t('addScore.findOpponent.searchHint')}
           </Text>
         </View>
-      ) : searchResults.length === 0 ? (
+      ) : isSearching ? (
+        renderPlayerSkeleton()
+      ) : players.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>
             {t('addScore.findOpponent.noPlayersFound', { query: searchQuery })}
@@ -317,11 +309,14 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
             {t('addScore.findOpponent.players')}
           </Text>
           <FlatList
-            data={searchResults}
+            data={players}
             keyExtractor={item => item.id}
             renderItem={renderPlayerItem}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            onEndReached={handleEndReached}
+            onEndReachedThreshold={0.3}
+            ListFooterComponent={renderListFooter}
           />
         </View>
       )}
@@ -382,9 +377,8 @@ const styles = StyleSheet.create({
   contactsTextContainer: {
     marginLeft: 12,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  footerLoader: {
+    paddingVertical: 16,
     alignItems: 'center',
   },
   emptyState: {

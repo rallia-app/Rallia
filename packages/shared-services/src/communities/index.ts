@@ -7,6 +7,8 @@
 export * from './communityTypes';
 
 // CRUD operations
+export type { PublicCommunitiesPage } from './communityCrudService';
+
 export {
   getCommunityTypeId,
   createCommunity,

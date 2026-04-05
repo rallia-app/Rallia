@@ -84,7 +84,7 @@ const TAB_ICONS: Record<TabKey, keyof typeof Ionicons.glyphMap> = {
 export default function GroupDetailScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<GroupDetailRouteProp>();
-  const { groupId } = route.params;
+  const { groupId, fromChat } = route.params;
 
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
@@ -1665,7 +1665,7 @@ export default function GroupDetailScreen() {
                 variant="secondary"
                 size="md"
                 onPress={() =>
-                  SheetManager.show('add-member', {
+                  SheetManager.show('add-group-member', {
                     payload: {
                       groupId,
                       currentMemberIds: group?.members.map(m => m.player_id) ?? [],
@@ -1744,8 +1744,8 @@ export default function GroupDetailScreen() {
         <View style={{ height: 80 }} />
       </ScrollView>
 
-      {/* Bottom Action Button - changes based on active tab */}
-      {activeTab === 'home' ? (
+      {/* Bottom Action Button - changes based on active tab, hidden when opened from chat */}
+      {activeTab === 'home' && !fromChat ? (
         <Button
           variant="primary"
           size="lg"

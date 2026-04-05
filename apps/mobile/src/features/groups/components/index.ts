@@ -1,7 +1,7 @@
 export { CreateGroupActionSheet, CreateGroupForm } from './CreateGroupModal';
 export { CreateNetworkWizard } from './CreateNetworkWizard';
 export { EditGroupModal } from './EditGroupModal';
-export { AddMemberModal } from './AddMemberModal';
+export { AddGroupMemberModal } from './AddGroupMemberModal';
 export { MemberListModal } from './MemberListModal';
 export { MemberOptionsModal } from './MemberOptionsModal';
 export { GroupOptionsModal } from './GroupOptionsModal';

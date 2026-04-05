@@ -173,18 +173,33 @@ export async function getCommunityWithMembers(
 }
 
 /**
- * Get all public communities for discovery
+ * Paginated response for public communities
+ */
+export interface PublicCommunitiesPage {
+  communities: CommunityWithStatus[];
+  hasMore: boolean;
+  nextOffset: number | null;
+}
+
+/**
+ * Get public communities for discovery with pagination
  * Returns communities with membership status for the current user
  * @param playerId - Optional player ID to check membership status
  * @param sportId - Optional sport ID to filter by (null returns communities for all sports)
+ * @param offset - Pagination offset (default 0)
+ * @param limit - Page size (default 20)
  */
 export async function getPublicCommunities(
   playerId?: string,
-  sportId?: string | null
-): Promise<CommunityWithStatus[]> {
+  sportId?: string | null,
+  offset: number = 0,
+  limit: number = 20
+): Promise<PublicCommunitiesPage> {
   const { data, error } = await supabase.rpc('get_public_communities', {
     p_player_id: playerId || null,
     p_sport_id: sportId || null,
+    p_offset: offset,
+    p_limit: limit + 1, // Fetch one extra to detect hasMore
   });
 
   if (error) {
@@ -192,11 +207,19 @@ export async function getPublicCommunities(
     throw new Error(error.message);
   }
 
-  return (data || []).map((c: Record<string, unknown>) => ({
+  const rows = (data || []) as Record<string, unknown>[];
+  const hasMore = rows.length > limit;
+  const items = (hasMore ? rows.slice(0, limit) : rows).map(c => ({
     ...c,
     is_public: true,
     max_members: null,
   })) as CommunityWithStatus[];
+
+  return {
+    communities: items,
+    hasMore,
+    nextOffset: hasMore ? offset + limit : null,
+  };
 }
 
 /**

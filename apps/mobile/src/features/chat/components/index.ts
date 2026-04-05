@@ -20,7 +20,7 @@ export { ChatSearchBar } from './ChatSearchBar';
 export { EditMessageModal } from './EditMessageModal';
 export { BlockedUserModal } from './BlockedUserModal';
 export { CreateGroupChatModal } from './CreateGroupChatModal';
-export { AddMembersToGroupModal } from './AddMembersToGroupModal';
+export { AddMembersToChatModal } from './AddMembersToChatModal';
 export { ReportUserModal } from './ReportUserModal';
 export { ChatMemberOptionsModal } from './ChatMemberOptionsModal';
 export { ChatFiltersBar } from './ChatFiltersBar';

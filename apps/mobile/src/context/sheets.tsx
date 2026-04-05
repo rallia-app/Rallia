@@ -17,7 +17,7 @@ import { GroupOptionsActionSheet } from '../features/groups/components/GroupOpti
 import { MemberOptionsActionSheet } from '../features/groups/components/MemberOptionsModal';
 import { InviteLinkActionSheet } from '../features/groups/components/InviteLinkModal';
 import { RecentGamesActionSheet } from '../features/groups/components/RecentGamesModal';
-import { AddMemberActionSheet } from '../features/groups/components/AddMemberModal';
+import { AddGroupMemberActionSheet } from '../features/groups/components/AddGroupMemberModal';
 import { MemberListActionSheet } from '../features/groups/components/MemberListModal';
 import { EditGroupActionSheet } from '../features/groups/components/EditGroupModal';
 // Community components
@@ -49,7 +49,7 @@ import { ConversationActionsActionSheet } from '../features/chat/components/Conv
 import { EditMessageActionSheet } from '../features/chat/components/EditMessageModal';
 import { ReportUserActionSheet } from '../features/chat/components/ReportUserModal';
 import { ChatAgreementActionSheet } from '../features/chat/components/ChatAgreementModal';
-import { AddMembersToGroupActionSheet } from '../features/chat/components/AddMembersToGroupModal';
+import { AddMembersToChatActionSheet } from '../features/chat/components/AddMembersToChatModal';
 import { CreateGroupChatActionSheet } from '../features/chat/components/CreateGroupChatModal';
 // Onboarding/Profile components
 import { PersonalInformationActionSheet } from '../features/onboarding/components/overlays/PersonalInformationOverlay';
@@ -162,7 +162,7 @@ declare module 'react-native-actions-sheet' {
         onDecline?: () => void;
       };
     }>;
-    'add-members-to-group': SheetDefinition<{
+    'add-members-to-chat': SheetDefinition<{
       payload: {
         existingMemberIds: string[];
         currentUserId?: string;
@@ -222,7 +222,7 @@ declare module 'react-native-actions-sheet' {
         onPlayerPress?: (playerId: string) => void;
       };
     }>;
-    'add-member': SheetDefinition<{
+    'add-group-member': SheetDefinition<{
       payload: {
         groupId: string;
         currentMemberIds: string[];
@@ -618,14 +618,14 @@ export const Sheets = () => {
         'edit-message': EditMessageActionSheet,
         'report-user': ReportUserActionSheet,
         'chat-agreement': ChatAgreementActionSheet,
-        'add-members-to-group': AddMembersToGroupActionSheet,
+        'add-members-to-chat': AddMembersToChatActionSheet,
         'create-group-chat': CreateGroupChatActionSheet,
         // Group sheets
         'group-options': GroupOptionsActionSheet,
         'member-options': MemberOptionsActionSheet,
         'invite-link': InviteLinkActionSheet,
         'recent-games': RecentGamesActionSheet,
-        'add-member': AddMemberActionSheet,
+        'add-group-member': AddGroupMemberActionSheet,
         'member-list': MemberListActionSheet,
         'edit-group': EditGroupActionSheet,
         'add-community-member': AddCommunityMemberActionSheet,

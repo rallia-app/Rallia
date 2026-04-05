@@ -16,6 +16,7 @@ import {
   Image,
   Dimensions,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -254,6 +255,9 @@ export default function CommunitiesScreen() {
     data: publicCommunities,
     isLoading: isLoadingPublic,
     isRefetching: isRefetchingPublic,
+    isFetchingNextPage: isFetchingNextPublic,
+    hasNextPage: hasNextPublic,
+    fetchNextPage: fetchNextPublic,
     refetch: refetchPublic,
   } = usePublicCommunities(playerId, selectedSport?.id);
 
@@ -283,6 +287,12 @@ export default function CommunitiesScreen() {
       isManualRefresh.current = false;
     });
   }, [activeTab, refetchPublic, refetchMy]);
+
+  const handleEndReached = useCallback(() => {
+    if (activeTab === 'discover' && hasNextPublic && !isFetchingNextPublic) {
+      fetchNextPublic();
+    }
+  }, [activeTab, hasNextPublic, isFetchingNextPublic, fetchNextPublic]);
 
   const handleOpenCreateCommunityActionSheet = useCallback(() => {
     lightHaptic();
@@ -527,6 +537,15 @@ export default function CommunitiesScreen() {
           communities && communities.length > 1 ? styles.columnWrapper : undefined
         }
         ListEmptyComponent={renderEmptyState}
+        ListFooterComponent={
+          isFetchingNextPublic && activeTab === 'discover' ? (
+            <View style={styles.footerLoader}>
+              <ActivityIndicator size="small" color={colors.primary} />
+            </View>
+          ) : null
+        }
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.5}
         refreshControl={
           <RefreshControl
             refreshing={isRefetching && isManualRefresh.current}
@@ -632,6 +651,10 @@ const styles = StyleSheet.create({
   listContent: {
     padding: CARD_PADDING,
     paddingBottom: 100,
+  },
+  footerLoader: {
+    paddingVertical: 16,
+    alignItems: 'center' as const,
   },
   emptyListContent: {
     flex: 1,
