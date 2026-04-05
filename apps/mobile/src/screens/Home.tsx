@@ -413,12 +413,6 @@ const Home = () => {
   const isManualRefresh = useRef(false);
   useScrollToTop(flatListRef);
 
-  const [showWelcome, setShowWelcome] = useState(true);
-  const welcomeOpacity = useState(new Animated.Value(1))[0];
-
-  // Extract display name from profile
-  const displayName = profile?.display_name || null;
-
   // Clear manual refresh flag when refetching completes
   useEffect(() => {
     if (!isRefetching) {
@@ -438,29 +432,6 @@ const Home = () => {
     setOnHomeScreen(true);
     return () => setOnHomeScreen(false);
   }, [setOnHomeScreen]);
-
-  // Auto-dismiss welcome message when user logs in
-  useEffect(() => {
-    if (session?.user && displayName) {
-      // Auto-dismiss welcome message after 3 seconds (3000ms)
-      const dismissTimer = setTimeout(() => {
-        Animated.timing(welcomeOpacity, {
-          toValue: 0,
-          duration: 500,
-          useNativeDriver: true,
-        }).start(() => {
-          setShowWelcome(false);
-        });
-      }, 3000);
-
-      return () => clearTimeout(dismissTimer);
-    } else {
-      // Reset states when user logs out
-      setShowWelcome(true);
-      welcomeOpacity.setValue(1);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, displayName]);
 
   // Handle end reached for infinite scroll
   const handleEndReached = useCallback(() => {
@@ -828,29 +799,7 @@ const Home = () => {
         </View>
       );
     } else {
-      // Fully onboarded: show welcome and My Matches
-      if (showWelcome) {
-        headerComponents.push(
-          <Animated.View
-            key="welcome"
-            style={[
-              styles.welcomeSection,
-              {
-                backgroundColor: colors.headerBackground,
-                opacity: welcomeOpacity,
-              },
-            ]}
-          >
-            <Text size="lg" weight="bold" color={colors.text} style={styles.welcomeText}>
-              {t('home.welcomeBack')}
-            </Text>
-            <Text size="sm" color={colors.textMuted}>
-              {displayName || session.user.email?.split('@')[0] || t('home.user')}
-            </Text>
-          </Animated.View>
-        );
-      }
-
+      // Fully onboarded: show My Matches
       // Cross-sport banners for unread notifications in other sports
       Object.entries(otherSportsUnreadCount).forEach(([sportName, count]) => {
         if (count > 0 && !dismissedBannerSports.has(sportName)) {
@@ -904,7 +853,6 @@ const Home = () => {
   }, [
     session,
     isOnboarded,
-    showWelcome,
     showNearbySection,
     colors.card,
     colors.border,
@@ -913,8 +861,6 @@ const Home = () => {
     colors.text,
     t,
     openSheet,
-    welcomeOpacity,
-    displayName,
     selectedSport,
     renderMyMatchesSection,
     renderSectionHeader,
@@ -939,23 +885,6 @@ const Home = () => {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         <View style={styles.loadingContainer}>
-          {/* Welcome skeleton */}
-          <View style={styles.skeletonWelcome}>
-            <Skeleton
-              width={200}
-              height={24}
-              backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-              highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-              style={{ marginBottom: 8 }}
-            />
-            <Skeleton
-              width={150}
-              height={16}
-              backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-              highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-            />
-          </View>
-
           {/* My Matches skeleton */}
           <View style={styles.skeletonSection}>
             <Skeleton
@@ -1120,10 +1049,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: spacingPixels[8],
   },
-  skeletonWelcome: {
-    paddingHorizontal: spacingPixels[4],
-    marginBottom: spacingPixels[6],
-  },
   skeletonSection: {
     marginBottom: spacingPixels[6],
   },
@@ -1144,16 +1069,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderStyle: 'dashed',
     alignItems: 'center',
-  },
-  welcomeSection: {
-    padding: spacingPixels[5],
-    margin: spacingPixels[4],
-    marginTop: spacingPixels[5],
-    borderRadius: radiusPixels.xl,
-    alignItems: 'center',
-  },
-  welcomeText: {
-    marginBottom: spacingPixels[2],
   },
   matchesSectionIcon: {
     marginBottom: spacingPixels[2],

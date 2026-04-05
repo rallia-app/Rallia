@@ -41,8 +41,8 @@ export type RootStackParamList = {
   Map: NavigatorScreenParams<MapStackParamList> | undefined;
   RatingProofs: RatingProofsScreenParams;
   IncomingReferenceRequests: undefined; // Incoming reference requests from other players
-  GroupDetail: { groupId: string; groupName?: string }; // Group detail view
-  CommunityDetail: { communityId: string; communityName?: string }; // Community detail view
+  GroupDetail: { groupId: string; groupName?: string; fromChat?: boolean }; // Group detail view
+  CommunityDetail: { communityId: string; communityName?: string; fromChat?: boolean }; // Community detail view
   FacilityDetail: FacilityDetailScreenParams; // Facility detail (root-level for external navigation)
   GroupChatInfo: { conversationId: string }; // Group chat info/settings view
   ChatConversation: { conversationId: string; title?: string }; // Direct chat navigation
@@ -132,7 +132,7 @@ export type CommunityStackParamList = {
   Communities: undefined;
   Tournaments: undefined;
   Leagues: undefined;
-  CommunityDetail: { communityId: string };
+  CommunityDetail: { communityId: string; fromChat?: boolean };
   TournamentDetail: { tournamentId: string };
   LeagueDetail: { leagueId: string };
 };

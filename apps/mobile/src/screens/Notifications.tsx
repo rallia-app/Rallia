@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, Skeleton } from '@rallia/shared-components';
 import { useTheme, useMatch } from '@rallia/shared-hooks';
 import { useAuth, useRequireOnboarding } from '../hooks';
 import { useTranslation, type TranslationOptions } from '../hooks/useTranslation';
@@ -610,13 +610,47 @@ const Notifications: React.FC = () => {
         style={[styles.container, { backgroundColor: colors.background }]}
         edges={['bottom']}
       >
-        {isLoadingAuth ? (
+        {isLoadingAuth || isLoadingNotifications ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.buttonActive} />
-          </View>
-        ) : isLoadingNotifications ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.buttonActive} />
+            {[1, 2, 3, 4, 5, 6].map(i => {
+              const skBg = isDark ? '#2C2C2E' : '#E1E9EE';
+              const skHl = isDark ? '#3C3C3E' : '#F2F8FC';
+              return (
+                <View key={i} style={styles.skeletonNotification}>
+                  {/* Icon circle */}
+                  <Skeleton
+                    width={40}
+                    height={40}
+                    circle
+                    backgroundColor={skBg}
+                    highlightColor={skHl}
+                  />
+                  {/* Content */}
+                  <View style={styles.skeletonNotificationContent}>
+                    <Skeleton
+                      width="60%"
+                      height={14}
+                      backgroundColor={skBg}
+                      highlightColor={skHl}
+                    />
+                    <Skeleton
+                      width="85%"
+                      height={12}
+                      backgroundColor={skBg}
+                      highlightColor={skHl}
+                      style={{ marginTop: 6 }}
+                    />
+                    <Skeleton
+                      width={50}
+                      height={10}
+                      backgroundColor={skBg}
+                      highlightColor={skHl}
+                      style={{ marginTop: 6 }}
+                    />
+                  </View>
+                </View>
+              );
+            })}
           </View>
         ) : (
           <SectionList
@@ -730,8 +764,17 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingTop: 16,
+    paddingHorizontal: 16,
+  },
+  skeletonNotification: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 14,
+    gap: 12,
+  },
+  skeletonNotificationContent: {
+    flex: 1,
   },
   listContent: {
     paddingTop: spacingPixels[4],
