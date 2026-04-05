@@ -4,7 +4,7 @@
  * Grid card layout with cover images
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   FlatList,
@@ -173,6 +173,7 @@ export default function GroupsScreen() {
     isRefetching,
     refetch,
   } = usePlayerGroups(playerId, selectedSport?.id);
+  const isManualRefresh = useRef(false);
   const { sports } = useSports();
   const { limits } = useNetworkLimits();
 
@@ -350,8 +351,13 @@ export default function GroupsScreen() {
         }
         refreshControl={
           <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={refetch}
+            refreshing={isRefetching && isManualRefresh.current}
+            onRefresh={() => {
+              isManualRefresh.current = true;
+              refetch().finally(() => {
+                isManualRefresh.current = false;
+              });
+            }}
             tintColor={colors.primary}
           />
         }

@@ -26,7 +26,7 @@ import { AppState, AppStateStatus } from 'react-native';
 import { supabase } from '../lib/supabase';
 import type { Session, AuthError, Provider, User } from '@supabase/supabase-js';
 import { Logger } from '@rallia/shared-services';
-import { usePostHog } from 'posthog-react-native';
+import { posthogClient } from '../providers/PostHogProvider';
 
 // =============================================================================
 // DEMO ACCOUNT FOR APP STORE REVIEW
@@ -177,7 +177,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
  * any providers it depends on (like QueryClientProvider).
  */
 export function AuthProvider({ children }: PropsWithChildren) {
-  const posthog = usePostHog();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessionExpired, setSessionExpired] = useState(false);
@@ -471,7 +470,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         Logger.error('Error signing out', error);
         return { success: false, error };
       }
-      posthog?.reset();
+      posthogClient?.reset();
       return { success: true };
     } catch (error) {
       Logger.error('Unexpected sign out error', error as Error);
@@ -480,7 +479,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         error: error instanceof Error ? error : new Error('Unknown error'),
       };
     }
-  }, [posthog]);
+  }, []);
 
   const value: AuthContextType = {
     // State

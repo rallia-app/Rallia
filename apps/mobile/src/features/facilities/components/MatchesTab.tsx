@@ -4,7 +4,7 @@
  * Reuses the same infrastructure as PublicMatches screen.
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MatchCard, Text } from '@rallia/shared-components';
@@ -117,6 +117,7 @@ export default function MatchesTab({ facilityId }: MatchesTabProps) {
   const showMatches = !!location && !!selectedSport;
 
   // Fetch public matches filtered to this facility
+  const isManualRefresh = useRef(false);
   const {
     matches,
     isLoading,
@@ -344,8 +345,13 @@ export default function MatchesTab({ facilityId }: MatchesTabProps) {
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={refetch}
+              refreshing={isRefetching && isManualRefresh.current}
+              onRefresh={() => {
+                isManualRefresh.current = true;
+                refetch().finally(() => {
+                  isManualRefresh.current = false;
+                });
+              }}
               tintColor={colors.primary}
               colors={[colors.primary]}
             />
