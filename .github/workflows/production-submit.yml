@@ -34,10 +34,15 @@ jobs:
           eas-version: '16'
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Write Google Play service account key
+      - name: Write credentials
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
         run: |
           mkdir -p apps/mobile/credentials
-          echo '${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}' > apps/mobile/credentials/play-store-service-account.json
+          echo "$GOOGLE_SERVICE_ACCOUNT_JSON" > apps/mobile/credentials/play-store-service-account.json
+          echo "$ASC_API_KEY_P8" > apps/mobile/credentials/asc-api-key.p8
+          echo "ASC key file size: $(wc -c < apps/mobile/credentials/asc-api-key.p8) bytes"
 
       - name: Submit to app stores
         id: submit
