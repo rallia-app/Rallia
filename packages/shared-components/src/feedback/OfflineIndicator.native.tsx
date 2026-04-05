@@ -34,16 +34,19 @@ export function OfflineIndicator({
   textColor = '#FFFFFF',
 }: OfflineIndicatorProps) {
   const insets = useSafeAreaInsets();
-  const translateY = useRef(new Animated.Value(-100)).current;
+  // The banner height is roughly insets.top + paddingTop spacing + content + paddingBottom.
+  // Use a generous value so nothing peeks on any device (Dynamic Island, notch, etc.).
+  const hideOffset = -(insets.top + 100);
+  const translateY = useRef(new Animated.Value(hideOffset)).current;
 
   useEffect(() => {
     Animated.spring(translateY, {
-      toValue: isOffline ? 0 : -100,
+      toValue: isOffline ? 0 : hideOffset,
       useNativeDriver: true,
       damping: 20,
       stiffness: 150,
     }).start();
-  }, [isOffline, translateY]);
+  }, [isOffline, translateY, hideOffset]);
 
   return (
     <Animated.View
