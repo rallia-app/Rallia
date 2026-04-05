@@ -8,7 +8,7 @@
  * a linked conversation and adds members to both.
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -25,12 +25,14 @@ import ActionSheet, {
   ScrollView,
 } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
-import { useGetOrCreateDirectConversation } from '@rallia/shared-hooks';
+import { Text, Skeleton } from '@rallia/shared-components';
+import { useGetOrCreateDirectConversation, usePlayerSearch } from '@rallia/shared-hooks';
 import { primary, spacingPixels, fontSizePixels, radiusPixels } from '@rallia/design-system';
+import type { PlayerSearchResult } from '@rallia/shared-services';
 
 import { SearchBar } from '../../../components/SearchBar';
 import { useThemeStyles, useAuth, useTranslation } from '../../../hooks';
+import { useSport } from '../../../context';
 import { supabase } from '../../../lib/supabase';
 import { uploadImage } from '../../../services/imageUpload';
 import { pickImageWithCropper } from '../../../utils/imagePicker';
@@ -53,6 +55,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const { session } = useAuth();
+  const { selectedSport } = useSport();
   const currentUserId = session?.user?.id;
 
   // Step state
@@ -66,8 +69,6 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
     setGroupName('');
     setGroupImage(null);
     setError(null);
-    setHasLoadedPlayers(false);
-    setAllPlayers([]);
   }, []);
 
   const handleClose = useCallback(async () => {
@@ -77,10 +78,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
 
   // Step 1: Member selection
   const [searchQuery, setSearchQuery] = useState('');
-  const [allPlayers, setAllPlayers] = useState<SelectedMember[]>([]);
   const [selectedMembers, setSelectedMembers] = useState<SelectedMember[]>([]);
-  const [isLoadingPlayers, setIsLoadingPlayers] = useState(false);
-  const [hasLoadedPlayers, setHasLoadedPlayers] = useState(false);
 
   // Step 2: Group details
   const [groupName, setGroupName] = useState('');
@@ -88,99 +86,56 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load all active players when modal opens
-  const loadPlayers = useCallback(async () => {
-    if (hasLoadedPlayers || isLoadingPlayers || !currentUserId) return;
+  // Use paginated player search hook
+  const {
+    players,
+    isLoading: isLoadingPlayers,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = usePlayerSearch({
+    sportId: selectedSport?.id,
+    currentUserId,
+    searchQuery,
+    pageSize: 50,
+    enabled: !!selectedSport?.id && !!currentUserId,
+  });
 
-    setIsLoadingPlayers(true);
-    try {
-      const { data, error: fetchError } = await supabase
-        .from('player')
-        .select(
-          `
-          id,
-          profile:profile!player_id_fkey (
-            first_name,
-            last_name,
-            display_name,
-            profile_picture_url
-          )
-        `
-        )
-        .neq('id', currentUserId)
-        .limit(200);
+  // Map PlayerSearchResult to SelectedMember for display
+  const toSelectedMember = useCallback(
+    (player: PlayerSearchResult): SelectedMember => ({
+      id: player.id,
+      firstName: player.first_name,
+      lastName: player.last_name,
+      displayName: player.display_name,
+      profilePictureUrl: player.profile_picture_url,
+    }),
+    []
+  );
 
-      if (fetchError) throw fetchError;
-
-      const players: SelectedMember[] = (data || [])
-        .filter((p: unknown) => {
-          const player = p as { profile: { first_name?: string } | null };
-          return player.profile?.first_name;
-        })
-        .map((p: unknown) => {
-          const player = p as {
-            id: string;
-            profile: {
-              first_name: string;
-              last_name?: string | null;
-              display_name?: string | null;
-              profile_picture_url?: string | null;
-            };
-          };
-          return {
-            id: player.id,
-            firstName: player.profile.first_name,
-            lastName: player.profile.last_name,
-            displayName: player.profile.display_name,
-            profilePictureUrl: player.profile.profile_picture_url,
-          };
-        });
-
-      setAllPlayers(players);
-      setHasLoadedPlayers(true);
-    } catch (err) {
-      console.error('Error loading players:', err);
-    } finally {
-      setIsLoadingPlayers(false);
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
     }
-  }, [currentUserId, hasLoadedPlayers, isLoadingPlayers]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Load players when component mounts and user is authenticated
-  useEffect(() => {
-    if (!hasLoadedPlayers && currentUserId) {
-      void loadPlayers();
-    }
-  }, [hasLoadedPlayers, loadPlayers, currentUserId]);
+  // Member selection handlers — accepts either type
+  const handleSelectMember = useCallback(
+    (player: SelectedMember | PlayerSearchResult) => {
+      const member: SelectedMember =
+        'firstName' in player
+          ? (player as SelectedMember)
+          : toSelectedMember(player as PlayerSearchResult);
 
-  // Filter players based on search
-  const filteredPlayers = useMemo(() => {
-    if (!searchQuery.trim()) return allPlayers;
-
-    const query = searchQuery.toLowerCase().trim();
-    return allPlayers.filter(player => {
-      const firstName = (player.firstName || '').toLowerCase();
-      const lastName = (player.lastName || '').toLowerCase();
-      const displayName = (player.displayName || '').toLowerCase();
-      const fullName = `${firstName} ${lastName}`.trim();
-
-      return (
-        firstName.includes(query) ||
-        lastName.includes(query) ||
-        displayName.includes(query) ||
-        fullName.includes(query)
-      );
-    });
-  }, [allPlayers, searchQuery]);
-
-  // Member selection handlers
-  const handleSelectMember = useCallback((player: SelectedMember) => {
-    setSelectedMembers(prev => {
-      if (prev.some(p => p.id === player.id)) {
-        return prev.filter(p => p.id !== player.id);
-      }
-      return [...prev, player];
-    });
-  }, []);
+      setSelectedMembers(prev => {
+        if (prev.some(p => p.id === member.id)) {
+          return prev.filter(p => p.id !== member.id);
+        }
+        return [...prev, member];
+      });
+    },
+    [toSelectedMember]
+  );
 
   // Hook for creating direct conversations
   const getOrCreateDirectConversation = useGetOrCreateDirectConversation();
@@ -322,9 +277,9 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
 
   // Render player item
   const renderPlayerItem = useCallback(
-    ({ item }: { item: SelectedMember }) => {
+    ({ item }: { item: PlayerSearchResult }) => {
       const isSelected = selectedMembers.some(p => p.id === item.id);
-      const displayName = `${item.firstName} ${item.lastName || ''}`.trim();
+      const displayName = `${item.first_name} ${item.last_name || ''}`.trim();
 
       return (
         <TouchableOpacity
@@ -339,8 +294,8 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
           activeOpacity={0.7}
         >
           <View style={[styles.playerAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-            {item.profilePictureUrl ? (
-              <Image source={{ uri: item.profilePictureUrl }} style={styles.avatarImage} />
+            {item.profile_picture_url ? (
+              <Image source={{ uri: item.profile_picture_url }} style={styles.avatarImage} />
             ) : (
               <Ionicons name="person-outline" size={24} color={colors.textMuted} />
             )}
@@ -402,6 +357,54 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
     );
   };
 
+  // Theme-aware skeleton colors
+  const skeletonBg = isDark ? '#2C2C2E' : '#E1E9EE';
+  const skeletonHighlight = isDark ? '#3C3C3E' : '#F2F8FC';
+
+  // Render loading skeleton matching playerItem layout
+  const renderPlayerSkeleton = () => (
+    <View style={styles.skeletonContainer}>
+      {[1, 2, 3, 4, 5].map(i => (
+        <View
+          key={i}
+          style={[
+            styles.playerItem,
+            {
+              backgroundColor: colors.buttonInactive,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <Skeleton
+            width={48}
+            height={48}
+            circle
+            backgroundColor={skeletonBg}
+            highlightColor={skeletonHighlight}
+          />
+          <View style={styles.playerInfo}>
+            <Skeleton
+              width="55%"
+              height={16}
+              backgroundColor={skeletonBg}
+              highlightColor={skeletonHighlight}
+            />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+
+  // Render footer loading indicator for pagination
+  const renderListFooter = useCallback(() => {
+    if (!isFetchingNextPage) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color={primary[500]} />
+      </View>
+    );
+  }, [isFetchingNextPage]);
+
   // Render Step 1: Select Members
   const renderSelectMembersStep = () => (
     <View style={styles.stepContainer}>
@@ -420,13 +423,8 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
       {/* Player list */}
       <View style={styles.listContainer}>
         {isLoadingPlayers ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={primary[500]} />
-            <Text style={{ color: colors.textMuted, marginTop: 12 }}>
-              {t('chat.loadingPlayers')}
-            </Text>
-          </View>
-        ) : filteredPlayers.length === 0 ? (
+          renderPlayerSkeleton()
+        ) : players.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="people-outline" size={48} color={colors.textMuted} />
             <Text style={{ color: colors.textMuted, marginTop: 12, textAlign: 'center' }}>
@@ -437,12 +435,15 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
           </View>
         ) : (
           <FlatList
-            data={filteredPlayers}
+            data={players}
             keyExtractor={item => item.id}
             renderItem={renderPlayerItem}
             style={styles.flatList}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            onEndReached={handleEndReached}
+            onEndReachedThreshold={0.3}
+            ListFooterComponent={renderListFooter}
           />
         )}
       </View>
@@ -633,13 +634,6 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
     </View>
   );
 
-  // Handler for when sheet opens - ensure players are loaded
-  const _handleSheetOpen = useCallback(() => {
-    if (!hasLoadedPlayers && currentUserId) {
-      void loadPlayers();
-    }
-  }, [hasLoadedPlayers, currentUserId, loadPlayers]);
-
   return (
     <ActionSheet
       gestureEnabled
@@ -767,9 +761,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     width: '100%',
   },
-  loadingContainer: {
+  skeletonContainer: {
     flex: 1,
-    justifyContent: 'center',
+    paddingTop: spacingPixels[2],
+    gap: spacingPixels[2],
+  },
+  footerLoader: {
+    paddingVertical: spacingPixels[4],
     alignItems: 'center',
   },
   emptyContainer: {

@@ -166,7 +166,7 @@ export default function GroupChatInfoScreen() {
 
   // Handle add member - show action sheet
   const handleAddMember = useCallback(() => {
-    SheetManager.show('add-members-to-group', {
+    SheetManager.show('add-members-to-chat', {
       payload: {
         existingMemberIds: participants.map(p => p.player_id),
         currentUserId: playerId,

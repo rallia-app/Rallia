@@ -70,6 +70,7 @@ interface NetworkInfo {
   name: string;
   cover_image_url: string | null;
   member_count: number;
+  type: 'community' | 'player_group' | string | null;
 }
 
 export default function ChatConversationScreen() {
@@ -393,13 +394,26 @@ export default function ChatConversationScreen() {
         console.error('Error fetching match details:', error);
       }
     } else if (conversation && isGroupConversationType(conversation.conversation_type)) {
-      navigation.navigate('GroupChatInfo', { conversationId });
+      // Network-backed conversations (player_group, community, club) navigate to their detail screen
+      // since membership is managed at the network level, not the chat level
+      if (networkInfo?.id && networkInfo.type === 'community') {
+        navigation.navigate('CommunityDetail', { communityId: networkInfo.id, fromChat: true });
+      } else if (
+        networkInfo?.id &&
+        (networkInfo.type === 'player_group' || networkInfo.type === 'club')
+      ) {
+        navigation.navigate('GroupDetail', { groupId: networkInfo.id, fromChat: true });
+      } else {
+        // Manually created group chats (no network) go to GroupChatInfo
+        navigation.navigate('GroupChatInfo', { conversationId });
+      }
     }
   }, [
     isDirectChat,
     otherUserId,
     conversation,
     conversationId,
+    networkInfo,
     navigation,
     navigateToPlayerProfile,
     openMatchDetailSheet,

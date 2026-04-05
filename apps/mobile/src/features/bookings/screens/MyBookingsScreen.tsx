@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, Skeleton } from '@rallia/shared-components';
 import { useTheme, usePlayerBookingsByTab, usePlayerBookingFilters } from '@rallia/shared-hooks';
 import type { BookingWithDetails, BookingTab } from '@rallia/shared-services';
 import { useAuth, useThemeStyles, useTranslation } from '../../../hooks';
@@ -309,7 +309,82 @@ export default function MyBookingsScreen() {
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          {[1, 2, 3, 4, 5].map(i => {
+            const skBg = isDark ? '#2C2C2E' : '#E1E9EE';
+            const skHl = isDark ? '#3C3C3E' : '#F2F8FC';
+            return (
+              <View
+                key={i}
+                style={[
+                  styles.skeletonBookingCard,
+                  { backgroundColor: isDark ? '#1C1C1E' : '#FAFAFA', borderColor: colors.border },
+                ]}
+              >
+                {/* Facility name + status badge row */}
+                <View style={styles.skeletonBookingRow}>
+                  <Skeleton width="50%" height={16} backgroundColor={skBg} highlightColor={skHl} />
+                  <Skeleton
+                    width={60}
+                    height={20}
+                    borderRadius={10}
+                    backgroundColor={skBg}
+                    highlightColor={skHl}
+                  />
+                </View>
+                {/* Court row */}
+                <View style={styles.skeletonBookingIconRow}>
+                  <Skeleton
+                    width={14}
+                    height={14}
+                    circle
+                    backgroundColor={skBg}
+                    highlightColor={skHl}
+                  />
+                  <Skeleton
+                    width="40%"
+                    height={13}
+                    backgroundColor={skBg}
+                    highlightColor={skHl}
+                    style={{ marginLeft: 8 }}
+                  />
+                </View>
+                {/* Date & time row */}
+                <View style={styles.skeletonBookingIconRow}>
+                  <Skeleton
+                    width={14}
+                    height={14}
+                    circle
+                    backgroundColor={skBg}
+                    highlightColor={skHl}
+                  />
+                  <Skeleton
+                    width="55%"
+                    height={13}
+                    backgroundColor={skBg}
+                    highlightColor={skHl}
+                    style={{ marginLeft: 8 }}
+                  />
+                </View>
+                {/* Price row */}
+                <View style={styles.skeletonBookingIconRow}>
+                  <Skeleton
+                    width={14}
+                    height={14}
+                    circle
+                    backgroundColor={skBg}
+                    highlightColor={skHl}
+                  />
+                  <Skeleton
+                    width={50}
+                    height={13}
+                    backgroundColor={skBg}
+                    highlightColor={skHl}
+                    style={{ marginLeft: 8 }}
+                  />
+                </View>
+              </View>
+            );
+          })}
         </View>
       ) : (
         <SectionList
@@ -356,7 +431,23 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
+    paddingTop: 16,
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  skeletonBookingCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
+    gap: 10,
+  },
+  skeletonBookingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  skeletonBookingIconRow: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
   tabBar: {

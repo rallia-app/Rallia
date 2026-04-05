@@ -1,125 +1,59 @@
 /**
- * AddMembersToGroupModal
+ * AddMembersToChatModal
  * Modal to select and add new members to an existing group chat
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, TouchableOpacity, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, FlatList } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 
-import { Text, Button } from '@rallia/shared-components';
+import { Text, Button, Skeleton } from '@rallia/shared-components';
+import { usePlayerSearch } from '@rallia/shared-hooks';
+import type { PlayerSearchResult } from '@rallia/shared-services';
 import { useThemeStyles, useTranslation } from '../../../hooks';
-import { supabase } from '../../../lib/supabase';
+import { useSport } from '../../../context';
 import { spacingPixels, fontSizePixels, primary, radiusPixels } from '@rallia/design-system';
 import { SearchBar } from '../../../components/SearchBar';
 
-interface PlayerItem {
-  id: string;
-  firstName: string;
-  lastName: string | null;
-  displayName: string | null;
-  profilePictureUrl: string | null;
-}
-
-export function AddMembersToGroupActionSheet({ payload }: SheetProps<'add-members-to-group'>) {
+export function AddMembersToChatActionSheet({ payload }: SheetProps<'add-members-to-chat'>) {
   const existingMemberIds = payload?.existingMemberIds ?? [];
   const currentUserId = payload?.currentUserId;
   const onMembersSelected = payload?.onMembersSelected;
 
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
+  const { selectedSport } = useSport();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [allPlayers, setAllPlayers] = useState<PlayerItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasLoaded, setHasLoaded] = useState(false);
+
+  // Exclude existing members and current user from search
+  const excludePlayerIds = useMemo(
+    () => [...existingMemberIds, ...(currentUserId ? [currentUserId] : [])],
+    [existingMemberIds, currentUserId]
+  );
+
+  // Use paginated player search hook
+  const { players, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = usePlayerSearch({
+    sportId: selectedSport?.id,
+    currentUserId,
+    searchQuery,
+    excludePlayerIds,
+    pageSize: 50,
+    enabled: !!selectedSport?.id && !!currentUserId,
+  });
+
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const handleClose = useCallback(() => {
     setSelectedIds([]);
     setSearchQuery('');
-    setHasLoaded(false);
-    setAllPlayers([]);
-    SheetManager.hide('add-members-to-group');
+    SheetManager.hide('add-members-to-chat');
   }, []);
-
-  // Load all active players when modal opens
-  const loadPlayers = useCallback(async () => {
-    if (hasLoaded || isLoading) return;
-
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('player')
-        .select(
-          `
-          id,
-          profile:profile!player_id_fkey (
-            first_name,
-            last_name,
-            display_name,
-            profile_picture_url
-          )
-        `
-        )
-        .limit(200);
-
-      if (error) throw error;
-
-      const players: PlayerItem[] = (data || [])
-        .filter((p: unknown) => {
-          const player = p as { id: string; profile: { first_name?: string } | null };
-          // Exclude current user and existing members
-          if (player.id === currentUserId) return false;
-          if (existingMemberIds.includes(player.id)) return false;
-          return player.profile?.first_name;
-        })
-        .map((p: unknown) => {
-          const player = p as {
-            id: string;
-            profile: {
-              first_name: string;
-              last_name?: string | null;
-              display_name?: string | null;
-              profile_picture_url?: string | null;
-            };
-          };
-          return {
-            id: player.id,
-            firstName: player.profile.first_name,
-            lastName: player.profile.last_name || null,
-            displayName: player.profile.display_name || null,
-            profilePictureUrl: player.profile.profile_picture_url || null,
-          };
-        });
-
-      setAllPlayers(players);
-      setHasLoaded(true);
-    } catch (err) {
-      console.error('Error loading players:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentUserId, existingMemberIds, hasLoaded, isLoading]);
-
-  // Load players when component mounts
-  useEffect(() => {
-    if (!hasLoaded) {
-      loadPlayers();
-    }
-  }, [hasLoaded, loadPlayers]);
-
-  // Filter by search query
-  const filteredPlayers = useMemo(() => {
-    if (!searchQuery.trim()) return allPlayers;
-
-    const query = searchQuery.toLowerCase();
-    return allPlayers.filter(p => {
-      const fullName = `${p.firstName} ${p.lastName || ''}`.toLowerCase();
-      const displayName = (p.displayName || '').toLowerCase();
-      return fullName.includes(query) || displayName.includes(query);
-    });
-  }, [allPlayers, searchQuery]);
 
   // Toggle selection
   const handleToggleSelect = useCallback((playerId: string) => {
@@ -141,8 +75,8 @@ export function AddMembersToGroupActionSheet({ payload }: SheetProps<'add-member
 
   // Get selected players for chips display
   const selectedPlayers = useMemo(() => {
-    return allPlayers.filter(p => selectedIds.includes(p.id));
-  }, [allPlayers, selectedIds]);
+    return players.filter(p => selectedIds.includes(p.id));
+  }, [players, selectedIds]);
 
   // Render selected member chips
   const renderSelectedChips = () => {
@@ -163,9 +97,9 @@ export function AddMembersToGroupActionSheet({ payload }: SheetProps<'add-member
                   { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
                 ]}
               >
-                {player.profilePictureUrl ? (
+                {player.profile_picture_url ? (
                   <Image
-                    source={{ uri: player.profilePictureUrl }}
+                    source={{ uri: player.profile_picture_url }}
                     style={styles.selectedChipAvatarImage}
                   />
                 ) : (
@@ -177,7 +111,7 @@ export function AddMembersToGroupActionSheet({ payload }: SheetProps<'add-member
               </View>
             </View>
             <Text style={[styles.selectedChipName, { color: colors.text }]} numberOfLines={1}>
-              {player.firstName}
+              {player.first_name}
             </Text>
           </TouchableOpacity>
         ))}
@@ -185,11 +119,59 @@ export function AddMembersToGroupActionSheet({ payload }: SheetProps<'add-member
     );
   };
 
+  // Theme-aware skeleton colors
+  const skeletonBg = isDark ? '#2C2C2E' : '#E1E9EE';
+  const skeletonHighlight = isDark ? '#3C3C3E' : '#F2F8FC';
+
+  // Render loading skeleton matching playerItem layout
+  const renderPlayerSkeleton = () => (
+    <View style={styles.skeletonContainer}>
+      {[1, 2, 3, 4, 5].map(i => (
+        <View
+          key={i}
+          style={[
+            styles.playerItem,
+            {
+              backgroundColor: colors.buttonInactive,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <Skeleton
+            width={48}
+            height={48}
+            circle
+            backgroundColor={skeletonBg}
+            highlightColor={skeletonHighlight}
+          />
+          <View style={styles.playerInfo}>
+            <Skeleton
+              width="55%"
+              height={16}
+              backgroundColor={skeletonBg}
+              highlightColor={skeletonHighlight}
+            />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+
+  // Render footer loading indicator for pagination
+  const renderListFooter = useCallback(() => {
+    if (!isFetchingNextPage) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color={primary[500]} />
+      </View>
+    );
+  }, [isFetchingNextPage]);
+
   // Render player item
   const renderPlayerItem = useCallback(
-    ({ item }: { item: PlayerItem }) => {
+    ({ item }: { item: PlayerSearchResult }) => {
       const isSelected = selectedIds.includes(item.id);
-      const displayName = `${item.firstName} ${item.lastName || ''}`.trim();
+      const displayName = `${item.first_name} ${item.last_name || ''}`.trim();
 
       return (
         <TouchableOpacity
@@ -205,8 +187,8 @@ export function AddMembersToGroupActionSheet({ payload }: SheetProps<'add-member
         >
           {/* Avatar */}
           <View style={[styles.playerAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-            {item.profilePictureUrl ? (
-              <Image source={{ uri: item.profilePictureUrl }} style={styles.avatarImage} />
+            {item.profile_picture_url ? (
+              <Image source={{ uri: item.profile_picture_url }} style={styles.avatarImage} />
             ) : (
               <Ionicons name="person-outline" size={24} color={colors.textMuted} />
             )}
@@ -259,10 +241,8 @@ export function AddMembersToGroupActionSheet({ payload }: SheetProps<'add-member
 
           {/* Player List */}
           {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={primary[500]} />
-            </View>
-          ) : filteredPlayers.length === 0 ? (
+            renderPlayerSkeleton()
+          ) : players.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="people-outline" size={48} color={colors.textMuted} />
               <Text style={[styles.emptyText, { color: colors.textMuted }]}>
@@ -271,11 +251,14 @@ export function AddMembersToGroupActionSheet({ payload }: SheetProps<'add-member
             </View>
           ) : (
             <FlatList
-              data={filteredPlayers}
+              data={players}
               keyExtractor={item => item.id}
               renderItem={renderPlayerItem}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
+              onEndReached={handleEndReached}
+              onEndReachedThreshold={0.3}
+              ListFooterComponent={renderListFooter}
             />
           )}
         </View>
@@ -297,7 +280,7 @@ export function AddMembersToGroupActionSheet({ payload }: SheetProps<'add-member
 }
 
 // Keep old export for backwards compatibility during migration
-export const AddMembersToGroupModal = AddMembersToGroupActionSheet;
+export const AddMembersToChatModal = AddMembersToChatActionSheet;
 
 const styles = StyleSheet.create({
   sheetBackground: {
@@ -385,9 +368,12 @@ const styles = StyleSheet.create({
     width: '100%',
     fontSize: fontSizePixels.xs,
   },
-  loadingContainer: {
+  skeletonContainer: {
     flex: 1,
-    justifyContent: 'center',
+    paddingTop: spacingPixels[2],
+  },
+  footerLoader: {
+    paddingVertical: spacingPixels[4],
     alignItems: 'center',
   },
   emptyContainer: {
