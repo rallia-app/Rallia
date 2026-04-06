@@ -2,8 +2,8 @@
  * FavoriteSitesStep Component
  *
  * Onboarding step to select favorite facilities/sites.
- * Single sport: at least 3 facilities.
- * Both sports: at least 3 tennis facilities AND 3 pickleball facilities.
+ * Single sport: at least 2 facilities.
+ * Both sports: at least 2 tennis facilities AND 2 pickleball facilities.
  * Dual-sport facilities count toward both counters.
  * Uses useFacilitySearch hook for searching facilities by name and location.
  */
@@ -22,6 +22,7 @@ import { computeFavoriteSportCounts } from '../../../hooks/useOnboardingWizard';
 import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
 import { useUserLocation } from '../../../../../hooks/useUserLocation';
 import { SearchBar } from '../../../../../components/SearchBar';
+import TennisCourtIcon from '../../../../../../assets/icons/tennis-court.svg';
 
 // =============================================================================
 // TYPES
@@ -64,8 +65,8 @@ interface FavoriteSitesStepProps {
 // CONSTANTS
 // =============================================================================
 
-const MIN_SINGLE_SPORT = 3;
-const MIN_BOTH_SPORTS = 3;
+const MIN_SINGLE_SPORT = 2;
+const MIN_BOTH_SPORTS = 2;
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -141,11 +142,13 @@ const FacilityCard: React.FC<FacilityCardProps> = ({
           { backgroundColor: isSelected ? colors.buttonActive : colors.border },
         ]}
       >
-        <Ionicons
-          name="business"
-          size={20}
-          color={isSelected ? colors.buttonTextActive : colors.textMuted}
-        />
+        <View style={{ transform: [{ rotate: '90deg' }] }}>
+          <TennisCourtIcon
+            width={20}
+            height={20}
+            stroke={isSelected ? colors.buttonTextActive : colors.textMuted}
+          />
+        </View>
       </View>
 
       {/* Facility info */}
@@ -289,7 +292,7 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
 
   const bothSports = hasTennis && hasPickleball;
-  const maxFavorites = bothSports ? 6 : 3;
+  const maxFavorites = bothSports ? 4 : 2;
 
   // Get device location as fallback if props don't have coordinates
   // This handles cases where user typed city manually without using autocomplete
@@ -448,7 +451,9 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
     if (filteredSearchResults.length === 0) {
       return (
         <View style={styles.emptyState}>
-          <Ionicons name="business-outline" size={48} color={colors.textMuted} />
+          <View style={{ transform: [{ rotate: '90deg' }] }}>
+            <TennisCourtIcon width={48} height={48} stroke={colors.textMuted} />
+          </View>
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
             {t('onboarding.favoriteSitesStep.noFacilitiesNearby')}
           </Text>

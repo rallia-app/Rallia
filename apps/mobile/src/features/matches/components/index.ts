@@ -9,6 +9,9 @@ export * from './steps';
 export { SearchBar } from './SearchBar';
 export { default as MatchFiltersBar } from './MatchFiltersBar';
 
+// Network matches tab (for group/community detail)
+export { default as NetworkMatchesTab } from './NetworkMatchesTab';
+
 // Player matches components
 export { default as PlayerMatchFilterChips } from './PlayerMatchFilterChips';
 

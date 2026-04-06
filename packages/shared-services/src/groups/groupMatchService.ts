@@ -6,6 +6,26 @@
 import { supabase } from '../supabase';
 import type { GroupMatch, LeaderboardEntry } from './groupTypes';
 import { logGroupActivity } from './groupActivityService';
+import type {
+  MatchWithDetails,
+  MatchParticipantWithPlayer,
+  Profile,
+  PlayerWithProfile,
+  BadgeStatusEnum,
+  FormatFilter,
+  MatchTypeFilter,
+  DateRangeFilter,
+  TimeOfDayFilter,
+  CostFilter,
+  JoinModeFilter,
+  DurationFilter,
+  CourtStatusFilter,
+  MatchTierFilter,
+  SpecificDateFilter,
+  SpotsAvailableFilter,
+  SpecificTimeFilter,
+  GenderFilter,
+} from '@rallia/shared-types';
 
 // ============================================================================
 // MATCH QUERIES
@@ -360,85 +380,43 @@ export async function removeMatchFromGroup(matchId: string, groupId: string): Pr
 /**
  * Match data returned from network member upcoming matches query
  */
-export interface NetworkMemberMatch {
-  id: string;
-  sport_id: string;
-  match_date: string;
-  start_time: string;
-  end_time: string;
-  format: 'singles' | 'doubles';
-  player_expectation: 'practice' | 'competitive' | 'both';
-  visibility: 'public' | 'private';
-  join_mode: 'direct' | 'request';
-  location_type: 'facility' | 'custom' | 'tbd';
-  location_name: string | null;
-  facility_id: string | null;
-  created_by: string;
-  cancelled_at: string | null;
-  // Computed fields for display
-  max_players: number;
-  current_players: number;
-  creator?: {
-    first_name: string;
-    last_name: string | null;
-    profile_picture_url: string | null;
-  };
-  sport?: {
-    id: string;
-    name: string;
-    display_name: string;
-    icon_url: string | null;
-  };
-  facility?: {
-    id: string;
-    name: string;
-    city: string | null;
-    address: string | null;
-  };
-  participants: Array<{
-    id: string;
-    player_id: string;
-    team_number: number | null;
-    is_host: boolean;
-    status: string;
-    player?: {
-      id: string;
-      profile?: {
-        first_name: string;
-        last_name: string | null;
-        display_name: string | null;
-        profile_picture_url: string | null;
-      };
-    };
-  }>;
-  created_by_player?: {
-    id: string;
-    profile?: {
-      first_name: string;
-      last_name: string | null;
-      display_name: string | null;
-      profile_picture_url: string | null;
-    };
-  };
+export interface NetworkMemberMatch extends MatchWithDetails {
+  distance_meters: number | null;
+}
+
+/** Filters accepted by getNetworkMemberUpcomingMatches (mirrors PublicMatchFilters) */
+export interface NetworkMatchFilters {
+  searchQuery?: string;
+  format?: FormatFilter;
+  matchType?: MatchTypeFilter;
+  dateRange?: DateRangeFilter;
+  timeOfDay?: TimeOfDayFilter;
+  gender?: GenderFilter;
+  cost?: CostFilter;
+  joinMode?: JoinModeFilter;
+  duration?: DurationFilter;
+  courtStatus?: CourtStatusFilter;
+  matchTier?: MatchTierFilter;
+  specificDate?: SpecificDateFilter;
+  spotsAvailable?: SpotsAvailableFilter;
+  specificTime?: SpecificTimeFilter;
+  userGender?: string | null;
 }
 
 /**
  * Get upcoming public matches of network members.
  * Returns matches where a network member is either the creator or a participant.
- * Filters by visibility settings and optionally by sport.
- *
- * @param networkId - The network (community or group) ID
- * @param networkType - 'community' or 'group' for proper visibility filtering
- * @param sportId - Optional sport ID to filter (null = all sports)
- * @param excludePlayerId - Player ID to exclude from results (current user)
- * @param limit - Maximum matches to return (default 20)
+ * Fetches full match details (same shape as public matches) so MatchCard renders
+ * all elements (tier ribbons, cost badges, rating badges, court info, etc.).
+ * Applies server-side filters (matching the search_public_matches RPC logic).
  */
 export async function getNetworkMemberUpcomingMatches(
   networkId: string,
   networkType: 'community' | 'group',
   sportId: string | null = null,
   excludePlayerId: string | null = null,
-  limit: number = 20
+  limit: number = 20,
+  filters: NetworkMatchFilters = {}
 ): Promise<NetworkMemberMatch[]> {
   // Step 1: Get all active member player IDs
   const { data: members, error: membersError } = await supabase
@@ -461,97 +439,31 @@ export async function getNetworkMemberUpcomingMatches(
   // Step 2: Get today's date for upcoming filter
   const today = new Date().toISOString().split('T')[0];
 
-  // Step 3: Build the query for upcoming public matches
-  // We need matches where created_by OR any participant is a network member
-  let query = supabase
+  // Step 3: Get match IDs created by network members
+  let creatorQuery = supabase
     .from('match')
-    .select(
-      `
-      id,
-      sport_id,
-      match_date,
-      start_time,
-      end_time,
-      format,
-      player_expectation,
-      visibility,
-      join_mode,
-      location_type,
-      location_name,
-      facility_id,
-      created_by,
-      cancelled_at,
-      sport:sport_id (
-        id,
-        name,
-        display_name,
-        icon_url
-      ),
-      facility:facility_id (
-        id,
-        name,
-        city,
-        address
-      ),
-      participants:match_participant (
-        id,
-        player_id,
-        team_number,
-        is_host,
-        status,
-        player:player_id (
-          id,
-          profile:profile!inner (
-            first_name,
-            last_name,
-            display_name,
-            profile_picture_url
-          )
-        )
-      ),
-      created_by_player:created_by (
-        id,
-        profile:profile!inner (
-          first_name,
-          last_name,
-          display_name,
-          profile_picture_url
-        )
-      )
-    `
-    )
-    .eq('visibility', 'public')
+    .select('id')
+    .in('visibility', ['public', 'private'])
     .is('cancelled_at', null)
     .gte('match_date', today)
     .in('created_by', memberPlayerIds);
 
-  // Apply visibility filter based on network type
   if (networkType === 'community') {
-    query = query.eq('visible_in_communities', true);
+    creatorQuery = creatorQuery.eq('visible_in_communities', true);
   } else {
-    query = query.eq('visible_in_groups', true);
+    creatorQuery = creatorQuery.eq('visible_in_groups', true);
   }
-
-  // Apply sport filter if provided
   if (sportId) {
-    query = query.eq('sport_id', sportId);
+    creatorQuery = creatorQuery.eq('sport_id', sportId);
   }
 
-  // Order by date and time, limit results
-  query = query
-    .order('match_date', { ascending: true })
-    .order('start_time', { ascending: true })
-    .limit(limit);
-
-  const { data: matchesByCreator, error: creatorError } = await query;
-
+  const { data: creatorMatches, error: creatorError } = await creatorQuery;
   if (creatorError) {
     console.error('Error fetching matches by creator:', creatorError);
     throw new Error(creatorError.message);
   }
 
-  // Step 4: Also get matches where members are participants (but not creators already found)
-  // Query for matches where a member is a participant with 'joined' status
+  // Step 4: Get match IDs where members are participants
   const { data: participantMatches, error: participantError } = await supabase
     .from('match_participant')
     .select('match_id')
@@ -563,245 +475,451 @@ export async function getNetworkMemberUpcomingMatches(
     throw new Error(participantError.message);
   }
 
-  // Get unique match IDs from participants that aren't already in creator matches
-  const creatorMatchIds = new Set((matchesByCreator || []).map(m => m.id));
-  const participantMatchIds = [
-    ...new Set(
-      (participantMatches || []).map(p => p.match_id).filter(id => !creatorMatchIds.has(id))
-    ),
+  // Combine and deduplicate match IDs
+  const allMatchIds = [
+    ...new Set([
+      ...(creatorMatches || []).map(m => m.id),
+      ...(participantMatches || []).map(p => p.match_id),
+    ]),
   ];
 
-  let matchesByParticipant: typeof matchesByCreator = [];
+  if (allMatchIds.length === 0) {
+    return [];
+  }
 
-  if (participantMatchIds.length > 0) {
-    let participantQuery = supabase
-      .from('match')
+  // Step 5: Fetch full match details with all joins + apply server-side filters
+  // Compute date range bounds (mirrors search_public_matches RPC logic)
+  let dateStart = today;
+  let dateEnd: string | null = null;
+
+  if (filters.specificDate) {
+    dateStart = filters.specificDate;
+    dateEnd = filters.specificDate;
+  } else if (filters.dateRange && filters.dateRange !== 'all') {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    switch (filters.dateRange) {
+      case 'today':
+        dateEnd = dateStart;
+        break;
+      case 'tomorrow': {
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        dateStart = tomorrow.toISOString().split('T')[0];
+        dateEnd = dateStart;
+        break;
+      }
+      case 'week': {
+        const weekEnd = new Date(now);
+        weekEnd.setDate(weekEnd.getDate() + 7);
+        dateEnd = weekEnd.toISOString().split('T')[0];
+        break;
+      }
+      case 'weekend': {
+        const saturday = new Date(now);
+        saturday.setDate(saturday.getDate() + (6 - saturday.getDay()));
+        const sunday = new Date(saturday);
+        sunday.setDate(sunday.getDate() + 1);
+        dateStart = saturday.toISOString().split('T')[0];
+        dateEnd = sunday.toISOString().split('T')[0];
+        break;
+      }
+    }
+  }
+
+  let fullQuery = supabase
+    .from('match')
+    .select(
+      `
+      *,
+      sport:sport_id (*),
+      facility:facility_id (*),
+      court:court_id (*),
+      min_rating_score:min_rating_score_id (*),
+      created_by_player:created_by (
+        id,
+        gender,
+        playing_hand,
+        max_travel_distance,
+        player_reputation (reputation_score),
+        notification_match_requests,
+        notification_messages,
+        notification_reminders,
+        privacy_show_age,
+        privacy_show_location,
+        privacy_show_stats
+      ),
+      participants:match_participant (
+        id,
+        match_id,
+        player_id,
+        status,
+        is_host,
+        score,
+        team_number,
+        feedback_completed,
+        checked_in_at,
+        joined_at,
+        created_at,
+        updated_at,
+        player:player_id (
+          id,
+          gender,
+          playing_hand,
+          max_travel_distance,
+          player_reputation (reputation_score),
+          notification_match_requests,
+          notification_messages,
+          notification_reminders,
+          privacy_show_age,
+          privacy_show_location,
+          privacy_show_stats
+        )
+      ),
+      result:match_result (
+        id,
+        winning_team,
+        team1_score,
+        team2_score,
+        is_verified,
+        disputed,
+        submitted_by,
+        confirmation_deadline,
+        confirmed_by,
+        verified_at,
+        created_at,
+        updated_at,
+        rebuttal_team1_score,
+        rebuttal_team2_score,
+        rebuttal_winning_team,
+        rebuttal_sets,
+        rebuttal_submitted_by,
+        rebuttal_submitted_at,
+        rebuttal_deadline,
+        sets:match_set (
+          set_number,
+          team1_score,
+          team2_score
+        ),
+        confirmations:score_confirmation (
+          player_id,
+          action
+        )
+      )
+    `
+    )
+    .in('id', allMatchIds)
+    .is('cancelled_at', null)
+    .gte('match_date', dateStart);
+
+  if (dateEnd) {
+    fullQuery = fullQuery.lte('match_date', dateEnd);
+  }
+
+  // Re-apply visibility filter (participant matches may not have been filtered)
+  if (networkType === 'community') {
+    fullQuery = fullQuery.eq('visible_in_communities', true);
+  } else {
+    fullQuery = fullQuery.eq('visible_in_groups', true);
+  }
+  if (sportId) {
+    fullQuery = fullQuery.eq('sport_id', sportId);
+  }
+
+  // Apply column-based filters via Supabase query builders
+  if (filters.format && filters.format !== 'all') {
+    fullQuery = fullQuery.eq('format', filters.format);
+  }
+  if (filters.joinMode && filters.joinMode !== 'all') {
+    fullQuery = fullQuery.eq('join_mode', filters.joinMode);
+  }
+  if (filters.courtStatus && filters.courtStatus !== 'all') {
+    fullQuery = fullQuery.eq('court_status', filters.courtStatus);
+  }
+  if (filters.cost && filters.cost !== 'all') {
+    if (filters.cost === 'free') {
+      fullQuery = fullQuery.eq('is_court_free', true);
+    } else {
+      // paid: either is_court_free is false or estimated_cost exists
+      fullQuery = fullQuery.eq('is_court_free', false);
+    }
+  }
+  if (filters.duration && filters.duration !== 'all') {
+    if (filters.duration === '120+') {
+      fullQuery = fullQuery.in('duration', ['120', 'custom']);
+    } else {
+      fullQuery = fullQuery.eq('duration', filters.duration);
+    }
+  }
+  if (filters.gender && filters.gender !== 'all') {
+    fullQuery = fullQuery.eq('preferred_opponent_gender', filters.gender);
+  }
+
+  // Time of day / specific time filter
+  if (filters.specificTime) {
+    // ±1 hour window around the specific time
+    const [h, m] = filters.specificTime.split(':').map(Number);
+    const startH = Math.max(0, h - 1);
+    const endH = Math.min(23, h + 1);
+    const startTime = `${String(startH).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+    const endTime = `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+    fullQuery = fullQuery.gte('start_time', startTime).lt('start_time', endTime);
+  } else if (filters.timeOfDay && filters.timeOfDay !== 'all') {
+    switch (filters.timeOfDay) {
+      case 'morning':
+        fullQuery = fullQuery.gte('start_time', '06:00:00').lt('start_time', '12:00:00');
+        break;
+      case 'afternoon':
+        fullQuery = fullQuery.gte('start_time', '12:00:00').lt('start_time', '18:00:00');
+        break;
+      case 'evening':
+        fullQuery = fullQuery.gte('start_time', '18:00:00').lte('start_time', '23:59:59');
+        break;
+    }
+  }
+
+  // matchType filter: 'casual' matches both 'casual' and 'both'; same for 'competitive'
+  if (filters.matchType && filters.matchType !== 'all') {
+    if (filters.matchType === 'casual') {
+      fullQuery = fullQuery.in('player_expectation', ['casual', 'both']);
+    } else {
+      fullQuery = fullQuery.in('player_expectation', ['competitive', 'both']);
+    }
+  }
+
+  // Gender eligibility: exclude matches with a gender preference the user doesn't match
+  if (filters.userGender) {
+    fullQuery = fullQuery.or(
+      `preferred_opponent_gender.is.null,preferred_opponent_gender.eq.${filters.userGender}`
+    );
+  }
+
+  const { data: matchesData, error: matchError } = await fullQuery;
+
+  if (matchError) {
+    console.error('Error fetching full match details:', matchError);
+    throw new Error(matchError.message);
+  }
+
+  if (!matchesData || matchesData.length === 0) {
+    return [];
+  }
+
+  // Step 6: Fetch profiles for all players (same pattern as getPublicMatches)
+  const playerIds = new Set<string>();
+  matchesData.forEach((match: MatchWithDetails) => {
+    if (match.created_by_player?.id) {
+      playerIds.add(match.created_by_player.id);
+    }
+    if (match.participants) {
+      match.participants.forEach((p: MatchParticipantWithPlayer) => {
+        const playerObj = Array.isArray(p.player) ? p.player[0] : p.player;
+        if (playerObj?.id) {
+          playerIds.add(playerObj.id);
+        }
+      });
+    }
+  });
+
+  const profileIds = Array.from(playerIds);
+  const profilesMap: Record<string, Profile> = {};
+
+  if (profileIds.length > 0) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profile')
+      .select('*')
+      .in('id', profileIds);
+
+    if (!profilesError && profiles) {
+      profiles.forEach(profile => {
+        profilesMap[profile.id] = profile;
+      });
+    }
+  }
+
+  // Step 7: Fetch player ratings for the match's sport
+  const publicRatingsMap: Record<
+    string,
+    { label: string; value: number | null; badgeStatus?: BadgeStatusEnum }
+  > = {};
+
+  if (profileIds.length > 0 && sportId) {
+    const { data: ratingsData, error: ratingsError } = await supabase
+      .from('player_rating_score')
       .select(
         `
-        id,
-        sport_id,
-        match_date,
-        start_time,
-        end_time,
-        format,
-        player_expectation,
-        visibility,
-        join_mode,
-        location_type,
-        location_name,
-        facility_id,
-        created_by,
-        cancelled_at,
-        sport:sport_id (
-          id,
-          name,
-          display_name,
-          icon_url
-        ),
-        facility:facility_id (
-          id,
-          name,
-          city,
-          address
-        ),
-        participants:match_participant (
-          id,
-          player_id,
-          team_number,
-          is_host,
-          status,
-          player:player_id (
-            id,
-            profile:profile!inner (
-              first_name,
-              last_name,
-              display_name,
-              profile_picture_url
-            )
-          )
-        ),
-        created_by_player:created_by (
-          id,
-          profile:profile!inner (
-            first_name,
-            last_name,
-            display_name,
-            profile_picture_url
+        player_id,
+        badge_status,
+        rating_score!player_rating_scores_rating_score_id_fkey!inner (
+          label,
+          value,
+          rating_system!inner (
+            sport_id
           )
         )
       `
       )
-      .eq('visibility', 'public')
-      .is('cancelled_at', null)
-      .gte('match_date', today)
-      .in('id', participantMatchIds);
+      .in('player_id', profileIds);
 
-    // Apply visibility filter based on network type
-    if (networkType === 'community') {
-      participantQuery = participantQuery.eq('visible_in_communities', true);
-    } else {
-      participantQuery = participantQuery.eq('visible_in_groups', true);
+    if (!ratingsError && ratingsData) {
+      type RatingResult = {
+        player_id: string;
+        badge_status?: BadgeStatusEnum;
+        rating_score: { label: string; value: number | null; rating_system: { sport_id: string } };
+      };
+      (ratingsData as unknown as RatingResult[]).forEach(rating => {
+        const ratingScore = rating.rating_score;
+        const ratingSystem = ratingScore?.rating_system;
+        if (ratingSystem?.sport_id === sportId && ratingScore?.label) {
+          const existing = publicRatingsMap[rating.player_id];
+          const badgeStatus =
+            existing?.badgeStatus === 'certified' ? 'certified' : rating.badge_status;
+          publicRatingsMap[rating.player_id] = {
+            label: ratingScore.label,
+            value: ratingScore.value,
+            badgeStatus,
+          };
+        }
+      });
     }
-
-    // Apply sport filter if provided
-    if (sportId) {
-      participantQuery = participantQuery.eq('sport_id', sportId);
-    }
-
-    const { data, error } = await participantQuery;
-
-    if (error) {
-      console.error('Error fetching participant matches details:', error);
-      throw new Error(error.message);
-    }
-
-    matchesByParticipant = data || [];
   }
 
-  // Step 5: Combine, deduplicate, and sort
-  const allMatches = [...(matchesByCreator || []), ...matchesByParticipant];
+  // Step 8: Attach profiles, ratings to matches; apply post-fetch filters; sort
+  const enrichedMatches: NetworkMemberMatch[] = [];
 
-  // Filter and transform matches
-  const transformedMatches: NetworkMemberMatch[] = allMatches
-    .filter(m => {
-      // Exclude current user's matches
-      if (excludePlayerId && m.created_by === excludePlayerId) {
-        return false;
-      }
-      // Also exclude if current user is already a joined participant
-      if (excludePlayerId) {
-        const isParticipant = (
-          (m.participants as Array<{ player_id: string; status: string }>) || []
-        ).some(p => p.player_id === excludePlayerId && p.status === 'joined');
-        if (isParticipant) return false;
-      }
-      return true;
-    })
-    .map(m => {
-      // Handle Supabase nested response format
-      const sport = Array.isArray(m.sport) ? m.sport[0] : m.sport;
-      const facility = Array.isArray(m.facility) ? m.facility[0] : m.facility;
-      const createdByPlayer = Array.isArray(m.created_by_player)
-        ? m.created_by_player[0]
-        : m.created_by_player;
-
-      // Transform participants
-      const participants = ((m.participants as Array<Record<string, unknown>>) || []).map(p => {
-        const player = Array.isArray(p.player) ? p.player[0] : p.player;
-        const profile = player?.profile;
-        const resolvedProfile = Array.isArray(profile) ? profile[0] : profile;
-
-        return {
-          id: p.id as string,
-          player_id: p.player_id as string,
-          team_number: p.team_number as number | null,
-          is_host: p.is_host as boolean,
-          status: p.status as string,
-          player: player
-            ? {
-                id: (player as Record<string, unknown>).id as string,
-                profile: resolvedProfile
-                  ? {
-                      first_name: (resolvedProfile as Record<string, unknown>).first_name as string,
-                      last_name: (resolvedProfile as Record<string, unknown>).last_name as
-                        | string
-                        | null,
-                      display_name: (resolvedProfile as Record<string, unknown>).display_name as
-                        | string
-                        | null,
-                      profile_picture_url: (resolvedProfile as Record<string, unknown>)
-                        .profile_picture_url as string | null,
-                    }
-                  : undefined,
-              }
-            : undefined,
-        };
+  matchesData.forEach((match: MatchWithDetails) => {
+    // Exclude current user's matches
+    if (excludePlayerId && match.created_by === excludePlayerId) {
+      return;
+    }
+    if (excludePlayerId && match.participants) {
+      const isParticipant = match.participants.some((p: MatchParticipantWithPlayer) => {
+        const playerObj = Array.isArray(p.player) ? p.player[0] : p.player;
+        return playerObj?.id === excludePlayerId && p.status === 'joined';
       });
+      if (isParticipant) return;
+    }
 
-      // Transform created_by_player
-      const creatorProfile = createdByPlayer?.profile;
-      const resolvedCreatorProfile = Array.isArray(creatorProfile)
-        ? creatorProfile[0]
-        : creatorProfile;
+    // Attach profile and rating to creator
+    if (match.created_by_player?.id && profilesMap[match.created_by_player.id]) {
+      match.created_by_player.profile = profilesMap[match.created_by_player.id];
+      const creatorRating = publicRatingsMap[match.created_by_player.id];
+      if (creatorRating) {
+        (match.created_by_player as PlayerWithProfile).sportRatingLabel = creatorRating.label;
+        if (creatorRating.value !== null) {
+          (match.created_by_player as PlayerWithProfile).sportRatingValue = creatorRating.value;
+        }
+        if (creatorRating.badgeStatus) {
+          (match.created_by_player as PlayerWithProfile).sportCertificationStatus =
+            creatorRating.badgeStatus;
+        }
+      }
+    }
 
-      // Compute max_players based on format
-      const maxPlayers = m.format === 'singles' ? 2 : 4;
+    // Attach profiles and ratings to participants
+    if (match.participants) {
+      match.participants = match.participants.map((p: MatchParticipantWithPlayer) => {
+        const playerObj = Array.isArray(p.player) ? p.player[0] : p.player;
+        const playerId = playerObj?.id;
 
-      // Compute current_players (count of joined participants)
-      const currentPlayers = participants.filter(p => p.status === 'joined').length;
+        if (playerId && profilesMap[playerId]) {
+          playerObj.profile = profilesMap[playerId];
+        }
+        const participantRating = playerId ? publicRatingsMap[playerId] : undefined;
+        if (participantRating && playerObj) {
+          (playerObj as PlayerWithProfile).sportRatingLabel = participantRating.label;
+          if (participantRating.value !== null) {
+            (playerObj as PlayerWithProfile).sportRatingValue = participantRating.value;
+          }
+          if (participantRating.badgeStatus) {
+            (playerObj as PlayerWithProfile).sportCertificationStatus =
+              participantRating.badgeStatus;
+          }
+        }
+        if (Array.isArray(p.player) && playerObj) {
+          p.player = playerObj;
+        }
+        return p;
+      });
+    }
 
-      return {
-        id: m.id,
-        sport_id: m.sport_id,
-        match_date: m.match_date,
-        start_time: m.start_time,
-        end_time: m.end_time,
-        format: m.format,
-        player_expectation: m.player_expectation,
-        visibility: m.visibility,
-        join_mode: m.join_mode,
-        location_type: m.location_type,
-        location_name: m.location_name,
-        facility_id: m.facility_id,
-        created_by: m.created_by,
-        cancelled_at: m.cancelled_at,
-        max_players: maxPlayers,
-        current_players: currentPlayers,
-        creator: resolvedCreatorProfile
-          ? {
-              first_name: (resolvedCreatorProfile as Record<string, unknown>).first_name as string,
-              last_name: (resolvedCreatorProfile as Record<string, unknown>).last_name as
-                | string
-                | null,
-              profile_picture_url: (resolvedCreatorProfile as Record<string, unknown>)
-                .profile_picture_url as string | null,
-            }
-          : undefined,
-        sport: sport
-          ? {
-              id: (sport as Record<string, unknown>).id as string,
-              name: (sport as Record<string, unknown>).name as string,
-              display_name: (sport as Record<string, unknown>).display_name as string,
-              icon_url: (sport as Record<string, unknown>).icon_url as string | null,
-            }
-          : undefined,
-        facility: facility
-          ? {
-              id: (facility as Record<string, unknown>).id as string,
-              name: (facility as Record<string, unknown>).name as string,
-              city: (facility as Record<string, unknown>).city as string | null,
-              address: (facility as Record<string, unknown>).address as string | null,
-            }
-          : undefined,
-        participants,
-        created_by_player: createdByPlayer
-          ? {
-              id: (createdByPlayer as Record<string, unknown>).id as string,
-              profile: resolvedCreatorProfile
-                ? {
-                    first_name: (resolvedCreatorProfile as Record<string, unknown>)
-                      .first_name as string,
-                    last_name: (resolvedCreatorProfile as Record<string, unknown>).last_name as
-                      | string
-                      | null,
-                    display_name: (resolvedCreatorProfile as Record<string, unknown>)
-                      .display_name as string | null,
-                    profile_picture_url: (resolvedCreatorProfile as Record<string, unknown>)
-                      .profile_picture_url as string | null,
-                  }
-                : undefined,
-            }
-          : undefined,
-      } as NetworkMemberMatch;
+    // --- Post-fetch filters (require participant data or text matching) ---
+
+    // Spots available filter
+    const joined = match.participants?.filter(p => p.status === 'joined') ?? [];
+    const totalSpots = match.format === 'doubles' ? 4 : 2;
+    const spotsLeft = totalSpots - joined.length;
+
+    // Only show matches with open spots
+    if (spotsLeft <= 0) return;
+
+    if (filters.spotsAvailable && filters.spotsAvailable !== 'all') {
+      const wanted = parseInt(filters.spotsAvailable, 10);
+      if (wanted === 3) {
+        if (spotsLeft < 3) return;
+      } else {
+        if (spotsLeft !== wanted) return;
+      }
+    }
+
+    // Match tier filter (requires participant reputation + certification data)
+    if (filters.matchTier && filters.matchTier !== 'all') {
+      const covetedCount = joined.filter(p => {
+        const playerObj = Array.isArray(p.player) ? p.player[0] : p.player;
+        const repScore = (playerObj as PlayerWithProfile)?.player_reputation?.reputation_score;
+        const certStatus = (playerObj as PlayerWithProfile)?.sportCertificationStatus;
+        return (repScore ?? 0) >= 90 && certStatus === 'certified';
+      }).length;
+      const covetedThreshold = match.format === 'doubles' ? 2 : 1;
+
+      switch (filters.matchTier) {
+        case 'mostWanted':
+          if (match.court_status !== 'reserved' || covetedCount < covetedThreshold) return;
+          break;
+        case 'covetedPlayers':
+          if (covetedCount < covetedThreshold) return;
+          break;
+        case 'courtBooked':
+          if (match.court_status !== 'reserved') return;
+          break;
+      }
+    }
+
+    // Search filter (text matching across host name, facility, location)
+    if (filters.searchQuery && filters.searchQuery.trim()) {
+      const query = filters.searchQuery.toLowerCase().trim();
+      const words = query.split(/\s+/).filter(Boolean);
+      const hostProfile = match.created_by_player?.profile;
+      const hostName = [hostProfile?.first_name, hostProfile?.last_name]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      const displayName = (hostProfile?.display_name ?? '').toLowerCase();
+      const facilityName = (match.facility?.name ?? '').toLowerCase();
+      const locationName = (match.location_name ?? '').toLowerCase();
+
+      const allWordsMatch = words.every(
+        word =>
+          hostName.includes(word) ||
+          displayName.includes(word) ||
+          facilityName.includes(word) ||
+          locationName.includes(word)
+      );
+      if (!allWordsMatch) return;
+    }
+
+    enrichedMatches.push({
+      ...match,
+      distance_meters: null,
     });
+  });
 
   // Sort by date and time
-  transformedMatches.sort((a, b) => {
+  enrichedMatches.sort((a, b) => {
     const dateCompare = a.match_date.localeCompare(b.match_date);
     if (dateCompare !== 0) return dateCompare;
     return a.start_time.localeCompare(b.start_time);
   });
 
-  // Return limited results
-  return transformedMatches.slice(0, limit);
+  return enrichedMatches.slice(0, limit);
 }

@@ -126,6 +126,41 @@ export interface SearchPlayersParams {
 }
 
 // =============================================================================
+// BADGE STATUS COMPUTATION
+// =============================================================================
+
+export type BadgeStatus = 'self_declared' | 'certified' | 'disputed';
+
+/**
+ * Compute the effective badge status from raw rating data.
+ * A player is certified if any of these conditions hold:
+ * - The stored badge_status is 'certified'
+ * - The is_certified flag is true
+ * - They have 3+ referrals/references
+ * - They have 2+ approved proofs at their current rating level
+ *
+ * @param params - Raw rating certification data
+ * @returns The computed badge status
+ */
+export function computeBadgeStatus(params: {
+  rawBadgeStatus?: string | null;
+  isCertified?: boolean;
+  referralsCount?: number;
+  approvedProofsCount?: number;
+}): BadgeStatus {
+  if (params.rawBadgeStatus === 'disputed') return 'disputed';
+  if (
+    params.rawBadgeStatus === 'certified' ||
+    params.isCertified ||
+    (params.referralsCount ?? 0) >= 3 ||
+    (params.approvedProofsCount ?? 0) >= 2
+  ) {
+    return 'certified';
+  }
+  return 'self_declared';
+}
+
+// =============================================================================
 // SERVICE FUNCTIONS
 // =============================================================================
 
@@ -339,6 +374,8 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
       player_id,
       is_certified,
       badge_status,
+      referrals_count,
+      approved_proofs_count,
       rating_score!player_rating_scores_rating_score_id_fkey!inner (
         label,
         value,
@@ -359,6 +396,8 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
       player_id: string;
       is_certified: boolean;
       badge_status: string | null;
+      referrals_count: number | null;
+      approved_proofs_count: number | null;
       rating_score: {
         label: string;
         value: number | null;
@@ -371,19 +410,22 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
       const ratingSystem = ratingScore?.rating_system;
       // Only include ratings for the requested sport
       if (ratingSystem?.sport_id === sportId && ratingScore?.label) {
-        const rawBadgeStatus = rating.badge_status as string | null;
-        let badgeStatus: 'self_declared' | 'certified' | 'disputed' = 'self_declared';
-        if (rawBadgeStatus === 'disputed') {
-          badgeStatus = 'disputed';
-        } else if (rawBadgeStatus === 'certified' || rating.is_certified) {
-          badgeStatus = 'certified';
+        const badgeStatus = computeBadgeStatus({
+          rawBadgeStatus: rating.badge_status,
+          isCertified: rating.is_certified,
+          referralsCount: rating.referrals_count ?? 0,
+          approvedProofsCount: rating.approved_proofs_count ?? 0,
+        });
+        // If player already has a rating entry, prefer the certified one
+        const existing = ratingsMap[rating.player_id];
+        if (!existing || (existing.badge_status !== 'certified' && badgeStatus === 'certified')) {
+          ratingsMap[rating.player_id] = {
+            label: ratingScore.label,
+            value: ratingScore.value,
+            is_certified: rating.is_certified ?? false,
+            badge_status: badgeStatus,
+          };
         }
-        ratingsMap[rating.player_id] = {
-          label: ratingScore.label,
-          value: ratingScore.value,
-          is_certified: rating.is_certified ?? false,
-          badge_status: badgeStatus,
-        };
       }
     });
   }

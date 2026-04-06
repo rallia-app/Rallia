@@ -16,7 +16,7 @@ import React, {
   useMemo,
   ReactNode,
 } from 'react';
-import { supabase } from '@rallia/shared-services';
+import { supabase, computeBadgeStatus } from '@rallia/shared-services';
 import type { Player } from '@rallia/shared-types';
 
 // =============================================================================
@@ -230,10 +230,16 @@ export const PlayerProvider: React.FC<PlayerProviderProps> = ({ children, userId
           const ratingSystem = ratingScore?.rating_system;
           const sportId = ratingSystem?.sport_id;
           if (sportId && !ratingsMap[sportId]) {
+            const badge_status = computeBadgeStatus({
+              rawBadgeStatus: rating.badge_status,
+              isCertified: rating.is_certified ?? false,
+              referralsCount: rating.referrals_count ?? 0,
+              approvedProofsCount: rating.approved_proofs_count ?? 0,
+            });
             ratingsMap[sportId] = {
               value: ratingScore?.value ?? null,
               label: ratingScore?.label ?? '',
-              badge_status: rating.badge_status,
+              badge_status,
               playerRatingScoreId: rating.id,
               ratingScoreId: ratingScore?.id,
               isCertified: rating.is_certified ?? false,
