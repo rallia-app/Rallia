@@ -176,7 +176,20 @@ export function ReferenceRequestActionSheet({ payload }: SheetProps<'reference-r
 
       if (profilesError) throw profilesError;
 
-      // Step 3: Map ratings by player_id
+      // Step 3: Fetch existing reference requests for this rating to exclude already-requested players
+      const alreadyRequestedIds = new Set<string>();
+      if (currentUserRatingScoreId) {
+        const { data: existingRequests } = await supabase
+          .from('rating_reference_request')
+          .select('referee_id')
+          .eq('requester_id', currentUserId)
+          .eq('player_rating_score_id', currentUserRatingScoreId)
+          .in('status', ['pending', 'completed']);
+
+        (existingRequests || []).forEach(r => alreadyRequestedIds.add(r.referee_id));
+      }
+
+      // Step 4: Map ratings by player_id
       // Note: Only references from certified players count toward certification requirement
       const ratingsMap = new Map<
         string,
@@ -207,29 +220,31 @@ export function ReferenceRequestActionSheet({ payload }: SheetProps<'reference-r
         }
       });
 
-      // Step 4: Combine profiles with ratings
-      const playersWithRatings: Player[] = (profiles || []).map(
-        (profile: {
-          id: string;
-          first_name: string;
-          last_name: string;
-          display_name: string | null;
-          profile_picture_url: string | null;
-        }) => {
-          const ratingInfo = ratingsMap.get(profile.id);
-          return {
-            id: profile.id,
-            first_name: profile.first_name,
-            last_name: profile.last_name,
-            display_name: profile.display_name,
-            profile_picture_url: profile.profile_picture_url,
-            rating: ratingInfo?.display_label || null,
-            ratingScore: ratingInfo?.ratingScore || null,
-            isCertified: ratingInfo?.isCertified || false,
-            playerRatingScoreId: ratingInfo?.playerRatingScoreId || null,
-          };
-        }
-      );
+      // Step 5: Combine profiles with ratings, excluding already-requested players
+      const playersWithRatings: Player[] = (profiles || [])
+        .filter((p: { id: string }) => !alreadyRequestedIds.has(p.id))
+        .map(
+          (profile: {
+            id: string;
+            first_name: string;
+            last_name: string;
+            display_name: string | null;
+            profile_picture_url: string | null;
+          }) => {
+            const ratingInfo = ratingsMap.get(profile.id);
+            return {
+              id: profile.id,
+              first_name: profile.first_name,
+              last_name: profile.last_name,
+              display_name: profile.display_name,
+              profile_picture_url: profile.profile_picture_url,
+              rating: ratingInfo?.display_label || null,
+              ratingScore: ratingInfo?.ratingScore || null,
+              isCertified: ratingInfo?.isCertified || false,
+              playerRatingScoreId: ratingInfo?.playerRatingScoreId || null,
+            };
+          }
+        );
 
       // Sort: certified players first, then by rating score (highest first)
       playersWithRatings.sort((a, b) => {

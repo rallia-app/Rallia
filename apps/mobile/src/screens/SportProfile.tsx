@@ -1340,18 +1340,6 @@ const SportProfile = () => {
                       style={{ borderRadius: radiusPixels.sm }}
                     />
                   </View>
-                  <View style={[styles.preferenceRow, { borderBottomColor: colors.border }]}>
-                    <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
-                      {t('profile.fields.favoriteFacilities')}
-                    </Text>
-                    <Skeleton
-                      width={110}
-                      height={14}
-                      backgroundColor={skeletonBg}
-                      highlightColor={skeletonHighlight}
-                      style={{ borderRadius: radiusPixels.sm }}
-                    />
-                  </View>
                   <View style={[styles.preferenceRow, { borderBottomWidth: 0 }]}>
                     <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
                       {t('profile.fields.playingStyle')}
@@ -1385,37 +1373,6 @@ const SportProfile = () => {
                     <Text style={[styles.preferenceValue, { color: colors.text }]}>
                       {formatMatchType(preferences.matchType)}
                     </Text>
-                  </View>
-
-                  {/* Favorite Facilities */}
-                  <View style={[styles.preferenceRow, { borderBottomColor: colors.border }]}>
-                    <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
-                      {t('profile.fields.favoriteFacilities')}
-                    </Text>
-                    <View style={styles.facilitiesContainer}>
-                      {loadingFavorites ? (
-                        <Skeleton
-                          width={120}
-                          height={16}
-                          backgroundColor={skeletonBg}
-                          highlightColor={skeletonHighlight}
-                        />
-                      ) : favoriteFacilities.length > 0 ? (
-                        favoriteFacilities.map(fav => (
-                          <Text
-                            key={fav.id}
-                            style={[styles.facilityText, { color: colors.text }]}
-                            numberOfLines={1}
-                          >
-                            {fav.facility?.name || t('profile.notSet')}
-                          </Text>
-                        ))
-                      ) : (
-                        <Text style={[styles.preferenceValue, { color: colors.text }]}>
-                          {t('profile.notSet')}
-                        </Text>
-                      )}
-                    </View>
                   </View>
 
                   {/* Playing Style (for Tennis: Server & Volley, etc.) */}
@@ -1478,6 +1435,170 @@ const SportProfile = () => {
                 </>
               )}
             </View>
+          </View>
+        )}
+
+        {/* Favorite Courts Section */}
+        {isActive && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                {t('profile.sections.favoriteCourts')}
+              </Text>
+              <TouchableOpacity
+                style={styles.editIconButton}
+                onPress={() => {
+                  selectionHaptic();
+                  SheetManager.show('favorite-facilities', {
+                    payload: {
+                      playerId: userId,
+                      sportId,
+                      latitude: location?.latitude ?? null,
+                      longitude: location?.longitude ?? null,
+                      initialFacilityIds: favoriteFacilities.map(f => f.facilityId),
+                      onSave: async (facilityIds: string[]) => {
+                        try {
+                          const currentIds = new Set(favoriteFacilities.map(f => f.facilityId));
+                          const newIds = new Set(facilityIds);
+
+                          // Remove facilities no longer selected
+                          for (const fav of favoriteFacilities) {
+                            if (!newIds.has(fav.facilityId)) {
+                              await supabase
+                                .from('player_favorite_facility')
+                                .delete()
+                                .eq('id', fav.id);
+                            }
+                          }
+
+                          // Add newly selected facilities
+                          let order = 1;
+                          for (const facilityId of facilityIds) {
+                            if (!currentIds.has(facilityId)) {
+                              await supabase.from('player_favorite_facility').insert({
+                                player_id: userId,
+                                facility_id: facilityId,
+                                sport_id: sportId,
+                                display_order: order,
+                              });
+                            } else {
+                              // Update display order for existing ones
+                              const existing = favoriteFacilities.find(
+                                f => f.facilityId === facilityId
+                              );
+                              if (existing && existing.displayOrder !== order) {
+                                await supabase
+                                  .from('player_favorite_facility')
+                                  .update({ display_order: order })
+                                  .eq('id', existing.id);
+                              }
+                            }
+                            order++;
+                          }
+
+                          refetchFavorites();
+                          toast.success(t('alerts.preferencesUpdated'));
+                        } catch (error) {
+                          Logger.error('Failed to save favorite facilities', error as Error, {
+                            sportId,
+                          });
+                          toast.error(getNetworkErrorMessage(error));
+                        }
+                      },
+                    },
+                  });
+                }}
+              >
+                <Ionicons name="create-outline" size={20} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+
+            {loadingFavorites && favoriteFacilities.length === 0 ? (
+              <View style={styles.favoriteFacilitiesList}>
+                {[1, 2, 3].map(i => (
+                  <View
+                    key={i}
+                    style={[styles.favoriteFacilityCard, { borderColor: colors.border }]}
+                  >
+                    <View style={styles.favoriteFacilityCardContent}>
+                      <Skeleton
+                        width={24}
+                        height={24}
+                        backgroundColor={skeletonBg}
+                        highlightColor={skeletonHighlight}
+                        style={{ borderRadius: 12 }}
+                      />
+                      <View style={{ flex: 1, gap: 4 }}>
+                        <Skeleton
+                          width={120}
+                          height={14}
+                          backgroundColor={skeletonBg}
+                          highlightColor={skeletonHighlight}
+                          style={{ borderRadius: radiusPixels.sm }}
+                        />
+                        <Skeleton
+                          width={180}
+                          height={12}
+                          backgroundColor={skeletonBg}
+                          highlightColor={skeletonHighlight}
+                          style={{ borderRadius: radiusPixels.sm }}
+                        />
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : favoriteFacilities.length > 0 ? (
+              <View style={styles.favoriteFacilitiesList}>
+                {favoriteFacilities.map((fav, index) => (
+                  <View
+                    key={fav.id}
+                    style={[
+                      styles.favoriteFacilityCard,
+                      { backgroundColor: colors.card, borderColor: colors.border },
+                    ]}
+                  >
+                    <View style={styles.favoriteFacilityCardContent}>
+                      <View
+                        style={[styles.favoriteFacilityOrder, { backgroundColor: colors.primary }]}
+                      >
+                        <Text
+                          style={[
+                            styles.favoriteFacilityOrderText,
+                            { color: colors.primaryForeground },
+                          ]}
+                        >
+                          {index + 1}
+                        </Text>
+                      </View>
+                      <View style={styles.favoriteFacilityTextContainer}>
+                        <Text
+                          style={[styles.favoriteFacilityName, { color: colors.text }]}
+                          numberOfLines={1}
+                        >
+                          {fav.facility?.name || t('profile.notSet')}
+                        </Text>
+                        {(fav.facility?.address || fav.facility?.city) && (
+                          <Text
+                            style={[styles.favoriteFacilityAddress, { color: colors.textMuted }]}
+                            numberOfLines={1}
+                          >
+                            {[fav.facility.address, fav.facility.city].filter(Boolean).join(', ')}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.noFavoritesContainer}>
+                <Ionicons name="location-outline" size={24} color={colors.textMuted} />
+                <Text style={[styles.noFavoritesText, { color: colors.textMuted }]}>
+                  {t('profile.notSet')}
+                </Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -1640,17 +1761,50 @@ const styles = StyleSheet.create({
     fontSize: fontSizePixels.xs,
     fontWeight: fontWeightNumeric.medium,
   },
-  facilitiesContainer: {
-    flexDirection: 'column',
-    alignItems: 'flex-end',
-    gap: 2,
-    flex: 1,
-    marginLeft: spacingPixels[4],
+  favoriteFacilitiesList: {
+    gap: spacingPixels[2],
   },
-  facilityText: {
+  favoriteFacilityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacingPixels[3],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+  },
+  favoriteFacilityCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: spacingPixels[3],
+  },
+  favoriteFacilityOrder: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  favoriteFacilityOrderText: {
+    fontSize: 12,
+    fontWeight: fontWeightNumeric.bold,
+  },
+  favoriteFacilityTextContainer: {
+    flex: 1,
+  },
+  favoriteFacilityName: {
     fontSize: fontSizePixels.sm,
     fontWeight: fontWeightNumeric.semibold,
-    textAlign: 'right',
+  },
+  favoriteFacilityAddress: {
+    fontSize: fontSizePixels.xs,
+  },
+  noFavoritesContainer: {
+    alignItems: 'center',
+    paddingVertical: spacingPixels[6],
+    gap: spacingPixels[2],
+  },
+  noFavoritesText: {
+    fontSize: fontSizePixels.sm,
   },
 });
 

@@ -18,4 +18,4 @@ export {
 export { CertificationSection, type CertificationSectionProps } from './CertificationSection';
 
 // Reference Request Components
-export { RespondToReferenceOverlay } from './RespondToReferenceOverlay';
+export { RespondToReferenceActionSheet } from './RespondToReferenceOverlay';

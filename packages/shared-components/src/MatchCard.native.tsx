@@ -161,6 +161,8 @@ export interface MatchCardProps {
   currentPlayerId?: string;
   /** Optional sport icon element rendered as a watermark background */
   sportIcon?: React.ReactNode;
+  /** Optional custom CTA renderer, replaces the default CardFooter when provided */
+  renderCta?: (match: MatchWithDetails) => React.ReactNode;
 }
 
 interface ThemeColors {
@@ -955,6 +957,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
   locale,
   currentPlayerId,
   sportIcon,
+  renderCta,
 }) => {
   // Compute participant info early to check for expired state
   const participantInfo = getParticipantInfo(match);
@@ -1389,15 +1392,19 @@ const MatchCard: React.FC<MatchCardProps> = ({
           )}
 
           {/* Footer with CTA */}
-          <CardFooter
-            match={match}
-            participantInfo={participantInfo}
-            colors={colors}
-            isDark={isDark}
-            t={t}
-            onPress={onPress}
-            currentPlayerId={currentPlayerId}
-          />
+          {renderCta ? (
+            renderCta(match)
+          ) : (
+            <CardFooter
+              match={match}
+              participantInfo={participantInfo}
+              colors={colors}
+              isDark={isDark}
+              t={t}
+              onPress={onPress}
+              currentPlayerId={currentPlayerId}
+            />
+          )}
         </View>
 
         {/* Scrim + banner AFTER content so they render on top in the paint order */}

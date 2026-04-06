@@ -1,38 +1,22 @@
 /**
  * RespondToReferenceOverlay Component
  *
- * Overlay for responding to a reference request.
+ * ActionSheet for responding to a reference request.
  * Allows users to:
  * - View the requester's profile info
  * - See the claimed rating they're asked to validate
  * - Approve (support) or decline the rating
  * - Add an optional message
- *
- * UX Design:
- * - Clear visual hierarchy showing who's asking and what they claim
- * - Easy approve/decline buttons with haptic feedback
- * - Optional message for context
- * - Confirmation before submitting
  */
 
-import React, { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  Animated,
-  Alert,
-} from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Overlay, Text, useToast } from '@rallia/shared-components';
+import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import { Text, useToast } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
 import { selectionHaptic, successHaptic, errorHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../../hooks';
-import { CertificationBadge } from './CertificationBadge';
 import {
   spacingPixels,
   radiusPixels,
@@ -41,42 +25,10 @@ import {
   status,
 } from '@rallia/design-system';
 
-interface ReferenceRequest {
-  id: string;
-  requester_id: string;
-  player_rating_score_id: string;
-  message: string | null;
-  status: 'pending' | 'completed' | 'declined' | 'expired' | 'cancelled';
-  expires_at: string;
-  created_at: string;
-  requester: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    display_name: string | null;
-    profile_picture_url: string | null;
-  };
-  rating_info: {
-    label: string;
-    value: number | null;
-    sport_name: string;
-    sport_display_name: string;
-  };
-}
+export function RespondToReferenceActionSheet({ payload }: SheetProps<'respond-to-reference'>) {
+  const request = payload?.request;
+  const onResponseComplete = payload?.onResponseComplete;
 
-interface RespondToReferenceOverlayProps {
-  visible: boolean;
-  onClose: () => void;
-  request: ReferenceRequest;
-  onResponseComplete: () => void;
-}
-
-export const RespondToReferenceOverlay: React.FC<RespondToReferenceOverlayProps> = ({
-  visible,
-  onClose,
-  request,
-  onResponseComplete,
-}) => {
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
   const toast = useToast();
@@ -85,30 +37,14 @@ export const RespondToReferenceOverlay: React.FC<RespondToReferenceOverlayProps>
   const [submitting, setSubmitting] = useState(false);
   const [selectedResponse, setSelectedResponse] = useState<'approve' | 'decline' | null>(null);
 
-  // Animation
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const onClose = useCallback(() => {
+    SheetManager.hide('respond-to-reference');
+  }, []);
 
-  useEffect(() => {
-    if (visible) {
-      setSelectedResponse(null);
-      setResponseMessage('');
-
-      Animated.parallel([
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          tension: 100,
-          friction: 10,
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible, scaleAnim, fadeAnim]);
+  const handleBeforeClose = useCallback(() => {
+    setSelectedResponse(null);
+    setResponseMessage('');
+  }, []);
 
   const handleSelectResponse = (response: 'approve' | 'decline') => {
     selectionHaptic();
@@ -116,7 +52,7 @@ export const RespondToReferenceOverlay: React.FC<RespondToReferenceOverlayProps>
   };
 
   const handleSubmit = async () => {
-    if (!selectedResponse) {
+    if (!selectedResponse || !request) {
       Alert.alert(t('alerts.error'), t('referenceRequest.selectResponse'));
       return;
     }
@@ -153,10 +89,11 @@ export const RespondToReferenceOverlay: React.FC<RespondToReferenceOverlayProps>
         hasMessage: !!responseMessage.trim(),
       });
 
-      onResponseComplete();
+      onClose();
+      onResponseComplete?.();
     } catch (error) {
       Logger.error('Failed to submit reference response', error as Error, {
-        requestId: request.id,
+        requestId: request?.id,
       });
       errorHaptic();
       toast.error(t('referenceRequest.failedToSubmit'));
@@ -165,95 +102,35 @@ export const RespondToReferenceOverlay: React.FC<RespondToReferenceOverlayProps>
     }
   };
 
-  const requesterName = `${request.requester.first_name} ${request.requester.last_name}`;
+  if (!request) return null;
 
   return (
-    <Overlay
-      visible={visible}
-      onClose={onClose}
-      type="bottom"
-      showBackButton={false}
-      showCloseButton={true}
+    <ActionSheet
+      gestureEnabled={!submitting}
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+      onBeforeClose={handleBeforeClose}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        <Animated.View
-          style={[
-            styles.container,
-            {
-              opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }],
-            },
-          ]}
-        >
-          {/* Title */}
-          <Text style={[styles.title, { color: colors.text }]}>
-            {t('referenceRequest.respondTitle')}
-          </Text>
-          <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-            {t('referenceRequest.respondSubtitle')}
-          </Text>
-
-          {/* Requester Card */}
-          <View style={[styles.requesterCard, { backgroundColor: colors.inputBackground }]}>
-            <View style={styles.requesterHeader}>
-              {request.requester.profile_picture_url ? (
-                <Image
-                  source={{ uri: request.requester.profile_picture_url }}
-                  style={styles.avatar}
-                />
-              ) : (
-                <View
-                  style={[
-                    styles.avatar,
-                    styles.avatarPlaceholder,
-                    { backgroundColor: colors.card },
-                  ]}
-                >
-                  <Ionicons name="person-outline" size={24} color={colors.textMuted} />
-                </View>
-              )}
-              <View style={styles.requesterInfo}>
-                <Text style={[styles.requesterName, { color: colors.text }]}>{requesterName}</Text>
-                <Text style={[styles.sportLabel, { color: colors.textSecondary }]}>
-                  {request.rating_info.sport_display_name}
-                </Text>
-              </View>
-            </View>
-
-            {/* Claimed Rating */}
-            <View style={[styles.claimedRating, { backgroundColor: colors.card }]}>
-              <View style={styles.claimedRatingHeader}>
-                <Text style={[styles.claimedLabel, { color: colors.textMuted }]}>
-                  {t('referenceRequest.claimsToBeRated')}
-                </Text>
-                <CertificationBadge status="self_declared" size="sm" />
-              </View>
-              <View style={styles.ratingDisplay}>
-                <Text style={[styles.ratingBig, { color: colors.primary }]}>
-                  {request.rating_info.label}
-                </Text>
-                {request.rating_info.value && (
-                  <Text style={[styles.ratingSmall, { color: colors.textSecondary }]}>
-                    ({request.rating_info.value.toFixed(1)})
-                  </Text>
-                )}
-              </View>
-            </View>
-
-            {/* Requester's Message */}
-            {request.message && (
-              <View style={styles.messageFromRequester}>
-                <Ionicons name="chatbubble-outline" size={14} color={colors.textMuted} />
-                <Text style={[styles.requesterMessage, { color: colors.textSecondary }]}>
-                  "{request.message}"
-                </Text>
-              </View>
-            )}
+      <View style={styles.modalContent}>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerCenter}>
+            <Text weight="semibold" size="lg" style={{ color: colors.text }} numberOfLines={1}>
+              {t('referenceRequest.respondTitle')}
+            </Text>
           </View>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
 
+        {/* Scrollable Content */}
+        <ScrollView
+          style={styles.scrollContent}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Question */}
           <Text style={[styles.question, { color: colors.text }]}>
             {t('referenceRequest.question', { name: request.requester.first_name })}
@@ -369,13 +246,18 @@ export const RespondToReferenceOverlay: React.FC<RespondToReferenceOverlayProps>
             </Text>
           </View>
 
-          {/* Submit Button */}
+          <Text style={[styles.privacyNote, { color: colors.textMuted }]}>
+            {t('referenceRequest.privacyNote')}
+          </Text>
+        </ScrollView>
+
+        {/* Sticky Footer */}
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
           <TouchableOpacity
             style={[
               styles.submitButton,
-              {
-                backgroundColor: selectedResponse ? colors.primary : colors.border,
-              },
+              { backgroundColor: colors.primary },
+              (!selectedResponse || submitting) && { opacity: 0.6 },
             ]}
             onPress={handleSubmit}
             disabled={!selectedResponse || submitting}
@@ -386,124 +268,57 @@ export const RespondToReferenceOverlay: React.FC<RespondToReferenceOverlayProps>
                 {t('common.submitting')}
               </Text>
             ) : (
-              <>
-                <Ionicons
-                  name="paper-plane-outline"
-                  size={18}
-                  color={selectedResponse ? colors.primaryForeground : colors.textMuted}
-                />
-                <Text
-                  style={[
-                    styles.submitButtonText,
-                    { color: selectedResponse ? colors.primaryForeground : colors.textMuted },
-                  ]}
-                >
-                  {t('referenceRequest.submitResponse')}
-                </Text>
-              </>
+              <Text style={[styles.submitButtonText, { color: colors.primaryForeground }]}>
+                {t('referenceRequest.submitResponse')}
+              </Text>
             )}
           </TouchableOpacity>
-
-          {/* Privacy note */}
-          <Text style={[styles.privacyNote, { color: colors.textMuted }]}>
-            {t('referenceRequest.privacyNote')}
-          </Text>
-        </Animated.View>
-      </KeyboardAvoidingView>
-    </Overlay>
+        </View>
+      </View>
+    </ActionSheet>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  keyboardView: {
-    width: '100%',
+  sheetBackground: {
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
-  container: {
-    paddingBottom: spacingPixels[6],
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
   },
-  title: {
-    fontSize: fontSizePixels.xl,
-    fontWeight: fontWeightNumeric.bold,
-    textAlign: 'center',
-    marginBottom: spacingPixels[1],
+  modalContent: {
+    maxHeight: '90%',
   },
-  subtitle: {
-    fontSize: fontSizePixels.sm,
-    textAlign: 'center',
-    marginBottom: spacingPixels[5],
-  },
-  requesterCard: {
-    borderRadius: radiusPixels.xl,
-    padding: spacingPixels[4],
-    marginBottom: spacingPixels[4],
-  },
-  requesterHeader: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacingPixels[3],
-    marginBottom: spacingPixels[3],
-  },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-  },
-  avatarPlaceholder: {
     justifyContent: 'center',
-    alignItems: 'center',
+    padding: spacingPixels[4],
+    borderBottomWidth: 1,
+    position: 'relative',
+    minHeight: 56,
   },
-  requesterInfo: {
+  headerCenter: {
     flex: 1,
-  },
-  requesterName: {
-    fontSize: fontSizePixels.lg,
-    fontWeight: fontWeightNumeric.semibold,
-  },
-  sportLabel: {
-    fontSize: fontSizePixels.sm,
-    marginTop: 2,
-  },
-  claimedRating: {
-    borderRadius: radiusPixels.lg,
-    padding: spacingPixels[3],
-  },
-  claimedRatingHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacingPixels[1],
+    paddingHorizontal: spacingPixels[12],
   },
-  claimedLabel: {
-    fontSize: fontSizePixels.xs,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  closeButton: {
+    padding: spacingPixels[1],
+    position: 'absolute',
+    right: spacingPixels[4],
+    zIndex: 1,
   },
-  ratingDisplay: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: spacingPixels[2],
+  scrollContent: {
+    flexGrow: 0,
   },
-  ratingBig: {
-    fontSize: fontSizePixels['2xl'],
-    fontWeight: fontWeightNumeric.bold,
-  },
-  ratingSmall: {
-    fontSize: fontSizePixels.base,
-  },
-  messageFromRequester: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacingPixels[2],
-    marginTop: spacingPixels[3],
-    paddingTop: spacingPixels[3],
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.05)',
-  },
-  requesterMessage: {
-    flex: 1,
-    fontSize: fontSizePixels.sm,
-    fontStyle: 'italic',
-    lineHeight: 20,
+  content: {
+    padding: spacingPixels[4],
+    paddingBottom: spacingPixels[6],
   },
   question: {
     fontSize: fontSizePixels.base,
@@ -561,14 +376,18 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     marginTop: spacingPixels[1],
   },
+  footer: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[4],
+    borderTopWidth: 1,
+  },
   submitButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacingPixels[2],
-    paddingVertical: spacingPixels[4],
+    padding: 14,
     borderRadius: radiusPixels.lg,
-    marginBottom: spacingPixels[3],
   },
   submitButtonText: {
     fontSize: fontSizePixels.base,
@@ -582,4 +401,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default RespondToReferenceOverlay;
+export default RespondToReferenceActionSheet;

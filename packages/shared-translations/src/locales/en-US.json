@@ -333,7 +333,7 @@
   "referenceRequest": {
     "screenTitle": "Reference Requests",
     "incomingTitle": "Reference Requests",
-    "pendingRequests": "Pending Requests",
+    "pendingRequests": "Verify player ratings",
     "helpCertifyRatings": "Help certify other players' ratings",
     "noRequests": "No Pending Requests",
     "noRequestsDescription": "When other players ask you to verify their rating, their requests will appear here.",
@@ -735,7 +735,8 @@
       "reputation": "MY REPUTATION",
       "preferences": "MY PREFERENCES",
       "location": "MY LOCATION",
-      "portfolio": "MY PORTFOLIO"
+      "portfolio": "MY PORTFOLIO",
+      "favoriteCourts": "MY FAVORITE COURTS"
     },
     "fields": {
       "firstName": "First Name",
@@ -1121,7 +1122,7 @@
         "strategic": "Strategic"
       },
       "favoriteFacilities": "Favorite Courts",
-      "selectUpTo3": "Select up to 3 facilities",
+      "selectUpTo3": "Select at least 2 favorite courts",
       "searchFacility": "Search for a court...",
       "addAnotherFacility": "Add another court...",
       "noFacilitiesFound": "No courts found. Try a different search.",
@@ -1201,7 +1202,8 @@
       "error": "Failed to send reference request. Please try again.",
       "noSportError": "Unable to determine sport for reference request.",
       "noRatingError": "You need a rating in this sport to request a reference.",
-      "playerLevelTooLow": "This player's level is below yours. References must come from players at your level or higher."
+      "playerLevelTooLow": "This player's level is below yours. References must come from players at your level or higher.",
+      "playerNotCertified": "This player's rating is not certified yet. Only certified players can provide references."
     },
     "unknownPlayer": "Player"
   },
@@ -1209,6 +1211,7 @@
     "title": "Invite to Match",
     "subtitle": "Select a match to invite {name}",
     "sendInvite": "Send Invite",
+    "invited": "Invited",
     "inviteSent": "Invitation sent to {name}!",
     "inviteError": "Failed to send invite. Please try again.",
     "spotsAvailable": "{count} spot(s) available",
@@ -1465,13 +1468,13 @@
     },
     "favoriteSitesStep": {
       "title": "Select Your Favorite Courts",
-      "subtitle": "Choose at least 3 facilities where you like to play. This helps us find you better matches.",
-      "subtitleBothSports": "Choose at least 3 facilities per sport. Facilities offering both sports count toward each.",
+      "subtitle": "Choose at least 2 facilities where you like to play. This helps us find you better matches.",
+      "subtitleBothSports": "Choose at least 2 facilities per sport. Facilities offering both sports count toward each.",
       "selected": "selected",
       "tennisCount": "Tennis",
       "pickleballCount": "Pickleball",
-      "selectMinimum": "Please select at least 3 favorite facilities.",
-      "selectMinimumPerSport": "Please select at least 3 facilities for each sport (tennis and pickleball).",
+      "selectMinimum": "Please select at least 2 favorite facilities.",
+      "selectMinimumPerSport": "Please select at least 2 facilities for each sport (tennis and pickleball).",
       "searchLabel": "Search for a facility",
       "searchPlaceholder": "Type to search...",
       "loading": "Loading nearby facilities...",
@@ -2017,6 +2020,7 @@
     },
     "detail": {
       "last7DaysActivities": "Last 7 days activities",
+      "viewActivity": "View Activity",
       "activities": "ACTIVITIES",
       "newMembers": "{count} new members",
       "gamesCreated": "{count} games created",
@@ -2026,7 +2030,8 @@
       "viewAll": "View all",
       "notFound": "Community not found",
       "players": "Players",
-      "gamesPlayed": "Games played"
+      "gamesPlayed": "Games played",
+      "sendInvite": "Send Invite"
     },
     "chat": {
       "title": "Chat",
@@ -2125,6 +2130,7 @@
     "createInfo": "Communities have no member limit. As the creator, you'll be a moderator with the ability to manage members and approve join requests.",
     "createCommunityButton": "Create Community",
     "addCommunityMember": "Add Community Member",
+    "addPlayer": "Add Player",
     "referAPlayer": "Refer a Player",
     "referralApprovalInfo": "Your referral will be sent to moderators for approval",
     "addAsModerator": "Add as moderator",
@@ -2215,7 +2221,7 @@
     "communityCapital": "Community",
     "members": "Members",
     "searchMembers": "Search members...",
-    "addMember": "Add Member",
+    "addPlayer": "Add Player",
     "memberAddedToGroup": "Member added to the group",
     "failedToAddMember": "Failed to add member",
     "searchPlayers": "Search players...",
@@ -2365,16 +2371,18 @@
     "detail": {
       "scoresToConfirm": "Scores to Confirm",
       "last7DaysActivities": "Last 7 days activities",
+      "viewActivity": "View Activity",
       "noGamesPlayedYet": "No games played yet",
       "playGamesToAppear": "Play games with group members to appear on the leaderboard",
       "noRecentActivity": "No recent activity",
-      "addMember": "Add Member",
+      "addPlayer": "Add Player",
       "shareInviteLink": "Share Invite Link",
       "noRecentGames": "No recent games",
       "groupStats": "Group Stats",
       "totalMembers": "Total Members",
       "visibility": "Visibility",
-      "private": "Private"
+      "private": "Private",
+      "sendInvite": "Send Invite"
     },
     "options": {
       "shareInviteLink": "Share Invite Link",
@@ -7430,6 +7438,14 @@
     },
     "showAllMatches": "Show All Matches",
     "beTheFirst": "Be the first!",
+    "communities": {
+      "title": "Communities",
+      "empty": "No communities play here yet",
+      "memberCount": "{count} members",
+      "memberCountOne": "1 member",
+      "showAll": "Show all {count} communities",
+      "hideCommunities": "Hide communities"
+    },
     "reportInaccuracy": "Report inaccuracy",
     "reportFacility": {
       "title": "Report Inaccuracy",

@@ -43,6 +43,7 @@ import { InviteToMatchActionSheet } from '../components/InviteToMatchSheet';
 // Sport profile components
 import { PeerRatingRequestActionSheet } from '../features/sport-profile/components/PeerRatingRequestOverlay';
 import { SportSetupWizardActionSheet } from '../features/sport-profile/components/SportSetupWizardSheet';
+import { FavoriteFacilitiesActionSheet } from '../features/sport-profile/components/FavoriteFacilitiesSheet';
 // Chat components
 import { MessageActionsActionSheet } from '../features/chat/components/MessageActionsSheet';
 import { ConversationActionsActionSheet } from '../features/chat/components/ConversationActionsSheet';
@@ -61,6 +62,8 @@ import { PickleballRatingActionSheet } from '../features/onboarding/components/o
 import { ReferenceRequestActionSheet } from '../features/sport-profile/components/ReferenceRequestOverlay';
 import { TennisPreferencesActionSheet } from '../features/sport-profile/components/TennisPreferencesOverlay';
 import { PickleballPreferencesActionSheet } from '../features/sport-profile/components/PickleballPreferencesOverlay';
+// Reference response
+import { RespondToReferenceActionSheet } from '../features/ratings/components/RespondToReferenceOverlay';
 // Rating proof components
 import { AddRatingProofActionSheet } from '../features/ratings/components/AddRatingProofOverlay';
 import { ExternalLinkProofActionSheet } from '../features/ratings/components/ExternalLinkProofOverlay';
@@ -456,6 +459,33 @@ declare module 'react-native-actions-sheet' {
         stepName?: string;
       };
     }>;
+    'respond-to-reference': SheetDefinition<{
+      payload: {
+        request: {
+          id: string;
+          requester_id: string;
+          player_rating_score_id: string;
+          message: string | null;
+          status: 'pending' | 'completed' | 'declined' | 'expired' | 'cancelled';
+          expires_at: string;
+          created_at: string;
+          requester: {
+            id: string;
+            first_name: string;
+            last_name: string;
+            display_name: string | null;
+            profile_picture_url: string | null;
+          };
+          rating_info: {
+            label: string;
+            value: number | null;
+            sport_name: string;
+            sport_display_name: string;
+          };
+        };
+        onResponseComplete?: () => void;
+      };
+    }>;
     'reference-request': SheetDefinition<{
       payload: {
         currentUserId: string;
@@ -538,6 +568,18 @@ declare module 'react-native-actions-sheet' {
         currentStep?: number;
         totalSteps?: number;
         stepName?: string;
+      };
+    }>;
+    // Favorite facilities editor
+    'favorite-facilities': SheetDefinition<{
+      payload: {
+        playerId: string;
+        sportId: string;
+        latitude: number | null;
+        longitude: number | null;
+        initialFacilityIds: string[];
+        onSave?: (facilityIds: string[]) => void;
+        onDismiss?: () => void;
       };
     }>;
     // Sport setup wizard
@@ -645,6 +687,7 @@ export const Sheets = () => {
         // Sport profile sheets
         'peer-rating-request': PeerRatingRequestActionSheet,
         'sport-setup-wizard': SportSetupWizardActionSheet,
+        'favorite-facilities': FavoriteFacilitiesActionSheet,
         // Profile/Onboarding sheets
         'personal-information': PersonalInformationActionSheet,
         'player-information': PlayerInformationActionSheet,
@@ -652,6 +695,7 @@ export const Sheets = () => {
         'player-availabilities': PlayerAvailabilitiesActionSheet,
         'tennis-rating': TennisRatingActionSheet,
         'pickleball-rating': PickleballRatingActionSheet,
+        'respond-to-reference': RespondToReferenceActionSheet,
         'reference-request': ReferenceRequestActionSheet,
         'tennis-preferences': TennisPreferencesActionSheet,
         'pickleball-preferences': PickleballPreferencesActionSheet,

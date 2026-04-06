@@ -89,6 +89,7 @@ interface MatchFiltersBarProps {
   isAuthenticated?: boolean;
   onReset?: () => void;
   hasActiveFilters?: boolean;
+  showDistanceFilter?: boolean;
   showLocationSelector?: boolean;
   locationMode?: LocationMode;
   onLocationModeChange?: (mode: LocationMode) => void;
@@ -383,6 +384,7 @@ export default function MatchFiltersBar({
   isAuthenticated = false,
   onReset,
   hasActiveFilters = false,
+  showDistanceFilter = true,
   showLocationSelector = false,
   locationMode,
   onLocationModeChange,
@@ -866,12 +868,16 @@ export default function MatchFiltersBar({
         onPress: () => setShowDurationDropdown(true),
         icon: duration !== 'all' ? 'timer-outline' : undefined,
       },
-      {
-        key: 'distance',
-        value: distanceDisplay,
-        isActive: distance !== 'all',
-        onPress: () => setShowDistanceDropdown(true),
-      },
+      ...(showDistanceFilter
+        ? [
+            {
+              key: 'distance',
+              value: distanceDisplay,
+              isActive: distance !== 'all',
+              onPress: () => setShowDistanceDropdown(true),
+            },
+          ]
+        : []),
       {
         key: 'skillLevel',
         value: skillLevelDisplay,
@@ -937,6 +943,7 @@ export default function MatchFiltersBar({
     matchType,
     durationDisplay,
     duration,
+    showDistanceFilter,
     distanceDisplay,
     distance,
     skillLevelDisplay,

@@ -23,7 +23,9 @@ import { lightHaptic } from '@rallia/shared-utils';
 import {
   useNetworkMemberUpcomingMatches,
   usePublicMatchFilters,
+  usePlayer,
   type NetworkMemberMatch,
+  type NetworkMatchFilters,
 } from '@rallia/shared-hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { Logger } from '@rallia/shared-services';
@@ -103,6 +105,7 @@ export default function NetworkMatchesScreen() {
   const { session } = useAuth();
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
   const { selectedSport } = useSport();
+  const { player } = usePlayer();
   const playerId = session?.user?.id;
 
   // Filter state - reuse the same hook as PublicMatches
@@ -131,233 +134,63 @@ export default function NetworkMatchesScreen() {
     clearSearch,
   } = usePublicMatchFilters();
 
-  // Fetch network member upcoming matches
+  // Build server-side filters from filter state
+  const serverFilters = useMemo<NetworkMatchFilters>(
+    () => ({
+      searchQuery: debouncedSearchQuery || undefined,
+      format: filters.format,
+      matchType: filters.matchType,
+      dateRange: filters.dateRange,
+      timeOfDay: filters.timeOfDay,
+      gender: filters.gender,
+      cost: filters.cost,
+      joinMode: filters.joinMode,
+      duration: filters.duration,
+      courtStatus: filters.courtStatus,
+      matchTier: filters.matchTier,
+      specificDate: filters.specificDate,
+      spotsAvailable: filters.spotsAvailable,
+      specificTime: filters.specificTime,
+      userGender: player?.gender,
+    }),
+    [debouncedSearchQuery, filters, player?.gender]
+  );
+
+  // Fetch network member upcoming matches with server-side filters
   const isManualRefresh = useRef(false);
   const {
     data: matches,
     isLoading,
+    isFetching,
     isRefetching,
     refetch,
   } = useNetworkMemberUpcomingMatches(
     networkId,
     networkType,
-    playerId, // excludePlayerId - exclude current user's own matches
-    sportId ?? undefined, // sportId - filter by sport if specified
-    100 // Higher limit since we'll filter client-side
+    playerId,
+    sportId ?? undefined,
+    100,
+    serverFilters
   );
 
-  // Transform and filter matches based on search and filters
-  const filteredMatches = useMemo(() => {
-    if (!matches) return [];
-
-    return matches.filter(match => {
-      // Search filter - check host name, facility name, location
-      if (debouncedSearchQuery) {
-        const query = debouncedSearchQuery.toLowerCase();
-        const hostName = (match.creator?.first_name ?? '') + ' ' + (match.creator?.last_name ?? '');
-        const facilityName = match.facility?.name ?? '';
-        const locationName = match.location_name ?? '';
-
-        const matchesSearch =
-          hostName.toLowerCase().includes(query) ||
-          facilityName.toLowerCase().includes(query) ||
-          locationName.toLowerCase().includes(query);
-
-        if (!matchesSearch) return false;
-      }
-
-      // Format filter - only filter if not 'all'
-      if (filters.format !== 'all' && match.format !== filters.format) {
-        return false;
-      }
-
-      // Match type filter - only filter if not 'all'
-      if (filters.matchType !== 'all' && match.player_expectation !== filters.matchType) {
-        return false;
-      }
-
-      // Date range filter
-      if (filters.dateRange && filters.dateRange !== 'all') {
-        const matchDate = new Date(match.match_date);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        switch (filters.dateRange) {
-          case 'today': {
-            const endOfToday = new Date(today);
-            endOfToday.setHours(23, 59, 59, 999);
-            if (matchDate < today || matchDate > endOfToday) return false;
-            break;
-          }
-          case 'week': {
-            const endOfWeek = new Date(today);
-            endOfWeek.setDate(endOfWeek.getDate() + 7);
-            endOfWeek.setHours(23, 59, 59, 999);
-            if (matchDate < today || matchDate > endOfWeek) return false;
-            break;
-          }
-          case 'weekend': {
-            const saturday = new Date(today);
-            saturday.setDate(saturday.getDate() + (6 - saturday.getDay()));
-            saturday.setHours(0, 0, 0, 0);
-            const sunday = new Date(saturday);
-            sunday.setDate(sunday.getDate() + 1);
-            sunday.setHours(23, 59, 59, 999);
-            if (matchDate < saturday || matchDate > sunday) return false;
-            break;
-          }
-        }
-      }
-
-      // Time of day filter
-      if (filters.timeOfDay && filters.timeOfDay !== 'all') {
-        const startHour = parseInt(match.start_time?.split(':')[0] ?? '0', 10);
-        switch (filters.timeOfDay) {
-          case 'morning':
-            if (startHour < 6 || startHour >= 12) return false;
-            break;
-          case 'afternoon':
-            if (startHour < 12 || startHour >= 17) return false;
-            break;
-          case 'evening':
-            if (startHour < 17) return false;
-            break;
-        }
-      }
-
-      // Join mode filter - only filter if not 'all'
-      if (filters.joinMode !== 'all' && match.join_mode !== filters.joinMode) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [matches, debouncedSearchQuery, filters]);
-
-  // Transform NetworkMemberMatch to a format compatible with MatchCard
-  const transformMatchForCard = useCallback((match: NetworkMemberMatch) => {
-    // Create a minimal object compatible with MatchWithDetails for MatchCard
-    return {
-      id: match.id,
-      sport_id: match.sport_id,
-      match_date: match.match_date,
-      start_time: match.start_time,
-      end_time: match.end_time,
-      format: match.format,
-      player_expectation: match.player_expectation,
-      visibility: match.visibility,
-      join_mode: match.join_mode,
-      location_type: match.location_type,
-      location_name: match.location_name,
-      facility_id: match.facility_id,
-      created_by: match.created_by,
-      cancelled_at: match.cancelled_at,
-      status: 'scheduled' as const,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      // Relations
-      sport: match.sport
-        ? {
-            id: match.sport.id,
-            name: match.sport.name,
-            display_name: match.sport.display_name,
-            icon_url: match.sport.icon_url,
-            is_active: true,
-            created_at: '',
-            updated_at: '',
-          }
-        : null,
-      facility: match.facility
-        ? {
-            id: match.facility.id,
-            name: match.facility.name,
-            city: match.facility.city,
-            address: match.facility.address,
-            // Add required fields with defaults
-            latitude: null,
-            longitude: null,
-            phone: null,
-            email: null,
-            website: null,
-            timezone: null,
-            created_at: '',
-            updated_at: '',
-          }
-        : undefined,
-      created_by_player: match.created_by_player
-        ? {
-            id: match.created_by_player.id,
-            profile: match.created_by_player.profile
-              ? {
-                  id: match.created_by,
-                  first_name: match.created_by_player.profile.first_name,
-                  last_name: match.created_by_player.profile.last_name,
-                  display_name: match.created_by_player.profile.display_name,
-                  profile_picture_url: match.created_by_player.profile.profile_picture_url,
-                }
-              : undefined,
-          }
-        : {
-            id: match.created_by,
-            profile: match.creator
-              ? {
-                  id: match.created_by,
-                  first_name: match.creator.first_name,
-                  last_name: match.creator.last_name,
-                  display_name: null,
-                  profile_picture_url: match.creator.profile_picture_url,
-                }
-              : undefined,
-          },
-      participants: match.participants?.map(p => ({
-        id: p.id,
-        match_id: match.id,
-        player_id: p.player_id,
-        team_number: p.team_number,
-        is_host: p.is_host,
-        status: p.status,
-        joined_at: null,
-        created_at: '',
-        updated_at: '',
-        player: p.player
-          ? {
-              id: p.player.id,
-              profile: p.player.profile
-                ? {
-                    id: p.player_id,
-                    first_name: p.player.profile.first_name,
-                    last_name: p.player.profile.last_name,
-                    display_name: p.player.profile.display_name,
-                    profile_picture_url: p.player.profile.profile_picture_url,
-                  }
-                : undefined,
-            }
-          : { id: p.player_id },
-      })),
-      // Distance is not available for network matches
-      distance_meters: null,
-    };
-  }, []);
+  const filteredMatches = matches ?? [];
 
   // Handle match card press - open match detail sheet
   const handleMatchPress = useCallback(
     (match: NetworkMemberMatch) => {
       void lightHaptic();
       Logger.logUserAction('network_match_pressed', { matchId: match.id, networkId, networkType });
-      // Transform and open the match detail sheet
-      const transformed = transformMatchForCard(match);
-      openMatchDetail(transformed as unknown as Parameters<typeof openMatchDetail>[0]);
+      openMatchDetail(match as Parameters<typeof openMatchDetail>[0]);
     },
-    [openMatchDetail, transformMatchForCard, networkId, networkType]
+    [openMatchDetail, networkId, networkType]
   );
 
   // Render match card
   const renderMatchCard = useCallback(
     ({ item }: { item: NetworkMemberMatch }) => {
-      const transformed = transformMatchForCard(item);
       return (
         <MatchCard
-          match={transformed as unknown as Parameters<typeof MatchCard>[0]['match']}
+          match={item as Parameters<typeof MatchCard>[0]['match']}
           isDark={isDark}
           t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
           locale={locale}
@@ -373,7 +206,7 @@ export default function NetworkMatchesScreen() {
         />
       );
     },
-    [transformMatchForCard, isDark, t, locale, playerId, selectedSport, handleMatchPress]
+    [isDark, t, locale, playerId, selectedSport, handleMatchPress]
   );
 
   // Render results count
@@ -447,7 +280,7 @@ export default function NetworkMatchesScreen() {
               value={filters.searchQuery}
               onChangeText={setSearchQuery}
               placeholder={t('publicMatches.searchPlaceholder')}
-              isLoading={false}
+              isLoading={isFetching && debouncedSearchQuery !== filters.searchQuery}
               onClear={clearSearch}
             />
           </View>
@@ -489,6 +322,7 @@ export default function NetworkMatchesScreen() {
           onSpecificTimeChange={setSpecificTime}
           onReset={resetFilters}
           hasActiveFilters={hasActiveFilters}
+          showDistanceFilter={false}
           showLocationSelector={false}
         />
       </View>

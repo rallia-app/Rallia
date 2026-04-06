@@ -211,15 +211,15 @@ function isStepComplete(stepId: OnboardingStepId, formData: OnboardingFormData):
       return !!(formData.playingHand && formData.maxTravelDistance);
 
     case 'favorite-sites': {
-      // Require at least 3 favorites; when both sports selected, need 3 per sport
+      // Require at least 2 favorites; when both sports selected, need 2 per sport
       const bothSports =
         formData.selectedSportNames.includes('tennis') &&
         formData.selectedSportNames.includes('pickleball');
       if (bothSports) {
         const counts = computeFavoriteSportCounts(formData);
-        return counts.tennisCount >= 3 && counts.pickleballCount >= 3;
+        return counts.tennisCount >= 2 && counts.pickleballCount >= 2;
       }
-      return formData.favoriteFacilities.length >= 3;
+      return formData.favoriteFacilities.length >= 2;
     }
 
     case 'availabilities':

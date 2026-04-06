@@ -73,7 +73,7 @@ export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
     );
   }, [formData.availabilities]);
 
-  const MIN_SELECTIONS = 5;
+  const MIN_SELECTIONS = 3;
   const hasMinimum = totalSelections >= MIN_SELECTIONS;
 
   const toggleAvailability = (day: DayOfWeek, slot: TimeSlot) => {

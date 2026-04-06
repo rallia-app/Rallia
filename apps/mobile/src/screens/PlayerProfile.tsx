@@ -25,7 +25,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text, Skeleton, SkeletonAvatar, useToast, Button } from '@rallia/shared-components';
-import { supabase, Logger, isPlayerOnline } from '@rallia/shared-services';
+import { supabase, Logger, isPlayerOnline, computeBadgeStatus } from '@rallia/shared-services';
 import { useGetOrCreateDirectConversation, usePlayerReputation } from '@rallia/shared-hooks';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
 import { useSport, useUserHomeLocation } from '../context';
@@ -265,7 +265,7 @@ const PlayerProfile = () => {
     const fetchFavoriteFacilities = async () => {
       setFavoriteFacilitiesLoading(true);
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('player_favorite_facility')
           .select(
             `
@@ -279,8 +279,13 @@ const PlayerProfile = () => {
           `
           )
           .eq('player_id', playerId)
-          .eq('sport_id', sportId)
           .order('display_order', { ascending: true });
+
+        if (sportId) {
+          query = query.eq('sport_id', sportId);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
           Logger.error('Failed to fetch favorite facilities for player', error, { playerId });
@@ -312,7 +317,7 @@ const PlayerProfile = () => {
     if (playerId) {
       fetchFavoriteFacilities();
     }
-  }, [playerId]);
+  }, [playerId, sportId]);
 
   // Fetch player data on mount
   useEffect(() => {
@@ -625,27 +630,17 @@ const PlayerProfile = () => {
         const displayValue = ratingScore?.value ?? null;
         const ratingScoreId = ratingScore?.id || rating.currentRatingScoreId || '';
 
-        // Determine badge status based on counts:
-        // - certified (green): badge_status is 'certified' OR 3+ references OR 2+ current-level proofs
-        // - disputed (red): badge_status is 'disputed'
-        // - self_declared (yellow): default when criteria not met
-        // NOTE: Only CURRENT-LEVEL proofs count for certification
-        const rawBadgeStatus = rating.badge_status as string | undefined;
         const referralsCount = rating.referrals_count || 0;
         const currentLevelProofsCount = rating.currentLevelProofsCount || 0;
         const totalProofsCount = rating.totalProofsCount || 0;
         const peerEvalCount = rating.peer_evaluation_count || 0;
 
-        let badgeStatus: BadgeStatus = 'self_declared';
-        if (rawBadgeStatus === 'disputed') {
-          badgeStatus = 'disputed';
-        } else if (
-          rawBadgeStatus === 'certified' ||
-          referralsCount >= 3 ||
-          currentLevelProofsCount >= 2
-        ) {
-          badgeStatus = 'certified';
-        }
+        const badgeStatus = computeBadgeStatus({
+          rawBadgeStatus: rating.badge_status as string | undefined,
+          isCertified: rating.is_certified ?? false,
+          referralsCount,
+          approvedProofsCount: currentLevelProofsCount,
+        });
 
         if (sportIdFromRating && !ratingsMap.has(sportIdFromRating)) {
           ratingsMap.set(sportIdFromRating, {
@@ -973,6 +968,12 @@ const PlayerProfile = () => {
         return;
       }
 
+      // Check if viewed player is certified (only certified players can give valid references)
+      if (!viewedPlayerSport.isCertified) {
+        toast.warning(t('playerProfile.referenceRequest.playerNotCertified'));
+        return;
+      }
+
       // Check if viewed player is at same/higher level (they need to be to give a valid reference)
       // First, fetch current user's ratings with full relationship chain
       const { data: currentUserRatings, error: ratingError } = await supabase
@@ -1016,6 +1017,20 @@ const PlayerProfile = () => {
           toast.warning(t('playerProfile.referenceRequest.playerLevelTooLow'));
           return;
         }
+      }
+
+      // Check if a request already exists for this player/rating (pending or completed)
+      const { count: existingCount } = await supabase
+        .from('rating_reference_request')
+        .select('id', { count: 'exact', head: true })
+        .eq('requester_id', currentUserId)
+        .eq('referee_id', playerId)
+        .eq('player_rating_score_id', currentUserRatingScoreId)
+        .in('status', ['pending', 'completed']);
+
+      if (existingCount && existingCount > 0) {
+        toast.warning(t('profile.certification.referenceRequest.alreadyRequested'));
+        return;
       }
 
       // Calculate expiration date (14 days from now)

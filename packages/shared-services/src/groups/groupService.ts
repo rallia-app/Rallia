@@ -93,6 +93,7 @@ export {
   removeMatchFromGroup,
   getNetworkMemberUpcomingMatches,
   type NetworkMemberMatch,
+  type NetworkMatchFilters,
 } from './groupMatchService';
 
 // ============================================================================

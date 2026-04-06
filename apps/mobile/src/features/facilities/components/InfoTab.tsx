@@ -34,6 +34,9 @@ import type { TranslationKey, TranslationOptions } from '../../../hooks';
 import { useSport } from '../../../context';
 import { SportIcon } from '../../../components/SportIcon';
 
+import { useCommunitiesForFacility } from '@rallia/shared-hooks';
+import { navigationRef } from '../../../navigation';
+import { CommunityCard } from '../../communities/components/CommunityCard';
 import CourtCard from './CourtCard';
 
 // Enable LayoutAnimation on Android
@@ -198,7 +201,10 @@ export default function InfoTab({
   const toast = useToast();
   const { selectedSport } = useSport();
   const [showAllCourts, setShowAllCourts] = useState(false);
+  const [showAllCommunities, setShowAllCommunities] = useState(false);
   const [addressCopied, setAddressCopied] = useState(false);
+
+  const { communities } = useCommunitiesForFacility(facility.id);
 
   const facilityData = facility.facilityData;
   const fullAddress = buildFullAddress(facility);
@@ -213,6 +219,12 @@ export default function InfoTab({
   const COURTS_PREVIEW_LIMIT = 4;
   const displayedCourts = showAllCourts ? courts : courts.slice(0, COURTS_PREVIEW_LIMIT);
   const hasMoreCourts = courts.length > COURTS_PREVIEW_LIMIT;
+
+  const COMMUNITIES_PREVIEW_LIMIT = 3;
+  const displayedCommunities = showAllCommunities
+    ? communities
+    : communities.slice(0, COMMUNITIES_PREVIEW_LIMIT);
+  const hasMoreCommunities = communities.length > COMMUNITIES_PREVIEW_LIMIT;
 
   // ==========================================================================
   // HANDLERS
@@ -236,6 +248,12 @@ export default function InfoTab({
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setShowAllCourts(!showAllCourts);
   }, [showAllCourts]);
+
+  const handleToggleShowAllCommunities = useCallback(() => {
+    lightHaptic();
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setShowAllCommunities(!showAllCommunities);
+  }, [showAllCommunities]);
 
   // ==========================================================================
   // RENDER
@@ -494,6 +512,50 @@ export default function InfoTab({
           </View>
         )}
       </View>
+
+      {/* Communities Section */}
+      {communities.length > 0 && (
+        <View style={styles.section}>
+          <Text size="lg" weight="bold" color={colors.text}>
+            {t('facilityDetail.communities.title')} ({communities.length})
+          </Text>
+          <View style={styles.courtsList}>
+            {displayedCommunities.map(community => (
+              <CommunityCard
+                key={community.id}
+                community={community}
+                onPress={() =>
+                  navigationRef.navigate('CommunityDetail', { communityId: community.id })
+                }
+                colors={colors}
+                isDark={isDark}
+                t={t}
+              />
+            ))}
+
+            {hasMoreCommunities && (
+              <TouchableOpacity
+                onPress={handleToggleShowAllCommunities}
+                style={[styles.showAllButton, { backgroundColor: colors.primary + '15' }]}
+                activeOpacity={0.7}
+              >
+                <Text size="sm" weight="medium" color={colors.primary}>
+                  {showAllCommunities
+                    ? t('facilityDetail.communities.hideCommunities')
+                    : t('facilityDetail.communities.showAll', {
+                        count: communities.length,
+                      })}
+                </Text>
+                <Ionicons
+                  name={showAllCommunities ? 'chevron-up' : 'chevron-down'}
+                  size={16}
+                  color={colors.primary}
+                />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
 
       {/* Report inaccuracy link */}
       {onReportInaccuracy && (

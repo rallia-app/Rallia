@@ -60,6 +60,7 @@ import {
   type SubmitMatchResultForMatchParams,
   type PendingScoreConfirmation,
   type NetworkMemberMatch,
+  type NetworkMatchFilters,
 } from '@rallia/shared-services';
 import { matchKeys } from './useCreateMatch';
 
@@ -89,13 +90,15 @@ export const groupKeys = {
   memberUpcomingMatches: (
     networkId: string,
     networkType: 'community' | 'group',
-    sportId?: string | null
+    sportId?: string | null,
+    filters?: NetworkMatchFilters
   ) =>
     [
       ...groupKeys.detail(networkId),
       'memberUpcomingMatches',
       networkType,
       sportId ?? 'all',
+      filters ?? {},
     ] as const,
 };
 
@@ -467,17 +470,19 @@ export function useNetworkMemberUpcomingMatches(
   networkType: 'community' | 'group',
   excludePlayerId?: string,
   sportId?: string,
-  limit: number = 20
+  limit: number = 20,
+  filters: NetworkMatchFilters = {}
 ): UseQueryResult<NetworkMemberMatch[]> {
   return useQuery({
-    queryKey: groupKeys.memberUpcomingMatches(networkId!, networkType, sportId ?? null),
+    queryKey: groupKeys.memberUpcomingMatches(networkId!, networkType, sportId ?? null, filters),
     queryFn: () =>
       getNetworkMemberUpcomingMatches(
         networkId!,
         networkType,
         sportId ?? null,
         excludePlayerId ?? null,
-        limit
+        limit,
+        filters
       ),
     enabled: !!networkId,
   });
@@ -856,4 +861,5 @@ export type {
   CreatePlayedMatchInput,
   PendingScoreConfirmation,
   NetworkMemberMatch,
+  NetworkMatchFilters,
 };
