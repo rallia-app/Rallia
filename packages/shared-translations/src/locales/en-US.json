@@ -2222,6 +2222,7 @@
     "members": "Members",
     "searchMembers": "Search members...",
     "addPlayer": "Add Player",
+    "addMember": "Add Member",
     "memberAddedToGroup": "Member added to the group",
     "failedToAddMember": "Failed to add member",
     "searchPlayers": "Search players...",
