@@ -99,7 +99,7 @@ const ADD_SCORE_INTRO_KEY = 'rallia_add_score_intro_dismissed';
 export default function CommunityDetailScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<CommunityDetailRouteProp>();
-  const { communityId } = route.params;
+  const { communityId, fromChat } = route.params;
 
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
@@ -1805,8 +1805,8 @@ export default function CommunityDetailScreen() {
         <View style={{ height: 80 }} />
       </ScrollView>
 
-      {/* Bottom Action Button - changes based on active tab */}
-      {activeTab === 'home' ? (
+      {/* Bottom Action Button - changes based on active tab, hidden when opened from chat */}
+      {activeTab === 'home' && !fromChat ? (
         <Button
           variant="primary"
           size="lg"

@@ -7,32 +7,24 @@
  * - Regular members: Can refer other players (creates pending request that needs approval)
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, TouchableOpacity, StyleSheet, ActivityIndicator, Image, Switch } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, FlatList } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 
-import { Text, useToast } from '@rallia/shared-components';
+import { Text, Skeleton, useToast } from '@rallia/shared-components';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useAuth, useTranslation } from '../../../hooks';
+import { useSport } from '../../../context';
 import {
-  useDebounce,
+  usePlayerSearch,
   useAddCommunityMember,
   useReferPlayerToCommunity,
   useIsCommunityModerator,
 } from '@rallia/shared-hooks';
-import { supabase } from '@rallia/shared-services';
+import type { PlayerSearchResult } from '@rallia/shared-services';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
 import { SearchBar } from '../../../components/SearchBar';
-
-interface PlayerProfile {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  display_name: string | null;
-  city: string | null;
-  profile_picture_url: string | null;
-}
 
 export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-community-member'>) {
   const communityId = payload?.communityId ?? '';
@@ -44,16 +36,12 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
   const { session } = useAuth();
   const playerId = session?.user?.id;
   const toast = useToast();
+  const { selectedSport } = useSport();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [suggestedPlayers, setSuggestedPlayers] = useState<PlayerProfile[]>([]);
-  const [searchResults, setSearchResults] = useState<PlayerProfile[]>([]);
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
   const [addAsModerator, setAddAsModerator] = useState(false);
   const [addedMemberIds, setAddedMemberIds] = useState<string[]>([]);
   const [addingMemberId, setAddingMemberId] = useState<string | null>(null);
-  const debouncedSearch = useDebounce(searchQuery, 300);
 
   // Mutations
   const addMemberMutation = useAddCommunityMember(); // For moderators - direct add
@@ -61,119 +49,36 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
 
   const { data: isModerator } = useIsCommunityModerator(communityId, playerId);
 
+  // Exclude current members, recently added, and current user
+  const excludePlayerIds = useMemo(
+    () => [...currentMemberIds, ...addedMemberIds],
+    [currentMemberIds, addedMemberIds]
+  );
+
+  // Use paginated player search hook
+  const { players, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = usePlayerSearch({
+    sportId: selectedSport?.id,
+    currentUserId: playerId,
+    searchQuery,
+    excludePlayerIds,
+    pageSize: 50,
+    enabled: !!selectedSport?.id && !!playerId,
+  });
+
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
   const handleClose = useCallback(() => {
     lightHaptic();
     setSearchQuery('');
-    setSearchResults([]);
     setAddAsModerator(false);
     setAddedMemberIds([]);
     setAddingMemberId(null);
     SheetManager.hide('add-community-member');
   }, []);
-
-  // Load suggested players when component mounts
-  useEffect(() => {
-    const loadSuggestedPlayers = async () => {
-      if (!playerId) return;
-
-      setIsLoadingSuggestions(true);
-      try {
-        // Get profiles of players (users who have a player record), excluding current user
-        const { data, error } = await supabase
-          .from('profile')
-          .select(
-            `
-            id,
-            first_name,
-            last_name,
-            display_name,
-            profile_picture_url,
-            player!inner(id, city)
-          `
-          )
-          .neq('id', playerId)
-          .order('created_at', { ascending: false })
-          .limit(50);
-
-        if (error) throw error;
-        // Map to flatten structure (profile data only, player join ensures they are players)
-        const players = (data || []).map(p => ({
-          id: p.id,
-          first_name: p.first_name,
-          last_name: p.last_name,
-          display_name: p.display_name,
-          city: (p.player as { city?: string | null })?.city ?? null,
-          profile_picture_url: p.profile_picture_url,
-        }));
-        setSuggestedPlayers(players);
-      } catch (error) {
-        console.error('Error loading suggested players:', error);
-        setSuggestedPlayers([]);
-      } finally {
-        setIsLoadingSuggestions(false);
-      }
-    };
-
-    loadSuggestedPlayers();
-  }, [playerId]);
-
-  // Search players when query changes
-  useEffect(() => {
-    const searchPlayers = async () => {
-      if (debouncedSearch.length < 2) {
-        setSearchResults([]);
-        return;
-      }
-
-      setIsSearching(true);
-      try {
-        const searchTerm = `%${debouncedSearch}%`;
-        const { data, error } = await supabase
-          .from('profile')
-          .select(
-            `
-            id,
-            first_name,
-            last_name,
-            display_name,
-            profile_picture_url,
-            player!inner(id, city)
-          `
-          )
-          .neq('id', playerId || '')
-          .or(
-            `first_name.ilike.${searchTerm},last_name.ilike.${searchTerm},display_name.ilike.${searchTerm}`
-          )
-          .limit(20);
-
-        if (error) throw error;
-        // Map to flatten structure
-        const players = (data || []).map(p => ({
-          id: p.id,
-          first_name: p.first_name,
-          last_name: p.last_name,
-          display_name: p.display_name,
-          city: (p.player as { city?: string | null })?.city ?? null,
-          profile_picture_url: p.profile_picture_url,
-        }));
-        setSearchResults(players);
-      } catch (error) {
-        console.error('Error searching players:', error);
-        setSearchResults([]);
-      } finally {
-        setIsSearching(false);
-      }
-    };
-
-    searchPlayers();
-  }, [debouncedSearch, playerId]);
-
-  // Filter out current members and recently added members from results
-  const filteredResults = useMemo(() => {
-    const sourceList = searchQuery.length >= 2 ? searchResults : suggestedPlayers;
-    const excludedIds = [...currentMemberIds, ...addedMemberIds];
-    return sourceList.filter(player => !excludedIds.includes(player.id));
-  }, [searchResults, suggestedPlayers, currentMemberIds, addedMemberIds, searchQuery]);
 
   const handleAddOrReferMember = useCallback(
     async (memberPlayerId: string) => {
@@ -238,8 +143,61 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
     ]
   );
 
+  // Theme-aware skeleton colors
+  const skeletonBg = isDark ? '#2C2C2E' : '#E1E9EE';
+  const skeletonHighlight = isDark ? '#3C3C3E' : '#F2F8FC';
+
+  // Render loading skeleton matching playerItem layout
+  const renderPlayerSkeleton = () => (
+    <View style={styles.skeletonContainer}>
+      {[1, 2, 3, 4, 5].map(i => (
+        <View key={i} style={[styles.playerItem, { borderBottomColor: colors.border }]}>
+          <Skeleton
+            width={48}
+            height={48}
+            circle
+            backgroundColor={skeletonBg}
+            highlightColor={skeletonHighlight}
+          />
+          <View style={styles.playerInfo}>
+            <Skeleton
+              width="55%"
+              height={16}
+              backgroundColor={skeletonBg}
+              highlightColor={skeletonHighlight}
+            />
+            <Skeleton
+              width="35%"
+              height={14}
+              backgroundColor={skeletonBg}
+              highlightColor={skeletonHighlight}
+              style={{ marginTop: 4 }}
+            />
+          </View>
+          <Skeleton
+            width={36}
+            height={36}
+            circle
+            backgroundColor={skeletonBg}
+            highlightColor={skeletonHighlight}
+          />
+        </View>
+      ))}
+    </View>
+  );
+
+  // Render footer loading indicator for pagination
+  const renderListFooter = useCallback(() => {
+    if (!isFetchingNextPage) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color={colors.primary} />
+      </View>
+    );
+  }, [isFetchingNextPage, colors.primary]);
+
   const renderPlayerItem = useCallback(
-    ({ item }: { item: PlayerProfile }) => {
+    ({ item }: { item: PlayerSearchResult }) => {
       const isAddingThis = addingMemberId === item.id;
       const fullName = `${item.first_name || ''} ${item.last_name || ''}`.trim() || 'Unknown';
 
@@ -336,26 +294,25 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
         </View>
 
         {/* Results */}
-        {isLoadingSuggestions || isSearching ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-          </View>
-        ) : filteredResults.length === 0 ? (
+        {isLoading ? (
+          renderPlayerSkeleton()
+        ) : players.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="people-outline" size={48} color={colors.textMuted} />
             <Text style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
-              {searchQuery.length >= 2
-                ? t('community.noPlayersFound')
-                : t('community.noPlayersAvailable')}
+              {searchQuery ? t('community.noPlayersFound') : t('community.noPlayersAvailable')}
             </Text>
           </View>
         ) : (
           <FlatList
-            data={filteredResults}
+            data={players}
             renderItem={renderPlayerItem}
             keyExtractor={item => item.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}
+            onEndReached={handleEndReached}
+            onEndReachedThreshold={0.3}
+            ListFooterComponent={renderListFooter}
           />
         )}
       </View>
@@ -417,9 +374,12 @@ const styles = StyleSheet.create({
   searchContainer: {
     padding: 16,
   },
-  loadingContainer: {
+  skeletonContainer: {
     flex: 1,
-    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  footerLoader: {
+    paddingVertical: spacingPixels[4],
     alignItems: 'center',
   },
   emptyContainer: {

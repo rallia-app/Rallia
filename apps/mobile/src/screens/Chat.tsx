@@ -43,7 +43,7 @@ import {
   radiusPixels,
 } from '@rallia/design-system';
 import {
-  usePlayerConversations,
+  useFilteredConversations,
   useConversationsRealtime,
   useTogglePinConversation,
   useToggleMuteConversation,
@@ -103,11 +103,24 @@ const Chat = () => {
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
 
   const {
-    data: conversations,
+    conversations,
     isLoading,
     refetch,
     isRefetching,
-  } = usePlayerConversations(playerId, selectedSport?.id);
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useFilteredConversations({
+    playerId,
+    sportId: selectedSport?.id,
+    limit: 50,
+  });
+
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Subscribe to real-time updates
   useConversationsRealtime(playerId);
@@ -736,6 +749,15 @@ const Chat = () => {
             renderEmpty()
           )
         }
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <View style={styles.footerLoader}>
+              <ActivityIndicator size="small" color={primary[500]} />
+            </View>
+          ) : null
+        }
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.3}
         refreshControl={
           <RefreshControl
             refreshing={isRefetching && isManualRefresh.current}
@@ -820,6 +842,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  footerLoader: {
+    paddingVertical: spacingPixels[4],
+    alignItems: 'center',
   },
   separator: {
     height: 1,

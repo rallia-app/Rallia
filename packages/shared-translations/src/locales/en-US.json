@@ -7865,6 +7865,85 @@
       "premium": "Free premium access"
     }
   },
+  "playerInterest": {
+    "title": "Play for Free - Rallia",
+    "hero": {
+      "badge": "Friends & Family",
+      "headline": "Help Us Launch Rallia",
+      "subheadline": "We're looking for our first players to kick things off. Tell us where you play and when you're free — we'll cover the court fees."
+    },
+    "formSection": {
+      "title": "Your Player Profile",
+      "subtitle": "This helps us organize matches at the right facilities and times for you."
+    },
+    "form": {
+      "firstNameLabel": "First name",
+      "firstNamePlaceholder": "Your first name",
+      "lastNameLabel": "Last name",
+      "lastNamePlaceholder": "Your last name",
+      "emailLabel": "Email",
+      "emailPlaceholder": "your.email@example.com",
+      "postalCodeLabel": "Postal code",
+      "postalCodePlaceholder": "e.g., H2X 1Y4",
+      "playsTennisLabel": "Do you play tennis?",
+      "ntrpRatingLabel": "Your NTRP rating",
+      "favoriteTennisFacilityLabel": "Where do you usually play tennis?",
+      "favoriteTennisFacilityPlaceholder": "Search for a facility...",
+      "playsPickleballLabel": "Do you play pickleball?",
+      "duprRatingLabel": "Your DUPR rating",
+      "favoritePickleballFacilityLabel": "Where do you usually play pickleball?",
+      "favoritePickleballFacilityPlaceholder": "Search for a facility...",
+      "facilityCustomHint": "Don't see your facility? Just type its name.",
+      "facilityNoResults": "No facilities found. Type a custom name.",
+      "availabilityTitle": "When can you play?",
+      "availabilityDescription": "Select the times when you're typically free. We'll use this to schedule matches.",
+      "days": {
+        "monday": "Mon",
+        "tuesday": "Tue",
+        "wednesday": "Wed",
+        "thursday": "Thu",
+        "friday": "Fri",
+        "saturday": "Sat",
+        "sunday": "Sun"
+      },
+      "periods": {
+        "morning": "Morning",
+        "afternoon": "Afternoon",
+        "evening": "Evening"
+      },
+      "periodRanges": {
+        "morning": "6am - 12pm",
+        "afternoon": "12pm - 5pm",
+        "evening": "5pm - 9pm"
+      },
+      "availabilityCount": "{count} selected",
+      "submitButton": "Count me in",
+      "submitting": "Submitting..."
+    },
+    "validation": {
+      "atLeastOneSport": "Please select at least one sport.",
+      "tennisRatingRequired": "Please select your NTRP rating.",
+      "pickleballRatingRequired": "Please select your DUPR rating.",
+      "tennisFacilityRequired": "Please enter where you usually play tennis.",
+      "pickleballFacilityRequired": "Please enter where you usually play pickleball.",
+      "availabilityMinimum": "Please select at least 3 availability slots.",
+      "postalCodeInvalid": "Please enter a valid Canadian postal code (e.g., H2X 1Y4)."
+    },
+    "success": {
+      "message": "You're in! We'll reach out soon to get you on the court."
+    },
+    "alreadySubmitted": {
+      "message": "Looks like you've already signed up! We'll be in touch soon."
+    },
+    "error": {
+      "message": "Something went wrong. Please try again."
+    },
+    "trust": {
+      "secure": "Your info stays private",
+      "fast": "Takes 2 minutes",
+      "premium": "Court fees on us"
+    }
+  },
   "gamesPage": {
     "title": "Upcoming Games",
     "subtitle": "Find public matches near you and join the action.",
