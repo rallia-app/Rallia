@@ -1,25 +1,14 @@
 /**
- * NetworkMatches Screen
- * Shows all upcoming public matches of network (community/group) members.
- * Provides search and filtering similar to FacilityDetail's MatchesTab and PublicMatches.
+ * NetworkMatchesTab Component
+ * Displays upcoming public matches from network (group/community) members
+ * with search and filtering. Mirrors the MatchesTab pattern from FacilityDetail.
  */
 
 import React, { useCallback, useMemo, useRef } from 'react';
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  ActivityIndicator,
-  RefreshControl,
-  TouchableOpacity,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MatchCard, Text } from '@rallia/shared-components';
-import { spacingPixels, neutral, primary } from '@rallia/design-system';
-import { lightHaptic } from '@rallia/shared-utils';
+import { SportIcon } from '../../../components/SportIcon';
 import {
   useNetworkMemberUpcomingMatches,
   usePublicMatchFilters,
@@ -27,21 +16,25 @@ import {
   type NetworkMemberMatch,
   type NetworkMatchFilters,
 } from '@rallia/shared-hooks';
+import { useThemeStyles, useTranslation, useAuth } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
+import { useMatchDetailSheet, useSport } from '../../../context';
 import { Logger } from '@rallia/shared-services';
-
-import { useThemeStyles, useTranslation, useAuth } from '../hooks';
-import { useMatchDetailSheet, useSport } from '../context';
-import { SportIcon } from '../components/SportIcon';
-import type { RootStackParamList } from '../navigation/types';
-import { SearchBar, MatchFiltersBar } from '../features/matches/components';
+import { spacingPixels, neutral } from '@rallia/design-system';
+import { lightHaptic } from '@rallia/shared-utils';
+import { SearchBar, MatchFiltersBar } from './index';
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-type NetworkMatchesRouteProp = RouteProp<RootStackParamList, 'NetworkMatches'>;
+interface NetworkMatchesTabProps {
+  networkId: string;
+  networkType: 'group' | 'community';
+  sportId?: string | null;
+  /** When true, renders matches inline (no FlatList) for embedding in a parent ScrollView */
+  inline?: boolean;
+}
 
 // =============================================================================
 // HELPER COMPONENTS
@@ -51,7 +44,7 @@ interface EmptyStateProps {
   hasActiveFilters: boolean;
   colors: ReturnType<typeof useThemeStyles>['colors'];
   t: (key: TranslationKey) => string;
-  networkType: 'community' | 'group';
+  networkType: 'group' | 'community';
 }
 
 function EmptyState({ hasActiveFilters, colors, t, networkType }: EmptyStateProps) {
@@ -95,20 +88,21 @@ function EmptyState({ hasActiveFilters, colors, t, networkType }: EmptyStateProp
 // MAIN COMPONENT
 // =============================================================================
 
-export default function NetworkMatchesScreen() {
-  const navigation = useNavigation<NavigationProp>();
-  const route = useRoute<NetworkMatchesRouteProp>();
-  const { networkId, networkType, networkName, sportId } = route.params;
-
-  const { colors, isDark } = useThemeStyles();
+export default function NetworkMatchesTab({
+  networkId,
+  networkType,
+  sportId,
+  inline = false,
+}: NetworkMatchesTabProps) {
   const { t, locale } = useTranslation();
+  const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
   const { selectedSport } = useSport();
   const { player } = usePlayer();
   const playerId = session?.user?.id;
 
-  // Filter state - reuse the same hook as PublicMatches
+  // Filter state
   const {
     filters,
     debouncedSearchQuery,
@@ -175,7 +169,7 @@ export default function NetworkMatchesScreen() {
 
   const filteredMatches = matches ?? [];
 
-  // Handle match card press - open match detail sheet
+  // Handle match card press
   const handleMatchPress = useCallback(
     (match: NetworkMemberMatch) => {
       void lightHaptic();
@@ -211,9 +205,7 @@ export default function NetworkMatchesScreen() {
 
   // Render results count
   const renderResultsInfo = useCallback(() => {
-    if (isLoading) return null;
-    if (!filteredMatches || filteredMatches.length === 0) return null;
-
+    if (isLoading || !filteredMatches || filteredMatches.length === 0) return null;
     return (
       <View style={styles.resultsContainer}>
         <Text size="sm" color={colors.textMuted}>
@@ -238,94 +230,88 @@ export default function NetworkMatchesScreen() {
     );
   }, [isLoading, hasActiveFilters, colors, t, networkType]);
 
-  return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['top', 'bottom']}
-    >
-      {/* Header - green background like CommunityDetail/GroupDetail */}
-      <View style={[styles.header, { backgroundColor: isDark ? primary[900] : primary[100] }]}>
-        <TouchableOpacity
-          onPress={() => {
-            void lightHaptic();
-            navigation.goBack();
-          }}
-          style={styles.backButton}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="chevron-back" size={28} color={isDark ? '#FFFFFF' : colors.text} />
-        </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <Text size="lg" weight="bold" style={{ color: isDark ? '#FFFFFF' : colors.text }}>
-            {networkType === 'community' ? t('community.matches.title') : t('groups.matches.title')}
-          </Text>
-          {networkName && (
-            <Text
-              size="xs"
-              style={{ color: isDark ? 'rgba(255,255,255,0.8)' : colors.textSecondary }}
-            >
-              {networkName}
-            </Text>
-          )}
+  const filtersBar = (
+    <View style={styles.headerContainer}>
+      <View style={styles.searchRow}>
+        <View style={styles.searchContainer}>
+          <SearchBar
+            value={filters.searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={t('publicMatches.searchPlaceholder')}
+            isLoading={isFetching && debouncedSearchQuery !== filters.searchQuery}
+            onClear={clearSearch}
+          />
         </View>
-        <View style={styles.headerRight} />
       </View>
 
-      {/* Search and Filters */}
-      <View style={styles.filtersContainer}>
-        {/* Search Bar */}
-        <View style={styles.searchRow}>
-          <View style={styles.searchContainer}>
-            <SearchBar
-              value={filters.searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder={t('publicMatches.searchPlaceholder')}
-              isLoading={isFetching && debouncedSearchQuery !== filters.searchQuery}
-              onClear={clearSearch}
-            />
+      <MatchFiltersBar
+        format={filters.format}
+        matchType={filters.matchType}
+        dateRange={filters.dateRange}
+        timeOfDay={filters.timeOfDay}
+        skillLevel={filters.skillLevel}
+        gender={filters.gender}
+        cost={filters.cost}
+        joinMode={filters.joinMode}
+        distance={filters.distance}
+        duration={filters.duration}
+        courtStatus={filters.courtStatus}
+        matchTier={filters.matchTier}
+        specificDate={filters.specificDate}
+        spotsAvailable={filters.spotsAvailable}
+        favoritesOnly={filters.favoritesOnly}
+        specificTime={filters.specificTime}
+        onFormatChange={setFormat}
+        onMatchTypeChange={setMatchType}
+        onDateRangeChange={setDateRange}
+        onTimeOfDayChange={setTimeOfDay}
+        onSkillLevelChange={setSkillLevel}
+        onGenderChange={setGender}
+        onCostChange={setCost}
+        onJoinModeChange={setJoinMode}
+        onDistanceChange={setDistance}
+        onDurationChange={setDuration}
+        onCourtStatusChange={setCourtStatus}
+        onMatchTierChange={setMatchTier}
+        onSpecificDateChange={setSpecificDate}
+        onSpotsAvailableChange={setSpotsAvailable}
+        onFavoritesOnlyChange={setFavoritesOnly}
+        onSpecificTimeChange={setSpecificTime}
+        onReset={resetFilters}
+        hasActiveFilters={hasActiveFilters}
+        showDistanceFilter={false}
+        showLocationSelector={false}
+      />
+    </View>
+  );
+
+  // Inline mode: render matches with .map() for embedding in a parent ScrollView
+  if (inline) {
+    return (
+      <View>
+        {filtersBar}
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
           </View>
-        </View>
-
-        {/* Filter Chips - hide distance and location filters (not relevant for network matches) */}
-        <MatchFiltersBar
-          format={filters.format}
-          matchType={filters.matchType}
-          dateRange={filters.dateRange}
-          timeOfDay={filters.timeOfDay}
-          skillLevel={filters.skillLevel}
-          gender={filters.gender}
-          cost={filters.cost}
-          joinMode={filters.joinMode}
-          distance={filters.distance}
-          duration={filters.duration}
-          courtStatus={filters.courtStatus}
-          matchTier={filters.matchTier}
-          specificDate={filters.specificDate}
-          spotsAvailable={filters.spotsAvailable}
-          favoritesOnly={filters.favoritesOnly}
-          specificTime={filters.specificTime}
-          onFormatChange={setFormat}
-          onMatchTypeChange={setMatchType}
-          onDateRangeChange={setDateRange}
-          onTimeOfDayChange={setTimeOfDay}
-          onSkillLevelChange={setSkillLevel}
-          onGenderChange={setGender}
-          onCostChange={setCost}
-          onJoinModeChange={setJoinMode}
-          onDistanceChange={setDistance}
-          onDurationChange={setDuration}
-          onCourtStatusChange={setCourtStatus}
-          onMatchTierChange={setMatchTier}
-          onSpecificDateChange={setSpecificDate}
-          onSpotsAvailableChange={setSpotsAvailable}
-          onFavoritesOnlyChange={setFavoritesOnly}
-          onSpecificTimeChange={setSpecificTime}
-          onReset={resetFilters}
-          hasActiveFilters={hasActiveFilters}
-          showDistanceFilter={false}
-          showLocationSelector={false}
-        />
+        ) : filteredMatches.length > 0 ? (
+          <View style={styles.inlineListContent}>
+            {renderResultsInfo()}
+            {filteredMatches.map(match => (
+              <View key={match.id}>{renderMatchCard({ item: match })}</View>
+            ))}
+          </View>
+        ) : (
+          renderEmptyComponent()
+        )}
       </View>
+    );
+  }
+
+  // Standalone mode: own FlatList with pull-to-refresh
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {filtersBar}
 
       {/* Match List */}
       {isLoading ? (
@@ -359,7 +345,7 @@ export default function NetworkMatchesScreen() {
           }
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -371,26 +357,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-  },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerRight: {
-    width: 40,
-  },
-  filtersContainer: {
+  headerContainer: {
     paddingTop: spacingPixels[3],
   },
   searchRow: {
@@ -415,6 +382,9 @@ const styles = StyleSheet.create({
   listContent: {
     flexGrow: 1,
     paddingBottom: spacingPixels[6],
+  },
+  inlineListContent: {
+    paddingBottom: spacingPixels[4],
   },
   emptyListContent: {
     justifyContent: 'center',

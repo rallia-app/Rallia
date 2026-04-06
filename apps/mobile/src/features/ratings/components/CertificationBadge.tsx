@@ -12,7 +12,7 @@ import { View, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation } from '../../../hooks';
-import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, fontSizePixels, primary } from '@rallia/design-system';
 
 export type BadgeStatus = 'self_declared' | 'certified' | 'disputed';
 
@@ -104,35 +104,21 @@ export const CertificationBadge: React.FC<CertificationBadgeProps> = ({
   style,
   testID = 'certification-badge',
 }) => {
-  useThemeStyles(); // Keep for future theme-aware colors
+  const { isDark } = useThemeStyles();
   const { t } = useTranslation();
 
-  // Define color schemes for each status
+  // Theme-aware color schemes matching SportProfile's getCertificationColors
   const getColorScheme = (badgeStatus: BadgeStatus): BadgeColorScheme => {
-    switch (badgeStatus) {
-      case 'certified':
-        return {
-          background: '#E8F5E9',
-          border: '#4CAF50',
-          text: '#4CAF50',
-          icon: '#4CAF50',
-        };
-      case 'disputed':
-        return {
-          background: '#FFEBEE',
-          border: '#F44336',
-          text: '#F44336',
-          icon: '#F44336',
-        };
-      case 'self_declared':
-      default:
-        return {
-          background: '#FFF8E1',
-          border: '#FFC107',
-          text: '#F57C00',
-          icon: '#FFC107',
-        };
-    }
+    const accent =
+      badgeStatus === 'certified'
+        ? '#4CAF50'
+        : badgeStatus === 'disputed'
+          ? '#F44336'
+          : isDark
+            ? primary[400]
+            : primary[500];
+    const bg = isDark ? `${accent}30` : `${accent}15`;
+    return { background: bg, border: accent, text: accent, icon: accent };
   };
 
   // Get size-specific dimensions

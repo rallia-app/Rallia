@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase, Logger } from '@rallia/shared-services';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 
-const MAX_FAVORITES = 3;
+const MIN_FAVORITES = 2;
 
 export interface FavoriteFacility {
   id: string;
@@ -30,7 +30,7 @@ interface UseFavoriteFacilitiesResult {
   loading: boolean;
   /** Error if any */
   error: Error | null;
-  /** Add a facility to favorites (max 3) */
+  /** Add a facility to favorites */
   addFavorite: (facility: FacilitySearchResult) => Promise<boolean>;
   /** Remove a facility from favorites */
   removeFavorite: (facilityId: string) => Promise<boolean>;
@@ -38,7 +38,9 @@ interface UseFavoriteFacilitiesResult {
   isFavorite: (facilityId: string) => boolean;
   /** Number of favorites */
   count: number;
-  /** Whether max favorites is reached */
+  /** Whether minimum favorites requirement is met */
+  hasMinimum: boolean;
+  /** @deprecated Use hasMinimum instead */
   isMaxReached: boolean;
   /** Refetch favorites */
   refetch: () => Promise<void>;
@@ -132,7 +134,6 @@ export function useFavoriteFacilities(
   const addFavorite = useCallback(
     async (facility: FacilitySearchResult): Promise<boolean> => {
       if (!playerId || !sportId) return false;
-      if (favorites.length >= MAX_FAVORITES) return false;
       if (favorites.some(f => f.facilityId === facility.id)) return false;
 
       try {
@@ -244,7 +245,8 @@ export function useFavoriteFacilities(
     removeFavorite,
     isFavorite,
     count: favorites.length,
-    isMaxReached: favorites.length >= MAX_FAVORITES,
+    hasMinimum: favorites.length >= MIN_FAVORITES,
+    isMaxReached: false,
     refetch: fetchFavorites,
   };
 }

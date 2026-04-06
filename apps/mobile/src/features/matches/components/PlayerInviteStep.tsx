@@ -315,7 +315,6 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
 
   // Invite mutation - do not close sheet on success so user can also share with contacts
   const { invitePlayers, isInviting } = useInviteToMatch({
-    matchId,
     hostId,
     onSuccess: result => {
       successHaptic();
@@ -375,7 +374,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
     if (selectedPlayers.length === 0) return;
     Analytics.inviteToMatchSent({ invite_count: selectedPlayers.length });
     const playerIds = selectedPlayers.map(p => p.id);
-    invitePlayers(playerIds);
+    invitePlayers({ matchId, playerIds });
   }, [selectedPlayers, invitePlayers]);
 
   // Handle close (X) - dismiss step/sheet

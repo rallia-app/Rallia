@@ -93,6 +93,7 @@ const GroupCard: React.FC<{
           styles.groupCard,
           {
             backgroundColor: colors.cardBackground,
+            borderColor: colors.border,
             marginRight: index % 2 === 0 ? CARD_GAP : 0,
             transform: [{ scale: scaleAnim }],
           },
@@ -466,6 +467,7 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     borderRadius: 16,
     overflow: 'hidden',
+    borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,

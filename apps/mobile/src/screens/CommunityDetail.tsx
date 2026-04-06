@@ -1,6 +1,6 @@
 /**
  * CommunityDetail Screen
- * Shows community details with tabs: Home, Activity
+ * Shows community details with tabs: Home, Leaderboard, Games
  * UI mirrors GroupDetail but adapted for communities (public/private visibility, join requests)
  */
 
@@ -15,6 +15,7 @@ import {
   Image,
   ScrollView,
   Modal,
+  Pressable,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,7 +25,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import Svg, { Circle } from 'react-native-svg';
 
-import { Text, Button, MatchCard } from '@rallia/shared-components';
+import { Text, Button } from '@rallia/shared-components';
 import { lightHaptic, mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
 import {
   useThemeStyles,
@@ -33,7 +34,7 @@ import {
   useNavigateToPlayerProfile,
   useRequireOnboarding,
 } from '../hooks';
-import { useSport, useMatchDetailSheet } from '../context';
+import { useSport } from '../context';
 import { SportIcon } from '../components/SportIcon';
 import {
   useCommunityWithMembers,
@@ -57,15 +58,23 @@ import {
   useConversationUnreadRealtime,
   useSports,
   usePlayer,
-  useNetworkMemberUpcomingMatches,
 } from '@rallia/shared-hooks';
-import type { GroupMatch, NetworkMemberMatch } from '@rallia/shared-hooks';
+import type { GroupMatch } from '@rallia/shared-hooks';
 import type { GroupWithMembers } from '@rallia/shared-services';
 import { SheetManager } from 'react-native-actions-sheet';
 import type { RootStackParamList } from '../navigation/types';
-import { primary, neutral } from '@rallia/design-system';
+import {
+  primary,
+  status,
+  accent,
+  neutral,
+  spacingPixels,
+  fontSizePixels,
+  radiusPixels,
+} from '@rallia/design-system';
 
 import { AddScoreIntroModal, AddScoreModal, type MatchType } from '../features/matches';
+import { NetworkMatchesTab } from '../features/matches/components';
 import { CommunityFavoriteFacilitiesSelector } from '../features/communities/components';
 import { InfoModal } from '../components/InfoModal';
 
@@ -74,14 +83,14 @@ const HEADER_HEIGHT = 140;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type CommunityDetailRouteProp = RouteProp<RootStackParamList, 'CommunityDetail'>;
 
-type TabKey = 'home' | 'leaderboard' | 'activity';
+type TabKey = 'home' | 'leaderboard' | 'games';
 
-const TAB_KEYS: TabKey[] = ['home', 'leaderboard', 'activity'];
+const TAB_KEYS: TabKey[] = ['home', 'leaderboard', 'games'];
 
 const TAB_ICONS: Record<TabKey, keyof typeof Ionicons.glyphMap> = {
   home: 'home-outline',
   leaderboard: 'podium-outline',
-  activity: 'flash-outline',
+  games: 'tennisball-outline', // placeholder, overridden with SportIcon
 };
 
 // Storage key for "never show intro again"
@@ -101,7 +110,7 @@ export default function CommunityDetailScreen() {
   const playerId = session?.user?.id;
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
   const { player } = usePlayer();
-  const { openSheet: openMatchDetail } = useMatchDetailSheet();
+
   const insets = useSafeAreaInsets();
 
   // Get all sport IDs and names for facility search when community has no specific sport
@@ -116,6 +125,7 @@ export default function CommunityDetailScreen() {
   const [activeTab, setActiveTab] = useState<TabKey>('home');
   const [showPendingRequestsModal, setShowPendingRequestsModal] = useState(false);
   const [leaderboardPeriod, setLeaderboardPeriod] = useState<30 | 90 | 180 | 0>(30);
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
 
   // Add Score flow state
   const [showAddScoreIntro, setShowAddScoreIntro] = useState(false);
@@ -159,16 +169,6 @@ export default function CommunityDetailScreen() {
   );
   const { data: recentMatch } = useMostRecentGroupMatch(communityId);
   const { data: allMatches } = useGroupMatches(communityId, 180, 100);
-
-  // Get upcoming public matches from network members
-  const { data: memberUpcomingMatches, refetch: refetchMemberMatches } =
-    useNetworkMemberUpcomingMatches(
-      communityId,
-      'community',
-      playerId ?? undefined,
-      community?.sport_id ?? undefined,
-      20
-    );
 
   // Get unread message count for the community chat badge (all unread)
   const { data: unreadChatCount } = useConversationUnreadCount(
@@ -431,128 +431,46 @@ export default function CommunityDetailScreen() {
   ]);
 
   const handleShowOptions = useCallback(() => {
-    SheetManager.show('group-options', {
-      payload: { options: menuOptions, title: 'Community Options' },
+    lightHaptic();
+    setShowOptionsMenu(true);
+  }, []);
+
+  const handleCloseOptionsMenu = useCallback(() => {
+    setShowOptionsMenu(false);
+  }, []);
+
+  const handleOptionItemPress = useCallback((action: () => void) => {
+    setShowOptionsMenu(false);
+    setTimeout(action, 100);
+  }, []);
+
+  // Set header title to community name
+  useEffect(() => {
+    if (community?.name) {
+      navigation.setOptions({ headerTitle: community.name });
+    }
+  }, [navigation, community?.name]);
+
+  // Set header right button for options
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: ({ tintColor }: { tintColor?: string }) => (
+        <TouchableOpacity
+          onPress={handleShowOptions}
+          style={{ padding: 4, marginRight: 8 }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="ellipsis-horizontal" size={22} color={tintColor ?? colors.text} />
+        </TouchableOpacity>
+      ),
     });
-  }, [menuOptions]);
+  }, [navigation, handleShowOptions, colors.text]);
 
   const handleMatchTypeSelect = useCallback((type: MatchType) => {
     selectionHaptic();
     setSelectedMatchType(type);
     setShowAddScoreModal(true);
   }, []);
-
-  // Transform NetworkMemberMatch to a format compatible with MatchCard
-  const transformMatchForCard = useCallback((match: NetworkMemberMatch) => {
-    return {
-      id: match.id,
-      sport_id: match.sport_id,
-      match_date: match.match_date,
-      start_time: match.start_time,
-      end_time: match.end_time,
-      format: match.format,
-      player_expectation: match.player_expectation,
-      visibility: match.visibility,
-      join_mode: match.join_mode,
-      location_type: match.location_type,
-      location_name: match.location_name,
-      facility_id: match.facility_id,
-      created_by: match.created_by,
-      cancelled_at: match.cancelled_at,
-      status: 'scheduled' as const,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      sport: match.sport
-        ? {
-            id: match.sport.id,
-            name: match.sport.name,
-            display_name: match.sport.display_name,
-            icon_url: match.sport.icon_url,
-            is_active: true,
-            created_at: '',
-            updated_at: '',
-          }
-        : null,
-      facility: match.facility
-        ? {
-            id: match.facility.id,
-            name: match.facility.name,
-            city: match.facility.city,
-            address: match.facility.address,
-            latitude: null,
-            longitude: null,
-            phone: null,
-            email: null,
-            website: null,
-            timezone: null,
-            created_at: '',
-            updated_at: '',
-          }
-        : undefined,
-      created_by_player: match.created_by_player
-        ? {
-            id: match.created_by_player.id,
-            profile: match.created_by_player.profile
-              ? {
-                  id: match.created_by,
-                  first_name: match.created_by_player.profile.first_name,
-                  last_name: match.created_by_player.profile.last_name,
-                  display_name: match.created_by_player.profile.display_name,
-                  profile_picture_url: match.created_by_player.profile.profile_picture_url,
-                }
-              : undefined,
-          }
-        : {
-            id: match.created_by,
-            profile: match.creator
-              ? {
-                  id: match.created_by,
-                  first_name: match.creator.first_name,
-                  last_name: match.creator.last_name,
-                  display_name: null,
-                  profile_picture_url: match.creator.profile_picture_url,
-                }
-              : undefined,
-          },
-      participants: match.participants?.map(p => ({
-        id: p.id,
-        match_id: match.id,
-        player_id: p.player_id,
-        team_number: p.team_number,
-        is_host: p.is_host,
-        status: p.status,
-        joined_at: null,
-        created_at: '',
-        updated_at: '',
-        player: p.player
-          ? {
-              id: p.player.id,
-              profile: p.player.profile
-                ? {
-                    id: p.player_id,
-                    first_name: p.player.profile.first_name,
-                    last_name: p.player.profile.last_name,
-                    display_name: p.player.profile.display_name,
-                    profile_picture_url: p.player.profile.profile_picture_url,
-                  }
-                : undefined,
-            }
-          : { id: p.player_id },
-      })),
-      distance_meters: null,
-    };
-  }, []);
-
-  // Handle network match card press - open match detail sheet
-  const handleNetworkMatchPress = useCallback(
-    (match: NetworkMemberMatch) => {
-      lightHaptic();
-      // Transform and open the match detail sheet
-      const transformed = transformMatchForCard(match);
-      openMatchDetail(transformed as unknown as Parameters<typeof openMatchDetail>[0]);
-    },
-    [openMatchDetail, transformMatchForCard]
-  );
 
   // Add Game flow handlers
   const handleAddGame = useCallback(() => {
@@ -613,85 +531,58 @@ export default function CommunityDetailScreen() {
       case 'home':
         return (
           <View style={styles.tabContent}>
-            {/* Community Stats Card */}
-            <View
-              style={[
-                styles.communityStatsCard,
-                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-              ]}
-            >
-              <Text weight="semibold" size="base" style={{ color: colors.text, marginBottom: 16 }}>
-                Community Stats
-              </Text>
-              <View style={styles.communityStatsList}>
-                <View style={styles.communityStatItem}>
-                  <View style={[styles.communityStatIcon, { backgroundColor: '#5AC8FA20' }]}>
-                    <Ionicons name="people-outline" size={24} color="#5AC8FA" />
-                  </View>
-                  <View style={styles.communityStatInfo}>
-                    <Text weight="bold" size="lg" style={{ color: colors.text }}>
-                      {community?.member_count || 0}
-                    </Text>
-                    <Text size="xs" style={{ color: colors.textSecondary }}>
-                      Total Members
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.communityStatItem}>
-                  <View
-                    style={[
-                      styles.communityStatIcon,
-                      { backgroundColor: community?.is_public ? '#34C75920' : '#FF950020' },
-                    ]}
-                  >
-                    <Ionicons
-                      name={community?.is_public ? 'globe-outline' : 'lock-closed-outline'}
-                      size={24}
-                      color={community?.is_public ? '#34C759' : '#FF9500'}
-                    />
-                  </View>
-                  <View style={styles.communityStatInfo}>
-                    <Text weight="bold" size="lg" style={{ color: colors.text }}>
-                      {community?.is_public ? 'Public' : 'Private'}
-                    </Text>
-                    <Text size="xs" style={{ color: colors.textSecondary }}>
-                      Visibility
-                    </Text>
-                  </View>
+            {/* About Section */}
+            {community?.description && (
+              <View>
+                <Text size="lg" weight="bold" style={{ color: colors.text, marginBottom: 8 }}>
+                  {t('community.detail.about')}
+                </Text>
+                <View
+                  style={[
+                    styles.aboutCard,
+                    { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                  ]}
+                >
+                  <Text style={{ color: colors.textSecondary, lineHeight: 22 }}>
+                    {community.description}
+                  </Text>
                 </View>
               </View>
-              {isModerator && pendingRequests && pendingRequests.length > 0 && (
-                <TouchableOpacity
-                  style={[
-                    styles.pendingRequestsBanner,
-                    { backgroundColor: '#FF3B3010', borderColor: '#FF3B30' },
-                  ]}
-                  onPress={() => setShowPendingRequestsModal(true)}
+            )}
+
+            {/* Pending Requests Banner (moderators only) */}
+            {isModerator && pendingRequests && pendingRequests.length > 0 && (
+              <TouchableOpacity
+                style={[
+                  styles.pendingRequestsBanner,
+                  { backgroundColor: '#FF3B3010', borderColor: '#FF3B30' },
+                ]}
+                onPress={() => setShowPendingRequestsModal(true)}
+              >
+                <Ionicons name="person-add-outline" size={20} color="#FF3B30" />
+                <Text
+                  size="sm"
+                  weight="semibold"
+                  style={{ color: '#FF3B30', marginLeft: 8, flex: 1 }}
                 >
-                  <Ionicons name="person-add-outline" size={20} color="#FF3B30" />
-                  <Text
-                    size="sm"
-                    weight="semibold"
-                    style={{ color: '#FF3B30', marginLeft: 8, flex: 1 }}
-                  >
-                    {pendingRequests.length} pending request
-                    {pendingRequests.length !== 1 ? 's' : ''}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color="#FF3B30" />
-                </TouchableOpacity>
-              )}
-            </View>
+                  {pendingRequests.length} pending request
+                  {pendingRequests.length !== 1 ? 's' : ''}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color="#FF3B30" />
+              </TouchableOpacity>
+            )}
 
             {/* Last 7 Days Activities Card */}
+            {/* Activity Stats */}
+            <Text size="lg" weight="bold" style={{ color: colors.text, marginBottom: 8 }}>
+              {t('community.detail.last7DaysActivities')}
+            </Text>
             <View
               style={[
                 styles.statsCard,
                 { backgroundColor: colors.cardBackground, borderColor: colors.border },
               ]}
             >
-              <Text weight="semibold" size="base" style={{ color: colors.text, marginBottom: 16 }}>
-                {t('community.detail.last7DaysActivities')}
-              </Text>
               <View style={styles.statsRow}>
                 <View style={styles.statCircle}>
                   {/* Donut Chart */}
@@ -712,7 +603,7 @@ export default function CommunityDetailScreen() {
                           cx={size / 2}
                           cy={size / 2}
                           r={radius}
-                          stroke="#5AC8FA"
+                          stroke={status.info.light}
                           strokeWidth={strokeWidth}
                           fill="transparent"
                           strokeDasharray={`${membersLength} ${circumference - membersLength}`}
@@ -728,7 +619,7 @@ export default function CommunityDetailScreen() {
                           cx={size / 2}
                           cy={size / 2}
                           r={radius}
-                          stroke="#FF9500"
+                          stroke={accent[500]}
                           strokeWidth={strokeWidth}
                           fill="transparent"
                           strokeDasharray={`${gamesLength} ${circumference - gamesLength}`}
@@ -744,7 +635,7 @@ export default function CommunityDetailScreen() {
                           cx={size / 2}
                           cy={size / 2}
                           r={radius}
-                          stroke={isDark ? '#8E8E93' : '#636366'}
+                          stroke={isDark ? neutral[400] : neutral[600]}
                           strokeWidth={strokeWidth}
                           fill="transparent"
                           strokeDasharray={`${messagesLength} ${circumference - messagesLength}`}
@@ -768,7 +659,7 @@ export default function CommunityDetailScreen() {
                 </View>
                 <View style={styles.statsList}>
                   <View style={styles.statItem}>
-                    <Ionicons name="people-outline" size={20} color="#5AC8FA" />
+                    <Ionicons name="people-outline" size={20} color={status.info.light} />
                     <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
                       {t('community.detail.newMembers', {
                         count: membersCountLast7Days,
@@ -779,7 +670,7 @@ export default function CommunityDetailScreen() {
                     <SportIcon
                       sportName={selectedSport?.name ?? 'tennis'}
                       size={20}
-                      color="#FF9500"
+                      color={accent[500]}
                     />
                     <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
                       {t('community.detail.gamesCreated', {
@@ -791,7 +682,7 @@ export default function CommunityDetailScreen() {
                     <Ionicons
                       name="chatbubble-ellipses-outline"
                       size={20}
-                      color={isDark ? '#8E8E93' : '#C7C7CC'}
+                      color={isDark ? neutral[400] : neutral[300]}
                     />
                     <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
                       {t('community.detail.newMessages', {
@@ -802,26 +693,6 @@ export default function CommunityDetailScreen() {
                 </View>
               </View>
             </View>
-
-            {/* About Section */}
-            {community?.description && (
-              <View
-                style={[
-                  styles.aboutCard,
-                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                ]}
-              >
-                <View style={styles.aboutHeader}>
-                  <Ionicons name="information-circle-outline" size={24} color={colors.primary} />
-                  <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
-                    {t('community.detail.about')}
-                  </Text>
-                </View>
-                <Text style={{ color: colors.textSecondary, lineHeight: 22, marginTop: 8 }}>
-                  {community.description}
-                </Text>
-              </View>
-            )}
 
             {/* Favorite Facilities Section */}
             <CommunityFavoriteFacilitiesSelector
@@ -836,138 +707,6 @@ export default function CommunityDetailScreen() {
               t={t}
               onNavigateToFacility={handleNavigateToFacility}
             />
-
-            {/* Member Upcoming Matches Preview */}
-            <View
-              style={[
-                styles.matchesPreview,
-                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-              ]}
-            >
-              <View style={styles.sectionHeader}>
-                <View style={styles.sectionTitle}>
-                  <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-                  <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
-                    {t('community.matches.title')}
-                  </Text>
-                </View>
-                {memberUpcomingMatches && memberUpcomingMatches.length > 0 && (
-                  <TouchableOpacity onPress={handleNavigateToNetworkMatches}>
-                    <Text size="sm" style={{ color: colors.primary }}>
-                      {t('community.detail.viewAll')}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-              {memberUpcomingMatches && memberUpcomingMatches.length > 0 ? (
-                <View style={styles.matchesPreviewList}>
-                  {memberUpcomingMatches.slice(0, 2).map(match => {
-                    const transformed = transformMatchForCard(match);
-                    return (
-                      <MatchCard
-                        key={match.id}
-                        match={transformed as unknown as Parameters<typeof MatchCard>[0]['match']}
-                        isDark={isDark}
-                        t={
-                          t as (
-                            key: string,
-                            options?: Record<string, string | number | boolean>
-                          ) => string
-                        }
-                        locale={locale}
-                        currentPlayerId={playerId}
-                        sportIcon={
-                          <SportIcon
-                            sportName={match.sport?.name ?? selectedSport?.name ?? 'tennis'}
-                            size={100}
-                            color={isDark ? neutral[600] : neutral[400]}
-                          />
-                        }
-                        onPress={() => handleNetworkMatchPress(match)}
-                      />
-                    );
-                  })}
-                </View>
-              ) : (
-                <View style={styles.matchesEmptyState}>
-                  <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
-                  <Text
-                    size="sm"
-                    style={{ color: colors.textSecondary, marginTop: 8, textAlign: 'center' }}
-                  >
-                    {t('community.matches.empty.title')}
-                  </Text>
-                  <Text
-                    size="xs"
-                    style={{ color: colors.textMuted, marginTop: 4, textAlign: 'center' }}
-                  >
-                    {t('community.matches.empty.description')}
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            {/* Leaderboard Preview */}
-            <View
-              style={[
-                styles.leaderboardPreview,
-                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-              ]}
-            >
-              <View style={styles.sectionHeader}>
-                <View style={styles.sectionTitle}>
-                  <Ionicons name="trophy-outline" size={20} color={colors.primary} />
-                  <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
-                    {t('community.leaderboard.title')}
-                  </Text>
-                </View>
-                <TouchableOpacity onPress={() => setActiveTab('leaderboard')}>
-                  <Text size="sm" style={{ color: colors.primary }}>
-                    {t('community.detail.viewAll')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              {/* Show top 3 from leaderboard preview or empty state */}
-              {leaderboard && leaderboard.length > 0 ? (
-                <View style={styles.leaderboardPreviewList}>
-                  {leaderboard.slice(0, 3).map((entry, index) => (
-                    <View key={entry.player_id} style={styles.leaderboardPreviewItem}>
-                      <Text weight="semibold" style={{ color: colors.textMuted, width: 20 }}>
-                        {index + 1}.
-                      </Text>
-                      <View
-                        style={[
-                          styles.smallAvatar,
-                          { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
-                        ]}
-                      >
-                        {entry.player?.profile?.profile_picture_url ? (
-                          <Image
-                            source={{ uri: entry.player.profile.profile_picture_url }}
-                            style={styles.avatarImage}
-                          />
-                        ) : (
-                          <Ionicons name="person-outline" size={14} color={colors.textMuted} />
-                        )}
-                      </View>
-                      <Text size="sm" style={{ color: colors.text, flex: 1, marginLeft: 8 }}>
-                        {entry.player?.profile?.first_name || t('common.player')}
-                      </Text>
-                      <Text size="sm" weight="semibold" style={{ color: colors.primary }}>
-                        {entry.games_played}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              ) : (
-                <Text
-                  size="sm"
-                  style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}
-                >
-                  {t('community.leaderboard.noGamesYet')}
-                </Text>
-              )}
-            </View>
 
             {/* Pending Requests Section (moderators only) */}
             {isModerator && pendingRequests && pendingRequests.length > 0 && (
@@ -1094,42 +833,39 @@ export default function CommunityDetailScreen() {
         return (
           <View style={styles.tabContent}>
             {/* Recent Games Section */}
+            <View style={styles.sectionHeader}>
+              <Text size="lg" weight="bold" style={{ color: colors.text }}>
+                {t('groups.recentGames.title')}
+              </Text>
+              <TouchableOpacity
+                onPress={() =>
+                  SheetManager.show('recent-games', {
+                    payload: {
+                      matches: allMatches || [],
+                      onMatchPress: (match: unknown) => {
+                        SheetManager.hide('recent-games');
+                        handleNavigateToMatch(match as GroupMatch);
+                      },
+                      onPlayerPress: (targetPlayerId: string) => {
+                        SheetManager.hide('recent-games');
+                        handleNavigateToPlayer(targetPlayerId);
+                      },
+                    },
+                  })
+                }
+              >
+                <Text size="sm" style={{ color: colors.primary }}>
+                  {t('community.detail.viewAll')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             <View
               style={[
                 styles.recentGamesCard,
                 { backgroundColor: colors.cardBackground, borderColor: colors.border },
               ]}
             >
-              <View style={styles.sectionHeader}>
-                <View style={styles.sectionTitle}>
-                  <Ionicons name="time-outline" size={20} color={colors.textSecondary} />
-                  <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
-                    {t('groups.recentGames.title')}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() =>
-                    SheetManager.show('recent-games', {
-                      payload: {
-                        matches: allMatches || [],
-                        onMatchPress: (match: unknown) => {
-                          SheetManager.hide('recent-games');
-                          handleNavigateToMatch(match as GroupMatch);
-                        },
-                        onPlayerPress: (targetPlayerId: string) => {
-                          SheetManager.hide('recent-games');
-                          handleNavigateToPlayer(targetPlayerId);
-                        },
-                      },
-                    })
-                  }
-                >
-                  <Text size="sm" style={{ color: colors.primary }}>
-                    {t('community.detail.viewAll')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
               {/* Most Recent Match Card */}
               {recentMatch?.match ? (
                 <TouchableOpacity
@@ -1146,7 +882,7 @@ export default function CommunityDetailScreen() {
                       <SportIcon
                         sportName={recentMatch.match.sport?.name ?? 'tennis'}
                         size={16}
-                        color={colors.primary}
+                        color={colors.textSecondary}
                       />
                       <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 6 }}>
                         {recentMatch.match.sport?.name || 'Sport'} ·{' '}
@@ -1509,123 +1245,14 @@ export default function CommunityDetailScreen() {
         );
       }
 
-      case 'activity':
+      case 'games':
         return (
-          <View style={styles.tabContent}>
-            {activities && activities.length > 0 ? (
-              <View
-                style={[
-                  styles.activityList,
-                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                ]}
-              >
-                {activities.slice(0, 20).map((activity, index) => {
-                  const actorName = activity.actor?.profile?.first_name || 'Someone';
-                  let message = '';
-                  let icon: keyof typeof Ionicons.glyphMap | 'sport' = 'ellipse';
-                  let iconColor: string = colors.primary;
-
-                  switch (activity.activity_type) {
-                    case 'member_joined':
-                      message = activity.added_by_name
-                        ? `${actorName} was added by ${activity.added_by_name}`
-                        : `${actorName} joined the community`;
-                      icon = 'person-add';
-                      iconColor = '#5AC8FA';
-                      break;
-                    case 'member_left':
-                      message = `${actorName} left the community`;
-                      icon = 'exit';
-                      iconColor = '#FF3B30';
-                      break;
-                    case 'member_promoted':
-                      message = `${actorName} was promoted to moderator`;
-                      icon = 'arrow-up-circle';
-                      iconColor = '#34C759';
-                      break;
-                    case 'member_demoted':
-                      message = `${actorName} was demoted to member`;
-                      icon = 'arrow-down-circle';
-                      iconColor = '#FF9500';
-                      break;
-                    case 'game_created':
-                      message = `${actorName} created a new game`;
-                      icon = 'sport'; // Rendered as SportIcon below
-                      iconColor = '#FF9500';
-                      break;
-                    case 'message_sent':
-                      message = `${actorName} sent a message`;
-                      icon = 'chatbubble';
-                      iconColor = colors.textSecondary;
-                      break;
-                    default:
-                      message = `${actorName} performed an action`;
-                  }
-
-                  const activityDate = new Date(activity.created_at);
-                  const timeAgo = getTimeAgo(activityDate);
-
-                  return (
-                    <TouchableOpacity
-                      key={activity.id}
-                      style={[
-                        styles.activityItem,
-                        index < Math.min(activities.length, 20) - 1 && {
-                          borderBottomWidth: 1,
-                          borderBottomColor: colors.border,
-                        },
-                      ]}
-                      onPress={() => {
-                        // Navigate to player profile if actor exists
-                        if (activity.actor?.id) {
-                          handleNavigateToPlayer(activity.actor.id);
-                        }
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <View
-                        style={[
-                          styles.activityIcon,
-                          { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' },
-                        ]}
-                      >
-                        {icon === 'sport' ? (
-                          <SportIcon
-                            sportName={selectedSport?.name ?? 'tennis'}
-                            size={16}
-                            color={iconColor}
-                          />
-                        ) : (
-                          <Ionicons name={icon} size={16} color={iconColor} />
-                        )}
-                      </View>
-                      <View style={styles.activityContent}>
-                        <Text size="sm" style={{ color: colors.text }}>
-                          {message}
-                        </Text>
-                        <Text size="xs" style={{ color: colors.textSecondary, marginTop: 2 }}>
-                          {timeAgo}
-                        </Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            ) : (
-              <View
-                style={[
-                  styles.emptyActivity,
-                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                ]}
-              >
-                <Ionicons name="time-outline" size={48} color={colors.textMuted} />
-                <Text style={{ color: colors.textSecondary, marginTop: 12 }}>
-                  {t('groups.detail.noRecentActivity')}
-                </Text>
-              </View>
-            )}
-          </View>
+          <NetworkMatchesTab
+            networkId={communityId}
+            networkType="community"
+            sportId={community?.sport_id}
+            inline
+          />
         );
 
       default:
@@ -1732,43 +1359,72 @@ export default function CommunityDetailScreen() {
               { backgroundColor: colors.cardBackground, borderColor: colors.border },
             ]}
           >
-            <View style={styles.titleRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                <Text weight="bold" size="xl" style={{ color: colors.text }}>
-                  {community.name}
-                </Text>
-              </View>
+            <Text weight="bold" size="xl" style={{ color: colors.text }}>
+              {community.name}
+            </Text>
+            <View style={styles.badgeRow}>
               {/* Certification badge for verified communities */}
               {community.is_certified && (
                 <View
-                  style={[styles.visibilityBadge, { backgroundColor: '#E3F2FD', marginRight: 8 }]}
+                  style={[
+                    styles.infoBadge,
+                    { backgroundColor: isDark ? `${primary[400]}30` : `${primary[500]}15` },
+                  ]}
                 >
-                  <MaterialCommunityIcons name="check-decagram" size={14} color={colors.primary} />
+                  <MaterialCommunityIcons
+                    name="check-decagram"
+                    size={12}
+                    color={isDark ? primary[400] : primary[500]}
+                    style={styles.infoBadgeIcon}
+                  />
                   <Text
                     size="xs"
                     weight="semibold"
-                    style={{ color: colors.primary, marginLeft: 4 }}
+                    style={{ color: isDark ? primary[400] : primary[500] }}
                   >
                     {t('community.certified')}
                   </Text>
                 </View>
               )}
               {!community.is_private ? (
-                <View style={[styles.visibilityBadge, { backgroundColor: '#E8F5E9' }]}>
-                  <Ionicons name="globe-outline" size={14} color="#2E7D32" />
-                  <Text size="xs" weight="semibold" style={{ color: '#2E7D32', marginLeft: 4 }}>
+                <View
+                  style={[
+                    styles.infoBadge,
+                    { backgroundColor: isDark ? `${primary[400]}30` : `${primary[500]}15` },
+                  ]}
+                >
+                  <Ionicons
+                    name="globe-outline"
+                    size={12}
+                    color={isDark ? primary[400] : primary[500]}
+                    style={styles.infoBadgeIcon}
+                  />
+                  <Text
+                    size="xs"
+                    weight="semibold"
+                    style={{ color: isDark ? primary[400] : primary[500] }}
+                  >
                     {t('community.visibility.public')}
                   </Text>
                 </View>
               ) : (
                 <View
                   style={[
-                    styles.visibilityBadge,
-                    { backgroundColor: isDark ? '#2C2C2E' : '#FFF3E0' },
+                    styles.infoBadge,
+                    { backgroundColor: isDark ? `${neutral[600]}40` : `${neutral[500]}20` },
                   ]}
                 >
-                  <Ionicons name="lock-closed" size={14} color="#F57C00" />
-                  <Text size="xs" weight="semibold" style={{ color: '#F57C00', marginLeft: 4 }}>
+                  <Ionicons
+                    name="lock-closed"
+                    size={12}
+                    color={isDark ? neutral[300] : neutral[600]}
+                    style={styles.infoBadgeIcon}
+                  />
+                  <Text
+                    size="xs"
+                    weight="semibold"
+                    style={{ color: isDark ? neutral[300] : neutral[600] }}
+                  >
                     {t('community.visibility.private')}
                   </Text>
                 </View>
@@ -1863,7 +1519,6 @@ export default function CommunityDetailScreen() {
               if (isModerator) {
                 refetchPendingRequests();
               }
-              refetchMemberMatches();
             }}
             tintColor={colors.primary}
           />
@@ -1896,39 +1551,72 @@ export default function CommunityDetailScreen() {
             { backgroundColor: colors.cardBackground, borderColor: colors.border },
           ]}
         >
-          <View style={styles.titleRow}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-              <Text weight="bold" size="xl" style={{ color: colors.text }}>
-                {community.name}
-              </Text>
-            </View>
+          <Text weight="bold" size="xl" style={{ color: colors.text }}>
+            {community.name}
+          </Text>
+          <View style={styles.badgeRow}>
             {/* Certification badge for verified communities */}
             {community.is_certified && (
               <View
-                style={[styles.visibilityBadge, { backgroundColor: '#E3F2FD', marginRight: 8 }]}
+                style={[
+                  styles.infoBadge,
+                  { backgroundColor: isDark ? `${primary[400]}30` : `${primary[500]}15` },
+                ]}
               >
-                <MaterialCommunityIcons name="check-decagram" size={14} color={colors.primary} />
-                <Text size="xs" weight="semibold" style={{ color: colors.primary, marginLeft: 4 }}>
+                <MaterialCommunityIcons
+                  name="check-decagram"
+                  size={12}
+                  color={isDark ? primary[400] : primary[500]}
+                  style={styles.infoBadgeIcon}
+                />
+                <Text
+                  size="xs"
+                  weight="semibold"
+                  style={{ color: isDark ? primary[400] : primary[500] }}
+                >
                   {t('community.certified')}
                 </Text>
               </View>
             )}
             {community.is_public ? (
-              <View style={[styles.visibilityBadge, { backgroundColor: '#E8F5E9' }]}>
-                <Ionicons name="globe-outline" size={14} color="#2E7D32" />
-                <Text size="xs" weight="semibold" style={{ color: '#2E7D32', marginLeft: 4 }}>
+              <View
+                style={[
+                  styles.infoBadge,
+                  { backgroundColor: isDark ? `${primary[400]}30` : `${primary[500]}15` },
+                ]}
+              >
+                <Ionicons
+                  name="globe-outline"
+                  size={12}
+                  color={isDark ? primary[400] : primary[500]}
+                  style={styles.infoBadgeIcon}
+                />
+                <Text
+                  size="xs"
+                  weight="semibold"
+                  style={{ color: isDark ? primary[400] : primary[500] }}
+                >
                   {t('community.visibility.public')}
                 </Text>
               </View>
             ) : (
               <View
                 style={[
-                  styles.visibilityBadge,
-                  { backgroundColor: isDark ? '#2C2C2E' : '#FFF3E0' },
+                  styles.infoBadge,
+                  { backgroundColor: isDark ? `${neutral[600]}40` : `${neutral[500]}20` },
                 ]}
               >
-                <Ionicons name="lock-closed-outline" size={14} color="#EF6C00" />
-                <Text size="xs" weight="semibold" style={{ color: '#EF6C00', marginLeft: 4 }}>
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={12}
+                  color={isDark ? neutral[300] : neutral[600]}
+                  style={styles.infoBadgeIcon}
+                />
+                <Text
+                  size="xs"
+                  weight="semibold"
+                  style={{ color: isDark ? neutral[300] : neutral[600] }}
+                >
                   {t('community.visibility.private')}
                 </Text>
               </View>
@@ -1997,10 +1685,20 @@ export default function CommunityDetailScreen() {
 
           {/* Action Buttons Row - Only show for active members */}
           {isActiveMember && (
-            <View style={styles.actionButtonsRow}>
-              <Button
-                variant="secondary"
-                size="md"
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.actionButtonsScroll}
+              contentContainerStyle={styles.actionButtonsContent}
+            >
+              <TouchableOpacity
+                style={[
+                  styles.actionPill,
+                  {
+                    backgroundColor: isDark ? primary[900] : primary[50],
+                    borderColor: isDark ? primary[700] : primary[200],
+                  },
+                ]}
                 onPress={() =>
                   SheetManager.show('add-community-member', {
                     payload: {
@@ -2010,14 +1708,27 @@ export default function CommunityDetailScreen() {
                     },
                   })
                 }
-                leftIcon={<Ionicons name="person-add-outline" size={18} color={colors.primary} />}
-                isDark={isDark}
-                style={{ flex: 1 }}
+                activeOpacity={0.7}
               >
-                {t('community.members.addMember')}
-              </Button>
+                <Ionicons
+                  name="person-add-outline"
+                  size={14}
+                  color={isDark ? primary[300] : primary[600]}
+                />
+                <Text
+                  style={[styles.actionPillText, { color: isDark ? primary[200] : primary[700] }]}
+                >
+                  {t('community.addPlayer')}
+                </Text>
+              </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.menuButton, { borderColor: colors.primary }]}
+                style={[
+                  styles.actionPill,
+                  {
+                    backgroundColor: isDark ? primary[900] : primary[50],
+                    borderColor: isDark ? primary[700] : primary[200],
+                  },
+                ]}
                 onPress={() =>
                   SheetManager.show('invite-link', {
                     payload: {
@@ -2029,16 +1740,20 @@ export default function CommunityDetailScreen() {
                     },
                   })
                 }
+                activeOpacity={0.7}
               >
-                <Ionicons name="share-outline" size={20} color={colors.primary} />
+                <Ionicons
+                  name="share-outline"
+                  size={14}
+                  color={isDark ? primary[300] : primary[600]}
+                />
+                <Text
+                  style={[styles.actionPillText, { color: isDark ? primary[200] : primary[700] }]}
+                >
+                  {t('community.detail.sendInvite')}
+                </Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.menuButton, { borderColor: colors.border }]}
-                onPress={handleShowOptions}
-              >
-                <Ionicons name="ellipsis-horizontal-outline" size={20} color={colors.text} />
-              </TouchableOpacity>
-            </View>
+            </ScrollView>
           )}
         </View>
 
@@ -2056,11 +1771,19 @@ export default function CommunityDetailScreen() {
               ]}
               onPress={() => setActiveTab(tabKey)}
             >
-              <Ionicons
-                name={TAB_ICONS[tabKey]}
-                size={18}
-                color={activeTab === tabKey ? colors.primary : colors.textMuted}
-              />
+              {tabKey === 'games' ? (
+                <SportIcon
+                  sportName={selectedSport?.name ?? 'tennis'}
+                  size={18}
+                  color={activeTab === tabKey ? colors.primary : colors.textMuted}
+                />
+              ) : (
+                <Ionicons
+                  name={TAB_ICONS[tabKey]}
+                  size={18}
+                  color={activeTab === tabKey ? colors.primary : colors.textMuted}
+                />
+              )}
               <Text
                 size="sm"
                 weight={activeTab === tabKey ? 'semibold' : 'medium'}
@@ -2270,6 +1993,57 @@ export default function CommunityDetailScreen() {
         matchType={selectedMatchType}
         networkId={communityId}
       />
+
+      {/* Options Dropdown Menu */}
+      <Modal
+        visible={showOptionsMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCloseOptionsMenu}
+      >
+        <Pressable style={styles.menuOverlay} onPress={handleCloseOptionsMenu}>
+          <Pressable
+            style={[
+              styles.menuContainer,
+              {
+                backgroundColor: isDark ? colors.card : '#FFFFFF',
+                top: insets.top + 50,
+              },
+            ]}
+            onPress={e => e.stopPropagation()}
+          >
+            {menuOptions.map((item, index) => (
+              <TouchableOpacity
+                key={item.id}
+                style={[
+                  styles.menuItem,
+                  index < menuOptions.length - 1 && {
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: colors.border,
+                  },
+                ]}
+                onPress={() => handleOptionItemPress(item.onPress)}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={item.icon}
+                  size={20}
+                  color={item.destructive ? status.error.DEFAULT : colors.text}
+                  style={styles.menuItemIcon}
+                />
+                <Text
+                  style={{
+                    fontSize: fontSizePixels.base,
+                    color: item.destructive ? status.error.DEFAULT : colors.text,
+                  }}
+                >
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -2321,17 +2095,21 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
   },
-  titleRow: {
+  badgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: spacingPixels[2],
+    marginTop: spacingPixels[3],
   },
-  visibilityBadge: {
+  infoBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: spacingPixels[2.5],
+    paddingVertical: spacingPixels[1],
+    borderRadius: radiusPixels.full,
+  },
+  infoBadgeIcon: {
+    marginRight: spacingPixels[1],
   },
   membersRow: {
     flexDirection: 'row',
@@ -2358,19 +2136,27 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
   },
-  actionButtonsRow: {
+  actionButtonsScroll: {
+    marginTop: spacingPixels[3],
+    marginHorizontal: -20,
+    overflow: 'hidden',
+  },
+  actionButtonsContent: {
+    paddingHorizontal: 20,
+    gap: spacingPixels[2],
+  },
+  actionPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
-    gap: 12,
-  },
-  menuButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 8,
+    gap: spacingPixels[1.5],
+    paddingVertical: spacingPixels[2],
+    paddingHorizontal: spacingPixels[3],
+    borderRadius: radiusPixels.full,
     borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  },
+  actionPillText: {
+    fontSize: fontSizePixels.sm,
+    fontWeight: '600',
   },
   tabContainer: {
     flexDirection: 'row',
@@ -2920,5 +2706,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 12,
     width: '100%',
+  },
+  // Options dropdown menu
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  menuContainer: {
+    position: 'absolute',
+    right: spacingPixels[3],
+    minWidth: 200,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+    overflow: 'hidden',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+  },
+  menuItemIcon: {
+    marginRight: spacingPixels[3],
+    width: 24,
   },
 });

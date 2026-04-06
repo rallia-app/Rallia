@@ -76,8 +76,17 @@ const CommunityCard: React.FC<{
   activeTab: TabType;
   onPress: (community: CommunityWithStatus) => void;
   onRequestToJoin: (id: string, name: string) => void;
-  isRequestPending: boolean;
-}> = ({ item, index, colors, isDark, activeTab, onPress, onRequestToJoin, isRequestPending }) => {
+  requestingCommunityId: string | null;
+}> = ({
+  item,
+  index,
+  colors,
+  isDark,
+  activeTab,
+  onPress,
+  onRequestToJoin,
+  requestingCommunityId,
+}) => {
   const scaleAnim = useMemo(() => new Animated.Value(1), []);
   const { t } = useTranslation();
   // Only show as member if they have active status (not pending)
@@ -111,6 +120,7 @@ const CommunityCard: React.FC<{
           styles.communityCard,
           {
             backgroundColor: colors.cardBackground,
+            borderColor: colors.border,
             marginRight: index % 2 === 0 ? CARD_GAP : 0,
             transform: [{ scale: scaleAnim }],
           },
@@ -155,18 +165,11 @@ const CommunityCard: React.FC<{
               >
                 {item.name}
               </Text>
+              {item.is_certified && (
+                <MaterialCommunityIcons name="check-decagram" size={14} color="#22c55e" />
+              )}
             </View>
           </View>
-
-          {/* Certification badge for verified communities - displayed under the name */}
-          {item.is_certified && (
-            <View style={styles.certifiedBadge}>
-              <MaterialCommunityIcons name="check-decagram" size={12} color="#22c55e" />
-              <Text size="xs" weight="semibold" style={{ color: '#22c55e' }}>
-                {t('community.certified')}
-              </Text>
-            </View>
-          )}
 
           {/* Member count + Status */}
           <View style={styles.bottomRow}>
@@ -188,7 +191,7 @@ const CommunityCard: React.FC<{
                 e?.stopPropagation();
                 onRequestToJoin(item.id, item.name);
               }}
-              disabled={isRequestPending}
+              disabled={requestingCommunityId === item.id}
               isDark={isDark}
               style={styles.joinButton}
             >
@@ -270,6 +273,9 @@ export default function CommunitiesScreen() {
 
   // Mutations
   const requestToJoinMutation = useRequestToJoinCommunity();
+  const requestingCommunityId = requestToJoinMutation.isPending
+    ? (requestToJoinMutation.variables?.communityId ?? null)
+    : null;
 
   const isLoading = activeTab === 'discover' ? isLoadingPublic : isLoadingMy;
   const isRefetching = activeTab === 'discover' ? isRefetchingPublic : isRefetchingMy;
@@ -344,18 +350,11 @@ export default function CommunitiesScreen() {
           activeTab={activeTab}
           onPress={handleCommunityPress}
           onRequestToJoin={handleRequestToJoin}
-          isRequestPending={requestToJoinMutation.isPending}
+          requestingCommunityId={requestingCommunityId}
         />
       );
     },
-    [
-      colors,
-      isDark,
-      activeTab,
-      handleCommunityPress,
-      handleRequestToJoin,
-      requestToJoinMutation.isPending,
-    ]
+    [colors, isDark, activeTab, handleCommunityPress, handleRequestToJoin, requestingCommunityId]
   );
 
   const renderEmptyState = useMemo(
@@ -594,7 +593,7 @@ const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
     marginHorizontal: CARD_PADDING,
-    marginTop: 8,
+    marginTop: 20,
     marginBottom: 12,
     borderRadius: 12,
     padding: 4,
@@ -644,6 +643,7 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     borderRadius: 16,
     overflow: 'hidden',
+    borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -679,23 +679,12 @@ const styles = StyleSheet.create({
   badgeText: {
     color: '#FFFFFF',
   },
-  certifiedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: '#dcfce7',
-    borderWidth: 1,
-    borderColor: '#22c55e',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    gap: 3,
-  },
   nameWithBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
     flexWrap: 'wrap',
+    gap: 4,
   },
   communityInfo: {
     padding: 12,

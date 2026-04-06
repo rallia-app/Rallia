@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -18,18 +18,19 @@ import DatabaseService, {
   Logger,
   supabase,
 } from '@rallia/shared-services';
-import { usePlayPreferences } from '@rallia/shared-hooks';
-import type { OnboardingRating } from '@rallia/shared-types';
+import { usePlayPreferences, useFacilitySearch } from '@rallia/shared-hooks';
+import type { OnboardingRating, FacilitySearchResult } from '@rallia/shared-types';
 import type { TranslationKey } from '@rallia/shared-translations';
 import ProgressIndicator from '../../onboarding/components/ProgressIndicator';
-import { FavoriteFacilitiesSelector } from './FavoriteFacilitiesSelector';
+import { SearchBar } from '../../../components/SearchBar';
+import TennisCourtIcon from '../../../../assets/icons/tennis-court.svg';
 import { selectionHaptic, mediumHaptic } from '../../../utils/haptics';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import { primary, radiusPixels, spacingPixels } from '@rallia/design-system';
 import { withTimeout } from '../../../utils/networkTimeout';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const TOTAL_STEPS = 2;
+const TOTAL_STEPS = 3;
 
 // =============================================================================
 // RATING HELPERS
@@ -163,12 +164,72 @@ export function SportSetupWizardActionSheet({ payload }: SheetProps<'sport-setup
   const [showPlayStyleDropdown, setShowPlayStyleDropdown] = useState(false);
   const [isSavingPreferences, setIsSavingPreferences] = useState(false);
 
+  // Favorite facilities step state
+  const [selectedFacilities, setSelectedFacilities] = useState<FacilitySearchResult[]>([]);
+  const [facilitySearchQuery, setFacilitySearchQuery] = useState('');
+
   // Fetch play preferences for the preferences step
   const {
     playStyles: playStyleOptions,
     playAttributesByCategory,
     loading: loadingPlayOptions,
   } = usePlayPreferences(sportId);
+
+  // Facility search for the favorites step
+  const {
+    facilities: facilitySearchResults,
+    isLoading: facilitiesLoading,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useFacilitySearch({
+    sportIds: sportId ? [sportId] : undefined,
+    latitude: latitude ?? undefined,
+    longitude: longitude ?? undefined,
+    searchQuery: facilitySearchQuery,
+    enabled: !!sportId && latitude !== null && longitude !== null,
+  });
+
+  const selectedFacilityIds = useMemo(
+    () => new Set(selectedFacilities.map(f => f.id)),
+    [selectedFacilities]
+  );
+
+  const filteredFacilityResults = useMemo(
+    () => facilitySearchResults.filter(f => !selectedFacilityIds.has(f.id)),
+    [facilitySearchResults, selectedFacilityIds]
+  );
+
+  const handleSelectFacility = useCallback((facility: FacilitySearchResult) => {
+    selectionHaptic();
+    setSelectedFacilities(prev => [...prev, facility]);
+    setFacilitySearchQuery('');
+  }, []);
+
+  const handleRemoveFacility = useCallback((facilityId: string) => {
+    selectionHaptic();
+    setSelectedFacilities(prev => prev.filter(f => f.id !== facilityId));
+  }, []);
+
+  const handleFacilityScroll = useCallback(
+    (event: {
+      nativeEvent: {
+        layoutMeasurement: { height: number };
+        contentOffset: { y: number };
+        contentSize: { height: number };
+      };
+    }) => {
+      const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+      if (
+        layoutMeasurement.height + contentOffset.y >= contentSize.height - 100 &&
+        hasNextPage &&
+        !isFetchingNextPage
+      ) {
+        fetchNextPage();
+      }
+    },
+    [hasNextPage, isFetchingNextPage, fetchNextPage]
+  );
 
   const isTennis = sportName === 'tennis';
   const ratingSystem = isTennis ? 'ntrp' : 'dupr';
@@ -252,63 +313,71 @@ export function SportSetupWizardActionSheet({ payload }: SheetProps<'sport-setup
         ? t('onboarding.stepNames.tennisRating')
         : t('onboarding.stepNames.pickleballRating');
     }
-    return t('onboarding.stepNames.preferences');
+    if (currentStep === 2) {
+      return t('onboarding.stepNames.preferences');
+    }
+    return t('profile.fields.favoriteFacilities');
   };
 
   // Save rating and advance to preferences step
   const handleNext = useCallback(async () => {
-    if (!selectedRating || isSavingRating) return;
-    mediumHaptic();
-    setIsSavingRating(true);
+    if (currentStep === 1) {
+      if (!selectedRating || isSavingRating) return;
+      mediumHaptic();
+      setIsSavingRating(true);
 
-    try {
-      const { data: sportData, error: sportError } = await SportService.getSportByName(sportName);
+      try {
+        const { data: sportData, error: sportError } = await SportService.getSportByName(sportName);
 
-      if (sportError || !sportData) {
-        Logger.error('Failed to fetch sport', sportError as Error);
-        Alert.alert(t('alerts.error'), t('onboarding.validation.failedToSaveRating'), [
+        if (sportError || !sportData) {
+          Logger.error('Failed to fetch sport', sportError as Error);
+          Alert.alert(t('alerts.error'), t('onboarding.validation.failedToSaveRating'), [
+            { text: t('common.ok') },
+          ]);
+          setIsSavingRating(false);
+          return;
+        }
+
+        const selectedRatingData = ratings.find(r => r.id === selectedRating);
+        if (!selectedRatingData) {
+          Alert.alert(t('alerts.error'), t('onboarding.validation.invalidRating'));
+          setIsSavingRating(false);
+          return;
+        }
+
+        const ratingData: OnboardingRating = {
+          sport_id: sportData.id,
+          sport_name: sportName,
+          rating_system_code: ratingSystem,
+          score_value: selectedRatingData.score_value,
+          display_label: selectedRatingData.display_label,
+        };
+
+        const { error } = await OnboardingService.saveRatings([ratingData]);
+        if (error) {
+          Logger.error('Failed to save rating', error as Error, { ratingData });
+          Alert.alert(t('alerts.error'), t('onboarding.validation.failedToSaveRating'), [
+            { text: t('common.ok') },
+          ]);
+          setIsSavingRating(false);
+          return;
+        }
+
+        Logger.debug('wizard_rating_saved', { ratingData });
+        setCurrentStep(2);
+      } catch (error) {
+        Logger.error('Unexpected error saving rating', error as Error);
+        Alert.alert(t('alerts.error'), t('onboarding.validation.unexpectedError'), [
           { text: t('common.ok') },
         ]);
+      } finally {
         setIsSavingRating(false);
-        return;
       }
-
-      const selectedRatingData = ratings.find(r => r.id === selectedRating);
-      if (!selectedRatingData) {
-        Alert.alert(t('alerts.error'), t('onboarding.validation.invalidRating'));
-        setIsSavingRating(false);
-        return;
-      }
-
-      const ratingData: OnboardingRating = {
-        sport_id: sportData.id,
-        sport_name: sportName,
-        rating_system_code: ratingSystem,
-        score_value: selectedRatingData.score_value,
-        display_label: selectedRatingData.display_label,
-      };
-
-      const { error } = await OnboardingService.saveRatings([ratingData]);
-      if (error) {
-        Logger.error('Failed to save rating', error as Error, { ratingData });
-        Alert.alert(t('alerts.error'), t('onboarding.validation.failedToSaveRating'), [
-          { text: t('common.ok') },
-        ]);
-        setIsSavingRating(false);
-        return;
-      }
-
-      Logger.debug('wizard_rating_saved', { ratingData });
-      setCurrentStep(2);
-    } catch (error) {
-      Logger.error('Unexpected error saving rating', error as Error);
-      Alert.alert(t('alerts.error'), t('onboarding.validation.unexpectedError'), [
-        { text: t('common.ok') },
-      ]);
-    } finally {
-      setIsSavingRating(false);
+    } else if (currentStep === 2) {
+      mediumHaptic();
+      setCurrentStep(3);
     }
-  }, [selectedRating, isSavingRating, sportName, ratingSystem, ratings, t]);
+  }, [currentStep, selectedRating, isSavingRating, sportName, ratingSystem, ratings, t]);
 
   // Save preferences and complete wizard
   const handleComplete = useCallback(async () => {
@@ -377,6 +446,25 @@ export function SportSetupWizardActionSheet({ payload }: SheetProps<'sport-setup
         }
       }
 
+      // Save favorite facilities
+      if (selectedFacilities.length > 0) {
+        // Clear existing favorites for this sport
+        await supabase
+          .from('player_favorite_facility')
+          .delete()
+          .eq('player_id', userId)
+          .eq('sport_id', sportId);
+
+        // Insert new favorites
+        const facilityInserts = selectedFacilities.map((facility, index) => ({
+          player_id: userId,
+          facility_id: facility.id,
+          sport_id: sportId,
+          display_order: index + 1,
+        }));
+        await supabase.from('player_favorite_facility').insert(facilityInserts);
+      }
+
       didCompleteRef.current = true;
       onComplete?.();
     } catch (error) {
@@ -391,8 +479,10 @@ export function SportSetupWizardActionSheet({ payload }: SheetProps<'sport-setup
     matchType,
     playStyle,
     playAttributes,
+    selectedFacilities,
     playerSportId,
     sportId,
+    userId,
     onComplete,
     t,
   ]);
@@ -416,8 +506,12 @@ export function SportSetupWizardActionSheet({ payload }: SheetProps<'sport-setup
     ]);
   };
 
-  const canAdvance = currentStep === 1 ? !!selectedRating : false;
-  const canComplete = !!matchDuration && !!matchType && !!playStyle && playAttributes.length > 0;
+  const canAdvanceStep1 = !!selectedRating;
+  const canAdvanceStep2 =
+    !!matchDuration && !!matchType && !!playStyle && playAttributes.length > 0;
+  const canAdvance =
+    currentStep === 1 ? canAdvanceStep1 : currentStep === 2 ? canAdvanceStep2 : false;
+  const canComplete = selectedFacilities.length >= 2;
 
   // ==========================================================================
   // RENDER: Rating Step
@@ -597,38 +691,6 @@ export function SportSetupWizardActionSheet({ payload }: SheetProps<'sport-setup
         </View>
       </View>
 
-      {/* Favorite Facilities */}
-      <View style={styles.section}>
-        <Text style={[styles.label, { color: colors.text }]}>
-          {t('profile.preferences.favoriteFacilities')}
-        </Text>
-        <Text style={[styles.sublabel, { color: colors.textMuted }]}>
-          {t('profile.preferences.selectUpTo3')}
-        </Text>
-        {userId && sportId ? (
-          <FavoriteFacilitiesSelector
-            playerId={userId}
-            sportId={sportId}
-            latitude={latitude}
-            longitude={longitude}
-            colors={{
-              text: colors.text,
-              textMuted: colors.textMuted,
-              inputBackground: colors.inputBackground,
-              border: colors.border,
-              primary: colors.primary,
-              primaryForeground: colors.primaryForeground,
-              card: colors.card,
-            }}
-            t={(key: string) => t(key as Parameters<typeof t>[0])}
-          />
-        ) : (
-          <Text style={{ color: colors.textMuted, fontStyle: 'italic' }}>
-            {t('common.loading')}
-          </Text>
-        )}
-      </View>
-
       {/* Play Style */}
       <View style={styles.section}>
         <Text style={[styles.label, { color: colors.text }]}>
@@ -773,6 +835,140 @@ export function SportSetupWizardActionSheet({ payload }: SheetProps<'sport-setup
   );
 
   // ==========================================================================
+  // RENDER: Favorite Facilities Step
+  // ==========================================================================
+  const renderFavoriteFacilitiesStep = () => (
+    <ScrollView
+      style={styles.scrollContent}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      onScroll={handleFacilityScroll}
+      scrollEventThrottle={400}
+    >
+      <Text style={[styles.label, { color: colors.text }]}>
+        {t('profile.preferences.selectUpTo3')}
+      </Text>
+
+      {/* Selected facilities badges */}
+      {selectedFacilities.length > 0 && (
+        <View style={styles.selectedFacilitiesContainer}>
+          {selectedFacilities.map((facility, index) => (
+            <View
+              key={facility.id}
+              style={[
+                styles.selectedFacilityBadge,
+                { backgroundColor: `${colors.primary}15`, borderColor: colors.primary },
+              ]}
+            >
+              <View style={[styles.facilityOrderBadge, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.facilityOrderText, { color: colors.primaryForeground }]}>
+                  {index + 1}
+                </Text>
+              </View>
+              <Text style={[styles.selectedFacilityName, { color: colors.text }]} numberOfLines={1}>
+                {facility.name}
+              </Text>
+              {selectedFacilities.length > 2 && (
+                <TouchableOpacity
+                  onPress={() => handleRemoveFacility(facility.id)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  style={styles.removeFacilityButton}
+                >
+                  <Ionicons name="close-circle" size={20} color={colors.primary} />
+                </TouchableOpacity>
+              )}
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Search bar */}
+      <SearchBar
+        value={facilitySearchQuery}
+        onChangeText={setFacilitySearchQuery}
+        placeholder={t('profile.preferences.searchFacility')}
+        style={styles.facilitySearchBar}
+      />
+
+      {/* Facility list */}
+      <View style={styles.facilityListSection}>
+        {facilitiesLoading ? (
+          <View style={styles.facilityEmptyState}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : filteredFacilityResults.length > 0 ? (
+          <>
+            {filteredFacilityResults.map(facility => (
+              <TouchableOpacity
+                key={facility.id}
+                style={[
+                  styles.facilityCard,
+                  {
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.border,
+                  },
+                ]}
+                onPress={() => handleSelectFacility(facility)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.facilityCardContent}>
+                  <View style={[styles.facilityIconContainer, { backgroundColor: colors.border }]}>
+                    <View style={{ transform: [{ rotate: '90deg' }] }}>
+                      <TennisCourtIcon width={20} height={20} stroke={colors.textMuted} />
+                    </View>
+                  </View>
+                  <View style={styles.facilityInfo}>
+                    <Text style={[styles.facilityName, { color: colors.text }]} numberOfLines={1}>
+                      {facility.name}
+                    </Text>
+                    <Text
+                      style={[styles.facilityAddress, { color: colors.textMuted }]}
+                      numberOfLines={1}
+                    >
+                      {[facility.address, facility.city].filter(Boolean).join(', ')}
+                    </Text>
+                  </View>
+                  <View style={styles.facilityCardRight}>
+                    {facility.distance_meters !== null && (
+                      <Text style={[styles.facilityDistance, { color: colors.textMuted }]}>
+                        {facility.distance_meters < 1000
+                          ? `${Math.round(facility.distance_meters)}m`
+                          : `${(facility.distance_meters / 1000).toFixed(1)}km`}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+            {isFetchingNextPage && (
+              <View style={styles.facilityFooterLoader}>
+                <ActivityIndicator size="small" color={colors.primary} />
+              </View>
+            )}
+          </>
+        ) : facilitySearchQuery ? (
+          <View style={styles.facilityEmptyState}>
+            <Ionicons name="search-outline" size={48} color={colors.textMuted} />
+            <Text style={[styles.facilityEmptyText, { color: colors.textMuted }]}>
+              {t('profile.preferences.noFacilitiesFound')}
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.facilityEmptyState}>
+            <View style={{ transform: [{ rotate: '90deg' }] }}>
+              <TennisCourtIcon width={48} height={48} stroke={colors.textMuted} />
+            </View>
+            <Text style={[styles.facilityEmptyText, { color: colors.textMuted }]}>
+              {t('profile.preferences.noFacilitiesFound')}
+            </Text>
+          </View>
+        )}
+      </View>
+    </ScrollView>
+  );
+
+  // ==========================================================================
   // MAIN RENDER
   // ==========================================================================
   return (
@@ -832,12 +1028,15 @@ export function SportSetupWizardActionSheet({ payload }: SheetProps<'sport-setup
             <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
               {renderPreferencesStep()}
             </View>
+            <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
+              {renderFavoriteFacilitiesStep()}
+            </View>
           </Animated.View>
         </View>
 
         {/* Footer */}
         <View style={[styles.footer, { borderTopColor: colors.border }]}>
-          {currentStep === 1 ? (
+          {currentStep < TOTAL_STEPS ? (
             <TouchableOpacity
               style={[
                 styles.submitButton,
@@ -1108,5 +1307,96 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 14,
     borderRadius: radiusPixels.lg,
+  },
+  // Favorite facilities step styles
+  selectedFacilitiesContainer: {
+    marginBottom: spacingPixels[4],
+    gap: spacingPixels[2],
+  },
+  selectedFacilityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacingPixels[2],
+    paddingHorizontal: spacingPixels[3],
+    borderRadius: radiusPixels.md,
+    borderWidth: 1,
+  },
+  facilityOrderBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacingPixels[2],
+  },
+  facilityOrderText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  selectedFacilityName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+    marginRight: spacingPixels[2],
+  },
+  removeFacilityButton: {
+    padding: spacingPixels[1],
+  },
+  facilitySearchBar: {
+    marginBottom: spacingPixels[4],
+  },
+  facilityListSection: {
+    minHeight: 200,
+  },
+  facilityCard: {
+    borderRadius: radiusPixels.md,
+    borderWidth: 1,
+    marginBottom: spacingPixels[2],
+    overflow: 'hidden',
+  },
+  facilityCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacingPixels[3],
+  },
+  facilityIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: radiusPixels.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacingPixels[3],
+  },
+  facilityInfo: {
+    flex: 1,
+    marginRight: spacingPixels[2],
+  },
+  facilityName: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  facilityAddress: {
+    fontSize: 12,
+  },
+  facilityCardRight: {
+    alignItems: 'flex-end',
+    gap: spacingPixels[1],
+  },
+  facilityDistance: {
+    fontSize: 12,
+  },
+  facilityEmptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[10],
+  },
+  facilityEmptyText: {
+    marginTop: spacingPixels[4],
+    textAlign: 'center',
+    fontSize: 14,
+  },
+  facilityFooterLoader: {
+    paddingVertical: spacingPixels[4],
+    alignItems: 'center',
   },
 });

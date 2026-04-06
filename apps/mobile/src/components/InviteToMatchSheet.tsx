@@ -3,6 +3,7 @@
  *
  * A modal bottom sheet that shows the user's upcoming matches with available spots.
  * Allows inviting a player to join one of the user's matches.
+ * Uses the standard MatchCard component with a custom "Send Invite" CTA.
  */
 
 import * as React from 'react';
@@ -10,7 +11,7 @@ import { useCallback, useMemo } from 'react';
 import { StyleSheet, View, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, useToast } from '@rallia/shared-components';
+import { Text, MatchCard, useToast } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -19,15 +20,13 @@ import {
   fontSizePixels,
   fontWeightNumeric,
   primary,
-  neutral,
   status,
+  base,
 } from '@rallia/design-system';
-import { selectionHaptic, lightHaptic, formatTime } from '@rallia/shared-utils';
+import { selectionHaptic, lightHaptic } from '@rallia/shared-utils';
 import { useTheme, usePlayerMatches, useInviteToMatch, useAuth } from '@rallia/shared-hooks';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import { useTranslation } from '../hooks';
-
-const BASE_WHITE = '#ffffff';
 
 // =============================================================================
 // TYPES
@@ -59,136 +58,6 @@ function isUserHost(match: MatchWithDetails, userId: string): boolean {
   return match.created_by === userId;
 }
 
-/**
- * Format match date for display
- */
-function formatMatchDate(dateStr: string, locale: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString(locale, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
-// =============================================================================
-// MATCH CARD COMPONENT
-// =============================================================================
-
-interface MatchCardProps {
-  match: MatchWithSpots;
-  onInvite: () => void;
-  isInviting: boolean;
-  colors: {
-    background: string;
-    cardBackground: string;
-    text: string;
-    textSecondary: string;
-    textMuted: string;
-    border: string;
-    buttonActive: string;
-    buttonTextActive: string;
-  };
-  isDark: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  t: (key: any) => string;
-  locale: string;
-}
-
-const MatchCard: React.FC<MatchCardProps> = ({
-  match,
-  onInvite,
-  isInviting,
-  colors,
-  isDark,
-  t,
-  locale,
-}) => {
-  const sportName = match.sport?.display_name || match.sport?.name || '';
-  const locationName =
-    match.location_name || match.facility?.name || t('inviteToMatch.unknownLocation');
-  const matchDate = formatMatchDate(match.match_date, locale);
-  const timeRange = `${formatTime(match.start_time)} - ${formatTime(match.end_time)}`;
-  const formatLabel =
-    match.format === 'doubles' ? t('inviteToMatch.doubles') : t('inviteToMatch.singles');
-
-  return (
-    <View
-      style={[
-        styles.matchCard,
-        {
-          backgroundColor: isDark ? neutral[800] : neutral[50],
-          borderColor: colors.border,
-        },
-      ]}
-    >
-      {/* Match Info */}
-      <View style={styles.matchInfo}>
-        {/* Sport & Format */}
-        <View style={styles.matchHeader}>
-          <Text style={[styles.sportName, { color: colors.text }]} numberOfLines={1}>
-            {sportName}
-          </Text>
-          <View
-            style={[styles.formatBadge, { backgroundColor: isDark ? primary[900] : primary[100] }]}
-          >
-            <Text style={[styles.formatText, { color: isDark ? primary[300] : primary[700] }]}>
-              {formatLabel}
-            </Text>
-          </View>
-        </View>
-
-        {/* Date & Time */}
-        <View style={styles.matchRow}>
-          <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
-          <Text style={[styles.matchDetail, { color: colors.textSecondary }]}>
-            {matchDate} • {timeRange}
-          </Text>
-        </View>
-
-        {/* Location */}
-        <View style={styles.matchRow}>
-          <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
-          <Text style={[styles.matchDetail, { color: colors.textSecondary }]} numberOfLines={1}>
-            {locationName}
-          </Text>
-        </View>
-
-        {/* Spots Available */}
-        <View style={styles.matchRow}>
-          <Ionicons name="people-outline" size={14} color={status.success.DEFAULT} />
-          <Text style={[styles.spotsText, { color: status.success.DEFAULT }]}>
-            {t('inviteToMatch.spotsAvailable').replace('{count}', String(match.spotsLeft))}
-          </Text>
-        </View>
-      </View>
-
-      {/* Invite Button */}
-      <TouchableOpacity
-        style={[
-          styles.inviteButton,
-          { backgroundColor: colors.buttonActive },
-          isInviting && styles.inviteButtonDisabled,
-        ]}
-        onPress={onInvite}
-        disabled={isInviting}
-        activeOpacity={0.7}
-      >
-        {isInviting ? (
-          <ActivityIndicator size="small" color={colors.buttonTextActive} />
-        ) : (
-          <>
-            <Ionicons name="paper-plane" size={14} color={colors.buttonTextActive} />
-            <Text style={[styles.inviteButtonText, { color: colors.buttonTextActive }]}>
-              {t('inviteToMatch.sendInvite')}
-            </Text>
-          </>
-        )}
-      </TouchableOpacity>
-    </View>
-  );
-};
-
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
@@ -204,8 +73,9 @@ export function InviteToMatchActionSheet({ payload }: SheetProps<'invite-to-matc
   const toast = useToast();
   const isDark = theme === 'dark';
 
-  // Track which match is currently being invited
+  // Track which match is currently being invited and which have been sent
   const [invitingMatchId, setInvitingMatchId] = React.useState<string | null>(null);
+  const [invitedMatchIds, setInvitedMatchIds] = React.useState<Set<string>>(new Set());
 
   // Fetch user's upcoming matches
   const { matches, isLoading, isError } = usePlayerMatches({
@@ -260,22 +130,25 @@ export function InviteToMatchActionSheet({ payload }: SheetProps<'invite-to-matc
       background: themeColors.card,
       cardBackground: themeColors.card,
       text: themeColors.foreground,
-      textSecondary: isDark ? primary[300] : neutral[600],
+      textSecondary: isDark ? primary[300] : primary[600],
       textMuted: themeColors.mutedForeground,
       border: themeColors.border,
       buttonActive: isDark ? primary[500] : primary[600],
-      buttonTextActive: BASE_WHITE,
+      buttonTextActive: base.white,
     }),
     [themeColors, isDark]
   );
 
-  // Handle invite success
+  // Handle invite success — keep sheet open so user can invite to more matches
   const handleInviteSuccess = useCallback(() => {
+    const matchId = invitingMatchId;
     setInvitingMatchId(null);
+    if (matchId) {
+      setInvitedMatchIds(prev => new Set(prev).add(matchId));
+    }
     toast.success(t('inviteToMatch.inviteSent').replace('{name}', targetPlayerName));
     lightHaptic();
-    SheetManager.hide('invite-to-match');
-  }, [toast, t, targetPlayerName]);
+  }, [toast, t, targetPlayerName, invitingMatchId]);
 
   // Handle invite error
   const handleInviteError = useCallback(
@@ -287,9 +160,8 @@ export function InviteToMatchActionSheet({ payload }: SheetProps<'invite-to-matc
     [toast, t]
   );
 
-  // Invite hook - we'll call this for each match
+  // Invite hook - matchId is now passed at call time, no stale closure issues
   const { invitePlayers, isInviting: isInviteLoading } = useInviteToMatch({
-    matchId: invitingMatchId ?? '',
     hostId: currentUserId,
     onSuccess: handleInviteSuccess,
     onError: handleInviteError,
@@ -302,11 +174,7 @@ export function InviteToMatchActionSheet({ payload }: SheetProps<'invite-to-matc
 
       selectionHaptic();
       setInvitingMatchId(match.id);
-
-      // Small delay to let state update before calling invitePlayers
-      setTimeout(() => {
-        invitePlayers([targetPlayerId]);
-      }, 50);
+      invitePlayers({ matchId: match.id, playerIds: [targetPlayerId] });
     },
     [isInviteLoading, invitingMatchId, invitePlayers, targetPlayerId]
   );
@@ -317,20 +185,71 @@ export function InviteToMatchActionSheet({ payload }: SheetProps<'invite-to-matc
     SheetManager.hide('invite-to-match');
   }, []);
 
-  // Render match card
+  // Render match card with custom invite CTA
   const renderMatchCard = useCallback(
-    ({ item }: { item: MatchWithSpots }) => (
-      <MatchCard
-        match={item}
-        onInvite={() => handleInvite(item)}
-        isInviting={invitingMatchId === item.id}
-        colors={colors}
-        isDark={isDark}
-        t={t}
-        locale={locale}
-      />
-    ),
-    [colors, isDark, t, locale, handleInvite, invitingMatchId]
+    ({ item }: { item: MatchWithSpots }) => {
+      const isThisInviting = invitingMatchId === item.id;
+      const alreadyInvited = invitedMatchIds.has(item.id);
+
+      return (
+        <View style={styles.cardWrapper}>
+          <MatchCard
+            match={item}
+            isDark={isDark}
+            t={t}
+            locale={locale}
+            currentPlayerId={currentUserId}
+            renderCta={() => {
+              if (alreadyInvited) {
+                return (
+                  <View
+                    style={[
+                      styles.invitedBadge,
+                      {
+                        backgroundColor: isDark
+                          ? 'rgba(5, 150, 105, 0.15)'
+                          : 'rgba(5, 150, 105, 0.1)',
+                        borderColor: isDark ? 'rgba(5, 150, 105, 0.3)' : 'rgba(5, 150, 105, 0.25)',
+                      },
+                    ]}
+                  >
+                    <Ionicons name="checkmark-circle" size={16} color={status.success.light} />
+                    <Text style={[styles.invitedBadgeText, { color: status.success.light }]}>
+                      {t('inviteToMatch.invited')}
+                    </Text>
+                  </View>
+                );
+              }
+
+              return (
+                <TouchableOpacity
+                  style={[
+                    styles.inviteButton,
+                    { backgroundColor: colors.buttonActive },
+                    isThisInviting && styles.inviteButtonDisabled,
+                  ]}
+                  onPress={() => handleInvite(item)}
+                  disabled={isThisInviting}
+                  activeOpacity={0.7}
+                >
+                  {isThisInviting ? (
+                    <ActivityIndicator size="small" color={colors.buttonTextActive} />
+                  ) : (
+                    <>
+                      <Ionicons name="paper-plane" size={14} color={colors.buttonTextActive} />
+                      <Text style={[styles.inviteButtonText, { color: colors.buttonTextActive }]}>
+                        {t('inviteToMatch.sendInvite')}
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              );
+            }}
+          />
+        </View>
+      );
+    },
+    [isDark, t, locale, currentUserId, colors, handleInvite, invitingMatchId, invitedMatchIds]
   );
 
   // Render empty state
@@ -418,7 +337,7 @@ export function InviteToMatchActionSheet({ payload }: SheetProps<'invite-to-matc
             keyExtractor={item => item.id}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
-            ItemSeparatorComponent={() => <View style={styles.separator} />}
+            style={styles.list}
           />
         )}
       </View>
@@ -467,52 +386,19 @@ const styles = StyleSheet.create({
     fontSize: fontSizePixels.sm,
     marginBottom: spacingPixels[4],
   },
+  list: {
+    overflow: 'visible',
+  },
   listContent: {
+    overflow: 'visible',
     paddingBottom: spacingPixels[4],
   },
-  separator: {
-    height: spacingPixels[3],
-  },
-  matchCard: {
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-    padding: spacingPixels[4],
-  },
-  matchInfo: {
-    marginBottom: spacingPixels[3],
-  },
-  matchHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacingPixels[2],
-  },
-  sportName: {
-    fontSize: fontSizePixels.base,
-    fontWeight: fontWeightNumeric.semibold,
-    flex: 1,
-  },
-  formatBadge: {
-    paddingHorizontal: spacingPixels[2],
-    paddingVertical: spacingPixels[0.5],
-    borderRadius: radiusPixels.full,
-  },
-  formatText: {
-    fontSize: fontSizePixels.xs,
-    fontWeight: fontWeightNumeric.medium,
-  },
-  matchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacingPixels[1],
-    gap: spacingPixels[2],
-  },
-  matchDetail: {
-    fontSize: fontSizePixels.sm,
-    flex: 1,
-  },
-  spotsText: {
-    fontSize: fontSizePixels.sm,
-    fontWeight: fontWeightNumeric.medium,
+  // Offset the MatchCard's built-in horizontal margin so it aligns in the sheet.
+  // Small positive padding keeps the tier ribbon badge from being clipped by
+  // the ActionSheet's border-radius.
+  cardWrapper: {
+    marginHorizontal: -spacingPixels[2],
+    overflow: 'visible',
   },
   inviteButton: {
     flexDirection: 'row',
@@ -521,10 +407,26 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[2.5],
     paddingHorizontal: spacingPixels[4],
     borderRadius: radiusPixels.lg,
+    marginTop: spacingPixels[2],
     gap: spacingPixels[2],
   },
   inviteButtonDisabled: {
     opacity: 0.6,
+  },
+  invitedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[2.5],
+    paddingHorizontal: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    marginTop: spacingPixels[2],
+    gap: spacingPixels[1.5],
+    borderWidth: 1,
+  },
+  invitedBadgeText: {
+    fontSize: fontSizePixels.sm,
+    fontWeight: fontWeightNumeric.medium,
   },
   inviteButtonText: {
     fontSize: fontSizePixels.sm,

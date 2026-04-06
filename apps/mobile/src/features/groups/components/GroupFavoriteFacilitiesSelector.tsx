@@ -358,7 +358,7 @@ export const GroupFavoriteFacilitiesSelector: React.FC<GroupFavoriteFacilitiesSe
       {/* Section Header */}
       <View style={styles.sectionHeader}>
         <View style={styles.sectionTitleRow}>
-          <Ionicons name="location-outline" size={20} color={colors.primary} />
+          <Ionicons name="location-outline" size={20} color={colors.textSecondary} />
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
             {t('groups.favoriteFacilities')}
           </Text>

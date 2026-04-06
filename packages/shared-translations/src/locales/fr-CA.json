@@ -333,7 +333,7 @@
   "referenceRequest": {
     "screenTitle": "Demandes de référence",
     "incomingTitle": "Demandes de référence",
-    "pendingRequests": "Demandes en attente",
+    "pendingRequests": "Vérifier des niveaux",
     "helpCertifyRatings": "Aidez à certifier les niveaux d'autres joueurs",
     "noRequests": "Aucune demande en attente",
     "noRequestsDescription": "Lorsque d'autres joueurs vous demandent de valider leur niveau, leurs demandes apparaîtront ici.",
@@ -735,7 +735,8 @@
       "reputation": "MA RÉPUTATION",
       "preferences": "MES PRÉFÉRENCES",
       "location": "MA LOCALISATION",
-      "portfolio": "MON PORTFOLIO"
+      "portfolio": "MON PORTFOLIO",
+      "favoriteCourts": "MES TERRAINS FAVORIS"
     },
     "fields": {
       "firstName": "Prénom",
@@ -1121,7 +1122,7 @@
         "strategic": "Stratégique"
       },
       "favoriteFacilities": "Terrains préférés",
-      "selectUpTo3": "Sélectionner jusqu'à 3 sites de jeu",
+      "selectUpTo3": "Sélectionnez au moins 2 terrains favoris",
       "searchFacility": "Rechercher un terrain...",
       "addAnotherFacility": "Ajouter un autre terrain...",
       "noFacilitiesFound": "Aucun terrain trouvé. Essayez une autre recherche.",
@@ -1201,7 +1202,8 @@
       "error": "Échec de l'envoi de la demande de référence. Veuillez réessayer.",
       "noSportError": "Impossible de déterminer le sport pour la demande de référence.",
       "noRatingError": "Vous devez avoir une cote dans ce sport pour demander une référence.",
-      "playerLevelTooLow": "Le niveau de ce joueur est inférieur au vôtre. Les références doivent provenir de joueurs de votre niveau ou supérieur."
+      "playerLevelTooLow": "Le niveau de ce joueur est inférieur au vôtre. Les références doivent provenir de joueurs de votre niveau ou supérieur.",
+      "playerNotCertified": "Le niveau de ce joueur n'est pas encore certifié. Seuls les joueurs certifiés peuvent fournir des références."
     },
     "unknownPlayer": "Joueur"
   },
@@ -1209,6 +1211,7 @@
     "title": "Inviter à un match",
     "subtitle": "Sélectionnez un match pour inviter {name}",
     "sendInvite": "Envoyer l'invitation",
+    "invited": "Invité",
     "inviteSent": "Invitation envoyée à {name}!",
     "inviteError": "Échec de l'envoi de l'invitation. Veuillez réessayer.",
     "spotsAvailable": "{count} place(s) disponible(s)",
@@ -1465,13 +1468,13 @@
     },
     "favoriteSitesStep": {
       "title": "Sélectionnez vos terrains favoris",
-      "subtitle": "Choisissez au moins 3 sites de jeu où vous aimez jouer. Cela nous aide à vous trouver de meilleures parties.",
-      "subtitleBothSports": "Choisissez au moins 3 sites de jeu par sport. Les sites offrant les deux sports comptent pour chacun.",
+      "subtitle": "Choisissez au moins 2 sites de jeu où vous aimez jouer. Cela nous aide à vous trouver de meilleures parties.",
+      "subtitleBothSports": "Choisissez au moins 2 sites de jeu par sport. Les sites offrant les deux sports comptent pour chacun.",
       "selected": "sélectionnés",
       "tennisCount": "Tennis",
       "pickleballCount": "Pickleball",
-      "selectMinimum": "Veuillez sélectionner au moins 3 sites de jeu favoris.",
-      "selectMinimumPerSport": "Veuillez sélectionner au moins 3 sites de jeu pour chaque sport (tennis et pickleball).",
+      "selectMinimum": "Veuillez sélectionner au moins 2 sites de jeu favoris.",
+      "selectMinimumPerSport": "Veuillez sélectionner au moins 2 sites de jeu pour chaque sport (tennis et pickleball).",
       "searchLabel": "Rechercher un site de jeu",
       "searchPlaceholder": "Tapez pour rechercher...",
       "loading": "Chargement des sites de jeu à proximité...",
@@ -2017,6 +2020,7 @@
     },
     "detail": {
       "last7DaysActivities": "Activités des 7 derniers jours",
+      "viewActivity": "Voir l'activité",
       "activities": "ACTIVITÉS",
       "newMembers": "{count} nouveaux membres",
       "gamesCreated": "{count} parties créées",
@@ -2026,7 +2030,8 @@
       "viewAll": "Voir tout",
       "notFound": "Communauté introuvable",
       "players": "Joueurs",
-      "gamesPlayed": "Parties jouées"
+      "gamesPlayed": "Parties jouées",
+      "sendInvite": "Envoyer une invitation"
     },
     "chat": {
       "title": "Chat",
@@ -2125,6 +2130,7 @@
     "createInfo": "Les communautés n'ont pas de limite de membres. En tant que créateur, vous serez modérateur avec la possibilité de gérer les membres et d'approuver les demandes d'adhésion.",
     "createCommunityButton": "Créer la communauté",
     "addCommunityMember": "Ajouter un membre",
+    "addPlayer": "Ajouter un joueur",
     "referAPlayer": "Référer un joueur",
     "referralApprovalInfo": "Votre référence sera envoyée aux modérateurs pour approbation",
     "addAsModerator": "Ajouter comme modérateur",
@@ -2215,7 +2221,7 @@
     "communityCapital": "Communauté",
     "members": "Membres",
     "searchMembers": "Rechercher des membres...",
-    "addMember": "Ajouter un membre",
+    "addPlayer": "Ajouter un joueur",
     "memberAddedToGroup": "Membre ajouté au groupe",
     "failedToAddMember": "Échec de l'ajout du membre",
     "searchPlayers": "Rechercher des joueurs...",
@@ -2365,16 +2371,18 @@
     "detail": {
       "scoresToConfirm": "Scores à confirmer",
       "last7DaysActivities": "Activités des 7 derniers jours",
+      "viewActivity": "Voir l'activité",
       "noGamesPlayedYet": "Aucune partie jouée pour le moment",
       "playGamesToAppear": "Jouez des parties avec les membres du groupe pour apparaître au classement",
       "noRecentActivity": "Aucune activité récente",
-      "addMember": "Ajouter un membre",
+      "addPlayer": "Ajouter un joueur",
       "shareInviteLink": "Partager le lien d'invitation",
       "noRecentGames": "Aucune partie récente",
       "groupStats": "Stats du groupe",
       "totalMembers": "Membres total",
       "visibility": "Visibilité",
-      "private": "Privé"
+      "private": "Privé",
+      "sendInvite": "Envoyer une invitation"
     },
     "options": {
       "shareInviteLink": "Partager le lien d'invitation",
@@ -7432,6 +7440,14 @@
     },
     "showAllMatches": "Voir toutes les parties",
     "beTheFirst": "Soyez le premier!",
+    "communities": {
+      "title": "Communautés",
+      "empty": "Aucune communauté ne joue ici pour le moment",
+      "memberCount": "{count} membres",
+      "memberCountOne": "1 membre",
+      "showAll": "Voir les {count} communautés",
+      "hideCommunities": "Masquer les communautés"
+    },
     "reportInaccuracy": "Signaler une inexactitude",
     "reportFacility": {
       "title": "Signaler une inexactitude",

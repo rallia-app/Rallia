@@ -9,11 +9,17 @@ import type { InvitePlayersResult } from '@rallia/shared-services';
 import { matchKeys } from './useCreateMatch';
 
 /**
+ * Variables passed to the invite mutation
+ */
+interface InviteVariables {
+  matchId: string;
+  playerIds: string[];
+}
+
+/**
  * Options for the useInviteToMatch hook
  */
 interface UseInviteToMatchOptions {
-  /** Match ID to invite players to */
-  matchId: string;
   /** Host ID (current user) */
   hostId: string;
   /** Callback when invitation succeeds */
@@ -24,30 +30,31 @@ interface UseInviteToMatchOptions {
 
 /**
  * Hook for inviting players to a match.
+ * The matchId is passed at call time (not at hook instantiation) to avoid
+ * stale-closure race conditions when inviting from a list of matches.
  *
  * @example
  * ```tsx
  * const { invitePlayers, isInviting, error } = useInviteToMatch({
- *   matchId: 'match-123',
  *   hostId: session.user.id,
  *   onSuccess: (result) => {
  *     showToast(`Invited ${result.invited.length} players`);
  *   },
  * });
  *
- * // Invite selected players
- * invitePlayers(['player-1', 'player-2']);
+ * // Invite selected players to a specific match
+ * invitePlayers({ matchId: 'match-123', playerIds: ['player-1', 'player-2'] });
  * ```
  */
 export function useInviteToMatch(options: UseInviteToMatchOptions) {
-  const { matchId, hostId, onSuccess, onError } = options;
+  const { hostId, onSuccess, onError } = options;
   const queryClient = useQueryClient();
 
-  const mutation = useMutation<InvitePlayersResult, Error, string[]>({
-    mutationFn: async (playerIds: string[]) => {
+  const mutation = useMutation<InvitePlayersResult, Error, InviteVariables>({
+    mutationFn: async ({ matchId, playerIds }: InviteVariables) => {
       return invitePlayersToMatch(matchId, playerIds, hostId);
     },
-    onSuccess: result => {
+    onSuccess: (result, { matchId }) => {
       // Invalidate match detail query to refresh participant list
       queryClient.invalidateQueries({ queryKey: matchKeys.detail(matchId) });
       // Also invalidate the player's matches list
@@ -60,7 +67,7 @@ export function useInviteToMatch(options: UseInviteToMatchOptions) {
   });
 
   return {
-    /** Function to invite players - pass array of player IDs */
+    /** Function to invite players - pass matchId and array of player IDs */
     invitePlayers: mutation.mutate,
     /** Async version of invitePlayers */
     invitePlayersAsync: mutation.mutateAsync,

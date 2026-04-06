@@ -383,14 +383,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   // Check if button should be disabled based on current step
   const isButtonDisabled = useMemo(() => {
     if (isSaving) return true;
-    if (currentStepId === 'availabilities' && totalAvailabilitySelections < 5) return true;
+    if (currentStepId === 'availabilities' && totalAvailabilitySelections < 3) return true;
     if (currentStepId === 'favorite-sites') {
       const bothSports = hasTennis && hasPickleball;
       if (bothSports) {
         const counts = computeFavoriteSportCounts(formData);
-        return counts.tennisCount < 3 || counts.pickleballCount < 3;
+        return counts.tennisCount < 2 || counts.pickleballCount < 2;
       }
-      return formData.favoriteFacilities.length < 3;
+      return formData.favoriteFacilities.length < 2;
     }
     return false;
   }, [isSaving, currentStepId, totalAvailabilitySelections, formData, hasTennis, hasPickleball]);
@@ -744,12 +744,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         const bothSportsSelected = hasTennis && hasPickleball;
         if (bothSportsSelected) {
           const counts = computeFavoriteSportCounts(formData);
-          if (counts.tennisCount < 3 || counts.pickleballCount < 3) {
+          if (counts.tennisCount < 2 || counts.pickleballCount < 2) {
             Alert.alert(t('alerts.error'), t('onboarding.favoriteSitesStep.selectMinimumPerSport'));
             warningHaptic();
             return false;
           }
-        } else if (formData.favoriteFacilities.length < 3) {
+        } else if (formData.favoriteFacilities.length < 2) {
           Alert.alert(t('alerts.error'), t('onboarding.favoriteSitesStep.selectMinimum'));
           warningHaptic();
           return false;

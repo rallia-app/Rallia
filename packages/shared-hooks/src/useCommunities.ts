@@ -262,7 +262,37 @@ export function useRequestToJoinCommunity() {
   return useMutation({
     mutationFn: ({ communityId, playerId }: { communityId: string; playerId: string }) =>
       requestToJoinCommunity(communityId, playerId),
-    onSuccess: (_, variables) => {
+    onMutate: async variables => {
+      // Cancel outgoing refetches so they don't overwrite our optimistic update
+      await queryClient.cancelQueries({
+        queryKey: communityKeys.publicCommunities(variables.playerId),
+      });
+
+      // Snapshot previous value
+      const previousPublicCommunities = queryClient.getQueriesData<CommunityWithStatus[]>({
+        queryKey: communityKeys.lists(),
+      });
+
+      // Optimistically update community status to pending in all matching list queries
+      queryClient.setQueriesData<CommunityWithStatus[]>({ queryKey: communityKeys.lists() }, old =>
+        old?.map(c =>
+          c.id === variables.communityId
+            ? { ...c, membership_status: 'pending' as const, is_member: false }
+            : c
+        )
+      );
+
+      return { previousPublicCommunities };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousPublicCommunities) {
+        for (const [queryKey, data] of context.previousPublicCommunities) {
+          queryClient.setQueryData(queryKey, data);
+        }
+      }
+    },
+    onSettled: (_, __, variables) => {
       queryClient.invalidateQueries({
         queryKey: communityKeys.membershipStatus(variables.communityId, variables.playerId),
       });

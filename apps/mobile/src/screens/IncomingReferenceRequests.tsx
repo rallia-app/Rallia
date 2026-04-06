@@ -35,8 +35,8 @@ import {
   fontWeightNumeric,
   status,
 } from '@rallia/design-system';
+import { SheetManager } from 'react-native-actions-sheet';
 import { CertificationBadge } from '../features/ratings/components';
-import { RespondToReferenceOverlay } from '../features/ratings/components';
 
 interface ReferenceRequest {
   id: string;
@@ -69,8 +69,6 @@ const IncomingReferenceRequests: React.FC = () => {
   const [requests, setRequests] = useState<ReferenceRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<ReferenceRequest | null>(null);
-  const [showRespondOverlay, setShowRespondOverlay] = useState(false);
 
   useEffect(() => {
     fetchIncomingRequests();
@@ -216,8 +214,12 @@ const IncomingReferenceRequests: React.FC = () => {
 
   const handleOpenRequest = (request: ReferenceRequest) => {
     lightHaptic();
-    setSelectedRequest(request);
-    setShowRespondOverlay(true);
+    SheetManager.show('respond-to-reference', {
+      payload: {
+        request,
+        onResponseComplete: () => fetchIncomingRequests(),
+      },
+    });
   };
 
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
@@ -226,35 +228,12 @@ const IncomingReferenceRequests: React.FC = () => {
     navigateToPlayerProfile(requesterId);
   };
 
-  const handleResponseComplete = () => {
-    setShowRespondOverlay(false);
-    setSelectedRequest(null);
-    // Refresh the list to remove the responded request
-    fetchIncomingRequests();
-  };
-
   // Helper function to calculate days between two dates
   const getDaysLeft = (expiresAt: string): number => {
     const expiryDate = new Date(expiresAt);
     const now = new Date();
     const diffTime = expiryDate.getTime() - now.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  };
-
-  // Helper function to format time ago
-  const formatTimeAgo = (dateString: string): string => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return t('common.time.now');
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
   };
 
   const getExpiryInfo = (expiresAt: string) => {
@@ -273,7 +252,6 @@ const IncomingReferenceRequests: React.FC = () => {
 
   const renderRequestCard = ({ item }: { item: ReferenceRequest }) => {
     const expiryInfo = getExpiryInfo(item.expires_at);
-    const timeAgo = formatTimeAgo(item.created_at);
 
     return (
       <TouchableOpacity
@@ -281,7 +259,7 @@ const IncomingReferenceRequests: React.FC = () => {
         onPress={() => handleOpenRequest(item)}
         activeOpacity={0.8}
       >
-        {/* Header with requester info */}
+        {/* Header with requester info and claimed rating */}
         <View style={styles.cardHeader}>
           <TouchableOpacity
             style={styles.requesterInfo}
@@ -304,39 +282,13 @@ const IncomingReferenceRequests: React.FC = () => {
               <Text style={[styles.requesterName, { color: colors.text }]}>
                 {item.requester.first_name} {item.requester.last_name}
               </Text>
-              {item.requester.display_name && (
-                <Text style={[styles.requesterUsername, { color: colors.textMuted }]}>
-                  @{item.requester.display_name}
-                </Text>
-              )}
+              <Text style={[styles.requesterUsername, { color: colors.textMuted }]}>
+                {t('referenceRequest.claimsToBeRated')} {item.rating_info.label}
+              </Text>
             </View>
           </TouchableOpacity>
 
-          <View style={[styles.sportBadge, { backgroundColor: colors.primary + '20' }]}>
-            <Text style={[styles.sportText, { color: colors.primary }]}>
-              {item.rating_info.sport_display_name}
-            </Text>
-          </View>
-        </View>
-
-        {/* Rating being verified */}
-        <View style={[styles.ratingSection, { backgroundColor: colors.inputBackground }]}>
-          <View style={styles.ratingLabelRow}>
-            <Text style={[styles.ratingLabel, { color: colors.textMuted }]}>
-              {t('referenceRequest.claimedRating')}
-            </Text>
-            <CertificationBadge status="self_declared" size="sm" />
-          </View>
-          <View style={styles.ratingValueRow}>
-            <Text style={[styles.ratingValue, { color: colors.text }]}>
-              {item.rating_info.label}
-            </Text>
-            {item.rating_info.value && (
-              <Text style={[styles.ratingNumeric, { color: colors.textSecondary }]}>
-                ({item.rating_info.value.toFixed(1)})
-              </Text>
-            )}
-          </View>
+          <CertificationBadge status="self_declared" size="sm" />
         </View>
 
         {/* Message (if any) */}
@@ -349,21 +301,18 @@ const IncomingReferenceRequests: React.FC = () => {
           </View>
         )}
 
-        {/* Footer with time and expiry */}
-        <View style={styles.cardFooter}>
-          <Text style={[styles.timeText, { color: colors.textMuted }]}>{timeAgo}</Text>
+        {/* Footer */}
+        <View style={[styles.cardFooter, { borderTopColor: colors.border }]}>
           <View style={styles.expiryContainer}>
-            <Ionicons name="time-outline" size={12} color={expiryInfo.color} />
-            <Text style={[styles.expiryText, { color: expiryInfo.color }]}>{expiryInfo.text}</Text>
+            <Ionicons name="time-outline" size={11} color={colors.textMuted} />
+            <Text style={[styles.expiryText, { color: colors.textMuted }]}>{expiryInfo.text}</Text>
           </View>
-        </View>
-
-        {/* Action hint */}
-        <View style={[styles.actionHint, { borderTopColor: colors.border }]}>
-          <Text style={[styles.actionHintText, { color: colors.primary }]}>
-            {t('referenceRequest.tapToRespond')}
-          </Text>
-          <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+          <View style={styles.actionHint}>
+            <Text style={[styles.actionHintText, { color: colors.primary }]}>
+              {t('referenceRequest.tapToRespond')}
+            </Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -431,19 +380,6 @@ const IncomingReferenceRequests: React.FC = () => {
         }
         showsVerticalScrollIndicator={false}
       />
-
-      {/* Respond Overlay */}
-      {selectedRequest && (
-        <RespondToReferenceOverlay
-          visible={showRespondOverlay}
-          onClose={() => {
-            setShowRespondOverlay(false);
-            setSelectedRequest(null);
-          }}
-          request={selectedRequest}
-          onResponseComplete={handleResponseComplete}
-        />
-      )}
     </SafeAreaView>
   );
 };
@@ -522,43 +458,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizePixels.sm,
     marginTop: 2,
   },
-  sportBadge: {
-    paddingHorizontal: spacingPixels[2],
-    paddingVertical: spacingPixels[1],
-    borderRadius: radiusPixels.md,
-  },
-  sportText: {
-    fontSize: fontSizePixels.xs,
-    fontWeight: fontWeightNumeric.medium,
-  },
-  ratingSection: {
-    marginHorizontal: spacingPixels[4],
-    padding: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-  },
-  ratingLabelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacingPixels[1],
-  },
-  ratingLabel: {
-    fontSize: fontSizePixels.xs,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  ratingValueRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: spacingPixels[2],
-  },
-  ratingValue: {
-    fontSize: fontSizePixels.xl,
-    fontWeight: fontWeightNumeric.bold,
-  },
-  ratingNumeric: {
-    fontSize: fontSizePixels.sm,
-  },
   messageSection: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -577,11 +476,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[3],
-    paddingBottom: spacingPixels[2],
-  },
-  timeText: {
-    fontSize: fontSizePixels.xs,
+    paddingVertical: spacingPixels[3],
+    borderTopWidth: 1,
+    marginTop: spacingPixels[2],
   },
   expiryContainer: {
     flexDirection: 'row',
@@ -590,16 +487,11 @@ const styles = StyleSheet.create({
   },
   expiryText: {
     fontSize: fontSizePixels.xs,
-    fontWeight: fontWeightNumeric.medium,
   },
   actionHint: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
     gap: spacingPixels[1],
-    paddingVertical: spacingPixels[3],
-    borderTopWidth: 1,
-    marginTop: spacingPixels[2],
   },
   actionHintText: {
     fontSize: fontSizePixels.sm,

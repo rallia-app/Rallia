@@ -1,6 +1,6 @@
 /**
  * GroupDetail Screen
- * Shows group details with tabs: Home, Leaderboard, Activity
+ * Shows group details with tabs: Home, Leaderboard, Games
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
@@ -13,6 +13,8 @@ import {
   Alert,
   Image,
   ScrollView,
+  Modal,
+  Pressable,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,7 +24,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import Svg, { Circle } from 'react-native-svg';
 
-import { Text, Button, MatchCard } from '@rallia/shared-components';
+import { Text, Button } from '@rallia/shared-components';
 import { lightHaptic, selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
 import {
   useThemeStyles,
@@ -31,7 +33,7 @@ import {
   useNavigateToPlayerProfile,
   useRequireOnboarding,
 } from '../hooks';
-import { useSport, useMatchDetailSheet } from '../context';
+import { useSport } from '../context';
 import { SportIcon } from '../components/SportIcon';
 import {
   useGroupWithMembers,
@@ -50,14 +52,20 @@ import {
   useConversationUnreadRealtime,
   useSports,
   usePlayer,
-  useNetworkMemberUpcomingMatches,
   type GroupActivity as GroupActivityType,
   type GroupMatch,
-  type NetworkMemberMatch,
 } from '@rallia/shared-hooks';
 import type { RootStackParamList } from '../navigation/types';
 import { SheetManager } from 'react-native-actions-sheet';
-import { primary, neutral } from '@rallia/design-system';
+import {
+  primary,
+  status,
+  accent,
+  neutral,
+  spacingPixels,
+  fontSizePixels,
+  radiusPixels,
+} from '@rallia/design-system';
 import {
   AddScoreIntroModal,
   AddScoreModal,
@@ -65,20 +73,21 @@ import {
   type MatchType,
 } from '../features/matches';
 import { GroupFavoriteFacilitiesSelector } from '../features/groups/components';
+import { NetworkMatchesTab } from '../features/matches/components';
 
 const HEADER_HEIGHT = 140;
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type GroupDetailRouteProp = RouteProp<RootStackParamList, 'GroupDetail'>;
 
-type TabKey = 'home' | 'leaderboard' | 'activity';
+type TabKey = 'home' | 'leaderboard' | 'games';
 
-const TAB_KEYS: TabKey[] = ['home', 'leaderboard', 'activity'];
+const TAB_KEYS: TabKey[] = ['home', 'leaderboard', 'games'];
 
 const TAB_ICONS: Record<TabKey, keyof typeof Ionicons.glyphMap> = {
   home: 'home-outline',
   leaderboard: 'podium-outline',
-  activity: 'flash-outline',
+  games: 'tennisball-outline', // placeholder, overridden with SportIcon
 };
 
 export default function GroupDetailScreen() {
@@ -95,7 +104,6 @@ export default function GroupDetailScreen() {
   const { player } = usePlayer();
   const playerId = session?.user?.id;
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
-  const { openSheet: openMatchDetail } = useMatchDetailSheet();
   const insets = useSafeAreaInsets();
 
   // Get all sport IDs and names for displaying sport tags on facilities
@@ -111,6 +119,7 @@ export default function GroupDetailScreen() {
 
   const [activeTab, setActiveTab] = useState<TabKey>('home');
   const [leaderboardPeriod, setLeaderboardPeriod] = useState<30 | 90 | 180 | 0>(30);
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   // Add Score flow state
   const [showAddScoreIntro, setShowAddScoreIntro] = useState(false);
   const [showAddScoreModal, setShowAddScoreModal] = useState(false);
@@ -144,16 +153,6 @@ export default function GroupDetailScreen() {
     groupId,
     leaderboardPeriod === 0 ? 3650 : leaderboardPeriod
   );
-
-  // Get upcoming public matches from network members
-  const { data: memberUpcomingMatches, refetch: refetchMemberMatches } =
-    useNetworkMemberUpcomingMatches(
-      groupId,
-      'group',
-      playerId ?? undefined,
-      group?.sport_id ?? undefined,
-      20
-    );
 
   // Get unread message count for the group chat badge (all unread)
   const { data: unreadChatCount } = useConversationUnreadCount(
@@ -192,118 +191,6 @@ export default function GroupDetailScreen() {
     setSelectedMatchType(type);
     setShowAddScoreModal(true);
   }, []);
-
-  // Transform NetworkMemberMatch to a format compatible with MatchCard
-  const transformMatchForCard = useCallback((match: NetworkMemberMatch) => {
-    return {
-      id: match.id,
-      sport_id: match.sport_id,
-      match_date: match.match_date,
-      start_time: match.start_time,
-      end_time: match.end_time,
-      format: match.format,
-      player_expectation: match.player_expectation,
-      visibility: match.visibility,
-      join_mode: match.join_mode,
-      location_type: match.location_type,
-      location_name: match.location_name,
-      facility_id: match.facility_id,
-      created_by: match.created_by,
-      cancelled_at: match.cancelled_at,
-      status: 'scheduled' as const,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      sport: match.sport
-        ? {
-            id: match.sport.id,
-            name: match.sport.name,
-            display_name: match.sport.display_name,
-            icon_url: match.sport.icon_url,
-            is_active: true,
-            created_at: '',
-            updated_at: '',
-          }
-        : null,
-      facility: match.facility
-        ? {
-            id: match.facility.id,
-            name: match.facility.name,
-            city: match.facility.city,
-            address: match.facility.address,
-            latitude: null,
-            longitude: null,
-            phone: null,
-            email: null,
-            website: null,
-            timezone: null,
-            created_at: '',
-            updated_at: '',
-          }
-        : undefined,
-      created_by_player: match.created_by_player
-        ? {
-            id: match.created_by_player.id,
-            profile: match.created_by_player.profile
-              ? {
-                  id: match.created_by,
-                  first_name: match.created_by_player.profile.first_name,
-                  last_name: match.created_by_player.profile.last_name,
-                  display_name: match.created_by_player.profile.display_name,
-                  profile_picture_url: match.created_by_player.profile.profile_picture_url,
-                }
-              : undefined,
-          }
-        : {
-            id: match.created_by,
-            profile: match.creator
-              ? {
-                  id: match.created_by,
-                  first_name: match.creator.first_name,
-                  last_name: match.creator.last_name,
-                  display_name: null,
-                  profile_picture_url: match.creator.profile_picture_url,
-                }
-              : undefined,
-          },
-      participants: match.participants?.map(p => ({
-        id: p.id,
-        match_id: match.id,
-        player_id: p.player_id,
-        team_number: p.team_number,
-        is_host: p.is_host,
-        status: p.status,
-        joined_at: null,
-        created_at: '',
-        updated_at: '',
-        player: p.player
-          ? {
-              id: p.player.id,
-              profile: p.player.profile
-                ? {
-                    id: p.player_id,
-                    first_name: p.player.profile.first_name,
-                    last_name: p.player.profile.last_name,
-                    display_name: p.player.profile.display_name,
-                    profile_picture_url: p.player.profile.profile_picture_url,
-                  }
-                : undefined,
-            }
-          : { id: p.player_id },
-      })),
-      distance_meters: null,
-    };
-  }, []);
-
-  // Handle network match card press - open match detail sheet
-  const handleNetworkMatchPress = useCallback(
-    (match: NetworkMemberMatch) => {
-      lightHaptic();
-      // Transform and open the match detail sheet
-      const transformed = transformMatchForCard(match);
-      openMatchDetail(transformed as unknown as Parameters<typeof openMatchDetail>[0]);
-    },
-    [openMatchDetail, transformMatchForCard]
-  );
 
   const handleAddGame = useCallback(() => {
     if (!guardAction()) return;
@@ -436,10 +323,40 @@ export default function GroupDetailScreen() {
   }, [group, groupId, playerId, isModerator, refetch, handleLeaveGroup, handleDeleteGroup, t]);
 
   const handleShowOptions = useCallback(() => {
-    SheetManager.show('group-options', {
-      payload: { options: menuOptions, title: 'Group Options' },
+    lightHaptic();
+    setShowOptionsMenu(true);
+  }, []);
+
+  const handleCloseOptionsMenu = useCallback(() => {
+    setShowOptionsMenu(false);
+  }, []);
+
+  const handleOptionItemPress = useCallback((action: () => void) => {
+    setShowOptionsMenu(false);
+    setTimeout(action, 100);
+  }, []);
+
+  // Set header title to group name
+  useEffect(() => {
+    if (group?.name) {
+      navigation.setOptions({ headerTitle: group.name });
+    }
+  }, [navigation, group?.name]);
+
+  // Set header right button for options
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: ({ tintColor }: { tintColor?: string }) => (
+        <TouchableOpacity
+          onPress={handleShowOptions}
+          style={{ padding: 4, marginRight: 8 }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="ellipsis-horizontal" size={22} color={tintColor ?? colors.text} />
+        </TouchableOpacity>
+      ),
     });
-  }, [menuOptions]);
+  }, [navigation, handleShowOptions, colors.text]);
 
   // Format activity time
   const formatActivityTime = useCallback(
@@ -571,56 +488,16 @@ export default function GroupDetailScreen() {
               />
             )}
 
-            {/* Group Stats */}
-            <View
-              style={[
-                styles.groupStatsCard,
-                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-              ]}
-            >
-              <Text weight="semibold" size="base" style={{ color: colors.text, marginBottom: 12 }}>
-                {t('groups.detail.groupStats')}
-              </Text>
-              <View style={styles.groupStatsList}>
-                <View style={styles.groupStatItem}>
-                  <View style={[styles.groupStatIcon, { backgroundColor: '#5AC8FA20' }]}>
-                    <Ionicons name="people-outline" size={20} color="#5AC8FA" />
-                  </View>
-                  <View style={styles.groupStatInfo}>
-                    <Text size="sm" style={{ color: colors.textSecondary }}>
-                      {t('groups.detail.totalMembers')}
-                    </Text>
-                    <Text weight="semibold" size="base" style={{ color: colors.text }}>
-                      {group?.member_count ?? 0}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.groupStatItem}>
-                  <View style={[styles.groupStatIcon, { backgroundColor: '#FF950015' }]}>
-                    <Ionicons name="lock-closed" size={20} color="#FF9500" />
-                  </View>
-                  <View style={styles.groupStatInfo}>
-                    <Text size="sm" style={{ color: colors.textSecondary }}>
-                      {t('groups.detail.visibility')}
-                    </Text>
-                    <Text weight="semibold" size="base" style={{ color: colors.text }}>
-                      {t('groups.detail.private')}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-
-            {/* Activity Stats Card */}
+            {/* Activity Stats */}
+            <Text size="lg" weight="bold" style={{ color: colors.text, marginBottom: 8 }}>
+              {t('groups.detail.last7DaysActivities')}
+            </Text>
             <View
               style={[
                 styles.statsCard,
                 { backgroundColor: colors.cardBackground, borderColor: colors.border },
               ]}
             >
-              <Text weight="semibold" size="base" style={{ color: colors.text, marginBottom: 16 }}>
-                {t('groups.detail.last7DaysActivities')}
-              </Text>
               <View style={styles.statsRow}>
                 <View style={styles.statCircle}>
                   {/* Donut Chart */}
@@ -641,7 +518,7 @@ export default function GroupDetailScreen() {
                           cx={size / 2}
                           cy={size / 2}
                           r={radius}
-                          stroke="#5AC8FA"
+                          stroke={status.info.light}
                           strokeWidth={strokeWidth}
                           fill="transparent"
                           strokeDasharray={`${membersLength} ${circumference - membersLength}`}
@@ -657,7 +534,7 @@ export default function GroupDetailScreen() {
                           cx={size / 2}
                           cy={size / 2}
                           r={radius}
-                          stroke="#FF9500"
+                          stroke={accent[500]}
                           strokeWidth={strokeWidth}
                           fill="transparent"
                           strokeDasharray={`${gamesLength} ${circumference - gamesLength}`}
@@ -673,7 +550,7 @@ export default function GroupDetailScreen() {
                           cx={size / 2}
                           cy={size / 2}
                           r={radius}
-                          stroke={isDark ? '#8E8E93' : '#636366'}
+                          stroke={isDark ? neutral[400] : neutral[600]}
                           strokeWidth={strokeWidth}
                           fill="transparent"
                           strokeDasharray={`${messagesLength} ${circumference - messagesLength}`}
@@ -697,7 +574,7 @@ export default function GroupDetailScreen() {
                 </View>
                 <View style={styles.statsList}>
                   <View style={styles.statItem}>
-                    <Ionicons name="people-outline" size={20} color="#5AC8FA" />
+                    <Ionicons name="people-outline" size={20} color={status.info.light} />
                     <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
                       {t('groups.activity.newMembers', { count: membersCount })}
                     </Text>
@@ -706,7 +583,7 @@ export default function GroupDetailScreen() {
                     <SportIcon
                       sportName={selectedSport?.name ?? 'tennis'}
                       size={20}
-                      color="#FF9500"
+                      color={accent[500]}
                     />
                     <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
                       {t('groups.activity.gamesCreated', { count: gamesCount })}
@@ -716,7 +593,7 @@ export default function GroupDetailScreen() {
                     <Ionicons
                       name="chatbubble-ellipses-outline"
                       size={20}
-                      color={isDark ? '#8E8E93' : '#C7C7CC'}
+                      color={isDark ? neutral[400] : neutral[300]}
                     />
                     <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
                       {t('groups.activity.newMessages', { count: messagesCount })}
@@ -728,21 +605,20 @@ export default function GroupDetailScreen() {
 
             {/* About Section */}
             {group?.description && (
-              <View
-                style={[
-                  styles.aboutCard,
-                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                ]}
-              >
-                <View style={styles.aboutHeader}>
-                  <Ionicons name="information-circle-outline" size={24} color={colors.primary} />
-                  <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
-                    {t('groups.home.about')}
+              <View>
+                <Text size="lg" weight="bold" style={{ color: colors.text, marginBottom: 8 }}>
+                  {t('groups.home.about')}
+                </Text>
+                <View
+                  style={[
+                    styles.aboutCard,
+                    { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                  ]}
+                >
+                  <Text style={{ color: colors.textSecondary, lineHeight: 22 }}>
+                    {group.description}
                   </Text>
                 </View>
-                <Text style={{ color: colors.textSecondary, lineHeight: 22, marginTop: 8 }}>
-                  {group.description}
-                </Text>
               </View>
             )}
 
@@ -761,148 +637,6 @@ export default function GroupDetailScreen() {
                 navigation.navigate('FacilityDetail', { facilityId })
               }
             />
-
-            {/* Member Upcoming Matches Preview */}
-            <View
-              style={[
-                styles.matchesPreview,
-                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-              ]}
-            >
-              <View style={styles.sectionHeader}>
-                <View style={styles.sectionTitle}>
-                  <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-                  <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
-                    {t('groups.matches.title')}
-                  </Text>
-                </View>
-                {memberUpcomingMatches && memberUpcomingMatches.length > 0 && (
-                  <TouchableOpacity
-                    onPress={() => {
-                      lightHaptic();
-                      navigation.navigate('NetworkMatches', {
-                        networkId: groupId,
-                        networkType: 'group',
-                        networkName: group?.name,
-                        sportId: group?.sport_id ?? undefined,
-                      });
-                    }}
-                  >
-                    <Text size="sm" style={{ color: colors.primary }}>
-                      {t('groups.home.viewAll')}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-              {memberUpcomingMatches && memberUpcomingMatches.length > 0 ? (
-                <View style={styles.matchesPreviewList}>
-                  {memberUpcomingMatches.slice(0, 2).map((match: NetworkMemberMatch) => {
-                    const transformed = transformMatchForCard(match);
-                    return (
-                      <MatchCard
-                        key={match.id}
-                        match={transformed as unknown as Parameters<typeof MatchCard>[0]['match']}
-                        isDark={isDark}
-                        t={
-                          t as (
-                            key: string,
-                            options?: Record<string, string | number | boolean>
-                          ) => string
-                        }
-                        locale={locale}
-                        currentPlayerId={playerId}
-                        sportIcon={
-                          <SportIcon
-                            sportName={match.sport?.name ?? selectedSport?.name ?? 'tennis'}
-                            size={100}
-                            color={isDark ? neutral[600] : neutral[400]}
-                          />
-                        }
-                        onPress={() => handleNetworkMatchPress(match)}
-                      />
-                    );
-                  })}
-                </View>
-              ) : (
-                <View style={styles.matchesEmptyState}>
-                  <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
-                  <Text
-                    size="sm"
-                    style={{ color: colors.textSecondary, marginTop: 8, textAlign: 'center' }}
-                  >
-                    {t('groups.matches.empty.title')}
-                  </Text>
-                  <Text
-                    size="xs"
-                    style={{ color: colors.textMuted, marginTop: 4, textAlign: 'center' }}
-                  >
-                    {t('groups.matches.empty.description')}
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            {/* Leaderboard Preview */}
-            <View
-              style={[
-                styles.leaderboardPreview,
-                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-              ]}
-            >
-              <View style={styles.sectionHeader}>
-                <View style={styles.sectionTitle}>
-                  <Ionicons name="trophy-outline" size={20} color={colors.primary} />
-                  <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
-                    {t('groups.leaderboard.title')}
-                  </Text>
-                </View>
-                <TouchableOpacity onPress={() => setActiveTab('leaderboard')}>
-                  <Text size="sm" style={{ color: colors.primary }}>
-                    {t('groups.home.viewAll')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              {/* Show top 3 from leaderboard preview or empty state */}
-              {leaderboard && leaderboard.length > 0 ? (
-                <View style={styles.leaderboardPreviewList}>
-                  {leaderboard.slice(0, 3).map((entry, index) => (
-                    <View key={entry.player_id} style={styles.leaderboardPreviewItem}>
-                      <Text weight="semibold" style={{ color: colors.textMuted, width: 20 }}>
-                        {index + 1}.
-                      </Text>
-                      <View
-                        style={[
-                          styles.smallAvatar,
-                          { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
-                        ]}
-                      >
-                        {entry.player?.profile?.profile_picture_url ? (
-                          <Image
-                            source={{ uri: entry.player.profile.profile_picture_url }}
-                            style={styles.avatarImage}
-                          />
-                        ) : (
-                          <Ionicons name="person-outline" size={14} color={colors.textMuted} />
-                        )}
-                      </View>
-                      <Text size="sm" style={{ color: colors.text, flex: 1, marginLeft: 8 }}>
-                        {entry.player?.profile?.first_name || t('groups.recentGames.player')}
-                      </Text>
-                      <Text size="sm" weight="semibold" style={{ color: colors.primary }}>
-                        {entry.games_played}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              ) : (
-                <Text
-                  size="sm"
-                  style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}
-                >
-                  {t('groups.detail.noGamesPlayedYet')}
-                </Text>
-              )}
-            </View>
           </View>
         );
 
@@ -917,42 +651,39 @@ export default function GroupDetailScreen() {
         return (
           <View style={styles.tabContent}>
             {/* Recent Games Section */}
+            <View style={styles.sectionHeader}>
+              <Text size="lg" weight="bold" style={{ color: colors.text }}>
+                {t('groups.recentGames.title')}
+              </Text>
+              <TouchableOpacity
+                onPress={() =>
+                  SheetManager.show('recent-games', {
+                    payload: {
+                      matches: allMatches || [],
+                      onMatchPress: (match: unknown) => {
+                        SheetManager.hide('recent-games');
+                        navigation.navigate('PlayedMatchDetail', { match: match as GroupMatch });
+                      },
+                      onPlayerPress: (playerId: string) => {
+                        SheetManager.hide('recent-games');
+                        navigateToPlayerProfile(playerId);
+                      },
+                    },
+                  })
+                }
+              >
+                <Text size="sm" style={{ color: colors.primary }}>
+                  {t('groups.recentGames.viewAll')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             <View
               style={[
                 styles.recentGamesCard,
                 { backgroundColor: colors.cardBackground, borderColor: colors.border },
               ]}
             >
-              <View style={styles.sectionHeader}>
-                <View style={styles.sectionTitle}>
-                  <Ionicons name="time-outline" size={20} color={colors.textSecondary} />
-                  <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
-                    {t('groups.recentGames.title')}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() =>
-                    SheetManager.show('recent-games', {
-                      payload: {
-                        matches: allMatches || [],
-                        onMatchPress: (match: unknown) => {
-                          SheetManager.hide('recent-games');
-                          navigation.navigate('PlayedMatchDetail', { match: match as GroupMatch });
-                        },
-                        onPlayerPress: (playerId: string) => {
-                          SheetManager.hide('recent-games');
-                          navigateToPlayerProfile(playerId);
-                        },
-                      },
-                    })
-                  }
-                >
-                  <Text size="sm" style={{ color: colors.primary }}>
-                    {t('groups.recentGames.viewAll')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
               {/* Most Recent Match Card */}
               {recentMatch?.match ? (
                 <TouchableOpacity
@@ -971,7 +702,7 @@ export default function GroupDetailScreen() {
                       <SportIcon
                         sportName={recentMatch.match.sport?.name ?? 'tennis'}
                         size={16}
-                        color={colors.primary}
+                        color={colors.textSecondary}
                       />
                       <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 6 }}>
                         {recentMatch.match.sport?.name || t('common.game')} ·{' '}
@@ -1229,49 +960,39 @@ export default function GroupDetailScreen() {
             </View>
 
             {/* Leaderboard Section */}
+            <View style={styles.sectionHeader}>
+              <Text size="lg" weight="bold" style={{ color: colors.text }}>
+                {t('groups.leaderboard.title')}
+              </Text>
+
+              {/* Period Filter Dropdown */}
+              <TouchableOpacity
+                style={[styles.periodFilter, { backgroundColor: isDark ? '#2C2C2E' : '#F0F0F0' }]}
+                onPress={() => {
+                  const nextIndex =
+                    (periodOptions.findIndex(o => o.value === leaderboardPeriod) + 1) %
+                    periodOptions.length;
+                  setLeaderboardPeriod(periodOptions[nextIndex].value as 30 | 90 | 180 | 0);
+                }}
+              >
+                <Text size="sm" style={{ color: colors.text }}>
+                  {periodOptions.find(o => o.value === leaderboardPeriod)?.label}
+                </Text>
+                <Ionicons
+                  name="chevron-down"
+                  size={16}
+                  color={colors.textMuted}
+                  style={{ marginLeft: 4 }}
+                />
+              </TouchableOpacity>
+            </View>
+
             <View
               style={[
                 styles.leaderboardCard,
                 { backgroundColor: colors.cardBackground, borderColor: colors.border },
               ]}
             >
-              <View style={styles.sectionHeader}>
-                <View style={styles.sectionTitle}>
-                  <Ionicons name="podium-outline" size={20} color={colors.textSecondary} />
-                  <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
-                    {t('groups.leaderboard.title')}
-                  </Text>
-                  <TouchableOpacity style={styles.infoButton}>
-                    <Ionicons
-                      name="information-circle-outline"
-                      size={18}
-                      color={colors.textMuted}
-                    />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Period Filter Dropdown */}
-                <TouchableOpacity
-                  style={[styles.periodFilter, { backgroundColor: isDark ? '#2C2C2E' : '#F0F0F0' }]}
-                  onPress={() => {
-                    const nextIndex =
-                      (periodOptions.findIndex(o => o.value === leaderboardPeriod) + 1) %
-                      periodOptions.length;
-                    setLeaderboardPeriod(periodOptions[nextIndex].value as 30 | 90 | 180 | 0);
-                  }}
-                >
-                  <Text size="sm" style={{ color: colors.text }}>
-                    {periodOptions.find(o => o.value === leaderboardPeriod)?.label}
-                  </Text>
-                  <Ionicons
-                    name="chevron-down"
-                    size={16}
-                    color={colors.textMuted}
-                    style={{ marginLeft: 4 }}
-                  />
-                </TouchableOpacity>
-              </View>
-
               {leaderboard && leaderboard.length > 0 ? (
                 <>
                   {/* Podium for top 3 */}
@@ -1439,75 +1160,14 @@ export default function GroupDetailScreen() {
         );
       }
 
-      case 'activity':
+      case 'games':
         return (
-          <View style={styles.tabContent}>
-            {groupedActivities.length === 0 ? (
-              <View
-                style={[
-                  styles.emptyActivity,
-                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                ]}
-              >
-                <Ionicons name="time-outline" size={48} color={colors.textMuted} />
-                <Text style={{ color: colors.textSecondary, marginTop: 12 }}>
-                  {t('groups.detail.noRecentActivity')}
-                </Text>
-              </View>
-            ) : (
-              groupedActivities.map((section, sectionIndex) => (
-                <View key={sectionIndex} style={styles.activitySection}>
-                  <Text
-                    weight="semibold"
-                    size="sm"
-                    style={[styles.activityDayHeader, { color: colors.textSecondary }]}
-                  >
-                    {section.title}
-                  </Text>
-                  {section.data.map(activity => (
-                    <TouchableOpacity
-                      key={activity.id}
-                      style={[
-                        styles.activityItem,
-                        { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                      ]}
-                      onPress={() => {
-                        if (activity.actor?.id) {
-                          navigateToPlayerProfile(activity.actor.id);
-                        }
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <View
-                        style={[
-                          styles.activityAvatar,
-                          { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
-                        ]}
-                      >
-                        {activity.actor?.profile?.profile_picture_url ? (
-                          <Image
-                            source={{ uri: activity.actor.profile.profile_picture_url }}
-                            style={styles.avatarImage}
-                          />
-                        ) : (
-                          <Ionicons name="person-outline" size={20} color={colors.textMuted} />
-                        )}
-                      </View>
-                      <View style={styles.activityContent}>
-                        <Text size="sm" style={{ color: colors.text }}>
-                          {getActivityMessage(activity)}
-                        </Text>
-                        <Text size="xs" style={{ color: colors.textMuted }}>
-                          {formatActivityTime(activity.created_at)}
-                        </Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              ))
-            )}
-          </View>
+          <NetworkMatchesTab
+            networkId={groupId}
+            networkType="group"
+            sportId={group?.sport_id}
+            inline
+          />
         );
 
       default:
@@ -1560,7 +1220,6 @@ export default function GroupDetailScreen() {
             refreshing={false}
             onRefresh={() => {
               refetch();
-              refetchMemberMatches();
             }}
             tintColor={colors.primary}
           />
@@ -1659,11 +1318,21 @@ export default function GroupDetailScreen() {
           </TouchableOpacity>
 
           {/* Action Buttons Row */}
-          <View style={styles.actionButtonsRow}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.actionButtonsScroll}
+            contentContainerStyle={styles.actionButtonsContent}
+          >
             {group.member_count < (group.max_members ?? 20) && (
-              <Button
-                variant="secondary"
-                size="md"
+              <TouchableOpacity
+                style={[
+                  styles.actionPill,
+                  {
+                    backgroundColor: isDark ? primary[900] : primary[50],
+                    borderColor: isDark ? primary[700] : primary[200],
+                  },
+                ]}
                 onPress={() =>
                   SheetManager.show('add-member', {
                     payload: {
@@ -1673,15 +1342,28 @@ export default function GroupDetailScreen() {
                     },
                   })
                 }
-                leftIcon={<Ionicons name="person-add-outline" size={18} color={colors.primary} />}
-                isDark={isDark}
-                style={{ flex: 1 }}
+                activeOpacity={0.7}
               >
-                {t('groups.detail.addMember')}
-              </Button>
+                <Ionicons
+                  name="person-add-outline"
+                  size={14}
+                  color={isDark ? primary[300] : primary[600]}
+                />
+                <Text
+                  style={[styles.actionPillText, { color: isDark ? primary[200] : primary[700] }]}
+                >
+                  {t('groups.detail.addPlayer')}
+                </Text>
+              </TouchableOpacity>
             )}
             <TouchableOpacity
-              style={[styles.menuButton, { borderColor: colors.primary }]}
+              style={[
+                styles.actionPill,
+                {
+                  backgroundColor: isDark ? primary[900] : primary[50],
+                  borderColor: isDark ? primary[700] : primary[200],
+                },
+              ]}
               onPress={() =>
                 SheetManager.show('invite-link', {
                   payload: {
@@ -1692,16 +1374,20 @@ export default function GroupDetailScreen() {
                   },
                 })
               }
+              activeOpacity={0.7}
             >
-              <Ionicons name="share-outline" size={20} color={colors.primary} />
+              <Ionicons
+                name="share-outline"
+                size={14}
+                color={isDark ? primary[300] : primary[600]}
+              />
+              <Text
+                style={[styles.actionPillText, { color: isDark ? primary[200] : primary[700] }]}
+              >
+                {t('groups.detail.sendInvite')}
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.menuButton, { borderColor: colors.border }]}
-              onPress={handleShowOptions}
-            >
-              <Ionicons name="ellipsis-horizontal-outline" size={20} color={colors.text} />
-            </TouchableOpacity>
-          </View>
+          </ScrollView>
         </View>
 
         {/* Tab Bar */}
@@ -1718,11 +1404,19 @@ export default function GroupDetailScreen() {
               ]}
               onPress={() => setActiveTab(tabKey)}
             >
-              <Ionicons
-                name={TAB_ICONS[tabKey]}
-                size={18}
-                color={activeTab === tabKey ? colors.primary : colors.textMuted}
-              />
+              {tabKey === 'games' ? (
+                <SportIcon
+                  sportName={selectedSport?.name ?? 'tennis'}
+                  size={18}
+                  color={activeTab === tabKey ? colors.primary : colors.textMuted}
+                />
+              ) : (
+                <Ionicons
+                  name={TAB_ICONS[tabKey]}
+                  size={18}
+                  color={activeTab === tabKey ? colors.primary : colors.textMuted}
+                />
+              )}
               <Text
                 size="sm"
                 weight={activeTab === tabKey ? 'semibold' : 'medium'}
@@ -1792,6 +1486,57 @@ export default function GroupDetailScreen() {
         matchType={selectedMatchType}
         networkId={groupId}
       />
+
+      {/* Options Dropdown Menu */}
+      <Modal
+        visible={showOptionsMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCloseOptionsMenu}
+      >
+        <Pressable style={styles.menuOverlay} onPress={handleCloseOptionsMenu}>
+          <Pressable
+            style={[
+              styles.menuContainer,
+              {
+                backgroundColor: isDark ? colors.card : '#FFFFFF',
+                top: insets.top + 50,
+              },
+            ]}
+            onPress={e => e.stopPropagation()}
+          >
+            {menuOptions.map((item, index) => (
+              <TouchableOpacity
+                key={item.id}
+                style={[
+                  styles.menuItem,
+                  index < menuOptions.length - 1 && {
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: colors.border,
+                  },
+                ]}
+                onPress={() => handleOptionItemPress(item.onPress)}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={item.icon}
+                  size={20}
+                  color={item.destructive ? status.error.DEFAULT : colors.text}
+                  style={styles.menuItemIcon}
+                />
+                <Text
+                  style={{
+                    fontSize: fontSizePixels.base,
+                    color: item.destructive ? status.error.DEFAULT : colors.text,
+                  }}
+                >
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1881,19 +1626,27 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
   },
-  actionButtonsRow: {
+  actionButtonsScroll: {
+    marginTop: spacingPixels[3],
+    marginHorizontal: -20,
+    overflow: 'hidden',
+  },
+  actionButtonsContent: {
+    paddingHorizontal: 20,
+    gap: spacingPixels[2],
+  },
+  actionPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
-    gap: 12,
-  },
-  menuButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 8,
+    gap: spacingPixels[1.5],
+    paddingVertical: spacingPixels[2],
+    paddingHorizontal: spacingPixels[3],
+    borderRadius: radiusPixels.full,
     borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  },
+  actionPillText: {
+    fontSize: fontSizePixels.sm,
+    fontWeight: '600',
   },
   tabContainer: {
     flexDirection: 'row',
@@ -2344,5 +2097,32 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
+  },
+  // Options dropdown menu
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  menuContainer: {
+    position: 'absolute',
+    right: spacingPixels[3],
+    minWidth: 200,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+    overflow: 'hidden',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+  },
+  menuItemIcon: {
+    marginRight: spacingPixels[3],
+    width: 24,
   },
 });
