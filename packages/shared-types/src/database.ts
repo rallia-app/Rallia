@@ -397,7 +397,7 @@ export interface PlayerWithProfile extends Player {
   /** Certification status for the match's sport rating (populated at runtime for match queries) */
   sportCertificationStatus?: BadgeStatusEnum;
   /** Reputation data joined from player_reputation table */
-  player_reputation?: { reputation_score: number } | null;
+  player_reputation?: { reputation_score: number; total_events: number } | null;
 }
 
 /** Player sport with sport details */
