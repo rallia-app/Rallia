@@ -987,6 +987,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
     certStatus: (p.player as unknown as Record<string, unknown>)?.sportCertificationStatus as
       | string
       | undefined,
+    totalEvents: p.player?.player_reputation?.total_events,
   }));
   const baseTier = getMatchTier(match.court_status, participants, match.format);
   const tier: MatchTier = isExpired ? 'expired' : baseTier;

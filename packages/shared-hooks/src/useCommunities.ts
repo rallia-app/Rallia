@@ -307,12 +307,31 @@ export function useRequestToJoinCommunity() {
       });
 
       // Optimistically update community status to pending in all matching list queries
-      queryClient.setQueriesData<CommunityWithStatus[]>({ queryKey: communityKeys.lists() }, old =>
-        old?.map(c =>
-          c.id === variables.communityId
-            ? { ...c, membership_status: 'pending' as const, is_member: false }
-            : c
-        )
+      // Handle both flat arrays (playerCommunities) and infinite query pages (publicCommunities)
+      const updateCommunity = (c: CommunityWithStatus) =>
+        c.id === variables.communityId
+          ? { ...c, membership_status: 'pending' as const, is_member: false }
+          : c;
+
+      // Update infinite query (publicCommunities)
+      queryClient.setQueriesData<{ pages: PublicCommunitiesPage[]; pageParams: number[] }>(
+        { queryKey: communityKeys.publicCommunities(variables.playerId) },
+        old =>
+          old
+            ? {
+                ...old,
+                pages: old.pages.map(page => ({
+                  ...page,
+                  communities: page.communities.map(updateCommunity),
+                })),
+              }
+            : old
+      );
+
+      // Update flat array queries (playerCommunities)
+      queryClient.setQueriesData<CommunityWithStatus[]>(
+        { queryKey: communityKeys.playerCommunities(variables.playerId) },
+        old => old?.map(updateCommunity)
       );
 
       return { previousPublicCommunities };

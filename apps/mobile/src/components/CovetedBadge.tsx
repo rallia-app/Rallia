@@ -11,6 +11,8 @@ interface CovetedBadgeProps {
   reputationScore?: number;
   /** Certification status */
   certificationStatus?: string | null;
+  /** Total reputation events for this player */
+  totalEvents?: number;
   /** Whether the app is in dark mode */
   isDark: boolean;
   /** Optional size variant */
@@ -22,6 +24,7 @@ interface CovetedBadgeProps {
 const CovetedBadge: React.FC<CovetedBadgeProps> = ({
   reputationScore,
   certificationStatus,
+  totalEvents,
   isDark,
   size = 'md',
   isLoading = false,
@@ -41,7 +44,7 @@ const CovetedBadge: React.FC<CovetedBadgeProps> = ({
     );
   }
 
-  if (!isCoveted(reputationScore, certificationStatus ?? undefined)) return null;
+  if (!isCoveted(reputationScore, certificationStatus ?? undefined, totalEvents)) return null;
 
   const baseColor = isDark ? accent[400] : accent[500];
   const bgColor = `${baseColor}25`;

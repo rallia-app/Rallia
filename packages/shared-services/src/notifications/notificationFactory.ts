@@ -66,6 +66,14 @@ export interface FeedbackNotificationPayload {
   format?: MatchFormatEnum;
 }
 
+export interface ReferenceRequestNotificationPayload {
+  requestId: string;
+  playerName: string;
+  sportName: string;
+  ratingLabel?: string;
+  playerRatingScoreId?: string;
+}
+
 /**
  * Union type for all notification payloads
  */
@@ -75,6 +83,7 @@ export type NotificationPayload =
   | MessageNotificationPayload
   | RatingNotificationPayload
   | FeedbackNotificationPayload
+  | ReferenceRequestNotificationPayload
   | Record<string, unknown>;
 
 /**
@@ -1245,6 +1254,61 @@ export async function notifyReminder(
 }
 
 /**
+ * Notify a referee that someone has requested them to verify a rating
+ */
+export async function notifyReferenceRequestReceived(
+  refereeUserId: string,
+  requestId: string,
+  requesterName: string,
+  sportName: string,
+  ratingLabel?: string,
+  playerRatingScoreId?: string
+): Promise<Notification> {
+  return createNotification({
+    type: 'reference_request_received',
+    userId: refereeUserId,
+    targetId: requestId,
+    payload: {
+      requestId,
+      playerName: requesterName,
+      sportName,
+      ratingLabel,
+      playerRatingScoreId,
+    },
+  });
+}
+
+/**
+ * Notify a requester that their reference request was responded to
+ */
+export async function notifyReferenceRequestResponded(
+  requesterUserId: string,
+  requestId: string,
+  refereeName: string,
+  sportName: string,
+  status: 'completed' | 'declined',
+  ratingLabel?: string,
+  ratingSupported?: boolean,
+  responseMessage?: string | null
+): Promise<Notification> {
+  const type = status === 'completed' ? 'reference_request_accepted' : 'reference_request_declined';
+
+  return createNotification({
+    type,
+    userId: requesterUserId,
+    targetId: requestId,
+    payload: {
+      requestId,
+      playerName: refereeName,
+      sportName,
+      ratingLabel,
+      ratingSupported,
+      responseMessage,
+    },
+  });
+}
+
+/**
  * Notification factory object for grouped exports
  */
 export const notificationFactory = {
@@ -1273,6 +1337,10 @@ export const notificationFactory = {
   // Social
   newMessage: notifyNewMessage,
   ratingVerified: notifyRatingVerified,
+
+  // Reference requests
+  referenceRequestReceived: notifyReferenceRequestReceived,
+  referenceRequestResponded: notifyReferenceRequestResponded,
 
   // Utilities
   formatTimeUntil,
