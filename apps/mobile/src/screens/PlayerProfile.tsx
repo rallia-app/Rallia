@@ -209,7 +209,11 @@ const PlayerProfile = () => {
   const { selectedSport } = useSport();
   const { homeLocation } = useUserHomeLocation();
   const getOrCreateDirectConversation = useGetOrCreateDirectConversation();
-  const { display: reputationDisplay, loading: reputationLoading } = usePlayerReputation(playerId);
+  const {
+    display: reputationDisplay,
+    reputation,
+    loading: reputationLoading,
+  } = usePlayerReputation(playerId);
   const toast = useToast();
 
   useEffect(() => {
@@ -1582,6 +1586,7 @@ const PlayerProfile = () => {
           <CovetedBadge
             reputationScore={reputationDisplay?.score}
             certificationStatus={primarySport?.badgeStatus}
+            totalEvents={reputation?.totalEvents}
             isDark={isDark}
             isLoading={loading || reputationLoading}
           />

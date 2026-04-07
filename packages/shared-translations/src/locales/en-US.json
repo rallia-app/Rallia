@@ -327,6 +327,18 @@
       "community_join_rejected": {
         "title": "Request Not Approved",
         "body": "Your request to join {communityName} was not approved"
+      },
+      "reference_request_received": {
+        "title": "Reference Requested",
+        "body": "{playerName} would like you to verify their {sportName} rating."
+      },
+      "reference_request_accepted": {
+        "title": "Reference Accepted!",
+        "body": "{playerName} verified your {sportName} rating ({ratingLabel})."
+      },
+      "reference_request_declined": {
+        "title": "Reference Declined",
+        "body": "{playerName} could not confirm your {sportName} rating."
       }
     }
   },

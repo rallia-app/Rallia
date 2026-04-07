@@ -7,7 +7,7 @@ import type { RouteProp } from '@react-navigation/native';
 import { useAppNavigation } from '../navigation/hooks';
 import type { RootStackParamList } from '../navigation/types';
 import { Text, Skeleton, useToast, Button } from '@rallia/shared-components';
-import { supabase, Logger } from '@rallia/shared-services';
+import { supabase, Logger, notifyReferenceRequestReceived } from '@rallia/shared-services';
 import { usePlayPreferences, useFavoriteFacilities, usePlayer } from '@rallia/shared-hooks';
 import { MATCH_DURATION_ENUM_LABELS } from '@rallia/shared-types';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
@@ -862,9 +862,10 @@ const SportProfile = () => {
         rating_score_id: ratingInfo?.ratingScoreId || undefined,
       }));
 
-      const { error: insertError } = await supabase
+      const { data: insertedRequests, error: insertError } = await supabase
         .from('rating_reference_request')
-        .insert(referenceRequests);
+        .insert(referenceRequests)
+        .select('id, referee_id');
 
       if (insertError) {
         // Check for unique constraint violation (already requested)
@@ -875,6 +876,34 @@ const SportProfile = () => {
         }
       } else {
         toast.success(t('alerts.referenceRequestsSent', { count: selectedPlayerIds.length }));
+
+        // Send notifications to referees (fire and forget)
+        if (insertedRequests?.length) {
+          const { data: profile } = await supabase
+            .from('profile')
+            .select('first_name, last_name, display_name')
+            .eq('id', userId)
+            .single();
+
+          const requesterName = profile
+            ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() ||
+              profile.display_name ||
+              'A player'
+            : 'A player';
+
+          for (const req of insertedRequests) {
+            notifyReferenceRequestReceived(
+              req.referee_id,
+              req.id,
+              requesterName,
+              sportName,
+              ratingInfo?.displayLabel,
+              playerRatingScoreId
+            ).catch(err => {
+              Logger.error('Failed to send reference request notification', err);
+            });
+          }
+        }
       }
 
       SheetManager.hide('reference-request');

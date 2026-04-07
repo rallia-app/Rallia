@@ -195,7 +195,9 @@ async function getSenderNames(senderIds: string[]): Promise<Map<string, string>>
  */
 export async function getTotalUnreadCount(playerId: string): Promise<number> {
   const conversations = await getPlayerConversations(playerId);
-  return conversations.reduce((total, conv) => total + conv.unread_count, 0);
+  return conversations
+    .filter(conv => !conv.is_archived)
+    .reduce((total, conv) => total + conv.unread_count, 0);
 }
 
 /**

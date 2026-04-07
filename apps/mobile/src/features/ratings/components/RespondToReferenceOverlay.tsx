@@ -14,7 +14,7 @@ import { View, StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert } from
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Text, useToast } from '@rallia/shared-components';
-import { supabase, Logger } from '@rallia/shared-services';
+import { supabase, Logger, notifyReferenceRequestResponded } from '@rallia/shared-services';
 import { selectionHaptic, successHaptic, errorHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import {
@@ -88,6 +88,37 @@ export function RespondToReferenceActionSheet({ payload }: SheetProps<'respond-t
         response: selectedResponse,
         hasMessage: !!responseMessage.trim(),
       });
+
+      // Send notification to the requester (fire and forget)
+      (async () => {
+        try {
+          const { data: currentUser } = await supabase.auth.getUser();
+          const { data: myProfile } = await supabase
+            .from('profile')
+            .select('first_name, last_name, display_name')
+            .eq('id', currentUser?.user?.id ?? '')
+            .single();
+
+          const refereeName = myProfile
+            ? `${myProfile.first_name || ''} ${myProfile.last_name || ''}`.trim() ||
+              myProfile.display_name ||
+              'A player'
+            : 'A player';
+
+          await notifyReferenceRequestResponded(
+            request.requester_id,
+            request.id,
+            refereeName,
+            request.rating_info.sport_display_name,
+            newStatus as 'completed' | 'declined',
+            request.rating_info.label,
+            isApproved,
+            responseMessage.trim() || null
+          );
+        } catch (err) {
+          Logger.error('Failed to send reference response notification', err as Error);
+        }
+      })();
 
       onClose();
       onResponseComplete?.();

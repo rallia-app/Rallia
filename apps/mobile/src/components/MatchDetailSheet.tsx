@@ -1670,6 +1670,7 @@ export const MatchDetailSheet: React.FC = () => {
   const participantsForTier = joinedForTier.map(p => ({
     repScore: p.player?.player_reputation?.reputation_score,
     certStatus: (p.player as PlayerWithProfile | undefined)?.sportCertificationStatus,
+    totalEvents: p.player?.player_reputation?.total_events,
   }));
   const tier = getMatchTier(match.court_status, participantsForTier, match.format);
 

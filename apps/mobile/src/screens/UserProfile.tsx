@@ -89,9 +89,11 @@ const UserProfile = () => {
     loading: playerLoading,
     refetch: refetchPlayer,
   } = usePlayer();
-  const { display: reputationDisplay, loading: reputationLoading } = usePlayerReputation(
-    player?.id
-  );
+  const {
+    display: reputationDisplay,
+    reputation,
+    loading: reputationLoading,
+  } = usePlayerReputation(player?.id);
   const { userSports, refetch: refetchSportContext } = useSport();
   const loadingCore = profileLoading || playerLoading;
 
@@ -818,6 +820,7 @@ const UserProfile = () => {
                 <CovetedBadge
                   reputationScore={reputationDisplay?.score}
                   certificationStatus={primaryRating?.badge_status}
+                  totalEvents={reputation?.totalEvents}
                   isDark={isDark}
                   isLoading={playerLoading || reputationLoading}
                 />
