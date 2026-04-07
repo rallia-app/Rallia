@@ -241,10 +241,27 @@ export default function FacilityCard({
         )}
 
         {/* Badges row */}
-        {(facility.is_first_come_first_serve ||
+        {(facility.organization_nature ||
+          facility.is_first_come_first_serve ||
           (facility.booking_url_template && facility.external_provider_id) ||
           facility.membership_required) && (
           <View style={styles.badgesRow}>
+            {facility.organization_nature === 'public' && (
+              <View style={[styles.badge, { backgroundColor: '#16a34a18' }]}>
+                <Ionicons name="business-outline" size={12} color="#16a34a" />
+                <Text size="xs" color="#16a34a" weight="medium">
+                  {t('facilitiesTab.badges.public')}
+                </Text>
+              </View>
+            )}
+            {facility.organization_nature === 'private' && (
+              <View style={[styles.badge, { backgroundColor: '#f59e0b18' }]}>
+                <Ionicons name="lock-closed-outline" size={12} color="#d97706" />
+                <Text size="xs" color="#d97706" weight="medium">
+                  {t('facilitiesTab.badges.private')}
+                </Text>
+              </View>
+            )}
             {facility.is_first_come_first_serve && (
               <View style={[styles.badge, { backgroundColor: colors.primary + '18' }]}>
                 <Ionicons name="walk-outline" size={12} color={colors.primary} />

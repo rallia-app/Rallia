@@ -3,12 +3,13 @@
  */
 import { supabase } from '../supabase';
 
-export type UserFeedbackCategory = 'bug' | 'feature' | 'improvement' | 'other';
+export type UserFeedbackCategory = 'bug' | 'feature' | 'improvement' | 'missing_court' | 'other';
 
 export const USER_FEEDBACK_CATEGORY_LABELS: Record<UserFeedbackCategory, string> = {
   bug: 'Bug Report',
   feature: 'Feature Request',
   improvement: 'Improvement',
+  missing_court: 'Missing Court',
   other: 'Other',
 };
 
@@ -54,10 +55,20 @@ export interface ImprovementFeedbackMetadata {
   how_to_improve: string;
 }
 
+export interface MissingCourtFeedbackMetadata {
+  place_name?: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  place_id?: string;
+  details?: string;
+}
+
 export type UserFeedbackMetadata =
   | BugFeedbackMetadata
   | FeatureFeedbackMetadata
-  | ImprovementFeedbackMetadata;
+  | ImprovementFeedbackMetadata
+  | MissingCourtFeedbackMetadata;
 
 export type UserFeedbackStatus = 'new' | 'reviewed' | 'in_progress' | 'resolved' | 'closed';
 

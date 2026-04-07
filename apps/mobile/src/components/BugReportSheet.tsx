@@ -23,7 +23,7 @@ import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-
 import { Ionicons } from '@expo/vector-icons';
 import * as Application from 'expo-application';
 import { Text, useToast } from '@rallia/shared-components';
-import { useTheme } from '@rallia/shared-hooks';
+import { useTheme, usePlacesAutocomplete, type PlaceDetails } from '@rallia/shared-hooks';
 import {
   submitUserFeedback,
   Logger,
@@ -33,6 +33,7 @@ import {
   type BugFeedbackMetadata,
   type FeatureFeedbackMetadata,
   type ImprovementFeedbackMetadata,
+  type MissingCourtFeedbackMetadata,
 } from '@rallia/shared-services';
 import { lightHaptic, successHaptic, warningHaptic, selectionHaptic } from '@rallia/shared-utils';
 import {
@@ -81,6 +82,11 @@ const CATEGORY_OPTIONS: CategoryOption[] = [
     value: 'feature',
     icon: 'bulb-outline',
     labelKey: 'feedback.categories.feature',
+  },
+  {
+    value: 'missing_court',
+    icon: 'tennisball-outline',
+    labelKey: 'feedback.categories.missingCourt',
   },
 ];
 
@@ -194,6 +200,24 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
   const [idealUserLength, setIdealUserLength] = useState(0);
   const [improveLength, setImproveLength] = useState(0);
 
+  // Missing court-specific state
+  const courtDetailsRef = useRef('');
+  const courtDetailsInputRef = useRef<TextInput | null>(null);
+  const [courtDetailsLength, setCourtDetailsLength] = useState(0);
+  const [placeSearchQuery, setPlaceSearchQuery] = useState('');
+  const [selectedPlace, setSelectedPlace] = useState<PlaceDetails | null>(null);
+  const hasSelectedPlace = selectedPlace !== null;
+
+  const {
+    predictions: placePredictions,
+    isLoading: placesLoading,
+    getPlaceDetails,
+    clearPredictions,
+  } = usePlacesAutocomplete({
+    searchQuery: placeSearchQuery,
+    enabled: selectedCategory === 'missing_court' && !hasSelectedPlace,
+  });
+
   // Theme colors
   const themeColors = isDark ? darkTheme : lightTheme;
   const colors = useMemo(
@@ -223,6 +247,8 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
         return featureTitleLength >= MIN_TEXT_LENGTH && featureDescLength >= MIN_TEXT_LENGTH;
       case 'improvement':
         return disappointment !== null && improveLength >= MIN_TEXT_LENGTH;
+      case 'missing_court':
+        return hasSelectedPlace || courtDetailsLength >= MIN_TEXT_LENGTH;
       default:
         return false;
     }
@@ -235,6 +261,8 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
     featureDescLength,
     disappointment,
     improveLength,
+    hasSelectedPlace,
+    courtDetailsLength,
   ]);
 
   // Reset all category-specific fields
@@ -268,7 +296,14 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
     setMainBenefitLength(0);
     setIdealUserLength(0);
     setImproveLength(0);
-  }, []);
+    // Missing court
+    courtDetailsRef.current = '';
+    courtDetailsInputRef.current?.clear();
+    setCourtDetailsLength(0);
+    setPlaceSearchQuery('');
+    setSelectedPlace(null);
+    clearPredictions();
+  }, [clearPredictions]);
 
   const handleClose = useCallback(() => {
     Keyboard.dismiss();
@@ -358,10 +393,23 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
           ...(idealUserRef.current.trim() && { ideal_user: idealUserRef.current.trim() }),
           how_to_improve: improveRef.current.trim(),
         } as ImprovementFeedbackMetadata;
+      case 'missing_court':
+        return {
+          ...(selectedPlace && {
+            place_name: selectedPlace.name,
+            address: selectedPlace.address,
+            latitude: selectedPlace.latitude,
+            longitude: selectedPlace.longitude,
+            place_id: selectedPlace.placeId,
+          }),
+          ...(courtDetailsRef.current.trim() && {
+            details: courtDetailsRef.current.trim(),
+          }),
+        } as MissingCourtFeedbackMetadata;
       default:
         return undefined;
     }
-  }, [selectedCategory, severity, disappointment]);
+  }, [selectedCategory, severity, disappointment, selectedPlace]);
 
   // Build subject/message from category-specific fields for backward compat
   const buildSubjectAndMessage = useCallback((): { subject: string; message: string } => {
@@ -393,10 +441,19 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
           message: parts.join('\n'),
         };
       }
+      case 'missing_court': {
+        const parts = [];
+        if (selectedPlace) parts.push(`Location: ${selectedPlace.name}, ${selectedPlace.address}`);
+        if (courtDetailsRef.current.trim()) parts.push(courtDetailsRef.current.trim());
+        return {
+          subject: `Missing Court: ${selectedPlace?.name || 'Unknown'}`,
+          message: parts.join('\n\n'),
+        };
+      }
       default:
         return { subject: '', message: '' };
     }
-  }, [selectedCategory, severity, disappointment]);
+  }, [selectedCategory, severity, disappointment, selectedPlace]);
 
   // Handle submit
   const handleSubmit = useCallback(async () => {
@@ -840,6 +897,126 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
     </>
   );
 
+  const handleSelectPlace = useCallback(
+    async (placeId: string) => {
+      const details = await getPlaceDetails(placeId);
+      if (details) {
+        setSelectedPlace(details);
+        setPlaceSearchQuery('');
+        clearPredictions();
+        void lightHaptic();
+      }
+    },
+    [getPlaceDetails, clearPredictions]
+  );
+
+  const handleClearPlace = useCallback(() => {
+    setSelectedPlace(null);
+    setPlaceSearchQuery('');
+    clearPredictions();
+    void lightHaptic();
+  }, [clearPredictions]);
+
+  const renderMissingCourtFields = () => (
+    <>
+      {/* Google Places search */}
+      <View style={styles.section}>
+        <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.sectionLabel}>
+          {t('feedback.missingCourt.searchLabel' as TranslationKey)}
+        </Text>
+
+        {hasSelectedPlace ? (
+          <View
+            style={[
+              styles.selectedPlaceCard,
+              {
+                backgroundColor: `${colors.buttonActive}15`,
+                borderColor: colors.buttonActive,
+              },
+            ]}
+          >
+            <View style={styles.selectedPlaceContent}>
+              <Ionicons name="location" size={20} color={colors.buttonActive} />
+              <View style={styles.selectedPlaceText}>
+                <Text size="sm" weight="semibold" color={colors.text}>
+                  {selectedPlace!.name}
+                </Text>
+                <Text size="xs" color={colors.textMuted} numberOfLines={2}>
+                  {selectedPlace!.address}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity onPress={handleClearPlace} activeOpacity={0.7}>
+              <Text size="sm" weight="semibold" color={colors.buttonActive}>
+                {t('feedback.missingCourt.clearPlace' as TranslationKey)}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            <TextInput
+              style={[
+                styles.textInput,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.border,
+                  color: colors.text,
+                },
+              ]}
+              placeholder={t('feedback.missingCourt.searchPlaceholder' as TranslationKey)}
+              placeholderTextColor={colors.textMuted}
+              value={placeSearchQuery}
+              onChangeText={setPlaceSearchQuery}
+            />
+
+            {placesLoading && (
+              <ActivityIndicator
+                size="small"
+                color={colors.buttonActive}
+                style={styles.placesLoading}
+              />
+            )}
+
+            {placePredictions.length > 0 && (
+              <View style={[styles.predictionsContainer, { borderColor: colors.border }]}>
+                {placePredictions.map(prediction => (
+                  <TouchableOpacity
+                    key={prediction.placeId}
+                    style={[styles.predictionItem, { borderBottomColor: colors.border }]}
+                    onPress={() => void handleSelectPlace(prediction.placeId)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="location-outline" size={18} color={colors.textMuted} />
+                    <View style={styles.predictionText}>
+                      <Text size="sm" weight="semibold" color={colors.text} numberOfLines={1}>
+                        {prediction.name}
+                      </Text>
+                      <Text size="xs" color={colors.textMuted} numberOfLines={1}>
+                        {prediction.address}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </>
+        )}
+      </View>
+
+      {renderTextInput({
+        label: t('feedback.missingCourt.detailsLabel' as TranslationKey),
+        placeholder: t('feedback.missingCourt.detailsPlaceholder' as TranslationKey),
+        inputRef: courtDetailsInputRef,
+        onChange: (text: string) => {
+          courtDetailsRef.current = text;
+          setCourtDetailsLength(text.trim().length);
+        },
+        currentLength: courtDetailsLength,
+        optional: hasSelectedPlace,
+      })}
+    </>
+  );
+
   const renderCategoryFields = () => {
     switch (selectedCategory) {
       case 'bug':
@@ -848,6 +1025,8 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
         return renderFeatureFields();
       case 'improvement':
         return renderImprovementFields();
+      case 'missing_court':
+        return renderMissingCourtFields();
       default:
         return null;
     }
@@ -1177,6 +1356,47 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.full,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  // Missing court — Google Places
+  selectedPlaceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+    gap: spacingPixels[3],
+  },
+  selectedPlaceContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: spacingPixels[3],
+  },
+  selectedPlaceText: {
+    flex: 1,
+    gap: 2,
+  },
+  placesLoading: {
+    marginTop: spacingPixels[3],
+  },
+  predictionsContainer: {
+    marginTop: spacingPixels[2],
+    borderWidth: 1,
+    borderRadius: radiusPixels.lg,
+    overflow: 'hidden',
+  },
+  predictionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacingPixels[3],
+    gap: spacingPixels[3],
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  predictionText: {
+    flex: 1,
+    gap: 2,
   },
 
   // Footer

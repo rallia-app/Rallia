@@ -5,3 +5,4 @@
 
 export * from './reportService';
 export * from './facilityReportService';
+export * from './proofReportService';

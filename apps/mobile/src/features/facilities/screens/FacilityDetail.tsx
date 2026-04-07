@@ -215,12 +215,16 @@ export default function FacilityDetail() {
     });
   }, [player?.id, facility, facilityId]);
 
-  // Contact info
-  const primaryContact = contacts.find(c => c.is_primary) || contacts[0];
-  const phone = primaryContact?.phone;
-  const email = primaryContact?.email;
-  const website = primaryContact?.website;
-  const hasContactInfo = !!(phone || email || website);
+  // Contact info — general contact has the city info page URL;
+  // reservation contact has the booking URL and phone number.
+  const generalContact =
+    contacts.find(c => c.is_primary) || contacts.find(c => c.contact_type === 'general');
+  const reservationContact = contacts.find(c => c.contact_type === 'reservation');
+  const phone = reservationContact?.phone;
+  const email = generalContact?.email || reservationContact?.email;
+  const website = generalContact?.website;
+  const reservationWebsite = reservationContact?.website;
+  const hasContactInfo = !!(phone || email || website || reservationWebsite);
 
   const handleCall = useCallback(() => {
     if (!phone) return;
@@ -239,6 +243,12 @@ export default function FacilityDetail() {
     lightHaptic();
     Linking.openURL(website);
   }, [website]);
+
+  const handleReservationWebsite = useCallback(() => {
+    if (!reservationWebsite) return;
+    lightHaptic();
+    Linking.openURL(reservationWebsite);
+  }, [reservationWebsite]);
   // Image carousel: values and hooks (must be before any early return to keep hook count stable)
   const headerImageWidth = windowWidth - 2 * spacingPixels[4];
   const headerImages = facility?.images?.filter(img => img.url || img.thumbnail_url) ?? [];
@@ -491,6 +501,15 @@ export default function FacilityDetail() {
                   activeOpacity={0.7}
                 >
                   <Ionicons name="globe-outline" size={20} color={primary[600]} />
+                </TouchableOpacity>
+              )}
+              {reservationWebsite && facility.organization_nature === 'private' && (
+                <TouchableOpacity
+                  onPress={handleReservationWebsite}
+                  style={[styles.contactButton, { backgroundColor: primary[500] + '15' }]}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="calendar-outline" size={20} color={primary[600]} />
                 </TouchableOpacity>
               )}
             </View>

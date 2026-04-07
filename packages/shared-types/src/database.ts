@@ -450,6 +450,8 @@ export interface FacilitySearchResult {
   city: string | null;
   address: string | null;
   distance_meters: number | null;
+  /** Organization nature: 'public' or 'private' */
+  organization_nature?: string | null;
   /** Provider ID (resolved from facility or organization) */
   data_provider_id: string | null;
   /** Provider type for registry lookup */

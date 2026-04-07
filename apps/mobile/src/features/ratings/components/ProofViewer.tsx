@@ -55,9 +55,19 @@ interface ProofViewerProps {
     } | null;
     created_at: string;
   } | null;
+  currentUserId?: string | null;
+  isOwnProfile?: boolean;
+  onReport?: (proofId: string, proofTitle: string) => void;
 }
 
-const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) => {
+const ProofViewer: React.FC<ProofViewerProps> = ({
+  visible,
+  onClose,
+  proof,
+  currentUserId,
+  isOwnProfile,
+  onReport,
+}) => {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const videoRef = useRef<Video>(null);
@@ -327,7 +337,19 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <View style={styles.headerSpacer} />
+          {isOwnProfile === false && currentUserId && proof && onReport ? (
+            <TouchableOpacity
+              onPress={() => {
+                onClose();
+                onReport(proof.id, proof.title);
+              }}
+              style={[styles.closeButton, { backgroundColor: colors.inputBackground }]}
+            >
+              <Ionicons name="flag-outline" size={24} color={colors.text} />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.headerSpacer} />
+          )}
           <View style={styles.headerCenter}>
             <View style={styles.headerTitleRow}>
               <Ionicons

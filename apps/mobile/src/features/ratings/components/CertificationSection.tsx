@@ -90,7 +90,7 @@ export const CertificationSection: React.FC<CertificationSectionProps> = ({
   referencesCount,
   approvedProofsCount,
   requiredReferences = 3,
-  requiredProofs = 2,
+  requiredProofs = 1,
   peerEvaluationAverage,
   peerEvaluationCount,
   ratingSystemName,
