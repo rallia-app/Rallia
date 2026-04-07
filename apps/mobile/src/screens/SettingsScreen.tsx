@@ -35,8 +35,8 @@ import {
 const BASE_WHITE = '#ffffff';
 import { lightHaptic, warningHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 
-// Get app environment from config (defaults to 'development' for local dev)
-const appEnv = Constants.expoConfig?.extra?.appEnv || 'development';
+// Get app environment (EXPO_PUBLIC_ vars are inlined at build time by Metro)
+const appEnv = process.env.EXPO_PUBLIC_APP_ENV || 'development';
 
 const SettingsScreen: React.FC = () => {
   const navigation = useAppNavigation();
