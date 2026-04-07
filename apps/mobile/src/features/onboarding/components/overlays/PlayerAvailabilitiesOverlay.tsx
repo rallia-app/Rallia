@@ -226,7 +226,7 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
           {/* Back Button - Only show in onboarding mode */}
           {mode === 'onboarding' && onBack && (
             <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.7}>
-              <Ionicons name="arrow-back" size={24} color={colors.text} />
+              <Ionicons name="chevron-back" size={24} color={colors.text} />
             </TouchableOpacity>
           )}
 
