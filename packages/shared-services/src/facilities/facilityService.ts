@@ -119,7 +119,8 @@ export async function getFacilityById(
       timezone,
       is_first_come_first_serve,
       organization:organization_id (
-        data_provider_id
+        data_provider_id,
+        nature
       ),
       facility_sports:facility_sport!inner (
         sport_id
@@ -151,6 +152,10 @@ export async function getFacilityById(
   const orgProviderId =
     orgData && typeof orgData === 'object' && 'data_provider_id' in orgData
       ? (orgData.data_provider_id as string | null)
+      : null;
+  const orgNature =
+    orgData && typeof orgData === 'object' && 'nature' in orgData
+      ? (orgData.nature as string | null)
       : null;
   const providerId = facility.data_provider_id || orgProviderId || null;
 
@@ -205,6 +210,7 @@ export async function getFacilityById(
     booking_url_template: bookingUrlTemplate,
     external_provider_id: facility.external_provider_id,
     timezone: facility.timezone,
+    organization_nature: orgNature,
     sport_ids: [sportId],
     is_first_come_first_serve: facility.is_first_come_first_serve ?? false,
   };

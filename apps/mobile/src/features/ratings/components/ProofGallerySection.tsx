@@ -19,6 +19,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text } from '@rallia/shared-components';
+import { SheetManager } from 'react-native-actions-sheet';
 import { supabase, Logger } from '@rallia/shared-services';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import { withTimeout } from '../../../utils/networkTimeout';
@@ -58,12 +59,16 @@ interface ProofGallerySectionProps {
   playerRatingScoreId: string;
   sportName?: string;
   onProofsCountChange?: (count: number) => void;
+  currentUserId?: string | null;
+  isOwnProfile?: boolean;
 }
 
 const ProofGallerySection: React.FC<ProofGallerySectionProps> = ({
   playerRatingScoreId,
   sportName: _sportName,
   onProofsCountChange,
+  currentUserId,
+  isOwnProfile,
 }) => {
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
@@ -328,6 +333,19 @@ const ProofGallerySection: React.FC<ProofGallerySectionProps> = ({
           setSelectedProof(null);
         }}
         proof={selectedProof}
+        currentUserId={currentUserId}
+        isOwnProfile={isOwnProfile}
+        onReport={(proofId, proofTitle) => {
+          setShowViewer(false);
+          setSelectedProof(null);
+          setTimeout(() => {
+            if (currentUserId) {
+              SheetManager.show('report-proof', {
+                payload: { reporterId: currentUserId, proofId, proofTitle },
+              });
+            }
+          }, 350);
+        }}
       />
     </View>
   );

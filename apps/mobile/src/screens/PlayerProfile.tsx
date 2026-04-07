@@ -1601,11 +1601,19 @@ const PlayerProfile = () => {
               }
               isDark={isDark}
               isLoading={loading}
+              onInfoPress={() =>
+                SheetManager.show('rating-explainer', {
+                  payload: {
+                    sportName: (primarySport?.name as 'tennis' | 'pickleball') ?? 'tennis',
+                  },
+                })
+              }
             />
             <ReputationBadge
               reputationDisplay={reputationDisplay}
               isDark={isDark}
               isLoading={reputationLoading}
+              onInfoPress={() => SheetManager.show('reputation-explainer')}
             />
           </View>
 
@@ -1807,6 +1815,20 @@ const PlayerProfile = () => {
                   setSelectedProof(null);
                 }}
                 proof={selectedProof}
+                currentUserId={currentUserId}
+                isOwnProfile={false}
+                onReport={(proofId, proofTitle) => {
+                  setShowProofViewer(false);
+                  setSelectedProof(null);
+                  // Delay to let the Modal unmount before opening the sheet
+                  setTimeout(() => {
+                    if (currentUserId) {
+                      SheetManager.show('report-proof', {
+                        payload: { reporterId: currentUserId, proofId, proofTitle },
+                      });
+                    }
+                  }, 350);
+                }}
               />
             </View>
           </View>
@@ -2421,7 +2443,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[2],
-    marginBottom: spacingPixels[1],
+    marginBottom: spacingPixels[2],
   },
   statsGrid: {
     flexDirection: 'row',

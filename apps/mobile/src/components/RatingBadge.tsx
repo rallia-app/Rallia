@@ -1,14 +1,14 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Skeleton } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
 
 export const CERTIFICATION_BADGE_COLORS: Record<
   'self_declared' | 'certified' | 'disputed',
   { bg: string; icon: string }
 > = {
-  self_declared: { bg: '#FFC107', icon: 'help-circle' },
+  self_declared: { bg: primary[500], icon: 'help-circle' },
   certified: { bg: '#4CAF50', icon: 'checkmark-circle' },
   disputed: { bg: '#F44336', icon: 'alert-circle' },
 };
@@ -26,6 +26,8 @@ interface RatingBadgeProps {
   size?: 'sm' | 'md';
   /** Whether the badge is loading */
   isLoading?: boolean;
+  /** Callback when info icon is pressed — shows info icon when provided */
+  onInfoPress?: () => void;
 }
 
 const RatingBadge: React.FC<RatingBadgeProps> = ({
@@ -35,6 +37,7 @@ const RatingBadge: React.FC<RatingBadgeProps> = ({
   isDark,
   size = 'md',
   isLoading = false,
+  onInfoPress,
 }) => {
   const height = size === 'sm' ? 20 : 24;
 
@@ -79,14 +82,36 @@ const RatingBadge: React.FC<RatingBadgeProps> = ({
 
   const iconSize = size === 'sm' ? 10 : 12;
 
-  return (
+  const badge = (
     <View style={[styles.badge, { backgroundColor: badgeBg }]}>
       <Ionicons name={badgeIcon} size={iconSize} color={badgeTextColor} />
       <Text size="xs" weight="semibold" color={badgeTextColor}>
         {ratingDisplay}
       </Text>
+      {onInfoPress && (
+        <Ionicons
+          name="information-circle-outline"
+          size={14}
+          color={isDark ? neutral[400] : neutral[500]}
+        />
+      )}
     </View>
   );
+
+  if (onInfoPress) {
+    return (
+      <TouchableOpacity
+        onPress={onInfoPress}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Rating info"
+      >
+        {badge}
+      </TouchableOpacity>
+    );
+  }
+
+  return badge;
 };
 
 const styles = StyleSheet.create({

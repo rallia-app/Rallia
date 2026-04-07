@@ -1018,6 +1018,24 @@
         "unknownProofType": "Unknown proof type"
       }
     },
+    "reportProof": {
+      "title": "Report Proof",
+      "description": "Flag this proof if you believe it's inaccurate or fraudulent.",
+      "selectReason": "What's wrong with this proof?",
+      "reasons": {
+        "fake_proof": "Fake or fabricated",
+        "misleading": "Misleading content",
+        "outdated": "Outdated information",
+        "stolen_content": "Stolen from someone else",
+        "other": "Other issue"
+      },
+      "additionalDetails": "Additional details (optional)",
+      "detailsPlaceholder": "Describe the issue with this proof...",
+      "submit": "Submit Report",
+      "successMessage": "Report submitted. We'll review it soon.",
+      "errorDuplicate": "You've already reported this proof recently.",
+      "errorGeneric": "Failed to submit report. Please try again."
+    },
     "portfolio": {
       "emptyTitle": "No proofs yet",
       "emptyDescription": "Your rating proofs will appear here as a gallery",
@@ -7336,6 +7354,8 @@
       "maxReached": "Maximum 3 favorites reached"
     },
     "badges": {
+      "public": "Public",
+      "private": "Private",
       "firstComeFirstServe": "No reservation needed",
       "bookable": "Bookable",
       "membershipRequired": "Membership required",
@@ -8031,6 +8051,7 @@
       "bug": "Bug Report",
       "feature": "Feature Suggestion",
       "improvement": "Value Proposition",
+      "missingCourt": "Suggest Missing Court",
       "other": "Other"
     },
     "moduleLabel": "Which area?",
@@ -8085,6 +8106,14 @@
       "idealUserPlaceholder": "The ideal user is someone who...",
       "improveLabel": "How can we improve Rallia for you?",
       "improvePlaceholder": "I wish Rallia would..."
+    },
+    "missingCourt": {
+      "searchLabel": "Search for the location",
+      "searchPlaceholder": "Search for an address...",
+      "selectedPlace": "Selected location",
+      "clearPlace": "Change",
+      "detailsLabel": "Additional Details",
+      "detailsPlaceholder": "Describe the location if not found above, or add details (number of courts, surface type, hours...)"
     }
   },
   "bugReport": {
@@ -8115,5 +8144,69 @@
     "success": "Feedback submitted! Thank you for helping improve Rallia.",
     "error": "Failed to submit feedback. Please try again.",
     "fullFeedback": "More Options"
+  },
+  "explainers": {
+    "rating": {
+      "title": "How Ratings Work",
+      "overview": {
+        "title": "Rating System",
+        "bodyTennis": "Your skill rating represents your playing level. Tennis uses the NTRP (National Tennis Rating Program) scale. Ratings range from Beginner to Professional across 10 levels.",
+        "bodyPickleball": "Your skill rating represents your playing level. Pickleball uses the DUPR (Dynamic Universal Pickleball Rating) scale. Ratings range from Beginner to Professional across 10 levels."
+      },
+      "certification": {
+        "title": "Certification Levels",
+        "selfDeclared": "Self-declared — not yet verified",
+        "certified": "Certified — verified by peers and proofs",
+        "disputed": "Disputed — peer evaluations suggest a different level"
+      },
+      "howToCertify": {
+        "title": "How to Get Certified",
+        "body": "To certify your rating, you need either 3 references from certified players at your level or higher, or 1 level proof. Meeting either requirement is enough to get certified."
+      },
+      "proofTypes": {
+        "title": "Proof Types",
+        "body": "You can upload external links (official rating platforms, tournament results), videos of your play, screenshots of official ratings, or documents like certificates and licenses."
+      },
+      "tips": {
+        "title": "Tips",
+        "body": "Play regularly and request references from players you compete with. Upload proof from official rating platforms or tournaments. The more evidence you provide, the faster you get certified."
+      }
+    },
+    "reputation": {
+      "title": "How Reputation Works",
+      "overview": {
+        "title": "Reputation Score",
+        "body": "Your reputation score reflects your reliability as a player. It starts at 100 and ranges from 0 to 100. Your score becomes visible to others after 5 reputation events."
+      },
+      "tiers": {
+        "title": "Reputation Tiers",
+        "unknown": "New Player",
+        "unknownRange": "< 5 events",
+        "bronze": "Bronze",
+        "silver": "Silver",
+        "gold": "Gold",
+        "platinum": "Platinum"
+      },
+      "impacts": {
+        "title": "What Affects Your Score",
+        "positiveLabel": "Positive",
+        "negativeLabel": "Negative",
+        "matchCompleted": "Match completed",
+        "onTime": "Arrived on time",
+        "fiveStarReview": "5-star review received",
+        "noShow": "No-show",
+        "lateCancellation": "Late cancellation (< 24h)",
+        "lateArrival": "Late arrival",
+        "oneStarReview": "1-star review received"
+      },
+      "decay": {
+        "title": "Score Decay",
+        "body": "Your score gradually decays over time if you're inactive. Stay active by playing matches regularly to maintain your reputation tier."
+      },
+      "tips": {
+        "title": "Tips",
+        "body": "Complete your matches, show up on time, and be a good sport. Leave fair reviews for other players — it also earns you a small reputation bonus."
+      }
+    }
   }
 }
