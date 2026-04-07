@@ -1161,7 +1161,7 @@
       "playerInformation": "Player Information",
       "preferences": "Preferences",
       "preferredCourts": "Preferred Courts",
-      "rating": "Rating",
+      "rating": "Level",
       "reputation": "Reputation",
       "statistics": "Statistics",
       "availabilities": "Availabilities"
@@ -1190,7 +1190,8 @@
         "intermediateAdvanced": "Intermediate player that can rally with decent consistency and control the direction of their shots.",
         "advanced": "Advanced player with strong shot variety and tactical awareness.",
         "professional": "Tournament-level player with exceptional skills."
-      }
+      },
+      "proofGalleryTitle": "Level Proofs"
     },
     "availability": {
       "am": "AM",

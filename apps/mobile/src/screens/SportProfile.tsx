@@ -1307,10 +1307,6 @@ const SportProfile = () => {
                         playStyleOptions,
                         playAttributesByCategory,
                         loadingPlayOptions,
-                        playerId: userId,
-                        sportId,
-                        latitude: location?.latitude ?? null,
-                        longitude: location?.longitude ?? null,
                       },
                     });
                   } else if (sportName.toLowerCase() === 'pickleball') {
@@ -1327,10 +1323,6 @@ const SportProfile = () => {
                         playStyleOptions,
                         playAttributesByCategory,
                         loadingPlayOptions,
-                        playerId: userId,
-                        sportId,
-                        latitude: location?.latitude ?? null,
-                        longitude: location?.longitude ?? null,
                       },
                     });
                   }

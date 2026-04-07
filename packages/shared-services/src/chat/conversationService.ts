@@ -294,34 +294,66 @@ export async function getOrCreateDirectConversation(
   playerId1: string,
   playerId2: string
 ): Promise<Conversation> {
-  // Check if direct conversation already exists between these two players
-  const { data: existingConvs } = await supabase
-    .from('conversation')
-    .select(
+  // Try the RPC first (most efficient — single query with match_id IS NULL filter)
+  const { data: existingConvId, error: rpcError } = await supabase.rpc('find_direct_conversation', {
+    p_player1: playerId1,
+    p_player2: playerId2,
+  });
+
+  if (!rpcError && existingConvId) {
+    const { data: existingConv } = await supabase
+      .from('conversation')
+      .select(
+        `
+        id,
+        conversation_type,
+        title,
+        picture_url,
+        match_id,
+        created_by,
+        created_at,
+        updated_at
       `
-      id,
-      conversation_type,
-      title,
-      picture_url,
-      match_id,
-      created_by,
-      created_at,
-      updated_at
-    `
-    )
-    .eq('conversation_type', 'direct');
+      )
+      .eq('id', existingConvId)
+      .single();
 
-  if (existingConvs) {
-    for (const conv of existingConvs) {
-      const { data: participants } = await supabase
-        .from('conversation_participant')
-        .select('player_id')
-        .eq('conversation_id', conv.id);
+    if (existingConv) {
+      return existingConv;
+    }
+  }
 
-      if (participants?.length === 2) {
-        const playerIds = participants.map(p => p.player_id);
-        if (playerIds.includes(playerId1) && playerIds.includes(playerId2)) {
-          return conv;
+  // Fallback: query directly if RPC is unavailable or returned nothing
+  if (rpcError || !existingConvId) {
+    const { data: existingConvs } = await supabase
+      .from('conversation')
+      .select(
+        `
+        id,
+        conversation_type,
+        title,
+        picture_url,
+        match_id,
+        created_by,
+        created_at,
+        updated_at
+      `
+      )
+      .eq('conversation_type', 'direct')
+      .is('match_id', null);
+
+    if (existingConvs) {
+      for (const conv of existingConvs) {
+        const { data: participants } = await supabase
+          .from('conversation_participant')
+          .select('player_id')
+          .eq('conversation_id', conv.id);
+
+        if (participants?.length === 2) {
+          const playerIds = participants.map(p => p.player_id);
+          if (playerIds.includes(playerId1) && playerIds.includes(playerId2)) {
+            return conv;
+          }
         }
       }
     }

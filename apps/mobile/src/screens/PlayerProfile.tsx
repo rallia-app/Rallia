@@ -1764,6 +1764,11 @@ const PlayerProfile = () => {
               </Text>
 
               {/* Proof Gallery */}
+              {(proofsLoading || approvedProofs.length > 0) && (
+                <Text style={[styles.proofGallerySectionTitle, { color: colors.text }]}>
+                  {t('playerProfile.rating.proofGalleryTitle' as TranslationKey)}
+                </Text>
+              )}
               {proofsLoading ? (
                 <View style={styles.proofGalleryLoading}>
                   <ActivityIndicator size="small" color={colors.primary} />
@@ -2345,6 +2350,12 @@ const styles = StyleSheet.create({
   referencesBadgeText: {
     fontSize: fontSizePixels.xs,
     fontWeight: fontWeightNumeric.semibold,
+  },
+  proofGallerySectionTitle: {
+    fontSize: fontSizePixels.sm,
+    fontWeight: fontWeightNumeric.semibold,
+    marginTop: spacingPixels[3],
+    marginBottom: spacingPixels[2],
   },
   proofGalleryLoading: {
     paddingVertical: spacingPixels[3],
