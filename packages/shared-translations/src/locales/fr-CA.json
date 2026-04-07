@@ -69,7 +69,7 @@
     "saving": "Enregistrement...",
     "warning": "Avertissement",
     "change": "Modifier",
-    "saveChanges": "Enregistrer les modifications",
+    "saveChanges": "Enregistrer",
     "remove": "Supprimer",
     "you": "Vous",
     "today": "Aujourd'hui",
@@ -389,7 +389,7 @@
       "sms": "SMS",
       "resetToDefaults": "Réinitialiser aux valeurs par défaut",
       "saving": "Enregistrement...",
-      "saveChanges": "Enregistrer les modifications",
+      "saveChanges": "Enregistrer",
       "savedSuccessfully": "Enregistré avec succès",
       "failedToLoad": "Échec du chargement des préférences de notifications",
       "failedToSave": "Échec de l'enregistrement des préférences de notifications",
@@ -468,7 +468,7 @@
       "fetchError": "Échec du chargement des paramètres.",
       "saveError": "Échec de l'enregistrement des paramètres.",
       "saving": "Enregistrement...",
-      "save": "Enregistrer les modifications",
+      "save": "Enregistrer",
       "saveSuccess": "Paramètres enregistrés avec succès!",
       "orgInfo": {
         "title": "Informations de l'organisation",
@@ -604,7 +604,7 @@
         "title": "Changer le rôle",
         "description": "Changer le rôle de {name}.",
         "cancel": "Annuler",
-        "confirm": "Enregistrer les modifications"
+        "confirm": "Enregistrer"
       },
       "invite": {
         "button": "Inviter un membre",
@@ -675,7 +675,7 @@
         "validFrom": "Valide à partir de",
         "validUntil": "Valide jusqu'à",
         "cancel": "Annuler",
-        "save": "Enregistrer les modifications",
+        "save": "Enregistrer",
         "create": "Créer la règle"
       },
       "delete": {
@@ -4168,7 +4168,7 @@
       "loadingSports": "Chargement des sports...",
       "cancel": "Annuler",
       "createButton": "Créer le contact",
-      "saveButton": "Enregistrer les modifications",
+      "saveButton": "Enregistrer",
       "creating": "Création...",
       "saving": "Enregistrement...",
       "deleting": "Suppression...",
@@ -4285,7 +4285,7 @@
       "sportsLabel": "Sports",
       "loadingSports": "Chargement des sports...",
       "sportsHint": "Sélectionnez les sports disponibles dans ce site de jeu.",
-      "saveButton": "Enregistrer les modifications",
+      "saveButton": "Enregistrer",
       "saving": "Enregistrement...",
       "cancelButton": "Annuler",
       "error": "Échec de la mise à jour du site de jeu",
@@ -4417,7 +4417,7 @@
     },
     "edit": {
       "title": "Modifier le terrain",
-      "saveButton": "Enregistrer les modifications",
+      "saveButton": "Enregistrer",
       "saving": "Enregistrement...",
       "success": "Terrain mis à jour avec succès",
       "error": "Échec de la mise à jour du terrain"
@@ -6993,7 +6993,7 @@
       },
       "actions": {
         "cancel": "Annuler",
-        "save": "Enregistrer les modifications"
+        "save": "Enregistrer"
       },
       "errors": {
         "failedToLoad": "Échec du chargement du programme",
@@ -7218,7 +7218,7 @@
         },
         "actions": {
           "cancel": "Annuler",
-          "save": "Enregistrer les modifications"
+          "save": "Enregistrer"
         },
         "errors": {
           "failedToLoad": "Échec du chargement de l'instructeur",

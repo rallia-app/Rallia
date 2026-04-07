@@ -313,13 +313,13 @@ export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community
               placeholderTextColor={colors.textMuted}
               value={description}
               onChangeText={setDescription}
-              maxLength={200}
+              maxLength={500}
               multiline
               numberOfLines={3}
               textAlignVertical="top"
             />
             <Text size="xs" style={{ color: colors.textMuted, marginTop: 4, textAlign: 'right' }}>
-              {description.length}/200
+              {description.length}/500
             </Text>
           </View>
 
