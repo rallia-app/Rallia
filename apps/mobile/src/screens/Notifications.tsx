@@ -72,10 +72,9 @@ const COMMUNITY_NOTIFICATION_TYPES: string[] = [
 ];
 
 /**
- * Reference request notification types that should navigate to incoming reference requests
+ * Reference request response types that should navigate to sport profile
  */
-const REFERENCE_NOTIFICATION_TYPES: string[] = [
-  'reference_request_received',
+const REFERENCE_RESPONSE_NOTIFICATION_TYPES: string[] = [
   'reference_request_accepted',
   'reference_request_declined',
 ];
@@ -316,7 +315,7 @@ const Notifications: React.FC = () => {
   const { t, locale } = useTranslation();
   const { openSheet } = useActionsSheet();
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
-  const { selectedSport, setSelectedSport } = useSport();
+  const { selectedSport, setSelectedSport, userSports } = useSport();
   const { isReady: isOnboarded } = useRequireOnboarding();
   const communityNavigation = useCommunityNavigation();
   const appNavigation = useAppNavigation();
@@ -413,8 +412,10 @@ const Notifications: React.FC = () => {
   // Filter notifications by selected sport:
   // Show notifications that match the selected sport, OR that have no sportName (system/social)
   const filteredNotifications = useMemo(() => {
-    if (!selectedSport) return notifications;
-    return notifications.filter(n => {
+    // Exclude new_message notifications — they are push-only
+    const visible = notifications.filter(n => n.type !== 'new_message');
+    if (!selectedSport) return visible;
+    return visible.filter(n => {
       const payload = n.payload as Record<string, unknown> | null;
       const notifSportName = payload?.sportName as string | undefined;
       // If no sportName in payload, it's a system/social notification — always show
@@ -476,10 +477,8 @@ const Notifications: React.FC = () => {
           return;
         }
 
-        // Handle reference request notifications - navigate to IncomingReferenceRequests screen
-        const isReferenceNotification = REFERENCE_NOTIFICATION_TYPES.includes(notification.type);
-
-        if (isReferenceNotification) {
+        // Handle reference_request_received - navigate to IncomingReferenceRequests screen
+        if (notification.type === 'reference_request_received') {
           Logger.logUserAction('notification_reference_request_tapped', {
             notificationId: notification.id,
             requestId: notification.target_id,
@@ -489,10 +488,32 @@ const Notifications: React.FC = () => {
           return;
         }
 
+        // Handle reference_request_accepted/declined - navigate to SportProfile
+        if (REFERENCE_RESPONSE_NOTIFICATION_TYPES.includes(notification.type)) {
+          const payload = notification.payload as Record<string, unknown> | null;
+          const sportName = payload?.sportName as string | undefined;
+          const sport = sportName ? userSports.find(s => s.name === sportName) : undefined;
+
+          Logger.logUserAction('notification_reference_response_tapped', {
+            notificationId: notification.id,
+            requestId: notification.target_id,
+            type: notification.type,
+            sportName,
+          });
+
+          if (sport) {
+            appNavigation.navigate('SportProfile', {
+              sportId: sport.id,
+              sportName: sport.name as 'tennis' | 'pickleball',
+            });
+          }
+          return;
+        }
+
         // TODO: Handle other notification types (messages, friend requests, etc.)
       }
     },
-    [markAsRead, communityNavigation, appNavigation]
+    [markAsRead, communityNavigation, appNavigation, userSports]
   );
 
   const handleLoadMore = useCallback(() => {
