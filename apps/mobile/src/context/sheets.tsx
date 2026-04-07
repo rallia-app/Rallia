@@ -524,10 +524,6 @@ declare module 'react-native-actions-sheet' {
           }>;
         };
         loadingPlayOptions?: boolean;
-        playerId?: string;
-        sportId?: string;
-        latitude?: number | null;
-        longitude?: number | null;
         currentStep?: number;
         totalSteps?: number;
         stepName?: string;
@@ -561,10 +557,6 @@ declare module 'react-native-actions-sheet' {
           }>;
         };
         loadingPlayOptions?: boolean;
-        playerId?: string;
-        sportId?: string;
-        latitude?: number | null;
-        longitude?: number | null;
         currentStep?: number;
         totalSteps?: number;
         stepName?: string;

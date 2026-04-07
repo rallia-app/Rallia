@@ -1161,7 +1161,7 @@
       "playerInformation": "Informations du joueur",
       "preferences": "Préférences",
       "preferredCourts": "Sites de jeu préférés",
-      "rating": "Classement",
+      "rating": "Niveau",
       "reputation": "Réputation",
       "statistics": "Statistiques",
       "availabilities": "Disponibilités"
@@ -1190,7 +1190,8 @@
         "intermediateAdvanced": "Joueur intermédiaire capable d'échanger avec régularité et de contrôler la direction de ses coups.",
         "advanced": "Joueur avancé avec une bonne variété de coups et une conscience tactique.",
         "professional": "Joueur de niveau tournoi avec des compétences exceptionnelles."
-      }
+      },
+      "proofGalleryTitle": "Preuves de niveau"
     },
     "availability": {
       "am": "MAT",

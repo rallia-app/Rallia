@@ -239,9 +239,17 @@ export function useCreateConversation() {
  * Get or create a direct conversation between two players
  */
 export function useGetOrCreateDirectConversation() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: ({ playerId1, playerId2 }: { playerId1: string; playerId2: string }) =>
       getOrCreateDirectConversation(playerId1, playerId2),
+    onSuccess: (_, variables) => {
+      // Invalidate conversations list so the new direct chat appears immediately
+      queryClient.invalidateQueries({
+        queryKey: chatKeys.conversations(),
+      });
+    },
   });
 }
 

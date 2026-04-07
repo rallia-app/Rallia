@@ -7,7 +7,7 @@ import { PreferencesInfo } from '@rallia/shared-types';
 import { selectionHaptic, mediumHaptic } from '../../../utils/haptics';
 import { useThemeStyles } from '../../../hooks';
 import { useTranslation, type TranslationKey } from '../../../hooks';
-import { FavoriteFacilitiesSelector } from './FavoriteFacilitiesSelector';
+
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
 import ProgressIndicator from '../../onboarding/components/ProgressIndicator';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -46,14 +46,6 @@ interface TennisPreferencesOverlayProps {
   playAttributesByCategory?: PlayAttributesByCategory;
   /** Loading state for play options */
   loadingPlayOptions?: boolean;
-  /** Player ID for favorite facilities */
-  playerId?: string;
-  /** Sport ID for filtering facilities */
-  sportId?: string;
-  /** User's latitude for distance calculation */
-  latitude?: number | null;
-  /** User's longitude for distance calculation */
-  longitude?: number | null;
 }
 
 /**
@@ -103,10 +95,6 @@ export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-pre
   const playStyleOptions = payload?.playStyleOptions || [];
   const playAttributesByCategory = payload?.playAttributesByCategory || {};
   const loadingPlayOptions = payload?.loadingPlayOptions || false;
-  const playerId = payload?.playerId;
-  const sportId = payload?.sportId;
-  const latitude = payload?.latitude;
-  const longitude = payload?.longitude;
   const currentStep = payload?.currentStep;
   const totalSteps = payload?.totalSteps;
   const stepName = payload?.stepName;
@@ -151,7 +139,6 @@ export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-pre
     initialPreferences.playAttributes || []
   );
   const [showPlayStyleDropdown, setShowPlayStyleDropdown] = useState(false);
-  const [favoritesCount, setFavoritesCount] = useState(0);
 
   const handleTogglePlayAttribute = (attributeName: string) => {
     selectionHaptic();
@@ -180,14 +167,8 @@ export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-pre
     SheetManager.hide('tennis-preferences');
   };
 
-  // When requireAllFields is true, all fields are mandatory (including min 3 favorites)
-  const MIN_FAVORITES_REQUIRED = 3;
   const canSave = requireAllFields
-    ? matchDuration &&
-      matchType &&
-      playStyle &&
-      playAttributes.length > 0 &&
-      favoritesCount >= MIN_FAVORITES_REQUIRED
+    ? matchDuration && matchType && playStyle && playAttributes.length > 0
     : matchDuration && matchType;
 
   return (
@@ -311,37 +292,6 @@ export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-pre
                 </TouchableOpacity>
               ))}
             </View>
-          </View>
-
-          {/* Favorite Facilities */}
-          <View style={styles.section}>
-            <Text style={[styles.label, { color: colors.text }]}>
-              {t('profile.preferences.favoriteFacilities')}
-            </Text>
-            <Text style={[styles.sublabel, { color: colors.textMuted }]}>
-              {t('profile.preferences.selectUpTo3')}
-            </Text>
-            {playerId && sportId ? (
-              <FavoriteFacilitiesSelector
-                playerId={playerId}
-                sportId={sportId}
-                latitude={latitude ?? null}
-                longitude={longitude ?? null}
-                colors={{
-                  text: colors.text,
-                  textMuted: colors.textMuted,
-                  inputBackground: colors.inputBackground,
-                  border: colors.border,
-                  primary: colors.primary,
-                  primaryForeground: colors.primaryForeground,
-                  card: colors.card,
-                }}
-                t={(key: string) => t(key as Parameters<typeof t>[0])}
-                onFavoritesCountChange={setFavoritesCount}
-              />
-            ) : (
-              <Text style={{ color: colors.textMuted, fontStyle: 'italic' }}>Loading...</Text>
-            )}
           </View>
 
           {/* Play Style */}
@@ -513,10 +463,6 @@ export const TennisPreferencesOverlay: React.FC<TennisPreferencesOverlayProps> =
   playStyleOptions,
   playAttributesByCategory,
   loadingPlayOptions,
-  playerId,
-  sportId,
-  latitude,
-  longitude,
 }) => {
   useEffect(() => {
     if (visible) {
@@ -527,10 +473,6 @@ export const TennisPreferencesOverlay: React.FC<TennisPreferencesOverlayProps> =
           playStyleOptions,
           playAttributesByCategory,
           loadingPlayOptions,
-          playerId,
-          sportId,
-          latitude,
-          longitude,
         },
       });
     }
@@ -541,10 +483,6 @@ export const TennisPreferencesOverlay: React.FC<TennisPreferencesOverlayProps> =
     playStyleOptions,
     playAttributesByCategory,
     loadingPlayOptions,
-    playerId,
-    sportId,
-    latitude,
-    longitude,
   ]);
 
   useEffect(() => {
