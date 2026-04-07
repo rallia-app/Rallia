@@ -71,8 +71,14 @@ import { ImageProofActionSheet } from '../features/ratings/components/ImageProof
 import { VideoProofActionSheet } from '../features/ratings/components/VideoProofOverlay';
 import { DocumentProofActionSheet } from '../features/ratings/components/DocumentProofOverlay';
 import { EditProofActionSheet } from '../features/ratings/components/EditProofOverlay';
+import { ReportProofActionSheet } from '../features/ratings/components/ReportProofSheet';
 // Referral
 import { ReferralInviteActionSheet } from '../components/ReferralInviteSheet';
+// Explainer sheets
+import {
+  RatingExplainerActionSheet,
+  ReputationExplainerActionSheet,
+} from '../components/explainers';
 // Define WeeklyAvailability inline to avoid circular dependencies
 type DayOfWeek = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
 interface DayAvailability {
@@ -524,10 +530,6 @@ declare module 'react-native-actions-sheet' {
           }>;
         };
         loadingPlayOptions?: boolean;
-        playerId?: string;
-        sportId?: string;
-        latitude?: number | null;
-        longitude?: number | null;
         currentStep?: number;
         totalSteps?: number;
         stepName?: string;
@@ -561,10 +563,6 @@ declare module 'react-native-actions-sheet' {
           }>;
         };
         loadingPlayOptions?: boolean;
-        playerId?: string;
-        sportId?: string;
-        latitude?: number | null;
-        longitude?: number | null;
         currentStep?: number;
         totalSteps?: number;
         stepName?: string;
@@ -640,6 +638,21 @@ declare module 'react-native-actions-sheet' {
     'referral-invite': SheetDefinition<{
       payload?: Record<string, never>;
     }>;
+    'rating-explainer': SheetDefinition<{
+      payload: {
+        sportName: 'tennis' | 'pickleball';
+      };
+    }>;
+    'reputation-explainer': SheetDefinition<{
+      payload?: Record<string, never>;
+    }>;
+    'report-proof': SheetDefinition<{
+      payload: {
+        reporterId: string;
+        proofId: string;
+        proofTitle: string;
+      };
+    }>;
   }
 }
 
@@ -710,6 +723,11 @@ export const Sheets = () => {
         'booking-detail': BookingDetailActionSheet,
         // Referral sheets
         'referral-invite': ReferralInviteActionSheet,
+        // Report proof sheet
+        'report-proof': ReportProofActionSheet,
+        // Explainer sheets
+        'rating-explainer': RatingExplainerActionSheet,
+        'reputation-explainer': ReputationExplainerActionSheet,
       }}
     />
   );

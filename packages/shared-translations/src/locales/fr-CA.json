@@ -1018,6 +1018,24 @@
         "unknownProofType": "Type de preuve inconnu"
       }
     },
+    "reportProof": {
+      "title": "Signaler la preuve",
+      "description": "Signalez cette preuve si vous pensez qu'elle est inexacte ou frauduleuse.",
+      "selectReason": "Quel est le problème avec cette preuve ?",
+      "reasons": {
+        "fake_proof": "Fausse ou fabriquée",
+        "misleading": "Contenu trompeur",
+        "outdated": "Information obsolète",
+        "stolen_content": "Volée à quelqu'un d'autre",
+        "other": "Autre problème"
+      },
+      "additionalDetails": "Détails supplémentaires (optionnel)",
+      "detailsPlaceholder": "Décrivez le problème avec cette preuve...",
+      "submit": "Envoyer le signalement",
+      "successMessage": "Signalement envoyé. Nous l'examinerons bientôt.",
+      "errorDuplicate": "Vous avez déjà signalé cette preuve récemment.",
+      "errorGeneric": "Échec de l'envoi du signalement. Veuillez réessayer."
+    },
     "portfolio": {
       "emptyTitle": "Aucune preuve",
       "emptyDescription": "Vos preuves de classement apparaîtront ici en galerie",
@@ -1161,7 +1179,7 @@
       "playerInformation": "Informations du joueur",
       "preferences": "Préférences",
       "preferredCourts": "Sites de jeu préférés",
-      "rating": "Classement",
+      "rating": "Niveau",
       "reputation": "Réputation",
       "statistics": "Statistiques",
       "availabilities": "Disponibilités"
@@ -1190,7 +1208,8 @@
         "intermediateAdvanced": "Joueur intermédiaire capable d'échanger avec régularité et de contrôler la direction de ses coups.",
         "advanced": "Joueur avancé avec une bonne variété de coups et une conscience tactique.",
         "professional": "Joueur de niveau tournoi avec des compétences exceptionnelles."
-      }
+      },
+      "proofGalleryTitle": "Preuves de niveau"
     },
     "availability": {
       "am": "MAT",
@@ -7337,6 +7356,8 @@
       "maxReached": "Maximum de 3 favoris atteint"
     },
     "badges": {
+      "public": "Public",
+      "private": "Privé",
       "firstComeFirstServe": "Sans réservation",
       "bookable": "Réservable",
       "membershipRequired": "Abonnement requis",
@@ -8032,6 +8053,7 @@
       "bug": "Signaler un bogue",
       "feature": "Suggestion de fonctionnalité",
       "improvement": "Proposition de valeur",
+      "missingCourt": "Suggérer un terrain manquant",
       "other": "Autre"
     },
     "moduleLabel": "Quelle section ?",
@@ -8086,6 +8108,14 @@
       "idealUserPlaceholder": "L'utilisateur idéal est quelqu'un qui...",
       "improveLabel": "Comment pouvons-nous améliorer Rallia pour vous ?",
       "improvePlaceholder": "J'aimerais que Rallia..."
+    },
+    "missingCourt": {
+      "searchLabel": "Rechercher l'emplacement",
+      "searchPlaceholder": "Rechercher une adresse...",
+      "selectedPlace": "Emplacement sélectionné",
+      "clearPlace": "Modifier",
+      "detailsLabel": "Détails supplémentaires",
+      "detailsPlaceholder": "Décrivez l'emplacement s'il n'apparaît pas ci-dessus, ou ajoutez des détails (nombre de terrains, type de surface, horaires...)"
     }
   },
   "bugReport": {
@@ -8116,5 +8146,69 @@
     "success": "Commentaires envoyés ! Merci d'aider à améliorer Rallia.",
     "error": "Échec de l'envoi des commentaires. Veuillez réessayer.",
     "fullFeedback": "Plus d'options"
+  },
+  "explainers": {
+    "rating": {
+      "title": "Comment fonctionnent les cotes",
+      "overview": {
+        "title": "Système de cote",
+        "bodyTennis": "Votre cote de compétence représente votre niveau de jeu. Le tennis utilise l'échelle NTRP (National Tennis Rating Program). Les cotes vont de Débutant à Professionnel sur 10 niveaux.",
+        "bodyPickleball": "Votre cote de compétence représente votre niveau de jeu. Le pickleball utilise l'échelle DUPR (Dynamic Universal Pickleball Rating). Les cotes vont de Débutant à Professionnel sur 10 niveaux."
+      },
+      "certification": {
+        "title": "Niveaux de certification",
+        "selfDeclared": "Auto-déclaré — pas encore vérifié",
+        "certified": "Certifié — vérifié par des pairs et des preuves",
+        "disputed": "Contesté — les évaluations des pairs suggèrent un niveau différent"
+      },
+      "howToCertify": {
+        "title": "Comment se faire certifier",
+        "body": "Pour certifier votre cote, vous avez besoin soit de 3 références de joueurs certifiés à votre niveau ou supérieur, soit d'une preuve de niveau. Remplir l'une ou l'autre de ces conditions suffit pour être certifié."
+      },
+      "proofTypes": {
+        "title": "Types de preuves",
+        "body": "Vous pouvez téléverser des liens externes (plateformes de cote officielles, résultats de tournois), des vidéos de votre jeu, des captures d'écran de cotes officielles, ou des documents comme des certificats et licences."
+      },
+      "tips": {
+        "title": "Conseils",
+        "body": "Jouez régulièrement et demandez des références aux joueurs contre qui vous jouez. Téléversez des preuves provenant de plateformes de cote officielles ou de tournois. Plus vous fournissez de preuves, plus vite vous serez certifié."
+      }
+    },
+    "reputation": {
+      "title": "Comment fonctionne la réputation",
+      "overview": {
+        "title": "Score de réputation",
+        "body": "Votre score de réputation reflète votre fiabilité en tant que joueur. Il commence à 100 et varie de 0 à 100. Votre score devient visible par les autres après 5 événements de réputation."
+      },
+      "tiers": {
+        "title": "Niveaux de réputation",
+        "unknown": "Nouveau joueur",
+        "unknownRange": "< 5 événements",
+        "bronze": "Bronze",
+        "silver": "Argent",
+        "gold": "Or",
+        "platinum": "Platine"
+      },
+      "impacts": {
+        "title": "Ce qui affecte votre score",
+        "positiveLabel": "Positif",
+        "negativeLabel": "Négatif",
+        "matchCompleted": "Match complété",
+        "onTime": "Arrivé à l'heure",
+        "fiveStarReview": "Évaluation 5 étoiles reçue",
+        "noShow": "Absence",
+        "lateCancellation": "Annulation tardive (< 24h)",
+        "lateArrival": "Arrivée en retard",
+        "oneStarReview": "Évaluation 1 étoile reçue"
+      },
+      "decay": {
+        "title": "Déclin du score",
+        "body": "Votre score diminue graduellement avec le temps si vous êtes inactif. Restez actif en jouant des matchs régulièrement pour maintenir votre niveau de réputation."
+      },
+      "tips": {
+        "title": "Conseils",
+        "body": "Complétez vos matchs, arrivez à l'heure et soyez fair-play. Laissez des évaluations justes aux autres joueurs — cela vous rapporte aussi un petit bonus de réputation."
+      }
+    }
   }
 }

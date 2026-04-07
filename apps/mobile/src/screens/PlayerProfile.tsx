@@ -1601,11 +1601,19 @@ const PlayerProfile = () => {
               }
               isDark={isDark}
               isLoading={loading}
+              onInfoPress={() =>
+                SheetManager.show('rating-explainer', {
+                  payload: {
+                    sportName: (primarySport?.name as 'tennis' | 'pickleball') ?? 'tennis',
+                  },
+                })
+              }
             />
             <ReputationBadge
               reputationDisplay={reputationDisplay}
               isDark={isDark}
               isLoading={reputationLoading}
+              onInfoPress={() => SheetManager.show('reputation-explainer')}
             />
           </View>
 
@@ -1764,6 +1772,11 @@ const PlayerProfile = () => {
               </Text>
 
               {/* Proof Gallery */}
+              {(proofsLoading || approvedProofs.length > 0) && (
+                <Text style={[styles.proofGallerySectionTitle, { color: colors.text }]}>
+                  {t('playerProfile.rating.proofGalleryTitle' as TranslationKey)}
+                </Text>
+              )}
               {proofsLoading ? (
                 <View style={styles.proofGalleryLoading}>
                   <ActivityIndicator size="small" color={colors.primary} />
@@ -1802,6 +1815,20 @@ const PlayerProfile = () => {
                   setSelectedProof(null);
                 }}
                 proof={selectedProof}
+                currentUserId={currentUserId}
+                isOwnProfile={false}
+                onReport={(proofId, proofTitle) => {
+                  setShowProofViewer(false);
+                  setSelectedProof(null);
+                  // Delay to let the Modal unmount before opening the sheet
+                  setTimeout(() => {
+                    if (currentUserId) {
+                      SheetManager.show('report-proof', {
+                        payload: { reporterId: currentUserId, proofId, proofTitle },
+                      });
+                    }
+                  }, 350);
+                }}
               />
             </View>
           </View>
@@ -2346,6 +2373,12 @@ const styles = StyleSheet.create({
     fontSize: fontSizePixels.xs,
     fontWeight: fontWeightNumeric.semibold,
   },
+  proofGallerySectionTitle: {
+    fontSize: fontSizePixels.sm,
+    fontWeight: fontWeightNumeric.semibold,
+    marginTop: spacingPixels[3],
+    marginBottom: spacingPixels[2],
+  },
   proofGalleryLoading: {
     paddingVertical: spacingPixels[3],
     alignItems: 'center',
@@ -2410,7 +2443,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[2],
-    marginBottom: spacingPixels[1],
+    marginBottom: spacingPixels[2],
   },
   statsGrid: {
     flexDirection: 'row',

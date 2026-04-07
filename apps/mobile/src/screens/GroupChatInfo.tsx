@@ -340,7 +340,7 @@ export default function GroupChatInfoScreen() {
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Group Info</Text>
         <View style={styles.headerRight} />
@@ -448,9 +448,6 @@ export default function GroupChatInfoScreen() {
           <Text style={[styles.membersHeaderText, { color: colors.textMuted }]}>
             {t('common.memberCount', { count: memberCount })}
           </Text>
-          <TouchableOpacity>
-            <Ionicons name="search-outline" size={20} color={colors.textMuted} />
-          </TouchableOpacity>
         </View>
 
         {/* Members List */}
