@@ -1328,7 +1328,7 @@ export default function CommunityDetailScreen() {
               style={[styles.backButtonCircle, { backgroundColor: colors.cardBackground }]}
               onPress={() => navigation.goBack()}
             >
-              <Ionicons name="arrow-back" size={24} color={colors.text} />
+              <Ionicons name="chevron-back" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
 

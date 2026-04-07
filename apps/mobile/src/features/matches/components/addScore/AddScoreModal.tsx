@@ -212,7 +212,7 @@ function AddScoreContent({
           onPress={handleBack}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name={canGoBack ? 'arrow-back' : 'close'} size={24} color={colors.text} />
+          <Ionicons name={canGoBack ? 'chevron-back' : 'close'} size={24} color={colors.text} />
         </TouchableOpacity>
 
         <Text weight="semibold" size="base" style={{ color: colors.text }}>

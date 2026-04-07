@@ -260,7 +260,7 @@ export default function PlayedMatchDetailScreen() {
         {/* Back button */}
         <SafeAreaView edges={['top', 'bottom']} style={styles.headerContent}>
           <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
 
           {/* Status badge */}

@@ -794,10 +794,6 @@ const UserProfile = () => {
                     </TouchableOpacity>
                   )}
                 </View>
-                <Text style={[styles.profilePicHint, { color: colors.textMuted }]}>
-                  {t('profile.tapCameraToChangePhoto')}
-                </Text>
-
                 {/* First and last name first, then username */}
                 <Text style={[styles.profileName, { color: colors.text }]}>
                   {`${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() ||
@@ -1575,10 +1571,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'transparent',
-  },
-  profilePicHint: {
-    fontSize: fontSizePixels.xs,
-    marginBottom: spacingPixels[3],
   },
   profileImage: {
     width: spacingPixels[20],
