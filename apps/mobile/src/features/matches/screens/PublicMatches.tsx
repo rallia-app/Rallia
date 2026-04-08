@@ -7,7 +7,7 @@ import React, { useCallback, useMemo, useEffect, useState, useRef } from 'react'
 import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { MatchCard, Text, Skeleton } from '@rallia/shared-components';
+import { MatchCard, Text, SkeletonMatchCard } from '@rallia/shared-components';
 import { SportIcon } from '../../../components/SportIcon';
 import {
   useTheme,
@@ -25,7 +25,7 @@ import { useAuth, useThemeStyles, useTranslation, useEffectiveLocation } from '.
 import type { TranslationKey } from '@rallia/shared-translations';
 import { useMatchDetailSheet, useSport, useUserHomeLocation } from '../../../context';
 import { Logger, supabase } from '@rallia/shared-services';
-import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
+import { spacingPixels, neutral } from '@rallia/design-system';
 import { SearchBar, MatchFiltersBar } from '../components';
 
 // =============================================================================
@@ -418,101 +418,17 @@ export default function PublicMatches() {
       {/* Match List */}
       {isLoading ? (
         <View style={styles.listLoadingContainer}>
-          {[1, 2, 3, 4].map(i => {
-            const skBg = isDark ? '#2C2C2E' : '#E1E9EE';
-            const skHl = isDark ? '#3C3C3E' : '#F2F8FC';
-            return (
-              <View
-                key={i}
-                style={[
-                  styles.skeletonMatchCard,
-                  { backgroundColor: isDark ? '#1C1C1E' : '#FAFAFA', borderColor: colors.border },
-                ]}
-              >
-                {/* Time row */}
-                <View style={styles.skeletonRow}>
-                  <Skeleton
-                    width={16}
-                    height={16}
-                    circle
-                    backgroundColor={skBg}
-                    highlightColor={skHl}
-                  />
-                  <Skeleton
-                    width={120}
-                    height={16}
-                    backgroundColor={skBg}
-                    highlightColor={skHl}
-                    style={{ marginLeft: 8 }}
-                  />
-                </View>
-                {/* Location row */}
-                <View style={styles.skeletonRow}>
-                  <Skeleton
-                    width={14}
-                    height={14}
-                    circle
-                    backgroundColor={skBg}
-                    highlightColor={skHl}
-                  />
-                  <Skeleton
-                    width="55%"
-                    height={14}
-                    backgroundColor={skBg}
-                    highlightColor={skHl}
-                    style={{ marginLeft: 8 }}
-                  />
-                </View>
-                {/* Player avatars */}
-                <View style={styles.skeletonRow}>
-                  {[1, 2, 3].map(j => (
-                    <Skeleton
-                      key={j}
-                      width={32}
-                      height={32}
-                      circle
-                      backgroundColor={skBg}
-                      highlightColor={skHl}
-                      style={j > 1 ? { marginLeft: -6 } : undefined}
-                    />
-                  ))}
-                  <Skeleton
-                    width={40}
-                    height={12}
-                    backgroundColor={skBg}
-                    highlightColor={skHl}
-                    style={{ marginLeft: 8 }}
-                  />
-                </View>
-                {/* Badges row */}
-                <View style={styles.skeletonRow}>
-                  <Skeleton
-                    width={70}
-                    height={20}
-                    borderRadius={10}
-                    backgroundColor={skBg}
-                    highlightColor={skHl}
-                  />
-                  <Skeleton
-                    width={55}
-                    height={20}
-                    borderRadius={10}
-                    backgroundColor={skBg}
-                    highlightColor={skHl}
-                    style={{ marginLeft: 8 }}
-                  />
-                </View>
-                {/* CTA button */}
-                <Skeleton
-                  width="100%"
-                  height={40}
-                  borderRadius={10}
-                  backgroundColor={skBg}
-                  highlightColor={skHl}
-                />
-              </View>
-            );
-          })}
+          {[1, 2, 3, 4].map(i => (
+            <SkeletonMatchCard
+              key={i}
+              backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+              highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+              style={{
+                backgroundColor: isDark ? '#1C1C1E' : '#FAFAFA',
+                borderColor: colors.border,
+              }}
+            />
+          ))}
         </View>
       ) : (
         <FlatList
@@ -567,16 +483,6 @@ const styles = StyleSheet.create({
     paddingTop: spacingPixels[4],
     paddingHorizontal: spacingPixels[4],
     gap: spacingPixels[3],
-  },
-  skeletonMatchCard: {
-    borderRadius: radiusPixels.xl,
-    borderWidth: 1.5,
-    padding: spacingPixels[4],
-    gap: spacingPixels[3],
-  },
-  skeletonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   headerLoadingContainer: {
     alignItems: 'center',
