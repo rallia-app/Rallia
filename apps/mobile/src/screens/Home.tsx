@@ -20,6 +20,7 @@ import {
   LocationSelector,
   Skeleton,
   SkeletonMatchCard,
+  SkeletonMyMatchCard,
 } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
 import {
@@ -474,11 +475,15 @@ const Home = () => {
         <SkeletonMatchCard
           backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
           highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-          style={{ backgroundColor: colors.card, marginHorizontal: 16 }}
+          style={{
+            backgroundColor: isDark ? '#1C1C1E' : '#FAFAFA',
+            borderColor: colors.border,
+            marginHorizontal: spacingPixels[4],
+          }}
         />
       </View>
     );
-  }, [isFetchingNextPage, colors.card, isDark]);
+  }, [isFetchingNextPage, colors.border, isDark]);
 
   // Render empty state with helpful message about travel distance (signed in) or simple message (signed out)
   const renderEmptyComponent = useCallback(
@@ -630,44 +635,20 @@ const Home = () => {
 
           {/* Content: horizontal scroll or empty state */}
           {loadingMyMatches ? (
-            <View style={styles.myMatchesLoading}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 16 }}
-              >
-                {[1, 2, 3].map(i => (
-                  <View
-                    key={i}
-                    style={[
-                      styles.myMatchSkeletonCard,
-                      { backgroundColor: colors.card, marginRight: 12 },
-                    ]}
-                  >
-                    <Skeleton
-                      width={120}
-                      height={16}
-                      backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-                      highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-                      style={{ marginBottom: 8 }}
-                    />
-                    <Skeleton
-                      width={80}
-                      height={14}
-                      backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-                      highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-                      style={{ marginBottom: 6 }}
-                    />
-                    <Skeleton
-                      width={100}
-                      height={12}
-                      backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-                      highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-                    />
-                  </View>
-                ))}
-              </ScrollView>
-            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.myMatchesScrollContent}
+            >
+              {[1, 2, 3].map(i => (
+                <SkeletonMyMatchCard
+                  key={i}
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                  style={{ backgroundColor: colors.card }}
+                />
+              ))}
+            </ScrollView>
           ) : myMatches.length === 0 ? (
             <View style={styles.myMatchesEmpty}>
               <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
@@ -897,37 +878,15 @@ const Home = () => {
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 16 }}
+              contentContainerStyle={styles.myMatchesScrollContent}
             >
               {[1, 2, 3].map(i => (
-                <View
+                <SkeletonMyMatchCard
                   key={i}
-                  style={[
-                    styles.myMatchSkeletonCard,
-                    { backgroundColor: colors.card, marginRight: 12 },
-                  ]}
-                >
-                  <Skeleton
-                    width={120}
-                    height={16}
-                    backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-                    highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-                    style={{ marginBottom: 8 }}
-                  />
-                  <Skeleton
-                    width={80}
-                    height={14}
-                    backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-                    highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-                    style={{ marginBottom: 6 }}
-                  />
-                  <Skeleton
-                    width={100}
-                    height={12}
-                    backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-                    highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-                  />
-                </View>
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                  style={{ backgroundColor: colors.card }}
+                />
               ))}
             </ScrollView>
           </View>
@@ -946,7 +905,12 @@ const Home = () => {
                 key={i}
                 backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
                 highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-                style={{ backgroundColor: colors.card, marginHorizontal: 16, marginBottom: 12 }}
+                style={{
+                  backgroundColor: isDark ? '#1C1C1E' : '#FAFAFA',
+                  borderColor: colors.border,
+                  marginHorizontal: spacingPixels[4],
+                  marginBottom: spacingPixels[3],
+                }}
               />
             ))}
           </View>
@@ -978,21 +942,21 @@ const Home = () => {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       {loadingMatches ? (
         <View style={styles.loadingContainer}>
-          {/* Skeleton for matches list */}
+          {/* Render the header (My Matches + section title) above skeletons */}
+          {renderListHeader()}
+          {/* Nearby matches skeleton */}
           <View style={styles.skeletonSection}>
-            <Skeleton
-              width={150}
-              height={20}
-              backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-              highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-              style={{ marginBottom: 12, marginHorizontal: 16 }}
-            />
             {[1, 2, 3].map(i => (
               <SkeletonMatchCard
                 key={i}
                 backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
                 highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-                style={{ backgroundColor: colors.card, marginHorizontal: 16, marginBottom: 12 }}
+                style={{
+                  backgroundColor: isDark ? '#1C1C1E' : '#FAFAFA',
+                  borderColor: colors.border,
+                  marginHorizontal: spacingPixels[4],
+                  marginBottom: spacingPixels[3],
+                }}
               />
             ))}
           </View>
@@ -1051,11 +1015,6 @@ const styles = StyleSheet.create({
   },
   skeletonSection: {
     marginBottom: spacingPixels[6],
-  },
-  myMatchSkeletonCard: {
-    width: 160,
-    padding: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
   },
   listContent: {
     flexGrow: 1,
