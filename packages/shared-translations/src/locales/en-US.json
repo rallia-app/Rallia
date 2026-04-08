@@ -133,7 +133,10 @@
     "profile": "Profile",
     "settings": "Settings",
     "chat": "Chat",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "courts": "Courts",
+    "create": "Create",
+    "players": "Players"
   },
   "screens": {
     "profile": "Profile",

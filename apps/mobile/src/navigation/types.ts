@@ -149,7 +149,9 @@ export type ChatStackParamList = {
  * Map Stack - Map view with facility detail drill-down
  */
 export type MapStackParamList = {
-  MapView: { focusLocation?: { lat: number; lng: number } } | undefined;
+  MapView:
+    | { focusLocation?: { lat: number; lng: number; zoom?: number }; restoreMatchIds?: string[] }
+    | undefined;
   FacilityDetail: FacilityDetailScreenParams;
 };
 

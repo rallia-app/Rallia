@@ -18,12 +18,14 @@ import {
   ViewStyle,
   GestureResponderEvent,
   Text as RNText,
+  Platform,
 } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StackActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { CopilotStep } from 'react-native-copilot';
 import { WalkthroughableView } from '../context/TourContext';
 import { lightHaptic } from '@rallia/shared-utils';
@@ -660,11 +662,12 @@ function TabButtonWithHaptic(props: {
  * Custom center tab button that opens the Actions bottom sheet
  * instead of navigating to a screen
  */
+const CENTER_TAB_SIZE = 80;
+
 function CenterTabButton({
-  children,
   style,
 }: {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   // These are passed by React Navigation but we intentionally ignore them
   onPress?: (e: GestureResponderEvent) => void;
@@ -674,24 +677,56 @@ function CenterTabButton({
   testID?: string;
 }) {
   const { openSheet } = useActionsSheet();
+  const { colors, isDark } = useThemeStyles();
 
   return (
-    <TouchableOpacity
-      onPress={() => {
-        lightHaptic();
-        openSheet();
-      }}
-      style={[
-        {
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-        },
-        style,
-      ]}
-    >
-      {children}
-    </TouchableOpacity>
+    <View style={[{ flex: 1, alignItems: 'center' }, style]}>
+      <TouchableOpacity
+        onPress={() => {
+          lightHaptic();
+          openSheet();
+        }}
+        activeOpacity={0.85}
+        style={{
+          position: 'absolute',
+          top: -CENTER_TAB_SIZE / 4,
+          width: CENTER_TAB_SIZE,
+          height: CENTER_TAB_SIZE,
+          borderRadius: CENTER_TAB_SIZE / 2,
+          borderWidth: 1,
+          borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.8)',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.15,
+          shadowRadius: 10,
+          ...(Platform.OS === 'ios' && { elevation: 6 }),
+          overflow: 'hidden',
+        }}
+      >
+        {/* Base gradient — light refraction from top-left to bottom-right */}
+        <LinearGradient
+          colors={
+            isDark
+              ? ['rgba(255,255,255,0.18)', 'rgba(255,255,255,0.04)', 'rgba(0,0,0,0.1)']
+              : ['rgba(255,255,255,0.95)', 'rgba(220,230,235,0.6)', 'rgba(180,200,210,0.4)']
+          }
+          locations={[0, 0.5, 1]}
+          start={{ x: 0.2, y: 0 }}
+          end={{ x: 0.8, y: 1 }}
+          style={{
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <Ionicons
+            name="add"
+            size={34}
+            color={isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.35)'}
+          />
+        </LinearGradient>
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -913,21 +948,26 @@ const resetStackOnBlur = ({
 function BottomTabs() {
   const { colors } = useThemeStyles();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   return (
     <Tab.Navigator
       id="BottomTabs"
       safeAreaInsets={{
-        bottom: insets.bottom + spacingPixels[2],
+        bottom: insets.bottom + (Platform.OS === 'android' ? spacingPixels[6] : spacingPixels[2]),
       }}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarShowLabel: false,
+        tabBarShowLabel: true,
+        tabBarLabelStyle: {
+          fontSize: 10,
+        },
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
+          overflow: 'visible',
         },
         tabBarItemStyle: {
           paddingVertical: spacingPixels[2],
@@ -939,6 +979,7 @@ function BottomTabs() {
         name="Home"
         component={HomeStack}
         options={{
+          tabBarLabel: t('navigation.matches'),
           tabBarIcon: ({ color, size }) => <HomeTabIcon color={color} size={size} />,
         }}
         listeners={resetStackOnBlur}
@@ -947,6 +988,7 @@ function BottomTabs() {
         name="Courts"
         component={CourtsStack}
         options={{
+          tabBarLabel: t('navigation.courts'),
           tabBarIcon: ({ color, size }) => <CourtsTabIcon color={color} size={size} />,
         }}
         listeners={resetStackOnBlur}
@@ -955,7 +997,8 @@ function BottomTabs() {
         name="Actions"
         component={ActionsPlaceholder}
         options={{
-          tabBarIcon: ({ color, size }) => <ActionsTabIcon color={color} size={size} />,
+          tabBarShowLabel: false,
+          tabBarIcon: () => null,
           tabBarButton: props => <CenterTabButton {...props} />,
         }}
         listeners={{
@@ -970,6 +1013,7 @@ function BottomTabs() {
         name="Community"
         component={CommunityStack}
         options={{
+          tabBarLabel: t('navigation.players'),
           tabBarIcon: ({ color, size }) => <CommunityTabIcon color={color} size={size} />,
         }}
         listeners={resetStackOnBlur}
@@ -978,6 +1022,7 @@ function BottomTabs() {
         name="Chat"
         component={ChatStack}
         options={{
+          tabBarLabel: t('navigation.chat'),
           tabBarIcon: ({ color, size }) => <ChatTabIconWithTour color={color} size={size} />,
         }}
         listeners={resetStackOnBlur}

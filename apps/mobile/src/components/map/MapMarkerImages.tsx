@@ -1,8 +1,8 @@
 import React, { memo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import Mapbox from '@rnmapbox/maps';
-import { Ionicons } from '@expo/vector-icons';
 import { primary, accent, base } from '@rallia/design-system';
+import TennisCourtIcon from '../../../assets/icons/tennis-court.svg';
 import { SportIcon } from '../SportIcon';
 
 interface MapMarkerImagesProps {
@@ -160,13 +160,17 @@ function MapMarkerImagesInner({ isDark }: MapMarkerImagesProps) {
     <Mapbox.Images>
       <Mapbox.Image name="marker-facility">
         <GlassMarkerImage color={primaryColor} glowColor={primaryGlow} isDark={isDark}>
-          <Ionicons name="business" size={16} color={base.white} />
+          <View style={{ transform: [{ rotate: '90deg' }] }}>
+            <TennisCourtIcon width={16} height={16} stroke={base.white} />
+          </View>
         </GlassMarkerImage>
       </Mapbox.Image>
 
       <Mapbox.Image name="marker-facility-selected">
         <GlassMarkerImage color={primaryColor} glowColor={primaryGlow} isDark={isDark} isSelected>
-          <Ionicons name="business" size={18} color={base.white} />
+          <View style={{ transform: [{ rotate: '90deg' }] }}>
+            <TennisCourtIcon width={18} height={18} stroke={base.white} />
+          </View>
         </GlassMarkerImage>
       </Mapbox.Image>
 
@@ -176,9 +180,21 @@ function MapMarkerImagesInner({ isDark }: MapMarkerImagesProps) {
         </GlassMarkerImage>
       </Mapbox.Image>
 
+      <Mapbox.Image name="marker-match-tennis-selected">
+        <GlassMarkerImage color={accentColor} glowColor={accentGlow} isDark={isDark} isSelected>
+          <SportIcon sportName="tennis" size={18} color={base.white} />
+        </GlassMarkerImage>
+      </Mapbox.Image>
+
       <Mapbox.Image name="marker-match-pickleball">
         <GlassMarkerImage color={accentColor} glowColor={accentGlow} isDark={isDark}>
           <SportIcon sportName="pickleball" size={16} color={base.white} />
+        </GlassMarkerImage>
+      </Mapbox.Image>
+
+      <Mapbox.Image name="marker-match-pickleball-selected">
+        <GlassMarkerImage color={accentColor} glowColor={accentGlow} isDark={isDark} isSelected>
+          <SportIcon sportName="pickleball" size={18} color={base.white} />
         </GlassMarkerImage>
       </Mapbox.Image>
 
@@ -200,6 +216,23 @@ function MapMarkerImagesInner({ isDark }: MapMarkerImagesProps) {
       </Mapbox.Image>
       <Mapbox.Image name="cluster-match-lg">
         <GlassClusterImage color={accentColor} glowColor={accentGlow} isDark={isDark} size="lg" />
+      </Mapbox.Image>
+
+      {/* Match count badge for facility markers */}
+      <Mapbox.Image name="badge-match-count">
+        <View
+          style={{
+            width: 24,
+            height: 24,
+            borderRadius: 12,
+            backgroundColor: accentColor,
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderWidth: 1.5,
+            borderColor: base.white,
+          }}
+          collapsable={false}
+        />
       </Mapbox.Image>
     </Mapbox.Images>
   );
