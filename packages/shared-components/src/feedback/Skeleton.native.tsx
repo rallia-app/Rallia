@@ -335,7 +335,7 @@ export function SkeletonList({
 }
 
 export interface SkeletonMatchCardProps {
-  /** Custom style */
+  /** Custom style applied to the outer card wrapper */
   style?: ViewStyle;
   /** Theme colors */
   backgroundColor?: string;
@@ -343,7 +343,8 @@ export interface SkeletonMatchCardProps {
 }
 
 /**
- * Match card skeleton for home screen
+ * Match card skeleton matching the MatchCard layout:
+ * time row, location row, player avatars, badge pills, CTA button.
  */
 export function SkeletonMatchCard({
   style,
@@ -352,35 +353,8 @@ export function SkeletonMatchCard({
 }: SkeletonMatchCardProps) {
   return (
     <View style={[styles.matchCard, style]}>
-      {/* Header with sport icon and type */}
-      <View style={styles.matchCardHeader}>
-        <Skeleton
-          width={24}
-          height={24}
-          circle
-          backgroundColor={backgroundColor}
-          highlightColor={highlightColor}
-        />
-        <Skeleton
-          width={80}
-          height={14}
-          backgroundColor={backgroundColor}
-          highlightColor={highlightColor}
-          style={styles.matchCardType}
-        />
-      </View>
-
-      {/* Date and time */}
-      <Skeleton
-        width={120}
-        height={18}
-        backgroundColor={backgroundColor}
-        highlightColor={highlightColor}
-        style={styles.matchCardDate}
-      />
-
-      {/* Location */}
-      <View style={styles.matchCardLocation}>
+      {/* Time row */}
+      <View style={styles.matchCardRow}>
         <Skeleton
           width={16}
           height={16}
@@ -389,34 +363,145 @@ export function SkeletonMatchCard({
           highlightColor={highlightColor}
         />
         <Skeleton
-          width="60%"
+          width={120}
+          height={16}
+          backgroundColor={backgroundColor}
+          highlightColor={highlightColor}
+          style={{ marginLeft: 8 }}
+        />
+      </View>
+      {/* Location row */}
+      <View style={styles.matchCardRow}>
+        <Skeleton
+          width={14}
+          height={14}
+          circle
+          backgroundColor={backgroundColor}
+          highlightColor={highlightColor}
+        />
+        <Skeleton
+          width="55%"
           height={14}
           backgroundColor={backgroundColor}
           highlightColor={highlightColor}
           style={{ marginLeft: 8 }}
         />
       </View>
-
-      {/* Players */}
-      <View style={styles.matchCardPlayers}>
-        <SkeletonAvatar
-          size={32}
-          backgroundColor={backgroundColor}
-          highlightColor={highlightColor}
-        />
-        <SkeletonAvatar
-          size={32}
-          backgroundColor={backgroundColor}
-          highlightColor={highlightColor}
-          style={{ marginLeft: -8 }}
-        />
+      {/* Player avatars */}
+      <View style={styles.matchCardRow}>
+        {[0, 1, 2].map(j => (
+          <Skeleton
+            key={j}
+            width={32}
+            height={32}
+            circle
+            backgroundColor={backgroundColor}
+            highlightColor={highlightColor}
+            style={j > 0 ? { marginLeft: -6 } : undefined}
+          />
+        ))}
         <Skeleton
-          width={60}
+          width={40}
           height={12}
           backgroundColor={backgroundColor}
           highlightColor={highlightColor}
           style={{ marginLeft: 8 }}
         />
+      </View>
+      {/* Badge pills */}
+      <View style={styles.matchCardRow}>
+        <Skeleton
+          width={70}
+          height={20}
+          borderRadius={10}
+          backgroundColor={backgroundColor}
+          highlightColor={highlightColor}
+        />
+        <Skeleton
+          width={55}
+          height={20}
+          borderRadius={10}
+          backgroundColor={backgroundColor}
+          highlightColor={highlightColor}
+          style={{ marginLeft: 8 }}
+        />
+      </View>
+      {/* CTA button */}
+      <Skeleton
+        width="100%"
+        height={40}
+        borderRadius={10}
+        backgroundColor={backgroundColor}
+        highlightColor={highlightColor}
+      />
+    </View>
+  );
+}
+
+export interface SkeletonMyMatchCardProps {
+  /** Custom style applied to the outer card wrapper */
+  style?: ViewStyle;
+  /** Theme colors */
+  backgroundColor?: string;
+  highlightColor?: string;
+}
+
+/**
+ * Compact match card skeleton matching the MyMatchCard layout (160px wide):
+ * day label, time, location row, player avatars.
+ */
+export function SkeletonMyMatchCard({
+  style,
+  backgroundColor,
+  highlightColor,
+}: SkeletonMyMatchCardProps) {
+  return (
+    <View style={[styles.myMatchCard, style]}>
+      {/* Day label */}
+      <Skeleton
+        width={60}
+        height={14}
+        backgroundColor={backgroundColor}
+        highlightColor={highlightColor}
+      />
+      {/* Time */}
+      <Skeleton
+        width={80}
+        height={20}
+        backgroundColor={backgroundColor}
+        highlightColor={highlightColor}
+        style={{ marginTop: 6 }}
+      />
+      {/* Location row */}
+      <View style={[styles.matchCardRow, { marginTop: 8 }]}>
+        <Skeleton
+          width={12}
+          height={12}
+          circle
+          backgroundColor={backgroundColor}
+          highlightColor={highlightColor}
+        />
+        <Skeleton
+          width={70}
+          height={12}
+          backgroundColor={backgroundColor}
+          highlightColor={highlightColor}
+          style={{ marginLeft: 4 }}
+        />
+      </View>
+      {/* Avatars */}
+      <View style={[styles.matchCardRow, { marginTop: 8 }]}>
+        {[0, 1, 2].map(j => (
+          <Skeleton
+            key={j}
+            width={24}
+            height={24}
+            circle
+            backgroundColor={backgroundColor}
+            highlightColor={highlightColor}
+            style={j > 0 ? { marginLeft: -4 } : undefined}
+          />
+        ))}
       </View>
     </View>
   );
@@ -547,30 +632,19 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   matchCard: {
+    borderRadius: 16,
+    borderWidth: 1.5,
+    padding: 16,
+    gap: 12,
+  },
+  matchCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  myMatchCard: {
+    width: 160,
     padding: 16,
     borderRadius: 12,
-    minHeight: 150,
-  },
-  matchCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  matchCardType: {
-    marginLeft: 8,
-  },
-  matchCardDate: {
-    marginBottom: 8,
-  },
-  matchCardLocation: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  matchCardPlayers: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
   },
   playerCard: {
     flexDirection: 'row',
