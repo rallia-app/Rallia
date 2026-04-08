@@ -127,13 +127,16 @@
   },
   "navigation": {
     "home": "Accueil",
-    "matches": "Parties",
+    "matches": "Matchs",
     "map": "Carte",
     "community": "Communauté",
     "profile": "Profil",
     "settings": "Paramètres",
-    "chat": "Messagerie",
-    "notifications": "Notifications"
+    "chat": "Chat",
+    "notifications": "Notifications",
+    "courts": "Terrains",
+    "create": "Créer",
+    "players": "Joueurs"
   },
   "screens": {
     "profile": "Profil",

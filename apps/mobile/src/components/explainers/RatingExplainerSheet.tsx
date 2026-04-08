@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, neutral, primary } from '@rallia/design-system';
@@ -33,6 +33,7 @@ export function RatingExplainerActionSheet({ payload }: SheetProps<'rating-expla
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const sportName = payload?.sportName ?? 'tennis';
 
   const handleClose = () => {
@@ -57,12 +58,16 @@ export function RatingExplainerActionSheet({ payload }: SheetProps<'rating-expla
       containerStyle={[styles.container, { backgroundColor: colors.card }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
-      <View style={[styles.content, { paddingBottom: insets.bottom + spacingPixels[4] }]}>
-        {/* Header */}
-        <Text size="xl" weight="bold" color={textColor} style={styles.header}>
-          {t('explainers.rating.title')}
-        </Text>
+      {/* Header */}
+      <Text size="xl" weight="bold" color={textColor} style={styles.header}>
+        {t('explainers.rating.title')}
+      </Text>
 
+      <ScrollView
+        style={[styles.scrollContent, { maxHeight: windowHeight * 0.6 }]}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         {/* How Ratings Work */}
         <ExplainerSection
           icon="analytics"
@@ -153,8 +158,15 @@ export function RatingExplainerActionSheet({ payload }: SheetProps<'rating-expla
             {t('explainers.rating.tips.body')}
           </Text>
         </ExplainerSection>
+      </ScrollView>
 
-        {/* Close Button */}
+      {/* Sticky Footer */}
+      <View
+        style={[
+          styles.footer,
+          { borderTopColor: colors.border, paddingBottom: insets.bottom + spacingPixels[4] },
+        ]}
+      >
         <Button variant="primary" size="lg" fullWidth onPress={handleClose} isDark={isDark}>
           {t('common.gotIt')}
         </Button>
@@ -174,13 +186,20 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     marginTop: spacingPixels[2],
   },
+  scrollContent: {},
   content: {
     paddingHorizontal: spacingPixels[5],
-    paddingTop: spacingPixels[4],
   },
   header: {
     textAlign: 'center',
+    paddingTop: spacingPixels[4],
+    paddingHorizontal: spacingPixels[5],
     marginBottom: spacingPixels[5],
+  },
+  footer: {
+    paddingHorizontal: spacingPixels[5],
+    paddingTop: spacingPixels[4],
+    borderTopWidth: 1,
   },
   bodyText: {
     lineHeight: 20,
