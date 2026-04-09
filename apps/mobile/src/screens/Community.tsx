@@ -7,7 +7,7 @@
  */
 
 import React, { useMemo, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -93,16 +93,6 @@ const Community = () => {
     navigation.navigate('Communities');
   }, [navigation]);
 
-  const handleTournaments = useCallback(() => {
-    lightHaptic();
-    Alert.alert(t('community.tournaments'), t('community.tournamentsComingSoon'));
-  }, [t]);
-
-  const handleLeagues = useCallback(() => {
-    lightHaptic();
-    Alert.alert(t('community.leagues'), t('community.leaguesComingSoon'));
-  }, [t]);
-
   // Action buttons configuration
   const actionButtons: ActionButton[] = useMemo(
     () => [
@@ -124,20 +114,8 @@ const Community = () => {
         label: t('community.communities'),
         onPress: handleCommunities,
       },
-      {
-        id: 'tournaments',
-        icon: 'trophy-outline',
-        label: t('community.tournaments'),
-        onPress: handleTournaments,
-      },
-      {
-        id: 'leagues',
-        icon: 'podium-outline',
-        label: t('community.leagues'),
-        onPress: handleLeagues,
-      },
     ],
-    [handleShareLists, handleGroups, handleCommunities, handleTournaments, handleLeagues, t]
+    [handleShareLists, handleGroups, handleCommunities, t]
   );
 
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
