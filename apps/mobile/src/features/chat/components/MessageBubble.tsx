@@ -18,6 +18,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
+import { getShortName } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary, status } from '@rallia/design-system';
 import type { MessageWithSender, ReactionSummary } from '@rallia/shared-services';
@@ -61,8 +62,7 @@ function MessageBubbleComponent({
   const replyIconOpacity = useMemo(() => new Animated.Value(0), []);
   const replyIconScale = useMemo(() => new Animated.Value(0.5), []);
 
-  const senderName =
-    message.sender?.profile?.display_name || message.sender?.profile?.first_name || 'Unknown';
+  const senderName = getShortName(message.sender?.profile, 'Unknown');
 
   const senderAvatar = message.sender?.profile?.profile_picture_url;
 

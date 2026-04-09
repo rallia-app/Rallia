@@ -419,7 +419,7 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
       <ActionSheet
         gestureEnabled
         containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
-        indicatorStyle={[styles.handleIndicator, { backgroundColor: themeColors.border }]}
+        indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
       >
         <View style={styles.modalContent}>
           <Animated.View style={[styles.successContainer, successAnimatedStyle]}>
@@ -472,8 +472,8 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
   return (
     <ActionSheet
       gestureEnabled
-      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
-      indicatorStyle={[styles.handleIndicator, { backgroundColor: themeColors.border }]}
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
       <View style={styles.modalContent}>
         {/* Header - centered title, close button absolute right (matches UserProfile sheets) */}
@@ -493,6 +493,7 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           {/* Booking Details Section */}
           <View style={[styles.section, { borderBottomColor: themeColors.border }]}>

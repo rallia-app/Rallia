@@ -388,6 +388,7 @@ export function MemberListActionSheet({ payload }: SheetProps<'member-list'>) {
           renderItem={renderMemberItem}
           keyExtractor={item => item.id}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.listContent}
         />
       </View>

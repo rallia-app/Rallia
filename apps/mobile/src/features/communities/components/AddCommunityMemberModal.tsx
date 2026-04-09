@@ -309,6 +309,7 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
             renderItem={renderPlayerItem}
             keyExtractor={item => item.id}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.listContent}
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.3}

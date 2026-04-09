@@ -10,9 +10,9 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Text, useToast } from '@rallia/shared-components';
 import { supabase, Logger, notifyReferenceRequestResponded } from '@rallia/shared-services';
 import { selectionHaptic, successHaptic, errorHaptic } from '@rallia/shared-utils';
@@ -138,7 +138,7 @@ export function RespondToReferenceActionSheet({ payload }: SheetProps<'respond-t
   return (
     <ActionSheet
       gestureEnabled={!submitting}
-      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
       onBeforeClose={handleBeforeClose}
     >

@@ -15,7 +15,6 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   Linking,
   Image,
@@ -24,7 +23,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { Video, ResizeMode } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
-import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Text, Button, useToast } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation, useImagePicker } from '../../../hooks';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
@@ -616,7 +615,7 @@ export function EditProofActionSheet({ payload }: SheetProps<'edit-proof'>) {
   return (
     <ActionSheet
       gestureEnabled={!isSubmitting}
-      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
       <View style={styles.modalContent}>

@@ -45,10 +45,10 @@ export function AdminsDataTable(props: AdminsDataTableProps) {
   };
 
   const getDisplayName = (admin: TransformedAdmin) =>
-    admin.display_name ||
     (admin.first_name && admin.last_name
       ? `${admin.first_name} ${admin.last_name}`
       : admin.first_name) ||
+    admin.display_name ||
     '-';
 
   const columns: ColumnDef<TransformedAdmin>[] = [

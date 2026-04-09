@@ -120,7 +120,7 @@ export function ExternalBookingActionSheet({ payload }: SheetProps<'external-boo
   return (
     <ActionSheet
       gestureEnabled
-      containerStyle={[styles.sheetContainer, { backgroundColor: colors.card }]}
+      containerStyle={[styles.sheetContainer, { backgroundColor: colors.cardBackground }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
       {/* Header */}
@@ -136,7 +136,11 @@ export function ExternalBookingActionSheet({ payload }: SheetProps<'external-boo
       </View>
 
       {/* Scrollable Content */}
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Booking details section */}
         <View style={[styles.section, { borderBottomColor: colors.border }]}>
           {/* Facility */}

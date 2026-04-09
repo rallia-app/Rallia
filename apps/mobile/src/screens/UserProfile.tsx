@@ -30,7 +30,7 @@ import { CopilotStep, WalkthroughableView } from '../context/TourContext';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { formatDate as formatDateUtil, formatDateMonthYear } from '../utils/dateFormatting';
-import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
+import { lightHaptic, mediumHaptic, getHumanName } from '@rallia/shared-utils';
 import type { Sport } from '@rallia/shared-types';
 import {
   spacingPixels,
@@ -796,9 +796,7 @@ const UserProfile = () => {
                 </View>
                 {/* First and last name first, then username */}
                 <Text style={[styles.profileName, { color: colors.text }]}>
-                  {`${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() ||
-                    profile?.display_name ||
-                    t('profile.user')}
+                  {getHumanName(profile, t('profile.user'))}
                 </Text>
                 <Text style={[styles.username, { color: colors.textMuted }]}>
                   @{profile?.display_name?.replace(/\s/g, '') || t('profile.username')}

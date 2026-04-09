@@ -11,9 +11,8 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
 } from 'react-native';
-import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
@@ -78,7 +77,7 @@ function EditMessageModalComponent({ payload }: SheetProps<'edit-message'>) {
   return (
     <ActionSheet
       gestureEnabled
-      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
       <KeyboardAvoidingView

@@ -3,7 +3,6 @@ import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Text, Button } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { lightHaptic } from '@rallia/shared-utils';
 import { TIER_COLORS } from '@rallia/shared-services';
 import { useThemeStyles, useTranslation } from '../../hooks';
@@ -55,7 +54,6 @@ function EventBullet({
 export function ReputationExplainerActionSheet(_props: SheetProps<'reputation-explainer'>) {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
 
   const { height: windowHeight } = useWindowDimensions();
 
@@ -80,7 +78,7 @@ export function ReputationExplainerActionSheet(_props: SheetProps<'reputation-ex
   return (
     <ActionSheet
       gestureEnabled
-      containerStyle={[styles.container, { backgroundColor: colors.card }]}
+      containerStyle={[styles.container, { backgroundColor: colors.cardBackground }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
       {/* Header */}
@@ -241,12 +239,7 @@ export function ReputationExplainerActionSheet(_props: SheetProps<'reputation-ex
       </ScrollView>
 
       {/* Sticky Footer */}
-      <View
-        style={[
-          styles.footer,
-          { borderTopColor: colors.border, paddingBottom: insets.bottom + spacingPixels[4] },
-        ]}
-      >
+      <View style={[styles.footer, { borderTopColor: colors.border }]}>
         <Button variant="primary" size="lg" fullWidth onPress={handleClose} isDark={isDark}>
           {t('common.gotIt')}
         </Button>
@@ -261,10 +254,10 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radiusPixels['2xl'],
   },
   handleIndicator: {
-    width: 40,
+    width: spacingPixels[10],
     height: 4,
-    borderRadius: 2,
-    marginTop: spacingPixels[2],
+    borderRadius: 4,
+    alignSelf: 'center',
   },
   scrollContent: {},
   content: {
@@ -277,8 +270,7 @@ const styles = StyleSheet.create({
     marginBottom: spacingPixels[5],
   },
   footer: {
-    paddingHorizontal: spacingPixels[5],
-    paddingTop: spacingPixels[4],
+    padding: spacingPixels[4],
     borderTopWidth: 1,
   },
   bodyText: {

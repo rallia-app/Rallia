@@ -287,7 +287,7 @@ function PeerRatingRequestOverlayComponent({ payload }: SheetProps<'peer-rating-
   return (
     <ActionSheet
       gestureEnabled
-      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
       onBeforeShow={handleSheetOpen}
       onClose={handleSheetClose}

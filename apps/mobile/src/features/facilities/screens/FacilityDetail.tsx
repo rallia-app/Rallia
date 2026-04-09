@@ -43,6 +43,7 @@ import type { FacilityDetailScreenParams } from '@rallia/shared-types';
 import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import { SheetManager } from 'react-native-actions-sheet';
+import { openInMaps } from '../../../utils/openInMaps';
 
 // Tab components
 import InfoTab from '../components/InfoTab';
@@ -173,32 +174,11 @@ export default function FacilityDetail() {
   const handleOpenInMaps = useCallback(() => {
     if (!facility?.facilityData) return;
 
-    const address = facility.address || facility.facilityData.address;
-    const lat = facility.facilityData.latitude;
-    const lng = facility.facilityData.longitude;
-
-    let url: string;
-    if (lat && lng) {
-      // Open with coordinates
-      url = Platform.select({
-        ios: `maps:0,0?q=${lat},${lng}`,
-        android: `geo:${lat},${lng}?q=${lat},${lng}`,
-      }) as string;
-    } else if (address) {
-      // Open with address
-      const encodedAddress = encodeURIComponent(address);
-      url = Platform.select({
-        ios: `maps:0,0?q=${encodedAddress}`,
-        android: `geo:0,0?q=${encodedAddress}`,
-      }) as string;
-    } else {
-      return;
-    }
-
-    Linking.canOpenURL(url).then(supported => {
-      if (supported) {
-        Linking.openURL(url);
-      }
+    openInMaps({
+      latitude: facility.facilityData.latitude,
+      longitude: facility.facilityData.longitude,
+      address: facility.address || facility.facilityData.address,
+      label: facility.facilityData.name,
     });
   }, [facility]);
 

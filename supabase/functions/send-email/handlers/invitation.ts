@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+
 import { InvitationRecordSchema } from '../schemas.ts';
 import { renderInvitationEmail } from '../templates/invitation.ts';
 import type { EmailContent, InvitationEmailPayload, InvitationRecord } from '../types.ts';
@@ -39,10 +40,10 @@ export class InvitationHandler {
 
       // Use fetched profile for name too (avoid a second query)
       const inviterName =
-        inviterProfile?.display_name ||
         (inviterProfile?.first_name && inviterProfile?.last_name
           ? `${inviterProfile.first_name} ${inviterProfile.last_name}`
           : inviterProfile?.first_name) ||
+        inviterProfile?.display_name ||
         'a team member';
 
       return this.buildContent(record, inviterName, locale, supabase);
@@ -61,10 +62,10 @@ export class InvitationHandler {
     }
 
     const inviterName =
-      inviterProfile?.display_name ||
       (inviterProfile?.first_name && inviterProfile?.last_name
         ? `${inviterProfile.first_name} ${inviterProfile.last_name}`
         : inviterProfile?.first_name) ||
+      inviterProfile?.display_name ||
       'a team member';
 
     return this.buildContent(record, inviterName, locale, supabase);
@@ -123,7 +124,7 @@ export class InvitationHandler {
 
     const payload: InvitationEmailPayload = {
       type: 'invitation',
-      email: record.email!,
+      email: record.email,
       role: record.role,
       adminRole: record.admin_role || undefined,
       signUpUrl,

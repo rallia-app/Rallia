@@ -20,7 +20,6 @@ import type { FacilitySearchResult } from '@rallia/shared-types';
 import { lightHaptic, selectionHaptic, successHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SearchBar } from '../../../components/SearchBar';
 import TennisCourtIcon from '../../../../assets/icons/tennis-court.svg';
 
@@ -160,13 +159,13 @@ const SelectedFacilityBadge: React.FC<SelectedFacilityBadgeProps> = ({
 export function FavoriteFacilitiesActionSheet({ payload }: SheetProps<'favorite-facilities'>) {
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
   const playerId = payload?.playerId;
   const sportId = payload?.sportId;
   const latitude = payload?.latitude;
   const longitude = payload?.longitude;
   const onSave = payload?.onSave;
   const onDismiss = payload?.onDismiss;
+  const minFavorites = payload?.minFavorites ?? MIN_FAVORITES;
 
   const didSaveRef = useRef(false);
 
@@ -248,7 +247,7 @@ export function FavoriteFacilitiesActionSheet({ payload }: SheetProps<'favorite-
     [selectedIds, handleRemoveFacility, handleSelectFacility]
   );
 
-  const canSave = selectedFacilities.length >= MIN_FAVORITES;
+  const canSave = selectedFacilities.length >= minFavorites;
 
   const handleSave = useCallback(() => {
     mediumHaptic();
@@ -332,7 +331,7 @@ export function FavoriteFacilitiesActionSheet({ payload }: SheetProps<'favorite-
   return (
     <ActionSheet
       gestureEnabled
-      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
       onBeforeClose={() => {
         if (onDismiss && !didSaveRef.current) {
@@ -377,7 +376,7 @@ export function FavoriteFacilitiesActionSheet({ payload }: SheetProps<'favorite-
                   name={facility.name}
                   order={index + 1}
                   onRemove={() => handleRemoveFacility(facility.id)}
-                  disabled={selectedFacilities.length <= MIN_FAVORITES}
+                  disabled={selectedFacilities.length <= minFavorites}
                 />
               ))}
             </View>
@@ -416,12 +415,7 @@ export function FavoriteFacilitiesActionSheet({ payload }: SheetProps<'favorite-
         </ScrollView>
 
         {/* Sticky Footer */}
-        <View
-          style={[
-            styles.footer,
-            { borderTopColor: colors.border, paddingBottom: insets.bottom + spacingPixels[4] },
-          ]}
-        >
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
           <TouchableOpacity
             style={[
               styles.submitButton,
@@ -579,8 +573,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   footer: {
-    paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[4],
+    padding: spacingPixels[4],
     borderTopWidth: 1,
   },
   submitButton: {

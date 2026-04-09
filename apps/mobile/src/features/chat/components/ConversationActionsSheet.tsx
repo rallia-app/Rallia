@@ -102,10 +102,7 @@ function ConversationActionsSheetComponent({ payload }: SheetProps<'conversation
   return (
     <ActionSheet
       gestureEnabled
-      containerStyle={[
-        styles.sheetBackground,
-        { backgroundColor: isDark ? colors.card : '#FFFFFF' },
-      ]}
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
       <View style={styles.sheet}>

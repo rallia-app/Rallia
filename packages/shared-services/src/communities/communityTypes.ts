@@ -87,8 +87,16 @@ export interface PendingMemberRequest {
   added_by: string | null;
   created_at: string;
   player_name: string;
+  player_first_name: string;
+  player_last_name: string | null;
   player_profile_picture: string | null;
   referrer_name: string | null;
+  rating_value: number | null;
+  rating_label: string | null;
+  badge_status: 'self_declared' | 'certified' | 'disputed' | null;
+  reputation_score: number | null;
+  reputation_tier: string | null;
+  reputation_total_events: number | null;
 }
 
 /**

@@ -221,6 +221,7 @@ export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community
           style={styles.scrollContent}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           {/* Cover Image Picker */}
           <View style={styles.inputGroup}>

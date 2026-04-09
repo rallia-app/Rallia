@@ -15,11 +15,10 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
-  ScrollView,
   type ViewStyle,
   type StyleProp,
 } from 'react-native';
-import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation } from '../../../hooks';

@@ -230,6 +230,7 @@ export function AddGroupMemberActionSheet({ payload }: SheetProps<'add-group-mem
             renderItem={renderPlayerItem}
             keyExtractor={item => item.id}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.listContent}
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.3}

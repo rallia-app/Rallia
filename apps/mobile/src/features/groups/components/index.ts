@@ -8,4 +8,3 @@ export { GroupOptionsModal } from './GroupOptionsModal';
 export { InviteLinkModal } from './InviteLinkModal';
 export { QRScannerModal } from './QRScannerModal';
 export { RecentGamesModal } from './RecentGamesModal';
-export { GroupFavoriteFacilitiesSelector } from './GroupFavoriteFacilitiesSelector';
