@@ -61,7 +61,7 @@ import {
   neutral,
   status,
 } from '@rallia/design-system';
-import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
+import { lightHaptic, mediumHaptic, getHumanName } from '@rallia/shared-utils';
 
 type RouteParams = RouteProp<RootStackParamList, 'AdminUserDetail'>;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -217,19 +217,6 @@ const AdminUserDetailScreen: React.FC = () => {
     setEditedProfile((prev: Partial<EditableProfileFields>) => ({ ...prev, [field]: value }));
   }, []);
 
-  // Get user display name
-  const getUserDisplayName = useCallback(
-    (userInfo: AdminUserDetail | null): string => {
-      if (!userInfo) return '';
-      if (userInfo.display_name) return userInfo.display_name;
-      if (userInfo.first_name || userInfo.last_name) {
-        return `${userInfo.first_name || ''} ${userInfo.last_name || ''}`.trim();
-      }
-      return t('admin.users.anonymous' as TranslationKey);
-    },
-    [t]
-  );
-
   // Format date
   const formatDate = useCallback(
     (dateString: string | null): string => {
@@ -252,7 +239,9 @@ const AdminUserDetailScreen: React.FC = () => {
 
     Alert.alert(
       t('admin.users.actions.banUser' as TranslationKey),
-      t('admin.users.actions.banConfirm' as TranslationKey, { name: getUserDisplayName(user) }),
+      t('admin.users.actions.banConfirm' as TranslationKey, {
+        name: getHumanName(user, t('admin.users.anonymous' as TranslationKey)),
+      }),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
@@ -281,7 +270,7 @@ const AdminUserDetailScreen: React.FC = () => {
         },
       ]
     );
-  }, [user, session, canBan, t, refetch, getUserDisplayName]);
+  }, [user, session, canBan, t, refetch]);
 
   // Handle unban user
   const handleUnbanUser = useCallback(async () => {
@@ -289,7 +278,9 @@ const AdminUserDetailScreen: React.FC = () => {
 
     Alert.alert(
       t('admin.users.actions.unbanUser' as TranslationKey),
-      t('admin.users.actions.unbanConfirm' as TranslationKey, { name: getUserDisplayName(user) }),
+      t('admin.users.actions.unbanConfirm' as TranslationKey, {
+        name: getHumanName(user, t('admin.users.anonymous' as TranslationKey)),
+      }),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
@@ -318,7 +309,7 @@ const AdminUserDetailScreen: React.FC = () => {
         },
       ]
     );
-  }, [user, session, canBan, t, refetch, getUserDisplayName]);
+  }, [user, session, canBan, t, refetch]);
 
   // Handle view profile
   const handleViewProfile = useCallback(() => {
@@ -865,7 +856,7 @@ const AdminUserDetailScreen: React.FC = () => {
           />
           <View style={styles.profileInfo}>
             <Text size="xl" weight="bold" color={colors.text}>
-              {getUserDisplayName(user)}
+              {getHumanName(user, t('admin.users.anonymous' as TranslationKey))}
             </Text>
             <Text size="sm" color={colors.textSecondary}>
               {user.email || t('admin.users.noEmail' as TranslationKey)}

@@ -256,6 +256,7 @@ export function AddMembersToChatActionSheet({ payload }: SheetProps<'add-members
               renderItem={renderPlayerItem}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
               onEndReached={handleEndReached}
               onEndReachedThreshold={0.3}
               ListFooterComponent={renderListFooter}

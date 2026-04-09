@@ -25,7 +25,7 @@ import type { RouteProp } from '@react-navigation/native';
 import Svg, { Circle } from 'react-native-svg';
 
 import { Text, Button } from '@rallia/shared-components';
-import { lightHaptic, selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
+import { lightHaptic, selectionHaptic, mediumHaptic, getShortName } from '@rallia/shared-utils';
 import {
   useThemeStyles,
   useAuth,
@@ -59,8 +59,8 @@ import type { RootStackParamList } from '../navigation/types';
 import { SheetManager } from 'react-native-actions-sheet';
 import {
   primary,
+  secondary,
   status,
-  accent,
   neutral,
   spacingPixels,
   fontSizePixels,
@@ -72,7 +72,7 @@ import {
   PendingScoresSection,
   type MatchType,
 } from '../features/matches';
-import { GroupFavoriteFacilitiesSelector } from '../features/groups/components';
+import { NetworkFavoriteFacilities } from '../components/NetworkFavoriteFacilities';
 import { NetworkMatchesTab } from '../features/matches/components';
 
 const HEADER_HEIGHT = 140;
@@ -80,12 +80,11 @@ const HEADER_HEIGHT = 140;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type GroupDetailRouteProp = RouteProp<RootStackParamList, 'GroupDetail'>;
 
-type TabKey = 'home' | 'leaderboard' | 'games';
+type TabKey = 'leaderboard' | 'games';
 
-const TAB_KEYS: TabKey[] = ['home', 'leaderboard', 'games'];
+const TAB_KEYS: TabKey[] = ['games', 'leaderboard'];
 
 const TAB_ICONS: Record<TabKey, keyof typeof Ionicons.glyphMap> = {
-  home: 'home-outline',
   leaderboard: 'podium-outline',
   games: 'tennisball-outline', // placeholder, overridden with SportIcon
 };
@@ -117,7 +116,7 @@ export default function GroupDetailScreen() {
     };
   }, [sports]);
 
-  const [activeTab, setActiveTab] = useState<TabKey>('home');
+  const [activeTab, setActiveTab] = useState<TabKey>('games');
   const [leaderboardPeriod, setLeaderboardPeriod] = useState<30 | 90 | 180 | 0>(30);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   // Add Score flow state
@@ -476,170 +475,6 @@ export default function GroupDetailScreen() {
     const messagesRotation = gamesRotation + gamesPercent * 360;
 
     switch (activeTab) {
-      case 'home':
-        return (
-          <View style={styles.tabContent}>
-            {/* Pending Score Confirmations */}
-            {playerId && (
-              <PendingScoresSection
-                playerId={playerId}
-                groupId={groupId}
-                title={t('groups.detail.scoresToConfirm')}
-              />
-            )}
-
-            {/* Activity Stats */}
-            <Text size="lg" weight="bold" style={{ color: colors.text, marginBottom: 8 }}>
-              {t('groups.detail.last7DaysActivities')}
-            </Text>
-            <View
-              style={[
-                styles.statsCard,
-                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-              ]}
-            >
-              <View style={styles.statsRow}>
-                <View style={styles.statCircle}>
-                  {/* Donut Chart */}
-                  <View style={styles.donutContainer}>
-                    <Svg width={size} height={size}>
-                      {/* Background circle */}
-                      <Circle
-                        cx={size / 2}
-                        cy={size / 2}
-                        r={radius}
-                        stroke={colors.border}
-                        strokeWidth={strokeWidth}
-                        fill="transparent"
-                      />
-                      {/* Members segment (cyan/blue) */}
-                      {membersCount > 0 && (
-                        <Circle
-                          cx={size / 2}
-                          cy={size / 2}
-                          r={radius}
-                          stroke={status.info.light}
-                          strokeWidth={strokeWidth}
-                          fill="transparent"
-                          strokeDasharray={`${membersLength} ${circumference - membersLength}`}
-                          strokeDashoffset={0}
-                          strokeLinecap="round"
-                          rotation={membersRotation}
-                          origin={`${size / 2}, ${size / 2}`}
-                        />
-                      )}
-                      {/* Games segment (orange) */}
-                      {gamesCount > 0 && (
-                        <Circle
-                          cx={size / 2}
-                          cy={size / 2}
-                          r={radius}
-                          stroke={accent[500]}
-                          strokeWidth={strokeWidth}
-                          fill="transparent"
-                          strokeDasharray={`${gamesLength} ${circumference - gamesLength}`}
-                          strokeDashoffset={0}
-                          strokeLinecap="round"
-                          rotation={gamesRotation}
-                          origin={`${size / 2}, ${size / 2}`}
-                        />
-                      )}
-                      {/* Messages segment (gray/dark) */}
-                      {messagesCount > 0 && (
-                        <Circle
-                          cx={size / 2}
-                          cy={size / 2}
-                          r={radius}
-                          stroke={isDark ? neutral[400] : neutral[600]}
-                          strokeWidth={strokeWidth}
-                          fill="transparent"
-                          strokeDasharray={`${messagesLength} ${circumference - messagesLength}`}
-                          strokeDashoffset={0}
-                          strokeLinecap="round"
-                          rotation={messagesRotation}
-                          origin={`${size / 2}, ${size / 2}`}
-                        />
-                      )}
-                    </Svg>
-                    {/* Center text */}
-                    <View style={styles.donutCenter}>
-                      <Text weight="bold" size="xl" style={{ color: colors.text }}>
-                        {totalActivities}
-                      </Text>
-                      <Text size="xs" style={{ color: colors.textSecondary }}>
-                        {t('groups.activity.activities')}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-                <View style={styles.statsList}>
-                  <View style={styles.statItem}>
-                    <Ionicons name="people-outline" size={20} color={status.info.light} />
-                    <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
-                      {t('groups.activity.newMembers', { count: membersCount })}
-                    </Text>
-                  </View>
-                  <View style={styles.statItem}>
-                    <SportIcon
-                      sportName={selectedSport?.name ?? 'tennis'}
-                      size={20}
-                      color={accent[500]}
-                    />
-                    <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
-                      {t('groups.activity.gamesCreated', { count: gamesCount })}
-                    </Text>
-                  </View>
-                  <View style={styles.statItem}>
-                    <Ionicons
-                      name="chatbubble-ellipses-outline"
-                      size={20}
-                      color={isDark ? neutral[400] : neutral[300]}
-                    />
-                    <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
-                      {t('groups.activity.newMessages', { count: messagesCount })}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-
-            {/* About Section */}
-            {group?.description && (
-              <View>
-                <Text size="lg" weight="bold" style={{ color: colors.text, marginBottom: 8 }}>
-                  {t('groups.home.about')}
-                </Text>
-                <View
-                  style={[
-                    styles.aboutCard,
-                    { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                  ]}
-                >
-                  <Text style={{ color: colors.textSecondary, lineHeight: 22 }}>
-                    {group.description}
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            {/* Favorite Facilities Section */}
-            <GroupFavoriteFacilitiesSelector
-              groupId={groupId}
-              currentPlayerId={playerId ?? null}
-              sportId={group?.sport_id ?? null}
-              allSportIds={allSportIds}
-              sportNames={sportNames}
-              latitude={player?.latitude ?? null}
-              longitude={player?.longitude ?? null}
-              colors={colors}
-              t={t}
-              onNavigateToFacility={facilityId =>
-                navigation.navigate('FacilityDetail', { facilityId })
-              }
-            />
-          </View>
-        );
-
       case 'leaderboard': {
         const periodOptions = [
           { value: 30, label: t('groups.leaderboardPeriod.30days') },
@@ -1133,9 +968,7 @@ export default function GroupDetailScreen() {
                         )}
                       </View>
                       <Text size="sm" style={{ color: colors.text, flex: 1, marginLeft: 12 }}>
-                        {entry.player?.profile?.display_name ||
-                          entry.player?.profile?.first_name ||
-                          t('groups.recentGames.player')}
+                        {getShortName(entry.player?.profile, t('groups.recentGames.player'))}
                       </Text>
                       <Text
                         size="sm"
@@ -1390,6 +1223,53 @@ export default function GroupDetailScreen() {
           </ScrollView>
         </View>
 
+        {/* Pending Score Confirmations */}
+        {playerId && (
+          <View style={{ marginHorizontal: 16 }}>
+            <PendingScoresSection
+              playerId={playerId}
+              groupId={groupId}
+              title={t('groups.detail.scoresToConfirm')}
+            />
+          </View>
+        )}
+
+        {/* About Section */}
+        {group?.description && (
+          <View style={{ marginHorizontal: 16, marginTop: 16 }}>
+            <Text size="lg" weight="bold" style={{ color: colors.text, marginBottom: 8 }}>
+              {t('groups.home.about')}
+            </Text>
+            <View
+              style={[
+                styles.aboutCard,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
+              <Text style={{ color: colors.textSecondary, lineHeight: 22 }}>
+                {group.description}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Favorite Facilities Section */}
+        {group?.sport_id && (
+          <View style={{ marginHorizontal: 16 }}>
+            <NetworkFavoriteFacilities
+              networkId={groupId}
+              currentPlayerId={playerId ?? null}
+              sportId={group.sport_id}
+              latitude={player?.latitude ?? null}
+              longitude={player?.longitude ?? null}
+              translationPrefix="groups"
+              onNavigateToFacility={facilityId =>
+                navigation.navigate('FacilityDetail', { facilityId })
+              }
+            />
+          </View>
+        )}
+
         {/* Tab Bar */}
         <View style={[styles.tabContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
           {TAB_KEYS.map(tabKey => (
@@ -1439,7 +1319,7 @@ export default function GroupDetailScreen() {
       </ScrollView>
 
       {/* Bottom Action Button - changes based on active tab, hidden when opened from chat */}
-      {activeTab === 'home' && !fromChat ? (
+      {!fromChat ? (
         <Button
           variant="primary"
           size="lg"

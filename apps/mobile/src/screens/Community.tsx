@@ -207,8 +207,10 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   actionButtonsContainer: {
+    flexGrow: 1,
     flexDirection: 'row',
-    gap: spacingPixels[6],
+    justifyContent: 'center',
+    gap: spacingPixels[8],
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[2],
     paddingBottom: spacingPixels[2],

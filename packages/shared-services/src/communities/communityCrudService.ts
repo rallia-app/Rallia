@@ -423,11 +423,13 @@ export async function rejectCommunityMember(
  */
 export async function getPendingCommunityMembers(
   communityId: string,
-  moderatorId: string
+  moderatorId: string,
+  sportId?: string
 ): Promise<PendingMemberRequest[]> {
   const { data, error } = await supabase.rpc('get_pending_community_members', {
     p_community_id: communityId,
     p_moderator_id: moderatorId,
+    ...(sportId && { p_sport_id: sportId }),
   });
 
   if (error) {

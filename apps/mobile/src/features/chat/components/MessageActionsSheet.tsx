@@ -140,7 +140,7 @@ function MessageActionsSheetComponent({ payload }: SheetProps<'message-actions'>
         gestureEnabled={!showEmojiPicker}
         containerStyle={[
           styles.sheetBackground,
-          { backgroundColor: isDark ? colors.card : '#FFFFFF' },
+          { backgroundColor: colors.cardBackground },
           // Hide sheet content when emoji picker is shown
           showEmojiPicker && { height: 0, opacity: 0 },
         ]}

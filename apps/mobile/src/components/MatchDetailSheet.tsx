@@ -22,7 +22,6 @@ import {
   TouchableWithoutFeedback,
   Modal,
   Image,
-  Linking,
   Platform,
   Animated as RNAnimated,
   Easing,
@@ -63,6 +62,8 @@ import {
   deriveMatchStatus,
   getMatchTier,
   HIGH_REPUTATION_THRESHOLD,
+  getHumanName,
+  getShortName,
 } from '@rallia/shared-utils';
 import { useMatchDetailSheet } from '../context/MatchDetailSheetContext';
 import { useActionsSheet } from '../context/ActionsSheetContext';
@@ -93,6 +94,7 @@ import {
 } from '@rallia/shared-services';
 import { SheetManager } from 'react-native-actions-sheet';
 import { shareMatch } from '../utils';
+import { openInMaps } from '../utils/openInMaps';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import { ConfirmationModal } from './ConfirmationModal';
 import { SportIcon } from './SportIcon';
@@ -1237,11 +1239,8 @@ export const MatchDetailSheet: React.FC = () => {
       .filter(p => p.player_id !== playerId && p.status === 'joined')
       .map(p => {
         const profile = p.player?.profile;
-        const firstName = profile?.first_name || '';
-        const lastName = profile?.last_name || '';
-        const displayName = profile?.display_name;
-        const name = displayName || firstName || 'Player';
-        const fullName = displayName || `${firstName} ${lastName}`.trim() || 'Player';
+        const name = getShortName(profile, 'Player');
+        const fullName = getHumanName(profile, 'Player');
         return {
           participantId: p.id,
           playerId: p.player_id,
@@ -1454,32 +1453,11 @@ export const MatchDetailSheet: React.FC = () => {
     if (!selectedMatch) return;
     selectionHaptic();
 
-    const address = selectedMatch.facility?.address || selectedMatch.location_address;
-    const lat = selectedMatch.facility?.latitude ?? selectedMatch.custom_latitude;
-    const lng = selectedMatch.facility?.longitude ?? selectedMatch.custom_longitude;
-
-    let url: string;
-    if (lat && lng) {
-      // Use coordinates if available
-      url =
-        Platform.select({
-          ios: `maps:0,0?q=${lat},${lng}`,
-          android: `geo:${lat},${lng}?q=${lat},${lng}`,
-        }) || `https://maps.google.com/?q=${lat},${lng}`;
-    } else if (address) {
-      // Fall back to address search
-      const encodedAddress = encodeURIComponent(address);
-      url =
-        Platform.select({
-          ios: `maps:0,0?q=${encodedAddress}`,
-          android: `geo:0,0?q=${encodedAddress}`,
-        }) || `https://maps.google.com/?q=${encodedAddress}`;
-    } else {
-      return; // No location data available
-    }
-
-    Linking.openURL(url).catch(() => {
-      // Silently handle errors
+    openInMaps({
+      latitude: selectedMatch.facility?.latitude ?? selectedMatch.custom_latitude,
+      longitude: selectedMatch.facility?.longitude ?? selectedMatch.custom_longitude,
+      address: selectedMatch.facility?.address || selectedMatch.location_address,
+      label: selectedMatch.facility?.name,
     });
   }, [selectedMatch]);
 
@@ -1692,10 +1670,7 @@ export const MatchDetailSheet: React.FC = () => {
   );
   const distanceDisplay = formatDistance(match.distance_meters);
   const creatorProfile = match.created_by_player?.profile;
-  const creatorName =
-    `${creatorProfile?.first_name || ''} ${creatorProfile?.last_name || ''}`.trim() ||
-    creatorProfile?.display_name ||
-    t('matchDetail.host');
+  const creatorName = getHumanName(creatorProfile, t('matchDetail.host'));
   const isFull = participantInfo.spotsLeft === 0;
   const isCreator = playerId === match.created_by;
   // Check if user is an active participant (not left, declined, refused, or kicked)
@@ -1918,7 +1893,7 @@ export const MatchDetailSheet: React.FC = () => {
 
   // Host first - use host participant's profile, fallback to created_by_player for backwards compatibility
   const hostProfile = hostParticipant?.player?.profile ?? creatorProfile;
-  const hostName = hostProfile?.first_name || hostProfile?.display_name || creatorName;
+  const hostName = getShortName(hostProfile, creatorName);
   const hostPlayer = hostParticipant?.player ?? match.created_by_player;
   participantAvatars.push({
     key: 'host',
@@ -1935,8 +1910,7 @@ export const MatchDetailSheet: React.FC = () => {
   // Other participants (joined, excluding host)
   // Normalize URLs to use current environment's Supabase URL
   otherJoinedParticipants.forEach((p, i) => {
-    const participantFirstName =
-      p.player?.profile?.first_name || p.player?.profile?.display_name || '';
+    const participantFirstName = getShortName(p.player?.profile, '');
     participantAvatars.push({
       key: p.id || `participant-${i}`,
       participantId: p.id,
@@ -1968,10 +1942,7 @@ export const MatchDetailSheet: React.FC = () => {
     match.participants
       ?.filter(p => p.status === 'requested')
       .map(p => {
-        const fullName =
-          `${p.player?.profile?.first_name || ''} ${p.player?.profile?.last_name || ''}`.trim() ||
-          p.player?.profile?.display_name ||
-          t('matchDetail.host');
+        const fullName = getHumanName(p.player?.profile, t('matchDetail.host'));
         // Get sport rating info if available (label and value)
         const playerWithRating = p.player as PlayerWithProfile | undefined;
         const ratingLabel = playerWithRating?.sportRatingLabel;
@@ -2016,10 +1987,7 @@ export const MatchDetailSheet: React.FC = () => {
     match.participants
       ?.filter(p => p.status === 'pending')
       .map(p => {
-        const fullName =
-          `${p.player?.profile?.first_name || ''} ${p.player?.profile?.last_name || ''}`.trim() ||
-          p.player?.profile?.display_name ||
-          t('matchDetail.host');
+        const fullName = getHumanName(p.player?.profile, t('matchDetail.host'));
         return {
           id: p.id,
           playerId: p.player_id,
@@ -2034,10 +2002,7 @@ export const MatchDetailSheet: React.FC = () => {
     match.participants
       ?.filter(p => p.status === 'declined')
       .map(p => {
-        const fullName =
-          `${p.player?.profile?.first_name || ''} ${p.player?.profile?.last_name || ''}`.trim() ||
-          p.player?.profile?.display_name ||
-          t('matchDetail.host');
+        const fullName = getHumanName(p.player?.profile, t('matchDetail.host'));
         return {
           id: p.id,
           playerId: p.player_id,
@@ -2987,7 +2952,7 @@ export const MatchDetailSheet: React.FC = () => {
             // Singles: "Name" vs "Name" (current user on left if participant)
             // Doubles: "Name & Name" vs "Name & Name"
             const getName = (p: (typeof joinedParticipants)[number]) =>
-              p.player?.profile?.first_name || p.player?.profile?.display_name || '';
+              getShortName(p.player?.profile, '');
             let leftLabel: string;
             let rightLabel: string;
             if (isSingles) {
