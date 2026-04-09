@@ -44,6 +44,7 @@ export {
   SkeletonCard,
   SkeletonList,
   SkeletonMatchCard,
+  SkeletonMyMatchCard,
   SkeletonPlayerCard,
   SkeletonConversation,
 } from './feedback/Skeleton.native';
@@ -65,6 +66,7 @@ export type {
   SkeletonCardProps,
   SkeletonListProps,
   SkeletonMatchCardProps,
+  SkeletonMyMatchCardProps,
   SkeletonPlayerCardProps,
   SkeletonConversationProps,
 } from './feedback/Skeleton.native';

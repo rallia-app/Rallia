@@ -36,7 +36,10 @@ export interface MatchDetailData extends MatchWithDetails {
 
 interface MatchDetailSheetContextType {
   /** Open the Match Detail bottom sheet with the specified match */
-  openSheet: (match: MatchDetailData, options?: { onMatchRemoved?: () => void }) => void;
+  openSheet: (
+    match: MatchDetailData,
+    options?: { onMatchRemoved?: () => void; onDismiss?: () => void }
+  ) => void;
 
   /** Close the Match Detail bottom sheet */
   closeSheet: () => void;
@@ -74,6 +77,7 @@ interface MatchDetailSheetProviderProps {
 export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> = ({ children }) => {
   const sheetRef = useRef<BottomSheetModal>(null);
   const onMatchRemovedRef = useRef<(() => void) | null>(null);
+  const onDismissRef = useRef<(() => void) | null>(null);
   const [selectedMatch, setSelectedMatch] = useState<MatchDetailData | null>(null);
 
   /**
@@ -83,9 +87,10 @@ export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> =
    * result so we still get scores for lists that don't include the result relation.
    */
   const openSheet = useCallback(
-    (match: MatchDetailData, options?: { onMatchRemoved?: () => void }) => {
+    (match: MatchDetailData, options?: { onMatchRemoved?: () => void; onDismiss?: () => void }) => {
       Analytics.matchViewed({ match_id: match.id, source: 'match_card' });
       onMatchRemovedRef.current = options?.onMatchRemoved ?? null;
+      onDismissRef.current = options?.onDismiss ?? null;
       setSelectedMatch(match);
       sheetRef.current?.present();
       const hasResult = Array.isArray(match.result)
@@ -119,6 +124,10 @@ export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> =
    */
   const handleSheetDismiss = useCallback(() => {
     setSelectedMatch(null);
+    if (onDismissRef.current) {
+      onDismissRef.current();
+      onDismissRef.current = null;
+    }
   }, []);
 
   /**

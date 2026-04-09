@@ -10,7 +10,6 @@ import {
   Platform,
 } from 'react-native';
 import Animated, {
-  FadeIn,
   FadeInDown,
   FadeOutDown,
   useSharedValue,
@@ -18,21 +17,20 @@ import Animated, {
   withTiming,
   withRepeat,
   withSequence,
+  Easing,
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Mapbox from '@rnmapbox/maps';
-import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, primary, accent } from '@rallia/design-system';
+import { Text, MatchCard } from '@rallia/shared-components';
+import { spacingPixels, radiusPixels, primary, accent, neutral } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useMapData, useFavoriteFacilities, usePlayer } from '@rallia/shared-hooks';
 import type { MapFacility, MapCustomMatch } from '@rallia/shared-hooks';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { MapStackParamList } from '../navigation/types';
+import type { MapStackParamList, RootStackParamList } from '../navigation/types';
 import { useThemeStyles, useTranslation, useEffectiveLocation } from '../hooks';
 import { useSport, useMatchDetailSheet } from '../context';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
@@ -69,7 +67,7 @@ function latOffsetForZoom(zoom: number): number {
 
 const Map = () => {
   const { colors, isDark } = useThemeStyles();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<MapStackParamList>>();
   const route = useRoute<RouteProp<MapStackParamList, 'MapView'>>();
   const { selectedSport } = useSport();
@@ -85,7 +83,7 @@ const Map = () => {
   const facilitySourceRef = useRef<Mapbox.ShapeSource>(null);
   const matchSourceRef = useRef<Mapbox.ShapeSource>(null);
   const currentZoomRef = useRef(12);
-  const matchListSheetRef = useRef<BottomSheetModal>(null);
+  const currentCenterRef = useRef<[number, number] | null>(null);
 
   const [selectedFacilities, setSelectedFacilities] = useState<MapFacility[]>([]);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
@@ -94,18 +92,22 @@ const Map = () => {
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const carouselRef = useRef<FlatList<MapFacility>>(null);
   const highlightTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const [clusterMatches, setClusterMatches] = useState<MapCustomMatch[]>([]);
+  const [selectedMatches, setSelectedMatches] = useState<MapCustomMatch[]>([]);
+  const [activeMatchCardIndex, setActiveMatchCardIndex] = useState(0);
+  const matchCarouselRef = useRef<FlatList<MapCustomMatch>>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const shapePressed = useRef(false);
 
   const focusLocation = route.params?.focusLocation;
+  const restoreMatchIds = route.params?.restoreMatchIds;
   const initialCenter: [number, number] = focusLocation
     ? [focusLocation.lng, focusLocation.lat]
     : location
       ? [location.longitude, location.latitude]
       : [-73.5673, 45.5017]; // Default: Montreal
-  const initialZoom = focusLocation ? 13 : 10;
+  const initialZoom = focusLocation?.zoom ?? (focusLocation ? 13 : 10);
 
   // Fix for Android: Mapbox Camera defaultSettings may not apply reliably,
   // causing the map to start at the wrong location/zoom. Imperatively set
@@ -134,7 +136,7 @@ const Map = () => {
 
   const sportIds = selectedSport?.id ? [selectedSport.id] : undefined;
 
-  const { facilities, customMatches, isLoading } = useMapData({
+  const { facilities, customMatches, isLoading, refetch } = useMapData({
     sportIds,
     latitude: location?.latitude,
     longitude: location?.longitude,
@@ -162,6 +164,24 @@ const Map = () => {
     opacity: loadingOpacity.value,
   }));
 
+  const refreshSpin = useSharedValue(0);
+  const showRefreshSpin = isLoading || isRefreshing;
+  useEffect(() => {
+    if (showRefreshSpin) {
+      refreshSpin.value = 0;
+      refreshSpin.value = withRepeat(
+        withTiming(360, { duration: 800, easing: Easing.linear }),
+        -1,
+        false
+      );
+    } else {
+      refreshSpin.value = withTiming(0, { duration: 200 });
+    }
+  }, [showRefreshSpin, refreshSpin]);
+  const refreshAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${refreshSpin.value}deg` }],
+  }));
+
   // Memoized GeoJSON for GL-native rendering
   // Uses highlightedId (delayed) instead of selectedFacility?.id to avoid
   // rebuilding the shape source mid-camera-animation which causes cluster flicker.
@@ -169,7 +189,12 @@ const Map = () => {
     () => facilitiesToGeoJSON(facilities, highlightedId),
     [facilities, highlightedId]
   );
-  const matchGeoJson = useMemo(() => matchesToGeoJSON(customMatches), [customMatches]);
+  const selectedMatchIds = useMemo(() => selectedMatches.map(m => m.id), [selectedMatches]);
+
+  const matchGeoJson = useMemo(
+    () => matchesToGeoJSON(customMatches, selectedMatchIds.length > 0 ? selectedMatchIds : null),
+    [customMatches, selectedMatchIds]
+  );
 
   const filteredFacilities = useMemo(() => {
     const normalized = searchQuery.trim().replace(/\s+/g, ' ').toLowerCase();
@@ -234,6 +259,19 @@ const Map = () => {
     if (state?.properties?.zoom != null) {
       currentZoomRef.current = state.properties.zoom;
     }
+    if (state?.properties?.center) {
+      currentCenterRef.current = state.properties.center;
+    }
+  }, []);
+
+  const dismissCards = useCallback(() => {
+    lightHaptic();
+    clearTimeout(highlightTimer.current);
+    setSelectedFacilities([]);
+    setActiveCardIndex(0);
+    setSelectedMatches([]);
+    setActiveMatchCardIndex(0);
+    setHighlightedId(null);
   }, []);
 
   const handleMapPress = useCallback(() => {
@@ -244,20 +282,18 @@ const Map = () => {
       return;
     }
     dismissSearch();
-    if (selectedFacilities.length > 0) {
-      lightHaptic();
-      clearTimeout(highlightTimer.current);
-      setSelectedFacilities([]);
-      setActiveCardIndex(0);
-      setHighlightedId(null);
+    if (selectedFacilities.length > 0 || selectedMatches.length > 0) {
+      dismissCards();
     }
-  }, [selectedFacilities.length, dismissSearch]);
+  }, [selectedFacilities.length, selectedMatches.length, dismissSearch, dismissCards]);
 
   const handleFacilitySelect = useCallback((facilityOrFacilities: MapFacility | MapFacility[]) => {
     lightHaptic();
     const arr = Array.isArray(facilityOrFacilities) ? facilityOrFacilities : [facilityOrFacilities];
     setSelectedFacilities(arr);
     setActiveCardIndex(0);
+    setSelectedMatches([]);
+    setActiveMatchCardIndex(0);
     // Delay the icon highlight until after the camera animation finishes
     // so the GeoJSON doesn't rebuild mid-flight and cause cluster flicker.
     clearTimeout(highlightTimer.current);
@@ -271,6 +307,36 @@ const Map = () => {
       });
     }
   }, []);
+
+  const handleMatchSelect = useCallback((matchOrMatches: MapCustomMatch | MapCustomMatch[]) => {
+    lightHaptic();
+    const arr = Array.isArray(matchOrMatches) ? matchOrMatches : [matchOrMatches];
+    setSelectedMatches(arr);
+    setActiveMatchCardIndex(0);
+    setSelectedFacilities([]);
+    setActiveCardIndex(0);
+    clearTimeout(highlightTimer.current);
+    setHighlightedId(null);
+    const target = arr[0];
+    if (cameraRef.current) {
+      const offset = latOffsetForZoom(currentZoomRef.current);
+      cameraRef.current.setCamera({
+        centerCoordinate: [target.custom_longitude, target.custom_latitude - offset],
+        animationDuration: 300,
+      });
+    }
+  }, []);
+
+  // Restore selected match cards when returning from match detail sheet
+  const hasRestoredMatches = useRef(false);
+  useEffect(() => {
+    if (hasRestoredMatches.current || !restoreMatchIds?.length || !customMatches.length) return;
+    const matches = customMatches.filter(m => restoreMatchIds.includes(m.id));
+    if (matches.length > 0) {
+      hasRestoredMatches.current = true;
+      handleMatchSelect(matches.length === 1 ? matches[0] : matches);
+    }
+  }, [restoreMatchIds, customMatches, handleMatchSelect]);
 
   const handleSearchResultPress = useCallback(
     (facility: MapFacility) => {
@@ -356,9 +422,14 @@ const Map = () => {
 
       // Cluster tap → zoom in or show list if can't expand further
       if (feature?.properties?.cluster) {
+        const clusterMaxZoom = 24;
         try {
           const expansionZoom = await matchSourceRef.current?.getClusterExpansionZoom(feature);
-          if (expansionZoom != null && expansionZoom > currentZoomRef.current) {
+          if (
+            expansionZoom != null &&
+            expansionZoom <= clusterMaxZoom &&
+            expansionZoom > currentZoomRef.current
+          ) {
             cameraRef.current?.setCamera({
               centerCoordinate: feature.geometry.coordinates,
               zoomLevel: expansionZoom + 1,
@@ -370,7 +441,7 @@ const Map = () => {
           // getClusterExpansionZoom can fail for fully-stacked points — fall through to list
         }
 
-        // Can't expand further — show match list sheet
+        // Can't expand further — show match cards
         try {
           const pointCount = feature.properties.point_count ?? 2;
           const leaves = await matchSourceRef.current?.getClusterLeaves(feature, pointCount, 0);
@@ -378,9 +449,7 @@ const Map = () => {
             const matchIds = leaves.features.map((f: any) => f.properties?.id).filter(Boolean);
             const matches = customMatches.filter(m => matchIds.includes(m.id));
             if (matches.length > 0) {
-              lightHaptic();
-              setClusterMatches(matches);
-              matchListSheetRef.current?.present();
+              handleMatchSelect(matches);
             }
           }
         } catch {
@@ -397,24 +466,10 @@ const Map = () => {
       if (!feature?.properties?.id) return;
       const match = customMatches.find(m => m.id === feature.properties.id);
       if (match) {
-        lightHaptic();
-        clearTimeout(highlightTimer.current);
-        setSelectedFacilities([]);
-        setActiveCardIndex(0);
-        setHighlightedId(null);
-        openSheet(match as unknown as MatchDetailData);
+        handleMatchSelect(match);
       }
     },
-    [customMatches, openSheet]
-  );
-
-  const handleMatchListItemPress = useCallback(
-    (match: MapCustomMatch) => {
-      matchListSheetRef.current?.dismiss();
-      setClusterMatches([]);
-      openSheet(match as unknown as MatchDetailData);
-    },
-    [openSheet]
+    [customMatches, handleMatchSelect]
   );
 
   const handleTooltipPress = useCallback(
@@ -422,6 +477,36 @@ const Map = () => {
       navigation.navigate('FacilityDetail', { facilityId });
     },
     [navigation]
+  );
+
+  const rootNavigation = navigation.getParent<NativeStackNavigationProp<RootStackParamList>>();
+
+  const handleMatchCardPress = useCallback(
+    (match: MapCustomMatch) => {
+      // Save camera position and selected matches so we can restore on return
+      const center = currentCenterRef.current;
+      const zoom = currentZoomRef.current;
+      const matchIds = selectedMatches.map(m => m.id);
+      navigation.goBack();
+      // Small delay so the map dismisses before the sheet presents
+      setTimeout(() => {
+        openSheet(match as unknown as MatchDetailData, {
+          onDismiss: () => {
+            // Re-open map at the same location with cards restored
+            if (center) {
+              rootNavigation?.navigate('Map', {
+                screen: 'MapView',
+                params: {
+                  focusLocation: { lat: center[1], lng: center[0], zoom },
+                  restoreMatchIds: matchIds,
+                },
+              });
+            }
+          },
+        });
+      }, 100);
+    },
+    [navigation, rootNavigation, openSheet, selectedMatches]
   );
 
   const PEEK = 24;
@@ -437,6 +522,16 @@ const Map = () => {
       const idx = viewableItems[0]?.index;
       if (idx != null) {
         setActiveCardIndex(idx);
+      }
+    },
+    []
+  );
+
+  const onViewableMatchItemsChanged = useCallback(
+    ({ viewableItems }: { viewableItems: Array<{ index: number | null }> }) => {
+      const idx = viewableItems[0]?.index;
+      if (idx != null) {
+        setActiveMatchCardIndex(idx);
       }
     },
     []
@@ -458,19 +553,6 @@ const Map = () => {
     }),
     [SNAP_INTERVAL]
   );
-
-  const renderBackdrop = useCallback(
-    (props: BottomSheetBackdropProps) => (
-      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.4} />
-    ),
-    []
-  );
-
-  const matchListSnapPoints = useMemo(() => ['35%', '60%'], []);
-
-  const primaryDot = isDark ? primary[400] : primary[500];
-  const accentDot = isDark ? accent[400] : accent[500];
-  const showLegend = facilities.length > 0 && customMatches.length > 0;
 
   // No location available
   if (!location) {
@@ -528,6 +610,12 @@ const Map = () => {
           cluster={true}
           clusterRadius={50}
           clusterMaxZoomLevel={24}
+          clusterProperties={{
+            total_matches: [
+              ['+', ['accumulated'], ['get', 'total_matches']],
+              ['get', 'match_count'],
+            ],
+          }}
           onPress={handleFacilityShapePress}
           hitbox={{ width: 44, height: 44 }}
         >
@@ -567,6 +655,44 @@ const Map = () => {
               iconAnchor: 'bottom',
             }}
           />
+          {/* Match count badge — top-right of cluster bubble */}
+          <Mapbox.SymbolLayer
+            id="facility-cluster-badge"
+            filter={['all', ['has', 'point_count'], ['>', ['get', 'total_matches'], 0]]}
+            style={{
+              iconImage: 'badge-match-count',
+              iconSize: 1,
+              iconAnchor: 'center',
+              iconTranslate: [18, -18],
+              iconAllowOverlap: true,
+              textField: ['to-string', ['get', 'total_matches']],
+              textSize: 11,
+              textColor: '#ffffff',
+              textFont: ['DIN Pro Bold', 'Arial Unicode MS Bold'],
+              textAnchor: 'center',
+              textTranslate: [18, -18],
+              textAllowOverlap: true,
+            }}
+          />
+          {/* Match count badge — top-right of facility marker */}
+          <Mapbox.SymbolLayer
+            id="facility-badge"
+            filter={['all', ['!', ['has', 'point_count']], ['>', ['get', 'match_count'], 0]]}
+            style={{
+              iconImage: 'badge-match-count',
+              iconSize: 1,
+              iconAnchor: 'center',
+              iconTranslate: [15, -48],
+              iconAllowOverlap: true,
+              textField: ['to-string', ['get', 'match_count']],
+              textSize: 11,
+              textColor: '#ffffff',
+              textFont: ['DIN Pro Bold', 'Arial Unicode MS Bold'],
+              textAnchor: 'center',
+              textTranslate: [15, -48],
+              textAllowOverlap: true,
+            }}
+          />
         </Mapbox.ShapeSource>
 
         {/* Match markers — rendered natively in the GL canvas */}
@@ -576,7 +702,7 @@ const Map = () => {
           shape={matchGeoJson}
           cluster={true}
           clusterRadius={50}
-          clusterMaxZoomLevel={14}
+          clusterMaxZoomLevel={24}
           hitbox={{ width: 44, height: 44 }}
           onPress={handleMatchShapePress}
         >
@@ -720,33 +846,26 @@ const Map = () => {
         >
           <Ionicons name="remove-outline" size={22} color={colors.text} />
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.controlButton, { backgroundColor: colors.card }]}
+          onPress={() => {
+            lightHaptic();
+            setIsRefreshing(true);
+            refetch();
+            setTimeout(() => setIsRefreshing(false), 1000);
+          }}
+          activeOpacity={0.7}
+          accessible
+          accessibilityLabel="Refresh"
+        >
+          <Animated.View style={refreshAnimatedStyle}>
+            <Ionicons name="refresh-outline" size={22} color={colors.text} />
+          </Animated.View>
+        </TouchableOpacity>
       </View>
 
       {/* Map Legend */}
-      {showLegend && (
-        <Animated.View
-          entering={FadeIn.delay(500)}
-          style={[
-            styles.legend,
-            { backgroundColor: colors.card + 'E6', bottom: insets.bottom + 16 },
-          ]}
-          pointerEvents="none"
-        >
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: primaryDot }]} />
-            <Text size="xs" color={colors.textMuted}>
-              {t('map.legend.facilities')}
-            </Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: accentDot }]} />
-            <Text size="xs" color={colors.textMuted}>
-              {t('map.legend.pickup')}
-            </Text>
-          </View>
-        </Animated.View>
-      )}
-
       {/* Facility card carousel */}
       {selectedFacilities.length === 1 && (
         <Animated.View
@@ -754,6 +873,11 @@ const Map = () => {
           exiting={FadeOutDown.duration(150)}
           style={[styles.facilityCardWrapper, { bottom: insets.bottom + 24 }]}
         >
+          <TouchableOpacity onPress={dismissCards} style={styles.dismissButton} activeOpacity={0.7}>
+            <View style={[styles.dismissCircle, { backgroundColor: colors.card }]}>
+              <Ionicons name="close" size={16} color={colors.textMuted} />
+            </View>
+          </TouchableOpacity>
           <FacilityCard
             facility={selectedFacilities[0]}
             isFavorite={isFavorite(selectedFacilities[0].id)}
@@ -781,6 +905,11 @@ const Map = () => {
           exiting={FadeOutDown.duration(150)}
           style={[styles.facilityCardWrapper, { bottom: insets.bottom + 24 }]}
         >
+          <TouchableOpacity onPress={dismissCards} style={styles.dismissButton} activeOpacity={0.7}>
+            <View style={[styles.dismissCircle, { backgroundColor: colors.card }]}>
+              <Ionicons name="close" size={16} color={colors.textMuted} />
+            </View>
+          </TouchableOpacity>
           <FlatList
             ref={carouselRef}
             data={selectedFacilities}
@@ -834,57 +963,96 @@ const Map = () => {
         </Animated.View>
       )}
 
-      {/* Match list bottom sheet for stacked clusters */}
-      <BottomSheetModal
-        ref={matchListSheetRef}
-        snapPoints={matchListSnapPoints}
-        backdropComponent={renderBackdrop}
-        enablePanDownToClose
-        backgroundStyle={{ backgroundColor: colors.card }}
-        handleIndicatorStyle={{ backgroundColor: colors.textMuted }}
-        onDismiss={() => setClusterMatches([])}
-      >
-        <View style={styles.sheetHeader}>
-          <Text size="base" weight="semibold" color={colors.text}>
-            {t('map.matchesAtLocation')}
-          </Text>
-        </View>
-        <BottomSheetScrollView contentContainerStyle={styles.sheetContent}>
-          {clusterMatches.map(match => (
-            <TouchableOpacity
-              key={match.id}
-              style={[styles.matchRow, { borderBottomColor: colors.border }]}
-              onPress={() => handleMatchListItemPress(match)}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.matchRowIcon, { backgroundColor: accentDot + '20' }]}>
-                <SportIcon sportName={match.sport?.name ?? 'tennis'} size={20} color={accentDot} />
+      {/* Match card carousel */}
+      {selectedMatches.length === 1 && (
+        <Animated.View
+          entering={FadeInDown.duration(250)}
+          exiting={FadeOutDown.duration(150)}
+          style={[styles.facilityCardWrapper, { bottom: insets.bottom + 24 }]}
+        >
+          <TouchableOpacity onPress={dismissCards} style={styles.dismissButton} activeOpacity={0.7}>
+            <View style={[styles.dismissCircle, { backgroundColor: colors.card }]}>
+              <Ionicons name="close" size={16} color={colors.textMuted} />
+            </View>
+          </TouchableOpacity>
+          <View style={{ paddingHorizontal: spacingPixels[4] }}>
+            <MatchCard
+              match={selectedMatches[0]}
+              onPress={() => handleMatchCardPress(selectedMatches[0])}
+              isDark={isDark}
+              t={t}
+              locale={locale}
+              currentPlayerId={player?.id}
+              sportIcon={
+                <SportIcon
+                  sportName={selectedMatches[0].sport?.name ?? 'tennis'}
+                  size={100}
+                  color={isDark ? neutral[600] : neutral[400]}
+                />
+              }
+            />
+          </View>
+        </Animated.View>
+      )}
+      {selectedMatches.length > 1 && (
+        <Animated.View
+          entering={FadeInDown.duration(250)}
+          exiting={FadeOutDown.duration(150)}
+          style={[styles.facilityCardWrapper, { bottom: insets.bottom + 24 }]}
+        >
+          <TouchableOpacity onPress={dismissCards} style={styles.dismissButton} activeOpacity={0.7}>
+            <View style={[styles.dismissCircle, { backgroundColor: colors.card }]}>
+              <Ionicons name="close" size={16} color={colors.textMuted} />
+            </View>
+          </TouchableOpacity>
+          <FlatList
+            ref={matchCarouselRef}
+            data={selectedMatches}
+            keyExtractor={item => item.id}
+            horizontal
+            snapToInterval={SNAP_INTERVAL}
+            decelerationRate="fast"
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingRight: CARD_OVERLAP }}
+            onViewableItemsChanged={onViewableMatchItemsChanged}
+            viewabilityConfig={viewabilityConfig}
+            getItemLayout={getItemLayout}
+            renderItem={({ item }) => (
+              <View style={{ width: CARD_WIDTH, marginRight: -CARD_OVERLAP }}>
+                <MatchCard
+                  match={item}
+                  onPress={() => handleMatchCardPress(item)}
+                  isDark={isDark}
+                  t={t}
+                  locale={locale}
+                  currentPlayerId={player?.id}
+                  sportIcon={
+                    <SportIcon
+                      sportName={item.sport?.name ?? 'tennis'}
+                      size={100}
+                      color={isDark ? neutral[600] : neutral[400]}
+                    />
+                  }
+                />
               </View>
-              <View style={styles.matchRowInfo}>
-                <Text size="sm" weight="medium" color={colors.text} numberOfLines={1}>
-                  {match.sport?.name ?? ''}
-                  {match.location_name ? ` · ${match.location_name}` : ''}
-                </Text>
-                <Text size="xs" color={colors.textMuted} numberOfLines={1}>
-                  {match.match_date
-                    ? new Date(`${match.match_date}T${match.start_time}`).toLocaleDateString(
-                        undefined,
-                        {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: 'numeric',
-                          minute: '2-digit',
-                        }
-                      )
-                    : ''}
-                  {match.participants ? ` · ${match.participants.length} players` : ''}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-            </TouchableOpacity>
-          ))}
-        </BottomSheetScrollView>
-      </BottomSheetModal>
+            )}
+          />
+          <View style={styles.dotsRow}>
+            {selectedMatches.map((m, i) => (
+              <View
+                key={m.id}
+                style={[
+                  styles.dot,
+                  {
+                    backgroundColor:
+                      i === activeMatchCardIndex ? colors.primary : colors.textMuted + '40',
+                  },
+                ]}
+              />
+            ))}
+          </View>
+        </Animated.View>
+      )}
     </SafeAreaView>
   );
 };
@@ -974,7 +1142,24 @@ const styles = StyleSheet.create({
     zIndex: 15,
   },
 
-  // Facility card
+  // Card dismiss button
+  dismissButton: {
+    alignSelf: 'center',
+    marginBottom: 12,
+  },
+  dismissCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  // Facility / match card
   facilityCardWrapper: {
     position: 'absolute',
     left: 0,
@@ -993,60 +1178,6 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-  },
-  // Legend
-  legend: {
-    position: 'absolute',
-    left: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[3],
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[1.5],
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-
-  // Match list sheet
-  sheetHeader: {
-    paddingHorizontal: spacingPixels[4],
-    paddingBottom: spacingPixels[3],
-  },
-  sheetContent: {
-    paddingHorizontal: spacingPixels[4],
-    paddingBottom: spacingPixels[6],
-  },
-  matchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacingPixels[3],
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: spacingPixels[3],
-  },
-  matchRowIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  matchRowInfo: {
-    flex: 1,
-    gap: 2,
   },
 });
 

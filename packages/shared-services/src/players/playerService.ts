@@ -137,7 +137,7 @@ export type BadgeStatus = 'self_declared' | 'certified' | 'disputed';
  * - The stored badge_status is 'certified'
  * - The is_certified flag is true
  * - They have 3+ referrals/references
- * - They have 2+ approved proofs at their current rating level
+ * - They have 1+ approved proofs at their current rating level
  *
  * @param params - Raw rating certification data
  * @returns The computed badge status
@@ -153,7 +153,7 @@ export function computeBadgeStatus(params: {
     params.rawBadgeStatus === 'certified' ||
     params.isCertified ||
     (params.referralsCount ?? 0) >= 3 ||
-    (params.approvedProofsCount ?? 0) >= 2
+    (params.approvedProofsCount ?? 0) >= 1
   ) {
     return 'certified';
   }

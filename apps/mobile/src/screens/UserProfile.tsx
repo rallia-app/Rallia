@@ -794,10 +794,6 @@ const UserProfile = () => {
                     </TouchableOpacity>
                   )}
                 </View>
-                <Text style={[styles.profilePicHint, { color: colors.textMuted }]}>
-                  {t('profile.tapCameraToChangePhoto')}
-                </Text>
-
                 {/* First and last name first, then username */}
                 <Text style={[styles.profileName, { color: colors.text }]}>
                   {`${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() ||
@@ -807,14 +803,6 @@ const UserProfile = () => {
                 <Text style={[styles.username, { color: colors.textMuted }]}>
                   @{profile?.display_name?.replace(/\s/g, '') || t('profile.username')}
                 </Text>
-
-                {/* Joined Date */}
-                <View style={styles.joinedContainer}>
-                  <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-                  <Text style={[styles.joinedText, { color: colors.textMuted }]}>
-                    {t('profile.joined')} {formatJoinedDate(player?.created_at || null)}
-                  </Text>
-                </View>
 
                 {/* Coveted Badge */}
                 <CovetedBadge
@@ -833,12 +821,29 @@ const UserProfile = () => {
                     certificationStatus={primaryRating?.badge_status}
                     isDark={isDark}
                     isLoading={playerLoading}
+                    onInfoPress={() =>
+                      SheetManager.show('rating-explainer', {
+                        payload: {
+                          sportName:
+                            primaryRating?.ratingSystemCode === 'dupr' ? 'pickleball' : 'tennis',
+                        },
+                      })
+                    }
                   />
                   <ReputationBadge
                     reputationDisplay={reputationDisplay}
                     isDark={isDark}
                     isLoading={reputationLoading}
+                    onInfoPress={() => SheetManager.show('reputation-explainer')}
                   />
+                </View>
+
+                {/* Joined Date */}
+                <View style={styles.joinedContainer}>
+                  <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
+                  <Text style={[styles.joinedText, { color: colors.textMuted }]}>
+                    {t('profile.joined')} {formatJoinedDate(player?.created_at || null)}
+                  </Text>
                 </View>
 
                 {/* Incoming Reference Requests CTA */}
@@ -1576,10 +1581,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
   },
-  profilePicHint: {
-    fontSize: fontSizePixels.xs,
-    marginBottom: spacingPixels[3],
-  },
   profileImage: {
     width: spacingPixels[20],
     height: spacingPixels[20],
@@ -1598,13 +1599,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[2],
-    marginTop: spacingPixels[1],
+    marginBottom: spacingPixels[2],
   },
   joinedContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[1],
-    marginTop: spacingPixels[1],
+    marginBottom: spacingPixels[1],
   },
   joinedText: {
     fontSize: fontSizePixels.xs,

@@ -989,7 +989,7 @@ export function SportSetupWizardActionSheet({ payload }: SheetProps<'sport-setup
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           {currentStep > 1 && (
             <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color={colors.text} />
+              <Ionicons name="chevron-back" size={24} color={colors.text} />
             </TouchableOpacity>
           )}
           <View style={styles.headerCenter}>

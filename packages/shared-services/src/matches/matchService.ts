@@ -1123,13 +1123,16 @@ export async function cancelMatch(matchId: string, userId?: string): Promise<Mat
       // Get sport name and location for better notification
       const { data: matchDetails } = await supabase
         .from('match')
-        .select('sport:sport_id (name), location_name')
+        .select('sport:sport_id (name), location_name, facility:facility_id (name)')
         .eq('id', matchId)
         .single();
 
       const sportName = (matchDetails?.sport as { name?: string } | null)?.name ?? 'Match';
+      const facilityName = (matchDetails?.facility as { name?: string } | null)?.name;
       const locationName =
-        (matchDetails as { location_name?: string | null })?.location_name ?? undefined;
+        facilityName ??
+        (matchDetails as { location_name?: string | null })?.location_name ??
+        undefined;
 
       // Extract time in HH:MM format for notification
       const startTime = match.start_time ? match.start_time.slice(0, 5) : undefined;
@@ -1504,16 +1507,20 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
           custom_latitude,
           custom_longitude,
           match_date,
-          start_time
+          start_time,
+          facility:facility_id (name)
         `
         )
         .eq('id', matchId)
         .single();
 
       const sportName = (matchDetails?.sport as { name?: string } | null)?.name;
+      const facilityName = (matchDetails?.facility as { name?: string } | null)?.name;
       // Don't include location if it's TBD
       const locationName =
-        matchDetails?.location_type === 'tbd' ? undefined : matchDetails?.location_name;
+        matchDetails?.location_type === 'tbd'
+          ? undefined
+          : (facilityName ?? matchDetails?.location_name);
 
       // Format match date
       let formattedDate: string | undefined;

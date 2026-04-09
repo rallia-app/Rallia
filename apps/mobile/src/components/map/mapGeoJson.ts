@@ -15,27 +15,39 @@ export function facilitiesToGeoJSON(
       properties: {
         id: f.id,
         icon: f.id === selectedId ? 'marker-facility-selected' : 'marker-facility',
+        match_count: f.upcoming_match_count ?? 0,
       },
     })),
   };
 }
 
-export function matchesToGeoJSON(matches: MapCustomMatch[]): GeoJSON.FeatureCollection {
+export function matchesToGeoJSON(
+  matches: MapCustomMatch[],
+  selectedIds: string[] | null
+): GeoJSON.FeatureCollection {
+  const selectedSet = selectedIds ? new Set(selectedIds) : null;
   return {
     type: 'FeatureCollection',
-    features: matches.map(m => ({
-      type: 'Feature' as const,
-      geometry: {
-        type: 'Point' as const,
-        coordinates: [m.custom_longitude, m.custom_latitude],
-      },
-      properties: {
-        id: m.id,
-        icon:
-          m.sport?.name?.toLowerCase() === 'pickleball'
-            ? 'marker-match-pickleball'
-            : 'marker-match-tennis',
-      },
-    })),
+    features: matches.map(m => {
+      const isPickleball = m.sport?.name?.toLowerCase() === 'pickleball';
+      const isSelected = selectedSet?.has(m.id) ?? false;
+      return {
+        type: 'Feature' as const,
+        geometry: {
+          type: 'Point' as const,
+          coordinates: [m.custom_longitude, m.custom_latitude],
+        },
+        properties: {
+          id: m.id,
+          icon: isPickleball
+            ? isSelected
+              ? 'marker-match-pickleball-selected'
+              : 'marker-match-pickleball'
+            : isSelected
+              ? 'marker-match-tennis-selected'
+              : 'marker-match-tennis',
+        },
+      };
+    }),
   };
 }

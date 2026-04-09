@@ -38,7 +38,7 @@ export const BlockedUserModal: React.FC<BlockedUserModalProps> = ({
     <View style={[styles.overlay, { backgroundColor: isDark ? colors.card : '#f5f5f5' }]}>
       {/* Back button at top left */}
       <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.7}>
-        <Ionicons name="arrow-back" size={24} color={colors.text} />
+        <Ionicons name="chevron-back" size={24} color={colors.text} />
         <Text style={[styles.backText, { color: colors.text }]}>{t('common.back')}</Text>
       </TouchableOpacity>
 
