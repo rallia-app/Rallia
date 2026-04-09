@@ -301,14 +301,14 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     switch (sortBy) {
       case 'name_asc':
         return sorted.sort((a, b) => {
-          const nameA = a.display_name || a.first_name || '';
-          const nameB = b.display_name || b.first_name || '';
+          const nameA = a.first_name || a.display_name || '';
+          const nameB = b.first_name || b.display_name || '';
           return nameA.localeCompare(nameB);
         });
       case 'name_desc':
         return sorted.sort((a, b) => {
-          const nameA = a.display_name || a.first_name || '';
-          const nameB = b.display_name || b.first_name || '';
+          const nameA = a.first_name || a.display_name || '';
+          const nameB = b.first_name || b.display_name || '';
           return nameB.localeCompare(nameA);
         });
       case 'rating_high':
@@ -332,8 +332,8 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
       case 'recently_active':
         // Last active not available in current data - fallback to name
         return sorted.sort((a, b) => {
-          const nameA = a.display_name || a.first_name || '';
-          const nameB = b.display_name || b.first_name || '';
+          const nameA = a.first_name || a.display_name || '';
+          const nameB = b.first_name || b.display_name || '';
           return nameA.localeCompare(nameB);
         });
       default:

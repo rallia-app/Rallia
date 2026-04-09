@@ -8,15 +8,13 @@ import {
   Modal,
   TextInput,
   ActivityIndicator,
-  ScrollView,
   Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Text, useToast } from '@rallia/shared-components';
 import { useTheme } from '@rallia/shared-hooks';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PhoneInput } from '../../../../components/PhoneInput';
 import { useImagePicker, useThemeStyles, useTranslation } from '../../../../hooks';
 import {
@@ -52,7 +50,6 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
   const totalSteps = payload?.totalSteps || 8;
   const initialData = payload?.initialData;
   const { colors } = useThemeStyles();
-  const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const { t } = useTranslation();
@@ -321,7 +318,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
   return (
     <ActionSheet
       gestureEnabled
-      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
       <View style={styles.modalContent}>
@@ -667,12 +664,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
         </ScrollView>
 
         {/* Sticky Footer */}
-        <View
-          style={[
-            styles.footer,
-            { borderTopColor: colors.border, paddingBottom: insets.bottom + spacingPixels[4] },
-          ]}
-        >
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
           <TouchableOpacity
             style={[
               styles.submitButton,
@@ -756,8 +748,7 @@ const styles = StyleSheet.create({
     borderRadius: 40,
   },
   footer: {
-    paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[4],
+    padding: spacingPixels[4],
     borderTopWidth: 1,
   },
   submitButton: {

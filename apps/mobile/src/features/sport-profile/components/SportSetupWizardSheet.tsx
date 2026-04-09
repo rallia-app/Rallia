@@ -3,13 +3,12 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   Alert,
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import ActionSheet, { SheetProps } from 'react-native-actions-sheet';
+import ActionSheet, { SheetProps, ScrollView } from 'react-native-actions-sheet';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { Text } from '@rallia/shared-components';
 import DatabaseService, {
@@ -977,7 +976,7 @@ export function SportSetupWizardActionSheet({ payload }: SheetProps<'sport-setup
       gestureEnabled={false}
       closable={false}
       closeOnTouchBackdrop={false}
-      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
       onBeforeClose={() => {
         if (!didCompleteRef.current) {
           onCancel?.();

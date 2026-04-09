@@ -33,7 +33,12 @@ import {
 } from '@rallia/design-system';
 
 const BASE_WHITE = '#ffffff';
-import { lightHaptic, warningHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
+import {
+  lightHaptic,
+  warningHaptic,
+  getProfilePictureUrl,
+  getHumanName,
+} from '@rallia/shared-utils';
 
 // Get app environment (EXPO_PUBLIC_ vars are inlined at build time by Metro)
 const appEnv = process.env.EXPO_PUBLIC_APP_ENV || 'development';
@@ -285,9 +290,7 @@ const SettingsScreen: React.FC = () => {
               )}
               <View style={styles.profileInfo}>
                 <Text size="lg" weight="semibold" color={colors.text}>
-                  {profile?.display_name ||
-                    `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() ||
-                    ''}
+                  {getHumanName(profile, '')}
                 </Text>
                 <Text size="sm" color={colors.textSecondary} style={styles.profileEmail}>
                   {profile?.email || ''}

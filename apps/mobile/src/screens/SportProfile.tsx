@@ -77,7 +77,7 @@ const getSkillLevelTranslationKey = (
   return mapping[scoreValue] || null;
 };
 
-import { selectionHaptic } from '@rallia/shared-utils';
+import { selectionHaptic, getHumanName } from '@rallia/shared-utils';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import { SheetManager } from 'react-native-actions-sheet';
 
@@ -885,11 +885,7 @@ const SportProfile = () => {
             .eq('id', userId)
             .single();
 
-          const requesterName = profile
-            ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() ||
-              profile.display_name ||
-              'A player'
-            : 'A player';
+          const requesterName = getHumanName(profile, 'A player');
 
           for (const req of insertedRequests) {
             notifyReferenceRequestReceived(

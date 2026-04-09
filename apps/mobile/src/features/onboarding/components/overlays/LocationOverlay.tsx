@@ -1,14 +1,7 @@
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  ActivityIndicator,
-  ScrollView,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Text, useToast } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
 import { spacingPixels, radiusPixels, darkTheme, lightTheme } from '@rallia/design-system';
@@ -270,7 +263,7 @@ export function LocationActionSheet({ payload }: SheetProps<'player-location'>) 
   return (
     <ActionSheet
       gestureEnabled
-      containerStyle={[styles.sheetContainer, { backgroundColor: colors.card }]}
+      containerStyle={[styles.sheetContainer, { backgroundColor: colors.cardBackground }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
       {/* Header */}

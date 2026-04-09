@@ -1,17 +1,9 @@
 import React, { useState, useCallback, useRef } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  ActivityIndicator,
-  ScrollView,
-} from 'react-native';
-import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import { View, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@rallia/shared-services';
 import { useAuth } from '@rallia/shared-hooks';
 import { useThemeStyles, useTranslation } from '../hooks';
@@ -26,7 +18,6 @@ export function ReferralInviteActionSheet(_props: SheetProps<'referral-invite'>)
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const { user } = useAuth();
-  const insets = useSafeAreaInsets();
 
   const [emails, setEmails] = useState<string[]>(['']);
   const [errors, setErrors] = useState<(string | null)[]>([null]);
@@ -242,10 +233,7 @@ export function ReferralInviteActionSheet(_props: SheetProps<'referral-invite'>)
   return (
     <ActionSheet
       gestureEnabled
-      containerStyle={[
-        styles.sheetContainer,
-        { backgroundColor: colors.cardBackground, paddingBottom: insets.bottom + spacingPixels[4] },
-      ]}
+      containerStyle={[styles.sheetContainer, { backgroundColor: colors.cardBackground }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
       onClose={resetState}
     >
@@ -260,10 +248,10 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radiusPixels['2xl'],
   },
   handleIndicator: {
-    width: 40,
+    width: spacingPixels[10],
     height: 4,
-    borderRadius: 2,
-    marginTop: spacingPixels[2],
+    borderRadius: 4,
+    alignSelf: 'center',
   },
   content: {
     padding: spacingPixels[5],

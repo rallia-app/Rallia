@@ -1,14 +1,14 @@
 import React from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
-import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
-import { Ionicons } from '@expo/vector-icons';
+import { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Text, Button } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, neutral, primary } from '@rallia/design-system';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { spacingPixels } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../hooks';
 import { ExplainerSection } from './ExplainerSection';
 import { CERTIFICATION_BADGE_COLORS } from '../RatingBadge';
+import { BaseActionSheet } from '../BaseActionSheet';
+import { primary } from '@rallia/design-system';
 
 function CertificationDot({
   color,
@@ -32,7 +32,6 @@ function CertificationDot({
 export function RatingExplainerActionSheet({ payload }: SheetProps<'rating-explainer'>) {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const sportName = payload?.sportName ?? 'tennis';
 
@@ -53,10 +52,13 @@ export function RatingExplainerActionSheet({ payload }: SheetProps<'rating-expla
   const amberBg = isDark ? 'rgba(251, 191, 36, 0.15)' : 'rgba(217, 119, 6, 0.10)';
 
   return (
-    <ActionSheet
-      gestureEnabled
-      containerStyle={[styles.container, { backgroundColor: colors.card }]}
-      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    <BaseActionSheet
+      flex={false}
+      footer={
+        <Button variant="primary" size="lg" fullWidth onPress={handleClose} isDark={isDark}>
+          {t('common.gotIt')}
+        </Button>
+      }
     >
       {/* Header */}
       <Text size="xl" weight="bold" color={textColor} style={styles.header}>
@@ -67,6 +69,7 @@ export function RatingExplainerActionSheet({ payload }: SheetProps<'rating-expla
         style={[styles.scrollContent, { maxHeight: windowHeight * 0.6 }]}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {/* How Ratings Work */}
         <ExplainerSection
@@ -159,33 +162,11 @@ export function RatingExplainerActionSheet({ payload }: SheetProps<'rating-expla
           </Text>
         </ExplainerSection>
       </ScrollView>
-
-      {/* Sticky Footer */}
-      <View
-        style={[
-          styles.footer,
-          { borderTopColor: colors.border, paddingBottom: insets.bottom + spacingPixels[4] },
-        ]}
-      >
-        <Button variant="primary" size="lg" fullWidth onPress={handleClose} isDark={isDark}>
-          {t('common.gotIt')}
-        </Button>
-      </View>
-    </ActionSheet>
+    </BaseActionSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    borderTopLeftRadius: radiusPixels['2xl'],
-    borderTopRightRadius: radiusPixels['2xl'],
-  },
-  handleIndicator: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    marginTop: spacingPixels[2],
-  },
   scrollContent: {},
   content: {
     paddingHorizontal: spacingPixels[5],

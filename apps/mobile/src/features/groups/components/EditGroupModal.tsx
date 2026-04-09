@@ -214,6 +214,7 @@ export function EditGroupActionSheet({ payload }: SheetProps<'edit-group'>) {
           style={styles.scrollContent}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           {/* Cover Image Picker */}
           <View style={styles.inputGroup}>

@@ -283,6 +283,7 @@ export function RecentGamesActionSheet({ payload }: SheetProps<'recent-games'>) 
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           {content}
         </ScrollView>

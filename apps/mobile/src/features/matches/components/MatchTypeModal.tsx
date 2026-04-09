@@ -36,8 +36,8 @@ export function MatchTypeActionSheet({ payload }: SheetProps<'match-type'>) {
   return (
     <ActionSheet
       gestureEnabled
-      containerStyle={[styles.sheetPanel, { backgroundColor: colors.cardBackground }]}
-      indicatorStyle={[styles.handleBar, { backgroundColor: colors.border }]}
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
       <View style={styles.container}>
         {/* Title */}
@@ -99,11 +99,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
-  sheetPanel: {
+  sheetBackground: {
     borderTopLeftRadius: radiusPixels['2xl'],
     borderTopRightRadius: radiusPixels['2xl'],
-    paddingBottom: spacingPixels[4],
-    paddingTop: 12,
   },
   container: {
     borderTopLeftRadius: radiusPixels['2xl'],
@@ -111,12 +109,11 @@ const styles = StyleSheet.create({
     paddingBottom: spacingPixels[4],
     paddingTop: 12,
   },
-  handleBar: {
+  handleIndicator: {
     width: spacingPixels[10],
     height: 4,
     borderRadius: 4,
     alignSelf: 'center',
-    marginBottom: 20,
   },
   title: {
     textAlign: 'center',
