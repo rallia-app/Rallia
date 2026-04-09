@@ -177,6 +177,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[5],
     marginBottom: spacingPixels[5],
   },
+  footer: {
+    paddingHorizontal: spacingPixels[5],
+    paddingTop: spacingPixels[4],
+    borderTopWidth: 1,
+  },
   bodyText: {
     lineHeight: 20,
   },

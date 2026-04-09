@@ -54,7 +54,6 @@ function EventBullet({
 export function ReputationExplainerActionSheet(_props: SheetProps<'reputation-explainer'>) {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
-
   const { height: windowHeight } = useWindowDimensions();
 
   const handleClose = () => {
