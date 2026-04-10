@@ -8,6 +8,7 @@ import {
   Dimensions,
   Keyboard,
   Platform,
+  Linking,
 } from 'react-native';
 import Animated, {
   FadeInDown,
@@ -26,11 +27,12 @@ import { Text, MatchCard } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary, accent, neutral } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useMapData, useFavoriteFacilities, usePlayer } from '@rallia/shared-hooks';
-import type { MapFacility, MapCustomMatch } from '@rallia/shared-hooks';
+import type { MapFacility, MapCustomMatch, FormattedSlot, CourtOption } from '@rallia/shared-hooks';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { MapStackParamList, RootStackParamList } from '../navigation/types';
+import type { MapStackParamList } from '../navigation/types';
+import { SheetManager } from 'react-native-actions-sheet';
 import { useThemeStyles, useTranslation, useEffectiveLocation } from '../hooks';
 import { useSport, useMatchDetailSheet } from '../context';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
@@ -101,7 +103,6 @@ const Map = () => {
   const shapePressed = useRef(false);
 
   const focusLocation = route.params?.focusLocation;
-  const restoreMatchIds = route.params?.restoreMatchIds;
   const initialCenter: [number, number] = focusLocation
     ? [focusLocation.lng, focusLocation.lat]
     : location
@@ -327,17 +328,6 @@ const Map = () => {
     }
   }, []);
 
-  // Restore selected match cards when returning from match detail sheet
-  const hasRestoredMatches = useRef(false);
-  useEffect(() => {
-    if (hasRestoredMatches.current || !restoreMatchIds?.length || !customMatches.length) return;
-    const matches = customMatches.filter(m => restoreMatchIds.includes(m.id));
-    if (matches.length > 0) {
-      hasRestoredMatches.current = true;
-      handleMatchSelect(matches.length === 1 ? matches[0] : matches);
-    }
-  }, [restoreMatchIds, customMatches, handleMatchSelect]);
-
   const handleSearchResultPress = useCallback(
     (facility: MapFacility) => {
       setSearchQuery('');
@@ -479,35 +469,36 @@ const Map = () => {
     [navigation]
   );
 
-  const rootNavigation = navigation.getParent<NativeStackNavigationProp<RootStackParamList>>();
-
   const handleMatchCardPress = useCallback(
     (match: MapCustomMatch) => {
-      // Save camera position and selected matches so we can restore on return
-      const center = currentCenterRef.current;
-      const zoom = currentZoomRef.current;
-      const matchIds = selectedMatches.map(m => m.id);
-      navigation.goBack();
-      // Small delay so the map dismisses before the sheet presents
-      setTimeout(() => {
-        openSheet(match as unknown as MatchDetailData, {
-          onDismiss: () => {
-            // Re-open map at the same location with cards restored
-            if (center) {
-              rootNavigation?.navigate('Map', {
-                screen: 'MapView',
-                params: {
-                  focusLocation: { lat: center[1], lng: center[0], zoom },
-                  restoreMatchIds: matchIds,
-                },
-              });
+      openSheet(match as unknown as MatchDetailData);
+    },
+    [openSheet]
+  );
+
+  const handleSlotPress = useCallback((_facility: unknown, slot: FormattedSlot) => {
+    if (slot.courtOptions.length > 1) {
+      SheetManager.show('court-selection', {
+        payload: {
+          courts: slot.courtOptions ?? [],
+          timeLabel: slot.time ?? '',
+          onSelect: (court: unknown) => {
+            const c = court as CourtOption;
+            if (c.bookingUrl) {
+              Linking.openURL(c.bookingUrl);
             }
           },
-        });
-      }, 100);
-    },
-    [navigation, rootNavigation, openSheet, selectedMatches]
-  );
+          onCancel: () => {},
+        },
+      });
+      return;
+    }
+
+    const bookingUrl = slot.courtOptions[0]?.bookingUrl || slot.bookingUrl;
+    if (bookingUrl) {
+      Linking.openURL(bookingUrl);
+    }
+  }, []);
 
   const PEEK = 24;
   const CARD_OVERLAP = 20; // Eat into the card's own 16+16px gap between items
@@ -893,6 +884,7 @@ const Map = () => {
             isMaxFavoritesReached={isMaxReached}
             showFavoriteButton={!!player?.id}
             sportName={selectedSport?.name}
+            onSlotPress={handleSlotPress}
             isDark={isDark}
             colors={colors}
             t={t}
@@ -939,6 +931,7 @@ const Map = () => {
                   isMaxFavoritesReached={isMaxReached}
                   showFavoriteButton={!!player?.id}
                   sportName={selectedSport?.name}
+                  onSlotPress={handleSlotPress}
                   isDark={isDark}
                   colors={colors}
                   t={t}
