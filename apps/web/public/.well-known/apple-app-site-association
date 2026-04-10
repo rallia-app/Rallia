@@ -4,7 +4,7 @@
     "details": [
       {
         "appID": "587DRRMTV8.com.mathisl971.rallia-app",
-        "paths": ["/match/*", "/*/match/*"]
+        "paths": ["/invite/*", "/*/invite/*", "/match/*", "/*/match/*"]
       }
     ]
   }

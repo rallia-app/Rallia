@@ -78,6 +78,7 @@ import {
 import {
   useTheme,
   usePlayer,
+  useReferral,
   useMatchActions,
   usePlayerReputation,
   useConfirmMatchScore,
@@ -708,6 +709,7 @@ export const MatchDetailSheet: React.FC = () => {
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
   const { player } = usePlayer();
+  const { code: referralCode } = useReferral(player?.id);
   const { location: locationPermission } = usePermissions();
   const isDark = theme === 'dark';
   const insets = useSafeAreaInsets();
@@ -1109,17 +1111,20 @@ export const MatchDetailSheet: React.FC = () => {
     }, 100);
   }, [selectedMatch, closeSheet, openSheet]);
 
-  // Handle share - uses rich message with match details and deep link
+  // Handle share - uses rich message with match details and unified invitation link
   const handleShare = useCallback(async () => {
     if (!selectedMatch) return;
     lightHaptic();
     try {
-      await shareMatch(selectedMatch, { t, locale });
+      await shareMatch(selectedMatch, { t, locale, referralCode });
       Analytics.matchShared({ sport: selectedMatch.sport?.name ?? 'unknown' });
+      if (referralCode) {
+        Analytics.invitationLinkGenerated({ invitation_type: 'match', channel: 'share_sheet' });
+      }
     } catch {
       // Silently handle errors
     }
-  }, [selectedMatch, t, locale]);
+  }, [selectedMatch, t, locale, referralCode]);
 
   // Handle confirming a score
   const handleConfirmScore = useCallback(async () => {

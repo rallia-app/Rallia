@@ -41,7 +41,7 @@ import type { TranslationKey } from '@rallia/shared-translations';
 import type { Locale } from '@rallia/shared-translations';
 import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
 import { useLocale } from '../../../../../context';
-import { PENDING_REFERRAL_KEY_EXPORT } from '../../../../../screens/InviteReferralScreen';
+import { PENDING_REFERRAL_KEY } from '../../../../../screens/InvitationDeepLinkScreen';
 
 interface ThemeColors {
   background: string;
@@ -310,7 +310,8 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
     const code = referralCode.trim().toUpperCase();
     if (!code) return;
     try {
-      await AsyncStorage.setItem(PENDING_REFERRAL_KEY_EXPORT, code);
+      // When manually entered, we only have the code (type defaults to 'referral')
+      await AsyncStorage.setItem(PENDING_REFERRAL_KEY, JSON.stringify({ code, type: 'referral' }));
       setReferralSaved(true);
     } catch {
       // Silently fail — attribution will be attempted later

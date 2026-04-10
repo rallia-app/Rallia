@@ -133,8 +133,17 @@ export function sportModeSwitched(props: { sport_name: string }): void {
 
 // ---- Growth (Inbound) ----
 
+/** @deprecated Use referralAttributed instead */
 export function referralCodeUsed(): void {
   capture('referral_code_used');
+}
+
+export function referralAttributed(props: {
+  invitation_type: string;
+  referral_code: string;
+  target_id?: string;
+}): void {
+  capture('referral_attributed', props);
 }
 
 // ---- Settings ----
@@ -175,11 +184,22 @@ export function filterApplied(props: { filter_type: string; value: string }): vo
 
 // ---- Growth ----
 
+/** @deprecated Use invitationLinkGenerated instead */
 export function referralInviteShared(props: { channel: string }): void {
   capture('referral_invite_shared', props);
 }
 
-export function deepLinkOpened(props: { link_type: string }): void {
+export function invitationLinkGenerated(props: { invitation_type: string; channel: string }): void {
+  capture('invitation_link_generated', props);
+}
+
+export function deepLinkOpened(props: {
+  link_type: string;
+  invitation_type?: string;
+  has_referral?: boolean;
+  referral_code?: string;
+  target_id?: string;
+}): void {
   capture('deep_link_opened', props);
 }
 

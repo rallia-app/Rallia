@@ -91,7 +91,8 @@ export const linking: LinkingOptions<RootStackParamList> = {
       ChatConversation: 'conversation/:conversationId',
       GroupDetail: 'group/:groupId',
       CommunityDetail: 'community/:communityId',
-      InviteReferral: 'invite/:referralCode',
+      InviteReferral: 'invite-legacy/:referralCode',
+      InvitationDeepLink: 'invite/:referralCode',
       MatchDeepLink: 'match/:matchId',
 
       // Admin screens - protected by useAdminDeepLinkGuard

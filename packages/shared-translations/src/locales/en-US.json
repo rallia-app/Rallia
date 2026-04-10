@@ -4782,6 +4782,18 @@
       "analyticsCard": {
         "title": "Analytics",
         "description": "Analytics and insights"
+      },
+      "kpi": {
+        "activeUsers": "Active Users",
+        "matchesToday": "Matches Today",
+        "pendingReports": "Pending Reports",
+        "refresh": "Refresh",
+        "loading": "Loading stats..."
+      },
+      "alertsPreview": {
+        "title": "Recent Alerts",
+        "viewAll": "View all alerts",
+        "noAlerts": "No alerts right now"
       }
     },
     "export": {
@@ -4804,6 +4816,7 @@
       "last7Days": "Last 7 Days",
       "totalActions": "Total Actions",
       "info": "Info",
+      "warning": "Warning",
       "warnings": "Warnings",
       "critical": "Critical",
       "filterByAction": "Filter by Action",
@@ -4813,7 +4826,13 @@
       "tryDifferentFilters": "Try adjusting your filters",
       "noActivityYet": "No activity recorded yet",
       "clearFilters": "Clear Filters",
-      "action": "Action"
+      "action": "Action",
+      "timestamp": "Timestamp",
+      "admin": "Admin",
+      "entity": "Entity",
+      "name": "Name",
+      "severity": "Severity",
+      "loadMore": "Load more"
     },
     "sections": {
       "users": {
@@ -4920,7 +4939,38 @@
       "durationDays": "Duration (Days)",
       "reasonLabel": "Reason",
       "reasonPlaceholder": "Enter reason for ban...",
-      "confirmBan": "Confirm Ban"
+      "confirmBan": "Confirm Ban",
+      "escalate": "Escalate",
+      "updateStatus": "Update Status",
+      "adminNotes": "Admin Notes",
+      "notesPlaceholder": "Add notes about this review...",
+      "submitReview": "Submit Review",
+      "submitting": "Submitting...",
+      "cancel": "Cancel",
+      "description": "Description",
+      "loadMore": "Load more",
+      "player": "Player",
+      "playerId": "Player ID",
+      "playerIdPlaceholder": "Enter player UUID...",
+      "date": "Date",
+      "deleteNetwork": "Delete Network",
+      "deleteNetworkConfirm": "This action cannot be undone. The network and all associated data will be permanently deleted.",
+      "deleteReasonPlaceholder": "Reason for deletion (optional)...",
+      "deleting": "Deleting...",
+      "delete": "Delete",
+      "certify": "Certify",
+      "removeCertification": "Remove Certification",
+      "certified": "Certified",
+      "notCertified": "Not Certified",
+      "networksDescription": "Manage communities and groups.",
+      "noNetworks": "No networks found.",
+      "searchNetworks": "Search networks...",
+      "allTypes": "All Types",
+      "group": "Group",
+      "community": "Community",
+      "certification": "Certification",
+      "members": "Members",
+      "total": "Total"
     },
     "alerts": {
       "title": "Alerts",
@@ -4933,7 +4983,9 @@
       "info": "Info",
       "unread": "Unread",
       "noAlerts": "No Alerts",
-      "allClear": "All clear! No alerts to display."
+      "allClear": "All clear! No alerts to display.",
+      "allSeverities": "All Severities",
+      "showRead": "Show read"
     },
     "signIn": {
       "title": "Admin Sign In",
@@ -4947,6 +4999,10 @@
       "dashboard": "Dashboard",
       "organizations": "Organizations",
       "users": "Users",
+      "moderation": "Moderation",
+      "activityLog": "Activity Log",
+      "alerts": "Alerts",
+      "networks": "Networks",
       "analytics": "Analytics",
       "settings": "Settings"
     },
@@ -5981,6 +6037,11 @@
       "titleMeta": "Analytics - Admin - Rallia",
       "descriptionMeta": "Analytics and insights.",
       "comingSoon": "Analytics dashboard coming soon.",
+      "viewInPostHog": "View detailed analytics in PostHog",
+      "totalUsers": "Total Users",
+      "activeToday": "Active Today",
+      "activeWeek": "Active This Week",
+      "newWeek": "New This Week",
       "lastUpdated": "Last updated",
       "overview": "Overview",
       "players": "Players",
@@ -8039,6 +8100,26 @@
       "singles": "Singles",
       "doubles": "Doubles"
     }
+  },
+  "invitePage": {
+    "title": "Join Rallia",
+    "description": "Download Rallia to find players, join matches, and play more.",
+    "invitedBy": "{name} invited you to Rallia!",
+    "invitedByGeneric": "You've been invited to Rallia!",
+    "matchInviteTitle": "{name} invited you to play {sport}!",
+    "matchInviteTitleGeneric": "You're invited to play {sport}!",
+    "matchInviteHeading": "{name} invited you to play {sport}!",
+    "matchInviteHeadingGeneric": "Join a {sport} match!",
+    "groupInviteTitle": "Join {group} on Rallia",
+    "groupInviteHeading": "You're invited to join {group}!",
+    "communityInviteTitle": "Join {community} on Rallia",
+    "communityInviteHeading": "You're invited to join {community}!",
+    "at": "at",
+    "scanQr": "Scan this QR code with your phone to get started.",
+    "appStore": "Download on the App Store",
+    "googlePlay": "Get it on Google Play",
+    "notFound": "Invite not found",
+    "notFoundDescription": "This invite link may be invalid or expired."
   },
   "feedback": {
     "title": "Feedback",
