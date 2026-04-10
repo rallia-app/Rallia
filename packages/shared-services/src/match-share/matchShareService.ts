@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '../supabase';
+import { generateInvitationLink } from '../invitation/invitationLinkService';
 
 // ============================================================================
 // TYPES
@@ -57,6 +58,8 @@ export interface ShareMatchInput {
     email?: string;
   }>;
   expiresInDays?: number; // Default 7 days
+  /** Sender's referral code for attribution tracking */
+  referralCode?: string;
 }
 
 export interface ShareMatchResult {
@@ -84,12 +87,21 @@ function generateShareToken(): string {
 
 /**
  * Generate share link for a match.
- * Uses the same /match/{id} deep link format as the social share from MatchDetailSheet.
- * The optional ref param preserves the share token for per-recipient analytics.
+ * Uses the unified invitation link format when referralCode is provided,
+ * enabling referral attribution for the sender.
+ * The optional share token enables per-recipient analytics tracking.
  */
-function generateShareLink(matchId: string, token?: string): string {
+function generateShareLink(matchId: string, referralCode?: string, token?: string): string {
+  if (referralCode) {
+    return generateInvitationLink({
+      type: 'match',
+      referralCode,
+      targetId: matchId,
+      shareToken: token,
+    });
+  }
   const base = `https://rallia.app/match/${matchId}`;
-  return token ? `${base}?ref=${token}` : base;
+  return token ? `${base}?share=${token}` : base;
 }
 
 /**
@@ -228,7 +240,7 @@ export async function shareMatchWithContacts(input: ShareMatchInput): Promise<Sh
     throw new Error(`Failed to create recipients: ${recipientsError.message}`);
   }
 
-  const shareLink = generateShareLink(input.matchId, token);
+  const shareLink = generateShareLink(input.matchId, input.referralCode, token);
   const shareMessage = await generateShareMessage(input.matchId, shareLink, senderName);
 
   return {

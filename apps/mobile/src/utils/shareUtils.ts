@@ -5,6 +5,7 @@
  */
 
 import { Share } from 'react-native';
+import { generateInvitationLink } from '@rallia/shared-services';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import type { TranslationKey } from '../hooks';
 
@@ -24,13 +25,19 @@ interface ShareOptions {
   t: TranslateFunction;
   /** Current locale for date/time formatting (e.g., 'en-US', 'fr-CA') */
   locale: string;
+  /** Sender's referral code for attribution tracking */
+  referralCode?: string;
 }
 
 /**
  * Generate the deep link URL for a match.
- * This URL can be opened by anyone to view/join the match in the app.
+ * When referralCode is provided, uses the unified invitation link format
+ * for referral attribution.
  */
-export function generateMatchDeepLink(matchId: string): string {
+export function generateMatchDeepLink(matchId: string, referralCode?: string): string {
+  if (referralCode) {
+    return generateInvitationLink({ type: 'match', referralCode, targetId: matchId });
+  }
   return `https://rallia.app/match/${matchId}`;
 }
 
@@ -104,7 +111,7 @@ export function generateMatchShareMessage(match: MatchDetailData, options: Share
   const date = formatShareDate(match.match_date, locale, match.timezone);
   const time = match.start_time ? formatShareTime(match.start_time, locale) : '';
   const location = match.location_name || match.facility?.name || t('matchDetail.locationTBD');
-  const deepLink = generateMatchDeepLink(match.id);
+  const deepLink = generateMatchDeepLink(match.id, options.referralCode);
 
   // Use translated strings
   const inviteText = t('matchDetail.shareInvite', { sport: sportName });

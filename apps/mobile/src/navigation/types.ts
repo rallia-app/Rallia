@@ -55,7 +55,8 @@ export type RootStackParamList = {
   }; // Network member upcoming matches view
   MyBookings: undefined; // My Bookings screen (court bookings management)
   BookingDetail: { bookingId: string }; // Booking detail screen (deep link / notification target)
-  InviteReferral: { referralCode: string }; // Referral deep link handler
+  InviteReferral: { referralCode: string }; // Legacy referral deep link handler (kept for reference)
+  InvitationDeepLink: { referralCode: string }; // Unified invitation deep link handler
   MatchDeepLink: { matchId: string }; // Match deep link handler (Universal Links / App Links)
 
   // Admin screens - accessible only to users with admin role

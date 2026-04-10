@@ -61,6 +61,8 @@ interface InviteFromListsStepProps {
   colors: InviteFromListsStepColors;
   t: (key: TranslationKey, options?: TranslationOptions) => string;
   isDark: boolean;
+  /** Sender's referral code for attribution tracking */
+  referralCode?: string;
   /** Called after a successful share (e.g. to close sheet or refresh) */
   onShareSuccess?: () => void;
 }
@@ -74,6 +76,7 @@ export function InviteFromListsStep({
   colors,
   t,
   isDark,
+  referralCode,
   onShareSuccess,
 }: InviteFromListsStepProps) {
   const toast = useToast();
@@ -182,6 +185,7 @@ export function InviteFromListsStep({
         const result = await shareMatchWithContacts({
           matchId,
           channel,
+          referralCode,
           contacts: selectedContacts.map(c => ({
             contactId: c.id,
             listId: c.listId,

@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '../supabase';
+import { generateInvitationLink } from '../invitation/invitationLinkService';
 
 // ============================================================================
 // INVITE CODE OPERATIONS
@@ -76,10 +77,13 @@ export async function resetGroupInviteCode(groupId: string, moderatorId: string)
 }
 
 /**
- * Get the invite link URL for a group
+ * Get the invite link URL for a group.
+ * When referralCode is provided, uses the unified invitation link format
+ * so the sender gets referral attribution if the recipient signs up.
  */
-export function getGroupInviteLink(inviteCode: string): string {
-  // Using a custom scheme that can be handled by the app
-  // This can be a universal link or deep link depending on your setup
+export function getGroupInviteLink(inviteCode: string, referralCode?: string): string {
+  if (referralCode) {
+    return generateInvitationLink({ type: 'group', referralCode, targetId: inviteCode });
+  }
   return `https://rallia.app/join/${inviteCode}`;
 }
