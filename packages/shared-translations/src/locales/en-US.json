@@ -5004,7 +5004,8 @@
       "alerts": "Alerts",
       "networks": "Networks",
       "analytics": "Analytics",
-      "settings": "Settings"
+      "settings": "Settings",
+      "map": "Player Map"
     },
     "organizations": {
       "title": "Organizations",
@@ -6049,6 +6050,38 @@
         "success": "\"{name}\" has been deleted. {count} members were notified.",
         "error": "Failed to delete network"
       }
+    },
+    "map": {
+      "title": "Player Map",
+      "titleMeta": "Player Map - Admin - Rallia",
+      "description": "Visualize player locations and density across regions.",
+      "descriptionMeta": "Geographic distribution of players.",
+      "filters": {
+        "gender": "Gender",
+        "status": "Status",
+        "province": "Province",
+        "all": "All",
+        "active": "Active",
+        "inactive": "Inactive",
+        "suspended": "Suspended"
+      },
+      "stats": {
+        "totalPlayers": "{count} players shown",
+        "totalFacilities": "{count} facilities",
+        "topCities": "Top cities"
+      },
+      "controls": {
+        "clusters": "Clusters",
+        "heatmap": "Heatmap",
+        "facilities": "Facilities",
+        "selectArea": "Select Area",
+        "joinedBetween": "Joined between"
+      },
+      "selection": {
+        "title": "Area Selection",
+        "players": "players"
+      },
+      "noData": "No players with location data found."
     },
     "analytics": {
       "title": "Analytics",
@@ -8071,6 +8104,7 @@
     "kmAway": "{distance} km away",
     "spotsLeft": "{count, plural, =1 {1 spot left} other {# spots left}}",
     "matchFull": "Full",
+    "playersJoined": "players joined",
     "today": "Today",
     "tomorrow": "Tomorrow",
     "singles": "Singles",
