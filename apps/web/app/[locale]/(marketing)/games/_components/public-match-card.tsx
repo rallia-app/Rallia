@@ -313,9 +313,9 @@ export default function PublicMatchCard({ match, onJoin }: PublicMatchCardProps)
           className="w-full font-semibold"
           size="lg"
           onClick={() => onJoin(match.id)}
-          disabled={isFull}
+          variant={isFull ? 'outline' : 'default'}
         >
-          {t('joinButton')}
+          {isFull ? t('waitlistButton') : t('joinButton')}
         </Button>
       </div>
     </div>

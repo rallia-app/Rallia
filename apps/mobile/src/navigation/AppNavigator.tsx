@@ -126,6 +126,7 @@ import PlayerMatches from '../features/matches/screens/PlayerMatches';
 import { FacilitiesDirectory, FacilityDetail } from '../features/facilities';
 import { MyBookingsScreen, BookingDetailScreen } from '../features/bookings';
 import { InviteReferralScreen } from '../screens/InviteReferralScreen';
+import { MatchDeepLinkScreen } from '../screens/MatchDeepLinkScreen';
 
 // =============================================================================
 // TYPED NAVIGATORS
@@ -1458,6 +1459,11 @@ export default function AppNavigator() {
       <RootStack.Screen
         name="InviteReferral"
         component={InviteReferralScreen}
+        options={{ headerShown: false }}
+      />
+      <RootStack.Screen
+        name="MatchDeepLink"
+        component={MatchDeepLinkScreen}
         options={{ headerShown: false }}
       />
     </RootStack.Navigator>

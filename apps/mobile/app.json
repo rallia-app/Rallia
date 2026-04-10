@@ -51,6 +51,11 @@
               "scheme": "https",
               "host": "rallia.app",
               "pathPrefix": "/match"
+            },
+            {
+              "scheme": "https",
+              "host": "rallia.app",
+              "pathPattern": "/.*/match/.*"
             }
           ],
           "category": ["BROWSABLE", "DEFAULT"]

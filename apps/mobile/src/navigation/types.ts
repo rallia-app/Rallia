@@ -56,6 +56,7 @@ export type RootStackParamList = {
   MyBookings: undefined; // My Bookings screen (court bookings management)
   BookingDetail: { bookingId: string }; // Booking detail screen (deep link / notification target)
   InviteReferral: { referralCode: string }; // Referral deep link handler
+  MatchDeepLink: { matchId: string }; // Match deep link handler (Universal Links / App Links)
 
   // Admin screens - accessible only to users with admin role
   AdminPanel: undefined; // Admin dashboard entry point

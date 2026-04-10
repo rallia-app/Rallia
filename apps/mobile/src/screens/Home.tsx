@@ -36,7 +36,9 @@ import {
   useSport,
   useMatchDetailSheet,
   useUserHomeLocation,
+  useDeepLink,
 } from '../context';
+import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import { CopilotStep, WalkthroughableView } from '../context/TourContext';
 import { FeedbackFAB } from '../components/BugReportFAB';
 import {
@@ -55,7 +57,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NearbyMatch, MatchScoringPreferences } from '@rallia/shared-hooks';
 import type { MatchWithDetails } from '@rallia/shared-types';
-import { Logger } from '@rallia/shared-services';
+import { Logger, getMatchWithDetails } from '@rallia/shared-services';
 import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
 import { SportIcon } from '../components/SportIcon';
 import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
@@ -185,6 +187,18 @@ const Home = () => {
   const isDark = theme === 'dark';
   const navigation = useHomeNavigation();
   const appNavigation = useAppNavigation();
+
+  // Consume pending match deep link (from Universal Links / App Links)
+  const { consumePendingMatchId } = useDeepLink();
+  useEffect(() => {
+    const matchId = consumePendingMatchId();
+    if (!matchId) return;
+    getMatchWithDetails(matchId).then(match => {
+      if (match) {
+        openMatchDetail(match as MatchDetailData);
+      }
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Home screen tour - triggers after main navigation tour is completed
   useTourSequence({
