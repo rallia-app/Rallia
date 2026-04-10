@@ -4784,6 +4784,18 @@
       "analyticsCard": {
         "title": "Analytique",
         "description": "Analyses et statistiques"
+      },
+      "kpi": {
+        "activeUsers": "Utilisateurs actifs",
+        "matchesToday": "Matchs aujourd'hui",
+        "pendingReports": "Signalements en attente",
+        "refresh": "Actualiser",
+        "loading": "Chargement des statistiques..."
+      },
+      "alertsPreview": {
+        "title": "Alertes récentes",
+        "viewAll": "Voir toutes les alertes",
+        "noAlerts": "Aucune alerte pour le moment"
       }
     },
     "export": {
@@ -4806,6 +4818,7 @@
       "last7Days": "7 derniers jours",
       "totalActions": "Total des actions",
       "info": "Info",
+      "warning": "Avertissement",
       "warnings": "Avertissements",
       "critical": "Critique",
       "filterByAction": "Filtrer par action",
@@ -4815,7 +4828,13 @@
       "tryDifferentFilters": "Essayez d'ajuster vos filtres",
       "noActivityYet": "Aucune activité enregistrée pour le moment",
       "clearFilters": "Effacer les filtres",
-      "action": "Action"
+      "action": "Action",
+      "timestamp": "Horodatage",
+      "admin": "Admin",
+      "entity": "Entité",
+      "name": "Nom",
+      "severity": "Sévérité",
+      "loadMore": "Charger plus"
     },
     "sections": {
       "users": {
@@ -4922,7 +4941,38 @@
       "durationDays": "Durée (jours)",
       "reasonLabel": "Raison",
       "reasonPlaceholder": "Entrez la raison du bannissement...",
-      "confirmBan": "Confirmer le bannissement"
+      "confirmBan": "Confirmer le bannissement",
+      "escalate": "Escalader",
+      "updateStatus": "Mettre à jour le statut",
+      "adminNotes": "Notes admin",
+      "notesPlaceholder": "Ajouter des notes sur cette révision...",
+      "submitReview": "Soumettre la révision",
+      "submitting": "Soumission...",
+      "cancel": "Annuler",
+      "description": "Description",
+      "loadMore": "Charger plus",
+      "player": "Joueur",
+      "playerId": "ID du joueur",
+      "playerIdPlaceholder": "Entrer le UUID du joueur...",
+      "date": "Date",
+      "deleteNetwork": "Supprimer le réseau",
+      "deleteNetworkConfirm": "Cette action est irréversible. Le réseau et toutes les données associées seront définitivement supprimés.",
+      "deleteReasonPlaceholder": "Raison de la suppression (facultatif)...",
+      "deleting": "Suppression...",
+      "delete": "Supprimer",
+      "certify": "Certifier",
+      "removeCertification": "Retirer la certification",
+      "certified": "Certifié",
+      "notCertified": "Non certifié",
+      "networksDescription": "Gérer les communautés et les groupes.",
+      "noNetworks": "Aucun réseau trouvé.",
+      "searchNetworks": "Rechercher des réseaux...",
+      "allTypes": "Tous les types",
+      "group": "Groupe",
+      "community": "Communauté",
+      "certification": "Certification",
+      "members": "Membres",
+      "total": "Total"
     },
     "alerts": {
       "title": "Alertes",
@@ -4935,7 +4985,9 @@
       "info": "Info",
       "unread": "Non lu",
       "noAlerts": "Aucune alerte",
-      "allClear": "Tout est en ordre ! Aucune alerte à afficher."
+      "allClear": "Tout est en ordre ! Aucune alerte à afficher.",
+      "allSeverities": "Toutes les sévérités",
+      "showRead": "Afficher lues"
     },
     "signIn": {
       "title": "Connexion Admin",
@@ -4949,8 +5001,13 @@
       "dashboard": "Tableau de bord",
       "organizations": "Organisations",
       "users": "Utilisateurs",
+      "moderation": "Modération",
+      "activityLog": "Journal d'activité",
+      "alerts": "Alertes",
+      "networks": "Réseaux",
       "analytics": "Analytique",
-      "settings": "Paramètres"
+      "settings": "Paramètres",
+      "map": "Carte des joueurs"
     },
     "organizations": {
       "title": "Organisations",
@@ -5734,6 +5791,20 @@
           },
           "supported": "Supporté",
           "notSupported": "Non supporté"
+        },
+        "actions": {
+          "suspend": "Suspendre",
+          "reactivate": "Réactiver",
+          "ban": "Bannir le joueur",
+          "suspendConfirmTitle": "Suspendre le joueur",
+          "suspendConfirmDescription": "Êtes-vous sûr de vouloir suspendre {name} ? L'accès à la plateforme sera révoqué.",
+          "reactivateConfirmTitle": "Réactiver le joueur",
+          "reactivateConfirmDescription": "Êtes-vous sûr de vouloir réactiver {name} ? L'accès à la plateforme sera rétabli.",
+          "confirm": "Confirmer",
+          "cancel": "Annuler",
+          "suspending": "Suspension en cours...",
+          "reactivating": "Réactivation en cours...",
+          "error": "L'action a échoué"
         }
       },
       "edit": {
@@ -5860,7 +5931,12 @@
           "confirmDescription": "Êtes-vous sûr de vouloir suspendre {count, plural, one {ce joueur} other {ces # joueurs}} ?",
           "cancel": "Annuler",
           "confirmSuspend": "Suspendre",
-          "suspending": "Suspension en cours..."
+          "suspending": "Suspension en cours...",
+          "reactivate": "Réactiver la sélection",
+          "reactivateConfirmTitle": "Réactiver les joueurs",
+          "reactivateConfirmDescription": "Êtes-vous sûr de vouloir réactiver {count, plural, one {ce joueur} other {ces # joueurs}} ?",
+          "confirmReactivate": "Réactiver",
+          "reactivating": "Réactivation en cours..."
         }
       }
     },
@@ -5977,12 +6053,49 @@
         "error": "Échec de la suppression du réseau"
       }
     },
+    "map": {
+      "title": "Carte des joueurs",
+      "titleMeta": "Carte des joueurs - Admin - Rallia",
+      "description": "Visualisez la répartition et la densité des joueurs par région.",
+      "descriptionMeta": "Répartition géographique des joueurs.",
+      "filters": {
+        "gender": "Genre",
+        "status": "Statut",
+        "province": "Province",
+        "all": "Tous",
+        "active": "Actif",
+        "inactive": "Inactif",
+        "suspended": "Suspendu"
+      },
+      "stats": {
+        "totalPlayers": "{count} joueurs affichés",
+        "totalFacilities": "{count} installations",
+        "topCities": "Villes principales"
+      },
+      "controls": {
+        "clusters": "Groupes",
+        "heatmap": "Carte thermique",
+        "facilities": "Installations",
+        "selectArea": "Sélectionner une zone",
+        "joinedBetween": "Inscrit entre"
+      },
+      "selection": {
+        "title": "Zone sélectionnée",
+        "players": "joueurs"
+      },
+      "noData": "Aucun joueur avec des données de localisation trouvé."
+    },
     "analytics": {
       "title": "Analytique",
       "description": "Analyses et informations.",
       "titleMeta": "Analytique - Admin - Rallia",
       "descriptionMeta": "Analyses et informations.",
       "comingSoon": "Tableau de bord analytique à venir.",
+      "viewInPostHog": "Voir les analyses détaillées dans PostHog",
+      "totalUsers": "Total utilisateurs",
+      "activeToday": "Actifs aujourd'hui",
+      "activeWeek": "Actifs cette semaine",
+      "newWeek": "Nouveaux cette semaine",
       "lastUpdated": "Dernière mise à jour",
       "overview": "Aperçu",
       "players": "Joueurs",
@@ -7987,11 +8100,13 @@
     "title": "Parties à venir",
     "subtitle": "Trouvez des parties publiques près de chez vous et rejoignez l'action.",
     "joinButton": "Rejoindre la partie",
+    "waitlistButton": "Rejoindre la liste d'attente",
     "loadMore": "Voir plus",
     "noMatches": "Aucune partie à venir pour le moment. Revenez bientôt!",
     "kmAway": "{distance} km",
     "spotsLeft": "{count, plural, =1 {1 place restante} other {# places restantes}}",
     "matchFull": "Complet",
+    "playersJoined": "joueurs inscrits",
     "today": "Aujourd'hui",
     "tomorrow": "Demain",
     "singles": "Simple",
@@ -8021,14 +8136,8 @@
     },
     "joinDialog": {
       "title": "Rejoindre cette partie",
-      "description": "Laissez votre courriel et nous vous enverrons les détails pour rejoindre cette partie.",
-      "emailLabel": "Courriel",
-      "emailPlaceholder": "vous@exemple.com",
-      "nameLabel": "Nom (optionnel)",
-      "namePlaceholder": "Votre nom",
-      "submitButton": "Envoyez-moi les détails",
-      "successTitle": "C'est fait!",
-      "successMessage": "Consultez votre boîte de réception pour les prochaines étapes."
+      "description": "Scannez le code QR avec votre téléphone pour télécharger Rallia et rejoindre cette partie.",
+      "qrHint": "Ouvrez Rallia sur votre téléphone pour rejoindre cette partie."
     }
   },
   "matchPage": {
@@ -8046,6 +8155,26 @@
       "singles": "Simple",
       "doubles": "Double"
     }
+  },
+  "invitePage": {
+    "title": "Rejoignez Rallia",
+    "description": "Téléchargez Rallia pour trouver des joueurs, rejoindre des parties et jouer plus.",
+    "invitedBy": "{name} vous a invité sur Rallia!",
+    "invitedByGeneric": "Vous avez été invité sur Rallia!",
+    "matchInviteTitle": "{name} vous invite à jouer au {sport}!",
+    "matchInviteTitleGeneric": "Vous êtes invité à jouer au {sport}!",
+    "matchInviteHeading": "{name} vous invite à jouer au {sport}!",
+    "matchInviteHeadingGeneric": "Rejoignez une partie de {sport}!",
+    "groupInviteTitle": "Rejoignez {group} sur Rallia",
+    "groupInviteHeading": "Vous êtes invité à rejoindre {group}!",
+    "communityInviteTitle": "Rejoignez {community} sur Rallia",
+    "communityInviteHeading": "Vous êtes invité à rejoindre {community}!",
+    "at": "à",
+    "scanQr": "Scannez ce code QR avec votre téléphone pour commencer.",
+    "appStore": "Télécharger sur l'App Store",
+    "googlePlay": "Télécharger sur Google Play",
+    "notFound": "Invitation non trouvée",
+    "notFoundDescription": "Ce lien d'invitation est peut-être invalide ou expiré."
   },
   "feedback": {
     "title": "Commentaires",

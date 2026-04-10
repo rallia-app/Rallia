@@ -4,7 +4,10 @@
     "target": {
       "namespace": "android_app",
       "package_name": "com.mathisl971.ralliaapp",
-      "sha256_cert_fingerprints": []
+      "sha256_cert_fingerprints": [
+        "A6:8A:50:4D:D5:95:3E:DA:1F:6A:5C:08:C4:8A:D9:7B:1D:F4:29:46:14:DD:05:D3:95:1E:01:C2:76:BC:54:D4",
+        "CF:49:9F:2C:6B:2F:4C:7D:17:FA:E3:32:61:54:1E:65:3E:2D:AF:41:D5:C6:0C:D4:2C:03:CC:86:BB:A2:A5:2B"
+      ]
     }
   }
 ]

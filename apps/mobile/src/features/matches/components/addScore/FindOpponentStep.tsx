@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, Button, Skeleton } from '@rallia/shared-components';
 import { usePlayerSearch } from '@rallia/shared-hooks';
 import type { PlayerSearchResult } from '@rallia/shared-services';
+import { getHumanName } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
 import { useAuth } from '../../../../hooks';
 import { useSport } from '../../../../context';
@@ -189,7 +190,7 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
         </View>
         <View style={styles.playerInfo}>
           <Text weight="medium" style={{ color: colors.text }}>
-            {item.display_name || `${item.first_name} ${item.last_name || ''}`.trim()}
+            {getHumanName(item)}
           </Text>
         </View>
         {isSelected && <Ionicons name="checkmark-circle" size={24} color={colors.primary} />}

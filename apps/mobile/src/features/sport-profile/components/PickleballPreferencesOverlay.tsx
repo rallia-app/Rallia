@@ -10,7 +10,6 @@ import { useTranslation, type TranslationKey } from '../../../hooks';
 
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
 import ProgressIndicator from '../../onboarding/components/ProgressIndicator';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /**
  * Dynamic play style option fetched from database
@@ -101,7 +100,6 @@ export function PickleballPreferencesActionSheet({
   const totalSteps = payload?.totalSteps;
   const stepName = payload?.stepName;
   const { colors } = useThemeStyles();
-  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
 
   // Track if save was called to distinguish between saved close and dismissed close
@@ -176,7 +174,7 @@ export function PickleballPreferencesActionSheet({
   return (
     <ActionSheet
       gestureEnabled
-      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
       onBeforeClose={() => {
         // Call onDismiss if sheet is closed without saving
@@ -430,12 +428,7 @@ export function PickleballPreferencesActionSheet({
         </ScrollView>
 
         {/* Sticky Footer */}
-        <View
-          style={[
-            styles.footer,
-            { borderTopColor: colors.border, paddingBottom: insets.bottom + spacingPixels[4] },
-          ]}
-        >
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
           <TouchableOpacity
             style={[
               styles.submitButton,
@@ -641,8 +634,7 @@ const styles = StyleSheet.create({
     // fontWeight and color applied inline
   },
   footer: {
-    paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[4],
+    padding: spacingPixels[4],
     borderTopWidth: 1,
   },
   submitButton: {

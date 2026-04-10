@@ -346,6 +346,40 @@ function SessionExpiryHandler() {
 }
 
 /**
+ * AccountSuspendedHandler - Shows toast when account is suspended by an admin.
+ * Monitors the accountSuspended flag from AuthContext and notifies the user.
+ * Must be rendered inside both AuthProvider and ToastProvider.
+ */
+function AccountSuspendedHandler() {
+  const { accountSuspended, clearAccountSuspended } = useAuth();
+  const { isSplashComplete } = useOverlay();
+  const toast = useToast();
+  const hasShownToastRef = useRef(false);
+
+  useEffect(() => {
+    if (accountSuspended && isSplashComplete && !hasShownToastRef.current) {
+      hasShownToastRef.current = true;
+
+      const timer = setTimeout(() => {
+        Logger.info('Account suspended - showing notification to user');
+        toast.error(
+          'Your account has been suspended. Please contact support for more information.'
+        );
+        clearAccountSuspended();
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+
+    if (!accountSuspended) {
+      hasShownToastRef.current = false;
+    }
+  }, [accountSuspended, isSplashComplete, clearAccountSuspended, toast]);
+
+  return null;
+}
+
+/**
  * PendingFeedbackHandler - Opens FeedbackSheet for pending feedback on app launch.
  * Checks for matches in the 48h feedback window where user hasn't completed feedback.
  */
@@ -564,6 +598,7 @@ function AppContent() {
       <PendingFeedbackHandler />
       {/* Session Expiry Handler - shows toast when session expires */}
       <SessionExpiryHandler />
+      <AccountSuspendedHandler />
       {/* Shake Handler - detects shakes and opens feedback report sheet */}
       <ShakeHandler />
       {/* Referral Invite Handler - periodically prompts users to invite friends */}

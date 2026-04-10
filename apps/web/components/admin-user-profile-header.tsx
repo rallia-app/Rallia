@@ -9,6 +9,7 @@ interface AdminUserProfileHeaderProps {
   description: string;
   backLabel: string;
   backHref: string;
+  actions?: React.ReactNode;
 }
 
 export function AdminUserProfileHeader({
@@ -16,6 +17,7 @@ export function AdminUserProfileHeader({
   description,
   backLabel,
   backHref,
+  actions,
 }: AdminUserProfileHeaderProps) {
   return (
     <div className="flex items-start justify-between">
@@ -32,6 +34,7 @@ export function AdminUserProfileHeader({
           <p className="text-muted-foreground mt-2 mb-0">{description}</p>
         </div>
       </div>
+      {actions && <div className="flex items-center gap-2">{actions}</div>}
     </div>
   );
 }

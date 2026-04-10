@@ -50,7 +50,22 @@
             {
               "scheme": "https",
               "host": "rallia.app",
+              "pathPrefix": "/invite"
+            },
+            {
+              "scheme": "https",
+              "host": "rallia.app",
+              "pathPattern": "/.*/invite/.*"
+            },
+            {
+              "scheme": "https",
+              "host": "rallia.app",
               "pathPrefix": "/match"
+            },
+            {
+              "scheme": "https",
+              "host": "rallia.app",
+              "pathPattern": "/.*/match/.*"
             }
           ],
           "category": ["BROWSABLE", "DEFAULT"]

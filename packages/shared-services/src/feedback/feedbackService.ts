@@ -3,6 +3,7 @@
  * Handles post-match feedback database operations.
  */
 
+import { getHumanName, getShortName } from '@rallia/shared-utils';
 import { supabase } from '../supabase';
 import { createReputationEvent } from '../reputation/reputationService';
 import type {
@@ -310,12 +311,8 @@ export async function getOpponentsForFeedback(
   // Map to OpponentForFeedback format
   return (participants as unknown as ParticipantWithProfile[]).map(p => {
     const profile = p.player?.profile;
-    const firstName = profile?.first_name || '';
-    const lastName = profile?.last_name || '';
-    const displayName = profile?.display_name;
-
-    const name = firstName || displayName || 'Player';
-    const fullName = displayName || `${firstName} ${lastName}`.trim() || 'Player';
+    const name = getShortName(profile, 'Player');
+    const fullName = getHumanName(profile, 'Player');
 
     return {
       participantId: p.id,

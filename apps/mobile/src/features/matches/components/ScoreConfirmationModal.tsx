@@ -117,7 +117,11 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
         </View>
 
         {/* Content */}
-        <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Submitter info */}
           <View
             style={[

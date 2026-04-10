@@ -1,5 +1,4 @@
-import { Card, CardContent } from '@/components/ui/card';
-import { BarChart3 } from 'lucide-react';
+import { AdminAnalyticsOverview } from '@/components/admin-analytics-overview';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 
@@ -21,12 +20,7 @@ export default async function AdminAnalyticsPage() {
         <p className="text-muted-foreground mt-2 mb-0">{t('description')}</p>
       </div>
 
-      <Card className="overflow-hidden">
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <BarChart3 className="h-12 w-12 text-muted-foreground/50 mb-4" />
-          <p className="text-muted-foreground m-0">{t('comingSoon')}</p>
-        </CardContent>
-      </Card>
+      <AdminAnalyticsOverview />
     </div>
   );
 }

@@ -42,7 +42,6 @@ export { getOrCreateClient as getSupabase };
 
 // For backward compatibility: `supabase` is a proxy that lazily initializes the client.
 // Consumers can continue to use `import { supabase } from '../supabase'` unchanged.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
   get(_target, prop) {
     const client = getOrCreateClient();
@@ -54,6 +53,15 @@ export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
     return value;
   },
 });
+
+/**
+ * Replace the shared supabase singleton with an externally-created client.
+ * On web, call this early with the cookie-based browser client so that all
+ * shared hooks and services use the same auth session — no token syncing needed.
+ */
+export function setSupabaseInstance(client: SupabaseClient): void {
+  _supabaseInstance = client;
+}
 
 // Platform-specific configuration helper
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

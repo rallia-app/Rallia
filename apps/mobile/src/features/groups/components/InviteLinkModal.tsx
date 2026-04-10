@@ -22,9 +22,11 @@ import { useThemeStyles, useTranslation } from '../../../hooks';
 import {
   useGroupInviteCode,
   useResetGroupInviteCode,
+  useReferral,
   getGroupInviteLink,
 } from '@rallia/shared-hooks';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import * as Analytics from '../../../services/analytics';
 
 export function InviteLinkActionSheet({ payload }: SheetProps<'invite-link'>) {
   const groupId = payload?.groupId ?? '';
@@ -51,8 +53,9 @@ export function InviteLinkActionSheet({ payload }: SheetProps<'invite-link'>) {
 
   const { data: inviteCode, isLoading, refetch } = useGroupInviteCode(groupId);
   const resetInviteCodeMutation = useResetGroupInviteCode();
+  const { code: referralCode } = useReferral(currentUserId || undefined);
 
-  const inviteLink = inviteCode ? getGroupInviteLink(inviteCode) : '';
+  const inviteLink = inviteCode ? getGroupInviteLink(inviteCode, referralCode) : '';
 
   // Generate QR code URL using a public API (Google Charts API for QR codes)
   const qrCodeUrl = inviteLink
@@ -95,13 +98,17 @@ export function InviteLinkActionSheet({ payload }: SheetProps<'invite-link'>) {
         }),
         title: t('groups.shareInviteTitle', { groupName }),
       });
+      Analytics.invitationLinkGenerated({
+        invitation_type: type === 'community' ? 'community' : 'group',
+        channel: 'share_sheet',
+      });
     } catch (error) {
       // User cancelled or error
       if (error instanceof Error && error.message !== 'User did not share') {
         Alert.alert(t('common.error'), t('groups.failedToShare'));
       }
     }
-  }, [inviteLink, inviteCode, groupName, typeLabel, t]);
+  }, [inviteLink, inviteCode, groupName, typeLabel, type, t]);
 
   const handleResetCode = useCallback(() => {
     Alert.alert(t('groups.resetInviteCode'), t('groups.resetInviteCodeWarning'), [
@@ -145,7 +152,11 @@ export function InviteLinkActionSheet({ payload }: SheetProps<'invite-link'>) {
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          keyboardShouldPersistTaps="handled"
+        >
           {isLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />

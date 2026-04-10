@@ -42,8 +42,6 @@ import {
   useLeaveCommunity,
   useDeleteCommunity,
   usePendingCommunityMembers,
-  useApproveCommunityMember,
-  useRejectCommunityMember,
   useCommunityRealtime,
   usePendingRequestsRealtime,
   useGroupStats,
@@ -65,8 +63,8 @@ import { SheetManager } from 'react-native-actions-sheet';
 import type { RootStackParamList } from '../navigation/types';
 import {
   primary,
+  secondary,
   status,
-  accent,
   neutral,
   spacingPixels,
   fontSizePixels,
@@ -75,7 +73,7 @@ import {
 
 import { AddScoreIntroModal, AddScoreModal, type MatchType } from '../features/matches';
 import { NetworkMatchesTab } from '../features/matches/components';
-import { CommunityFavoriteFacilitiesSelector } from '../features/communities/components';
+import { NetworkFavoriteFacilities } from '../components/NetworkFavoriteFacilities';
 import { InfoModal } from '../components/InfoModal';
 
 const HEADER_HEIGHT = 140;
@@ -83,12 +81,11 @@ const HEADER_HEIGHT = 140;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type CommunityDetailRouteProp = RouteProp<RootStackParamList, 'CommunityDetail'>;
 
-type TabKey = 'home' | 'leaderboard' | 'games';
+type TabKey = 'leaderboard' | 'games';
 
-const TAB_KEYS: TabKey[] = ['home', 'leaderboard', 'games'];
+const TAB_KEYS: TabKey[] = ['games', 'leaderboard'];
 
 const TAB_ICONS: Record<TabKey, keyof typeof Ionicons.glyphMap> = {
-  home: 'home-outline',
   leaderboard: 'podium-outline',
   games: 'tennisball-outline', // placeholder, overridden with SportIcon
 };
@@ -122,8 +119,7 @@ export default function CommunityDetailScreen() {
     };
   }, [sports]);
 
-  const [activeTab, setActiveTab] = useState<TabKey>('home');
-  const [showPendingRequestsModal, setShowPendingRequestsModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabKey>('games');
   const [leaderboardPeriod, setLeaderboardPeriod] = useState<30 | 90 | 180 | 0>(30);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
 
@@ -159,7 +155,8 @@ export default function CommunityDetailScreen() {
   } = useCommunityAccess(communityId, playerId);
   const { data: pendingRequests, refetch: refetchPendingRequests } = usePendingCommunityMembers(
     isModerator ? communityId : undefined,
-    playerId
+    playerId,
+    selectedSport?.id
   );
   const { data: stats } = useGroupStats(communityId);
   const { data: activities } = useGroupActivity(communityId, 50);
@@ -191,8 +188,6 @@ export default function CommunityDetailScreen() {
 
   const leaveCommunityMutation = useLeaveCommunity();
   const deleteCommunityMutation = useDeleteCommunity();
-  const approveMemberMutation = useApproveCommunityMember();
-  const rejectMemberMutation = useRejectCommunityMember();
   const requestToJoinMutation = useRequestToJoinCommunity();
 
   // Computed access state
@@ -376,17 +371,6 @@ export default function CommunityDetailScreen() {
         }),
     });
 
-    if (isModerator && pendingRequests && pendingRequests.length > 0) {
-      options.push({
-        id: 'requests',
-        label: t('community.options.pendingRequests', {
-          count: pendingRequests.length,
-        }),
-        icon: 'person-add-outline',
-        onPress: () => setShowPendingRequestsModal(true),
-      });
-    }
-
     if (isModerator && community) {
       options.push({
         id: 'edit',
@@ -528,300 +512,6 @@ export default function CommunityDetailScreen() {
     const messagesRotation = gamesRotation + gamesPercent * 360;
 
     switch (activeTab) {
-      case 'home':
-        return (
-          <View style={styles.tabContent}>
-            {/* About Section */}
-            {community?.description && (
-              <View>
-                <Text size="lg" weight="bold" style={{ color: colors.text, marginBottom: 8 }}>
-                  {t('community.detail.about')}
-                </Text>
-                <View
-                  style={[
-                    styles.aboutCard,
-                    { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                  ]}
-                >
-                  <Text style={{ color: colors.textSecondary, lineHeight: 22 }}>
-                    {community.description}
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            {/* Pending Requests Banner (moderators only) */}
-            {isModerator && pendingRequests && pendingRequests.length > 0 && (
-              <TouchableOpacity
-                style={[
-                  styles.pendingRequestsBanner,
-                  { backgroundColor: '#FF3B3010', borderColor: '#FF3B30' },
-                ]}
-                onPress={() => setShowPendingRequestsModal(true)}
-              >
-                <Ionicons name="person-add-outline" size={20} color="#FF3B30" />
-                <Text
-                  size="sm"
-                  weight="semibold"
-                  style={{ color: '#FF3B30', marginLeft: 8, flex: 1 }}
-                >
-                  {pendingRequests.length} pending request
-                  {pendingRequests.length !== 1 ? 's' : ''}
-                </Text>
-                <Ionicons name="chevron-forward" size={16} color="#FF3B30" />
-              </TouchableOpacity>
-            )}
-
-            {/* Last 7 Days Activities Card */}
-            {/* Activity Stats */}
-            <Text size="lg" weight="bold" style={{ color: colors.text, marginBottom: 8 }}>
-              {t('community.detail.last7DaysActivities')}
-            </Text>
-            <View
-              style={[
-                styles.statsCard,
-                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-              ]}
-            >
-              <View style={styles.statsRow}>
-                <View style={styles.statCircle}>
-                  {/* Donut Chart */}
-                  <View style={styles.donutContainer}>
-                    <Svg width={size} height={size}>
-                      {/* Background circle */}
-                      <Circle
-                        cx={size / 2}
-                        cy={size / 2}
-                        r={radius}
-                        stroke={colors.border}
-                        strokeWidth={strokeWidth}
-                        fill="transparent"
-                      />
-                      {/* Members segment (cyan/blue) */}
-                      {membersCountLast7Days > 0 && (
-                        <Circle
-                          cx={size / 2}
-                          cy={size / 2}
-                          r={radius}
-                          stroke={status.info.light}
-                          strokeWidth={strokeWidth}
-                          fill="transparent"
-                          strokeDasharray={`${membersLength} ${circumference - membersLength}`}
-                          strokeDashoffset={0}
-                          strokeLinecap="round"
-                          rotation={membersRotation}
-                          origin={`${size / 2}, ${size / 2}`}
-                        />
-                      )}
-                      {/* Games segment (orange) */}
-                      {gamesCountLast7Days > 0 && (
-                        <Circle
-                          cx={size / 2}
-                          cy={size / 2}
-                          r={radius}
-                          stroke={accent[500]}
-                          strokeWidth={strokeWidth}
-                          fill="transparent"
-                          strokeDasharray={`${gamesLength} ${circumference - gamesLength}`}
-                          strokeDashoffset={0}
-                          strokeLinecap="round"
-                          rotation={gamesRotation}
-                          origin={`${size / 2}, ${size / 2}`}
-                        />
-                      )}
-                      {/* Messages segment (gray/dark) */}
-                      {messagesCountLast7Days > 0 && (
-                        <Circle
-                          cx={size / 2}
-                          cy={size / 2}
-                          r={radius}
-                          stroke={isDark ? neutral[400] : neutral[600]}
-                          strokeWidth={strokeWidth}
-                          fill="transparent"
-                          strokeDasharray={`${messagesLength} ${circumference - messagesLength}`}
-                          strokeDashoffset={0}
-                          strokeLinecap="round"
-                          rotation={messagesRotation}
-                          origin={`${size / 2}, ${size / 2}`}
-                        />
-                      )}
-                    </Svg>
-                    {/* Center text */}
-                    <View style={styles.donutCenter}>
-                      <Text weight="bold" size="xl" style={{ color: colors.text }}>
-                        {totalActivities}
-                      </Text>
-                      <Text size="xs" style={{ color: colors.textSecondary }}>
-                        {t('community.detail.activities')}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-                <View style={styles.statsList}>
-                  <View style={styles.statItem}>
-                    <Ionicons name="people-outline" size={20} color={status.info.light} />
-                    <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
-                      {t('community.detail.newMembers', {
-                        count: membersCountLast7Days,
-                      })}
-                    </Text>
-                  </View>
-                  <View style={styles.statItem}>
-                    <SportIcon
-                      sportName={selectedSport?.name ?? 'tennis'}
-                      size={20}
-                      color={accent[500]}
-                    />
-                    <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
-                      {t('community.detail.gamesCreated', {
-                        count: gamesCountLast7Days,
-                      })}
-                    </Text>
-                  </View>
-                  <View style={styles.statItem}>
-                    <Ionicons
-                      name="chatbubble-ellipses-outline"
-                      size={20}
-                      color={isDark ? neutral[400] : neutral[300]}
-                    />
-                    <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
-                      {t('community.detail.newMessages', {
-                        count: messagesCountLast7Days,
-                      })}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-
-            {/* Favorite Facilities Section */}
-            <CommunityFavoriteFacilitiesSelector
-              networkId={communityId}
-              currentPlayerId={playerId ?? null}
-              sportId={community?.sport_id ?? null}
-              allSportIds={allSportIds}
-              sportNames={sportNames}
-              latitude={player?.latitude ?? null}
-              longitude={player?.longitude ?? null}
-              colors={colors}
-              t={t}
-              onNavigateToFacility={handleNavigateToFacility}
-            />
-
-            {/* Pending Requests Section (moderators only) */}
-            {isModerator && pendingRequests && pendingRequests.length > 0 && (
-              <View
-                style={[
-                  styles.pendingRequestsCard,
-                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                ]}
-              >
-                <View style={styles.sectionHeader}>
-                  <View style={styles.sectionTitle}>
-                    <Ionicons name="person-add-outline" size={20} color="#FF9500" />
-                    <Text
-                      weight="semibold"
-                      size="base"
-                      style={{ color: colors.text, marginLeft: 8 }}
-                    >
-                      {t('community.pendingRequests.title')}
-                    </Text>
-                    <View style={[styles.badgeCount, { backgroundColor: '#FF3B30' }]}>
-                      <Text size="xs" weight="bold" style={{ color: '#FFFFFF' }}>
-                        {pendingRequests.length}
-                      </Text>
-                    </View>
-                  </View>
-                  <TouchableOpacity onPress={() => setShowPendingRequestsModal(true)}>
-                    <Text size="sm" style={{ color: colors.primary }}>
-                      {t('community.detail.viewAll')}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-                {/* Show first 3 pending requests */}
-                <View style={styles.pendingRequestsList}>
-                  {pendingRequests.slice(0, 3).map(request => (
-                    <View
-                      key={request.id}
-                      style={[styles.pendingRequestItem, { borderBottomColor: colors.border }]}
-                    >
-                      <View
-                        style={[
-                          styles.smallAvatar,
-                          { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
-                        ]}
-                      >
-                        {request.player_profile_picture ? (
-                          <Image
-                            source={{ uri: request.player_profile_picture }}
-                            style={styles.avatarImage}
-                          />
-                        ) : (
-                          <Ionicons name="person-outline" size={14} color={colors.textMuted} />
-                        )}
-                      </View>
-                      <View style={styles.pendingRequestInfo}>
-                        <Text size="sm" weight="medium" style={{ color: colors.text }}>
-                          {request.player_name || t('common.player')}
-                        </Text>
-                        <Text size="xs" style={{ color: colors.textSecondary }}>
-                          {request.referrer_name
-                            ? t('community.referredBy', {
-                                name: request.referrer_name,
-                              })
-                            : t('community.pendingRequests.joinRequest')}
-                        </Text>
-                      </View>
-                      <View style={styles.pendingRequestActions}>
-                        <TouchableOpacity
-                          style={[styles.miniApproveButton, { backgroundColor: colors.primary }]}
-                          onPress={async () => {
-                            if (!playerId) return;
-                            try {
-                              await approveMemberMutation.mutateAsync({
-                                communityId,
-                                memberId: request.id,
-                                approverId: playerId,
-                              });
-                              refetchPendingRequests();
-                              refetch();
-                            } catch (error) {
-                              console.error('[CommunityDetail] Error approving member:', error);
-                            }
-                          }}
-                        >
-                          <Ionicons name="checkmark-outline" size={16} color="#FFFFFF" />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[
-                            styles.miniRejectButton,
-                            { backgroundColor: isDark ? '#3A3A3C' : '#E5E5EA' },
-                          ]}
-                          onPress={async () => {
-                            if (!playerId) return;
-                            try {
-                              await rejectMemberMutation.mutateAsync({
-                                communityId,
-                                memberId: request.id,
-                                rejectorId: playerId,
-                              });
-                              refetchPendingRequests();
-                            } catch (error) {
-                              console.error('[CommunityDetail] Error rejecting member:', error);
-                            }
-                          }}
-                        >
-                          <Ionicons name="close-outline" size={16} color={colors.text} />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-          </View>
-        );
-
       case 'leaderboard': {
         const periodOptions = [
           { value: 30, label: t('groups.leaderboardPeriod.30days') },
@@ -1691,6 +1381,33 @@ export default function CommunityDetailScreen() {
               style={styles.actionButtonsScroll}
               contentContainerStyle={styles.actionButtonsContent}
             >
+              {isModerator && pendingRequests && pendingRequests.length > 0 && (
+                <TouchableOpacity
+                  style={[
+                    styles.actionPill,
+                    {
+                      backgroundColor: isDark ? '#3A2A00' : '#FFF8E1',
+                      borderColor: isDark ? '#FF9500' : '#FFB74D',
+                    },
+                  ]}
+                  onPress={() =>
+                    SheetManager.show('pending-requests', {
+                      payload: {
+                        communityId,
+                        sportId: selectedSport?.id,
+                        onMemberChanged: () => refetch(),
+                        onNavigateToPlayer: handleNavigateToPlayer,
+                      },
+                    })
+                  }
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="time-outline" size={14} color="#FF9500" />
+                  <Text style={[styles.actionPillText, { color: '#FF9500' }]}>
+                    {pendingRequests.length} Pending
+                  </Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 style={[
                   styles.actionPill,
@@ -1757,6 +1474,40 @@ export default function CommunityDetailScreen() {
           )}
         </View>
 
+        {/* About Section */}
+        {community?.description && (
+          <View style={{ marginHorizontal: 16, marginTop: 16 }}>
+            <Text size="lg" weight="bold" style={{ color: colors.text, marginBottom: 8 }}>
+              {t('community.detail.about')}
+            </Text>
+            <View
+              style={[
+                styles.aboutCard,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
+              <Text style={{ color: colors.textSecondary, lineHeight: 22 }}>
+                {community.description}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Favorite Facilities Section */}
+        {community?.sport_id && (
+          <View style={{ marginHorizontal: 16 }}>
+            <NetworkFavoriteFacilities
+              networkId={communityId}
+              currentPlayerId={playerId ?? null}
+              sportId={community.sport_id}
+              latitude={player?.latitude ?? null}
+              longitude={player?.longitude ?? null}
+              translationPrefix="community"
+              onNavigateToFacility={handleNavigateToFacility}
+            />
+          </View>
+        )}
+
         {/* Tab Bar */}
         <View style={[styles.tabContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
           {TAB_KEYS.map(tabKey => (
@@ -1806,7 +1557,7 @@ export default function CommunityDetailScreen() {
       </ScrollView>
 
       {/* Bottom Action Button - changes based on active tab, hidden when opened from chat */}
-      {activeTab === 'home' && !fromChat ? (
+      {!fromChat ? (
         <Button
           variant="primary"
           size="lg"
@@ -1829,150 +1580,6 @@ export default function CommunityDetailScreen() {
           {t('community.chat.chatWithMembers')}
         </Button>
       ) : null}
-
-      {/* Pending Requests Modal */}
-      <Modal
-        visible={showPendingRequestsModal}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowPendingRequestsModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity
-            style={styles.modalBackdrop}
-            onPress={() => setShowPendingRequestsModal(false)}
-            activeOpacity={1}
-          />
-          <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <Text weight="bold" size="lg" style={{ color: colors.text }}>
-                Pending Requests
-              </Text>
-              <TouchableOpacity onPress={() => setShowPendingRequestsModal(false)}>
-                <Ionicons name="close-outline" size={24} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalBody}>
-              {pendingRequests && pendingRequests.length > 0 ? (
-                pendingRequests.map(request => (
-                  <View
-                    key={request.id}
-                    style={[styles.requestCard, { borderColor: colors.border }]}
-                  >
-                    <TouchableOpacity
-                      style={styles.requestHeader}
-                      onPress={() => {
-                        setShowPendingRequestsModal(false);
-                        handleNavigateToPlayer(request.player_id);
-                      }}
-                    >
-                      <View
-                        style={[
-                          styles.requestAvatar,
-                          { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
-                        ]}
-                      >
-                        {request.player_profile_picture ? (
-                          <Image
-                            source={{ uri: request.player_profile_picture }}
-                            style={styles.requestAvatarImage}
-                          />
-                        ) : (
-                          <Ionicons name="person-outline" size={24} color={colors.textMuted} />
-                        )}
-                      </View>
-                      <View style={styles.requestInfo}>
-                        <Text weight="semibold" style={{ color: colors.text }}>
-                          {request.player_name || 'Player'}
-                        </Text>
-                        <Text size="sm" style={{ color: colors.textSecondary }}>
-                          Requested{' '}
-                          {new Date(request.created_at).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                          })}
-                          {request.referrer_name && ` · Referred by ${request.referrer_name}`}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                    <View style={styles.requestActions}>
-                      <TouchableOpacity
-                        style={[styles.approveButton, { backgroundColor: colors.primary }]}
-                        onPress={async () => {
-                          if (!playerId) return;
-                          try {
-                            mediumHaptic();
-                            await approveMemberMutation.mutateAsync({
-                              communityId,
-                              memberId: request.id,
-                              approverId: playerId,
-                            });
-                            refetchPendingRequests();
-                            refetch();
-                          } catch (error) {
-                            Alert.alert(
-                              'Error',
-                              error instanceof Error ? error.message : 'Failed to approve member'
-                            );
-                          }
-                        }}
-                        disabled={approveMemberMutation.isPending || rejectMemberMutation.isPending}
-                      >
-                        <Ionicons name="checkmark-outline" size={18} color="#FFFFFF" />
-                        <Text
-                          weight="semibold"
-                          size="sm"
-                          style={{ color: '#FFFFFF', marginLeft: 4 }}
-                        >
-                          Approve
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.rejectButton, { borderColor: colors.border }]}
-                        onPress={async () => {
-                          if (!playerId) return;
-                          try {
-                            mediumHaptic();
-                            await rejectMemberMutation.mutateAsync({
-                              communityId,
-                              memberId: request.id,
-                              rejectorId: playerId,
-                            });
-                            refetchPendingRequests();
-                          } catch (error) {
-                            Alert.alert(
-                              'Error',
-                              error instanceof Error ? error.message : 'Failed to reject request'
-                            );
-                          }
-                        }}
-                        disabled={approveMemberMutation.isPending || rejectMemberMutation.isPending}
-                      >
-                        <Ionicons name="close-outline" size={18} color={colors.text} />
-                        <Text
-                          weight="semibold"
-                          size="sm"
-                          style={{ color: colors.text, marginLeft: 4 }}
-                        >
-                          Decline
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ))
-              ) : (
-                <View style={styles.emptyRequests}>
-                  <Ionicons name="checkmark-circle-outline" size={48} color={colors.textMuted} />
-                  <Text style={{ color: colors.textSecondary, marginTop: 12 }}>
-                    No pending requests
-                  </Text>
-                </View>
-              )}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
 
       {/* Add Score Flow Modals */}
       <AddScoreIntroModal
@@ -2242,14 +1849,6 @@ const styles = StyleSheet.create({
   communityStatInfo: {
     marginLeft: 12,
   },
-  pendingRequestsBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 16,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
   aboutCard: {
     padding: 20,
     borderRadius: 16,
@@ -2290,134 +1889,11 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 12,
   },
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  modalBackdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '70%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-  },
-  modalBody: {
-    padding: 16,
-  },
-  requestCard: {
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 12,
-  },
-  requestHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  requestAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  requestAvatarImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-  },
-  requestInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  requestActions: {
-    flexDirection: 'row',
-    marginTop: 12,
-    gap: 12,
-  },
-  approveButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  rejectButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  emptyRequests: {
-    padding: 40,
-    alignItems: 'center',
-  },
   // Leaderboard styles
   leaderboardPreview: {
     padding: 20,
     borderRadius: 16,
     borderWidth: 1,
-  },
-  pendingRequestsCard: {
-    padding: 20,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  pendingRequestsList: {
-    marginTop: 12,
-  },
-  pendingRequestItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  pendingRequestInfo: {
-    flex: 1,
-    marginLeft: 10,
-  },
-  pendingRequestActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  miniApproveButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  miniRejectButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  badgeCount: {
-    marginLeft: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -2435,19 +1911,6 @@ const styles = StyleSheet.create({
   leaderboardPreviewItem: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  smallAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  avatarImage: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
   },
   // Matches Preview styles
   matchesPreview: {

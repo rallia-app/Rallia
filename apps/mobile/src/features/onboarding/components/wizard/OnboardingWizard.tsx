@@ -45,9 +45,11 @@ import {
 } from '@rallia/shared-services';
 import { useProfile, usePlayer, usePostalCodeGeocode } from '@rallia/shared-hooks';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PENDING_REFERRAL_KEY_EXPORT } from '../../../../screens/InviteReferralScreen';
+import { PENDING_REFERRAL_KEY } from '../../../../screens/InvitationDeepLinkScreen';
+import type { PendingReferral } from '../../../../screens/InvitationDeepLinkScreen';
 import { replaceImage } from '../../../../services/imageUpload';
 import * as Analytics from '../../../../services/analytics';
+import { posthogClient } from '../../../../providers/PostHogProvider';
 import { useImagePicker } from '../../../../hooks';
 import { useSport, useUserHomeLocation } from '../../../../context';
 import type { TranslationKey } from '@rallia/shared-translations';
@@ -902,17 +904,47 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
           // Attribute pending referral if one was stored before signup
           try {
-            const pendingCode = await AsyncStorage.getItem(PENDING_REFERRAL_KEY_EXPORT);
-            if (pendingCode) {
+            const pendingRaw = await AsyncStorage.getItem(PENDING_REFERRAL_KEY);
+            if (pendingRaw) {
+              // Parse structured data (supports both new JSON and legacy plain string)
+              let pending: PendingReferral;
+              try {
+                const parsed = JSON.parse(pendingRaw);
+                pending =
+                  typeof parsed === 'object' && parsed.code
+                    ? parsed
+                    : { code: pendingRaw, type: 'referral' as const };
+              } catch {
+                pending = { code: pendingRaw, type: 'referral' as const };
+              }
+
               const userId = await DatabaseService.Auth.getCurrentUserId();
               const {
                 data: { user },
               } = await supabase.auth.getUser();
               if (userId) {
-                await attributeReferral(pendingCode, userId, user?.email ?? undefined);
-                Analytics.referralCodeUsed();
+                const result = await attributeReferral(
+                  pending.code,
+                  userId,
+                  user?.email ?? undefined,
+                  pending.type,
+                  pending.targetId
+                );
+                Analytics.referralAttributed({
+                  invitation_type: pending.type,
+                  referral_code: pending.code,
+                  target_id: pending.targetId,
+                });
+                // Set PostHog user properties for cohort analysis
+                if (result.success && result.referrerId) {
+                  posthogClient?.identify(userId, {
+                    referred_by_player_id: result.referrerId,
+                    referral_invitation_type: pending.type,
+                    referral_target_id: pending.targetId ?? null,
+                  });
+                }
               }
-              await AsyncStorage.removeItem(PENDING_REFERRAL_KEY_EXPORT);
+              await AsyncStorage.removeItem(PENDING_REFERRAL_KEY);
             }
           } catch (referralError) {
             Logger.warn('Failed to attribute referral', { error: referralError });

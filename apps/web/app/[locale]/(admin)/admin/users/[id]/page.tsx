@@ -1,3 +1,4 @@
+import { AdminUserActions } from '@/components/admin-user-actions';
 import { AdminUserFeedbackSection } from '@/components/admin-user-feedback-section';
 import { AdminUserProfileHeader } from '@/components/admin-user-profile-header';
 import { Badge } from '@/components/ui/badge';
@@ -372,6 +373,15 @@ export default async function UserDetailPage({
         description={profile.email}
         backLabel={t('backToUsers')}
         backHref={`/admin/users?tab=${backTab}`}
+        actions={
+          isPlayer ? (
+            <AdminUserActions
+              userId={profile.id}
+              userName={displayName}
+              currentStatus={profile.account_status ?? 'active'}
+            />
+          ) : undefined
+        }
       />
 
       {/* Profile Information */}

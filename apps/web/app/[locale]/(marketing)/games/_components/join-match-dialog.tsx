@@ -1,18 +1,17 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Loader2 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { useLocale, useTranslations } from 'next-intl';
-import { useState } from 'react';
+
+const APP_STORE_URL = 'https://apps.apple.com/app/rallia/idXXXXXXXXXX';
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.rallia.app';
 
 interface JoinMatchDialogProps {
   matchId: string | null;
@@ -23,136 +22,49 @@ interface JoinMatchDialogProps {
 export default function JoinMatchDialog({ matchId, open, onOpenChange }: JoinMatchDialogProps) {
   const t = useTranslations('gamesPage.joinDialog');
   const locale = useLocale();
-  const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!matchId) return;
-
-    setIsSubmitting(true);
-    setStatus('idle');
-
-    try {
-      const locationRes = await fetch('/api/get-location');
-      const locationData = locationRes.ok ? await locationRes.json() : null;
-
-      const res = await fetch('/api/submit-match-interest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          matchId,
-          email,
-          name: name || undefined,
-          locale,
-          ipAddress: locationData?.ipAddress || 'unknown',
-          location: locationData?.location || 'unknown',
-        }),
-      });
-
-      if (!res.ok) throw new Error('Submission failed');
-
-      setStatus('success');
-      setEmail('');
-      setName('');
-      setTimeout(() => onOpenChange(false), 3000);
-    } catch {
-      setStatus('error');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleOpenChange = (value: boolean) => {
-    if (!value) {
-      setStatus('idle');
-      setEmail('');
-      setName('');
-    }
-    if (value) {
-      setStatus('idle');
-    }
-    onOpenChange(value);
-  };
+  // Build the match detail URL which handles mobile redirects server-side
+  const matchUrl = matchId
+    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/${locale}/match/${matchId}?src=qr`
+    : '';
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
-        {status === 'success' ? (
-          <div className="flex flex-col items-center gap-3 py-6 text-center">
-            <DialogTitle className="sr-only">{t('successTitle')}</DialogTitle>
-            <div className="size-16 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-              <svg
-                className="size-8 text-green-600 dark:text-green-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
+        <DialogHeader>
+          <DialogTitle>{t('title')}</DialogTitle>
+          <DialogDescription>{t('description')}</DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col items-center gap-4 py-4">
+          {matchUrl && (
+            <div className="rounded-xl bg-white p-4">
+              <QRCodeSVG value={matchUrl} size={200} level="M" />
             </div>
-            <p className="text-lg font-semibold m-0">{t('successTitle')}</p>
-            <p className="text-sm text-muted-foreground">{t('successMessage')}</p>
+          )}
+          <p className="text-sm text-muted-foreground text-center">{t('qrHint')}</p>
+          <div className="flex items-center gap-3 pt-2">
+            <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
+              <img
+                src="/app-store-badge-light.svg"
+                alt="App Store"
+                className="h-10 block dark:hidden"
+              />
+              <img src="/app-store-badge.svg" alt="App Store" className="h-10 hidden dark:block" />
+            </a>
+            <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer">
+              <img
+                src="/google-play-badge-light.svg"
+                alt="Google Play"
+                className="h-10 block dark:hidden"
+              />
+              <img
+                src="/google-play-badge.svg"
+                alt="Google Play"
+                className="h-10 hidden dark:block"
+              />
+            </a>
           </div>
-        ) : (
-          <>
-            <DialogHeader>
-              <DialogTitle>{t('title')}</DialogTitle>
-              <DialogDescription>{t('description')}</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <label htmlFor="join-email" className="text-sm font-medium">
-                  {t('emailLabel')}
-                </label>
-                <Input
-                  id="join-email"
-                  type="email"
-                  placeholder={t('emailPlaceholder')}
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <label htmlFor="join-name" className="text-sm font-medium">
-                  {t('nameLabel')}
-                </label>
-                <Input
-                  id="join-name"
-                  type="text"
-                  placeholder={t('namePlaceholder')}
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                />
-              </div>
-              {status === 'error' && (
-                <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
-                  Something went wrong. Please try again.
-                </div>
-              )}
-              <DialogFooter>
-                <Button type="submit" disabled={isSubmitting} className="w-full">
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 size-4 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    t('submitButton')
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </>
-        )}
+        </div>
       </DialogContent>
     </Dialog>
   );

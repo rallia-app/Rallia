@@ -214,11 +214,12 @@ export function useCommunityAccess(communityId: string | undefined, playerId: st
  */
 export function usePendingCommunityMembers(
   communityId: string | undefined,
-  moderatorId: string | undefined
+  moderatorId: string | undefined,
+  sportId?: string
 ) {
   return useQuery({
     queryKey: communityKeys.pendingRequests(communityId || ''),
-    queryFn: () => getPendingCommunityMembers(communityId!, moderatorId!),
+    queryFn: () => getPendingCommunityMembers(communityId!, moderatorId!, sportId),
     enabled: !!communityId && !!moderatorId,
   });
 }

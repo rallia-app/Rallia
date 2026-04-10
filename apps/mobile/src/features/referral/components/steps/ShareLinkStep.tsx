@@ -164,7 +164,7 @@ export const ShareLinkStep: React.FC<ShareLinkStepProps> = ({
         title: t('referral.shareTitle'),
       });
       if (result.action === Share.sharedAction) {
-        Analytics.referralInviteShared({ channel: 'share_sheet' });
+        Analytics.invitationLinkGenerated({ invitation_type: 'referral', channel: 'share_sheet' });
       }
     } catch (error) {
       if (error instanceof Error && error.message !== 'User did not share') {

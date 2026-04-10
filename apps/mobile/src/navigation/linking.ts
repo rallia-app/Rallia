@@ -9,9 +9,12 @@
  * admin status before allowing navigation to admin screens.
  */
 
-import type { LinkingOptions } from '@react-navigation/native';
+import { type LinkingOptions, getStateFromPath } from '@react-navigation/native';
 import * as Linking from 'expo-linking';
 import type { RootStackParamList } from './types';
+
+/** Known locale prefixes used by the web app (next-intl) */
+const LOCALE_PATTERN = /^\/(en|en-US|fr|fr-CA|fr-FR)\//;
 
 // =============================================================================
 // URL PREFIXES
@@ -33,6 +36,11 @@ const prefixes = [
  */
 export const linking: LinkingOptions<RootStackParamList> = {
   prefixes,
+  // Strip locale prefixes (e.g. /en/match/123 → /match/123) so routes match
+  getStateFromPath(path, options) {
+    const cleaned = path.replace(LOCALE_PATTERN, '/');
+    return getStateFromPath(cleaned, options);
+  },
   config: {
     screens: {
       // Main app entry
@@ -83,7 +91,9 @@ export const linking: LinkingOptions<RootStackParamList> = {
       ChatConversation: 'conversation/:conversationId',
       GroupDetail: 'group/:groupId',
       CommunityDetail: 'community/:communityId',
-      InviteReferral: 'invite/:referralCode',
+      InviteReferral: 'invite-legacy/:referralCode',
+      InvitationDeepLink: 'invite/:referralCode',
+      MatchDeepLink: 'match/:matchId',
 
       // Admin screens - protected by useAdminDeepLinkGuard
       AdminPanel: 'admin',

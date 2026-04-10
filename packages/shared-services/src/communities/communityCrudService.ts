@@ -5,6 +5,7 @@
  */
 
 import { supabase } from '../supabase';
+import { generateInvitationLink } from '../invitation/invitationLinkService';
 import type {
   Community,
   CommunityWithStatus,
@@ -423,11 +424,13 @@ export async function rejectCommunityMember(
  */
 export async function getPendingCommunityMembers(
   communityId: string,
-  moderatorId: string
+  moderatorId: string,
+  sportId?: string
 ): Promise<PendingMemberRequest[]> {
   const { data, error } = await supabase.rpc('get_pending_community_members', {
     p_community_id: communityId,
     p_moderator_id: moderatorId,
+    ...(sportId && { p_sport_id: sportId }),
   });
 
   if (error) {
@@ -851,8 +854,13 @@ export async function getOrCreateCommunityInviteCode(communityId: string): Promi
 }
 
 /**
- * Get the invite link URL for a community
+ * Get the invite link URL for a community.
+ * When referralCode is provided, uses the unified invitation link format
+ * so the sender gets referral attribution if the recipient signs up.
  */
-export function getCommunityInviteLink(inviteCode: string): string {
+export function getCommunityInviteLink(inviteCode: string, referralCode?: string): string {
+  if (referralCode) {
+    return generateInvitationLink({ type: 'community', referralCode, targetId: inviteCode });
+  }
   return `https://rallia.app/community/join/${inviteCode}`;
 }

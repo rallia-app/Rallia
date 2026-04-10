@@ -3,4 +3,5 @@
  */
 
 export * from './dateFormatter';
+export * from './nameFormatter';
 export * from './numberFormatter';

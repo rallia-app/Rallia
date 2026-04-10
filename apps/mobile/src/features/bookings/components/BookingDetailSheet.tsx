@@ -6,8 +6,8 @@
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Text } from '@rallia/shared-components';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStyles, useTranslation } from '../../../hooks';
@@ -21,7 +21,6 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
 import * as Clipboard from 'expo-clipboard';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -73,7 +72,6 @@ export function BookingDetailActionSheet(props: SheetProps<'booking-detail'>) {
   const { colors } = useThemeStyles();
   const { t, locale } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
-  const insets = useSafeAreaInsets();
   const [showCancelModal, setShowCancelModal] = useState(false);
 
   const handleClose = useCallback(() => {
@@ -343,7 +341,6 @@ export function BookingDetailActionSheet(props: SheetProps<'booking-detail'>) {
           styles.footer,
           {
             borderTopColor: colors.border,
-            paddingBottom: insets.bottom + spacingPixels[4],
           },
         ]}
       >
@@ -468,11 +465,9 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: radiusPixels.full,
   },
-  // Footer - same as MatchDetailSheet stickyFooter; paddingBottom is overridden with safe area in component
   footer: {
     flexDirection: 'row',
-    paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[4],
+    padding: spacingPixels[4],
     gap: spacingPixels[2],
     borderTopWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',

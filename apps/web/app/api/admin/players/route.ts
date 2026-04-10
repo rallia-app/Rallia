@@ -1,6 +1,16 @@
 import { isAdmin } from '@/lib/supabase/check-admin';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+
+const VALID_ACTIONS = ['suspend', 'reactivate'] as const;
+type PlayerAction = (typeof VALID_ACTIONS)[number];
+
+type AccountStatus = 'active' | 'suspended' | 'deleted' | 'pending_verification';
+
+const ACTION_STATUS_MAP: Record<PlayerAction, AccountStatus> = {
+  suspend: 'suspended',
+  reactivate: 'active',
+};
 
 export async function PATCH(request: NextRequest) {
   try {
@@ -26,19 +36,35 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Missing player IDs' }, { status: 400 });
     }
 
-    if (action !== 'suspend') {
+    if (!VALID_ACTIONS.includes(action)) {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
 
-    const { error } = await supabase
+    const newStatus = ACTION_STATUS_MAP[action as PlayerAction];
+    const adminDb = createServiceRoleClient();
+
+    const { error } = await adminDb
       .from('profile')
-      .update({ account_status: 'suspended' })
+      .update({ account_status: newStatus })
       .in('id', playerIds);
 
     if (error) {
-      console.error('Error suspending players:', error);
-      return NextResponse.json({ error: 'Failed to suspend players' }, { status: 500 });
+      console.error(`Error ${action} players:`, error);
+      return NextResponse.json({ error: `Failed to ${action} players` }, { status: 500 });
     }
+
+    // Audit log
+    await adminDb.rpc('log_admin_action', {
+      p_admin_id: user.id,
+      p_action_type: 'update',
+      p_entity_type: 'player',
+      p_entity_id: playerIds[0],
+      p_entity_name: null,
+      p_old_data: null,
+      p_new_data: { account_status: newStatus },
+      p_metadata: { action, player_ids: playerIds, count: playerIds.length },
+      p_severity: action === 'suspend' ? 'warning' : 'info',
+    });
 
     return NextResponse.json({
       success: true,

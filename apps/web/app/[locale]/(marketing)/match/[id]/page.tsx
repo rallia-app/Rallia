@@ -2,13 +2,12 @@ import { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { createServiceRoleClient } from '@/lib/supabase/server';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Calendar, CircleDollarSign, Clock, MapPin, Swords, User, Users } from 'lucide-react';
 import Image from 'next/image';
-import type { Match } from '@rallia/shared-types';
 import { getRelativeDateLabel, formatDuration } from '../../games/_components/utils';
+import { getMatch } from './_lib/get-match';
 
 const APP_STORE_URL = 'https://apps.apple.com/app/rallia/idXXXXXXXXXX';
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.rallia.app';
@@ -20,44 +19,10 @@ function isMobile(userAgent: string): 'ios' | 'android' | null {
   return null;
 }
 
-/** Shape returned by the Supabase query with selected relation columns */
-type MatchWithRelations = Match & {
-  sport: Pick<{ name: string; slug: string }, 'name' | 'slug'> | null;
-  facility: Pick<{ name: string; city: string }, 'name' | 'city'> | null;
-  court: Pick<{ name: string }, 'name'> | null;
-  min_rating_score: Pick<{ label: string }, 'label'> | null;
-  participants:
-    | {
-        id: string;
-        status: string;
-        is_host: boolean;
-        player_id: string;
-        player: {
-          profile: {
-            display_name: string | null;
-            profile_picture_url: string | null;
-          } | null;
-        } | null;
-      }[]
-    | null;
-};
-
 type Props = {
   params: Promise<{ id: string; locale: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
-
-async function getMatch(id: string): Promise<MatchWithRelations | null> {
-  const supabase = createServiceRoleClient();
-  const { data } = await supabase
-    .from('match')
-    .select(
-      '*, sport:sport_id (name, slug), facility:facility_id (name, city), court:court_id (name), min_rating_score:min_rating_score_id (label), participants:match_participant (id, status, is_host, player_id, player:player_id (profile (display_name, profile_picture_url)))'
-    )
-    .eq('id', id)
-    .single();
-  return data as MatchWithRelations | null;
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id, locale } = await params;
@@ -75,12 +40,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     dateStyle: 'long',
   });
 
+  const title = `${sportName} — ${date}`;
+  const description = `${sportName} ${t('at')} ${location} — ${date}`;
+
   return {
-    title: `${sportName} — ${date}`,
-    description: `${sportName} ${t('at')} ${location} — ${date}`,
+    title,
+    description,
     openGraph: {
-      title: `${sportName} — ${date}`,
-      description: `${sportName} ${t('at')} ${location} — ${date}`,
+      title,
+      description,
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
     },
   };
 }
@@ -89,11 +63,12 @@ export default async function MatchPage({ params, searchParams }: Props) {
   const { id, locale } = await params;
   const query = await searchParams;
 
-  // When the link comes from the interest email (?src=email), redirect mobile users to app stores
-  if (query.src === 'email') {
-    const headersList = await headers();
-    const userAgent = headersList.get('user-agent') ?? '';
-    const platform = isMobile(userAgent);
+  // Redirect mobile users to app stores when coming from email or QR
+  const headersList = await headers();
+  const userAgent = headersList.get('user-agent') ?? '';
+  const platform = isMobile(userAgent);
+
+  if (query.src === 'email' || query.src === 'qr') {
     if (platform === 'ios') redirect(APP_STORE_URL);
     if (platform === 'android') redirect(PLAY_STORE_URL);
   }
@@ -312,38 +287,42 @@ export default async function MatchPage({ params, searchParams }: Props) {
             <h2 className="text-xl font-bold">{t('downloadTitle')}</h2>
             <p className="text-sm text-muted-foreground">{t('downloadDescription')}</p>
             <div className="flex gap-4">
-              <a href="https://apps.apple.com" target="_blank" rel="noopener noreferrer">
-                <Image
-                  src="/app-store-badge-light.svg"
-                  alt={t('appStore')}
-                  width={120}
-                  height={40}
-                  className="button-scale block dark:hidden"
-                />
-                <Image
-                  src="/app-store-badge.svg"
-                  alt={t('appStore')}
-                  width={120}
-                  height={40}
-                  className="button-scale hidden dark:block"
-                />
-              </a>
-              <a href="https://play.google.com" target="_blank" rel="noopener noreferrer">
-                <Image
-                  src="/google-play-badge-light.svg"
-                  alt={t('googlePlay')}
-                  width={135}
-                  height={40}
-                  className="button-scale block dark:hidden"
-                />
-                <Image
-                  src="/google-play-badge.svg"
-                  alt={t('googlePlay')}
-                  width={135}
-                  height={40}
-                  className="button-scale hidden dark:block"
-                />
-              </a>
+              {platform !== 'android' && (
+                <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
+                  <Image
+                    src="/app-store-badge-light.svg"
+                    alt={t('appStore')}
+                    width={120}
+                    height={40}
+                    className="button-scale block dark:hidden"
+                  />
+                  <Image
+                    src="/app-store-badge.svg"
+                    alt={t('appStore')}
+                    width={120}
+                    height={40}
+                    className="button-scale hidden dark:block"
+                  />
+                </a>
+              )}
+              {platform !== 'ios' && (
+                <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer">
+                  <Image
+                    src="/google-play-badge-light.svg"
+                    alt={t('googlePlay')}
+                    width={135}
+                    height={40}
+                    className="button-scale block dark:hidden"
+                  />
+                  <Image
+                    src="/google-play-badge.svg"
+                    alt={t('googlePlay')}
+                    width={135}
+                    height={40}
+                    className="button-scale hidden dark:block"
+                  />
+                </a>
+              )}
             </div>
           </div>
         </section>

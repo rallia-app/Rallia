@@ -29,7 +29,12 @@ import {
   primary,
 } from '@rallia/design-system';
 import { Ionicons } from '@expo/vector-icons';
-import { lightHaptic, getProfilePictureUrl, formatRelativeTime } from '@rallia/shared-utils';
+import {
+  lightHaptic,
+  getProfilePictureUrl,
+  formatRelativeTime,
+  getHumanName,
+} from '@rallia/shared-utils';
 import { useTheme } from '@rallia/shared-hooks';
 import { useTranslation } from '../hooks';
 import type { MatchParticipantWithPlayer } from '@rallia/shared-types';
@@ -150,10 +155,7 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
   // Note: playerData is already extracted above for reputation lookup
   const player = playerData as PlayerWithProfile | null | undefined;
   const profile = player?.profile;
-  const fullName =
-    `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() ||
-    profile?.display_name ||
-    'Player';
+  const fullName = getHumanName(profile, 'Player');
 
   // Get rating from the player object - check both label and value
   // The rating is attached by matchService at runtime when fetching match data

@@ -57,7 +57,7 @@ import {
   neutral,
   status,
 } from '@rallia/design-system';
-import { lightHaptic } from '@rallia/shared-utils';
+import { lightHaptic, getHumanName } from '@rallia/shared-utils';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -246,18 +246,6 @@ const AdminUsersScreen: React.FC = () => {
     setShowExportMenu(true);
   }, [exporting, users.length]);
 
-  // Get user display name
-  const getUserDisplayName = useCallback(
-    (user: AdminUserInfo): string => {
-      if (user.display_name) return user.display_name;
-      if (user.first_name || user.last_name) {
-        return `${user.first_name || ''} ${user.last_name || ''}`.trim();
-      }
-      return t('admin.users.anonymous' as TranslationKey);
-    },
-    [t]
-  );
-
   // Get user status badge
   const getStatusBadge = useCallback(
     (user: AdminUserInfo) => {
@@ -305,7 +293,7 @@ const AdminUsersScreen: React.FC = () => {
   const renderUserCard = useCallback(
     ({ item }: { item: AdminUserInfo }) => {
       const statusBadge = getStatusBadge(item);
-      const displayName = getUserDisplayName(item);
+      const displayName = getHumanName(item, t('admin.users.anonymous' as TranslationKey));
 
       return (
         <TouchableOpacity
@@ -392,7 +380,7 @@ const AdminUsersScreen: React.FC = () => {
         </TouchableOpacity>
       );
     },
-    [colors, t, handleUserPress, formatDate, getStatusBadge, getUserDisplayName]
+    [colors, t, handleUserPress, formatDate, getStatusBadge]
   );
 
   // Render empty state

@@ -4,12 +4,11 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Text, Button, useToast } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation, useImagePicker } from '../../../hooks';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';

@@ -35,6 +35,7 @@ import {
   useEffectiveLocation,
   type TranslationKey,
   type TranslationOptions,
+  useRequireOnboarding,
 } from '../../../hooks';
 import { useAuth } from '../../../hooks';
 import { useSport, useUserHomeLocation, useActionsSheet } from '../../../context';
@@ -192,6 +193,7 @@ export default function FacilitiesDirectory() {
   const { profile } = useProfile();
   const showFavoriteButton = !!session?.user && !!profile?.onboarding_completed;
   const { openSheet } = useActionsSheet();
+  const { guardAction } = useRequireOnboarding();
 
   // User is fully onboarded only if authenticated AND onboarding is complete
   const isOnboarded = !!session?.user && !!profile?.onboarding_completed;
@@ -341,31 +343,37 @@ export default function FacilitiesDirectory() {
   );
 
   // Handle slot press - show court selection sheet if multiple courts available
-  const handleSlotPress = useCallback((facility: FacilitySearchResult, slot: FormattedSlot) => {
-    // If multiple courts available, show court selection sheet
-    if (slot.courtOptions.length > 1) {
-      SheetManager.show('court-selection', {
-        payload: {
-          courts: slot.courtOptions ?? [],
-          timeLabel: slot.time ?? '',
-          onSelect: (court: unknown) => {
-            const c = court as CourtOption;
-            if (c.bookingUrl) {
-              Linking.openURL(c.bookingUrl);
-            }
-          },
-          onCancel: () => {},
-        },
-      });
-      return;
-    }
+  const handleSlotPress = useCallback(
+    (facility: FacilitySearchResult, slot: FormattedSlot) => {
+      // Require auth and onboarding before allowing booking actions
+      if (!guardAction()) return;
 
-    // Single court or no options - open booking URL directly
-    const bookingUrl = slot.courtOptions[0]?.bookingUrl || slot.bookingUrl;
-    if (bookingUrl) {
-      Linking.openURL(bookingUrl);
-    }
-  }, []);
+      // If multiple courts available, show court selection sheet
+      if (slot.courtOptions.length > 1) {
+        SheetManager.show('court-selection', {
+          payload: {
+            courts: slot.courtOptions ?? [],
+            timeLabel: slot.time ?? '',
+            onSelect: (court: unknown) => {
+              const c = court as CourtOption;
+              if (c.bookingUrl) {
+                Linking.openURL(c.bookingUrl);
+              }
+            },
+            onCancel: () => {},
+          },
+        });
+        return;
+      }
+
+      // Single court or no options - open booking URL directly
+      const bookingUrl = slot.courtOptions[0]?.bookingUrl || slot.bookingUrl;
+      if (bookingUrl) {
+        Linking.openURL(bookingUrl);
+      }
+    },
+    [guardAction]
+  );
 
   // Render facility card
   const renderFacilityCard = useCallback(

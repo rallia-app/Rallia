@@ -1,14 +1,7 @@
 import React, { useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-  Switch,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Text, useToast } from '@rallia/shared-components';
 import { OnboardingService, Logger, supabase } from '@rallia/shared-services';
 import type { DayEnum, PeriodEnum, OnboardingAvailability } from '@rallia/shared-types';
@@ -16,7 +9,6 @@ import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Analytics from '../../../../services/analytics';
 
 type TimeSlot = 'AM' | 'PM' | 'EVE';
@@ -42,7 +34,6 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
   const initialPrivacyShowAvailability = payload?.initialPrivacyShowAvailability ?? true;
   const _selectedSportIds = payload?.selectedSportIds;
   const { colors } = useThemeStyles();
-  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const toast = useToast();
   const days: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -195,7 +186,7 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
   return (
     <ActionSheet
       gestureEnabled
-      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
       <View style={styles.modalContent}>
@@ -316,12 +307,7 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
         </ScrollView>
 
         {/* Sticky Footer */}
-        <View
-          style={[
-            styles.footer,
-            { borderTopColor: colors.border, paddingBottom: insets.bottom + spacingPixels[4] },
-          ]}
-        >
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
           <TouchableOpacity
             style={[
               styles.submitButton,
@@ -442,8 +428,7 @@ const styles = StyleSheet.create({
     // color applied inline
   },
   footer: {
-    paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[4],
+    padding: spacingPixels[4],
     borderTopWidth: 1,
   },
   submitButton: {

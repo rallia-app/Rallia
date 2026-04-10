@@ -23,6 +23,7 @@ import { EditGroupActionSheet } from '../features/groups/components/EditGroupMod
 // Community components
 import { AddCommunityMemberActionSheet } from '../features/communities/components/AddCommunityMemberModal';
 import { EditCommunityActionSheet } from '../features/communities/components/EditCommunityModal';
+import { PendingRequestsActionSheet } from '../features/communities/components/PendingRequestsSheet';
 // Matches components
 import { MatchTypeActionSheet } from '../features/matches/components/MatchTypeModal';
 import { ScoreConfirmationActionSheet } from '../features/matches/components/ScoreConfirmationModal';
@@ -265,6 +266,14 @@ declare module 'react-native-actions-sheet' {
       payload: {
         community: unknown;
         onSuccess?: () => void;
+      };
+    }>;
+    'pending-requests': SheetDefinition<{
+      payload: {
+        communityId: string;
+        sportId?: string;
+        onMemberChanged?: () => void;
+        onNavigateToPlayer?: (playerId: string) => void;
       };
     }>;
     'match-type': SheetDefinition<{
@@ -571,11 +580,12 @@ declare module 'react-native-actions-sheet' {
     // Favorite facilities editor
     'favorite-facilities': SheetDefinition<{
       payload: {
-        playerId: string;
+        playerId?: string;
         sportId: string;
         latitude: number | null;
         longitude: number | null;
         initialFacilityIds: string[];
+        minFavorites?: number;
         onSave?: (facilityIds: string[]) => void;
         onDismiss?: () => void;
       };
@@ -685,6 +695,7 @@ export const Sheets = () => {
         'edit-group': EditGroupActionSheet,
         'add-community-member': AddCommunityMemberActionSheet,
         'edit-community': EditCommunityActionSheet,
+        'pending-requests': PendingRequestsActionSheet,
         'match-type': MatchTypeActionSheet,
         'score-confirmation': ScoreConfirmationActionSheet,
         'register-match-score': RegisterMatchScoreActionSheet,

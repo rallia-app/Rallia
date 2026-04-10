@@ -13,6 +13,7 @@ import type { FacilitySearchResult } from '@rallia/shared-types';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useCourtAvailability, type FormattedSlot } from '@rallia/shared-hooks';
 import { useAuth } from '../../../context';
+import { useRequireOnboarding } from '../../../hooks';
 import { SportIcon } from '../../../components/SportIcon';
 import type { TranslationKey, TranslationOptions } from '../../../hooks';
 
@@ -111,6 +112,7 @@ export default function FacilityCard({
   t,
 }: FacilityCardProps) {
   const { isAuthenticated } = useAuth();
+  const { guardAction } = useRequireOnboarding();
   const canShowFavorite = showFavoriteButton !== undefined ? showFavoriteButton : isAuthenticated;
 
   const handleFavoritePress = useCallback(() => {
@@ -136,13 +138,14 @@ export default function FacilityCard({
     (slot: FormattedSlot) => {
       if (!slot.bookingUrl && !slot.isLocalSlot) return;
       lightHaptic();
+      if (!guardAction()) return;
       if (onSlotPress) {
         onSlotPress(facility, slot);
       } else if (slot.bookingUrl) {
         Linking.openURL(slot.bookingUrl);
       }
     },
-    [facility, onSlotPress]
+    [facility, onSlotPress, guardAction]
   );
 
   // Determine if favorite toggle should be disabled

@@ -614,10 +614,10 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radiusPixels['2xl'],
   },
   handleIndicator: {
-    width: 40,
+    width: spacingPixels[10],
     height: 4,
-    borderRadius: 2,
-    marginTop: spacingPixels['2'],
+    borderRadius: 4,
+    alignSelf: 'center',
   },
   header: {
     flexDirection: 'row',
