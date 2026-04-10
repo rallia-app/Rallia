@@ -2,8 +2,10 @@
  * Referral Attribution Utilities
  *
  * Handles automatic referral code detection on first app launch:
- * - Android: Parse referral_code from Play Install Referrer
- * - iOS: Fingerprint matching against web invite page visits
+ * - Android: Parse referral_code, invitation_type, target_id from Play Install Referrer
+ * - iOS: Fingerprint matching against web invite page visits (returns structured data)
+ *
+ * Stores structured PendingReferral data in AsyncStorage for post-signup attribution.
  */
 
 import { Platform } from 'react-native';
@@ -11,8 +13,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
-import { PENDING_REFERRAL_KEY_EXPORT } from '../screens/InviteReferralScreen';
+import { PENDING_REFERRAL_KEY } from '../screens/InvitationDeepLinkScreen';
+import type { PendingReferral } from '../screens/InvitationDeepLinkScreen';
 import { matchReferralFingerprint, Logger } from '@rallia/shared-services';
+import type { InvitationType } from '@rallia/shared-services';
 
 const ATTRIBUTION_ATTEMPTED_KEY = 'referral_attribution_attempted';
 
@@ -26,23 +30,23 @@ export async function attemptFirstLaunchAttribution(playerId: string): Promise<v
     const alreadyAttempted = await AsyncStorage.getItem(ATTRIBUTION_ATTEMPTED_KEY);
     if (alreadyAttempted) return;
 
-    // Don't override a manually entered code
-    const existingCode = await AsyncStorage.getItem(PENDING_REFERRAL_KEY_EXPORT);
-    if (existingCode) {
+    // Don't override a manually entered code (from deep link)
+    const existingRaw = await AsyncStorage.getItem(PENDING_REFERRAL_KEY);
+    if (existingRaw) {
       await AsyncStorage.setItem(ATTRIBUTION_ATTEMPTED_KEY, 'true');
       return;
     }
 
-    let referralCode: string | null = null;
+    let pendingReferral: PendingReferral | null = null;
 
     if (Platform.OS === 'android') {
-      referralCode = await getAndroidInstallReferrerCode();
+      pendingReferral = await getAndroidInstallReferrer();
     } else if (Platform.OS === 'ios') {
-      referralCode = await getIOSFingerprintMatch(playerId);
+      pendingReferral = await getIOSFingerprintMatch(playerId);
     }
 
-    if (referralCode) {
-      await AsyncStorage.setItem(PENDING_REFERRAL_KEY_EXPORT, referralCode);
+    if (pendingReferral) {
+      await AsyncStorage.setItem(PENDING_REFERRAL_KEY, JSON.stringify(pendingReferral));
     }
 
     await AsyncStorage.setItem(ATTRIBUTION_ATTEMPTED_KEY, 'true');
@@ -56,18 +60,27 @@ export async function attemptFirstLaunchAttribution(playerId: string): Promise<v
 }
 
 /**
- * Android: Parse referral_code from the Play Install Referrer string.
- * The web invite page appends `&referrer=referral_code%3DXXXXXXXX` to the Play Store URL.
+ * Android: Parse referral data from the Play Install Referrer string.
+ * The web invite page appends referral_code, invitation_type, and target_id
+ * to the Play Store URL's referrer parameter.
  */
-async function getAndroidInstallReferrerCode(): Promise<string | null> {
+async function getAndroidInstallReferrer(): Promise<PendingReferral | null> {
   try {
     const referrer = await Application.getInstallReferrerAsync();
     if (!referrer) return null;
 
-    // Parse "referral_code=XXXXXXXX" from the referrer string
     const params = new URLSearchParams(referrer);
     const code = params.get('referral_code');
-    return code || null;
+    if (!code) return null;
+
+    const invitationType = params.get('invitation_type') as InvitationType | null;
+    const targetId = params.get('target_id');
+
+    return {
+      code,
+      type: invitationType || 'referral',
+      targetId: targetId || undefined,
+    };
   } catch {
     return null;
   }
@@ -76,8 +89,9 @@ async function getAndroidInstallReferrerCode(): Promise<string | null> {
 /**
  * iOS: Compute device fingerprint and match against web invite page visits.
  * Uses the same SHA-256(IP:UserAgent) algorithm as the web page.
+ * Returns structured data including invitation type and target ID.
  */
-async function getIOSFingerprintMatch(playerId: string): Promise<string | null> {
+async function getIOSFingerprintMatch(playerId: string): Promise<PendingReferral | null> {
   try {
     // Get public IP
     const ipResponse = await fetch('https://api.ipify.org?format=json');
@@ -94,9 +108,15 @@ async function getIOSFingerprintMatch(playerId: string): Promise<string | null> 
       `${ip}:${userAgent}`
     );
 
-    // Call RPC to match
-    const code = await matchReferralFingerprint(fingerprint, ip, playerId);
-    return code;
+    // Call RPC to match — now returns structured data
+    const result = await matchReferralFingerprint(fingerprint, ip, playerId);
+    if (!result) return null;
+
+    return {
+      code: result.code,
+      type: result.invitation_type,
+      targetId: result.target_id,
+    };
   } catch {
     return null;
   }

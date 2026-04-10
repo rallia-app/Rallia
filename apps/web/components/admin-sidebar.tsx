@@ -17,12 +17,16 @@ import { syncLocaleToBackend } from '@/lib/sync-locale';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@rallia/shared-hooks';
 import {
+  Bell,
   Building2,
   ChevronLeft,
   ChevronRight,
   Globe,
   LayoutDashboard,
   LogOut,
+  Network,
+  ScrollText,
+  Shield,
   Users,
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
@@ -84,6 +88,30 @@ export function AdminSidebar() {
       href: '/admin/users',
       label: t('users'),
       icon: Users,
+      exactMatch: false,
+    },
+    {
+      href: '/admin/moderation',
+      label: t('moderation'),
+      icon: Shield,
+      exactMatch: false,
+    },
+    {
+      href: '/admin/activity-log',
+      label: t('activityLog'),
+      icon: ScrollText,
+      exactMatch: false,
+    },
+    {
+      href: '/admin/alerts',
+      label: t('alerts'),
+      icon: Bell,
+      exactMatch: false,
+    },
+    {
+      href: '/admin/networks',
+      label: t('networks'),
+      icon: Network,
       exactMatch: false,
     },
   ];

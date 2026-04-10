@@ -1,6 +1,7 @@
 'use client';
 
 import { AdminSidebar } from '@/components/admin-sidebar';
+import { SharedSupabaseSync } from '@/components/shared-supabase-sync';
 import { SidebarProvider, useSidebar } from '@/components/sidebar-context';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -22,6 +23,7 @@ export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) 
   return (
     <SidebarProvider>
       <TooltipProvider delayDuration={100}>
+        <SharedSupabaseSync />
         <AdminLayoutContent>{children}</AdminLayoutContent>
       </TooltipProvider>
     </SidebarProvider>

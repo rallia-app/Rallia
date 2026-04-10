@@ -55,6 +55,15 @@ export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
   },
 });
 
+/**
+ * Replace the shared supabase singleton with an externally-created client.
+ * On web, call this early with the cookie-based browser client so that all
+ * shared hooks and services use the same auth session — no token syncing needed.
+ */
+export function setSupabaseInstance(client: SupabaseClient): void {
+  _supabaseInstance = client;
+}
+
 // Platform-specific configuration helper
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const configureSupabaseStorage = (storage: any) => {
