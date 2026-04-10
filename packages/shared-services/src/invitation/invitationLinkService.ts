@@ -113,7 +113,7 @@ export function parseInvitationUrl(url: string): ParsedInvitationLink | null {
     }
 
     // Strip locale prefix from pathname
-    let pathname = parsed.pathname.replace(LOCALE_PREFIX, '/');
+    const pathname = parsed.pathname.replace(LOCALE_PREFIX, '/');
 
     // Match /invite/{code}
     const match = pathname.match(/^\/invite\/([^/?]+)/);
