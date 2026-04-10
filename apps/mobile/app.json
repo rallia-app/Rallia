@@ -21,8 +21,13 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "This app requires access to your camera to take profile pictures.",
-        "NSPhotoLibraryUsageDescription": "This app requires access to your photo library to select profile pictures.",
+        "NSCameraUsageDescription": "$(PRODUCT_NAME) uses your camera to take a profile picture or record video proof of your playing level, for example filming yourself during a rally to verify your skill rating.",
+        "NSPhotoLibraryUsageDescription": "$(PRODUCT_NAME) uses your photo library to set a player, group, or community profile picture and to submit rating proof, for example selecting a video of your gameplay to verify your skill level.",
+        "NSContactsUsageDescription": "$(PRODUCT_NAME) uses your contacts to import them into shared lists, send SMS invitations, and select match opponents, for example inviting a friend to play via text message.",
+        "NSLocationWhenInUseUsageDescription": "$(PRODUCT_NAME) uses your location to show nearby courts and facilities sorted by distance, for example \"Tennis Club 0.3 km away\".",
+        "NSLocationAlwaysUsageDescription": "$(PRODUCT_NAME) uses your location to show nearby courts and facilities sorted by distance, for example \"Tennis Club 0.3 km away\".",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "$(PRODUCT_NAME) uses your location to show nearby courts and facilities sorted by distance, for example \"Tennis Club 0.3 km away\".",
+        "NSMicrophoneUsageDescription": "$(PRODUCT_NAME) uses your microphone to capture audio when recording video proof of your playing level, for example recording the sound during a rally video.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "bundleIdentifier": "com.mathisl971.rallia-app",
@@ -108,8 +113,9 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "The app accesses your photos to let you share them with your friends.",
-          "cameraPermission": "The app accesses your camera to let you take photos to share with your friends."
+          "photosPermission": "$(PRODUCT_NAME) uses your photo library to set a player, group, or community profile picture and to submit rating proof, for example selecting a video of your gameplay to verify your skill level.",
+          "cameraPermission": "$(PRODUCT_NAME) uses your camera to take a profile picture or record video proof of your playing level, for example filming yourself during a rally to verify your skill rating.",
+          "microphonePermission": "$(PRODUCT_NAME) uses your microphone to capture audio when recording video proof of your playing level, for example recording the sound during a rally video."
         }
       ],
       [

@@ -1122,7 +1122,7 @@ export default function AppNavigator() {
         <RootStack.Screen
           name="PreOnboarding"
           component={PreOnboardingScreen}
-          options={{ headerShown: false, animation: 'fade' }}
+          options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
         />
       )}
 

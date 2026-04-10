@@ -6642,9 +6642,8 @@
         "item4": "Discover players in your neighborhood"
       },
       "enable": "Enable Precise Location",
-      "skip": "Maybe Later",
       "privacyNote": "Your location stays on your device and is only used to calculate distances. We never track or store your movements.",
-      "skipNote": "You can always enable this later in Settings"
+      "settingsHint": "You can change this anytime in your device Settings."
     }
   },
   "reputation": {

@@ -112,7 +112,7 @@ import {
   // useTour, // TEMPORARILY DISABLED: User walkthrough deactivated
   TourProvider,
 } from './src/context';
-import { usePushNotifications, useShakeDetection } from './src/hooks';
+import { usePushNotifications } from './src/hooks';
 import { PostHogProvider, posthogClient } from './src/providers/PostHogProvider';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { SheetManager, SheetProvider } from 'react-native-actions-sheet';
@@ -440,26 +440,6 @@ function DeepLinkHandler() {
   return null;
 }
 
-/**
- * ShakeHandler - Detects device shakes and opens the bug report sheet.
- * Must be inside FeedbackReportSheetProvider.
- */
-function ShakeHandler() {
-  const { openFeedbackReport } = useFeedbackReportSheet();
-  const { isSplashComplete } = useOverlay();
-
-  useShakeDetection({
-    onShake: () => {
-      Logger.logUserAction('shake_detected_feedback_report');
-      openFeedbackReport('shake');
-    },
-    // Only enable shake detection after splash is complete
-    enabled: isSplashComplete,
-  });
-
-  return null;
-}
-
 function ReferralInviteHandler() {
   const { user } = useAuth();
   const { isSplashComplete, isSportSelectionComplete, permissionsHandled } = useOverlay();
@@ -599,8 +579,6 @@ function AppContent() {
       {/* Session Expiry Handler - shows toast when session expires */}
       <SessionExpiryHandler />
       <AccountSuspendedHandler />
-      {/* Shake Handler - detects shakes and opens feedback report sheet */}
-      <ShakeHandler />
       {/* Referral Invite Handler - periodically prompts users to invite friends */}
       <ReferralInviteHandler />
 

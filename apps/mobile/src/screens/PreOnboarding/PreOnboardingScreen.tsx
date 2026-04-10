@@ -244,7 +244,7 @@ export function PreOnboardingScreen() {
 
       {/* Progress Indicator & Back Button */}
       <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
-        {currentStep > 1 ? (
+        {currentStep > 1 && currentStep < 3 ? (
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons
               name="chevron-back-outline"
