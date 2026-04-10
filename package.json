@@ -151,8 +151,8 @@
   "dependencies": {
     "@alloc/quick-lru": "^5.2.0",
     "@ide/backoff": "^1.0.0",
-    "expo": "~54.0.27",
-    "expo-application": "^55.0.8",
+    "expo": "~55.0.14",
+    "expo-application": "^55.0.14",
     "import-in-the-middle": "3.0.0",
     "prettier-plugin-tailwindcss": "^0.5.14",
     "puppeteer": "^24.40.0",
