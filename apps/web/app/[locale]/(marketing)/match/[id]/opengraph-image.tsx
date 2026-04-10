@@ -1,6 +1,5 @@
 import { ImageResponse } from 'next/og';
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { headers } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
 import { getMatch } from './_lib/get-match';
 
@@ -31,13 +30,16 @@ export default async function Image({
   const { id, locale } = await params;
   const match = await getMatch(id);
   const t = await getTranslations({ locale, namespace: 'gamesPage' });
-  const logoSvgPath = join(process.cwd(), 'public/rallia-logo-light-inline.svg');
-  const [poppinsBoldData, poppinsSemiBoldData, interMediumData, logoSvgBuf] = await Promise.all([
+  const headersList = await headers();
+  const host = headersList.get('host') ?? 'localhost:3000';
+  const protocol = host.startsWith('localhost') ? 'http' : 'https';
+  const [poppinsBoldData, poppinsSemiBoldData, interMediumData, logoSvgRes] = await Promise.all([
     poppinsBold,
     poppinsSemiBold,
     interMedium,
-    readFile(logoSvgPath),
+    fetch(`${protocol}://${host}/rallia-logo-light-inline.svg`),
   ]);
+  const logoSvgBuf = Buffer.from(await logoSvgRes.arrayBuffer());
   const logoSrc = `data:image/svg+xml;base64,${logoSvgBuf.toString('base64')}`;
 
   const fonts = [
