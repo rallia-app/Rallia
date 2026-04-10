@@ -116,9 +116,7 @@ export function OrganizationsDataTable(props: OrganizationsDataTableProps) {
       variant: 'destructive',
       icon: <Trash2 className="h-4 w-4 mr-2" />,
       confirmTitle: t('bulkActions.confirmTitle'),
-      confirmDescription: t('bulkActions.confirmDescription', {
-        count: 0, // Will be overridden by selectedMessage
-      }),
+      confirmDescription: (count: number) => t('bulkActions.confirmDescription', { count }),
       confirmLabel: t('bulkActions.confirmDelete'),
       loadingLabel: t('bulkActions.deleting'),
       onExecute: async (ids: string[]) => {

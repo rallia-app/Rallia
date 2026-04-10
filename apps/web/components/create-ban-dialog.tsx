@@ -21,24 +21,34 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import type { BanType, CreateBanParams, PlayerBan } from '@rallia/shared-hooks';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface CreateBanDialogProps {
   open: boolean;
   onClose: () => void;
   onCreateBan: (params: CreateBanParams) => Promise<PlayerBan | null>;
+  initialPlayerId?: string;
 }
 
-export function CreateBanDialog({ open, onClose, onCreateBan }: CreateBanDialogProps) {
+export function CreateBanDialog({
+  open,
+  onClose,
+  onCreateBan,
+  initialPlayerId,
+}: CreateBanDialogProps) {
   const t = useTranslations('admin.moderation');
-  const [playerId, setPlayerId] = useState('');
+  const [playerId, setPlayerId] = useState(initialPlayerId ?? '');
   const [banType, setBanType] = useState<BanType>('temporary');
   const [durationDays, setDurationDays] = useState('7');
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (initialPlayerId) setPlayerId(initialPlayerId);
+  }, [initialPlayerId]);
+
   const resetForm = () => {
-    setPlayerId('');
+    setPlayerId(initialPlayerId ?? '');
     setBanType('temporary');
     setDurationDays('7');
     setReason('');
@@ -84,6 +94,8 @@ export function CreateBanDialog({ open, onClose, onCreateBan }: CreateBanDialogP
               value={playerId}
               onChange={e => setPlayerId(e.target.value)}
               placeholder={t('playerIdPlaceholder')}
+              readOnly={!!initialPlayerId}
+              className={initialPlayerId ? 'bg-muted' : ''}
             />
           </div>
 

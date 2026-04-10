@@ -145,22 +145,20 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
   return (
     <View style={[styles.header, { borderBottomColor: colors.border }]}>
       <View style={styles.headerLeft}>
-        <TouchableOpacity
-          onPress={() => {
-            Keyboard.dismiss();
-            lightHaptic();
-            if (currentStep === 1) {
-              onBackToLanding();
-            } else {
+        {currentStep > 1 && (
+          <TouchableOpacity
+            onPress={() => {
+              Keyboard.dismiss();
+              lightHaptic();
               onBack();
-            }
-          }}
-          style={styles.headerButton}
-          accessibilityLabel={t('common.back')}
-          accessibilityRole="button"
-        >
-          <Ionicons name="chevron-back-outline" size={24} color={colors.buttonActive} />
-        </TouchableOpacity>
+            }}
+            style={styles.headerButton}
+            accessibilityLabel={t('common.back')}
+            accessibilityRole="button"
+          >
+            <Ionicons name="chevron-back-outline" size={24} color={colors.buttonActive} />
+          </TouchableOpacity>
+        )}
       </View>
 
       <Text size="lg" weight="bold" color={colors.text}>
@@ -347,8 +345,10 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
         t={t}
       />
 
-      {/* Progress bar */}
-      <ProgressBar currentStep={currentStep} totalSteps={TOTAL_STEPS} colors={colors} t={t} />
+      {/* Progress bar - only show on OTP step (not relevant for OAuth or initial email screen) */}
+      {currentStep > 1 && (
+        <ProgressBar currentStep={currentStep} totalSteps={TOTAL_STEPS} colors={colors} t={t} />
+      )}
 
       {/* Step content with swipe */}
       <View style={styles.stepsViewport}>

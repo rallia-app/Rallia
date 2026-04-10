@@ -5788,6 +5788,20 @@
           },
           "supported": "Supported",
           "notSupported": "Not Supported"
+        },
+        "actions": {
+          "suspend": "Suspend",
+          "reactivate": "Reactivate",
+          "ban": "Ban Player",
+          "suspendConfirmTitle": "Suspend Player",
+          "suspendConfirmDescription": "Are you sure you want to suspend {name}? They will lose access to the platform.",
+          "reactivateConfirmTitle": "Reactivate Player",
+          "reactivateConfirmDescription": "Are you sure you want to reactivate {name}? They will regain access to the platform.",
+          "confirm": "Confirm",
+          "cancel": "Cancel",
+          "suspending": "Suspending...",
+          "reactivating": "Reactivating...",
+          "error": "Action failed"
         }
       },
       "edit": {
@@ -5914,7 +5928,12 @@
           "confirmDescription": "Are you sure you want to suspend {count, plural, one {this player} other {these # players}}?",
           "cancel": "Cancel",
           "confirmSuspend": "Suspend",
-          "suspending": "Suspending..."
+          "suspending": "Suspending...",
+          "reactivate": "Reactivate Selected",
+          "reactivateConfirmTitle": "Reactivate Players",
+          "reactivateConfirmDescription": "Are you sure you want to reactivate {count, plural, one {this player} other {these # players}}?",
+          "confirmReactivate": "Reactivate",
+          "reactivating": "Reactivating..."
         }
       }
     },

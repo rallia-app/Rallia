@@ -10,7 +10,7 @@ import { TabsContent } from '@/components/ui/tabs';
 import { UserInvitationButton } from '@/components/user-invitation-button';
 import { buildTableQuery } from '@/lib/supabase-table-query';
 import { parseTableParams } from '@/lib/table-params';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { Users } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
@@ -79,6 +79,7 @@ export default async function AdminUsersPage({
   }
 
   const userIsSuperAdmin = await isSuperAdmin(user.id);
+  const adminDb = createServiceRoleClient();
 
   const activeTab = (params.tab as string) || 'admins';
   const tableParams = parseTableParams(params);
@@ -101,8 +102,10 @@ export default async function AdminUsersPage({
     }
 
     try {
-      const query = supabase.from('admin').select(
-        `
+      const query = adminDb
+        .from('admin')
+        .select(
+          `
           id,
           role,
           assigned_at,
@@ -115,8 +118,9 @@ export default async function AdminUsersPage({
             created_at
           )
         `,
-        { count: 'exact' }
-      );
+          { count: 'exact' }
+        )
+        .neq('id', user.id);
 
       const result = await buildTableQuery<AdminWithProfile>(query, tableParams, {
         allowedSortFields: ['role', 'assigned_at'],
@@ -160,7 +164,7 @@ export default async function AdminUsersPage({
     }
 
     try {
-      const query = supabase.from('player').select(
+      const query = adminDb.from('player').select(
         `
           id,
           gender,
