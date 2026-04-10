@@ -27,7 +27,7 @@ export function LocationPermissionStep({
 }: LocationPermissionStepProps) {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
-  const { requestLocationPermission, markLocationAsked } = usePermissions();
+  const { requestLocationPermission } = usePermissions();
   const [isRequesting, setIsRequesting] = useState(false);
 
   const handleEnableLocation = useCallback(async () => {
@@ -46,12 +46,6 @@ export function LocationPermissionStep({
       setIsRequesting(false);
     }
   }, [isRequesting, requestLocationPermission, onContinue]);
-
-  const handleSkip = useCallback(async () => {
-    mediumHaptic();
-    await markLocationAsked();
-    onContinue(false);
-  }, [markLocationAsked, onContinue]);
 
   if (!isActive) return null;
 
@@ -241,14 +235,8 @@ export function LocationPermissionStep({
             {isRequesting ? t('common.loading') : t('preOnboarding.locationPermission.enable')}
           </Button>
 
-          <Button variant="ghost" onPress={handleSkip} style={styles.skipButton}>
-            <Text size="sm" color={colors.textMuted}>
-              {t('preOnboarding.locationPermission.skip')}
-            </Text>
-          </Button>
-
-          <Text size="xs" color={isDark ? neutral[600] : neutral[400]} style={styles.skipNote}>
-            {t('preOnboarding.locationPermission.skipNote')}
+          <Text size="xs" color={colors.textMuted} style={styles.settingsHint}>
+            {t('preOnboarding.locationPermission.settingsHint')}
           </Text>
         </Animated.View>
       </ScrollView>
@@ -374,11 +362,8 @@ const styles = StyleSheet.create({
   enableButton: {
     width: '100%',
   },
-  skipButton: {
-    marginTop: spacingPixels[2],
-  },
-  skipNote: {
-    marginTop: spacingPixels[1],
+  settingsHint: {
+    marginTop: spacingPixels[4],
     textAlign: 'center',
   },
 });

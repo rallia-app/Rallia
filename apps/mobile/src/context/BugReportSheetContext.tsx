@@ -2,7 +2,7 @@
  * Feedback Report Sheet Context
  *
  * Provides global control over the feedback report action sheet.
- * Can be triggered via shake gesture, FAB, or settings menu.
+ * Can be triggered via FAB or settings menu.
  */
 
 import React, { createContext, useContext, useCallback, useState, ReactNode } from 'react';
@@ -17,7 +17,7 @@ import { useActionsSheet } from './ActionsSheetContext';
 // TYPES
 // =============================================================================
 
-export type FeedbackReportTrigger = 'shake' | 'help_menu' | 'settings' | 'fab';
+export type FeedbackReportTrigger = 'help_menu' | 'settings' | 'fab';
 
 interface FeedbackReportSheetContextType {
   /** Open the feedback report sheet */

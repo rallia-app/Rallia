@@ -132,7 +132,6 @@ export default function GroupChatInfoScreen() {
     handleSaveName,
     handleCancelEditName,
     handleChangeImage,
-    handleEditDescription,
   } = useGroupEditActions({
     conversationId,
     conversationTitle: conversation?.title ?? undefined,
