@@ -5006,7 +5006,8 @@
       "alerts": "Alertes",
       "networks": "Réseaux",
       "analytics": "Analytique",
-      "settings": "Paramètres"
+      "settings": "Paramètres",
+      "map": "Carte des joueurs"
     },
     "organizations": {
       "title": "Organisations",
@@ -6051,6 +6052,38 @@
         "success": "« {name} » a été supprimé. {count} membres ont été notifiés.",
         "error": "Échec de la suppression du réseau"
       }
+    },
+    "map": {
+      "title": "Carte des joueurs",
+      "titleMeta": "Carte des joueurs - Admin - Rallia",
+      "description": "Visualisez la répartition et la densité des joueurs par région.",
+      "descriptionMeta": "Répartition géographique des joueurs.",
+      "filters": {
+        "gender": "Genre",
+        "status": "Statut",
+        "province": "Province",
+        "all": "Tous",
+        "active": "Actif",
+        "inactive": "Inactif",
+        "suspended": "Suspendu"
+      },
+      "stats": {
+        "totalPlayers": "{count} joueurs affichés",
+        "totalFacilities": "{count} installations",
+        "topCities": "Villes principales"
+      },
+      "controls": {
+        "clusters": "Groupes",
+        "heatmap": "Carte thermique",
+        "facilities": "Installations",
+        "selectArea": "Sélectionner une zone",
+        "joinedBetween": "Inscrit entre"
+      },
+      "selection": {
+        "title": "Zone sélectionnée",
+        "players": "joueurs"
+      },
+      "noData": "Aucun joueur avec des données de localisation trouvé."
     },
     "analytics": {
       "title": "Analytique",
@@ -8073,6 +8106,7 @@
     "kmAway": "{distance} km",
     "spotsLeft": "{count, plural, =1 {1 place restante} other {# places restantes}}",
     "matchFull": "Complet",
+    "playersJoined": "joueurs inscrits",
     "today": "Aujourd'hui",
     "tomorrow": "Demain",
     "singles": "Simple",

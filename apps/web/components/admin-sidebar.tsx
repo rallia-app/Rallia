@@ -24,6 +24,7 @@ import {
   Globe,
   LayoutDashboard,
   LogOut,
+  MapPin,
   Network,
   ScrollText,
   Shield,
@@ -91,15 +92,21 @@ export function AdminSidebar() {
       exactMatch: false,
     },
     {
-      href: '/admin/moderation',
-      label: t('moderation'),
-      icon: Shield,
+      href: '/admin/networks',
+      label: t('networks'),
+      icon: Network,
       exactMatch: false,
     },
     {
-      href: '/admin/activity-log',
-      label: t('activityLog'),
-      icon: ScrollText,
+      href: '/admin/map',
+      label: t('map'),
+      icon: MapPin,
+      exactMatch: false,
+    },
+    {
+      href: '/admin/moderation',
+      label: t('moderation'),
+      icon: Shield,
       exactMatch: false,
     },
     {
@@ -109,9 +116,9 @@ export function AdminSidebar() {
       exactMatch: false,
     },
     {
-      href: '/admin/networks',
-      label: t('networks'),
-      icon: Network,
+      href: '/admin/activity-log',
+      label: t('activityLog'),
+      icon: ScrollText,
       exactMatch: false,
     },
   ];
