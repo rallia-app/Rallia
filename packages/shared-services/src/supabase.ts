@@ -42,7 +42,6 @@ export { getOrCreateClient as getSupabase };
 
 // For backward compatibility: `supabase` is a proxy that lazily initializes the client.
 // Consumers can continue to use `import { supabase } from '../supabase'` unchanged.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
   get(_target, prop) {
     const client = getOrCreateClient();
