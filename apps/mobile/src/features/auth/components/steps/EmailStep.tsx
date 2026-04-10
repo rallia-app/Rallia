@@ -198,13 +198,6 @@ export const EmailStep: React.FC<EmailStepProps> = ({
         editable={isActive}
       />
 
-      {/* Error Message */}
-      {errorMessage ? (
-        <Text size="sm" color={colors.error} style={styles.errorText}>
-          {errorMessage}
-        </Text>
-      ) : null}
-
       {/* Continue Button */}
       <TouchableOpacity
         style={[

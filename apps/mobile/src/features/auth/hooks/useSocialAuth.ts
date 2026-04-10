@@ -239,6 +239,24 @@ export function useSocialAuth(): UseSocialAuthReturn {
       }
 
       Logger.info('Google sign-in completed successfully', { userId: data.user.id });
+
+      // Check if account is suspended before allowing sign-in
+      const { data: profile } = await supabase
+        .from('profile')
+        .select('account_status')
+        .eq('id', data.user.id)
+        .maybeSingle();
+
+      if (profile?.account_status === 'suspended') {
+        Logger.warn('Suspended account attempted Google sign-in', { userId: data.user.id });
+        await supabase.auth.signOut().catch(() => {});
+        setIsLoading(false);
+        setLoadingProvider(null);
+        setErrorMessage(getFriendlyErrorMessage('ACCOUNT_SUSPENDED'));
+        warningHaptic();
+        return { success: false, needsOnboarding: false };
+      }
+
       successHaptic();
 
       const needsOnboarding = await checkOnboardingStatus(data.user.id);
@@ -345,6 +363,24 @@ export function useSocialAuth(): UseSocialAuthReturn {
       }
 
       Logger.info('Apple sign-in completed successfully', { userId: data.user.id });
+
+      // Check if account is suspended before allowing sign-in
+      const { data: profile } = await supabase
+        .from('profile')
+        .select('account_status')
+        .eq('id', data.user.id)
+        .maybeSingle();
+
+      if (profile?.account_status === 'suspended') {
+        Logger.warn('Suspended account attempted Apple sign-in', { userId: data.user.id });
+        await supabase.auth.signOut().catch(() => {});
+        setIsLoading(false);
+        setLoadingProvider(null);
+        setErrorMessage(getFriendlyErrorMessage('ACCOUNT_SUSPENDED'));
+        warningHaptic();
+        return { success: false, needsOnboarding: false };
+      }
+
       successHaptic();
 
       const needsOnboarding = await checkOnboardingStatus(data.user.id);
@@ -439,6 +475,24 @@ export function useSocialAuth(): UseSocialAuthReturn {
       }
 
       Logger.info('Facebook sign-in completed successfully', { userId: user.id });
+
+      // Check if account is suspended before allowing sign-in
+      const { data: profile } = await supabase
+        .from('profile')
+        .select('account_status')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profile?.account_status === 'suspended') {
+        Logger.warn('Suspended account attempted Facebook sign-in', { userId: user.id });
+        await supabase.auth.signOut().catch(() => {});
+        setIsLoading(false);
+        setLoadingProvider(null);
+        setErrorMessage(getFriendlyErrorMessage('ACCOUNT_SUSPENDED'));
+        warningHaptic();
+        return { success: false, needsOnboarding: false };
+      }
+
       successHaptic();
 
       const needsOnboarding = await checkOnboardingStatus(user.id);

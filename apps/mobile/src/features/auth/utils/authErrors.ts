@@ -35,6 +35,10 @@ const ERROR_MESSAGES: Record<string, string> = {
   ERR_REQUEST_NOT_HANDLED: 'Apple Sign-In is not available on this device.',
   ERR_REQUEST_UNKNOWN: 'An unknown error occurred with Apple Sign-In.',
 
+  // Account Status Errors
+  ACCOUNT_SUSPENDED:
+    'Your account has been suspended. Please contact support for more information.',
+
   // Network Errors
   'Network request failed': 'Unable to connect. Please check your internet connection.',
   'Failed to fetch': 'Unable to connect. Please check your internet connection.',
