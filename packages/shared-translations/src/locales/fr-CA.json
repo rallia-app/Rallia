@@ -7987,6 +7987,7 @@
     "title": "Parties à venir",
     "subtitle": "Trouvez des parties publiques près de chez vous et rejoignez l'action.",
     "joinButton": "Rejoindre la partie",
+    "waitlistButton": "Rejoindre la liste d'attente",
     "loadMore": "Voir plus",
     "noMatches": "Aucune partie à venir pour le moment. Revenez bientôt!",
     "kmAway": "{distance} km",
@@ -8021,14 +8022,8 @@
     },
     "joinDialog": {
       "title": "Rejoindre cette partie",
-      "description": "Laissez votre courriel et nous vous enverrons les détails pour rejoindre cette partie.",
-      "emailLabel": "Courriel",
-      "emailPlaceholder": "vous@exemple.com",
-      "nameLabel": "Nom (optionnel)",
-      "namePlaceholder": "Votre nom",
-      "submitButton": "Envoyez-moi les détails",
-      "successTitle": "C'est fait!",
-      "successMessage": "Consultez votre boîte de réception pour les prochaines étapes."
+      "description": "Scannez le code QR avec votre téléphone pour télécharger Rallia et rejoindre cette partie.",
+      "qrHint": "Ouvrez Rallia sur votre téléphone pour rejoindre cette partie."
     }
   },
   "matchPage": {
