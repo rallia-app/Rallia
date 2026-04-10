@@ -89,11 +89,12 @@ export default async function MatchPage({ params, searchParams }: Props) {
   const { id, locale } = await params;
   const query = await searchParams;
 
-  // When the link comes from the interest email (?src=email), redirect mobile users to app stores
-  if (query.src === 'email') {
-    const headersList = await headers();
-    const userAgent = headersList.get('user-agent') ?? '';
-    const platform = isMobile(userAgent);
+  // Redirect mobile users to app stores when coming from email or QR
+  const headersList = await headers();
+  const userAgent = headersList.get('user-agent') ?? '';
+  const platform = isMobile(userAgent);
+
+  if (query.src === 'email' || query.src === 'qr') {
     if (platform === 'ios') redirect(APP_STORE_URL);
     if (platform === 'android') redirect(PLAY_STORE_URL);
   }
@@ -312,38 +313,42 @@ export default async function MatchPage({ params, searchParams }: Props) {
             <h2 className="text-xl font-bold">{t('downloadTitle')}</h2>
             <p className="text-sm text-muted-foreground">{t('downloadDescription')}</p>
             <div className="flex gap-4">
-              <a href="https://apps.apple.com" target="_blank" rel="noopener noreferrer">
-                <Image
-                  src="/app-store-badge-light.svg"
-                  alt={t('appStore')}
-                  width={120}
-                  height={40}
-                  className="button-scale block dark:hidden"
-                />
-                <Image
-                  src="/app-store-badge.svg"
-                  alt={t('appStore')}
-                  width={120}
-                  height={40}
-                  className="button-scale hidden dark:block"
-                />
-              </a>
-              <a href="https://play.google.com" target="_blank" rel="noopener noreferrer">
-                <Image
-                  src="/google-play-badge-light.svg"
-                  alt={t('googlePlay')}
-                  width={135}
-                  height={40}
-                  className="button-scale block dark:hidden"
-                />
-                <Image
-                  src="/google-play-badge.svg"
-                  alt={t('googlePlay')}
-                  width={135}
-                  height={40}
-                  className="button-scale hidden dark:block"
-                />
-              </a>
+              {platform !== 'android' && (
+                <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
+                  <Image
+                    src="/app-store-badge-light.svg"
+                    alt={t('appStore')}
+                    width={120}
+                    height={40}
+                    className="button-scale block dark:hidden"
+                  />
+                  <Image
+                    src="/app-store-badge.svg"
+                    alt={t('appStore')}
+                    width={120}
+                    height={40}
+                    className="button-scale hidden dark:block"
+                  />
+                </a>
+              )}
+              {platform !== 'ios' && (
+                <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer">
+                  <Image
+                    src="/google-play-badge-light.svg"
+                    alt={t('googlePlay')}
+                    width={135}
+                    height={40}
+                    className="button-scale block dark:hidden"
+                  />
+                  <Image
+                    src="/google-play-badge.svg"
+                    alt={t('googlePlay')}
+                    width={135}
+                    height={40}
+                    className="button-scale hidden dark:block"
+                  />
+                </a>
+              )}
             </div>
           </div>
         </section>

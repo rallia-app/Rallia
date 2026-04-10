@@ -7985,6 +7985,7 @@
     "title": "Upcoming Games",
     "subtitle": "Find public matches near you and join the action.",
     "joinButton": "Join Game",
+    "waitlistButton": "Join Waitlist",
     "loadMore": "Load More",
     "noMatches": "No upcoming games right now. Check back soon!",
     "kmAway": "{distance} km away",
@@ -8019,14 +8020,8 @@
     },
     "joinDialog": {
       "title": "Join this game",
-      "description": "Leave your email and we'll send you the details to join this match.",
-      "emailLabel": "Email",
-      "emailPlaceholder": "you@example.com",
-      "nameLabel": "Name (optional)",
-      "namePlaceholder": "Your name",
-      "submitButton": "Send me the details",
-      "successTitle": "You're in!",
-      "successMessage": "Check your inbox for next steps to join this game."
+      "description": "Scan the QR code with your phone to download Rallia and join this match.",
+      "qrHint": "Open Rallia on your phone to join this game."
     }
   },
   "matchPage": {
