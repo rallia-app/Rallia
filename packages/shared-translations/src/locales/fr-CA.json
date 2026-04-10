@@ -5790,6 +5790,20 @@
           },
           "supported": "Supporté",
           "notSupported": "Non supporté"
+        },
+        "actions": {
+          "suspend": "Suspendre",
+          "reactivate": "Réactiver",
+          "ban": "Bannir le joueur",
+          "suspendConfirmTitle": "Suspendre le joueur",
+          "suspendConfirmDescription": "Êtes-vous sûr de vouloir suspendre {name} ? L'accès à la plateforme sera révoqué.",
+          "reactivateConfirmTitle": "Réactiver le joueur",
+          "reactivateConfirmDescription": "Êtes-vous sûr de vouloir réactiver {name} ? L'accès à la plateforme sera rétabli.",
+          "confirm": "Confirmer",
+          "cancel": "Annuler",
+          "suspending": "Suspension en cours...",
+          "reactivating": "Réactivation en cours...",
+          "error": "L'action a échoué"
         }
       },
       "edit": {
@@ -5916,7 +5930,12 @@
           "confirmDescription": "Êtes-vous sûr de vouloir suspendre {count, plural, one {ce joueur} other {ces # joueurs}} ?",
           "cancel": "Annuler",
           "confirmSuspend": "Suspendre",
-          "suspending": "Suspension en cours..."
+          "suspending": "Suspension en cours...",
+          "reactivate": "Réactiver la sélection",
+          "reactivateConfirmTitle": "Réactiver les joueurs",
+          "reactivateConfirmDescription": "Êtes-vous sûr de vouloir réactiver {count, plural, one {ce joueur} other {ces # joueurs}} ?",
+          "confirmReactivate": "Réactiver",
+          "reactivating": "Réactivation en cours..."
         }
       }
     },

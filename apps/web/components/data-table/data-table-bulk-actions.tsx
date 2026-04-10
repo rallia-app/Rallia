@@ -18,7 +18,7 @@ export interface BulkActionDef {
   variant: 'destructive' | 'default';
   icon: React.ReactNode;
   confirmTitle: string;
-  confirmDescription: string;
+  confirmDescription: string | ((count: number) => string);
   confirmLabel: string;
   loadingLabel: string;
   onExecute: (ids: string[]) => Promise<void>;
@@ -81,7 +81,11 @@ export function DataTableBulkActions({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{activeAction?.confirmTitle}</DialogTitle>
-            <DialogDescription>{activeAction?.confirmDescription}</DialogDescription>
+            <DialogDescription>
+              {typeof activeAction?.confirmDescription === 'function'
+                ? activeAction.confirmDescription(selectedIds.length)
+                : activeAction?.confirmDescription}
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setActiveAction(null)} disabled={isExecuting}>

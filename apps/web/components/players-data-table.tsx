@@ -8,7 +8,7 @@ import {
   type FilterDef,
 } from '@/components/data-table';
 import { useRouter } from '@/i18n/navigation';
-import { Users, Ban } from 'lucide-react';
+import { Users, Ban, UserCheck } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import type { BulkActionDef } from '@/components/data-table';
 
@@ -136,7 +136,7 @@ export function PlayersDataTable(props: PlayersDataTableProps) {
       variant: 'destructive',
       icon: <Ban className="h-4 w-4 mr-2" />,
       confirmTitle: t('bulkActions.confirmTitle'),
-      confirmDescription: t('bulkActions.confirmDescription', { count: 0 }),
+      confirmDescription: (count: number) => t('bulkActions.confirmDescription', { count }),
       confirmLabel: t('bulkActions.confirmSuspend'),
       loadingLabel: t('bulkActions.suspending'),
       onExecute: async (ids: string[]) => {
@@ -148,6 +148,27 @@ export function PlayersDataTable(props: PlayersDataTableProps) {
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || 'Failed to suspend players');
+        }
+      },
+    },
+    {
+      label: t('bulkActions.reactivate'),
+      variant: 'default',
+      icon: <UserCheck className="h-4 w-4 mr-2" />,
+      confirmTitle: t('bulkActions.reactivateConfirmTitle'),
+      confirmDescription: (count: number) =>
+        t('bulkActions.reactivateConfirmDescription', { count }),
+      confirmLabel: t('bulkActions.confirmReactivate'),
+      loadingLabel: t('bulkActions.reactivating'),
+      onExecute: async (ids: string[]) => {
+        const response = await fetch('/api/admin/players', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playerIds: ids, action: 'reactivate' }),
+        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to reactivate players');
         }
       },
     },

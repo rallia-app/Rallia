@@ -156,6 +156,10 @@ export type AuthContextType = {
   sessionExpired: boolean;
   /** Clear the session expired flag */
   clearSessionExpired: () => void;
+  /** Whether the account was suspended by an admin */
+  accountSuspended: boolean;
+  /** Clear the account suspended flag */
+  clearAccountSuspended: () => void;
 
   // Auth methods
   signInWithProvider: (
@@ -180,6 +184,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [accountSuspended, setAccountSuspended] = useState(false);
 
   // Track previous session to detect expiry
   const previousSessionRef = useRef<Session | null>(null);
@@ -189,6 +194,43 @@ export function AuthProvider({ children }: PropsWithChildren) {
    */
   const clearSessionExpired = useCallback(() => {
     setSessionExpired(false);
+  }, []);
+
+  /**
+   * Clear the account suspended flag (after user acknowledges)
+   */
+  const clearAccountSuspended = useCallback(() => {
+    setAccountSuspended(false);
+  }, []);
+
+  /**
+   * Check if the user's account is suspended and sign them out if so.
+   * Returns true if account is suspended (caller should abort further processing).
+   */
+  const checkAccountSuspended = useCallback(async (userId: string): Promise<boolean> => {
+    try {
+      const { data: profile } = await supabase
+        .from('profile')
+        .select('account_status')
+        .eq('id', userId)
+        .single();
+
+      if (profile?.account_status === 'suspended') {
+        Logger.warn('Account suspended — signing user out');
+        previousSessionRef.current = null; // Prevent sessionExpired from triggering
+        setAccountSuspended(true);
+        try {
+          await supabase.auth.signOut();
+        } catch {
+          // Ignore sign-out errors
+        }
+        setSession(null);
+        return true;
+      }
+    } catch (error) {
+      Logger.error('Error checking account status', error as Error);
+    }
+    return false;
   }, []);
 
   useEffect(() => {
@@ -227,8 +269,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
             if (isSubscribed) {
               setSession(null);
             }
-          } else {
-            if (isSubscribed) {
+          } else if (isSubscribed) {
+            // Check if account is suspended before allowing session
+            const isSuspended = await checkAccountSuspended(user.id);
+            if (!isSuspended && isSubscribed) {
               setSession(initialSession);
               previousSessionRef.current = initialSession;
             }
@@ -269,6 +313,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
       // Track token refresh
       if (event === 'TOKEN_REFRESHED') {
         Logger.debug('Auth token refreshed successfully');
+      }
+
+      // Check account status on sign-in and token refresh
+      // For OAuth sign-in, this is the only interception point
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && newSession?.user?.id) {
+        checkAccountSuspended(newSession.user.id).then(isSuspended => {
+          if (!isSuspended) {
+            setSession(newSession);
+            previousSessionRef.current = newSession;
+          }
+          // If suspended, checkAccountSuspended already cleared session and signed out
+        });
+        return; // Don't set session synchronously — let the check decide
       }
 
       setSession(newSession);
@@ -356,6 +413,23 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (isDemoAccount(email)) {
         Logger.debug('Demo account detected, skipping OTP send');
         return { success: true };
+      }
+
+      // Check if account is suspended before sending OTP
+      try {
+        const { data: profile } = await supabase
+          .from('profile')
+          .select('account_status')
+          .eq('email', email.trim().toLowerCase())
+          .maybeSingle();
+
+        if (profile?.account_status === 'suspended') {
+          Logger.warn('Suspended account attempted sign-in', { email });
+          return { success: false, error: new Error('ACCOUNT_SUSPENDED') };
+        }
+      } catch (error) {
+        // Don't block sign-in if the check fails (e.g. new user with no profile yet)
+        Logger.debug('Could not check account status before OTP', { error });
       }
 
       try {
@@ -489,6 +563,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
     user: session?.user ?? null,
     sessionExpired,
     clearSessionExpired,
+    accountSuspended,
+    clearAccountSuspended,
 
     // Auth methods
     signInWithProvider,
