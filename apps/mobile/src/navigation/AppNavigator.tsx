@@ -1349,7 +1349,6 @@ export default function AppNavigator() {
         component={MapStack}
         options={{
           headerShown: false,
-          presentation: 'fullScreenModal' as const,
         }}
       />
 

@@ -474,8 +474,8 @@ export default function AvailabilityTab({
 
       lightHaptic();
 
-      // For local slots, require auth and onboarding
-      if (slot.isLocalSlot && !guardAction()) {
+      // Require auth and onboarding for all slot actions
+      if (!guardAction()) {
         return;
       }
 
