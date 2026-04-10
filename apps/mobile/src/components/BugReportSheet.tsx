@@ -1072,9 +1072,7 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
         >
           {/* Subtitle */}
           <Text size="sm" color={colors.textSecondary} style={styles.subtitle}>
-            {trigger === 'shake'
-              ? t('bugReport.subtitle' as TranslationKey)
-              : t('feedback.description' as TranslationKey)}
+            {t('feedback.description' as TranslationKey)}
           </Text>
 
           {/* Category Selection */}

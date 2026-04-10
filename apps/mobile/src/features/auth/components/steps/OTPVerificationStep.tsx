@@ -234,8 +234,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-    width: Platform.isPad ? 50 : 1,
-    height: Platform.isPad ? 50 : 1,
+    width: Platform.OS === 'ios' && (Platform as any).isPad ? 50 : 1,
+    height: Platform.OS === 'ios' && (Platform as any).isPad ? 50 : 1,
     opacity: 0.01,
   },
   codeInputContainer: {
