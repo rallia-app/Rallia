@@ -1,5 +1,8 @@
 -- Fix get_admin_audit_log: action_type and entity_type are enums,
 -- but the function parameters are text. Add explicit casts.
+-- Must drop first because the return type is changing (enums -> text).
+
+DROP FUNCTION IF EXISTS public.get_admin_audit_log(int, int, uuid, text, text, text, timestamp with time zone, timestamp with time zone);
 
 CREATE OR REPLACE FUNCTION public.get_admin_audit_log(
   p_limit int DEFAULT 50,
