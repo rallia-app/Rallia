@@ -233,8 +233,9 @@ export default async function Image({
 
         {/* Match attributes row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          {attributes.map(attr => (
+          {attributes.map((attr, i) => (
             <div
+              key={i}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -257,6 +258,7 @@ export default async function Image({
             <div style={{ display: 'flex', alignItems: 'center' }}>
               {slots.map((slot, i) => (
                 <div
+                  key={i}
                   style={{
                     width: 56,
                     height: 56,
