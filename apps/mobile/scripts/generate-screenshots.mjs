@@ -25,37 +25,42 @@ const LOGO_SVG = fs.readFileSync(
 const SCREENSHOTS_EN = [
   {
     id: 'screenshot-1-home',
-    source: 'IMG_9786.PNG',
+    sourceIphone: 'IMG_9838.PNG',
+    sourceIpad: 'IMG_0042.PNG',
     headline: 'Find and join\ngames nearby',
     subtitle: 'Browse nearby matches, booked courts\nand open games at a glance.',
     glow: '#0d9488', glowLight: '#5eead4', glowDark: '#0f766e',
   },
   {
-    id: 'screenshot-2-players',
-    source: 'IMG_9784.PNG',
-    headline: 'Find players\nnear you',
-    subtitle: 'Filter by level, sport and distance\nto find the perfect partner.',
-    glow: '#0d9488', glowLight: '#5eead4', glowDark: '#0f766e',
-  },
-  {
-    id: 'screenshot-3-facilities',
-    source: 'IMG_9785.PNG',
+    id: 'screenshot-2-facilities',
+    sourceIphone: 'IMG_9839.PNG',
+    sourceIpad: 'IMG_0043.PNG',
     headline: 'Explore courts\naround you',
     subtitle: 'Check availability, distances\nand surface types.',
     glow: '#0d9488', glowLight: '#5eead4', glowDark: '#0f766e',
   },
   {
-    id: 'screenshot-4-create',
-    source: 'IMG_9787.PNG',
-    headline: 'Create a game\nin a few taps',
-    subtitle: 'Pick the venue, time and format.\nInvite friends or open it to all.',
+    id: 'screenshot-3-players',
+    sourceIphone: 'IMG_9840.PNG',
+    sourceIpad: 'IMG_0044.PNG',
+    headline: 'Find players\nnear you',
+    subtitle: 'Filter by level, sport and distance\nto find the perfect partner.',
     glow: '#0d9488', glowLight: '#5eead4', glowDark: '#0f766e',
   },
   {
-    id: 'screenshot-5-detail',
-    source: 'IMG_9788.PNG',
-    headline: 'All the info\non every court',
-    subtitle: 'Map, court count, availability\nand nearby matches.',
+    id: 'screenshot-4-chat',
+    sourceIphone: 'IMG_9841.PNG',
+    sourceIpad: 'IMG_0045.PNG',
+    headline: 'Chat with\nyour opponents',
+    subtitle: 'Message players, coordinate matches\nand stay in the loop.',
+    glow: '#0d9488', glowLight: '#5eead4', glowDark: '#0f766e',
+  },
+  {
+    id: 'screenshot-5-create',
+    sourceIphone: 'IMG_9842.PNG',
+    sourceIpad: 'IMG_0046.PNG',
+    headline: 'Create a game\nin a few taps',
+    subtitle: 'Pick the venue, time and format.\nInvite friends or open it to all.',
     glow: '#0d9488', glowLight: '#5eead4', glowDark: '#0f766e',
   },
 ];
@@ -63,37 +68,42 @@ const SCREENSHOTS_EN = [
 const SCREENSHOTS_FR = [
   {
     id: 'screenshot-1-home',
-    source: 'IMG_9786.PNG',
+    sourceIphone: 'IMG_9843.PNG',
+    sourceIpad: 'IMG_0037.PNG',
     headline: 'Trouvez et rejoignez\ndes parties près de vous',
     subtitle: 'Parcourez les parties, les terrains disponibles\net les matchs ouverts en un coup d\'œil.',
     glow: '#0d9488', glowLight: '#5eead4', glowDark: '#0f766e',
   },
   {
-    id: 'screenshot-2-players',
-    source: 'IMG_9784.PNG',
-    headline: 'Trouvez des joueurs\nprès de vous',
-    subtitle: 'Filtrez par niveau, sport et distance\npour trouver le partenaire idéal.',
-    glow: '#0d9488', glowLight: '#5eead4', glowDark: '#0f766e',
-  },
-  {
-    id: 'screenshot-3-facilities',
-    source: 'IMG_9785.PNG',
+    id: 'screenshot-2-facilities',
+    sourceIphone: 'IMG_9845.PNG',
+    sourceIpad: 'IMG_0038.PNG',
     headline: 'Explorez les terrains\nautour de vous',
     subtitle: 'Consultez les disponibilités, distances\net types de surface.',
     glow: '#0d9488', glowLight: '#5eead4', glowDark: '#0f766e',
   },
   {
-    id: 'screenshot-4-create',
-    source: 'IMG_9787.PNG',
-    headline: 'Créez une partie\nen quelques taps',
-    subtitle: 'Choisissez le lieu, l\'heure et le format.\nInvitez vos amis ou ouvrez-la à tous.',
+    id: 'screenshot-3-players',
+    sourceIphone: 'IMG_9846.PNG',
+    sourceIpad: 'IMG_0039.PNG',
+    headline: 'Trouvez des joueurs\nprès de vous',
+    subtitle: 'Filtrez par niveau, sport et distance\npour trouver le partenaire idéal.',
     glow: '#0d9488', glowLight: '#5eead4', glowDark: '#0f766e',
   },
   {
-    id: 'screenshot-5-detail',
-    source: 'IMG_9788.PNG',
-    headline: 'Toutes les infos\nsur chaque terrain',
-    subtitle: 'Carte, nombre de terrains, disponibilités\net parties à proximité.',
+    id: 'screenshot-4-chat',
+    sourceIphone: 'IMG_9847.PNG',
+    sourceIpad: 'IMG_0040.PNG',
+    headline: 'Discutez avec\nvos adversaires',
+    subtitle: 'Échangez avec les joueurs, coordonnez\nvos parties et restez informé.',
+    glow: '#0d9488', glowLight: '#5eead4', glowDark: '#0f766e',
+  },
+  {
+    id: 'screenshot-5-create',
+    sourceIphone: 'IMG_9848.PNG',
+    sourceIpad: 'IMG_0041.PNG',
+    headline: 'Créez une partie\nen quelques taps',
+    subtitle: 'Choisissez le lieu, l\'heure et le format.\nInvitez vos amis ou ouvrez-la à tous.',
     glow: '#0d9488', glowLight: '#5eead4', glowDark: '#0f766e',
   },
 ];
@@ -122,49 +132,28 @@ const THEMES = {
 const langFilter = process.argv.find(a => a.startsWith('--lang='));
 const themeFilter = process.argv.find(a => a.startsWith('--theme='));
 const LANGS = langFilter ? [langFilter.split('=')[1]] : ['en', 'fr'];
-const THEME_NAMES = themeFilter ? [themeFilter.split('=')[1]] : ['light', 'dark'];
+const THEME_NAMES = themeFilter ? [themeFilter.split('=')[1]] : ['light'];
 
 /* ── Device sizes ──────────────────────────────────────────────── */
+/* Only Apple-required sizes:
+ *   iPhone 6.7": 1284 × 2778
+ *   iPad 12.9":  2048 × 2732
+ */
 const SIZES = {
-  phone: {
-    width: 1080, height: 1920,
-    phoneW: 660,  phoneH: 1430,
-    headlineSize: 66, subtitleSize: 26,
-    topPad: 80, gap: 36,
-    bezel: 4, radius: 40, screenRadius: 36,
-    logoH: 36, bottomPad: 50,
-    glowRadius: 560,
-  },
-  iphone65: {
+  iphone67: {
+    device: 'iphone',
     width: 1284, height: 2778,
-    phoneW: 780,  phoneH: 1690,
+    phoneW: 840,  phoneH: 1820,
     headlineSize: 78, subtitleSize: 32,
     topPad: 110, gap: 44,
     bezel: 5, radius: 46, screenRadius: 41,
     logoH: 42, bottomPad: 60,
     glowRadius: 660,
   },
-  tablet7: {
-    width: 1200, height: 1920,
-    phoneW: 620,  phoneH: 1340,
-    headlineSize: 62, subtitleSize: 24,
-    topPad: 70, gap: 32,
-    bezel: 4, radius: 38, screenRadius: 34,
-    logoH: 34, bottomPad: 46,
-    glowRadius: 520,
-  },
-  tablet10: {
-    width: 1600, height: 2560,
-    phoneW: 820,  phoneH: 1776,
-    headlineSize: 82, subtitleSize: 34,
-    topPad: 100, gap: 44,
-    bezel: 5, radius: 46, screenRadius: 41,
-    logoH: 42, bottomPad: 60,
-    glowRadius: 650,
-  },
   ipad13: {
+    device: 'ipad',
     width: 2048, height: 2732,
-    phoneW: 1040,  phoneH: 2250,
+    phoneW: 1430,  phoneH: 1975,
     headlineSize: 96, subtitleSize: 40,
     topPad: 100, gap: 50,
     bezel: 6, radius: 52, screenRadius: 46,
@@ -360,11 +349,15 @@ async function main() {
         for (const screenshot of screenshots) {
           console.log(`  Generating ${screenshot.id}...`);
 
+          // Pick source file based on device type (iphone vs ipad)
+          const deviceSubdir = size.device === 'ipad' ? 'ipad' : 'iphone';
+          const sourceFile = size.device === 'ipad' ? screenshot.sourceIpad : screenshot.sourceIphone;
+
           // Look for source in lang-theme specific folder, fall back to en-light
-          const sourceDir = fs.existsSync(path.join(ASSETS_DIR, 'sources', `${lang}-${themeName}`))
-            ? path.join(ASSETS_DIR, 'sources', `${lang}-${themeName}`)
-            : path.join(ASSETS_DIR, 'sources', 'en-light');
-          const sourcePath = path.join(sourceDir, screenshot.source);
+          const sourceDir = fs.existsSync(path.join(ASSETS_DIR, 'sources', `${lang}-${themeName}`, deviceSubdir))
+            ? path.join(ASSETS_DIR, 'sources', `${lang}-${themeName}`, deviceSubdir)
+            : path.join(ASSETS_DIR, 'sources', 'en-light', deviceSubdir);
+          const sourcePath = path.join(sourceDir, sourceFile);
           const imageBuffer = fs.readFileSync(sourcePath);
           const imageDataUri = `data:image/png;base64,${imageBuffer.toString('base64')}`;
 
