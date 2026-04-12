@@ -101,11 +101,6 @@ export const EmailStep: React.FC<EmailStepProps> = ({
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-      {/* Title */}
-      <Text size="2xl" weight="bold" color={colors.text} style={styles.title}>
-        {t('auth.signIn')}
-      </Text>
-
       {/* Social Sign In Buttons */}
       <View style={styles.socialButtons}>
         {/* Google Sign In */}
@@ -264,6 +259,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: spacingPixels[4],
+    marginTop: spacingPixels[4],
     marginBottom: spacingPixels[6],
   },
   socialButton: {
