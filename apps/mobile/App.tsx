@@ -77,6 +77,7 @@ import {
   useNotificationRealtime,
   usePendingFeedbackCheck,
   useUpdateLastSeen,
+  useReferral,
 } from '@rallia/shared-hooks';
 import { useBadgeCountSync } from '@rallia/shared-hooks/src/useBadgeCountSync';
 // TEMPORARILY DISABLED: User walkthrough deactivated
@@ -444,6 +445,7 @@ function ReferralInviteHandler() {
   const { user } = useAuth();
   const { isSplashComplete, isSportSelectionComplete, permissionsHandled } = useOverlay();
   const { feedbackData } = useFeedbackSheet();
+  const { stats, statsLoading } = useReferral(user?.id);
   const hasCheckedRef = useRef(false);
 
   useEffect(() => {
@@ -451,6 +453,10 @@ function ReferralInviteHandler() {
     if (!user?.id || !isSplashComplete || !isSportSelectionComplete || !permissionsHandled) return;
     // Don't show if the feedback sheet is already visible
     if (feedbackData) return;
+    // Wait for stats to load before deciding
+    if (statsLoading) return;
+    // Don't prompt users who already have successful referrals
+    if (stats && stats.total_converted > 0) return;
 
     hasCheckedRef.current = true;
 
@@ -463,7 +469,15 @@ function ReferralInviteHandler() {
         SheetManager.show('referral-invite');
       }, 1000);
     })();
-  }, [user?.id, isSplashComplete, isSportSelectionComplete, permissionsHandled, feedbackData]);
+  }, [
+    user?.id,
+    isSplashComplete,
+    isSportSelectionComplete,
+    permissionsHandled,
+    feedbackData,
+    stats,
+    statsLoading,
+  ]);
 
   return null;
 }

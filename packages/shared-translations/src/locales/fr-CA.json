@@ -3186,7 +3186,7 @@
     "generatingCode": "Génération de votre code de parrainage...",
     "shareInvite": "Partager l'invitation",
     "shareTitle": "Rejoins-moi sur Rallia!",
-    "shareMessage": "Salut! Rejoins-moi sur Rallia pour trouver des matchs sportifs et jouer ensemble! {link}",
+    "shareMessage": "Hey! J'ai trouvé cette app Rallia pour trouver des matchs de {sport} près de chez toi. Ça m'a fait penser à toi! {link}",
     "yourStats": "Vos statistiques de parrainage",
     "clicked": "Cliqué",
     "signedUp": "Inscrits",
@@ -3209,23 +3209,14 @@
       "sendInvites": "Envoyer les invitations",
       "invitesSent": "{count} invitation(s) envoyée(s)!",
       "failedToLoad": "Échec du chargement des contacts",
-      "failedToSend": "Échec de l'envoi des invitations"
+      "failedToSend": "Échec de l'envoi des invitations",
+      "invitesSent": "Invitations envoyées!"
     },
     "inviteModal": {
-      "title": "Invitez des amis sur Rallia",
-      "subtitle": "Vous connaissez quelqu'un qui aimerait jouer? Envoyez-lui une invitation!",
-      "emailLabel": "Adresse courriel",
-      "emailPlaceholder": "ami@exemple.com",
-      "addAnother": "Ajouter un autre",
-      "submit": "Envoyer les invitations",
-      "skip": "Peut-être plus tard",
-      "submitting": "Envoi en cours...",
-      "successTitle": "Invitations envoyées!",
-      "successMessage": "Vos amis recevront une invitation à rejoindre Rallia.",
-      "errorInvalidEmail": "Veuillez entrer une adresse courriel valide",
-      "errorDuplicateEmail": "Cette adresse courriel a déjà été invitée",
-      "errorGeneric": "Une erreur est survenue. Veuillez réessayer.",
-      "gotIt": "Compris"
+      "title": "Agrandissez votre réseau",
+      "subtitle": "Invitez vos amis et votre famille sur Rallia. Des récompenses arrivent bientôt pour les joueurs qui aident à faire grandir la communauté!",
+      "selectContacts": "Sélectionner des contacts",
+      "skip": "Peut-être plus tard"
     }
   },
   "matchCreation": {

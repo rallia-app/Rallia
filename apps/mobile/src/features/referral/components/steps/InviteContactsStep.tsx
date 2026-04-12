@@ -22,6 +22,7 @@ import { selectionHaptic, lightHaptic } from '@rallia/shared-utils';
 import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
 import { SearchBar } from '../../../../components/SearchBar';
 import type { TranslationKey } from '../../../../hooks';
+import { useSport } from '../../../../context';
 
 // ============================================================================
 // TYPES
@@ -67,6 +68,7 @@ export const InviteContactsStep: React.FC<InviteContactsStepProps> = ({
   t,
 }) => {
   const toast = useToast();
+  const { selectedSport } = useSport();
   const [contacts, setContacts] = useState<DeviceContact[]>([]);
   const [filteredContacts, setFilteredContacts] = useState<DeviceContact[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -170,21 +172,26 @@ export const InviteContactsStep: React.FC<InviteContactsStepProps> = ({
       const phones = selected.map(c => c.phone).filter((p): p is string => p != null);
 
       if (phones.length > 0 && referralLink) {
-        const message = t('referral.shareMessage').replace('{link}', referralLink);
+        const sportName = selectedSport?.display_name?.toLowerCase() ?? 'sports';
+        const message = t('referral.shareMessage')
+          .replace('{sport}', sportName)
+          .replace('{link}', referralLink);
         const isAvailable = await SMS.isAvailableAsync();
         if (isAvailable) {
-          await SMS.sendSMSAsync(phones, message);
+          const { result } = await SMS.sendSMSAsync(phones, message);
+          if (result !== 'sent') return;
         }
       }
 
-      // Deselect all after sending
+      // Deselect all after sending and confirm
       setContacts(prev => prev.map(c => ({ ...c, selected: false })));
       setFilteredContacts(prev => prev.map(c => ({ ...c, selected: false })));
+      toast.success(t('referral.contacts.invitesSent'));
     } catch (error) {
       console.error('Failed to send invites:', error);
       toast.error(t('referral.contacts.failedToSend'));
     }
-  }, [contacts, referralLink, toast, t]);
+  }, [contacts, referralLink, toast, t, selectedSport]);
 
   const renderContact = useCallback(
     ({ item }: { item: DeviceContact }) => (
