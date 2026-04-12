@@ -11,9 +11,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  ActivityIndicator,
   ScrollView,
   Pressable,
+  Platform,
 } from 'react-native';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
@@ -129,12 +129,13 @@ export const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
         style={styles.hiddenInput}
         value={code}
         onChangeText={handleCodeChange}
-        keyboardType="number-pad"
+        keyboardType={Platform.OS === 'ios' && Platform.isPad ? 'decimal-pad' : 'number-pad'}
         maxLength={6}
         caretHidden
         autoComplete="one-time-code"
         textContentType="oneTimeCode"
         editable={isActive}
+        inputMode="numeric"
       />
 
       {/* Visual Code Display Boxes */}
@@ -199,17 +200,13 @@ export const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
         activeOpacity={canVerify ? 0.8 : 1}
         disabled={!canVerify}
       >
-        {isLoading ? (
-          <ActivityIndicator color={colors.buttonTextActive} />
-        ) : (
-          <Text
-            size="lg"
-            weight="semibold"
-            color={canVerify ? colors.buttonTextActive : colors.textMuted}
-          >
-            {t('common.continue')}
-          </Text>
-        )}
+        <Text
+          size="lg"
+          weight="semibold"
+          color={canVerify ? colors.buttonTextActive : colors.textMuted}
+        >
+          {t('common.continue')}
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -235,9 +232,11 @@ const styles = StyleSheet.create({
   },
   hiddenInput: {
     position: 'absolute',
-    width: 1,
-    height: 1,
-    opacity: 0,
+    top: 0,
+    left: 0,
+    width: Platform.OS === 'ios' && (Platform as any).isPad ? 50 : 1,
+    height: Platform.OS === 'ios' && (Platform as any).isPad ? 50 : 1,
+    opacity: 0.01,
   },
   codeInputContainer: {
     flexDirection: 'row',

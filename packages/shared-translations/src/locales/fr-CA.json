@@ -6644,9 +6644,8 @@
         "item4": "Découvrir des joueurs dans votre quartier"
       },
       "enable": "Activer la localisation précise",
-      "skip": "Peut-être plus tard",
       "privacyNote": "Votre localisation reste sur votre appareil et n'est utilisée que pour calculer les distances. Nous ne suivons jamais vos déplacements.",
-      "skipNote": "Vous pourrez toujours l'activer plus tard dans les Paramètres"
+      "settingsHint": "Vous pouvez modifier ce choix à tout moment dans les Réglages de votre appareil."
     }
   },
   "reputation": {

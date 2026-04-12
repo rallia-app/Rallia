@@ -49,7 +49,6 @@ interface UseGroupEditActionsReturn {
   handleSaveName: () => Promise<void>;
   handleCancelEditName: () => void;
   handleChangeImage: () => Promise<void>;
-  handleEditDescription: () => void;
 }
 
 export function useGroupEditActions({
@@ -93,11 +92,6 @@ export function useGroupEditActions({
 
   const handleCancelEditName = useCallback(() => {
     setIsEditingName(false);
-  }, []);
-
-  // Handle edit description (coming soon)
-  const handleEditDescription = useCallback(() => {
-    Alert.alert('Coming Soon', 'Description editing will be available soon');
   }, []);
 
   // Handle image picker
@@ -162,6 +156,5 @@ export function useGroupEditActions({
     handleSaveName,
     handleCancelEditName,
     handleChangeImage,
-    handleEditDescription,
   };
 }
