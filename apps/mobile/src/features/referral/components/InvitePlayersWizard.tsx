@@ -30,6 +30,7 @@ const BASE_WHITE = '#ffffff';
 interface InvitePlayersWizardProps {
   onClose: () => void;
   onBackToLanding: () => void;
+  initialTab?: 'code' | 'qr' | 'contacts';
 }
 
 export interface ThemeColors {
@@ -106,6 +107,7 @@ const Header: React.FC<HeaderProps> = ({ onBackToLanding, onClose, colors, t }) 
 export const InvitePlayersWizard: React.FC<InvitePlayersWizardProps> = ({
   onClose,
   onBackToLanding,
+  initialTab,
 }) => {
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -115,7 +117,7 @@ export const InvitePlayersWizard: React.FC<InvitePlayersWizardProps> = ({
   const playerId = session?.user?.id;
   const { code, codeLoading, referralLink, stats, statsLoading } = useReferral(playerId);
 
-  const [activeTab, setActiveTab] = useState<'code' | 'qr' | 'contacts'>('code');
+  const [activeTab, setActiveTab] = useState<'code' | 'qr' | 'contacts'>(initialTab ?? 'code');
 
   // Theme colors
   const themeColors = isDark ? darkTheme : lightTheme;

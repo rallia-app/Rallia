@@ -209,6 +209,8 @@ export const ActionsBottomSheet: React.FC = () => {
     clearEditMatch,
     shouldOpenMatchCreation,
     clearMatchCreationFlag,
+    shouldOpenInvitePlayers,
+    clearInvitePlayersFlag,
     initialBookingForWizard,
     clearInitialBookingFlag,
   } = useActionsSheet();
@@ -223,6 +225,11 @@ export const ActionsBottomSheet: React.FC = () => {
   const [showInviteWizard, setShowInviteWizard] = useState(false);
   const [showShareListWizard, setShowShareListWizard] = useState(false);
   const [showNetworkWizard, setShowNetworkWizard] = useState(false);
+
+  // Track which tab the invite wizard should open to
+  const [inviteInitialTab, setInviteInitialTab] = useState<'code' | 'qr' | 'contacts' | undefined>(
+    undefined
+  );
 
   // If we have editMatchData, we're in edit mode - show wizard immediately
   const isEditMode = !!editMatchData;
@@ -267,6 +274,25 @@ export const ActionsBottomSheet: React.FC = () => {
     showWizard,
     isEditMode,
     clearMatchCreationFlag,
+    slideIn,
+  ]);
+
+  // Effect to automatically open invite players wizard when flag is set
+  useEffect(() => {
+    if (shouldOpenInvitePlayers && contentMode === 'actions' && !showInviteWizard && !isEditMode) {
+      clearInvitePlayersFlag();
+      setTimeout(() => {
+        setInviteInitialTab('contacts');
+        setShowInviteWizard(true);
+        slideIn();
+      }, 100);
+    }
+  }, [
+    shouldOpenInvitePlayers,
+    contentMode,
+    showInviteWizard,
+    isEditMode,
+    clearInvitePlayersFlag,
     slideIn,
   ]);
 
@@ -347,6 +373,7 @@ export const ActionsBottomSheet: React.FC = () => {
   // Handle invite players - show invite wizard with slide animation
   const handleInvitePlayers = useCallback(() => {
     lightHaptic();
+    setInviteInitialTab(undefined);
     setShowInviteWizard(true);
     slideIn();
   }, [slideIn]);
@@ -367,7 +394,10 @@ export const ActionsBottomSheet: React.FC = () => {
 
   // Handle invite wizard close - slide back to actions list
   const handleInviteWizardClose = useCallback(() => {
-    slideOut(() => setShowInviteWizard(false));
+    slideOut(() => {
+      setShowInviteWizard(false);
+      setInviteInitialTab(undefined);
+    });
   }, [slideOut]);
 
   // Handle share list wizard close - slide back to actions list
@@ -462,6 +492,7 @@ export const ActionsBottomSheet: React.FC = () => {
   const handleSheetDismiss = useCallback(() => {
     setShowWizard(false);
     setShowInviteWizard(false);
+    setInviteInitialTab(undefined);
     setShowShareListWizard(false);
     setShowNetworkWizard(false);
     // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
@@ -651,7 +682,11 @@ export const ActionsBottomSheet: React.FC = () => {
         {/* Invite players wizard */}
         {showInviteWizard && (
           <Animated.View style={[styles.slidePanel, styles.wizardPanel, wizardAnimatedStyle]}>
-            <InvitePlayersWizard onClose={closeSheet} onBackToLanding={handleInviteWizardClose} />
+            <InvitePlayersWizard
+              onClose={closeSheet}
+              onBackToLanding={handleInviteWizardClose}
+              initialTab={inviteInitialTab}
+            />
           </Animated.View>
         )}
 

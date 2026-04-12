@@ -81,6 +81,15 @@ interface ActionsSheetContextType {
   /** Clear the shouldOpenMatchCreation flag after it's been consumed */
   clearMatchCreationFlag: () => void;
 
+  /** Open the Actions bottom sheet directly to invite players wizard (contacts tab) */
+  openSheetForInvitePlayers: () => void;
+
+  /** Flag to indicate we should open directly to invite players wizard */
+  shouldOpenInvitePlayers: boolean;
+
+  /** Clear the shouldOpenInvitePlayers flag after it's been consumed */
+  clearInvitePlayersFlag: () => void;
+
   /** Initial booking data when opening wizard from facility "Create game" (consumed by wizard) */
   initialBookingForWizard: {
     facility: unknown;
@@ -121,6 +130,9 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
 
   // Flag to open directly to match creation wizard
   const [shouldOpenMatchCreation, setShouldOpenMatchCreation] = useState(false);
+
+  // Flag to open directly to invite players wizard (contacts tab)
+  const [shouldOpenInvitePlayers, setShouldOpenInvitePlayers] = useState(false);
 
   // Initial booking data when opening wizard from facility "Create game" (steps 1–2 pre-filled, step 3 to fill)
   const [initialBookingForWizard, setInitialBookingForWizard] = useState<{
@@ -182,6 +194,7 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
   const openSheet = useCallback(() => {
     setEditMatchData(null);
     setInitialBookingForWizard(null);
+    setShouldOpenInvitePlayers(false);
     const mode = computeInitialMode();
     setContentMode(mode);
     sheetRef.current?.present();
@@ -193,6 +206,7 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
   const openSheetForEdit = useCallback((match: MatchDetailData) => {
     setEditMatchData(match);
     setShouldOpenMatchCreation(false);
+    setShouldOpenInvitePlayers(false);
     setInitialBookingForWizard(null);
     setContentMode('actions'); // Always show actions mode when editing
     sheetRef.current?.present();
@@ -248,6 +262,36 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
     },
     [computeInitialMode]
   );
+
+  /**
+   * Open the sheet directly to invite players wizard (contacts tab)
+   */
+  const openSheetForInvitePlayers = useCallback(() => {
+    const mode = computeInitialMode();
+
+    // If user is not authenticated or not onboarded, show the appropriate screen first
+    if (mode !== 'actions') {
+      setContentMode(mode);
+      setShouldOpenInvitePlayers(false);
+      sheetRef.current?.present();
+      return;
+    }
+
+    // User is authenticated and onboarded - open directly to invite players
+    setEditMatchData(null);
+    setInitialBookingForWizard(null);
+    setShouldOpenMatchCreation(false);
+    setShouldOpenInvitePlayers(true);
+    setContentMode('actions');
+    sheetRef.current?.present();
+  }, [computeInitialMode]);
+
+  /**
+   * Clear the shouldOpenInvitePlayers flag (called by ActionsBottomSheet after consuming it)
+   */
+  const clearInvitePlayersFlag = useCallback(() => {
+    setShouldOpenInvitePlayers(false);
+  }, []);
 
   /**
    * Clear the edit match data
@@ -310,6 +354,9 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
     clearEditMatch,
     shouldOpenMatchCreation,
     clearMatchCreationFlag,
+    openSheetForInvitePlayers,
+    shouldOpenInvitePlayers,
+    clearInvitePlayersFlag,
     initialBookingForWizard,
     clearInitialBookingFlag,
   };
