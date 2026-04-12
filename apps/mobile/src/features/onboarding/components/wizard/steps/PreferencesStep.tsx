@@ -8,10 +8,11 @@
  * Unchecking reveals individual preference rows for each sport.
  */
 
-import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, StyleSheet, TouchableOpacity, LayoutChangeEvent } from 'react-native';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import Slider from '@react-native-community/slider';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { useSharedValue, useAnimatedStyle, runOnJS } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
@@ -56,8 +57,68 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
   const [sameMatchTypeForAll, setSameMatchTypeForAll] = useState(true);
   const [sameMatchDurationForAll, setSameMatchDurationForAll] = useState(true);
 
-  // Local state for smooth slider display - updates instantly while dragging
+  // Local state for slider display value
   const [sliderValue, setSliderValue] = useState(formData.maxTravelDistance);
+
+  // Custom slider built with RNGH + Reanimated to work inside BottomSheet on Android
+  const MIN = 1;
+  const MAX = 50;
+  const THUMB_SIZE = 24;
+  const trackWidth = useSharedValue(0);
+  const translateX = useSharedValue(0);
+  const startX = useSharedValue(0);
+
+  const onTrackLayout = useCallback(
+    (e: LayoutChangeEvent) => {
+      const w = e.nativeEvent.layout.width;
+      trackWidth.value = w;
+      // Position thumb to match current value
+      translateX.value = ((formData.maxTravelDistance - MIN) / (MAX - MIN)) * w;
+    },
+    [formData.maxTravelDistance]
+  );
+
+  const updateSliderValue = useCallback((val: number) => {
+    setSliderValue(val);
+  }, []);
+
+  const commitSliderValue = useCallback(
+    (val: number) => {
+      onUpdateFormData({ maxTravelDistance: val });
+    },
+    [onUpdateFormData]
+  );
+
+  const clampedValue = (x: number): number => {
+    'worklet';
+    const clamped = Math.min(Math.max(x, 0), trackWidth.value);
+    return Math.round(MIN + (clamped / trackWidth.value) * (MAX - MIN));
+  };
+
+  const sliderGesture = Gesture.Pan()
+    .activeOffsetX([-5, 5])
+    .failOffsetY([-10, 10])
+    .onStart(() => {
+      startX.value = translateX.value;
+    })
+    .onUpdate(e => {
+      const newX = Math.min(Math.max(startX.value + e.translationX, 0), trackWidth.value);
+      translateX.value = newX;
+      const val = clampedValue(newX);
+      runOnJS(updateSliderValue)(val);
+    })
+    .onEnd(() => {
+      const val = clampedValue(translateX.value);
+      runOnJS(commitSliderValue)(val);
+    });
+
+  const thumbStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value - THUMB_SIZE / 2 }],
+  }));
+
+  const filledTrackStyle = useAnimatedStyle(() => ({
+    width: translateX.value,
+  }));
 
   // When "Same for all sports" is toggled ON, sync both sports to the tennis value
   const handleSameMatchTypeToggle = () => {
@@ -178,18 +239,22 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
         <Text size="lg" weight="bold" color={colors.text} style={styles.sliderValue}>
           {sliderValue} km
         </Text>
-        <Slider
-          style={styles.slider}
-          minimumValue={1}
-          maximumValue={50}
-          step={1}
-          value={sliderValue}
-          onValueChange={setSliderValue}
-          onSlidingComplete={value => onUpdateFormData({ maxTravelDistance: value })}
-          minimumTrackTintColor={colors.buttonActive}
-          maximumTrackTintColor={colors.buttonInactive}
-          thumbTintColor={colors.buttonActive}
-        />
+        <GestureDetector gesture={sliderGesture}>
+          <Animated.View style={styles.sliderTrackOuter} onLayout={onTrackLayout}>
+            <View style={[styles.sliderTrack, { backgroundColor: colors.buttonInactive }]}>
+              <Animated.View
+                style={[
+                  styles.sliderTrackFilled,
+                  { backgroundColor: colors.buttonActive },
+                  filledTrackStyle,
+                ]}
+              />
+            </View>
+            <Animated.View
+              style={[styles.sliderThumb, { backgroundColor: colors.buttonActive }, thumbStyle]}
+            />
+          </Animated.View>
+        </GestureDetector>
       </View>
 
       {/* Preferred Match Duration Section */}
@@ -509,9 +574,30 @@ const styles = StyleSheet.create({
   sliderValue: {
     marginBottom: spacingPixels[2],
   },
-  slider: {
-    width: '100%',
+  sliderTrackOuter: {
     height: 40,
+    justifyContent: 'center',
+  },
+  sliderTrack: {
+    height: 4,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  sliderTrackFilled: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  sliderThumb: {
+    position: 'absolute',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    top: 8,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
 });
 

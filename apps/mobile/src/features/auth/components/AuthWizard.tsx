@@ -1,8 +1,8 @@
 /**
  * AuthWizard Component
  *
- * 2-step authentication wizard with horizontal slide animations,
- * progress indicator, and full theme/i18n support.
+ * 2-step authentication wizard with horizontal slide animations
+ * and full theme/i18n support.
  *
  * Step 1: Email entry with social sign-in buttons
  * Step 2: OTP verification
@@ -46,8 +46,6 @@ export interface AuthWizardColors {
   buttonActive: string;
   buttonInactive: string;
   buttonTextActive: string;
-  progressActive: string;
-  progressInactive: string;
   inputBackground: string;
   inputBorder: string;
   inputBorderFocused: string;
@@ -72,55 +70,6 @@ interface AuthWizardProps {
 }
 
 // =============================================================================
-// PROGRESS BAR COMPONENT
-// =============================================================================
-
-interface ProgressBarProps {
-  currentStep: number;
-  totalSteps: number;
-  colors: AuthWizardColors;
-  t: (key: TranslationKey) => string;
-}
-
-const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, totalSteps, colors, t }) => {
-  const progress = useSharedValue((currentStep / totalSteps) * 100);
-
-  useEffect(() => {
-    progress.value = withTiming((currentStep / totalSteps) * 100, { duration: 300 });
-  }, [currentStep, totalSteps, progress]);
-
-  const animatedProgressStyle = useAnimatedStyle(() => ({
-    width: `${progress.value}%`,
-  }));
-
-  const stepNames = [t('auth.email'), t('auth.verificationCode')];
-  const currentStepName = stepNames[currentStep - 1] || '';
-
-  return (
-    <View style={styles.progressContainer}>
-      <View style={styles.progressHeader}>
-        <Text size="sm" weight="semibold" color={colors.textMuted}>
-          {t('auth.step')
-            .replace('{current}', String(currentStep))
-            .replace('{total}', String(totalSteps))}
-        </Text>
-        <Text size="sm" weight="bold" color={colors.progressActive}>
-          {currentStepName}
-        </Text>
-      </View>
-      <View style={[styles.progressBarBg, { backgroundColor: colors.progressInactive }]}>
-        <Animated.View
-          style={[
-            styles.progressBarFill,
-            { backgroundColor: colors.progressActive },
-            animatedProgressStyle,
-          ]}
-        />
-      </View>
-    </View>
-  );
-};
-
 // =============================================================================
 // WIZARD HEADER COMPONENT
 // =============================================================================
@@ -345,11 +294,6 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
         t={t}
       />
 
-      {/* Progress bar - only show on OTP step (not relevant for OAuth or initial email screen) */}
-      {currentStep > 1 && (
-        <ProgressBar currentStep={currentStep} totalSteps={TOTAL_STEPS} colors={colors} t={t} />
-      )}
-
       {/* Step content with swipe */}
       <View style={styles.stepsViewport}>
         <GestureDetector gesture={panGesture}>
@@ -432,25 +376,6 @@ const styles = StyleSheet.create({
   },
   headerButton: {
     padding: spacingPixels[1],
-  },
-  progressContainer: {
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacingPixels[2],
-  },
-  progressBarBg: {
-    height: 4,
-    borderRadius: radiusPixels.full,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: radiusPixels.full,
   },
   stepsViewport: {
     flex: 1,
