@@ -23,6 +23,7 @@ import QRCode from 'react-native-qrcode-svg';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import type { TranslationKey } from '../../../../hooks';
+import { useSport } from '../../../../context';
 import { InviteContactsStep } from './InviteContactsStep';
 import * as Analytics from '../../../../services/analytics';
 
@@ -132,6 +133,7 @@ export const ShareLinkStep: React.FC<ShareLinkStepProps> = ({
   t,
 }) => {
   const toast = useToast();
+  const { selectedSport } = useSport();
   const [copied, setCopied] = useState(false);
 
   const handleCopyLink = useCallback(async () => {
@@ -160,7 +162,9 @@ export const ShareLinkStep: React.FC<ShareLinkStepProps> = ({
     if (!referralLink) return;
     try {
       const result = await Share.share({
-        message: t('referral.shareMessage').replace('{link}', referralLink),
+        message: t('referral.shareMessage')
+          .replace('{sport}', selectedSport?.display_name?.toLowerCase() ?? 'sports')
+          .replace('{link}', referralLink),
         title: t('referral.shareTitle'),
       });
       if (result.action === Share.sharedAction) {

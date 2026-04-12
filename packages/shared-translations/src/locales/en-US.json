@@ -3186,7 +3186,7 @@
     "generatingCode": "Generating your referral code...",
     "shareInvite": "Share Invite",
     "shareTitle": "Join me on Rallia!",
-    "shareMessage": "Hey! Join me on Rallia to find sports matches and play together! {link}",
+    "shareMessage": "Hey! Found this app called Rallia for finding {sport} matches nearby. Thought of you! {link}",
     "yourStats": "Your Referral Stats",
     "clicked": "Clicked",
     "signedUp": "Signed Up",
@@ -3209,23 +3209,14 @@
       "sendInvites": "Send Invites",
       "invitesSent": "{count} invite(s) sent!",
       "failedToLoad": "Failed to load contacts",
-      "failedToSend": "Failed to send invites"
+      "failedToSend": "Failed to send invites",
+      "invitesSent": "Invites sent!"
     },
     "inviteModal": {
-      "title": "Invite Friends to Rallia",
-      "subtitle": "Know someone who'd love to play? Send them an invite!",
-      "emailLabel": "Email address",
-      "emailPlaceholder": "friend@example.com",
-      "addAnother": "Add another",
-      "submit": "Send Invites",
-      "skip": "Maybe later",
-      "submitting": "Sending...",
-      "successTitle": "Invites Sent!",
-      "successMessage": "Your friends will receive an invitation to join Rallia.",
-      "errorInvalidEmail": "Please enter a valid email address",
-      "errorDuplicateEmail": "This email has already been invited",
-      "errorGeneric": "Something went wrong. Please try again.",
-      "gotIt": "Got it"
+      "title": "Grow Your Network",
+      "subtitle": "Invite your friends and family to Rallia. Rewards are coming soon for players who help grow the community!",
+      "selectContacts": "Select contacts",
+      "skip": "Maybe later"
     }
   },
   "matchCreation": {
