@@ -17,6 +17,7 @@ import { useVideoThumbnail } from '../hooks/useVideoThumbnail';
 import { Text, Button, Skeleton, useToast } from '@rallia/shared-components';
 import { lightHaptic, warningHaptic } from '@rallia/shared-utils';
 import { supabase, Logger } from '@rallia/shared-services';
+import { useProfileCompleteness } from '@rallia/shared-hooks';
 import { RatingProofWithFile, RatingProofsScreenParams } from '@rallia/shared-types';
 import { SheetManager } from 'react-native-actions-sheet';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
@@ -120,10 +121,11 @@ const VideoThumbnailPreview: React.FC<{
 const RatingProofs: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute<RatingProofsRouteProp>();
-  const { playerRatingScoreId, ratingValue, isOwnProfile } = route.params;
+  const { playerRatingScoreId, ratingValue, isOwnProfile, openSheet } = route.params;
   const { colors, isDark } = useThemeStyles();
   const { t, locale } = useTranslation();
   const toast = useToast();
+  const { refetch: refetchCompleteness } = useProfileCompleteness();
 
   const [proofs, setProofs] = useState<RatingProofWithRatingScore[]>([]);
   const [loading, setLoading] = useState(true);
@@ -137,11 +139,23 @@ const RatingProofs: React.FC = () => {
     SheetManager.show('add-rating-proof', {
       payload: {
         playerRatingScoreId,
-        onSuccess: () => fetchProofs(),
+        onSuccess: () => {
+          fetchProofs();
+          refetchCompleteness();
+        },
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playerRatingScoreId]);
+  }, [playerRatingScoreId, refetchCompleteness]);
+
+  // Auto-open add proof sheet if navigated with openSheet param
+  useEffect(() => {
+    if (openSheet === 'add' && playerRatingScoreId) {
+      handleAddProof();
+    }
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Configure header title and right button
   useLayoutEffect(() => {
@@ -213,7 +227,10 @@ const RatingProofs: React.FC = () => {
     SheetManager.show('edit-proof', {
       payload: {
         proof,
-        onSuccess: () => fetchProofs(),
+        onSuccess: () => {
+          fetchProofs();
+          refetchCompleteness();
+        },
       },
     });
   };
@@ -238,6 +255,7 @@ const RatingProofs: React.FC = () => {
 
             toast.success(t('profile.ratingProofs.delete.success'));
             fetchProofs();
+            refetchCompleteness();
           } catch (error) {
             Logger.error('Failed to delete proof', error as Error, {
               proofId,

@@ -53,6 +53,7 @@ import {
   useFavoriteFacilities,
   useOtherSportsUnreadCount,
   useSports,
+  useProfileCompleteness,
 } from '@rallia/shared-hooks';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NearbyMatch, MatchScoringPreferences } from '@rallia/shared-hooks';
@@ -61,6 +62,7 @@ import { Logger, getMatchWithDetails } from '@rallia/shared-services';
 import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
 import { SportIcon } from '../components/SportIcon';
 import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
+import ProfileCompletionBanner from '../features/profile/components/ProfileCompletionBanner';
 
 /** Dismissible banner alerting the player to unread notifications in another sport */
 const CrossSportBanner: React.FC<{
@@ -225,6 +227,32 @@ const Home = () => {
     selectedSport?.name
   );
   const [dismissedBannerSports, setDismissedBannerSports] = useState<Set<string>>(new Set());
+
+  // Profile completeness for banner
+  const profileCompleteness = useProfileCompleteness();
+
+  // Handle profile completion banner action
+  const handleCompletionBannerAction = useCallback(
+    (item: {
+      actionType: string;
+      actionNavigate?: string;
+      actionPayload?: Record<string, unknown>;
+      actionSheet?: string;
+    }) => {
+      if (item.actionType === 'navigate' && item.actionNavigate) {
+        (appNavigation.navigate as (...args: unknown[]) => void)(
+          item.actionNavigate,
+          item.actionPayload
+        );
+      } else if (item.actionType === 'sheet' && item.actionSheet) {
+        // For sheet actions, navigate to UserProfile where the sheets are available
+        (appNavigation.navigate as (...args: unknown[]) => void)('UserProfile');
+      } else if (item.actionType === 'image_picker') {
+        appNavigation.navigate('UserProfile' as never);
+      }
+    },
+    [appNavigation]
+  );
 
   // Second sport activation banner state
   const { sports: allSports } = useSports();
@@ -835,6 +863,24 @@ const Home = () => {
         );
       }
 
+      // Profile completion banner
+      if (!profileCompleteness.isComplete && !profileCompleteness.loading) {
+        headerComponents.push(
+          <ProfileCompletionBanner
+            key="profile-completion"
+            percentage={profileCompleteness.percentage}
+            tier={profileCompleteness.tier}
+            nextAction={profileCompleteness.nextAction}
+            isComplete={profileCompleteness.isComplete}
+            loading={profileCompleteness.loading}
+            onAction={handleCompletionBannerAction}
+            colors={colors}
+            isDark={isDark}
+            t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
+          />
+        );
+      }
+
       // Add "My Matches" section for fully onboarded users
       headerComponents.push(<View key="my-matches">{renderMyMatchesSection()}</View>);
     }
@@ -869,6 +915,13 @@ const Home = () => {
     handleActivateSecondSport,
     handleDismissSecondSportBanner,
     secondSportFadeAnim,
+    profileCompleteness.isComplete,
+    profileCompleteness.loading,
+    profileCompleteness.percentage,
+    profileCompleteness.tier,
+    profileCompleteness.nextAction,
+    handleCompletionBannerAction,
+    isDark,
   ]);
 
   // Show loading if auth is loading, or if player/sport data is loading initially

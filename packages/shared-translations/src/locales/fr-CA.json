@@ -8362,5 +8362,31 @@
         "body": "Complétez vos matchs, arrivez à l'heure et soyez fair-play. Laissez des évaluations justes aux autres joueurs — cela vous rapporte aussi un petit bonus de réputation."
       }
     }
+  },
+  "profileCompletion": {
+    "title": "FORCE DU PROFIL",
+    "percentComplete": "{percentage}% complété",
+    "complete": "Profil complété",
+    "bannerTitle": "Profil à {percentage}%",
+    "bannerCta": "Compléter",
+    "tiers": {
+      "getting_started": "Début — remplissez les bases pour de meilleurs matchs",
+      "growing": "En progression — continuez, vous prenez de l'élan",
+      "strong": "Solide — presque terminé, quelques détails de plus",
+      "almost_there": "Presque fini — plus qu'un petit effort",
+      "complete": "Complété — vous êtes prêt!"
+    },
+    "items": {
+      "profilePicture": "Ajouter une photo de profil",
+      "homeAddress": "Définir votre adresse",
+      "skillRating": "Ajouter votre classement",
+      "ratingProof": "Ajouter une preuve de classement",
+      "favoriteCourts": "Ajouter vos terrains favoris",
+      "availability": "Définir vos disponibilités",
+      "bio": "Écrire une courte bio",
+      "phone": "Ajouter votre numéro de téléphone",
+      "displayName": "Choisir un nom d'affichage",
+      "playStyle": "Définir votre style de jeu"
+    }
   }
 }

@@ -67,6 +67,7 @@ export * from './useBooking';
 export * from './usePlayerBookingFilters';
 export * from './useReferral';
 export * from './useMapData';
+export * from './useProfileCompleteness';
 
 // Platform-specific exports - Metro resolves .native.ts for React Native builds
 // Web bundlers will use the stub .ts files which throw helpful errors at runtime

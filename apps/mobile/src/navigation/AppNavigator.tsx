@@ -10,10 +10,11 @@
  * Note: Splash animation is handled by SplashOverlay component in App.tsx
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   View,
   TouchableOpacity,
+  Image,
   StyleProp,
   ViewStyle,
   GestureResponderEvent,
@@ -28,7 +29,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CopilotStep } from 'react-native-copilot';
 import { WalkthroughableView } from '../context/TourContext';
-import { lightHaptic } from '@rallia/shared-utils';
+import { lightHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 import { SheetManager } from 'react-native-actions-sheet';
 
 // WalkthroughableView is now imported from TourContext with collapsable={false} for reliable Android measurement
@@ -47,11 +48,14 @@ import {
   useProfile,
   useTotalUnreadCount,
   useOtherSportsUnreadCount,
+  useProfileCompleteness,
 } from '@rallia/shared-hooks';
 import { useAuth, useThemeStyles, useTranslation, useRequireOnboarding } from '../hooks';
 import { useTheme } from '@rallia/shared-hooks';
 import { useAppNavigation } from './hooks';
-import { spacingPixels, fontSizePixels } from '@rallia/design-system';
+import { spacingPixels, fontSizePixels, neutral } from '@rallia/design-system';
+import ProfileCompletionRing from '../features/profile/components/ProfileCompletionRing';
+import { getTierColors } from '../features/profile/completionTierColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type {
   NativeStackNavigationProp,
@@ -174,7 +178,7 @@ function NotificationButtonWithBadge({ color }: { color?: string }) {
  * - Signed-in users who have completed onboarding
  */
 function SportSelectorWithContext() {
-  const { selectedSport, userSports, setSelectedSport } = useSport();
+  const { selectedSport, userSports, setSelectedSport, refetch: refetchSports } = useSport();
   const { theme } = useTheme();
   const { session } = useAuth();
   const { contentMode } = useActionsSheet();
@@ -205,8 +209,9 @@ function SportSelectorWithContext() {
   const prevContentModeRef = React.useRef<typeof contentMode>(contentMode);
   useEffect(() => {
     if (prevContentModeRef.current === 'onboarding' && contentMode === 'actions' && session?.user) {
-      // Onboarding was just completed, refetch profile to get updated onboarding_completed status
+      // Onboarding was just completed, refetch profile and sports
       refetch();
+      refetchSports();
     }
     prevContentModeRef.current = contentMode;
   }, [contentMode, session?.user, refetch]);
@@ -313,6 +318,8 @@ function ProfilePictureButtonWithAuth() {
   useAuth();
   useActionsSheet();
   const { t } = useTranslation();
+  const { profile } = useProfile();
+  const completeness = useProfileCompleteness();
 
   const handlePress = () => {
     if (isReady) {
@@ -325,10 +332,93 @@ function ProfilePictureButtonWithAuth() {
   };
 
   const { isDark } = useThemeStyles();
+  const showRing = isReady && !completeness.loading && !completeness.isComplete;
+
+  const profilePictureUrl = useMemo(
+    () => getProfilePictureUrl(profile?.profile_picture_url),
+    [profile?.profile_picture_url]
+  );
+
+  // Ring colors based on tier
+  const tierColors = useMemo(
+    () => getTierColors(completeness.tier, isDark),
+    [completeness.tier, isDark]
+  );
+  const ringColor = tierColors.accent;
+  const ringTrackColor = tierColors.trackColor;
+  const avatarSize = 28;
+  const ringSize = avatarSize + 5; // 33px — ring sits tight against the avatar
+  const iconColor = isDark ? neutral[50] : neutral[900];
+  const placeholderBg = isDark ? neutral[700] : neutral[200];
+
   return (
     <CopilotStep text={t('tour.header.profile.description')} order={6} name="header-profile">
       <WalkthroughableView style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <ProfilePictureButton onPress={handlePress} isDark={isDark} />
+        {showRing ? (
+          <TouchableOpacity
+            onPress={handlePress}
+            style={{
+              marginLeft: spacingPixels[2],
+              width: ringSize,
+              height: ringSize,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {/* Ring — absolutely positioned to fill the touchable */}
+            <View style={{ position: 'absolute', top: 0, left: 0 }} pointerEvents="none">
+              <ProfileCompletionRing
+                percentage={completeness.percentage}
+                size={ringSize}
+                strokeWidth={2.5}
+                color={ringColor}
+                trackColor={ringTrackColor}
+                showLabel={false}
+              />
+            </View>
+            {/* Avatar — centered inside the ring */}
+            {profilePictureUrl ? (
+              <Image
+                source={{ uri: profilePictureUrl }}
+                style={{
+                  width: avatarSize,
+                  height: avatarSize,
+                  borderRadius: avatarSize / 2,
+                  backgroundColor: placeholderBg,
+                }}
+              />
+            ) : (
+              <Ionicons name="person-circle-outline" size={ringSize} color={iconColor} />
+            )}
+            {/* Percentage badge */}
+            <View
+              style={{
+                position: 'absolute',
+                bottom: -3,
+                right: -6,
+                backgroundColor: ringColor,
+                borderRadius: 6,
+                paddingHorizontal: 3,
+                paddingVertical: 1,
+                minWidth: 22,
+                alignItems: 'center',
+              }}
+            >
+              <RNText
+                style={{
+                  color: '#fff',
+                  fontSize: 8,
+                  fontWeight: '700',
+                  lineHeight: 10,
+                }}
+              >
+                {completeness.percentage}%
+              </RNText>
+            </View>
+          </TouchableOpacity>
+        ) : (
+          <ProfilePictureButton onPress={handlePress} isDark={isDark} />
+        )}
       </WalkthroughableView>
     </CopilotStep>
   );
