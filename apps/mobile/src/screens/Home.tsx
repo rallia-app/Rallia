@@ -21,6 +21,7 @@ import {
   Skeleton,
   SkeletonMatchCard,
   SkeletonMyMatchCard,
+  useToast,
 } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
 import {
@@ -58,7 +59,12 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NearbyMatch, MatchScoringPreferences } from '@rallia/shared-hooks';
 import type { MatchWithDetails } from '@rallia/shared-types';
-import { Logger, getMatchWithDetails } from '@rallia/shared-services';
+import {
+  Logger,
+  getMatchWithDetails,
+  joinGroupByInviteCode,
+  requestToJoinCommunityByInviteCode,
+} from '@rallia/shared-services';
 import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
 import { SportIcon } from '../components/SportIcon';
 import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
@@ -189,15 +195,90 @@ const Home = () => {
   const isDark = theme === 'dark';
   const navigation = useHomeNavigation();
   const appNavigation = useAppNavigation();
+  const toast = useToast();
 
   // Consume pending match deep link (from Universal Links / App Links)
-  const { consumePendingMatchId } = useDeepLink();
+  const {
+    consumePendingMatchId,
+    consumePendingGroupInviteCode,
+    consumePendingCommunityInviteCode,
+  } = useDeepLink();
   useEffect(() => {
     const matchId = consumePendingMatchId();
     if (!matchId) return;
     getMatchWithDetails(matchId).then(match => {
       if (match) {
         openMatchDetail(match as MatchDetailData);
+      }
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Consume pending group invite deep link
+  useEffect(() => {
+    const inviteCode = consumePendingGroupInviteCode();
+    if (!inviteCode || !player?.id) return;
+
+    joinGroupByInviteCode(inviteCode, player.id)
+      .then(result => {
+        if (result.success && result.groupId) {
+          toast.success(t('groups.joinedViaLinkMessage', { name: result.groupName ?? '' }));
+          appNavigation.navigate('GroupDetail', {
+            groupId: result.groupId,
+            groupName: result.groupName,
+          });
+        } else {
+          toast.error(result.error || t('groups.joinFailedViaLink'));
+        }
+      })
+      .catch(() => {
+        toast.error(t('groups.joinFailedViaLink'));
+      });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Consume pending community invite deep link
+  useEffect(() => {
+    const inviteCode = consumePendingCommunityInviteCode();
+    if (!inviteCode || !player?.id) return;
+
+    requestToJoinCommunityByInviteCode(inviteCode, player.id)
+      .then(result => {
+        if (result.success && result.communityId) {
+          toast.success(
+            t('community.requestSentViaLinkMessage', { name: result.communityName ?? '' })
+          );
+          appNavigation.navigate('CommunityDetail', {
+            communityId: result.communityId,
+            communityName: result.communityName,
+          });
+        } else {
+          toast.error(result.error || t('community.joinFailedViaLink'));
+        }
+      })
+      .catch(() => {
+        toast.error(t('community.joinFailedViaLink'));
+      });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Consume pending navigation from post-onboarding join (AsyncStorage)
+  useEffect(() => {
+    AsyncStorage.getItem('@rallia/pending-navigation').then(raw => {
+      if (!raw) return;
+      AsyncStorage.removeItem('@rallia/pending-navigation');
+      try {
+        const nav = JSON.parse(raw) as { screen: string; params?: Record<string, string> };
+        if (nav.screen === 'GroupDetail' && nav.params?.groupId) {
+          appNavigation.navigate('GroupDetail', {
+            groupId: nav.params.groupId,
+            groupName: nav.params.groupName,
+          });
+        } else if (nav.screen === 'CommunityDetail' && nav.params?.communityId) {
+          appNavigation.navigate('CommunityDetail', {
+            communityId: nav.params.communityId,
+            communityName: nav.params.communityName,
+          });
+        }
+      } catch {
+        // Ignore parse errors
       }
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
