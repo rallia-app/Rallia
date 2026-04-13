@@ -78,19 +78,24 @@ export { APP_STORE_URL, PLAY_STORE_URL };
 
 /**
  * Build the Android Play Store URL with referrer parameters for Install Referrer API.
+ * `referralCode` is optional — non-referral invite links (e.g. /join/{code}) don't have one.
  */
 export function buildPlayStoreUrl(
-  referralCode: string,
+  referralCode?: string,
   invitationType: InvitationType = 'referral',
   targetId?: string
 ): string {
-  const parts = [`referral_code=${referralCode.toUpperCase()}`];
+  const parts: string[] = [];
+  if (referralCode) {
+    parts.push(`referral_code=${referralCode.toUpperCase()}`);
+  }
   if (invitationType !== 'referral') {
     parts.push(`invitation_type=${invitationType}`);
   }
   if (targetId) {
     parts.push(`target_id=${targetId}`);
   }
+  if (parts.length === 0) return PLAY_STORE_URL;
   const referrerParam = encodeURIComponent(parts.join('&'));
   return `${PLAY_STORE_URL}&referrer=${referrerParam}`;
 }

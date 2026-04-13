@@ -92,7 +92,8 @@ export const InvitationDeepLinkScreen: React.FC<RootStackScreenProps<'Invitation
   const { referralCode } = route.params;
   const { theme } = useTheme();
   const { t } = useTranslation();
-  const { setPendingMatchId } = useDeepLink();
+  const { setPendingMatchId, setPendingGroupInviteCode, setPendingCommunityInviteCode } =
+    useDeepLink();
   const { isSportSelectionComplete } = useOverlay();
   const isDark = theme === 'dark';
 
@@ -128,18 +129,11 @@ export const InvitationDeepLinkScreen: React.FC<RootStackScreenProps<'Invitation
         setPendingMatchId(targetId);
         navigation.reset({ index: 0, routes: [{ name: destination }] });
       } else if (invitationType === 'group' && targetId) {
-        // Navigate to group detail — the invite code is the targetId
-        navigation.reset({
-          index: 0,
-          routes: [{ name: destination }],
-        });
-        // TODO: Navigate to group join flow once GroupJoin screen exists
+        setPendingGroupInviteCode(targetId);
+        navigation.reset({ index: 0, routes: [{ name: destination }] });
       } else if (invitationType === 'community' && targetId) {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: destination }],
-        });
-        // TODO: Navigate to community join flow once CommunityJoin screen exists
+        setPendingCommunityInviteCode(targetId);
+        navigation.reset({ index: 0, routes: [{ name: destination }] });
       } else {
         // Default: pure referral — go to home
         navigation.reset({ index: 0, routes: [{ name: destination }] });
@@ -148,7 +142,14 @@ export const InvitationDeepLinkScreen: React.FC<RootStackScreenProps<'Invitation
       console.error('Failed to handle invitation deep link:', error);
       navigation.reset({ index: 0, routes: [{ name: destination }] });
     }
-  }, [referralCode, navigation, setPendingMatchId, isSportSelectionComplete]);
+  }, [
+    referralCode,
+    navigation,
+    setPendingMatchId,
+    setPendingGroupInviteCode,
+    setPendingCommunityInviteCode,
+    isSportSelectionComplete,
+  ]);
 
   useEffect(() => {
     handleDeepLink();
