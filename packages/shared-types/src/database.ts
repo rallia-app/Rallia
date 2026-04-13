@@ -476,6 +476,8 @@ export interface FacilitySearchResult {
   latitude?: number | null;
   /** Facility longitude for map display */
   longitude?: number | null;
+  /** Whether this facility is favorited by the requesting player */
+  is_favorite?: boolean;
 }
 
 /** Paginated facilities response */

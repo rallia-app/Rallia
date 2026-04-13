@@ -271,6 +271,7 @@ export default function FacilitiesDirectory() {
     searchQuery: debouncedSearchQuery,
     filters,
     userGender: player?.gender,
+    playerId: player?.id,
     enabled: showFacilities,
   });
 
@@ -278,23 +279,7 @@ export default function FacilitiesDirectory() {
   const { favorites, isFavorite, addFavorite, removeFavorite, isMaxReached } =
     useFavoriteFacilities(player?.id ?? null, selectedSport?.id);
 
-  // Sort facilities: favorites first, then by distance
-  const sortedFacilities = useMemo(() => {
-    const favoriteIds = new Set(favorites.map(f => f.facilityId));
-
-    // Split into favorites and non-favorites
-    const favoriteFacilities = facilities.filter(f => favoriteIds.has(f.id));
-    const otherFacilities = facilities.filter(f => !favoriteIds.has(f.id));
-
-    // Sort each group by distance
-    const sortByDistance = (a: FacilitySearchResult, b: FacilitySearchResult) =>
-      (a.distance_meters ?? Infinity) - (b.distance_meters ?? Infinity);
-
-    return [
-      ...favoriteFacilities.sort(sortByDistance), // Favorites first, sorted by distance
-      ...otherFacilities.sort(sortByDistance), // Then others, sorted by distance
-    ];
-  }, [facilities, favorites]);
+  // Facilities are already sorted by the DB: favorites first, then by distance
 
   // Handle infinite scroll
   const handleEndReached = useCallback(() => {
@@ -631,7 +616,7 @@ export default function FacilitiesDirectory() {
     if (isLoading || !showFacilities) return null;
 
     // Use totalCount from database if available, otherwise fall back to displayed count
-    const count = totalCount ?? sortedFacilities.length;
+    const count = totalCount ?? facilities.length;
     const countText =
       count === 1
         ? t('facilitiesTab.results.countSingular')
@@ -644,7 +629,7 @@ export default function FacilitiesDirectory() {
         </Text>
       </View>
     );
-  }, [isLoading, showFacilities, totalCount, sortedFacilities.length, colors.textMuted, t]);
+  }, [isLoading, showFacilities, totalCount, facilities.length, colors.textMuted, t]);
 
   // Full list header: My Bookings, title, search, filters, error, then results info or skeleton
   const renderListHeader = useCallback(() => {
@@ -762,7 +747,7 @@ export default function FacilitiesDirectory() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <FlatList
-        data={sortedFacilities}
+        data={facilities}
         renderItem={renderFacilityCard}
         keyExtractor={item => item.id}
         ListHeaderComponent={renderListHeader()}
@@ -779,7 +764,7 @@ export default function FacilitiesDirectory() {
         }
         contentContainerStyle={[
           styles.listContent,
-          sortedFacilities.length === 0 && styles.emptyListContent,
+          facilities.length === 0 && styles.emptyListContent,
         ]}
         showsVerticalScrollIndicator={false}
       />
