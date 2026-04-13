@@ -8360,5 +8360,31 @@
         "body": "Complete your matches, show up on time, and be a good sport. Leave fair reviews for other players — it also earns you a small reputation bonus."
       }
     }
+  },
+  "profileCompletion": {
+    "title": "PROFILE STRENGTH",
+    "percentComplete": "{percentage}% complete",
+    "complete": "Profile complete",
+    "bannerTitle": "{percentage}% complete",
+    "bannerCta": "Complete",
+    "tiers": {
+      "getting_started": "Getting started — fill in the basics for better matches",
+      "growing": "Growing — keep going, you're building momentum",
+      "strong": "Strong — almost there, a few more details to go",
+      "almost_there": "Almost there — just a touch more to finish",
+      "complete": "Complete — you're all set!"
+    },
+    "items": {
+      "profilePicture": "Add a profile photo",
+      "homeAddress": "Set your home address",
+      "skillRating": "Add your skill rating",
+      "ratingProof": "Add proof for your rating",
+      "favoriteCourts": "Add your favorite courts",
+      "availability": "Set your availability",
+      "bio": "Write a short bio",
+      "phone": "Add your phone number",
+      "displayName": "Choose a display name",
+      "playStyle": "Set your play style"
+    }
   }
 }

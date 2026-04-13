@@ -74,10 +74,13 @@ import {
   useTheme,
   ProfileProvider,
   PlayerProvider,
+  useProfile,
+  usePlayer,
   useNotificationRealtime,
   usePendingFeedbackCheck,
   useUpdateLastSeen,
   useReferral,
+  ProfileCompletenessProvider,
 } from '@rallia/shared-hooks';
 import { useBadgeCountSync } from '@rallia/shared-hooks/src/useBadgeCountSync';
 // TEMPORARILY DISABLED: User walkthrough deactivated
@@ -98,6 +101,7 @@ import {
   ActionsSheetProvider,
   PendingExternalBookingProvider,
   SportProvider,
+  useSport,
   MatchDetailSheetProvider,
   useMatchDetailSheet,
   PlayerInviteSheetProvider,
@@ -282,11 +286,36 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
         <HomeLocationSync userId={userId} />
         <ProfileProvider userId={userId}>
           <PlayerProvider userId={userId}>
-            <SportProvider userId={userId}>{children}</SportProvider>
+            <SportProvider userId={userId}>
+              <ProfileCompletenessBridge>{children}</ProfileCompletenessBridge>
+            </SportProvider>
           </PlayerProvider>
         </ProfileProvider>
       </LocationModeProvider>
     </UserLocationProvider>
+  );
+}
+
+/**
+ * Bridges Profile, Player, and Sport contexts into the ProfileCompletenessProvider.
+ * Must be rendered inside all three providers.
+ */
+function ProfileCompletenessBridge({ children }: PropsWithChildren) {
+  const { profile } = useProfile();
+  const { player, sportRatings, sportPreferences } = usePlayer();
+  const { selectedSport } = useSport();
+
+  return (
+    <ProfileCompletenessProvider
+      profile={profile}
+      player={player}
+      sportRatings={sportRatings}
+      sportPreferences={sportPreferences}
+      selectedSportId={selectedSport?.id ?? null}
+      selectedSportName={selectedSport?.name ?? null}
+    >
+      {children}
+    </ProfileCompletenessProvider>
   );
 }
 

@@ -71,7 +71,7 @@ const ProfilePictureButton: React.FC<ProfilePictureButtonProps> = ({
           onError={() => setImageLoadError(true)}
         />
       ) : (
-        <Ionicons name="person-circle-outline" size={size} color={iconColor} />
+        <Ionicons name="person-circle-outline" size={size + 6} color={iconColor} />
       )}
     </TouchableOpacity>
   );
