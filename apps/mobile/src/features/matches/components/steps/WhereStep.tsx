@@ -1117,6 +1117,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     latitude: location?.latitude,
     longitude: location?.longitude,
     searchQuery,
+    playerId: player?.id,
     enabled: locationType === 'facility' && !selectedFacility,
   });
 

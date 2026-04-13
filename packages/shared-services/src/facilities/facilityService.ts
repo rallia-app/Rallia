@@ -62,6 +62,8 @@ export interface SearchFacilitiesParams {
   membershipRequired?: boolean;
   /** The viewing user's gender for match eligibility filtering */
   userGender?: string | null;
+  /** Player ID for favorite-first sorting */
+  playerId?: string | null;
   limit?: number;
   offset?: number;
 }
@@ -236,6 +238,7 @@ export async function searchFacilitiesNearby(
     hasLighting,
     membershipRequired,
     userGender,
+    playerId,
     limit = DEFAULT_PAGE_SIZE,
     offset = 0,
   } = params;
@@ -256,6 +259,7 @@ export async function searchFacilitiesNearby(
       p_limit: limit + 1, // Fetch one extra to check if more exist
       p_offset: offset,
       p_user_gender: userGender || null,
+      p_player_id: playerId || null,
     }),
     // Only fetch count on first page (offset === 0) to avoid unnecessary queries
     offset === 0
