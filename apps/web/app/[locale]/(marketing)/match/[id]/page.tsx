@@ -9,8 +9,8 @@ import Image from 'next/image';
 import { getRelativeDateLabel, formatDuration } from '../../games/_components/utils';
 import { getMatch } from './_lib/get-match';
 
-const APP_STORE_URL = 'https://apps.apple.com/app/rallia/idXXXXXXXXXX';
-const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.rallia.app';
+const APP_STORE_URL = 'https://apps.apple.com/app/rallia/id6760482014';
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.mathisl971.ralliaapp';
 
 function isMobile(userAgent: string): 'ios' | 'android' | null {
   const ua = userAgent.toLowerCase();

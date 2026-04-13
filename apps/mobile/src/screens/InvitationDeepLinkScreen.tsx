@@ -24,6 +24,7 @@ import { useTheme } from '@rallia/shared-hooks';
 import { lightTheme, darkTheme, spacingPixels, primary } from '@rallia/design-system';
 import type { InvitationType } from '@rallia/shared-services';
 import { useDeepLink } from '../context';
+import { useOverlay } from '../context/OverlayContext';
 import { useTranslation } from '../hooks';
 import type { RootStackScreenProps } from '../navigation/types';
 
@@ -92,6 +93,7 @@ export const InvitationDeepLinkScreen: React.FC<RootStackScreenProps<'Invitation
   const { theme } = useTheme();
   const { t } = useTranslation();
   const { setPendingMatchId } = useDeepLink();
+  const { isSportSelectionComplete } = useOverlay();
   const isDark = theme === 'dark';
 
   const themeColors = isDark ? darkTheme : lightTheme;
@@ -106,6 +108,8 @@ export const InvitationDeepLinkScreen: React.FC<RootStackScreenProps<'Invitation
   );
 
   const handleDeepLink = useCallback(async () => {
+    const destination = isSportSelectionComplete ? 'Main' : 'PreOnboarding';
+
     try {
       const query = await extractQueryParams();
       const invitationType = parseInvitationType(query.type);
@@ -122,29 +126,29 @@ export const InvitationDeepLinkScreen: React.FC<RootStackScreenProps<'Invitation
       // Navigate based on invitation type
       if (invitationType === 'match' && targetId) {
         setPendingMatchId(targetId);
-        navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+        navigation.reset({ index: 0, routes: [{ name: destination }] });
       } else if (invitationType === 'group' && targetId) {
         // Navigate to group detail — the invite code is the targetId
         navigation.reset({
           index: 0,
-          routes: [{ name: 'Main' }],
+          routes: [{ name: destination }],
         });
         // TODO: Navigate to group join flow once GroupJoin screen exists
       } else if (invitationType === 'community' && targetId) {
         navigation.reset({
           index: 0,
-          routes: [{ name: 'Main' }],
+          routes: [{ name: destination }],
         });
         // TODO: Navigate to community join flow once CommunityJoin screen exists
       } else {
         // Default: pure referral — go to home
-        navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+        navigation.reset({ index: 0, routes: [{ name: destination }] });
       }
     } catch (error) {
       console.error('Failed to handle invitation deep link:', error);
-      navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+      navigation.reset({ index: 0, routes: [{ name: destination }] });
     }
-  }, [referralCode, navigation, setPendingMatchId]);
+  }, [referralCode, navigation, setPendingMatchId, isSportSelectionComplete]);
 
   useEffect(() => {
     handleDeepLink();
