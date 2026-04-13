@@ -5804,6 +5804,10 @@
           "cancel": "Cancel",
           "suspending": "Suspending...",
           "reactivating": "Reactivating...",
+          "delete": "Delete",
+          "deleteConfirmTitle": "Delete Player",
+          "deleteConfirmDescription": "Are you sure you want to permanently delete {name}? This action cannot be undone. All their data will be permanently removed.",
+          "deleting": "Deleting...",
           "error": "Action failed"
         }
       },
@@ -5936,7 +5940,12 @@
           "reactivateConfirmTitle": "Reactivate Players",
           "reactivateConfirmDescription": "Are you sure you want to reactivate {count, plural, one {this player} other {these # players}}?",
           "confirmReactivate": "Reactivate",
-          "reactivating": "Reactivating..."
+          "reactivating": "Reactivating...",
+          "delete": "Delete Selected",
+          "deleteConfirmTitle": "Delete Players",
+          "deleteConfirmDescription": "Are you sure you want to permanently delete {count, plural, one {this player} other {these # players}}? This action cannot be undone.",
+          "confirmDelete": "Delete",
+          "deleting": "Deleting..."
         }
       }
     },

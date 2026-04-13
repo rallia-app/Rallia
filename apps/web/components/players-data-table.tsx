@@ -8,7 +8,7 @@ import {
   type FilterDef,
 } from '@/components/data-table';
 import { useRouter } from '@/i18n/navigation';
-import { Users, Ban, UserCheck } from 'lucide-react';
+import { Users, Ban, UserCheck, Trash2 } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import type { BulkActionDef } from '@/components/data-table';
 
@@ -169,6 +169,26 @@ export function PlayersDataTable(props: PlayersDataTableProps) {
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || 'Failed to reactivate players');
+        }
+      },
+    },
+    {
+      label: t('bulkActions.delete'),
+      variant: 'destructive',
+      icon: <Trash2 className="h-4 w-4 mr-2" />,
+      confirmTitle: t('bulkActions.deleteConfirmTitle'),
+      confirmDescription: (count: number) => t('bulkActions.deleteConfirmDescription', { count }),
+      confirmLabel: t('bulkActions.confirmDelete'),
+      loadingLabel: t('bulkActions.deleting'),
+      onExecute: async (ids: string[]) => {
+        const response = await fetch('/api/admin/players', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playerIds: ids }),
+        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to delete players');
         }
       },
     },

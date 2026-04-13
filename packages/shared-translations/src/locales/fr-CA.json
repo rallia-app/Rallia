@@ -5806,6 +5806,10 @@
           "cancel": "Annuler",
           "suspending": "Suspension en cours...",
           "reactivating": "Réactivation en cours...",
+          "delete": "Supprimer",
+          "deleteConfirmTitle": "Supprimer le joueur",
+          "deleteConfirmDescription": "Êtes-vous sûr de vouloir supprimer définitivement {name} ? Cette action est irréversible. Toutes ses données seront supprimées de façon permanente.",
+          "deleting": "Suppression en cours...",
           "error": "L'action a échoué"
         }
       },
@@ -5938,7 +5942,12 @@
           "reactivateConfirmTitle": "Réactiver les joueurs",
           "reactivateConfirmDescription": "Êtes-vous sûr de vouloir réactiver {count, plural, one {ce joueur} other {ces # joueurs}} ?",
           "confirmReactivate": "Réactiver",
-          "reactivating": "Réactivation en cours..."
+          "reactivating": "Réactivation en cours...",
+          "delete": "Supprimer la sélection",
+          "deleteConfirmTitle": "Supprimer les joueurs",
+          "deleteConfirmDescription": "Êtes-vous sûr de vouloir supprimer définitivement {count, plural, one {ce joueur} other {ces # joueurs}} ? Cette action est irréversible.",
+          "confirmDelete": "Supprimer",
+          "deleting": "Suppression en cours..."
         }
       }
     },
