@@ -102,10 +102,15 @@ async function getIOSFingerprintMatch(playerId: string): Promise<PendingReferral
     const userAgent = await Constants.getWebViewUserAgentAsync();
     if (!userAgent) return null;
 
+    // Extract stable device traits that match across Safari and WebView UAs
+    // Both contain e.g. "iPhone; CPU iPhone OS 19_0 like Mac OS X"
+    const traitsMatch = userAgent.match(/(iPhone|iPad|iPod);[^)]+like Mac OS X/);
+    const traits = traitsMatch ? traitsMatch[0] : userAgent;
+
     // Compute fingerprint with same algorithm as web page
     const fingerprint = await Crypto.digestStringAsync(
       Crypto.CryptoDigestAlgorithm.SHA256,
-      `${ip}:${userAgent}`
+      `${ip}:${traits}`
     );
 
     // Call RPC to match — now returns structured data

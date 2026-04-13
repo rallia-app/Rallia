@@ -12,6 +12,7 @@ import { Text } from '@rallia/shared-components';
 import { useTheme } from '@rallia/shared-hooks';
 import { lightTheme, darkTheme, spacingPixels, primary } from '@rallia/design-system';
 import { useDeepLink } from '../context';
+import { useOverlay } from '../context/OverlayContext';
 import type { RootStackScreenProps } from '../navigation/types';
 
 export const MatchDeepLinkScreen: React.FC<RootStackScreenProps<'MatchDeepLink'>> = ({
@@ -21,6 +22,7 @@ export const MatchDeepLinkScreen: React.FC<RootStackScreenProps<'MatchDeepLink'>
   const { matchId } = route.params;
   const { theme } = useTheme();
   const { setPendingMatchId } = useDeepLink();
+  const { isSportSelectionComplete } = useOverlay();
   const isDark = theme === 'dark';
 
   const themeColors = isDark ? darkTheme : lightTheme;
@@ -37,9 +39,9 @@ export const MatchDeepLinkScreen: React.FC<RootStackScreenProps<'MatchDeepLink'>
     setPendingMatchId(matchId);
     navigation.reset({
       index: 0,
-      routes: [{ name: 'Main' }],
+      routes: [{ name: isSportSelectionComplete ? 'Main' : 'PreOnboarding' }],
     });
-  }, [matchId, navigation, setPendingMatchId]);
+  }, [matchId, navigation, setPendingMatchId, isSportSelectionComplete]);
 
   useEffect(() => {
     handleDeepLink();
