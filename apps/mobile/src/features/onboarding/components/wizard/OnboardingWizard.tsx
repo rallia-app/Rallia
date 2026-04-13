@@ -42,6 +42,8 @@ import {
   DatabaseService,
   supabase,
   attributeReferral,
+  joinGroupByInviteCode,
+  requestToJoinCommunityByInviteCode,
 } from '@rallia/shared-services';
 import { useProfile, usePlayer, usePostalCodeGeocode } from '@rallia/shared-hooks';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -952,6 +954,46 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 }
               }
               await AsyncStorage.removeItem(PENDING_REFERRAL_KEY);
+
+              // If the referral was for a group/community, trigger the join action
+              // and store pending navigation so Home can redirect after mounting
+              if (pending.type === 'group' && pending.targetId && userId) {
+                try {
+                  const joinResult = await joinGroupByInviteCode(pending.targetId, userId);
+                  if (joinResult.success && joinResult.groupId) {
+                    await AsyncStorage.setItem(
+                      '@rallia/pending-navigation',
+                      JSON.stringify({
+                        screen: 'GroupDetail',
+                        params: { groupId: joinResult.groupId, groupName: joinResult.groupName },
+                      })
+                    );
+                  }
+                } catch (e) {
+                  Logger.warn('Post-onboarding group join failed', { error: e });
+                }
+              } else if (pending.type === 'community' && pending.targetId && userId) {
+                try {
+                  const joinResult = await requestToJoinCommunityByInviteCode(
+                    pending.targetId,
+                    userId
+                  );
+                  if (joinResult.success && joinResult.communityId) {
+                    await AsyncStorage.setItem(
+                      '@rallia/pending-navigation',
+                      JSON.stringify({
+                        screen: 'CommunityDetail',
+                        params: {
+                          communityId: joinResult.communityId,
+                          communityName: joinResult.communityName,
+                        },
+                      })
+                    );
+                  }
+                } catch (e) {
+                  Logger.warn('Post-onboarding community join request failed', { error: e });
+                }
+              }
             }
           } catch (referralError) {
             Logger.warn('Failed to attribute referral', { error: referralError });
