@@ -73,6 +73,7 @@ export interface InitialBookingForWizard {
   facilityId: string;
   courtId: string;
   courtNumber: number | null;
+  price?: number;
 }
 
 interface MatchCreationWizardProps {
@@ -451,7 +452,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     isLoading: isDraftLoading,
   } = useMatchDraft();
 
-  // Apply player preferences to form when they're loaded (only if not in edit mode and no draft for this sport)
+  // Apply player preferences to form when they're loaded (only if not in edit mode, no draft, and no initial booking)
   useEffect(() => {
     // Skip if there's a draft for the current sport (user might want to resume it)
     const hasDraftForCurrentSport = hasDraft && isDraftForSport(sportId);
@@ -461,6 +462,8 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       preferencesLoading ||
       !playerPreferences ||
       hasDraftForCurrentSport ||
+      hasAppliedInitialBooking.current ||
+      initialBookingForWizard ||
       Object.keys(playerPreferences).length === 0
     ) {
       return;
@@ -472,7 +475,16 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
         form.setValue(key as keyof MatchFormSchemaData, value as never, { shouldDirty: false });
       }
     });
-  }, [playerPreferences, preferencesLoading, isEditMode, hasDraft, isDraftForSport, sportId, form]);
+  }, [
+    playerPreferences,
+    preferencesLoading,
+    isEditMode,
+    hasDraft,
+    isDraftForSport,
+    sportId,
+    form,
+    initialBookingForWizard,
+  ]);
 
   // Helper to format date as YYYY-MM-DD in local time
   const formatDateLocal = useCallback((date: Date): string => {
@@ -485,15 +497,25 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   // Apply initial booking data when opening from facility "Create game"
   const hasAppliedInitialBooking = useRef(false);
   useEffect(() => {
-    if (!initialBookingForWizard) {
-      hasAppliedInitialBooking.current = false;
+    // Once applied, don't reset — the ref stays true for this wizard instance
+    // to prevent player preferences from overwriting the booking data
+    if (!initialBookingForWizard || hasAppliedInitialBooking.current) {
       return;
     }
-    if (!onConsumeInitialBooking || isEditMode || hasAppliedInitialBooking.current) {
+    if (!onConsumeInitialBooking || isEditMode) {
       return;
     }
     const { facility, slot, facilityId, courtId } = initialBookingForWizard;
     const slotTyped = slot as { datetime: Date; endDateTime: Date };
+
+    // Ensure datetime values are actual Date objects (they may have lost their type through state)
+    const startDate =
+      slotTyped.datetime instanceof Date ? slotTyped.datetime : new Date(slotTyped.datetime);
+    const endDate =
+      slotTyped.endDateTime instanceof Date
+        ? slotTyped.endDateTime
+        : new Date(slotTyped.endDateTime);
+
     const facilityTyped = facility as {
       name: string;
       address?: string;
@@ -501,10 +523,10 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       timezone?: string;
     };
     const facilityTimezone = facilityTyped.timezone || timezone;
-    const matchDate = formatDateLocal(slotTyped.datetime);
-    const startTime = formatTime24(slotTyped.datetime);
-    const endTime = formatTime24(slotTyped.endDateTime);
-    const durationMins = calculateDurationMinutes(slotTyped.datetime, slotTyped.endDateTime);
+    const matchDate = formatDateLocal(startDate);
+    const startTime = formatTime24(startDate);
+    const endTime = formatTime24(endDate);
+    const durationMins = calculateDurationMinutes(startDate, endDate);
     const duration = mapDurationToFormValue(durationMins);
 
     form.setValue('locationType', 'facility', { shouldDirty: true });
@@ -521,6 +543,14 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     form.setValue('customDurationMinutes', durationMins, { shouldDirty: true });
     form.setValue('timezone', facilityTimezone, { shouldDirty: true });
 
+    // Pre-fill step 3 preferences for booking-to-match flow
+    form.setValue('joinMode', 'request', { shouldDirty: true });
+    const bookingPrice = initialBookingForWizard.price;
+    if (bookingPrice !== undefined && bookingPrice > 0) {
+      form.setValue('isCourtFree', false, { shouldDirty: true });
+      form.setValue('estimatedCost', bookingPrice, { shouldDirty: true });
+    }
+
     setBookedSlotData({
       matchDate,
       startTime,
@@ -530,6 +560,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       timezone: facilityTimezone,
     });
     setCurrentStep(3);
+    setHighestStepVisited(3);
     hasAppliedInitialBooking.current = true;
     onConsumeInitialBooking();
   }, [
@@ -632,7 +663,15 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   // Clear booked slot data when location type changes away from facility or facility is cleared
   // This unlocks the WhenFormatStep when user changes location type after booking a slot
   // Also resets date/time/duration to default values
+  const hasMountedClearEffect = useRef(false);
   useEffect(() => {
+    // Skip initial mount — on the first render, facilityId is still the default (undefined)
+    // even if the booking effect has already queued setValue calls. Running here would
+    // incorrectly clear booked slot data that was just applied.
+    if (!hasMountedClearEffect.current) {
+      hasMountedClearEffect.current = true;
+      return;
+    }
     // Clear booking if location type is not 'facility' or facilityId is cleared
     if (values.locationType !== 'facility' || !values.facilityId) {
       setBookedSlotData(prev => {
@@ -1280,6 +1319,20 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
               onSlotBooked={handleSlotBooked}
               preferredFacilityId={preferredFacilityId}
               editMatch={editMatch}
+              initialBookingFacility={
+                initialBookingForWizard
+                  ? {
+                      id: initialBookingForWizard.facilityId,
+                      name: (initialBookingForWizard.facility as { name: string }).name ?? '',
+                      address: (initialBookingForWizard.facility as { address?: string | null })
+                        ?.address,
+                      city: (initialBookingForWizard.facility as { city?: string | null })?.city,
+                      timezone: (initialBookingForWizard.facility as { timezone?: string | null })
+                        ?.timezone,
+                      courtNumber: initialBookingForWizard.courtNumber,
+                    }
+                  : null
+              }
             />
           </View>
 

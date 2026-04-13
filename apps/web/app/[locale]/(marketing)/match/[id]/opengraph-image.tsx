@@ -66,7 +66,8 @@ export default async function Image({
   }
 
   // ---------- Derived values ----------
-  const sportName = match.sport?.name ?? 'Match';
+  const rawSport = match.sport?.name;
+  const sportName = rawSport ? rawSport.charAt(0).toUpperCase() + rawSport.slice(1) : 'Match';
   const facilityName = match.facility?.name;
   const city = match.facility?.city;
   const location = facilityName

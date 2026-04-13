@@ -12,6 +12,7 @@ export * from './useEffectiveLocation';
 export * from './usePushNotifications';
 export * from './useTourSequence';
 export * from './useSportSetup';
+export * from './useOpenExternalBooking';
 
 // Group chat hooks
 export * from './groupChat';

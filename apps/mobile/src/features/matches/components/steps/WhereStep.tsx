@@ -95,6 +95,15 @@ interface WhereStepProps {
   preferredFacilityId?: string;
   /** Match data when in edit mode - used to initialize facility/location state */
   editMatch?: MatchWithDetails;
+  /** Pre-filled facility data from booking confirmation flow */
+  initialBookingFacility?: {
+    id: string;
+    name: string;
+    address?: string | null;
+    city?: string | null;
+    timezone?: string | null;
+    courtNumber?: number | null;
+  } | null;
 }
 
 interface LocationTypeCardProps {
@@ -669,6 +678,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   onSlotBooked,
   preferredFacilityId,
   editMatch,
+  initialBookingFacility,
 }) => {
   const {
     setValue,
@@ -804,6 +814,32 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       setHasSelectedPlace(true);
     }
   }, [editMatch]);
+
+  // Initialize local state from booking confirmation flow (facility pre-filled by wizard)
+  const hasInitializedFromBooking = useRef(false);
+  useEffect(() => {
+    if (hasInitializedFromBooking.current || !initialBookingFacility) {
+      return;
+    }
+    hasInitializedFromBooking.current = true;
+
+    const facilitySearchResult: FacilitySearchResult = {
+      id: initialBookingFacility.id,
+      name: initialBookingFacility.name,
+      city: initialBookingFacility.city ?? null,
+      address: initialBookingFacility.address ?? null,
+      distance_meters: null,
+      data_provider_id: null,
+      data_provider_type: null,
+      booking_url_template: null,
+      external_provider_id: null,
+      timezone: initialBookingFacility.timezone ?? null,
+    };
+    setSelectedFacility(facilitySearchResult);
+    if (initialBookingFacility.courtNumber != null) {
+      setBookedCourtNumber(initialBookingFacility.courtNumber);
+    }
+  }, [initialBookingFacility]);
 
   // Handle court booking success - called when booking sheet completes
   const handleCourtBookingSuccess = useCallback(

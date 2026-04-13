@@ -1479,7 +1479,12 @@
     "success": {
       "title": "Bienvenue sur Rallia!",
       "subtitle": "Votre compte a été créé avec succès.",
-      "getStarted": "Commencer"
+      "getStarted": "Commencer",
+      "inviteTitle": "Invitez vos amis!",
+      "inviteSubtitle": "Rallia est meilleur entre amis. Partagez votre lien d'invitation!",
+      "shareButton": "Partager avec des amis",
+      "maybeLater": "Peut-être plus tard",
+      "linkCopied": "Lien copié!"
     },
     "complete": "Terminer",
     "locationStep": {
@@ -3186,7 +3191,7 @@
     "generatingCode": "Génération de votre code de parrainage...",
     "shareInvite": "Partager l'invitation",
     "shareTitle": "Rejoins-moi sur Rallia!",
-    "shareMessage": "Hey! J'ai trouvé cette app Rallia pour trouver des matchs de {sport} près de chez toi. Ça m'a fait penser à toi! {link}",
+    "shareMessage": "Hey! J'ai trouvé cette app Rallia pour trouver des joueurs et organiser des parties de {sport}. Ça m'a fait penser à toi!\n\n{link}",
     "yourStats": "Vos statistiques de parrainage",
     "clicked": "Cliqué",
     "signedUp": "Inscrits",
@@ -6580,7 +6585,7 @@
     "step": "Étape {current} sur {total}",
     "postalCode": {
       "title": "Où jouez-vous?",
-      "subtitle": "Votre code postal nous aide à trouver des parties et des joueurs près de chez vous. Fini de parcourir des parties à l'autre bout du pays!",
+      "subtitle": "Pour trouver des parties et joueurs près de vous.",
       "whyNeeded": "Nous utilisons cela pour vous montrer des parties que vous pouvez réellement atteindre",
       "placeholder": "Entrez votre code postal",
       "placeholderCA": "ex. H2X 1Y4",
@@ -6595,7 +6600,7 @@
         "item3": "Être notifié des parties à proximité",
         "findPlayers": {
           "title": "Trouvez des joueurs près de vous",
-          "description": "Jouez avec des partenaires de votre niveau dans votre région"
+          "description": "Jouez avec des joueurs de votre niveau"
         },
         "discoverCourts": {
           "title": "Découvrez les terrains locaux",
@@ -6603,7 +6608,7 @@
         },
         "joinEvents": {
           "title": "Ne manquez jamais une partie",
-          "description": "Soyez notifié des matchs dans votre quartier"
+          "description": "Alertes pour les parties à proximité"
         }
       },
       "privacy": "Nous ne partageons jamais votre adresse exacte",
@@ -6637,6 +6642,19 @@
       "enable": "Activer la localisation précise",
       "privacyNote": "Votre localisation reste sur votre appareil et n'est utilisée que pour calculer les distances. Nous ne suivons jamais vos déplacements.",
       "settingsHint": "Vous pouvez modifier ce choix à tout moment dans les Réglages de votre appareil."
+    },
+    "discovery": {
+      "title": "Comment avez-vous entendu parler de nous?",
+      "subtitle": "Cela nous aide à améliorer Rallia pour des joueurs comme vous.",
+      "options": {
+        "friend": "Ami ou coéquipier",
+        "social": "Réseaux sociaux",
+        "appStore": "App Store / Google Play",
+        "event": "Événement ou tournoi",
+        "search": "Recherche web",
+        "other": "Autre"
+      },
+      "skip": "Passer"
     }
   },
   "reputation": {
@@ -7642,6 +7660,15 @@
       "description": "Ce terrain est réservé via un fournisseur externe.",
       "openSite": "Ouvrir le site de réservation",
       "instructions": "Complétez votre réservation sur le site web du site de jeu."
+    },
+    "confirmation": {
+      "title": "Avez-vous réservé?",
+      "subtitle": "Créez une partie et trouvez des partenaires!",
+      "perkVisibility": "Rendez-la publique ou gardez-la privée — vous avez le contrôle",
+      "perkApproval": "Avec demande pour rejoindre, vous approuvez chaque joueur",
+      "perkInvite": "Invitez vos partenaires juste après — même s'ils ne sont pas encore sur Rallia",
+      "confirm": "Oui, créer une partie",
+      "decline": "Peut-être la prochaine fois"
     }
   },
   "tour": {
@@ -8141,6 +8168,9 @@
     "downloadDescription": "Téléchargez Rallia pour rejoindre ce match et trouver des joueurs près de chez vous.",
     "appStore": "Télécharger dans l'App Store",
     "googlePlay": "Télécharger sur Google Play",
+    "ogTitle": "Rejoignez un match de {sport} sur Rallia",
+    "ogSpotsLeft": "{count, plural, one {1 place restante} other {# places restantes}}",
+    "ogMatchFull": "Match complet",
     "format": {
       "singles": "Simple",
       "doubles": "Double"

@@ -8,7 +8,6 @@ import {
   Dimensions,
   Keyboard,
   Platform,
-  Linking,
 } from 'react-native';
 import Animated, {
   FadeInDown,
@@ -33,7 +32,12 @@ import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { MapStackParamList } from '../navigation/types';
 import { SheetManager } from 'react-native-actions-sheet';
-import { useThemeStyles, useTranslation, useEffectiveLocation } from '../hooks';
+import {
+  useThemeStyles,
+  useTranslation,
+  useEffectiveLocation,
+  useOpenExternalBooking,
+} from '../hooks';
 import { useSport, useMatchDetailSheet } from '../context';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import { SearchBar } from '../components/SearchBar';
@@ -476,29 +480,37 @@ const Map = () => {
     [openSheet]
   );
 
-  const handleSlotPress = useCallback((_facility: unknown, slot: FormattedSlot) => {
-    if (slot.courtOptions.length > 1) {
-      SheetManager.show('court-selection', {
-        payload: {
-          courts: slot.courtOptions ?? [],
-          timeLabel: slot.time ?? '',
-          onSelect: (court: unknown) => {
-            const c = court as CourtOption;
-            if (c.bookingUrl) {
-              Linking.openURL(c.bookingUrl);
-            }
-          },
-          onCancel: () => {},
-        },
-      });
-      return;
-    }
+  const { openExternalBooking } = useOpenExternalBooking();
 
-    const bookingUrl = slot.courtOptions[0]?.bookingUrl || slot.bookingUrl;
-    if (bookingUrl) {
-      Linking.openURL(bookingUrl);
-    }
-  }, []);
+  const handleSlotPress = useCallback(
+    (facility: unknown, slot: FormattedSlot) => {
+      const f = facility as {
+        id: string;
+        name: string;
+        address?: string | null;
+        city?: string | null;
+        timezone?: string | null;
+      };
+
+      if (slot.courtOptions.length > 1) {
+        SheetManager.show('court-selection', {
+          payload: {
+            courts: slot.courtOptions ?? [],
+            timeLabel: slot.time ?? '',
+            onSelect: (court: unknown) => {
+              const c = court as CourtOption;
+              openExternalBooking({ facility: f, slot, selectedCourt: c });
+            },
+            onCancel: () => {},
+          },
+        });
+        return;
+      }
+
+      openExternalBooking({ facility: f, slot });
+    },
+    [openExternalBooking]
+  );
 
   const PEEK = 24;
   const CARD_OVERLAP = 20; // Eat into the card's own 16+16px gap between items

@@ -134,7 +134,8 @@ export async function getCourtByNumber(
     .select('id, name, court_number, facility_id, external_provider_id')
     .eq('facility_id', facilityId)
     .eq('court_number', courtNumber)
-    .single();
+    .limit(1)
+    .maybeSingle();
 
   if (error) {
     // PGRST116 = no rows returned - not an error, just not found
@@ -172,10 +173,15 @@ export async function updateCourtWithExternalData(
     })
     .eq('id', courtId)
     .select('id, name, court_number, facility_id, external_provider_id')
-    .single();
+    .limit(1)
+    .maybeSingle();
 
   if (error) {
     throw new Error(`Failed to update court: ${error.message}`);
+  }
+
+  if (!data) {
+    throw new Error(`Court not found after update: ${courtId}`);
   }
 
   return data;
@@ -270,17 +276,26 @@ export async function getOrCreateCourt(
     const courtByNumber = await getCourtByNumber(facilityId, courtNumber);
 
     if (courtByNumber) {
-      // Found a court with matching number - update it with external provider data
-      const updatedCourt = await updateCourtWithExternalData(courtByNumber.id, {
-        externalProviderId,
-        courtName,
-      });
+      // Found a court with matching number - try to update it with external provider data
+      try {
+        const updatedCourt = await updateCourtWithExternalData(courtByNumber.id, {
+          externalProviderId,
+          courtName,
+        });
 
-      return {
-        court: updatedCourt,
-        created: false,
-        updated: true,
-      };
+        return {
+          court: updatedCourt,
+          created: false,
+          updated: true,
+        };
+      } catch {
+        // Update may fail due to RLS policies — return the existing court as-is
+        return {
+          court: courtByNumber,
+          created: false,
+          updated: false,
+        };
+      }
     }
   }
 

@@ -308,6 +308,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     Array<{ id: string; name: string; display_name: string; icon_url?: string | null }>
   >([]);
 
+  // Player ID for referral sharing on success step
+  const [successPlayerId, setSuccessPlayerId] = useState<string | null>(null);
+
   // Image picker hook
   const { image: profileImage, pickImage } = useImagePicker();
 
@@ -339,6 +342,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     const fetchSelectedSports = async () => {
       if (currentStepId === 'success' && formData.selectedSportIds.length > 0) {
         try {
+          // Fetch player ID for referral sharing
+          const userId = await DatabaseService.Auth.getCurrentUserId();
+          if (userId) setSuccessPlayerId(userId);
+
           const { data: allSports, error } = await DatabaseService.Sport.getAllSports();
           if (error) {
             Logger.error('Failed to fetch sports for success step', error as Error);
@@ -950,6 +957,23 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             Logger.warn('Failed to attribute referral', { error: referralError });
           }
 
+          // Persist acquisition channel from pre-onboarding
+          try {
+            const channel = await AsyncStorage.getItem('@rallia/acquisition-channel');
+            if (channel) {
+              const channelUserId = await DatabaseService.Auth.getCurrentUserId();
+              if (channelUserId) {
+                await supabase
+                  .from('profile')
+                  .update({ acquisition_channel: channel })
+                  .eq('id', channelUserId);
+              }
+              await AsyncStorage.removeItem('@rallia/acquisition-channel');
+            }
+          } catch (channelError) {
+            Logger.warn('Failed to persist acquisition channel', { error: channelError });
+          }
+
           // Refetch profile, player, and sports immediately after marking onboarding as completed
           // This ensures:
           // 1. Profile: header updates, onboarding_completed flag is recognized
@@ -1123,6 +1147,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             selectedSports={selectedSportsForSuccess}
             currentSport={selectedSport}
             onSelectInitialSport={handleSelectInitialSport}
+            playerId={successPlayerId}
           />
         );
       default:
@@ -1157,6 +1182,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           selectedSports={selectedSportsForSuccess}
           currentSport={selectedSport}
           onSelectInitialSport={handleSelectInitialSport}
+          playerId={successPlayerId}
         />
       </View>
     );

@@ -193,6 +193,14 @@ export function invitationLinkGenerated(props: { invitation_type: string; channe
   capture('invitation_link_generated', props);
 }
 
+export function onboardingShareSkipped(): void {
+  capture('onboarding_share_skipped', {});
+}
+
+export function acquisitionChannelSelected(props: { channel: string }): void {
+  capture('acquisition_channel_selected', props);
+}
+
 export function deepLinkOpened(props: {
   link_type: string;
   invitation_type?: string;

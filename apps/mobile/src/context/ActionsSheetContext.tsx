@@ -49,6 +49,7 @@ interface ActionsSheetContextType {
     facilityId: string;
     courtId: string;
     courtNumber: number | null;
+    price?: number;
   }) => void;
 
   /** Close the Actions bottom sheet */
@@ -97,6 +98,7 @@ interface ActionsSheetContextType {
     facilityId: string;
     courtId: string;
     courtNumber: number | null;
+    price?: number;
   } | null;
 
   /** Clear initial booking data after wizard has consumed it */
@@ -141,6 +143,7 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
     facilityId: string;
     courtId: string;
     courtNumber: number | null;
+    price?: number;
   } | null>(null);
 
   // Refetch profile when auth state changes

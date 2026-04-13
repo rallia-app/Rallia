@@ -12,7 +12,6 @@ import {
   RefreshControl,
   ScrollView,
   TouchableOpacity,
-  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -36,6 +35,7 @@ import {
   type TranslationKey,
   type TranslationOptions,
   useRequireOnboarding,
+  useOpenExternalBooking,
 } from '../../../hooks';
 import { useAuth } from '../../../hooks';
 import { useSport, useUserHomeLocation, useActionsSheet } from '../../../context';
@@ -194,6 +194,7 @@ export default function FacilitiesDirectory() {
   const showFavoriteButton = !!session?.user && !!profile?.onboarding_completed;
   const { openSheet } = useActionsSheet();
   const { guardAction } = useRequireOnboarding();
+  const { openExternalBooking } = useOpenExternalBooking();
 
   // User is fully onboarded only if authenticated AND onboarding is complete
   const isOnboarded = !!session?.user && !!profile?.onboarding_completed;
@@ -356,9 +357,7 @@ export default function FacilitiesDirectory() {
             timeLabel: slot.time ?? '',
             onSelect: (court: unknown) => {
               const c = court as CourtOption;
-              if (c.bookingUrl) {
-                Linking.openURL(c.bookingUrl);
-              }
+              openExternalBooking({ facility, slot, selectedCourt: c });
             },
             onCancel: () => {},
           },
@@ -366,13 +365,10 @@ export default function FacilitiesDirectory() {
         return;
       }
 
-      // Single court or no options - open booking URL directly
-      const bookingUrl = slot.courtOptions[0]?.bookingUrl || slot.bookingUrl;
-      if (bookingUrl) {
-        Linking.openURL(bookingUrl);
-      }
+      // Single court or no options - open booking URL with pending tracking
+      openExternalBooking({ facility, slot });
     },
-    [guardAction]
+    [guardAction, openExternalBooking]
   );
 
   // Render facility card
