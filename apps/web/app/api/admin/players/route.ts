@@ -138,7 +138,7 @@ export async function DELETE(request: NextRequest) {
               await adminDb.storage.from(bucket).remove(filePaths);
             }
           } catch (storageError) {
-            console.error(`Failed to clean up ${bucket} for ${playerId}:`, storageError);
+            console.error('Failed to clean up %s for %s:', bucket, playerId, storageError);
           }
         }
 
