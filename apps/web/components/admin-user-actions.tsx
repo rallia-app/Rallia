@@ -12,7 +12,7 @@ import {
 import { CreateBanDialog } from '@/components/create-ban-dialog';
 import { useRouter } from '@/i18n/navigation';
 import { useBans } from '@rallia/shared-hooks';
-import { Ban, Loader2, ShieldBan, UserCheck } from 'lucide-react';
+import { Ban, Loader2, ShieldBan, Trash2, UserCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
@@ -27,7 +27,9 @@ export function AdminUserActions({ userId, userName, currentStatus }: AdminUserA
   const router = useRouter();
   const { createBan } = useBans({ autoFetch: false });
 
-  const [confirmAction, setConfirmAction] = useState<'suspend' | 'reactivate' | null>(null);
+  const [confirmAction, setConfirmAction] = useState<'suspend' | 'reactivate' | 'delete' | null>(
+    null
+  );
   const [isExecuting, setIsExecuting] = useState(false);
   const [showBanDialog, setShowBanDialog] = useState(false);
 
@@ -35,6 +37,22 @@ export function AdminUserActions({ userId, userName, currentStatus }: AdminUserA
     if (!confirmAction) return;
     setIsExecuting(true);
     try {
+      if (confirmAction === 'delete') {
+        const response = await fetch('/api/admin/players', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playerIds: [userId] }),
+        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to delete player');
+        }
+        setConfirmAction(null);
+        router.push('/admin/users');
+        router.refresh();
+        return;
+      }
+
       const response = await fetch('/api/admin/players', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -73,6 +91,10 @@ export function AdminUserActions({ userId, userName, currentStatus }: AdminUserA
           <ShieldBan className="h-4 w-4 mr-2" />
           {t('ban')}
         </Button>
+        <Button variant="destructive" size="sm" onClick={() => setConfirmAction('delete')}>
+          <Trash2 className="h-4 w-4 mr-2" />
+          {t('delete')}
+        </Button>
       </div>
 
       {/* Suspend / Reactivate confirmation */}
@@ -80,12 +102,18 @@ export function AdminUserActions({ userId, userName, currentStatus }: AdminUserA
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {confirmAction === 'suspend' ? t('suspendConfirmTitle') : t('reactivateConfirmTitle')}
+              {confirmAction === 'delete'
+                ? t('deleteConfirmTitle')
+                : confirmAction === 'suspend'
+                  ? t('suspendConfirmTitle')
+                  : t('reactivateConfirmTitle')}
             </DialogTitle>
             <DialogDescription>
-              {confirmAction === 'suspend'
-                ? t('suspendConfirmDescription', { name: userName })
-                : t('reactivateConfirmDescription', { name: userName })}
+              {confirmAction === 'delete'
+                ? t('deleteConfirmDescription', { name: userName })
+                : confirmAction === 'suspend'
+                  ? t('suspendConfirmDescription', { name: userName })
+                  : t('reactivateConfirmDescription', { name: userName })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -93,14 +121,18 @@ export function AdminUserActions({ userId, userName, currentStatus }: AdminUserA
               {t('cancel')}
             </Button>
             <Button
-              variant={confirmAction === 'suspend' ? 'destructive' : 'default'}
+              variant={confirmAction === 'reactivate' ? 'default' : 'destructive'}
               onClick={handleExecute}
               disabled={isExecuting}
             >
               {isExecuting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {confirmAction === 'suspend' ? t('suspending') : t('reactivating')}
+                  {confirmAction === 'delete'
+                    ? t('deleting')
+                    : confirmAction === 'suspend'
+                      ? t('suspending')
+                      : t('reactivating')}
                 </>
               ) : (
                 t('confirm')

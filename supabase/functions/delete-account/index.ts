@@ -83,25 +83,25 @@ Deno.serve(async req => {
     // Service-role client for privileged operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     // ---- Delete storage files ----
-    try {
-      const { data: profile } = await supabase
-        .from('profile')
-        .select('profile_picture_url')
-        .eq('id', user.id)
-        .single();
-      if (profile?.profile_picture_url) {
-        // Extract the storage path from the URL
-        const url = profile.profile_picture_url;
-        const bucketPath = url.includes('/profile-pictures/')
-          ? url.split('/profile-pictures/').pop()
-          : null;
-        if (bucketPath) {
-          await supabase.storage.from('profile-pictures').remove([bucketPath]);
+    const USER_STORAGE_BUCKETS = [
+      'profile-pictures',
+      'rating-proof-images',
+      'rating-proof-documents',
+      'rating-proof-videos',
+      'feedback-screenshots',
+      'report-evidence',
+    ];
+    for (const bucket of USER_STORAGE_BUCKETS) {
+      try {
+        const { data: files } = await supabase.storage.from(bucket).list(user.id);
+        if (files && files.length > 0) {
+          const filePaths = files.map(f => `${user.id}/${f.name}`);
+          await supabase.storage.from(bucket).remove(filePaths);
         }
+      } catch (storageError) {
+        // Log but don't block deletion if storage cleanup fails
+        console.error(`Failed to clean up ${bucket}:`, storageError);
       }
-    } catch (storageError) {
-      // Log but don't block deletion if storage cleanup fails
-      console.error('Failed to clean up storage files:', storageError);
     }
     // ---- Delete user (cascades all data) ----
     const { error: deleteError } = await supabase.auth.admin.deleteUser(user.id);
