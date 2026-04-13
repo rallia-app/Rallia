@@ -4586,6 +4586,7 @@ export type Database = {
       profile: {
         Row: {
           account_status: Database["public"]["Enums"]["account_status"] | null
+          acquisition_channel: string | null
           bio: string | null
           birth_date: string | null
           created_at: string | null
@@ -4603,11 +4604,14 @@ export type Database = {
           preferred_locale: Database["public"]["Enums"]["locale_enum"] | null
           profile_picture_url: string | null
           referral_code: string | null
+          referral_invitation_type: string | null
+          referral_target_id: string | null
           referred_by: string | null
           updated_at: string | null
         }
         Insert: {
           account_status?: Database["public"]["Enums"]["account_status"] | null
+          acquisition_channel?: string | null
           bio?: string | null
           birth_date?: string | null
           created_at?: string | null
@@ -4625,11 +4629,14 @@ export type Database = {
           preferred_locale?: Database["public"]["Enums"]["locale_enum"] | null
           profile_picture_url?: string | null
           referral_code?: string | null
+          referral_invitation_type?: string | null
+          referral_target_id?: string | null
           referred_by?: string | null
           updated_at?: string | null
         }
         Update: {
           account_status?: Database["public"]["Enums"]["account_status"] | null
+          acquisition_channel?: string | null
           bio?: string | null
           birth_date?: string | null
           created_at?: string | null
@@ -4647,6 +4654,8 @@ export type Database = {
           preferred_locale?: Database["public"]["Enums"]["locale_enum"] | null
           profile_picture_url?: string | null
           referral_code?: string | null
+          referral_invitation_type?: string | null
+          referral_target_id?: string | null
           referred_by?: string | null
           updated_at?: string | null
         }
@@ -5555,10 +5564,12 @@ export type Database = {
           device_fingerprint: string
           expires_at: string
           id: string
+          invitation_type: string | null
           ip_address: string | null
           matched_at: string | null
           matched_player_id: string | null
           referral_code: string
+          target_id: string | null
           user_agent: string | null
         }
         Insert: {
@@ -5566,10 +5577,12 @@ export type Database = {
           device_fingerprint: string
           expires_at?: string
           id?: string
+          invitation_type?: string | null
           ip_address?: string | null
           matched_at?: string | null
           matched_player_id?: string | null
           referral_code: string
+          target_id?: string | null
           user_agent?: string | null
         }
         Update: {
@@ -5577,10 +5590,12 @@ export type Database = {
           device_fingerprint?: string
           expires_at?: string
           id?: string
+          invitation_type?: string | null
           ip_address?: string | null
           matched_at?: string | null
           matched_player_id?: string | null
           referral_code?: string
+          target_id?: string | null
           user_agent?: string | null
         }
         Relationships: [
@@ -5627,24 +5642,30 @@ export type Database = {
           created_at: string
           device_fingerprint: string
           id: string
+          invitation_type: string | null
           ip_address: string | null
           referral_code: string
+          target_id: string | null
           user_agent: string | null
         }
         Insert: {
           created_at?: string
           device_fingerprint: string
           id?: string
+          invitation_type?: string | null
           ip_address?: string | null
           referral_code: string
+          target_id?: string | null
           user_agent?: string | null
         }
         Update: {
           created_at?: string
           device_fingerprint?: string
           id?: string
+          invitation_type?: string | null
           ip_address?: string | null
           referral_code?: string
+          target_id?: string | null
           user_agent?: string | null
         }
         Relationships: []
@@ -6221,19 +6242,16 @@ export type Database = {
         }
         Returns: boolean
       }
-      attribute_referral:
-        | {
-            Args: { p_new_player_id: string; p_referral_code: string }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_new_player_email?: string
-              p_new_player_id: string
-              p_referral_code: string
-            }
-            Returns: Json
-          }
+      attribute_referral: {
+        Args: {
+          p_invitation_type?: string
+          p_new_player_email?: string
+          p_new_player_id: string
+          p_referral_code: string
+          p_target_id?: string
+        }
+        Returns: Json
+      }
       auto_confirm_expired_scores: { Args: never; Returns: number }
       calculate_reputation_tier: {
         Args: { min_events?: number; score: number; total_events: number }
@@ -6763,15 +6781,27 @@ export type Database = {
         }[]
       }
       get_pending_community_members: {
-        Args: { p_community_id: string; p_moderator_id?: string }
+        Args: {
+          p_community_id: string
+          p_moderator_id?: string
+          p_sport_id?: string
+        }
         Returns: {
           added_by: string
+          badge_status: string
           created_at: string
           id: string
+          player_first_name: string
           player_id: string
+          player_last_name: string
           player_name: string
           player_profile_picture: string
+          rating_label: string
+          rating_value: number
           referrer_name: string
+          reputation_score: number
+          reputation_tier: string
+          reputation_total_events: number
           request_type: Database["public"]["Enums"]["network_member_request_type"]
         }[]
       }
@@ -7455,8 +7485,10 @@ export type Database = {
       log_referral_click: {
         Args: {
           p_device_fingerprint: string
+          p_invitation_type?: string
           p_ip_address?: string
           p_referral_code: string
+          p_target_id?: string
           p_user_agent?: string
         }
         Returns: undefined
@@ -7464,8 +7496,10 @@ export type Database = {
       log_referral_fingerprint: {
         Args: {
           p_device_fingerprint: string
+          p_invitation_type?: string
           p_ip_address?: string
           p_referral_code: string
+          p_target_id?: string
           p_user_agent?: string
         }
         Returns: undefined
@@ -7474,6 +7508,7 @@ export type Database = {
         Args: { p_admin_id: string; p_alert_id: string }
         Returns: boolean
       }
+      mark_all_alerts_read: { Args: { p_admin_id: string }; Returns: number }
       mark_check_in_reminder_sent: {
         Args: { p_participant_ids: string[] }
         Returns: number
@@ -7508,7 +7543,7 @@ export type Database = {
           p_ip_address: string
           p_player_id: string
         }
-        Returns: string
+        Returns: Json
       }
       parse_match_duration_to_minutes: {
         Args: { p_duration: string }
@@ -7620,6 +7655,7 @@ export type Database = {
           p_max_distance_km?: number
           p_membership_required?: boolean
           p_offset?: number
+          p_player_id?: string
           p_search_query?: string
           p_sport_ids: string[]
           p_surface_types?: string[]
@@ -7636,6 +7672,7 @@ export type Database = {
           external_provider_id: string
           facility_type: string
           id: string
+          is_favorite: boolean
           is_first_come_first_serve: boolean
           latitude: number
           longitude: number

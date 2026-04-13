@@ -77,7 +77,8 @@ export const facilityKeys = {
     courtType: 'all' | CourtTypeFilter,
     lighting: LightingFilter,
     membership: MembershipFilter,
-    userGender?: string | null
+    userGender?: string | null,
+    playerId?: string | null
   ) =>
     [
       ...facilityKeys.search(),
@@ -92,6 +93,7 @@ export const facilityKeys = {
       lighting,
       membership,
       userGender,
+      playerId,
     ] as const,
 };
 
@@ -128,6 +130,8 @@ interface UseFacilitySearchOptions {
   filters?: FacilityFilters;
   /** The viewing user's gender for match eligibility filtering */
   userGender?: string | null;
+  /** Player ID for favorite-first sorting */
+  playerId?: string | null;
   /** Debounce delay in milliseconds (default: 300) */
   debounceMs?: number;
   /** Enable/disable the query */
@@ -167,6 +171,7 @@ export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilit
     searchQuery,
     filters = DEFAULT_FACILITY_FILTERS,
     userGender,
+    playerId,
     debounceMs = 300,
     enabled = true,
   } = options;
@@ -192,7 +197,8 @@ export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilit
       filters.courtType,
       filters.lighting,
       filters.membership,
-      userGender
+      userGender,
+      playerId
     ),
     queryFn: async ({ pageParam }) => {
       if (!sportIds?.length || latitude === undefined || longitude === undefined) {
@@ -219,6 +225,7 @@ export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilit
         hasLighting,
         membershipRequired,
         userGender,
+        playerId,
         offset: (pageParam as number) ?? 0,
       });
     },
