@@ -88,7 +88,8 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
   if (invitationType === 'match' && query.id) {
     const match = await getMatchDetails(query.id);
-    const sportName = match?.sport?.name || 'a game';
+    const rawSport = match?.sport?.name;
+    const sportName = rawSport ? rawSport.charAt(0).toUpperCase() + rawSport.slice(1) : 'a game';
     title = inviter?.first_name
       ? t('matchInviteTitle', { name: inviter.first_name, sport: sportName })
       : t('matchInviteTitleGeneric', { sport: sportName });
@@ -105,7 +106,8 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   return {
     title,
     description: t('description'),
-    openGraph: { title, description: t('description') },
+    openGraph: { title, description: t('description'), type: 'website' },
+    twitter: { card: 'summary_large_image', title, description: t('description') },
   };
 }
 
@@ -166,7 +168,8 @@ export default async function InvitePage({ params, searchParams }: Props) {
   if (invitationType === 'match' && targetId) {
     const match = await getMatchDetails(targetId);
     if (match) {
-      const sportName = match.sport?.name || 'a game';
+      const rawSport = match.sport?.name;
+      const sportName = rawSport ? rawSport.charAt(0).toUpperCase() + rawSport.slice(1) : 'a game';
       const [year, month, day] = (match.match_date as string).split('-').map(Number);
       const dateObj = new Date(year, month - 1, day);
       const matchDate = dateObj.toLocaleDateString(locale, {

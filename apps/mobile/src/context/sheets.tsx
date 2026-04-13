@@ -33,6 +33,7 @@ import { ReportIssueActionSheet } from '../features/matches/components/feedback-
 // Facilities components
 import { ExternalBookingActionSheet } from '../features/facilities/components/ExternalBookingSheet';
 import { CourtBookingActionSheet } from '../features/facilities/components/CourtBookingSheet';
+import { BookingConfirmationActionSheet } from '../features/facilities/components/BookingConfirmationSheet';
 import { ReportFacilityActionSheet } from '../features/facilities/components/ReportFacilitySheet';
 // Booking components
 import { BookingDetailActionSheet } from '../features/bookings/components/BookingDetailSheet';
@@ -318,6 +319,15 @@ declare module 'react-native-actions-sheet' {
       payload: {
         facility: unknown;
         slot: unknown;
+      };
+    }>;
+    'booking-confirmation': SheetDefinition<{
+      payload: {
+        facilityName: string;
+        slotTime?: string;
+        slotDate?: string;
+        onConfirm?: () => void;
+        onDecline?: () => void;
       };
     }>;
     'court-booking': SheetDefinition<{
@@ -702,6 +712,7 @@ export const Sheets = () => {
         'court-selection': CourtSelectionActionSheet,
         'report-issue': ReportIssueActionSheet,
         'external-booking': ExternalBookingActionSheet,
+        'booking-confirmation': BookingConfirmationActionSheet,
         'court-booking': CourtBookingActionSheet,
         'report-facility': ReportFacilityActionSheet,
         'image-picker': ImagePickerActionSheet,
