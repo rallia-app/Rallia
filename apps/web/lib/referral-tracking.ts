@@ -35,7 +35,7 @@ export async function logReferralClick(
     p_ip_address: ip,
     p_user_agent: userAgent,
     p_invitation_type: invitationType,
-    p_target_id: targetId ?? null,
+    p_target_id: targetId,
   });
 }
 
@@ -54,7 +54,7 @@ export async function logReferralFingerprint(
     p_ip_address: ip,
     p_user_agent: userAgent,
     p_invitation_type: invitationType,
-    p_target_id: targetId ?? null,
+    p_target_id: targetId,
   });
 }
 
