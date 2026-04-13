@@ -129,12 +129,12 @@ function getAppStoreBadgesHtml(siteUrl: string, locale: string): string {
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                         <tr>
                           <td style="padding: 0 6px 0 0;">
-                            <a href="https://apps.apple.com/app/rallia/idXXXXXXXXXX" style="text-decoration: none;">
+                            <a href="https://apps.apple.com/app/rallia/id6760482014" style="text-decoration: none;">
                               <img src="${siteUrl}/app-store-badge.svg" alt="${appStoreAlt}" width="120" height="40" style="display: block; border: 0;" />
                             </a>
                           </td>
                           <td style="padding: 0 0 0 6px;">
-                            <a href="https://play.google.com/store/apps/details?id=com.rallia.app" style="text-decoration: none;">
+                            <a href="https://play.google.com/store/apps/details?id=com.mathisl971.ralliaapp" style="text-decoration: none;">
                               <img src="${siteUrl}/google-play-badge.svg" alt="${googlePlayAlt}" width="135" height="40" style="display: block; border: 0;" />
                             </a>
                           </td>

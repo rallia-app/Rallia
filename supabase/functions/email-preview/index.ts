@@ -273,12 +273,12 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                         <tr>
                           <td style="padding: 0 6px 0 0;">
-                            <a href="https://apps.apple.com/app/rallia/idXXXXXXXXXX" style="text-decoration: none;">
+                            <a href="https://apps.apple.com/app/rallia/id6760482014" style="text-decoration: none;">
                               <img src="{{ .SiteURL }}/app-store-badge.svg" alt="{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Télécharger dans l'App Store{{ else }}Download on the App Store{{ end }}" width="120" height="40" style="display: block; border: 0;" />
                             </a>
                           </td>
                           <td style="padding: 0 0 0 6px;">
-                            <a href="https://play.google.com/store/apps/details?id=com.rallia.app" style="text-decoration: none;">
+                            <a href="https://play.google.com/store/apps/details?id=com.mathisl971.ralliaapp" style="text-decoration: none;">
                               <img src="{{ .SiteURL }}/google-play-badge.svg" alt="{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Disponible sur Google Play{{ else }}Get it on Google Play{{ end }}" width="135" height="40" style="display: block; border: 0;" />
                             </a>
                           </td>
@@ -589,12 +589,12 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                         <tr>
                           <td style="padding: 0 6px 0 0;">
-                            <a href="https://apps.apple.com/app/rallia/idXXXXXXXXXX" style="text-decoration: none;">
+                            <a href="https://apps.apple.com/app/rallia/id6760482014" style="text-decoration: none;">
                               <img src="{{ .SiteURL }}/app-store-badge.svg" alt="{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Télécharger dans l'App Store{{ else }}Download on the App Store{{ end }}" width="120" height="40" style="display: block; border: 0;" />
                             </a>
                           </td>
                           <td style="padding: 0 0 0 6px;">
-                            <a href="https://play.google.com/store/apps/details?id=com.rallia.app" style="text-decoration: none;">
+                            <a href="https://play.google.com/store/apps/details?id=com.mathisl971.ralliaapp" style="text-decoration: none;">
                               <img src="{{ .SiteURL }}/google-play-badge.svg" alt="{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Disponible sur Google Play{{ else }}Get it on Google Play{{ end }}" width="135" height="40" style="display: block; border: 0;" />
                             </a>
                           </td>

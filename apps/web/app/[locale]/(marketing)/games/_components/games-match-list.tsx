@@ -181,11 +181,12 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
   const handleJoin = (matchId: string) => {
     const ua = navigator.userAgent.toLowerCase();
     if (/iphone|ipad|ipod/.test(ua)) {
-      window.location.href = 'https://apps.apple.com/app/rallia/idXXXXXXXXXX';
+      window.location.href = 'https://apps.apple.com/app/rallia/id6760482014';
       return;
     }
     if (/android/.test(ua)) {
-      window.location.href = 'https://play.google.com/store/apps/details?id=com.rallia.app';
+      window.location.href =
+        'https://play.google.com/store/apps/details?id=com.mathisl971.ralliaapp';
       return;
     }
     // Desktop: show QR code dialog

@@ -9,8 +9,21 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 
 type InvitationType = 'referral' | 'match' | 'group' | 'community';
 
+/**
+ * Extract stable device traits from any iOS user agent string.
+ * Both Safari and WKWebView include "CPU iPhone OS XX_X like Mac OS X",
+ * so we use that as the stable device signature for fingerprinting.
+ * Falls back to the full user agent if the pattern doesn't match.
+ */
+function extractStableDeviceTraits(userAgent: string): string {
+  // Matches e.g. "iPhone; CPU iPhone OS 19_0 like Mac OS X"
+  const match = userAgent.match(/(iPhone|iPad|iPod);[^)]+like Mac OS X/);
+  return match ? match[0] : userAgent;
+}
+
 export function computeFingerprint(ip: string, userAgent: string): string {
-  return createHash('sha256').update(`${ip}:${userAgent}`).digest('hex');
+  const traits = extractStableDeviceTraits(userAgent);
+  return createHash('sha256').update(`${ip}:${traits}`).digest('hex');
 }
 
 export function detectPlatform(userAgent: string): 'ios' | 'android' | null {
@@ -59,7 +72,7 @@ export async function logReferralFingerprint(
 }
 
 const APP_STORE_URL = 'https://apps.apple.com/app/rallia/id6760482014';
-const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.rallia.app';
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.mathisl971.ralliaapp';
 
 export { APP_STORE_URL, PLAY_STORE_URL };
 

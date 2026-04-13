@@ -10,8 +10,8 @@ import {
 import { QRCodeSVG } from 'qrcode.react';
 import { useLocale, useTranslations } from 'next-intl';
 
-const APP_STORE_URL = 'https://apps.apple.com/app/rallia/idXXXXXXXXXX';
-const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.rallia.app';
+const APP_STORE_URL = 'https://apps.apple.com/app/rallia/id6760482014';
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.mathisl971.ralliaapp';
 
 interface JoinMatchDialogProps {
   matchId: string | null;
