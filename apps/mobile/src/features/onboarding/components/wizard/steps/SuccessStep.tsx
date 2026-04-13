@@ -1,15 +1,20 @@
 /**
  * SuccessStep Component
  *
- * Final success screen of onboarding - animated celebration.
+ * Final success screen of onboarding - animated celebration with share invite.
  * Shows after completing all onboarding steps.
- * Automatically selects the initial sport:
- * - If the current sport is still selected, keep it
- * - Otherwise, switch to the first sport from the selection
+ * Automatically selects the initial sport, then prompts user to share referral link.
  */
 
-import React, { useEffect, useRef } from 'react';
-import { StyleSheet, TouchableOpacity, ScrollView, View } from 'react-native';
+import React, { useEffect, useRef, useCallback } from 'react';
+import {
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  View,
+  Share,
+  ActivityIndicator,
+} from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -21,6 +26,9 @@ import LottieView from 'lottie-react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { useReferral } from '@rallia/shared-hooks';
+import { lightHaptic, successHaptic } from '@rallia/shared-utils';
+import * as Analytics from '../../../../../services/analytics';
 
 const BASE_WHITE = '#ffffff';
 import type { TranslationKey } from '@rallia/shared-translations';
@@ -53,6 +61,7 @@ interface SuccessStepProps {
   selectedSports: Sport[];
   currentSport: Sport | null;
   onSelectInitialSport: (sport: Sport) => void | Promise<void>;
+  playerId?: string | null;
 }
 
 export const SuccessStep: React.FC<SuccessStepProps> = ({
@@ -62,9 +71,13 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
   selectedSports,
   currentSport,
   onSelectInitialSport,
+  playerId,
 }) => {
   // Track if we've already auto-selected to prevent repeated calls
   const hasAutoSelected = useRef(false);
+
+  // Referral link for sharing
+  const { referralLink, codeLoading: referralLoading } = useReferral(playerId ?? undefined);
 
   // Auto-select initial sport based on current selection
   useEffect(() => {
@@ -74,10 +87,8 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
     const currentStillSelected = currentSport && selectedSports.some(s => s.id === currentSport.id);
 
     if (currentStillSelected) {
-      // Keep the current sport
       onSelectInitialSport(currentSport);
     } else {
-      // Switch to the first sport from the selection
       onSelectInitialSport(selectedSports[0]);
     }
 
@@ -88,8 +99,9 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
   const iconScale = useSharedValue(0);
   const iconOpacity = useSharedValue(0);
   const textOpacity = useSharedValue(0);
-  const buttonOpacity = useSharedValue(0);
-  const buttonTranslateY = useSharedValue(20);
+  const shareCardOpacity = useSharedValue(0);
+  const shareCardTranslateY = useSharedValue(20);
+  const skipOpacity = useSharedValue(0);
 
   // Trigger animations on mount
   useEffect(() => {
@@ -100,10 +112,13 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
     // Text animation - fade in
     textOpacity.value = withDelay(500, withTiming(1, { duration: 400 }));
 
-    // Button animation - slide up and fade in
-    buttonOpacity.value = withDelay(800, withTiming(1, { duration: 400 }));
-    buttonTranslateY.value = withDelay(800, withSpring(0, { damping: 40, stiffness: 300 }));
-  }, [iconScale, iconOpacity, textOpacity, buttonOpacity, buttonTranslateY]);
+    // Share card animation - slide up and fade in
+    shareCardOpacity.value = withDelay(900, withTiming(1, { duration: 400 }));
+    shareCardTranslateY.value = withDelay(900, withSpring(0, { damping: 40, stiffness: 300 }));
+
+    // Skip link animation - fade in last
+    skipOpacity.value = withDelay(1200, withTiming(1, { duration: 400 }));
+  }, [iconScale, iconOpacity, textOpacity, shareCardOpacity, shareCardTranslateY, skipOpacity]);
 
   const iconAnimatedStyle = useAnimatedStyle(() => ({
     opacity: iconOpacity.value,
@@ -114,10 +129,45 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
     opacity: textOpacity.value,
   }));
 
-  const buttonAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: buttonOpacity.value,
-    transform: [{ translateY: buttonTranslateY.value }],
+  const shareCardAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: shareCardOpacity.value,
+    transform: [{ translateY: shareCardTranslateY.value }],
   }));
+
+  const skipAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: skipOpacity.value,
+  }));
+
+  const handleShare = useCallback(async () => {
+    if (!referralLink) return;
+    try {
+      lightHaptic();
+      const sportName =
+        currentSport?.display_name?.toLowerCase() ??
+        selectedSports[0]?.display_name?.toLowerCase() ??
+        'sports';
+      const result = await Share.share({
+        message: t('referral.shareMessage' as TranslationKey)
+          .replace('{sport}', sportName)
+          .replace('{link}', referralLink),
+        title: t('referral.shareTitle' as TranslationKey),
+      });
+      if (result.action === Share.sharedAction) {
+        Analytics.invitationLinkGenerated({
+          invitation_type: 'onboarding_referral',
+          channel: 'share_sheet',
+        });
+        successHaptic();
+      }
+    } catch {
+      // User cancelled share — no-op
+    }
+  }, [referralLink, t, currentSport, selectedSports]);
+
+  const handleSkip = useCallback(() => {
+    Analytics.onboardingShareSkipped();
+    onComplete();
+  }, [onComplete]);
 
   return (
     <View style={styles.wrapper}>
@@ -159,15 +209,53 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
           </Text>
         </Animated.View>
 
-        {/* Continue Button */}
-        <Animated.View style={[styles.buttonContainer, buttonAnimatedStyle]}>
-          <TouchableOpacity
-            style={[styles.continueButton, { backgroundColor: colors.buttonActive }]}
-            onPress={onComplete}
-            activeOpacity={0.8}
+        {/* Invite Card */}
+        <Animated.View style={[styles.inviteCardWrapper, shareCardAnimatedStyle]}>
+          <View
+            style={[
+              styles.inviteCard,
+              { backgroundColor: colors.cardBackground, borderColor: colors.border },
+            ]}
           >
-            <Text size="base" weight="semibold" color={colors.buttonTextActive}>
-              {t('onboarding.success.getStarted')}
+            <Ionicons name="people-outline" size={28} color={colors.buttonActive} />
+            <Text size="base" weight="semibold" color={colors.text} style={styles.inviteTitle}>
+              {t('onboarding.success.inviteTitle')}
+            </Text>
+            <Text size="sm" color={colors.textMuted} style={styles.inviteSubtitle}>
+              {t('onboarding.success.inviteSubtitle')}
+            </Text>
+
+            {/* Primary CTA: Share button */}
+            <TouchableOpacity
+              style={[styles.shareButton, { backgroundColor: colors.buttonActive }]}
+              onPress={handleShare}
+              activeOpacity={0.8}
+              disabled={referralLoading || !referralLink}
+            >
+              {referralLoading ? (
+                <ActivityIndicator size="small" color={BASE_WHITE} />
+              ) : (
+                <>
+                  <Ionicons name="share-outline" size={20} color={colors.buttonTextActive} />
+                  <Text
+                    size="base"
+                    weight="semibold"
+                    color={colors.buttonTextActive}
+                    style={styles.shareButtonText}
+                  >
+                    {t('onboarding.success.shareButton')}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+
+        {/* Secondary: Maybe later */}
+        <Animated.View style={skipAnimatedStyle}>
+          <TouchableOpacity onPress={handleSkip} activeOpacity={0.6} style={styles.skipButton}>
+            <Text size="sm" color={colors.textMuted} style={styles.maybeLater}>
+              {t('onboarding.success.maybeLater')}
             </Text>
           </TouchableOpacity>
         </Animated.View>
@@ -209,13 +297,42 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacingPixels[6],
   },
-  buttonContainer: {
+  inviteCardWrapper: {
     width: '100%',
   },
-  continueButton: {
+  inviteCard: {
+    width: '100%',
+    alignItems: 'center',
+    padding: spacingPixels[5],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+    marginBottom: spacingPixels[4],
+  },
+  inviteTitle: {
+    marginTop: spacingPixels[2],
+    textAlign: 'center',
+  },
+  inviteSubtitle: {
+    textAlign: 'center',
+    marginTop: spacingPixels[1],
+    marginBottom: spacingPixels[4],
+  },
+  shareButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: spacingPixels[4],
     borderRadius: radiusPixels.lg,
-    alignItems: 'center',
+    width: '100%',
+  },
+  shareButtonText: {
+    marginLeft: spacingPixels[2],
+  },
+  skipButton: {
+    paddingVertical: spacingPixels[3],
+  },
+  maybeLater: {
+    textAlign: 'center',
   },
 });
 

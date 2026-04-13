@@ -18,14 +18,18 @@ import { spacingPixels, primary, secondary, neutral } from '@rallia/design-syste
 import { mediumHaptic } from '@rallia/shared-utils';
 import { useThemeStyles } from '../../hooks';
 import { useOverlay, useSport, useLocationMode } from '../../context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SportStep, type Sport } from './SportStep';
 import { PostalCodeStep } from './PostalCodeStep';
 import { LocationPermissionStep } from './LocationPermissionStep';
+import { DiscoveryStep } from './DiscoveryStep';
 import * as Analytics from '../../services/analytics';
+
+const ACQUISITION_CHANNEL_KEY = '@rallia/acquisition-channel';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-type WizardStep = 1 | 2 | 3;
+type WizardStep = 1 | 2 | 3 | 4;
 
 export function PreOnboardingScreen() {
   const insets = useSafeAreaInsets();
@@ -160,13 +164,22 @@ export function PreOnboardingScreen() {
 
   // Step 3: Location permission complete (or skipped)
   const handleLocationContinue = useCallback(
-    async (_locationEnabled: boolean) => {
+    (_locationEnabled: boolean) => {
       mediumHaptic();
+      animateToStep(4, 'forward');
+    },
+    [animateToStep]
+  );
+
+  // Step 4: Discovery channel selected (or skipped)
+  const handleDiscoveryContinue = useCallback(
+    async (channel: string | null) => {
+      if (channel) {
+        await AsyncStorage.setItem(ACQUISITION_CHANNEL_KEY, channel);
+        Analytics.acquisitionChannelSelected({ channel });
+      }
       Analytics.preOnboardingCompleted({ sport_count: selectedSports.length });
-      // Complete the pre-onboarding flow
       onSportSelectionComplete(selectedSports);
-      // Set location mode to home so effective location uses the home location
-      // that was just collected in step 2
       await setLocationMode('home');
     },
     [selectedSports, onSportSelectionComplete, setLocationMode]
@@ -179,6 +192,8 @@ export function PreOnboardingScreen() {
       animateToStep(1, 'back');
     } else if (currentStep === 3) {
       animateToStep(2, 'back');
+    } else if (currentStep === 4) {
+      animateToStep(3, 'back');
     }
   }, [currentStep, animateToStep]);
 
@@ -244,7 +259,7 @@ export function PreOnboardingScreen() {
 
       {/* Progress Indicator & Back Button */}
       <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
-        {currentStep > 1 && currentStep < 3 ? (
+        {currentStep > 1 ? (
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons
               name="chevron-back-outline"
@@ -257,7 +272,7 @@ export function PreOnboardingScreen() {
         )}
 
         <View style={styles.progressContainer}>
-          {[1, 2, 3].map(step => (
+          {[1, 2, 3, 4].map(step => (
             <View
               key={step}
               style={[
@@ -296,6 +311,9 @@ export function PreOnboardingScreen() {
             onContinue={handleLocationContinue}
             isActive={currentStep === 3}
           />
+        )}
+        {currentStep === 4 && (
+          <DiscoveryStep onContinue={handleDiscoveryContinue} isActive={currentStep === 4} />
         )}
       </Animated.View>
     </View>

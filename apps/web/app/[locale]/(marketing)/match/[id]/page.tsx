@@ -33,15 +33,29 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: t('notFound') };
   }
 
-  const sportName = match.sport?.name ?? '';
+  const rawSport = match.sport?.name ?? '';
+  const sportName = rawSport.charAt(0).toUpperCase() + rawSport.slice(1);
   const { facility } = match;
   const location = facility ? `${facility.name}, ${facility.city}` : '';
-  const date = new Date(`${match.match_date}T${match.start_time}`).toLocaleDateString(locale, {
-    dateStyle: 'long',
+  const dateObj = new Date(`${match.match_date}T${match.start_time}`);
+  const date = dateObj.toLocaleDateString(locale, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
   });
+  const time = dateObj.toLocaleTimeString(locale, { timeStyle: 'short' });
 
-  const title = `${sportName} — ${date}`;
-  const description = `${sportName} ${t('at')} ${location} — ${date}`;
+  const total = match.format === 'doubles' ? 4 : 2;
+  const joinedCount = match.participants?.filter(p => p.status === 'joined').length ?? 0;
+  const spotsLeft = Math.max(0, total - joinedCount);
+
+  const title = t('ogTitle', { sport: sportName });
+
+  const descParts = [`📅 ${date} ${t('at')} ${time}`];
+  if (location) descParts.push(`📍 ${location}`);
+  if (match.format) descParts.push(t(`format.${match.format}`));
+  descParts.push(spotsLeft === 0 ? t('ogMatchFull') : t('ogSpotsLeft', { count: spotsLeft }));
+  const description = descParts.join(' · ');
 
   return {
     title,

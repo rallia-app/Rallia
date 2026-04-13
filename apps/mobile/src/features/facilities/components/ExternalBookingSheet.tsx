@@ -6,16 +6,15 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, Linking } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
 import type { FormattedSlot, CourtOption } from '@rallia/shared-hooks';
 import type { FacilityWithDetails } from '@rallia/shared-services';
-import { Logger } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../../hooks';
+import { useThemeStyles, useTranslation, useOpenExternalBooking } from '../../../hooks';
 import { useSport } from '../../../context';
 import { SportIcon } from '../../../components/SportIcon';
 
@@ -27,6 +26,7 @@ export function ExternalBookingActionSheet({ payload }: SheetProps<'external-boo
   const { t } = useTranslation();
   const toast = useToast();
   const { selectedSport } = useSport();
+  const { openExternalBooking } = useOpenExternalBooking();
 
   // Court selection state
   const courtOptions = useMemo(() => slot?.courtOptions ?? [], [slot?.courtOptions]);
@@ -67,27 +67,29 @@ export function ExternalBookingActionSheet({ payload }: SheetProps<'external-boo
 
     mediumHaptic();
 
-    Logger.logUserAction('external_booking_opened', {
-      facilityId: facility.id,
-      facilityName: facility.name,
-      slotTime: slot.time,
+    const success = await openExternalBooking({
+      facility,
+      slot,
+      selectedCourt: selectedCourt ?? undefined,
       bookingUrl,
-      courtName: selectedCourt?.courtName,
     });
 
-    try {
-      const canOpen = await Linking.canOpenURL(bookingUrl);
-      if (canOpen) {
-        await Linking.openURL(bookingUrl);
-        handleClose();
-      } else {
-        toast.error('Unable to open booking site');
-      }
-    } catch (error) {
-      Logger.error('Failed to open external booking URL', error as Error);
-      toast.error('Failed to open booking site');
+    if (success) {
+      handleClose();
+    } else {
+      toast.error('Unable to open booking site');
     }
-  }, [slot, facility, bookingUrl, selectedCourt, hasMultipleCourts, handleClose, toast, t]);
+  }, [
+    slot,
+    facility,
+    bookingUrl,
+    selectedCourt,
+    hasMultipleCourts,
+    handleClose,
+    toast,
+    t,
+    openExternalBooking,
+  ]);
 
   // Format date for display
   const formattedDate = useMemo(() => {

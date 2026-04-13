@@ -1479,7 +1479,12 @@
     "success": {
       "title": "Welcome to Rallia!",
       "subtitle": "Your account was created successfully.",
-      "getStarted": "Get Started"
+      "getStarted": "Get Started",
+      "inviteTitle": "Invite your friends!",
+      "inviteSubtitle": "Rallia is better with friends. Share your personal invite link!",
+      "shareButton": "Share with Friends",
+      "maybeLater": "Maybe later",
+      "linkCopied": "Link copied!"
     },
     "complete": "Complete",
     "locationStep": {
@@ -3186,7 +3191,7 @@
     "generatingCode": "Generating your referral code...",
     "shareInvite": "Share Invite",
     "shareTitle": "Join me on Rallia!",
-    "shareMessage": "Hey! Found this app called Rallia for finding {sport} matches nearby. Thought of you! {link}",
+    "shareMessage": "Hey! Found this app called Rallia to find players and organize {sport} games. Thought of you!\n\n{link}",
     "yourStats": "Your Referral Stats",
     "clicked": "Clicked",
     "signedUp": "Signed Up",
@@ -6578,7 +6583,7 @@
     "step": "Step {current} of {total}",
     "postalCode": {
       "title": "Where do you play?",
-      "subtitle": "Your postal code helps us find matches and players in your area. No more scrolling through games across the country!",
+      "subtitle": "Help us find matches and players near you.",
       "whyNeeded": "We use this to show you matches you can actually get to",
       "placeholder": "Enter your postal code",
       "placeholderCA": "e.g., H2X 1Y4",
@@ -6593,7 +6598,7 @@
         "item3": "Get notified about games nearby",
         "findPlayers": {
           "title": "Find players near you",
-          "description": "Match with players in your area who are at your level"
+          "description": "Connect with local players at your level"
         },
         "discoverCourts": {
           "title": "Discover local courts",
@@ -6601,7 +6606,7 @@
         },
         "joinEvents": {
           "title": "Never miss a game",
-          "description": "Get notified about matches in your neighborhood"
+          "description": "Get alerts about nearby matches"
         }
       },
       "privacy": "We never share your exact address",
@@ -6635,6 +6640,19 @@
       "enable": "Enable Precise Location",
       "privacyNote": "Your location stays on your device and is only used to calculate distances. We never track or store your movements.",
       "settingsHint": "You can change this anytime in your device Settings."
+    },
+    "discovery": {
+      "title": "How did you hear about us?",
+      "subtitle": "This helps us improve Rallia for players like you.",
+      "options": {
+        "friend": "Friend or teammate",
+        "social": "Social media",
+        "appStore": "App Store / Google Play",
+        "event": "Event or tournament",
+        "search": "Web search",
+        "other": "Other"
+      },
+      "skip": "Skip"
     }
   },
   "reputation": {
@@ -7640,6 +7658,15 @@
       "description": "This court is booked through an external provider.",
       "openSite": "Open Booking Site",
       "instructions": "Complete your booking on the facility's website."
+    },
+    "confirmation": {
+      "title": "Did you book?",
+      "subtitle": "Create a game and find partners!",
+      "perkVisibility": "Make it public or keep it private — you're in control",
+      "perkApproval": "With request to join, you approve every player",
+      "perkInvite": "Invite your partners right after — even if they're not on Rallia yet",
+      "confirm": "Yes, create a game",
+      "decline": "Maybe next time"
     }
   },
   "tour": {
@@ -8139,6 +8166,9 @@
     "downloadDescription": "Download Rallia to join this match and find players near you.",
     "appStore": "Download on the App Store",
     "googlePlay": "Get it on Google Play",
+    "ogTitle": "Join a {sport} match on Rallia",
+    "ogSpotsLeft": "{count, plural, one {1 spot left} other {# spots left}}",
+    "ogMatchFull": "Match full",
     "format": {
       "singles": "Singles",
       "doubles": "Doubles"

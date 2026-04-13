@@ -96,6 +96,7 @@ import {
   LocaleProvider,
   useLocale,
   ActionsSheetProvider,
+  PendingExternalBookingProvider,
   SportProvider,
   MatchDetailSheetProvider,
   useMatchDetailSheet,
@@ -657,24 +658,26 @@ function App() {
                             <AuthProvider>
                               <AuthenticatedProviders>
                                 <ActionsSheetProvider>
-                                  <MatchDetailSheetProvider>
-                                    <PlayerInviteSheetProvider>
-                                      <FeedbackSheetProvider>
-                                        <FeedbackReportSheetProvider>
-                                          <StripeProvider
-                                            publishableKey={
-                                              process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
-                                            }
-                                            merchantIdentifier="merchant.com.rallia"
-                                          >
-                                            <BottomSheetModalProvider>
-                                              <AppContent />
-                                            </BottomSheetModalProvider>
-                                          </StripeProvider>
-                                        </FeedbackReportSheetProvider>
-                                      </FeedbackSheetProvider>
-                                    </PlayerInviteSheetProvider>
-                                  </MatchDetailSheetProvider>
+                                  <PendingExternalBookingProvider>
+                                    <MatchDetailSheetProvider>
+                                      <PlayerInviteSheetProvider>
+                                        <FeedbackSheetProvider>
+                                          <FeedbackReportSheetProvider>
+                                            <StripeProvider
+                                              publishableKey={
+                                                process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
+                                              }
+                                              merchantIdentifier="merchant.com.rallia"
+                                            >
+                                              <BottomSheetModalProvider>
+                                                <AppContent />
+                                              </BottomSheetModalProvider>
+                                            </StripeProvider>
+                                          </FeedbackReportSheetProvider>
+                                        </FeedbackSheetProvider>
+                                      </PlayerInviteSheetProvider>
+                                    </MatchDetailSheetProvider>
+                                  </PendingExternalBookingProvider>
                                 </ActionsSheetProvider>
                               </AuthenticatedProviders>
                             </AuthProvider>
