@@ -15,7 +15,13 @@ import { SheetManager } from 'react-native-actions-sheet';
 import { useAppNavigation } from '../navigation/hooks';
 import { Text, Skeleton, SkeletonAvatar, useToast } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
-import { useProfile, usePlayer, usePlayerReputation } from '@rallia/shared-hooks';
+import {
+  useProfile,
+  usePlayer,
+  usePlayerReputation,
+  useProfileCompleteness,
+} from '@rallia/shared-hooks';
+import type { CompletenessItem } from '@rallia/shared-hooks';
 import { replaceImage } from '../services/imageUpload';
 import {
   useImagePicker,
@@ -45,6 +51,7 @@ import RatingBadge from '../components/RatingBadge';
 import ReputationBadge from '../components/ReputationBadge';
 import CovetedBadge from '../components/CovetedBadge';
 import SportIcon from '../components/SportIcon';
+import ProfileCompletionChecklist from '../features/profile/components/ProfileCompletionChecklist';
 
 interface SportWithRating extends Sport {
   isActive: boolean;
@@ -96,6 +103,9 @@ const UserProfile = () => {
   } = usePlayerReputation(player?.id);
   const { userSports, refetch: refetchSportContext } = useSport();
   const loadingCore = profileLoading || playerLoading;
+
+  // Profile completeness
+  const profileCompleteness = useProfileCompleteness();
 
   // Theme-aware skeleton colors (aligned with FacilitiesDirectory for consistent, sleek loading UI)
   const skeletonBg = isDark ? '#262626' : '#E1E9EE';
@@ -285,7 +295,10 @@ const UserProfile = () => {
   useFocusEffect(
     useCallback(() => {
       refreshReferenceRequestsCount();
-    }, [refreshReferenceRequestsCount])
+      // Refresh completeness when returning from SportProfile (e.g. after
+      // editing favorite facilities, rating, or play style)
+      profileCompleteness.refetch();
+    }, [refreshReferenceRequestsCount, profileCompleteness.refetch])
   );
 
   // Upload profile picture when a new image is selected
@@ -332,6 +345,9 @@ const UserProfile = () => {
       if (updateResult.error) throw updateResult.error;
 
       toast.success(t('profile.profilePictureUpdated'));
+
+      // Refresh profile context so completeness checklist updates
+      refetchProfile();
     } catch (error) {
       Logger.error('Failed to upload profile picture', error as Error, { userId: profile?.id });
       toast.error(getNetworkErrorMessage(error));
@@ -666,11 +682,110 @@ const UserProfile = () => {
       SheetManager.hide('player-availabilities');
 
       toast.success(t('alerts.availabilitiesUpdated'));
+
+      // Refresh completeness so the checklist reflects the new availability count
+      profileCompleteness.refetch();
     } catch (error) {
       Logger.error('Failed to save availabilities', error as Error, { playerId: player?.id });
       toast.error(getNetworkErrorMessage(error));
     }
   };
+
+  // Handle completeness checklist item actions
+  const handleCompletenessAction = useCallback(
+    (item: CompletenessItem) => {
+      void lightHaptic();
+      if (item.actionType === 'image_picker') {
+        openPicker();
+        return;
+      }
+      if (item.actionType === 'navigate' && item.actionNavigate) {
+        (navigation.navigate as (...args: unknown[]) => void)(
+          item.actionNavigate,
+          item.actionPayload
+        );
+        return;
+      }
+      if (item.actionType === 'sheet' && item.actionSheet) {
+        const sheet = item.actionSheet;
+        if (sheet === 'personal-information') {
+          SheetManager.show('personal-information', {
+            payload: {
+              mode: 'edit',
+              initialData: {
+                firstName: profile?.first_name || '',
+                lastName: profile?.last_name || '',
+                username: profile?.display_name || '',
+                email: profile?.email || '',
+                dateOfBirth: profile?.birth_date || '',
+                gender: player?.gender || '',
+                phoneNumber: profile?.phone || '',
+                profilePictureUrl: profile?.profile_picture_url || undefined,
+              },
+              onSave: () => {
+                refetchProfile();
+                refetchPlayer();
+              },
+            },
+          });
+        } else if (sheet === 'player-information') {
+          SheetManager.show('player-information', {
+            payload: {
+              initialData: {
+                username: profile?.display_name || '',
+                bio: profile?.bio || '',
+                preferredPlayingHand: player?.playing_hand || '',
+                maximumTravelDistance: player?.max_travel_distance || 15,
+              },
+              onSave: () => {
+                refetchProfile();
+                refetchPlayer();
+              },
+            },
+          });
+        } else if (sheet === 'player-location') {
+          SheetManager.show('player-location', {
+            payload: {
+              initialData: {
+                postalCode: player?.postal_code || '',
+                address: player?.address || '',
+                city: player?.city || '',
+                province: player?.province || '',
+                latitude: player?.latitude,
+                longitude: player?.longitude,
+              },
+              onSave: () => {
+                refetchPlayer();
+              },
+            },
+          });
+        } else if (sheet === 'player-availabilities') {
+          SheetManager.show('player-availabilities', {
+            payload: {
+              mode: 'edit',
+              initialData: convertToUIFormat(availabilities),
+              initialPrivacyShowAvailability: player?.privacy_show_availability ?? true,
+              onSave: handleSaveAvailabilities,
+            },
+          });
+        } else {
+          // Rating or preferences sheets (sport-specific)
+          SheetManager.show(sheet as never);
+        }
+      }
+    },
+    [
+      profile,
+      player,
+      navigation,
+      openPicker,
+      refetchProfile,
+      refetchPlayer,
+      availabilities,
+      convertToUIFormat,
+      handleSaveAvailabilities,
+    ]
+  );
 
   const formatDate = (dateString: string | null): string => {
     if (!dateString) return t('profile.notSet');
@@ -893,6 +1008,21 @@ const UserProfile = () => {
             )}
           </WalkthroughableView>
         </CopilotStep>
+
+        {/* Profile Completion Checklist */}
+        {!loadingCore && (
+          <ProfileCompletionChecklist
+            percentage={profileCompleteness.percentage}
+            tier={profileCompleteness.tier}
+            items={profileCompleteness.applicableItems}
+            isComplete={profileCompleteness.isComplete}
+            loading={profileCompleteness.loading}
+            onAction={handleCompletenessAction}
+            colors={colors}
+            isDark={isDark}
+            t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
+          />
+        )}
 
         {/* My Personal Information with Edit Icon */}
         <View style={styles.section}>

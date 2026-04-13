@@ -122,6 +122,8 @@ export interface RatingProofsScreenParams {
   sportName: string;
   ratingValue: number;
   isOwnProfile: boolean;
+  /** Optional: auto-open the add proof sheet on mount */
+  openSheet?: 'add';
 }
 
 /**
@@ -154,6 +156,8 @@ export interface FacilityDetailScreenParams {
 export interface SportProfileScreenParams {
   sportId: string;
   sportName: 'tennis' | 'pickleball';
+  /** Optional sheet to auto-open on mount */
+  openSheet?: 'preferences' | 'rating' | 'favorite-facilities';
 }
 
 // ============================================

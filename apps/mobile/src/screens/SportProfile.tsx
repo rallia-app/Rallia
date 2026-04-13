@@ -107,7 +107,7 @@ interface PreferencesInfo {
 const SportProfile = () => {
   const navigation = useAppNavigation();
   const route = useRoute<SportProfileRouteProp>();
-  const { sportId, sportName } = route.params;
+  const { sportId, sportName, openSheet } = route.params;
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const { refetch: refetchSportContext } = useSport();
@@ -1028,6 +1028,98 @@ const SportProfile = () => {
       toast.error(getNetworkErrorMessage(error));
     }
   };
+
+  // Auto-open a sheet if navigated with openSheet param (e.g. from profile completeness checklist)
+  const [didAutoOpenSheet, setDidAutoOpenSheet] = useState(false);
+  // Wait for play options to have loaded at least once (loading starts false, goes true, then false)
+  const [playOptionsLoadedOnce, setPlayOptionsLoadedOnce] = useState(false);
+  useEffect(() => {
+    if (loadingPlayOptions) {
+      // Fetch started — next time it goes false, data will be ready
+      setPlayOptionsLoadedOnce(false);
+    } else if (playStyleOptions.length > 0 || Object.keys(playAttributesByCategory).length > 0) {
+      setPlayOptionsLoadedOnce(true);
+    }
+  }, [loadingPlayOptions, playStyleOptions, playAttributesByCategory]);
+
+  useEffect(() => {
+    if (didAutoOpenSheet || !openSheet) return;
+
+    if (openSheet === 'preferences') {
+      if (!playOptionsLoadedOnce) return;
+      setDidAutoOpenSheet(true);
+      const sheetName =
+        sportName.toLowerCase() === 'pickleball' ? 'pickleball-preferences' : 'tennis-preferences';
+      SheetManager.show(sheetName, {
+        payload: {
+          onSave: handleSavePreferences,
+          initialPreferences: {
+            matchDuration: preferences.matchDuration || undefined,
+            matchType: preferences.matchType || undefined,
+            court: preferences.facilityName || undefined,
+            playStyle: preferences.playingStyle || undefined,
+            playAttributes: preferences.playAttributes || undefined,
+          },
+          playStyleOptions,
+          playAttributesByCategory,
+          loadingPlayOptions: false,
+        },
+      });
+    } else if (openSheet === 'rating') {
+      setDidAutoOpenSheet(true);
+      const sheetName =
+        sportName.toLowerCase() === 'pickleball' ? 'pickleball-rating' : 'tennis-rating';
+      SheetManager.show(sheetName);
+    } else if (openSheet === 'favorite-facilities') {
+      if (loadingFavorites || !location) return;
+      setDidAutoOpenSheet(true);
+      SheetManager.show('favorite-facilities', {
+        payload: {
+          playerId: userId,
+          sportId,
+          latitude: location?.latitude ?? null,
+          longitude: location?.longitude ?? null,
+          initialFacilityIds: favoriteFacilities.map(f => f.facilityId),
+          onSave: async (facilityIds: string[]) => {
+            try {
+              const currentIds = new Set(favoriteFacilities.map(f => f.facilityId));
+              const newIds = new Set(facilityIds);
+              for (const fav of favoriteFacilities) {
+                if (!newIds.has(fav.facilityId)) {
+                  await supabase.from('player_favorite_facility').delete().eq('id', fav.id);
+                }
+              }
+              let order = 1;
+              for (const facilityId of facilityIds) {
+                if (!currentIds.has(facilityId)) {
+                  await supabase.from('player_favorite_facility').insert({
+                    player_id: userId,
+                    facility_id: facilityId,
+                    sport_id: sportId,
+                    display_order: order,
+                  });
+                } else {
+                  const existing = favoriteFacilities.find(f => f.facilityId === facilityId);
+                  if (existing && existing.displayOrder !== order) {
+                    await supabase
+                      .from('player_favorite_facility')
+                      .update({ display_order: order })
+                      .eq('id', existing.id);
+                  }
+                }
+                order++;
+              }
+              refetchFavorites();
+              toast.success(t('alerts.preferencesUpdated'));
+            } catch (error) {
+              Logger.error('Failed to save favorite facilities', error as Error, { sportId });
+              toast.error(getNetworkErrorMessage(error));
+            }
+          },
+        },
+      });
+    }
+  }, [openSheet, playOptionsLoadedOnce, didAutoOpenSheet, loadingFavorites, location]);
 
   // Don't render until we have userId from context
   if (!userId) {
