@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Animated, Dimensions, Easing } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
 import RalliaLogoDark from '../../assets/images/logo-dark.svg';
 import RalliaLogoLight from '../../assets/images/logo-light.svg';
 import { ANIMATION_DELAYS } from '../constants';
@@ -44,6 +45,11 @@ export function SplashOverlay({ onAnimationComplete, holdVisible = false }: Spla
 
   // Exit animation
   const [exitOpacity] = useState(() => new Animated.Value(1));
+
+  useEffect(() => {
+    // Hide the native splash now that our JS overlay is mounted and covering the screen
+    SplashScreen.hideAsync();
+  }, []);
 
   useEffect(() => {
     // All entrance animations run in parallel with staggered delays
