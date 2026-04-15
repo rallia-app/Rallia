@@ -1,0 +1,322 @@
+import { AppStoreButtons } from '@/components/app-store-buttons';
+import { HeroDownloadCta } from '@/components/hero-download-cta';
+import { LandingHeader } from '@/components/landing-header';
+import { ScrollReveal } from '@/components/scroll-reveal';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  CalendarX,
+  Check,
+  Download,
+  Map,
+  ShieldCheck,
+  ShoppingCart,
+  Sparkles,
+  Star,
+  Trophy,
+  TrendingDown,
+  Users,
+  UserX,
+} from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
+
+export default async function Home() {
+  const t = await getTranslations('home');
+
+  return (
+    <>
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
+
+      {/* Transparent header overlay for the hero */}
+      <LandingHeader />
+
+      {/* ====== HERO — Full viewport video ====== */}
+      <section className="relative flex items-center justify-center w-full min-h-[100svh] overflow-hidden animate-fade-in">
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          poster="/video/hero-poster.jpg"
+          className="absolute inset-0 w-full h-full object-cover"
+        >
+          <source src="/video/hero.webm" type="video/webm" />
+          <source src="/video/hero.mp4" type="video/mp4" />
+        </video>
+        <div className="absolute inset-0 bg-black/55" />
+        <div className="relative z-10 flex flex-col items-center text-center gap-6 px-8 pt-36 pb-24 max-w-5xl mx-auto">
+          <h1 className="text-5xl md:text-8xl font-bold text-white">
+            {t('landing.hero.headline')}
+          </h1>
+          <h2 className="text-xl md:text-2xl text-white/60 max-w-2xl -mt-8">
+            {t('landing.hero.subheadline')}
+          </h2>
+          <div className="mt-6 md:hidden">
+            <AppStoreButtons badgeHeight={48} />
+          </div>
+          <div className="hidden md:block mt-6">
+            <HeroDownloadCta label={t('landing.hero.downloadButton')} />
+          </div>
+          <a
+            href="#how-it-works"
+            className="text-sm text-white/50 hover:text-white transition-colors mt-2"
+          >
+            {t('landing.hero.learnMore')} ↓
+          </a>
+        </div>
+      </section>
+
+      {/* ====== PROBLEMS — Dark teal background, glowing cards ====== */}
+      <section className="w-full bg-[var(--primary-950)] dark:bg-[#0b1a18]" id="main-content">
+        <div className="flex flex-col items-center justify-center gap-12 min-h-[100svh] max-w-6xl mx-auto px-8 py-24">
+          <div className="flex flex-col items-center gap-4">
+            <Badge className="text-base px-4 py-1 bg-[var(--secondary-500)] text-white">
+              {t('problems.sectionBadge')}
+            </Badge>
+            <h2 className="text-4xl md:text-5xl font-bold text-white">
+              {t('problems.sectionTitle')}
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+            {(
+              [
+                { key: 'scheduling', icon: CalendarX },
+                { key: 'compatibility', icon: Users },
+                { key: 'reliability', icon: UserX },
+                { key: 'growth', icon: TrendingDown },
+              ] as const
+            ).map(({ key, icon: Icon }) => (
+              <ScrollReveal key={key}>
+                <Card className="bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-300 hover:-translate-y-1">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-[#ed6a6d]/20">
+                        <Icon className="size-6 text-[#f1888a]" />
+                      </div>
+                      <CardTitle className="text-xl text-white">
+                        {t(`problems.${key}.title`)}
+                      </CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription className="text-base text-white/60">
+                      {t(`problems.${key}.description`)}
+                    </CardDescription>
+                  </CardContent>
+                </Card>
+              </ScrollReveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ====== SOLUTIONS — Light, alternating left-right ====== */}
+      <section className="w-full bg-[var(--primary-50)] dark:bg-[#0a0f0e]">
+        <div className="flex flex-col items-center justify-center gap-16 min-h-[100svh] max-w-6xl mx-auto px-8 py-24">
+          <div className="flex flex-col items-center gap-4">
+            <Badge className="text-base px-4 py-1 bg-[var(--primary-500)] text-white">
+              {t('landing.solutions.sectionBadge')}
+            </Badge>
+            <h2 className="text-4xl md:text-5xl font-bold">
+              {t('landing.solutions.sectionTitle')}
+            </h2>
+          </div>
+
+          <div className="flex flex-col gap-20 w-full">
+            {(
+              [
+                { key: 'courtFinder', icon: Map },
+                { key: 'skillLevels', icon: ShieldCheck },
+                { key: 'gameMarketplace', icon: ShoppingCart },
+                { key: 'reputation', icon: Trophy },
+              ] as const
+            ).map(({ key, icon: Icon }, i) => (
+              <div
+                key={key}
+                className={`flex flex-col md:flex-row items-center gap-8 md:gap-16 ${i % 2 === 1 ? 'md:flex-row-reverse' : ''}`}
+              >
+                <div className="flex-shrink-0 size-24 md:size-32 rounded-2xl bg-[var(--primary-100)] dark:bg-[var(--primary-500)]/10 flex items-center justify-center">
+                  <Icon className="size-12 md:size-16 text-[var(--primary-600)] dark:text-[var(--primary-500)]" />
+                </div>
+                <div className="flex flex-col gap-3 text-center md:text-left">
+                  <h3 className="text-2xl md:text-3xl font-bold">
+                    {t(`landing.solutions.${key}.title`)}
+                  </h3>
+                  <p className="text-lg text-muted-foreground max-w-lg">
+                    {t(`landing.solutions.${key}.description`)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ====== HOW IT WORKS — Dark teal, timeline stepper ====== */}
+      <section id="how-it-works" className="w-full bg-[var(--primary-900)] dark:bg-[#071412]">
+        <div className="flex flex-col items-center justify-center gap-16 min-h-[100svh] max-w-5xl mx-auto px-8 py-24">
+          <div className="flex flex-col items-center gap-4">
+            <Badge className="text-base px-4 py-1 bg-[var(--primary-500)] text-white">
+              {t('landing.howItWorks.sectionBadge')}
+            </Badge>
+            <h2 className="text-4xl md:text-5xl font-bold text-white">
+              {t('landing.howItWorks.sectionTitle')}
+            </h2>
+          </div>
+
+          <div className="relative flex flex-col md:flex-row gap-8 md:gap-0 w-full">
+            {/* Connecting line (desktop) */}
+            <div className="hidden md:block absolute top-8 left-[10%] right-[10%] h-0.5 bg-[var(--primary-500)]/30" />
+
+            {[1, 2, 3, 4].map(step => {
+              const icons = [Download, Users, Sparkles, Star];
+              const Icon = icons[step - 1];
+              return (
+                <div
+                  key={step}
+                  className="flex-1 flex flex-col items-center text-center gap-4 relative"
+                >
+                  <div className="relative z-10 size-16 rounded-full bg-[var(--primary-500)] flex items-center justify-center shadow-lg shadow-[var(--primary-500)]/25">
+                    <Icon className="size-7 text-white" />
+                  </div>
+                  <span className="text-sm font-bold text-white/40 uppercase tracking-wider">
+                    {`0${step}`}
+                  </span>
+                  <h3 className="text-lg font-bold text-white">
+                    {t(`landing.howItWorks.step${step}.title`)}
+                  </h3>
+                  <p className="text-sm text-white/60 max-w-[200px]">
+                    {t(`landing.howItWorks.step${step}.description`)}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ====== WHY JOIN BETA — Coral gradient, checklist ====== */}
+      <section className="w-full bg-gradient-to-br from-[#ed6a6d] to-[#8e4041]">
+        <div className="flex flex-col items-center justify-center gap-12 min-h-[100svh] max-w-6xl mx-auto px-8 py-24">
+          <div className="flex flex-col items-center gap-4">
+            <h2 className="text-4xl md:text-5xl font-bold text-center text-white">
+              {t('landing.whyJoinBeta.sectionTitle')}
+            </h2>
+            <p className="text-lg text-white/60 text-center max-w-2xl m-0">
+              {t('landing.whyJoinBeta.description')}
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-6 w-full items-center">
+            {/* First row: 2 cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+              {(['free', 'influence'] as const).map(key => (
+                <div
+                  key={key}
+                  className="flex items-start gap-4 bg-white/10 backdrop-blur-sm rounded-xl p-6 hover:bg-white/15 transition-colors min-h-0"
+                >
+                  <div className="flex-shrink-0 size-8 rounded-full bg-white/20 flex items-center justify-center mt-0.5">
+                    <Check className="size-5 text-white" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-lg font-bold text-white">
+                      {t(`landing.whyJoinBeta.benefits.${key}.title`)}
+                    </h3>
+                    <p className="text-sm text-white/60">
+                      {t(`landing.whyJoinBeta.benefits.${key}.description`)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Second row: 3 cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+              {(['community', 'exclusive', 'support'] as const).map(key => (
+                <div
+                  key={key}
+                  className="flex items-start gap-4 bg-white/10 backdrop-blur-sm rounded-xl p-6 hover:bg-white/15 transition-colors min-h-0"
+                >
+                  <div className="flex-shrink-0 size-8 rounded-full bg-white/20 flex items-center justify-center mt-0.5">
+                    <Check className="size-5 text-white" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-lg font-bold text-white">
+                      {t(`landing.whyJoinBeta.benefits.${key}.title`)}
+                    </h3>
+                    <p className="text-sm text-white/60">
+                      {t(`landing.whyJoinBeta.benefits.${key}.description`)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ====== DOWNLOAD CTA + FAQ ====== */}
+      <section className="w-full bg-[var(--primary-50)] dark:bg-[#0a0f0e]">
+        <div className="flex flex-col items-center gap-24 max-w-6xl mx-auto px-8 py-24">
+          {/* Download CTA */}
+          <div
+            id="download"
+            className="flex flex-col items-center text-center gap-8 cta-gradient py-16 px-8 rounded-2xl w-full shadow-luma"
+          >
+            <div className="flex flex-col gap-4 max-w-2xl">
+              <h2 className="text-4xl md:text-5xl font-bold">
+                {t('landing.downloadCta.headline')}
+              </h2>
+              <p className="text-lg text-muted-foreground m-0">
+                {t('landing.downloadCta.description')}
+              </p>
+            </div>
+            <div className="md:hidden">
+              <AppStoreButtons badgeHeight={48} />
+            </div>
+            <div className="hidden md:block">
+              <HeroDownloadCta label={t('landing.hero.downloadButton')} />
+            </div>
+          </div>
+
+          {/* FAQ */}
+          <div className="flex flex-col items-center w-full gap-12">
+            <div className="flex flex-col items-center gap-4">
+              <Badge className="text-base px-4 py-1 bg-[var(--primary-500)] text-white">
+                {t('landing.faq.sectionBadge')}
+              </Badge>
+              <h2 className="text-4xl md:text-5xl font-bold text-center">
+                {t('landing.faq.sectionTitle')}
+              </h2>
+            </div>
+
+            <Card className="w-full">
+              <CardContent className="pt-6">
+                <Accordion type="single" collapsible className="w-full">
+                  {['cost', 'sports', 'matching', 'privacy', 'getStarted', 'platforms'].map(key => (
+                    <AccordionItem key={key} value={key}>
+                      <AccordionTrigger className="text-left">
+                        {t(`landing.faq.questions.${key}.question`)}
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        {t(`landing.faq.questions.${key}.answer`)}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
