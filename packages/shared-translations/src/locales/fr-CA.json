@@ -8209,7 +8209,9 @@
     "appStore": "Télécharger sur l'App Store",
     "googlePlay": "Télécharger sur Google Play",
     "notFound": "Invitation non trouvée",
-    "notFoundDescription": "Ce lien d'invitation est peut-être invalide ou expiré."
+    "notFoundDescription": "Ce lien d'invitation est peut-être invalide ou expiré.",
+    "downloadCta": "Télécharger Rallia",
+    "clipboardHint": "Le lien sera sauvegardé pour que l'app puisse connecter votre invitation."
   },
   "feedback": {
     "title": "Commentaires",

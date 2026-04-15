@@ -8207,7 +8207,9 @@
     "appStore": "Download on the App Store",
     "googlePlay": "Get it on Google Play",
     "notFound": "Invite not found",
-    "notFoundDescription": "This invite link may be invalid or expired."
+    "notFoundDescription": "This invite link may be invalid or expired.",
+    "downloadCta": "Download Rallia",
+    "clipboardHint": "The link will be saved so the app can connect your invitation."
   },
   "feedback": {
     "title": "Feedback",

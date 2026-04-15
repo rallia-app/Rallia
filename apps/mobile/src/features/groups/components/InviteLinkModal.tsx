@@ -1,24 +1,19 @@
 /**
  * InviteLinkModal
  * Modal showing the group invite link with options to copy, share, and generate QR code
+ *
+ * Visual design aligned with the referral InvitePlayersWizard / ShareLinkStep.
  */
 
 import React, { useCallback, useState } from 'react';
-import {
-  View,
-  TouchableOpacity,
-  StyleSheet,
-  Share,
-  Alert,
-  ActivityIndicator,
-  Image,
-} from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Share, Alert, ActivityIndicator } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import QRCode from 'react-native-qrcode-svg';
 
-import { Text } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation } from '../../../hooks';
+import { Text, useToast, Button } from '@rallia/shared-components';
+import { useThemeStyles, useTranslation, type TranslationKey } from '../../../hooks';
 import {
   useGroupInviteCode,
   useResetGroupInviteCode,
@@ -26,7 +21,68 @@ import {
   getGroupInviteLink,
 } from '@rallia/shared-hooks';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { lightHaptic } from '@rallia/shared-utils';
 import * as Analytics from '../../../services/analytics';
+
+// =============================================================================
+// TAB BAR
+// =============================================================================
+
+type InviteTabId = 'code' | 'qr';
+
+const INVITE_TABS: Array<{ id: InviteTabId; icon: string; labelKey: TranslationKey }> = [
+  { id: 'code', icon: 'code-slash-outline', labelKey: 'groups.code' },
+  { id: 'qr', icon: 'qr-code-outline', labelKey: 'groups.qrCode' },
+];
+
+interface TabBarProps {
+  activeTab: InviteTabId;
+  onTabChange: (tab: InviteTabId) => void;
+  colors: ReturnType<typeof useThemeStyles>['colors'];
+  t: (key: TranslationKey) => string;
+}
+
+const TabBar: React.FC<TabBarProps> = ({ activeTab, onTabChange, colors, t }) => (
+  <View style={[styles.tabBar, { backgroundColor: colors.buttonInactive }]}>
+    {INVITE_TABS.map(tab => {
+      const isActive = activeTab === tab.id;
+      return (
+        <TouchableOpacity
+          key={tab.id}
+          style={[
+            styles.tab,
+            isActive && [styles.activeTab, { backgroundColor: colors.cardBackground }],
+          ]}
+          onPress={() => {
+            lightHaptic();
+            onTabChange(tab.id);
+          }}
+          activeOpacity={0.8}
+        >
+          <Ionicons
+            name={tab.icon as any}
+            size={18}
+            color={isActive ? colors.buttonActive : colors.textMuted}
+          />
+          <Text
+            size="xs"
+            weight={isActive ? 'semibold' : 'medium'}
+            style={{
+              color: isActive ? colors.buttonActive : colors.textMuted,
+              marginLeft: 4,
+            }}
+          >
+            {t(tab.labelKey)}
+          </Text>
+        </TouchableOpacity>
+      );
+    })}
+  </View>
+);
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
 
 export function InviteLinkActionSheet({ payload }: SheetProps<'invite-link'>) {
   const groupId = payload?.groupId ?? '';
@@ -37,12 +93,13 @@ export function InviteLinkActionSheet({ payload }: SheetProps<'invite-link'>) {
 
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
+  const toast = useToast();
   const [copied, setCopied] = useState(false);
-  const [showQRCode, setShowQRCode] = useState(false);
+  const [activeTab, setActiveTab] = useState<InviteTabId>('code');
 
   const handleClose = useCallback(() => {
     setCopied(false);
-    setShowQRCode(false);
+    setActiveTab('code');
     SheetManager.hide('invite-link');
   }, []);
 
@@ -57,33 +114,29 @@ export function InviteLinkActionSheet({ payload }: SheetProps<'invite-link'>) {
 
   const inviteLink = inviteCode ? getGroupInviteLink(inviteCode, referralCode) : '';
 
-  // Generate QR code URL using a public API (Google Charts API for QR codes)
-  const qrCodeUrl = inviteLink
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(inviteLink)}&bgcolor=${isDark ? '1C1C1E' : 'F2F2F7'}`
-    : '';
-
   const handleCopyLink = useCallback(async () => {
     if (!inviteLink) return;
 
     try {
       await Clipboard.setStringAsync(inviteLink);
       setCopied(true);
+      toast.success(t('common.copied'));
       setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      Alert.alert(t('common.error'), t('groups.failedToCopyLink'));
+    } catch {
+      toast.error(t('common.error'));
     }
-  }, [inviteLink, t]);
+  }, [inviteLink, toast, t]);
 
   const handleCopyCode = useCallback(async () => {
     if (!inviteCode) return;
 
     try {
       await Clipboard.setStringAsync(inviteCode);
-      Alert.alert(t('common.copied'), t('groups.inviteCodeCopied'));
-    } catch (error) {
-      Alert.alert(t('common.error'), t('groups.failedToCopyCode'));
+      toast.success(t('common.copied'));
+    } catch {
+      toast.error(t('common.error'));
     }
-  }, [inviteCode, t]);
+  }, [inviteCode, toast, t]);
 
   const handleShare = useCallback(async () => {
     if (!inviteLink) return;
@@ -105,10 +158,10 @@ export function InviteLinkActionSheet({ payload }: SheetProps<'invite-link'>) {
     } catch (error) {
       // User cancelled or error
       if (error instanceof Error && error.message !== 'User did not share') {
-        Alert.alert(t('common.error'), t('groups.failedToShare'));
+        toast.error(t('common.error'));
       }
     }
-  }, [inviteLink, inviteCode, groupName, typeLabel, type, t]);
+  }, [inviteLink, inviteCode, groupName, typeLabel, type, toast, t]);
 
   const handleResetCode = useCallback(() => {
     Alert.alert(t('groups.resetInviteCode'), t('groups.resetInviteCodeWarning'), [
@@ -123,17 +176,14 @@ export function InviteLinkActionSheet({ payload }: SheetProps<'invite-link'>) {
               moderatorId: currentUserId,
             });
             refetch();
-            Alert.alert(t('common.success'), t('groups.inviteCodeReset'));
+            toast.success(t('groups.inviteCodeReset'));
           } catch (error) {
-            Alert.alert(
-              t('common.error'),
-              error instanceof Error ? error.message : t('groups.failedToResetCode')
-            );
+            toast.error(error instanceof Error ? error.message : t('groups.failedToResetCode'));
           }
         },
       },
     ]);
-  }, [groupId, currentUserId, resetInviteCodeMutation, refetch, t]);
+  }, [groupId, currentUserId, resetInviteCodeMutation, refetch, toast, t]);
 
   return (
     <ActionSheet
@@ -144,6 +194,7 @@ export function InviteLinkActionSheet({ payload }: SheetProps<'invite-link'>) {
       <View style={styles.container}>
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerSpacer} />
           <Text weight="semibold" size="lg" style={{ color: colors.text }}>
             {t('groups.inviteTo', { type: typeLabelCapitalized })}
           </Text>
@@ -159,80 +210,48 @@ export function InviteLinkActionSheet({ payload }: SheetProps<'invite-link'>) {
         >
           {isLoading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={{ color: colors.textSecondary, marginTop: 12 }}>
+              <ActivityIndicator size="large" color={colors.buttonActive} />
+              <Text size="sm" color={colors.textMuted} style={styles.loadingText}>
                 {t('groups.generatingInviteLink')}
               </Text>
             </View>
           ) : (
             <>
               {/* Description */}
-              <Text style={{ color: colors.textSecondary, textAlign: 'center', marginBottom: 24 }}>
+              <Text size="sm" color={colors.textSecondary} style={styles.description}>
                 {t('groups.shareInviteDescription', { typeLabel })}
               </Text>
 
-              {/* Toggle between Code and QR */}
-              <View style={styles.toggleContainer}>
-                <TouchableOpacity
-                  style={[
-                    styles.toggleButton,
-                    !showQRCode && { backgroundColor: colors.primary },
-                    { borderTopLeftRadius: 8, borderBottomLeftRadius: 8 },
-                  ]}
-                  onPress={() => setShowQRCode(false)}
-                >
-                  <Text
-                    size="sm"
-                    weight="medium"
-                    style={{ color: !showQRCode ? '#FFFFFF' : colors.textSecondary }}
-                  >
-                    {t('groups.code')}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.toggleButton,
-                    showQRCode && { backgroundColor: colors.primary },
-                    { borderTopRightRadius: 8, borderBottomRightRadius: 8 },
-                  ]}
-                  onPress={() => setShowQRCode(true)}
-                >
-                  <Text
-                    size="sm"
-                    weight="medium"
-                    style={{ color: showQRCode ? '#FFFFFF' : colors.textSecondary }}
-                  >
-                    {t('groups.qrCode')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              {/* Tab Bar */}
+              <TabBar activeTab={activeTab} onTabChange={setActiveTab} colors={colors} t={t} />
 
-              {showQRCode ? (
+              {activeTab === 'qr' ? (
                 /* QR Code Display */
-                <View
-                  style={[styles.qrContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}
-                >
-                  <Image source={{ uri: qrCodeUrl }} style={styles.qrImage} resizeMode="contain" />
-                  <Text size="xs" style={{ color: colors.textMuted, marginTop: 8 }}>
+                <View style={[styles.qrContainer, { backgroundColor: colors.buttonInactive }]}>
+                  {inviteLink && (
+                    <QRCode
+                      value={inviteLink}
+                      size={180}
+                      backgroundColor={colors.buttonInactive}
+                      color={colors.text}
+                    />
+                  )}
+                  <Text size="xs" color={colors.textMuted} style={styles.qrHint}>
                     {t('groups.scanToJoin', { typeLabel })}
                   </Text>
                 </View>
               ) : (
                 /* Invite Code Display */
-                <View
-                  style={[
-                    styles.codeContainer,
-                    { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' },
-                  ]}
-                >
-                  <Text size="xs" style={{ color: colors.textMuted, marginBottom: 4 }}>
+                <View style={[styles.codeContainer, { backgroundColor: colors.buttonInactive }]}>
+                  <Text size="xs" color={colors.textMuted} style={styles.codeLabel}>
                     {t('groups.inviteCode')}
                   </Text>
                   <TouchableOpacity onPress={handleCopyCode} activeOpacity={0.7}>
                     <Text
                       weight="bold"
                       size="xl"
-                      style={{ color: colors.primary, letterSpacing: 4 }}
+                      color={colors.buttonActive}
+                      style={styles.codeText}
                     >
                       {inviteCode}
                     </Text>
@@ -244,38 +263,43 @@ export function InviteLinkActionSheet({ payload }: SheetProps<'invite-link'>) {
               <View
                 style={[
                   styles.linkContainer,
-                  { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', borderColor: colors.border },
+                  { backgroundColor: colors.buttonInactive, borderColor: colors.border },
                 ]}
               >
-                <Text numberOfLines={1} style={{ color: colors.text, flex: 1 }}>
+                <Text numberOfLines={1} size="sm" color={colors.text} style={styles.linkText}>
                   {inviteLink}
                 </Text>
                 <TouchableOpacity
                   onPress={handleCopyLink}
                   style={[
                     styles.copyButton,
-                    { backgroundColor: copied ? colors.primary : isDark ? '#3A3A3C' : '#E5E5EA' },
+                    {
+                      backgroundColor: copied ? colors.buttonActive : colors.border,
+                    },
                   ]}
                 >
                   <Ionicons
                     name={copied ? 'checkmark' : 'copy-outline'}
                     size={18}
-                    color={copied ? '#FFFFFF' : colors.text}
+                    color={copied ? colors.buttonTextActive : colors.text}
                   />
                 </TouchableOpacity>
               </View>
 
               {/* Action Buttons */}
               <View style={styles.actions}>
-                <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: colors.primary }]}
+                <Button
+                  variant="primary"
+                  size="md"
+                  fullWidth
                   onPress={handleShare}
+                  leftIcon={
+                    <Ionicons name="share-outline" size={20} color={colors.buttonTextActive} />
+                  }
+                  isDark={isDark}
                 >
-                  <Ionicons name="share-outline" size={20} color="#FFFFFF" />
-                  <Text weight="semibold" style={{ color: '#FFFFFF', marginLeft: 8 }}>
-                    {t('groups.shareInvite')}
-                  </Text>
-                </TouchableOpacity>
+                  {t('groups.shareInvite')}
+                </Button>
 
                 {isModerator && (
                   <TouchableOpacity
@@ -309,6 +333,10 @@ export function InviteLinkActionSheet({ payload }: SheetProps<'invite-link'>) {
 // Keep old export for backwards compatibility during migration
 export const InviteLinkModal = InviteLinkActionSheet;
 
+// =============================================================================
+// STYLES
+// =============================================================================
+
 const styles = StyleSheet.create({
   sheetBackground: {
     flex: 1,
@@ -331,6 +359,9 @@ const styles = StyleSheet.create({
     padding: spacingPixels[4],
     borderBottomWidth: 1,
   },
+  headerSpacer: {
+    width: 24 + spacingPixels[1] * 2,
+  },
   closeButton: {
     padding: spacingPixels[1],
   },
@@ -343,44 +374,67 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: spacingPixels[10],
   },
-  toggleContainer: {
+  loadingText: {
+    marginTop: spacingPixels[3],
+  },
+  description: {
+    textAlign: 'center',
+    marginBottom: spacingPixels[6],
+  },
+  tabBar: {
     flexDirection: 'row',
-    alignSelf: 'center',
-    marginBottom: 16,
+    marginBottom: spacingPixels[4],
+    borderRadius: 12,
+    padding: 4,
   },
-  toggleButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 8,
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#3A3A3C',
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  activeTab: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   qrContainer: {
     alignItems: 'center',
     padding: 20,
-    borderRadius: 12,
-    marginBottom: 16,
+    borderRadius: radiusPixels.lg,
+    marginBottom: spacingPixels[4],
   },
-  qrImage: {
-    width: 180,
-    height: 180,
-    borderRadius: 8,
+  qrHint: {
+    marginTop: spacingPixels[2],
   },
   codeContainer: {
     alignItems: 'center',
     padding: 20,
-    borderRadius: 12,
-    marginBottom: 16,
+    borderRadius: radiusPixels.lg,
+    marginBottom: spacingPixels[4],
+  },
+  codeLabel: {
+    marginBottom: 4,
+  },
+  codeText: {
+    letterSpacing: 4,
   },
   linkContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    borderRadius: 10,
+    borderRadius: radiusPixels.md,
     borderWidth: 1,
-    marginBottom: 24,
+    marginBottom: spacingPixels[4],
+  },
+  linkText: {
+    flex: 1,
   },
   copyButton: {
     padding: 8,
@@ -388,27 +442,20 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   actions: {
-    gap: 12,
-    marginBottom: 24,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 14,
-    borderRadius: 12,
+    gap: spacingPixels[3],
+    marginBottom: spacingPixels[6],
   },
   resetButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 10,
-    borderRadius: 8,
+    padding: spacingPixels[2.5],
+    borderRadius: radiusPixels.lg,
     borderWidth: 1,
   },
   infoSection: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    paddingHorizontal: 8,
+    paddingHorizontal: spacingPixels[2],
   },
 });
