@@ -64,6 +64,7 @@ export default async function AdminMapPage() {
           address,
           city,
           facility_type,
+          external_provider_id,
           facility_sport (
             sport (
               name
@@ -108,6 +109,7 @@ export default async function AdminMapPage() {
       facilityType: f.facility_type,
       sports: (f.facility_sport ?? []).map((fs: any) => fs.sport?.name).filter(Boolean),
       courtCount: f.court?.length ?? 0,
+      hasExternalProvider: !!f.external_provider_id,
     }));
   } catch (e) {
     console.error('Error fetching map data:', e);

@@ -111,9 +111,7 @@ export async function logReferralFingerprint(
   });
 }
 
-const APP_STORE_URL = 'https://apps.apple.com/app/rallia/id6760482014';
-const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.mathisl971.ralliaapp';
-
+import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/store-urls';
 export { APP_STORE_URL, PLAY_STORE_URL };
 
 /**

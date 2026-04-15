@@ -39,9 +39,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Rallia - Tennis & Pickleball Matchmaking Platform | Coming Early 2026',
+  title: 'Rallia - Tennis & Pickleball Matchmaking Platform',
   description:
-    'Join the waitlist for Rallia - the revolutionary platform connecting tennis and pickleball players. Smart matchmaking, instant scheduling, and reliable partners. Sign up for exclusive early access.',
+    'Download Rallia - the app connecting tennis and pickleball players. Smart matchmaking, instant scheduling, and reliable partners. Available now on iOS and Android.',
   keywords: [
     'tennis matchmaking',
     'pickleball partners',
@@ -50,6 +50,8 @@ export const metadata: Metadata = {
     'tennis app',
     'pickleball app',
     'sports matchmaking',
+    'download',
+    'beta',
   ],
   authors: [{ name: 'Rallia' }],
   creator: 'Rallia',
@@ -60,7 +62,7 @@ export const metadata: Metadata = {
     url: 'https://rallia.app',
     title: 'Rallia - Where Rallies Live On',
     description:
-      'Join the waitlist for the future of tennis and pickleball matchmaking. Smart player matching, instant scheduling, and reliable games.',
+      'Download Rallia and find your next tennis or pickleball game. Smart player matching, instant scheduling, and reliable partners.',
     siteName: 'Rallia',
     images: [
       {
@@ -75,7 +77,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Rallia - Where Rallies Live On',
     description:
-      'Join the waitlist for the future of tennis and pickleball matchmaking. Coming Early 2026.',
+      'Download Rallia and find your next tennis or pickleball game. Available now on iOS and Android.',
     images: ['/og-image.png'],
     creator: '@rallia',
   },

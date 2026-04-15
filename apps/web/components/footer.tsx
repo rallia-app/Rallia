@@ -33,7 +33,7 @@ export async function Footer() {
             <ul className="space-y-3 text-sm">
               <li>
                 <Link
-                  href="/beta"
+                  href="/#download"
                   className="text-gray-600 dark:text-gray-400 hover:text-foreground transition-colors"
                 >
                   {t('joinBeta')}

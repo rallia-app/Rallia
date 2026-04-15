@@ -1,5 +1,3 @@
-import { AppStoreButtons } from '@/components/app-store-buttons';
-import { HeroDownloadCta } from '@/components/hero-download-cta';
 import { ScrollReveal } from '@/components/scroll-reveal';
 import {
   Accordion,
@@ -8,25 +6,29 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { WaitlistForm } from '@/components/waitlist-form';
 import {
   CalendarX,
   Clock,
-  Download,
-  Gift,
-  MessageSquareHeart,
   Network,
   ShoppingCart,
   Sparkles,
-  Star,
   TrendingDown,
   Users,
   UserX,
 } from 'lucide-react';
+import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 
-export default async function Home() {
+export const metadata: Metadata = {
+  title: 'Rallia - Waitlist (Archived)',
+  robots: { index: false, follow: false },
+};
+
+export default async function WaitlistPage() {
   const t = await getTranslations('home');
 
   return (
@@ -36,31 +38,22 @@ export default async function Home() {
       </a>
       <div className="flex flex-col items-center w-full gap-24 pb-16" id="main-content">
         {/* Hero Section */}
-        <section className="flex flex-col items-center text-center gap-6 animate-fade-in hero-gradient rounded-3xl p-8 md:p-12 shadow-luma-lg w-full">
+        <section className="flex flex-col items-center text-center gap-6 animate-fade-in hero-gradient rounded-3xl p-12 shadow-luma-lg">
           <Badge className="badge-interactive text-sm px-4 py-1.5 bg-[var(--primary-500)] hover:bg-[var(--primary-600)] text-white">
-            {t('landing.hero.badge')}
+            {t('hero.badge')}
           </Badge>
-          <h1 className="text-5xl md:text-8xl font-bold mt-8 mb-4">{t('landing.hero.headline')}</h1>
-          <h2 className="text-xl md:text-2xl text-muted-foreground max-w-2xl mt-4">
-            {t('landing.hero.subheadline')}
+          <h1 className="text-6xl md:text-8xl font-bold mt-8 mb-4">{t('hero.headline')}</h1>
+          <h2 className="text-xl md:text-2xl text-muted-foreground max-w-2xl mt-8">
+            {t('hero.subheadline')}
           </h2>
-
-          {/* Mobile: show store badges directly */}
-          <div className="mt-6 md:hidden">
-            <AppStoreButtons badgeHeight={48} />
-          </div>
-
-          {/* Desktop: show button that opens QR dialog */}
-          <div className="hidden md:block mt-6">
-            <HeroDownloadCta label={t('landing.hero.downloadButton')} />
-          </div>
-
-          <a
-            href="#how-it-works"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors mt-2"
+          <Button
+            size="lg"
+            className="cta-button mt-4 text-lg px-8 py-6 bg-[var(--secondary-500)] hover:bg-[var(--secondary-600)] text-white"
+            asChild
           >
-            {t('landing.hero.learnMore')} ↓
-          </a>
+            <a href="#waitlist">{t('hero.ctaButton')}</a>
+          </Button>
+          <p className="text-sm text-muted-foreground m-0">{t('hero.ctaSubtext')}</p>
         </section>
 
         {/* Problems Section */}
@@ -228,145 +221,141 @@ export default async function Home() {
         <Separator className="max-w-md" />
 
         {/* How It Works Section */}
-        <section
-          id="how-it-works"
-          className="flex flex-col items-center w-full gap-12 animate-fade-in animate-delay-300"
-        >
+        <section className="flex flex-col items-center w-full gap-12 animate-fade-in animate-delay-300">
           <div className="flex flex-col items-center gap-4">
             <Badge className="badge-interactive text-base px-4 py-1 bg-[var(--primary-500)] hover:bg-[var(--primary-600)] text-white">
-              {t('landing.howItWorks.sectionBadge')}
+              {t('howItWorks.sectionBadge')}
             </Badge>
-            <h2 className="text-4xl md:text-5xl font-bold">
-              {t('landing.howItWorks.sectionTitle')}
-            </h2>
+            <h2 className="text-4xl md:text-5xl font-bold">{t('howItWorks.sectionTitle')}</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 w-full">
-            {[1, 2, 3, 4].map(step => {
-              const icons = [Download, Users, Sparkles, Star];
-              const Icon = icons[step - 1];
-              return (
-                <Card
-                  key={step}
-                  className="text-center hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-[var(--secondary-200)] dark:border-[var(--secondary-800)] hover:border-[var(--secondary-300)] dark:hover:border-[var(--secondary-700)]"
-                >
-                  <CardHeader>
-                    <div className="mx-auto mb-4 size-16 rounded-full bg-[var(--secondary-100)] dark:bg-[var(--secondary-800)] flex items-center justify-center">
-                      <Icon className="size-7 text-[var(--secondary-800)] dark:text-[var(--secondary-200)]" />
-                    </div>
-                    <CardTitle className="text-lg">
-                      {t(`landing.howItWorks.step${step}.title`)}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription className="text-sm">
-                      {t(`landing.howItWorks.step${step}.description`)}
-                    </CardDescription>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </section>
-
-        <Separator className="max-w-md" />
-
-        {/* Why Join the Beta Section */}
-        <section className="flex flex-col items-center w-full gap-12 animate-fade-in animate-delay-500">
-          <div className="flex flex-col items-center gap-4">
-            <Badge className="badge-interactive text-base px-4 py-1 bg-[var(--secondary-500)] hover:bg-[var(--secondary-600)] text-white">
-              {t('landing.whyJoinBeta.sectionBadge')}
-            </Badge>
-            <h2 className="text-4xl md:text-5xl font-bold text-center">
-              {t('landing.whyJoinBeta.sectionTitle')}
-            </h2>
-            <p className="text-lg text-muted-foreground text-center max-w-2xl m-0">
-              {t('landing.whyJoinBeta.description')}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
-            {(
-              [
-                { key: 'free', icon: Gift },
-                { key: 'influence', icon: MessageSquareHeart },
-                { key: 'community', icon: Users },
-                { key: 'exclusive', icon: Sparkles },
-                { key: 'support', icon: Star },
-              ] as const
-            ).map(({ key, icon: Icon }) => (
+            {[1, 2, 3, 4].map(step => (
               <Card
-                key={key}
-                className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-[var(--secondary-200)] dark:border-[var(--secondary-800)]"
+                key={step}
+                className="text-center hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-[var(--secondary-200)] dark:border-[var(--secondary-800)] hover:border-[var(--secondary-300)] dark:hover:border-[var(--secondary-700)]"
               >
                 <CardHeader>
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-[var(--secondary-100)] dark:bg-[var(--secondary-800)] mt-1">
-                      <Icon className="size-5 text-[var(--secondary-800)] dark:text-[var(--secondary-200)]" />
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <CardTitle className="text-lg">
-                        {t(`landing.whyJoinBeta.benefits.${key}.title`)}
-                      </CardTitle>
-                      <CardDescription className="text-sm">
-                        {t(`landing.whyJoinBeta.benefits.${key}.description`)}
-                      </CardDescription>
-                    </div>
+                  <div className="mx-auto mb-4 size-16 rounded-full bg-[var(--secondary-100)] dark:bg-[var(--secondary-800)] flex items-center justify-center">
+                    <span className="text-3xl font-bold text-[var(--secondary-800)] dark:text-[var(--secondary-200)]">
+                      {step}
+                    </span>
                   </div>
+                  <CardTitle className="text-lg">{t(`howItWorks.step${step}.title`)}</CardTitle>
                 </CardHeader>
+                <CardContent>
+                  <CardDescription className="text-sm">
+                    {t(`howItWorks.step${step}.description`)}
+                  </CardDescription>
+                </CardContent>
               </Card>
             ))}
           </div>
         </section>
-
         <Separator className="max-w-md" />
 
-        {/* Download CTA Section */}
-        <section
-          id="download"
-          className="flex flex-col items-center text-center gap-8 animate-fade-in animate-delay-600 cta-gradient py-16 px-8 rounded-2xl w-full shadow-luma"
-        >
-          <div className="flex flex-col gap-4 max-w-2xl">
-            <h2 className="text-4xl md:text-5xl font-bold">{t('landing.downloadCta.headline')}</h2>
-            <p className="text-lg text-muted-foreground m-0">
-              {t('landing.downloadCta.description')}
+        {/* Why Join Early Section */}
+        <section className="flex flex-col items-center w-full gap-12 animate-fade-in animate-delay-500">
+          <div className="flex flex-col items-center gap-4">
+            <Badge className="badge-interactive text-base px-4 py-1 bg-[var(--secondary-500)] hover:bg-[var(--secondary-600)] text-white">
+              {t('whyJoinEarly.sectionBadge')}
+            </Badge>
+            <h2 className="text-4xl md:text-5xl font-bold text-center">
+              {t('whyJoinEarly.sectionTitle')}
+            </h2>
+            <p className="text-lg text-muted-foreground text-center max-w-2xl m-0">
+              {t('whyJoinEarly.description')}
             </p>
           </div>
 
-          {/* Mobile: direct store badges */}
-          <div className="md:hidden">
-            <AppStoreButtons badgeHeight={48} />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
+            {['priority', 'pricing', 'influence', 'exclusive', 'community', 'support'].map(
+              benefit => (
+                <Card
+                  key={benefit}
+                  className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-[var(--secondary-200)] dark:border-[var(--secondary-800)]"
+                >
+                  <CardHeader>
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 rounded-lg bg-[var(--secondary-100)] dark:bg-[var(--secondary-800)] mt-1">
+                        <Sparkles className="size-5 text-[var(--secondary-800)] dark:text-[var(--secondary-200)]" />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <CardTitle className="text-lg">
+                          {t(`whyJoinEarly.benefits.${benefit}.title`)}
+                        </CardTitle>
+                        <CardDescription className="text-sm">
+                          {t(`whyJoinEarly.benefits.${benefit}.description`)}
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                </Card>
+              )
+            )}
+          </div>
+        </section>
+
+        <Separator className="max-w-md" />
+
+        {/* CTA Section */}
+        <section className="flex flex-col items-center text-center gap-8 animate-fade-in animate-delay-600 cta-gradient py-16 px-8 rounded-2xl w-full shadow-luma">
+          <div className="flex flex-col gap-4 max-w-2xl">
+            <h2 className="text-4xl md:text-5xl font-bold">{t('cta.headline')}</h2>
+            <p className="text-lg text-muted-foreground m-0">{t('cta.description')}</p>
+          </div>
+          <Button
+            size="lg"
+            className="button-scale text-lg px-8 py-6 button-gradient text-white"
+            asChild
+          >
+            <a href="#waitlist">{t('cta.button')}</a>
+          </Button>
+        </section>
+
+        <Separator className="max-w-md" />
+
+        {/* Waitlist Section */}
+        <section
+          id="waitlist"
+          className="flex flex-col items-center w-full gap-12 animate-fade-in animate-delay-1000"
+        >
+          <div className="flex flex-col items-center gap-4">
+            <Badge className="badge-interactive text-base px-4 py-1 bg-[var(--secondary-500)] hover:bg-[var(--secondary-600)] text-white">
+              {t('waitlist.sectionBadge')}
+            </Badge>
+            <h2 className="text-4xl md:text-5xl font-bold text-center">
+              {t('waitlist.sectionTitle')}
+            </h2>
+            <p className="text-lg text-muted-foreground text-center max-w-2xl m-0">
+              {t('waitlist.description')}
+            </p>
           </div>
 
-          {/* Desktop: button that opens QR dialog */}
-          <div className="hidden md:block">
-            <HeroDownloadCta label={t('landing.hero.downloadButton')} />
-          </div>
+          <WaitlistForm />
         </section>
 
         <Separator className="max-w-md" />
 
         {/* FAQ Section */}
-        <section className="flex flex-col items-center w-full gap-12 animate-fade-in animate-delay-800">
+        <section className="flex flex-col items-center w-full gap-12 animate-fade-in animate-delay-1200">
           <div className="flex flex-col items-center gap-4">
             <Badge className="badge-interactive text-base px-4 py-1 bg-[var(--primary-500)] hover:bg-[var(--primary-600)] text-white">
-              {t('landing.faq.sectionBadge')}
+              {t('faq.sectionBadge')}
             </Badge>
-            <h2 className="text-4xl md:text-5xl font-bold text-center">
-              {t('landing.faq.sectionTitle')}
-            </h2>
+            <h2 className="text-4xl md:text-5xl font-bold text-center">{t('faq.sectionTitle')}</h2>
           </div>
 
           <Card className="w-full">
             <CardContent className="pt-6">
               <Accordion type="single" collapsible className="w-full">
-                {['cost', 'sports', 'matching', 'privacy', 'getStarted', 'platforms'].map(key => (
+                {['cost', 'sports', 'matching', 'privacy', 'availability', 'platforms'].map(key => (
                   <AccordionItem key={key} value={key}>
                     <AccordionTrigger className="text-left">
-                      {t(`landing.faq.questions.${key}.question`)}
+                      {t(`faq.questions.${key}.question`)}
                     </AccordionTrigger>
                     <AccordionContent className="text-gray-600 dark:text-gray-400">
-                      {t(`landing.faq.questions.${key}.answer`)}
+                      {t(`faq.questions.${key}.answer`)}
                     </AccordionContent>
                   </AccordionItem>
                 ))}
