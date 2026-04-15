@@ -21,9 +21,49 @@ function extractStableDeviceTraits(userAgent: string): string {
   return match ? match[0] : userAgent;
 }
 
-export function computeFingerprint(ip: string, userAgent: string): string {
+/**
+ * Extract the iOS build number from a user agent string.
+ * Both Safari and WKWebView UAs contain "Mobile/XXXXX" where XXXXX is the
+ * build number (e.g. "15E148"). This is more granular than the OS version
+ * alone and is consistent across Safari and WKWebView on the same device.
+ */
+function extractBuildNumber(userAgent: string): string {
+  const match = userAgent.match(/Mobile\/(\w+)/);
+  return match ? match[1] : '';
+}
+
+/**
+ * Extract the primary locale from the Accept-Language header.
+ * Returns the first language tag (e.g. "fr-CA" from "fr-CA,fr;q=0.9,en;q=0.8").
+ * This matches the device's primary locale reported by expo-localization.
+ */
+function extractPrimaryLocale(acceptLanguage: string): string {
+  // First entry before any comma or semicolon
+  const primary = acceptLanguage.split(/[,;]/)[0]?.trim();
+  return primary || '';
+}
+
+/**
+ * Compute a device fingerprint from device traits, build number, and locale.
+ * IP is NOT included because iCloud Private Relay (enabled by default for
+ * iCloud+ subscribers on iOS 15+) routes Safari traffic through Apple relay
+ * servers, giving the web server a different IP than the mobile app sees.
+ *
+ * The combination of device traits + build number + locale provides ~18,000+
+ * distinct fingerprints, sufficient for deferred deep link matching within
+ * a 7-day window at current scale.
+ *
+ * IP is still stored separately in the DB and used as a preference tiebreaker.
+ */
+export function computeFingerprint(
+  _ip: string,
+  userAgent: string,
+  acceptLanguage?: string
+): string {
   const traits = extractStableDeviceTraits(userAgent);
-  return createHash('sha256').update(`${ip}:${traits}`).digest('hex');
+  const build = extractBuildNumber(userAgent);
+  const locale = acceptLanguage ? extractPrimaryLocale(acceptLanguage) : '';
+  return createHash('sha256').update(`${traits}:${build}:${locale}`).digest('hex');
 }
 
 export function detectPlatform(userAgent: string): 'ios' | 'android' | null {

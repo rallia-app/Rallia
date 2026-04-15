@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { headers } from 'next/headers';
-import { redirect } from 'next/navigation';
+
 import { getTranslations } from 'next-intl/server';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -21,7 +21,6 @@ function isMobile(userAgent: string): 'ios' | 'android' | null {
 
 type Props = {
   params: Promise<{ id: string; locale: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -70,22 +69,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title,
       description,
     },
+    other: {
+      'apple-itunes-app': `app-id=6760482014, app-argument=https://rallia.app/${locale}/match/${id}`,
+    },
   };
 }
 
-export default async function MatchPage({ params, searchParams }: Props) {
+export default async function MatchPage({ params }: Props) {
   const { id, locale } = await params;
-  const query = await searchParams;
 
-  // Redirect mobile users to app stores when coming from email or QR
+  // Detect platform for showing the right store badge
   const headersList = await headers();
   const userAgent = headersList.get('user-agent') ?? '';
   const platform = isMobile(userAgent);
-
-  if (query.src === 'email' || query.src === 'qr') {
-    if (platform === 'ios') redirect(APP_STORE_URL);
-    if (platform === 'android') redirect(PLAY_STORE_URL);
-  }
 
   const match = await getMatch(id);
   const t = await getTranslations({ locale, namespace: 'matchPage' });

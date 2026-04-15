@@ -23,7 +23,7 @@ export default function JoinMatchDialog({ matchId, open, onOpenChange }: JoinMat
   const t = useTranslations('gamesPage.joinDialog');
   const locale = useLocale();
 
-  // Build the match detail URL which handles mobile redirects server-side
+  // Universal link with tracking param — iOS/Android will open the app directly if installed
   const matchUrl = matchId
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/${locale}/match/${matchId}?src=qr`
     : '';
