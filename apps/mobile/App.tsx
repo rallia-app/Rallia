@@ -69,6 +69,7 @@ import { linking } from './src/navigation/linking';
 import { ActionsBottomSheet } from './src/components/ActionsBottomSheet';
 import { FeedbackSheet } from './src/components/FeedbackSheet';
 import { SplashOverlay } from './src/components/SplashOverlay';
+import BetaNoticeModal from './src/components/BetaNoticeModal';
 import {
   ThemeProvider,
   useTheme,
@@ -634,6 +635,8 @@ function AppContent() {
         tourId={lastCompletedTourId || undefined}
       />
       */}
+      {/* Beta notice - shown once on first launch during beta period */}
+      <BetaNoticeModal isSplashComplete={isSplashComplete} />
       {/* Splash overlay - renders on top of everything */}
       <SplashOverlay
         onAnimationComplete={() => setSplashComplete(true)}

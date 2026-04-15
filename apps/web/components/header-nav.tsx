@@ -5,9 +5,8 @@ import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 
 const navLinks = [
+  { href: '/', key: 'home' },
   { href: '/games', key: 'games' },
-  { href: '/communities', key: 'communities' },
-  { href: '/guides', key: 'guides' },
 ] as const;
 
 export default function HeaderNav() {
@@ -17,7 +16,10 @@ export default function HeaderNav() {
   return (
     <nav className="hidden md:flex items-center gap-14">
       {navLinks.map(link => {
-        const isActive = pathname === link.href || pathname.startsWith(`${link.href}/`);
+        const isActive =
+          link.href === '/'
+            ? pathname === '/'
+            : pathname === link.href || pathname.startsWith(`${link.href}/`);
 
         return (
           <Link
