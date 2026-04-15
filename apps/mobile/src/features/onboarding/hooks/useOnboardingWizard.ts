@@ -189,8 +189,7 @@ function isStepComplete(stepId: OnboardingStepId, formData: OnboardingFormData):
         formData.lastName.trim() &&
         formData.username.trim() &&
         formData.dateOfBirth &&
-        formData.gender &&
-        formData.phoneNumber.trim()
+        formData.gender
       );
 
     case 'location':

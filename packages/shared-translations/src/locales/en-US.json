@@ -3509,7 +3509,7 @@
       "activate": "Activate"
     },
     "header": {
-      "ctaButton": "Become a Beta Tester",
+      "ctaButton": "Download",
       "nav": {
         "home": "Home",
         "games": "Games"
@@ -3691,6 +3691,101 @@
         "platforms": {
           "question": "What platforms is Rallia available on?",
           "answer": "Rallia will be available as a web app, iOS app, and Android app. You can access your account and schedule games from any device."
+        }
+      }
+    },
+    "landing": {
+      "hero": {
+        "badge": "Beta",
+        "headline": "Your next game starts here.",
+        "subheadline": "Download the app, connect with players at your level, and start playing today.",
+        "downloadButton": "Download the App",
+        "learnMore": "Learn more"
+      },
+      "howItWorks": {
+        "sectionTitle": "How It Works",
+        "sectionBadge": "Simple Process",
+        "step1": {
+          "title": "Download the App",
+          "description": "Get Rallia on the App Store or Google Play and create your free account in seconds."
+        },
+        "step2": {
+          "title": "Create Your Profile",
+          "description": "Share your skill level, location, and playing preferences."
+        },
+        "step3": {
+          "title": "Find a Game",
+          "description": "Browse nearby games or create your own. Get matched with players at your level."
+        },
+        "step4": {
+          "title": "Play & Review",
+          "description": "Show up, play, and rate your experience. Build your network of reliable players."
+        }
+      },
+      "whyJoinBeta": {
+        "sectionTitle": "Why Join the Beta?",
+        "sectionBadge": "Beta Tester Perks",
+        "description": "Be part of the founding community and help shape the future of racquet sports.",
+        "benefits": {
+          "free": {
+            "title": "Completely Free",
+            "description": "The beta is 100% free. No credit card, no hidden fees. Just download and play."
+          },
+          "influence": {
+            "title": "Shape the Product",
+            "description": "Your feedback directly influences features. Help us build exactly what players need."
+          },
+          "community": {
+            "title": "Founding Community",
+            "description": "Connect with other early adopters and build your network before the crowd arrives."
+          },
+          "exclusive": {
+            "title": "Exclusive Features",
+            "description": "Get early access to new features and releases before anyone else."
+          },
+          "support": {
+            "title": "VIP Support",
+            "description": "Direct line to our team. Get priority support and help shape our service standards."
+          }
+        }
+      },
+      "downloadCta": {
+        "headline": "Ready to play?",
+        "description": "Download Rallia and find your next game today. Available on iOS and Android."
+      },
+      "downloadDialog": {
+        "title": "Download Rallia",
+        "description": "Scan the QR code with your phone to download the app.",
+        "qrHint": "Point your phone camera at the QR code to get started"
+      },
+      "faq": {
+        "sectionTitle": "Frequently Asked Questions",
+        "sectionBadge": "FAQ",
+        "questions": {
+          "cost": {
+            "question": "Is Rallia free to use?",
+            "answer": "Rallia is completely free during the beta. We're focused on building the best experience for players right now. Future pricing will be announced before launch."
+          },
+          "sports": {
+            "question": "What sports are supported?",
+            "answer": "Currently, we support tennis and pickleball. We're planning to expand to other racquet sports like squash and badminton based on user demand."
+          },
+          "matching": {
+            "question": "How does the skill matching work?",
+            "answer": "Our system analyzes your skill level, match history, and player feedback to assess your ability. You'll be matched with players at your level for competitive and enjoyable games."
+          },
+          "privacy": {
+            "question": "Is my data private and secure?",
+            "answer": "Absolutely. We use industry-standard encryption and never share your personal information with third parties. You control what information other players can see."
+          },
+          "getStarted": {
+            "question": "How do I get started?",
+            "answer": "Download Rallia from the App Store or Google Play, create your profile, and start browsing games near you. It takes less than a minute to get set up."
+          },
+          "platforms": {
+            "question": "What platforms is Rallia available on?",
+            "answer": "Rallia is available now on iOS and Android. Download it from the App Store or Google Play and start playing today."
+          }
         }
       }
     }
@@ -3972,11 +4067,11 @@
     "title": "Rallia",
     "description": "The platform that will connect tennis and pickleball players for better games, every time.",
     "quickLinks": "Quick Links",
-    "joinBeta": "Become a Beta Tester",
+    "joinBeta": "Download the App",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
     "rights": "All rights reserved.",
-    "comingSoon": "Coming Early 2026"
+    "comingSoon": "Now in Beta"
   },
   "signIn": {
     "title": "Organization Sign In",
@@ -6083,9 +6178,19 @@
       "controls": {
         "clusters": "Clusters",
         "heatmap": "Heatmap",
+        "players": "Players",
         "facilities": "Facilities",
+        "thirdPartyOnly": "Bookable only",
         "selectArea": "Select Area",
         "joinedBetween": "Joined between"
+      },
+      "legend": {
+        "tennis": "Tennis",
+        "pickleball": "Pickleball",
+        "bookable": "Bookable"
+      },
+      "popup": {
+        "bookable": "Bookable"
       },
       "selection": {
         "title": "Area Selection",

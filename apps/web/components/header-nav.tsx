@@ -14,7 +14,7 @@ export default function HeaderNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="hidden md:flex items-center gap-14">
+    <nav className="hidden md:flex items-center gap-10">
       {navLinks.map(link => {
         const isActive =
           link.href === '/'
