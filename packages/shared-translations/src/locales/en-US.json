@@ -3702,6 +3702,26 @@
         "downloadButton": "Download the App",
         "learnMore": "Learn more"
       },
+      "solutions": {
+        "sectionTitle": "The Solution",
+        "sectionBadge": "How It Works",
+        "courtFinder": {
+          "title": "Court Finder",
+          "description": "Browse every tennis and pickleball court near you on an interactive map. Filter by surface, lighting, and access type. See real-time availability for public courts and get redirected straight to the booking page."
+        },
+        "skillLevels": {
+          "title": "Verified Skill Levels",
+          "description": "Rate your level on the NTRP or DUPR scale and get certified through video proof or player references. Trust badges let you know exactly who you're playing with."
+        },
+        "gameMarketplace": {
+          "title": "Game Marketplace",
+          "description": "Create a game or browse open ones nearby. Set the format, skill level, cost sharing, and more. Players can join instantly or request approval — no more group chat coordination."
+        },
+        "reputation": {
+          "title": "Player Reputation",
+          "description": "Every player earns a reliability score based on punctuality, cancellations, and fair play. Bronze to Platinum badges make it easy to find players who actually show up."
+        }
+      },
       "howItWorks": {
         "sectionTitle": "How It Works",
         "sectionBadge": "Simple Process",

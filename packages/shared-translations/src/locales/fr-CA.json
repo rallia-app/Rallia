@@ -3535,7 +3535,7 @@
       },
       "reliability": {
         "title": "Le problème de fiabilité",
-        "description": "Absences sans préavis. Joueurs qui annulent à la dernière minute. Impossible de savoir qui est fiable."
+        "description": "Absences sans préavis. Joueurs qui annulent à la dernière minute. Aucun moyen de savoir à l'avance si ton partenaire va se présenter."
       },
       "growth": {
         "title": "La barrière de progression",
@@ -3701,6 +3701,26 @@
         "subheadline": "Télécharge l'application, connecte-toi avec des joueurs de ton niveau, et commence à jouer aujourd'hui.",
         "downloadButton": "Télécharger l'application",
         "learnMore": "En savoir plus"
+      },
+      "solutions": {
+        "sectionTitle": "La solution",
+        "sectionBadge": "Comment ça marche",
+        "courtFinder": {
+          "title": "Trouver un terrain",
+          "description": "Parcours tous les terrains de tennis et pickleball près de chez toi sur une carte interactive. Filtre par surface, éclairage et type d'accès. Consulte les disponibilités en temps réel des terrains publics et accède directement à la page de réservation."
+        },
+        "skillLevels": {
+          "title": "Niveaux vérifiés",
+          "description": "Évalue ton niveau sur l'échelle NTRP ou DUPR et fais-le certifier par preuve vidéo ou références de joueurs. Les badges de confiance te permettent de savoir exactement avec qui tu joues."
+        },
+        "gameMarketplace": {
+          "title": "Marché de parties",
+          "description": "Crée une partie ou parcours celles qui sont ouvertes à proximité. Définis le format, le niveau, le partage des coûts et plus encore. Les joueurs peuvent rejoindre instantanément ou demander l'approbation — fini la coordination par chat de groupe."
+        },
+        "reputation": {
+          "title": "Réputation des joueurs",
+          "description": "Chaque joueur obtient un score de fiabilité basé sur la ponctualité, les annulations et le fair-play. Les badges Bronze à Platine permettent de trouver facilement des joueurs qui se présentent vraiment."
+        }
       },
       "howItWorks": {
         "sectionTitle": "Comment ça fonctionne",
