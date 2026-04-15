@@ -1,3 +1,4 @@
+import HeaderDownloadButton from './header-download-button';
 import HeaderNav from './header-nav';
 import LocaleToggle from './locale-toggle';
 import ModeToggle from './mode-toggle';
@@ -9,6 +10,7 @@ export default function Header() {
       <ThemeLogo href="/" width={120} height={40} />
       <HeaderNav />
       <div className="flex items-center gap-3">
+        <HeaderDownloadButton />
         <LocaleToggle />
         <ModeToggle />
       </div>

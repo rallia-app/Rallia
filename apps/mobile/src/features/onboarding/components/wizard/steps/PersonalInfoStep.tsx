@@ -215,7 +215,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
 
   const validatePhoneNumber = (value: string): string | undefined => {
     if (!value.trim()) {
-      return 'Phone number is required';
+      return undefined;
     }
     // Basic phone validation - at least 8 digits
     const digitsOnly = value.replace(/\D/g, '');
@@ -708,7 +708,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
           onChangePhone={handlePhoneNumberChange}
           label={t('onboarding.personalInfoStep.phoneNumber')}
           placeholder={t('onboarding.personalInfoStep.phoneNumber')}
-          required
+          required={false}
           colors={{
             text: colors.text,
             textMuted: colors.textMuted,

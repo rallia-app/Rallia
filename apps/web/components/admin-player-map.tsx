@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { Building2, Flame, MapPin, MousePointerSquareDashed, Users, X } from 'lucide-react';
+import { Building2, Flame, Link2, MapPin, MousePointerSquareDashed, Users, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
 import { useCallback, useMemo, useState } from 'react';
@@ -48,6 +48,7 @@ export interface FacilityMapPoint {
   facilityType: string | null;
   sports: string[];
   courtCount: number;
+  hasExternalProvider: boolean;
 }
 
 export interface SelectionStats {
@@ -72,7 +73,9 @@ export function AdminPlayerMap({ points, facilities }: AdminPlayerMapProps) {
   const [statusFilter, setStatusFilter] = useState('all');
   const [provinceFilter, setProvinceFilter] = useState('all');
   const [viewMode, setViewMode] = useState<MapViewMode>('clusters');
+  const [showPlayers, setShowPlayers] = useState(true);
   const [showFacilities, setShowFacilities] = useState(true);
+  const [showOnlyBookable, setShowOnlyBookable] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionStats, setSelectionStats] = useState<SelectionStats | null>(null);
 
@@ -122,6 +125,11 @@ export function AdminPlayerMap({ points, facilities }: AdminPlayerMapProps) {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5);
   }, [filteredPoints]);
+
+  const filteredFacilities = useMemo(() => {
+    if (!showOnlyBookable) return facilities;
+    return facilities.filter(f => f.hasExternalProvider);
+  }, [facilities, showOnlyBookable]);
 
   const handleSelectionComplete = useCallback(
     (bounds: { north: number; south: number; east: number; west: number }) => {
@@ -243,6 +251,17 @@ export function AdminPlayerMap({ points, facilities }: AdminPlayerMapProps) {
           </Button>
         </div>
 
+        {/* Player toggle */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn('gap-1.5 h-8', showPlayers && 'bg-primary/10 text-primary')}
+          onClick={() => setShowPlayers(!showPlayers)}
+        >
+          <Users className="size-3.5" />
+          {t('controls.players')}
+        </Button>
+
         {/* Facility toggle */}
         <Button
           variant="ghost"
@@ -253,6 +272,19 @@ export function AdminPlayerMap({ points, facilities }: AdminPlayerMapProps) {
           <Building2 className="size-3.5" />
           {t('controls.facilities')}
         </Button>
+
+        {/* Bookable only toggle */}
+        {showFacilities && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn('gap-1.5 h-8', showOnlyBookable && 'bg-primary/10 text-primary')}
+            onClick={() => setShowOnlyBookable(!showOnlyBookable)}
+          >
+            <Link2 className="size-3.5" />
+            {t('controls.thirdPartyOnly')}
+          </Button>
+        )}
 
         {/* Area select */}
         <Button
@@ -314,7 +346,39 @@ export function AdminPlayerMap({ points, facilities }: AdminPlayerMapProps) {
             <span className="text-border">|</span>
             <span className="flex items-center gap-1.5">
               <Building2 className="size-3.5" />
-              {t('stats.totalFacilities', { count: facilities.length })}
+              {t('stats.totalFacilities', { count: filteredFacilities.length })}
+            </span>
+            <span className="text-border">|</span>
+            <span className="flex items-center gap-1.5">
+              <span
+                className="inline-block size-2.5 rounded-sm"
+                style={{ background: '#14b8a6' }}
+              />
+              {t('legend.tennis')}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span
+                className="inline-block size-2.5 rounded-sm"
+                style={{ background: '#f59e0b' }}
+              />
+              {t('legend.pickleball')}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span
+                className="inline-block size-2.5 rounded-sm overflow-hidden"
+                style={{ background: 'linear-gradient(135deg, #14b8a6 50%, #f59e0b 50%)' }}
+              />
+              {t('legend.tennis')} + {t('legend.pickleball')}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span
+                className="inline-block size-2.5 rounded-sm"
+                style={{
+                  background: '#0ea5e9',
+                  boxShadow: '0 0 0 1.5px #059669, 0 0 4px 1px #05966966',
+                }}
+              />
+              {t('legend.bookable')}
             </span>
           </>
         )}
@@ -381,10 +445,10 @@ export function AdminPlayerMap({ points, facilities }: AdminPlayerMapProps) {
       )}
 
       {/* Map */}
-      {filteredPoints.length > 0 ? (
+      {points.length > 0 || facilities.length > 0 ? (
         <AdminPlayerMapInner
-          points={filteredPoints}
-          facilities={showFacilities ? facilities : []}
+          points={showPlayers ? filteredPoints : []}
+          facilities={showFacilities ? filteredFacilities : []}
           viewMode={viewMode}
           isSelecting={isSelecting}
           onSelectionComplete={handleSelectionComplete}

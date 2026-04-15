@@ -3509,11 +3509,10 @@
       "activate": "Activer"
     },
     "header": {
-      "ctaButton": "Devenir bêta-testeur",
+      "ctaButton": "Télécharger",
       "nav": {
-        "games": "Parties",
-        "communities": "Communautés",
-        "guides": "Guides"
+        "home": "Accueil",
+        "games": "Parties"
       }
     },
     "hero": {
@@ -3692,6 +3691,101 @@
         "platforms": {
           "question": "Sur quelles plateformes Rallia est-il disponible?",
           "answer": "Rallia sera disponible comme application web, application iOS et application Android. Vous pourrez accéder à votre compte et planifier des parties depuis n'importe quel appareil."
+        }
+      }
+    },
+    "landing": {
+      "hero": {
+        "badge": "Bêta",
+        "headline": "Ta prochaine partie commence ici.",
+        "subheadline": "Télécharge l'application, connecte-toi avec des joueurs de ton niveau, et commence à jouer aujourd'hui.",
+        "downloadButton": "Télécharger l'application",
+        "learnMore": "En savoir plus"
+      },
+      "howItWorks": {
+        "sectionTitle": "Comment ça fonctionne",
+        "sectionBadge": "Processus simple",
+        "step1": {
+          "title": "Télécharger l'application",
+          "description": "Obtiens Rallia sur l'App Store ou Google Play et crée ton compte gratuit en quelques secondes."
+        },
+        "step2": {
+          "title": "Créer ton profil",
+          "description": "Partage ton niveau, ta localisation et tes préférences de jeu."
+        },
+        "step3": {
+          "title": "Trouver une partie",
+          "description": "Parcours les parties à proximité ou crée la tienne. Sois jumelé avec des joueurs de ton niveau."
+        },
+        "step4": {
+          "title": "Jouer et évaluer",
+          "description": "Présente-toi, joue, et évalue ton expérience. Construis ton réseau de joueurs fiables."
+        }
+      },
+      "whyJoinBeta": {
+        "sectionTitle": "Pourquoi rejoindre la bêta?",
+        "sectionBadge": "Avantages bêta-testeur",
+        "description": "Fais partie de la communauté fondatrice et aide à façonner l'avenir des sports de raquette.",
+        "benefits": {
+          "free": {
+            "title": "Complètement gratuit",
+            "description": "La bêta est 100% gratuite. Pas de carte de crédit, pas de frais cachés. Télécharge et joue."
+          },
+          "influence": {
+            "title": "Façonne le produit",
+            "description": "Tes commentaires influencent directement les fonctionnalités. Aide-nous à créer exactement ce dont les joueurs ont besoin."
+          },
+          "community": {
+            "title": "Communauté fondatrice",
+            "description": "Connecte-toi avec d'autres pionniers et construis ton réseau avant l'arrivée de la foule."
+          },
+          "exclusive": {
+            "title": "Fonctionnalités exclusives",
+            "description": "Accède en avant-première aux nouvelles fonctionnalités et versions avant tout le monde."
+          },
+          "support": {
+            "title": "Support VIP",
+            "description": "Ligne directe avec notre équipe. Obtiens un support prioritaire et aide à façonner nos standards."
+          }
+        }
+      },
+      "downloadCta": {
+        "headline": "Prêt à jouer?",
+        "description": "Télécharge Rallia et trouve ta prochaine partie aujourd'hui. Disponible sur iOS et Android."
+      },
+      "downloadDialog": {
+        "title": "Télécharger Rallia",
+        "description": "Scanne le code QR avec ton téléphone pour télécharger l'application.",
+        "qrHint": "Pointe la caméra de ton téléphone vers le code QR pour commencer"
+      },
+      "faq": {
+        "sectionTitle": "Questions fréquentes",
+        "sectionBadge": "FAQ",
+        "questions": {
+          "cost": {
+            "question": "Est-ce que Rallia est gratuit?",
+            "answer": "Rallia est complètement gratuit pendant la bêta. Nous nous concentrons sur offrir la meilleure expérience possible. Les tarifs futurs seront annoncés avant le lancement."
+          },
+          "sports": {
+            "question": "Quels sports sont supportés?",
+            "answer": "Actuellement, nous supportons le tennis et le pickleball. Nous prévoyons étendre à d'autres sports de raquette comme le squash et le badminton selon la demande."
+          },
+          "matching": {
+            "question": "Comment fonctionne le jumelage par niveau?",
+            "answer": "Notre système analyse ton niveau, l'historique de tes parties et les commentaires des joueurs pour évaluer ta capacité. Tu seras jumelé avec des joueurs de ton niveau pour des parties compétitives et agréables."
+          },
+          "privacy": {
+            "question": "Mes données sont-elles privées et sécurisées?",
+            "answer": "Absolument. Nous utilisons un chiffrement standard de l'industrie et ne partageons jamais tes informations personnelles. Tu contrôles quelles informations sont visibles aux autres joueurs."
+          },
+          "getStarted": {
+            "question": "Comment commencer?",
+            "answer": "Télécharge Rallia depuis l'App Store ou Google Play, crée ton profil, et commence à parcourir les parties près de chez toi. Ça prend moins d'une minute."
+          },
+          "platforms": {
+            "question": "Sur quelles plateformes Rallia est-il disponible?",
+            "answer": "Rallia est disponible maintenant sur iOS et Android. Télécharge-le depuis l'App Store ou Google Play et commence à jouer aujourd'hui."
+          }
         }
       }
     }
@@ -3973,11 +4067,11 @@
     "title": "Rallia",
     "description": "La plateforme qui connectera les joueurs de tennis et de pickleball pour de meilleures parties, à chaque fois.",
     "quickLinks": "Liens rapides",
-    "joinBeta": "Devenir bêta-testeur",
+    "joinBeta": "Télécharger l'application",
     "privacy": "Politique de confidentialité",
     "terms": "Conditions d'utilisation",
     "rights": "Tous droits réservés.",
-    "comingSoon": "Disponible début 2026"
+    "comingSoon": "En bêta"
   },
   "signIn": {
     "title": "Connexion Organisation",
@@ -6086,9 +6180,19 @@
       "controls": {
         "clusters": "Groupes",
         "heatmap": "Carte thermique",
+        "players": "Joueurs",
         "facilities": "Installations",
+        "thirdPartyOnly": "Réservable uniquement",
         "selectArea": "Sélectionner une zone",
         "joinedBetween": "Inscrit entre"
+      },
+      "legend": {
+        "tennis": "Tennis",
+        "pickleball": "Pickleball",
+        "bookable": "Réservable"
+      },
+      "popup": {
+        "bookable": "Réservable"
       },
       "selection": {
         "title": "Zone sélectionnée",
@@ -8209,7 +8313,9 @@
     "appStore": "Télécharger sur l'App Store",
     "googlePlay": "Télécharger sur Google Play",
     "notFound": "Invitation non trouvée",
-    "notFoundDescription": "Ce lien d'invitation est peut-être invalide ou expiré."
+    "notFoundDescription": "Ce lien d'invitation est peut-être invalide ou expiré.",
+    "downloadCta": "Télécharger Rallia",
+    "clipboardHint": "Le lien sera sauvegardé pour que l'app puisse connecter votre invitation."
   },
   "feedback": {
     "title": "Commentaires",
@@ -8403,5 +8509,11 @@
       "displayName": "Choisir un nom d'affichage",
       "playStyle": "Définir votre style de jeu"
     }
+  },
+  "beta": {
+    "badge": "BÊTA",
+    "noticeTitle": "Bienvenue dans la bêta de Rallia !",
+    "noticeMessage": "Vous utilisez une version préliminaire de Rallia. Certains joueurs et matchs peuvent être simulés pour vous permettre d'explorer l'application. Les installations et terrains, par contre, sont réels et exacts. Les disponibilités des terrains publics à travers Montréal seront progressivement ajoutées au cours des prochaines semaines — certaines sont déjà disponibles dans l'application !",
+    "noticeDismiss": "Compris !"
   }
 }

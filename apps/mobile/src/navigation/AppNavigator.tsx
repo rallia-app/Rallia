@@ -56,6 +56,7 @@ import { useAppNavigation } from './hooks';
 import { spacingPixels, fontSizePixels, neutral } from '@rallia/design-system';
 import ProfileCompletionRing from '../features/profile/components/ProfileCompletionRing';
 import { getTierColors } from '../features/profile/completionTierColors';
+import BetaBadge from '../components/BetaBadge';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type {
   NativeStackNavigationProp,
@@ -456,7 +457,7 @@ const HEADER_CONTENT_HEIGHT = 52; // default native is 44
 
 function MainTabHeader() {
   const insets = useSafeAreaInsets();
-  const { colors } = useThemeStyles();
+  const { colors, isDark } = useThemeStyles();
 
   return (
     <View
@@ -490,7 +491,10 @@ function MainTabHeader() {
             paddingBottom: 4,
           }}
         >
-          <ThemeLogo width={100} height={30} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <ThemeLogo width={100} height={30} />
+            <BetaBadge isDark={isDark} />
+          </View>
         </View>
         <HeaderRightButtons />
       </View>

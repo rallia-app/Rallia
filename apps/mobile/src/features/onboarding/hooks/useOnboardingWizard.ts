@@ -127,7 +127,7 @@ const INITIAL_FORM_DATA: OnboardingFormData = {
   tennisRatingId: null,
   pickleballRatingId: null,
   playingHand: 'right',
-  maxTravelDistance: 15,
+  maxTravelDistance: 50,
   matchDuration: '90', // Legacy field (90 = 1.5h)
   tennisMatchDuration: '90',
   pickleballMatchDuration: '90',
@@ -189,8 +189,7 @@ function isStepComplete(stepId: OnboardingStepId, formData: OnboardingFormData):
         formData.lastName.trim() &&
         formData.username.trim() &&
         formData.dateOfBirth &&
-        formData.gender &&
-        formData.phoneNumber.trim()
+        formData.gender
       );
 
     case 'location':
