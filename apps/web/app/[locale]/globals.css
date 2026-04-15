@@ -239,10 +239,10 @@
     margin-bottom: 0.75em;
   }
 
-  /* Improved spacing for sections */
-  section {
+  /* Improved spacing for sections — disabled for landing page full-bleed sections */
+  /* section {
     margin-bottom: 4rem;
-  }
+  } */
 
   /* Better paragraph spacing */
   p {
@@ -257,9 +257,6 @@
 
   /* Better mobile spacing */
   @media (max-width: 768px) {
-    section {
-      margin-bottom: 3rem;
-    }
 
     h1 {
       font-size: 3rem;

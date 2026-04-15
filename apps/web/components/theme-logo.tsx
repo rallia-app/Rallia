@@ -12,6 +12,7 @@ interface ThemeLogoProps {
   height?: number;
   className?: string;
   href?: string;
+  variant?: 'auto' | 'light' | 'dark';
 }
 
 export default function ThemeLogo({
@@ -19,6 +20,7 @@ export default function ThemeLogo({
   height = 40,
   className = '',
   href,
+  variant = 'auto',
 }: ThemeLogoProps) {
   const [mounted, setMounted] = useState(false);
   const { theme, systemTheme } = useTheme();
@@ -37,7 +39,14 @@ export default function ThemeLogo({
   }
 
   const currentTheme = theme === 'system' ? systemTheme : theme;
-  const logoSrc = currentTheme === 'dark' ? LogoLight : LogoDark;
+  const logoSrc =
+    variant === 'light'
+      ? LogoLight
+      : variant === 'dark'
+        ? LogoDark
+        : currentTheme === 'dark'
+          ? LogoLight
+          : LogoDark;
 
   const logoElement = (
     <Image
