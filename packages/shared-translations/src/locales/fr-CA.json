@@ -3511,9 +3511,8 @@
     "header": {
       "ctaButton": "Devenir bêta-testeur",
       "nav": {
-        "games": "Parties",
-        "communities": "Communautés",
-        "guides": "Guides"
+        "home": "Accueil",
+        "games": "Parties"
       }
     },
     "hero": {
@@ -8403,5 +8402,11 @@
       "displayName": "Choisir un nom d'affichage",
       "playStyle": "Définir votre style de jeu"
     }
+  },
+  "beta": {
+    "badge": "BÊTA",
+    "noticeTitle": "Bienvenue dans la bêta de Rallia !",
+    "noticeMessage": "Vous utilisez une version préliminaire de Rallia. Certains joueurs et matchs peuvent être simulés pour vous permettre d'explorer l'application. Les installations et terrains, par contre, sont réels et exacts. Les disponibilités des terrains publics à travers Montréal seront progressivement ajoutées au cours des prochaines semaines — certaines sont déjà disponibles dans l'application !",
+    "noticeDismiss": "Compris !"
   }
 }

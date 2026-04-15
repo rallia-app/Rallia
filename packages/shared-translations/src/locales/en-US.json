@@ -3511,9 +3511,8 @@
     "header": {
       "ctaButton": "Become a Beta Tester",
       "nav": {
-        "games": "Games",
-        "communities": "Communities",
-        "guides": "Guides"
+        "home": "Home",
+        "games": "Games"
       }
     },
     "hero": {
@@ -8401,5 +8400,11 @@
       "displayName": "Choose a display name",
       "playStyle": "Set your play style"
     }
+  },
+  "beta": {
+    "badge": "BETA",
+    "noticeTitle": "Welcome to the Rallia Beta!",
+    "noticeMessage": "You're using an early version of Rallia. Some players and games you see may be simulated to help you explore the app. Facilities and courts, however, are real and accurate. Court availabilities from public facilities across Montreal will progressively become available over the next few weeks — some are already live in the app!",
+    "noticeDismiss": "Got it!"
   }
 }
