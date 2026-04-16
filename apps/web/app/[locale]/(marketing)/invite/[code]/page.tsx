@@ -16,7 +16,12 @@ import Image from 'next/image';
 import { QRCodeSVG } from 'qrcode.react';
 import { ClipboardDownloadButton } from './_components/clipboard-download-button';
 
-type InvitationType = 'referral' | 'match' | 'group' | 'community';
+type InvitationType = 'referral' | 'match' | 'group' | 'community' | 'flyer' | 'poster';
+
+const PHYSICAL_CHANNEL_TYPES: readonly InvitationType[] = ['flyer', 'poster'] as const;
+function isPhysicalChannel(type: InvitationType): boolean {
+  return (PHYSICAL_CHANNEL_TYPES as readonly string[]).includes(type);
+}
 
 type Props = {
   params: Promise<{ code: string; locale: string }>;
@@ -72,7 +77,7 @@ async function getCommunityDetails(inviteCode: string) {
 }
 
 function parseInvitationType(type?: string): InvitationType {
-  if (type && ['match', 'group', 'community', 'referral'].includes(type)) {
+  if (type && ['match', 'group', 'community', 'referral', 'flyer', 'poster'].includes(type)) {
     return type as InvitationType;
   }
   return 'referral';
@@ -82,8 +87,19 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const { code, locale } = await params;
   const query = await searchParams;
   const invitationType = parseInvitationType(query.type);
-  const inviter = await getInviter(code);
   const t = await getTranslations({ locale, namespace: 'invitePage' });
+
+  if (isPhysicalChannel(invitationType)) {
+    const title = t('physicalTitle');
+    return {
+      title,
+      description: t('physicalDescription'),
+      openGraph: { title, description: t('physicalDescription'), type: 'website' },
+      twitter: { card: 'summary_large_image', title, description: t('physicalDescription') },
+    };
+  }
+
+  const inviter = await getInviter(code);
 
   let title: string;
 
@@ -141,10 +157,13 @@ export default async function InvitePage({ params, searchParams }: Props) {
   }
 
   // iOS + Desktop: show landing page (iOS gets clipboard CTA, desktop gets QR code)
-  const inviter = await getInviter(code);
   const t = await getTranslations({ locale, namespace: 'invitePage' });
+  const isPhysical = isPhysicalChannel(invitationType);
 
-  if (!inviter) {
+  // Physical channels (flyer/poster) have no referring user — skip inviter lookup
+  const inviter = isPhysical ? null : await getInviter(code);
+
+  if (!isPhysical && !inviter) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-24 w-full">
         <h1 className="text-2xl font-bold">{t('notFound')}</h1>
@@ -180,7 +199,7 @@ export default async function InvitePage({ params, searchParams }: Props) {
       });
       const matchTime = match.start_time?.substring(0, 5) || '';
       const location = match.location_name || '';
-      contextHeading = inviter.first_name
+      contextHeading = inviter?.first_name
         ? t('matchInviteHeading', { name: inviter.first_name, sport: sportName })
         : t('matchInviteHeadingGeneric', { sport: sportName });
       const parts = [`📅 ${matchDate}${matchTime ? ` ${t('at')} ${matchTime}` : ''}`];
@@ -203,7 +222,13 @@ export default async function InvitePage({ params, searchParams }: Props) {
 
   const heading =
     contextHeading ||
-    (inviter.first_name ? t('invitedBy', { name: inviter.first_name }) : t('invitedByGeneric'));
+    (isPhysical
+      ? t('physicalHeading')
+      : inviter?.first_name
+        ? t('invitedBy', { name: inviter.first_name })
+        : t('invitedByGeneric'));
+
+  const fallbackDescription = isPhysical ? t('physicalDescription') : t('description');
 
   return (
     <div className="flex flex-col items-center gap-8 py-16 w-full max-w-lg mx-auto animate-fade-in">
@@ -214,7 +239,7 @@ export default async function InvitePage({ params, searchParams }: Props) {
         {contextDescription ? (
           <p className="text-muted-foreground">{contextDescription}</p>
         ) : (
-          <p className="text-muted-foreground">{t('description')}</p>
+          <p className="text-muted-foreground">{fallbackDescription}</p>
         )}
       </div>
 

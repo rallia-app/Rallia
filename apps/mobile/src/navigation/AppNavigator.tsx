@@ -131,10 +131,6 @@ import PlayerMatches from '../features/matches/screens/PlayerMatches';
 import { FacilitiesDirectory, FacilityDetail } from '../features/facilities';
 import { MyBookingsScreen, BookingDetailScreen } from '../features/bookings';
 import { InviteReferralScreen } from '../screens/InviteReferralScreen';
-import { MatchDeepLinkScreen } from '../screens/MatchDeepLinkScreen';
-import { InvitationDeepLinkScreen } from '../screens/InvitationDeepLinkScreen';
-import { GroupJoinDeepLinkScreen } from '../screens/GroupJoinDeepLinkScreen';
-import { CommunityJoinDeepLinkScreen } from '../screens/CommunityJoinDeepLinkScreen';
 
 // =============================================================================
 // TYPED NAVIGATORS
@@ -1555,26 +1551,6 @@ export default function AppNavigator() {
       <RootStack.Screen
         name="InviteReferral"
         component={InviteReferralScreen}
-        options={{ headerShown: false }}
-      />
-      <RootStack.Screen
-        name="MatchDeepLink"
-        component={MatchDeepLinkScreen}
-        options={{ headerShown: false }}
-      />
-      <RootStack.Screen
-        name="InvitationDeepLink"
-        component={InvitationDeepLinkScreen}
-        options={{ headerShown: false }}
-      />
-      <RootStack.Screen
-        name="GroupJoinDeepLink"
-        component={GroupJoinDeepLinkScreen}
-        options={{ headerShown: false }}
-      />
-      <RootStack.Screen
-        name="CommunityJoinDeepLink"
-        component={CommunityJoinDeepLinkScreen}
         options={{ headerShown: false }}
       />
     </RootStack.Navigator>

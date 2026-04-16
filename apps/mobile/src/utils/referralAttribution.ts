@@ -15,8 +15,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import { getLocales } from 'expo-localization';
-import { PENDING_REFERRAL_KEY } from '../screens/InvitationDeepLinkScreen';
-import type { PendingReferral } from '../screens/InvitationDeepLinkScreen';
+import { PENDING_REFERRAL_KEY, type PendingReferral } from '../navigation/deepLinkStore';
 import { matchReferralFingerprint, parseInvitationUrl, Logger } from '@rallia/shared-services';
 import type { InvitationType } from '@rallia/shared-services';
 

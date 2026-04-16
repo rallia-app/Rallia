@@ -41,7 +41,7 @@ import type { TranslationKey } from '@rallia/shared-translations';
 import type { Locale } from '@rallia/shared-translations';
 import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
 import { useLocale } from '../../../../../context';
-import { PENDING_REFERRAL_KEY } from '../../../../../screens/InvitationDeepLinkScreen';
+import { PENDING_REFERRAL_KEY } from '../../../../../navigation/deepLinkStore';
 
 interface ThemeColors {
   background: string;

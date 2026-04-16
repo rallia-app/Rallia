@@ -8398,7 +8398,10 @@
     "notFound": "Invite not found",
     "notFoundDescription": "This invite link may be invalid or expired.",
     "downloadCta": "Download Rallia",
-    "clipboardHint": "The link will be saved so the app can connect your invitation."
+    "clipboardHint": "The link will be saved so the app can connect your invitation.",
+    "physicalTitle": "Welcome to Rallia",
+    "physicalHeading": "Welcome to Rallia",
+    "physicalDescription": "Download the app to find players, join matches, and play more."
   },
   "feedback": {
     "title": "Feedback",
