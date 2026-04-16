@@ -12,6 +12,11 @@
 import { type LinkingOptions, getStateFromPath } from '@react-navigation/native';
 import * as Linking from 'expo-linking';
 import type { RootStackParamList } from './types';
+import {
+  setPendingDeepLink,
+  isSportSelectionComplete,
+  type DeepLinkPayload,
+} from './deepLinkStore';
 
 /** Known locale prefixes used by the web app (next-intl) */
 const LOCALE_PATTERN = /^\/(en|en-US|fr|fr-CA|fr-FR)\//;
@@ -34,11 +39,68 @@ const prefixes = [
  * Linking configuration for React Navigation
  * Maps URL paths to screen names and parameters
  */
+/**
+ * Try to extract a deep link payload from the URL path.
+ * Returns the payload if matched, or null to fall through to default routing.
+ */
+function extractDeepLinkPayload(path: string): DeepLinkPayload | null {
+  // /community/join/:inviteCode (must be checked before /community/:communityId)
+  const communityJoin = path.match(/^\/community\/join\/([A-Za-z0-9]+)/);
+  if (communityJoin) {
+    return { type: 'community', inviteCode: communityJoin[1] };
+  }
+
+  // /join/:inviteCode — group invite
+  const groupJoin = path.match(/^\/join\/([A-Za-z0-9]+)/);
+  if (groupJoin) {
+    return { type: 'group', inviteCode: groupJoin[1] };
+  }
+
+  // /match/:matchId
+  const matchLink = path.match(/^\/match\/([A-Za-z0-9-]+)/);
+  if (matchLink) {
+    return { type: 'match', matchId: matchLink[1] };
+  }
+
+  // /invite/:referralCode?type=...&id=...
+  const inviteLink = path.match(/^\/invite\/([A-Za-z0-9]+)/);
+  if (inviteLink) {
+    const referralCode = inviteLink[1];
+    // Parse query params
+    const queryMatch = path.match(/\?(.*)/);
+    const params = new URLSearchParams(queryMatch?.[1] ?? '');
+    const type = params.get('type') ?? undefined;
+    const id = params.get('id') ?? undefined;
+    const validTypes = ['match', 'group', 'community', 'referral'] as const;
+    const invitationType =
+      type && validTypes.includes(type as (typeof validTypes)[number])
+        ? (type as (typeof validTypes)[number])
+        : undefined;
+    return {
+      type: 'invitation' as const,
+      referralCode,
+      invitationType,
+      targetId: id,
+    };
+  }
+
+  return null;
+}
+
 export const linking: LinkingOptions<RootStackParamList> = {
   prefixes,
-  // Strip locale prefixes (e.g. /en/match/123 → /match/123) so routes match
+  // Strip locale prefixes and intercept deep link URLs before default routing
   getStateFromPath(path, options) {
     const cleaned = path.replace(LOCALE_PATTERN, '/');
+
+    // Check for deep link patterns — store the data and navigate to Main
+    const payload = extractDeepLinkPayload(cleaned);
+    if (payload) {
+      setPendingDeepLink(payload);
+      const destination = isSportSelectionComplete() ? 'Main' : 'PreOnboarding';
+      return { routes: [{ name: destination }] };
+    }
+
     return getStateFromPath(cleaned, options);
   },
   config: {
@@ -92,10 +154,6 @@ export const linking: LinkingOptions<RootStackParamList> = {
       GroupDetail: 'group/:groupId',
       CommunityDetail: 'community/:communityId',
       InviteReferral: 'invite-legacy/:referralCode',
-      InvitationDeepLink: 'invite/:referralCode',
-      MatchDeepLink: 'match/:matchId',
-      GroupJoinDeepLink: 'join/:inviteCode',
-      CommunityJoinDeepLink: 'community/join/:inviteCode',
 
       // Admin screens - protected by useAdminDeepLinkGuard
       AdminPanel: 'admin',

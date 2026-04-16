@@ -555,30 +555,14 @@ export default function CommunitiesScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      {/* FAB Container - QR Scanner + Create Community */}
-      <View style={styles.fabContainer}>
-        {/* QR Scanner Button */}
-        <TouchableOpacity
-          style={[styles.fabSecondary, { backgroundColor: colors.cardBackground }]}
-          onPress={() => {
-            lightHaptic();
-            if (!guardAction()) return;
-            setShowQRScanner(true);
-          }}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="qr-code-outline" size={24} color={colors.primary} />
-        </TouchableOpacity>
-
-        {/* Create Community Button */}
-        <TouchableOpacity
-          style={[styles.fab, { backgroundColor: colors.primary }]}
-          onPress={handleOpenCreateCommunityActionSheet}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="add-outline" size={28} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+      {/* Create Community FAB */}
+      <TouchableOpacity
+        style={[styles.fab, { backgroundColor: colors.primary }]}
+        onPress={handleOpenCreateCommunityActionSheet}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="add-outline" size={28} color="#FFFFFF" />
+      </TouchableOpacity>
 
       {/* QR Scanner Modal */}
       {playerId && (

@@ -19,6 +19,7 @@ import {
   useResetGroupInviteCode,
   useReferral,
   getGroupInviteLink,
+  getCommunityInviteLink,
 } from '@rallia/shared-hooks';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
@@ -112,7 +113,8 @@ export function InviteLinkActionSheet({ payload }: SheetProps<'invite-link'>) {
   const resetInviteCodeMutation = useResetGroupInviteCode();
   const { code: referralCode } = useReferral(currentUserId || undefined);
 
-  const inviteLink = inviteCode ? getGroupInviteLink(inviteCode, referralCode) : '';
+  const getInviteLink = type === 'community' ? getCommunityInviteLink : getGroupInviteLink;
+  const inviteLink = inviteCode ? getInviteLink(inviteCode, referralCode) : '';
 
   const handleCopyLink = useCallback(async () => {
     if (!inviteLink) return;

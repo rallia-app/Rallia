@@ -370,33 +370,18 @@ export default function GroupsScreen() {
         initialNumToRender={6}
       />
 
-      {/* FABs - Scan QR and Create Group */}
+      {/* Create Group FAB */}
       {groups && groups.length > 0 && (
-        <View style={styles.fabContainer}>
-          {/* Scan QR FAB */}
-          <TouchableOpacity
-            style={[styles.fabSecondary, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}
-            onPress={() => {
-              if (!guardAction()) return;
-              setShowScannerModal(true);
-            }}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="qr-code-outline" size={24} color={colors.text} />
-          </TouchableOpacity>
-
-          {/* Create Group FAB */}
-          <TouchableOpacity
-            style={[styles.fab, { backgroundColor: colors.primary }]}
-            onPress={() => {
-              if (!guardAction() || !playerId) return;
-              SheetManager.show('create-group', { payload: { playerId } });
-            }}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="add-outline" size={28} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: colors.primary }]}
+          onPress={() => {
+            if (!guardAction() || !playerId) return;
+            SheetManager.show('create-group', { payload: { playerId } });
+          }}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add-outline" size={28} color="#FFFFFF" />
+        </TouchableOpacity>
       )}
 
       {/* QR Scanner Modal */}

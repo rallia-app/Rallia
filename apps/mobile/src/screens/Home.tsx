@@ -7,6 +7,8 @@ import {
   RefreshControl,
   TouchableOpacity,
   ScrollView,
+  ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { useScrollToTop } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -37,7 +39,6 @@ import {
   useSport,
   useMatchDetailSheet,
   useUserHomeLocation,
-  useDeepLink,
 } from '../context';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import { CopilotStep, WalkthroughableView } from '../context/TourContext';
@@ -65,8 +66,11 @@ import {
   joinGroupByInviteCode,
   requestToJoinCommunityByInviteCode,
 } from '@rallia/shared-services';
-import { PENDING_REFERRAL_KEY } from './InvitationDeepLinkScreen';
-import type { PendingReferral } from './InvitationDeepLinkScreen';
+import {
+  PENDING_REFERRAL_KEY,
+  type PendingReferral,
+  consumePendingDeepLink,
+} from '../navigation/deepLinkStore';
 import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
 import { SportIcon } from '../components/SportIcon';
 import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
@@ -199,66 +203,101 @@ const Home = () => {
   const appNavigation = useAppNavigation();
   const toast = useToast();
 
-  // Consume pending match deep link (from Universal Links / App Links)
-  const {
-    consumePendingMatchId,
-    consumePendingGroupInviteCode,
-    consumePendingCommunityInviteCode,
-  } = useDeepLink();
+  // Consume pending deep link from the module-level store (set by getStateFromPath)
+  const [deepLinkOverlay, setDeepLinkOverlay] = useState(false);
   useEffect(() => {
-    const matchId = consumePendingMatchId();
-    if (!matchId) return;
-    getMatchWithDetails(matchId).then(match => {
-      if (match) {
-        openMatchDetail(match as MatchDetailData);
+    const payload = consumePendingDeepLink();
+    if (!payload) return;
+
+    // Only show the overlay for group/community joins (visible async operation).
+    // Match links just open the detail sheet; referral-only links have nothing to show.
+    const needsOverlay =
+      payload.type === 'group' ||
+      payload.type === 'community' ||
+      (payload.type === 'invitation' &&
+        (payload.invitationType === 'group' || payload.invitationType === 'community'));
+
+    if (needsOverlay) setDeepLinkOverlay(true);
+
+    const process = async () => {
+      try {
+        switch (payload.type) {
+          case 'match': {
+            const match = await getMatchWithDetails(payload.matchId);
+            if (match) openMatchDetail(match as MatchDetailData);
+            break;
+          }
+          case 'group': {
+            if (!player?.id) break;
+            const r = await joinGroupByInviteCode(payload.inviteCode, player.id);
+            if (r.success && r.groupId) {
+              toast.success(t('groups.joinedViaLinkMessage', { name: r.groupName ?? '' }));
+              appNavigation.navigate('GroupDetail', {
+                groupId: r.groupId,
+                groupName: r.groupName,
+              });
+            } else {
+              toast.error(r.error || t('groups.joinFailedViaLink'));
+            }
+            break;
+          }
+          case 'community': {
+            if (!player?.id) break;
+            const r = await requestToJoinCommunityByInviteCode(payload.inviteCode, player.id);
+            if (r.success && r.communityId) {
+              toast.success(
+                t('community.requestSentViaLinkMessage', { name: r.communityName ?? '' })
+              );
+              appNavigation.navigate('CommunityDetail', {
+                communityId: r.communityId,
+                communityName: r.communityName,
+              });
+            } else {
+              toast.error(r.error || t('community.joinFailedViaLink'));
+            }
+            break;
+          }
+          case 'invitation': {
+            if (payload.invitationType === 'match' && payload.targetId) {
+              const match = await getMatchWithDetails(payload.targetId);
+              if (match) openMatchDetail(match as MatchDetailData);
+            } else if (payload.invitationType === 'group' && payload.targetId && player?.id) {
+              const r = await joinGroupByInviteCode(payload.targetId, player.id);
+              if (r.success && r.groupId) {
+                toast.success(t('groups.joinedViaLinkMessage', { name: r.groupName ?? '' }));
+                appNavigation.navigate('GroupDetail', {
+                  groupId: r.groupId,
+                  groupName: r.groupName,
+                });
+              } else {
+                toast.error(r.error || t('groups.joinFailedViaLink'));
+              }
+            } else if (payload.invitationType === 'community' && payload.targetId && player?.id) {
+              const r = await requestToJoinCommunityByInviteCode(payload.targetId, player.id);
+              if (r.success && r.communityId) {
+                toast.success(
+                  t('community.requestSentViaLinkMessage', { name: r.communityName ?? '' })
+                );
+                appNavigation.navigate('CommunityDetail', {
+                  communityId: r.communityId,
+                  communityName: r.communityName,
+                });
+              } else {
+                toast.error(r.error || t('community.joinFailedViaLink'));
+              }
+            }
+            // referral-only: nothing to do, already persisted to AsyncStorage by the store
+            break;
+          }
+        }
+      } catch {
+        // Errors handled per-case above
+      } finally {
+        setDeepLinkOverlay(false);
       }
-    });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    };
 
-  // Consume pending group invite deep link
-  useEffect(() => {
-    const inviteCode = consumePendingGroupInviteCode();
-    if (!inviteCode || !player?.id) return;
-
-    joinGroupByInviteCode(inviteCode, player.id)
-      .then(result => {
-        if (result.success && result.groupId) {
-          toast.success(t('groups.joinedViaLinkMessage', { name: result.groupName ?? '' }));
-          appNavigation.navigate('GroupDetail', {
-            groupId: result.groupId,
-            groupName: result.groupName,
-          });
-        } else {
-          toast.error(result.error || t('groups.joinFailedViaLink'));
-        }
-      })
-      .catch(() => {
-        toast.error(t('groups.joinFailedViaLink'));
-      });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Consume pending community invite deep link
-  useEffect(() => {
-    const inviteCode = consumePendingCommunityInviteCode();
-    if (!inviteCode || !player?.id) return;
-
-    requestToJoinCommunityByInviteCode(inviteCode, player.id)
-      .then(result => {
-        if (result.success && result.communityId) {
-          toast.success(
-            t('community.requestSentViaLinkMessage', { name: result.communityName ?? '' })
-          );
-          appNavigation.navigate('CommunityDetail', {
-            communityId: result.communityId,
-            communityName: result.communityName,
-          });
-        } else {
-          toast.error(result.error || t('community.joinFailedViaLink'));
-        }
-      })
-      .catch(() => {
-        toast.error(t('community.joinFailedViaLink'));
-      });
+    process();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Consume pending navigation from post-onboarding join (AsyncStorage)
@@ -1069,8 +1108,11 @@ const Home = () => {
 
   const isInitialLoading = authLoading || playerLoading || sportLoading;
 
+  // Determine main content based on loading / data state
+  let content: React.ReactNode;
+
   if (isInitialLoading) {
-    return (
+    content = (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         <View style={styles.loadingContainer}>
           {/* My Matches skeleton */}
@@ -1124,11 +1166,8 @@ const Home = () => {
         </View>
       </SafeAreaView>
     );
-  }
-
-  // If location is not available, only show the header (no matches list)
-  if (!showNearbySection) {
-    return (
+  } else if (!showNearbySection) {
+    content = (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         <FlatList
           ref={flatListRef}
@@ -1143,66 +1182,97 @@ const Home = () => {
         />
       </SafeAreaView>
     );
+  } else {
+    content = (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+        {loadingMatches ? (
+          <View style={styles.loadingContainer}>
+            {renderListHeader()}
+            <View style={styles.skeletonSection}>
+              {[1, 2, 3].map(i => (
+                <SkeletonMatchCard
+                  key={i}
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                  style={{
+                    backgroundColor: isDark ? '#1C1C1E' : '#FAFAFA',
+                    borderColor: colors.border,
+                    marginHorizontal: spacingPixels[4],
+                    marginBottom: spacingPixels[3],
+                  }}
+                />
+              ))}
+            </View>
+          </View>
+        ) : (
+          <FlatList
+            ref={flatListRef}
+            data={matches}
+            renderItem={renderMatchCard}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            automaticallyAdjustContentInsets={false}
+            ListHeaderComponent={renderListHeader()}
+            ListEmptyComponent={renderEmptyComponent()}
+            ListFooterComponent={renderFooter()}
+            onEndReached={handleEndReached}
+            onEndReachedThreshold={0.3}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefetching && isManualRefresh.current}
+                onRefresh={() => {
+                  isManualRefresh.current = true;
+                  refetch();
+                  if (session?.user?.id) {
+                    refetchMyMatches();
+                  }
+                }}
+                tintColor={colors.primary}
+                colors={[colors.primary]}
+              />
+            }
+          />
+        )}
+        {/* Bug Report FAB */}
+        <View style={styles.fabContainer}>
+          <FeedbackFAB />
+        </View>
+      </SafeAreaView>
+    );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-      {loadingMatches ? (
-        <View style={styles.loadingContainer}>
-          {/* Render the header (My Matches + section title) above skeletons */}
-          {renderListHeader()}
-          {/* Nearby matches skeleton */}
-          <View style={styles.skeletonSection}>
-            {[1, 2, 3].map(i => (
-              <SkeletonMatchCard
-                key={i}
-                backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-                highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-                style={{
-                  backgroundColor: isDark ? '#1C1C1E' : '#FAFAFA',
-                  borderColor: colors.border,
-                  marginHorizontal: spacingPixels[4],
-                  marginBottom: spacingPixels[3],
-                }}
-              />
-            ))}
+    <>
+      {content}
+
+      {/* Deep link processing overlay */}
+      <Modal visible={deepLinkOverlay} transparent animationType="fade">
+        <View style={styles.deepLinkOverlay}>
+          <View
+            style={[
+              styles.deepLinkCard,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
+            <Ionicons name="gift-outline" size={48} color={colors.primary} />
+            <Text
+              size="lg"
+              weight="semibold"
+              color={colors.text}
+              style={{ marginTop: spacingPixels[3] }}
+            >
+              {t('referral.welcomeTitle')}
+            </Text>
+            <ActivityIndicator
+              size="small"
+              color={colors.primary}
+              style={{ marginTop: spacingPixels[4] }}
+            />
           </View>
         </View>
-      ) : (
-        <FlatList
-          ref={flatListRef}
-          data={matches}
-          renderItem={renderMatchCard}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          automaticallyAdjustContentInsets={false}
-          ListHeaderComponent={renderListHeader()}
-          ListEmptyComponent={renderEmptyComponent()}
-          ListFooterComponent={renderFooter()}
-          onEndReached={handleEndReached}
-          onEndReachedThreshold={0.3}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefetching && isManualRefresh.current}
-              onRefresh={() => {
-                isManualRefresh.current = true;
-                refetch();
-                if (session?.user?.id) {
-                  refetchMyMatches();
-                }
-              }}
-              tintColor={colors.primary}
-              colors={[colors.primary]}
-            />
-          }
-        />
-      )}
-      {/* Bug Report FAB */}
-      <View style={styles.fabContainer}>
-        <FeedbackFAB />
-      </View>
-    </SafeAreaView>
+      </Modal>
+    </>
   );
 };
 
@@ -1332,6 +1402,19 @@ const styles = StyleSheet.create({
     paddingRight: spacingPixels[4],
     paddingBottom: spacingPixels[2],
     gap: spacingPixels[2],
+  },
+  deepLinkOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deepLinkCard: {
+    alignItems: 'center',
+    paddingVertical: spacingPixels[8],
+    paddingHorizontal: spacingPixels[10],
+    borderRadius: radiusPixels['2xl'],
+    borderWidth: 1,
   },
 });
 

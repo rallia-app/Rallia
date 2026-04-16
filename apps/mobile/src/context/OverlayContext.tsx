@@ -25,6 +25,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Logger } from '@rallia/shared-services';
 import { ANIMATION_DELAYS } from '../constants';
 import { usePermissions } from '../hooks';
+import { setSportSelectionComplete as syncSportSelectionToStore } from '../navigation/deepLinkStore';
 
 // =============================================================================
 // CONSTANTS
@@ -119,6 +120,12 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
 
     checkSportSelectionStatus();
   }, []);
+
+  // Keep the module-level deep link store in sync so getStateFromPath
+  // can decide between Main and PreOnboarding synchronously.
+  useEffect(() => {
+    syncSportSelectionToStore(isSportSelectionComplete);
+  }, [isSportSelectionComplete]);
 
   // ==========================================================================
   // REQUEST NATIVE PERMISSIONS AFTER SPORT SELECTION COMPLETES
