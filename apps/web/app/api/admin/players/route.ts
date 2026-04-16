@@ -1,4 +1,4 @@
-import { isAdmin } from '@/lib/supabase/check-admin';
+import { requireApiRole } from '@/lib/supabase/check-admin';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -36,8 +36,8 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userIsAdmin = await isAdmin(user.id);
-    if (!userIsAdmin) {
+    const { allowed } = await requireApiRole(user.id, ['super_admin', 'moderator']);
+    if (!allowed) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -100,8 +100,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userIsAdmin = await isAdmin(user.id);
-    if (!userIsAdmin) {
+    const { allowed } = await requireApiRole(user.id, ['super_admin', 'moderator']);
+    if (!allowed) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

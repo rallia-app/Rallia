@@ -14,7 +14,9 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { Users } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { isSuperAdmin } from '@/lib/supabase/check-admin';
+import { canPerformAction } from '@/lib/admin-rbac';
+import { getAdminRole } from '@/lib/supabase/check-admin';
+import type { AdminRole } from '@rallia/shared-hooks';
 import { redirect } from 'next/navigation';
 
 interface AdminWithProfile {
@@ -78,7 +80,9 @@ export default async function AdminUsersPage({
     redirect('/admin/sign-in');
   }
 
-  const userIsSuperAdmin = await isSuperAdmin(user.id);
+  const adminRole = (await getAdminRole(user.id)) as AdminRole;
+  const canInvite = canPerformAction(adminRole, 'invitations:create');
+  const canManagePlayers = canPerformAction(adminRole, 'players:suspend');
   const adminDb = createServiceRoleClient();
 
   const activeTab = (params.tab as string) || 'admins';
@@ -254,7 +258,7 @@ export default async function AdminUsersPage({
           <h1 className="text-3xl font-bold">{t('title')}</h1>
           <p className="text-muted-foreground mt-2 mb-0">{t('description')}</p>
         </div>
-        {userIsSuperAdmin && <UserInvitationButton />}
+        {canInvite && <UserInvitationButton />}
       </div>
 
       <UrlTabs tabs={tabs} activeTab={activeTab}>
@@ -305,6 +309,7 @@ export default async function AdminUsersPage({
                 pageSize={playersResult.pageSize}
                 sortBy={tableParams.sortBy ?? undefined}
                 sortOrder={tableParams.sortOrder ?? undefined}
+                readOnly={!canManagePlayers}
               />
             ) : null}
           </div>

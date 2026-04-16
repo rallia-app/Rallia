@@ -3,9 +3,12 @@ import {
   OrganizationsDataTable,
   OrganizationsFilters,
 } from '@/components/organizations-data-table';
+import { canPerformAction } from '@/lib/admin-rbac';
 import { buildTableQuery } from '@/lib/supabase-table-query';
+import { getAdminRole } from '@/lib/supabase/check-admin';
 import { createClient } from '@/lib/supabase/server';
 import { parseTableParams } from '@/lib/table-params';
+import type { AdminRole } from '@rallia/shared-hooks';
 import { Tables } from '@/types';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
@@ -28,6 +31,12 @@ export default async function AdminOrganizationsPage({
   const t = await getTranslations('admin.organizations');
   const supabase = await createClient();
   const params = await searchParams;
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const adminRole = user ? ((await getAdminRole(user.id)) as AdminRole) : null;
+  const canCreate = adminRole ? canPerformAction(adminRole, 'organizations:create') : false;
 
   const tableParams = parseTableParams(params);
 
@@ -66,6 +75,7 @@ export default async function AdminOrganizationsPage({
         title={t('title')}
         description={t('description')}
         createButtonLabel={t('createButton')}
+        canCreate={canCreate}
       />
 
       <div className="flex flex-col gap-3">

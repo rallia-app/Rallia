@@ -4,7 +4,10 @@ import { FacilityCourtsSection } from '@/components/facility-courts-section';
 import { FacilityFilesSection } from '@/components/facility-files-section';
 import { FacilityImagesSection } from '@/components/facility-images-section';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { canPerformAction } from '@/lib/admin-rbac';
+import { getAdminRole } from '@/lib/supabase/check-admin';
 import { createClient } from '@/lib/supabase/server';
+import type { AdminRole } from '@rallia/shared-hooks';
 import { Building2, Clock, Database, Globe, Hash, MapPin } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
@@ -140,8 +143,12 @@ export default async function AdminFacilityDetailPage({ params }: PageProps) {
 
   const courts = Array.isArray(facility.court) ? facility.court : [];
 
-  // Admins always have edit access
-  const canEdit = true;
+  // Only super_admins can edit organizations/facilities
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const adminRole = user ? ((await getAdminRole(user.id)) as AdminRole) : null;
+  const canEdit = adminRole ? canPerformAction(adminRole, 'organizations:edit') : false;
 
   return (
     <div className="flex flex-col w-full gap-8">

@@ -73,3 +73,19 @@ export async function isSuperAdmin(userId: string): Promise<boolean> {
 
   return admin.role === 'super_admin';
 }
+
+/**
+ * Check if a user's admin role is in a list of allowed roles.
+ * super_admin always passes regardless of allowedRoles.
+ *
+ * Returns the role if allowed, or { allowed: false } if not.
+ */
+export async function requireApiRole(
+  userId: string,
+  allowedRoles: string[]
+): Promise<{ allowed: boolean; role: string | null }> {
+  const role = await getAdminRole(userId);
+  if (!role) return { allowed: false, role: null };
+  if (role === 'super_admin') return { allowed: true, role };
+  return { allowed: allowedRoles.includes(role), role };
+}

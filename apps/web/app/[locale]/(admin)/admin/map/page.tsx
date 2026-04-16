@@ -65,13 +65,19 @@ export default async function AdminMapPage() {
           city,
           facility_type,
           external_provider_id,
+          is_first_come_first_serve,
+          organization:organization_id (
+            nature
+          ),
           facility_sport (
             sport (
               name
             )
           ),
           court (
-            id
+            id,
+            indoor,
+            lighting
           )
         `
         )
@@ -99,18 +105,26 @@ export default async function AdminMapPage() {
       sports: (player.player_sport ?? []).map((ps: any) => ps.sport?.name).filter(Boolean),
     }));
 
-    facilities = (facilitiesResult.data ?? []).map((f: any) => ({
-      id: f.id,
-      name: f.name,
-      latitude: Number(f.latitude),
-      longitude: Number(f.longitude),
-      address: f.address,
-      city: f.city,
-      facilityType: f.facility_type,
-      sports: (f.facility_sport ?? []).map((fs: any) => fs.sport?.name).filter(Boolean),
-      courtCount: f.court?.length ?? 0,
-      hasExternalProvider: !!f.external_provider_id,
-    }));
+    facilities = (facilitiesResult.data ?? []).map((f: any) => {
+      const courts = f.court ?? [];
+      return {
+        id: f.id,
+        name: f.name,
+        latitude: Number(f.latitude),
+        longitude: Number(f.longitude),
+        address: f.address,
+        city: f.city,
+        facilityType: f.facility_type,
+        sports: (f.facility_sport ?? []).map((fs: any) => fs.sport?.name).filter(Boolean),
+        courtCount: courts.length,
+        hasExternalProvider: !!f.external_provider_id,
+        organizationNature: f.organization?.nature ?? null,
+        isFirstComeFirstServe: f.is_first_come_first_serve ?? false,
+        hasIndoorCourts: courts.some((c: any) => c.indoor === true),
+        hasOutdoorCourts: courts.some((c: any) => c.indoor === false),
+        hasLighting: courts.some((c: any) => c.lighting === true),
+      };
+    });
   } catch (e) {
     console.error('Error fetching map data:', e);
     error = t('noData');

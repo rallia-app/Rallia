@@ -1,4 +1,4 @@
-import { isAdmin } from '@/lib/supabase/check-admin';
+import { requireApiRole } from '@/lib/supabase/check-admin';
 import { createClient } from '@/lib/supabase/server';
 import { Enums } from '@/types';
 import { NextRequest, NextResponse } from 'next/server';
@@ -379,9 +379,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user is admin
-    const userIsAdmin = await isAdmin(user.id);
-    if (!userIsAdmin) {
+    // Check if user is a super_admin (only super admins can create organizations)
+    const { allowed } = await requireApiRole(user.id, ['super_admin']);
+    if (!allowed) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

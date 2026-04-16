@@ -1,5 +1,7 @@
 'use client';
 
+import type { AdminRole } from '@rallia/shared-hooks';
+import { AdminRoleProvider } from '@/components/admin-role-context';
 import { AdminSidebar } from '@/components/admin-sidebar';
 import { SharedSupabaseSync } from '@/components/shared-supabase-sync';
 import { SidebarProvider, useSidebar } from '@/components/sidebar-context';
@@ -19,12 +21,20 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) {
+export function AdminLayoutWrapper({
+  role,
+  children,
+}: {
+  role: AdminRole;
+  children: React.ReactNode;
+}) {
   return (
     <SidebarProvider>
       <TooltipProvider delayDuration={100}>
-        <SharedSupabaseSync />
-        <AdminLayoutContent>{children}</AdminLayoutContent>
+        <AdminRoleProvider role={role}>
+          <SharedSupabaseSync />
+          <AdminLayoutContent>{children}</AdminLayoutContent>
+        </AdminRoleProvider>
       </TooltipProvider>
     </SidebarProvider>
   );

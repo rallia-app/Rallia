@@ -5121,7 +5121,50 @@
       "networks": "Networks",
       "analytics": "Analytics",
       "settings": "Settings",
-      "map": "Player Map"
+      "map": "Map",
+      "communications": "Communications"
+    },
+    "communications": {
+      "title": "Communications",
+      "titleMeta": "Communications - Admin - Rallia",
+      "description": "Preview email, push notification, and SMS content across all notification types.",
+      "tabs": {
+        "email": "Email",
+        "push": "Push Notifications",
+        "sms": "SMS"
+      },
+      "controls": {
+        "locale": "Preview Locale",
+        "category": "Category",
+        "allCategories": "All Categories",
+        "colorMode": "Color Mode",
+        "light": "Light",
+        "dark": "Dark"
+      },
+      "email": {
+        "selectTemplate": "Select a template from the sidebar",
+        "templateCount": "{count} templates",
+        "loading": "Loading preview..."
+      },
+      "push": {
+        "defaultChannels": "Default Channels",
+        "enabled": "Enabled",
+        "disabled": "Disabled"
+      },
+      "sms": {
+        "characterCount": "{count}/160 characters",
+        "segments": "{count} segment(s)",
+        "smsEnabled": "SMS Enabled",
+        "smsDisabled": "SMS Disabled",
+        "showEnabledOnly": "SMS-enabled only"
+      },
+      "categories": {
+        "match": "Match",
+        "social": "Social / Community",
+        "organization": "Organization",
+        "system": "System",
+        "auth": "Authentication"
+      }
     },
     "organizations": {
       "title": "Organizations",
@@ -5968,7 +6011,8 @@
       "roles": {
         "super_admin": "Super Admin",
         "moderator": "Moderator",
-        "support": "Support"
+        "support": "Support",
+        "analyst": "Analyst"
       },
       "inviteButton": "Invite User",
       "invite": {
@@ -5989,7 +6033,8 @@
         "adminRoles": {
           "super_admin": "Super Admin",
           "moderator": "Moderator",
-          "support": "Support"
+          "support": "Support",
+          "analyst": "Analyst"
         },
         "actions": {
           "send": "Send Invitation",
@@ -6177,8 +6222,8 @@
       }
     },
     "map": {
-      "title": "Player Map",
-      "titleMeta": "Player Map - Admin - Rallia",
+      "title": "Map",
+      "titleMeta": "Map - Admin - Rallia",
       "description": "Visualize player locations and density across regions.",
       "descriptionMeta": "Geographic distribution of players.",
       "filters": {
@@ -6202,7 +6247,27 @@
         "facilities": "Facilities",
         "thirdPartyOnly": "Bookable only",
         "selectArea": "Select Area",
-        "joinedBetween": "Joined between"
+        "joinedBetween": "Joined between",
+        "fullScreen": "Full Screen",
+        "exitFullScreen": "Exit Full Screen"
+      },
+      "facilityFilters": {
+        "label": "Facility Filters",
+        "sport": "Sport",
+        "bothSports": "Tennis & Pickleball",
+        "access": "Access",
+        "public": "Public",
+        "private": "Private",
+        "booking": "Booking",
+        "firstCome": "Walk-in / FCFS",
+        "bookingRequired": "Booking Required",
+        "lighting": "Lighting",
+        "withLighting": "Has Lighting",
+        "noLighting": "No Lighting",
+        "venue": "Venue",
+        "indoorOnly": "Indoor",
+        "outdoorOnly": "Outdoor",
+        "indoorAndOutdoor": "Both"
       },
       "legend": {
         "tennis": "Tennis",
