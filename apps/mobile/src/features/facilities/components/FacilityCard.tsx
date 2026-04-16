@@ -293,101 +293,107 @@ export default function FacilityCard({
         )}
 
         {/* Skeleton slots while loading */}
-        {slotsLoading && !facility.is_first_come_first_serve && (
+        {slotsLoading && !facility.is_first_come_first_serve && !!facility.external_provider_id && (
           <SlotSkeleton color={colors.border} />
         )}
 
         {/* Date-sectioned slots with horizontal scroll */}
-        {slotsByDate.length > 0 && !slotsLoading && !facility.is_first_come_first_serve && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.slotsScrollContent}
-            style={styles.slotsScrollView}
-          >
-            {slotsByDate.map(dateGroup => (
-              <View key={dateGroup.dateKey} style={styles.dateGroup}>
-                <Text
-                  size="xs"
-                  weight="semibold"
-                  color={dateGroup.isToday ? colors.primary : colors.textMuted}
-                  style={styles.dateLabel}
-                >
-                  {dateGroup.dateLabel}
-                </Text>
-                <View style={styles.dateSlotsRow}>
-                  {dateGroup.slots.map((slot, index) => {
-                    const isTappable = !!slot.bookingUrl || !!slot.isLocalSlot;
-                    return (
-                      <TouchableOpacity
-                        key={`${slot.facilityScheduleId}-${index}`}
-                        style={[
-                          styles.slotChip,
-                          {
-                            backgroundColor: isTappable
-                              ? `${colors.primary}15`
-                              : isDark
-                                ? '#262626'
-                                : '#f5f5f5',
-                            borderColor: isTappable ? colors.primary : colors.border,
-                          },
-                        ]}
-                        onPress={() => isTappable && handleSlotPress(slot)}
-                        disabled={!isTappable}
-                        activeOpacity={0.7}
-                      >
-                        <Text
-                          size="xs"
-                          weight="medium"
-                          color={isTappable ? colors.primary : colors.textMuted}
+        {slotsByDate.length > 0 &&
+          !slotsLoading &&
+          !facility.is_first_come_first_serve &&
+          !!facility.external_provider_id && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.slotsScrollContent}
+              style={styles.slotsScrollView}
+            >
+              {slotsByDate.map(dateGroup => (
+                <View key={dateGroup.dateKey} style={styles.dateGroup}>
+                  <Text
+                    size="xs"
+                    weight="semibold"
+                    color={dateGroup.isToday ? colors.primary : colors.textMuted}
+                    style={styles.dateLabel}
+                  >
+                    {dateGroup.dateLabel}
+                  </Text>
+                  <View style={styles.dateSlotsRow}>
+                    {dateGroup.slots.map((slot, index) => {
+                      const isTappable = !!slot.bookingUrl || !!slot.isLocalSlot;
+                      return (
+                        <TouchableOpacity
+                          key={`${slot.facilityScheduleId}-${index}`}
+                          style={[
+                            styles.slotChip,
+                            {
+                              backgroundColor: isTappable
+                                ? `${colors.primary}15`
+                                : isDark
+                                  ? '#262626'
+                                  : '#f5f5f5',
+                              borderColor: isTappable ? colors.primary : colors.border,
+                            },
+                          ]}
+                          onPress={() => isTappable && handleSlotPress(slot)}
+                          disabled={!isTappable}
+                          activeOpacity={0.7}
                         >
-                          {slot.time}
-                        </Text>
-                        {slot.isLocalSlot ? (
-                          <Ionicons name="business-outline" size={10} color={colors.primary} />
-                        ) : (
-                          slot.courtCount > 0 && (
-                            <View
-                              style={[
-                                styles.courtCountBadge,
-                                {
-                                  backgroundColor: isTappable
-                                    ? colors.primary
-                                    : isDark
-                                      ? colors.border
-                                      : colors.textMuted,
-                                },
-                              ]}
-                            >
-                              <Text
-                                size="xs"
-                                weight="bold"
-                                color={isTappable ? '#fff' : colors.card}
-                                style={styles.courtCountText}
+                          <Text
+                            size="xs"
+                            weight="medium"
+                            color={isTappable ? colors.primary : colors.textMuted}
+                          >
+                            {slot.time}
+                          </Text>
+                          {slot.isLocalSlot ? (
+                            <Ionicons name="business-outline" size={10} color={colors.primary} />
+                          ) : (
+                            slot.courtCount > 0 && (
+                              <View
+                                style={[
+                                  styles.courtCountBadge,
+                                  {
+                                    backgroundColor: isTappable
+                                      ? colors.primary
+                                      : isDark
+                                        ? colors.border
+                                        : colors.textMuted,
+                                  },
+                                ]}
                               >
-                                {slot.courtCount}
-                              </Text>
-                            </View>
-                          )
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
+                                <Text
+                                  size="xs"
+                                  weight="bold"
+                                  color={isTappable ? '#fff' : colors.card}
+                                  style={styles.courtCountText}
+                                >
+                                  {slot.courtCount}
+                                </Text>
+                              </View>
+                            )
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
                 </View>
-              </View>
-            ))}
-          </ScrollView>
-        )}
+              ))}
+            </ScrollView>
+          )}
 
         {/* Empty state when no slots available */}
-        {slotsByDate.length === 0 && !slotsLoading && !facility.is_first_come_first_serve && (
-          <View style={styles.emptySlots}>
-            <Ionicons name="calendar-clear-outline" size={14} color={colors.textMuted} />
-            <Text size="xs" color={colors.textMuted}>
-              {t('matchCreation.booking.noSlotsAvailable' as TranslationKey)}
-            </Text>
-          </View>
-        )}
+        {slotsByDate.length === 0 &&
+          !slotsLoading &&
+          !facility.is_first_come_first_serve &&
+          !!facility.external_provider_id && (
+            <View style={styles.emptySlots}>
+              <Ionicons name="calendar-clear-outline" size={14} color={colors.textMuted} />
+              <Text size="xs" color={colors.textMuted}>
+                {t('matchCreation.booking.noSlotsAvailable' as TranslationKey)}
+              </Text>
+            </View>
+          )}
       </View>
 
       {/* Chevron indicator */}

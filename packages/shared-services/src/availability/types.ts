@@ -121,15 +121,16 @@ export interface AvailabilityResult {
 }
 
 // =============================================================================
-// LOISIR MONTREAL SPECIFIC TYPES
+// IC3/OTIUM SPECIFIC TYPES
+// Used by all IC3/Otium municipalities (Montreal, Boucherville, Blainville, etc.)
 // =============================================================================
 
 /**
- * Loisir Montreal API search request body.
+ * IC3/Otium API search request body.
  *
  * Note: dates must be in ISO format with timezone, e.g., "2025-06-04T00:00:00.000-04:00"
  */
-export interface LoisirMontrealSearchRequest {
+export interface IC3SearchRequest {
   /** Array of ISO date strings with timezone (e.g., "2025-06-04T00:00:00.000-04:00") */
   dates: string[];
   boroughIds: string | null;
@@ -149,9 +150,9 @@ export interface LoisirMontrealSearchRequest {
 }
 
 /**
- * Loisir Montreal API borough.
+ * IC3/Otium API borough.
  */
-export interface LoisirMontrealBorough {
+export interface IC3Borough {
   $id: string;
   id: number;
   name: string;
@@ -159,22 +160,22 @@ export interface LoisirMontrealBorough {
 }
 
 /**
- * Loisir Montreal API site (location/park).
+ * IC3/Otium API site (location/park).
  */
-export interface LoisirMontrealSite {
+export interface IC3Site {
   $id: string;
   id: number;
   name: string;
   address: string;
   publicPhone: string | null;
   fax: string | null;
-  boroughs: LoisirMontrealBorough[];
+  boroughs: IC3Borough[];
 }
 
 /**
- * Loisir Montreal API facility type.
+ * IC3/Otium API facility type.
  */
-export interface LoisirMontrealFacilityType {
+export interface IC3FacilityType {
   $id: string;
   id: number;
   name: string;
@@ -182,21 +183,21 @@ export interface LoisirMontrealFacilityType {
 }
 
 /**
- * Loisir Montreal API facility (court).
+ * IC3/Otium API facility (court).
  */
-export interface LoisirMontrealFacility {
+export interface IC3Facility {
   $id: string;
   id: number;
   name: string;
   isMembershipRequired: boolean;
-  site: LoisirMontrealSite;
-  facilityType: LoisirMontrealFacilityType;
+  site: IC3Site;
+  facilityType: IC3FacilityType;
 }
 
 /**
- * Loisir Montreal API reservation status.
+ * IC3/Otium API reservation status.
  */
-export interface LoisirMontrealCanReserve {
+export interface IC3CanReserve {
   $id: string;
   value: boolean;
   validationResult: {
@@ -211,26 +212,106 @@ export interface LoisirMontrealCanReserve {
 }
 
 /**
- * Loisir Montreal API slot response item.
+ * IC3/Otium API slot response item.
  */
-export interface LoisirMontrealSlot {
+export interface IC3Slot {
   $id: string;
-  facility: LoisirMontrealFacility;
+  facility: IC3Facility;
   startDateTime: string;
   endDateTime: string;
   priorNoticeDelayInMinutes: number;
   facilityScheduleId: number;
   totalPrice: number;
-  canReserve: LoisirMontrealCanReserve;
+  canReserve: IC3CanReserve;
   facilityPricingId: number;
 }
 
 /**
- * Loisir Montreal API search response.
+ * IC3/Otium API search response.
  */
-export interface LoisirMontrealSearchResponse {
-  results: LoisirMontrealSlot[];
+export interface IC3SearchResponse {
+  results: IC3Slot[];
   recordCount: number;
+}
+
+// Backward-compatible aliases
+export type LoisirMontrealSearchRequest = IC3SearchRequest;
+export type LoisirMontrealBorough = IC3Borough;
+export type LoisirMontrealSite = IC3Site;
+export type LoisirMontrealFacilityType = IC3FacilityType;
+export type LoisirMontrealFacility = IC3Facility;
+export type LoisirMontrealCanReserve = IC3CanReserve;
+export type LoisirMontrealSlot = IC3Slot;
+export type LoisirMontrealSearchResponse = IC3SearchResponse;
+
+// =============================================================================
+// ACTIVITY MESSENGER SPECIFIC TYPES
+// Used by ActivityMessenger-powered facilities (Stade IGA, etc.)
+// =============================================================================
+
+/**
+ * Single location (court) in an ActivityMessenger availability event.
+ */
+export interface ActivityMessengerLocation {
+  id: number;
+  name: string;
+  number?: number;
+}
+
+/**
+ * Availability detail within an ActivityMessenger event.
+ */
+export interface ActivityMessengerAvailabilityDetail {
+  location_ids: number[];
+  locations: ActivityMessengerLocation[];
+  duration: number;
+  pre_buffer: number;
+  post_buffer: number;
+  allow_choice: boolean;
+  display: boolean;
+  do_not_reserve: boolean;
+}
+
+/**
+ * Hint about availability count and court names.
+ */
+export interface ActivityMessengerHintAvailability {
+  count: number;
+  locations: string[];
+  title: string | null;
+  inline: string | null;
+}
+
+/**
+ * Extended properties of an ActivityMessenger calendar event.
+ */
+export interface ActivityMessengerExtendedProps {
+  package_id: number;
+  package_name: string;
+  package_category_id: number;
+  package_category_name: string;
+  price: string;
+  step: number;
+  duration: number;
+  pre_buffer: number;
+  post_buffer: number;
+  availability: ActivityMessengerAvailabilityDetail[];
+  hint_availability: ActivityMessengerHintAvailability;
+  requires_coupon: boolean;
+  disabled: boolean;
+}
+
+/**
+ * FullCalendar-compatible event from ActivityMessenger API.
+ */
+export interface ActivityMessengerEvent {
+  id: number;
+  start: string;
+  end: string;
+  title: string;
+  url: string;
+  borderColor: string;
+  extendedProps: ActivityMessengerExtendedProps;
 }
 
 // =============================================================================

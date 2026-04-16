@@ -7,7 +7,8 @@
 
 import type { ProviderConfig } from '../types';
 import { BaseAvailabilityProvider } from './BaseAvailabilityProvider';
-import { LoisirMontrealProvider } from './LoisirMontrealProvider';
+import { IC3OtiumProvider } from './IC3OtiumProvider';
+import { ActivityMessengerProvider } from './ActivityMessengerProvider';
 
 // =============================================================================
 // PROVIDER REGISTRY
@@ -20,10 +21,10 @@ import { LoisirMontrealProvider } from './LoisirMontrealProvider';
 type ProviderConstructor = new (config: ProviderConfig) => BaseAvailabilityProvider;
 
 const providerRegistry: Record<string, ProviderConstructor> = {
-  loisir_montreal: LoisirMontrealProvider,
-  // Future providers:
-  // tennis_canada: TennisCanadaProvider,
-  // club_spark: ClubSparkProvider,
+  ic3_otium: IC3OtiumProvider,
+  activity_messenger: ActivityMessengerProvider,
+  // Backward compatibility alias for existing data_provider rows
+  loisir_montreal: IC3OtiumProvider,
 };
 
 /**
@@ -67,4 +68,6 @@ export function getRegisteredProviders(): string[] {
 // =============================================================================
 
 export { BaseAvailabilityProvider } from './BaseAvailabilityProvider';
-export { LoisirMontrealProvider } from './LoisirMontrealProvider';
+export { IC3OtiumProvider } from './IC3OtiumProvider';
+export { IC3OtiumProvider as LoisirMontrealProvider } from './IC3OtiumProvider';
+export { ActivityMessengerProvider } from './ActivityMessengerProvider';

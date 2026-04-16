@@ -1,12 +1,13 @@
 import { Metadata } from 'next';
-import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { detectPlatform, buildPlayStoreUrl, APP_STORE_URL } from '@/lib/referral-tracking';
+import { logReferralClick, buildPlayStoreUrl, APP_STORE_URL } from '@/lib/referral-tracking';
+import { getLandingContext } from '@/lib/landing-attribution';
 import { Card, CardContent } from '@/components/ui/card';
 import Image from 'next/image';
 import { QRCodeSVG } from 'qrcode.react';
+import { ClipboardDownloadButton } from '../../invite/[code]/_components/clipboard-download-button';
 
 type Props = {
   params: Promise<{ code: string; locale: string }>;
@@ -41,19 +42,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function GroupJoinPage({ params }: Props) {
   const { code, locale } = await params;
 
-  const headersList = await headers();
-  const userAgent = headersList.get('user-agent') ?? '';
-  const platform = detectPlatform(userAgent);
+  // Attribution: log click and detect platform
+  const { platform, fingerprint, ip, userAgent } = await getLandingContext();
 
-  if (platform === 'ios') {
-    redirect(APP_STORE_URL);
-  }
+  // Log click for analytics (non-blocking, no referral code)
+  logReferralClick('', fingerprint, ip, userAgent, 'group', code).catch(() => {});
 
   if (platform === 'android') {
     redirect(buildPlayStoreUrl(undefined, 'group', code));
   }
 
-  // Desktop: show landing page with QR code
+  // iOS + Desktop: show landing page (iOS gets clipboard CTA, desktop gets QR code)
   const group = await getGroupDetails(code);
   const t = await getTranslations({ locale, namespace: 'invitePage' });
 
@@ -82,51 +81,62 @@ export default async function GroupJoinPage({ params }: Props) {
         )}
       </div>
 
-      <Card className="p-6">
-        <CardContent className="flex flex-col items-center gap-4 p-0">
-          <QRCodeSVG value={inviteUrl} size={200} level="M" />
-          <p className="text-sm text-muted-foreground text-center">{t('scanQr')}</p>
-        </CardContent>
-      </Card>
+      {platform === 'ios' ? (
+        <ClipboardDownloadButton
+          inviteUrl={inviteUrl}
+          appStoreUrl={APP_STORE_URL}
+          label={t('downloadCta')}
+          hint={t('clipboardHint')}
+        />
+      ) : (
+        <>
+          <Card className="p-6">
+            <CardContent className="flex flex-col items-center gap-4 p-0">
+              <QRCodeSVG value={inviteUrl} size={200} level="M" />
+              <p className="text-sm text-muted-foreground text-center">{t('scanQr')}</p>
+            </CardContent>
+          </Card>
 
-      <div className="flex gap-4">
-        <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
-          <Image
-            src="/app-store-badge-light.svg"
-            alt={t('appStore')}
-            width={120}
-            height={40}
-            className="button-scale block dark:hidden"
-          />
-          <Image
-            src="/app-store-badge.svg"
-            alt={t('appStore')}
-            width={120}
-            height={40}
-            className="button-scale hidden dark:block"
-          />
-        </a>
-        <a
-          href={buildPlayStoreUrl(undefined, 'group', code)}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            src="/google-play-badge-light.svg"
-            alt={t('googlePlay')}
-            width={135}
-            height={40}
-            className="button-scale block dark:hidden"
-          />
-          <Image
-            src="/google-play-badge.svg"
-            alt={t('googlePlay')}
-            width={135}
-            height={40}
-            className="button-scale hidden dark:block"
-          />
-        </a>
-      </div>
+          <div className="flex gap-4">
+            <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
+              <Image
+                src="/app-store-badge-light.svg"
+                alt={t('appStore')}
+                width={120}
+                height={40}
+                className="button-scale block dark:hidden"
+              />
+              <Image
+                src="/app-store-badge.svg"
+                alt={t('appStore')}
+                width={120}
+                height={40}
+                className="button-scale hidden dark:block"
+              />
+            </a>
+            <a
+              href={buildPlayStoreUrl(undefined, 'group', code)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Image
+                src="/google-play-badge-light.svg"
+                alt={t('googlePlay')}
+                width={135}
+                height={40}
+                className="button-scale block dark:hidden"
+              />
+              <Image
+                src="/google-play-badge.svg"
+                alt={t('googlePlay')}
+                width={135}
+                height={40}
+                className="button-scale hidden dark:block"
+              />
+            </a>
+          </div>
+        </>
+      )}
     </div>
   );
 }

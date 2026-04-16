@@ -65,6 +65,8 @@ import {
   joinGroupByInviteCode,
   requestToJoinCommunityByInviteCode,
 } from '@rallia/shared-services';
+import { PENDING_REFERRAL_KEY } from './InvitationDeepLinkScreen';
+import type { PendingReferral } from './InvitationDeepLinkScreen';
 import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
 import { SportIcon } from '../components/SportIcon';
 import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
@@ -276,6 +278,63 @@ const Home = () => {
             communityId: nav.params.communityId,
             communityName: nav.params.communityName,
           });
+        } else if (nav.screen === 'MatchDetail' && nav.params?.matchId) {
+          getMatchWithDetails(nav.params.matchId).then(match => {
+            if (match) {
+              openMatchDetail(match as MatchDetailData);
+            }
+          });
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fallback: consume PendingReferral from AsyncStorage if DeepLinkContext expired
+  // (e.g., session-expired user taps a deep link, signs in, and DeepLinkContext has expired)
+  useEffect(() => {
+    AsyncStorage.getItem(PENDING_REFERRAL_KEY).then(raw => {
+      if (!raw) return;
+      try {
+        const pending: PendingReferral = JSON.parse(raw);
+        // Only consume if there's a deferred action (match/group/community with target)
+        if (!pending.targetId) return;
+
+        AsyncStorage.removeItem(PENDING_REFERRAL_KEY);
+
+        if (pending.type === 'match') {
+          getMatchWithDetails(pending.targetId).then(match => {
+            if (match) {
+              openMatchDetail(match as MatchDetailData);
+            }
+          });
+        } else if (pending.type === 'group' && player?.id) {
+          joinGroupByInviteCode(pending.targetId, player.id)
+            .then(result => {
+              if (result.success && result.groupId) {
+                toast.success(t('groups.joinedViaLinkMessage', { name: result.groupName ?? '' }));
+                appNavigation.navigate('GroupDetail', {
+                  groupId: result.groupId,
+                  groupName: result.groupName,
+                });
+              }
+            })
+            .catch(() => {});
+        } else if (pending.type === 'community' && player?.id) {
+          requestToJoinCommunityByInviteCode(pending.targetId, player.id)
+            .then(result => {
+              if (result.success && result.communityId) {
+                toast.success(
+                  t('community.requestSentViaLinkMessage', { name: result.communityName ?? '' })
+                );
+                appNavigation.navigate('CommunityDetail', {
+                  communityId: result.communityId,
+                  communityName: result.communityName,
+                });
+              }
+            })
+            .catch(() => {});
         }
       } catch {
         // Ignore parse errors

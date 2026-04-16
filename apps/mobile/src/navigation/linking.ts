@@ -94,6 +94,8 @@ export const linking: LinkingOptions<RootStackParamList> = {
       InviteReferral: 'invite-legacy/:referralCode',
       InvitationDeepLink: 'invite/:referralCode',
       MatchDeepLink: 'match/:matchId',
+      GroupJoinDeepLink: 'join/:inviteCode',
+      CommunityJoinDeepLink: 'community/join/:inviteCode',
 
       // Admin screens - protected by useAdminDeepLinkGuard
       AdminPanel: 'admin',
