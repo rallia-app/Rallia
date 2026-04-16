@@ -1,4 +1,4 @@
-import { isAdmin } from '@/lib/supabase/check-admin';
+import { requireApiRole } from '@/lib/supabase/check-admin';
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
@@ -15,8 +15,8 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userIsAdmin = await isAdmin(user.id);
-    if (!userIsAdmin) {
+    const { allowed } = await requireApiRole(user.id, ['super_admin', 'moderator', 'support']);
+    if (!allowed) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

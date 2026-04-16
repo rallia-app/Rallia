@@ -4,7 +4,10 @@ import { AdminUserProfileHeader } from '@/components/admin-user-profile-header';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { canPerformAction } from '@/lib/admin-rbac';
+import { getAdminRole } from '@/lib/supabase/check-admin';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
+import type { AdminRole } from '@rallia/shared-hooks';
 import { Calendar, Hand, Mail, MapPin, Phone, Shield, Star, Trophy, User } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
@@ -51,6 +54,15 @@ export default async function UserDetailPage({
   const t = await getTranslations('admin.users.detail');
   const supabase = await createClient();
   const adminDb = createServiceRoleClient();
+
+  // Get current admin's role for permission checks
+  const {
+    data: { user: currentUser },
+  } = await supabase.auth.getUser();
+  const currentAdminRole = currentUser ? ((await getAdminRole(currentUser.id)) as AdminRole) : null;
+  const canManageUsers = currentAdminRole
+    ? canPerformAction(currentAdminRole, 'players:suspend')
+    : false;
 
   // Fetch profile (use service role to bypass RLS for admin view)
   const { data: profile, error: profileError } = await adminDb
@@ -374,7 +386,7 @@ export default async function UserDetailPage({
         backLabel={t('backToUsers')}
         backHref={`/admin/users?tab=${backTab}`}
         actions={
-          isPlayer ? (
+          isPlayer && canManageUsers ? (
             <AdminUserActions
               userId={profile.id}
               userName={displayName}

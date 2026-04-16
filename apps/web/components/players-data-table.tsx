@@ -40,6 +40,7 @@ interface PlayersDataTableProps {
   pageSize: number;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  readOnly?: boolean;
 }
 
 export function PlayersDataTable(props: PlayersDataTableProps) {
@@ -208,8 +209,10 @@ export function PlayersDataTable(props: PlayersDataTableProps) {
       emptyIcon={<Users className="h-12 w-12 text-muted-foreground/50" />}
       emptyMessage={t('table.noPlayers')}
       onRowClick={item => router.push(`/admin/users/${item.id}`)}
-      bulkActions={bulkActions}
-      bulkSelectedMessage={count => t('bulkActions.selected', { count })}
+      bulkActions={props.readOnly ? [] : bulkActions}
+      bulkSelectedMessage={
+        props.readOnly ? undefined : count => t('bulkActions.selected', { count })
+      }
       paginationNamespace="admin.users.players.pagination"
     />
   );

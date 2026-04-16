@@ -1,4 +1,5 @@
 import { AdminOrganizationForm } from '@/components/admin-organization-form';
+import { requireAdminRole } from '@/lib/admin-rbac.server';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 
@@ -11,6 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AdminOrganizationCreatePage() {
+  await requireAdminRole(['super_admin']);
   const t = await getTranslations('admin.organizations.create');
 
   return (

@@ -1,5 +1,6 @@
+import type { AdminRole } from '@rallia/shared-hooks';
 import { AdminLayoutWrapper } from '@/components/admin-layout-wrapper';
-import { isAdmin } from '@/lib/supabase/check-admin';
+import { getAdminRole } from '@/lib/supabase/check-admin';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
@@ -17,13 +18,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect('/admin/sign-in');
   }
 
-  // Check if user is an admin
-  const userIsAdmin = await isAdmin(user.id);
+  // Check if user is an admin and get their role
+  const role = await getAdminRole(user.id);
 
   // If not an admin, redirect to org dashboard
-  if (!userIsAdmin) {
+  if (!role) {
     redirect('/dashboard');
   }
 
-  return <AdminLayoutWrapper>{children}</AdminLayoutWrapper>;
+  return <AdminLayoutWrapper role={role as AdminRole}>{children}</AdminLayoutWrapper>;
 }
