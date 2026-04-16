@@ -79,16 +79,29 @@ async function getAndroidInstallReferrer(): Promise<PendingReferral | null> {
 
     const params = new URLSearchParams(referrer);
     const code = params.get('referral_code');
-    if (!code) return null;
-
     const invitationType = params.get('invitation_type') as InvitationType | null;
     const targetId = params.get('target_id');
 
-    return {
-      code,
-      type: invitationType || 'referral',
-      targetId: targetId || undefined,
-    };
+    // If we have a referral code, return full referral data
+    if (code) {
+      return {
+        code,
+        type: invitationType || 'referral',
+        targetId: targetId || undefined,
+      };
+    }
+
+    // No referral code but invitation context present (e.g., /join/{code} or /match/{id})
+    // — still capture the invitation type and target for deferred deep linking
+    if (invitationType && targetId) {
+      return {
+        code: '',
+        type: invitationType,
+        targetId,
+      };
+    }
+
+    return null;
   } catch {
     return null;
   }

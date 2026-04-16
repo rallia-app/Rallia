@@ -96,8 +96,11 @@ export function generateInvitationLink(params: InvitationLinkParams): string {
  *   /invite/{code}?type=match&id=uuid&share=token
  *   /en/invite/{code}?type=group&id=code    (locale-prefixed)
  *   rallia://invite/{code}?type=community&id=code
+ *   /join/{code}                             (group join without referral)
+ *   /community/join/{code}                   (community join without referral)
+ *   /match/{id}                              (match link without referral)
  *
- * Returns null if the URL doesn't match the expected pattern.
+ * Returns null if the URL doesn't match any expected pattern.
  */
 export function parseInvitationUrl(url: string): ParsedInvitationLink | null {
   try {
@@ -115,21 +118,53 @@ export function parseInvitationUrl(url: string): ParsedInvitationLink | null {
     // Strip locale prefix from pathname
     const pathname = parsed.pathname.replace(LOCALE_PREFIX, '/');
 
-    // Match /invite/{code}
-    const match = pathname.match(/^\/invite\/([^/?]+)/);
-    if (!match) return null;
+    // 1. Match /invite/{code} (unified format with referral code)
+    const inviteMatch = pathname.match(/^\/invite\/([^/?]+)/);
+    if (inviteMatch) {
+      const referralCode = decodeURIComponent(inviteMatch[1]);
+      const typeParam = parsed.searchParams.get('type');
+      const targetId = parsed.searchParams.get('id') ?? undefined;
+      const shareToken = parsed.searchParams.get('share') ?? undefined;
 
-    const referralCode = decodeURIComponent(match[1]);
-    const typeParam = parsed.searchParams.get('type');
-    const targetId = parsed.searchParams.get('id') ?? undefined;
-    const shareToken = parsed.searchParams.get('share') ?? undefined;
+      const type: InvitationType =
+        typeParam && ['match', 'group', 'community', 'referral'].includes(typeParam)
+          ? (typeParam as InvitationType)
+          : 'referral';
 
-    const type: InvitationType =
-      typeParam && ['match', 'group', 'community', 'referral'].includes(typeParam)
-        ? (typeParam as InvitationType)
-        : 'referral';
+      return { referralCode, type, targetId, shareToken };
+    }
 
-    return { referralCode, type, targetId, shareToken };
+    // 2. Match /community/join/{code} (must be checked before /join/ to avoid false match)
+    const communityJoinMatch = pathname.match(/^\/community\/join\/([^/?]+)/);
+    if (communityJoinMatch) {
+      return {
+        referralCode: '',
+        type: 'community',
+        targetId: decodeURIComponent(communityJoinMatch[1]),
+      };
+    }
+
+    // 3. Match /join/{code} (group join without referral)
+    const groupJoinMatch = pathname.match(/^\/join\/([^/?]+)/);
+    if (groupJoinMatch) {
+      return {
+        referralCode: '',
+        type: 'group',
+        targetId: decodeURIComponent(groupJoinMatch[1]),
+      };
+    }
+
+    // 4. Match /match/{id} (match link without referral)
+    const matchLink = pathname.match(/^\/match\/([^/?]+)/);
+    if (matchLink) {
+      return {
+        referralCode: '',
+        type: 'match',
+        targetId: decodeURIComponent(matchLink[1]),
+      };
+    }
+
+    return null;
   } catch {
     return null;
   }

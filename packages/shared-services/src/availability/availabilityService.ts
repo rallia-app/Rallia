@@ -194,7 +194,7 @@ export async function fetchTodayAvailability(
 
   return fetchAvailability(providerId, {
     dates,
-    siteId: facilityExternalId ? parseInt(facilityExternalId, 10) : undefined,
+    facilityExternalId: facilityExternalId ?? undefined,
   });
 }
 
@@ -350,7 +350,7 @@ export async function fetchUnifiedAvailability(
     if (dataProviderId && externalProviderId) {
       return fetchAvailability(dataProviderId, {
         dates,
-        siteId: parseInt(externalProviderId, 10),
+        facilityExternalId: externalProviderId,
         searchString,
       });
     }

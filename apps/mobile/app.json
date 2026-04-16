@@ -71,6 +71,26 @@
               "scheme": "https",
               "host": "rallia.app",
               "pathPattern": "/.*/match/.*"
+            },
+            {
+              "scheme": "https",
+              "host": "rallia.app",
+              "pathPrefix": "/join"
+            },
+            {
+              "scheme": "https",
+              "host": "rallia.app",
+              "pathPattern": "/.*/join/.*"
+            },
+            {
+              "scheme": "https",
+              "host": "rallia.app",
+              "pathPrefix": "/community/join"
+            },
+            {
+              "scheme": "https",
+              "host": "rallia.app",
+              "pathPattern": "/.*/community/join/.*"
             }
           ],
           "category": ["BROWSABLE", "DEFAULT"]
