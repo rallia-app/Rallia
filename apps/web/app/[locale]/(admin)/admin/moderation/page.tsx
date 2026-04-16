@@ -1,4 +1,5 @@
 import { ModerationView } from '@/components/moderation-view';
+import { requireAdminRole } from '@/lib/admin-rbac.server';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 
@@ -11,6 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AdminModerationPage() {
+  await requireAdminRole(['super_admin', 'moderator']);
   const t = await getTranslations('admin.moderation');
 
   return (

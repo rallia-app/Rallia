@@ -1,5 +1,6 @@
 'use client';
 
+import { useAdminRole } from '@/components/admin-role-context';
 import { ModeToggle } from '@/components/mode-toggle';
 import ThemeLogo from '@/components/theme-logo';
 import { Button } from '@/components/ui/button';
@@ -12,11 +13,13 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Link, usePathname } from '@/i18n/navigation';
+import { canAccessRoute } from '@/lib/admin-rbac';
 import { createClient } from '@/lib/supabase/client';
 import { syncLocaleToBackend } from '@/lib/sync-locale';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@rallia/shared-hooks';
 import {
+  BarChart3,
   Bell,
   Building2,
   ChevronLeft,
@@ -24,9 +27,11 @@ import {
   Globe,
   LayoutDashboard,
   LogOut,
+  Mail,
   MapPin,
   Network,
   ScrollText,
+  Settings,
   Shield,
   Users,
 } from 'lucide-react';
@@ -72,7 +77,9 @@ export function AdminSidebar() {
     });
   };
 
-  const navItems = [
+  const role = useAdminRole();
+
+  const allNavItems = [
     {
       href: '/admin/dashboard',
       label: t('dashboard'),
@@ -121,7 +128,27 @@ export function AdminSidebar() {
       icon: ScrollText,
       exactMatch: false,
     },
+    {
+      href: '/admin/communications',
+      label: t('communications'),
+      icon: Mail,
+      exactMatch: false,
+    },
+    {
+      href: '/admin/analytics',
+      label: t('analytics'),
+      icon: BarChart3,
+      exactMatch: false,
+    },
+    {
+      href: '/admin/settings',
+      label: t('settings'),
+      icon: Settings,
+      exactMatch: false,
+    },
   ];
+
+  const navItems = allNavItems.filter(item => canAccessRoute(role, item.href));
 
   const currentLocale = locales.find(l => l.code === locale) || locales[0];
 

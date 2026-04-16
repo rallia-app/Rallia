@@ -3,6 +3,7 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.heat';
+import { cn } from '@/lib/utils';
 import { useTheme } from 'next-themes';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet';
@@ -511,6 +512,62 @@ function FacilityPopup({ facility }: { facility: FacilityMapPoint }) {
               Bookable
             </span>
           )}
+          {facility.isFirstComeFirstServe && (
+            <span
+              style={{
+                padding: '2px 8px',
+                borderRadius: 4,
+                background: `${ds.accent[500]}18`,
+                color: ds.accent[500],
+                fontSize: 11,
+                fontWeight: 500,
+              }}
+            >
+              Walk-in
+            </span>
+          )}
+          {facility.hasIndoorCourts && (
+            <span
+              style={{
+                padding: '2px 8px',
+                borderRadius: 4,
+                background: `${ds.info[500]}14`,
+                color: ds.info[600],
+                fontSize: 11,
+                fontWeight: 500,
+              }}
+            >
+              Indoor
+            </span>
+          )}
+          {facility.hasOutdoorCourts && (
+            <span
+              style={{
+                padding: '2px 8px',
+                borderRadius: 4,
+                background: `${ds.info[500]}14`,
+                color: ds.info[600],
+                fontSize: 11,
+                fontWeight: 500,
+              }}
+            >
+              Outdoor
+            </span>
+          )}
+          {facility.hasLighting && (
+            <span
+              style={{
+                padding: '2px 8px',
+                borderRadius: 4,
+                background: `${ds.accent[300]}28`,
+                color: ds.accent[500],
+                fontSize: 11,
+                fontWeight: 500,
+              }}
+            >
+              Lit
+            </span>
+          )}
         </div>
 
         {/* Sports */}
@@ -539,11 +596,22 @@ function FacilityPopup({ facility }: { facility: FacilityMapPoint }) {
   );
 }
 
+// Re-render map tiles when container size changes (e.g. full-screen toggle)
+function MapResizeHandler({ isFullScreen }: { isFullScreen: boolean }) {
+  const map = useMap();
+  useEffect(() => {
+    const timer = setTimeout(() => map.invalidateSize(), 300);
+    return () => clearTimeout(timer);
+  }, [isFullScreen, map]);
+  return null;
+}
+
 interface AdminPlayerMapInnerProps {
   points: PlayerMapPoint[];
   facilities: FacilityMapPoint[];
   viewMode: MapViewMode;
   isSelecting: boolean;
+  isFullScreen: boolean;
   onSelectionComplete: (bounds: {
     north: number;
     south: number;
@@ -557,6 +625,7 @@ export default function AdminPlayerMapInner({
   facilities,
   viewMode,
   isSelecting,
+  isFullScreen,
   onSelectionComplete,
 }: AdminPlayerMapInnerProps) {
   usePopupStyles();
@@ -574,9 +643,13 @@ export default function AdminPlayerMapInner({
     <MapContainer
       center={[45.5017, -73.5673]}
       zoom={10}
-      className="w-full h-[calc(100vh-360px)] rounded-lg border border-border dark:border-neutral-700 z-0"
+      className={cn(
+        'w-full rounded-lg border border-border dark:border-neutral-700 z-0',
+        isFullScreen ? 'h-screen w-screen rounded-none border-none' : 'h-[calc(100vh-360px)]'
+      )}
       scrollWheelZoom={true}
     >
+      <MapResizeHandler isFullScreen={isFullScreen} />
       <TileLayer
         key={isDark ? 'dark' : 'light'}
         attribution={isDark ? ATTR_DARK : ATTR_LIGHT}

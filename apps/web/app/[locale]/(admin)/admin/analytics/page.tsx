@@ -1,4 +1,5 @@
 import { AdminAnalyticsOverview } from '@/components/admin-analytics-overview';
+import { requireAdminRole } from '@/lib/admin-rbac.server';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 
@@ -11,6 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AdminAnalyticsPage() {
+  await requireAdminRole(['super_admin', 'analyst']);
   const t = await getTranslations('admin.analytics');
 
   return (

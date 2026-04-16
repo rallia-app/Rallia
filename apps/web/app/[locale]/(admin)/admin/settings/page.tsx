@@ -1,4 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card';
+import { requireAdminRole } from '@/lib/admin-rbac.server';
 import { Settings } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
@@ -12,6 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AdminSettingsPage() {
+  await requireAdminRole(['super_admin']);
   const t = await getTranslations('admin.settings');
 
   return (
