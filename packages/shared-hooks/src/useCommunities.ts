@@ -39,6 +39,8 @@ import {
   subscribeToCommunitySettings,
   subscribeToPendingRequests,
   unsubscribeFromCommunityChannel,
+  // Invite link helper
+  getCommunityInviteLink,
   // Types
   type Community,
   type CommunityWithStatus,
@@ -694,7 +696,7 @@ export function usePendingRequestsRealtime(communityId: string | undefined) {
 }
 
 // =============================================================================
-// RE-EXPORT TYPES
+// RE-EXPORT TYPES & HELPERS
 // =============================================================================
 
 export type {
@@ -706,3 +708,5 @@ export type {
   UpdateCommunityInput,
   PendingMemberRequest,
 };
+
+export { getCommunityInviteLink };

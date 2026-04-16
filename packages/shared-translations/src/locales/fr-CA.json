@@ -8400,7 +8400,10 @@
     "notFound": "Invitation non trouvée",
     "notFoundDescription": "Ce lien d'invitation est peut-être invalide ou expiré.",
     "downloadCta": "Télécharger Rallia",
-    "clipboardHint": "Le lien sera sauvegardé pour que l'app puisse connecter votre invitation."
+    "clipboardHint": "Le lien sera sauvegardé pour que l'app puisse connecter votre invitation.",
+    "physicalTitle": "Bienvenue sur Rallia",
+    "physicalHeading": "Bienvenue sur Rallia",
+    "physicalDescription": "Téléchargez l'app pour trouver des joueurs, rejoindre des parties et jouer plus."
   },
   "feedback": {
     "title": "Commentaires",

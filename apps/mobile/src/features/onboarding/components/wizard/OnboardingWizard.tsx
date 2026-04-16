@@ -47,8 +47,7 @@ import {
 } from '@rallia/shared-services';
 import { useProfile, usePlayer, usePostalCodeGeocode } from '@rallia/shared-hooks';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PENDING_REFERRAL_KEY } from '../../../../screens/InvitationDeepLinkScreen';
-import type { PendingReferral } from '../../../../screens/InvitationDeepLinkScreen';
+import { PENDING_REFERRAL_KEY, type PendingReferral } from '../../../../navigation/deepLinkStore';
 import { replaceImage } from '../../../../services/imageUpload';
 import * as Analytics from '../../../../services/analytics';
 import { posthogClient } from '../../../../providers/PostHogProvider';

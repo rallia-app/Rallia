@@ -14,7 +14,7 @@ import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-sy
 import { mediumHaptic } from '@rallia/shared-utils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useThemeStyles, useTranslation } from '../../hooks';
-import { PENDING_REFERRAL_KEY } from '../InvitationDeepLinkScreen';
+import { PENDING_REFERRAL_KEY } from '../../navigation/deepLinkStore';
 import type { TranslationKey } from '../../hooks';
 
 interface DiscoveryStepProps {
