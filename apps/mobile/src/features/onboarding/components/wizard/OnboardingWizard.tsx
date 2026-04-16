@@ -932,25 +932,29 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 data: { user },
               } = await supabase.auth.getUser();
               if (userId) {
-                const result = await attributeReferral(
-                  pending.code,
-                  userId,
-                  user?.email ?? undefined,
-                  pending.type,
-                  pending.targetId
-                );
-                Analytics.referralAttributed({
-                  invitation_type: pending.type,
-                  referral_code: pending.code,
-                  target_id: pending.targetId,
-                });
-                // Set PostHog user properties for cohort analysis
-                if (result.success && result.referrerId) {
-                  posthogClient?.identify(userId, {
-                    referred_by_player_id: result.referrerId,
-                    referral_invitation_type: pending.type,
-                    referral_target_id: pending.targetId ?? null,
+                // Only attribute referral if a referral code is present
+                // (non-referral links like /join/{code} or /match/{id} have empty code)
+                if (pending.code) {
+                  const result = await attributeReferral(
+                    pending.code,
+                    userId,
+                    user?.email ?? undefined,
+                    pending.type,
+                    pending.targetId
+                  );
+                  Analytics.referralAttributed({
+                    invitation_type: pending.type,
+                    referral_code: pending.code,
+                    target_id: pending.targetId,
                   });
+                  // Set PostHog user properties for cohort analysis
+                  if (result.success && result.referrerId) {
+                    posthogClient?.identify(userId, {
+                      referred_by_player_id: result.referrerId,
+                      referral_invitation_type: pending.type,
+                      referral_target_id: pending.targetId ?? null,
+                    });
+                  }
                 }
               }
               await AsyncStorage.removeItem(PENDING_REFERRAL_KEY);
@@ -993,6 +997,15 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 } catch (e) {
                   Logger.warn('Post-onboarding community join request failed', { error: e });
                 }
+              } else if (pending.type === 'match' && pending.targetId) {
+                // Store pending navigation so Home opens the match detail sheet
+                await AsyncStorage.setItem(
+                  '@rallia/pending-navigation',
+                  JSON.stringify({
+                    screen: 'MatchDetail',
+                    params: { matchId: pending.targetId },
+                  })
+                );
               }
             }
           } catch (referralError) {

@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 
 import { getTranslations } from 'next-intl/server';
 import { Badge } from '@/components/ui/badge';
@@ -8,16 +8,9 @@ import { Calendar, CircleDollarSign, Clock, MapPin, Swords, User, Users } from '
 import Image from 'next/image';
 import { getRelativeDateLabel, formatDuration } from '../../games/_components/utils';
 import { getMatch } from './_lib/get-match';
-
-const APP_STORE_URL = 'https://apps.apple.com/app/rallia/id6760482014';
-const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.mathisl971.ralliaapp';
-
-function isMobile(userAgent: string): 'ios' | 'android' | null {
-  const ua = userAgent.toLowerCase();
-  if (/iphone|ipad|ipod/.test(ua)) return 'ios';
-  if (/android/.test(ua)) return 'android';
-  return null;
-}
+import { getLandingContext } from '@/lib/landing-attribution';
+import { logReferralClick, buildPlayStoreUrl, APP_STORE_URL } from '@/lib/referral-tracking';
+import { ClipboardDownloadButton } from '../../invite/[code]/_components/clipboard-download-button';
 
 type Props = {
   params: Promise<{ id: string; locale: string }>;
@@ -78,10 +71,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function MatchPage({ params }: Props) {
   const { id, locale } = await params;
 
-  // Detect platform for showing the right store badge
-  const headersList = await headers();
-  const userAgent = headersList.get('user-agent') ?? '';
-  const platform = isMobile(userAgent);
+  // Attribution: log click and detect platform
+  const { platform, fingerprint, ip, userAgent } = await getLandingContext();
+
+  // Log click for analytics (non-blocking, no referral code)
+  logReferralClick('', fingerprint, ip, userAgent, 'match', id).catch(() => {});
+
+  // Android: redirect to Play Store with match ID in install referrer
+  if (platform === 'android') {
+    redirect(buildPlayStoreUrl(undefined, 'match', id));
+  }
+
+  const matchUrl = `https://rallia.app/${locale}/match/${id}`;
 
   const match = await getMatch(id);
   const t = await getTranslations({ locale, namespace: 'matchPage' });
@@ -296,8 +297,16 @@ export default async function MatchPage({ params }: Props) {
           <div className="flex flex-col items-center justify-center gap-5 text-center flex-1">
             <h2 className="text-xl font-bold">{t('downloadTitle')}</h2>
             <p className="text-sm text-muted-foreground">{t('downloadDescription')}</p>
-            <div className="flex gap-4">
-              {platform !== 'android' && (
+
+            {platform === 'ios' ? (
+              <ClipboardDownloadButton
+                inviteUrl={matchUrl}
+                appStoreUrl={APP_STORE_URL}
+                label={t('downloadTitle')}
+                hint={t('downloadDescription')}
+              />
+            ) : (
+              <div className="flex gap-4">
                 <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
                   <Image
                     src="/app-store-badge-light.svg"
@@ -314,9 +323,11 @@ export default async function MatchPage({ params }: Props) {
                     className="button-scale hidden dark:block"
                   />
                 </a>
-              )}
-              {platform !== 'ios' && (
-                <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={buildPlayStoreUrl(undefined, 'match', id)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   <Image
                     src="/google-play-badge-light.svg"
                     alt={t('googlePlay')}
@@ -332,8 +343,8 @@ export default async function MatchPage({ params }: Props) {
                     className="button-scale hidden dark:block"
                   />
                 </a>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </section>
       </div>

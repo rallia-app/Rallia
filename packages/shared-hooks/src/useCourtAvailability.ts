@@ -24,9 +24,9 @@ export interface UseCourtAvailabilityOptions {
   facilityId: string;
   /** Data provider ID from the facility or organization */
   dataProviderId: string | null;
-  /** Provider type for registry lookup (e.g., 'loisir_montreal') */
+  /** Provider type for registry lookup (e.g., 'ic3_otium', 'activity_messenger') */
   dataProviderType: string | null;
-  /** External provider ID for the facility (e.g., Loisir Montreal siteId) */
+  /** External provider ID for the facility (e.g., IC3 siteId, ActivityMessenger packageId) */
   externalProviderId: string | null;
   /** Booking URL template with placeholders */
   bookingUrlTemplate: string | null;

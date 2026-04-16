@@ -1,11 +1,11 @@
 /**
- * Mock Data for Loisir Montreal Provider
+ * Mock Data for IC3/Otium Provider
  *
  * Generates realistic mock API responses for testing during winter
  * when no real tennis court availability exists.
  */
 
-import type { LoisirMontrealSearchResponse, LoisirMontrealSlot } from '../types';
+import type { IC3SearchResponse, IC3Slot } from '../types';
 
 // =============================================================================
 // MOCK FACILITIES DATA
@@ -111,7 +111,7 @@ function generateMockSlot(
   courtIndex: number,
   dateStr: string,
   hour: number
-): LoisirMontrealSlot {
+): IC3Slot {
   const site = MOCK_SITES[siteIndex % MOCK_SITES.length];
   const courtName = COURT_NAMES[courtIndex % COURT_NAMES.length];
 
@@ -189,11 +189,11 @@ function generateMockSlot(
 export function generateMockLoisirMontrealResponse(
   dates: string[],
   siteId?: number | null
-): LoisirMontrealSearchResponse {
+): IC3SearchResponse {
   // Reset counter for consistent mock data
   resetMockIdCounter();
 
-  const results: LoisirMontrealSlot[] = [];
+  const results: IC3Slot[] = [];
 
   // Filter sites if siteId is provided
   // When a siteId is provided but doesn't match any mock site, return empty results
