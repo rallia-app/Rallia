@@ -19,6 +19,7 @@ import Animated, {
   withRepeat,
   withSequence,
   Easing,
+  makeMutable,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
@@ -106,8 +107,10 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
 
   // Staggered card entry animations
   const MAX_ANIMATED = 10;
-  const cardOpacities = Array.from({ length: MAX_ANIMATED }, () => useSharedValue(0));
-  const cardTranslateYs = Array.from({ length: MAX_ANIMATED }, () => useSharedValue(20));
+  const cardOpacities = useRef(Array.from({ length: MAX_ANIMATED }, () => makeMutable(0))).current;
+  const cardTranslateYs = useRef(
+    Array.from({ length: MAX_ANIMATED }, () => makeMutable(20))
+  ).current;
   const hasAnimated = useRef(false);
 
   useEffect(() => {
