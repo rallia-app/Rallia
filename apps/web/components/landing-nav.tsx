@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 const navLinks = [
   { href: '/', key: 'home' },
   { href: '/games', key: 'games' },
+  { href: '/communities', key: 'communities' },
 ] as const;
 
 export default function LandingNav() {
