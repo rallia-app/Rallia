@@ -459,7 +459,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacingPixels[4],
   },
   emptyListContent: {
-    flex: 1,
+    flexGrow: 1,
+    paddingBottom: 0,
   },
   contactItem: {
     flexDirection: 'row',

@@ -418,8 +418,9 @@ const styles = StyleSheet.create({
     gap: spacingPixels[3],
   },
   emptyListContent: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
+    paddingBottom: 0,
   },
   requestCard: {
     borderRadius: radiusPixels.xl,

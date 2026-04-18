@@ -39,6 +39,9 @@ import {
   subscribeToCommunitySettings,
   subscribeToPendingRequests,
   unsubscribeFromCommunityChannel,
+  // Rating check
+  checkPlayerMeetsCommunityRating,
+  type CommunityRatingCheckResult,
   // Invite link helper
   getCommunityInviteLink,
   // Types
@@ -72,6 +75,8 @@ export const communityKeys = {
     [...communityKeys.detail(communityId), 'access', playerId] as const,
   pendingRequests: (communityId: string) =>
     [...communityKeys.detail(communityId), 'pending'] as const,
+  ratingCheck: (communityId: string, playerId: string) =>
+    [...communityKeys.detail(communityId), 'ratingCheck', playerId] as const,
 };
 
 // =============================================================================
@@ -299,10 +304,14 @@ export function useRequestToJoinCommunity() {
     mutationFn: ({ communityId, playerId }: { communityId: string; playerId: string }) =>
       requestToJoinCommunity(communityId, playerId),
     onMutate: async variables => {
+      // Use prefix keys (without sportId) so the optimistic update matches
+      // all sport-filtered variants of the query
+      const publicPrefix = [...communityKeys.lists(), 'public', variables.playerId] as const;
+      const playerPrefix = [...communityKeys.lists(), 'player', variables.playerId] as const;
+
       // Cancel outgoing refetches so they don't overwrite our optimistic update
-      await queryClient.cancelQueries({
-        queryKey: communityKeys.publicCommunities(variables.playerId),
-      });
+      await queryClient.cancelQueries({ queryKey: publicPrefix });
+      await queryClient.cancelQueries({ queryKey: playerPrefix });
 
       // Snapshot previous value
       const previousPublicCommunities = queryClient.getQueriesData<CommunityWithStatus[]>({
@@ -316,9 +325,9 @@ export function useRequestToJoinCommunity() {
           ? { ...c, membership_status: 'pending' as const, is_member: false }
           : c;
 
-      // Update infinite query (publicCommunities)
+      // Update infinite query (publicCommunities) — all sport variants
       queryClient.setQueriesData<{ pages: PublicCommunitiesPage[]; pageParams: number[] }>(
-        { queryKey: communityKeys.publicCommunities(variables.playerId) },
+        { queryKey: publicPrefix },
         old =>
           old
             ? {
@@ -331,10 +340,9 @@ export function useRequestToJoinCommunity() {
             : old
       );
 
-      // Update flat array queries (playerCommunities)
-      queryClient.setQueriesData<CommunityWithStatus[]>(
-        { queryKey: communityKeys.playerCommunities(variables.playerId) },
-        old => old?.map(updateCommunity)
+      // Update flat array queries (playerCommunities) — all sport variants
+      queryClient.setQueriesData<CommunityWithStatus[]>({ queryKey: playerPrefix }, old =>
+        old?.map(updateCommunity)
       );
 
       return { previousPublicCommunities };
@@ -351,8 +359,12 @@ export function useRequestToJoinCommunity() {
       queryClient.invalidateQueries({
         queryKey: communityKeys.membershipStatus(variables.communityId, variables.playerId),
       });
+      // Invalidate all sport variants of public & player community lists
       queryClient.invalidateQueries({
-        queryKey: communityKeys.publicCommunities(variables.playerId),
+        queryKey: [...communityKeys.lists(), 'public', variables.playerId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [...communityKeys.lists(), 'player', variables.playerId],
       });
     },
   });
@@ -696,6 +708,28 @@ export function usePendingRequestsRealtime(communityId: string | undefined) {
 }
 
 // =============================================================================
+// RATING REQUIREMENT HOOKS
+// =============================================================================
+
+/**
+ * Check if a player meets a community's minimum rating requirement
+ * Used for UI pre-checks to show/hide join button and display requirement info
+ * @param communityId - The community to check against
+ * @param playerId - The player to check (undefined disables the query)
+ */
+export function usePlayerMeetsCommunityRating(
+  communityId: string | undefined,
+  playerId: string | undefined
+) {
+  return useQuery<CommunityRatingCheckResult, Error>({
+    queryKey: communityKeys.ratingCheck(communityId!, playerId!),
+    queryFn: () => checkPlayerMeetsCommunityRating(communityId!, playerId!),
+    enabled: !!communityId && !!playerId,
+    staleTime: 5 * 60 * 1000, // 5 minutes — rating doesn't change often
+  });
+}
+
+// =============================================================================
 // RE-EXPORT TYPES & HELPERS
 // =============================================================================
 
@@ -707,6 +741,7 @@ export type {
   CreateCommunityInput,
   UpdateCommunityInput,
   PendingMemberRequest,
+  CommunityRatingCheckResult,
 };
 
 export { getCommunityInviteLink };
