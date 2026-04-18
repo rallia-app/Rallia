@@ -23,6 +23,7 @@ import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import type { TranslationKey } from '@rallia/shared-translations';
 
+import { ThemeLogo } from '../../../components/ThemeLogo';
 import { useAuthWizard } from '../hooks/useAuthWizard';
 import { useSocialAuth } from '../hooks/useSocialAuth';
 import { EmailStep } from './steps/EmailStep';
@@ -91,6 +92,46 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
   colors,
   t,
 }) => {
+  // Step 1: Branded welcome header (no bottom border)
+  if (currentStep === 1) {
+    return (
+      <View style={styles.brandedHeader}>
+        {/* Close button row */}
+        <View style={styles.brandedHeaderTopRow}>
+          <View style={styles.headerLeft} />
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              onPress={() => {
+                Keyboard.dismiss();
+                lightHaptic();
+                onClose();
+              }}
+              style={styles.headerButton}
+              accessibilityLabel={t('common.close')}
+              accessibilityRole="button"
+            >
+              <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Logo + Subtitle */}
+        <View style={styles.brandedHeaderContent}>
+          <ThemeLogo width={120} height={36} style={styles.brandedLogo} />
+          <Text
+            size="sm"
+            weight="medium"
+            color={colors.textSecondary}
+            style={styles.brandedSubtitle}
+          >
+            {t('auth.welcomeSubtitle')}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Step 2+: Compact header with back button
   return (
     <View style={[styles.header, { borderBottomColor: colors.border }]}>
       <View style={styles.headerLeft}>
@@ -366,6 +407,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[3],
     borderBottomWidth: 1,
+  },
+  brandedHeader: {
+    paddingHorizontal: spacingPixels[4],
+  },
+  brandedHeaderTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacingPixels[1],
+  },
+  brandedHeaderContent: {
+    alignItems: 'center',
+    paddingBottom: spacingPixels[3],
+  },
+  brandedLogo: {
+    marginBottom: spacingPixels[1],
+  },
+  brandedSubtitle: {
+    textAlign: 'center',
   },
   headerLeft: {
     width: 40,

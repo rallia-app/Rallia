@@ -22,10 +22,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, lightTheme, darkTheme } from '@rallia/design-system';
 import { usePlacesAutocomplete, usePostalCodeGeocode } from '@rallia/shared-hooks';
+import { checkPostalCodeCoverage } from '@rallia/shared-services';
 import {
   lightHaptic,
   isValidCanadianPostalCode,
-  isPostalCodeInGreaterMontreal,
   formatPostalCodeInput,
 } from '@rallia/shared-utils';
 import type { TranslationKey } from '@rallia/shared-translations';
@@ -142,14 +142,19 @@ export const LocationStep: React.FC<LocationStepProps> = ({
       return;
     }
 
-    if (!isPostalCodeInGreaterMontreal(trimmed, 'CA')) {
-      setPostalCodeError(t('preOnboarding.postalCode.errors.outOfCoverage'));
-      return;
-    }
-
     // Geocode the postal code to get updated coordinates
     const location = await geocode(trimmed);
     if (location) {
+      try {
+        const inCoverage = await checkPostalCodeCoverage(location.latitude, location.longitude);
+        if (!inCoverage) {
+          setPostalCodeError(t('preOnboarding.postalCode.errors.outOfCoverage'));
+          return;
+        }
+      } catch {
+        setPostalCodeError(t('preOnboarding.postalCode.errors.coverageCheckFailed'));
+        return;
+      }
       onUpdateFormData({
         postalCode: trimmed,
         latitude: location.latitude,
@@ -215,14 +220,16 @@ export const LocationStep: React.FC<LocationStepProps> = ({
             updates.province = details.province;
           }
 
-          // Sync the postal code if it passes GMA validation
-          // (same validation as manually entered postal codes)
-          if (
-            details.postalCode &&
-            isValidCanadianPostalCode(details.postalCode) &&
-            isPostalCodeInGreaterMontreal(details.postalCode, 'CA')
-          ) {
-            updates.postalCode = details.postalCode;
+          // Sync the postal code if it passes coverage validation
+          if (details.postalCode && isValidCanadianPostalCode(details.postalCode)) {
+            try {
+              const inCoverage = await checkPostalCodeCoverage(details.latitude, details.longitude);
+              if (inCoverage) {
+                updates.postalCode = details.postalCode;
+              }
+            } catch {
+              // Coverage check failed — keep existing postal code
+            }
           }
 
           onUpdateFormData(updates);
