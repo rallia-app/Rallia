@@ -455,6 +455,35 @@ export async function getMapFacilities(
 }
 
 /**
+ * Check if given coordinates are within coverage — i.e. within a radius of
+ * at least one facility that has court availabilities displayed in the app.
+ * Uses the check_postal_code_coverage Supabase RPC.
+ *
+ * @param latitude - Latitude of the postal code centroid
+ * @param longitude - Longitude of the postal code centroid
+ * @param radiusKm - Optional radius in km (defaults to 15 in the RPC)
+ * @returns true if within coverage, false otherwise
+ */
+export async function checkPostalCodeCoverage(
+  latitude: number,
+  longitude: number,
+  radiusKm?: number
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc('check_postal_code_coverage', {
+    p_latitude: latitude,
+    p_longitude: longitude,
+    ...(radiusKm !== undefined && { p_radius_km: radiusKm }),
+  });
+
+  if (error) {
+    console.error('Coverage check RPC error:', error);
+    throw error;
+  }
+
+  return data === true;
+}
+
+/**
  * Facility service object for grouped exports
  */
 export const facilityService = {
@@ -462,6 +491,7 @@ export const facilityService = {
   getFacilityWithDetails,
   searchFacilitiesNearby,
   getMapFacilities,
+  checkPostalCodeCoverage,
 };
 
 export default facilityService;

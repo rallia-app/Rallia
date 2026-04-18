@@ -1,6 +1,10 @@
 /**
- * Coverage zone utilities for geographic restriction (e.g. pre-onboarding).
- * Validates postal codes against Greater Montreal Area (GMA) using FSA allowlist.
+ * Postal code format utilities.
+ * Validates and normalizes Canadian and US postal codes.
+ *
+ * Note: Coverage zone validation (is the postal code in a served area?)
+ * is now handled dynamically by the check_postal_code_coverage Supabase RPC,
+ * which checks proximity to facilities with court availability.
  */
 
 // Canadian postal code format: A1A 1A1 (letter-digit-letter digit-letter-digit)
@@ -10,42 +14,6 @@ const CA_POSTAL_REGEX = /^[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z][ -]?\d[ABCEGHJ-
 
 // US ZIP code: 12345 or 12345-6789
 const US_ZIP_REGEX = /^\d{5}(-\d{4})?$/;
-
-// Valid 3rd character for Canadian FSA (letter in 2nd segment): A,B,C,E,G,H,J-N,P,R,S,T,V-W,X,Y,Z
-const FSA_THIRD_CHAR = 'ABCEGHJKLMNPRSTVWXYZ';
-
-/**
- * Greater Montreal Area (GMA) FSA allowlist.
- * FSA = Forward Sortation Area (first 3 characters of Canadian postal code).
- * Covers the Communauté métropolitaine de Montréal (CMM) and surroundings:
- * - H1–H9: Montreal island, Laval, parts of South Shore
- * - J3: Chambly, Carignan, Saint-Jean-sur-Richelieu area
- * - J4: Longueuil, Brossard, Saint-Lambert
- * - J5: Saint-Bruno, Sainte-Julie, Beloeil, Mont-Saint-Hilaire, Varennes
- * - J6: Terrebonne (old town), Lachenaie, Châteauguay, Beauharnois, L'Île-Perrot
- * - J7: Blainville, Terrebonne (Lachenaie), Mirabel, Deux-Montagnes, Vaudreuil-Dorion
- */
-function buildGmaFsaSet(): Set<string> {
-  const set = new Set<string>();
-
-  // H1A through H9Z (Montreal metro)
-  for (let d = 1; d <= 9; d++) {
-    for (const c of FSA_THIRD_CHAR) {
-      set.add(`H${d}${c}`);
-    }
-  }
-
-  // J3, J4, J5, J6, J7 (South Shore, North Shore, greater CMM)
-  for (const d of [3, 4, 5, 6, 7]) {
-    for (const c of FSA_THIRD_CHAR) {
-      set.add(`J${d}${c}`);
-    }
-  }
-
-  return set;
-}
-
-const GMA_FSA_SET = buildGmaFsaSet();
 
 /**
  * Validates Canadian postal code format (A1A 1A1) using regex.
@@ -122,23 +90,4 @@ export function formatPostalCodeInput(raw: string): string {
   }
 
   return filtered.length > 3 ? `${filtered.slice(0, 3)} ${filtered.slice(3)}` : filtered;
-}
-
-/**
- * Returns whether the given postal code is in the Greater Montreal Area (GMA).
- * Use after validating format: for US or invalid format, returns false.
- *
- * @param postalCode - Raw or normalized Canadian postal code (e.g. "H2X 1Y4" or "H2X1Y4")
- * @param country - 'CA' or 'US'. US codes are not in GMA.
- */
-export function isPostalCodeInGreaterMontreal(postalCode: string, country: 'CA' | 'US'): boolean {
-  if (country === 'US') {
-    return false;
-  }
-  const cleaned = postalCode.replace(/[\s-]/g, '').toUpperCase();
-  if (cleaned.length < 3) {
-    return false;
-  }
-  const fsa = cleaned.slice(0, 3);
-  return GMA_FSA_SET.has(fsa);
 }
