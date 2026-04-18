@@ -52,7 +52,7 @@ STABLE
 SECURITY DEFINER
 AS $$
 DECLARE
-  v_caller_location        geography;
+  v_caller_location        extensions.geography;
   v_caller_max_distance    INT;
   v_caller_match_type      match_type_enum;
   v_caller_match_duration  match_duration_enum;
@@ -264,9 +264,9 @@ BEGIN
       COALESCE(fp.booking_url_template, op_dp.booking_url_template) AS fac_booking_tpl,
 
       -- Distance from facility to caller (meters)
-      ST_Distance(f.location, v_caller_location) AS dist_caller,
+      extensions.ST_Distance(f.location, v_caller_location) AS dist_caller,
       -- Distance from facility to opponent (meters)
-      ST_Distance(f.location, o.opp_location)    AS dist_opponent,
+      extensions.ST_Distance(f.location, o.opp_location)    AS dist_opponent,
 
       -- ── w6: Facility affinity (0.0-1.0) ──
       (
@@ -279,10 +279,10 @@ BEGIN
         ) THEN 0.4 ELSE 0.0 END
         +
         -- Distance to caller's home (0.0-0.3, continuous linear decay)
-        GREATEST(0, 0.3 * (1.0 - ST_Distance(f.location, v_caller_location) / (COALESCE(v_caller_max_distance, 25) * 1000)))
+        GREATEST(0, 0.3 * (1.0 - extensions.ST_Distance(f.location, v_caller_location) / (COALESCE(v_caller_max_distance, 25) * 1000)))
         +
         -- Distance to opponent's home (0.0-0.3, continuous linear decay)
-        GREATEST(0, 0.3 * (1.0 - ST_Distance(f.location, o.opp_location) / (COALESCE(o.opp_max_distance, 25) * 1000)))
+        GREATEST(0, 0.3 * (1.0 - extensions.ST_Distance(f.location, o.opp_location) / (COALESCE(o.opp_max_distance, 25) * 1000)))
       ) AS score_facility
 
     FROM opponents o
@@ -296,9 +296,9 @@ BEGIN
     LEFT JOIN data_provider op_dp ON op_dp.id = org.data_provider_id AND op_dp.is_active = TRUE
    WHERE f.location IS NOT NULL
      -- Facility within caller's max travel distance
-     AND ST_DWithin(f.location, v_caller_location, COALESCE(v_caller_max_distance, 25) * 1000)
+     AND extensions.ST_DWithin(f.location, v_caller_location, COALESCE(v_caller_max_distance, 25) * 1000)
      -- Facility within opponent's max travel distance
-     AND ST_DWithin(f.location, o.opp_location, COALESCE(o.opp_max_distance, 25) * 1000)
+     AND extensions.ST_DWithin(f.location, o.opp_location, COALESCE(o.opp_max_distance, 25) * 1000)
   )
 
   -- Final output with weighted score
