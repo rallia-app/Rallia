@@ -7,6 +7,7 @@ import type {
 } from '@rallia/shared-services';
 
 import { FeedbackReportActionSheet } from '../components/BugReportSheet';
+import { MatchSuggestionsActionSheet } from '../components/MatchSuggestionsSheet';
 import { CreateCommunityActionSheet } from '../features/communities/components/CreateCommunityModal';
 import { CreateListActionSheet } from '../features/shared-lists/components/CreateListModal';
 import { ShareMatchActionSheet } from '../features/shared-lists/components/ShareMatchModal';
@@ -666,6 +667,9 @@ declare module 'react-native-actions-sheet' {
     'reputation-explainer': SheetDefinition<{
       payload?: Record<string, never>;
     }>;
+    'match-suggestions': SheetDefinition<{
+      payload?: Record<string, never>;
+    }>;
     'report-proof': SheetDefinition<{
       payload: {
         reporterId: string;
@@ -750,6 +754,7 @@ export const Sheets = () => {
         // Explainer sheets
         'rating-explainer': RatingExplainerActionSheet,
         'reputation-explainer': ReputationExplainerActionSheet,
+        'match-suggestions': MatchSuggestionsActionSheet,
       }}
     />
   );

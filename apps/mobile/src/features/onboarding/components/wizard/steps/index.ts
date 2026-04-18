@@ -6,3 +6,4 @@ export { PreferencesStep } from './PreferencesStep';
 export { FavoriteSitesStep } from './FavoriteSitesStep';
 export { AvailabilitiesStep } from './AvailabilitiesStep';
 export { SuccessStep } from './SuccessStep';
+export { SuggestionsStep } from './SuggestionsStep';

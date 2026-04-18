@@ -26,6 +26,7 @@ import {
   useToast,
 } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
+import { SheetManager } from 'react-native-actions-sheet';
 import {
   useAuth,
   useThemeStyles,
@@ -75,6 +76,7 @@ import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
 import { SportIcon } from '../components/SportIcon';
 import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
 import ProfileCompletionBanner from '../features/profile/components/ProfileCompletionBanner';
+import { SuggestionsFeedSection } from '../components/SuggestionsFeedSection';
 
 /** Dismissible banner alerting the player to unread notifications in another sport */
 const CrossSportBanner: React.FC<{
@@ -690,21 +692,33 @@ const Home = () => {
 
   // Render footer with loading indicator
   const renderFooter = useCallback(() => {
-    if (!isFetchingNextPage) return null;
-    return (
-      <View style={styles.footerLoader}>
-        <SkeletonMatchCard
-          backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-          highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-          style={{
-            backgroundColor: isDark ? '#1C1C1E' : '#FAFAFA',
-            borderColor: colors.border,
-            marginHorizontal: spacingPixels[4],
-          }}
+    if (isFetchingNextPage) {
+      return (
+        <View style={styles.footerLoader}>
+          <ActivityIndicator size="small" color={colors.primary} />
+        </View>
+      );
+    }
+    if (!hasNextPage && isOnboarded) {
+      return (
+        <SuggestionsFeedSection
+          playerId={player?.id}
+          sportId={selectedSport?.id}
+          sportName={selectedSport?.name}
         />
-      </View>
-    );
-  }, [isFetchingNextPage, colors.border, isDark]);
+      );
+    }
+    return null;
+  }, [
+    isFetchingNextPage,
+    hasNextPage,
+    isOnboarded,
+    colors.primary,
+    isDark,
+    player?.id,
+    selectedSport?.id,
+    selectedSport?.name,
+  ]);
 
   // Render empty state with helpful message about travel distance (signed in) or simple message (signed out)
   const renderEmptyComponent = useCallback(
@@ -1234,8 +1248,20 @@ const Home = () => {
             }
           />
         )}
-        {/* Bug Report FAB */}
+        {/* FAB buttons */}
         <View style={styles.fabContainer}>
+          {isOnboarded && (
+            <TouchableOpacity
+              style={[styles.suggestionsFab, { backgroundColor: colors.primary }]}
+              onPress={() => {
+                lightHaptic();
+                SheetManager.show('match-suggestions');
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="sparkles" size={24} color="#ffffff" />
+            </TouchableOpacity>
+          )}
           <FeedbackFAB />
         </View>
       </SafeAreaView>
@@ -1285,6 +1311,19 @@ const styles = StyleSheet.create({
     bottom: spacingPixels[6],
     right: spacingPixels[4],
     alignItems: 'center',
+    gap: spacingPixels[3],
+  },
+  suggestionsFab: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
   loadingContainer: {
     flex: 1,

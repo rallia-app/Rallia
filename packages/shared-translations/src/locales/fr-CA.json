@@ -120,7 +120,15 @@
     },
     "verificationCodeSent": "Code de vérification envoyé avec succès",
     "enterAllDigits": "Veuillez entrer les 6 chiffres",
-    "authFailed": "L'authentification a échoué. Veuillez réessayer."
+    "authFailed": "L'authentification a échoué. Veuillez réessayer.",
+    "welcomeTitle": "Bienvenue sur Rallia",
+    "welcomeSubtitle": "Ta prochaine partie t'attend.",
+    "continueWithGoogle": "Continuer avec Google",
+    "continueWithApple": "Continuer avec Apple",
+    "continueWithEmail": "ou continuer avec courriel",
+    "benefitFindPartners": "Trouve des partenaires de jeu près de chez toi",
+    "benefitCreateGames": "Crée et rejoins des parties instantanément",
+    "benefitJoinCommunity": "Connecte-toi à ta communauté locale"
   },
   "splash": {
     "slogan": "Ta prochaine partie t'attend."
@@ -1485,6 +1493,37 @@
       "shareButton": "Partager avec des amis",
       "maybeLater": "Peut-être plus tard",
       "linkCopied": "Lien copié!"
+    },
+    "suggestions": {
+      "title": "Vos meilleurs matchs",
+      "subtitle": "Nous avons trouvé des joueurs près de chez vous qui correspondent à votre niveau et horaire",
+      "sendInvite": "Envoyer l'invitation",
+      "confirmTitle": "Envoyer l'invitation?",
+      "confirmMessage": "Inviter {opponent} pour {sport} à {facility}, {time}",
+      "confirmButton": "Envoyer",
+      "cancelButton": "Annuler",
+      "inviteSent": "Invitation envoyée!",
+      "exploreLater": "Explorer plus tard",
+      "loading": "Recherche de vos meilleurs matchs...",
+      "emptyTitle": "Nous cherchons des matchs pour vous",
+      "emptySubtitle": "Revenez bientôt sur la page d'accueil!",
+      "courtsAvailable": "{count} terrains disponibles",
+      "reserveCourt": "Réserver un terrain",
+      "facility": "Site de jeu",
+      "when": "Quand",
+      "noAvailableTimes": "Aucun horaire disponible",
+      "unknownPlayer": "Inconnu",
+      "periodMorning": "Matin",
+      "periodAfternoon": "Après-midi",
+      "periodEvening": "Soir",
+      "feedPromptTitle": "Envie de plus d'options?",
+      "feedPromptSubtitle": "Nous pouvons trouver des joueurs qui correspondent à votre niveau et horaire à proximité.",
+      "feedPromptButton": "Générer des suggestions",
+      "feedSectionTitle": "Vos meilleurs matchs",
+      "feedEmptyTitle": "Aucune suggestion disponible",
+      "feedEmptySubtitle": "Revenez plus tard quand d'autres joueurs se joindront.",
+      "selectDate": "Sélectionnez une date",
+      "selectTime": "Sélectionnez un horaire"
     },
     "complete": "Terminer",
     "locationStep": {
@@ -6822,9 +6861,10 @@
         "invalidUS": "Veuillez entrer un code ZIP américain valide (ex. 90210)",
         "notFound": "Nous n'avons pas trouvé ce code postal. Veuillez vérifier et réessayer.",
         "networkError": "Erreur de connexion. Veuillez réessayer.",
-        "outOfCoverage": "Cette zone n'est pas couverte. Nous sommes actuellement disponibles uniquement dans le Grand Montréal."
+        "outOfCoverage": "Il n'y a pas encore de terrains disponibles près de ce code postal. Nous grandissons — restez à l'affût!",
+        "coverageCheckFailed": "Impossible de vérifier la couverture. Veuillez réessayer."
       },
-      "coverageNote": "Nous sommes actuellement disponibles dans le Grand Montréal."
+      "coverageNote": "La couverture dépend des terrains disponibles près de chez vous."
     },
     "locationPermission": {
       "title": "Obtenez les meilleures recommandations",

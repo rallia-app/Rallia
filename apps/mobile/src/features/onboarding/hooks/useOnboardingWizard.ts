@@ -20,7 +20,8 @@ export type OnboardingStepId =
   | 'preferences'
   | 'favorite-sites'
   | 'availabilities'
-  | 'success';
+  | 'success'
+  | 'suggestions';
 
 export interface OnboardingFormData {
   // Personal Info
@@ -228,6 +229,7 @@ function isStepComplete(stepId: OnboardingStepId, formData: OnboardingFormData):
       );
 
     case 'success':
+    case 'suggestions':
       return true;
 
     default:
@@ -244,8 +246,8 @@ function findFirstIncompleteStepIndex(
 ): number {
   for (let i = 0; i < steps.length; i++) {
     const stepId = steps[i];
-    // Skip success step - it's not a real step to complete
-    if (stepId === 'success') continue;
+    // Skip success and suggestions steps - they're not real steps to complete
+    if (stepId === 'success' || stepId === 'suggestions') continue;
 
     if (!isStepComplete(stepId, formData)) {
       return i;
@@ -529,12 +531,12 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
     if (hasPickleball) baseSteps.push('pickleball-rating');
 
     // Add preferences, favorite sites, and availabilities
-    baseSteps.push('preferences', 'favorite-sites', 'availabilities', 'success');
+    baseSteps.push('preferences', 'favorite-sites', 'availabilities', 'success', 'suggestions');
 
     return baseSteps;
   }, [hasTennis, hasPickleball]);
 
-  const totalSteps = steps.length - 1; // Don't count success as a step
+  const totalSteps = steps.length - 2; // Don't count success or suggestions as steps
   const currentStep = Math.min(currentStepIndex + 1, totalSteps);
   const currentStepId = steps[currentStepIndex] || 'personal';
   const isLastStep = currentStepId === 'availabilities';
