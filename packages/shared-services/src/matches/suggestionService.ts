@@ -403,7 +403,7 @@ export async function getMatchSuggestions(
       const hasConfiguredSource = facilityAvail?.hasSource ?? false;
       const overlaps = row.overlapping_days_periods || [];
 
-      let facilitySlots: AvailableTimeSlot[] = [];
+      const facilitySlots: AvailableTimeSlot[] = [];
 
       if (facilityAvail && facilityAvail.slots.length > 0) {
         // Facility WITH availability source — filter real slots
