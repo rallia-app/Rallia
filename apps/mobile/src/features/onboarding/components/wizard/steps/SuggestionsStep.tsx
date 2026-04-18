@@ -14,6 +14,7 @@ import Animated, {
   withTiming,
   withDelay,
   withSpring,
+  makeMutable,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
@@ -85,8 +86,8 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
   // Animation values
   const headerOpacity = useSharedValue(0);
   const skipOpacity = useSharedValue(0);
-  const cardOpacities = Array.from({ length: MAX_CARDS }, () => useSharedValue(0));
-  const cardTranslateYs = Array.from({ length: MAX_CARDS }, () => useSharedValue(20));
+  const cardOpacities = useRef(Array.from({ length: MAX_CARDS }, () => makeMutable(0))).current;
+  const cardTranslateYs = useRef(Array.from({ length: MAX_CARDS }, () => makeMutable(20))).current;
 
   // Trigger animations
   useEffect(() => {

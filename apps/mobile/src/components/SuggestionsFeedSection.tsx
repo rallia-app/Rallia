@@ -17,6 +17,7 @@ import Animated, {
   withDelay,
   withSpring,
   Easing,
+  makeMutable,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
@@ -163,9 +164,9 @@ export const SuggestionsFeedSection: React.FC<SuggestionsFeedSectionProps> = ({
     opacity: pulseOpacity.value,
   }));
 
-  // Card stagger animation — shared values must be at top level, not inside useMemo
-  const cardOpacities = Array.from({ length: MAX_CARDS }, () => useSharedValue(0));
-  const cardTranslateYs = Array.from({ length: MAX_CARDS }, () => useSharedValue(20));
+  // Card stagger animation
+  const cardOpacities = useRef(Array.from({ length: MAX_CARDS }, () => makeMutable(0))).current;
+  const cardTranslateYs = useRef(Array.from({ length: MAX_CARDS }, () => makeMutable(20))).current;
 
   useEffect(() => {
     if (!isLoading && suggestions.length > 0) {
