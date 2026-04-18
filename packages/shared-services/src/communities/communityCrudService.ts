@@ -80,6 +80,8 @@ export async function createCommunity(
       max_members: null, // Communities have no member limit
       created_by: playerId,
       sport_id: input.sport_id || null, // null means both sports
+      min_rating_score_id: input.min_rating_score_id || null,
+      require_certified_rating: input.require_certified_rating ?? false,
     })
     .select()
     .single();
@@ -286,6 +288,21 @@ export async function updateCommunity(
   }
   if (input.sport_id !== undefined) {
     updateData.sport_id = input.sport_id;
+    // When sport is cleared, also clear rating requirement (ratings are sport-specific)
+    if (input.sport_id === null) {
+      updateData.min_rating_score_id = null;
+      updateData.require_certified_rating = false;
+    }
+  }
+  if (input.min_rating_score_id !== undefined) {
+    updateData.min_rating_score_id = input.min_rating_score_id;
+    // When rating requirement is cleared, also clear certified requirement
+    if (input.min_rating_score_id === null) {
+      updateData.require_certified_rating = false;
+    }
+  }
+  if (input.require_certified_rating !== undefined) {
+    updateData.require_certified_rating = input.require_certified_rating;
   }
 
   const { data, error } = await supabase
@@ -863,4 +880,49 @@ export function getCommunityInviteLink(inviteCode: string, referralCode?: string
     return generateInvitationLink({ type: 'community', referralCode, targetId: inviteCode });
   }
   return `https://rallia.app/community/join/${inviteCode}`;
+}
+
+// ============================================================================
+// RATING REQUIREMENT CHECKS
+// ============================================================================
+
+/**
+ * Result of checking if a player meets a community's rating requirement
+ */
+export interface CommunityRatingCheckResult {
+  meets_requirement: boolean;
+  reason: string | null;
+  min_rating_label: string | null;
+  player_rating_label: string | null;
+}
+
+/**
+ * Check if a player meets a community's minimum rating requirement
+ * Used for UI pre-checks before showing join button
+ * @param communityId - The community to check against
+ * @param playerId - The player to check
+ * @returns Rating check result with meets_requirement boolean and reason
+ */
+export async function checkPlayerMeetsCommunityRating(
+  communityId: string,
+  playerId: string
+): Promise<CommunityRatingCheckResult> {
+  const { data, error } = await supabase.rpc('check_player_meets_community_rating', {
+    p_community_id: communityId,
+    p_player_id: playerId,
+  });
+
+  if (error) {
+    console.error('Error checking community rating requirement:', error);
+    throw new Error(error.message);
+  }
+
+  // RPC returns a single row
+  const row = Array.isArray(data) ? data[0] : data;
+  return {
+    meets_requirement: row?.meets_requirement ?? true,
+    reason: row?.reason ?? null,
+    min_rating_label: row?.min_rating_label ?? null,
+    player_rating_label: row?.player_rating_label ?? null,
+  };
 }

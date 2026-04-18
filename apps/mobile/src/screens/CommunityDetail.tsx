@@ -36,6 +36,7 @@ import {
 } from '../hooks';
 import { useSport } from '../context';
 import { SportIcon } from '../components/SportIcon';
+import RatingBadge from '../components/RatingBadge';
 import {
   useCommunityWithMembers,
   useIsCommunityModerator,
@@ -56,6 +57,7 @@ import {
   useConversationUnreadRealtime,
   useSports,
   usePlayer,
+  usePlayerMeetsCommunityRating,
 } from '@rallia/shared-hooks';
 import type { GroupMatch } from '@rallia/shared-hooks';
 import type { GroupWithMembers } from '@rallia/shared-services';
@@ -189,6 +191,19 @@ export default function CommunityDetailScreen() {
   const leaveCommunityMutation = useLeaveCommunity();
   const deleteCommunityMutation = useDeleteCommunity();
   const requestToJoinMutation = useRequestToJoinCommunity();
+
+  // Check if player meets community rating requirement (for non-members)
+  const { data: ratingCheck } = usePlayerMeetsCommunityRating(
+    community?.min_rating_score_id ? communityId : undefined,
+    playerId
+  );
+
+  // Derive sport name for rating requirement display
+  const communitySportName = useMemo(() => {
+    if (!community?.sport_id || !sports) return undefined;
+    const sport = sports.find(s => s.id === community.sport_id);
+    return sport?.name ? sport.name.charAt(0).toUpperCase() + sport.name.slice(1) : undefined;
+  }, [community?.sport_id, sports]);
 
   // Computed access state
   const canAccessCommunity = accessInfo?.canAccess ?? false;
@@ -1119,6 +1134,16 @@ export default function CommunityDetailScreen() {
                   </Text>
                 </View>
               )}
+              {community.min_rating_score_id && (
+                <RatingBadge
+                  ratingLabel={t('community.minRatingBadge', {
+                    label: ratingCheck?.min_rating_label ?? '...',
+                  })}
+                  certificationStatus={community.require_certified_rating ? 'certified' : undefined}
+                  isDark={isDark}
+                  size="sm"
+                />
+              )}
             </View>
 
             {community.description && (
@@ -1127,15 +1152,52 @@ export default function CommunityDetailScreen() {
               </Text>
             )}
 
-            {/* Member count */}
-            <View style={[styles.memberCountRow, { marginTop: 16 }]}>
-              <Ionicons name="people-outline" size={18} color={colors.textMuted} />
-              <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 8 }}>
+            {/* Members Row */}
+            <View style={[styles.membersRow, { marginTop: 16 }]}>
+              <Text size="sm" style={{ color: colors.textSecondary }}>
                 {t('common.memberCount', { count: community.member_count || 0 })}
               </Text>
+              <View style={styles.memberAvatars}>
+                {community.members?.slice(0, 5).map((member, index) => (
+                  <View
+                    key={member.id}
+                    style={[
+                      styles.memberAvatar,
+                      {
+                        backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA',
+                        marginLeft: index > 0 ? -8 : 0,
+                        zIndex: 5 - index,
+                      },
+                    ]}
+                  >
+                    {member.player?.profile?.profile_picture_url ? (
+                      <Image
+                        source={{ uri: member.player.profile.profile_picture_url }}
+                        style={styles.memberAvatarImage}
+                      />
+                    ) : (
+                      <Text size="xs" weight="semibold" style={{ color: colors.text }}>
+                        {member.player?.profile?.first_name?.charAt(0) || '?'}
+                      </Text>
+                    )}
+                  </View>
+                ))}
+                {(community.member_count || 0) > 5 && (
+                  <View
+                    style={[
+                      styles.memberAvatar,
+                      { backgroundColor: colors.primary, marginLeft: -8 },
+                    ]}
+                  >
+                    <Text size="xs" weight="semibold" style={{ color: '#FFFFFF' }}>
+                      +{(community.member_count || 0) - 5}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
 
-            {/* Action Section */}
+            {/* Info Section */}
             <View style={styles.nonMemberActions}>
               {isPendingMember ? (
                 <View
@@ -1153,23 +1215,51 @@ export default function CommunityDetailScreen() {
                     {t('community.pendingRequests.pending')}
                   </Text>
                 </View>
-              ) : (
-                <Button
-                  variant="primary"
-                  size="lg"
-                  rounded
-                  loading={requestToJoinMutation.isPending}
-                  onPress={handleRequestToJoin}
-                  leftIcon={
-                    !requestToJoinMutation.isPending ? (
-                      <Ionicons name="person-add-outline" size={20} color="#FFFFFF" />
-                    ) : undefined
-                  }
-                  isDark={isDark}
-                >
-                  {t('community.pendingRequests.requestToJoin')}
-                </Button>
-              )}
+              ) : ratingCheck && !ratingCheck.meets_requirement ? (
+                <View>
+                  <View
+                    style={[
+                      styles.ratingRequirementBox,
+                      { backgroundColor: isDark ? '#3C3C3E' : '#FFF3E0' },
+                    ]}
+                  >
+                    <Ionicons
+                      name="alert-circle-outline"
+                      size={20}
+                      color="#EF6C00"
+                      style={{ marginRight: 8 }}
+                    />
+                    <View style={{ flex: 1 }}>
+                      {ratingCheck.reason === 'NO_RATING' ? (
+                        <Text size="sm" style={{ color: colors.text }}>
+                          {t('community.ratingRequired', { sport: communitySportName ?? '' })}
+                        </Text>
+                      ) : ratingCheck.reason === 'CERTIFIED_REQUIRED' ? (
+                        <>
+                          <Text size="sm" style={{ color: colors.text }}>
+                            {t('community.ratingRequirementCertifiedNeeded')}
+                          </Text>
+                          {ratingCheck.player_rating_label && (
+                            <Text size="xs" style={{ color: colors.textSecondary, marginTop: 4 }}>
+                              {ratingCheck.player_rating_label} → {ratingCheck.min_rating_label}+
+                            </Text>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <Text size="sm" style={{ color: colors.text }}>
+                            {t('community.ratingRequirementNotMet')}
+                          </Text>
+                          <Text size="xs" style={{ color: colors.textSecondary, marginTop: 4 }}>
+                            {ratingCheck.player_rating_label ?? '—'} →{' '}
+                            {ratingCheck.min_rating_label}+
+                          </Text>
+                        </>
+                      )}
+                    </View>
+                  </View>
+                </View>
+              ) : null}
 
               <Text
                 size="xs"
@@ -1178,8 +1268,37 @@ export default function CommunityDetailScreen() {
                 {t('community.nonMember.joinToAccessContent')}
               </Text>
             </View>
+
+            {/* Bottom spacing for floating button */}
+            <View style={{ height: 80 }} />
           </View>
         </ScrollView>
+
+        {/* Floating Join / Pending CTA */}
+        {!(ratingCheck && !ratingCheck.meets_requirement) && (
+          <Button
+            variant="primary"
+            size="lg"
+            disabled={isPendingMember}
+            loading={requestToJoinMutation.isPending}
+            onPress={isPendingMember ? undefined : handleRequestToJoin}
+            leftIcon={
+              !requestToJoinMutation.isPending ? (
+                <Ionicons
+                  name={isPendingMember ? 'time-outline' : 'person-add-outline'}
+                  size={20}
+                  color="#FFFFFF"
+                />
+              ) : undefined
+            }
+            isDark={isDark}
+            style={[styles.chatButton, { bottom: Math.max(insets.bottom, 20) + 12 }]}
+          >
+            {isPendingMember
+              ? t('community.pendingRequests.pendingApproval')
+              : t('community.pendingRequests.requestToJoin')}
+          </Button>
+        )}
 
         {/* Request Sent Success Modal */}
         <InfoModal
@@ -1310,6 +1429,16 @@ export default function CommunityDetailScreen() {
                   {t('community.visibility.private')}
                 </Text>
               </View>
+            )}
+            {community.min_rating_score_id && (
+              <RatingBadge
+                ratingLabel={t('community.minRatingBadge', {
+                  label: ratingCheck?.min_rating_label ?? '...',
+                })}
+                certificationStatus={community.require_certified_rating ? 'certified' : undefined}
+                isDark={isDark}
+                size="sm"
+              />
             )}
           </View>
 
@@ -1556,29 +1685,54 @@ export default function CommunityDetailScreen() {
         <View style={{ height: 80 }} />
       </ScrollView>
 
-      {/* Bottom Action Button - changes based on active tab, hidden when opened from chat */}
+      {/* Bottom Action Button - Ask to join for non-members, Chat for members */}
       {!fromChat ? (
-        <Button
-          variant="primary"
-          size="lg"
-          onPress={handleOpenChat}
-          leftIcon={
-            <View style={styles.chatIconContainer}>
-              <Ionicons name="chatbubbles-outline" size={20} color="#FFFFFF" />
-              {(unreadChatCount ?? 0) > 0 && (
-                <View style={styles.unreadBadge}>
-                  <Text size="xs" weight="bold" style={styles.unreadBadgeText}>
-                    {(unreadChatCount ?? 0) > 99 ? '99+' : unreadChatCount}
-                  </Text>
-                </View>
-              )}
-            </View>
-          }
-          isDark={isDark}
-          style={[styles.chatButton, { bottom: Math.max(insets.bottom, 20) + 12 }]}
-        >
-          {t('community.chat.chatWithMembers')}
-        </Button>
+        isActiveMember ? (
+          <Button
+            variant="primary"
+            size="lg"
+            onPress={handleOpenChat}
+            leftIcon={
+              <View style={styles.chatIconContainer}>
+                <Ionicons name="chatbubbles-outline" size={20} color="#FFFFFF" />
+                {(unreadChatCount ?? 0) > 0 && (
+                  <View style={styles.unreadBadge}>
+                    <Text size="xs" weight="bold" style={styles.unreadBadgeText}>
+                      {(unreadChatCount ?? 0) > 99 ? '99+' : unreadChatCount}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            }
+            isDark={isDark}
+            style={[styles.chatButton, { bottom: Math.max(insets.bottom, 20) + 12 }]}
+          >
+            {t('community.chat.chatWithMembers')}
+          </Button>
+        ) : (
+          <Button
+            variant="primary"
+            size="lg"
+            disabled={isPendingMember}
+            loading={requestToJoinMutation.isPending}
+            onPress={isPendingMember ? undefined : handleRequestToJoin}
+            leftIcon={
+              !requestToJoinMutation.isPending ? (
+                <Ionicons
+                  name={isPendingMember ? 'time-outline' : 'person-add-outline'}
+                  size={20}
+                  color="#FFFFFF"
+                />
+              ) : undefined
+            }
+            isDark={isDark}
+            style={[styles.chatButton, { bottom: Math.max(insets.bottom, 20) + 12 }]}
+          >
+            {isPendingMember
+              ? t('community.pendingRequests.pendingApproval')
+              : t('community.pendingRequests.requestToJoin')}
+          </Button>
+        )
       ) : null}
 
       {/* Add Score Flow Modals */}
@@ -1705,6 +1859,7 @@ const styles = StyleSheet.create({
   badgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: spacingPixels[2],
     marginTop: spacingPixels[3],
   },
@@ -2167,6 +2322,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 14,
     paddingHorizontal: 24,
+    borderRadius: 12,
+    width: '100%',
+  },
+  ratingRequirementBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 16,
     borderRadius: 12,
     width: '100%',
   },

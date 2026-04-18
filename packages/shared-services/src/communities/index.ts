@@ -7,7 +7,7 @@
 export * from './communityTypes';
 
 // CRUD operations
-export type { PublicCommunitiesPage } from './communityCrudService';
+export type { PublicCommunitiesPage, CommunityRatingCheckResult } from './communityCrudService';
 
 export {
   getCommunityTypeId,
@@ -35,6 +35,7 @@ export {
   removeCommunityMember,
   promoteCommunityMember,
   demoteCommunityMember,
+  checkPlayerMeetsCommunityRating,
 } from './communityCrudService';
 
 // Realtime subscriptions

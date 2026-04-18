@@ -1500,6 +1500,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1.5,
     borderColor: primary[500],
+    overflow: 'hidden',
   },
   memberAvatarImage: {
     width: 28,

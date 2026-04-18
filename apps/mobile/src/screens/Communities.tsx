@@ -640,8 +640,9 @@ const styles = StyleSheet.create({
     alignItems: 'center' as const,
   },
   emptyListContent: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
+    paddingBottom: 0,
   },
   columnWrapper: {
     marginBottom: CARD_GAP,
@@ -769,6 +770,9 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
     width: 56,
     height: 56,
     borderRadius: 28,

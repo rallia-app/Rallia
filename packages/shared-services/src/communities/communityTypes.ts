@@ -60,6 +60,10 @@ export interface CommunityWithStatus extends Community {
   membership_status: 'active' | 'pending' | 'blocked' | 'removed' | null;
   /** User's role if member */
   membership_role: 'member' | 'moderator' | null;
+  /** Resolved minimum rating value (from rating_scores join) */
+  min_rating_value: number | null;
+  /** Resolved minimum rating label (from rating_scores join) */
+  min_rating_label: string | null;
 }
 
 /**
@@ -138,6 +142,10 @@ export interface CreateCommunityInput {
   is_public?: boolean;
   /** Optional sport association (null/undefined = both sports) */
   sport_id?: string | null;
+  /** Optional minimum rating score required to join */
+  min_rating_score_id?: string | null;
+  /** Whether certified (green badge) rating is required (default: false) */
+  require_certified_rating?: boolean;
 }
 
 /**
@@ -149,6 +157,10 @@ export interface UpdateCommunityInput {
   cover_image_url?: string;
   is_public?: boolean;
   sport_id?: string | null;
+  /** Optional minimum rating score required to join */
+  min_rating_score_id?: string | null;
+  /** Whether certified (green badge) rating is required */
+  require_certified_rating?: boolean;
 }
 
 // ============================================================================

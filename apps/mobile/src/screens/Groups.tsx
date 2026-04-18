@@ -4,7 +4,7 @@
  * Grid card layout with cover images
  */
 
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import {
   View,
   FlatList,
@@ -35,7 +35,6 @@ import {
   type Group,
 } from '@rallia/shared-hooks';
 import type { RootStackParamList } from '../navigation/types';
-import { QRScannerModal } from '../features/groups';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_GAP = 12;
@@ -165,8 +164,6 @@ export default function GroupsScreen() {
   const { selectedSport } = useSport();
   const playerId = session?.user?.id;
 
-  const [showScannerModal, setShowScannerModal] = useState(false);
-
   // Filter groups by selected sport
   const {
     data: groups,
@@ -241,19 +238,6 @@ export default function GroupsScreen() {
             isDark={isDark}
           >
             {t('groups.empty.createButton')}
-          </Button>
-          <Button
-            variant="outline"
-            size="md"
-            rounded
-            onPress={() => {
-              if (!guardAction()) return;
-              setShowScannerModal(true);
-            }}
-            leftIcon={<Ionicons name="qr-code-outline" size={20} color={colors.primary} />}
-            isDark={isDark}
-          >
-            {t('groups.empty.scanButton')}
           </Button>
         </View>
       </View>
@@ -383,16 +367,6 @@ export default function GroupsScreen() {
           <Ionicons name="add-outline" size={28} color="#FFFFFF" />
         </TouchableOpacity>
       )}
-
-      {/* QR Scanner Modal */}
-      {playerId && (
-        <QRScannerModal
-          visible={showScannerModal}
-          onClose={() => setShowScannerModal(false)}
-          playerId={playerId}
-          onGroupJoined={handleGroupJoined}
-        />
-      )}
     </SafeAreaView>
   );
 }
@@ -430,8 +404,9 @@ const styles = StyleSheet.create({
     paddingBottom: 100, // Extra padding for FAB
   },
   emptyListContent: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
+    paddingBottom: 0,
   },
   columnWrapper: {
     marginBottom: CARD_GAP,
