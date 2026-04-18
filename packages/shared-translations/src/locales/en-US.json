@@ -2016,6 +2016,17 @@
       "private": "Private"
     },
     "certified": "Certified",
+    "minRating": "Minimum Rating",
+    "minRatingOptional": "Minimum Rating (Optional)",
+    "noMinRating": "None",
+    "requireCertifiedRating": "Require Certified Rating",
+    "requireCertifiedDescription": "Players must have a verified rating, not self-declared",
+    "ratingRequirementInfo": "Only players at or above this level can request to join",
+    "ratingRequirementExistingMembersNote": "This only applies to new join requests. Existing members are not affected.",
+    "ratingRequirementNotMet": "Your rating does not meet the minimum requirement",
+    "ratingRequirementCertifiedNeeded": "This community requires a certified rating",
+    "ratingRequired": "You need a {sport} rating to join this community",
+    "minRatingBadge": "{label}+",
     "stats": {
       "title": "Community Stats",
       "totalMembers": "Total Members",
@@ -2047,8 +2058,9 @@
       "approveSuccess": "Member approved successfully",
       "declineSuccess": "Request declined",
       "noRequests": "No pending requests",
-      "requestToJoin": "Request to Join",
+      "requestToJoin": "Ask to join",
       "pending": "Pending",
+      "pendingApproval": "Pending approval",
       "joinRequest": "Join request"
     },
     "referredBy": "Referred by {name}",

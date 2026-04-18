@@ -2706,8 +2706,10 @@ export type Database = {
           is_private: boolean | null
           max_members: number | null
           member_count: number | null
+          min_rating_score_id: string | null
           name: string
           network_type_id: string
+          require_certified_rating: boolean
           sport_id: string | null
           updated_at: string | null
         }
@@ -2727,8 +2729,10 @@ export type Database = {
           is_private?: boolean | null
           max_members?: number | null
           member_count?: number | null
+          min_rating_score_id?: string | null
           name: string
           network_type_id: string
+          require_certified_rating?: boolean
           sport_id?: string | null
           updated_at?: string | null
         }
@@ -2748,8 +2752,10 @@ export type Database = {
           is_private?: boolean | null
           max_members?: number | null
           member_count?: number | null
+          min_rating_score_id?: string | null
           name?: string
           network_type_id?: string
+          require_certified_rating?: boolean
           sport_id?: string | null
           updated_at?: string | null
         }
@@ -2773,6 +2779,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_min_rating_score_id_fkey"
+            columns: ["min_rating_score_id"]
+            isOneToOne: false
+            referencedRelation: "rating_score"
             referencedColumns: ["id"]
           },
           {
@@ -5211,6 +5224,24 @@ export type Database = {
           },
         ]
       }
+      raffle_entry: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+        }
+        Relationships: []
+      }
       rating_proof: {
         Row: {
           created_at: string
@@ -6278,6 +6309,19 @@ export type Database = {
           should_create_verified: boolean
         }[]
       }
+      check_player_meets_community_rating: {
+        Args: { p_community_id: string; p_player_id: string }
+        Returns: {
+          meets_requirement: boolean
+          min_rating_label: string
+          player_rating_label: string
+          reason: string
+        }[]
+      }
+      check_postal_code_coverage: {
+        Args: { p_latitude: number; p_longitude: number; p_radius_km?: number }
+        Returns: boolean
+      }
       confirm_match_score: {
         Args: { p_match_result_id: string; p_player_id: string }
         Returns: boolean
@@ -6617,6 +6661,35 @@ export type Database = {
           total_matches: number
         }[]
       }
+      get_match_suggestions_scored: {
+        Args: { p_limit?: number; p_player_id: string; p_sport_id: string }
+        Returns: {
+          facility_address: string
+          facility_affinity: number
+          facility_booking_url_tpl: string
+          facility_city: string
+          facility_data_provider_id: string
+          facility_external_id: string
+          facility_id: string
+          facility_name: string
+          facility_provider_type: string
+          facility_timezone: string
+          match_duration: Database["public"]["Enums"]["match_duration_enum"]
+          match_type: Database["public"]["Enums"]["match_type_enum"]
+          matchup_score: number
+          opponent_avatar: string
+          opponent_badge_status: Database["public"]["Enums"]["badge_status_enum"]
+          opponent_first_name: string
+          opponent_id: string
+          opponent_last_name: string
+          opponent_rating_label: string
+          opponent_rating_value: number
+          opponent_reputation_score: number
+          opponent_reputation_tier: Database["public"]["Enums"]["reputation_tier"]
+          overlapping_days_periods: Json
+          player_compatibility: number
+        }[]
+      }
       get_match_type_types: {
         Args: never
         Returns: {
@@ -6849,7 +6922,11 @@ export type Database = {
           member_count: number
           membership_role: string
           membership_status: string
+          min_rating_label: string
+          min_rating_score_id: string
+          min_rating_value: number
           name: string
+          require_certified_rating: boolean
           sport_id: string
         }[]
       }
@@ -7067,7 +7144,11 @@ export type Database = {
           member_count: number
           membership_role: string
           membership_status: string
+          min_rating_label: string
+          min_rating_score_id: string
+          min_rating_value: number
           name: string
+          require_certified_rating: boolean
           sport_id: string
         }[]
       }

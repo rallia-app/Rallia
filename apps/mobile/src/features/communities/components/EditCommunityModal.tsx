@@ -3,7 +3,7 @@
  * Modal for editing community name, description, cover image, and visibility
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -17,7 +17,12 @@ import {
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
-import { useUpdateCommunity, type Community } from '@rallia/shared-hooks';
+import {
+  useUpdateCommunity,
+  useSports,
+  useRatingScoresForSport,
+  type Community,
+} from '@rallia/shared-hooks';
 import { neutral, radiusPixels, spacingPixels } from '@rallia/design-system';
 
 import { useThemeStyles, useAuth, useTranslation } from '../../../hooks';
@@ -41,8 +46,24 @@ export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community
   const [newCoverImage, setNewCoverImage] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [minRatingScoreId, setMinRatingScoreId] = useState<string | null>(
+    community?.min_rating_score_id ?? null
+  );
+  const [requireCertifiedRating, setRequireCertifiedRating] = useState(
+    community?.require_certified_rating ?? false
+  );
 
   const updateCommunityMutation = useUpdateCommunity();
+  const { sports } = useSports();
+
+  // Derive sport name from community's sport_id for rating scores lookup
+  const communitySportName = useMemo(() => {
+    if (!community?.sport_id || !sports) return undefined;
+    const sport = sports.find(s => s.id === community.sport_id);
+    return sport?.name;
+  }, [community?.sport_id, sports]);
+
+  const { ratingScores, hasRatingSystem } = useRatingScoresForSport(communitySportName);
 
   // Reset form when community changes
   useEffect(() => {
@@ -52,6 +73,8 @@ export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community
       setIsPublic(community.is_public ?? true);
       setCoverImage(community.cover_image_url || null);
       setNewCoverImage(null);
+      setMinRatingScoreId(community.min_rating_score_id ?? null);
+      setRequireCertifiedRating(community.require_certified_rating ?? false);
       setError(null);
     }
   }, [community]);
@@ -156,6 +179,8 @@ export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community
           name: name.trim(),
           description: description.trim() || undefined,
           is_public: isPublic,
+          min_rating_score_id: minRatingScoreId,
+          require_certified_rating: requireCertifiedRating,
           ...(coverImageUrl !== undefined && { cover_image_url: coverImageUrl || undefined }),
         },
       });
@@ -176,6 +201,8 @@ export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community
     name,
     description,
     isPublic,
+    minRatingScoreId,
+    requireCertifiedRating,
     community.id,
     community.cover_image_url,
     playerId,
@@ -192,7 +219,9 @@ export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community
     description !== (community.description || '') ||
     isPublic !== (community.is_public ?? true) ||
     newCoverImage !== null ||
-    (coverImage === null && community.cover_image_url !== null);
+    (coverImage === null && community.cover_image_url !== null) ||
+    minRatingScoreId !== (community.min_rating_score_id ?? null) ||
+    requireCertifiedRating !== (community.require_certified_rating ?? false);
 
   const displayImage = newCoverImage || coverImage;
   const isSubmitting = updateCommunityMutation.isPending || isUploadingImage;
@@ -360,6 +389,171 @@ export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community
               thumbColor="#FFFFFF"
             />
           </View>
+
+          {/* Minimum Rating Requirement Section */}
+          {hasRatingSystem && community.sport_id && (
+            <View style={styles.inputGroup}>
+              <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
+                {t('community.minRatingOptional')}
+              </Text>
+              <View
+                style={[
+                  styles.visibilityToggle,
+                  { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', borderColor: colors.border },
+                ]}
+              >
+                <View style={styles.visibilityInfo}>
+                  <View
+                    style={[
+                      styles.visibilityIcon,
+                      { backgroundColor: minRatingScoreId ? '#007AFF20' : '#8E8E9320' },
+                    ]}
+                  >
+                    <Ionicons
+                      name="speedometer-outline"
+                      size={20}
+                      color={minRatingScoreId ? '#007AFF' : '#8E8E93'}
+                    />
+                  </View>
+                  <View style={styles.visibilityText}>
+                    <Text weight="semibold" style={{ color: colors.text }}>
+                      {t('community.minRating')}
+                    </Text>
+                    <Text size="xs" style={{ color: colors.textSecondary, marginTop: 2 }}>
+                      {minRatingScoreId
+                        ? (ratingScores.find(r => r.id === minRatingScoreId)?.label ?? '')
+                        : t('community.noMinRating')}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={{ marginTop: 8 }}
+                contentContainerStyle={{ gap: 8 }}
+              >
+                <TouchableOpacity
+                  style={[
+                    styles.ratingChip,
+                    {
+                      backgroundColor: !minRatingScoreId
+                        ? colors.primary + '20'
+                        : isDark
+                          ? '#2C2C2E'
+                          : '#E5E5EA',
+                      borderColor: !minRatingScoreId ? colors.primary : 'transparent',
+                      borderWidth: 1,
+                    },
+                  ]}
+                  onPress={() => {
+                    setMinRatingScoreId(null);
+                    setRequireCertifiedRating(false);
+                  }}
+                >
+                  <Text
+                    size="xs"
+                    weight={!minRatingScoreId ? 'semibold' : 'regular'}
+                    style={{ color: !minRatingScoreId ? colors.primary : colors.text }}
+                  >
+                    {t('community.noMinRating')}
+                  </Text>
+                </TouchableOpacity>
+                {ratingScores.map(score => (
+                  <TouchableOpacity
+                    key={score.id}
+                    style={[
+                      styles.ratingChip,
+                      {
+                        backgroundColor:
+                          minRatingScoreId === score.id
+                            ? colors.primary + '20'
+                            : isDark
+                              ? '#2C2C2E'
+                              : '#E5E5EA',
+                        borderColor: minRatingScoreId === score.id ? colors.primary : 'transparent',
+                        borderWidth: 1,
+                      },
+                    ]}
+                    onPress={() => setMinRatingScoreId(score.id)}
+                  >
+                    <Text
+                      size="xs"
+                      weight={minRatingScoreId === score.id ? 'semibold' : 'regular'}
+                      style={{
+                        color: minRatingScoreId === score.id ? colors.primary : colors.text,
+                      }}
+                    >
+                      {score.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              {minRatingScoreId && (
+                <>
+                  <View
+                    style={[
+                      styles.visibilityToggle,
+                      {
+                        backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7',
+                        borderColor: colors.border,
+                        marginTop: 12,
+                      },
+                    ]}
+                  >
+                    <View style={styles.visibilityInfo}>
+                      <View
+                        style={[
+                          styles.visibilityIcon,
+                          {
+                            backgroundColor: requireCertifiedRating ? '#34C75920' : '#8E8E9320',
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name="shield-checkmark-outline"
+                          size={20}
+                          color={requireCertifiedRating ? '#34C759' : '#8E8E93'}
+                        />
+                      </View>
+                      <View style={styles.visibilityText}>
+                        <Text weight="semibold" style={{ color: colors.text }}>
+                          {t('community.requireCertifiedRating')}
+                        </Text>
+                        <Text size="xs" style={{ color: colors.textSecondary, marginTop: 2 }}>
+                          {t('community.requireCertifiedDescription')}
+                        </Text>
+                      </View>
+                    </View>
+                    <Switch
+                      value={requireCertifiedRating}
+                      onValueChange={setRequireCertifiedRating}
+                      trackColor={{ false: colors.border, true: colors.primary }}
+                      thumbColor="#FFFFFF"
+                    />
+                  </View>
+                  <Text
+                    size="xs"
+                    style={{ color: colors.textMuted, marginTop: 6, paddingHorizontal: 4 }}
+                  >
+                    {t('community.ratingRequirementInfo')}
+                  </Text>
+                  <Text
+                    size="xs"
+                    style={{
+                      color: colors.textMuted,
+                      marginTop: 4,
+                      paddingHorizontal: 4,
+                      fontStyle: 'italic',
+                    }}
+                  >
+                    {t('community.ratingRequirementExistingMembersNote')}
+                  </Text>
+                </>
+              )}
+            </View>
+          )}
         </ScrollView>
 
         {/* Footer */}
@@ -541,5 +735,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     gap: spacingPixels[2],
+  },
+  ratingChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
 });

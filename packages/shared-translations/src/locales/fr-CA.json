@@ -2016,6 +2016,17 @@
       "private": "Privé"
     },
     "certified": "Certifiée",
+    "minRating": "Classement minimum",
+    "minRatingOptional": "Classement minimum (Optionnel)",
+    "noMinRating": "Aucun",
+    "requireCertifiedRating": "Exiger un classement certifié",
+    "requireCertifiedDescription": "Les joueurs doivent avoir un classement vérifié, pas auto-déclaré",
+    "ratingRequirementInfo": "Seuls les joueurs à ce niveau ou au-dessus peuvent demander à rejoindre",
+    "ratingRequirementExistingMembersNote": "Cela s'applique uniquement aux nouvelles demandes. Les membres existants ne sont pas affectés.",
+    "ratingRequirementNotMet": "Votre classement ne répond pas à l'exigence minimale",
+    "ratingRequirementCertifiedNeeded": "Cette communauté exige un classement certifié",
+    "ratingRequired": "Vous avez besoin d'un classement {sport} pour rejoindre cette communauté",
+    "minRatingBadge": "{label}+",
     "stats": {
       "title": "Statistiques de la communauté",
       "totalMembers": "Membres totaux",
@@ -2049,6 +2060,7 @@
       "noRequests": "Aucune demande en attente",
       "requestToJoin": "Demander à rejoindre",
       "pending": "En attente",
+      "pendingApproval": "En attente d'approbation",
       "joinRequest": "Demande d'adhésion"
     },
     "referredBy": "Référé par {name}",

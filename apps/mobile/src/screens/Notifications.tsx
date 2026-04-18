@@ -803,8 +803,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   emptyListContent: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
+    paddingBottom: 0,
   },
   headerContainer: {
     flexDirection: 'row',

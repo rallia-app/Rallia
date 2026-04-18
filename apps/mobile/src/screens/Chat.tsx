@@ -887,7 +887,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[8],
   },
   emptyListContent: {
-    flex: 1,
+    flexGrow: 1,
   },
   emptyTitle: {
     fontSize: fontSizePixels.lg,

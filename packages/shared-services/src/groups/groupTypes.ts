@@ -22,6 +22,8 @@
  * @property created_at - ISO timestamp of creation
  * @property updated_at - ISO timestamp of last update
  * @property sport_id - Optional sport association (null = both sports)
+ * @property min_rating_score_id - Minimum rating score required to join (null = no requirement)
+ * @property require_certified_rating - Whether certified (green badge) rating is required
  */
 export interface Group {
   id: string;
@@ -36,6 +38,8 @@ export interface Group {
   created_at: string;
   updated_at: string;
   sport_id: string | null;
+  min_rating_score_id: string | null;
+  require_certified_rating: boolean;
 }
 
 /**
