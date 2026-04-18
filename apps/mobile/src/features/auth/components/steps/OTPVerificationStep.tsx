@@ -6,15 +6,8 @@
  */
 
 import React, { useRef, useEffect, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
-  Pressable,
-  Platform,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, TextInput, Pressable, Platform } from 'react-native';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import type { TranslationKey } from '@rallia/shared-translations';
@@ -103,11 +96,12 @@ export const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
   const canVerify = isCodeComplete && !isLoading;
 
   return (
-    <ScrollView
+    <BottomSheetScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
     >
       {/* Title */}
       <Text size="2xl" weight="bold" color={colors.text} style={styles.title}>
@@ -208,7 +202,7 @@ export const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
           {t('common.continue')}
         </Text>
       </TouchableOpacity>
-    </ScrollView>
+    </BottomSheetScrollView>
   );
 };
 
@@ -219,7 +213,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[4],
-    paddingBottom: spacingPixels[8],
+    paddingBottom: spacingPixels[4],
   },
   title: {
     textAlign: 'center',

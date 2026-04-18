@@ -2,7 +2,8 @@
  * EmailStep Component
  *
  * First step of the AuthWizard - Email entry with social sign-in buttons.
- * Migrated from AuthOverlay with theme-aware colors and i18n support.
+ * Features a welcoming layout with benefit points, branded social buttons,
+ * and a soft divider for email entry.
  */
 
 import React, { useRef, useEffect } from 'react';
@@ -10,12 +11,11 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
   ActivityIndicator,
-  ScrollView,
   Platform,
   Linking,
 } from 'react-native';
+import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { primary } from '@rallia/design-system';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
@@ -73,7 +73,7 @@ export const EmailStep: React.FC<EmailStepProps> = ({
   onContinue,
   colors,
   t,
-  isDark: _isDark,
+  isDark,
   isActive = true,
   onGoogleSignIn,
   onAppleSignIn,
@@ -82,7 +82,7 @@ export const EmailStep: React.FC<EmailStepProps> = ({
   socialAuthLoadingProvider = null,
   isAppleSignInAvailable = Platform.OS === 'ios',
 }) => {
-  const emailInputRef = useRef<TextInput>(null);
+  const emailInputRef = useRef<any>(null);
 
   // Blur email input when step becomes inactive
   useEffect(() => {
@@ -94,14 +94,39 @@ export const EmailStep: React.FC<EmailStepProps> = ({
   const canContinue = isEmailValid && !isLoading && !socialAuthLoading;
   const isAnyLoading = isLoading || socialAuthLoading;
 
+  const benefitIconColor = isDark ? primary[400] : primary[500];
+
   return (
-    <ScrollView
+    <BottomSheetScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
     >
-      {/* Social Sign In Buttons */}
+      {/* Benefit Points */}
+      <View style={styles.benefitsSection}>
+        <View style={styles.benefitRow}>
+          <Ionicons name="people-outline" size={16} color={benefitIconColor} />
+          <Text size="sm" color={colors.textSecondary}>
+            {t('auth.benefitFindPartners')}
+          </Text>
+        </View>
+        <View style={styles.benefitRow}>
+          <Ionicons name="add-circle-outline" size={16} color={benefitIconColor} />
+          <Text size="sm" color={colors.textSecondary}>
+            {t('auth.benefitCreateGames')}
+          </Text>
+        </View>
+        <View style={styles.benefitRow}>
+          <Ionicons name="globe-outline" size={16} color={benefitIconColor} />
+          <Text size="sm" color={colors.textSecondary}>
+            {t('auth.benefitJoinCommunity')}
+          </Text>
+        </View>
+      </View>
+
+      {/* Social Sign In Buttons - Full Width with Labels */}
       <View style={styles.socialButtons}>
         {/* Google Sign In */}
         <TouchableOpacity
@@ -117,7 +142,12 @@ export const EmailStep: React.FC<EmailStepProps> = ({
           {socialAuthLoadingProvider === 'google' ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (
-            <Ionicons name="logo-google" size={24} color="#fff" />
+            <>
+              <Ionicons name="logo-google" size={20} color="#fff" />
+              <Text size="base" weight="semibold" color="#fff">
+                {t('auth.continueWithGoogle')}
+              </Text>
+            </>
           )}
         </TouchableOpacity>
 
@@ -136,7 +166,12 @@ export const EmailStep: React.FC<EmailStepProps> = ({
             {socialAuthLoadingProvider === 'apple' ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <Ionicons name="logo-apple" size={24} color="#fff" />
+              <>
+                <Ionicons name="logo-apple" size={20} color="#fff" />
+                <Text size="base" weight="semibold" color="#fff">
+                  {t('auth.continueWithApple')}
+                </Text>
+              </>
             )}
           </TouchableOpacity>
         )}
@@ -155,23 +190,28 @@ export const EmailStep: React.FC<EmailStepProps> = ({
           {socialAuthLoadingProvider === 'facebook' ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (
-            <Ionicons name="logo-facebook" size={24} color="#fff" />
+            <>
+              <Ionicons name="logo-facebook" size={20} color="#fff" />
+              <Text size="base" weight="semibold" color="#fff">
+                {t('auth.continueWithFacebook')}
+              </Text>
+            </>
           )}
         </TouchableOpacity>
         */}
       </View>
 
-      {/* OR Divider */}
+      {/* OR Divider - softer "or continue with email" */}
       <View style={styles.dividerContainer}>
         <View style={[styles.dividerLine, { backgroundColor: colors.divider }]} />
         <Text size="sm" weight="medium" color={colors.textMuted} style={styles.dividerText}>
-          {t('auth.orDivider')}
+          {t('auth.continueWithEmail')}
         </Text>
         <View style={[styles.dividerLine, { backgroundColor: colors.divider }]} />
       </View>
 
       {/* Email Input */}
-      <TextInput
+      <BottomSheetTextInput
         ref={emailInputRef}
         style={[
           styles.emailInput,
@@ -238,7 +278,7 @@ export const EmailStep: React.FC<EmailStepProps> = ({
         </Text>
         {t('auth.termsSuffix')}
       </Text>
-    </ScrollView>
+    </BottomSheetScrollView>
   );
 };
 
@@ -248,26 +288,31 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[4],
-    paddingBottom: spacingPixels[8],
+    paddingTop: spacingPixels[2],
+    paddingBottom: spacingPixels[4],
   },
-  title: {
-    textAlign: 'center',
-    marginBottom: spacingPixels[6],
+  benefitsSection: {
+    paddingHorizontal: spacingPixels[2],
+    marginBottom: spacingPixels[5],
+  },
+  benefitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    marginBottom: spacingPixels[1.5],
   },
   socialButtons: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacingPixels[4],
-    marginTop: spacingPixels[4],
-    marginBottom: spacingPixels[6],
+    flexDirection: 'column',
+    gap: spacingPixels[3],
+    marginBottom: spacingPixels[4],
   },
   socialButton: {
-    width: 70,
-    height: 50,
-    borderRadius: radiusPixels.lg,
+    height: 48,
+    borderRadius: radiusPixels.xl,
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    gap: spacingPixels[3],
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -287,7 +332,7 @@ const styles = StyleSheet.create({
     height: 1,
   },
   dividerText: {
-    marginHorizontal: spacingPixels[4],
+    marginHorizontal: spacingPixels[3],
   },
   emailInput: {
     borderRadius: radiusPixels.lg,

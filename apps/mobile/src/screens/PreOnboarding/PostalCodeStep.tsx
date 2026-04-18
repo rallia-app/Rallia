@@ -13,12 +13,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, Button, Spinner } from '@rallia/shared-components';
 import { SportIcon } from '../../components/SportIcon';
 import { spacingPixels, radiusPixels, primary, neutral, status } from '@rallia/design-system';
-import { usePostalCodeGeocode } from '@rallia/shared-hooks';
-import {
-  selectionHaptic,
-  isPostalCodeInGreaterMontreal,
-  formatPostalCodeInput,
-} from '@rallia/shared-utils';
+import { usePostalCodeGeocode, useCoverageCheck } from '@rallia/shared-hooks';
+import { selectionHaptic, formatPostalCodeInput } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../hooks';
 import { useUserHomeLocation } from '../../context';
 
@@ -34,12 +30,19 @@ export function PostalCodeStep({ onContinue, isActive = true }: PostalCodeStepPr
   const { t } = useTranslation();
   const {
     geocode,
-    isLoading,
+    isLoading: isGeocoding,
     error: geocodeError,
     result,
     validateFormat,
     clearResult,
   } = usePostalCodeGeocode();
+  const {
+    checkCoverage,
+    isChecking,
+    isInCoverage,
+    error: coverageError,
+    reset: resetCoverage,
+  } = useCoverageCheck();
   const { setHomeLocation } = useUserHomeLocation();
 
   const [postalCode, setPostalCode] = useState('');
@@ -85,34 +88,47 @@ export function PostalCodeStep({ onContinue, isActive = true }: PostalCodeStepPr
     };
   }, [isInputFocused]);
 
-  // Debounced geocoding only when format is valid and postal code is in GMA (no Google call if out of coverage)
+  // Effect 1: Debounced geocoding when format is valid
+  // US codes are short-circuited (no US facilities exist yet)
   useEffect(() => {
     const validation = validateFormat(postalCode);
     if (!validation.isValid || !validation.normalized) {
       clearResult();
+      resetCoverage();
       setOutOfCoverage(false);
       return;
     }
-    // US or non-GMA Canadian: show out-of-coverage, do not call geocode()
+    // US postal codes: show out-of-coverage immediately, skip geocode
     if (validation.country === 'US') {
       clearResult();
-      setOutOfCoverage(true);
-      return;
-    }
-    if (
-      validation.country === 'CA' &&
-      !isPostalCodeInGreaterMontreal(validation.normalized, 'CA')
-    ) {
-      clearResult();
+      resetCoverage();
       setOutOfCoverage(true);
       return;
     }
     setOutOfCoverage(false);
+    resetCoverage();
     const timer = setTimeout(() => {
       geocode(postalCode);
     }, 500);
     return () => clearTimeout(timer);
-  }, [postalCode, validateFormat, geocode, clearResult]);
+  }, [postalCode, validateFormat, geocode, clearResult, resetCoverage]);
+
+  // Effect 2: When geocode succeeds, check coverage via Supabase RPC
+  useEffect(() => {
+    if (!result) return;
+
+    let cancelled = false;
+    checkCoverage(result.latitude, result.longitude).then(inCoverage => {
+      if (cancelled) return;
+      if (!inCoverage) {
+        setOutOfCoverage(true);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result]);
 
   const handlePostalCodeChange = useCallback((text: string) => {
     setPostalCode(formatPostalCodeInput(text));
@@ -134,9 +150,14 @@ export function PostalCodeStep({ onContinue, isActive = true }: PostalCodeStepPr
     }
   }, [result, isSaving, setHomeLocation, onContinue]);
 
+  const isLoading = isGeocoding || isChecking;
+
   const getErrorMessage = (): string | null => {
     if (outOfCoverage) {
       return t('preOnboarding.postalCode.errors.outOfCoverage');
+    }
+    if (coverageError) {
+      return t('preOnboarding.postalCode.errors.coverageCheckFailed');
     }
     if (!geocodeError) return null;
 
@@ -152,9 +173,11 @@ export function PostalCodeStep({ onContinue, isActive = true }: PostalCodeStepPr
     }
   };
 
-  const hasValidInput = result !== null;
+  const hasValidInput = result !== null && isInCoverage === true;
   const showError =
-    (geocodeError && postalCode.length >= 3) || (outOfCoverage && postalCode.length >= 3);
+    (geocodeError && postalCode.length >= 3) ||
+    (outOfCoverage && postalCode.length >= 3) ||
+    (coverageError && postalCode.length >= 3);
   const errorMessage = getErrorMessage();
 
   if (!isActive) return null;

@@ -3,14 +3,13 @@ import { View, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator } from
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Text, useToast } from '@rallia/shared-components';
-import { supabase, Logger } from '@rallia/shared-services';
+import { supabase, Logger, checkPostalCodeCoverage } from '@rallia/shared-services';
 import { spacingPixels, radiusPixels, darkTheme, lightTheme } from '@rallia/design-system';
 import { usePlacesAutocomplete, usePostalCodeGeocode } from '@rallia/shared-hooks';
 import {
   lightHaptic,
   mediumHaptic,
   isValidCanadianPostalCode,
-  isPostalCodeInGreaterMontreal,
   formatPostalCodeInput,
 } from '@rallia/shared-utils';
 import type { PlacePrediction } from '@rallia/shared-types';
@@ -83,13 +82,18 @@ export function LocationActionSheet({ payload }: SheetProps<'player-location'>) 
       return;
     }
 
-    if (!isPostalCodeInGreaterMontreal(trimmed, 'CA')) {
-      setPostalCodeError(t('preOnboarding.postalCode.errors.outOfCoverage'));
-      return;
-    }
-
     const location = await geocode(trimmed);
     if (location) {
+      try {
+        const inCoverage = await checkPostalCodeCoverage(location.latitude, location.longitude);
+        if (!inCoverage) {
+          setPostalCodeError(t('preOnboarding.postalCode.errors.outOfCoverage'));
+          return;
+        }
+      } catch {
+        setPostalCodeError(t('preOnboarding.postalCode.errors.coverageCheckFailed'));
+        return;
+      }
       setPostalCode(trimmed);
       setLatitude(location.latitude);
       setLongitude(location.longitude);
@@ -142,12 +146,15 @@ export function LocationActionSheet({ payload }: SheetProps<'player-location'>) 
           if (details.city) setCity(details.city);
           if (details.province) setProvince(details.province);
 
-          if (
-            details.postalCode &&
-            isValidCanadianPostalCode(details.postalCode) &&
-            isPostalCodeInGreaterMontreal(details.postalCode, 'CA')
-          ) {
-            setPostalCode(details.postalCode);
+          if (details.postalCode && isValidCanadianPostalCode(details.postalCode)) {
+            try {
+              const inCoverage = await checkPostalCodeCoverage(details.latitude, details.longitude);
+              if (inCoverage) {
+                setPostalCode(details.postalCode);
+              }
+            } catch {
+              // Coverage check failed — keep existing postal code
+            }
           }
         }
       } catch (error) {

@@ -9,7 +9,6 @@ export {
   detectPostalCodeCountry,
   normalizePostalCode,
   formatPostalCodeInput,
-  isPostalCodeInGreaterMontreal,
 } from './coverageZones';
 
 /**
