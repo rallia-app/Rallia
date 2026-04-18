@@ -27,42 +27,24 @@ import { useMatchDetailSheet, useSport, useUserHomeLocation } from '../../../con
 import { Logger, supabase } from '@rallia/shared-services';
 import { spacingPixels, neutral } from '@rallia/design-system';
 import { SearchBar, MatchFiltersBar } from '../components';
+import { SuggestionsFeedSection } from '../../../components/SuggestionsFeedSection';
 
 // =============================================================================
 // HELPER COMPONENTS
 // =============================================================================
 
 interface EmptyStateProps {
-  hasActiveFilters: boolean;
-  colors: ReturnType<typeof useThemeStyles>['colors'];
-  t: (key: TranslationKey) => string;
+  playerId: string | undefined;
+  sportId: string | undefined;
+  sportName: string | undefined;
+  isAuthenticated: boolean;
 }
 
-function EmptyState({ hasActiveFilters, colors, t }: EmptyStateProps) {
-  const { selectedSport } = useSport();
+function EmptyState({ playerId, sportId, sportName, isAuthenticated }: EmptyStateProps) {
+  if (!isAuthenticated) return null;
   return (
-    <View style={styles.emptyContainer}>
-      <View style={[styles.emptyIconContainer, { backgroundColor: colors.card }]}>
-        {hasActiveFilters ? (
-          <Ionicons name="search-outline" size={48} color={colors.textMuted} />
-        ) : (
-          <SportIcon
-            sportName={selectedSport?.name ?? 'tennis'}
-            size={48}
-            color={colors.textMuted}
-          />
-        )}
-      </View>
-      <Text size="lg" weight="semibold" color={colors.text} style={styles.emptyTitle}>
-        {t(hasActiveFilters ? 'publicMatches.empty.title' : 'publicMatches.empty.noFilters.title')}
-      </Text>
-      <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-        {t(
-          hasActiveFilters
-            ? 'publicMatches.empty.description'
-            : 'publicMatches.empty.noFilters.description'
-        )}
-      </Text>
+    <View style={styles.emptyWrapper}>
+      <SuggestionsFeedSection playerId={playerId} sportId={sportId} sportName={sportName} />
     </View>
   );
 }
@@ -311,20 +293,47 @@ export default function PublicMatches() {
 
   // Render empty state
   const renderEmptyComponent = useCallback(() => {
-    // Don't show empty state while loading or searching
     if (isLoading || isSearching) return null;
-    return <EmptyState hasActiveFilters={hasActiveFilters} colors={colors} t={t} />;
-  }, [isLoading, isSearching, hasActiveFilters, colors, t]);
-
-  // Render footer with loading indicator
-  const renderFooter = useCallback(() => {
-    if (!isFetchingNextPage) return null;
     return (
-      <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color={colors.primary} />
-      </View>
+      <EmptyState
+        playerId={player?.id}
+        sportId={selectedSport?.id}
+        sportName={selectedSport?.name}
+        isAuthenticated={!!session?.user}
+      />
     );
-  }, [isFetchingNextPage, colors.primary]);
+  }, [isLoading, isSearching, player?.id, selectedSport?.id, selectedSport?.name, session?.user]);
+
+  // Render footer with loading indicator or suggestions prompt
+  const renderFooter = useCallback(() => {
+    if (isFetchingNextPage) {
+      return (
+        <View style={styles.footerLoader}>
+          <ActivityIndicator size="small" color={colors.primary} />
+        </View>
+      );
+    }
+    if (!hasNextPage && sortedMatches.length > 0 && !isLoading && session?.user) {
+      return (
+        <SuggestionsFeedSection
+          playerId={player?.id}
+          sportId={selectedSport?.id}
+          sportName={selectedSport?.name}
+        />
+      );
+    }
+    return null;
+  }, [
+    isFetchingNextPage,
+    hasNextPage,
+    isLoading,
+    sortedMatches.length,
+    colors.primary,
+    session?.user,
+    player?.id,
+    selectedSport?.id,
+    selectedSport?.name,
+  ]);
 
   // Loading state for initial data
   const isInitialLoading = playerLoading || sportLoading;
@@ -514,8 +523,10 @@ const styles = StyleSheet.create({
     paddingBottom: spacingPixels[5],
   },
   emptyListContent: {
-    justifyContent: 'center',
-    minHeight: '100%',
+    flexGrow: 0,
+  },
+  emptyWrapper: {
+    paddingTop: spacingPixels[2],
   },
   emptyContainer: {
     padding: spacingPixels[8],

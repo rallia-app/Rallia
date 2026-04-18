@@ -27,6 +27,7 @@ export * from './useMatches';
 export * from './useMatchActions';
 export * from './useMatchFeedback';
 export * from './useNearbyMatches';
+export * from './useMatchSuggestions';
 export * from './useMatchRelevanceScore';
 export * from './usePlayerMatches';
 export * from './usePlayerMatchFilters';
@@ -68,6 +69,7 @@ export * from './usePlayerBookingFilters';
 export * from './useReferral';
 export * from './useMapData';
 export * from './useProfileCompleteness';
+export * from './useCoverageCheck';
 
 // Platform-specific exports - Metro resolves .native.ts for React Native builds
 // Web bundlers will use the stub .ts files which throw helpful errors at runtime

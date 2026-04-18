@@ -120,7 +120,15 @@
     },
     "verificationCodeSent": "Verification code sent successfully",
     "enterAllDigits": "Please enter all 6 digits",
-    "authFailed": "Authentication failed. Please try again."
+    "authFailed": "Authentication failed. Please try again.",
+    "welcomeTitle": "Welcome to Rallia",
+    "welcomeSubtitle": "Play More, Plan Less.",
+    "continueWithGoogle": "Continue with Google",
+    "continueWithApple": "Continue with Apple",
+    "continueWithEmail": "or continue with email",
+    "benefitFindPartners": "Find playing partners near you",
+    "benefitCreateGames": "Create and join games instantly",
+    "benefitJoinCommunity": "Connect with your local community"
   },
   "splash": {
     "slogan": "Play More, Plan Less."
@@ -1485,6 +1493,37 @@
       "shareButton": "Share with Friends",
       "maybeLater": "Maybe later",
       "linkCopied": "Link copied!"
+    },
+    "suggestions": {
+      "title": "Your Top Matches",
+      "subtitle": "We found players near you that match your level and schedule",
+      "sendInvite": "Send Game Invite",
+      "confirmTitle": "Send game invite?",
+      "confirmMessage": "Invite {opponent} for {sport} at {facility}, {time}",
+      "confirmButton": "Send Invite",
+      "cancelButton": "Cancel",
+      "inviteSent": "Invite sent!",
+      "exploreLater": "Explore Later",
+      "loading": "Finding your best matches...",
+      "emptyTitle": "We're finding matches for you",
+      "emptySubtitle": "Check back soon on the home screen!",
+      "courtsAvailable": "{count} courts available",
+      "reserveCourt": "Reserve a court",
+      "facility": "Facility",
+      "when": "When",
+      "noAvailableTimes": "No available times",
+      "unknownPlayer": "Unknown",
+      "periodMorning": "Morning",
+      "periodAfternoon": "Afternoon",
+      "periodEvening": "Evening",
+      "feedPromptTitle": "Want more options?",
+      "feedPromptSubtitle": "We can find players that match your level and schedule nearby.",
+      "feedPromptButton": "Generate Suggestions",
+      "feedSectionTitle": "Your Top Matches",
+      "feedEmptyTitle": "No suggestions available",
+      "feedEmptySubtitle": "Check back later as more players join.",
+      "selectDate": "Select a date",
+      "selectTime": "Select a time"
     },
     "complete": "Complete",
     "locationStep": {
@@ -6820,9 +6859,10 @@
         "invalidUS": "Please enter a valid US ZIP code (e.g., 90210)",
         "notFound": "We couldn't find this postal code. Please check and try again.",
         "networkError": "Connection error. Please try again.",
-        "outOfCoverage": "This area is not covered. We're currently only available in Greater Montreal."
+        "outOfCoverage": "There are no courts with availability near this postal code yet. We're expanding — stay tuned!",
+        "coverageCheckFailed": "Couldn't verify coverage. Please try again."
       },
-      "coverageNote": "We're currently available in Greater Montreal only."
+      "coverageNote": "Coverage depends on available courts near you."
     },
     "locationPermission": {
       "title": "Get the best match recommendations",

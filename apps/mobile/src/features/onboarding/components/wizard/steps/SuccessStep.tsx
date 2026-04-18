@@ -55,6 +55,7 @@ export interface Sport {
 
 interface SuccessStepProps {
   onComplete: () => void;
+  onAdvanceToSuggestions: () => void;
   colors: ThemeColors;
   t: (key: TranslationKey) => string;
   isDark: boolean;
@@ -66,6 +67,7 @@ interface SuccessStepProps {
 
 export const SuccessStep: React.FC<SuccessStepProps> = ({
   onComplete,
+  onAdvanceToSuggestions,
   colors,
   t,
   selectedSports,
@@ -166,8 +168,8 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
 
   const handleSkip = useCallback(() => {
     Analytics.onboardingShareSkipped();
-    onComplete();
-  }, [onComplete]);
+    onAdvanceToSuggestions();
+  }, [onAdvanceToSuggestions]);
 
   return (
     <View style={styles.wrapper}>

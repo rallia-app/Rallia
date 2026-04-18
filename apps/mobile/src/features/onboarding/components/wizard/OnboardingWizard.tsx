@@ -45,13 +45,18 @@ import {
   joinGroupByInviteCode,
   requestToJoinCommunityByInviteCode,
 } from '@rallia/shared-services';
-import { useProfile, usePlayer, usePostalCodeGeocode } from '@rallia/shared-hooks';
+import {
+  useProfile,
+  usePlayer,
+  usePostalCodeGeocode,
+  useMatchSuggestions,
+} from '@rallia/shared-hooks';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PENDING_REFERRAL_KEY, type PendingReferral } from '../../../../navigation/deepLinkStore';
 import { replaceImage } from '../../../../services/imageUpload';
 import * as Analytics from '../../../../services/analytics';
 import { posthogClient } from '../../../../providers/PostHogProvider';
-import { useImagePicker } from '../../../../hooks';
+import { useImagePicker, useTranslation as useLocale } from '../../../../hooks';
 import { useSport, useUserHomeLocation } from '../../../../context';
 import type { TranslationKey } from '@rallia/shared-translations';
 import type {
@@ -76,6 +81,7 @@ import {
   FavoriteSitesStep,
   AvailabilitiesStep,
   SuccessStep,
+  SuggestionsStep,
 } from './steps';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -251,6 +257,7 @@ const getStepName = (stepId: OnboardingStepId, t: (key: TranslationKey) => strin
     'favorite-sites': 'onboarding.stepNames.favoriteSites',
     availabilities: 'onboarding.stepNames.availability',
     success: 'onboarding.complete',
+    suggestions: 'onboarding.suggestions.title' as TranslationKey,
   };
   return t(keys[stepId]) || '';
 };
@@ -267,6 +274,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   t,
   isDark,
 }) => {
+  const { locale } = useLocale();
   const {
     currentStep,
     currentStepId,
@@ -311,6 +319,21 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
   // Player ID for referral sharing on success step
   const [successPlayerId, setSuccessPlayerId] = useState<string | null>(null);
+
+  // Match suggestions for post-success step
+  // Resolves sport from context or onboarding data
+  const suggestionSport = selectedSport ?? selectedSportsForSuccess[0];
+  const {
+    suggestions: matchSuggestions,
+    isLoading: suggestionsLoading,
+    refetch: refetchSuggestions,
+  } = useMatchSuggestions({
+    playerId: successPlayerId,
+    sportId: suggestionSport?.id,
+    sportName: suggestionSport?.name,
+    limit: 5,
+    enabled: currentStepId === 'success' || currentStepId === 'suggestions',
+  });
 
   // Image picker hook
   const { image: profileImage, pickImage } = useImagePicker();
@@ -373,6 +396,16 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
     fetchSelectedSports();
   }, [currentStepId, formData.selectedSportIds]);
+
+  // Advance from success step to suggestions step
+  const handleAdvanceToSuggestions = useCallback(() => {
+    goToNextStep();
+  }, [goToNextStep]);
+
+  // Refresh suggestions — delegates to the hook's refetch
+  const handleRefreshSuggestions = useCallback(async () => {
+    await refetchSuggestions();
+  }, [refetchSuggestions]);
 
   // Wrapper to handle async setSelectedSport
   const handleSelectInitialSport = useCallback(
@@ -1195,12 +1228,28 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         return (
           <SuccessStep
             onComplete={onComplete}
+            onAdvanceToSuggestions={handleAdvanceToSuggestions}
             colors={colors}
             t={t}
             isDark={isDark}
             selectedSports={selectedSportsForSuccess}
             currentSport={selectedSport}
             onSelectInitialSport={handleSelectInitialSport}
+            playerId={successPlayerId}
+          />
+        );
+      case 'suggestions':
+        return (
+          <SuggestionsStep
+            suggestions={matchSuggestions}
+            isLoading={suggestionsLoading}
+            onComplete={onComplete}
+            onRefresh={handleRefreshSuggestions}
+            colors={colors}
+            t={t}
+            locale={locale}
+            isDark={isDark}
+            currentSport={selectedSport}
             playerId={successPlayerId}
           />
         );
@@ -1224,20 +1273,36 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     );
   }
 
-  // If showing success screen, render without header/progress/footer
-  if (currentStepId === 'success') {
+  // If showing success or suggestions screen, render without header/progress/footer
+  if (currentStepId === 'success' || currentStepId === 'suggestions') {
     return (
       <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
-        <SuccessStep
-          onComplete={onComplete}
-          colors={colors}
-          t={t}
-          isDark={isDark}
-          selectedSports={selectedSportsForSuccess}
-          currentSport={selectedSport}
-          onSelectInitialSport={handleSelectInitialSport}
-          playerId={successPlayerId}
-        />
+        {currentStepId === 'success' ? (
+          <SuccessStep
+            onComplete={onComplete}
+            onAdvanceToSuggestions={handleAdvanceToSuggestions}
+            colors={colors}
+            t={t}
+            isDark={isDark}
+            selectedSports={selectedSportsForSuccess}
+            currentSport={selectedSport}
+            onSelectInitialSport={handleSelectInitialSport}
+            playerId={successPlayerId}
+          />
+        ) : (
+          <SuggestionsStep
+            suggestions={matchSuggestions}
+            isLoading={suggestionsLoading}
+            onComplete={onComplete}
+            onRefresh={handleRefreshSuggestions}
+            colors={colors}
+            t={t}
+            locale={locale}
+            isDark={isDark}
+            currentSport={selectedSport}
+            playerId={successPlayerId}
+          />
+        )}
       </View>
     );
   }
