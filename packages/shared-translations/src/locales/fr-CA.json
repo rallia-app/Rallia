@@ -3551,7 +3551,8 @@
       "ctaButton": "Télécharger",
       "nav": {
         "home": "Accueil",
-        "games": "Parties"
+        "games": "Parties",
+        "communities": "Communautés"
       }
     },
     "hero": {
@@ -8355,6 +8356,23 @@
       "secure": "Vos infos restent privées",
       "fast": "Ça prend 2 minutes",
       "premium": "Terrains à nos frais"
+    }
+  },
+  "communitiesPage": {
+    "title": "Découvrez les communautés",
+    "subtitle": "Trouvez et rejoignez des communautés publiques qui correspondent à vos intérêts.",
+    "joinButton": "Rejoindre la communauté",
+    "loadMore": "Voir plus",
+    "allSports": "Tous",
+    "members": "{count, plural, =1 {1 membre} other {# membres}}",
+    "certified": "Certifiée",
+    "emptyTitle": "Aucune communauté trouvée",
+    "emptyDescription": "Il n'y a pas de communautés publiques disponibles pour le moment. Revenez bientôt ou inscrivez-vous à la liste d'attente.",
+    "emptyCta": "Rejoindre la liste d'attente",
+    "joinDialog": {
+      "title": "Rejoindre cette communauté",
+      "description": "Scannez le code QR avec votre téléphone pour télécharger Rallia et rejoindre cette communauté.",
+      "qrHint": "Ouvrez Rallia sur votre téléphone pour rejoindre cette communauté."
     }
   },
   "gamesPage": {
