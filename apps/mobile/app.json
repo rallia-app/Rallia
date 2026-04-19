@@ -13,11 +13,6 @@
       "style": "dark"
     },
     "scheme": "rallia",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
@@ -156,6 +151,15 @@
         "@rnmapbox/maps",
         {
           "RNMapboxMapsImpl": "mapbox"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#fafafa",
+          "dark": {
+            "backgroundColor": "#0a0a0a"
+          }
         }
       ]
     ],

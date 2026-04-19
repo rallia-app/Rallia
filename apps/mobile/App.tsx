@@ -56,8 +56,12 @@ import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import * as SplashScreen from 'expo-splash-screen';
 import * as SystemUI from 'expo-system-ui';
 import { StatusBar } from 'expo-status-bar';
+
+// Keep the native splash visible until our JS SplashOverlay has mounted
+SplashScreen.preventAutoHideAsync();
 
 // Set the native root view background color immediately so it's visible
 // behind the React tree (e.g. area above the Dynamic Island).
@@ -446,10 +450,10 @@ function PendingFeedbackHandler() {
 function DeepLinkHandler() {
   const { pendingMatchId, clearPendingDeepLink } = useDeepLink();
   const { openSheet } = useMatchDetailSheet();
-  const { isSplashComplete } = useOverlay();
+  const { isSplashComplete, isSportSelectionComplete } = useOverlay();
 
   useEffect(() => {
-    if (!pendingMatchId || !isSplashComplete) return;
+    if (!pendingMatchId || !isSplashComplete || !isSportSelectionComplete) return;
 
     let cancelled = false;
 
@@ -467,7 +471,7 @@ function DeepLinkHandler() {
     return () => {
       cancelled = true;
     };
-  }, [pendingMatchId, isSplashComplete, openSheet, clearPendingDeepLink]);
+  }, [pendingMatchId, isSplashComplete, isSportSelectionComplete, openSheet, clearPendingDeepLink]);
 
   return null;
 }
