@@ -3,7 +3,7 @@
     "name": "Rallia",
     "slug": "rallia-app",
     "owner": "rallia-app",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "entryPoint": "./index.ts",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

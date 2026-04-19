@@ -785,6 +785,7 @@ export async function getNetworkMemberUpcomingMatches(
   }
 
   // Step 8: Attach profiles, ratings to matches; apply post-fetch filters; sort
+  const { getTimeDifferenceFromNow } = await import('@rallia/shared-utils');
   const enrichedMatches: NetworkMemberMatch[] = [];
 
   matchesData.forEach((match: MatchWithDetails) => {
@@ -799,6 +800,14 @@ export async function getNetworkMemberUpcomingMatches(
       });
       if (isParticipant) return;
     }
+
+    // Filter out matches that have already started (timezone-aware)
+    const timeDiff = getTimeDifferenceFromNow(
+      match.match_date,
+      match.start_time,
+      match.timezone || 'UTC'
+    );
+    if (timeDiff <= 0) return;
 
     // Attach profile and rating to creator
     if (match.created_by_player?.id && profilesMap[match.created_by_player.id]) {
