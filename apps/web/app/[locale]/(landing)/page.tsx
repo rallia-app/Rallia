@@ -1,6 +1,5 @@
 import { AppStoreButtons } from '@/components/app-store-buttons';
 import { HeroDownloadCta } from '@/components/hero-download-cta';
-import { LandingHeader } from '@/components/landing-header';
 import { ScrollReveal } from '@/components/scroll-reveal';
 import {
   Accordion,
@@ -34,9 +33,6 @@ export default async function Home() {
       <a href="#main-content" className="skip-link">
         Skip to main content
       </a>
-
-      {/* Transparent header overlay for the hero */}
-      <LandingHeader />
 
       {/* ====== HERO — Full viewport video ====== */}
       <section className="relative flex items-center justify-center w-full min-h-[100svh] overflow-hidden animate-fade-in">

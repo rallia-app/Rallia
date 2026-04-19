@@ -11,6 +11,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, Keyboard } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { lightTheme, darkTheme, spacingPixels, primary, neutral } from '@rallia/design-system';
@@ -18,6 +19,7 @@ import { lightHaptic } from '@rallia/shared-utils';
 import { useTheme, useReferral } from '@rallia/shared-hooks';
 import { useTranslation, type TranslationKey } from '../../../hooks/useTranslation';
 import { useAuth } from '../../../hooks';
+import { useLocale } from '../../../context';
 
 import { ShareLinkStep } from './steps/ShareLinkStep';
 
@@ -112,10 +114,13 @@ export const InvitePlayersWizard: React.FC<InvitePlayersWizardProps> = ({
   const { theme } = useTheme();
   const { t } = useTranslation();
   const { session } = useAuth();
+  const { locale } = useLocale();
+  const { bottom: bottomInset } = useSafeAreaInsets();
   const isDark = theme === 'dark';
 
   const playerId = session?.user?.id;
-  const { code, codeLoading, referralLink, stats, statsLoading } = useReferral(playerId);
+  const { code, codeLoading, referralLink, stats, statsLoading, contest, leaderboard, myRank } =
+    useReferral(playerId, locale);
 
   const [activeTab, setActiveTab] = useState<'code' | 'qr' | 'contacts'>(initialTab ?? 'code');
 
@@ -153,6 +158,11 @@ export const InvitePlayersWizard: React.FC<InvitePlayersWizardProps> = ({
         colors={colors}
         isDark={isDark}
         t={t}
+        contest={contest ?? null}
+        leaderboard={leaderboard}
+        myRank={myRank ?? null}
+        playerId={playerId}
+        bottomInset={bottomInset}
       />
     </View>
   );

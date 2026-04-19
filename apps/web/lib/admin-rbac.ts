@@ -49,6 +49,9 @@ const ROLE_WRITE_PERMISSIONS: Record<string, AdminRole[]> = {
   'players:ban': ['super_admin', 'moderator'],
   'invitations:create': ['super_admin'],
   'communications:send': ['super_admin', 'moderator'],
+  'referral-contests:create': ['super_admin'],
+  'referral-contests:edit': ['super_admin'],
+  'referral-contests:delete': ['super_admin'],
 };
 
 /** Check if a role can perform a specific write action. */

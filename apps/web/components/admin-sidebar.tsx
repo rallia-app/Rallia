@@ -33,6 +33,7 @@ import {
   ScrollText,
   Settings,
   Shield,
+  Trophy,
   Users,
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
@@ -138,6 +139,12 @@ export function AdminSidebar() {
       href: '/admin/analytics',
       label: t('analytics'),
       icon: BarChart3,
+      exactMatch: false,
+    },
+    {
+      href: '/admin/referral-contests',
+      label: t('referralContests'),
+      icon: Trophy,
       exactMatch: false,
     },
     {

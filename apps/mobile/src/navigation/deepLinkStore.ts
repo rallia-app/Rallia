@@ -42,17 +42,30 @@ export type DeepLinkPayload =
 // =============================================================================
 
 let _pending: DeepLinkPayload | null = null;
+const _listeners = new Set<() => void>();
 
 export function setPendingDeepLink(payload: DeepLinkPayload): void {
   _pending = payload;
   // Fire-and-forget: persist to AsyncStorage for post-onboarding flow
   persistToAsyncStorage(payload);
+  _listeners.forEach(fn => fn());
+}
+
+/** Peek at the pending link without consuming it */
+export function getPendingDeepLink(): DeepLinkPayload | null {
+  return _pending;
 }
 
 export function consumePendingDeepLink(): DeepLinkPayload | null {
   const p = _pending;
   _pending = null;
   return p;
+}
+
+/** Subscribe to future setPendingDeepLink calls. Returns unsubscribe. */
+export function addDeepLinkListener(fn: () => void): () => void {
+  _listeners.add(fn);
+  return () => void _listeners.delete(fn);
 }
 
 // =============================================================================

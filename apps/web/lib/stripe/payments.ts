@@ -140,3 +140,37 @@ export async function getRefund(refundId: string): Promise<Stripe.Refund> {
 export function calculateApplicationFee(amountCents: number, feePercent: number = 5): number {
   return Math.round((amountCents * feePercent) / 100);
 }
+
+export interface CreateDonationPaymentIntentParams {
+  amountCents: number;
+  currency?: string;
+  donorName?: string;
+  donorEmail?: string;
+  donorMessage?: string;
+}
+
+export async function createDonationPaymentIntent(
+  params: CreateDonationPaymentIntentParams
+): Promise<PaymentIntentResult> {
+  const stripe = getStripeClient();
+
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: params.amountCents,
+    currency: params.currency ?? 'cad',
+    automatic_payment_methods: { enabled: true },
+    receipt_email: params.donorEmail || undefined,
+    description: 'Donation to Rallia',
+    metadata: {
+      type: 'donation',
+      donor_name: params.donorName ?? '',
+      donor_email: params.donorEmail ?? '',
+      donor_message: params.donorMessage?.slice(0, 500) ?? '',
+    },
+  });
+
+  return {
+    paymentIntentId: paymentIntent.id,
+    clientSecret: paymentIntent.client_secret!,
+    status: paymentIntent.status,
+  };
+}

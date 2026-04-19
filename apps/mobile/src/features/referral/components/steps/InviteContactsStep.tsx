@@ -6,14 +6,8 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-  Linking,
-  FlatList,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
+import { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import * as SMS from 'expo-sms';
 import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
@@ -55,6 +49,8 @@ interface InviteContactsStepProps {
   colors: ThemeColors;
   isDark: boolean;
   t: (key: TranslationKey) => string;
+  listHeader?: React.ReactNode;
+  bottomInset?: number;
 }
 
 // ============================================================================
@@ -66,6 +62,8 @@ export const InviteContactsStep: React.FC<InviteContactsStepProps> = ({
   colors,
   isDark,
   t,
+  listHeader,
+  bottomInset = 0,
 }) => {
   const toast = useToast();
   const { selectedSport } = useSport();
@@ -264,8 +262,9 @@ export const InviteContactsStep: React.FC<InviteContactsStepProps> = ({
     );
   }
 
-  return (
-    <View style={styles.container}>
+  const listHeaderComponent = (
+    <>
+      {listHeader}
       {/* Search */}
       <View style={styles.searchContainer}>
         <SearchBar
@@ -298,12 +297,17 @@ export const InviteContactsStep: React.FC<InviteContactsStepProps> = ({
           </Text>
         </TouchableOpacity>
       )}
+    </>
+  );
 
+  return (
+    <View style={styles.container}>
       {/* Contacts List */}
-      <FlatList
+      <BottomSheetFlatList
         data={filteredContacts}
-        keyExtractor={item => item.id}
+        keyExtractor={(item: DeviceContact) => item.id}
         renderItem={renderContact}
+        ListHeaderComponent={listHeaderComponent}
         contentContainerStyle={[
           styles.listContent,
           filteredContacts.length === 0 && styles.emptyListContent,
@@ -325,7 +329,12 @@ export const InviteContactsStep: React.FC<InviteContactsStepProps> = ({
       />
 
       {/* Footer */}
-      <View style={[styles.footer, { borderTopColor: colors.border }]}>
+      <View
+        style={[
+          styles.footer,
+          { borderTopColor: colors.border, paddingBottom: spacingPixels[4] + bottomInset },
+        ]}
+      >
         <Button
           variant="primary"
           size="lg"
@@ -378,19 +387,18 @@ const styles = StyleSheet.create({
     gap: spacingPixels[2],
   },
   searchContainer: {
-    paddingHorizontal: spacingPixels[4],
+    paddingHorizontal: spacingPixels[6],
     paddingVertical: spacingPixels[3],
   },
   selectAllRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacingPixels[4],
+    paddingHorizontal: spacingPixels[6],
     paddingVertical: spacingPixels[3],
     borderBottomWidth: 1,
     gap: spacingPixels[3],
   },
   listContent: {
-    paddingHorizontal: spacingPixels[4],
     paddingBottom: spacingPixels[4],
   },
   emptyListContent: {
@@ -402,6 +410,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacingPixels[3],
     paddingHorizontal: spacingPixels[2],
+    marginHorizontal: spacingPixels[6],
     borderRadius: radiusPixels.md,
     marginBottom: spacingPixels[1],
     gap: spacingPixels[3],
@@ -426,7 +435,8 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   footer: {
-    padding: spacingPixels[4],
+    paddingHorizontal: spacingPixels[6],
+    paddingTop: spacingPixels[4],
     borderTopWidth: 1,
   },
 });
