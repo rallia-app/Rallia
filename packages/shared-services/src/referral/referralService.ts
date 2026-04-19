@@ -16,6 +16,49 @@ export interface ReferralStats {
   total_converted: number;
 }
 
+export interface ReferralContest {
+  id: string;
+  title: string;
+  prizeDescription: string;
+  titleEn: string | null;
+  titleFr: string | null;
+  prizeDescriptionEn: string | null;
+  prizeDescriptionFr: string | null;
+  startAt: string;
+  endAt: string;
+  maxWinners: number;
+}
+
+/**
+ * Returns a copy of the contest with title/prizeDescription set to the
+ * locale-appropriate value, falling back through EN then the base field.
+ */
+export function localizeContest(contest: ReferralContest, locale: string): ReferralContest {
+  const isFr = locale.startsWith('fr');
+  return {
+    ...contest,
+    title: (isFr ? contest.titleFr : contest.titleEn) ?? contest.titleEn ?? contest.title,
+    prizeDescription:
+      (isFr ? contest.prizeDescriptionFr : contest.prizeDescriptionEn) ??
+      contest.prizeDescriptionEn ??
+      contest.prizeDescription,
+  };
+}
+
+export interface ReferralLeaderboardEntry {
+  referrerId: string;
+  displayName: string;
+  avatarUrl: string | null;
+  referralCount: number;
+  rank: number;
+}
+
+export interface ContestRank {
+  rank: number;
+  referralCount: number;
+  totalParticipants: number;
+}
+
 export interface FingerprintMatchResult {
   code: string;
   invitation_type: InvitationType;
@@ -100,6 +143,95 @@ export async function matchReferralFingerprint(
     code: result.code,
     invitation_type: (result.invitation_type || 'referral') as InvitationType,
     target_id: result.target_id ?? undefined,
+  };
+}
+
+// ============================================================================
+// CONTEST
+// ============================================================================
+
+/**
+ * Returns the currently active contest, or null if none is running.
+ */
+export async function getActiveContest(): Promise<ReferralContest | null> {
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from('referral_contest')
+    .select(
+      'id, title, prize_description, title_en, title_fr, prize_description_en, prize_description_fr, start_at, end_at, max_winners'
+    )
+    .eq('is_active', true)
+    .lte('start_at', now)
+    .gte('end_at', now)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching active contest:', error);
+    throw new Error(error.message);
+  }
+  if (!data) return null;
+
+  return {
+    id: data.id,
+    title: data.title,
+    prizeDescription: data.prize_description,
+    titleEn: data.title_en ?? null,
+    titleFr: data.title_fr ?? null,
+    prizeDescriptionEn: data.prize_description_en ?? null,
+    prizeDescriptionFr: data.prize_description_fr ?? null,
+    startAt: data.start_at,
+    endAt: data.end_at,
+    maxWinners: data.max_winners,
+  };
+}
+
+/**
+ * Returns the leaderboard for a contest (top p_limit referrers).
+ */
+export async function getReferralLeaderboard(
+  contestId: string,
+  limit = 10
+): Promise<ReferralLeaderboardEntry[]> {
+  const { data, error } = await supabase.rpc('get_referral_leaderboard', {
+    p_contest_id: contestId,
+    p_limit: limit,
+  });
+
+  if (error) {
+    console.error('Error fetching referral leaderboard:', error);
+    throw new Error(error.message);
+  }
+
+  return ((data as any[]) ?? []).map(row => ({
+    referrerId: row.referrer_id,
+    displayName: row.display_name,
+    avatarUrl: row.avatar_url ?? null,
+    referralCount: Number(row.referral_count),
+    rank: Number(row.rank),
+  }));
+}
+
+/**
+ * Returns the calling player's rank within the contest.
+ */
+export async function getMyContestRank(contestId: string, playerId: string): Promise<ContestRank> {
+  const { data, error } = await supabase.rpc('get_my_contest_rank', {
+    p_contest_id: contestId,
+    p_player_id: playerId,
+  });
+
+  if (error) {
+    console.error('Error fetching contest rank:', error);
+    throw new Error(error.message);
+  }
+
+  const result = data as { rank: number; referral_count: number; total_participants: number };
+  return {
+    rank: result.rank,
+    referralCount: result.referral_count,
+    totalParticipants: result.total_participants,
   };
 }
 

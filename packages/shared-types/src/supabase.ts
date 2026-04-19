@@ -1094,6 +1094,45 @@ export type Database = {
           },
         ]
       }
+      donations: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          currency: string
+          donor_email: string | null
+          donor_message: string | null
+          donor_name: string | null
+          id: string
+          status: string
+          stripe_payment_intent_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          currency?: string
+          donor_email?: string | null
+          donor_message?: string | null
+          donor_name?: string | null
+          id?: string
+          status?: string
+          stripe_payment_intent_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          currency?: string
+          donor_email?: string | null
+          donor_message?: string | null
+          donor_name?: string | null
+          id?: string
+          status?: string
+          stripe_payment_intent_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       facility: {
         Row: {
           address: string | null
@@ -5589,6 +5628,51 @@ export type Database = {
           },
         ]
       }
+      referral_contest: {
+        Row: {
+          created_at: string
+          end_at: string
+          id: string
+          is_active: boolean
+          max_winners: number
+          prize_description: string
+          prize_description_en: string | null
+          prize_description_fr: string | null
+          start_at: string
+          title: string
+          title_en: string | null
+          title_fr: string | null
+        }
+        Insert: {
+          created_at?: string
+          end_at: string
+          id?: string
+          is_active?: boolean
+          max_winners?: number
+          prize_description: string
+          prize_description_en?: string | null
+          prize_description_fr?: string | null
+          start_at: string
+          title: string
+          title_en?: string | null
+          title_fr?: string | null
+        }
+        Update: {
+          created_at?: string
+          end_at?: string
+          id?: string
+          is_active?: boolean
+          max_winners?: number
+          prize_description?: string
+          prize_description_en?: string | null
+          prize_description_fr?: string | null
+          start_at?: string
+          title?: string
+          title_en?: string | null
+          title_fr?: string | null
+        }
+        Relationships: []
+      }
       referral_fingerprint: {
         Row: {
           created_at: string
@@ -6726,6 +6810,10 @@ export type Database = {
           snapshot_date: string
         }[]
       }
+      get_my_contest_rank: {
+        Args: { p_contest_id: string; p_player_id: string }
+        Returns: Json
+      }
       get_network_growth: {
         Args: { p_end_date: string; p_start_date: string }
         Returns: {
@@ -7197,6 +7285,16 @@ export type Database = {
           new_today: number
           new_week: number
           total_users: number
+        }[]
+      }
+      get_referral_leaderboard: {
+        Args: { p_contest_id: string; p_limit?: number }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          rank: number
+          referral_count: number
+          referrer_id: string
         }[]
       }
       get_report_types: {

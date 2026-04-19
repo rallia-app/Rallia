@@ -15,7 +15,12 @@ import * as Clipboard from 'expo-clipboard';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import { getLocales } from 'expo-localization';
-import { PENDING_REFERRAL_KEY, type PendingReferral } from '../navigation/deepLinkStore';
+import {
+  PENDING_REFERRAL_KEY,
+  type PendingReferral,
+  type DeepLinkPayload,
+  setPendingDeepLink,
+} from '../navigation/deepLinkStore';
 import { matchReferralFingerprint, parseInvitationUrl, Logger } from '@rallia/shared-services';
 import type { InvitationType } from '@rallia/shared-services';
 
@@ -54,6 +59,10 @@ export async function attemptFirstLaunchAttribution(playerId: string): Promise<v
 
     if (pendingReferral) {
       await AsyncStorage.setItem(PENDING_REFERRAL_KEY, JSON.stringify(pendingReferral));
+      // Also push to in-memory store so Home's listener fires immediately
+      // (avoids race condition for already-onboarded users who reinstall)
+      const payload = toDeepLinkPayload(pendingReferral);
+      if (payload) setPendingDeepLink(payload);
     }
 
     await AsyncStorage.setItem(ATTRIBUTION_ATTEMPTED_KEY, 'true');
@@ -183,4 +192,21 @@ async function getIOSFingerprintMatch(playerId: string): Promise<PendingReferral
   } catch {
     return null;
   }
+}
+
+function toDeepLinkPayload(referral: PendingReferral): DeepLinkPayload | null {
+  if (referral.type === 'group' && referral.targetId)
+    return { type: 'group', inviteCode: referral.targetId };
+  if (referral.type === 'community' && referral.targetId)
+    return { type: 'community', inviteCode: referral.targetId };
+  if (referral.type === 'match' && referral.targetId)
+    return { type: 'match', matchId: referral.targetId };
+  if (referral.code)
+    return {
+      type: 'invitation',
+      referralCode: referral.code,
+      invitationType: referral.type,
+      targetId: referral.targetId,
+    };
+  return null;
 }

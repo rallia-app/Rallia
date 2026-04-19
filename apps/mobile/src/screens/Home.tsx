@@ -71,6 +71,8 @@ import {
   PENDING_REFERRAL_KEY,
   type PendingReferral,
   consumePendingDeepLink,
+  getPendingDeepLink,
+  addDeepLinkListener,
 } from '../navigation/deepLinkStore';
 import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
 import { SportIcon } from '../components/SportIcon';
@@ -205,102 +207,8 @@ const Home = () => {
   const appNavigation = useAppNavigation();
   const toast = useToast();
 
-  // Consume pending deep link from the module-level store (set by getStateFromPath)
+  // Overlay state for deep link async operations (group join, community request)
   const [deepLinkOverlay, setDeepLinkOverlay] = useState(false);
-  useEffect(() => {
-    const payload = consumePendingDeepLink();
-    if (!payload) return;
-
-    // Only show the overlay for group/community joins (visible async operation).
-    // Match links just open the detail sheet; referral-only links have nothing to show.
-    const needsOverlay =
-      payload.type === 'group' ||
-      payload.type === 'community' ||
-      (payload.type === 'invitation' &&
-        (payload.invitationType === 'group' || payload.invitationType === 'community'));
-
-    if (needsOverlay) setDeepLinkOverlay(true);
-
-    const process = async () => {
-      try {
-        switch (payload.type) {
-          case 'match': {
-            const match = await getMatchWithDetails(payload.matchId);
-            if (match) openMatchDetail(match as MatchDetailData);
-            break;
-          }
-          case 'group': {
-            if (!player?.id) break;
-            const r = await joinGroupByInviteCode(payload.inviteCode, player.id);
-            if (r.success && r.groupId) {
-              toast.success(t('groups.joinedViaLinkMessage', { name: r.groupName ?? '' }));
-              appNavigation.navigate('GroupDetail', {
-                groupId: r.groupId,
-                groupName: r.groupName,
-              });
-            } else {
-              toast.error(r.error || t('groups.joinFailedViaLink'));
-            }
-            break;
-          }
-          case 'community': {
-            if (!player?.id) break;
-            const r = await requestToJoinCommunityByInviteCode(payload.inviteCode, player.id);
-            if (r.success && r.communityId) {
-              toast.success(
-                t('community.requestSentViaLinkMessage', { name: r.communityName ?? '' })
-              );
-              appNavigation.navigate('CommunityDetail', {
-                communityId: r.communityId,
-                communityName: r.communityName,
-              });
-            } else {
-              toast.error(r.error || t('community.joinFailedViaLink'));
-            }
-            break;
-          }
-          case 'invitation': {
-            if (payload.invitationType === 'match' && payload.targetId) {
-              const match = await getMatchWithDetails(payload.targetId);
-              if (match) openMatchDetail(match as MatchDetailData);
-            } else if (payload.invitationType === 'group' && payload.targetId && player?.id) {
-              const r = await joinGroupByInviteCode(payload.targetId, player.id);
-              if (r.success && r.groupId) {
-                toast.success(t('groups.joinedViaLinkMessage', { name: r.groupName ?? '' }));
-                appNavigation.navigate('GroupDetail', {
-                  groupId: r.groupId,
-                  groupName: r.groupName,
-                });
-              } else {
-                toast.error(r.error || t('groups.joinFailedViaLink'));
-              }
-            } else if (payload.invitationType === 'community' && payload.targetId && player?.id) {
-              const r = await requestToJoinCommunityByInviteCode(payload.targetId, player.id);
-              if (r.success && r.communityId) {
-                toast.success(
-                  t('community.requestSentViaLinkMessage', { name: r.communityName ?? '' })
-                );
-                appNavigation.navigate('CommunityDetail', {
-                  communityId: r.communityId,
-                  communityName: r.communityName,
-                });
-              } else {
-                toast.error(r.error || t('community.joinFailedViaLink'));
-              }
-            }
-            // referral-only: nothing to do, already persisted to AsyncStorage by the store
-            break;
-          }
-        }
-      } catch {
-        // Errors handled per-case above
-      } finally {
-        setDeepLinkOverlay(false);
-      }
-    };
-
-    process();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Consume pending navigation from post-onboarding join (AsyncStorage)
   useEffect(() => {
@@ -396,7 +304,163 @@ const Home = () => {
     useEffectiveLocation();
   const { homeLocation } = useUserHomeLocation();
   const { player, maxTravelDistanceKm, loading: playerLoading } = usePlayer();
+
+  // Keep a ref so the stable processDeepLink callback always reads the latest player
+  const playerRef = useRef(player);
+  useEffect(() => {
+    playerRef.current = player;
+  }, [player]);
+
+  // Process a pending deep link from deepLinkStore. Stable callback (no deps) — uses refs.
+  const processDeepLink = useCallback(async () => {
+    const peeked = getPendingDeepLink();
+    if (!peeked) return;
+
+    // Defer group/community processing until player is loaded to avoid silent discard
+    const needsPlayer =
+      peeked.type === 'group' ||
+      peeked.type === 'community' ||
+      (peeked.type === 'invitation' &&
+        (peeked.invitationType === 'group' || peeked.invitationType === 'community'));
+
+    if (needsPlayer && !playerRef.current?.id) return;
+
+    const payload = consumePendingDeepLink();
+    if (!payload) return;
+
+    const needsOverlay =
+      payload.type === 'group' ||
+      payload.type === 'community' ||
+      (payload.type === 'invitation' &&
+        (payload.invitationType === 'group' || payload.invitationType === 'community'));
+    if (needsOverlay) setDeepLinkOverlay(true);
+
+    // Switch to the group/community's sport if it differs from the current selection
+    const switchSportIfNeeded = async (sportId: string | null | undefined) => {
+      if (!sportId || sportId === selectedSportRef.current?.id) return;
+      const target = userSportsRef.current?.find(s => s.id === sportId);
+      if (target) await setSelectedSportRef.current(target);
+    };
+
+    try {
+      switch (payload.type) {
+        case 'match': {
+          const match = await getMatchWithDetails(payload.matchId);
+          if (match) openMatchDetail(match as MatchDetailData);
+          break;
+        }
+        case 'group': {
+          const r = await joinGroupByInviteCode(payload.inviteCode, playerRef.current!.id);
+          if (r.success && r.groupId) {
+            await switchSportIfNeeded(r.sportId);
+            toast.success(t('groups.joinedViaLinkMessage', { name: r.groupName ?? '' }));
+            appNavigation.navigate('GroupDetail', {
+              groupId: r.groupId,
+              groupName: r.groupName,
+            });
+          } else {
+            toast.error(r.error || t('groups.joinFailedViaLink'));
+          }
+          break;
+        }
+        case 'community': {
+          const r = await requestToJoinCommunityByInviteCode(
+            payload.inviteCode,
+            playerRef.current!.id
+          );
+          if (r.success && r.communityId) {
+            await switchSportIfNeeded(r.sportId);
+            toast.success(
+              t('community.requestSentViaLinkMessage', { name: r.communityName ?? '' })
+            );
+            appNavigation.navigate('CommunityDetail', {
+              communityId: r.communityId,
+              communityName: r.communityName,
+            });
+          } else {
+            toast.error(r.error || t('community.joinFailedViaLink'));
+          }
+          break;
+        }
+        case 'invitation': {
+          if (payload.invitationType === 'match' && payload.targetId) {
+            const match = await getMatchWithDetails(payload.targetId);
+            if (match) openMatchDetail(match as MatchDetailData);
+          } else if (
+            payload.invitationType === 'group' &&
+            payload.targetId &&
+            playerRef.current?.id
+          ) {
+            const r = await joinGroupByInviteCode(payload.targetId, playerRef.current.id);
+            if (r.success && r.groupId) {
+              await switchSportIfNeeded(r.sportId);
+              toast.success(t('groups.joinedViaLinkMessage', { name: r.groupName ?? '' }));
+              appNavigation.navigate('GroupDetail', {
+                groupId: r.groupId,
+                groupName: r.groupName,
+              });
+            } else {
+              toast.error(r.error || t('groups.joinFailedViaLink'));
+            }
+          } else if (
+            payload.invitationType === 'community' &&
+            payload.targetId &&
+            playerRef.current?.id
+          ) {
+            const r = await requestToJoinCommunityByInviteCode(
+              payload.targetId,
+              playerRef.current.id
+            );
+            if (r.success && r.communityId) {
+              await switchSportIfNeeded(r.sportId);
+              toast.success(
+                t('community.requestSentViaLinkMessage', { name: r.communityName ?? '' })
+              );
+              appNavigation.navigate('CommunityDetail', {
+                communityId: r.communityId,
+                communityName: r.communityName,
+              });
+            } else {
+              toast.error(r.error || t('community.joinFailedViaLink'));
+            }
+          }
+          // referral-only: nothing to do, already persisted to AsyncStorage by the store
+          break;
+        }
+      }
+    } catch {
+      // Errors handled per-case above
+    } finally {
+      setDeepLinkOverlay(false);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Check on mount + subscribe so re-fires when Home is already mounted (fixes app-open bug)
+  useEffect(() => {
+    processDeepLink();
+    return addDeepLinkListener(processDeepLink);
+  }, [processDeepLink]);
+
+  // Retry once player data arrives in case it was null on first run
+  useEffect(() => {
+    if (player?.id) processDeepLink();
+  }, [player?.id, processDeepLink]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const { selectedSport, isLoading: sportLoading, userSports, setSelectedSport } = useSport();
+
+  // Refs so processDeepLink (stable callback) can auto-switch sport without stale closures
+  const selectedSportRef = useRef(selectedSport);
+  useEffect(() => {
+    selectedSportRef.current = selectedSport;
+  }, [selectedSport]);
+  const userSportsRef = useRef(userSports);
+  useEffect(() => {
+    userSportsRef.current = userSports;
+  }, [userSports]);
+  const setSelectedSportRef = useRef(setSelectedSport);
+  useEffect(() => {
+    setSelectedSportRef.current = setSelectedSport;
+  }, [setSelectedSport]);
 
   // Player sport preferences and rating for match relevance scoring
   const { playerSports } = usePlayerSports(session?.user?.id);

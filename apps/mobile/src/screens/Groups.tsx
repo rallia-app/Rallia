@@ -356,16 +356,18 @@ export default function GroupsScreen() {
 
       {/* Create Group FAB */}
       {groups && groups.length > 0 && (
-        <TouchableOpacity
-          style={[styles.fab, { backgroundColor: colors.primary }]}
-          onPress={() => {
-            if (!guardAction() || !playerId) return;
-            SheetManager.show('create-group', { payload: { playerId } });
-          }}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="add-outline" size={28} color="#FFFFFF" />
-        </TouchableOpacity>
+        <View style={styles.fabContainer}>
+          <TouchableOpacity
+            style={[styles.fab, { backgroundColor: colors.primary }]}
+            onPress={() => {
+              if (!guardAction() || !playerId) return;
+              SheetManager.show('create-group', { payload: { playerId } });
+            }}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="add-outline" size={28} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
       )}
     </SafeAreaView>
   );

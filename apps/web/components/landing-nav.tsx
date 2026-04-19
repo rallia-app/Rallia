@@ -38,6 +38,12 @@ export default function LandingNav() {
           </Link>
         );
       })}
+      <Link
+        href="/donate"
+        className="px-4 py-1.5 rounded-full bg-[var(--secondary-500)] hover:bg-[var(--secondary-600)] text-white text-sm font-semibold transition-colors"
+      >
+        {t('nav.donate')}
+      </Link>
     </nav>
   );
 }
