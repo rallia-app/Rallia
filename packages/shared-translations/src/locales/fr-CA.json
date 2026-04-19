@@ -3269,16 +3269,30 @@
       "noContactsDescription": "Votre carnet d'adresses semble être vide.",
       "selectAtLeastOne": "Sélectionnez au moins un contact à inviter",
       "sendInvites": "Envoyer les invitations",
-      "invitesSent": "{count} invitation(s) envoyée(s)!",
+      "invitesSent": "Invitations envoyées!",
       "failedToLoad": "Échec du chargement des contacts",
-      "failedToSend": "Échec de l'envoi des invitations",
-      "invitesSent": "Invitations envoyées!"
+      "failedToSend": "Échec de l'envoi des invitations"
     },
     "inviteModal": {
       "title": "Agrandissez votre réseau",
       "subtitle": "Invitez vos amis et votre famille sur Rallia. Des récompenses arrivent bientôt pour les joueurs qui aident à faire grandir la communauté!",
       "selectContacts": "Sélectionner des contacts",
       "skip": "Peut-être plus tard"
+    },
+    "contest": {
+      "tab": "Concours",
+      "endsIn": "Le concours se termine dans",
+      "ended": "Ce concours est terminé",
+      "days": "jours",
+      "hours": "h",
+      "minutes": "min",
+      "leaderboard": "Classement",
+      "conversions": "Inscriptions",
+      "noEntries": "Aucune référence pour l'instant — soyez le premier !",
+      "you": "Vous",
+      "youreLeading": "Vous êtes en tête — continuez !",
+      "referMore": "Référez {count} personne(s) de plus pour atteindre #{rank}",
+      "joinLeaderboard": "Faites une référence pour apparaître au classement !"
     }
   },
   "matchCreation": {
@@ -3564,7 +3578,8 @@
       "nav": {
         "home": "Accueil",
         "games": "Parties",
-        "communities": "Communautés"
+        "communities": "Communautés",
+        "donate": "Faire un don"
       }
     },
     "hero": {
@@ -3967,11 +3982,11 @@
         "all": "Tout"
       },
       "duration": {
-        "label": "Durée",
-        "all": "Toutes",
         "30": "30 min",
         "60": "1 heure",
         "90": "1,5 heures",
+        "label": "Durée",
+        "all": "Toutes",
         "120+": "2+ heures"
       },
       "courtStatus": {
@@ -3988,12 +4003,12 @@
         "courtBooked": "Terrain réservé"
       },
       "spotsAvailable": {
-        "label": "Places",
-        "all": "Toutes",
-        "undefined": "Toutes",
         "1": "1 place",
         "2": "2 places",
-        "3": "3 places"
+        "3": "3 places",
+        "label": "Places",
+        "all": "Toutes",
+        "undefined": "Toutes"
       },
       "favorites": {
         "label": "Favoris"
@@ -5176,7 +5191,84 @@
       "analytics": "Analytique",
       "settings": "Paramètres",
       "map": "Carte",
-      "communications": "Communications"
+      "communications": "Communications",
+      "referralContests": "Concours de parrainage"
+    },
+    "referralContests": {
+      "titleMeta": "Concours de parrainage - Admin - Rallia",
+      "descriptionMeta": "Gérer les concours de parrainage",
+      "title": "Concours de parrainage",
+      "description": "Créez et gérez des concours de parrainage à durée limitée.",
+      "createButton": "Nouveau concours",
+      "table": {
+        "title": "Titre",
+        "prize": "Prix",
+        "startAt": "Début",
+        "endAt": "Fin",
+        "maxWinners": "Gagnants",
+        "status": "Statut",
+        "createdAt": "Créé le",
+        "noContests": "Aucun concours pour l'instant",
+        "error": "Impossible de charger les concours",
+        "actions": "Actions"
+      },
+      "status": {
+        "active": "Actif",
+        "inactive": "Inactif",
+        "upcoming": "À venir",
+        "live": "En cours",
+        "ended": "Terminé"
+      },
+      "dialog": {
+        "createTitle": "Nouveau concours",
+        "editTitle": "Modifier le concours",
+        "titleLabel": "Titre",
+        "titlePlaceholder": "Concours de lancement",
+        "prizeLabel": "Description du prix",
+        "prizePlaceholder": "Les 3 meilleurs parrains gagnent...",
+        "startAtLabel": "Date et heure de début",
+        "endAtLabel": "Date et heure de fin",
+        "endBeforeStart": "La date de fin doit être après la date de début",
+        "maxWinnersLabel": "Nombre de gagnants",
+        "isActiveLabel": "Actif",
+        "isActiveDescription": "Visible par les utilisateurs",
+        "save": "Enregistrer",
+        "cancel": "Annuler",
+        "creating": "Création...",
+        "saving": "Enregistrement...",
+        "titleEnLabel": "Titre (anglais)",
+        "titleEnPlaceholder": "Spring Launch Contest",
+        "titleFrLabel": "Titre (français)",
+        "titleFrPlaceholder": "Concours de lancement",
+        "prizeEnLabel": "Description du prix (anglais)",
+        "prizeEnPlaceholder": "Top 3 referrers win a 1-year membership",
+        "prizeFrLabel": "Description du prix (français)",
+        "prizeFrPlaceholder": "Les 3 meilleurs gagnent un abonnement annuel"
+      },
+      "errors": {
+        "anotherActive": "Un autre concours est déjà actif. Désactivez-le d'abord."
+      },
+      "leaderboard": {
+        "title": "Classement",
+        "winners": "Gagnants",
+        "rank": "Rang",
+        "player": "Joueur",
+        "referrals": "Parrainages",
+        "copyWinners": "Copier les gagnants",
+        "copied": "Copié !",
+        "noEntries": "Aucun parrainage pour ce concours.",
+        "loading": "Chargement du classement..."
+      },
+      "bulkActions": {
+        "delete": "Supprimer",
+        "confirmTitle": "Supprimer les concours",
+        "confirmDescription": "Supprimer définitivement {count} concours ? Cette action est irréversible.",
+        "confirmDelete": "Supprimer",
+        "deleting": "Suppression...",
+        "selected": "{count} sélectionné(s)"
+      },
+      "edit": "Modifier",
+      "toggleActive": "Activer/désactiver"
     },
     "communications": {
       "title": "Communications",
@@ -8218,78 +8310,10 @@
     "viewMyBookings": "Voir mes réservations"
   },
   "beta": {
-    "title": "Devenez Beta Testeur - Rallia",
-    "hero": {
-      "badge": "Accès Exclusif",
-      "headline": "Devenez Beta Testeur",
-      "subheadline": "Rejoignez notre groupe de testeurs privilégiés et contribuez à façonner l'avenir du tennis et du pickleball au Canada."
-    },
-    "benefits": {
-      "priority": {
-        "title": "Accès Prioritaire",
-        "description": "Soyez parmi les premiers à découvrir et utiliser toutes les fonctionnalités de Rallia."
-      },
-      "influence": {
-        "title": "Influencez le Produit",
-        "description": "Vos retours façonneront directement l'expérience de milliers de joueurs."
-      },
-      "exclusive": {
-        "title": "Avantages Exclusifs",
-        "description": "Profitez de fonctionnalités premium gratuitement pendant la période beta."
-      },
-      "community": {
-        "title": "Communauté Fondatrice",
-        "description": "Rejoignez un groupe restreint de passionnés qui définissent le futur du sport."
-      }
-    },
-    "form": {
-      "fullNameLabel": "Nom complet",
-      "fullNamePlaceholder": "Votre nom complet",
-      "cityLabel": "Ville de résidence",
-      "cityPlaceholder": "Ex: Montréal",
-      "playsTennisLabel": "Pratiquez-vous le tennis?",
-      "tennisLevelLabel": "Niveau tennis",
-      "playsPickleballLabel": "Pratiquez-vous le pickleball?",
-      "pickleballLevelLabel": "Niveau pickleball",
-      "emailLabel": "Courriel",
-      "emailPlaceholder": "votre.courriel@exemple.com",
-      "phoneLabel": "Téléphone (facultatif)",
-      "phonePlaceholder": "+1 (555) 123-4567",
-      "submitButton": "Rejoindre le programme beta",
-      "submitting": "Envoi en cours...",
-      "levels": {
-        "beginner": "Débutant",
-        "intermediate": "Intermédiaire",
-        "advanced": "Avancé",
-        "elite": "Haut niveau"
-      },
-      "selectLevel": "Sélectionnez votre niveau"
-    },
-    "validation": {
-      "atLeastOneSport": "Veuillez sélectionner au moins un sport",
-      "tennisLevelRequired": "Veuillez indiquer votre niveau de tennis",
-      "pickleballLevelRequired": "Veuillez indiquer votre niveau de pickleball"
-    },
-    "success": {
-      "title": "Merci!",
-      "message": "Merci pour votre inscription! Nous vous contacterons bientôt avec les prochaines étapes pour rejoindre notre programme beta."
-    },
-    "error": {
-      "title": "Erreur",
-      "message": "Une erreur est survenue. Veuillez réessayer."
-    },
-    "urgency": {
-      "message": "Places limitées — Rejoignez les premiers testeurs dès maintenant!"
-    },
-    "formSection": {
-      "title": "Inscrivez-vous au programme beta",
-      "subtitle": "Remplissez le formulaire ci-dessous pour rejoindre notre communauté de testeurs privilégiés."
-    },
-    "trust": {
-      "secure": "Données sécurisées",
-      "fast": "Inscription rapide",
-      "premium": "Accès premium gratuit"
-    }
+    "badge": "BÊTA",
+    "noticeTitle": "Bienvenue dans la bêta de Rallia !",
+    "noticeMessage": "Vous utilisez une version préliminaire de Rallia. Certains joueurs et matchs peuvent être simulés pour vous permettre d'explorer l'application. Les installations et terrains, par contre, sont réels et exacts. Les disponibilités des terrains publics à travers Montréal seront progressivement ajoutées au cours des prochaines semaines — certaines sont déjà disponibles dans l'application !",
+    "noticeDismiss": "Compris !"
   },
   "playerInterest": {
     "title": "Jouez gratuitement - Rallia",
@@ -8668,10 +8692,51 @@
       "playStyle": "Définir votre style de jeu"
     }
   },
-  "beta": {
-    "badge": "BÊTA",
-    "noticeTitle": "Bienvenue dans la bêta de Rallia !",
-    "noticeMessage": "Vous utilisez une version préliminaire de Rallia. Certains joueurs et matchs peuvent être simulés pour vous permettre d'explorer l'application. Les installations et terrains, par contre, sont réels et exacts. Les disponibilités des terrains publics à travers Montréal seront progressivement ajoutées au cours des prochaines semaines — certaines sont déjà disponibles dans l'application !",
-    "noticeDismiss": "Compris !"
+  "donate": {
+    "meta": {
+      "title": "Faire un don à Rallia",
+      "description": "Soutenez Rallia et aidez-nous à bâtir la meilleure plateforme de communauté sportive pour tous."
+    },
+    "hero": {
+      "badge": "Soutenir Rallia",
+      "headline": "Gardons le jeu en vie.",
+      "subheadline": "Votre don nous aide à construire une meilleure communauté sportive — pour tous."
+    },
+    "amounts": {
+      "label": "Choisissez un montant",
+      "custom": "Autre",
+      "customPlaceholder": "0,00",
+      "customLabel": "Montant personnalisé (CAD)",
+      "minimum": "Le don minimum est de 0,50 $"
+    },
+    "form": {
+      "nameLabel": "Votre nom",
+      "namePlaceholder": "Anonyme",
+      "emailLabel": "Adresse courriel",
+      "emailPlaceholder": "vous@exemple.com",
+      "messageLabel": "Laisser un message (optionnel)",
+      "messagePlaceholder": "Qu'est-ce qui vous fait jouer ?",
+      "continueButton": "Continuer vers le paiement"
+    },
+    "payment": {
+      "title": "Informations de paiement",
+      "backButton": "Modifier le montant",
+      "submitButton": "Donner {amount}",
+      "submitting": "Traitement...",
+      "secureNote": "Sécurisé par Stripe. Vos informations bancaires ne sont jamais stockées par Rallia."
+    },
+    "errors": {
+      "invalidAmount": "Veuillez entrer un montant valide.",
+      "minimumAmount": "Le don minimum est de 0,50 $.",
+      "paymentFailed": "Paiement échoué. Veuillez vérifier vos informations et réessayer.",
+      "generic": "Une erreur s'est produite. Veuillez réessayer."
+    },
+    "success": {
+      "badge": "Merci !",
+      "headline": "Votre don est en route.",
+      "message": "Merci{name} pour votre généreux soutien. Vous nous aidez à construire une meilleure communauté sportive.",
+      "receiptNote": "Un reçu sera envoyé à {email}.",
+      "donateAgain": "Faire un autre don"
+    }
   }
 }

@@ -32,7 +32,13 @@ export async function getOrCreateGroupInviteCode(groupId: string): Promise<strin
 export async function joinGroupByInviteCode(
   inviteCode: string,
   playerId: string
-): Promise<{ success: boolean; groupId?: string; groupName?: string; error?: string }> {
+): Promise<{
+  success: boolean;
+  groupId?: string;
+  groupName?: string;
+  sportId?: string | null;
+  error?: string;
+}> {
   const { data, error } = await supabase.rpc('join_group_by_invite_code', {
     p_invite_code: inviteCode.toUpperCase(),
     p_player_id: playerId,
@@ -50,11 +56,22 @@ export async function joinGroupByInviteCode(
     error?: string;
   };
 
+  if (!result.success || !result.group_id) {
+    return { success: result.success, error: result.error };
+  }
+
+  // Fetch sport_id — the RPC doesn't return it, one lightweight query
+  const { data: network } = await supabase
+    .from('network')
+    .select('sport_id')
+    .eq('id', result.group_id)
+    .single();
+
   return {
-    success: result.success,
+    success: true,
     groupId: result.group_id,
     groupName: result.group_name,
-    error: result.error,
+    sportId: network?.sport_id ?? null,
   };
 }
 

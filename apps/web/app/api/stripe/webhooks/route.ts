@@ -166,6 +166,16 @@ async function handlePaymentIntentSucceeded(
   supabase: ReturnType<typeof getAdminClient>,
   paymentIntent: Stripe.PaymentIntent
 ) {
+  if (paymentIntent.metadata?.type === 'donation') {
+    const { error } = await supabase
+      .from('donations')
+      .update({ status: 'succeeded', updated_at: new Date().toISOString() })
+      .eq('stripe_payment_intent_id', paymentIntent.id);
+    if (error) throw error;
+    console.log(`Donation succeeded: ${paymentIntent.id}`);
+    return;
+  }
+
   const chargeId =
     typeof paymentIntent.latest_charge === 'string'
       ? paymentIntent.latest_charge

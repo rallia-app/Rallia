@@ -780,7 +780,13 @@ export async function demoteCommunityMember(
 export async function requestToJoinCommunityByInviteCode(
   inviteCode: string,
   playerId: string
-): Promise<{ success: boolean; communityId?: string; communityName?: string; error?: string }> {
+): Promise<{
+  success: boolean;
+  communityId?: string;
+  communityName?: string;
+  sportId?: string | null;
+  error?: string;
+}> {
   // First, look up the community by invite code
   const { data: networkData, error: lookupError } = await supabase
     .from('network')
@@ -788,6 +794,7 @@ export async function requestToJoinCommunityByInviteCode(
       `
       id,
       name,
+      sport_id,
       network_type:network_type_id (name)
     `
     )
@@ -825,6 +832,7 @@ export async function requestToJoinCommunityByInviteCode(
         success: false,
         communityId: networkData.id,
         communityName: networkData.name,
+        sportId: networkData.sport_id ?? null,
         error: 'You are already a member of this community.',
       };
     }
@@ -833,6 +841,7 @@ export async function requestToJoinCommunityByInviteCode(
         success: false,
         communityId: networkData.id,
         communityName: networkData.name,
+        sportId: networkData.sport_id ?? null,
         error: 'You already have a pending request to join this community.',
       };
     }
@@ -845,6 +854,7 @@ export async function requestToJoinCommunityByInviteCode(
       success: true,
       communityId: networkData.id,
       communityName: networkData.name,
+      sportId: networkData.sport_id ?? null,
     };
   } catch (err) {
     return {
