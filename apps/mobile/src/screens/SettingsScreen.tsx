@@ -18,7 +18,7 @@ import { Text, useToast } from '@rallia/shared-components';
 import { Logger, tourService, supabase } from '@rallia/shared-services';
 import { useTheme, useAdminStatus } from '@rallia/shared-hooks';
 import { useAppNavigation } from '../navigation/hooks';
-import { useLocale, useFeedbackReportSheet } from '../context';
+import { useLocale, useFeedbackReportSheet, useSubscription } from '../context';
 import { useAuth, useTranslation } from '../hooks';
 import type { Locale } from '@rallia/shared-translations';
 import { useProfile } from '@rallia/shared-hooks';
@@ -59,6 +59,7 @@ const SettingsScreen: React.FC = () => {
 
   const { openFeedbackReport } = useFeedbackReportSheet();
   const { isAuthenticated, loading: authLoading, signOut } = useAuth();
+  const { subscriptionStatus, presentPaywall } = useSubscription();
   const { profile, loading: profileLoading } = useProfile();
   const { isAdmin } = useAdminStatus();
 
@@ -374,6 +375,30 @@ const SettingsScreen: React.FC = () => {
               icon="construct-outline"
               title={t('admin.panelButton')}
               onPress={handleAdminPanel}
+            />
+          </View>
+        )}
+
+        {/* Rallia Pro */}
+        {isOnboarded && (
+          <View style={[styles.settingsGroup, { backgroundColor: colors.background }]}>
+            {subscriptionStatus === 'active' || subscriptionStatus === 'cancelling' ? (
+              <SettingsItem
+                icon="star"
+                title={`Rallia Pro — ${t('subscription.status_active')}`}
+                onPress={() => navigation.navigate('SubscriptionManagement')}
+              />
+            ) : (
+              <SettingsItem
+                icon="star-outline"
+                title={t('subscription.upgrade_cta')}
+                onPress={() => presentPaywall()}
+              />
+            )}
+            <SettingsItem
+              icon="card-outline"
+              title={t('subscription.manage')}
+              onPress={() => navigation.navigate('SubscriptionManagement')}
             />
           </View>
         )}

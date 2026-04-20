@@ -943,6 +943,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             duration_seconds: Math.round((Date.now() - onboardingStartTimeRef.current) / 1000),
           });
 
+          // Set persistent PostHog person properties for cohort segmentation
+          posthogClient?.setPersonProperties({
+            sports: formData.selectedSportNames,
+            gender: formData.gender || null,
+            city: formData.city || null,
+            province: formData.province || null,
+          });
+
           // Attribute pending referral if one was stored before signup
           try {
             const pendingRaw = await AsyncStorage.getItem(PENDING_REFERRAL_KEY);

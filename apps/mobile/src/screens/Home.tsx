@@ -79,6 +79,8 @@ import { SportIcon } from '../components/SportIcon';
 import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
 import ProfileCompletionBanner from '../features/profile/components/ProfileCompletionBanner';
 import { SuggestionsFeedSection } from '../components/SuggestionsFeedSection';
+import BillingIssueBanner from '../components/BillingIssueBanner';
+import { useSubscription } from '../context';
 
 /** Dismissible banner alerting the player to unread notifications in another sport */
 const CrossSportBanner: React.FC<{
@@ -195,6 +197,7 @@ const Home = () => {
   const { profile } = useProfile();
   const { setOnHomeScreen } = useOverlay();
   const { openSheet } = useActionsSheet();
+  const { subscriptionStatus } = useSubscription();
 
   // User is fully onboarded only if authenticated AND onboarding is complete
   const isOnboarded = !!session?.user && profile?.onboarding_completed;
@@ -1079,6 +1082,16 @@ const Home = () => {
         </View>
       );
     } else {
+      // Billing issue banner (shown when subscription payment has failed)
+      if (subscriptionStatus === 'billing_issue') {
+        headerComponents.push(
+          <BillingIssueBanner
+            key="billing-issue"
+            onManagePress={() => appNavigation.navigate('SubscriptionManagement')}
+          />
+        );
+      }
+
       // Fully onboarded: show My Matches
       // Cross-sport banners for unread notifications in other sports
       Object.entries(otherSportsUnreadCount).forEach(([sportName, count]) => {
@@ -1179,6 +1192,8 @@ const Home = () => {
     profileCompleteness.nextAction,
     handleCompletionBannerAction,
     isDark,
+    subscriptionStatus,
+    appNavigation,
   ]);
 
   // Show loading if auth is loading, or if player/sport data is loading initially
