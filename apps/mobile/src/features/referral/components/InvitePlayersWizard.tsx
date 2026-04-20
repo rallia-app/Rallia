@@ -135,7 +135,7 @@ export const InvitePlayersWizard: React.FC<InvitePlayersWizardProps> = ({
       textMuted: themeColors.mutedForeground,
       border: themeColors.border,
       buttonActive: isDark ? primary[500] : primary[600],
-      buttonInactive: themeColors.muted,
+      buttonInactive: isDark ? '#1C1C1E' : '#F2F2F7',
       buttonTextActive: BASE_WHITE,
       progressActive: isDark ? primary[500] : primary[600],
       progressInactive: themeColors.muted,

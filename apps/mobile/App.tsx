@@ -4,11 +4,15 @@
  * to ensure the supabase client is properly configured before any hooks use it.
  */
 import './src/lib/supabase';
+import { initRevenueCat } from './src/lib/revenuecat';
 import * as Sentry from '@sentry/react-native';
 import { isRunningInExpoGo } from 'expo';
 import Mapbox from '@rnmapbox/maps';
 
 Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? '');
+if (!isRunningInExpoGo()) {
+  initRevenueCat();
+}
 
 // Set up Sentry navigation integration (must be created before Sentry.init)
 const sentryNavigationIntegration = Sentry.reactNavigationIntegration({
@@ -50,7 +54,8 @@ ErrorUtils.setGlobalHandler((error, isFatal) => {
 });
 
 import { useEffect, useMemo, useState, useCallback, useRef, type PropsWithChildren } from 'react';
-import { AppState, Linking } from 'react-native';
+import { AppState, Linking, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Updates from 'expo-updates';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -120,6 +125,7 @@ import {
   UserLocationProvider,
   useUserHomeLocation,
   LocationModeProvider,
+  SubscriptionProvider,
   // useTour, // TEMPORARILY DISABLED: User walkthrough deactivated
   TourProvider,
 } from './src/context';
@@ -176,19 +182,42 @@ const queryClient = new QueryClient({
  */
 function parseMatchIdFromUrl(url: string): string | null {
   try {
-    // Handle custom scheme: rallia://match/[id]
     const customSchemeMatch = url.match(/^rallia:\/\/match\/([a-zA-Z0-9-]+)/);
-    if (customSchemeMatch) {
-      return customSchemeMatch[1];
-    }
-
-    // Handle universal link: https://rallia.app/match/[id]
+    if (customSchemeMatch) return customSchemeMatch[1];
     const universalLinkMatch = url.match(/^https?:\/\/rallia\.app\/match\/([a-zA-Z0-9-]+)/);
-    if (universalLinkMatch) {
-      return universalLinkMatch[1];
-    }
-
+    if (universalLinkMatch) return universalLinkMatch[1];
     return null;
+  } catch {
+    return null;
+  }
+}
+
+const UTM_STORAGE_KEY = '@rallia/utm-params';
+
+interface UtmParams {
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_content?: string;
+}
+
+function parseUtmParams(url: string): UtmParams | null {
+  try {
+    // Works for both https:// universal links and rallia:// custom scheme
+    const queryIndex = url.indexOf('?');
+    if (queryIndex === -1) return null;
+    const query = url.slice(queryIndex + 1);
+    const params: UtmParams = {};
+    for (const part of query.split('&')) {
+      const [key, value] = part.split('=');
+      if (!key || !value) continue;
+      const decoded = decodeURIComponent(value.replace(/\+/g, ' '));
+      if (key === 'utm_source') params.utm_source = decoded;
+      else if (key === 'utm_medium') params.utm_medium = decoded;
+      else if (key === 'utm_campaign') params.utm_campaign = decoded;
+      else if (key === 'utm_content') params.utm_content = decoded;
+    }
+    return Object.keys(params).length > 0 ? params : null;
   } catch {
     return null;
   }
@@ -213,6 +242,7 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
   useEffect(() => {
     posthogClient?.register({
       platform: 'mobile',
+      os_type: Platform.OS,
       app_version: Application.nativeApplicationVersion ?? null,
     });
   }, []);
@@ -225,22 +255,52 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
 
   // Handle incoming deep link URL
   const handleDeepLink = useCallback(
-    (url: string | null) => {
+    (url: string | null, isColdStart = false) => {
       if (!url) return;
+      const utmParams = parseUtmParams(url);
+
+      // On cold start, persist UTM params so they survive until post-auth attribution
+      if (isColdStart && utmParams) {
+        AsyncStorage.getItem(UTM_STORAGE_KEY).then(existing => {
+          if (!existing) {
+            AsyncStorage.setItem(UTM_STORAGE_KEY, JSON.stringify(utmParams)).catch(() => {});
+          }
+        });
+      }
+
       const matchId = parseMatchIdFromUrl(url);
+      const inviteCode = url.match(/\/invite\/([A-Za-z0-9]+)/)?.[1];
+
       if (matchId) {
         Logger.logNavigation('deep_link_received', { url, matchId });
-        deepLinkOpened({ link_type: 'match' });
+        deepLinkOpened({ link_type: 'match', ...utmParams });
         setPendingMatchId(matchId);
+      } else if (inviteCode) {
+        deepLinkOpened({ link_type: 'invite', referral_code: inviteCode, ...utmParams });
+      } else if (utmParams) {
+        deepLinkOpened({ link_type: 'utm', ...utmParams });
       }
     },
     [setPendingMatchId]
   );
 
+  // After authentication, set UTM params as PostHog person properties (once per install)
+  useEffect(() => {
+    if (!userId) return;
+    AsyncStorage.getItem(UTM_STORAGE_KEY).then(raw => {
+      if (!raw) return;
+      try {
+        const utmParams: UtmParams = JSON.parse(raw);
+        posthogClient?.setPersonProperties({ ...utmParams });
+        AsyncStorage.removeItem(UTM_STORAGE_KEY);
+      } catch {}
+    });
+  }, [userId]);
+
   // Listen for deep links (both cold start and while app is running)
   useEffect(() => {
     // Handle URL that opened the app (cold start)
-    Linking.getInitialURL().then(handleDeepLink);
+    Linking.getInitialURL().then(url => handleDeepLink(url, true));
 
     // Handle URLs while app is running
     const subscription = Linking.addEventListener('url', event => {
@@ -292,7 +352,9 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
         <ProfileProvider userId={userId}>
           <PlayerProvider userId={userId}>
             <SportProvider userId={userId}>
-              <ProfileCompletenessBridge>{children}</ProfileCompletenessBridge>
+              <SubscriptionProvider>
+                <ProfileCompletenessBridge>{children}</ProfileCompletenessBridge>
+              </SubscriptionProvider>
             </SportProvider>
           </PlayerProvider>
         </ProfileProvider>
