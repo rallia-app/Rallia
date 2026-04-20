@@ -70,6 +70,8 @@ import Chat from '../screens/Chat';
 import ChatConversation from '../screens/ChatConversation';
 import ArchivedChats from '../screens/ArchivedChats';
 import SettingsScreen from '../screens/SettingsScreen';
+import Paywall from '../screens/Paywall';
+import SubscriptionManagement from '../screens/SubscriptionManagement';
 import UserProfile from '../screens/UserProfile';
 import SportProfile from '../screens/SportProfile';
 import RatingProofs from '../screens/RatingProofs';
@@ -1260,6 +1262,22 @@ export default function AppNavigator() {
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('screens.settings'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="Paywall"
+        component={Paywall}
+        options={{ headerShown: false, presentation: 'modal' }}
+      />
+
+      <RootStack.Screen
+        name="SubscriptionManagement"
+        component={SubscriptionManagement}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('subscription.manage'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />

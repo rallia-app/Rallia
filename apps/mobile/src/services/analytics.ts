@@ -58,6 +58,10 @@ export function matchJoined(props: { sport: string; discovery_source?: string })
   capture('match_joined', props);
 }
 
+export function matchFilled(props: { sport: string; format: string }): void {
+  capture('match_filled', props);
+}
+
 export function matchJoinRequested(props: { sport: string }): void {
   capture('match_join_requested', props);
 }
@@ -207,6 +211,10 @@ export function deepLinkOpened(props: {
   has_referral?: boolean;
   referral_code?: string;
   target_id?: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_content?: string;
 }): void {
   capture('deep_link_opened', props);
 }
@@ -245,8 +253,68 @@ export function bookingCancelled(props: { reason?: string }): void {
   capture('booking_cancelled', props);
 }
 
+// ---- Waitlist ----
+
+export function waitlistJoined(props: { sport: string }): void {
+  capture('waitlist_joined', props);
+}
+
+// ---- Satisfaction ----
+
+export function satisfactionScoreSubmitted(props: { score: number; context: string }): void {
+  capture('satisfaction_score_submitted', props);
+}
+
+// ---- Pre-signin ----
+
+export function preSigninScreenViewed(): void {
+  capture('pre_signin_screen_viewed');
+}
+
 // ---- App Health ----
 
 export function appOpened(props: { cold_start: boolean }): void {
   capture('app_opened', props);
+}
+
+// ---- Subscription ----
+
+export function paywallViewed(): void {
+  capture('paywall_viewed');
+}
+
+export function paywallDismissed(): void {
+  capture('paywall_dismissed');
+}
+
+export function subscriptionStarted(props: { product_id: string }): void {
+  capture('subscription_started', props);
+}
+
+export function subscriptionRenewed(props: { product_id: string }): void {
+  capture('subscription_renewed', props);
+}
+
+export function subscriptionCancelled(): void {
+  capture('subscription_cancelled');
+}
+
+export function subscriptionExpired(): void {
+  capture('subscription_expired');
+}
+
+export function restorePurchasesAttempted(): void {
+  capture('restore_purchases_attempted');
+}
+
+export function restorePurchasesSuccess(): void {
+  capture('restore_purchases_success');
+}
+
+export function restorePurchasesFailed(): void {
+  capture('restore_purchases_failed');
+}
+
+export function billingIssueEncountered(): void {
+  capture('billing_issue_encountered');
 }

@@ -84,6 +84,10 @@ export type RootStackParamList = {
   // Admin Analytics Sub-Views (Phase 5)
   AdminCommunityAnalytics: undefined; // Community and network analytics
   AdminSportAnalytics: undefined; // Sport-specific analytics
+
+  // Subscription
+  Paywall: undefined;
+  SubscriptionManagement: undefined;
 };
 
 // =============================================================================

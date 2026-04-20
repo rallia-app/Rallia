@@ -846,8 +846,13 @@ export const MatchDetailSheet: React.FC = () => {
     matchData: selectedMatch ?? undefined,
     onJoinSuccess: result => {
       const sport = selectedMatch?.sport?.name ?? 'unknown';
-      if (result.status === 'joined' || result.status === 'waitlisted') {
+      if (result.status === 'joined') {
         Analytics.matchJoined({ sport });
+        if (selectedMatch && getParticipantInfo(selectedMatch).spotsLeft === 1) {
+          Analytics.matchFilled({ sport, format: selectedMatch.format ?? 'unknown' });
+        }
+      } else if (result.status === 'waitlisted') {
+        Analytics.waitlistJoined({ sport });
       } else {
         Analytics.matchJoinRequested({ sport });
       }
