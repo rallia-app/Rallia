@@ -293,7 +293,9 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
         const utmParams: UtmParams = JSON.parse(raw);
         posthogClient?.setPersonProperties({ ...utmParams });
         AsyncStorage.removeItem(UTM_STORAGE_KEY);
-      } catch (_e) {}
+      } catch {
+        // ignore parse errors for malformed UTM storage
+      }
     });
   }, [userId]);
 
