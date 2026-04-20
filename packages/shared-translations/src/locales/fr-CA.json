@@ -8738,5 +8738,25 @@
       "receiptNote": "Un reçu sera envoyé à {email}.",
       "donateAgain": "Faire un autre don"
     }
+  },
+  "subscription": {
+    "pro_badge": "Pro",
+    "upgrade_cta": "Passer à Rallia Pro",
+    "manage": "Gérer l'abonnement",
+    "restore": "Restaurer les achats",
+    "restore_success": "Abonnement restauré !",
+    "restore_none": "Aucun abonnement actif trouvé",
+    "status_active": "Actif",
+    "status_cancelling": "Annulation en cours",
+    "status_expired": "Expiré",
+    "status_billing_issue": "Problème de paiement",
+    "renews_on": "Renouvellement le {{date}}",
+    "cancels_on": "Accès jusqu'au {{date}}",
+    "billing_banner_title": "Problème de paiement avec votre abonnement",
+    "billing_banner_cta": "Mettre à jour",
+    "manage_via_apple": "Gérez votre abonnement via les réglages Apple",
+    "free_plan": "Forfait gratuit",
+    "privacy_policy": "Politique de confidentialité",
+    "terms_of_service": "Conditions d'utilisation"
   }
 }
