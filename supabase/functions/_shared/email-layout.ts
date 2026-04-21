@@ -154,7 +154,7 @@ export function wrapInLayout(options: LayoutOptions): string {
     content,
     footerNote = '',
     headerSubtitle,
-    siteUrl = Deno.env.get('SITE_URL') || 'https://www.rallia.ca',
+    siteUrl = Deno.env.get('SITE_URL') || 'https://rallia.app',
     locale = 'en-US',
     preheader,
     showUnsubscribe = false,

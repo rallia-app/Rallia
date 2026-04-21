@@ -59,24 +59,24 @@ export const TIER_COLORS = {
     text: '#6B7280', // gray-500
   },
   bronze: {
-    primary: '#CD7F32', // bronze
-    background: '#F0E0D0', // warm brown-100
-    text: '#78350F', // brown-800
+    primary: '#CD7F32', // bronze copper
+    background: '#FEF0DF', // warm orange-cream
+    text: '#92400E', // amber-800
   },
   silver: {
-    primary: '#C0C0C0', // silver
-    background: '#F3F4F6', // gray-100
-    text: '#374151', // gray-700
+    primary: '#94A3B8', // slate-400 — blue-tinted metallic gray
+    background: '#E2E8F0', // slate-200 — distinct from unknown gray-100
+    text: '#334155', // slate-700
   },
   gold: {
-    primary: '#FFD700', // gold
+    primary: '#EAB308', // yellow-500 — saturated amber, clearly distinct from bronze
     background: '#FEF9C3', // yellow-100
-    text: '#854D0E', // yellow-800
+    text: '#713F12', // yellow-900
   },
   platinum: {
-    primary: '#E5E4E2', // platinum
-    background: '#EDE9FE', // violet-100
-    text: '#5B21B6', // violet-800
+    primary: '#2DD4BF', // teal-400 — premium, distinct from all other tiers
+    background: '#F0FDFA', // teal-50
+    text: '#134E4A', // teal-900
   },
 } as const;
 

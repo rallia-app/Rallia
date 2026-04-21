@@ -261,7 +261,7 @@ async function sendViaChannel(
       return sendPush(notification, contact.expo_push_token, badgeCount);
 
     case 'sms':
-      return sendSms(notification, contact.phone);
+      return sendSms(notification, contact.phone, contact.preferred_locale);
 
     default:
       return {

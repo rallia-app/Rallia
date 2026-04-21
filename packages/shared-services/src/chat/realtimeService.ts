@@ -128,22 +128,32 @@ export function subscribeToReactions(
 }
 
 /**
- * Subscribe to conversation updates (new messages in any conversation)
+ * Subscribe to conversation updates: new/removed messages in any conversation,
+ * plus this player's own conversation_participant changes (e.g. last_read_at
+ * updated from another device) so unread counts stay in sync across devices.
+ *
+ * NOTE: We deliberately ignore message UPDATE events. The unread count formula
+ * is driven by conversation_participant.last_read_at — not by message.status —
+ * and listening to message UPDATEs would race against mark_messages_as_read.
  */
 export function subscribeToConversations(playerId: string, onUpdate: () => void): RealtimeChannel {
-  // Subscribe to conversation updates
   const channel = supabase
     .channel(`conversations:${playerId}`)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'message' }, () =>
+      onUpdate()
+    )
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'message' }, () =>
+      onUpdate()
+    )
     .on(
       'postgres_changes',
       {
-        event: '*',
+        event: 'UPDATE',
         schema: 'public',
-        table: 'message',
+        table: 'conversation_participant',
+        filter: `player_id=eq.${playerId}`,
       },
-      () => {
-        onUpdate();
-      }
+      () => onUpdate()
     )
     .subscribe();
 

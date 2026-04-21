@@ -107,21 +107,21 @@ export const EmailStep: React.FC<EmailStepProps> = ({
       {/* Benefit Points */}
       <View style={styles.benefitsSection}>
         <View style={styles.benefitRow}>
+          <Ionicons name="globe-outline" size={16} color={benefitIconColor} />
+          <Text size="sm" color={colors.textSecondary} style={styles.benefitText}>
+            {t('auth.benefitJoinCommunity')}
+          </Text>
+        </View>
+        <View style={styles.benefitRow}>
           <Ionicons name="people-outline" size={16} color={benefitIconColor} />
-          <Text size="sm" color={colors.textSecondary}>
+          <Text size="sm" color={colors.textSecondary} style={styles.benefitText}>
             {t('auth.benefitFindPartners')}
           </Text>
         </View>
         <View style={styles.benefitRow}>
           <Ionicons name="add-circle-outline" size={16} color={benefitIconColor} />
-          <Text size="sm" color={colors.textSecondary}>
+          <Text size="sm" color={colors.textSecondary} style={styles.benefitText}>
             {t('auth.benefitCreateGames')}
-          </Text>
-        </View>
-        <View style={styles.benefitRow}>
-          <Ionicons name="globe-outline" size={16} color={benefitIconColor} />
-          <Text size="sm" color={colors.textSecondary}>
-            {t('auth.benefitJoinCommunity')}
           </Text>
         </View>
       </View>
@@ -292,6 +292,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacingPixels[4],
   },
   benefitsSection: {
+    alignItems: 'center',
     paddingHorizontal: spacingPixels[2],
     marginBottom: spacingPixels[5],
   },
@@ -300,6 +301,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacingPixels[2],
     marginBottom: spacingPixels[1.5],
+  },
+  benefitText: {
+    flexShrink: 1,
   },
   socialButtons: {
     flexDirection: 'column',

@@ -25,8 +25,11 @@ Sentry.init({
   tracesSampleRate: 0.2,
   replaysOnErrorSampleRate: 1.0,
   replaysSessionSampleRate: 0.1,
-  integrations: [sentryNavigationIntegration, Sentry.mobileReplayIntegration()],
-  enableNativeFramesTracking: !isRunningInExpoGo(),
+  integrations: [
+    sentryNavigationIntegration,
+    ...(!__DEV__ ? [Sentry.mobileReplayIntegration()] : []),
+  ],
+  enableNativeFramesTracking: !__DEV__ && !isRunningInExpoGo(),
   sendDefaultPii: true,
 });
 
@@ -758,8 +761,8 @@ function App() {
                             <AuthProvider>
                               <AuthenticatedProviders>
                                 <ActionsSheetProvider>
-                                  <PendingExternalBookingProvider>
-                                    <MatchDetailSheetProvider>
+                                  <MatchDetailSheetProvider>
+                                    <PendingExternalBookingProvider>
                                       <PlayerInviteSheetProvider>
                                         <FeedbackSheetProvider>
                                           <FeedbackReportSheetProvider>
@@ -776,8 +779,8 @@ function App() {
                                           </FeedbackReportSheetProvider>
                                         </FeedbackSheetProvider>
                                       </PlayerInviteSheetProvider>
-                                    </MatchDetailSheetProvider>
-                                  </PendingExternalBookingProvider>
+                                    </PendingExternalBookingProvider>
+                                  </MatchDetailSheetProvider>
                                 </ActionsSheetProvider>
                               </AuthenticatedProviders>
                             </AuthProvider>

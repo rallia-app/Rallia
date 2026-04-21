@@ -124,7 +124,7 @@ export default async function Image({
   if (match.is_court_free) {
     attributes.push(t('free'));
   } else if (match.estimated_cost) {
-    attributes.push(t('costPerPlayer', { amount: Math.ceil(match.estimated_cost / total) }));
+    attributes.push(t('costPerPlayer', { amount: (match.estimated_cost / total).toFixed(2) }));
   }
 
   return new ImageResponse(

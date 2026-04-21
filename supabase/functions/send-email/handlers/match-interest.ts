@@ -40,7 +40,8 @@ export class MatchInterestHandler {
     const matchTime = dateObj.toLocaleTimeString(locale, { timeStyle: 'short' });
 
     const baseUrl = Deno.env.get('NEXT_PUBLIC_BASE_URL') || 'https://rallia.app';
-    const matchUrl = `${baseUrl}/match/${record.match_id}?src=email`;
+    const urlLocale = locale === 'fr' || locale === 'fr-CA' ? 'fr-CA' : 'en-US';
+    const matchUrl = `${baseUrl}/${urlLocale}/match/${record.match_id}?src=email`;
 
     return renderMatchInterestEmail({
       type: 'match_interest',

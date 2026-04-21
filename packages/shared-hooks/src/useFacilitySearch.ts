@@ -77,6 +77,7 @@ export const facilityKeys = {
     courtType: 'all' | CourtTypeFilter,
     lighting: LightingFilter,
     membership: MembershipFilter,
+    hasAvailabilities: boolean,
     userGender?: string | null,
     playerId?: string | null
   ) =>
@@ -92,6 +93,7 @@ export const facilityKeys = {
       courtType,
       lighting,
       membership,
+      hasAvailabilities,
       userGender,
       playerId,
     ] as const,
@@ -105,6 +107,7 @@ export interface FacilityFilters {
   courtType: 'all' | CourtTypeFilter;
   lighting: LightingFilter;
   membership: MembershipFilter;
+  hasAvailabilities: boolean;
 }
 
 /** Default filter values */
@@ -115,6 +118,7 @@ export const DEFAULT_FACILITY_FILTERS: FacilityFilters = {
   courtType: 'all',
   lighting: 'all',
   membership: 'all',
+  hasAvailabilities: false,
 };
 
 interface UseFacilitySearchOptions {
@@ -197,6 +201,7 @@ export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilit
       filters.courtType,
       filters.lighting,
       filters.membership,
+      filters.hasAvailabilities,
       userGender,
       playerId
     ),
@@ -224,6 +229,7 @@ export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilit
         courtTypes: filters.courtType === 'all' ? undefined : [filters.courtType],
         hasLighting,
         membershipRequired,
+        hasAvailabilities: filters.hasAvailabilities ? true : undefined,
         userGender,
         playerId,
         offset: (pageParam as number) ?? 0,

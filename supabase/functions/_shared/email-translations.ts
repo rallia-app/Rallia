@@ -146,6 +146,21 @@ const translations: Translations = {
     'matchInterest.disclaimer':
       "You received this email because you expressed interest in a game on Rallia. If this wasn't you, you can safely ignore this email.",
     'matchInterest.footerNote': 'Rallia — Find players, join games, play more',
+
+    // SMS formatter
+    'sms.prefix': 'Rallia: ',
+    'sms.urgent.startingSoon': 'STARTING {timeUntil}!',
+    'sms.urgent.startingSoonFallback': 'STARTING SOON!',
+    'sms.urgent.checkInOpen': 'CHECK-IN NOW OPEN!',
+    'sms.urgent.cancelled': 'CANCELLED',
+    'sms.youreIn': "You're in!",
+    'sms.startsIn': 'Starts {timeUntil}',
+    'sms.startsInFallback': 'Starts soon',
+    'sms.checkInOpen': 'Check-in is open',
+    'sms.reminder': 'Reminder',
+    'sms.at': 'at {location}',
+    'sms.gameOn': 'Game on {date}',
+    'sms.separator': ' - ',
   },
 
   'fr-CA': {
@@ -293,6 +308,21 @@ const translations: Translations = {
     'matchInterest.disclaimer':
       "Vous recevez ce courriel car vous avez manifesté de l'intérêt pour une partie sur Rallia. Si ce n'était pas vous, ignorez simplement ce courriel.",
     'matchInterest.footerNote': 'Rallia — Trouvez des joueurs, rejoignez des parties, jouez plus',
+
+    // SMS formatter
+    'sms.prefix': 'Rallia : ',
+    'sms.urgent.startingSoon': 'COMMENCE {timeUntil} !',
+    'sms.urgent.startingSoonFallback': 'COMMENCE BIENTÔT !',
+    'sms.urgent.checkInOpen': 'ENREGISTREMENT OUVERT !',
+    'sms.urgent.cancelled': 'ANNULÉ',
+    'sms.youreIn': "C'est confirmé !",
+    'sms.startsIn': 'Commence {timeUntil}',
+    'sms.startsInFallback': 'Commence bientôt',
+    'sms.checkInOpen': 'Enregistrement ouvert',
+    'sms.reminder': 'Rappel',
+    'sms.at': 'à {location}',
+    'sms.gameOn': 'Partie le {date}',
+    'sms.separator': ' — ',
   },
 };
 

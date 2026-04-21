@@ -49,11 +49,9 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
 
   const { data: isModerator } = useIsCommunityModerator(communityId, playerId);
 
-  // Exclude current members, recently added, and current user
-  const excludePlayerIds = useMemo(
-    () => [...currentMemberIds, ...addedMemberIds],
-    [currentMemberIds, addedMemberIds]
-  );
+  // Only pass existing members through the query key; locally-added IDs are
+  // filtered client-side to avoid refetching the whole list on every + tap.
+  const excludePlayerIds = useMemo(() => currentMemberIds, [currentMemberIds]);
 
   // Use paginated player search hook
   const { players, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = usePlayerSearch({
@@ -64,6 +62,11 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
     pageSize: 50,
     enabled: !!selectedSport?.id && !!playerId,
   });
+
+  const visiblePlayers = useMemo(
+    () => players.filter(p => !addedMemberIds.includes(p.id)),
+    [players, addedMemberIds]
+  );
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -296,7 +299,7 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
         {/* Results */}
         {isLoading ? (
           renderPlayerSkeleton()
-        ) : players.length === 0 ? (
+        ) : visiblePlayers.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="people-outline" size={48} color={colors.textMuted} />
             <Text style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
@@ -305,7 +308,7 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
           </View>
         ) : (
           <FlatList
-            data={players}
+            data={visiblePlayers}
             renderItem={renderPlayerItem}
             keyExtractor={item => item.id}
             showsVerticalScrollIndicator={false}
