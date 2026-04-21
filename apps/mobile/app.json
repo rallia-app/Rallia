@@ -3,11 +3,11 @@
     "name": "Rallia",
     "slug": "rallia-app",
     "owner": "rallia-app",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "entryPoint": "./index.ts",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "backgroundColor": "#fafafa",
     "statusBar": {
       "style": "dark"
@@ -158,8 +158,11 @@
         {
           "backgroundColor": "#fafafa",
           "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
           "dark": {
-            "backgroundColor": "#0a0a0a"
+            "backgroundColor": "#0a0a0a",
+            "image": "./assets/splash-icon-dark.png"
           }
         }
       ]

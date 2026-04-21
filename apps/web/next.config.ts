@@ -29,6 +29,40 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: '/:locale/beta',
+        destination: '/:locale',
+        permanent: false,
+      },
+      {
+        source: '/beta',
+        destination: '/',
+        permanent: false,
+      },
+      {
+        source: '/:locale/waitlist',
+        destination: '/:locale',
+        permanent: false,
+      },
+      {
+        source: '/waitlist',
+        destination: '/',
+        permanent: false,
+      },
+      {
+        source: '/:locale/winter',
+        destination: '/:locale',
+        permanent: false,
+      },
+      {
+        source: '/winter',
+        destination: '/',
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {

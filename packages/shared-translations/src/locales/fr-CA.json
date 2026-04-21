@@ -130,9 +130,6 @@
     "benefitCreateGames": "Crée et rejoins des parties alignées avec ton niveau et tes attentes",
     "benefitJoinCommunity": "Explore les disponibilités et réserve 10x plus vite les terrains du grand Montréal"
   },
-  "splash": {
-    "slogan": "Ta prochaine partie t'attend."
-  },
   "navigation": {
     "home": "Accueil",
     "matches": "Matchs",
@@ -8414,6 +8411,23 @@
     "noticeTitle": "Bienvenue dans la bêta de Rallia !",
     "noticeMessage": "Vous utilisez une version préliminaire de Rallia. Certains joueurs et matchs peuvent être simulés pour vous permettre d'explorer l'application. Les installations et terrains, par contre, sont réels et exacts. Les disponibilités des terrains publics à travers Montréal seront progressivement ajoutées au cours des prochaines semaines — certaines sont déjà disponibles dans l'application !",
     "noticeDismiss": "Compris !"
+  },
+  "launch": {
+    "bannerPrefix": "Lancement public dans",
+    "bannerSuffix": "— télécharger l'app",
+    "bannerCta": "Télécharger l'app",
+    "dismissLabel": "Ignorer",
+    "days": "j",
+    "hours": "h",
+    "minutes": "m",
+    "seconds": "s",
+    "mobileTitle": "Rallia arrive samedi",
+    "mobileSubtitle": "En ligne dans",
+    "daysLabel": "Jours",
+    "hoursLabel": "Heures",
+    "minutesLabel": "Minutes",
+    "secondsLabel": "Secondes",
+    "earlyAccessPitch": "Accès anticipé — devenez bêta-testeur dès aujourd'hui"
   },
   "playerInterest": {
     "title": "Jouez gratuitement - Rallia",

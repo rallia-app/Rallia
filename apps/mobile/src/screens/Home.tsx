@@ -80,6 +80,7 @@ import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
 import ProfileCompletionBanner from '../features/profile/components/ProfileCompletionBanner';
 import { SuggestionsFeedSection } from '../components/SuggestionsFeedSection';
 import BillingIssueBanner from '../components/BillingIssueBanner';
+import LaunchCountdownBanner from '../components/LaunchCountdownBanner';
 import { useSubscription } from '../context';
 
 /** Dismissible banner alerting the player to unread notifications in another sport */
@@ -1024,6 +1025,9 @@ const Home = () => {
   // Render list header (welcome section for logged-in users)
   const renderListHeader = useCallback(() => {
     const headerComponents = [];
+
+    // Launch countdown — shown above everything until LAUNCH_MS
+    headerComponents.push(<LaunchCountdownBanner key="launch-countdown" isDark={isDark} />);
 
     if (!session) {
       // Not signed in: show sign-in prompt
