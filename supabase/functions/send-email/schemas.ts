@@ -95,6 +95,28 @@ export const MatchInterestRecordSchema = z.object({
   created_at: z.string(),
 });
 
+// Welcome record schema (from profile onboarding-completion trigger)
+export const WelcomeRecordSchema = z.object({
+  emailType: z.literal('welcome'),
+  user_id: z.string().uuid(),
+  email: z.string().email(),
+  display_name: z
+    .string()
+    .nullable()
+    .optional()
+    .transform(v => v ?? null),
+  first_name: z
+    .string()
+    .nullable()
+    .optional()
+    .transform(v => v ?? null),
+  preferred_locale: z
+    .string()
+    .nullable()
+    .optional()
+    .transform(v => v ?? null),
+});
+
 // Union schema for all email types (raw records from triggers)
 // Using z.union() instead of z.discriminatedUnion() because InvitationRecordSchema
 // uses .refine() which wraps it in ZodEffects
@@ -102,4 +124,5 @@ export const EmailRequestSchema = z.union([
   InvitationRecordSchema,
   NotificationRecordSchema,
   MatchInterestRecordSchema,
+  WelcomeRecordSchema,
 ]);

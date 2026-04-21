@@ -50,14 +50,12 @@ interface CreateCommunityFormProps {
   onSuccess?: (communityId: string) => void;
   onCancel?: () => void;
   containerStyle?: StyleProp<ViewStyle>;
-  bottomInset?: number;
 }
 
 export const CreateCommunityForm: React.FC<CreateCommunityFormProps> = ({
   onSuccess,
   onCancel,
   containerStyle,
-  bottomInset = 0,
 }) => {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
@@ -765,10 +763,7 @@ export const CreateCommunityForm: React.FC<CreateCommunityFormProps> = ({
 
       {/* Footer */}
       <View
-        style={[
-          styles.footer,
-          { borderTopColor: colors.border, paddingBottom: bottomInset + spacingPixels[4] },
-        ]}
+        style={[styles.footer, { borderTopColor: colors.border, paddingBottom: spacingPixels[4] }]}
       >
         <TouchableOpacity
           style={[

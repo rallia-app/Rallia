@@ -63,7 +63,6 @@ import * as Updates from 'expo-updates';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import * as SplashScreen from 'expo-splash-screen';
 import * as SystemUI from 'expo-system-ui';
 import { StatusBar } from 'expo-status-bar';
@@ -79,8 +78,6 @@ import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-
 import AppNavigator from './src/navigation/AppNavigator';
 import { navigationRef } from './src/navigation';
 import { linking } from './src/navigation/linking';
-import { ActionsBottomSheet } from './src/components/ActionsBottomSheet';
-import { FeedbackSheet } from './src/components/FeedbackSheet';
 import BetaNoticeModal from './src/components/BetaNoticeModal';
 import {
   ThemeProvider,
@@ -148,7 +145,6 @@ import {
 
 // Import NativeWind global styles
 // import './global.css';
-import MatchDetailSheet from './src/components/MatchDetailSheet';
 
 // Connect React Query's focusManager to React Native's AppState.
 // When the app returns from background, stale queries automatically refetch.
@@ -691,12 +687,6 @@ function AppContent() {
           <Sheets />
           <AppNavigator />
         </SheetProvider>
-        {/* Match Detail Bottom Sheet - shows when match card is pressed */}
-        <MatchDetailSheet />
-        {/* Actions Bottom Sheet - renders above navigation */}
-        <ActionsBottomSheet />
-        {/* Feedback Bottom Sheet - shows when providing post-match feedback */}
-        <FeedbackSheet />
       </NavigationContainer>
 
       {/* Deep Link Handler - opens match detail sheet when a deep link is received */}
@@ -778,9 +768,7 @@ function App() {
                                               }
                                               merchantIdentifier="merchant.com.rallia"
                                             >
-                                              <BottomSheetModalProvider>
-                                                <AppContent />
-                                              </BottomSheetModalProvider>
+                                              <AppContent />
                                             </StripeProvider>
                                           </FeedbackReportSheetProvider>
                                         </FeedbackSheetProvider>

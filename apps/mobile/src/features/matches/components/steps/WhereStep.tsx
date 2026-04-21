@@ -17,14 +17,11 @@ import {
   Animated,
   Keyboard,
   Platform,
+  TextInput,
 } from 'react-native';
 import { UseFormReturn, useWatch } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
-import {
-  BottomSheetTextInput,
-  BottomSheetScrollView,
-  type BottomSheetScrollViewMethods,
-} from '@gorhom/bottom-sheet';
+import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { Text, LocationSelector } from '@rallia/shared-components';
 import { SearchBar } from '../../../../components/SearchBar';
 import { spacingPixels, radiusPixels, accent, secondary } from '@rallia/design-system';
@@ -695,7 +692,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFacility, setSelectedFacility] = useState<FacilitySearchResult | null>(null);
   const [bookedCourtNumber, setBookedCourtNumber] = useState<number | null>(null);
-  const scrollViewRef = useRef<BottomSheetScrollViewMethods>(null);
+  const scrollViewRef = useRef<any>(null);
   const facilitySearchRef = useRef<View>(null);
   const placeSearchRef = useRef<View>(null);
 
@@ -1368,7 +1365,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   ]);
 
   return (
-    <BottomSheetScrollView
+    <SheetScrollView
       ref={scrollViewRef}
       style={styles.container}
       contentContainerStyle={[
@@ -1453,7 +1450,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                     onChangeText={setSearchQuery}
                     placeholder={t('matchCreation.fields.facilityPlaceholder')}
                     colors={colors}
-                    InputComponent={BottomSheetTextInput}
+                    InputComponent={TextInput}
                     onFocus={() => setFocusedField('facility')}
                     containerStyle={styles.compactSearchContainer}
                   />
@@ -1528,7 +1525,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                   }}
                   placeholder={t('matchCreation.fields.searchLocationPlaceholder')}
                   colors={colors}
-                  InputComponent={BottomSheetTextInput}
+                  InputComponent={TextInput}
                   onFocus={() => setFocusedField('place')}
                   borderColor={errors.locationName ? '#ef4444' : undefined}
                 />
@@ -1625,7 +1622,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         confirmLabel={t('matchCreation.booking.iBookedThisCourt')}
         cancelLabel={t('matchCreation.booking.notYet')}
       />
-    </BottomSheetScrollView>
+    </SheetScrollView>
   );
 };
 

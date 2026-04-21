@@ -7,7 +7,7 @@
 
 import React, { useRef, useEffect, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity, TextInput, Pressable, Platform } from 'react-native';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import type { TranslationKey } from '@rallia/shared-translations';
@@ -96,7 +96,7 @@ export const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
   const canVerify = isCodeComplete && !isLoading;
 
   return (
-    <BottomSheetScrollView
+    <SheetScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
@@ -202,7 +202,7 @@ export const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
           {t('common.continue')}
         </Text>
       </TouchableOpacity>
-    </BottomSheetScrollView>
+    </SheetScrollView>
   );
 };
 

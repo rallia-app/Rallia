@@ -22,7 +22,7 @@ import {
   UIManager,
   Animated,
 } from 'react-native';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast, Button } from '@rallia/shared-components';
@@ -75,7 +75,6 @@ interface ShareLinkStepProps {
   leaderboard: ReferralLeaderboardEntry[];
   myRank: ContestRank | null;
   playerId: string | undefined;
-  bottomInset: number;
 }
 
 // ============================================================================
@@ -353,7 +352,6 @@ export const ShareLinkStep: React.FC<ShareLinkStepProps> = ({
   leaderboard,
   myRank,
   playerId,
-  bottomInset,
 }) => {
   const toast = useToast();
   const { selectedSport } = useSport();
@@ -438,7 +436,6 @@ export const ShareLinkStep: React.FC<ShareLinkStepProps> = ({
           colors={colors}
           isDark={isDark}
           t={t}
-          bottomInset={bottomInset}
           listHeader={
             <TabHeader {...sharedHeaderProps} description={t('referral.contacts.description')} />
           }
@@ -446,14 +443,14 @@ export const ShareLinkStep: React.FC<ShareLinkStepProps> = ({
       </View>
 
       {/* Code / QR panel — always mounted */}
-      <BottomSheetScrollView
+      <SheetScrollView
         style={[styles.flex, activeTab === 'contacts' && styles.hidden]}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
         <TabHeader {...sharedHeaderProps} description={t('referral.shareLinkDescription')} />
-        <View style={[styles.container, { paddingBottom: spacingPixels[6] + bottomInset }]}>
+        <View style={[styles.container, { paddingBottom: spacingPixels[6] }]}>
           {activeTab === 'qr' ? (
             <View style={[styles.qrContainer, { backgroundColor: colors.buttonInactive }]}>
               {referralLink && (
@@ -546,7 +543,7 @@ export const ShareLinkStep: React.FC<ShareLinkStepProps> = ({
             )}
           </View>
         </View>
-      </BottomSheetScrollView>
+      </SheetScrollView>
     </View>
   );
 };

@@ -29,9 +29,8 @@ import {
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import MapView, { Marker } from 'react-native-maps';
 import { WebView } from 'react-native-webview';
-import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
+import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
+import { BaseActionSheet } from './BaseActionSheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button, useToast } from '@rallia/shared-components';
 import {
@@ -98,6 +97,7 @@ import { shareMatch } from '../utils';
 import { openInMaps } from '../utils/openInMaps';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import { ConfirmationModal } from './ConfirmationModal';
+import { MatchShareQRModal } from './MatchShareQRModal';
 import { SportIcon } from './SportIcon';
 import RatingBadge from './RatingBadge';
 import ReputationBadge from './ReputationBadge';
@@ -695,7 +695,6 @@ const CheckInButton: React.FC<CheckInButtonProps> = ({
 
 export const MatchDetailSheet: React.FC = () => {
   const {
-    sheetRef,
     closeSheet,
     openSheet,
     selectedMatch,
@@ -713,7 +712,6 @@ export const MatchDetailSheet: React.FC = () => {
   const { code: referralCode } = useReferral(player?.id);
   const { location: locationPermission } = usePermissions();
   const isDark = theme === 'dark';
-  const insets = useSafeAreaInsets();
   const toast = useToast();
   const playerId = player?.id;
   const navigation = useAppNavigation();
@@ -783,6 +781,7 @@ export const MatchDetailSheet: React.FC = () => {
   const acceptRebuttalMutation = useAcceptRebuttalScore();
   const disputeRebuttalMutation = useDisputeRebuttalScore();
   const [showDisputeModal, setShowDisputeModal] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
 
   // Collapse/expand state for pending requests
   const [showAllRequests, setShowAllRequests] = useState(false);
@@ -1077,17 +1076,6 @@ export const MatchDetailSheet: React.FC = () => {
     [themeColors, isDark]
   );
 
-  // Single snap point at 98% - sheet opens directly at this height to ensure footer actions are visible
-  const snapPoints = useMemo(() => ['95%'], []);
-
-  // Backdrop
-  const renderBackdrop = useCallback(
-    (props: BottomSheetBackdropProps) => (
-      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.5} />
-    ),
-    []
-  );
-
   // Handle close sheet with haptic
   const handleCloseSheet = useCallback(() => {
     selectionHaptic();
@@ -1096,26 +1084,31 @@ export const MatchDetailSheet: React.FC = () => {
 
   // Handle register score (from match detail during feedback window)
   // Dismisses the detail sheet while the score sheet is open, then reopens it after
-  const handleRegisterScore = useCallback(() => {
+  const handleRegisterScore = useCallback(async () => {
     if (!selectedMatch) return;
     mediumHaptic();
     const matchRef = selectedMatch;
-    closeSheet();
-    setTimeout(() => {
-      SheetManager.show('register-match-score', {
-        payload: {
-          match: matchRef,
-          onSuccess: async () => {
-            const refreshed = await getMatchWithDetails(matchRef.id);
-            openSheet((refreshed ?? matchRef) as MatchDetailData);
-          },
-          onDismiss: () => {
-            openSheet(matchRef);
-          },
+    await SheetManager.hide('match-detail');
+    SheetManager.show('register-match-score', {
+      payload: {
+        match: matchRef,
+        onSuccess: async () => {
+          const refreshed = await getMatchWithDetails(matchRef.id);
+          openSheet((refreshed ?? matchRef) as MatchDetailData);
         },
-      });
-    }, 100);
-  }, [selectedMatch, closeSheet, openSheet]);
+        onDismiss: () => {
+          openSheet(matchRef);
+        },
+      },
+    });
+  }, [selectedMatch, openSheet]);
+
+  // Open the compact QR + copyable-link modal for in-person invites and paste-anywhere sharing
+  const handleOpenQRModal = useCallback(() => {
+    if (!selectedMatch) return;
+    lightHaptic();
+    setShowQRModal(true);
+  }, [selectedMatch]);
 
   // Handle share - uses rich message with match details and unified invitation link
   const handleShare = useCallback(async () => {
@@ -1162,7 +1155,7 @@ export const MatchDetailSheet: React.FC = () => {
   }, [playerId, selectedMatch, confirmMutation, toast, t, updateSelectedMatch]);
 
   // Handle proposing a different score (rebuttal) - opens score sheet in rebuttal mode
-  const handleProposeRebuttal = useCallback(() => {
+  const handleProposeRebuttal = useCallback(async () => {
     if (!selectedMatch?.result) return;
     const raw = Array.isArray(selectedMatch.result)
       ? selectedMatch.result[0]
@@ -1170,24 +1163,22 @@ export const MatchDetailSheet: React.FC = () => {
     const resObj = raw as { id: string };
     mediumHaptic();
     const matchRef = selectedMatch;
-    closeSheet();
-    setTimeout(() => {
-      SheetManager.show('register-match-score', {
-        payload: {
-          match: matchRef,
-          isRebuttal: true,
-          matchResultId: resObj.id,
-          onSuccess: async () => {
-            const refreshed = await getMatchWithDetails(matchRef.id);
-            openSheet((refreshed ?? matchRef) as MatchDetailData);
-          },
-          onDismiss: () => {
-            openSheet(matchRef);
-          },
+    await SheetManager.hide('match-detail');
+    SheetManager.show('register-match-score', {
+      payload: {
+        match: matchRef,
+        isRebuttal: true,
+        matchResultId: resObj.id,
+        onSuccess: async () => {
+          const refreshed = await getMatchWithDetails(matchRef.id);
+          openSheet((refreshed ?? matchRef) as MatchDetailData);
         },
-      });
-    }, 100);
-  }, [selectedMatch, closeSheet, openSheet]);
+        onDismiss: () => {
+          openSheet(matchRef);
+        },
+      },
+    });
+  }, [selectedMatch, openSheet]);
 
   // Handle accepting a rebuttal score
   const handleAcceptRebuttal = useCallback(async () => {
@@ -1634,19 +1625,9 @@ export const MatchDetailSheet: React.FC = () => {
   // Render nothing if no match is selected
   if (!selectedMatch) {
     return (
-      <BottomSheetModal
-        ref={sheetRef}
-        snapPoints={snapPoints}
-        index={0}
-        enableDynamicSizing={false}
-        backdropComponent={renderBackdrop}
-        enablePanDownToClose
-        onDismiss={handleSheetDismiss}
-        handleIndicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
-        backgroundStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
-      >
+      <BaseActionSheet onSheetClose={handleSheetDismiss}>
         <View style={styles.emptyContent} />
-      </BottomSheetModal>
+      </BaseActionSheet>
     );
   }
 
@@ -2563,17 +2544,7 @@ export const MatchDetailSheet: React.FC = () => {
   const resolvedLongitude = match.facility?.longitude ?? match.custom_longitude;
 
   return (
-    <BottomSheetModal
-      ref={sheetRef}
-      snapPoints={snapPoints}
-      index={0}
-      enableDynamicSizing={false}
-      backdropComponent={renderBackdrop}
-      enablePanDownToClose
-      onDismiss={handleSheetDismiss}
-      handleIndicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
-      backgroundStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
-    >
+    <BaseActionSheet onSheetClose={handleSheetDismiss}>
       {/* Header with sport name, format, and close button */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={styles.headerTop}>
@@ -2624,10 +2595,7 @@ export const MatchDetailSheet: React.FC = () => {
         </View>
       </View>
 
-      <BottomSheetScrollView
-        style={styles.sheetContent}
-        contentContainerStyle={styles.scrollContent}
-      >
+      <SheetScrollView style={styles.sheetContent} contentContainerStyle={styles.scrollContent}>
         {/* Pending Request Banner - shown to requesters with pending status */}
         {hasPendingRequest && !isCreator && (
           <View
@@ -3445,7 +3413,7 @@ export const MatchDetailSheet: React.FC = () => {
                 />
               )}
 
-              {/* Top Player badge - accent (lightest shade) */}
+              {/* Top Player badge - primary (teal) */}
               {(tier === 'topPlayer' || tier === 'mostWanted') && (
                 <Badge
                   label={t(
@@ -3453,18 +3421,18 @@ export const MatchDetailSheet: React.FC = () => {
                       ? 'match.tier.topPlayerPlural'
                       : 'match.tier.topPlayer') as TranslationKey
                   )}
-                  bgColor={isDark ? `${accent[400]}30` : `${accent[500]}15`}
-                  textColor={isDark ? accent[400] : accent[500]}
+                  bgColor={isDark ? `${primary[400]}30` : `${primary[500]}15`}
+                  textColor={isDark ? primary[400] : primary[500]}
                   icon="star"
                 />
               )}
 
-              {/* Court Booked badge - accent (medium shade) */}
+              {/* Court Booked badge - secondary (coral/red) */}
               {(tier === 'mostWanted' || tier === 'readyToPlay') && (
                 <Badge
                   label={t('match.courtStatus.courtBooked')}
-                  bgColor={isDark ? `${accent[500]}30` : `${accent[600]}15`}
-                  textColor={isDark ? accent[500] : accent[600]}
+                  bgColor={isDark ? `${secondary[400]}30` : `${secondary[500]}15`}
+                  textColor={isDark ? secondary[400] : secondary[500]}
                   icon="checkmark-circle"
                 />
               )}
@@ -3706,6 +3674,35 @@ export const MatchDetailSheet: React.FC = () => {
                 style={styles.inviteButtonText}
               >
                 {t('matchDetail.share')}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* QR code + copyable link button - for in-person invites and paste-anywhere sharing */}
+          {startTimeDiffMs >= 0 && !isCancelled && !hasMatchEnded && (
+            <TouchableOpacity
+              style={[
+                styles.invitePlayersButton,
+                {
+                  backgroundColor: isDark ? `${secondary[500]}15` : `${secondary[500]}10`,
+                  borderColor: isDark ? secondary[400] : secondary[500],
+                },
+              ]}
+              onPress={handleOpenQRModal}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="qr-code-outline"
+                size={18}
+                color={isDark ? secondary[400] : secondary[500]}
+              />
+              <Text
+                size="sm"
+                weight="medium"
+                color={isDark ? secondary[400] : secondary[500]}
+                style={styles.inviteButtonText}
+              >
+                {t('matchDetail.qrAndLink')}
               </Text>
             </TouchableOpacity>
           )}
@@ -4427,7 +4424,7 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
             </View>
           </Animated.View>
         )}
-      </BottomSheetScrollView>
+      </SheetScrollView>
 
       {/* Sticky Action Footer */}
       <View
@@ -4436,7 +4433,7 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
           {
             backgroundColor: colors.cardBackground,
             borderTopColor: colors.border,
-            paddingBottom: insets.bottom + spacingPixels[4],
+            paddingBottom: spacingPixels[4],
           },
           needsScoreConfirmAndFeedback && hasTwoScoreActions && { flexDirection: 'column' },
         ]}
@@ -4648,6 +4645,16 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
         isLoading={disputeRebuttalMutation.isPending}
       />
 
+      {/* QR + copy-link Modal */}
+      {selectedMatch && (
+        <MatchShareQRModal
+          visible={showQRModal}
+          onClose={() => setShowQRModal(false)}
+          matchId={selectedMatch.id}
+          referralCode={referralCode}
+        />
+      )}
+
       {/* Badge Info Modal */}
       <Modal
         visible={showBadgeInfo}
@@ -4796,7 +4803,7 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-    </BottomSheetModal>
+    </BaseActionSheet>
   );
 };
 
@@ -4805,13 +4812,6 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
 // =============================================================================
 
 const styles = StyleSheet.create({
-  sheetBackground: {
-    borderTopLeftRadius: radiusPixels['2xl'],
-    borderTopRightRadius: radiusPixels['2xl'],
-  },
-  handleIndicator: {
-    width: spacingPixels[10],
-  },
   // Live indicator styles for ongoing matches
   liveIndicatorContainer: {
     width: 12,

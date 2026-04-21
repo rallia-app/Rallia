@@ -28,7 +28,6 @@ import {
   type ShareChannel,
 } from '@rallia/shared-services';
 import { selectionHaptic, lightHaptic } from '@rallia/shared-utils';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { TranslationKey, TranslationOptions } from '../../../hooks/useTranslation';
 
 // =============================================================================
@@ -80,8 +79,6 @@ export function InviteFromListsStep({
   onShareSuccess,
 }: InviteFromListsStepProps) {
   const toast = useToast();
-  const insets = useSafeAreaInsets();
-
   const [lists, setLists] = useState<SharedContactList[]>([]);
   const [expandedListId, setExpandedListId] = useState<string | null>(null);
   const [listContacts, setListContacts] = useState<Record<string, SharedContact[]>>({});
@@ -498,7 +495,7 @@ export function InviteFromListsStep({
         <View
           style={[
             styles.footer,
-            { borderTopColor: colors.border, paddingBottom: insets.bottom + spacingPixels[4] },
+            { borderTopColor: colors.border, paddingBottom: spacingPixels[4] },
           ]}
         >
           <View style={styles.shareOptions}>

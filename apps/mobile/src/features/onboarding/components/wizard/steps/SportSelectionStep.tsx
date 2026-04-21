@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Spinner } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
@@ -245,7 +245,7 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
   };
 
   return (
-    <BottomSheetScrollView
+    <SheetScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
@@ -327,7 +327,7 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
           );
         })
       )}
-    </BottomSheetScrollView>
+    </SheetScrollView>
   );
 };
 

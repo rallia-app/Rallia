@@ -2958,6 +2958,9 @@
     "shareFormat": "Format: {format}",
     "shareDuration": "Duration: {duration}",
     "shareMinLevel": "Minimum level: {level}",
+    "qrAndLink": "QR & link",
+    "qrModalTitle": "Invite to this match",
+    "qrModalDescription": "Let someone scan the code, or copy the link to paste anywhere",
     "distance": "Distance",
     "away": "away",
     "free": "Free",
@@ -7091,7 +7094,7 @@
         "friend": "Friend or teammate",
         "social": "Social media",
         "appStore": "App Store / Google Play",
-        "event": "Event or tournament",
+        "event": "Poster / Flyer",
         "search": "Web search",
         "other": "Other"
       },
