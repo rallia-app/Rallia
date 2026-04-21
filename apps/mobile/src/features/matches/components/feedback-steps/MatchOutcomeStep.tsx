@@ -6,8 +6,8 @@
  */
 
 import React, { useCallback, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
-import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { View, StyleSheet, TouchableOpacity, ScrollView, TextInput, Image } from 'react-native';
+import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { SportIcon } from '../../../../components/SportIcon';
@@ -569,7 +569,7 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
   );
 
   return (
-    <BottomSheetScrollView
+    <SheetScrollView
       ref={scrollViewRef}
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
@@ -701,7 +701,7 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
           {/* Other reason text input */}
           {cancellationReason === 'other' && (
             <View style={styles.notesContainer}>
-              <BottomSheetTextInput
+              <TextInput
                 style={[
                   styles.notesInput,
                   {
@@ -722,7 +722,7 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
           )}
         </View>
       )}
-    </BottomSheetScrollView>
+    </SheetScrollView>
   );
 };
 

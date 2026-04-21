@@ -30,7 +30,7 @@ const CHANNELS: Array<{ id: string; labelKey: TranslationKey; icon: string }> = 
     labelKey: 'preOnboarding.discovery.options.appStore',
     icon: 'phone-portrait-outline',
   },
-  { id: 'event', labelKey: 'preOnboarding.discovery.options.event', icon: 'trophy-outline' },
+  { id: 'event', labelKey: 'preOnboarding.discovery.options.event', icon: 'document-text-outline' },
   { id: 'search', labelKey: 'preOnboarding.discovery.options.search', icon: 'search-outline' },
   {
     id: 'other',

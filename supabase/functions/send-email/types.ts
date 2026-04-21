@@ -21,7 +21,7 @@ export type InviteSource =
 export type InviteStatus = 'pending' | 'sent' | 'accepted' | 'expired' | 'bounced' | 'cancelled';
 
 // Email type union
-export type EmailType = 'invitation' | 'notification' | 'match_interest';
+export type EmailType = 'invitation' | 'notification' | 'match_interest' | 'welcome';
 
 // Raw database record from Supabase trigger (what we receive)
 export interface InvitationRecord {
@@ -99,6 +99,16 @@ export interface MatchInterestRecord {
   created_at: string;
 }
 
+// Raw record from profile onboarding-completion trigger
+export interface WelcomeRecord {
+  emailType: 'welcome';
+  user_id: string;
+  email: string;
+  display_name: string | null;
+  first_name: string | null;
+  preferred_locale: string | null;
+}
+
 // Processed payload for match interest email rendering
 export interface MatchInterestEmailPayload {
   type: 'match_interest';
@@ -112,8 +122,21 @@ export interface MatchInterestEmailPayload {
   matchUrl: string;
 }
 
+// Processed payload for welcome email rendering
+export interface WelcomeEmailPayload {
+  type: 'welcome';
+  email: string;
+  firstName: string | null;
+  displayName: string | null;
+  openAppUrl: string;
+}
+
 // Discriminated union for all email requests (raw records from triggers)
-export type EmailRequest = InvitationRecord | NotificationRecord | MatchInterestRecord;
+export type EmailRequest =
+  | InvitationRecord
+  | NotificationRecord
+  | MatchInterestRecord
+  | WelcomeRecord;
 
 // Email response types
 export interface EmailSuccessResponse {

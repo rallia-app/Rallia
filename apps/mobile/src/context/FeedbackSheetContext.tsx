@@ -6,8 +6,8 @@
  * It wraps the MatchFeedbackWizard component in a modal presentation.
  */
 
-import React, { createContext, useContext, useRef, useCallback, useState, ReactNode } from 'react';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import React, { createContext, useContext, useCallback, useState, ReactNode } from 'react';
+import { SheetManager } from 'react-native-actions-sheet';
 import type { FeedbackSheetData, OpponentForFeedback } from '@rallia/shared-types';
 
 // =============================================================================
@@ -28,9 +28,6 @@ interface FeedbackSheetContextType {
 
   /** The current feedback data (null when sheet is closed) */
   feedbackData: FeedbackSheetData | null;
-
-  /** Reference to the bottom sheet for direct control if needed */
-  sheetRef: React.RefObject<BottomSheetModal | null>;
 }
 
 // =============================================================================
@@ -48,7 +45,6 @@ interface FeedbackSheetProviderProps {
 }
 
 export const FeedbackSheetProvider: React.FC<FeedbackSheetProviderProps> = ({ children }) => {
-  const sheetRef = useRef<BottomSheetModal>(null);
   const [feedbackData, setFeedbackData] = useState<FeedbackSheetData | null>(null);
 
   /**
@@ -73,7 +69,7 @@ export const FeedbackSheetProvider: React.FC<FeedbackSheetProviderProps> = ({ ch
         opponents,
         alreadyRatedOpponentIds,
       });
-      sheetRef.current?.present();
+      SheetManager.show('feedback');
     },
     []
   );
@@ -82,7 +78,7 @@ export const FeedbackSheetProvider: React.FC<FeedbackSheetProviderProps> = ({ ch
    * Close the sheet and clear the feedback data
    */
   const closeSheet = useCallback(() => {
-    sheetRef.current?.dismiss();
+    SheetManager.hide('feedback');
     // Clear feedback data after a delay to allow dismiss animation
     setTimeout(() => {
       setFeedbackData(null);
@@ -93,7 +89,6 @@ export const FeedbackSheetProvider: React.FC<FeedbackSheetProviderProps> = ({ ch
     openSheet,
     closeSheet,
     feedbackData,
-    sheetRef,
   };
 
   return (

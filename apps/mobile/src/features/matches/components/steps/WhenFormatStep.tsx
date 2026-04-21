@@ -16,11 +16,12 @@ import {
   Pressable,
   FlatList,
   Keyboard,
+  TextInput,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { UseFormReturn } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
-import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
@@ -327,7 +328,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
   };
 
   return (
-    <BottomSheetScrollView
+    <SheetScrollView
       ref={scrollViewRef}
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
@@ -700,7 +701,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
                 },
               ]}
             >
-              <BottomSheetTextInput
+              <TextInput
                 style={[styles.customDurationInput, { color: colors.text }]}
                 value={customDurationMinutes?.toString() ?? ''}
                 onChangeText={text => {
@@ -739,7 +740,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
           </View>
         )}
       </View>
-    </BottomSheetScrollView>
+    </SheetScrollView>
   );
 };
 

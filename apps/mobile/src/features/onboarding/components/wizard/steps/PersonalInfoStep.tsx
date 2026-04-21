@@ -17,14 +17,11 @@ import {
   Keyboard,
   ActivityIndicator,
   LayoutAnimation,
+  TextInput,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import {
-  BottomSheetTextInput,
-  BottomSheetScrollView,
-  type BottomSheetScrollViewMethods,
-} from '@gorhom/bottom-sheet';
+import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { PhoneInput } from '../../../../../components/PhoneInput';
@@ -114,7 +111,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
   const [usernameCheckTimeout, setUsernameCheckTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Refs for keyboard visibility handling
-  const scrollViewRef = useRef<BottomSheetScrollViewMethods>(null);
+  const scrollViewRef = useRef<any>(null);
   const firstNameFieldRef = useRef<View>(null);
   const lastNameFieldRef = useRef<View>(null);
   const usernameFieldRef = useRef<View>(null);
@@ -394,7 +391,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
   }, []);
 
   return (
-    <BottomSheetScrollView
+    <SheetScrollView
       ref={scrollViewRef}
       style={styles.container}
       contentContainerStyle={[
@@ -443,7 +440,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
           {t('onboarding.personalInfoStep.firstName')}{' '}
           <Text color={colors.error}>{t('onboarding.personalInfoStep.required')}</Text>
         </Text>
-        <BottomSheetTextInput
+        <TextInput
           placeholder={t('onboarding.personalInfoStep.firstNamePlaceholder')}
           placeholderTextColor={colors.textMuted}
           value={formData.firstName}
@@ -478,7 +475,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
           {t('onboarding.personalInfoStep.lastName')}{' '}
           <Text color={colors.error}>{t('onboarding.personalInfoStep.required')}</Text>
         </Text>
-        <BottomSheetTextInput
+        <TextInput
           placeholder={t('onboarding.personalInfoStep.lastNamePlaceholder')}
           placeholderTextColor={colors.textMuted}
           value={formData.lastName}
@@ -514,7 +511,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
           <Text color={colors.error}>{t('onboarding.personalInfoStep.required')}</Text>
         </Text>
         <View style={styles.inputWithStatus}>
-          <BottomSheetTextInput
+          <TextInput
             placeholder={t('onboarding.personalInfoStep.usernamePlaceholder')}
             placeholderTextColor={colors.textMuted}
             value={formData.username}
@@ -722,7 +719,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
           }}
           onFocus={() => scrollToField('phoneNumber')}
           onBlur={handlePhoneNumberBlur}
-          TextInputComponent={BottomSheetTextInput}
+          TextInputComponent={TextInput}
         />
         {fieldErrors.phoneNumber && (
           <Text size="xs" color={colors.error} style={styles.errorText}>
@@ -749,7 +746,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
         </TouchableOpacity>
         {showReferralCode && (
           <View style={styles.referralInputRow}>
-            <BottomSheetTextInput
+            <TextInput
               placeholder={t('referral.enterCode')}
               placeholderTextColor={colors.textMuted}
               value={referralCode}
@@ -802,7 +799,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
           </Text>
         )}
       </View>
-    </BottomSheetScrollView>
+    </SheetScrollView>
   );
 };
 

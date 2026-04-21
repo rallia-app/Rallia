@@ -16,12 +16,12 @@ import {
   Keyboard,
   Platform,
   ScrollView,
+  TextInput,
 } from 'react-native';
 import { ScrollView as GestureScrollView } from 'react-native-gesture-handler';
 import { UseFormReturn } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
@@ -407,7 +407,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
   }, [isLoadingRatings, ratingLayoutsReady, ratingScores, minRatingScoreId, ratingScrollViewWidth]);
 
   return (
-    <BottomSheetScrollView
+    <SheetScrollView
       ref={scrollViewRef}
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
@@ -589,7 +589,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
               <Text size="base" weight="medium" color={colors.textMuted}>
                 $
               </Text>
-              <BottomSheetTextInput
+              <TextInput
                 style={[styles.costInput, { color: colors.text }]}
                 value={estimatedCost?.toString() ?? ''}
                 onChangeText={text => {
@@ -958,7 +958,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
           {t('matchCreation.fields.notes')}
         </Text>
-        <BottomSheetTextInput
+        <TextInput
           style={[
             styles.notesInput,
             {
@@ -981,7 +981,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           {notes?.length ?? 0}/500
         </Text>
       </View>
-    </BottomSheetScrollView>
+    </SheetScrollView>
   );
 };
 

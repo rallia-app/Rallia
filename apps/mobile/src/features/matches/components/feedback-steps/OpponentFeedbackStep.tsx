@@ -6,8 +6,8 @@
  */
 
 import React, { useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { View, StyleSheet, TouchableOpacity, TextInput, Image } from 'react-native';
+import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
@@ -213,7 +213,7 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
   const avatarUrl = opponent.avatarUrl ? getProfilePictureUrl(opponent.avatarUrl) : null;
 
   return (
-    <BottomSheetScrollView
+    <SheetScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
@@ -317,7 +317,7 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.fieldLabel}>
           {t('matchFeedback.opponentStep.comments')}
         </Text>
-        <BottomSheetTextInput
+        <TextInput
           style={[
             styles.commentsInput,
             {
@@ -348,7 +348,7 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
           </Text>
         </TouchableOpacity>
       )}
-    </BottomSheetScrollView>
+    </SheetScrollView>
   );
 };
 

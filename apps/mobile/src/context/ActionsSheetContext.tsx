@@ -15,13 +15,12 @@
 import React, {
   createContext,
   useContext,
-  useRef,
   useCallback,
   useState,
   useEffect,
   ReactNode,
 } from 'react';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { SheetManager } from 'react-native-actions-sheet';
 import { useProfile } from '@rallia/shared-hooks';
 import { useAuth } from './AuthContext';
 import type { MatchDetailData } from './MatchDetailSheetContext';
@@ -60,12 +59,6 @@ interface ActionsSheetContextType {
 
   /** Directly set the content mode (used for transitions like auth → onboarding) */
   setContentMode: (mode: ActionsSheetMode) => void;
-
-  /** Snap to a specific index (0 = first snap point, 1 = second, etc.) */
-  snapToIndex: (index: number) => void;
-
-  /** Reference to the bottom sheet for direct control if needed */
-  sheetRef: React.RefObject<BottomSheetModal | null>;
 
   /** Refresh the profile data (call after onboarding completes to update state) */
   refreshProfile: () => Promise<void>;
@@ -120,7 +113,6 @@ interface ActionsSheetProviderProps {
 }
 
 export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ children }) => {
-  const sheetRef = useRef<BottomSheetModal>(null);
   const { session } = useAuth();
   const { profile, loading: profileLoading, refetch } = useProfile();
 
@@ -200,7 +192,7 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
     setShouldOpenInvitePlayers(false);
     const mode = computeInitialMode();
     setContentMode(mode);
-    sheetRef.current?.present();
+    SheetManager.show('main-actions');
   }, [computeInitialMode]);
 
   /**
@@ -212,7 +204,7 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
     setShouldOpenInvitePlayers(false);
     setInitialBookingForWizard(null);
     setContentMode('actions'); // Always show actions mode when editing
-    sheetRef.current?.present();
+    SheetManager.show('main-actions');
   }, []);
 
   /**
@@ -226,7 +218,7 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
       setContentMode(mode);
       setShouldOpenMatchCreation(false);
       setInitialBookingForWizard(null);
-      sheetRef.current?.present();
+      SheetManager.show('main-actions');
       return;
     }
 
@@ -235,7 +227,7 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
     setInitialBookingForWizard(null);
     setShouldOpenMatchCreation(true);
     setContentMode('actions');
-    sheetRef.current?.present();
+    SheetManager.show('main-actions');
   }, [computeInitialMode]);
 
   /**
@@ -254,14 +246,14 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
         setContentMode(mode);
         setShouldOpenMatchCreation(false);
         setInitialBookingForWizard(null);
-        sheetRef.current?.present();
+        SheetManager.show('main-actions');
         return;
       }
       setEditMatchData(null);
       setInitialBookingForWizard(data);
       setShouldOpenMatchCreation(true);
       setContentMode('actions');
-      sheetRef.current?.present();
+      SheetManager.show('main-actions');
     },
     [computeInitialMode]
   );
@@ -276,7 +268,7 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
     if (mode !== 'actions') {
       setContentMode(mode);
       setShouldOpenInvitePlayers(false);
-      sheetRef.current?.present();
+      SheetManager.show('main-actions');
       return;
     }
 
@@ -286,7 +278,7 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
     setShouldOpenMatchCreation(false);
     setShouldOpenInvitePlayers(true);
     setContentMode('actions');
-    sheetRef.current?.present();
+    SheetManager.show('main-actions');
   }, [computeInitialMode]);
 
   /**
@@ -321,18 +313,11 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
    * Close the sheet
    */
   const closeSheet = useCallback(() => {
-    sheetRef.current?.dismiss();
+    SheetManager.hide('main-actions');
     // Clear edit data after a delay to allow dismiss animation
     setTimeout(() => {
       setEditMatchData(null);
     }, 300);
-  }, []);
-
-  /**
-   * Snap to a specific index
-   */
-  const snapToIndex = useCallback((index: number) => {
-    sheetRef.current?.snapToIndex(index);
   }, []);
 
   /**
@@ -350,8 +335,6 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
     closeSheet,
     contentMode,
     setContentMode,
-    snapToIndex,
-    sheetRef,
     refreshProfile,
     editMatchData,
     clearEditMatch,

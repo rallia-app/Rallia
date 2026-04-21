@@ -12,7 +12,6 @@ import { Text } from '@rallia/shared-components';
 import { lightTheme, darkTheme, spacingPixels, primary, neutral } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useTheme } from '@rallia/shared-hooks';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation, type TranslationKey } from '../../../hooks/useTranslation';
 
 import { CreateListForm } from './CreateListModal';
@@ -89,7 +88,6 @@ export const CreateShareListWizard: React.FC<CreateShareListWizardProps> = ({
 }) => {
   const { theme } = useTheme();
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
   const isDark = theme === 'dark';
 
   const themeColors = isDark ? darkTheme : lightTheme;
@@ -108,11 +106,7 @@ export const CreateShareListWizard: React.FC<CreateShareListWizardProps> = ({
   return (
     <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
       <Header onBackToLanding={onBackToLanding} onClose={onClose} t={t} colors={colors} />
-      <CreateListForm
-        onSuccess={onSuccess}
-        onCancel={onBackToLanding}
-        bottomInset={insets.bottom}
-      />
+      <CreateListForm onSuccess={onSuccess} onCancel={onBackToLanding} />
     </View>
   );
 };

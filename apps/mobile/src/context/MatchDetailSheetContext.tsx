@@ -10,8 +10,8 @@
  * the match was opened from a list that doesn't include the result relation.
  */
 
-import React, { createContext, useContext, useRef, useCallback, useState, ReactNode } from 'react';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import React, { createContext, useContext, useCallback, useState, ReactNode } from 'react';
+import { SheetManager } from 'react-native-actions-sheet';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import { getMatchWithDetails } from '@rallia/shared-services';
 import * as Analytics from '../services/analytics';
@@ -47,9 +47,6 @@ interface MatchDetailSheetContextType {
   /** The currently selected match to display */
   selectedMatch: MatchDetailData | null;
 
-  /** Reference to the bottom sheet for direct control if needed */
-  sheetRef: React.RefObject<BottomSheetModal | null>;
-
   /** Update the selected match */
   updateSelectedMatch: (match: MatchDetailData) => void;
 
@@ -75,9 +72,8 @@ interface MatchDetailSheetProviderProps {
 }
 
 export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> = ({ children }) => {
-  const sheetRef = useRef<BottomSheetModal>(null);
-  const onMatchRemovedRef = useRef<(() => void) | null>(null);
-  const onDismissRef = useRef<(() => void) | null>(null);
+  const onMatchRemovedRef = React.useRef<(() => void) | null>(null);
+  const onDismissRef = React.useRef<(() => void) | null>(null);
   const [selectedMatch, setSelectedMatch] = useState<MatchDetailData | null>(null);
 
   /**
@@ -92,7 +88,7 @@ export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> =
       onMatchRemovedRef.current = options?.onMatchRemoved ?? null;
       onDismissRef.current = options?.onDismiss ?? null;
       setSelectedMatch(match);
-      sheetRef.current?.present();
+      SheetManager.show('match-detail');
       const hasResult = Array.isArray(match.result)
         ? (match.result?.length ?? 0) > 0
         : !!match.result;
@@ -115,7 +111,7 @@ export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> =
    * which fires after the dismiss animation completes.
    */
   const closeSheet = useCallback(() => {
-    sheetRef.current?.dismiss();
+    SheetManager.hide('match-detail');
   }, []);
 
   /**
@@ -141,7 +137,6 @@ export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> =
     openSheet,
     closeSheet,
     selectedMatch,
-    sheetRef,
     updateSelectedMatch,
     handleSheetDismiss,
     onMatchRemovedRef,

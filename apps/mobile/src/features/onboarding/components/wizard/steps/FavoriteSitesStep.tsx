@@ -9,8 +9,8 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native';
+import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
@@ -459,7 +459,7 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
   };
 
   return (
-    <BottomSheetScrollView
+    <SheetScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
@@ -542,7 +542,7 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
           onChangeText={setSearchQuery}
           placeholder={t('onboarding.favoriteSitesStep.searchPlaceholder')}
           colors={colors}
-          InputComponent={BottomSheetTextInput}
+          InputComponent={TextInput}
         />
       </View>
 
@@ -573,7 +573,7 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
           renderEmptyState()
         )}
       </View>
-    </BottomSheetScrollView>
+    </SheetScrollView>
   );
 };
 

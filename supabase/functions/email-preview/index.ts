@@ -12,8 +12,13 @@ import { renderOrgEmail } from '../send-notification/templates/organization.ts';
 import { renderInvitationEmail } from '../send-email/templates/invitation.ts';
 import { renderNotificationEmail } from '../send-email/templates/notification.ts';
 import { renderMatchInterestEmail } from '../send-email/templates/match-interest.ts';
+import { renderWelcomeEmail } from '../send-email/templates/welcome.ts';
 import type { NotificationRecord, OrganizationInfo } from '../send-notification/types.ts';
-import type { InvitationEmailPayload, NotificationEmailPayload } from '../send-email/types.ts';
+import type {
+  InvitationEmailPayload,
+  NotificationEmailPayload,
+  WelcomeEmailPayload,
+} from '../send-email/types.ts';
 
 // Auth templates inlined as string constants — file reading doesn't work in the
 // compiled Deno edge runtime since it runs from /var/tmp/sb-compile-edge-runtime/
@@ -1073,6 +1078,23 @@ const TEMPLATES: TemplateEntry[] = [
         location: 'Parc La Fontaine, Montreal',
         matchUrl: `${PREVIEW_SITE_URL}/${locale.startsWith('fr') ? 'fr-CA' : 'en-US'}/match/match-abc-123?src=email`,
       }).html,
+  },
+
+  // ---- Welcome (post-onboarding) ----
+  {
+    id: 'welcome',
+    label: 'Welcome: Onboarding Complete',
+    category: 'Onboarding',
+    render: locale => {
+      const payload: WelcomeEmailPayload = {
+        type: 'welcome',
+        email: 'newplayer@example.com',
+        firstName: 'Alex',
+        displayName: 'alex_plays',
+        openAppUrl: PREVIEW_SITE_URL,
+      };
+      return renderWelcomeEmail(payload, locale).html;
+    },
   },
 
   // ---- Org notifications (via renderOrgEmail) ----

@@ -120,6 +120,7 @@ const styles = StyleSheet.create({
   sheetBackground: {
     borderTopLeftRadius: radiusPixels['2xl'],
     borderTopRightRadius: radiusPixels['2xl'],
+    overflow: 'hidden',
   },
   sheetFlex: {
     flex: 1,

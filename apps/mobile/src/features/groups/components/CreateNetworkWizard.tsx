@@ -20,7 +20,6 @@ import {
 } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useTheme } from '@rallia/shared-hooks';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation, type TranslationKey } from '../../../hooks/useTranslation';
 
 import { CreateGroupForm } from './CreateGroupModal';
@@ -181,7 +180,6 @@ export const CreateNetworkWizard: React.FC<CreateNetworkWizardProps> = ({
 }) => {
   const { theme } = useTheme();
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
   const isDark = theme === 'dark';
 
   const [selectedType, setSelectedType] = useState<NetworkType>('group');
@@ -233,14 +231,12 @@ export const CreateNetworkWizard: React.FC<CreateNetworkWizardProps> = ({
           key={`group-${formKey}`}
           onSuccess={handleGroupSuccess}
           onCancel={onBackToLanding}
-          bottomInset={insets.bottom}
         />
       ) : (
         <CreateCommunityForm
           key={`community-${formKey}`}
           onSuccess={handleCommunitySuccess}
           onCancel={onBackToLanding}
-          bottomInset={insets.bottom}
         />
       )}
     </View>
