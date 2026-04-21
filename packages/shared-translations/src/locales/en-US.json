@@ -130,9 +130,6 @@
     "benefitCreateGames": "Create and join games that match your level and expectations",
     "benefitJoinCommunity": "Explore availabilities and book courts across Greater Montreal 10x faster"
   },
-  "splash": {
-    "slogan": "Play More, Plan Less."
-  },
   "navigation": {
     "home": "Home",
     "matches": "Games",
@@ -8412,6 +8409,23 @@
     "noticeTitle": "Welcome to the Rallia Beta!",
     "noticeMessage": "You're using an early version of Rallia. Some players and games you see may be simulated to help you explore the app. Facilities and courts, however, are real and accurate. Court availabilities from public facilities across Montreal will progressively become available over the next few weeks — some are already live in the app!",
     "noticeDismiss": "Got it!"
+  },
+  "launch": {
+    "bannerPrefix": "Public launch in",
+    "bannerSuffix": "— download the app",
+    "bannerCta": "Download the app",
+    "dismissLabel": "Dismiss",
+    "days": "d",
+    "hours": "h",
+    "minutes": "m",
+    "seconds": "s",
+    "mobileTitle": "Rallia launches Saturday",
+    "mobileSubtitle": "Going live in",
+    "daysLabel": "Days",
+    "hoursLabel": "Hours",
+    "minutesLabel": "Minutes",
+    "secondsLabel": "Seconds",
+    "earlyAccessPitch": "Get early access — be a beta user today"
   },
   "playerInterest": {
     "title": "Play for Free - Rallia",

@@ -1238,12 +1238,44 @@ textarea:focus-visible {
   background-size: 300% 100%;
 }
 
+/* Launch countdown floating card */
+@keyframes launch-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateY(32px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes bounce-subtle-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-launch-slide-in {
+  animation: launch-slide-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-bounce-subtle-y {
+  animation: bounce-subtle-y 2.4s ease-in-out infinite;
+}
+
 /* Respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .animate-float,
   .animate-float-delayed,
   .animate-float-slow,
-  .animate-pulse-subtle {
+  .animate-pulse-subtle,
+  .animate-launch-slide-in,
+  .animate-bounce-subtle-y {
     animation: none;
   }
 

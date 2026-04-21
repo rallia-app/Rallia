@@ -6,8 +6,6 @@
  * - Bottom Tabs: Home, Courts, Actions (opens sheet), Community, Chat
  * - Each tab has a minimal stack with only tab-specific screens
  * - Shared screens (UserProfile, Settings, etc.) are in Root Stack for full-screen experience
- *
- * Note: Splash animation is handled by SplashOverlay component in App.tsx
  */
 
 import React, { useEffect, useMemo } from 'react';
@@ -59,7 +57,6 @@ import { useAppNavigation } from './hooks';
 import { spacingPixels, fontSizePixels, neutral } from '@rallia/design-system';
 import ProfileCompletionRing from '../features/profile/components/ProfileCompletionRing';
 import { getTierColors } from '../features/profile/completionTierColors';
-import BetaBadge from '../components/BetaBadge';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type {
   NativeStackNavigationProp,
@@ -494,10 +491,7 @@ function MainTabHeader() {
             paddingBottom: 4,
           }}
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <ThemeLogo width={100} height={30} />
-            <BetaBadge isDark={isDark} />
-          </View>
+          <ThemeLogo width={100} height={30} />
         </View>
         <HeaderRightButtons />
       </View>
