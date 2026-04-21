@@ -10,6 +10,7 @@ import { useCallback } from 'react';
 import { Linking } from 'react-native';
 import type { FormattedSlot, CourtOption } from '@rallia/shared-hooks';
 import { Logger } from '@rallia/shared-services';
+
 import { usePendingExternalBooking } from '../context/PendingExternalBookingContext';
 
 interface FacilityForBooking {
@@ -26,13 +27,15 @@ interface OpenExternalBookingParams {
   selectedCourt?: CourtOption;
   /** Override the booking URL (e.g. when resolved from court selection) */
   bookingUrl?: string;
+  /** When set, the confirmation flow will update this match instead of opening the match creation wizard */
+  matchId?: string;
 }
 
 export function useOpenExternalBooking() {
   const { setPendingBooking } = usePendingExternalBooking();
 
   const openExternalBooking = useCallback(
-    async ({ facility, slot, selectedCourt, bookingUrl }: OpenExternalBookingParams) => {
+    async ({ facility, slot, selectedCourt, bookingUrl, matchId }: OpenExternalBookingParams) => {
       // Resolve booking URL
       const url =
         bookingUrl ||
@@ -47,7 +50,7 @@ export function useOpenExternalBooking() {
         if (!canOpen) return false;
 
         // Store pending booking context before leaving the app
-        setPendingBooking({ facility, slot, selectedCourt });
+        setPendingBooking({ facility, slot, selectedCourt, matchId });
 
         Logger.logUserAction('external_booking_opened', {
           facilityId: facility.id,
@@ -55,6 +58,7 @@ export function useOpenExternalBooking() {
           slotTime: slot.time,
           bookingUrl: url,
           courtName: selectedCourt?.courtName,
+          matchId,
         });
 
         await Linking.openURL(url);

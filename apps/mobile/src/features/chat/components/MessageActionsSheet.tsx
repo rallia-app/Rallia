@@ -20,7 +20,7 @@ import {
   status,
   radiusPixels,
 } from '@rallia/design-system';
-import { EmojiReactionPicker } from './EmojiReactionPicker';
+import { COMMON_REACTIONS } from '@rallia/shared-services';
 
 type ActionItem = {
   id: string;
@@ -38,7 +38,6 @@ function MessageActionsSheetComponent({ payload }: SheetProps<'message-actions'>
   const onEdit = payload?.onEdit;
   const onDelete = payload?.onDelete;
   const onReact = payload?.onReact;
-  const messageY = payload?.messageY;
 
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
@@ -73,25 +72,16 @@ function MessageActionsSheetComponent({ payload }: SheetProps<'message-actions'>
 
   const handleShowEmojiPicker = useCallback(() => {
     setShowEmojiPicker(true);
-    // Don't hide the sheet - just show emoji picker on top
-    // The sheet content will be hidden when showEmojiPicker is true
   }, []);
 
   const handleEmojiSelect = useCallback(
     (emoji: string) => {
       setShowEmojiPicker(false);
       onReact?.(emoji);
-      // Close the sheet after selecting an emoji
       SheetManager.hide('message-actions');
     },
     [onReact]
   );
-
-  const handleCloseEmojiPicker = useCallback(() => {
-    setShowEmojiPicker(false);
-    // Close the entire sheet when emoji picker is dismissed
-    SheetManager.hide('message-actions');
-  }, []);
 
   const actions: ActionItem[] = [
     {
@@ -135,30 +125,32 @@ function MessageActionsSheetComponent({ payload }: SheetProps<'message-actions'>
   if (!message) return null;
 
   return (
-    <>
-      <ActionSheet
-        gestureEnabled={!showEmojiPicker}
-        containerStyle={[
-          styles.sheetBackground,
-          { backgroundColor: colors.cardBackground },
-          // Hide sheet content when emoji picker is shown
-          showEmojiPicker && { height: 0, opacity: 0 },
-        ]}
-        indicatorStyle={[
-          styles.handleIndicator,
-          { backgroundColor: colors.border },
-          showEmojiPicker && { opacity: 0 },
-        ]}
-      >
-        <View style={styles.sheet}>
-          {/* Message Preview */}
-          <View style={[styles.preview, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.previewText, { color: colors.textMuted }]} numberOfLines={2}>
-              {message.content}
-            </Text>
-          </View>
+    <ActionSheet
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    >
+      <View style={styles.sheet}>
+        {/* Message Preview */}
+        <View style={[styles.preview, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.previewText, { color: colors.textMuted }]} numberOfLines={2}>
+            {message.content}
+          </Text>
+        </View>
 
-          {/* Actions */}
+        {showEmojiPicker ? (
+          <View style={styles.emojiRow}>
+            {COMMON_REACTIONS.map(emoji => (
+              <TouchableOpacity
+                key={emoji}
+                style={styles.emojiButton}
+                onPress={() => handleEmojiSelect(emoji)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.emoji}>{emoji}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
           <View style={styles.actionsContainer}>
             {visibleActions.map((action, index) => (
               <TouchableOpacity
@@ -190,34 +182,22 @@ function MessageActionsSheetComponent({ payload }: SheetProps<'message-actions'>
               </TouchableOpacity>
             ))}
           </View>
+        )}
 
-          {/* Sticky Footer - Cancel */}
-          <View style={[styles.footer, { borderTopColor: colors.border }]}>
-            <TouchableOpacity
-              style={[
-                styles.cancelButton,
-                { backgroundColor: isDark ? neutral[800] : neutral[100] },
-              ]}
-              onPress={handleClose}
-              activeOpacity={0.7}
-            >
-              <Text size="lg" weight="semibold" color={colors.text}>
-                {t('common.cancel')}
-              </Text>
-            </TouchableOpacity>
-          </View>
+        {/* Sticky Footer - Cancel */}
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+          <TouchableOpacity
+            style={[styles.cancelButton, { backgroundColor: isDark ? neutral[800] : neutral[100] }]}
+            onPress={handleClose}
+            activeOpacity={0.7}
+          >
+            <Text size="lg" weight="semibold" color={colors.text}>
+              {t('common.cancel')}
+            </Text>
+          </TouchableOpacity>
         </View>
-      </ActionSheet>
-
-      {/* Emoji Reaction Picker - shown when "Add Reaction" is tapped */}
-      <EmojiReactionPicker
-        visible={showEmojiPicker}
-        onSelect={handleEmojiSelect}
-        onClose={handleCloseEmojiPicker}
-        anchorY={messageY}
-        isOwnMessage={isOwnMessage}
-      />
-    </>
+      </View>
+    </ActionSheet>
   );
 }
 
@@ -279,5 +259,24 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     gap: spacingPixels[2],
+  },
+  emojiRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[4],
+    marginBottom: spacingPixels[3],
+  },
+  emojiButton: {
+    width: 48,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emoji: {
+    fontSize: 30,
+    lineHeight: 38,
+    textAlign: 'center',
   },
 });

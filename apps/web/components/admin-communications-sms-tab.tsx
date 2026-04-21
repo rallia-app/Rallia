@@ -7,7 +7,7 @@ import {
   DEFAULT_PREFERENCES,
   NOTIFICATION_CATEGORIES,
   NOTIFICATION_TYPES_WITH_MESSAGES,
-  MOCK_DATA,
+  getMockData,
   formatSmsPreview,
   getNotificationMessage,
   interpolate,
@@ -22,14 +22,16 @@ import type { Locale } from '@rallia/shared-translations';
 interface SmsPreviewTabProps {
   previewLocale: string;
   category: string;
+  colorMode: 'light' | 'dark';
 }
 
-export function SmsPreviewTab({ previewLocale, category }: SmsPreviewTabProps) {
+export function SmsPreviewTab({ previewLocale, category, colorMode }: SmsPreviewTabProps) {
   const t = useTranslations('admin.communications');
   const tTypes = useTranslations('notifications.types');
   const [smsEnabledOnly, setSmsEnabledOnly] = useState(false);
 
   const items = useMemo(() => {
+    const mock = getMockData(previewLocale as Locale);
     return NOTIFICATION_TYPES_WITH_MESSAGES.filter(type => {
       if (category !== 'all' && NOTIFICATION_CATEGORIES[type] !== category) return false;
       if (smsEnabledOnly && !DEFAULT_PREFERENCES[type].sms) return false;
@@ -39,9 +41,9 @@ export function SmsPreviewTab({ previewLocale, category }: SmsPreviewTabProps) {
         const msg = getNotificationMessage(type, previewLocale as Locale);
         if (!msg) return null;
 
-        const title = interpolate(msg.title, MOCK_DATA);
-        const body = interpolate(msg.body, MOCK_DATA);
-        const sms = formatSmsPreview(type, title, body);
+        const title = interpolate(msg.title, mock);
+        const body = interpolate(msg.body, mock);
+        const sms = formatSmsPreview(type, title, body, previewLocale as Locale);
         const smsEnabled = DEFAULT_PREFERENCES[type].sms;
         const cat = NOTIFICATION_CATEGORIES[type];
 
@@ -57,7 +59,10 @@ export function SmsPreviewTab({ previewLocale, category }: SmsPreviewTabProps) {
   }, [previewLocale, category, smsEnabledOnly]);
 
   return (
-    <div className="space-y-4">
+    <div
+      data-color-mode={colorMode}
+      className="space-y-4 rounded-lg bg-background text-foreground p-3"
+    >
       {/* Filter toggle */}
       <div className="flex items-center gap-2">
         <Switch id="sms-filter" checked={smsEnabledOnly} onCheckedChange={setSmsEnabledOnly} />

@@ -21,6 +21,7 @@ import { SportIcon } from '../../../components/SportIcon';
 export function ExternalBookingActionSheet({ payload }: SheetProps<'external-booking'>) {
   const facility = payload?.facility as FacilityWithDetails;
   const slot = payload?.slot as FormattedSlot;
+  const matchId = (payload as { matchId?: string } | undefined)?.matchId;
 
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
@@ -72,6 +73,7 @@ export function ExternalBookingActionSheet({ payload }: SheetProps<'external-boo
       slot,
       selectedCourt: selectedCourt ?? undefined,
       bookingUrl,
+      matchId,
     });
 
     if (success) {
@@ -89,6 +91,7 @@ export function ExternalBookingActionSheet({ payload }: SheetProps<'external-boo
     toast,
     t,
     openExternalBooking,
+    matchId,
   ]);
 
   // Format date for display

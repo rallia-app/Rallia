@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Moon, Sun } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { EmailPreviewTab } from './admin-communications-email-tab';
@@ -18,6 +19,7 @@ export function AdminCommunicationsView() {
   const [previewLocale, setPreviewLocale] = useState(locale);
   const [activeTab, setActiveTab] = useState('email');
   const [category, setCategory] = useState('all');
+  const [colorMode, setColorMode] = useState<'light' | 'dark'>('light');
 
   return (
     <div className="space-y-4">
@@ -70,6 +72,20 @@ export function AdminCommunicationsView() {
             </SelectContent>
           </Select>
         </div>
+
+        {/* Color mode toggle */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">{t('controls.colorMode')}:</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1.5 text-xs"
+            onClick={() => setColorMode(prev => (prev === 'light' ? 'dark' : 'light'))}
+          >
+            {colorMode === 'dark' ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
+            {colorMode === 'dark' ? t('controls.light') : t('controls.dark')}
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -81,15 +97,19 @@ export function AdminCommunicationsView() {
         </TabsList>
 
         <TabsContent value="email">
-          <EmailPreviewTab previewLocale={previewLocale} category={category} />
+          <EmailPreviewTab
+            previewLocale={previewLocale}
+            category={category}
+            colorMode={colorMode}
+          />
         </TabsContent>
 
         <TabsContent value="push">
-          <PushPreviewTab previewLocale={previewLocale} category={category} />
+          <PushPreviewTab previewLocale={previewLocale} category={category} colorMode={colorMode} />
         </TabsContent>
 
         <TabsContent value="sms">
-          <SmsPreviewTab previewLocale={previewLocale} category={category} />
+          <SmsPreviewTab previewLocale={previewLocale} category={category} colorMode={colorMode} />
         </TabsContent>
       </Tabs>
     </div>

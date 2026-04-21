@@ -27,7 +27,7 @@ import TennisCourtIcon from '../../../../assets/icons/tennis-court.svg';
 // CONSTANTS
 // =============================================================================
 
-const MIN_FAVORITES = 2;
+const MIN_FAVORITES = 3;
 
 // =============================================================================
 // HELPER FUNCTIONS

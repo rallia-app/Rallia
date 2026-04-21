@@ -7,7 +7,8 @@
  */
 
 import React, { useEffect, useCallback, useMemo, useRef, useState } from 'react';
-import { StyleSheet, TouchableOpacity, ScrollView, View, ActivityIndicator } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -190,7 +191,7 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
 
   return (
     <View style={styles.wrapper}>
-      <ScrollView
+      <BottomSheetScrollView
         style={styles.scrollContainer}
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
@@ -270,7 +271,7 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
             </Text>
           </TouchableOpacity>
         </Animated.View>
-      </ScrollView>
+      </BottomSheetScrollView>
     </View>
   );
 };

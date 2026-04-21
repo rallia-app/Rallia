@@ -1150,7 +1150,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
     ? t('match.cost.free')
     : match.estimated_cost
       ? t('match.cost.perPlayer', {
-          amount: `$${Math.ceil(match.estimated_cost / participantInfo.total)}`,
+          amount: `$${(match.estimated_cost / participantInfo.total).toFixed(2)}`,
         })
       : null;
 

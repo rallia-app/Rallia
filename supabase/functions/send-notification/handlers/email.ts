@@ -11,6 +11,7 @@ import { generateEmailHtml, generateEmailSubject } from '../templates/match.ts';
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'noreply@rallia.com';
+const SITE_URL = Deno.env.get('NEXT_PUBLIC_BASE_URL') || 'https://rallia.app';
 
 /**
  * Send an email notification via Resend
@@ -29,7 +30,7 @@ export async function sendEmail(
   }
 
   try {
-    const htmlContent = generateEmailHtml(notification, locale);
+    const htmlContent = generateEmailHtml(notification, locale, SITE_URL);
     const subject = generateEmailSubject(notification);
 
     const resend = new Resend(RESEND_API_KEY);
@@ -81,7 +82,7 @@ export async function sendOrgEmail(
   }
 
   try {
-    const { subject, html } = renderOrgEmail(notification, organization, locale);
+    const { subject, html } = renderOrgEmail(notification, organization, locale, SITE_URL);
 
     // Use organization's email as sender if available, otherwise fall back to default
     const fromEmail = organization.email || FROM_EMAIL;

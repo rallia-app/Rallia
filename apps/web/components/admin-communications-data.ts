@@ -175,6 +175,13 @@ export interface EmailTemplate {
   id: string;
   label: string;
   category: string;
+  /**
+   * The NotificationType whose translated title/body should be used as the
+   * email heading + description for this preview. Undefined for templates
+   * (auth, invitation, match_interest) that localize their content internally
+   * via their own translation keys.
+   */
+  notifType?: NotificationType;
 }
 
 export const EMAIL_TEMPLATES: EmailTemplate[] = [
@@ -182,19 +189,169 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
   { id: 'auth_magic_link', label: 'Magic Link', category: 'Auth' },
   { id: 'invitation_org', label: 'Organization', category: 'Invitation' },
   { id: 'invitation_platform', label: 'Platform', category: 'Invitation' },
-  { id: 'notification_generic', label: 'Generic', category: 'Notification' },
-  { id: 'match_invitation', label: 'Invitation', category: 'Match' },
-  { id: 'match_join_accepted', label: 'Join Accepted', category: 'Match' },
-  { id: 'match_cancelled', label: 'Cancelled', category: 'Match' },
-  { id: 'match_updated', label: 'Updated', category: 'Match' },
-  { id: 'match_starting_soon', label: 'Starting Soon', category: 'Match' },
-  { id: 'match_reminder', label: 'Reminder', category: 'Match' },
-  { id: 'match_player_joined', label: 'Player Joined', category: 'Match' },
-  { id: 'match_new_available', label: 'New Available', category: 'Match' },
-  { id: 'org_booking_confirmed', label: 'Booking Confirmed', category: 'Organization' },
-  { id: 'org_booking_reminder', label: 'Booking Reminder', category: 'Organization' },
-  { id: 'org_payment_received', label: 'Payment Received', category: 'Organization' },
-  { id: 'org_new_member', label: 'New Member', category: 'Organization' },
+  { id: 'notification_generic', label: 'Generic', category: 'Notification', notifType: 'system' },
+  { id: 'match_invitation', label: 'Invitation', category: 'Match', notifType: 'match_invitation' },
+  {
+    id: 'match_join_accepted',
+    label: 'Join Accepted',
+    category: 'Match',
+    notifType: 'match_join_accepted',
+  },
+  {
+    id: 'match_join_request',
+    label: 'Join Request',
+    category: 'Match',
+    notifType: 'match_join_request',
+  },
+  {
+    id: 'match_join_rejected',
+    label: 'Join Rejected',
+    category: 'Match',
+    notifType: 'match_join_rejected',
+  },
+  { id: 'match_cancelled', label: 'Cancelled', category: 'Match', notifType: 'match_cancelled' },
+  { id: 'match_updated', label: 'Updated', category: 'Match', notifType: 'match_updated' },
+  {
+    id: 'match_starting_soon',
+    label: 'Starting Soon',
+    category: 'Match',
+    notifType: 'match_starting_soon',
+  },
+  {
+    id: 'match_check_in_available',
+    label: 'Check-in',
+    category: 'Match',
+    notifType: 'match_check_in_available',
+  },
+  { id: 'match_reminder', label: 'Reminder', category: 'Match', notifType: 'reminder' },
+  {
+    id: 'match_player_joined',
+    label: 'Player Joined',
+    category: 'Match',
+    notifType: 'match_player_joined',
+  },
+  { id: 'player_kicked', label: 'Player Kicked', category: 'Match', notifType: 'player_kicked' },
+  {
+    id: 'match_new_available',
+    label: 'New Available',
+    category: 'Match',
+    notifType: 'match_new_available',
+  },
+  { id: 'match_interest', label: 'Match Interest', category: 'Match' },
+  {
+    id: 'feedback_request',
+    label: 'Feedback Request',
+    category: 'Match',
+    notifType: 'feedback_request',
+  },
+  {
+    id: 'feedback_reminder',
+    label: 'Feedback Reminder',
+    category: 'Match',
+    notifType: 'feedback_reminder',
+  },
+  {
+    id: 'score_confirmation',
+    label: 'Score Confirmation',
+    category: 'Match',
+    notifType: 'score_confirmation',
+  },
+  {
+    id: 'rating_verified',
+    label: 'Rating Verified',
+    category: 'System',
+    notifType: 'rating_verified',
+  },
+  {
+    id: 'org_booking_confirmed',
+    label: 'Booking Confirmed',
+    category: 'Organization',
+    notifType: 'booking_confirmed',
+  },
+  {
+    id: 'org_booking_reminder',
+    label: 'Booking Reminder',
+    category: 'Organization',
+    notifType: 'booking_reminder',
+  },
+  {
+    id: 'org_booking_created',
+    label: 'Booking Created',
+    category: 'Organization',
+    notifType: 'booking_created',
+  },
+  {
+    id: 'org_booking_cancelled_by_player',
+    label: 'Booking Cancelled (player)',
+    category: 'Organization',
+    notifType: 'booking_cancelled_by_player',
+  },
+  {
+    id: 'org_booking_modified',
+    label: 'Booking Modified',
+    category: 'Organization',
+    notifType: 'booking_modified',
+  },
+  {
+    id: 'org_booking_cancelled_by_org',
+    label: 'Booking Cancelled (org)',
+    category: 'Organization',
+    notifType: 'booking_cancelled_by_org',
+  },
+  {
+    id: 'org_payment_received',
+    label: 'Payment Received',
+    category: 'Organization',
+    notifType: 'payment_received',
+  },
+  {
+    id: 'org_payment_failed',
+    label: 'Payment Failed',
+    category: 'Organization',
+    notifType: 'payment_failed',
+  },
+  {
+    id: 'org_refund_processed',
+    label: 'Refund Processed',
+    category: 'Organization',
+    notifType: 'refund_processed',
+  },
+  {
+    id: 'org_new_member',
+    label: 'New Member',
+    category: 'Organization',
+    notifType: 'new_member_joined',
+  },
+  {
+    id: 'org_member_left',
+    label: 'Member Left',
+    category: 'Organization',
+    notifType: 'member_left',
+  },
+  {
+    id: 'org_member_role_changed',
+    label: 'Member Role Changed',
+    category: 'Organization',
+    notifType: 'member_role_changed',
+  },
+  {
+    id: 'org_membership_approved',
+    label: 'Membership Approved',
+    category: 'Organization',
+    notifType: 'membership_approved',
+  },
+  {
+    id: 'org_weekly_report',
+    label: 'Weekly Report',
+    category: 'Organization',
+    notifType: 'weekly_report',
+  },
+  {
+    id: 'org_announcement',
+    label: 'Announcement',
+    category: 'Organization',
+    notifType: 'org_announcement',
+  },
 ];
 
 export const EMAIL_CATEGORIES = [...new Set(EMAIL_TEMPLATES.map(t => t.category))];
@@ -216,29 +373,58 @@ export const SPORT_EMOJIS: Record<string, string> = {
 // Mock data for template interpolation
 // ---------------------------------------------------------------------------
 
-export const MOCK_DATA: Record<string, string> = {
-  playerName: 'Alex Johnson',
-  sportName: 'Tennis',
-  matchDate: 'April 16, 2026',
-  startTime: ' at 2:00 PM',
-  locationName: 'Parc La Fontaine',
-  locationAddress: '3933 Av du Parc La Fontaine, Montreal, QC H2L 3M6',
-  timeUntil: 'in 30 minutes',
-  spotsLeft: '2',
-  senderName: 'Marie Dupont',
-  messagePreview: 'Hey, are we still on for tomorrow?',
-  ratingSystemName: 'UTR',
-  ratingValue: '7.5',
-  ratingLabel: 'UTR 7.5',
-  opponentNames: 'Alex Johnson',
-  communityName: 'Montreal Tennis League',
-  requesterName: 'Marc Tremblay',
-  orgName: 'Montreal Tennis Club',
-  courtName: 'Court A',
-  facilityName: 'Montreal Tennis Club',
-  bookingDate: 'April 16, 2026',
-  endTime: '3:00 PM',
-};
+const MOCK_START_DATE = new Date(2026, 3, 16, 14, 0); // April 16, 2026 14:00 local
+const MOCK_END_DATE = new Date(2026, 3, 16, 15, 0); //   April 16, 2026 15:00 local
+
+/**
+ * Locale-aware mock values used to interpolate {placeholder} tokens in
+ * notification titles/bodies for the admin preview. Dates, times, and
+ * currency render via Intl so French previews show "16 avril 2026" instead
+ * of "April 16, 2026".
+ */
+export function getMockData(locale: Locale = 'en-US'): Record<string, string> {
+  const isFr = locale === 'fr-CA';
+  const dateStr = new Intl.DateTimeFormat(locale, { dateStyle: 'long' }).format(MOCK_START_DATE);
+  const startTimeStr = new Intl.DateTimeFormat(locale, { timeStyle: 'short' }).format(
+    MOCK_START_DATE
+  );
+  const endTimeStr = new Intl.DateTimeFormat(locale, { timeStyle: 'short' }).format(MOCK_END_DATE);
+  const amountStr = new Intl.NumberFormat(locale, { style: 'currency', currency: 'CAD' }).format(
+    45
+  );
+
+  return {
+    playerName: 'Alex Johnson',
+    sportName: 'Tennis',
+    matchDate: dateStr,
+    startTime: isFr ? ` à ${startTimeStr}` : ` at ${startTimeStr}`,
+    locationName: 'Parc La Fontaine',
+    locationAddress: '3933 Av du Parc La Fontaine, Montreal, QC H2L 3M6',
+    timeUntil: isFr ? 'dans 30 minutes' : 'in 30 minutes',
+    spotsLeft: '2',
+    senderName: 'Marie Dupont',
+    messagePreview: isFr
+      ? 'Salut, on est toujours bons pour demain ?'
+      : 'Hey, are we still on for tomorrow?',
+    ratingSystemName: 'UTR',
+    ratingValue: '7.5',
+    ratingLabel: 'UTR 7.5',
+    opponentNames: 'Alex Johnson',
+    communityName: 'Montreal Tennis League',
+    requesterName: 'Marc Tremblay',
+    orgName: 'Montreal Tennis Club',
+    courtName: 'Court A',
+    facilityName: 'Montreal Tennis Club',
+    bookingDate: dateStr,
+    endTime: endTimeStr,
+    memberRole: isFr ? 'Administrateur' : 'Admin',
+    amountFormatted: amountStr,
+    networkName: 'Rallia',
+  };
+}
+
+/** @deprecated — use getMockData(locale) instead. Kept for any external callers. */
+export const MOCK_DATA = getMockData('en-US');
 
 // ---------------------------------------------------------------------------
 // Translation helpers
@@ -312,7 +498,58 @@ function getSportPrefix(sportName?: string): string {
   return `[${sport}] `;
 }
 
-function getPrioritizedContent(notification: MockNotification): {
+/**
+ * Locale-aware SMS string table. Mirrors sms.* keys in
+ * supabase/functions/_shared/email-translations.ts — keep them in sync.
+ */
+const SMS_STRINGS: Record<string, Record<string, string>> = {
+  'en-US': {
+    prefix: 'Rallia: ',
+    'urgent.startingSoon': 'STARTING {timeUntil}!',
+    'urgent.startingSoonFallback': 'STARTING SOON!',
+    'urgent.checkInOpen': 'CHECK-IN NOW OPEN!',
+    'urgent.cancelled': 'CANCELLED',
+    youreIn: "You're in!",
+    startsIn: 'Starts {timeUntil}',
+    startsInFallback: 'Starts soon',
+    checkInOpen: 'Check-in is open',
+    reminder: 'Reminder',
+    at: 'at {location}',
+    gameOn: 'Game on {date}',
+    separator: ' - ',
+  },
+  'fr-CA': {
+    prefix: 'Rallia : ',
+    'urgent.startingSoon': 'COMMENCE {timeUntil} !',
+    'urgent.startingSoonFallback': 'COMMENCE BIENTÔT !',
+    'urgent.checkInOpen': 'ENREGISTREMENT OUVERT !',
+    'urgent.cancelled': 'ANNULÉ',
+    youreIn: "C'est confirmé !",
+    startsIn: 'Commence {timeUntil}',
+    startsInFallback: 'Commence bientôt',
+    checkInOpen: 'Enregistrement ouvert',
+    reminder: 'Rappel',
+    at: 'à {location}',
+    gameOn: 'Partie le {date}',
+    separator: ' — ',
+  },
+};
+
+function smsT(locale: Locale, key: string, params?: Record<string, string>): string {
+  const normalized = locale === 'fr-CA' ? 'fr-CA' : 'en-US';
+  let value = SMS_STRINGS[normalized]?.[key] ?? SMS_STRINGS['en-US'][key] ?? key;
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      value = value.replace(new RegExp(`\\{${k}\\}`, 'g'), v);
+    }
+  }
+  return value;
+}
+
+function getPrioritizedContent(
+  notification: MockNotification,
+  locale: Locale
+): {
   prefix: string;
   core: string;
   extra?: string;
@@ -325,84 +562,99 @@ function getPrioritizedContent(notification: MockNotification): {
   const timeUntil = payload?.timeUntil as string | undefined;
 
   const sportPrefix = getSportPrefix(sportName);
+  const atLocation = locationName ? smsT(locale, 'at', { location: locationName }) : undefined;
+  const gameOnDate = matchDate ? smsT(locale, 'gameOn', { date: matchDate }) : undefined;
 
   if (priority === 'urgent') {
     switch (type) {
       case 'match_starting_soon':
         return {
           prefix: `${sportPrefix}`,
-          core: `STARTING ${timeUntil?.toUpperCase() || 'SOON'}!`,
-          extra: locationName ? `at ${locationName}` : undefined,
+          core: timeUntil
+            ? smsT(locale, 'urgent.startingSoon', { timeUntil: timeUntil.toUpperCase() })
+            : smsT(locale, 'urgent.startingSoonFallback'),
+          extra: atLocation,
         };
       case 'match_check_in_available':
         return {
           prefix: `${sportPrefix}`,
-          core: 'CHECK-IN NOW OPEN!',
-          extra: locationName ? `at ${locationName}` : undefined,
+          core: smsT(locale, 'urgent.checkInOpen'),
+          extra: atLocation,
         };
       case 'match_cancelled':
         return {
           prefix: `${sportPrefix}`,
-          core: 'CANCELLED',
-          extra: matchDate ? `Game on ${matchDate}` : undefined,
+          core: smsT(locale, 'urgent.cancelled'),
+          extra: gameOnDate,
         };
     }
   }
+
+  const sep = smsT(locale, 'separator');
 
   switch (type) {
     case 'match_invitation':
       return {
         prefix: `${sportPrefix}`,
         core: title,
-        extra: matchDate && playerName ? `${playerName} - ${matchDate}` : body || undefined,
+        extra: matchDate && playerName ? `${playerName}${sep}${matchDate}` : body || undefined,
       };
     case 'match_join_accepted':
       return {
         prefix: `${sportPrefix}`,
-        core: "You're in!",
-        extra: matchDate && locationName ? `${matchDate} at ${locationName}` : body || undefined,
+        core: smsT(locale, 'youreIn'),
+        extra:
+          matchDate && locationName
+            ? `${matchDate} ${smsT(locale, 'at', { location: locationName })}`
+            : body || undefined,
       };
     case 'match_starting_soon':
       return {
         prefix: `${sportPrefix}`,
-        core: `Starts ${timeUntil || 'soon'}`,
-        extra: locationName ? `at ${locationName}` : undefined,
+        core: timeUntil
+          ? smsT(locale, 'startsIn', { timeUntil })
+          : smsT(locale, 'startsInFallback'),
+        extra: atLocation,
       };
     case 'match_check_in_available':
       return {
         prefix: `${sportPrefix}`,
-        core: 'Check-in is open',
-        extra: locationName ? `at ${locationName}` : undefined,
+        core: smsT(locale, 'checkInOpen'),
+        extra: atLocation,
       };
     case 'reminder':
       return {
         prefix: `${sportPrefix}`,
-        core: 'Reminder',
-        extra: matchDate && locationName ? `${matchDate} at ${locationName}` : body || undefined,
+        core: smsT(locale, 'reminder'),
+        extra:
+          matchDate && locationName
+            ? `${matchDate} ${smsT(locale, 'at', { location: locationName })}`
+            : body || undefined,
       };
     default:
       return {
-        prefix: sportPrefix || 'Rallia: ',
+        prefix: sportPrefix || smsT(locale, 'prefix'),
         core: title,
         extra: body || undefined,
       };
   }
 }
 
-function formatSmsMessage(notification: MockNotification): string {
+function formatSmsMessage(notification: MockNotification, locale: Locale): string {
   const maxLength = 160;
-  const content = getPrioritizedContent(notification);
+  const content = getPrioritizedContent(notification, locale);
+  const separator = smsT(locale, 'separator');
 
   let message = content.prefix + content.core;
 
   if (content.extra) {
-    const withExtra = `${message} - ${content.extra}`;
+    const withExtra = `${message}${separator}${content.extra}`;
     if (withExtra.length <= maxLength) {
       message = withExtra;
     } else {
-      const availableSpace = maxLength - message.length - 5;
+      const availableSpace = maxLength - message.length - separator.length - 3;
       if (availableSpace > 10) {
-        message = `${message} - ${content.extra.substring(0, availableSpace)}...`;
+        message = `${message}${separator}${content.extra.substring(0, availableSpace)}...`;
       }
     }
   }
@@ -423,8 +675,10 @@ const URGENT_TYPES: NotificationType[] = [
 export function formatSmsPreview(
   type: NotificationType,
   title: string,
-  body: string | null
+  body: string | null,
+  locale: Locale = 'en-US'
 ): { text: string; length: number; segments: number } {
+  const mock = getMockData(locale);
   const isUrgent = URGENT_TYPES.includes(type);
   const notification: MockNotification = {
     type,
@@ -432,15 +686,15 @@ export function formatSmsPreview(
     body,
     priority: isUrgent ? 'urgent' : 'normal',
     payload: {
-      sportName: MOCK_DATA.sportName,
-      matchDate: MOCK_DATA.matchDate,
-      locationName: MOCK_DATA.locationName,
-      playerName: MOCK_DATA.playerName,
-      timeUntil: MOCK_DATA.timeUntil,
+      sportName: mock.sportName,
+      matchDate: mock.matchDate,
+      locationName: mock.locationName,
+      playerName: mock.playerName,
+      timeUntil: mock.timeUntil,
     },
   };
 
-  const text = formatSmsMessage(notification);
+  const text = formatSmsMessage(notification, locale);
   return {
     text,
     length: text.length,

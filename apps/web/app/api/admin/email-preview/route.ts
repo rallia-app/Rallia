@@ -24,6 +24,8 @@ export async function GET(request: NextRequest) {
     const template = searchParams.get('template') || '';
     const locale = searchParams.get('locale') || 'en-US';
     const mode = searchParams.get('mode') || 'light';
+    const title = searchParams.get('title');
+    const body = searchParams.get('body');
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const anonKey =
@@ -38,6 +40,8 @@ export async function GET(request: NextRequest) {
     url.searchParams.set('locale', locale);
     url.searchParams.set('mode', mode);
     url.searchParams.set('raw', '1');
+    if (title) url.searchParams.set('title', title);
+    if (body) url.searchParams.set('body', body);
 
     const response = await fetch(url.toString(), {
       headers: {

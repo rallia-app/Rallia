@@ -587,7 +587,7 @@ export function useTotalUnreadCount(playerId: string | undefined) {
     queryKey: chatKeys.unreadCount(playerId || ''),
     queryFn: () => getTotalUnreadCount(playerId!),
     enabled: !!playerId,
-    staleTime: 5 * 1000, // 5 seconds - quick refresh for accurate badge count
+    staleTime: 1000,
   });
 }
 
@@ -603,7 +603,7 @@ export function useConversationUnreadCount(
     queryKey: chatKeys.conversationUnreadCount(conversationId || '', playerId || ''),
     queryFn: () => getConversationUnreadCount(conversationId!, playerId!),
     enabled: !!conversationId && !!playerId,
-    staleTime: 5 * 1000, // 5 seconds - quick refresh for accurate badge count
+    staleTime: 1000,
   });
 }
 
@@ -619,7 +619,7 @@ export function useConversationUnreadCountLast7Days(
     queryKey: chatKeys.conversationUnreadCountLast7Days(conversationId || '', playerId || ''),
     queryFn: () => getConversationUnreadCountLast7Days(conversationId!, playerId!),
     enabled: !!conversationId && !!playerId,
-    staleTime: 5 * 1000, // 5 seconds - quick refresh for accurate badge count
+    staleTime: 1000,
   });
 }
 

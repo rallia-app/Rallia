@@ -4,6 +4,7 @@
  */
 
 import type { NotificationRecord, DeliveryResult } from '../types.ts';
+import { t } from '../../_shared/email-translations.ts';
 
 const TWILIO_ACCOUNT_SID = Deno.env.get('TWILIO_ACCOUNT_SID');
 const TWILIO_AUTH_TOKEN = Deno.env.get('TWILIO_AUTH_TOKEN');
@@ -14,7 +15,8 @@ const TWILIO_PHONE_NUMBER = Deno.env.get('TWILIO_PHONE_NUMBER');
  */
 export async function sendSms(
   notification: NotificationRecord,
-  recipientPhone: string
+  recipientPhone: string,
+  locale: string = 'en-US'
 ): Promise<DeliveryResult> {
   if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_PHONE_NUMBER) {
     return {
@@ -25,7 +27,7 @@ export async function sendSms(
   }
 
   try {
-    const messageBody = formatSmsMessage(notification);
+    const messageBody = formatSmsMessage(notification, locale);
 
     // Twilio API URL
     const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
@@ -87,7 +89,10 @@ function getSportPrefix(sportName?: string): string {
  * Get the most important info for SMS based on notification type
  * Prioritizes critical info that fits in 160 chars
  */
-function getPrioritizedContent(notification: NotificationRecord): {
+function getPrioritizedContent(
+  notification: NotificationRecord,
+  locale: string
+): {
   prefix: string;
   core: string;
   extra?: string;
@@ -100,6 +105,8 @@ function getPrioritizedContent(notification: NotificationRecord): {
   const timeUntil = payload?.timeUntil as string | undefined;
 
   const sportPrefix = getSportPrefix(sportName);
+  const atLocation = locationName ? t(locale, 'sms.at', { location: locationName }) : undefined;
+  const gameOnDate = matchDate ? t(locale, 'sms.gameOn', { date: matchDate }) : undefined;
 
   // Urgent notifications get special formatting
   if (priority === 'urgent') {
@@ -107,20 +114,22 @@ function getPrioritizedContent(notification: NotificationRecord): {
       case 'match_starting_soon':
         return {
           prefix: `${sportPrefix}`,
-          core: `STARTING ${timeUntil?.toUpperCase() || 'SOON'}!`,
-          extra: locationName ? `at ${locationName}` : undefined,
+          core: timeUntil
+            ? t(locale, 'sms.urgent.startingSoon', { timeUntil: timeUntil.toUpperCase() })
+            : t(locale, 'sms.urgent.startingSoonFallback'),
+          extra: atLocation,
         };
       case 'match_check_in_available':
         return {
           prefix: `${sportPrefix}`,
-          core: 'CHECK-IN NOW OPEN!',
-          extra: locationName ? `at ${locationName}` : undefined,
+          core: t(locale, 'sms.urgent.checkInOpen'),
+          extra: atLocation,
         };
       case 'match_cancelled':
         return {
           prefix: `${sportPrefix}`,
-          core: 'CANCELLED',
-          extra: matchDate ? `Game on ${matchDate}` : undefined,
+          core: t(locale, 'sms.urgent.cancelled'),
+          extra: gameOnDate,
         };
     }
   }
@@ -131,40 +140,51 @@ function getPrioritizedContent(notification: NotificationRecord): {
       return {
         prefix: `${sportPrefix}`,
         core: title,
-        extra: matchDate && playerName ? `${playerName} - ${matchDate}` : body || undefined,
+        extra:
+          matchDate && playerName
+            ? `${playerName}${t(locale, 'sms.separator')}${matchDate}`
+            : body || undefined,
       };
 
     case 'match_join_accepted':
       return {
         prefix: `${sportPrefix}`,
-        core: "You're in!",
-        extra: matchDate && locationName ? `${matchDate} at ${locationName}` : body || undefined,
+        core: t(locale, 'sms.youreIn'),
+        extra:
+          matchDate && locationName
+            ? `${matchDate} ${t(locale, 'sms.at', { location: locationName })}`
+            : body || undefined,
       };
 
     case 'match_starting_soon':
       return {
         prefix: `${sportPrefix}`,
-        core: `Starts ${timeUntil || 'soon'}`,
-        extra: locationName ? `at ${locationName}` : undefined,
+        core: timeUntil
+          ? t(locale, 'sms.startsIn', { timeUntil })
+          : t(locale, 'sms.startsInFallback'),
+        extra: atLocation,
       };
 
     case 'match_check_in_available':
       return {
         prefix: `${sportPrefix}`,
-        core: 'Check-in is open',
-        extra: locationName ? `at ${locationName}` : undefined,
+        core: t(locale, 'sms.checkInOpen'),
+        extra: atLocation,
       };
 
     case 'reminder':
       return {
         prefix: `${sportPrefix}`,
-        core: 'Reminder',
-        extra: matchDate && locationName ? `${matchDate} at ${locationName}` : body || undefined,
+        core: t(locale, 'sms.reminder'),
+        extra:
+          matchDate && locationName
+            ? `${matchDate} ${t(locale, 'sms.at', { location: locationName })}`
+            : body || undefined,
       };
 
     default:
       return {
-        prefix: sportPrefix || 'Rallia: ',
+        prefix: sportPrefix || t(locale, 'sms.prefix'),
         core: title,
         extra: body || undefined,
       };
@@ -176,23 +196,24 @@ function getPrioritizedContent(notification: NotificationRecord): {
  * SMS has a 160 character limit for single segment
  * Prioritizes most important information within the limit
  */
-function formatSmsMessage(notification: NotificationRecord): string {
+function formatSmsMessage(notification: NotificationRecord, locale: string): string {
   const maxLength = 160;
-  const content = getPrioritizedContent(notification);
+  const content = getPrioritizedContent(notification, locale);
+  const separator = t(locale, 'sms.separator');
 
   // Build message with prioritized content
   let message = content.prefix + content.core;
 
   // Add extra info if we have room
   if (content.extra) {
-    const withExtra = `${message} - ${content.extra}`;
+    const withExtra = `${message}${separator}${content.extra}`;
     if (withExtra.length <= maxLength) {
       message = withExtra;
     } else {
       // Try to fit as much extra as possible
-      const availableSpace = maxLength - message.length - 5; // " - " + "..."
+      const availableSpace = maxLength - message.length - separator.length - 3; // sep + "..."
       if (availableSpace > 10) {
-        message = `${message} - ${content.extra.substring(0, availableSpace)}...`;
+        message = `${message}${separator}${content.extra.substring(0, availableSpace)}...`;
       }
     }
   }

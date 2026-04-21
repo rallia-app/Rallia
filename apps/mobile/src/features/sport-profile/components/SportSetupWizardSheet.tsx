@@ -510,7 +510,7 @@ export function SportSetupWizardActionSheet({ payload }: SheetProps<'sport-setup
     !!matchDuration && !!matchType && !!playStyle && playAttributes.length > 0;
   const canAdvance =
     currentStep === 1 ? canAdvanceStep1 : currentStep === 2 ? canAdvanceStep2 : false;
-  const canComplete = selectedFacilities.length >= 2;
+  const canComplete = selectedFacilities.length >= 3;
 
   // ==========================================================================
   // RENDER: Rating Step

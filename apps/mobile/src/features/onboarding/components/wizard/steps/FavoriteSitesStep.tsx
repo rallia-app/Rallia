@@ -14,7 +14,7 @@ import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-shee
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { lightHaptic, selectionHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
+import { lightHaptic, selectionHaptic, successHaptic } from '@rallia/shared-utils';
 import { useFacilitySearch } from '@rallia/shared-hooks';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 import type { TranslationKey } from '@rallia/shared-translations';
@@ -65,8 +65,8 @@ interface FavoriteSitesStepProps {
 // CONSTANTS
 // =============================================================================
 
-const MIN_SINGLE_SPORT = 2;
-const MIN_BOTH_SPORTS = 2;
+const MIN_SINGLE_SPORT = 3;
+const MIN_BOTH_SPORTS = 3;
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -292,7 +292,6 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
 
   const bothSports = hasTennis && hasPickleball;
-  const maxFavorites = bothSports ? 4 : 2;
 
   // Get device location as fallback if props don't have coordinates
   // This handles cases where user typed city manually without using autocomplete
@@ -351,11 +350,6 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
         const newFacilities = selectedFacilities.filter(f => f.id !== facility.id);
         onUpdateFormData({ favoriteFacilities: newFacilities });
       } else {
-        // Add to selection (if under max)
-        if (selectedFacilities.length >= maxFavorites) {
-          warningHaptic();
-          return;
-        }
         successHaptic();
         const newFacilities = [...selectedFacilities, facility];
         onUpdateFormData({ favoriteFacilities: newFacilities });
@@ -363,7 +357,7 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
         setSearchQuery('');
       }
     },
-    [isFacilitySelected, selectedFacilities, onUpdateFormData, maxFavorites, setSearchQuery]
+    [isFacilitySelected, selectedFacilities, onUpdateFormData, setSearchQuery]
   );
 
   // Handle removing a selected facility
