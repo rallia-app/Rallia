@@ -16,7 +16,7 @@
     "base64-arraybuffer": "^1.0.2"
   },
   "peerDependencies": {
-    "expo-file-system": "*",
+    "expo-file-system": "^55.0.17",
     "react-native": "*"
   },
   "devDependencies": {
