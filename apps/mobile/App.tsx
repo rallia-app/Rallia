@@ -68,8 +68,9 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as SystemUI from 'expo-system-ui';
 import { StatusBar } from 'expo-status-bar';
 
-// Keep the native splash visible until our JS SplashOverlay has mounted
+// Keep the native splash visible until the app is ready, then cross-fade it out.
 SplashScreen.preventAutoHideAsync();
+SplashScreen.setOptions({ fade: true, duration: 400 });
 
 // Set the native root view background color immediately so it's visible
 // behind the React tree (e.g. area above the Dynamic Island).
@@ -80,7 +81,6 @@ import { navigationRef } from './src/navigation';
 import { linking } from './src/navigation/linking';
 import { ActionsBottomSheet } from './src/components/ActionsBottomSheet';
 import { FeedbackSheet } from './src/components/FeedbackSheet';
-import { SplashOverlay } from './src/components/SplashOverlay';
 import BetaNoticeModal from './src/components/BetaNoticeModal';
 import {
   ThemeProvider,
@@ -628,6 +628,17 @@ function AppContent() {
   const { theme } = useTheme();
   const { setSplashComplete, isSplashComplete, permissionsHandled } = useOverlay();
   const isCheckingUpdate = useOTAUpdate();
+  const hasHiddenSplashRef = useRef(false);
+
+  // Hide the native splash (cross-fade via setOptions above) once OTA check is done.
+  // Gate setSplashComplete on this so downstream handlers keep their current ordering.
+  useEffect(() => {
+    if (isCheckingUpdate || hasHiddenSplashRef.current) return;
+    hasHiddenSplashRef.current = true;
+    SplashScreen.hideAsync()
+      .catch(() => {})
+      .finally(() => setSplashComplete(true));
+  }, [isCheckingUpdate, setSplashComplete]);
   // TEMPORARILY DISABLED: User walkthrough deactivated
   // const { showCompletionModal, dismissCompletionModal, lastCompletedTourId } = useTour();
 
@@ -708,11 +719,6 @@ function AppContent() {
       */}
       {/* Beta notice - shown once on first launch during beta period */}
       <BetaNoticeModal isSplashComplete={isSplashComplete} />
-      {/* Splash overlay - renders on top of everything */}
-      <SplashOverlay
-        onAnimationComplete={() => setSplashComplete(true)}
-        holdVisible={isCheckingUpdate}
-      />
     </>
   );
 }
