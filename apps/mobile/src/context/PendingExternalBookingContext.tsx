@@ -104,7 +104,7 @@ export const PendingExternalBookingProvider: React.FC<PendingExternalBookingProv
   const [matchConfirmBooking, setMatchConfirmBooking] = useState<PendingBookingData | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
 
-  const { openSheetForMatchCreationFromBooking, sheetRef } = useActionsSheet();
+  const { openSheetForMatchCreationFromBooking } = useActionsSheet();
   const { updateSelectedMatch } = useMatchDetailSheet();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
@@ -316,7 +316,7 @@ export const PendingExternalBookingProvider: React.FC<PendingExternalBookingProv
     });
 
     return () => subscription.remove();
-  }, [pendingBooking, handleDirectoryConfirm, clearPendingBooking, sheetRef]);
+  }, [pendingBooking, handleDirectoryConfirm, clearPendingBooking]);
 
   const contextValue: PendingExternalBookingContextType = {
     setPendingBooking,
