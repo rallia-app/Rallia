@@ -127,6 +127,33 @@ const translations: Translations = {
     'match.dateAt': 'at',
     'org.dateAt': 'at',
 
+    // Welcome (post-onboarding)
+    'welcome.subject': 'Welcome to Rallia — your next game is waiting',
+    'welcome.preheader': 'Your next game is waiting. Here is what you can do with Rallia.',
+    'welcome.heading': 'Welcome to Rallia, {firstName}',
+    'welcome.headingDefault': 'Welcome to Rallia',
+    'welcome.missionTagline': 'Your next game is waiting.',
+    'welcome.intro':
+      "We're glad to have you on board. Rallia is built to turn your intent to play into actual matches — making it as easy as possible to find the right opponents, organize the details, and enjoy every game you show up for.",
+    'welcome.featuresHeading': 'What you can do with Rallia',
+    'welcome.features.courts.title': 'The most complete court directory in Greater Montreal',
+    'welcome.features.courts.body':
+      'Browse tennis and pickleball courts across Greater Montreal, see real-time availability for most public courts, and get redirected to the official booking page in a few clicks.',
+    'welcome.features.matches.title': 'Create or join a match',
+    'welcome.features.matches.body':
+      'Open a public or private game, or jump into matches that fit your level, schedule, and favorite spots — no more group-chat chaos.',
+    'welcome.features.levels.title': 'Skill ratings you can actually trust',
+    'welcome.features.levels.body':
+      "Self-declared ratings are easy — trusting them isn't. Rallia adds a layer of trust on top of NTRP / DUPR with player references and rating proofs, so the levels you see on profiles hold up and you know exactly who you're stepping on court with.",
+    'welcome.features.reputation.title': 'Reliability & reputation',
+    'welcome.features.reputation.body':
+      'Every game counts. Build your reputation with Bronze → Platinum badges and play with people who show up.',
+    'welcome.ctaButton': 'Open Rallia',
+    'welcome.footerTagline': 'See you on the court.',
+    'welcome.disclaimer':
+      "You're receiving this email because you just finished creating your Rallia account.",
+    'welcome.footerNote': 'Rallia — Find players, join games, play more',
+
     // Match Interest (public visitor conversion email)
     'matchInterest.subject': 'Join this {sportName} game on Rallia',
     'matchInterest.preheader': 'Download Rallia to join the {sportName} game on {matchDate}',
@@ -287,6 +314,33 @@ const translations: Translations = {
     'org.scanQrCode': 'Scannez ce code QR sur place',
     'match.dateAt': 'à',
     'org.dateAt': 'à',
+
+    // Welcome (post-onboarding)
+    'welcome.subject': "Bienvenue sur Rallia — ta prochaine partie t'attend",
+    'welcome.preheader': "Ta prochaine partie t'attend. Voici ce que tu peux faire avec Rallia.",
+    'welcome.heading': 'Bienvenue sur Rallia, {firstName}',
+    'welcome.headingDefault': 'Bienvenue sur Rallia',
+    'welcome.missionTagline': "Ta prochaine partie t'attend.",
+    'welcome.intro':
+      "On est content de t'avoir avec nous. Rallia est conçu pour transformer ton envie de jouer en vraies parties — en rendant le plus simple possible de trouver les bons adversaires, d'organiser les détails, et de profiter pleinement de chaque match.",
+    'welcome.featuresHeading': 'Ce que tu peux faire avec Rallia',
+    'welcome.features.courts.title': 'Le répertoire de terrains le plus complet du Grand Montréal',
+    'welcome.features.courts.body':
+      'Parcours les terrains de tennis et de pickleball du Grand Montréal, vois les disponibilités en temps réel sur la plupart des terrains publics, et fais-toi rediriger vers la page officielle de réservation en quelques clics.',
+    'welcome.features.matches.title': 'Crée ou rejoins une partie',
+    'welcome.features.matches.body':
+      'Ouvre une partie publique ou privée, ou rejoins des matchs adaptés à ton niveau, ton horaire et tes terrains préférés — fini le chaos des groupes de texto.',
+    'welcome.features.levels.title': 'Des niveaux auxquels tu peux te fier',
+    'welcome.features.levels.body':
+      "Les notes auto-déclarées, c'est facile — les croire, c'est autre chose. Rallia ajoute une couche de confiance par-dessus NTRP / DUPR avec des références de joueurs et des preuves de niveau, pour que les classements affichés reflètent la réalité et que tu saches vraiment avec qui tu embarques sur le terrain.",
+    'welcome.features.reputation.title': 'Fiabilité et réputation',
+    'welcome.features.reputation.body':
+      'Chaque partie compte. Bâtis ta réputation avec les badges Bronze → Platine et joue avec du monde qui se présente.',
+    'welcome.ctaButton': 'Ouvrir Rallia',
+    'welcome.footerTagline': 'On se voit sur le terrain.',
+    'welcome.disclaimer':
+      'Vous recevez ce courriel parce que vous venez de terminer la création de votre compte Rallia.',
+    'welcome.footerNote': 'Rallia — Trouvez des joueurs, rejoignez des parties, jouez plus',
 
     // Match Interest (public visitor conversion email)
     'matchInterest.subject': 'Rejoignez cette partie de {sportName} sur Rallia',

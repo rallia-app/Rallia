@@ -51,7 +51,6 @@ import {
   usePostalCodeGeocode,
   useMatchSuggestions,
 } from '@rallia/shared-hooks';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PENDING_REFERRAL_KEY, type PendingReferral } from '../../../../navigation/deepLinkStore';
 import { replaceImage } from '../../../../services/imageUpload';
 import * as Analytics from '../../../../services/analytics';
@@ -291,7 +290,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     steps,
   } = useOnboardingWizard();
 
-  const insets = useSafeAreaInsets();
   const [isSaving, setIsSaving] = useState(false);
   // Track the last uploaded profile picture URL to clean up old uploads
   const [lastUploadedProfileUrl, setLastUploadedProfileUrl] = useState<string | null>(null);
@@ -464,8 +462,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           !formData.username.trim() ||
           formData.username.length < 3 ||
           !formData.dateOfBirth ||
-          !formData.gender ||
-          !formData.phoneNumber.trim()
+          !formData.gender
         ) {
           Alert.alert(t('alerts.error'), t('onboarding.validation.fillRequiredFields'));
           warningHaptic();
@@ -538,7 +535,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             display_name: formData.username,
             birth_date: formattedDate,
             gender: formData.gender as GenderEnum,
-            phone: formData.phoneNumber,
+            phone: formData.phoneNumber.trim() || undefined,
             profile_picture_url: uploadedImageUrl,
           });
 
@@ -1356,10 +1353,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
       {/* Fixed Footer */}
       <View
-        style={[
-          styles.footer,
-          { borderTopColor: colors.border, paddingBottom: insets.bottom + spacingPixels[4] },
-        ]}
+        style={[styles.footer, { borderTopColor: colors.border, paddingBottom: spacingPixels[4] }]}
       >
         {!isLastStep ? (
           <TouchableOpacity

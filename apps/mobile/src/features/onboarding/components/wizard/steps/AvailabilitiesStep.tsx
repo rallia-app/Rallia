@@ -7,7 +7,7 @@
 
 import React, { useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, Switch } from 'react-native';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
@@ -93,7 +93,7 @@ export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
   };
 
   return (
-    <BottomSheetScrollView
+    <SheetScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
@@ -204,7 +204,7 @@ export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
           />
         </View>
       </View>
-    </BottomSheetScrollView>
+    </SheetScrollView>
   );
 };
 

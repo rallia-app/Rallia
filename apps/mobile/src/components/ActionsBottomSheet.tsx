@@ -15,15 +15,14 @@
 
 import * as React from 'react';
 import { useCallback, useMemo, useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions, Keyboard } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   interpolate,
 } from 'react-native-reanimated';
-import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
-import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
+import ActionSheet, { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Skeleton } from '@rallia/shared-components';
 import {
@@ -38,7 +37,6 @@ import {
 
 const BASE_WHITE = '#ffffff';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useActionsSheet, useMatchDetailSheet, useSport } from '../context';
 import { useTranslation, type TranslationKey } from '../hooks';
 import { SportIcon } from './SportIcon';
@@ -138,7 +136,6 @@ interface ActionsContentProps {
   onCreateNetwork: () => void;
   colors: ThemeColors;
   t: (key: TranslationKey) => string;
-  bottomInset: number;
 }
 
 const ActionsContent: React.FC<ActionsContentProps> = ({
@@ -149,10 +146,9 @@ const ActionsContent: React.FC<ActionsContentProps> = ({
   onCreateNetwork,
   colors,
   t,
-  bottomInset,
 }) => {
   return (
-    <View style={[styles.contentContainer, { paddingBottom: bottomInset + spacingPixels[4] }]}>
+    <View style={[styles.contentContainer, { paddingBottom: spacingPixels[4] }]}>
       <View style={styles.actionsList}>
         <ActionItem
           icon="sport"
@@ -200,7 +196,6 @@ const MAX_SHEET_HEIGHT = SCREEN_HEIGHT * 0.9; // 90% of screen height
 export const ActionsBottomSheet: React.FC = () => {
   // Get contentMode and setContentMode from context - single source of truth
   const {
-    sheetRef,
     closeSheet,
     contentMode,
     setContentMode,
@@ -217,7 +212,6 @@ export const ActionsBottomSheet: React.FC = () => {
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
   const { theme } = useTheme();
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
   const isDark = theme === 'dark';
 
   // Wizard state for all sliding panels (local, only for slide animation)
@@ -323,14 +317,6 @@ export const ActionsBottomSheet: React.FC = () => {
       divider: isDark ? neutral[700] : neutral[200],
     }),
     [themeColors, isDark]
-  );
-
-  // Custom backdrop with opacity
-  const renderBackdrop = useCallback(
-    (props: BottomSheetBackdropProps) => (
-      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.5} />
-    ),
-    []
   );
 
   // Handle auth success - simple and direct
@@ -501,48 +487,6 @@ export const ActionsBottomSheet: React.FC = () => {
     // Note: contentMode is reset by openSheet when the sheet is opened again
   }, [slideProgress, clearEditMatch]);
 
-  // Handle keyboard dismissal to restore sheet position
-  useEffect(() => {
-    const isWizardActive =
-      showWizard ||
-      showInviteWizard ||
-      showShareListWizard ||
-      showNetworkWizard ||
-      contentMode === 'auth' ||
-      contentMode === 'onboarding' ||
-      contentMode === 'loading';
-    if (!isWizardActive) return;
-
-    let hideTimeout: NodeJS.Timeout;
-
-    const handleKeyboardHide = () => {
-      if (hideTimeout) {
-        clearTimeout(hideTimeout);
-      }
-
-      hideTimeout = setTimeout(() => {
-        if (sheetRef.current) {
-          try {
-            sheetRef.current.snapToIndex(0);
-          } catch {
-            // Silently handle any errors
-          }
-        }
-      }, 150);
-    };
-
-    const keyboardWillHideListener = Keyboard.addListener('keyboardWillHide', handleKeyboardHide);
-    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', handleKeyboardHide);
-
-    return () => {
-      if (hideTimeout) {
-        clearTimeout(hideTimeout);
-      }
-      keyboardWillHideListener.remove();
-      keyboardDidHideListener.remove();
-    };
-  }, [showWizard, showInviteWizard, showShareListWizard, showNetworkWizard, contentMode, sheetRef]);
-
   // Animated styles for content sliding
   const actionsAnimatedStyle = useAnimatedStyle(() => ({
     transform: [
@@ -572,9 +516,7 @@ export const ActionsBottomSheet: React.FC = () => {
       const ACTION_ITEMS_COUNT = 5;
       const iconSize = spacingPixels[11];
       return (
-        <View
-          style={[styles.contentContainer, { paddingBottom: insets.bottom + spacingPixels[4] }]}
-        >
+        <View style={[styles.contentContainer, { paddingBottom: spacingPixels[4] }]}>
           <View style={styles.actionsList}>
             {Array.from({ length: ACTION_ITEMS_COUNT }).map((_, index) => (
               <View key={index} style={[styles.actionItem, { borderBottomColor: colors.border }]}>
@@ -662,7 +604,6 @@ export const ActionsBottomSheet: React.FC = () => {
             onCreateNetwork={handleCreateNetwork}
             colors={colors}
             t={t}
-            bottomInset={insets.bottom}
           />
         </Animated.View>
 
@@ -726,37 +667,32 @@ export const ActionsBottomSheet: React.FC = () => {
     contentMode === 'onboarding';
 
   return (
-    <BottomSheetModal
-      ref={sheetRef}
-      enableDynamicSizing={!isWizardMode}
-      snapPoints={isWizardMode ? ['95%'] : undefined}
-      maxDynamicContentSize={MAX_SHEET_HEIGHT}
-      backdropComponent={renderBackdrop}
-      enablePanDownToClose={!isWizardMode}
-      handleIndicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
-      backgroundStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
-      bottomInset={0}
-      onDismiss={handleSheetDismiss}
-      keyboardBehavior="interactive"
-      keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
-      enableDismissOnClose
+    <ActionSheet
+      gestureEnabled={!isWizardMode}
+      closeOnTouchBackdrop={!isWizardMode}
+      onClose={handleSheetDismiss}
+      containerStyle={[
+        styles.sheetBackground,
+        { backgroundColor: colors.cardBackground },
+        isWizardMode && styles.sheetFullHeight,
+      ]}
+      indicatorStyle={{
+        width: spacingPixels[10],
+        height: 4,
+        borderRadius: 4,
+        alignSelf: 'center',
+        backgroundColor: colors.border,
+      }}
     >
       {/* For wizards (auth, onboarding, match creation), render directly without ScrollView wrapper */}
       {/* The wizards manage their own internal scrolling */}
       {isWizardMode ? (
-        <View style={[styles.sheetContent, { backgroundColor: colors.cardBackground }]}>
-          {renderContent()}
-        </View>
+        <View style={styles.sheetContent}>{renderContent()}</View>
       ) : (
-        /* For actions content, use BottomSheetScrollView */
-        <BottomSheetScrollView
-          style={[styles.sheetContent, { backgroundColor: colors.cardBackground }]}
-        >
-          {renderContent()}
-        </BottomSheetScrollView>
+        /* For actions content, use SheetScrollView — no flex:1 so it auto-sizes to content */
+        <SheetScrollView>{renderContent()}</SheetScrollView>
       )}
-    </BottomSheetModal>
+    </ActionSheet>
   );
 };
 
@@ -768,9 +704,10 @@ const styles = StyleSheet.create({
   sheetBackground: {
     borderTopLeftRadius: radiusPixels['2xl'],
     borderTopRightRadius: radiusPixels['2xl'],
+    overflow: 'hidden',
   },
-  handleIndicator: {
-    width: spacingPixels[10],
+  sheetFullHeight: {
+    flex: 1,
   },
   sheetContent: {
     flex: 1,

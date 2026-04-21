@@ -330,17 +330,17 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
     isPickleballSport,
   ]);
 
-  if (!match) return null;
-
   const expectedCount = isDoubles ? 4 : 2;
-  if (joinedParticipants.length !== expectedCount) {
-    return (
-      <ActionSheet
-        gestureEnabled
-        onClose={handleSheetClose}
-        containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
-        indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
-      >
+  const hasInvalidParticipants = !!match && joinedParticipants.length !== expectedCount;
+
+  return (
+    <ActionSheet
+      gestureEnabled
+      onClose={handleSheetClose}
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    >
+      {!match || hasInvalidParticipants ? (
         <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <TouchableOpacity onPress={handleClose} style={styles.headerButton} hitSlop={8}>
@@ -351,308 +351,303 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
             </Text>
             <View style={styles.headerButton} />
           </View>
-          <View style={styles.errorStateContent}>
-            <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
-            <Text size="base" color={colors.textMuted} style={styles.errorStateText}>
-              {t('registerMatchScore.error.invalidParticipants')}
-            </Text>
-          </View>
-        </View>
-      </ActionSheet>
-    );
-  }
-
-  return (
-    <ActionSheet
-      gestureEnabled
-      onClose={handleSheetClose}
-      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
-      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
-    >
-      <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <View style={styles.headerLeft} />
-          <Text
-            size="lg"
-            weight="semibold"
-            color={colors.text}
-            style={styles.headerTitle}
-            numberOfLines={1}
-          >
-            {t(isRebuttal ? 'registerMatchScore.rebuttalTitle' : 'registerMatchScore.title')}
-          </Text>
-          <View style={styles.headerRight}>
-            <TouchableOpacity
-              onPress={handleClose}
-              style={styles.headerButton}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Ionicons name="close-outline" size={24} color={colors.textMuted} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Content: partner (doubles) + set scores */}
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {isDoubles && !isRebuttal && (
-            <>
-              <Text
-                size="sm"
-                weight="semibold"
-                color={colors.textMuted}
-                style={styles.sectionLabel}
-              >
-                {t('registerMatchScore.yourPartner')}
+          {hasInvalidParticipants && (
+            <View style={styles.errorStateContent}>
+              <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
+              <Text size="base" color={colors.textMuted} style={styles.errorStateText}>
+                {t('registerMatchScore.error.invalidParticipants')}
               </Text>
-              <View style={styles.partnerRow}>
-                {otherParticipants.map(p => {
-                  const id = p.player_id;
-                  const selected = partnerId === id;
-                  return (
-                    <TouchableOpacity
-                      key={id}
-                      style={[
-                        styles.partnerCard,
-                        {
-                          backgroundColor: selected
-                            ? `${colors.buttonActive}15`
-                            : colors.buttonInactive,
-                          borderColor: selected ? colors.buttonActive : colors.border,
-                        },
-                      ]}
-                      onPress={() => {
-                        selectionHaptic();
-                        setPartnerId(selected ? null : id);
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        size="base"
-                        weight={selected ? 'semibold' : 'regular'}
-                        color={selected ? colors.buttonActive : colors.text}
-                      >
-                        {getParticipantName(p)}
-                      </Text>
-                      {selected && (
-                        <Ionicons
-                          name="checkmark-circle"
-                          size={20}
-                          color={colors.buttonActive}
-                          style={styles.partnerCardCheck}
-                        />
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </>
+            </View>
           )}
-
-          <Text size="sm" weight="semibold" color={colors.textMuted} style={styles.sectionLabel}>
-            {t(isPickleballSport ? 'registerMatchScore.games' : 'registerMatchScore.sets')}
-          </Text>
-          <Text size="xs" color={colors.textMuted} style={styles.scoreHint}>
-            {t(
-              isPickleballSport
-                ? 'registerMatchScore.pickleballScoreHint'
-                : 'registerMatchScore.tennisScoreHint'
-            )}
-          </Text>
-
-          {sets.map((set, idx) => (
-            <View
-              key={idx}
-              style={[
-                styles.setCard,
-                { backgroundColor: colors.buttonInactive, borderColor: colors.border },
-              ]}
+        </View>
+      ) : (
+        <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
+          {/* Header */}
+          <View style={[styles.header, { borderBottomColor: colors.border }]}>
+            <View style={styles.headerLeft} />
+            <Text
+              size="lg"
+              weight="semibold"
+              color={colors.text}
+              style={styles.headerTitle}
+              numberOfLines={1}
             >
-              <View style={styles.setCardHeader}>
+              {t(isRebuttal ? 'registerMatchScore.rebuttalTitle' : 'registerMatchScore.title')}
+            </Text>
+            <View style={styles.headerRight}>
+              <TouchableOpacity
+                onPress={handleClose}
+                style={styles.headerButton}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Content: partner (doubles) + set scores */}
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {isDoubles && !isRebuttal && (
+              <>
                 <Text
                   size="sm"
-                  weight="medium"
+                  weight="semibold"
                   color={colors.textMuted}
-                  style={styles.setCardLabel}
+                  style={styles.sectionLabel}
                 >
-                  {t(isPickleballSport ? 'registerMatchScore.gameN' : 'registerMatchScore.setN', {
-                    number: idx + 1,
-                  })}
+                  {t('registerMatchScore.yourPartner')}
                 </Text>
-                {sets.length > 1 && idx > 0 && (
-                  <TouchableOpacity
-                    onPress={() => handleRemoveSet(idx)}
-                    style={styles.removeSetButton}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    accessibilityLabel={t(
-                      isPickleballSport
-                        ? 'registerMatchScore.removeGame'
-                        : 'registerMatchScore.removeSet'
-                    )}
-                    accessibilityRole="button"
-                  >
-                    <Ionicons name="trash-outline" size={20} color={colors.textMuted} />
-                  </TouchableOpacity>
-                )}
-              </View>
-              <View style={styles.setCardLabelsRow}>
-                <View style={styles.scoreCell}>
+                <View style={styles.partnerRow}>
+                  {otherParticipants.map(p => {
+                    const id = p.player_id;
+                    const selected = partnerId === id;
+                    return (
+                      <TouchableOpacity
+                        key={id}
+                        style={[
+                          styles.partnerCard,
+                          {
+                            backgroundColor: selected
+                              ? `${colors.buttonActive}15`
+                              : colors.buttonInactive,
+                            borderColor: selected ? colors.buttonActive : colors.border,
+                          },
+                        ]}
+                        onPress={() => {
+                          selectionHaptic();
+                          setPartnerId(selected ? null : id);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Text
+                          size="base"
+                          weight={selected ? 'semibold' : 'regular'}
+                          color={selected ? colors.buttonActive : colors.text}
+                        >
+                          {getParticipantName(p)}
+                        </Text>
+                        {selected && (
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={20}
+                            color={colors.buttonActive}
+                            style={styles.partnerCardCheck}
+                          />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </>
+            )}
+
+            <Text size="sm" weight="semibold" color={colors.textMuted} style={styles.sectionLabel}>
+              {t(isPickleballSport ? 'registerMatchScore.games' : 'registerMatchScore.sets')}
+            </Text>
+            <Text size="xs" color={colors.textMuted} style={styles.scoreHint}>
+              {t(
+                isPickleballSport
+                  ? 'registerMatchScore.pickleballScoreHint'
+                  : 'registerMatchScore.tennisScoreHint'
+              )}
+            </Text>
+
+            {sets.map((set, idx) => (
+              <View
+                key={idx}
+                style={[
+                  styles.setCard,
+                  { backgroundColor: colors.buttonInactive, borderColor: colors.border },
+                ]}
+              >
+                <View style={styles.setCardHeader}>
                   <Text
-                    size="xs"
+                    size="sm"
                     weight="medium"
                     color={colors.textMuted}
-                    style={styles.scoreCellLabel}
-                    numberOfLines={1}
+                    style={styles.setCardLabel}
                   >
-                    {team1Label}
+                    {t(isPickleballSport ? 'registerMatchScore.gameN' : 'registerMatchScore.setN', {
+                      number: idx + 1,
+                    })}
                   </Text>
+                  {sets.length > 1 && idx > 0 && (
+                    <TouchableOpacity
+                      onPress={() => handleRemoveSet(idx)}
+                      style={styles.removeSetButton}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      accessibilityLabel={t(
+                        isPickleballSport
+                          ? 'registerMatchScore.removeGame'
+                          : 'registerMatchScore.removeSet'
+                      )}
+                      accessibilityRole="button"
+                    >
+                      <Ionicons name="trash-outline" size={20} color={colors.textMuted} />
+                    </TouchableOpacity>
+                  )}
                 </View>
-                <View style={styles.setCardDashSpacer} />
-                <View style={styles.scoreCell}>
+                <View style={styles.setCardLabelsRow}>
+                  <View style={styles.scoreCell}>
+                    <Text
+                      size="xs"
+                      weight="medium"
+                      color={colors.textMuted}
+                      style={styles.scoreCellLabel}
+                      numberOfLines={1}
+                    >
+                      {team1Label}
+                    </Text>
+                  </View>
+                  <View style={styles.setCardDashSpacer} />
+                  <View style={styles.scoreCell}>
+                    <Text
+                      size="xs"
+                      weight="medium"
+                      color={colors.textMuted}
+                      style={styles.scoreCellLabel}
+                      numberOfLines={1}
+                    >
+                      {team2Label}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.setCardInputsRow}>
+                  <View style={styles.scoreCell}>
+                    <TextInput
+                      ref={el => {
+                        leftInputRefs.current[idx] = el;
+                      }}
+                      style={[
+                        styles.scoreInput,
+                        {
+                          backgroundColor: colors.cardBackground,
+                          borderColor: colors.border,
+                          color: colors.text,
+                        },
+                      ]}
+                      keyboardType="number-pad"
+                      maxLength={2}
+                      placeholder="0"
+                      placeholderTextColor={colors.textMuted}
+                      value={set.team1Score !== null ? String(set.team1Score) : ''}
+                      onChangeText={v => handleScoreChange(idx, 'team1', v)}
+                    />
+                  </View>
                   <Text
-                    size="xs"
+                    size="base"
                     weight="medium"
                     color={colors.textMuted}
-                    style={styles.scoreCellLabel}
-                    numberOfLines={1}
+                    style={styles.setCardDash}
                   >
-                    {team2Label}
+                    –
                   </Text>
+                  <View style={styles.scoreCell}>
+                    <TextInput
+                      ref={el => {
+                        rightInputRefs.current[idx] = el;
+                      }}
+                      style={[
+                        styles.scoreInput,
+                        {
+                          backgroundColor: colors.cardBackground,
+                          borderColor: colors.border,
+                          color: colors.text,
+                        },
+                      ]}
+                      keyboardType="number-pad"
+                      maxLength={2}
+                      placeholder="0"
+                      placeholderTextColor={colors.textMuted}
+                      value={set.team2Score !== null ? String(set.team2Score) : ''}
+                      onChangeText={v => handleScoreChange(idx, 'team2', v)}
+                    />
+                  </View>
                 </View>
               </View>
-              <View style={styles.setCardInputsRow}>
-                <View style={styles.scoreCell}>
-                  <TextInput
-                    ref={el => {
-                      leftInputRefs.current[idx] = el;
-                    }}
-                    style={[
-                      styles.scoreInput,
-                      {
-                        backgroundColor: colors.cardBackground,
-                        borderColor: colors.border,
-                        color: colors.text,
-                      },
-                    ]}
-                    keyboardType="number-pad"
-                    maxLength={2}
-                    placeholder="0"
-                    placeholderTextColor={colors.textMuted}
-                    value={set.team1Score !== null ? String(set.team1Score) : ''}
-                    onChangeText={v => handleScoreChange(idx, 'team1', v)}
-                  />
-                </View>
+            ))}
+
+            {sets.length < MAX_SETS && (
+              <TouchableOpacity
+                style={[styles.addSetButton, { borderColor: colors.border }]}
+                onPress={handleAddSet}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="add-circle-outline" size={22} color={colors.buttonActive} />
                 <Text
                   size="base"
                   weight="medium"
-                  color={colors.textMuted}
-                  style={styles.setCardDash}
+                  color={colors.buttonActive}
+                  style={styles.addSetLabel}
                 >
-                  –
+                  {t(
+                    isPickleballSport ? 'registerMatchScore.addGame' : 'registerMatchScore.addSet'
+                  )}
                 </Text>
-                <View style={styles.scoreCell}>
-                  <TextInput
-                    ref={el => {
-                      rightInputRefs.current[idx] = el;
-                    }}
-                    style={[
-                      styles.scoreInput,
-                      {
-                        backgroundColor: colors.cardBackground,
-                        borderColor: colors.border,
-                        color: colors.text,
-                      },
-                    ]}
-                    keyboardType="number-pad"
-                    maxLength={2}
-                    placeholder="0"
-                    placeholderTextColor={colors.textMuted}
-                    value={set.team2Score !== null ? String(set.team2Score) : ''}
-                    onChangeText={v => handleScoreChange(idx, 'team2', v)}
-                  />
-                </View>
-              </View>
-            </View>
-          ))}
-
-          {sets.length < MAX_SETS && (
-            <TouchableOpacity
-              style={[styles.addSetButton, { borderColor: colors.border }]}
-              onPress={handleAddSet}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="add-circle-outline" size={22} color={colors.buttonActive} />
-              <Text
-                size="base"
-                weight="medium"
-                color={colors.buttonActive}
-                style={styles.addSetLabel}
-              >
-                {t(isPickleballSport ? 'registerMatchScore.addGame' : 'registerMatchScore.addSet')}
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          {scoreWarning && !error ? (
-            <View style={styles.warningRow}>
-              <Ionicons name="warning-outline" size={18} color="#F59E0B" />
-              <Text size="sm" color="#F59E0B">
-                {t(scoreWarning as Parameters<typeof t>[0])}
-              </Text>
-            </View>
-          ) : null}
-
-          {error ? (
-            <View style={styles.errorRow}>
-              <Ionicons name="alert-circle" size={18} color={colors.textMuted} />
-              <Text size="sm" color={colors.textMuted}>
-                {error}
-              </Text>
-            </View>
-          ) : null}
-        </ScrollView>
-
-        {/* Footer */}
-        <View style={[styles.footer, { borderTopColor: colors.border }]}>
-          <TouchableOpacity
-            style={[
-              styles.primaryButton,
-              {
-                backgroundColor:
-                  canSubmit && !isSubmitting ? colors.buttonActive : colors.buttonInactive,
-              },
-              (!canSubmit || isSubmitting) && styles.primaryButtonDisabled,
-            ]}
-            onPress={handleSubmit}
-            disabled={!canSubmit || isSubmitting}
-            activeOpacity={0.8}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator color={colors.buttonTextActive} />
-            ) : (
-              <>
-                <Text
-                  size="lg"
-                  weight="semibold"
-                  color={canSubmit ? colors.buttonTextActive : colors.textMuted}
-                >
-                  {t('registerMatchScore.submit')}
-                </Text>
-                <Ionicons
-                  name="checkmark"
-                  size={20}
-                  color={canSubmit ? colors.buttonTextActive : colors.textMuted}
-                />
-              </>
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
+
+            {scoreWarning && !error ? (
+              <View style={styles.warningRow}>
+                <Ionicons name="warning-outline" size={18} color="#F59E0B" />
+                <Text size="sm" color="#F59E0B">
+                  {t(scoreWarning as Parameters<typeof t>[0])}
+                </Text>
+              </View>
+            ) : null}
+
+            {error ? (
+              <View style={styles.errorRow}>
+                <Ionicons name="alert-circle" size={18} color={colors.textMuted} />
+                <Text size="sm" color={colors.textMuted}>
+                  {error}
+                </Text>
+              </View>
+            ) : null}
+          </ScrollView>
+
+          {/* Footer */}
+          <View style={[styles.footer, { borderTopColor: colors.border }]}>
+            <TouchableOpacity
+              style={[
+                styles.primaryButton,
+                {
+                  backgroundColor:
+                    canSubmit && !isSubmitting ? colors.buttonActive : colors.buttonInactive,
+                },
+                (!canSubmit || isSubmitting) && styles.primaryButtonDisabled,
+              ]}
+              onPress={handleSubmit}
+              disabled={!canSubmit || isSubmitting}
+              activeOpacity={0.8}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator color={colors.buttonTextActive} />
+              ) : (
+                <>
+                  <Text
+                    size="lg"
+                    weight="semibold"
+                    color={canSubmit ? colors.buttonTextActive : colors.textMuted}
+                  >
+                    {t('registerMatchScore.submit')}
+                  </Text>
+                  <Ionicons
+                    name="checkmark"
+                    size={20}
+                    color={canSubmit ? colors.buttonTextActive : colors.textMuted}
+                  />
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      )}
     </ActionSheet>
   );
 }

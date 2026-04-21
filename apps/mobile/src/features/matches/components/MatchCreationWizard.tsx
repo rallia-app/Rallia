@@ -24,7 +24,6 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Localization from 'expo-localization';
 import { Text, useToast } from '@rallia/shared-components';
 import {
@@ -283,7 +282,6 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   const { session } = useAuth();
   const { selectedSport } = useSport();
   const isDark = theme === 'dark';
-  const insets = useSafeAreaInsets();
   const toast = useToast();
 
   // Determine if we're in edit mode
@@ -1369,10 +1367,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
 
       {/* Navigation buttons */}
       <View
-        style={[
-          styles.footer,
-          { borderTopColor: colors.border, paddingBottom: insets.bottom + spacingPixels[4] },
-        ]}
+        style={[styles.footer, { borderTopColor: colors.border, paddingBottom: spacingPixels[4] }]}
       >
         {currentStep < TOTAL_STEPS ? (
           <TouchableOpacity

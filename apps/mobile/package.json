@@ -23,7 +23,6 @@
   "dependencies": {
     "@expo/cli": "^54.0.16",
     "@expo/vector-icons": "^15.0.3",
-    "@gorhom/bottom-sheet": "^5.2.8",
     "@hookform/resolvers": "^5.2.2",
     "@rallia/design-system": "*",
     "@rallia/shared-components": "*",
@@ -116,6 +115,7 @@
     "postcss": "^8.5.8",
     "prettier-plugin-tailwindcss": "^0.5.14",
     "react-native-svg-transformer": "^1.5.2",
+    "sharp": "^0.34.5",
     "tailwindcss": "4.1.16",
     "typescript": "^5.9.3"
   },

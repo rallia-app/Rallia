@@ -14,7 +14,7 @@ import {
   Linking,
   Alert,
 } from 'react-native';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
@@ -199,7 +199,7 @@ export const RatingStep: React.FC<RatingStepProps> = ({
   };
 
   return (
-    <BottomSheetScrollView
+    <SheetScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
@@ -334,7 +334,7 @@ export const RatingStep: React.FC<RatingStepProps> = ({
           })}
         </View>
       )}
-    </BottomSheetScrollView>
+    </SheetScrollView>
   );
 };
 

@@ -1,6 +1,7 @@
 import { InvitationHandler } from './handlers/invitation.ts';
 import { MatchInterestHandler } from './handlers/match-interest.ts';
 import { NotificationHandler } from './handlers/notification.ts';
+import { WelcomeHandler } from './handlers/welcome.ts';
 import type {
   EmailContent,
   EmailRequest,
@@ -8,6 +9,7 @@ import type {
   InvitationRecord,
   MatchInterestRecord,
   NotificationRecord,
+  WelcomeRecord,
 } from './types.ts';
 
 // Handler interface for type-safe email processing
@@ -22,6 +24,7 @@ export const emailHandlers: Record<EmailType, EmailHandler> = {
   invitation: new InvitationHandler(),
   notification: new NotificationHandler(),
   match_interest: new MatchInterestHandler(),
+  welcome: new WelcomeHandler(),
 };
 
 // Type-safe handler lookup
@@ -44,4 +47,8 @@ export function isNotificationRecord(request: EmailRequest): request is Notifica
 
 export function isMatchInterestRecord(request: EmailRequest): request is MatchInterestRecord {
   return request.emailType === 'match_interest';
+}
+
+export function isWelcomeRecord(request: EmailRequest): request is WelcomeRecord {
+  return request.emailType === 'welcome';
 }

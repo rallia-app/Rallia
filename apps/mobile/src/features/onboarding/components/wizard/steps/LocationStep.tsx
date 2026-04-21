@@ -16,8 +16,9 @@ import {
   Platform,
   Keyboard,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
-import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, lightTheme, darkTheme } from '@rallia/design-system';
@@ -272,7 +273,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
   }, [clearPredictions, onUpdateFormData, formData.postalCode, homeLocation?.postalCode, geocode]);
 
   return (
-    <BottomSheetScrollView
+    <SheetScrollView
       style={styles.container}
       contentContainerStyle={[
         styles.contentContainer,
@@ -311,7 +312,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
                 {t('onboarding.locationStep.postalCode')}
               </Text>
               <View style={styles.postalCodeEditRow}>
-                <BottomSheetTextInput
+                <TextInput
                   style={[
                     styles.postalCodeEditInput,
                     {
@@ -441,7 +442,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
               }}
               placeholder={t('onboarding.locationStep.addressPlaceholder')}
               colors={colors}
-              InputComponent={BottomSheetTextInput}
+              InputComponent={TextInput}
               autoCapitalize="words"
             />
 
@@ -500,7 +501,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
           </Text>
         </View>
       </View>
-    </BottomSheetScrollView>
+    </SheetScrollView>
   );
 };
 

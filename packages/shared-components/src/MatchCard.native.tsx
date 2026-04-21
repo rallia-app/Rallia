@@ -1177,7 +1177,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
   // 2. Top Player + Court Booked badges (only in badge list for mostWanted,
   //    since standalone tiers already show in the corner ribbon)
   if (tier === 'mostWanted') {
-    const topPlayerAccent = isDark ? accent[400] : accent[500];
+    const topPlayerAccent = isDark ? primary[400] : primary[500];
     const topPlayerChip = getChipColors(topPlayerAccent);
     badges.push({
       key: 'topPlayer',
@@ -1190,7 +1190,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
       textColor: topPlayerChip.textColor,
       icon: 'star',
     });
-    const courtBookedAccent = isDark ? accent[500] : accent[600];
+    const courtBookedAccent = isDark ? secondary[400] : secondary[500];
     const courtBookedChip = getChipColors(courtBookedAccent);
     badges.push({
       key: 'courtBooked',
@@ -1234,7 +1234,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
       ? `${primary[400]}40`
       : `${primary[500]}20`;
 
-  // Tier ribbon badge config (3 accent shades: lightest → richest)
+  // Tier ribbon badge config — one hue per tier (gold / red / teal)
   const tierRibbon = isMostWanted
     ? {
         label: t('match.tier.mostWanted' as TranslationKey),
@@ -1243,7 +1243,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
     : isReadyToPlay
       ? {
           label: t('match.courtStatus.courtBooked'),
-          bg: isDark ? accent[500] : accent[600],
+          bg: isDark ? secondary[500] : secondary[600],
         }
       : isTopPlayer
         ? {
@@ -1252,7 +1252,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
                 ? 'match.tier.topPlayerPlural'
                 : 'match.tier.topPlayer') as TranslationKey
             ),
-            bg: isDark ? accent[400] : accent[500],
+            bg: isDark ? primary[500] : primary[600],
           }
         : null;
 

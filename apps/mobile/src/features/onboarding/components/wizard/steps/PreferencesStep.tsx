@@ -11,7 +11,7 @@
 
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
@@ -130,7 +130,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
   };
 
   return (
-    <BottomSheetScrollView
+    <SheetScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
@@ -419,7 +419,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           </View>
         </>
       )}
-    </BottomSheetScrollView>
+    </SheetScrollView>
   );
 };
 

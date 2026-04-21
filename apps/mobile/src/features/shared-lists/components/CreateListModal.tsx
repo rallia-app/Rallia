@@ -39,7 +39,6 @@ interface CreateListFormProps {
   onSuccess?: (listId: string) => void;
   onCancel?: () => void;
   containerStyle?: StyleProp<ViewStyle>;
-  bottomInset?: number;
 }
 
 export const CreateListForm: React.FC<CreateListFormProps> = ({
@@ -47,7 +46,6 @@ export const CreateListForm: React.FC<CreateListFormProps> = ({
   onSuccess,
   onCancel,
   containerStyle,
-  bottomInset = 0,
 }) => {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
@@ -189,10 +187,7 @@ export const CreateListForm: React.FC<CreateListFormProps> = ({
 
       {/* Footer */}
       <View
-        style={[
-          styles.footer,
-          { borderTopColor: colors.border, paddingBottom: bottomInset + spacingPixels[4] },
-        ]}
+        style={[styles.footer, { borderTopColor: colors.border, paddingBottom: spacingPixels[4] }]}
       >
         <TouchableOpacity
           style={[

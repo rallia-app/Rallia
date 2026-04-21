@@ -11,7 +11,6 @@
 
 import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, Keyboard } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { lightTheme, darkTheme, spacingPixels, primary, neutral } from '@rallia/design-system';
@@ -115,7 +114,6 @@ export const InvitePlayersWizard: React.FC<InvitePlayersWizardProps> = ({
   const { t } = useTranslation();
   const { session } = useAuth();
   const { locale } = useLocale();
-  const { bottom: bottomInset } = useSafeAreaInsets();
   const isDark = theme === 'dark';
 
   const playerId = session?.user?.id;
@@ -162,7 +160,6 @@ export const InvitePlayersWizard: React.FC<InvitePlayersWizardProps> = ({
         leaderboard={leaderboard}
         myRank={myRank ?? null}
         playerId={playerId}
-        bottomInset={bottomInset}
       />
     </View>
   );

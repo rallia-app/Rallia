@@ -6,8 +6,14 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
-import { BottomSheetFlatList } from '@gorhom/bottom-sheet';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Linking,
+  FlatList,
+} from 'react-native';
 import * as SMS from 'expo-sms';
 import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
@@ -50,7 +56,6 @@ interface InviteContactsStepProps {
   isDark: boolean;
   t: (key: TranslationKey) => string;
   listHeader?: React.ReactNode;
-  bottomInset?: number;
 }
 
 // ============================================================================
@@ -63,7 +68,6 @@ export const InviteContactsStep: React.FC<InviteContactsStepProps> = ({
   isDark,
   t,
   listHeader,
-  bottomInset = 0,
 }) => {
   const toast = useToast();
   const { selectedSport } = useSport();
@@ -303,7 +307,7 @@ export const InviteContactsStep: React.FC<InviteContactsStepProps> = ({
   return (
     <View style={styles.container}>
       {/* Contacts List */}
-      <BottomSheetFlatList
+      <FlatList
         data={filteredContacts}
         keyExtractor={(item: DeviceContact) => item.id}
         renderItem={renderContact}
@@ -330,10 +334,7 @@ export const InviteContactsStep: React.FC<InviteContactsStepProps> = ({
 
       {/* Footer */}
       <View
-        style={[
-          styles.footer,
-          { borderTopColor: colors.border, paddingBottom: spacingPixels[4] + bottomInset },
-        ]}
+        style={[styles.footer, { borderTopColor: colors.border, paddingBottom: spacingPixels[4] }]}
       >
         <Button
           variant="primary"

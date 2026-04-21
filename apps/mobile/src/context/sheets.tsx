@@ -77,6 +77,10 @@ import { EditProofActionSheet } from '../features/ratings/components/EditProofOv
 import { ReportProofActionSheet } from '../features/ratings/components/ReportProofSheet';
 // Referral
 import { ReferralInviteActionSheet } from '../components/ReferralInviteSheet';
+// Gorhom-migrated sheets
+import { FeedbackActionSheet } from '../components/FeedbackSheet';
+import { MatchDetailSheet as MatchDetailActionSheet } from '../components/MatchDetailSheet';
+import { ActionsBottomSheet as ActionsActionSheet } from '../components/ActionsBottomSheet';
 // Explainer sheets
 import {
   RatingExplainerActionSheet,
@@ -677,6 +681,9 @@ declare module 'react-native-actions-sheet' {
         proofTitle: string;
       };
     }>;
+    feedback: SheetDefinition;
+    'match-detail': SheetDefinition;
+    'main-actions': SheetDefinition;
   }
 }
 
@@ -749,6 +756,10 @@ export const Sheets = () => {
         'booking-detail': BookingDetailActionSheet,
         // Referral sheets
         'referral-invite': ReferralInviteActionSheet,
+        // Migrated from gorhom
+        feedback: FeedbackActionSheet,
+        'match-detail': MatchDetailActionSheet,
+        'main-actions': ActionsActionSheet,
         // Report proof sheet
         'report-proof': ReportProofActionSheet,
         // Explainer sheets

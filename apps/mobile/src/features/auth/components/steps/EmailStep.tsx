@@ -14,8 +14,9 @@ import {
   ActivityIndicator,
   Platform,
   Linking,
+  TextInput,
 } from 'react-native';
-import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { primary } from '@rallia/design-system';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
@@ -97,7 +98,7 @@ export const EmailStep: React.FC<EmailStepProps> = ({
   const benefitIconColor = isDark ? primary[400] : primary[500];
 
   return (
-    <BottomSheetScrollView
+    <SheetScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
@@ -211,7 +212,7 @@ export const EmailStep: React.FC<EmailStepProps> = ({
       </View>
 
       {/* Email Input */}
-      <BottomSheetTextInput
+      <TextInput
         ref={emailInputRef}
         style={[
           styles.emailInput,
@@ -278,7 +279,7 @@ export const EmailStep: React.FC<EmailStepProps> = ({
         </Text>
         {t('auth.termsSuffix')}
       </Text>
-    </BottomSheetScrollView>
+    </SheetScrollView>
   );
 };
 
