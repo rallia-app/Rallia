@@ -60,6 +60,8 @@ export interface SearchFacilitiesParams {
   hasLighting?: boolean;
   /** Filter by membership requirement (true = members only, false = public) */
   membershipRequired?: boolean;
+  /** When true, only return facilities considered bookable (external provider, active court_slot, or upcoming one-time availability) */
+  hasAvailabilities?: boolean;
   /** The viewing user's gender for match eligibility filtering */
   userGender?: string | null;
   /** Player ID for favorite-first sorting */
@@ -237,6 +239,7 @@ export async function searchFacilitiesNearby(
     courtTypes,
     hasLighting,
     membershipRequired,
+    hasAvailabilities,
     userGender,
     playerId,
     limit = DEFAULT_PAGE_SIZE,
@@ -256,6 +259,7 @@ export async function searchFacilitiesNearby(
       p_court_types: courtTypes?.length ? courtTypes : null,
       p_has_lighting: hasLighting ?? null,
       p_membership_required: membershipRequired ?? null,
+      p_has_availabilities: hasAvailabilities ?? null,
       p_limit: limit + 1, // Fetch one extra to check if more exist
       p_offset: offset,
       p_user_gender: userGender || null,
@@ -274,6 +278,7 @@ export async function searchFacilitiesNearby(
           p_court_types: courtTypes?.length ? courtTypes : null,
           p_has_lighting: hasLighting ?? null,
           p_membership_required: membershipRequired ?? null,
+          p_has_availabilities: hasAvailabilities ?? null,
         })
       : Promise.resolve({ data: null, error: null }),
   ]);

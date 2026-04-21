@@ -126,9 +126,9 @@
     "continueWithGoogle": "Continuer avec Google",
     "continueWithApple": "Continuer avec Apple",
     "continueWithEmail": "ou continuer avec courriel",
-    "benefitFindPartners": "Trouve des partenaires de jeu près de chez toi",
-    "benefitCreateGames": "Crée et rejoins des parties instantanément",
-    "benefitJoinCommunity": "Connecte-toi à ta communauté locale"
+    "benefitFindPartners": "Trouve les meilleurs partenaires de jeu et évalue leur niveau et crédibilité instantanément",
+    "benefitCreateGames": "Crée et rejoins des parties alignées avec ton niveau et tes attentes",
+    "benefitJoinCommunity": "Explore les disponibilités et réserve 10x plus vite les terrains du grand Montréal"
   },
   "splash": {
     "slogan": "Ta prochaine partie t'attend."
@@ -217,7 +217,23 @@
       "score_confirmation": "Confirmation du score",
       "community_join_request": "Demande d'adhésion",
       "community_join_accepted": "Demande approuvée",
-      "community_join_rejected": "Demande refusée"
+      "community_join_rejected": "Demande refusée",
+      "booking_created": "Réservation\ncréée",
+      "booking_cancelled_by_player": "Réservation annulée\n(joueur)",
+      "booking_modified": "Réservation\nmodifiée",
+      "new_member_joined": "Nouveau\nmembre",
+      "member_left": "Départ d'un\nmembre",
+      "member_role_changed": "Rôle\nmodifié",
+      "payment_received": "Paiement\nreçu",
+      "payment_failed": "Paiement\néchoué",
+      "refund_processed": "Remboursement\neffectué",
+      "daily_summary": "Résumé\nquotidien",
+      "weekly_report": "Rapport\nhebdo",
+      "booking_confirmed": "Réservation\nconfirmée",
+      "booking_reminder": "Rappel de\nréservation",
+      "booking_cancelled_by_org": "Réservation annulée\n(établissement)",
+      "membership_approved": "Adhésion\napprouvée",
+      "org_announcement": "Annonce"
     },
     "categories": {
       "match": "Notifications de parties",
@@ -240,7 +256,7 @@
     "messages": {
       "match_invitation": {
         "title": "Partie en vue!",
-        "body": "{playerName} veut jouer au {sportName} avec vous le {matchDate}{startTime}{locationName}"
+        "body": "{playerName} veut jouer au {sportName} avec vous le {matchDate}{startTime} à {locationName}"
       },
       "match_join_request": {
         "title": "{playerName} veut rejoindre",
@@ -350,6 +366,78 @@
       "reference_request_declined": {
         "title": "Référence refusée",
         "body": "{playerName} n'a pas pu confirmer votre niveau en {sportName}."
+      },
+      "match_spot_opened": {
+        "title": "Une place vient de se libérer",
+        "body": "Une place s'est libérée dans une partie de {sportName} à {locationName} le {matchDate}{startTime}"
+      },
+      "nearby_match_available": {
+        "title": "Nouvelle partie de {sportName} près de vous",
+        "body": "Une nouvelle partie est disponible à {locationName} le {matchDate}{startTime}"
+      },
+      "booking_created": {
+        "title": "Nouvelle réservation",
+        "body": "{playerName} a réservé {courtName} le {bookingDate}{startTime}"
+      },
+      "booking_cancelled_by_player": {
+        "title": "Réservation annulée",
+        "body": "{playerName} a annulé sa réservation de {courtName} le {bookingDate}"
+      },
+      "booking_modified": {
+        "title": "Réservation modifiée",
+        "body": "La réservation de {courtName} le {bookingDate} a été modifiée."
+      },
+      "new_member_joined": {
+        "title": "Nouveau membre",
+        "body": "{playerName} a rejoint {orgName}."
+      },
+      "member_left": {
+        "title": "Départ d'un membre",
+        "body": "{playerName} a quitté {orgName}."
+      },
+      "member_role_changed": {
+        "title": "Rôle modifié",
+        "body": "Le rôle de {playerName} a été changé en {memberRole}."
+      },
+      "payment_received": {
+        "title": "Paiement reçu",
+        "body": "{amountFormatted} reçu de {playerName}."
+      },
+      "payment_failed": {
+        "title": "Paiement échoué",
+        "body": "Le paiement de {amountFormatted} de {playerName} a échoué."
+      },
+      "refund_processed": {
+        "title": "Remboursement effectué",
+        "body": "{amountFormatted} ont été remboursés à {playerName}."
+      },
+      "daily_summary": {
+        "title": "Résumé quotidien",
+        "body": "Résumé des réservations et activités pour {orgName}."
+      },
+      "weekly_report": {
+        "title": "Rapport hebdomadaire",
+        "body": "Votre rapport hebdomadaire pour {orgName} est prêt."
+      },
+      "booking_confirmed": {
+        "title": "Réservation confirmée",
+        "body": "Votre réservation de {courtName} le {bookingDate}{startTime} est confirmée."
+      },
+      "booking_reminder": {
+        "title": "Rappel de réservation",
+        "body": "Rappel : vous avez réservé {courtName} le {bookingDate}{startTime}"
+      },
+      "booking_cancelled_by_org": {
+        "title": "Réservation annulée",
+        "body": "{orgName} a annulé votre réservation de {courtName} le {bookingDate}."
+      },
+      "membership_approved": {
+        "title": "Adhésion approuvée",
+        "body": "Votre adhésion à {orgName} a été approuvée."
+      },
+      "org_announcement": {
+        "title": "Annonce de {orgName}",
+        "body": "{orgName} a partagé une nouvelle annonce."
       }
     }
   },
@@ -1163,7 +1251,7 @@
         "strategic": "Stratégique"
       },
       "favoriteFacilities": "Terrains préférés",
-      "selectUpTo3": "Sélectionnez au moins 2 terrains favoris",
+      "selectUpTo3": "Sélectionnez au moins 3 terrains favoris",
       "searchFacility": "Rechercher un terrain...",
       "addAnotherFacility": "Ajouter un autre terrain...",
       "noFacilitiesFound": "Aucun terrain trouvé. Essayez une autre recherche.",
@@ -1496,7 +1584,7 @@
     },
     "suggestions": {
       "title": "Vos meilleurs matchs",
-      "subtitle": "Nous avons trouvé des joueurs près de chez vous qui correspondent à votre niveau et horaire",
+      "subtitle": "Des joueurs près de chez vous, sélectionnés selon votre niveau, vos disponibilités et vos terrains préférés",
       "sendInvite": "Envoyer l'invitation",
       "confirmTitle": "Envoyer l'invitation?",
       "confirmMessage": "Inviter {opponent} pour {sport} à {facility}, {time}",
@@ -1546,13 +1634,13 @@
     },
     "favoriteSitesStep": {
       "title": "Sélectionnez vos terrains favoris",
-      "subtitle": "Choisissez au moins 2 sites de jeu où vous aimez jouer. Cela nous aide à vous trouver de meilleures parties.",
-      "subtitleBothSports": "Choisissez au moins 2 sites de jeu par sport. Les sites offrant les deux sports comptent pour chacun.",
+      "subtitle": "Choisissez au moins 3 sites de jeu où vous aimez jouer. Cela nous aide à vous trouver de meilleures parties.",
+      "subtitleBothSports": "Choisissez au moins 3 sites de jeu par sport. Les sites offrant les deux sports comptent pour chacun.",
       "selected": "sélectionnés",
       "tennisCount": "Tennis",
       "pickleballCount": "Pickleball",
-      "selectMinimum": "Veuillez sélectionner au moins 2 sites de jeu favoris.",
-      "selectMinimumPerSport": "Veuillez sélectionner au moins 2 sites de jeu pour chaque sport (tennis et pickleball).",
+      "selectMinimum": "Veuillez sélectionner au moins 3 sites de jeu favoris.",
+      "selectMinimumPerSport": "Veuillez sélectionner au moins 3 sites de jeu pour chaque sport (tennis et pickleball).",
       "searchLabel": "Rechercher un site de jeu",
       "searchPlaceholder": "Tapez pour rechercher...",
       "loading": "Chargement des sites de jeu à proximité...",
@@ -2828,6 +2916,15 @@
     "chat": "Chat",
     "host": "Hôte",
     "hostedBy": "Organisé par",
+    "availableCourtsHeader": "Terrains disponibles à l'heure de la partie",
+    "availableCourtsSubtitle": "Réservez-en un maintenant pour confirmer la partie",
+    "availableCourtsLoading": "Vérification des disponibilités…",
+    "bookingConfirmation": {
+      "message": "Confirmer associera le terrain réservé à cette partie.",
+      "confirm": "Oui, j'ai réservé",
+      "decline": "Pas encore",
+      "error": "Impossible de mettre à jour la partie. Veuillez réessayer."
+    },
     "participants": "Joueurs",
     "openSpots": "Places disponibles",
     "court": "Terrain",
@@ -7810,6 +7907,9 @@
         "all": "Tout accès",
         "public": "Public",
         "members_only": "Membres seulement"
+      },
+      "hasAvailabilities": {
+        "label": "Réservable"
       }
     },
     "empty": {

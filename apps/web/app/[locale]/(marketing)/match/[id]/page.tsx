@@ -122,7 +122,7 @@ export default async function MatchPage({ params }: Props) {
   const costLabel = match.is_court_free
     ? tGames('free')
     : match.estimated_cost
-      ? tGames('costPerPlayer', { amount: Math.ceil(match.estimated_cost / total) })
+      ? tGames('costPerPlayer', { amount: (match.estimated_cost / total).toFixed(2) })
       : null;
 
   const badges: Array<{

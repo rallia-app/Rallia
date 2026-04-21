@@ -20,6 +20,7 @@ import {
   GestureResponderEvent,
   Text as RNText,
   Platform,
+  AppState,
 } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
@@ -49,7 +50,9 @@ import {
   useTotalUnreadCount,
   useOtherSportsUnreadCount,
   useProfileCompleteness,
+  chatKeys,
 } from '@rallia/shared-hooks';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth, useThemeStyles, useTranslation, useRequireOnboarding } from '../hooks';
 import { useTheme } from '@rallia/shared-hooks';
 import { useAppNavigation } from './hooks';
@@ -960,8 +963,24 @@ function CommunityTabIcon({ color, size }: { color: string; size: number }) {
 function ChatTabIconWithTour({ color, size }: { color: string; size: number }) {
   const { t } = useTranslation();
   const { session } = useAuth();
-  const { data: unreadCount } = useTotalUnreadCount(session?.user?.id);
+  const playerId = session?.user?.id;
+  const { data: unreadCount } = useTotalUnreadCount(playerId);
   const { colors } = useThemeStyles();
+  const queryClient = useQueryClient();
+
+  // Self-heal the badge when returning to foreground: realtime channels can
+  // drop while the app is suspended, so refetch unread counts on every wake.
+  useEffect(() => {
+    if (!playerId) return;
+    const sub = AppState.addEventListener('change', nextState => {
+      if (nextState === 'active') {
+        queryClient.invalidateQueries({ queryKey: chatKeys.unreadCount(playerId) });
+        queryClient.invalidateQueries({ queryKey: chatKeys.playerConversations(playerId) });
+        queryClient.invalidateQueries({ queryKey: chatKeys.unreadConversationsCount(playerId) });
+      }
+    });
+    return () => sub.remove();
+  }, [playerId, queryClient]);
 
   const count = unreadCount ?? 0;
   const showBadge = count > 0;

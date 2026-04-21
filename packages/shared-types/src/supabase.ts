@@ -4556,6 +4556,71 @@ export type Database = {
           },
         ]
       }
+      player_subscription: {
+        Row: {
+          cancellation_date: string | null
+          created_at: string | null
+          current_period_end: string | null
+          current_period_start: string | null
+          entitlements: Json | null
+          grace_period_expires_at: string | null
+          id: string
+          in_grace_period: boolean | null
+          last_revenuecat_event: string | null
+          original_transaction_id: string | null
+          player_id: string
+          product_identifier: string | null
+          revenuecat_customer_id: string | null
+          status: string
+          store: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          cancellation_date?: string | null
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          entitlements?: Json | null
+          grace_period_expires_at?: string | null
+          id?: string
+          in_grace_period?: boolean | null
+          last_revenuecat_event?: string | null
+          original_transaction_id?: string | null
+          player_id: string
+          product_identifier?: string | null
+          revenuecat_customer_id?: string | null
+          status?: string
+          store?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          cancellation_date?: string | null
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          entitlements?: Json | null
+          grace_period_expires_at?: string | null
+          id?: string
+          in_grace_period?: boolean | null
+          last_revenuecat_event?: string | null
+          original_transaction_id?: string | null
+          player_id?: string
+          product_identifier?: string | null
+          revenuecat_customer_id?: string | null
+          status?: string
+          store?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_subscription_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: true
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pricing_rule: {
         Row: {
           court_id: string | null
@@ -7827,6 +7892,7 @@ export type Database = {
         Args: {
           p_court_types?: string[]
           p_facility_types?: string[]
+          p_has_availabilities?: boolean
           p_has_lighting?: boolean
           p_latitude: number
           p_limit?: number
@@ -7867,6 +7933,7 @@ export type Database = {
         Args: {
           p_court_types?: string[]
           p_facility_types?: string[]
+          p_has_availabilities?: boolean
           p_has_lighting?: boolean
           p_latitude: number
           p_longitude: number

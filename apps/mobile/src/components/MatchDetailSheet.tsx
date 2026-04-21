@@ -104,6 +104,7 @@ import ReputationBadge from './ReputationBadge';
 import { useAppNavigation } from '../navigation';
 import type { PlayerWithProfile, OpponentForFeedback } from '@rallia/shared-types';
 import * as Analytics from '../services/analytics';
+import { MatchAvailableCourtsSection } from '../features/matches/components/MatchAvailableCourtsSection';
 
 // Use base.white from design system for consistency
 
@@ -2030,7 +2031,7 @@ export const MatchDetailSheet: React.FC = () => {
   const hasCostData = isCourtFree || !!match.estimated_cost;
   const totalCost = match.estimated_cost ?? 0;
   const perPlayerCost =
-    participantInfo.total > 0 ? Math.ceil(totalCost / participantInfo.total) : 0;
+    participantInfo.total > 0 ? (totalCost / participantInfo.total).toFixed(2) : '0.00';
 
   // Location display
   const facilityName = match.facility?.name || match.location_name;
@@ -4303,6 +4304,10 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
             )}
           </TouchableOpacity>
         </Animated.View>
+
+        {/* Available Courts Section — host-only CTA when facility has real-time
+            availability and no court is booked yet. */}
+        <MatchAvailableCourtsSection match={match} isCreator={isCreator} />
 
         {/* Cost Section */}
         {hasCostData && (

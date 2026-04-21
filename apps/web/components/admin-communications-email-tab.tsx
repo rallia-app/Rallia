@@ -1,21 +1,27 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { Mail, Moon, Sun } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
-import { EMAIL_CATEGORIES, EMAIL_TEMPLATES } from './admin-communications-data';
-import { Button } from './ui/button';
+import type { Locale } from '@rallia/shared-translations';
+import {
+  EMAIL_CATEGORIES,
+  EMAIL_TEMPLATES,
+  getMockData,
+  getNotificationMessage,
+  interpolate,
+} from './admin-communications-data';
 
 interface EmailPreviewTabProps {
   previewLocale: string;
   category: string;
+  colorMode: 'light' | 'dark';
 }
 
-export function EmailPreviewTab({ previewLocale, category }: EmailPreviewTabProps) {
+export function EmailPreviewTab({ previewLocale, category, colorMode }: EmailPreviewTabProps) {
   const t = useTranslations('admin.communications');
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
-  const [colorMode, setColorMode] = useState<'light' | 'dark'>('light');
 
   const filteredTemplates =
     category === 'all'
@@ -24,9 +30,22 @@ export function EmailPreviewTab({ previewLocale, category }: EmailPreviewTabProp
 
   const selectedEntry = EMAIL_TEMPLATES.find(tmpl => tmpl.id === selectedTemplate);
 
-  const iframeSrc = selectedTemplate
-    ? `/api/admin/email-preview?template=${selectedTemplate}&locale=${previewLocale}&mode=${colorMode}`
-    : null;
+  // For templates that map to a NotificationType, look up the localized
+  // title/body from `notifications.messages.<type>` and pass them to the
+  // preview function as query params. This keeps the backend preview free of
+  // its own translation mirror — packages/shared-translations stays the single
+  // source of truth for notification copy.
+  const iframeSrc = (() => {
+    if (!selectedTemplate || !selectedEntry) return null;
+    const base = `/api/admin/email-preview?template=${selectedTemplate}&locale=${previewLocale}&mode=${colorMode}`;
+    if (!selectedEntry.notifType) return base;
+    const msg = getNotificationMessage(selectedEntry.notifType, previewLocale as Locale);
+    if (!msg) return base;
+    const mock = getMockData(previewLocale as Locale);
+    const title = encodeURIComponent(interpolate(msg.title, mock));
+    const body = encodeURIComponent(interpolate(msg.body, mock));
+    return `${base}&title=${title}&body=${body}`;
+  })();
 
   return (
     <div className="flex border rounded-lg overflow-hidden bg-card" style={{ height: '70vh' }}>
@@ -80,21 +99,9 @@ export function EmailPreviewTab({ previewLocale, category }: EmailPreviewTabProp
               <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
                 {previewLocale}
               </span>
-              <div className="ml-auto">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 gap-1.5 text-xs"
-                  onClick={() => setColorMode(prev => (prev === 'light' ? 'dark' : 'light'))}
-                >
-                  {colorMode === 'dark' ? (
-                    <Sun className="size-3.5" />
-                  ) : (
-                    <Moon className="size-3.5" />
-                  )}
-                  {colorMode === 'dark' ? t('controls.light') : t('controls.dark')}
-                </Button>
-              </div>
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded capitalize">
+                {colorMode}
+              </span>
             </div>
             {/* Iframe */}
             <iframe

@@ -182,7 +182,7 @@ export default function PublicMatchCard({ match, onJoin }: PublicMatchCardProps)
   const costLabel = match.is_court_free
     ? t('free')
     : match.estimated_cost
-      ? t('costPerPlayer', { amount: Math.ceil(match.estimated_cost / total) })
+      ? t('costPerPlayer', { amount: (match.estimated_cost / total).toFixed(2) })
       : null;
 
   const badges: Array<{

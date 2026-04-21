@@ -214,34 +214,20 @@ export async function sendMessage(input: SendMessageInput): Promise<MessageWithS
 }
 
 /**
- * Mark messages as read up to a certain point
- * Updates both conversation_participant.last_read_at AND message.status
- * Uses RPC function to bypass RLS (since recipient is not the sender)
+ * Mark messages as read up to a certain point.
+ * Atomically updates message.status and conversation_participant.last_read_at
+ * inside a single RPC so a refetch triggered by the message UPDATE event
+ * cannot observe a half-applied state.
  */
 export async function markMessagesAsRead(conversationId: string, playerId: string): Promise<void> {
-  // IMPORTANT: Call RPC FIRST to mark messages as read
-  // The RPC uses last_read_at to bound which messages to update,
-  // so we must not update last_read_at until after the RPC runs
-  const { error: messageError } = await supabase.rpc('mark_messages_as_read', {
+  const { error } = await supabase.rpc('mark_messages_as_read', {
     p_conversation_id: conversationId,
     p_reader_id: playerId,
   });
 
-  if (messageError) {
-    console.error('Error updating message status to read:', messageError);
-    // Continue anyway - still update last_read_at for unread count calculations
-  }
-
-  // THEN update the participant's last_read_at
-  const { error: participantError } = await supabase
-    .from('conversation_participant')
-    .update({ last_read_at: new Date().toISOString() })
-    .eq('conversation_id', conversationId)
-    .eq('player_id', playerId);
-
-  if (participantError) {
-    console.error('Error updating participant last_read_at:', participantError);
-    throw participantError;
+  if (error) {
+    console.error('Error marking messages as read:', error);
+    throw error;
   }
 }
 

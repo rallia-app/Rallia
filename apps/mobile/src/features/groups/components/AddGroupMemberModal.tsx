@@ -35,11 +35,9 @@ export function AddGroupMemberActionSheet({ payload }: SheetProps<'add-group-mem
 
   const addMemberMutation = useAddGroupMember();
 
-  // Exclude current members, recently added, and current user
-  const excludePlayerIds = useMemo(
-    () => [...currentMemberIds, ...addedMemberIds],
-    [currentMemberIds, addedMemberIds]
-  );
+  // Only pass existing members through the query key; locally-added IDs are
+  // filtered client-side to avoid refetching the whole list on every + tap.
+  const excludePlayerIds = useMemo(() => currentMemberIds, [currentMemberIds]);
 
   // Use paginated player search hook
   const { players, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = usePlayerSearch({
@@ -50,6 +48,11 @@ export function AddGroupMemberActionSheet({ payload }: SheetProps<'add-group-mem
     pageSize: 50,
     enabled: !!selectedSport?.id && !!playerId,
   });
+
+  const visiblePlayers = useMemo(
+    () => players.filter(p => !addedMemberIds.includes(p.id)),
+    [players, addedMemberIds]
+  );
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -217,7 +220,7 @@ export function AddGroupMemberActionSheet({ payload }: SheetProps<'add-group-mem
         {/* Results */}
         {isLoading ? (
           renderPlayerSkeleton()
-        ) : players.length === 0 ? (
+        ) : visiblePlayers.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="person-outline" size={48} color={colors.textMuted} />
             <Text style={{ color: colors.textSecondary, marginTop: 12 }}>
@@ -226,7 +229,7 @@ export function AddGroupMemberActionSheet({ payload }: SheetProps<'add-group-mem
           </View>
         ) : (
           <FlatList
-            data={players}
+            data={visiblePlayers}
             renderItem={renderPlayerItem}
             keyExtractor={item => item.id}
             showsVerticalScrollIndicator={false}

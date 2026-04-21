@@ -11,6 +11,7 @@ import { generateEmailHtml } from '../send-notification/templates/match.ts';
 import { renderOrgEmail } from '../send-notification/templates/organization.ts';
 import { renderInvitationEmail } from '../send-email/templates/invitation.ts';
 import { renderNotificationEmail } from '../send-email/templates/notification.ts';
+import { renderMatchInterestEmail } from '../send-email/templates/match-interest.ts';
 import type { NotificationRecord, OrganizationInfo } from '../send-notification/types.ts';
 import type { InvitationEmailPayload, NotificationEmailPayload } from '../send-email/types.ts';
 
@@ -706,11 +707,16 @@ function mockNotification(
 
 const PREVIEW_SITE_URL = 'http://localhost:3000';
 
+interface TemplateOverrides {
+  title?: string;
+  body?: string;
+}
+
 interface TemplateEntry {
   id: string;
   label: string;
   category: string;
-  render: (locale: string) => string;
+  render: (locale: string, overrides?: TemplateOverrides) => string;
 }
 
 function renderAuthTemplate(templateFile: string, locale: string): string {
@@ -788,13 +794,15 @@ const TEMPLATES: TemplateEntry[] = [
     id: 'notification_generic',
     label: 'Notification: Generic',
     category: 'Notification',
-    render: locale => {
+    render: (locale, overrides) => {
       const payload: NotificationEmailPayload = {
         type: 'notification',
         email: 'user@example.com',
         notificationType: 'system',
-        title: 'System Maintenance Scheduled',
-        body: 'We will be performing scheduled maintenance on March 15 from 2:00 AM to 4:00 AM EST. During this time, some features may be temporarily unavailable.',
+        title: overrides?.title ?? 'System Maintenance Scheduled',
+        body:
+          overrides?.body ??
+          'We will be performing scheduled maintenance on March 15 from 2:00 AM to 4:00 AM EST. During this time, some features may be temporarily unavailable.',
       };
       return renderNotificationEmail(payload, locale, PREVIEW_SITE_URL).html;
     },
@@ -805,12 +813,12 @@ const TEMPLATES: TemplateEntry[] = [
     id: 'match_invitation',
     label: 'Match: Invitation',
     category: 'Match',
-    render: locale =>
+    render: (locale, overrides) =>
       generateEmailHtml(
         mockNotification(
           'match_invitation',
-          "You've been invited to a game!",
-          'Alex Johnson invited you to play Tennis tomorrow.'
+          overrides?.title ?? "You've been invited to a game!",
+          overrides?.body ?? 'Alex Johnson invited you to play Tennis tomorrow.'
         ),
         locale,
         PREVIEW_SITE_URL
@@ -820,12 +828,12 @@ const TEMPLATES: TemplateEntry[] = [
     id: 'match_join_accepted',
     label: 'Match: Join Accepted',
     category: 'Match',
-    render: locale =>
+    render: (locale, overrides) =>
       generateEmailHtml(
         mockNotification(
           'match_join_accepted',
-          "You're in the game!",
-          'Your request to join the Tennis match has been accepted.'
+          overrides?.title ?? "You're in the game!",
+          overrides?.body ?? 'Your request to join the Tennis match has been accepted.'
         ),
         locale,
         PREVIEW_SITE_URL
@@ -835,12 +843,13 @@ const TEMPLATES: TemplateEntry[] = [
     id: 'match_cancelled',
     label: 'Match: Cancelled',
     category: 'Match',
-    render: locale =>
+    render: (locale, overrides) =>
       generateEmailHtml(
         mockNotification(
           'match_cancelled',
-          'Game cancelled',
-          'The Tennis match at Parc La Fontaine has been cancelled by the organizer.'
+          overrides?.title ?? 'Game cancelled',
+          overrides?.body ??
+            'The Tennis match at Parc La Fontaine has been cancelled by the organizer.'
         ),
         locale,
         PREVIEW_SITE_URL
@@ -850,12 +859,13 @@ const TEMPLATES: TemplateEntry[] = [
     id: 'match_updated',
     label: 'Match: Updated',
     category: 'Match',
-    render: locale =>
+    render: (locale, overrides) =>
       generateEmailHtml(
         mockNotification(
           'match_updated',
-          'Game details updated',
-          'The Tennis match details have been updated. Please check the new time and location.'
+          overrides?.title ?? 'Game details updated',
+          overrides?.body ??
+            'The Tennis match details have been updated. Please check the new time and location.'
         ),
         locale,
         PREVIEW_SITE_URL
@@ -865,12 +875,13 @@ const TEMPLATES: TemplateEntry[] = [
     id: 'match_starting_soon',
     label: 'Match: Starting Soon',
     category: 'Match',
-    render: locale =>
+    render: (locale, overrides) =>
       generateEmailHtml(
         mockNotification(
           'match_starting_soon',
-          'Game starts in 30 minutes!',
-          "Your Tennis match at Parc La Fontaine starts soon. Don't forget your gear!"
+          overrides?.title ?? 'Game starts in 30 minutes!',
+          overrides?.body ??
+            "Your Tennis match at Parc La Fontaine starts soon. Don't forget your gear!"
         ),
         locale,
         PREVIEW_SITE_URL
@@ -880,12 +891,12 @@ const TEMPLATES: TemplateEntry[] = [
     id: 'match_reminder',
     label: 'Match: Reminder',
     category: 'Match',
-    render: locale =>
+    render: (locale, overrides) =>
       generateEmailHtml(
         mockNotification(
           'reminder',
-          'Upcoming game reminder',
-          'You have a Tennis match tomorrow at 2:00 PM.'
+          overrides?.title ?? 'Upcoming game reminder',
+          overrides?.body ?? 'You have a Tennis match tomorrow at 2:00 PM.'
         ),
         locale,
         PREVIEW_SITE_URL
@@ -895,12 +906,12 @@ const TEMPLATES: TemplateEntry[] = [
     id: 'match_player_joined',
     label: 'Match: Player Joined',
     category: 'Match',
-    render: locale =>
+    render: (locale, overrides) =>
       generateEmailHtml(
         mockNotification(
           'match_player_joined',
-          'A new player joined your game',
-          'Alex Johnson has joined your Tennis match.'
+          overrides?.title ?? 'A new player joined your game',
+          overrides?.body ?? 'Alex Johnson has joined your Tennis match.'
         ),
         locale,
         PREVIEW_SITE_URL
@@ -910,112 +921,348 @@ const TEMPLATES: TemplateEntry[] = [
     id: 'match_new_available',
     label: 'Match: New Available',
     category: 'Match',
-    render: locale =>
+    render: (locale, overrides) =>
       generateEmailHtml(
         mockNotification(
           'match_new_available',
-          'New Tennis game near you',
-          'A new Tennis game is available at Parc La Fontaine. Join now!'
+          overrides?.title ?? 'New Tennis game near you',
+          overrides?.body ?? 'A new Tennis game is available at Parc La Fontaine. Join now!'
+        ),
+        locale,
+        PREVIEW_SITE_URL
+      ),
+  },
+  {
+    id: 'match_join_request',
+    label: 'Match: Join Request',
+    category: 'Match',
+    render: (locale, overrides) =>
+      generateEmailHtml(
+        mockNotification(
+          'match_join_request',
+          overrides?.title ?? 'New request to join your game',
+          overrides?.body ?? 'Alex Johnson wants to join your Tennis match tomorrow.'
+        ),
+        locale,
+        PREVIEW_SITE_URL
+      ),
+  },
+  {
+    id: 'match_join_rejected',
+    label: 'Match: Join Rejected',
+    category: 'Match',
+    render: (locale, overrides) =>
+      generateEmailHtml(
+        mockNotification(
+          'match_join_rejected',
+          overrides?.title ?? 'Your request was declined',
+          overrides?.body ?? 'The organizer declined your request to join the Tennis match.'
+        ),
+        locale,
+        PREVIEW_SITE_URL
+      ),
+  },
+  {
+    id: 'match_check_in_available',
+    label: 'Match: Check-in',
+    category: 'Match',
+    render: (locale, overrides) =>
+      generateEmailHtml(
+        mockNotification(
+          'match_check_in_available',
+          overrides?.title ?? 'Check-in is now open',
+          overrides?.body ?? 'You can now check in for your Tennis match at Parc La Fontaine.'
+        ),
+        locale,
+        PREVIEW_SITE_URL
+      ),
+  },
+  {
+    id: 'player_kicked',
+    label: 'Match: Player Kicked',
+    category: 'Match',
+    render: (locale, overrides) =>
+      generateEmailHtml(
+        mockNotification(
+          'player_kicked',
+          overrides?.title ?? 'Removed from a game',
+          overrides?.body ?? 'You have been removed from the Tennis match at Parc La Fontaine.'
+        ),
+        locale,
+        PREVIEW_SITE_URL
+      ),
+  },
+  {
+    id: 'feedback_request',
+    label: 'Match: Feedback Request',
+    category: 'Match',
+    render: (locale, overrides) =>
+      generateEmailHtml(
+        mockNotification(
+          'feedback_request',
+          overrides?.title ?? 'How was your game?',
+          overrides?.body ??
+            "Let us know how your Tennis match went. Your feedback helps improve everyone's experience."
+        ),
+        locale,
+        PREVIEW_SITE_URL
+      ),
+  },
+  {
+    id: 'feedback_reminder',
+    label: 'Match: Feedback Reminder',
+    category: 'Match',
+    render: (locale, overrides) =>
+      generateEmailHtml(
+        mockNotification(
+          'feedback_reminder',
+          overrides?.title ?? 'Reminder: rate your game',
+          overrides?.body ?? "Don't forget to leave feedback for your recent Tennis match."
+        ),
+        locale,
+        PREVIEW_SITE_URL
+      ),
+  },
+  {
+    id: 'score_confirmation',
+    label: 'Match: Score Confirmation',
+    category: 'Match',
+    render: (locale, overrides) =>
+      generateEmailHtml(
+        mockNotification(
+          'score_confirmation',
+          overrides?.title ?? 'Confirm the match score',
+          overrides?.body ?? 'Please review and confirm the score submitted for your Tennis match.'
         ),
         locale,
         PREVIEW_SITE_URL
       ),
   },
 
+  // ---- System notifications ----
+  {
+    id: 'rating_verified',
+    label: 'Rating Verified',
+    category: 'System',
+    render: (locale, overrides) =>
+      generateEmailHtml(
+        mockNotification(
+          'rating_verified',
+          overrides?.title ?? 'Your rating has been verified',
+          overrides?.body ?? 'Your UTR rating of 7.5 has been verified and applied to your profile.'
+        ),
+        locale,
+        PREVIEW_SITE_URL
+      ),
+  },
+
+  // ---- Match Interest (send-email) ----
+  {
+    id: 'match_interest',
+    label: 'Match Interest',
+    category: 'Match',
+    render: locale =>
+      renderMatchInterestEmail({
+        type: 'match_interest',
+        email: 'prospect@example.com',
+        name: 'Alex Johnson',
+        locale,
+        sportName: 'Tennis',
+        matchDate: TOMORROW.toLocaleDateString(locale, { dateStyle: 'long' }),
+        matchTime: '2:00 PM',
+        location: 'Parc La Fontaine, Montreal',
+        matchUrl: `${PREVIEW_SITE_URL}/${locale.startsWith('fr') ? 'fr-CA' : 'en-US'}/match/match-abc-123?src=email`,
+      }).html,
+  },
+
   // ---- Org notifications (via renderOrgEmail) ----
-  {
-    id: 'org_booking_confirmed',
-    label: 'Org: Booking Confirmed',
+  // Title/body default to English; when the admin UI passes localized
+  // overrides (via ?title=…&body=…) those win.
+  ...(
+    [
+      {
+        id: 'org_booking_confirmed',
+        label: 'Org: Booking Confirmed',
+        type: 'booking_confirmed',
+        defaultTitle: 'Booking Confirmed',
+        defaultBody: 'Your court booking has been confirmed.',
+        extra: {
+          bookingId: 'booking-123',
+          courtName: 'Court A',
+          facilityName: 'Montreal Tennis Club',
+          startTime: '14:00',
+          endTime: '15:00',
+          priceCents: 4500,
+          currency: 'CAD',
+          locationAddress: '1234 Rue Sherbrooke, Montreal, QC',
+        },
+      },
+      {
+        id: 'org_booking_reminder',
+        label: 'Org: Booking Reminder',
+        type: 'booking_reminder',
+        defaultTitle: 'Booking Reminder',
+        defaultBody: 'Your court booking is tomorrow.',
+        extra: {
+          bookingId: 'booking-123',
+          courtName: 'Court A',
+          facilityName: 'Montreal Tennis Club',
+          startTime: '14:00',
+          endTime: '15:00',
+          locationAddress: '1234 Rue Sherbrooke, Montreal, QC',
+        },
+      },
+      {
+        id: 'org_payment_received',
+        label: 'Org: Payment Received',
+        type: 'payment_received',
+        defaultTitle: 'Payment Received',
+        defaultBody: 'A payment has been processed for a court booking.',
+        extra: { amountCents: 4500, currency: 'CAD', playerName: 'Alex Johnson' },
+      },
+      {
+        id: 'org_new_member',
+        label: 'Org: New Member',
+        type: 'new_member_joined',
+        defaultTitle: 'New Member Joined',
+        defaultBody: 'A new member has joined your organization.',
+        extra: { playerName: 'Alex Johnson' },
+      },
+      {
+        id: 'org_booking_created',
+        label: 'Org: Booking Created',
+        type: 'booking_created',
+        defaultTitle: 'New Booking',
+        defaultBody: 'A new court booking was created.',
+        extra: {
+          bookingId: 'booking-201',
+          courtName: 'Court A',
+          facilityName: 'Montreal Tennis Club',
+          startTime: '14:00',
+          endTime: '15:00',
+          priceCents: 4500,
+          currency: 'CAD',
+          playerName: 'Alex Johnson',
+        },
+      },
+      {
+        id: 'org_booking_cancelled_by_player',
+        label: 'Org: Booking Cancelled (player)',
+        type: 'booking_cancelled_by_player',
+        defaultTitle: 'Booking Cancelled',
+        defaultBody: 'A player cancelled their booking.',
+        extra: {
+          bookingId: 'booking-202',
+          courtName: 'Court A',
+          facilityName: 'Montreal Tennis Club',
+          startTime: '14:00',
+          endTime: '15:00',
+          playerName: 'Alex Johnson',
+        },
+      },
+      {
+        id: 'org_booking_modified',
+        label: 'Org: Booking Modified',
+        type: 'booking_modified',
+        defaultTitle: 'Booking Modified',
+        defaultBody: 'A booking was updated.',
+        extra: {
+          bookingId: 'booking-203',
+          courtName: 'Court A',
+          facilityName: 'Montreal Tennis Club',
+          startTime: '15:00',
+          endTime: '16:00',
+          playerName: 'Alex Johnson',
+        },
+      },
+      {
+        id: 'org_booking_cancelled_by_org',
+        label: 'Org: Booking Cancelled (org)',
+        type: 'booking_cancelled_by_org',
+        defaultTitle: 'Your booking has been cancelled',
+        defaultBody: 'The facility cancelled your court booking.',
+        extra: {
+          bookingId: 'booking-204',
+          courtName: 'Court A',
+          facilityName: 'Montreal Tennis Club',
+          startTime: '14:00',
+          endTime: '15:00',
+        },
+      },
+      {
+        id: 'org_member_left',
+        label: 'Org: Member Left',
+        type: 'member_left',
+        defaultTitle: 'Member Left',
+        defaultBody: 'A member left your organization.',
+        extra: { playerName: 'Alex Johnson' },
+      },
+      {
+        id: 'org_member_role_changed',
+        label: 'Org: Member Role Changed',
+        type: 'member_role_changed',
+        defaultTitle: 'Member Role Updated',
+        defaultBody: "A member's role was updated.",
+        extra: { playerName: 'Alex Johnson', newRole: 'Admin' },
+      },
+      {
+        id: 'org_payment_failed',
+        label: 'Org: Payment Failed',
+        type: 'payment_failed',
+        defaultTitle: 'Payment Failed',
+        defaultBody: 'A payment attempt failed.',
+        extra: { amountCents: 4500, currency: 'CAD', playerName: 'Alex Johnson' },
+      },
+      {
+        id: 'org_refund_processed',
+        label: 'Org: Refund Processed',
+        type: 'refund_processed',
+        defaultTitle: 'Refund Processed',
+        defaultBody: 'A refund was issued for a booking.',
+        extra: { amountCents: 4500, currency: 'CAD', playerName: 'Alex Johnson' },
+      },
+      {
+        id: 'org_weekly_report',
+        label: 'Org: Weekly Report',
+        type: 'weekly_report',
+        defaultTitle: 'Your Weekly Report',
+        defaultBody: 'Here is a summary of bookings and revenue for the past week.',
+        extra: {},
+      },
+      {
+        id: 'org_membership_approved',
+        label: 'Org: Membership Approved',
+        type: 'membership_approved',
+        defaultTitle: 'Membership Approved',
+        defaultBody: 'Your membership has been approved.',
+        extra: { playerName: 'Alex Johnson' },
+      },
+      {
+        id: 'org_announcement',
+        label: 'Org: Announcement',
+        type: 'org_announcement',
+        defaultTitle: 'Announcement from your club',
+        defaultBody:
+          "Upcoming tournament registration opens this Friday at 9:00 AM. Don't miss it!",
+        extra: {},
+      },
+    ] as const
+  ).map<TemplateEntry>(({ id, label, type, defaultTitle, defaultBody, extra }) => ({
+    id,
+    label,
     category: 'Organization',
-    render: locale =>
+    render: (locale, overrides) =>
       renderOrgEmail(
-        mockNotification(
-          'booking_confirmed',
-          'Booking Confirmed',
-          'Your court booking has been confirmed.',
-          {
-            bookingId: 'booking-123',
-            courtName: 'Court A',
-            facilityName: 'Montreal Tennis Club',
-            bookingDate: MATCH_DATE,
-            startTime: '14:00',
-            endTime: '15:00',
-            priceCents: 4500,
-            currency: 'CAD',
-            locationAddress: '1234 Rue Sherbrooke, Montreal, QC',
-          }
-        ),
+        mockNotification(type, overrides?.title ?? defaultTitle, overrides?.body ?? defaultBody, {
+          bookingDate: MATCH_DATE,
+          paymentDate: new Date().toLocaleDateString(locale),
+          ...extra,
+        }),
         MOCK_ORG,
         locale,
         PREVIEW_SITE_URL
       ).html,
-  },
-  {
-    id: 'org_booking_reminder',
-    label: 'Org: Booking Reminder',
-    category: 'Organization',
-    render: locale =>
-      renderOrgEmail(
-        mockNotification(
-          'booking_reminder',
-          'Booking Reminder',
-          'Your court booking is tomorrow.',
-          {
-            bookingId: 'booking-123',
-            courtName: 'Court A',
-            facilityName: 'Montreal Tennis Club',
-            bookingDate: MATCH_DATE,
-            startTime: '14:00',
-            endTime: '15:00',
-            locationAddress: '1234 Rue Sherbrooke, Montreal, QC',
-          }
-        ),
-        MOCK_ORG,
-        locale,
-        PREVIEW_SITE_URL
-      ).html,
-  },
-  {
-    id: 'org_payment_received',
-    label: 'Org: Payment Received',
-    category: 'Organization',
-    render: locale =>
-      renderOrgEmail(
-        mockNotification(
-          'payment_received',
-          'Payment Received',
-          'A payment has been processed for a court booking.',
-          {
-            amountCents: 4500,
-            currency: 'CAD',
-            playerName: 'Alex Johnson',
-            paymentDate: new Date().toLocaleDateString(locale),
-          }
-        ),
-        MOCK_ORG,
-        locale,
-        PREVIEW_SITE_URL
-      ).html,
-  },
-  {
-    id: 'org_new_member',
-    label: 'Org: New Member',
-    category: 'Organization',
-    render: locale =>
-      renderOrgEmail(
-        mockNotification(
-          'new_member_joined',
-          'New Member Joined',
-          'A new member has joined your organization.',
-          {
-            playerName: 'Alex Johnson',
-          }
-        ),
-        MOCK_ORG,
-        locale,
-        PREVIEW_SITE_URL
-      ).html,
-  },
+  })),
 ];
 
 // ---------------------------------------------------------------------------
@@ -1118,14 +1365,22 @@ function forceColorScheme(html: string, mode: string): string {
 
 /**
  * Serve the raw rendered email HTML (used as iframe src).
+ * `overrides` lets the admin UI inject locale-aware title/body resolved from
+ * `@rallia/shared-translations` on the client, keeping notification copy in
+ * one place (packages/shared-translations JSON).
  */
-function renderRawTemplate(templateId: string, locale: string, mode: string): string | null {
+function renderRawTemplate(
+  templateId: string,
+  locale: string,
+  mode: string,
+  overrides?: TemplateOverrides
+): string | null {
   const entry = TEMPLATES.find(t => t.id === templateId);
   if (!entry) return null;
 
   let emailHtml: string;
   try {
-    emailHtml = entry.render(locale);
+    emailHtml = entry.render(locale, overrides);
   } catch (err) {
     return `<html><body><pre style="padding:40px;color:red;font-family:monospace;">${String(err)}</pre></body></html>`;
   }
@@ -1199,10 +1454,19 @@ Deno.serve((req: Request) => {
   const locale = url.searchParams.get('locale') || 'en-US';
   const mode = url.searchParams.get('mode') || 'light';
   const isRaw = url.searchParams.get('raw') === '1';
+  const titleOverride = url.searchParams.get('title');
+  const bodyOverride = url.searchParams.get('body');
+  const overrides: TemplateOverrides | undefined =
+    titleOverride || bodyOverride
+      ? {
+          ...(titleOverride ? { title: titleOverride } : {}),
+          ...(bodyOverride ? { body: bodyOverride } : {}),
+        }
+      : undefined;
 
   // Raw endpoint: serves the email HTML directly (used as iframe src)
   if (isRaw && templateId) {
-    const rawHtml = renderRawTemplate(templateId, locale, mode);
+    const rawHtml = renderRawTemplate(templateId, locale, mode, overrides);
     if (!rawHtml) {
       return new Response('Template not found', { status: 404 });
     }

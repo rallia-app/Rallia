@@ -494,6 +494,10 @@ export default function FacilityFiltersBar({
     onReset?.();
   }, [onReset]);
 
+  const handleHasAvailabilitiesToggle = useCallback(() => {
+    onFiltersChange({ ...filters, hasAvailabilities: !filters.hasAvailabilities });
+  }, [filters, onFiltersChange]);
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -514,6 +518,16 @@ export default function FacilityFiltersBar({
             />
           </View>
         )}
+
+        {/* Has Availabilities Toggle (bookable facilities) */}
+        <FilterChip
+          value={t('facilitiesTab.filters.hasAvailabilities.label')}
+          isActive={filters.hasAvailabilities}
+          onPress={handleHasAvailabilitiesToggle}
+          isDark={isDark}
+          hasDropdown={false}
+          icon="calendar-outline"
+        />
 
         {/* Distance Filter */}
         <FilterChip

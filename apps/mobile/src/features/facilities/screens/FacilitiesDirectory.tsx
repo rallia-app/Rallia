@@ -236,7 +236,8 @@ export default function FacilitiesDirectory() {
       filters.surfaceType !== 'all' ||
       filters.courtType !== 'all' ||
       filters.lighting !== 'all' ||
-      filters.membership !== 'all'
+      filters.membership !== 'all' ||
+      filters.hasAvailabilities
     );
   }, [filters]);
 

@@ -25,10 +25,14 @@ const SPORT_ICONS = new Set(['tennis', 'pickleball']);
 
 /**
  * Convert a rallia:// deep link to a universal link using siteUrl.
+ * Includes the locale segment so it matches the Next.js `/[locale]/...` route
+ * and the mobile universal-link intent filters.
  */
-function toUniversalLink(deepLink: string, siteUrl?: string): string {
+function toUniversalLink(deepLink: string, siteUrl?: string, locale: string = 'en-US'): string {
   if (!siteUrl || !deepLink.startsWith('rallia://')) return deepLink;
-  return deepLink.replace('rallia://', `${siteUrl}/`);
+  const path = deepLink.slice('rallia://'.length);
+  const urlLocale = locale === 'fr' || locale === 'fr-CA' ? 'fr-CA' : 'en-US';
+  return path ? `${siteUrl}/${urlLocale}/${path}` : `${siteUrl}/${urlLocale}/`;
 }
 
 /**
@@ -300,7 +304,7 @@ function generateActionButton(
       deepLink = 'rallia://';
   }
 
-  return renderCtaButton(t(locale, buttonKey), toUniversalLink(deepLink, siteUrl));
+  return renderCtaButton(t(locale, buttonKey), toUniversalLink(deepLink, siteUrl, locale));
 }
 
 /**
@@ -355,7 +359,7 @@ export function generateEmailHtml(
 
                 ${renderDividerAndDisclaimer(t(locale, 'match.disclaimer'))}`;
 
-  const manageHref = toUniversalLink('rallia://settings/notifications', siteUrl);
+  const manageHref = toUniversalLink('rallia://settings/notifications', siteUrl, locale);
   const manageLink = `<a href="${manageHref}" style="color: ${T.primary600}; text-decoration: none;">${t(locale, 'match.managePreferences')}</a>`;
   const footerNote = `${t(locale, 'match.footerNote')}<br>${manageLink}`;
 
