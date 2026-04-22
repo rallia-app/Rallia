@@ -3353,6 +3353,9 @@
     "enterCode": "Enter referral code",
     "codeApplied": "Referral code applied!",
     "invalidCode": "Invalid referral code",
+    "inviteCardTitle": "Invited by a friend?",
+    "inviteCardSubtitle": "Enter their referral code to give them credit.",
+    "changeCode": "Change",
     "welcomeTitle": "Welcome to Rallia!",
     "welcomeDescription": "You've been invited to join Rallia. Setting things up for you...",
     "contacts": {
@@ -7098,7 +7101,11 @@
         "search": "Web search",
         "other": "Other"
       },
-      "skip": "Skip"
+      "skip": "Skip",
+      "friendCodePrompt": "Got their referral code?",
+      "friendCodeSubtitle": "Enter the code your friend shared to give them credit.",
+      "applyCode": "Apply & continue",
+      "noCode": "I don't have a code"
     }
   },
   "reputation": {

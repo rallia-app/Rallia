@@ -84,3 +84,28 @@ export const validatePassword = (password: string): boolean => {
 
   return password.length >= minLength && hasLetter && hasNumber;
 };
+
+/**
+ * Referral / invite code format (matches server-side generation):
+ * - Exactly 8 characters
+ * - Crockford-style alphabet: ABCDEFGHJKLMNPQRSTUVWXYZ23456789
+ *   (excludes the visually ambiguous I, O, 0, 1)
+ */
+export const REFERRAL_CODE_LENGTH = 8;
+export const REFERRAL_CODE_CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const REFERRAL_CODE_DISALLOWED = /[^ABCDEFGHJKLMNPQRSTUVWXYZ23456789]/g;
+
+/**
+ * Strips disallowed characters, uppercases, and truncates to the expected length.
+ * Use as the onChangeText sanitizer for a referral / invite code input.
+ */
+export const sanitizeReferralCode = (text: string): string => {
+  return text.toUpperCase().replace(REFERRAL_CODE_DISALLOWED, '').slice(0, REFERRAL_CODE_LENGTH);
+};
+
+/**
+ * Returns true when the code is exactly 8 chars from the allowed charset.
+ */
+export const isReferralCodeComplete = (code: string): boolean => {
+  return code.length === REFERRAL_CODE_LENGTH && /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]+$/.test(code);
+};
