@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { Video, ResizeMode } from 'expo-av';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Text, Button, useToast } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation } from '../../../hooks';
@@ -48,6 +48,10 @@ export function VideoProofForm({
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  const videoPlayer = useVideoPlayer(selectedVideo?.uri ?? null, player => {
+    player.loop = false;
+  });
 
   const resetForm = () => {
     setSelectedVideo(null);
@@ -343,12 +347,11 @@ export function VideoProofForm({
         ) : (
           <View style={styles.previewContainer}>
             <View style={styles.videoPreviewWrapper}>
-              <Video
-                source={{ uri: selectedVideo.uri }}
+              <VideoView
+                player={videoPlayer}
                 style={styles.videoPreview}
-                resizeMode={ResizeMode.COVER}
-                useNativeControls
-                isLooping={false}
+                contentFit="cover"
+                nativeControls
               />
               <TouchableOpacity
                 style={[styles.removeButton, { backgroundColor: colors.error }]}

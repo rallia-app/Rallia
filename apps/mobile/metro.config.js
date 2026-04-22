@@ -39,8 +39,8 @@ config.resolver = {
   },
 };
 
-// Watch workspace packages
-config.watchFolders = [workspaceRoot];
+// Watch workspace packages (extend Expo defaults rather than replace)
+config.watchFolders = [...(config.watchFolders ?? []), workspaceRoot];
 
 // Apply NativeWind
 module.exports = withNativeWind(config);

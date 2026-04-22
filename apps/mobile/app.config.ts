@@ -1,9 +1,6 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
 
-// Read from app.json as base
-import appJson from './app.json';
-
-export default ({ config: _config }: ConfigContext): ExpoConfig => {
+export default ({ config }: ConfigContext): ExpoConfig => {
   // Extract the iOS URL scheme from the iOS Client ID
   // The iOS URL scheme for Google Sign-In should be in format: com.googleusercontent.apps.CLIENT_ID
   const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '';
@@ -19,8 +16,8 @@ export default ({ config: _config }: ConfigContext): ExpoConfig => {
     googleIosUrlScheme = `com.googleusercontent.apps.${clientId}`;
   }
 
-  // Start with base config from app.json
-  const baseConfig = appJson.expo as ExpoConfig;
+  // Start with base config from app.json (merged by Expo via ConfigContext)
+  const baseConfig = config;
 
   // Filter out plugins that need dynamic configuration
   const basePlugins = (baseConfig.plugins || []).filter(plugin => {
@@ -48,6 +45,8 @@ export default ({ config: _config }: ConfigContext): ExpoConfig => {
 
   return {
     ...baseConfig,
+    name: baseConfig.name ?? 'Rallia',
+    slug: baseConfig.slug ?? 'rallia-app',
     android: {
       ...baseConfig.android,
       googleServicesFile: './google-services.json',
