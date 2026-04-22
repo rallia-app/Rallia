@@ -21,7 +21,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { Video, ResizeMode } from 'expo-av';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Text, Button, useToast } from '@rallia/shared-components';
@@ -68,6 +68,13 @@ export function EditProofActionSheet({ payload }: SheetProps<'edit-proof'>) {
 
   // New file state (when user selects a replacement file)
   const [newFile, setNewFile] = useState<NewFile | null>(null);
+
+  const newVideoPlayer = useVideoPlayer(
+    newFile && newFile.mimeType.startsWith('video/') ? (newFile.uri ?? null) : null,
+    player => {
+      player.loop = false;
+    }
+  );
 
   // Check proof type
   const isExternalLink = proof?.proof_type === 'external_link';
@@ -516,13 +523,11 @@ export function EditProofActionSheet({ payload }: SheetProps<'edit-proof'>) {
 
           {fileType === 'video' && (
             <View style={styles.videoPreviewContainer}>
-              <Video
-                source={{ uri: newFile.uri }}
+              <VideoView
+                player={newVideoPlayer}
                 style={styles.previewVideo}
-                resizeMode={ResizeMode.COVER}
-                shouldPlay={false}
-                isLooping={false}
-                useNativeControls={false}
+                contentFit="cover"
+                nativeControls={false}
               />
               <View style={styles.videoOverlay}>
                 <Ionicons name="play-circle" size={48} color="rgba(255,255,255,0.9)" />

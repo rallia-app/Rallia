@@ -6,7 +6,7 @@
  * Provides smooth animations and professional UI.
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -21,7 +21,8 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Video, ResizeMode } from 'expo-av';
+import { VideoView, useVideoPlayer } from 'expo-video';
+import { useEventListener } from 'expo';
 import { WebView } from 'react-native-webview';
 import { Text } from '@rallia/shared-components';
 import { Logger } from '@rallia/shared-services';
@@ -70,11 +71,29 @@ const ProofViewer: React.FC<ProofViewerProps> = ({
 }) => {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
-  const videoRef = useRef<Video>(null);
   const [loading, setLoading] = useState(true);
-  const [, setVideoStatus] = useState<{ isPlaying: boolean }>({ isPlaying: false });
   const [error, setError] = useState<string | null>(null);
   const [resolvedFileUrl, setResolvedFileUrl] = useState<string | null>(null);
+
+  const isVideoProof = proof?.proof_type === 'video' || proof?.file?.file_type === 'video';
+
+  const videoPlayer = useVideoPlayer(isVideoProof ? (resolvedFileUrl ?? null) : null, player => {
+    player.loop = false;
+  });
+
+  useEventListener(videoPlayer, 'statusChange', ({ status, error: playerError }) => {
+    if (status === 'loading') {
+      setLoading(true);
+    } else if (status === 'readyToPlay') {
+      setLoading(false);
+    } else if (status === 'error') {
+      if (playerError) {
+        Logger.error('Video playback error', new Error(String(playerError)));
+      }
+      setError(t('profile.ratingProofs.gallery.failedToLoadVideo'));
+      setLoading(false);
+    }
+  });
 
   // Resolve signed URLs for private storage buckets (rating-proof-*)
   useEffect(() => {
@@ -140,25 +159,11 @@ const ProofViewer: React.FC<ProofViewerProps> = ({
         }
         return (
           <View style={styles.videoContainer}>
-            <Video
-              ref={videoRef}
-              source={{ uri: resolvedFileUrl }}
+            <VideoView
+              player={videoPlayer}
               style={styles.video}
-              resizeMode={ResizeMode.CONTAIN}
-              useNativeControls
-              isLooping={false}
-              onLoadStart={() => setLoading(true)}
-              onLoad={() => setLoading(false)}
-              onPlaybackStatusUpdate={status => {
-                if (status.isLoaded) {
-                  setVideoStatus({ isPlaying: status.isPlaying });
-                }
-              }}
-              onError={err => {
-                Logger.error('Video playback error', new Error(String(err)));
-                setError(t('profile.ratingProofs.gallery.failedToLoadVideo'));
-                setLoading(false);
-              }}
+              contentFit="contain"
+              nativeControls
             />
             {loading && (
               <View style={styles.loadingOverlay}>
