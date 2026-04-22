@@ -3,15 +3,11 @@
     "name": "Rallia",
     "slug": "rallia-app",
     "owner": "rallia-app",
-    "version": "1.0.2",
-    "entryPoint": "./index.ts",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#fafafa",
-    "statusBar": {
-      "style": "dark"
-    },
     "scheme": "rallia",
     "ios": {
       "supportsTablet": true,
@@ -29,10 +25,6 @@
       "appleTeamId": "587DRRMTV8",
       "usesAppleSignIn": true,
       "associatedDomains": ["applinks:rallia.app"]
-    },
-    "androidStatusBar": {
-      "translucent": true,
-      "style": "auto"
     },
     "android": {
       "softwareKeyboardLayoutMode": "resize",
@@ -124,7 +116,7 @@
           }
         }
       ],
-      "./plugins/withFollyFix.js",
+      "./plugins/withGradleHeap.js",
       [
         "expo-image-picker",
         {

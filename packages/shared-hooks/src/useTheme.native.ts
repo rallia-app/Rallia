@@ -51,7 +51,8 @@ interface ThemeProviderProps {
 }
 
 export function ThemeProvider({ children, defaultPreference = 'system' }: ThemeProviderProps) {
-  const systemTheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme();
+  const systemTheme: ResolvedTheme = colorScheme === 'dark' ? 'dark' : 'light';
   const [themePreference, setThemePreferenceState] = useState<ThemePreference>(defaultPreference);
   const [isLoading, setIsLoading] = useState(true);
   const previousPreferenceRef = useRef<ThemePreference>(defaultPreference);
