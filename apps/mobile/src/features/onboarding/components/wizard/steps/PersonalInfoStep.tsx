@@ -31,6 +31,9 @@ import {
   validateUsername,
   lightHaptic,
   selectionHaptic,
+  sanitizeReferralCode,
+  isReferralCodeComplete,
+  REFERRAL_CODE_LENGTH,
 } from '@rallia/shared-utils';
 import { GENDER_VALUES } from '@rallia/shared-types';
 import { supabase } from '@rallia/shared-services';
@@ -39,6 +42,7 @@ import type { Locale } from '@rallia/shared-translations';
 import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
 import { useLocale } from '../../../../../context';
 import { PENDING_REFERRAL_KEY } from '../../../../../navigation/deepLinkStore';
+import * as Analytics from '../../../../../services/analytics';
 
 interface ThemeColors {
   background: string;
@@ -99,7 +103,6 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   // Referral code state
-  const [showReferralCode, setShowReferralCode] = useState(false);
   const [referralCode, setReferralCode] = useState('');
   const [referralSaved, setReferralSaved] = useState(false);
 
@@ -304,20 +307,48 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
   };
 
   const handleReferralCodeSubmit = useCallback(async () => {
-    const code = referralCode.trim().toUpperCase();
-    if (!code) return;
+    if (!isReferralCodeComplete(referralCode)) return;
+    const code = referralCode;
     try {
       // When manually entered, we only have the code (type defaults to 'referral')
       await AsyncStorage.setItem(PENDING_REFERRAL_KEY, JSON.stringify({ code, type: 'referral' }));
       setReferralSaved(true);
+      Analytics.referralAttributed({ invitation_type: 'referral', referral_code: code });
     } catch {
       // Silently fail — attribution will be attempted later
     }
   }, [referralCode]);
 
-  const toggleReferralSection = useCallback(() => {
+  const handleChangeReferralCode = useCallback(async () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setShowReferralCode(prev => !prev);
+    setReferralSaved(false);
+    setReferralCode('');
+    try {
+      await AsyncStorage.removeItem(PENDING_REFERRAL_KEY);
+    } catch {
+      // Non-fatal
+    }
+  }, []);
+
+  // Hydrate from a pending referral captured via DiscoveryStep, clipboard, or deep link
+  useEffect(() => {
+    let cancelled = false;
+    AsyncStorage.getItem(PENDING_REFERRAL_KEY).then(raw => {
+      if (cancelled || !raw) return;
+      try {
+        const parsed = JSON.parse(raw) as { code?: string; type?: string };
+        const sanitized = parsed.code ? sanitizeReferralCode(parsed.code) : '';
+        if (parsed.type === 'referral' && isReferralCodeComplete(sanitized)) {
+          setReferralCode(sanitized);
+          setReferralSaved(true);
+        }
+      } catch {
+        // Ignore malformed entries
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Get the current date value for the picker
@@ -728,75 +759,80 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
         )}
       </View>
 
-      {/* Referral Code (optional collapsible) */}
+      {/* Referral Code */}
       <View style={styles.inputContainer}>
-        <TouchableOpacity
-          onPress={toggleReferralSection}
-          style={styles.referralToggle}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={showReferralCode ? 'chevron-down-outline' : 'chevron-forward-outline'}
-            size={18}
-            color={colors.buttonActive}
-          />
-          <Text size="sm" weight="medium" color={colors.buttonActive}>
-            {t('referral.haveReferralCode')}
+        <View style={styles.referralLabelRow}>
+          <Ionicons name="gift-outline" size={16} color={colors.buttonActive} />
+          <Text size="sm" weight="semibold" color={colors.text} style={styles.referralLabel}>
+            {t('referral.inviteCardTitle')}
           </Text>
-        </TouchableOpacity>
-        {showReferralCode && (
-          <View style={styles.referralInputRow}>
-            <TextInput
-              placeholder={t('referral.enterCode')}
-              placeholderTextColor={colors.textMuted}
-              value={referralCode}
-              onChangeText={setReferralCode}
-              autoCapitalize="characters"
-              maxLength={12}
-              editable={!referralSaved}
+        </View>
+        <Text size="xs" color={colors.textSecondary} style={styles.referralHelper}>
+          {t('referral.inviteCardSubtitle')}
+        </Text>
+
+        <View style={styles.referralInputRow}>
+          <TextInput
+            placeholder={t('referral.enterCode')}
+            placeholderTextColor={colors.textMuted}
+            value={referralCode}
+            onChangeText={text => setReferralCode(sanitizeReferralCode(text))}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={REFERRAL_CODE_LENGTH}
+            editable={!referralSaved}
+            returnKeyType="done"
+            onSubmitEditing={handleReferralCodeSubmit}
+            style={[
+              styles.input,
+              styles.referralInput,
+              {
+                backgroundColor: colors.inputBackground,
+                borderColor: referralSaved ? colors.buttonActive : colors.inputBorder,
+                color: colors.text,
+              },
+            ]}
+          />
+          {referralSaved ? (
+            <View style={styles.referralCheckIcon}>
+              <Ionicons name="checkmark-circle" size={24} color={colors.buttonActive} />
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPress={handleReferralCodeSubmit}
+              disabled={!isReferralCodeComplete(referralCode)}
               style={[
-                styles.input,
+                styles.referralApplyButton,
                 {
-                  flex: 1,
-                  backgroundColor: colors.inputBackground,
-                  borderColor: referralSaved ? colors.buttonActive : colors.inputBorder,
-                  color: colors.text,
+                  backgroundColor: isReferralCodeComplete(referralCode)
+                    ? colors.buttonActive
+                    : colors.buttonInactive,
                 },
               ]}
-            />
-            {referralSaved ? (
-              <View style={styles.referralCheckIcon}>
-                <Ionicons name="checkmark-circle" size={24} color={colors.buttonActive} />
-              </View>
-            ) : (
-              <TouchableOpacity
-                onPress={handleReferralCodeSubmit}
-                disabled={!referralCode.trim()}
-                style={[
-                  styles.referralApplyButton,
-                  {
-                    backgroundColor: referralCode.trim()
-                      ? colors.buttonActive
-                      : colors.buttonInactive,
-                  },
-                ]}
-                activeOpacity={0.8}
+              activeOpacity={0.8}
+            >
+              <Text
+                size="sm"
+                weight="semibold"
+                color={isReferralCodeComplete(referralCode) ? '#FFFFFF' : colors.textMuted}
               >
-                <Text
-                  size="sm"
-                  weight="semibold"
-                  color={referralCode.trim() ? '#FFFFFF' : colors.textMuted}
-                >
-                  {t('common.submit')}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
+                {t('common.submit')}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
         {referralSaved && (
-          <Text size="xs" color={colors.buttonActive} style={styles.errorText}>
-            {t('referral.codeApplied')}
-          </Text>
+          <View style={styles.referralAppliedFooter}>
+            <Text size="xs" color={colors.buttonActive}>
+              {t('referral.codeApplied')}
+            </Text>
+            <TouchableOpacity onPress={handleChangeReferralCode} activeOpacity={0.6}>
+              <Text size="xs" weight="semibold" color={colors.buttonActive}>
+                {t('referral.changeCode')}
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     </SheetScrollView>
@@ -914,17 +950,26 @@ const styles = StyleSheet.create({
   datePicker: {
     height: 200,
   },
-  referralToggle: {
+  referralLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacingPixels[1],
-    paddingVertical: spacingPixels[1],
+    gap: spacingPixels[1] + 2,
+    marginBottom: spacingPixels[1],
+  },
+  referralLabel: {
+    marginBottom: 0,
+  },
+  referralHelper: {
+    marginBottom: spacingPixels[2],
+    lineHeight: 16,
   },
   referralInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[2],
-    marginTop: spacingPixels[2],
+  },
+  referralInput: {
+    flex: 1,
   },
   referralApplyButton: {
     paddingHorizontal: spacingPixels[4],
@@ -933,6 +978,12 @@ const styles = StyleSheet.create({
   },
   referralCheckIcon: {
     paddingHorizontal: spacingPixels[2],
+  },
+  referralAppliedFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacingPixels[1],
   },
 });
 

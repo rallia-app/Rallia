@@ -3353,6 +3353,9 @@
     "enterCode": "Entrer le code de parrainage",
     "codeApplied": "Code de parrainage appliqué!",
     "invalidCode": "Code de parrainage invalide",
+    "inviteCardTitle": "Invité par un ami?",
+    "inviteCardSubtitle": "Entrez son code de parrainage pour lui donner crédit.",
+    "changeCode": "Modifier",
     "welcomeTitle": "Bienvenue sur Rallia!",
     "welcomeDescription": "Vous avez été invité à rejoindre Rallia. Préparation en cours...",
     "contacts": {
@@ -7100,7 +7103,11 @@
         "search": "Recherche web",
         "other": "Autre"
       },
-      "skip": "Passer"
+      "skip": "Passer",
+      "friendCodePrompt": "Vous avez son code de parrainage?",
+      "friendCodeSubtitle": "Entrez le code que votre ami vous a partagé pour lui donner crédit.",
+      "applyCode": "Appliquer et continuer",
+      "noCode": "Je n'ai pas de code"
     }
   },
   "reputation": {

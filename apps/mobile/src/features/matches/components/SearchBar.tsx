@@ -68,8 +68,6 @@ export function SearchBar({
         autoCapitalize="none"
         autoCorrect={false}
         autoFocus={autoFocus}
-        returnKeyType="search"
-        clearButtonMode="never"
       />
       {isLoading && (
         <ActivityIndicator size="small" color={colors.primary} style={styles.loadingIndicator} />
