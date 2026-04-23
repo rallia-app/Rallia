@@ -595,6 +595,8 @@ const ParticipantAvatar: React.FC<ParticipantAvatarProps> = ({
 interface CheckInButtonProps {
   playerId: string | undefined;
   matchId: string | undefined;
+  sportId: string | undefined;
+  sportName: string | undefined;
   checkIn: (params: { playerId: string; latitude: number; longitude: number }) => void;
   isCheckingIn: boolean;
   successThemeColors: {
@@ -621,6 +623,8 @@ interface CheckInButtonProps {
 const CheckInButton: React.FC<CheckInButtonProps> = ({
   playerId,
   matchId,
+  sportId,
+  sportName,
   checkIn,
   isCheckingIn,
   successThemeColors,
@@ -658,8 +662,8 @@ const CheckInButton: React.FC<CheckInButtonProps> = ({
       }
 
       Analytics.matchCheckInCompleted({
-        sport_id: selectedMatch?.sport?.id ?? 'unknown',
-        sport_name: selectedMatch?.sport?.name ?? 'unknown',
+        sport_id: sportId ?? 'unknown',
+        sport_name: sportName ?? 'unknown',
       });
       checkIn({
         playerId,
@@ -2273,6 +2277,8 @@ export const MatchDetailSheet: React.FC = () => {
         <CheckInButton
           playerId={playerId}
           matchId={selectedMatch?.id}
+          sportId={selectedMatch?.sport?.id}
+          sportName={selectedMatch?.sport?.name}
           checkIn={checkIn}
           isCheckingIn={isCheckingIn}
           successThemeColors={successThemeColors}
