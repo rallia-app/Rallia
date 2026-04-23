@@ -581,7 +581,11 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   const { createMatch, isCreating } = useCreateMatch({
     onSuccess: match => {
       Analytics.matchCreated({
-        sport: values.sportId,
+        sport_id: values.sportId,
+        sport_name:
+          selectedSport?.id === values.sportId
+            ? (selectedSport?.display_name ?? 'unknown')
+            : 'unknown',
         format: values.format,
         is_public: values.visibility === 'public',
         player_count: values.playerExpectation,

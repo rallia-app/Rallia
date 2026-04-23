@@ -845,7 +845,11 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       slot: FormattedSlot,
       data: { facilityId: string; courtId: string; courtNumber: number | null }
     ) => {
-      Analytics.courtBooked({ facility_id: data.facilityId, sport: sportId ?? 'unknown' });
+      Analytics.courtBooked({
+        facility_id: data.facilityId,
+        sport_id: sportId ?? 'unknown',
+        sport_name: sportName ?? 'unknown',
+      });
 
       // Update form with facility
       setValue('facilityId', data.facilityId);
@@ -884,7 +888,11 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   // Handle slot press - different behavior for local vs external slots
   const handleSlotPress = useCallback(
     async (facility: FacilitySearchResult, slot: FormattedSlot) => {
-      Analytics.bookingInitiated({ facility_id: facility.id, sport: sportId ?? 'unknown' });
+      Analytics.bookingInitiated({
+        facility_id: facility.id,
+        sport_id: sportId ?? 'unknown',
+        sport_name: sportName ?? 'unknown',
+      });
 
       // === LOCAL SLOT: Open court booking sheet ===
       if (slot.isLocalSlot) {

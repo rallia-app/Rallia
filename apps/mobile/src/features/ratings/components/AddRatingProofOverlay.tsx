@@ -90,7 +90,7 @@ export function AddRatingProofActionSheet({ payload }: SheetProps<'add-rating-pr
   }, [slideProgress]);
 
   const handleSuccess = useCallback(() => {
-    Analytics.ratingProofSubmitted({ sport: 'unknown' });
+    Analytics.ratingProofSubmitted({ sport_id: 'unknown', sport_name: 'unknown' });
     onSuccessCallback?.();
   }, [onSuccessCallback]);
 
