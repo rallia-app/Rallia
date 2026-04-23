@@ -19,11 +19,17 @@ import type { InvitationType } from '@rallia/shared-services';
 // =============================================================================
 
 export const PENDING_REFERRAL_KEY = 'pending_referral_code';
+export const ACQUISITION_CHANNEL_KEY = '@rallia/acquisition-channel';
+
+/** Chip ids in PreOnboarding/DiscoveryStep — kept in sync with the CHANNELS array there. */
+export type DiscoveryChannelId = 'friend' | 'social' | 'app_store' | 'event' | 'search' | 'other';
 
 export interface PendingReferral {
   code: string;
   type: InvitationType;
   targetId?: string;
+  /** True when the user typed the code by hand (DiscoveryStep / PersonalInfoStep). Absent for deep-link / install-referrer / clipboard origins. */
+  enteredManually?: boolean;
 }
 
 export type DeepLinkPayload =

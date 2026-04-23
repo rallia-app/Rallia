@@ -8,8 +8,8 @@
  * Step 2: OTP verification
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions, Keyboard } from 'react-native';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { View, StyleSheet, TouchableOpacity, Dimensions, Keyboard, TextInput } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -139,7 +139,8 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
         {currentStep > 1 && (
           <TouchableOpacity
             onPress={() => {
-              Keyboard.dismiss();
+              // Don't dismiss the keyboard — onBack transfers focus to the
+              // email input so the keyboard stays open across the slide.
               lightHaptic();
               onBack();
             }}
@@ -189,6 +190,12 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
   const [currentStep, setCurrentStep] = useState(1);
   const toast = useToast();
 
+  // Refs to the two steps' TextInputs. We focus them imperatively during step
+  // transitions so iOS transfers first-responder in the same frame — keeping
+  // the keyboard open continuously across the slide (both forward and back).
+  const emailInputRef = useRef<TextInput>(null);
+  const otpInputRef = useRef<TextInput>(null);
+
   useEffect(() => {
     Analytics.preSigninScreenViewed();
   }, []);
@@ -202,6 +209,7 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
     errorMessage,
     resendCooldown,
     canResend,
+    lastSubmittedEmail,
     handleEmailSubmit,
     handleResendCode,
     handleVerifyCode,
@@ -276,26 +284,58 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
 
   // Navigate to next step
   const goToNextStep = useCallback(async () => {
-    Keyboard.dismiss();
     if (currentStep === 1) {
+      // If a code was already sent to this same email and the cooldown
+      // hasn't elapsed, skip the resend and just re-open the OTP step.
+      // The running countdown stays visible and the originally-sent code
+      // is still valid for entry.
+      if (resendCooldown > 0 && email === lastSubmittedEmail && isEmailValid) {
+        lightHaptic();
+        otpInputRef.current?.focus();
+        setCurrentStep(2);
+        return;
+      }
+
       const success = await handleEmailSubmit();
       if (success) {
         lightHaptic();
+        // Transfer keyboard focus to the OTP input BEFORE triggering the
+        // slide animation. iOS keeps the keyboard open as long as some
+        // TextInput is first-responder; swapping first-responder while the
+        // email field is still on-screen avoids the close/reopen flicker.
+        otpInputRef.current?.focus();
         setCurrentStep(2);
       }
     } else if (currentStep === 2) {
       const result = await handleVerifyCode();
       if (result.success) {
+        // Only dismiss the keyboard once verification actually succeeded.
+        // Keep it open on failure so the user can correct the code without
+        // having to tap the code boxes again.
+        Keyboard.dismiss();
         onSuccess(result.needsOnboarding);
       }
     }
-  }, [currentStep, handleEmailSubmit, handleVerifyCode, onSuccess]);
+  }, [
+    currentStep,
+    handleEmailSubmit,
+    handleVerifyCode,
+    onSuccess,
+    resendCooldown,
+    email,
+    lastSubmittedEmail,
+    isEmailValid,
+  ]);
 
   // Navigate to previous step
   const goToPrevStep = useCallback(() => {
-    Keyboard.dismiss();
     lightHaptic();
     if (currentStep > 1) {
+      // Transfer first-responder to the email input before triggering the
+      // slide so the keyboard stays open across the back transition.
+      if (Keyboard.isVisible()) {
+        emailInputRef.current?.focus();
+      }
       setCurrentStep(prev => prev - 1);
     }
   }, [currentStep]);
@@ -353,6 +393,7 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
             {/* Step 1: Email */}
             <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
               <EmailStep
+                inputRef={emailInputRef}
                 email={email}
                 onEmailChange={setEmail}
                 isEmailValid={isEmailValid}
@@ -375,6 +416,7 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
             {/* Step 2: OTP Verification */}
             <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
               <OTPVerificationStep
+                hiddenInputRef={otpInputRef}
                 email={email}
                 code={code}
                 onCodeChange={setCode}
@@ -402,9 +444,7 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
 // =============================================================================
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: {},
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -415,6 +455,7 @@ const styles = StyleSheet.create({
   },
   brandedHeader: {
     paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
   },
   brandedHeaderTopRow: {
     flexDirection: 'row',
@@ -443,16 +484,12 @@ const styles = StyleSheet.create({
     padding: spacingPixels[1],
   },
   stepsViewport: {
-    flex: 1,
     overflow: 'hidden',
   },
   stepsContainer: {
     flexDirection: 'row',
-    flex: 1,
   },
-  stepWrapper: {
-    height: '100%',
-  },
+  stepWrapper: {},
 });
 
 export default AuthWizard;

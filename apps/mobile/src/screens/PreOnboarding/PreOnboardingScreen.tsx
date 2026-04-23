@@ -24,8 +24,7 @@ import { PostalCodeStep } from './PostalCodeStep';
 import { LocationPermissionStep } from './LocationPermissionStep';
 import { DiscoveryStep } from './DiscoveryStep';
 import * as Analytics from '../../services/analytics';
-
-const ACQUISITION_CHANNEL_KEY = '@rallia/acquisition-channel';
+import { ACQUISITION_CHANNEL_KEY } from '../../navigation/deepLinkStore';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 

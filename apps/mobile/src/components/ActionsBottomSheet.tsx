@@ -656,25 +656,29 @@ export const ActionsBottomSheet: React.FC = () => {
     );
   };
 
-  // Determine if we should use wizard mode (full height, no scroll)
-  const isWizardMode =
+  // Full-height mode: sheet fills available space (flex:1 chain).
+  // Auth is deliberately NOT in this list — it sizes to content.
+  const isFullHeight =
     showWizard ||
     showInviteWizard ||
     showShareListWizard ||
     showNetworkWizard ||
     isEditMode ||
-    contentMode === 'auth' ||
     contentMode === 'onboarding';
+
+  // Disable gestures/backdrop-dismiss during any wizard flow, including auth,
+  // so typing doesn't accidentally close the sheet.
+  const disableGestures = isFullHeight || contentMode === 'auth';
 
   return (
     <ActionSheet
-      gestureEnabled={!isWizardMode}
-      closeOnTouchBackdrop={!isWizardMode}
+      gestureEnabled={!disableGestures}
+      closeOnTouchBackdrop={!disableGestures}
       onClose={handleSheetDismiss}
       containerStyle={[
         styles.sheetBackground,
         { backgroundColor: colors.cardBackground },
-        isWizardMode && styles.sheetFullHeight,
+        isFullHeight && styles.sheetFullHeight,
       ]}
       indicatorStyle={{
         width: spacingPixels[10],
@@ -684,9 +688,11 @@ export const ActionsBottomSheet: React.FC = () => {
         backgroundColor: colors.border,
       }}
     >
-      {/* For wizards (auth, onboarding, match creation), render directly without ScrollView wrapper */}
-      {/* The wizards manage their own internal scrolling */}
-      {isWizardMode ? (
+      {contentMode === 'auth' ? (
+        /* Auth wizard has its own SheetScrollView per step — render directly so it auto-sizes */
+        renderContent()
+      ) : isFullHeight ? (
+        /* Full-height wizards manage their own internal scrolling */
         <View style={styles.sheetContent}>{renderContent()}</View>
       ) : (
         /* For actions content, use SheetScrollView — no flex:1 so it auto-sizes to content */

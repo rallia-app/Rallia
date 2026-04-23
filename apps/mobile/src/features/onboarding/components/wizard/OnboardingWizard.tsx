@@ -51,7 +51,12 @@ import {
   usePostalCodeGeocode,
   useMatchSuggestions,
 } from '@rallia/shared-hooks';
-import { PENDING_REFERRAL_KEY, type PendingReferral } from '../../../../navigation/deepLinkStore';
+import {
+  PENDING_REFERRAL_KEY,
+  ACQUISITION_CHANNEL_KEY,
+  type PendingReferral,
+  type DiscoveryChannelId,
+} from '../../../../navigation/deepLinkStore';
 import { replaceImage } from '../../../../services/imageUpload';
 import * as Analytics from '../../../../services/analytics';
 import { posthogClient } from '../../../../providers/PostHogProvider';
@@ -260,6 +265,28 @@ const getStepName = (stepId: OnboardingStepId, t: (key: TranslationKey) => strin
   };
   return t(keys[stepId]) || '';
 };
+
+const DISCOVERY_CHIP_TO_SOURCE: Record<DiscoveryChannelId, Analytics.AcquisitionSource> = {
+  friend: 'discovery_friend',
+  social: 'discovery_social',
+  app_store: 'discovery_app_store',
+  event: 'discovery_event',
+  search: 'discovery_search',
+  other: 'discovery_other',
+};
+
+function resolveAcquisitionSource(
+  pending: PendingReferral | null,
+  channel: string | null
+): Analytics.AcquisitionSource {
+  if (pending?.code) {
+    return pending.enteredManually ? 'referral_code' : 'referral_link';
+  }
+  if (channel && channel in DISCOVERY_CHIP_TO_SOURCE) {
+    return DISCOVERY_CHIP_TO_SOURCE[channel as DiscoveryChannelId];
+  }
+  return 'unknown';
+}
 
 // =============================================================================
 // MAIN WIZARD COMPONENT
@@ -948,21 +975,31 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             province: formData.province || null,
           });
 
+          // Read both attribution signals upfront so we can resolve a unified
+          // acquisition source even if only one signal is present.
+          const [pendingRaw, channelRaw] = await Promise.all([
+            AsyncStorage.getItem(PENDING_REFERRAL_KEY),
+            AsyncStorage.getItem(ACQUISITION_CHANNEL_KEY),
+          ]);
+
+          // Parse pending referral (supports new JSON and legacy plain string)
+          let pendingForSource: PendingReferral | null = null;
+          if (pendingRaw) {
+            try {
+              const parsed = JSON.parse(pendingRaw);
+              pendingForSource =
+                typeof parsed === 'object' && parsed.code
+                  ? parsed
+                  : { code: pendingRaw, type: 'referral' as const };
+            } catch {
+              pendingForSource = { code: pendingRaw, type: 'referral' as const };
+            }
+          }
+
           // Attribute pending referral if one was stored before signup
           try {
-            const pendingRaw = await AsyncStorage.getItem(PENDING_REFERRAL_KEY);
-            if (pendingRaw) {
-              // Parse structured data (supports both new JSON and legacy plain string)
-              let pending: PendingReferral;
-              try {
-                const parsed = JSON.parse(pendingRaw);
-                pending =
-                  typeof parsed === 'object' && parsed.code
-                    ? parsed
-                    : { code: pendingRaw, type: 'referral' as const };
-              } catch {
-                pending = { code: pendingRaw, type: 'referral' as const };
-              }
+            if (pendingForSource) {
+              const pending: PendingReferral = pendingForSource;
 
               const userId = await DatabaseService.Auth.getCurrentUserId();
               const {
@@ -1051,19 +1088,36 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
           // Persist acquisition channel from pre-onboarding
           try {
-            const channel = await AsyncStorage.getItem('@rallia/acquisition-channel');
-            if (channel) {
+            if (channelRaw) {
               const channelUserId = await DatabaseService.Auth.getCurrentUserId();
               if (channelUserId) {
                 await supabase
                   .from('profile')
-                  .update({ acquisition_channel: channel })
+                  .update({ acquisition_channel: channelRaw })
                   .eq('id', channelUserId);
               }
-              await AsyncStorage.removeItem('@rallia/acquisition-channel');
+              await AsyncStorage.removeItem(ACQUISITION_CHANNEL_KEY);
             }
           } catch (channelError) {
             Logger.warn('Failed to persist acquisition channel', { error: channelError });
+          }
+
+          // Fire a unified `user_acquired` event with a single mutually-exclusive
+          // source bucket so growth dashboards can show a clean stacked view.
+          // Resolution priority: referral_link > referral_code > discovery_<chip> > unknown.
+          try {
+            const source = resolveAcquisitionSource(pendingForSource, channelRaw);
+            Analytics.userAcquired({
+              source,
+              has_referral: Boolean(pendingForSource?.code),
+              referral_invitation_type: pendingForSource?.code ? pendingForSource.type : undefined,
+            });
+            const acquiredUserId = await DatabaseService.Auth.getCurrentUserId();
+            if (acquiredUserId) {
+              posthogClient?.identify(acquiredUserId, { acquisition_source: source });
+            }
+          } catch (sourceError) {
+            Logger.warn('Failed to fire user_acquired', { error: sourceError });
           }
 
           // Refetch profile, player, and sports immediately after marking onboarding as completed
