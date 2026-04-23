@@ -240,7 +240,10 @@ export const CreateGroupForm: React.FC<CreateGroupFormProps> = ({
         }
       }
 
-      Analytics.groupCreated({ sport: selectedSport?.name });
+      Analytics.groupCreated({
+        sport_id: selectedSport?.id,
+        sport_name: selectedSport?.name,
+      });
       toast.success(t('groups.success.created'));
       resetForm();
       onSuccess?.(newGroup.id);
