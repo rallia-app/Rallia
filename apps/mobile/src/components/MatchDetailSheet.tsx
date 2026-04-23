@@ -657,7 +657,10 @@ const CheckInButton: React.FC<CheckInButtonProps> = ({
         });
       }
 
-      Analytics.matchCheckInCompleted({ sport: 'unknown' });
+      Analytics.matchCheckInCompleted({
+        sport_id: selectedMatch?.sport?.id ?? 'unknown',
+        sport_name: selectedMatch?.sport?.name ?? 'unknown',
+      });
       checkIn({
         playerId,
         latitude: position.coords.latitude,
@@ -845,16 +848,21 @@ export const MatchDetailSheet: React.FC = () => {
   } = useMatchActions(selectedMatch?.id, {
     matchData: selectedMatch ?? undefined,
     onJoinSuccess: result => {
-      const sport = selectedMatch?.sport?.name ?? 'unknown';
+      const sport_id = selectedMatch?.sport?.id ?? 'unknown';
+      const sport_name = selectedMatch?.sport?.name ?? 'unknown';
       if (result.status === 'joined') {
-        Analytics.matchJoined({ sport });
+        Analytics.matchJoined({ sport_id, sport_name });
         if (selectedMatch && getParticipantInfo(selectedMatch).spotsLeft === 1) {
-          Analytics.matchFilled({ sport, format: selectedMatch.format ?? 'unknown' });
+          Analytics.matchFilled({
+            sport_id,
+            sport_name,
+            format: selectedMatch.format ?? 'unknown',
+          });
         }
       } else if (result.status === 'waitlisted') {
-        Analytics.waitlistJoined({ sport });
+        Analytics.waitlistJoined({ sport_id, sport_name });
       } else {
-        Analytics.matchJoinRequested({ sport });
+        Analytics.matchJoinRequested({ sport_id, sport_name });
       }
       successHaptic();
       closeSheet();
@@ -888,7 +896,10 @@ export const MatchDetailSheet: React.FC = () => {
       toast.error(error.message);
     },
     onCancelSuccess: () => {
-      Analytics.matchCancelled({ sport: selectedMatch?.sport?.name ?? 'unknown' });
+      Analytics.matchCancelled({
+        sport_id: selectedMatch?.sport?.id ?? 'unknown',
+        sport_name: selectedMatch?.sport?.name ?? 'unknown',
+      });
       successHaptic();
       setShowCancelModal(false);
       onMatchRemovedRef.current?.();
@@ -1116,7 +1127,10 @@ export const MatchDetailSheet: React.FC = () => {
     lightHaptic();
     try {
       await shareMatch(selectedMatch, { t, locale, referralCode });
-      Analytics.matchShared({ sport: selectedMatch.sport?.name ?? 'unknown' });
+      Analytics.matchShared({
+        sport_id: selectedMatch.sport?.id ?? 'unknown',
+        sport_name: selectedMatch.sport?.name ?? 'unknown',
+      });
       if (referralCode) {
         Analytics.invitationLinkGenerated({ invitation_type: 'match', channel: 'share_sheet' });
       }
@@ -1446,7 +1460,10 @@ export const MatchDetailSheet: React.FC = () => {
   // Confirm decline invitation
   const handleConfirmDeclineInvite = useCallback(() => {
     if (!playerId) return;
-    Analytics.matchDeclined({ sport: selectedMatch?.sport?.name ?? 'unknown' });
+    Analytics.matchDeclined({
+      sport_id: selectedMatch?.sport?.id ?? 'unknown',
+      sport_name: selectedMatch?.sport?.name ?? 'unknown',
+    });
     declineInvite(playerId);
   }, [playerId, declineInvite, selectedMatch]);
 

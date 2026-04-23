@@ -46,7 +46,8 @@ export function onboardingAbandoned(props: {
 // ---- Core Loop ----
 
 export function matchCreated(props: {
-  sport: string;
+  sport_id: string;
+  sport_name: string;
   format: string;
   is_public: boolean;
   player_count: string;
@@ -54,15 +55,19 @@ export function matchCreated(props: {
   capture('match_created', props);
 }
 
-export function matchJoined(props: { sport: string; discovery_source?: string }): void {
+export function matchJoined(props: {
+  sport_id: string;
+  sport_name: string;
+  discovery_source?: string;
+}): void {
   capture('match_joined', props);
 }
 
-export function matchFilled(props: { sport: string; format: string }): void {
+export function matchFilled(props: { sport_id: string; sport_name: string; format: string }): void {
   capture('match_filled', props);
 }
 
-export function matchJoinRequested(props: { sport: string }): void {
+export function matchJoinRequested(props: { sport_id: string; sport_name: string }): void {
   capture('match_join_requested', props);
 }
 
@@ -74,15 +79,19 @@ export function messageSent(props: { conversation_type: string }): void {
   capture('message_sent', props);
 }
 
-export function courtBooked(props: { facility_id: string; sport: string }): void {
+export function courtBooked(props: {
+  facility_id: string;
+  sport_id: string;
+  sport_name: string;
+}): void {
   capture('court_booked', props);
 }
 
-export function matchCancelled(props: { sport: string }): void {
+export function matchCancelled(props: { sport_id: string; sport_name: string }): void {
   capture('match_cancelled', props);
 }
 
-export function matchFeedbackSubmitted(props: { sport: string }): void {
+export function matchFeedbackSubmitted(props: { sport_id: string; sport_name: string }): void {
   capture('match_feedback_submitted', props);
 }
 
@@ -99,11 +108,11 @@ export function preOnboardingCompleted(props: { sport_count: number }): void {
   capture('pre_onboarding_completed', props);
 }
 
-export function matchShared(props: { sport: string }): void {
+export function matchShared(props: { sport_id: string; sport_name: string }): void {
   capture('match_shared', props);
 }
 
-export function matchDeclined(props: { sport: string }): void {
+export function matchDeclined(props: { sport_id: string; sport_name: string }): void {
   capture('match_declined', props);
 }
 
@@ -111,7 +120,7 @@ export function matchCreationStarted(): void {
   capture('match_creation_started');
 }
 
-export function matchCheckInCompleted(props: { sport: string }): void {
+export function matchCheckInCompleted(props: { sport_id: string; sport_name: string }): void {
   capture('match_check_in_completed', props);
 }
 
@@ -164,7 +173,7 @@ export function notificationPreferenceChanged(props: {
   capture('notification_preference_changed', props);
 }
 
-export function ratingProofSubmitted(props: { sport: string }): void {
+export function ratingProofSubmitted(props: { sport_id: string; sport_name: string }): void {
   capture('rating_proof_submitted', props);
 }
 
@@ -225,7 +234,7 @@ export function inviteToMatchSent(props: { invite_count: number }): void {
 
 // ---- Community & Social ----
 
-export function groupCreated(props: { sport?: string }): void {
+export function groupCreated(props: { sport_id?: string; sport_name?: string }): void {
   capture('group_created', props);
 }
 
@@ -245,7 +254,11 @@ export function pushNotificationOpened(props: { type: string }): void {
 
 // ---- Monetization ----
 
-export function bookingInitiated(props: { facility_id: string; sport: string }): void {
+export function bookingInitiated(props: {
+  facility_id: string;
+  sport_id: string;
+  sport_name: string;
+}): void {
   capture('booking_initiated', props);
 }
 
@@ -255,7 +268,7 @@ export function bookingCancelled(props: { reason?: string }): void {
 
 // ---- Waitlist ----
 
-export function waitlistJoined(props: { sport: string }): void {
+export function waitlistJoined(props: { sport_id: string; sport_name: string }): void {
   capture('waitlist_joined', props);
 }
 

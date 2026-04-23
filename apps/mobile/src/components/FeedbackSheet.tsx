@@ -31,7 +31,8 @@ export const FeedbackActionSheet: React.FC = () => {
 
   const handleComplete = useCallback(() => {
     Analytics.matchFeedbackSubmitted({
-      sport: selectedMatch?.sport?.name ?? 'unknown',
+      sport_id: selectedMatch?.sport?.id ?? 'unknown',
+      sport_name: selectedMatch?.sport?.name ?? 'unknown',
     });
     if (selectedMatch && feedbackData?.reviewerId) {
       const updatedParticipants = selectedMatch.participants?.map(p =>
