@@ -93,7 +93,10 @@ export function DiscoveryStep({ onContinue, isActive = true }: DiscoveryStepProp
     if (!isReferralCodeComplete(code)) return;
     mediumHaptic();
     try {
-      await AsyncStorage.setItem(PENDING_REFERRAL_KEY, JSON.stringify({ code, type: 'referral' }));
+      await AsyncStorage.setItem(
+        PENDING_REFERRAL_KEY,
+        JSON.stringify({ code, type: 'referral', enteredManually: true })
+      );
       Analytics.referralAttributed({
         invitation_type: 'referral',
         referral_code: code,

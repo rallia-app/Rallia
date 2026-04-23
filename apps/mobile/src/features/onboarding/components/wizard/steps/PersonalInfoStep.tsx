@@ -311,7 +311,10 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
     const code = referralCode;
     try {
       // When manually entered, we only have the code (type defaults to 'referral')
-      await AsyncStorage.setItem(PENDING_REFERRAL_KEY, JSON.stringify({ code, type: 'referral' }));
+      await AsyncStorage.setItem(
+        PENDING_REFERRAL_KEY,
+        JSON.stringify({ code, type: 'referral', enteredManually: true })
+      );
       setReferralSaved(true);
       Analytics.referralAttributed({ invitation_type: 'referral', referral_code: code });
     } catch {
