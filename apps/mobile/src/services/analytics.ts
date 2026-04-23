@@ -159,6 +159,25 @@ export function referralAttributed(props: {
   capture('referral_attributed', props);
 }
 
+export type AcquisitionSource =
+  | 'referral_link'
+  | 'referral_code'
+  | 'discovery_friend'
+  | 'discovery_social'
+  | 'discovery_app_store'
+  | 'discovery_event'
+  | 'discovery_search'
+  | 'discovery_other'
+  | 'unknown';
+
+export function userAcquired(props: {
+  source: AcquisitionSource;
+  has_referral: boolean;
+  referral_invitation_type?: string;
+}): void {
+  capture('user_acquired', props);
+}
+
 // ---- Settings ----
 
 export function availabilityScheduleUpdated(): void {

@@ -5,7 +5,8 @@
  * Migrated from AuthOverlay with theme-aware colors and i18n support.
  */
 
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback } from 'react';
+import type { RefObject } from 'react';
 import { View, StyleSheet, TouchableOpacity, TextInput, Pressable, Platform } from 'react-native';
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { Text } from '@rallia/shared-components';
@@ -31,6 +32,12 @@ interface ThemeColors {
 }
 
 interface OTPVerificationStepProps {
+  /**
+   * Ref to the hidden OTP TextInput, owned by the parent wizard. The parent
+   * focuses it imperatively during the step transition so the keyboard
+   * stays open across the slide.
+   */
+  hiddenInputRef: RefObject<TextInput | null>;
   email: string;
   code: string;
   onCodeChange: (code: string) => void;
@@ -50,6 +57,7 @@ interface OTPVerificationStepProps {
 }
 
 export const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
+  hiddenInputRef,
   email,
   code,
   onCodeChange,
@@ -64,18 +72,14 @@ export const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
   isDark,
   isActive = true,
 }) => {
-  const hiddenInputRef = useRef<TextInput>(null);
-
-  // Focus hidden input when step becomes active
+  // Re-focus when the step becomes active — covers the case where focus was
+  // lost (e.g., user tapped outside the hidden input) after the initial
+  // imperative focus from the parent wizard.
   useEffect(() => {
     if (isActive && hiddenInputRef.current) {
-      // Small delay to ensure the step animation has started
-      const timer = setTimeout(() => {
-        hiddenInputRef.current?.focus();
-      }, 300);
-      return () => clearTimeout(timer);
+      hiddenInputRef.current.focus();
     }
-  }, [isActive]);
+  }, [isActive, hiddenInputRef]);
 
   // Handler for code input changes - memoized for performance
   const handleCodeChange = useCallback(
@@ -90,7 +94,7 @@ export const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
   // Focus the hidden input when tapping the code boxes
   const focusHiddenInput = useCallback(() => {
     hiddenInputRef.current?.focus();
-  }, []);
+  }, [hiddenInputRef]);
 
   const isCodeComplete = code.length === 6;
   const canVerify = isCodeComplete && !isLoading;
@@ -117,7 +121,9 @@ export const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
         </Text>
       </Text>
 
-      {/* Hidden TextInput for smooth OTP entry */}
+      {/* Hidden TextInput for smooth OTP entry.
+          Always editable so the parent wizard can focus it before the step
+          becomes visible (needed to keep the keyboard open across the slide). */}
       <TextInput
         ref={hiddenInputRef}
         style={styles.hiddenInput}
@@ -128,7 +134,6 @@ export const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
         caretHidden
         autoComplete="one-time-code"
         textContentType="oneTimeCode"
-        editable={isActive}
         inputMode="numeric"
       />
 
@@ -207,12 +212,10 @@ export const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: {},
   contentContainer: {
     paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[4],
+    paddingTop: spacingPixels[8],
     paddingBottom: spacingPixels[4],
   },
   title: {

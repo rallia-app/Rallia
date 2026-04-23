@@ -6,7 +6,8 @@
  * and a soft divider for email entry.
  */
 
-import React, { useRef, useEffect } from 'react';
+import React from 'react';
+import type { RefObject } from 'react';
 import {
   View,
   StyleSheet,
@@ -43,6 +44,12 @@ interface ThemeColors {
 }
 
 interface EmailStepProps {
+  /**
+   * Ref to the email TextInput, owned by the parent wizard. Letting the
+   * parent hold the ref enables imperative focus transfer during step
+   * transitions (keeps the keyboard open when navigating back from OTP).
+   */
+  inputRef: RefObject<TextInput | null>;
   email: string;
   onEmailChange: (email: string) => void;
   isEmailValid: boolean;
@@ -66,6 +73,7 @@ interface EmailStepProps {
 }
 
 export const EmailStep: React.FC<EmailStepProps> = ({
+  inputRef,
   email,
   onEmailChange,
   isEmailValid,
@@ -74,8 +82,6 @@ export const EmailStep: React.FC<EmailStepProps> = ({
   onContinue,
   colors,
   t,
-  isDark,
-  isActive = true,
   onGoogleSignIn,
   onAppleSignIn,
   onFacebookSignIn,
@@ -83,19 +89,13 @@ export const EmailStep: React.FC<EmailStepProps> = ({
   socialAuthLoadingProvider = null,
   isAppleSignInAvailable = Platform.OS === 'ios',
 }) => {
-  const emailInputRef = useRef<any>(null);
-
-  // Blur email input when step becomes inactive
-  useEffect(() => {
-    if (!isActive && emailInputRef.current) {
-      emailInputRef.current.blur();
-    }
-  }, [isActive]);
+  // Note: don't explicitly blur on !isActive. When advancing to the OTP step,
+  // focusing the OTP input will remove focus here automatically, and doing so
+  // keeps the keyboard open across the step transition. An explicit blur here
+  // would dismiss the keyboard in the gap before OTP focuses.
 
   const canContinue = isEmailValid && !isLoading && !socialAuthLoading;
   const isAnyLoading = isLoading || socialAuthLoading;
-
-  const benefitIconColor = isDark ? primary[400] : primary[500];
 
   return (
     <SheetScrollView
@@ -105,29 +105,7 @@ export const EmailStep: React.FC<EmailStepProps> = ({
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
     >
-      {/* Benefit Points */}
-      <View style={styles.benefitsSection}>
-        <View style={styles.benefitRow}>
-          <Ionicons name="globe-outline" size={16} color={benefitIconColor} />
-          <Text size="sm" color={colors.textSecondary} style={styles.benefitText}>
-            {t('auth.benefitJoinCommunity')}
-          </Text>
-        </View>
-        <View style={styles.benefitRow}>
-          <Ionicons name="people-outline" size={16} color={benefitIconColor} />
-          <Text size="sm" color={colors.textSecondary} style={styles.benefitText}>
-            {t('auth.benefitFindPartners')}
-          </Text>
-        </View>
-        <View style={styles.benefitRow}>
-          <Ionicons name="add-circle-outline" size={16} color={benefitIconColor} />
-          <Text size="sm" color={colors.textSecondary} style={styles.benefitText}>
-            {t('auth.benefitCreateGames')}
-          </Text>
-        </View>
-      </View>
-
-      {/* Social Sign In Buttons - Full Width with Labels */}
+      {/* Social Sign In Buttons - Compact row with icon + brand name */}
       <View style={styles.socialButtons}>
         {/* Google Sign In */}
         <TouchableOpacity
@@ -146,7 +124,7 @@ export const EmailStep: React.FC<EmailStepProps> = ({
             <>
               <Ionicons name="logo-google" size={20} color="#fff" />
               <Text size="base" weight="semibold" color="#fff">
-                {t('auth.continueWithGoogle')}
+                Google
               </Text>
             </>
           )}
@@ -170,36 +148,12 @@ export const EmailStep: React.FC<EmailStepProps> = ({
               <>
                 <Ionicons name="logo-apple" size={20} color="#fff" />
                 <Text size="base" weight="semibold" color="#fff">
-                  {t('auth.continueWithApple')}
+                  Apple
                 </Text>
               </>
             )}
           </TouchableOpacity>
         )}
-
-        {/* Facebook Sign In - commented out; re-enable by uncommenting
-        <TouchableOpacity
-          style={[
-            styles.socialButton,
-            { backgroundColor: colors.buttonActive },
-            isAnyLoading && styles.socialButtonDisabled,
-          ]}
-          onPress={onFacebookSignIn}
-          activeOpacity={0.8}
-          disabled={isAnyLoading}
-        >
-          {socialAuthLoadingProvider === 'facebook' ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <>
-              <Ionicons name="logo-facebook" size={20} color="#fff" />
-              <Text size="base" weight="semibold" color="#fff">
-                {t('auth.continueWithFacebook')}
-              </Text>
-            </>
-          )}
-        </TouchableOpacity>
-        */}
       </View>
 
       {/* OR Divider - softer "or continue with email" */}
@@ -213,7 +167,7 @@ export const EmailStep: React.FC<EmailStepProps> = ({
 
       {/* Email Input */}
       <TextInput
-        ref={emailInputRef}
+        ref={inputRef}
         style={[
           styles.emailInput,
           {
@@ -231,7 +185,6 @@ export const EmailStep: React.FC<EmailStepProps> = ({
         autoCorrect={false}
         autoComplete="email"
         textContentType="emailAddress"
-        editable={isActive}
       />
 
       {/* Continue Button */}
@@ -284,40 +237,25 @@ export const EmailStep: React.FC<EmailStepProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: {},
   contentContainer: {
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[2],
     paddingBottom: spacingPixels[4],
   },
-  benefitsSection: {
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[2],
+  socialButtons: {
+    flexDirection: 'row',
+    gap: spacingPixels[3],
     marginBottom: spacingPixels[5],
   },
-  benefitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[2],
-    marginBottom: spacingPixels[1.5],
-  },
-  benefitText: {
-    flexShrink: 1,
-  },
-  socialButtons: {
-    flexDirection: 'column',
-    gap: spacingPixels[3],
-    marginBottom: spacingPixels[4],
-  },
   socialButton: {
+    flex: 1,
     height: 48,
     borderRadius: radiusPixels.xl,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: spacingPixels[3],
+    gap: spacingPixels[2],
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,

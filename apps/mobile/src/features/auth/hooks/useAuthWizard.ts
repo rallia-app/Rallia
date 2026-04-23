@@ -55,6 +55,8 @@ interface UseAuthWizardReturn {
   // Rate limiting
   resendCooldown: number;
   canResend: boolean;
+  /** Email that the last OTP was successfully sent to. */
+  lastSubmittedEmail: string;
 
   // Actions
   handleEmailSubmit: () => Promise<boolean>;
@@ -85,6 +87,10 @@ export function useAuthWizard(options: UseAuthWizardOptions = {}): UseAuthWizard
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  // Email that the last OTP was sent to. Used to decide whether tapping
+  // Continue on step 1 during an active cooldown should re-send or just
+  // re-open the OTP step with the still-valid code.
+  const [lastSubmittedEmail, setLastSubmittedEmail] = useState('');
 
   // Rate limiting state
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -138,6 +144,7 @@ export function useAuthWizard(options: UseAuthWizardOptions = {}): UseAuthWizard
     setErrorMessage('');
     setIsLoading(false);
     setResendCooldown(0);
+    setLastSubmittedEmail('');
     if (cooldownIntervalRef.current) {
       clearInterval(cooldownIntervalRef.current);
       cooldownIntervalRef.current = null;
@@ -227,6 +234,7 @@ export function useAuthWizard(options: UseAuthWizardOptions = {}): UseAuthWizard
 
       if (result.success) {
         Logger.info('OTP sent successfully', { emailDomain: email.split('@')[1] });
+        setLastSubmittedEmail(email);
         startResendCooldown(); // Start cooldown after successful send
         setIsLoading(false);
         return true;
@@ -273,6 +281,7 @@ export function useAuthWizard(options: UseAuthWizardOptions = {}): UseAuthWizard
       if (result.success) {
         Logger.info('OTP resent successfully', { emailDomain: email.split('@')[1] });
         setCode(''); // Clear any code currently entered so user can type the new one
+        setLastSubmittedEmail(email);
         startResendCooldown(); // Start cooldown after successful resend
         showSuccess('Verification code sent!');
       } else {
@@ -399,6 +408,7 @@ export function useAuthWizard(options: UseAuthWizardOptions = {}): UseAuthWizard
     // Rate limiting
     resendCooldown,
     canResend,
+    lastSubmittedEmail,
 
     // Actions
     handleEmailSubmit,
