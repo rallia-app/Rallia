@@ -83,7 +83,7 @@ export type PlayerMatchFilter = UpcomingMatchFilter | PastMatchFilter;
 // CONVERSATION FILTERS
 // ============================================
 
-/** Filter values for conversation inbox */
+/** Filter values for conversation inbox (server-side filterable) */
 export type ConversationFilter =
   | 'all'
   | 'unread'
@@ -93,3 +93,9 @@ export type ConversationFilter =
   | 'community'
   | 'club'
   | 'match';
+
+/** Client-side inbox status filters (applied after server fetch) */
+export type ConversationStatusFilter = 'pinned' | 'favorites' | 'muted' | 'blocked';
+
+/** Union of all filters surfaced in the chat inbox chip bar */
+export type ChatInboxFilter = ConversationFilter | ConversationStatusFilter;

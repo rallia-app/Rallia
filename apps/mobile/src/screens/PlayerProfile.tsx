@@ -595,15 +595,16 @@ const PlayerProfile = () => {
           let totalProofsCount = 0;
           let currentLevelProofsCount = 0;
 
-          // Get the current rating_score_id from the rating
-          const ratingScore = rating.rating_score as { id?: string } | null;
+          // Get the current rating_score_id and value from the rating
+          const ratingScore = rating.rating_score as { id?: string; value?: number | null } | null;
           const currentRatingScoreId = ratingScore?.id || rating.rating_score_id;
+          const currentValue = ratingScore?.value ?? null;
 
           if (rating.id) {
-            // Fetch all proofs with their rating_score_id
+            // Fetch all proofs with their rating_score value
             const { data: proofs, error: proofsError } = await supabase
               .from('rating_proof')
-              .select('rating_score_id')
+              .select('rating_score_id, rating_score:rating_score_id(value)')
               .eq('player_rating_score_id', rating.id)
               .eq('is_active', true);
 
@@ -611,10 +612,14 @@ const PlayerProfile = () => {
               // Total count: all proofs
               totalProofsCount = proofs.length;
 
-              // Current-level count: proofs matching current rating_score_id
-              currentLevelProofsCount = proofs.filter(
-                p => p.rating_score_id === currentRatingScoreId
-              ).length;
+              // Current-level count: proofs at current rating or higher
+              currentLevelProofsCount =
+                currentValue == null
+                  ? 0
+                  : proofs.filter(p => {
+                      const score = p.rating_score as unknown as { value: number } | null;
+                      return score && score.value >= currentValue;
+                    }).length;
             }
           }
           return { ...rating, totalProofsCount, currentLevelProofsCount, currentRatingScoreId };
@@ -1188,7 +1193,8 @@ const PlayerProfile = () => {
   useEffect(() => {
     const fetchApprovedProofs = async () => {
       const prsId = primarySport?.playerRatingScoreId;
-      if (!prsId) {
+      const currentValue = primarySport?.ratingValue;
+      if (!prsId || currentValue == null) {
         setApprovedProofs([]);
         return;
       }
@@ -1205,11 +1211,13 @@ const PlayerProfile = () => {
             external_url,
             status,
             created_at,
-            file:file_id(id, url, thumbnail_url, file_type, original_name, mime_type)
+            file:file_id(id, url, thumbnail_url, file_type, original_name, mime_type),
+            rating_score:rating_score_id!inner(value)
           `
           )
           .eq('player_rating_score_id', prsId)
           .eq('is_active', true)
+          .gte('rating_score.value', currentValue)
           .order('created_at', { ascending: false })
           .limit(10);
 
@@ -1230,7 +1238,7 @@ const PlayerProfile = () => {
       }
     };
     fetchApprovedProofs();
-  }, [primarySport?.playerRatingScoreId]);
+  }, [primarySport?.playerRatingScoreId, primarySport?.ratingValue]);
 
   const getEffectiveProofType = useCallback((proof: RatingProofData): string => {
     if (proof.proof_type === 'external_link') return 'external_link';
@@ -1749,9 +1757,19 @@ const PlayerProfile = () => {
                     {primarySport.ratingLabel ||
                       (primarySport.name === 'tennis' ? 'NTRP -' : 'DUPR -')}
                   </Text>
-                  {(primarySport.referencesCount ?? 0) > 0 && (
-                    <View
+                  {(primarySport.referencesCount ?? 0) > 0 && primarySport.playerRatingScoreId && (
+                    <TouchableOpacity
                       style={[styles.referencesBadge, { backgroundColor: `${colors.primary}15` }]}
+                      onPress={() => {
+                        lightHaptic();
+                        SheetManager.show('references-list', {
+                          payload: {
+                            playerRatingScoreId: primarySport.playerRatingScoreId!,
+                            sportId: primarySport.id,
+                          },
+                        });
+                      }}
+                      activeOpacity={0.7}
                     >
                       <Ionicons name="people-outline" size={14} color={colors.primary} />
                       <Text style={[styles.referencesBadgeText, { color: colors.primary }]}>
@@ -1759,7 +1777,8 @@ const PlayerProfile = () => {
                           count: primarySport.referencesCount || 0,
                         })}
                       </Text>
-                    </View>
+                      <Ionicons name="chevron-forward" size={12} color={colors.primary} />
+                    </TouchableOpacity>
                   )}
                 </View>
                 <CertificationBadge

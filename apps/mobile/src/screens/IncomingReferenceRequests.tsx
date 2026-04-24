@@ -285,6 +285,12 @@ const IncomingReferenceRequests: React.FC = () => {
               <Text style={[styles.requesterUsername, { color: colors.textMuted }]}>
                 {t('referenceRequest.claimsToBeRated')} {item.rating_info.label}
               </Text>
+              <View style={styles.expiryContainer}>
+                <Ionicons name="time-outline" size={11} color={expiryInfo.color} />
+                <Text style={[styles.expiryText, { color: expiryInfo.color }]}>
+                  {expiryInfo.text}
+                </Text>
+              </View>
             </View>
           </TouchableOpacity>
 
@@ -301,19 +307,16 @@ const IncomingReferenceRequests: React.FC = () => {
           </View>
         )}
 
-        {/* Footer */}
-        <View style={[styles.cardFooter, { borderTopColor: colors.border }]}>
-          <View style={styles.expiryContainer}>
-            <Ionicons name="time-outline" size={11} color={colors.textMuted} />
-            <Text style={[styles.expiryText, { color: colors.textMuted }]}>{expiryInfo.text}</Text>
-          </View>
-          <View style={styles.actionHint}>
-            <Text style={[styles.actionHintText, { color: colors.primary }]}>
-              {t('referenceRequest.tapToRespond')}
-            </Text>
-            <Ionicons name="chevron-forward" size={14} color={colors.primary} />
-          </View>
-        </View>
+        {/* CTA */}
+        <TouchableOpacity
+          style={[styles.respondButton, { backgroundColor: colors.buttonActive }]}
+          onPress={() => handleOpenRequest(item)}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.respondButtonText, { color: colors.buttonTextActive }]}>
+            {t('referenceRequest.reviewAndRespond')}
+          </Text>
+        </TouchableOpacity>
       </TouchableOpacity>
     );
   };
@@ -472,30 +475,28 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     lineHeight: 20,
   },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
-    borderTopWidth: 1,
-    marginTop: spacingPixels[2],
-  },
   expiryContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[1],
+    marginTop: spacingPixels[1],
   },
   expiryText: {
     fontSize: fontSizePixels.xs,
   },
-  actionHint: {
+  respondButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacingPixels[1],
+    justifyContent: 'center',
+    gap: spacingPixels[2],
+    paddingVertical: spacingPixels[3],
+    marginHorizontal: spacingPixels[4],
+    marginTop: spacingPixels[3],
+    marginBottom: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
   },
-  actionHintText: {
-    fontSize: fontSizePixels.sm,
+  respondButtonText: {
+    fontSize: fontSizePixels.base,
     fontWeight: fontWeightNumeric.semibold,
   },
   emptyState: {

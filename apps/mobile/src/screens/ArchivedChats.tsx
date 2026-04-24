@@ -24,7 +24,7 @@ import { SheetManager } from 'react-native-actions-sheet';
 import { useAppNavigation } from '../navigation/hooks';
 
 const ArchivedChats = () => {
-  const { colors } = useThemeStyles();
+  const { colors, isDark } = useThemeStyles();
   const navigation = useAppNavigation();
   const { session } = useAuth();
   const { t } = useTranslation();
@@ -151,8 +151,13 @@ const ArchivedChats = () => {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          {[...Array(5)].map((_, index) => (
-            <SkeletonConversation key={index} />
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <SkeletonConversation
+              key={i}
+              backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+              highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+              style={{ paddingHorizontal: spacingPixels[4] }}
+            />
           ))}
         </View>
       ) : (

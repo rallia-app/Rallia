@@ -44,11 +44,10 @@ import { useTheme } from '@rallia/shared-hooks';
 import { getMatchWithDetails } from '@rallia/shared-services';
 import { MatchCreationWizard } from '../features/matches';
 import { InvitePlayersWizard } from '../features/referral';
-import { CreateShareListWizard } from '../features/shared-lists';
 import { CreateNetworkWizard } from '../features/groups';
 import { AuthWizard } from '../features/auth';
 import { OnboardingWizard } from '../features/onboarding/components/wizard';
-import { navigateFromOutside, navigateToCommunityScreen, navigationRef } from '../navigation';
+import { navigateFromOutside, navigationRef } from '../navigation';
 import * as Analytics from '../services/analytics';
 
 // =============================================================================
@@ -132,7 +131,6 @@ interface ActionsContentProps {
   onClose: () => void;
   onCreateMatch: () => void;
   onInvitePlayers: () => void;
-  onCreateShareList: () => void;
   onCreateNetwork: () => void;
   colors: ThemeColors;
   t: (key: TranslationKey) => string;
@@ -142,7 +140,6 @@ const ActionsContent: React.FC<ActionsContentProps> = ({
   onClose,
   onCreateMatch,
   onInvitePlayers,
-  onCreateShareList,
   onCreateNetwork,
   colors,
   t,
@@ -163,14 +160,6 @@ const ActionsContent: React.FC<ActionsContentProps> = ({
           title={t('actions.invitePlayers')}
           description={t('actions.invitePlayersDescription')}
           onPress={onInvitePlayers}
-          colors={colors}
-        />
-
-        <ActionItem
-          icon="share-outline"
-          title={t('actions.createShareList')}
-          description={t('actions.createShareListDescription')}
-          onPress={onCreateShareList}
           colors={colors}
         />
 
@@ -217,7 +206,6 @@ export const ActionsBottomSheet: React.FC = () => {
   // Wizard state for all sliding panels (local, only for slide animation)
   const [showWizard, setShowWizard] = useState(false);
   const [showInviteWizard, setShowInviteWizard] = useState(false);
-  const [showShareListWizard, setShowShareListWizard] = useState(false);
   const [showNetworkWizard, setShowNetworkWizard] = useState(false);
 
   // Track which tab the invite wizard should open to
@@ -364,13 +352,6 @@ export const ActionsBottomSheet: React.FC = () => {
     slideIn();
   }, [slideIn]);
 
-  // Handle create share list - show share list wizard with slide animation
-  const handleCreateShareList = useCallback(() => {
-    lightHaptic();
-    setShowShareListWizard(true);
-    slideIn();
-  }, [slideIn]);
-
   // Handle create network - show network wizard with slide animation
   const handleCreateNetwork = useCallback(() => {
     lightHaptic();
@@ -384,11 +365,6 @@ export const ActionsBottomSheet: React.FC = () => {
       setShowInviteWizard(false);
       setInviteInitialTab(undefined);
     });
-  }, [slideOut]);
-
-  // Handle share list wizard close - slide back to actions list
-  const handleShareListWizardClose = useCallback(() => {
-    slideOut(() => setShowShareListWizard(false));
   }, [slideOut]);
 
   // Handle network wizard close - slide back to actions list
@@ -439,19 +415,6 @@ export const ActionsBottomSheet: React.FC = () => {
     [closeSheet, slideProgress, openMatchDetail, clearEditMatch]
   );
 
-  // Handle share list wizard success - navigate to created list
-  const handleShareListSuccess = useCallback(
-    (listId: string) => {
-      successHaptic();
-      closeSheet();
-      setShowShareListWizard(false);
-      // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
-      slideProgress.value = 0;
-      navigateToCommunityScreen('SharedListDetail', { listId, listName: '' });
-    },
-    [closeSheet, slideProgress]
-  );
-
   // Handle network wizard success - navigate to created group or community
   const handleNetworkSuccess = useCallback(
     (type: 'group' | 'community', id: string) => {
@@ -479,7 +442,6 @@ export const ActionsBottomSheet: React.FC = () => {
     setShowWizard(false);
     setShowInviteWizard(false);
     setInviteInitialTab(undefined);
-    setShowShareListWizard(false);
     setShowNetworkWizard(false);
     // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
     slideProgress.value = 0;
@@ -600,7 +562,6 @@ export const ActionsBottomSheet: React.FC = () => {
             onClose={closeSheet}
             onCreateMatch={handleCreateMatch}
             onInvitePlayers={handleInvitePlayers}
-            onCreateShareList={handleCreateShareList}
             onCreateNetwork={handleCreateNetwork}
             colors={colors}
             t={t}
@@ -631,17 +592,6 @@ export const ActionsBottomSheet: React.FC = () => {
           </Animated.View>
         )}
 
-        {/* Share list wizard */}
-        {showShareListWizard && (
-          <Animated.View style={[styles.slidePanel, styles.wizardPanel, wizardAnimatedStyle]}>
-            <CreateShareListWizard
-              onClose={closeSheet}
-              onBackToLanding={handleShareListWizardClose}
-              onSuccess={handleShareListSuccess}
-            />
-          </Animated.View>
-        )}
-
         {/* Network wizard (Group / Community) */}
         {showNetworkWizard && (
           <Animated.View style={[styles.slidePanel, styles.wizardPanel, wizardAnimatedStyle]}>
@@ -661,7 +611,6 @@ export const ActionsBottomSheet: React.FC = () => {
   const isFullHeight =
     showWizard ||
     showInviteWizard ||
-    showShareListWizard ||
     showNetworkWizard ||
     isEditMode ||
     contentMode === 'onboarding';

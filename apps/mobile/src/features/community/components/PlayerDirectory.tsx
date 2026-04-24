@@ -80,7 +80,7 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
       filters.day !== 'all' ||
       filters.playStyle !== 'all' ||
       filters.maxDistance !== 'all' ||
-      (filters.sortBy && filters.sortBy !== 'name_asc')
+      (filters.sortBy && filters.sortBy !== 'distance')
     );
   }, [filters]);
 
@@ -291,58 +291,8 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     longitude: location?.longitude,
   });
 
-  // Sort players based on selected sort option
-  const sortedPlayers = useMemo(() => {
-    if (!players || players.length === 0) return players;
-
-    const sorted = [...players];
-    const sortBy = filters.sortBy || 'name_asc';
-
-    switch (sortBy) {
-      case 'name_asc':
-        return sorted.sort((a, b) => {
-          const nameA = a.first_name || a.display_name || '';
-          const nameB = b.first_name || b.display_name || '';
-          return nameA.localeCompare(nameB);
-        });
-      case 'name_desc':
-        return sorted.sort((a, b) => {
-          const nameA = a.first_name || a.display_name || '';
-          const nameB = b.first_name || b.display_name || '';
-          return nameB.localeCompare(nameA);
-        });
-      case 'rating_high':
-        return sorted.sort((a, b) => {
-          const ratingA = a.rating?.value || 0;
-          const ratingB = b.rating?.value || 0;
-          return ratingB - ratingA;
-        });
-      case 'rating_low':
-        return sorted.sort((a, b) => {
-          const ratingA = a.rating?.value || 0;
-          const ratingB = b.rating?.value || 0;
-          return ratingA - ratingB;
-        });
-      case 'distance':
-        return sorted.sort((a, b) => {
-          const distA = a.distance_meters ?? Infinity;
-          const distB = b.distance_meters ?? Infinity;
-          return distA - distB;
-        });
-      case 'recently_active':
-        // Last active not available in current data - fallback to name
-        return sorted.sort((a, b) => {
-          const nameA = a.first_name || a.display_name || '';
-          const nameB = b.first_name || b.display_name || '';
-          return nameA.localeCompare(nameB);
-        });
-      default:
-        return sorted;
-    }
-  }, [players, filters.sortBy]);
-
   // Fetch reputation data for visible players
-  const playerIds = useMemo(() => (sortedPlayers || []).map(p => p.id), [sortedPlayers]);
+  const playerIds = useMemo(() => players.map(p => p.id), [players]);
   const { reputations } = useMultipleReputations(playerIds);
 
   // Toggle favorite handler
@@ -659,7 +609,7 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
   const renderResultsInfo = () => {
     if (isLoading || !sportId) return null;
 
-    const count = totalCount ?? sortedPlayers.length;
+    const count = totalCount ?? players.length;
     const countText =
       count === 1
         ? t('playerDirectory.results.countSingular')
@@ -718,7 +668,7 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     // and the TextInput keeps keyboard focus during search
     return (
       <FlatList
-        data={isLoading ? [] : sortedPlayers}
+        data={isLoading ? [] : players}
         renderItem={renderPlayer}
         keyExtractor={item => item.id}
         ListHeaderComponent={
@@ -732,13 +682,13 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
         ListFooterComponent={renderFooter}
         contentContainerStyle={[
           styles.listContent,
-          (isLoading || sortedPlayers.length === 0) && styles.emptyListContent,
+          (isLoading || players.length === 0) && styles.emptyListContent,
         ]}
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
         refreshControl={
           <RefreshControl
-            refreshing={isFetching && !isFetchingNextPage}
+            refreshing={isFetching && !isFetchingNextPage && !isLoading}
             onRefresh={refetch}
             colors={[colors.primary]}
             tintColor={colors.primary}

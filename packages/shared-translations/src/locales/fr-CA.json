@@ -153,6 +153,7 @@
     "permissions": "Permissions",
     "feedback": "Commentaires",
     "ratingProofs": "Preuves de classement",
+    "ratingReferences": "Références de classement",
     "publicMatches": "Parties publiques",
     "playerMatches": "Mes parties",
     "group": "Groupe",
@@ -450,7 +451,10 @@
     "expiresVerySoon": "Expire aujourd'hui",
     "expiresSoon": "Expire dans {days} jours",
     "expiresIn": "Expire dans {days} jours",
-    "tapToRespond": "Appuyez pour répondre",
+    "reviewAndRespond": "Examiner et répondre",
+    "pendingCount": "{count} joueurs attendent la confirmation de leur niveau",
+    "pendingCount_one": "{count} joueur attend la confirmation de son niveau",
+    "reviewCta": "Examiner",
     "respondTitle": "Vérifier le niveau",
     "respondSubtitle": "Aidez ce joueur à faire certifier son niveau",
     "claimsToBeRated": "Déclare être au niveau",
@@ -917,10 +921,16 @@
       "peerRating": "{count} Évaluation par les pairs",
       "ratingProof": "{count} Preuve de niveau",
       "requestReference": "Demander une référence",
+      "manageReferences": "Gérer les références",
       "requestPeerRating": "Demander une évaluation par les pairs",
       "manageRatingProofs": "Gérer les preuves de niveau",
       "currentLevel": "Actuel",
-      "previousLevel": "Précédent"
+      "previousLevel": "Précédent",
+      "referencesList": {
+        "title": "Références",
+        "empty": "Aucune référence pour le moment.",
+        "error": "Impossible de charger les références."
+      }
     },
     "certification": {
       "title": "Statut de certification",
@@ -979,6 +989,41 @@
         "count": "{count} évaluations",
         "belowLevel": "Les évaluations suggèrent que le niveau pourrait être inférieur",
         "matchesLevel": "Les évaluations correspondent au niveau déclaré"
+      }
+    },
+    "referencesManage": {
+      "title": "Mes références",
+      "error": "Impossible de charger les références.",
+      "sentOn": "Envoyée le {date}",
+      "requestedFor": "Demandée pour",
+      "expiresIn": "Expire dans {days} jours",
+      "responseLabel": "Commentaire du référent",
+      "status": {
+        "approved": "Approuvée",
+        "contested": "Contestée",
+        "pending": "En attente"
+      },
+      "filters": {
+        "all": "Toutes",
+        "approved": "Approuvées",
+        "contested": "Contestées",
+        "pending": "En attente"
+      },
+      "empty": {
+        "title": "Aucune référence",
+        "description": "Envoyez des demandes à des joueurs de votre niveau ou supérieur pour valider votre classement."
+      },
+      "emptyApproved": {
+        "title": "Aucune référence approuvée",
+        "description": "Aucun joueur n'a encore approuvé vos demandes de référence."
+      },
+      "emptyContested": {
+        "title": "Aucune référence contestée",
+        "description": "Aucun référent n'a contesté votre classement."
+      },
+      "emptyPending": {
+        "title": "Aucune demande en attente",
+        "description": "Envoyez une nouvelle demande avec le bouton + ci-dessus."
       }
     },
     "ratingProofs": {
@@ -1823,20 +1868,6 @@
     "mustBeLoggedIn": "Veuillez vous connecter pour créer une partie."
   },
   "chat": {
-    "empty": {
-      "direct": {
-        "title": "Aucun message direct pour le moment",
-        "subtitle": "Démarrez une conversation avec un autre joueur"
-      },
-      "groups": {
-        "title": "Aucune discussion de groupe pour le moment",
-        "subtitle": "Rejoignez un groupe ou une communauté pour commencer à discuter"
-      },
-      "matches": {
-        "title": "Aucune discussion de match pour le moment",
-        "subtitle": "Rejoignez un match pour discuter avec vos adversaires"
-      }
-    },
     "inbox": "Boîte de réception",
     "signInRequired": "Connectez-vous pour voir vos messages",
     "signInPrompt": "Connectez-vous pour voir vos conversations et vous connecter avec d'autres joueurs.",
@@ -1854,11 +1885,6 @@
     },
     "noConversations": "Aucune conversation pour le moment",
     "noConversationsSubtitle": "Rejoignez un groupe ou démarrez une conversation avec un autre joueur",
-    "tabs": {
-      "direct": "Direct",
-      "groups": "Groupes",
-      "matches": "Matchs"
-    },
     "filters": {
       "all": "Tout",
       "unread": "Non lus",
@@ -8254,9 +8280,9 @@
         "title": "Recherche",
         "description": "Recherchez des conversations par nom ou contenu de message."
       },
-      "tabs": {
-        "title": "Catégories de chat",
-        "description": "Basculez entre les messages directs, les groupes et les chats de parties. Le badge indique les messages non lus."
+      "filters": {
+        "title": "Filtrer les chats",
+        "description": "Affinez votre boîte de réception par type ou statut. Appuyez sur « Tout » pour effacer."
       },
       "newMessage": {
         "title": "Nouveau message",

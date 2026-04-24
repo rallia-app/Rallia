@@ -7314,6 +7314,22 @@ export type Database = {
           rating_label: string
         }[]
       }
+      get_rating_score_referees: {
+        Args: { p_player_rating_score_id: string }
+        Returns: {
+          display_name: string
+          first_name: string
+          last_name: string
+          profile_picture_url: string
+          referee_id: string
+          referee_is_certified: boolean
+          referee_rating_label: string
+          referee_rating_value: number
+          reference_rating_label: string
+          reference_rating_value: number
+          responded_at: string
+        }[]
+      }
       get_rating_scores_by_type: {
         Args: {
           p_rating_system_code: Database["public"]["Enums"]["rating_system_code_enum"]
@@ -7958,6 +7974,46 @@ export type Database = {
         Returns: {
           distance_meters: number
           match_id: string
+        }[]
+      }
+      search_players_nearby: {
+        Args: {
+          p_availability?: string
+          p_blocked_only?: boolean
+          p_blocked_player_ids?: string[]
+          p_current_user_id?: string
+          p_day?: string
+          p_exclude_player_ids?: string[]
+          p_favorite_player_ids?: string[]
+          p_favorites_only?: boolean
+          p_gender?: string
+          p_latitude?: number
+          p_limit?: number
+          p_longitude?: number
+          p_min_skill_value?: number
+          p_min_travel_distance_km?: number
+          p_offset?: number
+          p_play_style?: string
+          p_search_query?: string
+          p_sort_by?: string
+          p_sport_id: string
+        }
+        Returns: {
+          city: string
+          display_name: string
+          distance_meters: number
+          first_name: string
+          gender: string
+          id: string
+          last_name: string
+          latitude: number
+          longitude: number
+          profile_picture_url: string
+          rating_badge_status: string
+          rating_is_certified: boolean
+          rating_label: string
+          rating_value: number
+          total_count: number
         }[]
       }
       search_public_matches: {
