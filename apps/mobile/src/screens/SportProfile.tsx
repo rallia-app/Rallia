@@ -7,7 +7,7 @@ import type { RouteProp } from '@react-navigation/native';
 import { useAppNavigation } from '../navigation/hooks';
 import type { RootStackParamList } from '../navigation/types';
 import { Text, Skeleton, useToast, Button } from '@rallia/shared-components';
-import { supabase, Logger, notifyReferenceRequestReceived } from '@rallia/shared-services';
+import { supabase, Logger } from '@rallia/shared-services';
 import { usePlayPreferences, useFavoriteFacilities, usePlayer } from '@rallia/shared-hooks';
 import { MATCH_DURATION_ENUM_LABELS } from '@rallia/shared-types';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
@@ -77,7 +77,7 @@ const getSkillLevelTranslationKey = (
   return mapping[scoreValue] || null;
 };
 
-import { selectionHaptic, getHumanName } from '@rallia/shared-utils';
+import { selectionHaptic } from '@rallia/shared-utils';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import { SheetManager } from 'react-native-actions-sheet';
 
@@ -187,7 +187,7 @@ const SportProfile = () => {
   const [ratingInfo, setRatingInfo] = useState<RatingInfo | null>(initialRatingInfo);
   // Total proofs count (all proofs for this sport) - shown in "Rating Proof" button
   const [totalProofsCount, setTotalProofsCount] = useState(0);
-  // Current-level proofs count (proofs matching current rating) - used for certification
+  // Proofs count at current rating or higher - shown in stats row
   const [currentLevelProofsCount, setCurrentLevelProofsCount] = useState(0);
   const [referencesCount, setReferencesCount] = useState(
     hasCachedRating ? (cachedRating!.referralsCount ?? 0) : 0
@@ -284,7 +284,7 @@ const SportProfile = () => {
       // Fetch all proofs for this player_rating_score (total count)
       supabase
         .from('rating_proof')
-        .select('rating_score_id')
+        .select('rating_score_id, rating_score:rating_score_id(value)')
         .eq('player_rating_score_id', playerRatingScoreId)
         .eq('is_active', true),
       // Fetch updated certification status from DB (may have been updated by triggers)
@@ -303,10 +303,12 @@ const SportProfile = () => {
       // Total count: all proofs for this sport
       setTotalProofsCount(proofs.length);
 
-      // Current-level count: only proofs matching current rating_score_id
-      const currentLevelCount = proofs.filter(
-        p => p.rating_score_id === ratingInfo.ratingScoreId
-      ).length;
+      // Current-level count: proofs at the current rating or higher
+      const currentValue = ratingInfo.scoreValue;
+      const currentLevelCount = proofs.filter(p => {
+        const score = p.rating_score as unknown as { value: number } | null;
+        return score && score.value >= currentValue;
+      }).length;
       setCurrentLevelProofsCount(currentLevelCount);
     }
 
@@ -316,23 +318,6 @@ const SportProfile = () => {
       setReferencesCount(certResult.data.referrals_count ?? 0);
       setPeerEvaluationAverage(certResult.data.peer_evaluation_average ?? undefined);
       setPeerEvaluationCount(certResult.data.peer_evaluation_count ?? 0);
-    }
-
-    // Refresh reference count (level-filtered)
-    const { data: refs, error: refsError } = await supabase
-      .from('rating_reference_request')
-      .select('rating_score_id, rating_score:rating_score_id(value)')
-      .eq('player_rating_score_id', playerRatingScoreId)
-      .eq('status', 'completed')
-      .eq('rating_supported', true);
-
-    if (!refsError && refs) {
-      const currentValue = ratingInfo.scoreValue;
-      const validCount = refs.filter(r => {
-        const score = r.rating_score as unknown as { value: number } | null;
-        return score && score.value >= currentValue;
-      }).length;
-      setReferencesCount(validCount);
     }
   }, [playerRatingScoreId, ratingInfo?.ratingScoreId, ratingInfo?.scoreValue]);
 
@@ -840,78 +825,6 @@ const SportProfile = () => {
     });
   };
 
-  const handleSendReferenceRequests = async (selectedPlayerIds: string[]) => {
-    try {
-      if (!playerRatingScoreId || !userId) {
-        throw new Error('Missing required data for reference request');
-      }
-
-      Logger.logUserAction('send_reference_requests', { count: selectedPlayerIds.length, sportId });
-
-      // Calculate expiration date (14 days from now)
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 14);
-
-      // Insert reference requests into the database
-      const referenceRequests = selectedPlayerIds.map(refereePlayerId => ({
-        player_rating_score_id: playerRatingScoreId,
-        requester_id: userId,
-        referee_id: refereePlayerId,
-        status: 'pending',
-        expires_at: expiresAt.toISOString(),
-        rating_score_id: ratingInfo?.ratingScoreId || undefined,
-      }));
-
-      const { data: insertedRequests, error: insertError } = await supabase
-        .from('rating_reference_request')
-        .insert(referenceRequests)
-        .select('id, referee_id');
-
-      if (insertError) {
-        // Check for unique constraint violation (already requested)
-        if (insertError.code === '23505') {
-          toast.warning(t('profile.certification.referenceRequest.alreadyRequested'));
-        } else {
-          throw insertError;
-        }
-      } else {
-        toast.success(t('alerts.referenceRequestsSent', { count: selectedPlayerIds.length }));
-
-        // Send notifications to referees (fire and forget)
-        if (insertedRequests?.length) {
-          const { data: profile } = await supabase
-            .from('profile')
-            .select('first_name, last_name, display_name')
-            .eq('id', userId)
-            .single();
-
-          const requesterName = getHumanName(profile, 'A player');
-
-          for (const req of insertedRequests) {
-            notifyReferenceRequestReceived(
-              req.referee_id,
-              req.id,
-              requesterName,
-              sportName,
-              ratingInfo?.displayLabel,
-              playerRatingScoreId
-            ).catch(err => {
-              Logger.error('Failed to send reference request notification', err);
-            });
-          }
-        }
-      }
-
-      SheetManager.hide('reference-request');
-    } catch (error) {
-      Logger.error('Failed to send reference requests', error as Error, {
-        count: selectedPlayerIds.length,
-        sportId,
-      });
-      toast.error(t('alerts.failedToSendReferenceRequests'));
-    }
-  };
-
   const handleSavePreferences = async (
     updatedPreferences: {
       matchDuration?: string;
@@ -1302,7 +1215,20 @@ const SportProfile = () => {
 
                   {/* Stats Row */}
                   <View style={[styles.ratingStatsRow, { borderTopColor: colors.border }]}>
-                    <View style={styles.ratingStatItem}>
+                    <TouchableOpacity
+                      style={styles.ratingStatItem}
+                      disabled={!playerRatingScoreId || referencesCount === 0}
+                      onPress={() => {
+                        if (!playerRatingScoreId) return;
+                        SheetManager.show('references-list', {
+                          payload: {
+                            playerRatingScoreId,
+                            sportId,
+                          },
+                        });
+                      }}
+                      activeOpacity={0.7}
+                    >
                       <Ionicons name="people-outline" size={16} color={colors.textMuted} />
                       <Text
                         style={[styles.ratingStatText, { color: colors.text }]}
@@ -1310,7 +1236,10 @@ const SportProfile = () => {
                       >
                         {t('profile.rating.references', { count: referencesCount })}
                       </Text>
-                    </View>
+                      {referencesCount > 0 && (
+                        <Ionicons name="chevron-forward" size={12} color={colors.textMuted} />
+                      )}
+                    </TouchableOpacity>
                     <View style={[styles.ratingStatDivider, { backgroundColor: colors.border }]} />
                     <View style={styles.ratingStatItem}>
                       <Ionicons name="document-text-outline" size={16} color={colors.textMuted} />
@@ -1328,21 +1257,23 @@ const SportProfile = () => {
                     <TouchableOpacity
                       style={[styles.ratingActionButton, { borderColor: colors.border }]}
                       onPress={() => {
-                        SheetManager.show('reference-request', {
-                          payload: {
-                            currentUserId: userId,
-                            sportId,
-                            currentUserRatingScore: ratingInfo?.scoreValue,
-                            currentUserRatingScoreId: playerRatingScoreId || undefined,
-                            ratingSystemCode: ratingInfo?.ratingTypeName?.toUpperCase(),
-                            onSendRequests: handleSendReferenceRequests,
-                          },
+                        if (!playerRatingScoreId || !ratingInfo) {
+                          Alert.alert(t('alerts.error'), t('errors.notFound'));
+                          return;
+                        }
+                        navigation.navigate('RatingReferences', {
+                          playerRatingScoreId,
+                          sportId,
+                          sportName,
+                          ratingValue: ratingInfo.scoreValue,
+                          ratingLabel: ratingInfo.displayLabel,
+                          ratingSystemCode: ratingInfo.ratingTypeName?.toUpperCase(),
                         });
                       }}
                     >
-                      <Ionicons name="person-add-outline" size={16} color={colors.primary} />
+                      <Ionicons name="people-outline" size={16} color={colors.primary} />
                       <Text style={[styles.ratingActionText, { color: colors.primary }]}>
-                        {t('profile.rating.requestReference')}
+                        {t('profile.rating.manageReferences')}
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity

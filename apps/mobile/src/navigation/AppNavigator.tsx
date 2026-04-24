@@ -75,6 +75,7 @@ import SubscriptionManagement from '../screens/SubscriptionManagement';
 import UserProfile from '../screens/UserProfile';
 import SportProfile from '../screens/SportProfile';
 import RatingProofs from '../screens/RatingProofs';
+import RatingReferences from '../screens/RatingReferences';
 import IncomingReferenceRequests from '../screens/IncomingReferenceRequests';
 import Notifications from '../screens/Notifications';
 import NotificationPreferencesScreen from '../screens/NotificationPreferencesScreen';
@@ -1481,6 +1482,16 @@ export default function AppNavigator() {
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('screens.ratingProofs'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="RatingReferences"
+        component={RatingReferences}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('screens.ratingReferences'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />

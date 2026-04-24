@@ -46,6 +46,13 @@ export type PlayStyleFilter =
   | 'all_court';
 export type SkillLevelFilter = 'all' | string; // '1.0', '1.5', etc.
 export type DistanceFilter = 'all' | number; // 5, 10, 15, etc.
+export type SortByFilter =
+  | 'distance'
+  | 'name_asc'
+  | 'name_desc'
+  | 'rating_high'
+  | 'rating_low'
+  | 'recently_active';
 
 export interface PlayerFilters {
   favorites?: boolean;
@@ -56,6 +63,7 @@ export interface PlayerFilters {
   availability?: AvailabilityFilter;
   day?: DayFilter;
   playStyle?: PlayStyleFilter;
+  sortBy?: SortByFilter;
 }
 
 /**
@@ -166,10 +174,11 @@ export function computeBadgeStatus(params: {
 
 /**
  * Search for players active in a specific sport.
- * Returns players with their profile info and sport-specific rating.
  *
- * @param params - Search parameters
- * @returns Paginated list of players matching the criteria
+ * Delegates to the `search_players_nearby` Postgres RPC so filtering,
+ * sorting, pagination, and distance computation happen server-side.
+ * This keeps infinite-scroll pages stable: later pages never reorder
+ * rows that are already visible.
  */
 export async function searchPlayersForSport(params: SearchPlayersParams): Promise<PlayersPage> {
   const {
@@ -186,386 +195,106 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     longitude,
   } = params;
 
-  // Step 1: Get player IDs that are active in this sport
-  // Using player_sport table which links players to their sports
-  let sportQuery = supabase
-    .from('player_sport')
-    .select('player_id')
-    .eq('sport_id', sportId)
-    .or('is_active.is.null,is_active.eq.true'); // Include null (default) or true
+  // Map UI filter values to RPC parameters.
+  const minSkillValue =
+    filters.skillLevel && filters.skillLevel !== 'all' ? Number(filters.skillLevel) : null;
 
-  // Exclude current user if provided (for authenticated users)
-  if (currentUserId) {
-    sportQuery = sportQuery.neq('player_id', currentUserId);
-  }
-
-  const { data: playerSports, error: sportError } = await sportQuery;
-
-  if (sportError) {
-    throw new Error(`Failed to fetch player sports: ${sportError.message}`);
-  }
-
-  if (!playerSports || playerSports.length === 0) {
-    return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
-  }
-
-  // Get unique player IDs from player_sport records
-  let playerIds = playerSports.map(ps => ps.player_id);
-
-  // Filter out excluded players
-  if (excludePlayerIds.length > 0) {
-    playerIds = playerIds.filter(id => !excludePlayerIds.includes(id));
-  }
-
-  // Filter by favorites if enabled
-  if (filters.favorites && favoritePlayerIds.length > 0) {
-    playerIds = playerIds.filter(id => favoritePlayerIds.includes(id));
-  } else if (filters.favorites && favoritePlayerIds.length === 0) {
-    // No favorites, return empty
-    return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
-  }
-
-  // Handle blocked players:
-  // - If blocked filter is ON: show only blocked players
-  // - If blocked filter is OFF: exclude blocked players from results (default behavior)
-  if (filters.blocked && blockedPlayerIds.length > 0) {
-    // Show only blocked players
-    playerIds = playerIds.filter(id => blockedPlayerIds.includes(id));
-  } else if (filters.blocked && blockedPlayerIds.length === 0) {
-    // No blocked players, return empty
-    return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
-  } else if (!filters.blocked && blockedPlayerIds.length > 0) {
-    // Exclude blocked players from results (default behavior)
-    playerIds = playerIds.filter(id => !blockedPlayerIds.includes(id));
-  }
-
-  if (playerIds.length === 0) {
-    return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
-  }
-
-  // Step 2: Apply gender filter by fetching player data
-  // Filter by gender if specified (gender is on player table)
-  if (filters.gender && filters.gender !== 'all') {
-    const { data: genderFilteredPlayers, error: genderError } = await supabase
-      .from('player')
-      .select('id')
-      .in('id', playerIds)
-      .eq('gender', filters.gender);
-
-    if (genderError) {
-      console.error('[searchPlayersForSport] Error filtering by gender:', genderError);
-    } else if (genderFilteredPlayers) {
-      playerIds = genderFilteredPlayers.map(p => p.id);
-    }
-
-    if (playerIds.length === 0) {
-      return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
-    }
-  }
-
-  // Step 3: Apply distance filter if specified
-  // Filter players whose max_travel_distance is >= the selected distance
-  if (filters.maxDistance && filters.maxDistance !== 'all') {
-    const distanceValue =
-      typeof filters.maxDistance === 'number'
+  const minTravelDistanceKm =
+    filters.maxDistance && filters.maxDistance !== 'all'
+      ? typeof filters.maxDistance === 'number'
         ? filters.maxDistance
-        : parseInt(String(filters.maxDistance), 10);
+        : parseInt(String(filters.maxDistance), 10)
+      : null;
 
-    if (!isNaN(distanceValue)) {
-      const { data: distanceFilteredPlayers, error: distanceError } = await supabase
-        .from('player')
-        .select('id')
-        .in('id', playerIds)
-        .gte('max_travel_distance', distanceValue);
+  const availability =
+    filters.availability && filters.availability !== 'all' ? filters.availability : null;
 
-      if (distanceError) {
-        console.error('[searchPlayersForSport] Error filtering by distance:', distanceError);
-      } else if (distanceFilteredPlayers) {
-        playerIds = distanceFilteredPlayers.map(p => p.id);
-      }
+  const day = filters.day && filters.day !== 'all' ? filters.day : null;
 
-      if (playerIds.length === 0) {
-        return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
-      }
-    }
+  const playStyle = filters.playStyle && filters.playStyle !== 'all' ? filters.playStyle : null;
+
+  const gender = filters.gender && filters.gender !== 'all' ? filters.gender : null;
+
+  // Favorites toggle ON with empty favorites list → short-circuit to empty result
+  // (the RPC would return all players otherwise since the filter wouldn't apply).
+  if (filters.favorites && favoritePlayerIds.length === 0) {
+    return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
   }
-
-  // Step 4: Apply availability filter if specified
-  if (filters.availability && filters.availability !== 'all') {
-    const { data: availabilityPlayers, error: availError } = await supabase
-      .from('player_availability')
-      .select('player_id')
-      .in('player_id', playerIds)
-      .eq('period', filters.availability)
-      .or('is_active.is.null,is_active.eq.true');
-
-    if (availError) {
-      console.error('[searchPlayersForSport] Error filtering by availability:', availError);
-    } else if (availabilityPlayers) {
-      const availablePlayerIds = [...new Set(availabilityPlayers.map(p => p.player_id))];
-      playerIds = playerIds.filter(id => availablePlayerIds.includes(id));
-    }
-
-    if (playerIds.length === 0) {
-      return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
-    }
-  }
-
-  // Step 4b: Apply day filter if specified
-  if (filters.day && filters.day !== 'all') {
-    const { data: dayFilteredPlayers, error: dayError } = await supabase
-      .from('player_availability')
-      .select('player_id')
-      .in('player_id', playerIds)
-      .eq('day', filters.day)
-      .or('is_active.is.null,is_active.eq.true');
-
-    if (dayError) {
-      console.error('[searchPlayersForSport] Error filtering by day:', dayError);
-    } else if (dayFilteredPlayers) {
-      const dayPlayerIds = [...new Set(dayFilteredPlayers.map(p => p.player_id))];
-      playerIds = playerIds.filter(id => dayPlayerIds.includes(id));
-    }
-
-    if (playerIds.length === 0) {
-      return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
-    }
-  }
-
-  // Step 5: Apply play style filter if specified
-  // Uses player_sport.preferred_play_style enum column directly
-  if (filters.playStyle && filters.playStyle !== 'all') {
-    const { data: styledPlayers, error: styledError } = await supabase
-      .from('player_sport')
-      .select('player_id')
-      .in('player_id', playerIds)
-      .eq('sport_id', sportId)
-      .eq('preferred_play_style', filters.playStyle);
-
-    if (styledError) {
-      console.error('[searchPlayersForSport] Error filtering by play style:', styledError);
-    } else if (styledPlayers) {
-      const styledPlayerIds = styledPlayers.map(p => p.player_id);
-      playerIds = playerIds.filter(id => styledPlayerIds.includes(id));
-    }
-
-    if (playerIds.length === 0) {
-      return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
-    }
-  }
-
-  // Step 6: Apply skill level filter - we need to fetch ratings first
-  const ratingsMap: Record<
-    string,
-    {
-      label: string;
-      value: number | null;
-      is_certified: boolean;
-      badge_status: 'self_declared' | 'certified' | 'disputed';
-    }
-  > = {};
-  let skillFilteredPlayerIds = playerIds;
-
-  // Always fetch ratings (we need them for the result anyway)
-  const { data: ratingsData, error: ratingsError } = await supabase
-    .from('player_rating_score')
-    .select(
-      `
-      player_id,
-      is_certified,
-      badge_status,
-      referrals_count,
-      approved_proofs_count,
-      rating_score!player_rating_scores_rating_score_id_fkey!inner (
-        label,
-        value,
-        rating_system!inner (
-          sport_id
-        )
-      )
-    `
-    )
-    .in('player_id', playerIds);
-
-  if (ratingsError) {
-    console.error('[searchPlayersForSport] Error fetching ratings:', ratingsError);
-  }
-
-  if (!ratingsError && ratingsData) {
-    type RatingResult = {
-      player_id: string;
-      is_certified: boolean;
-      badge_status: string | null;
-      referrals_count: number | null;
-      approved_proofs_count: number | null;
-      rating_score: {
-        label: string;
-        value: number | null;
-        rating_system: { sport_id: string };
-      };
-    };
-
-    (ratingsData as unknown as RatingResult[]).forEach(rating => {
-      const ratingScore = rating.rating_score;
-      const ratingSystem = ratingScore?.rating_system;
-      // Only include ratings for the requested sport
-      if (ratingSystem?.sport_id === sportId && ratingScore?.label) {
-        const badgeStatus = computeBadgeStatus({
-          rawBadgeStatus: rating.badge_status,
-          isCertified: rating.is_certified,
-          referralsCount: rating.referrals_count ?? 0,
-          approvedProofsCount: rating.approved_proofs_count ?? 0,
-        });
-        // If player already has a rating entry, prefer the certified one
-        const existing = ratingsMap[rating.player_id];
-        if (!existing || (existing.badge_status !== 'certified' && badgeStatus === 'certified')) {
-          ratingsMap[rating.player_id] = {
-            label: ratingScore.label,
-            value: ratingScore.value,
-            is_certified: rating.is_certified ?? false,
-            badge_status: badgeStatus,
-          };
-        }
-      }
-    });
-  }
-
-  // Apply skill level filter if specified
-  if (filters.skillLevel && filters.skillLevel !== 'all') {
-    const targetLevel = parseFloat(filters.skillLevel);
-    if (!isNaN(targetLevel)) {
-      // Filter to players with rating >= target level
-      skillFilteredPlayerIds = playerIds.filter(id => {
-        const rating = ratingsMap[id];
-        return rating && rating.value !== null && rating.value >= targetLevel;
-      });
-      playerIds = skillFilteredPlayerIds;
-    }
-  }
-
-  if (playerIds.length === 0) {
+  // Blocked toggle ON with empty blocked list → same.
+  if (filters.blocked && blockedPlayerIds.length === 0) {
     return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
   }
 
-  // Step 7: If searching, find player IDs matching city and union with name-matched profile IDs
-  if (searchQuery && searchQuery.trim().length > 0) {
-    const searchTerm = `%${searchQuery.trim()}%`;
-
-    // Find IDs matching city in player table
-    const { data: cityMatches } = await supabase
-      .from('player')
-      .select('id')
-      .in('id', playerIds)
-      .ilike('city', searchTerm);
-
-    // Find IDs matching name in profile table
-    const { data: nameMatches } = await supabase
-      .from('profile')
-      .select('id')
-      .in('id', playerIds)
-      .or('is_active.is.null,is_active.eq.true')
-      .or(
-        `first_name.ilike.${searchTerm},last_name.ilike.${searchTerm},display_name.ilike.${searchTerm}`
-      );
-
-    // Union the matched IDs
-    const matchedIds = new Set<string>();
-    cityMatches?.forEach(p => matchedIds.add(p.id));
-    nameMatches?.forEach(p => matchedIds.add(p.id));
-
-    // Narrow playerIds to only matched ones
-    playerIds = playerIds.filter(id => matchedIds.has(id));
-
-    if (playerIds.length === 0) {
-      return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
-    }
-  }
-
-  // Capture total count before pagination
-  const totalCount = playerIds.length;
-
-  // Step 8: Fetch profiles (paginated)
-  const { data: profiles, error: profileError } = await supabase
-    .from('profile')
-    .select('id, first_name, last_name, display_name, profile_picture_url')
-    .in('id', playerIds)
-    .or('is_active.is.null,is_active.eq.true')
-    .order('first_name', { ascending: true })
-    .range(offset, offset + limit); // Fetch one extra to check if more exist
-
-  if (profileError) {
-    throw new Error(`Failed to fetch profiles: ${profileError.message}`);
-  }
-
-  if (!profiles || profiles.length === 0) {
-    return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
-  }
-
-  // Check if there are more results
-  const hasMore = profiles.length > limit;
-  const resultsToReturn = hasMore ? profiles.slice(0, limit) : profiles;
-  const profileIdsToFetch = resultsToReturn.map(p => p.id);
-
-  // Fetch gender, city, and location data for profiles
-  const genderMap: Record<string, string | null> = {};
-  const cityMap: Record<string, string | null> = {};
-  const latitudeMap: Record<string, number | null> = {};
-  const longitudeMap: Record<string, number | null> = {};
-  const { data: playerData, error: playerError } = await supabase
-    .from('player')
-    .select('id, gender, city, latitude, longitude')
-    .in('id', profileIdsToFetch);
-
-  if (!playerError && playerData) {
-    playerData.forEach(p => {
-      genderMap[p.id] = p.gender;
-      cityMap[p.id] = p.city;
-      latitudeMap[p.id] = p.latitude;
-      longitudeMap[p.id] = p.longitude;
-    });
-  }
-
-  // Step 9: Combine profiles with ratings, gender, city, and distance
-  const players: PlayerSearchResult[] = resultsToReturn.map(profile => {
-    const playerLat = latitudeMap[profile.id];
-    const playerLon = longitudeMap[profile.id];
-
-    // Calculate distance using Haversine formula if both locations are available
-    let distanceMeters: number | null = null;
-    if (
-      latitude !== undefined &&
-      longitude !== undefined &&
-      playerLat != null &&
-      playerLon != null
-    ) {
-      const R = 6371000; // Earth's radius in meters
-      const lat1Rad = (latitude * Math.PI) / 180;
-      const lat2Rad = (playerLat * Math.PI) / 180;
-      const deltaLat = ((playerLat - latitude) * Math.PI) / 180;
-      const deltaLon = ((playerLon - longitude) * Math.PI) / 180;
-
-      const a =
-        Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
-        Math.cos(lat1Rad) * Math.cos(lat2Rad) * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-      distanceMeters = R * c;
-    }
-
-    return {
-      id: profile.id,
-      first_name: profile.first_name,
-      last_name: profile.last_name,
-      display_name: profile.display_name,
-      profile_picture_url: profile.profile_picture_url,
-      city: cityMap[profile.id] ?? null,
-      gender: genderMap[profile.id] ?? null,
-      rating: ratingsMap[profile.id] ?? null,
-      latitude: playerLat ?? null,
-      longitude: playerLon ?? null,
-      distance_meters: distanceMeters,
-    };
+  const { data, error } = await supabase.rpc('search_players_nearby', {
+    p_sport_id: sportId,
+    p_current_user_id: currentUserId ?? null,
+    p_search_query: searchQuery && searchQuery.trim().length > 0 ? searchQuery.trim() : null,
+    p_latitude: latitude ?? null,
+    p_longitude: longitude ?? null,
+    p_gender: gender,
+    p_min_skill_value: minSkillValue,
+    p_min_travel_distance_km:
+      !minTravelDistanceKm || isNaN(minTravelDistanceKm) ? null : minTravelDistanceKm,
+    p_availability: availability,
+    p_day: day,
+    p_play_style: playStyle,
+    p_favorite_player_ids: favoritePlayerIds.length > 0 ? favoritePlayerIds : null,
+    p_blocked_player_ids: blockedPlayerIds.length > 0 ? blockedPlayerIds : null,
+    p_favorites_only: !!filters.favorites,
+    p_blocked_only: !!filters.blocked,
+    p_exclude_player_ids: excludePlayerIds.length > 0 ? excludePlayerIds : null,
+    p_sort_by: filters.sortBy ?? 'distance',
+    p_limit: limit,
+    p_offset: offset,
   });
+
+  if (error) {
+    throw new Error(`Failed to search players: ${error.message}`);
+  }
+
+  type RpcRow = {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    display_name: string | null;
+    profile_picture_url: string | null;
+    city: string | null;
+    gender: string | null;
+    rating_label: string | null;
+    rating_value: number | null;
+    rating_is_certified: boolean | null;
+    rating_badge_status: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    distance_meters: number | null;
+    total_count: number | string;
+  };
+
+  const rows = (data ?? []) as RpcRow[];
+  const totalCount = rows.length > 0 ? Number(rows[0].total_count) : 0;
+
+  const players: PlayerSearchResult[] = rows.map(row => ({
+    id: row.id,
+    first_name: row.first_name ?? '',
+    last_name: row.last_name ?? '',
+    display_name: row.display_name,
+    profile_picture_url: row.profile_picture_url,
+    city: row.city,
+    gender: row.gender,
+    rating: row.rating_label
+      ? {
+          label: row.rating_label,
+          value: row.rating_value,
+          is_certified: row.rating_is_certified ?? false,
+          badge_status: (row.rating_badge_status ?? 'self_declared') as BadgeStatus,
+        }
+      : null,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    distance_meters: row.distance_meters,
+  }));
+
+  const hasMore = offset + rows.length < totalCount;
 
   return {
     players,

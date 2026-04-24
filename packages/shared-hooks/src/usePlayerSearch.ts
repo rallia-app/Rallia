@@ -40,7 +40,7 @@ export const playerKeys = {
 };
 
 /** Default number of players to load per page */
-const DEFAULT_PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 20;
 
 interface UsePlayerSearchOptions {
   /** Sport ID to filter players by (required) */

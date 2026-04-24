@@ -127,6 +127,22 @@ export interface RatingProofsScreenParams {
 }
 
 /**
+ * Props for RatingReferences screen
+ */
+export interface RatingReferencesScreenParams {
+  playerRatingScoreId: string;
+  sportId: string;
+  sportName: string;
+  ratingValue: number;
+  /** Display label for the requester's current rating (e.g. "NTRP 3.5") */
+  ratingLabel?: string;
+  /** Rating system code (e.g. 'NTRP', 'DUPR') — used by the request sheet */
+  ratingSystemCode?: string;
+  /** Optional: auto-open the reference-request sheet on mount */
+  openSheet?: 'request';
+}
+
+/**
  * Props for Match detail screen
  */
 export interface MatchDetailScreenParams {
