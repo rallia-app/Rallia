@@ -67,6 +67,7 @@ import { TennisPreferencesActionSheet } from '../features/sport-profile/componen
 import { PickleballPreferencesActionSheet } from '../features/sport-profile/components/PickleballPreferencesOverlay';
 // Reference response
 import { RespondToReferenceActionSheet } from '../features/ratings/components/RespondToReferenceOverlay';
+import { ReferencesListActionSheet } from '../features/ratings/components/ReferencesListSheet';
 // Rating proof components
 import { AddRatingProofActionSheet } from '../features/ratings/components/AddRatingProofOverlay';
 import { ExternalLinkProofActionSheet } from '../features/ratings/components/ExternalLinkProofOverlay';
@@ -526,6 +527,12 @@ declare module 'react-native-actions-sheet' {
         onSendRequests?: (selectedPlayerIds: string[]) => Promise<void>;
       };
     }>;
+    'references-list': SheetDefinition<{
+      payload: {
+        playerRatingScoreId: string;
+        sportId?: string;
+      };
+    }>;
     'tennis-preferences': SheetDefinition<{
       payload: {
         onSave?: (preferences: {
@@ -743,6 +750,7 @@ export const Sheets = () => {
         'pickleball-rating': PickleballRatingActionSheet,
         'respond-to-reference': RespondToReferenceActionSheet,
         'reference-request': ReferenceRequestActionSheet,
+        'references-list': ReferencesListActionSheet,
         'tennis-preferences': TennisPreferencesActionSheet,
         'pickleball-preferences': PickleballPreferencesActionSheet,
         // Rating proof sheets

@@ -14,6 +14,7 @@ import type { NavigatorScreenParams, CompositeScreenProps } from '@react-navigat
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type {
   RatingProofsScreenParams,
+  RatingReferencesScreenParams,
   SportProfileScreenParams,
   FacilityDetailScreenParams,
 } from '@rallia/shared-types';
@@ -40,6 +41,7 @@ export type RootStackParamList = {
   Permissions: undefined;
   Map: NavigatorScreenParams<MapStackParamList> | undefined;
   RatingProofs: RatingProofsScreenParams;
+  RatingReferences: RatingReferencesScreenParams;
   IncomingReferenceRequests: undefined; // Incoming reference requests from other players
   GroupDetail: { groupId: string; groupName?: string; fromChat?: boolean }; // Group detail view
   CommunityDetail: { communityId: string; communityName?: string; fromChat?: boolean }; // Community detail view

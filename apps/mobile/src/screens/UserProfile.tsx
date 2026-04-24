@@ -115,9 +115,7 @@ const UserProfile = () => {
   const [allSports, setAllSports] = useState<Sport[]>([]);
   const [loadingAllSports, setLoadingAllSports] = useState(true);
   const [availabilities, setAvailabilities] = useState<AvailabilityGrid>({});
-  const [pendingReferenceRequestsCount, setPendingReferenceRequestsCount] = useState(0);
   const [loadingAvailabilities, setLoadingAvailabilities] = useState(true);
-  const [loadingReferenceRequests, setLoadingReferenceRequests] = useState(true);
   const [reactivateConfirm, setReactivateConfirm] = useState<{
     visible: boolean;
     sport: SportWithRating | null;
@@ -269,36 +267,12 @@ const UserProfile = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Refresh pending reference requests count when screen gains focus
-  const refreshReferenceRequestsCount = useCallback(async () => {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { count, error } = await supabase
-        .from('rating_reference_request')
-        .select('id', { count: 'exact', head: true })
-        .eq('referee_id', user.id)
-        .eq('status', 'pending')
-        .gte('expires_at', new Date().toISOString());
-
-      if (!error) {
-        setPendingReferenceRequestsCount(count || 0);
-      }
-    } catch (error) {
-      Logger.error('Failed to refresh reference requests count', error as Error);
-    }
-  }, []);
-
   useFocusEffect(
     useCallback(() => {
-      refreshReferenceRequestsCount();
       // Refresh completeness when returning from SportProfile (e.g. after
       // editing favorite facilities, rating, or play style)
       profileCompleteness.refetch();
-    }, [refreshReferenceRequestsCount, profileCompleteness.refetch])
+    }, [profileCompleteness.refetch])
   );
 
   // Upload profile picture when a new image is selected
@@ -412,7 +386,6 @@ const UserProfile = () => {
 
     setLoadingAllSports(true);
     setLoadingAvailabilities(true);
-    setLoadingReferenceRequests(true);
 
     // Fetch all sports (static data). Active/rating status is derived from shared contexts.
     const fetchSports = async () => {
@@ -474,41 +447,7 @@ const UserProfile = () => {
       }
     };
 
-    // Reference requests count
-    const fetchReferenceRequests = async () => {
-      try {
-        Logger.info('Fetching reference requests count', { userId: user.id });
-        const referenceRequestsResult = await withTimeout(
-          (async () =>
-            supabase
-              .from('rating_reference_request')
-              .select('id', { count: 'exact', head: true })
-              .eq('referee_id', user.id)
-              .eq('status', 'pending'))(),
-          15000,
-          'Failed to load reference requests - connection timeout'
-        );
-
-        Logger.info('Reference requests result', {
-          count: referenceRequestsResult.count,
-          error: referenceRequestsResult.error?.message,
-          userId: user.id,
-        });
-
-        if (!referenceRequestsResult.error) {
-          setPendingReferenceRequestsCount(referenceRequestsResult.count || 0);
-        } else {
-          Logger.error('Reference requests query error', referenceRequestsResult.error);
-        }
-      } catch (error) {
-        Logger.error('Failed to fetch reference requests', error as Error);
-        toast.error(getNetworkErrorMessage(error));
-      } finally {
-        setLoadingReferenceRequests(false);
-      }
-    };
-
-    await Promise.all([fetchSports(), fetchAvailabilities(), fetchReferenceRequests()]);
+    await Promise.all([fetchSports(), fetchAvailabilities()]);
   };
 
   // Convert DB format to UI format for the overlay
@@ -958,52 +897,6 @@ const UserProfile = () => {
                     {t('profile.joined')} {formatJoinedDate(player?.created_at || null)}
                   </Text>
                 </View>
-
-                {/* Incoming Reference Requests CTA */}
-                {!loadingReferenceRequests && pendingReferenceRequestsCount > 0 && (
-                  <TouchableOpacity
-                    style={[
-                      styles.referenceRequestCta,
-                      {
-                        backgroundColor: isDark ? primary[900] : primary[50],
-                        borderColor: isDark ? primary[700] : primary[200],
-                      },
-                    ]}
-                    onPress={() => navigation.navigate('IncomingReferenceRequests')}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={16}
-                      color={isDark ? primary[300] : primary[600]}
-                    />
-                    <Text
-                      style={[
-                        styles.referenceRequestCtaText,
-                        { color: isDark ? primary[200] : primary[700] },
-                      ]}
-                    >
-                      {t('referenceRequest.pendingRequests')}
-                    </Text>
-                    <View
-                      style={[styles.referenceRequestCtaBadge, { backgroundColor: colors.primary }]}
-                    >
-                      <Text
-                        style={[
-                          styles.referenceRequestCtaBadgeText,
-                          { color: colors.primaryForeground },
-                        ]}
-                      >
-                        {pendingReferenceRequestsCount}
-                      </Text>
-                    </View>
-                    <Ionicons
-                      name="chevron-forward"
-                      size={14}
-                      color={isDark ? primary[400] : primary[500]}
-                    />
-                  </TouchableOpacity>
-                )}
               </>
             )}
           </WalkthroughableView>
@@ -1909,38 +1802,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  // Reference Request CTA Styles
-  referenceRequestCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'center',
-    gap: spacingPixels[2],
-    marginTop: spacingPixels[3],
-    paddingVertical: spacingPixels[2.5],
-    paddingHorizontal: spacingPixels[3],
-    borderRadius: radiusPixels.full,
-    borderWidth: 1,
-  },
-  referenceRequestCtaText: {
-    fontSize: fontSizePixels.sm,
-    fontWeight: fontWeightNumeric.semibold,
-  },
-  referenceRequestCtaBadge: {
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-  },
-  referenceRequestCtaBadgeText: {
-    fontSize: 11,
-    fontWeight: fontWeightNumeric.bold,
-    lineHeight: 20,
-    textAlign: 'center',
-    includeFontPadding: false,
-    textAlignVertical: 'center',
   },
 });
 

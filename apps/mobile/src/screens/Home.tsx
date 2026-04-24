@@ -33,6 +33,7 @@ import {
   useTranslation,
   useEffectiveLocation,
   useTourSequence,
+  usePendingReferenceRequestsCount,
 } from '../hooks';
 import {
   useOverlay,
@@ -81,6 +82,7 @@ import ProfileCompletionBanner from '../features/profile/components/ProfileCompl
 import { SuggestionsFeedSection } from '../components/SuggestionsFeedSection';
 import BillingIssueBanner from '../components/BillingIssueBanner';
 import LaunchCountdownBanner from '../components/LaunchCountdownBanner';
+import ReferenceRequestsBanner from '../components/ReferenceRequestsBanner';
 import { useSubscription } from '../context';
 
 /** Dismissible banner alerting the player to unread notifications in another sport */
@@ -479,6 +481,9 @@ const Home = () => {
 
   // Profile completeness for banner
   const profileCompleteness = useProfileCompleteness();
+
+  // Pending incoming reference requests
+  const { count: pendingReferenceRequestsCount } = usePendingReferenceRequestsCount();
 
   // Handle profile completion banner action
   const handleCompletionBannerAction = useCallback(
@@ -1096,6 +1101,19 @@ const Home = () => {
         );
       }
 
+      // Pending incoming reference requests
+      if (pendingReferenceRequestsCount > 0) {
+        headerComponents.push(
+          <ReferenceRequestsBanner
+            key="reference-requests"
+            count={pendingReferenceRequestsCount}
+            onPress={() => appNavigation.navigate('IncomingReferenceRequests')}
+            colors={colors}
+            t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
+          />
+        );
+      }
+
       // Fully onboarded: show My Matches
       // Cross-sport banners for unread notifications in other sports
       Object.entries(otherSportsUnreadCount).forEach(([sportName, count]) => {
@@ -1198,6 +1216,7 @@ const Home = () => {
     isDark,
     subscriptionStatus,
     appNavigation,
+    pendingReferenceRequestsCount,
   ]);
 
   // Show loading if auth is loading, or if player/sport data is loading initially
@@ -1410,7 +1429,7 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    paddingTop: spacingPixels[8],
+    paddingTop: spacingPixels[2],
   },
   skeletonSection: {
     marginBottom: spacingPixels[6],

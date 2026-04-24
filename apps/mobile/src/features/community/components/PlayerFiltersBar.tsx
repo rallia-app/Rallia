@@ -111,7 +111,7 @@ export const DEFAULT_PLAYER_FILTERS: PlayerFilters = {
   availability: 'all',
   day: 'all',
   playStyle: 'all',
-  sortBy: 'name_asc',
+  sortBy: 'distance',
 };
 
 // =============================================================================
@@ -516,7 +516,7 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
       filters.availability !== 'all' ||
       filters.day !== 'all' ||
       filters.playStyle !== 'all' ||
-      (filters.sortBy && filters.sortBy !== 'name_asc')
+      (filters.sortBy && filters.sortBy !== 'distance')
     );
   }, [filters]);
 
@@ -635,7 +635,7 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
     filters.playStyle === 'all'
       ? t('playerDirectory.filters.playStyle')
       : t(PLAY_STYLE_LABEL_KEYS[filters.playStyle]);
-  const sortDisplay = t(SORT_LABEL_KEYS[filters.sortBy || 'name_asc']);
+  const sortDisplay = t(SORT_LABEL_KEYS[filters.sortBy || 'distance']);
 
   // Define all filter chips configuration
   type FilterChipConfig = {
@@ -741,7 +741,7 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
         key: 'sort',
         label: t('playerDirectory.filters.sortBy'),
         value: sortDisplay,
-        isActive: filters.sortBy !== 'name_asc',
+        isActive: filters.sortBy !== 'distance',
         onPress: () => setShowSortDropdown(true),
         icon: 'swap-vertical-outline',
         show: true,
@@ -907,7 +907,7 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
         visible={showSortDropdown}
         title={t('playerDirectory.filters.sortPlayersBy')}
         options={SORT_OPTIONS}
-        selectedValue={filters.sortBy || 'name_asc'}
+        selectedValue={filters.sortBy || 'distance'}
         onSelect={handleSortChange}
         onClose={() => setShowSortDropdown(false)}
         isDark={isDark}

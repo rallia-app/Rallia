@@ -153,6 +153,7 @@
     "permissions": "Permissions",
     "feedback": "Feedback",
     "ratingProofs": "Rating Proofs",
+    "ratingReferences": "Rating References",
     "publicMatches": "Public Games",
     "playerMatches": "My Games",
     "group": "Group",
@@ -450,7 +451,10 @@
     "expiresVerySoon": "Expires today",
     "expiresSoon": "Expires in {days} days",
     "expiresIn": "Expires in {days} days",
-    "tapToRespond": "Tap to respond",
+    "reviewAndRespond": "Review & Respond",
+    "pendingCount": "{count} players are waiting for your rating confirmation",
+    "pendingCount_one": "{count} player is waiting for your rating confirmation",
+    "reviewCta": "Review",
     "respondTitle": "Verify Rating",
     "respondSubtitle": "Help this player get their rating certified",
     "claimsToBeRated": "Claims to be rated at",
@@ -917,10 +921,16 @@
       "peerRating": "{count} Peer Rating",
       "ratingProof": "{count} Rating Proof",
       "requestReference": "Request reference",
+      "manageReferences": "Manage rating references",
       "requestPeerRating": "Request peer rating",
       "manageRatingProofs": "Manage rating proofs",
       "currentLevel": "Current",
-      "previousLevel": "Previous"
+      "previousLevel": "Previous",
+      "referencesList": {
+        "title": "References",
+        "empty": "No references yet.",
+        "error": "Couldn't load references."
+      }
     },
     "certification": {
       "title": "Certification Status",
@@ -979,6 +989,41 @@
         "count": "{count} evaluations",
         "belowLevel": "Evaluations suggest level may be lower",
         "matchesLevel": "Evaluations match declared level"
+      }
+    },
+    "referencesManage": {
+      "title": "My References",
+      "error": "Couldn't load references.",
+      "sentOn": "Sent on {date}",
+      "requestedFor": "Requested for",
+      "expiresIn": "Expires in {days} days",
+      "responseLabel": "Referee's comment",
+      "status": {
+        "approved": "Approved",
+        "contested": "Contested",
+        "pending": "Pending"
+      },
+      "filters": {
+        "all": "All",
+        "approved": "Approved",
+        "contested": "Contested",
+        "pending": "Pending"
+      },
+      "empty": {
+        "title": "No references yet",
+        "description": "Send requests to players at your level or higher to validate your rating."
+      },
+      "emptyApproved": {
+        "title": "No approved references",
+        "description": "Players haven't approved any references yet."
+      },
+      "emptyContested": {
+        "title": "No contested references",
+        "description": "No referee has disputed your rating."
+      },
+      "emptyPending": {
+        "title": "No pending requests",
+        "description": "Send a new request from the + button above."
       }
     },
     "ratingProofs": {
@@ -1823,20 +1868,6 @@
     "mustBeLoggedIn": "Sign in to create a game."
   },
   "chat": {
-    "empty": {
-      "direct": {
-        "title": "No direct messages yet",
-        "subtitle": "Start a conversation with another player"
-      },
-      "groups": {
-        "title": "No group chats yet",
-        "subtitle": "Join a group or community to start chatting"
-      },
-      "matches": {
-        "title": "No match chats yet",
-        "subtitle": "Join a match to start chatting with opponents"
-      }
-    },
     "inbox": "Inbox",
     "signInRequired": "Sign in to view messages",
     "signInPrompt": "Sign in to see your conversations and connect with other players.",
@@ -1854,11 +1885,6 @@
     },
     "noConversations": "No conversations yet",
     "noConversationsSubtitle": "Join a group or start a conversation with another player",
-    "tabs": {
-      "direct": "Direct",
-      "groups": "Groups",
-      "matches": "Matches"
-    },
     "filters": {
       "all": "All",
       "unread": "Unread",
@@ -8252,9 +8278,9 @@
         "title": "Search",
         "description": "Search for conversations by name or message content."
       },
-      "tabs": {
-        "title": "Chat Categories",
-        "description": "Switch between Direct Messages, Groups, and Match chats. The badge shows unread messages."
+      "filters": {
+        "title": "Filter Chats",
+        "description": "Narrow your inbox by chat type or status. Tap \"All\" to clear."
       },
       "newMessage": {
         "title": "New Message",

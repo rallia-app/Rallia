@@ -1,19 +1,21 @@
 /**
  * ConversationFilterChips Component
  * Horizontally scrollable filter chips for the chat inbox.
- * Single-select behavior — tapping active chip deselects to 'all'.
- * "Unread" chip shows a badge with the count of unread conversations.
+ * Single-select — tapping another chip switches filter; tapping "All" clears.
+ * Mixes chat-type filters (server-side via RPC) and status filters (client-side).
+ * The "Archived" chip is a navigation shortcut — it calls onArchivedPress instead of toggling.
  */
 
 import { useCallback, useMemo } from 'react';
 import { View, ScrollView, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
 import { Text } from '@rallia/shared-components';
 import { useTheme } from '@rallia/shared-hooks';
-import type { ConversationFilter } from '@rallia/shared-hooks';
-import { useTranslation } from '../../../hooks';
+import type { ChatInboxFilter } from '@rallia/shared-types';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
 import { Ionicons } from '@expo/vector-icons';
+
+import { useTranslation } from '../../../hooks';
 import { lightHaptic } from '../../../utils/haptics';
 import { SportIcon } from '../../../components/SportIcon';
 
@@ -22,20 +24,20 @@ import { SportIcon } from '../../../components/SportIcon';
 // =============================================================================
 
 interface ConversationFilterChipsProps {
-  filter: ConversationFilter;
-  onFilterToggle: (filter: ConversationFilter) => void;
+  filter: ChatInboxFilter;
+  onFilterChange: (filter: ChatInboxFilter) => void;
   unreadCount?: number;
 }
 
 interface FilterOption {
-  value: ConversationFilter;
+  value: ChatInboxFilter;
   labelKey: TranslationKey;
   icon?: keyof typeof Ionicons.glyphMap;
   useSportIcon?: boolean;
 }
 
 // =============================================================================
-// FILTER OPTIONS
+// FILTER OPTIONS (ordered by relevance/value)
 // =============================================================================
 
 const FILTER_OPTIONS: FilterOption[] = [
@@ -46,6 +48,10 @@ const FILTER_OPTIONS: FilterOption[] = [
   { value: 'group_chat', labelKey: 'chat.filters.groupChat', icon: 'people-outline' },
   { value: 'player_group', labelKey: 'chat.filters.playerGroup', icon: 'people-circle-outline' },
   { value: 'community', labelKey: 'chat.filters.community', icon: 'earth-outline' },
+  { value: 'pinned', labelKey: 'chat.filters.pinned', icon: 'pin-outline' },
+  { value: 'favorites', labelKey: 'chat.filters.favorites', icon: 'heart-outline' },
+  { value: 'muted', labelKey: 'chat.filters.muted', icon: 'volume-mute-outline' },
+  { value: 'blocked', labelKey: 'chat.filters.blocked', icon: 'ban-outline' },
 ];
 
 // =============================================================================
@@ -132,9 +138,9 @@ function FilterChip({
 // MAIN COMPONENT
 // =============================================================================
 
-export default function ConversationFilterChips({
+export function ConversationFilterChips({
   filter,
-  onFilterToggle,
+  onFilterChange,
   unreadCount,
 }: ConversationFilterChipsProps) {
   const { theme } = useTheme();
@@ -150,19 +156,30 @@ export default function ConversationFilterChips({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {FILTER_OPTIONS.map((option, index) => (
-          <FilterChip
-            key={option.value}
-            label={getLabel(option.labelKey)}
-            isActive={filter === option.value}
-            onPress={() => onFilterToggle(option.value)}
-            isDark={isDark}
-            icon={option.value !== 'all' ? option.icon : undefined}
-            useSportIcon={option.useSportIcon}
-            isFirst={index === 0}
-            badge={option.value === 'unread' ? unreadCount : undefined}
-          />
-        ))}
+        {FILTER_OPTIONS.map((option, index) => {
+          const handlePress = () => {
+            // Single-select: tapping the active chip clears to 'all'
+            if (filter === option.value && option.value !== 'all') {
+              onFilterChange('all');
+              return;
+            }
+            onFilterChange(option.value);
+          };
+
+          return (
+            <FilterChip
+              key={option.value}
+              label={getLabel(option.labelKey)}
+              isActive={filter === option.value}
+              onPress={handlePress}
+              isDark={isDark}
+              icon={option.value !== 'all' ? option.icon : undefined}
+              useSportIcon={option.useSportIcon}
+              isFirst={index === 0}
+              badge={option.value === 'unread' ? unreadCount : undefined}
+            />
+          );
+        })}
       </ScrollView>
     </View>
   );

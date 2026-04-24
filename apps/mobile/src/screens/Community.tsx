@@ -2,12 +2,12 @@
  * Community Screen
  *
  * Main community hub with:
- * - Quick action buttons: Share Lists, Groups, Communities
+ * - Quick action buttons: Groups, Communities
  * - Player directory for finding and connecting with players
  */
 
 import React, { useMemo, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -23,8 +23,7 @@ import {
   type TranslationKey,
 } from '../hooks';
 import { useSport } from '../context';
-import { spacingPixels } from '@rallia/design-system';
-import { primary, neutral } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
 import { PlayerDirectory } from '../features/community';
 import { FeedbackFAB } from '../components/BugReportFAB';
 import type { PlayerSearchResult } from '@rallia/shared-services';
@@ -76,12 +75,6 @@ const Community = () => {
   );
 
   // Action button handlers
-  const handleShareLists = useCallback(() => {
-    if (!guardAction()) return;
-    lightHaptic();
-    navigation.navigate('ShareLists');
-  }, [navigation, guardAction]);
-
   const handleGroups = useCallback(() => {
     if (!guardAction()) return;
     lightHaptic();
@@ -97,12 +90,6 @@ const Community = () => {
   const actionButtons: ActionButton[] = useMemo(
     () => [
       {
-        id: 'share-lists',
-        icon: 'paper-plane-outline',
-        label: t('community.shareLists'),
-        onPress: handleShareLists,
-      },
-      {
         id: 'groups',
         icon: 'people-outline',
         label: t('community.groups'),
@@ -115,7 +102,7 @@ const Community = () => {
         onPress: handleCommunities,
       },
     ],
-    [handleShareLists, handleGroups, handleCommunities, t]
+    [handleGroups, handleCommunities, t]
   );
 
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
@@ -132,16 +119,14 @@ const Community = () => {
   const listHeader = useMemo(
     () => (
       <>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.actionButtonsScrollView}
-          contentContainerStyle={styles.actionButtonsContainer}
-        >
+        <View style={styles.actionButtonsRow}>
           {actionButtons.map(button => (
             <TouchableOpacity
               key={button.id}
-              style={styles.actionButton}
+              style={[
+                styles.actionButton,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
               onPress={button.onPress}
               activeOpacity={0.7}
             >
@@ -149,19 +134,16 @@ const Community = () => {
                 <Ionicons name={button.icon} size={28} color={buttonColors.iconColor} />
               </View>
               <Text
-                size="xs"
-                weight="medium"
+                size="base"
+                weight="semibold"
                 color={colors.text}
                 style={styles.actionButtonLabel}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.8}
               >
                 {button.label}
               </Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
 
         <View style={styles.sectionHeader}>
           <Text size="xl" weight="bold" color={colors.text} style={styles.sectionTitle}>
@@ -170,7 +152,7 @@ const Community = () => {
         </View>
       </>
     ),
-    [actionButtons, buttonColors, colors.text, t]
+    [actionButtons, buttonColors, colors.text, colors.cardBackground, colors.border, t]
   );
 
   return (
@@ -201,31 +183,35 @@ const styles = StyleSheet.create({
     right: spacingPixels[4],
     alignItems: 'center',
   },
-  actionButtonsScrollView: {
-    flexGrow: 0,
-    paddingTop: spacingPixels[2],
-    flexShrink: 0,
-  },
-  actionButtonsContainer: {
-    flexGrow: 1,
+  actionButtonsRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacingPixels[8],
+    gap: spacingPixels[3],
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[2],
     paddingBottom: spacingPixels[2],
   },
   actionButton: {
-    alignItems: 'center',
-    width: 80,
-  },
-  actionButtonIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    flex: 1,
+    aspectRatio: 1.5,
+    borderRadius: radiusPixels['2xl'],
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacingPixels[2],
+    gap: spacingPixels[2],
+    paddingVertical: spacingPixels[4],
+    paddingHorizontal: spacingPixels[3],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  actionButtonIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   actionButtonLabel: {
     textAlign: 'center',
