@@ -10,7 +10,12 @@ import React, {
 import Purchases from 'react-native-purchases';
 import type { CustomerInfo } from 'react-native-purchases';
 import { isRunningInExpoGo } from 'expo';
-import { identifyRevenueCatUser, resetRevenueCatUser, PRO_ENTITLEMENT_ID } from '../lib/revenuecat';
+import {
+  identifyRevenueCatUser,
+  resetRevenueCatUser,
+  isRevenueCatSupported,
+  PRO_ENTITLEMENT_ID,
+} from '../lib/revenuecat';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
 import { navigationRef } from '../navigation';
@@ -74,7 +79,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
 
   // Identify/reset RC user when auth changes and set up CustomerInfo listener
   useEffect(() => {
-    if (isRunningInExpoGo()) {
+    if (isRunningInExpoGo() || !isRevenueCatSupported) {
       setIsLoading(false);
       return;
     }
@@ -129,7 +134,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
   }, [user?.id, fetchDbSubscription]);
 
   const refreshSubscription = useCallback(async () => {
-    if (!user?.id || isRunningInExpoGo()) return;
+    if (!user?.id || isRunningInExpoGo() || !isRevenueCatSupported) return;
     try {
       const info = await Purchases.getCustomerInfo();
       setCustomerInfo(info);
@@ -147,7 +152,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
   }, []);
 
   const restorePurchases = useCallback(async (): Promise<boolean> => {
-    if (isRunningInExpoGo()) return false;
+    if (isRunningInExpoGo() || !isRevenueCatSupported) return false;
     try {
       const info = await Purchases.restorePurchases();
       setCustomerInfo(info);
