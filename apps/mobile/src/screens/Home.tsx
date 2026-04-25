@@ -464,8 +464,6 @@ const Home = () => {
 
     const hasReferredUser = (referralStats?.total_converted ?? 0) >= 1;
 
-    // DEBUG: force-show for visual testing — remove before shipping
-    SheetManager.show('referral-invite');
     (async () => {
       await incrementOnboardedLaunchCount();
       const show = await shouldShowReferralInvite(hasReferredUser);
