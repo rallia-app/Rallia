@@ -58,6 +58,7 @@ import {
   useOtherSportsUnreadCount,
   useSports,
   useProfileCompleteness,
+  useReferral,
 } from '@rallia/shared-hooks';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NearbyMatch, MatchScoringPreferences } from '@rallia/shared-hooks';
@@ -83,6 +84,11 @@ import { SuggestionsFeedSection } from '../components/SuggestionsFeedSection';
 import BillingIssueBanner from '../components/BillingIssueBanner';
 import ReferenceRequestsBanner from '../components/ReferenceRequestsBanner';
 import { useSubscription } from '../context';
+import {
+  incrementOnboardedLaunchCount,
+  shouldShowReferralInvite,
+  markSheetShown,
+} from '../utils/referralInviteFrequency';
 
 /** Dismissible banner alerting the player to unread notifications in another sport */
 const CrossSportBanner: React.FC<{
@@ -450,6 +456,25 @@ const Home = () => {
   useEffect(() => {
     if (player?.id) processDeepLink();
   }, [player?.id, processDeepLink]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Referral invite prompt — shown every 3 launches (0 referrals) or 7 launches (1+ referrals)
+  const { stats: referralStats, statsLoading: referralStatsLoading } = useReferral(player?.id);
+  useEffect(() => {
+    if (!isOnboarded || !player?.id || referralStatsLoading) return;
+
+    const hasReferredUser = (referralStats?.total_converted ?? 0) >= 1;
+
+    // DEBUG: force-show for visual testing — remove before shipping
+    SheetManager.show('referral-invite');
+    (async () => {
+      await incrementOnboardedLaunchCount();
+      const show = await shouldShowReferralInvite(hasReferredUser);
+      if (show) {
+        await markSheetShown();
+        SheetManager.show('referral-invite');
+      }
+    })();
+  }, [isOnboarded, player?.id, referralStatsLoading, referralStats?.total_converted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { selectedSport, isLoading: sportLoading, userSports, setSelectedSport } = useSport();
 

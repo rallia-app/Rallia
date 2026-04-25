@@ -19,8 +19,10 @@ import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast, Button } from '@rallia/shared-components';
 import { selectionHaptic, lightHaptic } from '@rallia/shared-utils';
-import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
 import { SearchBar } from '../../../../components/SearchBar';
+import { ContactRow, ContactSelectionCheck } from '../../../../components/ContactRow';
+import { formatContactSubtitle } from '../../../../utils/contactDisplay';
 import type { TranslationKey } from '../../../../hooks';
 import { useSport } from '../../../../context';
 
@@ -196,37 +198,27 @@ export const InviteContactsStep: React.FC<InviteContactsStepProps> = ({
   }, [contacts, referralLink, toast, t, selectedSport]);
 
   const renderContact = useCallback(
-    ({ item }: { item: DeviceContact }) => (
-      <TouchableOpacity
-        style={[
-          styles.contactItem,
-          {
-            backgroundColor: item.selected ? (isDark ? primary[900] : primary[50]) : 'transparent',
-          },
-        ]}
-        onPress={() => toggleContact(item.id)}
-        activeOpacity={0.7}
-      >
-        <View style={[styles.checkbox, item.selected && styles.checkboxSelected]}>
-          {item.selected && <Ionicons name="checkmark-outline" size={14} color="#fff" />}
+    ({ item, index }: { item: DeviceContact; index: number }) => {
+      const subtitle = formatContactSubtitle(item.phone, item.email);
+      const isLast = index === filteredContacts.length - 1;
+      return (
+        <View style={styles.rowWrapper}>
+          <ContactRow
+            name={item.name}
+            subtitle={subtitle || undefined}
+            avatarSeed={item.id}
+            isLast={isLast}
+            isDark={isDark}
+            selected={item.selected}
+            onPress={() => toggleContact(item.id)}
+            nameColor={colors.text}
+            subtitleColor={colors.textMuted}
+            trailing={<ContactSelectionCheck selected={item.selected} isDark={isDark} />}
+          />
         </View>
-        <View style={styles.contactInfo}>
-          <Text
-            size="base"
-            weight="medium"
-            color={colors.text}
-            numberOfLines={1}
-            style={styles.contactName}
-          >
-            {item.name}
-          </Text>
-          <Text size="sm" color={colors.textSecondary} numberOfLines={1}>
-            {[item.phone, item.email].filter(Boolean).join(' • ')}
-          </Text>
-        </View>
-      </TouchableOpacity>
-    ),
-    [colors, isDark, toggleContact]
+      );
+    },
+    [colors, isDark, toggleContact, filteredContacts.length]
   );
 
   // Permission denied state
@@ -279,28 +271,31 @@ export const InviteContactsStep: React.FC<InviteContactsStepProps> = ({
         />
       </View>
 
-      {/* Select All */}
-      {filteredContacts.length > 0 && (
-        <TouchableOpacity
-          style={[styles.selectAllRow, { borderBottomColor: colors.border }]}
-          onPress={toggleSelectAll}
-          activeOpacity={0.7}
-        >
-          <View
-            style={[
-              styles.checkbox,
-              filteredContacts.every(c => c.selected) && styles.checkboxSelected,
-            ]}
-          >
-            {filteredContacts.every(c => c.selected) && (
-              <Ionicons name="checkmark-outline" size={14} color="#fff" />
-            )}
-          </View>
-          <Text size="sm" weight="medium" color={colors.text}>
-            {t('common.selectAll')} ({filteredContacts.length})
-          </Text>
-        </TouchableOpacity>
-      )}
+      {/* List header: count + select/deselect all */}
+      {filteredContacts.length > 0 &&
+        (() => {
+          const allSelected = filteredContacts.every(c => c.selected);
+          return (
+            <View style={styles.listHeaderRow}>
+              <Text
+                size="xs"
+                weight="semibold"
+                color={colors.textMuted}
+                style={styles.listHeaderLabel}
+              >
+                {filteredContacts.length}{' '}
+                {filteredContacts.length === 1
+                  ? t('referral.contacts.contactSingular' as TranslationKey)
+                  : t('referral.contacts.contactPlural' as TranslationKey)}
+              </Text>
+              <TouchableOpacity onPress={toggleSelectAll} activeOpacity={0.6} hitSlop={8}>
+                <Text size="xs" weight="semibold" color={colors.buttonActive}>
+                  {allSelected ? t('common.deselectAll') : t('common.selectAll')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          );
+        })()}
     </>
   );
 
@@ -391,13 +386,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[6],
     paddingVertical: spacingPixels[3],
   },
-  selectAllRow: {
+  listHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacingPixels[6],
     paddingVertical: spacingPixels[3],
-    borderBottomWidth: 1,
-    gap: spacingPixels[3],
+  },
+  listHeaderLabel: {
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
   listContent: {
     paddingBottom: spacingPixels[4],
@@ -406,34 +404,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingBottom: 0,
   },
-  contactItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacingPixels[3],
-    paddingHorizontal: spacingPixels[2],
-    marginHorizontal: spacingPixels[6],
-    borderRadius: radiusPixels.md,
-    marginBottom: spacingPixels[1],
-    gap: spacingPixels[3],
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: neutral[400],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxSelected: {
-    backgroundColor: primary[500],
-    borderColor: primary[500],
-  },
-  contactInfo: {
-    flex: 1,
-  },
-  contactName: {
-    flexShrink: 1,
+  rowWrapper: {
+    paddingHorizontal: spacingPixels[6],
   },
   footer: {
     paddingHorizontal: spacingPixels[6],

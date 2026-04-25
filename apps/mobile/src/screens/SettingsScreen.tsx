@@ -388,13 +388,13 @@ const SettingsScreen: React.FC = () => {
                 title={`Rallia Pro — ${t('subscription.status_active')}`}
                 onPress={() => navigation.navigate('SubscriptionManagement')}
               />
-            ) : (
+            ) : isAdmin ? (
               <SettingsItem
                 icon="star-outline"
                 title={t('subscription.upgrade_cta')}
                 onPress={() => presentPaywall()}
               />
-            )}
+            ) : null}
           </View>
         )}
 

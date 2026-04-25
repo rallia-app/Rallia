@@ -15,7 +15,6 @@ import {
   Image,
   Pressable,
   Keyboard,
-  ActivityIndicator,
   LayoutAnimation,
   TextInput,
 } from 'react-native';
@@ -24,11 +23,9 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { PhoneInput } from '../../../../../components/PhoneInput';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import {
   validateFullName,
-  validateUsername,
   lightHaptic,
   selectionHaptic,
   sanitizeReferralCode,
@@ -36,7 +33,6 @@ import {
   REFERRAL_CODE_LENGTH,
 } from '@rallia/shared-utils';
 import { GENDER_VALUES } from '@rallia/shared-types';
-import { supabase } from '@rallia/shared-services';
 import type { TranslationKey } from '@rallia/shared-translations';
 import type { Locale } from '@rallia/shared-translations';
 import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
@@ -71,13 +67,9 @@ interface PersonalInfoStepProps {
 interface FieldErrors {
   firstName?: string;
   lastName?: string;
-  username?: string;
   dateOfBirth?: string;
   gender?: string;
-  phoneNumber?: string;
 }
-
-type ValidationStatus = 'idle' | 'valid' | 'invalid' | 'checking';
 
 const MINIMUM_AGE_YEARS = 13;
 const MINIMUM_AGE_MONTHS = 1;
@@ -109,16 +101,10 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
   // Field validation errors
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
-  // Username uniqueness check state
-  const [usernameStatus, setUsernameStatus] = useState<ValidationStatus>('idle');
-  const [usernameCheckTimeout, setUsernameCheckTimeout] = useState<NodeJS.Timeout | null>(null);
-
   // Refs for keyboard visibility handling
   const scrollViewRef = useRef<any>(null);
   const firstNameFieldRef = useRef<View>(null);
   const lastNameFieldRef = useRef<View>(null);
-  const usernameFieldRef = useRef<View>(null);
-  const phoneNumberFieldRef = useRef<View>(null);
   // Y positions of each field within scroll content (from onLayout), used to scroll only enough to bring field into view
   const fieldYOffsets = useRef<Record<string, number>>({});
   const SCROLL_TO_FIELD_TOP_PADDING = 24;
@@ -159,68 +145,12 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
     return undefined;
   };
 
-  const checkUsernameUniqueness = useCallback(async (username: string) => {
-    if (!username.trim()) return;
-
-    setUsernameStatus('checking');
-
-    try {
-      const {
-        data: { user: currentUser },
-      } = await supabase.auth.getUser();
-
-      let query = supabase
-        .from('profile')
-        .select('display_name')
-        .ilike('display_name', username.trim());
-
-      if (currentUser) {
-        query = query.neq('id', currentUser.id);
-      }
-
-      const { data, error } = await query.maybeSingle();
-
-      if (error) {
-        console.error('Username check error:', error);
-        setUsernameStatus('idle');
-      } else if (data) {
-        setUsernameStatus('invalid');
-      } else {
-        setUsernameStatus('valid');
-      }
-    } catch {
-      setUsernameStatus('idle');
-    }
-  }, []);
-
-  const validateUsernameField = (value: string): string | undefined => {
-    if (!value.trim()) {
-      return 'Username is required';
-    }
-    if (value.length < 3) {
-      return 'Username must be at least 3 characters';
-    }
-    return undefined;
-  };
-
   const validateDateOfBirth = (date: Date | null): string | undefined => {
     if (!date) {
       return 'Date of birth is required';
     }
     if (date > minimumDateOfBirth) {
       return t('onboarding.validation.minimumAge' as TranslationKey);
-    }
-    return undefined;
-  };
-
-  const validatePhoneNumber = (value: string): string | undefined => {
-    if (!value.trim()) {
-      return undefined;
-    }
-    // Basic phone validation - at least 8 digits
-    const digitsOnly = value.replace(/\D/g, '');
-    if (digitsOnly.length < 8) {
-      return 'Please enter a valid phone number';
     }
     return undefined;
   };
@@ -256,53 +186,6 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
     const error = validateLastName(formData.lastName);
     if (error) {
       setFieldErrors(prev => ({ ...prev, lastName: error }));
-    }
-  };
-
-  const handleUsernameChange = (text: string) => {
-    const validatedText = validateUsername(text);
-    onUpdateFormData({ username: validatedText });
-
-    // Clear errors
-    if (fieldErrors.username) {
-      clearFieldError('username');
-    }
-    setUsernameStatus('idle');
-
-    // Debounced uniqueness check
-    if (usernameCheckTimeout) {
-      clearTimeout(usernameCheckTimeout);
-    }
-
-    if (validatedText.length >= 3) {
-      const timeout = setTimeout(() => {
-        checkUsernameUniqueness(validatedText);
-      }, 500);
-      setUsernameCheckTimeout(timeout);
-    }
-  };
-
-  const handleUsernameBlur = () => {
-    const error = validateUsernameField(formData.username);
-    if (error) {
-      setFieldErrors(prev => ({ ...prev, username: error }));
-    }
-  };
-
-  const handlePhoneNumberChange = useCallback(
-    (fullNumber: string, _countryCode: string, _localNumber: string) => {
-      onUpdateFormData({ phoneNumber: fullNumber });
-      if (fieldErrors.phoneNumber) {
-        clearFieldError('phoneNumber');
-      }
-    },
-    [onUpdateFormData, fieldErrors.phoneNumber]
-  );
-
-  const handlePhoneNumberBlur = () => {
-    const error = validatePhoneNumber(formData.phoneNumber);
-    if (error) {
-      setFieldErrors(prev => ({ ...prev, phoneNumber: error }));
     }
   };
 
@@ -532,67 +415,6 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
         )}
       </View>
 
-      {/* Username */}
-      <View
-        ref={usernameFieldRef}
-        style={styles.inputContainer}
-        onLayout={e => {
-          fieldYOffsets.current.username = e.nativeEvent.layout.y;
-        }}
-      >
-        <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-          {t('onboarding.personalInfoStep.username')}{' '}
-          <Text color={colors.error}>{t('onboarding.personalInfoStep.required')}</Text>
-        </Text>
-        <View style={styles.inputWithStatus}>
-          <TextInput
-            placeholder={t('onboarding.personalInfoStep.usernamePlaceholder')}
-            placeholderTextColor={colors.textMuted}
-            value={formData.username}
-            onChangeText={handleUsernameChange}
-            onBlur={handleUsernameBlur}
-            maxLength={10}
-            onFocus={() => scrollToField('username')}
-            style={[
-              styles.input,
-              styles.inputWithIcon,
-              {
-                backgroundColor: colors.inputBackground,
-                borderColor: fieldErrors.username ? colors.error : colors.inputBorder,
-                color: colors.text,
-              },
-            ]}
-          />
-          {usernameStatus === 'checking' && (
-            <ActivityIndicator size="small" color={colors.buttonActive} style={styles.statusIcon} />
-          )}
-          {usernameStatus === 'valid' && (
-            <Ionicons
-              name="checkmark-circle"
-              size={20}
-              color={colors.buttonActive}
-              style={styles.statusIcon}
-            />
-          )}
-          {usernameStatus === 'invalid' && (
-            <Ionicons
-              name="close-circle"
-              size={20}
-              color={colors.error}
-              style={styles.statusIcon}
-            />
-          )}
-        </View>
-        <View style={styles.inputFooter}>
-          <Text size="xs" color={fieldErrors.username ? colors.error : colors.textSecondary}>
-            {fieldErrors.username || t('onboarding.personalInfoStep.usernameHelper')}
-          </Text>
-          <Text size="xs" color={colors.textSecondary}>
-            {formData.username.length}/10
-          </Text>
-        </View>
-      </View>
-
       {/* Date of Birth */}
       <View style={styles.inputContainer}>
         <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
@@ -724,42 +546,6 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
             );
           })}
         </View>
-      </View>
-
-      {/* Phone Number */}
-      <View
-        ref={phoneNumberFieldRef}
-        style={styles.inputContainer}
-        onLayout={e => {
-          fieldYOffsets.current.phoneNumber = e.nativeEvent.layout.y;
-        }}
-      >
-        <PhoneInput
-          value={formData.phoneNumber}
-          onChangePhone={handlePhoneNumberChange}
-          label={t('onboarding.personalInfoStep.phoneNumber')}
-          placeholder={t('onboarding.personalInfoStep.phoneNumber')}
-          required={false}
-          colors={{
-            text: colors.text,
-            textMuted: colors.textMuted,
-            textSecondary: colors.textSecondary,
-            background: colors.background,
-            inputBackground: colors.inputBackground,
-            inputBorder: fieldErrors.phoneNumber ? colors.error : colors.inputBorder,
-            primary: colors.buttonActive,
-            error: colors.error,
-            card: colors.cardBackground,
-          }}
-          onFocus={() => scrollToField('phoneNumber')}
-          onBlur={handlePhoneNumberBlur}
-          TextInputComponent={TextInput}
-        />
-        {fieldErrors.phoneNumber && (
-          <Text size="xs" color={colors.error} style={styles.errorText}>
-            {fieldErrors.phoneNumber}
-          </Text>
-        )}
       </View>
 
       {/* Referral Code */}
@@ -897,24 +683,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[3],
-  },
-  inputFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: spacingPixels[1],
-  },
-  inputWithStatus: {
-    position: 'relative',
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  inputWithIcon: {
-    flex: 1,
-    paddingRight: spacingPixels[10],
-  },
-  statusIcon: {
-    position: 'absolute',
-    right: spacingPixels[3],
   },
   genderRow: {
     flexDirection: 'row',

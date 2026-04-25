@@ -21,6 +21,8 @@ import { selectionHaptic, lightHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { SearchBar } from '../../../components/SearchBar';
+import { ContactRow, ContactSelectionCheck } from '../../../components/ContactRow';
+import { formatContactSubtitle } from '../../../utils/contactDisplay';
 import { primary } from '@rallia/design-system';
 import { bulkCreateSharedContacts, type SharedContact } from '@rallia/shared-services';
 
@@ -207,47 +209,27 @@ export function ImportContactsActionSheet({ payload }: SheetProps<'import-contac
   }, []);
 
   // Get initials from contact name
-  const getInitials = useCallback((name: string) => {
-    const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    return name.substring(0, 2).toUpperCase();
-  }, []);
-
   // Render contact item
   const renderContact = useCallback(
-    ({ item }: { item: DeviceContact }) => (
-      <TouchableOpacity
-        style={[
-          styles.contactItem,
-          {
-            backgroundColor: item.selected ? `${colors.buttonActive}15` : colors.buttonInactive,
-            borderColor: item.selected ? colors.buttonActive : colors.border,
-          },
-        ]}
-        onPress={() => toggleContact(item.id)}
-        activeOpacity={0.7}
-      >
-        <View style={[styles.contactAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-          <Text size="sm" weight="semibold" style={{ color: colors.textMuted }}>
-            {getInitials(item.name)}
-          </Text>
-        </View>
-        <View style={styles.contactInfo}>
-          <Text weight="medium" style={{ color: colors.text }} numberOfLines={1}>
-            {item.name}
-          </Text>
-          {(item.phone || item.email) && (
-            <Text size="sm" style={{ color: colors.textSecondary }} numberOfLines={1}>
-              {[item.phone, item.email].filter(Boolean).join(' • ')}
-            </Text>
-          )}
-        </View>
-        {item.selected && (
-          <Ionicons name="checkmark-circle" size={22} color={colors.buttonActive} />
-        )}
-      </TouchableOpacity>
-    ),
-    [colors, isDark, toggleContact, getInitials]
+    ({ item, index }: { item: DeviceContact; index: number }) => {
+      const subtitle = formatContactSubtitle(item.phone, item.email);
+      const isLast = index === filteredContacts.length - 1;
+      return (
+        <ContactRow
+          name={item.name}
+          subtitle={subtitle || undefined}
+          avatarSeed={item.id}
+          isLast={isLast}
+          isDark={isDark}
+          selected={item.selected}
+          onPress={() => toggleContact(item.id)}
+          nameColor={colors.text}
+          subtitleColor={colors.textMuted}
+          trailing={<ContactSelectionCheck selected={item.selected} isDark={isDark} />}
+        />
+      );
+    },
+    [colors, isDark, toggleContact, filteredContacts.length]
   );
 
   // Render permission denied state
@@ -461,26 +443,6 @@ const styles = StyleSheet.create({
   emptyListContent: {
     flexGrow: 1,
     paddingBottom: 0,
-  },
-  contactItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacingPixels[3],
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: spacingPixels[2],
-  },
-  contactAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  contactInfo: {
-    flex: 1,
-    marginLeft: spacingPixels[3],
   },
   centerContainer: {
     flex: 1,

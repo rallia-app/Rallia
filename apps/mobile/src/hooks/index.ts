@@ -14,6 +14,7 @@ export * from './useTourSequence';
 export * from './useSportSetup';
 export * from './useOpenExternalBooking';
 export * from './usePendingReferenceRequestsCount';
+export * from './useDeviceContacts';
 
 // Group chat hooks
 export * from './groupChat';

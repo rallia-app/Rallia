@@ -39,6 +39,7 @@ import {
 } from '@rallia/shared-services';
 import { usePlayerMatches } from '@rallia/shared-hooks';
 import { SportIcon } from '../../../components/SportIcon';
+import { ContactRow, ContactSelectionCheck } from '../../../components/ContactRow';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../../../hooks';
 
 // Local interface to ensure TypeScript recognizes match properties
@@ -682,69 +683,20 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
                   {contacts.map((contact, index) => {
                     const isSelected = selectedContacts.some(sc => sc.id === contact.id);
                     const isLast = index === contacts.length - 1;
-                    const initials = contact.name
-                      .split(' ')
-                      .map(n => n[0])
-                      .join('')
-                      .substring(0, 2)
-                      .toUpperCase();
                     return (
-                      <TouchableOpacity
+                      <ContactRow
                         key={contact.id}
-                        style={[
-                          styles.contactRow,
-                          !isLast && {
-                            borderBottomWidth: 1,
-                            borderBottomColor: isDark ? neutral[700] : neutral[200],
-                          },
-                        ]}
+                        name={contact.name}
+                        subtitle={contact.phone || undefined}
+                        avatarSeed={contact.id}
+                        isLast={isLast}
+                        isDark={isDark}
+                        selected={isSelected}
                         onPress={() => handleToggleContact(contact, item.id)}
-                        activeOpacity={0.7}
-                      >
-                        <View
-                          style={[
-                            styles.contactAvatar,
-                            {
-                              backgroundColor: isSelected
-                                ? isDark
-                                  ? primary[800]
-                                  : primary[100]
-                                : isDark
-                                  ? neutral[700]
-                                  : neutral[200],
-                            },
-                          ]}
-                        >
-                          <Text
-                            size="xs"
-                            weight="bold"
-                            color={
-                              isSelected ? (isDark ? primary[300] : primary[600]) : colors.textMuted
-                            }
-                          >
-                            {initials}
-                          </Text>
-                        </View>
-                        <View style={styles.contactInfo}>
-                          <Text
-                            size="sm"
-                            weight={isSelected ? 'semibold' : 'regular'}
-                            color={colors.text}
-                          >
-                            {contact.name}
-                          </Text>
-                          {contact.phone && (
-                            <Text size="xs" color={colors.textMuted}>
-                              {contact.phone}
-                            </Text>
-                          )}
-                        </View>
-                        <Ionicons
-                          name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
-                          size={22}
-                          color={isSelected ? colors.primary : colors.textMuted}
-                        />
-                      </TouchableOpacity>
+                        nameColor={colors.text}
+                        subtitleColor={colors.textMuted}
+                        trailing={<ContactSelectionCheck selected={isSelected} isDark={isDark} />}
+                      />
                     );
                   })}
                 </>
@@ -1372,23 +1324,6 @@ const styles = StyleSheet.create({
     gap: spacingPixels[2.5],
     borderBottomWidth: 1,
     marginBottom: spacingPixels[1],
-  },
-  contactRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacingPixels[2.5],
-    paddingHorizontal: spacingPixels[1],
-    gap: spacingPixels[3],
-  },
-  contactAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  contactInfo: {
-    flex: 1,
   },
   selectedBadge: {
     alignSelf: 'flex-start',

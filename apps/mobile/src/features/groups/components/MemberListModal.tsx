@@ -127,7 +127,6 @@ export function MemberListActionSheet({ payload }: SheetProps<'member-list'>) {
       // Show member options sheet
       const memberInfo = {
         name:
-          member.player?.profile?.display_name ||
           `${member.player?.profile?.first_name || ''} ${member.player?.profile?.last_name || ''}`.trim() ||
           'Unknown',
         role: effectiveRole as 'member' | 'moderator',
@@ -304,8 +303,7 @@ export function MemberListActionSheet({ payload }: SheetProps<'member-list'>) {
           <View style={styles.memberInfo}>
             <View style={styles.memberNameRow}>
               <Text weight="medium" style={{ color: colors.text }}>
-                {item.player?.profile?.display_name ||
-                  `${item.player?.profile?.first_name || ''} ${item.player?.profile?.last_name || ''}`.trim() ||
+                {`${item.player?.profile?.first_name || ''} ${item.player?.profile?.last_name || ''}`.trim() ||
                   'Unknown'}
               </Text>
               {isSelf && (

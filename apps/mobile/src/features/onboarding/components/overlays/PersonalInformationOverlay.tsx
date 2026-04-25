@@ -17,13 +17,7 @@ import { Text, useToast } from '@rallia/shared-components';
 import { useTheme } from '@rallia/shared-hooks';
 import { PhoneInput } from '../../../../components/PhoneInput';
 import { useImagePicker, useThemeStyles, useTranslation } from '../../../../hooks';
-import {
-  validateFullName,
-  validateUsername,
-  lightHaptic,
-  mediumHaptic,
-  selectionHaptic,
-} from '@rallia/shared-utils';
+import { validateFullName, lightHaptic, mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
 import { OnboardingService, supabase, Logger } from '@rallia/shared-services';
 import { uploadImage, replaceImage } from '../../../../services/imageUpload';
 import { GENDER_VALUES } from '@rallia/shared-types';
@@ -57,7 +51,6 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
   const toast = useToast();
   const [firstName, setFirstName] = useState(initialData?.firstName || '');
   const [lastName, setLastName] = useState(initialData?.lastName || '');
-  const [username, setUsername] = useState(initialData?.username || '');
   const [email] = useState(initialData?.email || ''); // Email is read-only in edit mode
   const [dateOfBirth, setDateOfBirth] = useState<Date | null>(
     initialData?.dateOfBirth ? new Date(initialData.dateOfBirth) : null
@@ -79,10 +72,6 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
 
   const handleLastNameChange = (text: string) => {
     setLastName(validateFullName(text));
-  };
-
-  const handleUsernameChange = (text: string) => {
-    setUsername(validateUsername(text));
   };
 
   const handlePhoneNumberChange = useCallback(
@@ -180,6 +169,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
           return;
         }
 
+        const fullName = `${firstName} ${lastName}`.trim();
         const updateData: {
           first_name: string;
           last_name: string;
@@ -191,7 +181,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
         } = {
           first_name: firstName,
           last_name: lastName,
-          display_name: username,
+          display_name: fullName,
           birth_date: formattedDate,
           phone: phoneNumber,
           updated_at: new Date().toISOString(),
@@ -230,7 +220,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
 
         // Sync display_name to auth.users metadata (phone is already in profile table)
         const { error: authUpdateError } = await supabase.auth.updateUser({
-          data: { display_name: username },
+          data: { display_name: fullName },
         });
 
         if (authUpdateError) {
@@ -251,11 +241,12 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
           SheetManager.hide('personal-information');
         }, 500);
       } else {
+        const fullName = `${firstName} ${lastName}`.trim();
+
         // Onboarding mode: Save new personal information
         const { error } = await OnboardingService.savePersonalInfo({
           first_name: firstName,
           last_name: lastName,
-          display_name: username,
           birth_date: formattedDate,
           gender: gender as GenderEnum,
           phone: phoneNumber,
@@ -270,28 +261,21 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
           return;
         }
 
-        // Sync username (display name) to auth.users metadata
-        // Note: Phone is stored in profile table, not auth.users (requires verification)
-        Logger.debug('Syncing username to auth.users', { username });
+        // Sync display_name to auth.users metadata so the rest of the app
+        // (and Supabase auth metadata) sees a consistent "First Last" identity.
         const { error: authUpdateError } = await supabase.auth.updateUser({
-          data: {
-            display_name: username, // Sync username to display_name in user_metadata
-          },
+          data: { display_name: fullName },
         });
 
         if (authUpdateError) {
-          Logger.warn('Failed to sync username to auth.users', {
+          Logger.warn('Failed to sync display_name to auth.users', {
             error: authUpdateError.message,
           });
-          // Don't block onboarding if this fails - data is already saved to profile table
-        } else {
-          Logger.debug('Username synced to auth.users successfully', { username });
         }
 
         Logger.info('Personal info saved successfully during onboarding', {
           hasFirstName: !!firstName,
           hasLastName: !!lastName,
-          hasUsername: !!username,
           hasGender: !!gender,
           hasPhone: !!phoneNumber,
           hasProfileImage: !!profileImage,
@@ -310,7 +294,6 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
   const isFormValid =
     firstName.trim() !== '' &&
     lastName.trim() !== '' &&
-    username.trim() !== '' &&
     dateOfBirth !== null &&
     gender.trim() !== '' &&
     phoneNumber.trim() !== '';
@@ -438,36 +421,6 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
               </Text>
             </View>
           )}
-
-          {/* Username Input */}
-          <View style={styles.inputContainer}>
-            <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-              {t('onboarding.personalInfoStep.username')} <Text color={colors.error}>*</Text>
-            </Text>
-            <TextInput
-              placeholder={t('onboarding.personalInfoStep.usernamePlaceholder')}
-              placeholderTextColor={colors.textMuted}
-              value={username}
-              onChangeText={handleUsernameChange}
-              maxLength={10}
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colors.inputBackground,
-                  borderColor: colors.inputBorder,
-                  color: colors.text,
-                },
-              ]}
-            />
-            <View style={styles.inputFooter}>
-              <Text size="xs" color={colors.textSecondary}>
-                {t('onboarding.personalInfoStep.usernameHelper')}
-              </Text>
-              <Text size="xs" color={colors.textSecondary}>
-                {username.length}/10
-              </Text>
-            </View>
-          </View>
 
           {/* Date of Birth Input */}
           <View style={styles.inputContainer}>

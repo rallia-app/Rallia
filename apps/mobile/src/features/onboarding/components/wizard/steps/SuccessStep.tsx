@@ -1,12 +1,13 @@
 /**
  * SuccessStep Component
  *
- * Final success screen of onboarding - animated celebration with share invite.
- * Shows after completing all onboarding steps.
- * Automatically selects the initial sport, then prompts user to share referral link.
+ * Final success screen of onboarding - animated celebration with invite flow.
+ * Offers an inline contacts picker (multi-select + SMS) and a native share
+ * sheet fallback. Once the user has sent at least one batch of invitations,
+ * the muted "Maybe later" link is replaced by a primary "Continue" button.
  */
 
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useMemo, useState } from 'react';
 import {
   StyleSheet,
   TouchableOpacity,
@@ -14,7 +15,10 @@ import {
   View,
   Share,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
+import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
+import * as SMS from 'expo-sms';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -24,13 +28,20 @@ import Animated, {
 } from 'react-native-reanimated';
 import LottieView from 'lottie-react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { useReferral } from '@rallia/shared-hooks';
-import { lightHaptic, successHaptic } from '@rallia/shared-utils';
+import { lightHaptic, selectionHaptic, successHaptic } from '@rallia/shared-utils';
 import * as Analytics from '../../../../../services/analytics';
+import { SearchBar } from '../../../../../components/SearchBar';
+import { ContactRow, ContactSelectionCheck } from '../../../../../components/ContactRow';
+import { useDeviceContacts } from '../../../../../hooks/useDeviceContacts';
+import { formatContactSubtitle } from '../../../../../utils/contactDisplay';
 
 const BASE_WHITE = '#ffffff';
+const CONTACT_LIST_MAX_HEIGHT = 280;
+const CONTACTS_PAGE_SIZE = 20;
+
 import type { TranslationKey } from '@rallia/shared-translations';
 
 interface ThemeColors {
@@ -66,26 +77,46 @@ interface SuccessStepProps {
 }
 
 export const SuccessStep: React.FC<SuccessStepProps> = ({
-  onComplete,
   onAdvanceToSuggestions,
   colors,
   t,
+  isDark,
   selectedSports,
   currentSport,
   onSelectInitialSport,
   playerId,
 }) => {
-  // Track if we've already auto-selected to prevent repeated calls
+  const toast = useToast();
   const hasAutoSelected = useRef(false);
 
-  // Referral link for sharing
   const { referralLink, codeLoading: referralLoading } = useReferral(playerId ?? undefined);
+
+  const {
+    permissionStatus,
+    isLoading: contactsLoading,
+    contacts,
+    selectedCount,
+    requestAndLoad,
+    toggle,
+    toggleAllInIds,
+    clearSelection,
+  } = useDeviceContacts();
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [invitesSentCount, setInvitesSentCount] = useState(0);
+  const [isSendingSms, setIsSendingSms] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(CONTACTS_PAGE_SIZE);
+
+  // Reset pagination when the search changes so the top N always reflects the
+  // current query.
+  useEffect(() => {
+    setVisibleCount(CONTACTS_PAGE_SIZE);
+  }, [searchQuery]);
 
   // Auto-select initial sport based on current selection
   useEffect(() => {
     if (hasAutoSelected.current || selectedSports.length === 0) return;
 
-    // Check if current sport is still in the selected sports
     const currentStillSelected = currentSport && selectedSports.some(s => s.id === currentSport.id);
 
     if (currentStillSelected) {
@@ -105,20 +136,12 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
   const shareCardTranslateY = useSharedValue(20);
   const skipOpacity = useSharedValue(0);
 
-  // Trigger animations on mount
   useEffect(() => {
-    // Icon animation - pop in with bounce
     iconScale.value = withDelay(200, withSpring(1, { damping: 40, stiffness: 300 }));
     iconOpacity.value = withDelay(200, withTiming(1, { duration: 300 }));
-
-    // Text animation - fade in
     textOpacity.value = withDelay(500, withTiming(1, { duration: 400 }));
-
-    // Share card animation - slide up and fade in
     shareCardOpacity.value = withDelay(900, withTiming(1, { duration: 400 }));
     shareCardTranslateY.value = withDelay(900, withSpring(0, { damping: 40, stiffness: 300 }));
-
-    // Skip link animation - fade in last
     skipOpacity.value = withDelay(1200, withTiming(1, { duration: 400 }));
   }, [iconScale, iconOpacity, textOpacity, shareCardOpacity, shareCardTranslateY, skipOpacity]);
 
@@ -126,32 +149,51 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
     opacity: iconOpacity.value,
     transform: [{ scale: iconScale.value }],
   }));
-
-  const textAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: textOpacity.value,
-  }));
-
+  const textAnimatedStyle = useAnimatedStyle(() => ({ opacity: textOpacity.value }));
   const shareCardAnimatedStyle = useAnimatedStyle(() => ({
     opacity: shareCardOpacity.value,
     transform: [{ translateY: shareCardTranslateY.value }],
   }));
+  const skipAnimatedStyle = useAnimatedStyle(() => ({ opacity: skipOpacity.value }));
 
-  const skipAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: skipOpacity.value,
-  }));
+  const filteredContacts = useMemo(() => {
+    if (!searchQuery.trim()) return contacts;
+    const q = searchQuery.toLowerCase();
+    return contacts.filter(
+      c =>
+        c.name.toLowerCase().includes(q) ||
+        c.phone?.includes(q) ||
+        c.email?.toLowerCase().includes(q)
+    );
+  }, [contacts, searchQuery]);
 
-  const handleShare = useCallback(async () => {
-    if (!referralLink) return;
+  const filteredIds = useMemo(() => new Set(filteredContacts.map(c => c.id)), [filteredContacts]);
+  const allFilteredSelected =
+    filteredContacts.length > 0 && filteredContacts.every(c => c.selected);
+  const visibleContacts = useMemo(
+    () => filteredContacts.slice(0, visibleCount),
+    [filteredContacts, visibleCount]
+  );
+  const remainingCount = Math.max(0, filteredContacts.length - visibleContacts.length);
+
+  const buildShareMessage = useCallback(() => {
+    if (!referralLink) return null;
+    const sportName =
+      currentSport?.display_name?.toLowerCase() ??
+      selectedSports[0]?.display_name?.toLowerCase() ??
+      'sports';
+    return t('referral.shareMessage' as TranslationKey)
+      .replace('{sport}', sportName)
+      .replace('{link}', referralLink);
+  }, [currentSport, selectedSports, t, referralLink]);
+
+  const handleNativeShare = useCallback(async () => {
+    const message = buildShareMessage();
+    if (!message) return;
     try {
       lightHaptic();
-      const sportName =
-        currentSport?.display_name?.toLowerCase() ??
-        selectedSports[0]?.display_name?.toLowerCase() ??
-        'sports';
       const result = await Share.share({
-        message: t('referral.shareMessage' as TranslationKey)
-          .replace('{sport}', sportName)
-          .replace('{link}', referralLink),
+        message,
         title: t('referral.shareTitle' as TranslationKey),
       });
       if (result.action === Share.sharedAction) {
@@ -164,16 +206,77 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
     } catch {
       // User cancelled share — no-op
     }
-  }, [referralLink, t, currentSport, selectedSports]);
+  }, [buildShareMessage, t]);
 
-  const handleSkip = useCallback(() => {
+  const handleRequestContacts = useCallback(async () => {
+    lightHaptic();
+    await requestAndLoad();
+  }, [requestAndLoad]);
+
+  const handleToggle = useCallback(
+    (id: string) => {
+      selectionHaptic();
+      toggle(id);
+    },
+    [toggle]
+  );
+
+  const handleToggleAll = useCallback(() => {
+    lightHaptic();
+    toggleAllInIds(filteredIds);
+  }, [toggleAllInIds, filteredIds]);
+
+  const handleSendSmsInvites = useCallback(async () => {
+    if (selectedCount === 0 || isSendingSms) return;
+    const message = buildShareMessage();
+    if (!message) return;
+
+    const phones = contacts
+      .filter(c => c.selected)
+      .map(c => c.phone)
+      .filter((p): p is string => p != null);
+
+    if (phones.length === 0) {
+      toast.warning(t('referral.contacts.selectAtLeastOne'));
+      return;
+    }
+
+    setIsSendingSms(true);
+    try {
+      const isAvailable = await SMS.isAvailableAsync();
+      if (!isAvailable) {
+        toast.error(t('referral.contacts.failedToSend'));
+        return;
+      }
+      const { result } = await SMS.sendSMSAsync(phones, message);
+      if (result === 'sent') {
+        Analytics.invitationLinkGenerated({
+          invitation_type: 'onboarding_referral',
+          channel: 'sms_contacts',
+        });
+        successHaptic();
+        clearSelection();
+        setInvitesSentCount(c => c + 1);
+        toast.success(t('onboarding.success.invitesSentToast' as TranslationKey));
+      }
+    } catch {
+      toast.error(t('referral.contacts.failedToSend'));
+    } finally {
+      setIsSendingSms(false);
+    }
+  }, [selectedCount, isSendingSms, buildShareMessage, contacts, toast, t, clearSelection]);
+
+  const handleContinue = useCallback(() => {
     Analytics.onboardingShareSkipped();
     onAdvanceToSuggestions();
   }, [onAdvanceToSuggestions]);
 
+  const hasInvited = invitesSentCount > 0;
+  const showContactList = permissionStatus === 'granted';
+  const showDeniedState = permissionStatus === 'denied' || permissionStatus === 'undetermined';
+
   return (
     <View style={styles.wrapper}>
-      {/* Confetti Animation Overlay */}
       <View style={styles.confetti} pointerEvents="none">
         <LottieView
           source={require('../../../../../../assets/animations/confetti.json')}
@@ -185,10 +288,11 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
         />
       </View>
 
-      <ScrollView
+      <SheetScrollView
         style={styles.scrollContainer}
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Success Icon */}
         <Animated.View
@@ -221,47 +325,287 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
           >
             <Ionicons name="people-outline" size={28} color={colors.buttonActive} />
             <Text size="base" weight="semibold" color={colors.text} style={styles.inviteTitle}>
-              {t('onboarding.success.inviteTitle')}
+              {t('onboarding.success.contactsTitle' as TranslationKey)}
             </Text>
             <Text size="sm" color={colors.textMuted} style={styles.inviteSubtitle}>
-              {t('onboarding.success.inviteSubtitle')}
+              {t('onboarding.success.contactsSubtitle' as TranslationKey)}
             </Text>
 
-            {/* Primary CTA: Share button */}
-            <TouchableOpacity
-              style={[styles.shareButton, { backgroundColor: colors.buttonActive }]}
-              onPress={handleShare}
-              activeOpacity={0.8}
-              disabled={referralLoading || !referralLink}
-            >
-              {referralLoading ? (
-                <ActivityIndicator size="small" color={BASE_WHITE} />
-              ) : (
-                <>
-                  <Ionicons name="share-outline" size={20} color={colors.buttonTextActive} />
+            {/* PRE-PERMISSION: persuasive primary CTA */}
+            {permissionStatus === null && (
+              <>
+                <TouchableOpacity
+                  style={[styles.primaryButton, { backgroundColor: colors.buttonActive }]}
+                  onPress={handleRequestContacts}
+                  activeOpacity={0.8}
+                  disabled={contactsLoading}
+                >
+                  {contactsLoading ? (
+                    <ActivityIndicator size="small" color={BASE_WHITE} />
+                  ) : (
+                    <>
+                      <Ionicons
+                        name="person-add-outline"
+                        size={20}
+                        color={colors.buttonTextActive}
+                      />
+                      <Text
+                        size="base"
+                        weight="semibold"
+                        color={colors.buttonTextActive}
+                        style={styles.primaryButtonText}
+                      >
+                        {t('onboarding.success.findFromContacts' as TranslationKey)}
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.secondaryButton, { borderColor: colors.border }]}
+                  onPress={handleNativeShare}
+                  activeOpacity={0.7}
+                  disabled={referralLoading || !referralLink}
+                >
+                  <Ionicons name="share-outline" size={18} color={colors.text} />
                   <Text
-                    size="base"
+                    size="sm"
                     weight="semibold"
-                    color={colors.buttonTextActive}
-                    style={styles.shareButtonText}
+                    color={colors.text}
+                    style={styles.secondaryButtonText}
                   >
-                    {t('onboarding.success.shareButton')}
+                    {t('onboarding.success.shareLinkInstead' as TranslationKey)}
                   </Text>
-                </>
-              )}
-            </TouchableOpacity>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {/* GRANTED: searchable list + send */}
+            {showContactList && (
+              <View style={styles.contactsArea}>
+                <SearchBar
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholder={t('onboarding.success.searchPlaceholder' as TranslationKey)}
+                  colors={colors}
+                  style={styles.searchBar}
+                />
+
+                {filteredContacts.length > 0 && (
+                  <View style={styles.listHeaderRow}>
+                    <Text
+                      size="xs"
+                      weight="semibold"
+                      color={colors.textMuted}
+                      style={styles.listHeaderLabel}
+                    >
+                      {remainingCount > 0
+                        ? `${visibleContacts.length} / ${filteredContacts.length} ${t('onboarding.success.contactPlural' as TranslationKey)}`
+                        : `${filteredContacts.length} ${
+                            filteredContacts.length === 1
+                              ? t('onboarding.success.contactSingular' as TranslationKey)
+                              : t('onboarding.success.contactPlural' as TranslationKey)
+                          }`}
+                    </Text>
+                    <TouchableOpacity onPress={handleToggleAll} activeOpacity={0.6} hitSlop={8}>
+                      <Text size="xs" weight="semibold" color={colors.buttonActive}>
+                        {allFilteredSelected
+                          ? t('common.deselectAll' as TranslationKey)
+                          : t('common.selectAll' as TranslationKey)}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                <ScrollView
+                  style={styles.contactList}
+                  nestedScrollEnabled
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                >
+                  {filteredContacts.length === 0 ? (
+                    <View style={styles.emptySearchState}>
+                      <Ionicons name="search-outline" size={28} color={colors.textMuted} />
+                      <Text size="sm" color={colors.textMuted} style={styles.noContacts}>
+                        {t('onboarding.success.noContacts' as TranslationKey)}
+                      </Text>
+                    </View>
+                  ) : (
+                    visibleContacts.map((item, index) => {
+                      const subtitle = formatContactSubtitle(item.phone, item.email);
+                      const isLast = index === visibleContacts.length - 1 && remainingCount === 0;
+                      return (
+                        <ContactRow
+                          key={item.id}
+                          name={item.name}
+                          subtitle={subtitle || undefined}
+                          avatarSeed={item.id}
+                          isLast={isLast}
+                          isDark={isDark}
+                          selected={item.selected}
+                          onPress={() => handleToggle(item.id)}
+                          nameColor={colors.text}
+                          subtitleColor={colors.textMuted}
+                          trailing={
+                            <ContactSelectionCheck selected={item.selected} isDark={isDark} />
+                          }
+                        />
+                      );
+                    })
+                  )}
+                  {remainingCount > 0 && (
+                    <TouchableOpacity
+                      style={styles.showMoreButton}
+                      onPress={() => {
+                        lightHaptic();
+                        setVisibleCount(c => c + CONTACTS_PAGE_SIZE);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text size="sm" weight="semibold" color={colors.buttonActive}>
+                        {t('onboarding.success.showMoreCount' as TranslationKey).replace(
+                          '{count}',
+                          String(Math.min(CONTACTS_PAGE_SIZE, remainingCount))
+                        )}
+                      </Text>
+                      <Ionicons name="chevron-down" size={16} color={colors.buttonActive} />
+                    </TouchableOpacity>
+                  )}
+                </ScrollView>
+
+                <TouchableOpacity
+                  style={[
+                    styles.primaryButton,
+                    {
+                      backgroundColor:
+                        selectedCount === 0 ? colors.buttonInactive : colors.buttonActive,
+                    },
+                  ]}
+                  onPress={handleSendSmsInvites}
+                  activeOpacity={0.8}
+                  disabled={selectedCount === 0 || isSendingSms}
+                >
+                  {isSendingSms ? (
+                    <ActivityIndicator size="small" color={BASE_WHITE} />
+                  ) : (
+                    <>
+                      <Ionicons
+                        name="send-outline"
+                        size={18}
+                        color={selectedCount === 0 ? colors.textMuted : colors.buttonTextActive}
+                      />
+                      <Text
+                        size="base"
+                        weight="semibold"
+                        color={selectedCount === 0 ? colors.textMuted : colors.buttonTextActive}
+                        style={styles.primaryButtonText}
+                      >
+                        {t('onboarding.success.sendInvitesCount' as TranslationKey).replace(
+                          '{count}',
+                          String(selectedCount)
+                        )}
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.secondaryButton, { borderColor: colors.border }]}
+                  onPress={handleNativeShare}
+                  activeOpacity={0.7}
+                  disabled={referralLoading || !referralLink}
+                >
+                  <Ionicons name="share-outline" size={18} color={colors.text} />
+                  <Text
+                    size="sm"
+                    weight="semibold"
+                    color={colors.text}
+                    style={styles.secondaryButtonText}
+                  >
+                    {t('onboarding.success.shareLinkInstead' as TranslationKey)}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* DENIED: fallback to share link */}
+            {showDeniedState && (
+              <View style={styles.deniedArea}>
+                <Text size="sm" weight="semibold" color={colors.text} style={styles.deniedTitle}>
+                  {t('onboarding.success.permissionDenied' as TranslationKey)}
+                </Text>
+                <Text size="xs" color={colors.textMuted} style={styles.deniedHint}>
+                  {t('onboarding.success.permissionDeniedHint' as TranslationKey)}
+                </Text>
+
+                <TouchableOpacity
+                  style={[styles.primaryButton, { backgroundColor: colors.buttonActive }]}
+                  onPress={handleNativeShare}
+                  activeOpacity={0.8}
+                  disabled={referralLoading || !referralLink}
+                >
+                  {referralLoading ? (
+                    <ActivityIndicator size="small" color={BASE_WHITE} />
+                  ) : (
+                    <>
+                      <Ionicons name="share-outline" size={20} color={colors.buttonTextActive} />
+                      <Text
+                        size="base"
+                        weight="semibold"
+                        color={colors.buttonTextActive}
+                        style={styles.primaryButtonText}
+                      >
+                        {t('onboarding.success.shareButton')}
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.openSettingsLink}
+                  onPress={() => Linking.openSettings()}
+                  activeOpacity={0.6}
+                >
+                  <Text size="xs" color={colors.buttonActive}>
+                    {t('onboarding.success.openSettings' as TranslationKey)}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </Animated.View>
 
-        {/* Secondary: Maybe later */}
-        <Animated.View style={skipAnimatedStyle}>
-          <TouchableOpacity onPress={handleSkip} activeOpacity={0.6} style={styles.skipButton}>
-            <Text size="sm" color={colors.textMuted} style={styles.maybeLater}>
-              {t('onboarding.success.maybeLater')}
-            </Text>
-          </TouchableOpacity>
+        {/* Skip / Continue */}
+        <Animated.View style={[skipAnimatedStyle, hasInvited && styles.continueWrapper]}>
+          {hasInvited ? (
+            <TouchableOpacity
+              style={[styles.continueButton, { backgroundColor: colors.buttonActive }]}
+              onPress={handleContinue}
+              activeOpacity={0.8}
+            >
+              <Text
+                size="base"
+                weight="semibold"
+                color={colors.buttonTextActive}
+                style={styles.continueText}
+              >
+                {t('common.continue' as TranslationKey)}
+              </Text>
+              <Ionicons name="arrow-forward" size={18} color={colors.buttonTextActive} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              onPress={handleContinue}
+              activeOpacity={0.6}
+              style={styles.skipButton}
+            >
+              <Text size="sm" color={colors.textMuted} style={styles.maybeLater}>
+                {t('onboarding.success.maybeLater')}
+              </Text>
+            </TouchableOpacity>
+          )}
         </Animated.View>
-      </ScrollView>
+      </SheetScrollView>
     </View>
   );
 };
@@ -319,16 +663,79 @@ const styles = StyleSheet.create({
     marginTop: spacingPixels[1],
     marginBottom: spacingPixels[4],
   },
-  shareButton: {
+  primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     width: '100%',
+    gap: spacingPixels[2],
   },
-  shareButtonText: {
-    marginLeft: spacingPixels[2],
+  primaryButtonText: {},
+  secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[3],
+    borderRadius: radiusPixels.lg,
+    width: '100%',
+    borderWidth: 1,
+    marginTop: spacingPixels[3],
+    gap: spacingPixels[2],
+  },
+  secondaryButtonText: {},
+  contactsArea: {
+    width: '100%',
+  },
+  searchBar: {
+    marginBottom: spacingPixels[2],
+  },
+  listHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacingPixels[1],
+    paddingVertical: spacingPixels[2],
+  },
+  listHeaderLabel: {
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  contactList: {
+    maxHeight: CONTACT_LIST_MAX_HEIGHT,
+    marginBottom: spacingPixels[2],
+  },
+  emptySearchState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[8],
+    gap: spacingPixels[2],
+  },
+  showMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[3],
+    gap: spacingPixels[1],
+  },
+  noContacts: {
+    textAlign: 'center',
+  },
+  deniedArea: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  deniedTitle: {
+    textAlign: 'center',
+    marginBottom: spacingPixels[1],
+  },
+  deniedHint: {
+    textAlign: 'center',
+    marginBottom: spacingPixels[4],
+  },
+  openSettingsLink: {
+    paddingVertical: spacingPixels[3],
   },
   skipButton: {
     paddingVertical: spacingPixels[3],
@@ -336,6 +743,19 @@ const styles = StyleSheet.create({
   maybeLater: {
     textAlign: 'center',
   },
+  continueWrapper: {
+    width: '100%',
+  },
+  continueButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    width: '100%',
+    gap: spacingPixels[2],
+  },
+  continueText: {},
 });
 
 export default SuccessStep;
