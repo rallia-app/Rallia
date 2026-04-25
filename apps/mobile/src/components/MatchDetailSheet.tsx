@@ -709,10 +709,10 @@ export const MatchDetailSheet: React.FC = () => {
     handleSheetDismiss,
     onMatchRemovedRef,
   } = useMatchDetailSheet();
-  const { openSheetForEdit } = useActionsSheet();
+  const { openSheetForEdit, openSheet: openActionsSheet } = useActionsSheet();
   const { openSheet: openInviteSheet } = usePlayerInviteSheet();
   const { openSheet: openFeedbackSheet } = useFeedbackSheet();
-  const { guardAction } = useRequireOnboarding();
+  const { isReady } = useRequireOnboarding();
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
   const { player } = usePlayer();
@@ -756,17 +756,18 @@ export const MatchDetailSheet: React.FC = () => {
   // Navigate to player profile or open auth sheet if not signed in / onboarding incomplete.
   // Saves the current match so the sheet reopens automatically when navigating back.
   const handleParticipantProfilePress = useCallback(
-    (targetPlayerId: string) => {
+    async (targetPlayerId: string) => {
       lightHaptic();
-      pendingReopenRef.current = selectedMatch;
-      closeSheet();
-      if (!guardAction()) {
-        pendingReopenRef.current = null;
+      if (!isReady) {
+        await SheetManager.hide('match-detail');
+        openActionsSheet();
         return;
       }
+      pendingReopenRef.current = selectedMatch;
+      closeSheet();
       navigation.navigate('PlayerProfile', { playerId: targetPlayerId });
     },
-    [closeSheet, guardAction, navigation, selectedMatch]
+    [closeSheet, isReady, openActionsSheet, navigation, selectedMatch]
   );
 
   // Confirmation modal states
@@ -1275,12 +1276,13 @@ export const MatchDetailSheet: React.FC = () => {
   }, [selectedMatch, playerId, openFeedbackSheet]);
 
   // Handle opening the match chat conversation
-  const handleOpenChat = useCallback(() => {
+  const handleOpenChat = useCallback(async () => {
     if (!matchConversationId || !selectedMatch) return;
 
     // Guard action: require auth and onboarding to access chat
-    if (!guardAction()) {
-      closeSheet();
+    if (!isReady) {
+      await SheetManager.hide('match-detail');
+      openActionsSheet();
       return;
     }
 
@@ -1297,20 +1299,21 @@ export const MatchDetailSheet: React.FC = () => {
         title: undefined,
       });
     }, 100);
-  }, [matchConversationId, selectedMatch, guardAction, closeSheet, locale, t, navigation]);
+  }, [matchConversationId, selectedMatch, isReady, openActionsSheet, closeSheet, navigation]);
 
   // Handle join match
-  const handleJoinMatch = useCallback(() => {
+  const handleJoinMatch = useCallback(async () => {
     if (!selectedMatch) return;
     // Guard action: if user is not authenticated or not onboarded,
     // close this sheet and open auth/onboarding sheet
-    if (!guardAction()) {
-      closeSheet();
+    if (!isReady) {
+      await SheetManager.hide('match-detail');
+      openActionsSheet();
       return;
     }
     mediumHaptic();
     joinMatch(playerId!);
-  }, [selectedMatch, guardAction, closeSheet, playerId, joinMatch]);
+  }, [selectedMatch, isReady, openActionsSheet, playerId, joinMatch]);
 
   // Handle leave match - opens confirmation modal
   const handleLeaveMatch = useCallback(() => {

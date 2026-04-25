@@ -89,10 +89,17 @@ export interface MatchSuggestion {
 }
 
 export interface GetMatchSuggestionsParams {
-  playerId: string;
+  /** Authenticated caller's player id. Omit for anon mode. */
+  playerId?: string;
   sportId: string;
   sportName?: string;
   limit?: number;
+  /** Anon mode: caller latitude. Required when playerId is not provided. */
+  latitude?: number;
+  /** Anon mode: caller longitude. Required when playerId is not provided. */
+  longitude?: number;
+  /** Anon mode: search radius in km (defaults to 25). */
+  maxDistanceKm?: number;
 }
 
 /** A player's existing match time window for conflict detection */
@@ -290,17 +297,32 @@ function generateNoSourceSlots(
 export async function getMatchSuggestions(
   params: GetMatchSuggestionsParams
 ): Promise<MatchSuggestion[]> {
-  const { playerId, sportId, sportName } = params;
+  const { playerId, sportId, sportName, latitude, longitude, maxDistanceKm = 25 } = params;
+  const isAnon = !playerId;
+
+  if (isAnon && (latitude == null || longitude == null)) {
+    console.warn('[SuggestionService] Anon mode requires latitude/longitude');
+    return [];
+  }
+
   const dates = getNextNDays(3);
   const startDate = dates[0];
   const endDate = dates[dates.length - 1];
 
   // ── Step 1: Call SQL RPC ────────────────────────────────────────────
-  const { data: scoredRows, error } = await supabase.rpc('get_match_suggestions_scored', {
-    p_player_id: playerId,
-    p_sport_id: sportId,
-    p_limit: 50,
-  });
+  const { data: scoredRows, error } = isAnon
+    ? await supabase.rpc('get_match_suggestions_anon', {
+        p_sport_id: sportId,
+        p_lat: latitude!,
+        p_lng: longitude!,
+        p_max_distance_km: maxDistanceKm,
+        p_limit: 50,
+      })
+    : await supabase.rpc('get_match_suggestions_scored', {
+        p_player_id: playerId!,
+        p_sport_id: sportId,
+        p_limit: 50,
+      });
 
   if (error) {
     console.error('[SuggestionService] RPC error:', error);
@@ -335,7 +357,8 @@ export async function getMatchSuggestions(
 
   // ── Step 3: Fetch court availability + busy slots IN PARALLEL ──────
   const uniqueOpponentIds = [...new Set(scored.map(r => r.opponent_id))];
-  const allPlayerIds = [playerId, ...uniqueOpponentIds];
+  // In anon mode there's no caller to fetch busy slots for.
+  const allPlayerIds = isAnon ? uniqueOpponentIds : [playerId!, ...uniqueOpponentIds];
 
   const facilityEntries = Array.from(facilityMap.entries());
 
@@ -372,7 +395,7 @@ export async function getMatchSuggestions(
     });
   }
 
-  const callerBusy = busyByPlayer.get(playerId) ?? [];
+  const callerBusy = isAnon ? [] : (busyByPlayer.get(playerId!) ?? []);
 
   // ── Step 4: Group by opponent, build facilities + conflict-free slots ─
   const now = new Date();

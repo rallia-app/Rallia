@@ -233,6 +233,13 @@ export function acquisitionChannelSelected(props: { channel: string }): void {
   capture('acquisition_channel_selected', props);
 }
 
+export function notificationPermissionResult(props: {
+  granted: boolean;
+  source: 'pre_onboarding';
+}): void {
+  capture('notification_permission_result', props);
+}
+
 export function deepLinkOpened(props: {
   link_type: string;
   invitation_type?: string;

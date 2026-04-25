@@ -1649,7 +1649,9 @@
       "feedPromptTitle": "Envie de plus d'options?",
       "feedPromptSubtitle": "Nous pouvons trouver des joueurs qui correspondent à votre niveau et horaire à proximité.",
       "feedPromptButton": "Générer des suggestions",
-      "feedSectionTitle": "Vos meilleurs matchs",
+      "feedSectionTitle": "Suggestions de matchups",
+      "feedSectionSubtitle": "Selon ton sport et ta région — pas des matchs actifs à rejoindre",
+      "feedRefreshButton": "Voir d'autres matchups",
       "feedEmptyTitle": "Aucune suggestion disponible",
       "feedEmptySubtitle": "Revenez plus tard quand d'autres joueurs se joindront.",
       "selectDate": "Sélectionnez une date",
@@ -3794,7 +3796,7 @@
         },
         "exclusive": {
           "title": "Fonctionnalités exclusives",
-          "description": "Accédez en avant-première aux fonctionnalités bêta et nouvelles versions avant tout le monde."
+          "description": "Accédez en avant-première aux nouvelles fonctionnalités et versions avant tout le monde."
         },
         "community": {
           "title": "Communauté fondatrice",
@@ -3812,14 +3814,14 @@
       "button": "Rejoindre la liste d'attente"
     },
     "socialProof": {
-      "sectionTitle": "Ce que disent les testeurs bêta",
+      "sectionTitle": "Ce que disent les joueurs",
       "sectionBadge": "Commentaires préliminaires",
       "testimonials": {
         "first": {
           "name": "Sarah M.",
           "location": "Toronto, ON",
           "rating": "5",
-          "text": "J'ai testé la version bêta et le jumelage est incroyable. J'ai hâte au lancement complet - cela changera complètement ma façon de trouver des partenaires!"
+          "text": "Le jumelage est incroyable. Cela a complètement changé ma façon de trouver des partenaires!"
         },
         "second": {
           "name": "Michael R.",
@@ -3831,16 +3833,16 @@
           "name": "Jennifer L.",
           "location": "Montréal, QC",
           "rating": "5",
-          "text": "La fonction de planification vaut à elle seule le coup. En tant que testeuse bêta, j'ai hâte de voir la suite. Inscrivez-vous sur la liste!"
+          "text": "La fonction de planification vaut à elle seule le coup. J'ai hâte de voir la suite. Téléchargez l'application dès aujourd'hui!"
         }
       },
       "stats": {
         "players": "2 500+",
         "playersLabel": "Inscriptions liste",
         "matches": "500+",
-        "matchesLabel": "Parties test bêta",
+        "matchesLabel": "Parties jouées",
         "rating": "4.9/5",
-        "ratingLabel": "Note testeurs bêta"
+        "ratingLabel": "Note des joueurs"
       }
     },
     "waitlist": {
@@ -3879,7 +3881,7 @@
         },
         "availability": {
           "question": "Quand est-ce que Rallia sera disponible?",
-          "answer": "Nous sommes actuellement en phase de test bêta et prévoyons lancer publiquement au début 2026. Inscrivez-vous à notre liste d'attente pour obtenir un accès anticipé et être notifié lors du lancement dans votre région."
+          "answer": "Rallia est maintenant disponible. Téléchargez l'application sur iOS ou Android pour commencer à jouer dès aujourd'hui."
         },
         "platforms": {
           "question": "Sur quelles plateformes Rallia est-il disponible?",
@@ -3889,7 +3891,7 @@
     },
     "landing": {
       "hero": {
-        "badge": "Bêta",
+        "badge": "Nouveau",
         "headline": "Ta prochaine partie commence ici.",
         "subheadline": "Télécharge l'application, connecte-toi avec des joueurs de ton niveau, et commence à jouer aujourd'hui.",
         "downloadButton": "Télécharger l'application",
@@ -3935,33 +3937,6 @@
           "description": "Présente-toi, joue, et évalue ton expérience. Construis ton réseau de joueurs fiables."
         }
       },
-      "whyJoinBeta": {
-        "sectionTitle": "Pourquoi rejoindre la bêta?",
-        "sectionBadge": "Avantages bêta-testeur",
-        "description": "Fais partie de la communauté fondatrice et aide à façonner l'avenir des sports de raquette.",
-        "benefits": {
-          "free": {
-            "title": "Complètement gratuit",
-            "description": "La bêta est 100% gratuite. Pas de carte de crédit, pas de frais cachés. Télécharge et joue."
-          },
-          "influence": {
-            "title": "Façonne le produit",
-            "description": "Tes commentaires influencent directement les fonctionnalités. Aide-nous à créer exactement ce dont les joueurs ont besoin."
-          },
-          "community": {
-            "title": "Communauté fondatrice",
-            "description": "Connecte-toi avec d'autres pionniers et construis ton réseau avant l'arrivée de la foule."
-          },
-          "exclusive": {
-            "title": "Fonctionnalités exclusives",
-            "description": "Accède en avant-première aux nouvelles fonctionnalités et versions avant tout le monde."
-          },
-          "support": {
-            "title": "Support VIP",
-            "description": "Ligne directe avec notre équipe. Obtiens un support prioritaire et aide à façonner nos standards."
-          }
-        }
-      },
       "downloadCta": {
         "headline": "Prêt à jouer?",
         "description": "Télécharge Rallia et trouve ta prochaine partie aujourd'hui. Disponible sur iOS et Android."
@@ -3977,7 +3952,7 @@
         "questions": {
           "cost": {
             "question": "Est-ce que Rallia est gratuit?",
-            "answer": "Rallia est complètement gratuit pendant la bêta. Nous nous concentrons sur offrir la meilleure expérience possible. Les tarifs futurs seront annoncés avant le lancement."
+            "answer": "Rallia est gratuit à télécharger. Nous nous concentrons sur offrir la meilleure expérience possible. Tout changement de tarif sera annoncé à l'avance."
           },
           "sports": {
             "question": "Quels sports sont supportés?",
@@ -4280,11 +4255,10 @@
     "title": "Rallia",
     "description": "La plateforme qui connectera les joueurs de tennis et de pickleball pour de meilleures parties, à chaque fois.",
     "quickLinks": "Liens rapides",
-    "joinBeta": "Télécharger l'application",
+    "download": "Télécharger l'application",
     "privacy": "Politique de confidentialité",
     "terms": "Conditions d'utilisation",
-    "rights": "Tous droits réservés.",
-    "comingSoon": "En bêta"
+    "rights": "Tous droits réservés."
   },
   "signIn": {
     "title": "Connexion Organisation",
@@ -7066,6 +7040,7 @@
       "placeholderUS": "ex. 90210",
       "verifying": "Recherche de votre région...",
       "verified": "Parfait! Nous avons trouvé votre région",
+      "statusHint": "Nous prenons uniquement en charge les codes postaux canadiens",
       "continue": "Trouver des parties près de moi",
       "benefits": {
         "title": "Avec votre code postal, vous pourrez:",
@@ -7109,14 +7084,46 @@
       },
       "benefits": {
         "title": "Avec la localisation précise, vous pourrez:",
-        "item1": "Voir les distances exactes jusqu'aux parties",
-        "item2": "Trouver les terrains disponibles les plus proches",
-        "item3": "Recevoir des alertes en temps réel quand vous êtes à proximité",
-        "item4": "Découvrir des joueurs dans votre quartier"
+        "preciseDistance": {
+          "title": "Distances exactes",
+          "description": "Sachez en combien de temps vous y serez"
+        },
+        "closestCourts": {
+          "title": "Terrains les plus proches",
+          "description": "Triés par distance réelle"
+        },
+        "nearbyAlerts": {
+          "title": "Alertes en temps réel",
+          "description": "Soyez averti des parties à proximité"
+        }
       },
       "enable": "Activer la localisation précise",
-      "privacyNote": "Votre localisation reste sur votre appareil et n'est utilisée que pour calculer les distances. Nous ne suivons jamais vos déplacements.",
-      "settingsHint": "Vous pouvez modifier ce choix à tout moment dans les Réglages de votre appareil."
+      "privacyNote": "Votre localisation reste sur votre appareil — modifiable à tout moment dans les Réglages."
+    },
+    "notificationPermission": {
+      "title": "Restez dans le match",
+      "subtitle": "Soyez averti dès qu'une partie a besoin de vous, sans rien manquer.",
+      "preview": {
+        "timestamp": "maintenant",
+        "title": "Une place vient de se libérer",
+        "body": "Une place vient de se libérer dans une partie au Club de tennis Westmount samedi à 19h00. Joignez-vous!"
+      },
+      "benefits": {
+        "matchInvites": {
+          "title": "Invitations aux matchs",
+          "description": "Soyez le premier averti quand une place se libère"
+        },
+        "matchAlerts": {
+          "title": "Alertes en temps réel",
+          "description": "Recevez les parties qui se forment près de vous"
+        },
+        "confirmations": {
+          "title": "Confirmations de score",
+          "description": "Réglez scores et litiges instantanément"
+        }
+      },
+      "enable": "Activer les notifications",
+      "privacyNote": "Modifiable à tout moment dans les Réglages."
     },
     "discovery": {
       "title": "Comment avez-vous entendu parler de nous?",
@@ -8441,29 +8448,6 @@
     "viewMatch": "Voir le match lié",
     "cancelBooking": "Annuler la réservation",
     "viewMyBookings": "Voir mes réservations"
-  },
-  "beta": {
-    "badge": "BÊTA",
-    "noticeTitle": "Bienvenue dans la bêta de Rallia !",
-    "noticeMessage": "Vous utilisez une version préliminaire de Rallia. Certains joueurs et matchs peuvent être simulés pour vous permettre d'explorer l'application. Les installations et terrains, par contre, sont réels et exacts. Les disponibilités des terrains publics à travers Montréal seront progressivement ajoutées au cours des prochaines semaines — certaines sont déjà disponibles dans l'application !",
-    "noticeDismiss": "Compris !"
-  },
-  "launch": {
-    "bannerPrefix": "Lancement public dans",
-    "bannerSuffix": "— télécharger l'app",
-    "bannerCta": "Télécharger l'app",
-    "dismissLabel": "Ignorer",
-    "days": "j",
-    "hours": "h",
-    "minutes": "m",
-    "seconds": "s",
-    "mobileTitle": "Rallia arrive samedi",
-    "mobileSubtitle": "En ligne dans",
-    "daysLabel": "Jours",
-    "hoursLabel": "Heures",
-    "minutesLabel": "Minutes",
-    "secondsLabel": "Secondes",
-    "earlyAccessPitch": "Accès anticipé — devenez bêta-testeur dès aujourd'hui"
   },
   "playerInterest": {
     "title": "Jouez gratuitement - Rallia",

@@ -7,12 +7,19 @@
  * before continuing. Skippable.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
+import {
+  spacingPixels,
+  radiusPixels,
+  primary,
+  neutral,
+  shadowsNative,
+} from '@rallia/design-system';
 import {
   mediumHaptic,
   sanitizeReferralCode,
@@ -25,12 +32,18 @@ import { PENDING_REFERRAL_KEY } from '../../navigation/deepLinkStore';
 import * as Analytics from '../../services/analytics';
 import type { TranslationKey } from '../../hooks';
 
+type Mode = 'chips' | 'friendCode';
+
 interface DiscoveryStepProps {
+  /** Chips vs. friend-code input — owned by parent so it survives remount. */
+  mode: Mode;
+  onModeChange: (mode: Mode) => void;
+  /** Referral code the user has typed so far. */
+  code: string;
+  onCodeChange: (code: string) => void;
   onContinue: (channel: string | null) => void;
   isActive?: boolean;
 }
-
-type Mode = 'chips' | 'friendCode';
 
 const CHANNELS: Array<{ id: string; labelKey: TranslationKey; icon: string }> = [
   { id: 'friend', labelKey: 'preOnboarding.discovery.options.friend', icon: 'people-outline' },
@@ -49,12 +62,16 @@ const CHANNELS: Array<{ id: string; labelKey: TranslationKey; icon: string }> = 
   },
 ];
 
-export function DiscoveryStep({ onContinue, isActive = true }: DiscoveryStepProps) {
+export function DiscoveryStep({
+  mode,
+  onModeChange,
+  code,
+  onCodeChange,
+  onContinue,
+  isActive = true,
+}: DiscoveryStepProps) {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
-
-  const [mode, setMode] = useState<Mode>('chips');
-  const [code, setCode] = useState('');
 
   // Auto-skip if user arrived via referral link
   useEffect(() => {
@@ -70,12 +87,12 @@ export function DiscoveryStep({ onContinue, isActive = true }: DiscoveryStepProp
     (channelId: string) => {
       mediumHaptic();
       if (channelId === 'friend') {
-        setMode('friendCode');
+        onModeChange('friendCode');
         return;
       }
       onContinue(channelId);
     },
-    [onContinue]
+    [onContinue, onModeChange]
   );
 
   const handleSkip = useCallback(() => {
@@ -85,9 +102,9 @@ export function DiscoveryStep({ onContinue, isActive = true }: DiscoveryStepProp
 
   const handleBackToChips = useCallback(() => {
     mediumHaptic();
-    setCode('');
-    setMode('chips');
-  }, []);
+    onCodeChange('');
+    onModeChange('chips');
+  }, [onCodeChange, onModeChange]);
 
   const handleApplyCode = useCallback(async () => {
     if (!isReferralCodeComplete(code)) return;
@@ -112,8 +129,6 @@ export function DiscoveryStep({ onContinue, isActive = true }: DiscoveryStepProp
     onContinue('friend');
   }, [onContinue]);
 
-  if (!isActive) return null;
-
   const codeReady = isReferralCodeComplete(code);
 
   return (
@@ -125,18 +140,16 @@ export function DiscoveryStep({ onContinue, isActive = true }: DiscoveryStepProp
       >
         {/* Header */}
         <Animated.View entering={FadeInDown.delay(50).springify()} style={styles.headerSection}>
-          <View
-            style={[
-              styles.iconContainer,
-              { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)' },
-            ]}
+          <LinearGradient
+            colors={isDark ? [primary[800], primary[900]] : [primary[50], primary[100]]}
+            style={styles.iconContainer}
           >
             <Ionicons
               name={mode === 'friendCode' ? 'people-outline' : 'chatbubble-ellipses-outline'}
               size={36}
-              color={isDark ? primary[400] : primary[600]}
+              color={isDark ? primary[200] : primary[600]}
             />
-          </View>
+          </LinearGradient>
 
           <Text size="xl" weight="bold" color={colors.foreground} style={styles.title}>
             {mode === 'friendCode'
@@ -211,7 +224,7 @@ export function DiscoveryStep({ onContinue, isActive = true }: DiscoveryStepProp
               placeholder={t('referral.enterCode')}
               placeholderTextColor={colors.textMuted}
               value={code}
-              onChangeText={text => setCode(sanitizeReferralCode(text))}
+              onChangeText={text => onCodeChange(sanitizeReferralCode(text))}
               autoCapitalize="characters"
               autoCorrect={false}
               maxLength={REFERRAL_CODE_LENGTH}
@@ -300,6 +313,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacingPixels[3],
+    ...shadowsNative.md,
+    shadowColor: primary[500],
+    shadowOpacity: 0.25,
   },
   title: {
     textAlign: 'center',
