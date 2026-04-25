@@ -201,11 +201,9 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
     if (isDoubles && team2Players.length >= 2) {
       return `${team2Players[0]?.firstName}, ${team2Players[1]?.firstName}`;
     }
-    return (
-      team2Players[0]?.displayName ||
-      team2Players[0]?.firstName ||
-      t('addScore.winnerScores.opponent')
-    );
+    const p = team2Players[0];
+    const fullName = p ? `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim() : '';
+    return fullName || p?.firstName || t('addScore.winnerScores.opponent');
   };
 
   return (

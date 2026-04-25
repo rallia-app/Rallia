@@ -7,14 +7,24 @@
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import DatabaseService, { Logger, supabase } from '@rallia/shared-services';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 import * as Analytics from '../../../services/analytics';
 
+/**
+ * AsyncStorage key written by pre-onboarding's SportStep (via SportContext).
+ * Kept in sync with `GUEST_SPORTS_STORAGE_KEY` in apps/mobile/src/context/SportContext.tsx.
+ */
+const GUEST_SPORTS_STORAGE_KEY = '@rallia/guest-selected-sports';
+
+interface GuestSportEntry {
+  id: string;
+  name: string;
+}
+
 export type OnboardingStepId =
   | 'personal'
-  | 'location'
-  | 'sports'
   | 'tennis-rating'
   | 'pickleball-rating'
   | 'preferences'
@@ -27,10 +37,8 @@ export interface OnboardingFormData {
   // Personal Info
   firstName: string;
   lastName: string;
-  username: string;
   dateOfBirth: Date | null;
   gender: string;
-  phoneNumber: string;
   profileImage: string | null;
   /** URL of the already-saved profile picture from DB (to avoid re-uploading) */
   savedProfilePictureUrl: string | null;
@@ -111,10 +119,8 @@ const DEFAULT_AVAILABILITIES = {
 const INITIAL_FORM_DATA: OnboardingFormData = {
   firstName: '',
   lastName: '',
-  username: '',
   dateOfBirth: null,
   gender: '',
-  phoneNumber: '',
   profileImage: null,
   savedProfilePictureUrl: null,
   address: '',
@@ -128,7 +134,7 @@ const INITIAL_FORM_DATA: OnboardingFormData = {
   tennisRatingId: null,
   pickleballRatingId: null,
   playingHand: 'right',
-  maxTravelDistance: 50,
+  maxTravelDistance: 20,
   matchDuration: '90', // Legacy field (90 = 1.5h)
   tennisMatchDuration: '90',
   pickleballMatchDuration: '90',
@@ -188,17 +194,9 @@ function isStepComplete(stepId: OnboardingStepId, formData: OnboardingFormData):
       return !!(
         formData.firstName.trim() &&
         formData.lastName.trim() &&
-        formData.username.trim() &&
         formData.dateOfBirth &&
         formData.gender
       );
-
-    case 'location':
-      // Postal code is required (pre-populated from pre-onboarding), address is optional
-      return !!formData.postalCode.trim();
-
-    case 'sports':
-      return formData.selectedSportIds.length > 0;
 
     case 'tennis-rating':
       return !!formData.tennisRatingId;
@@ -295,11 +293,9 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
         if (profileRes.data) {
           updates.firstName = profileRes.data.first_name || '';
           updates.lastName = profileRes.data.last_name || '';
-          updates.username = profileRes.data.display_name || '';
           updates.dateOfBirth = profileRes.data.birth_date
             ? new Date(profileRes.data.birth_date)
             : null;
-          updates.phoneNumber = profileRes.data.phone || '';
           // Store the saved URL - we'll display this but not re-upload it
           if (profileRes.data.profile_picture_url) {
             updates.savedProfilePictureUrl = profileRes.data.profile_picture_url;
@@ -378,6 +374,37 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
 
           updates.selectedSportIds = sportIds;
           updates.selectedSportNames = sportNames;
+        } else {
+          // Pre-onboarding's SportStep stores the guest selection in AsyncStorage
+          // (see SportContext.GUEST_SPORTS_STORAGE_KEY). The player_sport rows are
+          // only created later (here on first wizard load), so fall back to that
+          // selection so dynamic rating steps appear.
+          try {
+            const guestRaw = await AsyncStorage.getItem(GUEST_SPORTS_STORAGE_KEY);
+            if (guestRaw) {
+              const guestSports = JSON.parse(guestRaw) as GuestSportEntry[];
+              if (Array.isArray(guestSports) && guestSports.length > 0) {
+                updates.selectedSportIds = guestSports.map(s => s.id);
+                updates.selectedSportNames = guestSports.map(s => s.name);
+
+                // Persist to player_sport so subsequent steps (preferences,
+                // favorites, ratings) have a real row to write against.
+                await Promise.all(
+                  guestSports.map((sport, index) =>
+                    DatabaseService.PlayerSport.addPlayerSport({
+                      player_id: userId,
+                      sport_id: sport.id,
+                      is_primary: index === 0,
+                    })
+                  )
+                );
+              }
+            }
+          } catch (guestError) {
+            Logger.warn('Failed to hydrate sports from pre-onboarding selection', {
+              error: guestError,
+            });
+          }
         }
 
         // Ratings data
@@ -522,9 +549,10 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
     loadExistingData();
   }, []);
 
-  // Calculate steps dynamically based on selected sports
+  // Calculate steps dynamically based on selected sports (resolved from
+  // pre-onboarding's saved player_sport rows in the load-existing-data effect)
   const steps = useMemo<OnboardingStepId[]>(() => {
-    const baseSteps: OnboardingStepId[] = ['personal', 'location', 'sports'];
+    const baseSteps: OnboardingStepId[] = ['personal'];
 
     // Add rating steps based on selected sports
     if (hasTennis) baseSteps.push('tennis-rating');

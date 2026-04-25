@@ -654,7 +654,6 @@ const UserProfile = () => {
               initialData: {
                 firstName: profile?.first_name || '',
                 lastName: profile?.last_name || '',
-                username: profile?.display_name || '',
                 email: profile?.email || '',
                 dateOfBirth: profile?.birth_date || '',
                 gender: player?.gender || '',
@@ -671,7 +670,6 @@ const UserProfile = () => {
           SheetManager.show('player-information', {
             payload: {
               initialData: {
-                username: profile?.display_name || '',
                 bio: profile?.bio || '',
                 preferredPlayingHand: player?.playing_hand || '',
                 maximumTravelDistance: player?.max_travel_distance || 15,
@@ -848,12 +846,8 @@ const UserProfile = () => {
                     </TouchableOpacity>
                   )}
                 </View>
-                {/* First and last name first, then username */}
                 <Text style={[styles.profileName, { color: colors.text }]}>
                   {getHumanName(profile, t('profile.user'))}
-                </Text>
-                <Text style={[styles.username, { color: colors.textMuted }]}>
-                  @{profile?.display_name?.replace(/\s/g, '') || t('profile.username')}
                 </Text>
 
                 {/* Coveted Badge */}
@@ -933,7 +927,6 @@ const UserProfile = () => {
                       initialData: {
                         firstName: profile?.first_name || '',
                         lastName: profile?.last_name || '',
-                        username: profile?.display_name || '',
                         email: profile?.email || '',
                         dateOfBirth: profile?.birth_date || '',
                         gender: player?.gender || '',
@@ -1057,7 +1050,6 @@ const UserProfile = () => {
                   SheetManager.show('player-information', {
                     payload: {
                       initialData: {
-                        username: profile?.display_name || '',
                         bio: profile?.bio || '',
                         preferredPlayingHand: player?.playing_hand || '',
                         maximumTravelDistance: player?.max_travel_distance || 15,
@@ -1611,10 +1603,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizePixels.xl,
     fontWeight: fontWeightNumeric.bold,
     marginBottom: spacingPixels[1],
-  },
-  username: {
-    fontSize: fontSizePixels.sm,
-    marginBottom: spacingPixels[2],
   },
   profileBadgesRow: {
     flexDirection: 'row',

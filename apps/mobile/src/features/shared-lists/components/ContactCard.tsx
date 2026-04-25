@@ -8,9 +8,12 @@ import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { primary, neutral, status } from '@rallia/design-system';
+import { neutral, status } from '@rallia/design-system';
 import type { SharedContact } from '@rallia/shared-services';
 import { useTranslation, type TranslationKey } from '../../../hooks';
+import { getAvatarColor, getContactInitials } from '../../../utils/contactDisplay';
+
+const BASE_WHITE = '#ffffff';
 
 interface ThemeColors {
   background: string;
@@ -33,15 +36,6 @@ interface ContactCardProps {
 const ContactCard: React.FC<ContactCardProps> = ({ contact, colors, isDark, onEdit, onDelete }) => {
   const { t } = useTranslation();
 
-  // Get initials from name
-  const getInitials = (name: string) => {
-    const parts = name.trim().split(' ');
-    if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
-  };
-
   return (
     <View
       style={[
@@ -55,9 +49,9 @@ const ContactCard: React.FC<ContactCardProps> = ({ contact, colors, isDark, onEd
     >
       {/* Top row: avatar + name + source badge */}
       <View style={styles.topRow}>
-        <View style={[styles.avatar, { backgroundColor: isDark ? primary[900] : primary[100] }]}>
-          <Text size="sm" weight="semibold" color={primary[500]}>
-            {getInitials(contact.name)}
+        <View style={[styles.avatar, { backgroundColor: getAvatarColor(contact.id) }]}>
+          <Text size="sm" weight="semibold" color={BASE_WHITE}>
+            {getContactInitials(contact.name)}
           </Text>
         </View>
         <Text

@@ -413,7 +413,6 @@ declare module 'react-native-actions-sheet' {
         initialData?: {
           firstName?: string;
           lastName?: string;
-          username?: string;
           email?: string;
           dateOfBirth?: string;
           gender?: string;
@@ -430,7 +429,6 @@ declare module 'react-native-actions-sheet' {
     'player-information': SheetDefinition<{
       payload: {
         initialData?: {
-          username?: string;
           bio?: string;
           preferredPlayingHand?: string;
           maximumTravelDistance?: number;
