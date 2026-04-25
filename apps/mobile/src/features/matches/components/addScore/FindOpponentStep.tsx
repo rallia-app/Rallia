@@ -71,7 +71,6 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
       id: player.id,
       firstName: player.first_name,
       lastName: player.last_name,
-      displayName: player.display_name ?? undefined,
       profilePictureUrl: player.profile_picture_url ?? undefined,
     }),
     []

@@ -21,6 +21,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
 import { SearchBar } from '../../../../components/SearchBar';
+import { ContactRow } from '../../../../components/ContactRow';
+import { formatContactSubtitle } from '../../../../utils/contactDisplay';
 import type { SelectedPlayer } from './types';
 
 interface DeviceContact {
@@ -163,31 +165,24 @@ export function ContactPickerModal({
   }, []);
 
   const renderContact = useCallback(
-    ({ item }: { item: DeviceContact }) => (
-      <TouchableOpacity
-        style={[styles.contactItem, { borderBottomColor: colors.border }]}
-        onPress={() => handleSelectContact(item)}
-        activeOpacity={0.7}
-      >
-        <View style={[styles.avatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-          <Text weight="semibold" style={{ color: colors.primary }}>
-            {item.name.charAt(0).toUpperCase()}
-          </Text>
-        </View>
-        <View style={styles.contactInfo}>
-          <Text weight="medium" style={{ color: colors.text }}>
-            {item.name}
-          </Text>
-          {item.phone && (
-            <Text size="sm" style={{ color: colors.textSecondary }}>
-              {item.phone}
-            </Text>
-          )}
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-      </TouchableOpacity>
-    ),
-    [colors, isDark, handleSelectContact]
+    ({ item, index }: { item: DeviceContact; index: number }) => {
+      const subtitle = formatContactSubtitle(item.phone, item.email);
+      const isLast = index === filteredContacts.length - 1;
+      return (
+        <ContactRow
+          name={item.name}
+          subtitle={subtitle || undefined}
+          avatarSeed={item.id}
+          isLast={isLast}
+          isDark={isDark}
+          onPress={() => handleSelectContact(item)}
+          nameColor={colors.text}
+          subtitleColor={colors.textMuted}
+          trailing={<Ionicons name="chevron-forward" size={20} color={colors.textMuted} />}
+        />
+      );
+    },
+    [colors, isDark, handleSelectContact, filteredContacts.length]
   );
 
   const renderContent = () => {
@@ -326,25 +321,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   listContent: {
+    paddingHorizontal: 8,
     paddingBottom: 20,
-  },
-  contactItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  contactInfo: {
-    flex: 1,
-    marginLeft: 12,
   },
 });
 

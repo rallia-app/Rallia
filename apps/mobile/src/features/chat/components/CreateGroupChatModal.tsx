@@ -43,7 +43,6 @@ interface SelectedMember {
   id: string;
   firstName: string;
   lastName?: string | null;
-  displayName?: string | null;
   profilePictureUrl?: string | null;
 }
 
@@ -107,7 +106,6 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
       id: player.id,
       firstName: player.first_name,
       lastName: player.last_name,
-      displayName: player.display_name,
       profilePictureUrl: player.profile_picture_url,
     }),
     []

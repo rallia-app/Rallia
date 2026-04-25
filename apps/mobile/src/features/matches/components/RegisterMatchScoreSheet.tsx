@@ -162,7 +162,8 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
     const playerObj = Array.isArray(p.player) ? p.player[0] : p.player;
     const profile = playerObj?.profile;
     if (!profile) return 'Player';
-    return profile.first_name || profile.display_name || 'Player';
+    const fullName = `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim();
+    return fullName || 'Player';
   }, []);
 
   /** Labels for the two sides of the score (team 1 = you/your team, team 2 = opponent(s)) */

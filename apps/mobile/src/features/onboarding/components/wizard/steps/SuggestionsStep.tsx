@@ -162,13 +162,18 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
     [playerId, currentSport?.id, callerDuration, callerMatchType, queryClient]
   );
 
+  const hasSentInvite = useMemo(
+    () => Object.values(inviteStates).some(state => state === 'sent'),
+    [inviteStates]
+  );
+
   const handleSkip = useCallback(() => {
     Analytics.onboardingStepCompleted({
-      step_name: 'suggestions_skipped',
+      step_name: hasSentInvite ? 'suggestions_continued' : 'suggestions_skipped',
       step_index: -1,
     });
     onComplete();
-  }, [onComplete]);
+  }, [onComplete, hasSentInvite]);
 
   const cardLabels = useMemo(
     () => ({
@@ -263,13 +268,31 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
           </View>
         )}
 
-        {/* Skip button */}
+        {/* Skip / Continue button */}
         <Animated.View style={skipAnimatedStyle}>
-          <TouchableOpacity onPress={handleSkip} activeOpacity={0.6} style={styles.skipButton}>
-            <Text size="sm" color={colors.textMuted} style={styles.skipText}>
-              {t('onboarding.suggestions.exploreLater' as TranslationKey)}
-            </Text>
-          </TouchableOpacity>
+          {hasSentInvite ? (
+            <TouchableOpacity
+              onPress={handleSkip}
+              activeOpacity={0.8}
+              style={[styles.continueButton, { backgroundColor: colors.buttonActive }]}
+            >
+              <Text
+                size="base"
+                weight="semibold"
+                color={colors.buttonTextActive}
+                style={styles.continueText}
+              >
+                {t('common.continue' as TranslationKey)}
+              </Text>
+              <Ionicons name="arrow-forward" size={18} color={colors.buttonTextActive} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={handleSkip} activeOpacity={0.6} style={styles.skipButton}>
+              <Text size="sm" color={colors.textMuted} style={styles.skipText}>
+                {t('onboarding.suggestions.exploreLater' as TranslationKey)}
+              </Text>
+            </TouchableOpacity>
+          )}
         </Animated.View>
       </SheetScrollView>
     </View>
@@ -345,6 +368,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   skipText: {
+    textAlign: 'center',
+  },
+  continueButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    marginHorizontal: spacingPixels[1],
+    marginTop: spacingPixels[2],
+    gap: spacingPixels[2],
+  },
+  continueText: {
     textAlign: 'center',
   },
 });

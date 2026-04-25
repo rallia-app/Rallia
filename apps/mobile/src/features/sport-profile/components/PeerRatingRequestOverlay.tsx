@@ -265,11 +265,6 @@ function PeerRatingRequestOverlayComponent({ payload }: SheetProps<'peer-rating-
           <Text style={[styles.playerName, { color: colors.text }]}>
             {`${player.first_name} ${player.last_name}`.trim()}
           </Text>
-          {player.display_name && (
-            <Text style={[styles.playerUsername, { color: colors.textMuted }]}>
-              @{player.display_name}
-            </Text>
-          )}
         </View>
 
         {/* Rating Badge */}

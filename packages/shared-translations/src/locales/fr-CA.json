@@ -60,6 +60,7 @@
     "more": "+{count} autres",
     "share": "Partager",
     "selectAll": "Tout sélectionner",
+    "deselectAll": "Tout désélectionner",
     "user": "Utilisateur",
     "discard": "Abandonner",
     "copied": "Copié",
@@ -1488,9 +1489,6 @@
       "lastNamePlaceholder": "Entrez votre nom de famille",
       "fullName": "Nom complet",
       "fullNamePlaceholder": "Entrez votre nom complet",
-      "username": "Nom d'utilisateur",
-      "usernamePlaceholder": "Choisissez un nom d'utilisateur",
-      "usernameHelper": "Maximum 10 caractères, sans espaces",
       "dateOfBirth": "Date de naissance",
       "gender": "Genre",
       "genderPlaceholder": "Sélectionnez votre genre",
@@ -1622,7 +1620,21 @@
       "inviteSubtitle": "Rallia est meilleur entre amis. Partagez votre lien d'invitation!",
       "shareButton": "Partager avec des amis",
       "maybeLater": "Peut-être plus tard",
-      "linkCopied": "Lien copié!"
+      "linkCopied": "Lien copié!",
+      "contactsTitle": "Invitez vos amis à jouer",
+      "contactsSubtitle": "Choisissez parmi vos contacts et nous leur enverrons votre invitation par texto. Les joueurs avec des amis sur Rallia trouvent des matchs plus vite.",
+      "findFromContacts": "Trouver des amis dans mes contacts",
+      "shareLinkInstead": "Partager le lien d'invitation",
+      "permissionDenied": "Accès aux contacts refusé",
+      "permissionDeniedHint": "Vous pouvez toujours partager votre lien, ou activer les contacts dans les Réglages.",
+      "openSettings": "Ouvrir les Réglages",
+      "sendInvitesCount": "Envoyer les invitations ({count})",
+      "searchPlaceholder": "Rechercher des contacts",
+      "noContacts": "Aucun contact trouvé",
+      "invitesSentToast": "Invitations envoyées!",
+      "contactSingular": "contact",
+      "contactPlural": "contacts",
+      "showMoreCount": "Afficher {count} de plus"
     },
     "suggestions": {
       "title": "Vos meilleurs matchs",
@@ -3399,12 +3411,14 @@
       "sendInvites": "Envoyer les invitations",
       "invitesSent": "Invitations envoyées!",
       "failedToLoad": "Échec du chargement des contacts",
-      "failedToSend": "Échec de l'envoi des invitations"
+      "failedToSend": "Échec de l'envoi des invitations",
+      "contactSingular": "contact",
+      "contactPlural": "contacts"
     },
     "inviteModal": {
       "title": "Agrandissez votre réseau",
-      "subtitle": "Invitez vos amis et votre famille sur Rallia. Des récompenses arrivent bientôt pour les joueurs qui aident à faire grandir la communauté!",
-      "selectContacts": "Sélectionner des contacts",
+      "subtitle": "Vous connaissez quelqu'un qui joue? Invitez-le sur Rallia et progressez ensemble.",
+      "selectContacts": "Inviter des amis",
       "skip": "Peut-être plus tard"
     },
     "contest": {

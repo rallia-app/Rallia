@@ -1,15 +1,15 @@
 /**
  * OnboardingWizard Component
  *
- * 4-6 step onboarding wizard (dynamic based on selected sports) with
- * horizontal slide animations, progress indicator, and full theme/i18n support.
+ * Onboarding wizard (dynamic based on the sport selected during pre-onboarding)
+ * with horizontal slide animations, progress indicator, and theme/i18n support.
  *
  * Steps:
- * 1. Personal Info
- * 2. Sport Selection
- * 3. Tennis Rating (if tennis selected)
- * 4. Pickleball Rating (if pickleball selected)
- * 5. Preferences
+ * 1. Personal Info (also silently persists pre-onboarding home location)
+ * 2. Tennis Rating (if tennis selected)
+ * 3. Pickleball Rating (if pickleball selected)
+ * 4. Preferences
+ * 5. Favorite Sites
  * 6. Availabilities
  * 7. Success (final)
  */
@@ -44,13 +44,9 @@ import {
   attributeReferral,
   joinGroupByInviteCode,
   requestToJoinCommunityByInviteCode,
+  syncHomeLocation as syncHomeLocationToPlayer,
 } from '@rallia/shared-services';
-import {
-  useProfile,
-  usePlayer,
-  usePostalCodeGeocode,
-  useMatchSuggestions,
-} from '@rallia/shared-hooks';
+import { useProfile, usePlayer, useMatchSuggestions } from '@rallia/shared-hooks';
 import {
   PENDING_REFERRAL_KEY,
   ACQUISITION_CHANNEL_KEY,
@@ -78,8 +74,6 @@ import {
 } from '../../hooks/useOnboardingWizard';
 import {
   PersonalInfoStep,
-  LocationStep,
-  SportSelectionStep,
   RatingStep,
   PreferencesStep,
   FavoriteSitesStep,
@@ -253,8 +247,6 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
 const getStepName = (stepId: OnboardingStepId, t: (key: TranslationKey) => string): string => {
   const keys: Record<OnboardingStepId, TranslationKey> = {
     personal: 'onboarding.stepNames.personal',
-    location: 'onboarding.stepNames.location',
-    sports: 'onboarding.stepNames.sports',
     'tennis-rating': 'onboarding.stepNames.tennisRating',
     'pickleball-rating': 'onboarding.stepNames.pickleballRating',
     preferences: 'onboarding.stepNames.preferences',
@@ -330,9 +322,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   // Without this refetch, the player stays null until sign out/sign in.
   const { refetch: refetchPlayer } = usePlayer();
 
-  // Home location context to sync postal code to local storage
-  const { setHomeLocation } = useUserHomeLocation();
-  const { geocode } = usePostalCodeGeocode();
+  // Home location captured during pre-onboarding; synced to the player row
+  // after personal info is saved, so we no longer need a Location step.
+  const { homeLocation } = useUserHomeLocation();
 
   // Sport context to refetch player sports when onboarding completes
   const { refetch: refetchSports, setSelectedSport, selectedSport } = useSport();
@@ -448,19 +440,45 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     );
   }, [formData.availabilities]);
 
-  // Check if button should be disabled based on current step
+  // Check if button should be disabled based on current step's mandatory fields.
+  // Mirrors the required-field checks performed inside validateAndSaveStep so the
+  // user gets a visible affordance instead of only an alert on tap.
   const isButtonDisabled = useMemo(() => {
     if (isSaving) return true;
-    if (currentStepId === 'availabilities' && totalAvailabilitySelections < 3) return true;
-    if (currentStepId === 'favorite-sites') {
-      const bothSports = hasTennis && hasPickleball;
-      if (bothSports) {
-        const counts = computeFavoriteSportCounts(formData);
-        return counts.tennisCount < 2 || counts.pickleballCount < 2;
+
+    switch (currentStepId) {
+      case 'personal': {
+        if (
+          !formData.firstName.trim() ||
+          !formData.lastName.trim() ||
+          !formData.dateOfBirth ||
+          !formData.gender
+        ) {
+          return true;
+        }
+        const minimumDateOfBirth = new Date();
+        minimumDateOfBirth.setFullYear(minimumDateOfBirth.getFullYear() - 13);
+        minimumDateOfBirth.setMonth(minimumDateOfBirth.getMonth() - 1);
+        if (formData.dateOfBirth > minimumDateOfBirth) return true;
+        return false;
       }
-      return formData.favoriteFacilities.length < 2;
+      case 'tennis-rating':
+        return !formData.tennisRatingId;
+      case 'pickleball-rating':
+        return !formData.pickleballRatingId;
+      case 'favorite-sites': {
+        const bothSports = hasTennis && hasPickleball;
+        if (bothSports) {
+          const counts = computeFavoriteSportCounts(formData);
+          return counts.tennisCount < 2 || counts.pickleballCount < 2;
+        }
+        return formData.favoriteFacilities.length < 2;
+      }
+      case 'availabilities':
+        return totalAvailabilitySelections < 3;
+      default:
+        return false;
     }
-    return false;
   }, [isSaving, currentStepId, totalAvailabilitySelections, formData, hasTennis, hasPickleball]);
 
   // Animation values
@@ -486,8 +504,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         if (
           !formData.firstName.trim() ||
           !formData.lastName.trim() ||
-          !formData.username.trim() ||
-          formData.username.length < 3 ||
           !formData.dateOfBirth ||
           !formData.gender
         ) {
@@ -502,28 +518,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         minimumDateOfBirth.setMonth(minimumDateOfBirth.getMonth() - 1);
         if (formData.dateOfBirth > minimumDateOfBirth) {
           Alert.alert(t('alerts.error'), t('onboarding.validation.minimumAge'));
-          warningHaptic();
-          return false;
-        }
-
-        // Check username uniqueness (case-insensitive), excluding current user
-        const {
-          data: { user: currentUser },
-        } = await supabase.auth.getUser();
-
-        let usernameQuery = supabase
-          .from('profile')
-          .select('display_name')
-          .ilike('display_name', formData.username.trim());
-
-        if (currentUser) {
-          usernameQuery = usernameQuery.neq('id', currentUser.id);
-        }
-
-        const { data: existingUser } = await usernameQuery.maybeSingle();
-
-        if (existingUser) {
-          Alert.alert(t('alerts.error'), 'This username is already taken. Please choose another.');
           warningHaptic();
           return false;
         }
@@ -559,10 +553,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           const { error } = await OnboardingService.savePersonalInfo({
             first_name: formData.firstName,
             last_name: formData.lastName,
-            display_name: formData.username,
             birth_date: formattedDate,
             gender: formData.gender as GenderEnum,
-            phone: formData.phoneNumber.trim() || undefined,
             profile_picture_url: uploadedImageUrl,
           });
 
@@ -571,6 +563,26 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             Alert.alert(t('alerts.error'), t('onboarding.validation.failedToSaveInfo'));
             setIsSaving(false);
             return false;
+          }
+
+          // Silently persist the home location captured in pre-onboarding to the
+          // player row so downstream features (suggestions, favorites distance)
+          // have lat/long even though we no longer show a Location step.
+          if (homeLocation) {
+            const userId = await DatabaseService.Auth.getCurrentUserId();
+            if (userId) {
+              const syncResult = await syncHomeLocationToPlayer(userId, {
+                postalCode: homeLocation.postalCode,
+                country: homeLocation.country,
+                latitude: homeLocation.latitude,
+                longitude: homeLocation.longitude,
+              });
+              if (!syncResult.success) {
+                Logger.warn('Failed to sync pre-onboarding home location to player', {
+                  error: syncResult.error,
+                });
+              }
+            }
           }
 
           setIsSaving(false);
@@ -582,88 +594,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           return false;
         }
       }
-
-      case 'location': {
-        // Postal code is required (pre-populated from pre-onboarding)
-        if (!formData.postalCode.trim()) {
-          Alert.alert(t('alerts.error'), t('onboarding.validation.postalCodeRequired'));
-          warningHaptic();
-          return false;
-        }
-
-        // Helper function to save location data
-        const saveLocationData = async (): Promise<boolean> => {
-          setIsSaving(true);
-          try {
-            const userId = await DatabaseService.Auth.getCurrentUserId();
-            if (!userId) {
-              Alert.alert(t('alerts.error'), t('onboarding.validation.userNotAuthenticated'));
-              setIsSaving(false);
-              return false;
-            }
-
-            // Determine coordinates: if a valid address is selected, use its
-            // coordinates (already in formData). Otherwise, always geocode the
-            // postal code so lat/long are guaranteed to be fresh.
-            let { latitude, longitude } = formData;
-            if (!formData.address) {
-              const location = await geocode(formData.postalCode);
-              if (location) {
-                latitude = location.latitude;
-                longitude = location.longitude;
-                updateFormData({ latitude, longitude });
-              }
-            }
-
-            const { error } = await OnboardingService.saveLocationInfo({
-              address: formData.address || null,
-              city: formData.city || null,
-              province: formData.province || null,
-              postal_code: formData.postalCode,
-              latitude,
-              longitude,
-            });
-
-            if (error) {
-              Logger.error('Failed to save location info', error as Error);
-              Alert.alert(t('alerts.error'), t('onboarding.validation.failedToSaveLocation'));
-              setIsSaving(false);
-              return false;
-            }
-
-            // Sync updated postal code and coordinates to local device storage
-            if (formData.postalCode && latitude && longitude) {
-              await setHomeLocation({
-                postalCode: formData.postalCode,
-                country: 'CA',
-                formattedAddress: formData.address || formData.postalCode,
-                latitude,
-                longitude,
-              });
-            }
-
-            setIsSaving(false);
-            return true;
-          } catch (error) {
-            Logger.error('Unexpected error saving location info', error as Error);
-            Alert.alert(t('alerts.error'), t('onboarding.validation.unexpectedError'));
-            setIsSaving(false);
-            return false;
-          }
-        };
-
-        // Save location data directly - no warning needed since postal code is always present
-        return await saveLocationData();
-      }
-
-      case 'sports':
-        if (formData.selectedSportIds.length === 0) {
-          Alert.alert(t('alerts.error'), t('onboarding.validation.selectAtLeastOneSport'));
-          warningHaptic();
-          return false;
-        }
-        // Sports are saved optimistically during selection
-        return true;
 
       case 'tennis-rating':
         if (!formData.tennisRatingId) {
@@ -1196,26 +1126,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             formData={formData}
             onUpdateFormData={updateFormData}
             onPickImage={pickImage}
-            colors={colors}
-            t={t}
-            isDark={isDark}
-          />
-        );
-      case 'location':
-        return (
-          <LocationStep
-            formData={formData}
-            onUpdateFormData={updateFormData}
-            colors={colors}
-            t={t}
-            isDark={isDark}
-          />
-        );
-      case 'sports':
-        return (
-          <SportSelectionStep
-            formData={formData}
-            onUpdateFormData={updateFormData}
             colors={colors}
             t={t}
             isDark={isDark}

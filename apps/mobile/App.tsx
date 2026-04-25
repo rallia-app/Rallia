@@ -88,7 +88,6 @@ import {
   useNotificationRealtime,
   usePendingFeedbackCheck,
   useUpdateLastSeen,
-  useReferral,
   ProfileCompletenessProvider,
 } from '@rallia/shared-hooks';
 import { useBadgeCountSync } from '@rallia/shared-hooks/src/useBadgeCountSync';
@@ -137,10 +136,6 @@ import { useToast } from '@rallia/shared-components';
 import { getMatchWithDetails } from '@rallia/shared-services';
 import type { MatchDetailData } from './src/context/MatchDetailSheetContext';
 import { attemptFirstLaunchAttribution } from './src/utils/referralAttribution';
-import {
-  shouldShowReferralInvite,
-  updateLastPromptTimestamp,
-} from './src/utils/referralInviteFrequency';
 
 // Import NativeWind global styles
 // import './global.css';
@@ -538,47 +533,6 @@ function DeepLinkHandler() {
   return null;
 }
 
-function ReferralInviteHandler() {
-  const { user } = useAuth();
-  const { isSplashComplete, isSportSelectionComplete, permissionsHandled } = useOverlay();
-  const { feedbackData } = useFeedbackSheet();
-  const { stats, statsLoading } = useReferral(user?.id);
-  const hasCheckedRef = useRef(false);
-
-  useEffect(() => {
-    if (hasCheckedRef.current) return;
-    if (!user?.id || !isSplashComplete || !isSportSelectionComplete || !permissionsHandled) return;
-    // Don't show if the feedback sheet is already visible
-    if (feedbackData) return;
-    // Wait for stats to load before deciding
-    if (statsLoading) return;
-    // Don't prompt users who already have successful referrals
-    if (stats && stats.total_converted > 0) return;
-
-    hasCheckedRef.current = true;
-
-    (async () => {
-      const shouldShow = await shouldShowReferralInvite();
-      if (!shouldShow) return;
-
-      await updateLastPromptTimestamp();
-      setTimeout(() => {
-        SheetManager.show('referral-invite');
-      }, 1000);
-    })();
-  }, [
-    user?.id,
-    isSplashComplete,
-    isSportSelectionComplete,
-    permissionsHandled,
-    feedbackData,
-    stats,
-    statsLoading,
-  ]);
-
-  return null;
-}
-
 /**
  * useOTAUpdate - Check for OTA updates while the splash screen is visible.
  * If an update is found, download it and reload before the user sees the app.
@@ -695,9 +649,6 @@ function AppContent() {
       {/* Session Expiry Handler - shows toast when session expires */}
       <SessionExpiryHandler />
       <AccountSuspendedHandler />
-      {/* Referral Invite Handler - periodically prompts users to invite friends */}
-      <ReferralInviteHandler />
-
       {/* TEMPORARILY DISABLED: User walkthrough deactivated
       <WelcomeTourModal splashComplete={isSplashComplete} permissionsHandled={permissionsHandled} />
       <TourCompleteModal

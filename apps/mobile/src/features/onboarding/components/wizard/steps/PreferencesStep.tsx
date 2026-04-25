@@ -1,17 +1,18 @@
 /**
  * PreferencesStep Component
  *
- * Preferences step of onboarding - playing hand, match duration, match type.
+ * Preferences step of onboarding - playing hand, travel distance, match duration, match type.
  * Migrated from PlayerPreferencesOverlay with theme-aware colors.
- * Note: Travel distance slider hidden for launch (defaults to 50km). Users can adjust in profile settings.
  *
  * When user has multiple sports, shows "Same for all sports" checkbox for match type.
  * Unchecking reveals individual preference rows for each sport.
  */
 
-import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { LayoutChangeEvent, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
@@ -55,6 +56,79 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
   // State for "Same for all sports" checkboxes (only relevant when user has both sports)
   const [sameMatchTypeForAll, setSameMatchTypeForAll] = useState(true);
   const [sameMatchDurationForAll, setSameMatchDurationForAll] = useState(true);
+
+  // Custom slider built with RNGH + Reanimated to work inside the actions-sheet on Android.
+  // translateX represents the thumb center within the track (range 0..trackWidth). The
+  // wrapping View applies horizontal padding equal to THUMB_SIZE/2 so the thumb's
+  // half-width never overflows the parent at min/max.
+  const MIN = 3;
+  const MAX = 50;
+  const THUMB_SIZE = 24;
+  const trackWidth = useSharedValue(0);
+  const translateX = useSharedValue(0);
+  const startX = useSharedValue(0);
+
+  // Clamp any saved value below the new minimum (e.g. legacy 1 km settings)
+  const clampedInitial = Math.min(Math.max(formData.maxTravelDistance, MIN), MAX);
+  const [sliderValue, setSliderValue] = useState(clampedInitial);
+
+  // If the persisted value was outside the allowed range, push the clamped value
+  // back into form data so the next save writes the corrected value.
+  useEffect(() => {
+    if (formData.maxTravelDistance !== clampedInitial) {
+      onUpdateFormData({ maxTravelDistance: clampedInitial });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const onTrackLayout = useCallback(
+    (e: LayoutChangeEvent) => {
+      const w = e.nativeEvent.layout.width;
+      trackWidth.value = w;
+      translateX.value = ((clampedInitial - MIN) / (MAX - MIN)) * w;
+    },
+    [clampedInitial, trackWidth, translateX]
+  );
+
+  const updateSliderValue = useCallback((val: number) => {
+    setSliderValue(val);
+  }, []);
+
+  const commitSliderValue = useCallback(
+    (val: number) => {
+      onUpdateFormData({ maxTravelDistance: val });
+    },
+    [onUpdateFormData]
+  );
+
+  const sliderGesture = Gesture.Pan()
+    .activeOffsetX([-5, 5])
+    .failOffsetY([-10, 10])
+    .onStart(() => {
+      startX.value = translateX.value;
+    })
+    .onUpdate(e => {
+      const newX = Math.min(Math.max(startX.value + e.translationX, 0), trackWidth.value);
+      translateX.value = newX;
+      const val = trackWidth.value
+        ? Math.round(MIN + (newX / trackWidth.value) * (MAX - MIN))
+        : MIN;
+      runOnJS(updateSliderValue)(val);
+    })
+    .onEnd(() => {
+      const val = trackWidth.value
+        ? Math.round(MIN + (translateX.value / trackWidth.value) * (MAX - MIN))
+        : MIN;
+      runOnJS(commitSliderValue)(val);
+    });
+
+  const thumbStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value - THUMB_SIZE / 2 }],
+  }));
+
+  const filledTrackStyle = useAnimatedStyle(() => ({
+    width: translateX.value,
+  }));
 
   // When "Same for all sports" is toggled ON, sync both sports to the tennis value
   const handleSameMatchTypeToggle = () => {
@@ -165,6 +239,34 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           formData.playingHand,
           () => onUpdateFormData({ playingHand: 'both' })
         )}
+      </View>
+
+      {/* Maximum Travel Distance */}
+      <Text size="sm" weight="semibold" color={colors.text} style={styles.sectionLabel}>
+        {t('onboarding.preferencesStep.travelDistance')}
+      </Text>
+      <View style={styles.sliderContainer}>
+        <Text size="lg" weight="bold" color={colors.text} style={styles.sliderValue}>
+          {sliderValue} km
+        </Text>
+        <View style={styles.sliderTrackPadding}>
+          <GestureDetector gesture={sliderGesture}>
+            <Animated.View style={styles.sliderTrackOuter} onLayout={onTrackLayout}>
+              <View style={[styles.sliderTrack, { backgroundColor: colors.buttonInactive }]}>
+                <Animated.View
+                  style={[
+                    styles.sliderTrackFilled,
+                    { backgroundColor: colors.buttonActive },
+                    filledTrackStyle,
+                  ]}
+                />
+              </View>
+              <Animated.View
+                style={[styles.sliderThumb, { backgroundColor: colors.buttonActive }, thumbStyle]}
+              />
+            </Animated.View>
+          </GestureDetector>
+        </View>
       </View>
 
       {/* Preferred Match Duration Section */}
@@ -483,6 +585,9 @@ const styles = StyleSheet.create({
   },
   sliderValue: {
     marginBottom: spacingPixels[2],
+  },
+  sliderTrackPadding: {
+    paddingHorizontal: 12, // THUMB_SIZE / 2 — keeps the thumb inside the parent at min/max
   },
   sliderTrackOuter: {
     height: 40,

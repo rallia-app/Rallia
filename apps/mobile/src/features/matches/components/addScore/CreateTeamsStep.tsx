@@ -79,7 +79,7 @@ export function CreateTeamsStep({ onContinue }: CreateTeamsStepProps) {
           )}
         </View>
         <Text weight="medium" style={[styles.playerName, { color: colors.text }]}>
-          {player.displayName || `${player.firstName} ${player.lastName || ''}`.trim()}
+          {`${player.firstName} ${player.lastName || ''}`.trim()}
         </Text>
         {isSelected && (
           <View style={[styles.checkmark, { backgroundColor: colors.primary }]}>

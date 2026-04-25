@@ -70,6 +70,7 @@
     "more": "+{count} more",
     "share": "Share",
     "selectAll": "Select All",
+    "deselectAll": "Deselect All",
     "user": "User",
     "discard": "Discard",
     "copied": "Copied",
@@ -1488,9 +1489,6 @@
       "lastNamePlaceholder": "Enter your last name",
       "fullName": "Full Name",
       "fullNamePlaceholder": "Enter your full name",
-      "username": "Username",
-      "usernamePlaceholder": "Choose a username",
-      "usernameHelper": "Max 10 characters, no spaces",
       "dateOfBirth": "Date of Birth",
       "gender": "Gender",
       "genderPlaceholder": "Select your gender",
@@ -1622,7 +1620,21 @@
       "inviteSubtitle": "Rallia is better with friends. Share your personal invite link!",
       "shareButton": "Share with Friends",
       "maybeLater": "Maybe later",
-      "linkCopied": "Link copied!"
+      "linkCopied": "Link copied!",
+      "contactsTitle": "Invite your friends to play",
+      "contactsSubtitle": "Pick from your contacts and we'll text them your invite. Players with friends on Rallia find matches faster.",
+      "findFromContacts": "Find friends from contacts",
+      "shareLinkInstead": "Share invite link",
+      "permissionDenied": "Contacts access denied",
+      "permissionDeniedHint": "You can still share your link, or enable Contacts in Settings.",
+      "openSettings": "Open Settings",
+      "sendInvitesCount": "Send invites ({count})",
+      "searchPlaceholder": "Search contacts",
+      "noContacts": "No contacts found",
+      "invitesSentToast": "Invites sent!",
+      "contactSingular": "contact",
+      "contactPlural": "contacts",
+      "showMoreCount": "Show {count} more"
     },
     "suggestions": {
       "title": "Your Top Matches",
@@ -3399,12 +3411,14 @@
       "sendInvites": "Send Invites",
       "invitesSent": "Invites sent!",
       "failedToLoad": "Failed to load contacts",
-      "failedToSend": "Failed to send invites"
+      "failedToSend": "Failed to send invites",
+      "contactSingular": "contact",
+      "contactPlural": "contacts"
     },
     "inviteModal": {
       "title": "Grow Your Network",
-      "subtitle": "Invite your friends and family to Rallia. Rewards are coming soon for players who help grow the community!",
-      "selectContacts": "Select contacts",
+      "subtitle": "Know someone who plays? Bring them to Rallia and grow your game together.",
+      "selectContacts": "Invite friends",
       "skip": "Maybe later"
     },
     "contest": {

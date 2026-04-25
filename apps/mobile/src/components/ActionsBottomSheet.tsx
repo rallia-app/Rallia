@@ -264,7 +264,6 @@ export const ActionsBottomSheet: React.FC = () => {
     if (shouldOpenInvitePlayers && contentMode === 'actions' && !showInviteWizard && !isEditMode) {
       clearInvitePlayersFlag();
       setTimeout(() => {
-        setInviteInitialTab('contacts');
         setShowInviteWizard(true);
         slideIn();
       }, 100);
