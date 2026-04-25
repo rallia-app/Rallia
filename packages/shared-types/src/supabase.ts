@@ -6810,6 +6810,41 @@ export type Database = {
           total_matches: number
         }[]
       }
+      get_match_suggestions_anon: {
+        Args: {
+          p_lat: number
+          p_limit?: number
+          p_lng: number
+          p_max_distance_km?: number
+          p_sport_id: string
+        }
+        Returns: {
+          facility_address: string
+          facility_affinity: number
+          facility_booking_url_tpl: string
+          facility_city: string
+          facility_data_provider_id: string
+          facility_external_id: string
+          facility_id: string
+          facility_name: string
+          facility_provider_type: string
+          facility_timezone: string
+          match_duration: Database["public"]["Enums"]["match_duration_enum"]
+          match_type: Database["public"]["Enums"]["match_type_enum"]
+          matchup_score: number
+          opponent_avatar: string
+          opponent_badge_status: Database["public"]["Enums"]["badge_status_enum"]
+          opponent_first_name: string
+          opponent_id: string
+          opponent_last_name: string
+          opponent_rating_label: string
+          opponent_rating_value: number
+          opponent_reputation_score: number
+          opponent_reputation_tier: Database["public"]["Enums"]["reputation_tier"]
+          overlapping_days_periods: Json
+          player_compatibility: number
+        }[]
+      }
       get_match_suggestions_scored: {
         Args: { p_limit?: number; p_player_id: string; p_sport_id: string }
         Returns: {

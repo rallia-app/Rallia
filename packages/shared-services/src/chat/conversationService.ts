@@ -414,13 +414,25 @@ export async function createMatchChat(
   // Singles = direct chat with match_id, Doubles = group chat with match_id
   const conversationType: ConversationType = matchFormat === 'singles' ? 'direct' : 'group';
 
-  return createConversation({
-    conversation_type: conversationType,
-    title: conversationType === 'group' ? title : undefined, // Direct chats don't need title
-    participant_ids: participantIds,
-    created_by: createdBy,
-    match_id: matchId,
-  });
+  try {
+    return await createConversation({
+      conversation_type: conversationType,
+      title: conversationType === 'group' ? title : undefined, // Direct chats don't need title
+      participant_ids: participantIds,
+      created_by: createdBy,
+      match_id: matchId,
+    });
+  } catch (err) {
+    // A concurrent join may have inserted the match chat first. Partial UNIQUE
+    // index on conversation.match_id raises 23505; resolve against the winner.
+    if ((err as { code?: string })?.code === '23505') {
+      const existing = await getMatchChat(matchId);
+      if (existing) {
+        return existing;
+      }
+    }
+    throw err;
+  }
 }
 
 /**

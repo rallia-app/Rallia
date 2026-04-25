@@ -90,3 +90,6 @@ logs
 .cursor/plans
 .claude
 .worktreerc
+
+# Database backup dumps (may contain PII)
+backups/

@@ -237,7 +237,7 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
             <p className="text-muted-foreground">{t('emptyDescription')}</p>
           </div>
           <Button asChild variant="default" size="lg" className="font-semibold">
-            <Link href="/beta">{t('emptyCta')}</Link>
+            <Link href="/#download">{t('emptyCta')}</Link>
           </Button>
         </div>
       </>

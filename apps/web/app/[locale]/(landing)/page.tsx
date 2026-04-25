@@ -11,7 +11,6 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   CalendarX,
-  Check,
   Download,
   Map,
   ShieldCheck,
@@ -196,65 +195,6 @@ export default async function Home() {
                 </div>
               );
             })}
-          </div>
-        </div>
-      </section>
-
-      {/* ====== WHY JOIN BETA — Coral gradient, checklist ====== */}
-      <section className="w-full bg-gradient-to-br from-[#ed6a6d] to-[#8e4041]">
-        <div className="flex flex-col items-center justify-center gap-12 min-h-[100svh] max-w-6xl mx-auto px-8 py-24">
-          <div className="flex flex-col items-center gap-4">
-            <h2 className="text-4xl md:text-5xl font-bold text-center text-white">
-              {t('landing.whyJoinBeta.sectionTitle')}
-            </h2>
-            <p className="text-lg text-white/60 text-center max-w-2xl m-0">
-              {t('landing.whyJoinBeta.description')}
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-6 w-full items-center">
-            {/* First row: 2 cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-              {(['free', 'influence'] as const).map(key => (
-                <div
-                  key={key}
-                  className="flex items-start gap-4 bg-white/10 backdrop-blur-sm rounded-xl p-6 hover:bg-white/15 transition-colors min-h-0"
-                >
-                  <div className="flex-shrink-0 size-8 rounded-full bg-white/20 flex items-center justify-center mt-0.5">
-                    <Check className="size-5 text-white" />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <h3 className="text-lg font-bold text-white">
-                      {t(`landing.whyJoinBeta.benefits.${key}.title`)}
-                    </h3>
-                    <p className="text-sm text-white/60">
-                      {t(`landing.whyJoinBeta.benefits.${key}.description`)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            {/* Second row: 3 cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
-              {(['community', 'exclusive', 'support'] as const).map(key => (
-                <div
-                  key={key}
-                  className="flex items-start gap-4 bg-white/10 backdrop-blur-sm rounded-xl p-6 hover:bg-white/15 transition-colors min-h-0"
-                >
-                  <div className="flex-shrink-0 size-8 rounded-full bg-white/20 flex items-center justify-center mt-0.5">
-                    <Check className="size-5 text-white" />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <h3 className="text-lg font-bold text-white">
-                      {t(`landing.whyJoinBeta.benefits.${key}.title`)}
-                    </h3>
-                    <p className="text-sm text-white/60">
-                      {t(`landing.whyJoinBeta.benefits.${key}.description`)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </section>

@@ -4,12 +4,11 @@
  * This context manages:
  * 1. Splash animation completion state
  * 2. First-time pre-onboarding state (determines navigation flow)
- * 3. Requesting native permissions (Notifications) after pre-onboarding
  *
- * Note: Location permission is now handled within the pre-onboarding wizard (step 3),
- * so it's NOT requested here after the flow completes.
+ * Native permission requests (Location, Notifications) are now handled
+ * inside the pre-onboarding wizard itself, not after the flow completes.
  *
- * Flow: Splash -> PreOnboarding Screen (first-time only) -> Main App -> Permission requests
+ * Flow: Splash -> PreOnboarding Screen (first-time only) -> Main App
  */
 
 import React, {
@@ -18,13 +17,10 @@ import React, {
   useState,
   useCallback,
   useEffect,
-  useRef,
   ReactNode,
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Logger } from '@rallia/shared-services';
-import { ANIMATION_DELAYS } from '../constants';
-import { usePermissions } from '../hooks';
 import { setSportSelectionComplete as syncSportSelectionToStore } from '../navigation/deepLinkStore';
 
 // =============================================================================
@@ -75,26 +71,18 @@ interface OverlayProviderProps {
 }
 
 export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) => {
-  // Permission handling
-  // Note: Location permission is handled in the pre-onboarding wizard (step 3),
-  // so we only request notifications here
-  const {
-    shouldShowNotificationOverlay,
-    requestNotificationPermission,
-    loading: permissionsLoading,
-  } = usePermissions();
-
   // ==========================================================================
   // STATE
   // ==========================================================================
   const [, setIsOnHomeScreen] = useState(false);
   const [isSplashComplete, setIsSplashComplete] = useState(false);
   const [isSportSelectionComplete, setIsSportSelectionComplete] = useState(false);
-  const [hasCheckedSportSelection, setHasCheckedSportSelection] = useState(false);
-  const [permissionsHandled, setPermissionsHandled] = useState(false);
 
-  // Track if we've already requested permissions this session
-  const hasRequestedPermissions = useRef(false);
+  // Permissions are now requested inside the pre-onboarding wizard, so
+  // by the time sport selection is complete, permission dialogs are done.
+  // Returning users (sport selection already complete on mount) also fall
+  // into this branch, so the WelcomeTourModal can render right away.
+  const permissionsHandled = isSportSelectionComplete;
 
   // ==========================================================================
   // CHECK IF SPORT SELECTION HAS BEEN COMPLETED
@@ -115,7 +103,6 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
         Logger.error('Failed to check sport selection status', error as Error);
         // On error, assume sport selection is needed (safer default)
       }
-      setHasCheckedSportSelection(true);
     };
 
     checkSportSelectionStatus();
@@ -126,60 +113,6 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
   useEffect(() => {
     syncSportSelectionToStore(isSportSelectionComplete);
   }, [isSportSelectionComplete]);
-
-  // ==========================================================================
-  // REQUEST NATIVE PERMISSIONS AFTER SPORT SELECTION COMPLETES
-  // ==========================================================================
-  useEffect(() => {
-    // Only request permissions when:
-    // 1. Splash animation has completed
-    // 2. Sport selection is complete (or was already done)
-    // 3. Permissions are loaded
-    // 4. We haven't already requested this session
-    const shouldRequestPermissions =
-      isSplashComplete &&
-      hasCheckedSportSelection &&
-      isSportSelectionComplete &&
-      !permissionsLoading &&
-      !hasRequestedPermissions.current;
-
-    if (shouldRequestPermissions) {
-      hasRequestedPermissions.current = true;
-
-      const requestPermissions = async () => {
-        // Small delay to let the UI settle
-        await new Promise(resolve => setTimeout(resolve, ANIMATION_DELAYS.SHORT_DELAY));
-
-        // Request notification permission FIRST (most important for engagement)
-        if (shouldShowNotificationOverlay) {
-          Logger.logNavigation('request_native_permission', {
-            permission: 'notifications',
-            trigger: 'post_preonboarding',
-          });
-          const notificationGranted = await requestNotificationPermission();
-          Logger.logUserAction('permission_result', {
-            permission: 'notifications',
-            granted: notificationGranted,
-          });
-
-          // Small delay between permission dialogs
-          await new Promise(resolve => setTimeout(resolve, ANIMATION_DELAYS.OVERLAY_STAGGER));
-        }
-
-        // Mark permissions as handled
-        setPermissionsHandled(true);
-      };
-
-      requestPermissions();
-    }
-  }, [
-    isSplashComplete,
-    hasCheckedSportSelection,
-    isSportSelectionComplete,
-    permissionsLoading,
-    shouldShowNotificationOverlay,
-    requestNotificationPermission,
-  ]);
 
   // ==========================================================================
   // STATE HANDLERS
@@ -209,7 +142,8 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
       Logger.error('Failed to save sport selection status', error as Error);
     }
 
-    // Mark sport selection as complete (navigation will switch to Main, and permission requests will trigger)
+    // Mark sport selection as complete (navigation will switch to Main).
+    // Permissions are already handled inside the pre-onboarding wizard.
     setIsSportSelectionComplete(true);
   }, []);
 

@@ -30,8 +30,8 @@ import { useMatchSuggestions } from '@rallia/shared-hooks';
 import { createMatchFromSuggestion } from '@rallia/shared-services';
 import { useQueryClient } from '@tanstack/react-query';
 import type { InvitePayload } from './SuggestionCard';
-import { useThemeStyles, useTranslation } from '../hooks';
-import { useSport } from '../context';
+import { useThemeStyles, useTranslation, useEffectiveLocation } from '../hooks';
+import { useActionsSheet, useSport } from '../context';
 import { useAuth, usePlayer } from '../hooks';
 import { usePlayerSports } from '@rallia/shared-hooks';
 
@@ -41,6 +41,8 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
   const { session } = useAuth();
   const { player } = usePlayer();
   const { selectedSport } = useSport();
+  const { openSheet: openAuthSheet } = useActionsSheet();
+  const { location: effectiveLocation } = useEffectiveLocation();
   const { playerSports } = usePlayerSports(session?.user?.id);
   const callerSportPrefs = playerSports.find(ps => ps.sport_id === selectedSport?.id);
   const callerDuration = callerSportPrefs?.preferred_match_duration ?? '60';
@@ -48,10 +50,15 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
 
   const queryClient = useQueryClient();
 
+  const resolvedPlayerId = player?.id ?? session?.user?.id;
+  const isAnon = !resolvedPlayerId;
+
   const { suggestions, isLoading, isRefetching, refetch } = useMatchSuggestions({
-    playerId: player?.id ?? session?.user?.id,
+    playerId: resolvedPlayerId,
     sportId: selectedSport?.id,
     sportName: selectedSport?.name,
+    latitude: isAnon ? effectiveLocation?.latitude : undefined,
+    longitude: isAnon ? effectiveLocation?.longitude : undefined,
     limit: 10,
     enabled: true,
   });
@@ -155,6 +162,14 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
 
   const handleSendInvite = useCallback(
     async (payload: InvitePayload) => {
+      // Signed-out users: dismiss this sheet and route to auth
+      if (!session?.user) {
+        lightHaptic();
+        SheetManager.hide('match-suggestions');
+        openAuthSheet();
+        return;
+      }
+
       const id = payload.suggestion.opponentId;
       if (inviteStatesRef.current[id] === 'sending' || inviteStatesRef.current[id] === 'sent')
         return;
@@ -180,7 +195,15 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
         setInviteStates(prev => ({ ...prev, [id]: 'idle' }));
       }
     },
-    [player?.id, session?.user?.id, selectedSport?.id, callerDuration, callerMatchType, queryClient]
+    [
+      player?.id,
+      session?.user,
+      selectedSport?.id,
+      callerDuration,
+      callerMatchType,
+      queryClient,
+      openAuthSheet,
+    ]
   );
 
   const cardLabels = useMemo(

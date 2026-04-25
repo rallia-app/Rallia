@@ -395,11 +395,6 @@ const SettingsScreen: React.FC = () => {
                 onPress={() => presentPaywall()}
               />
             )}
-            <SettingsItem
-              icon="card-outline"
-              title={t('subscription.manage')}
-              onPress={() => navigation.navigate('SubscriptionManagement')}
-            />
           </View>
         )}
 

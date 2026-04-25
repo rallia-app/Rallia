@@ -6,11 +6,19 @@
  */
 
 import React, { useCallback, useState } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, primary, neutral, status } from '@rallia/design-system';
+import {
+  spacingPixels,
+  radiusPixels,
+  primary,
+  neutral,
+  status,
+  shadowsNative,
+} from '@rallia/design-system';
 import { mediumHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation, usePermissions } from '../../hooks';
 
@@ -47,29 +55,21 @@ export function LocationPermissionStep({
     }
   }, [isRequesting, requestLocationPermission, onContinue]);
 
-  if (!isActive) return null;
-
   return (
     <View style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.inner}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
+      <View style={styles.inner}>
         {/* Header Section */}
         <Animated.View entering={FadeInDown.delay(50).springify()} style={styles.headerSection}>
-          <View
-            style={[
-              styles.iconContainer,
-              { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)' },
-            ]}
+          <LinearGradient
+            colors={isDark ? [primary[800], primary[900]] : [primary[50], primary[100]]}
+            style={styles.iconContainer}
           >
             <Ionicons
               name="navigate-outline"
               size={36}
-              color={isDark ? primary[400] : primary[600]}
+              color={isDark ? primary[200] : primary[600]}
             />
-          </View>
+          </LinearGradient>
 
           <Text size="xl" weight="bold" color={colors.foreground} style={styles.title}>
             {t('preOnboarding.locationPermission.title')}
@@ -86,31 +86,20 @@ export function LocationPermissionStep({
           style={styles.comparisonSection}
         >
           {/* Without GPS */}
-          <View
-            style={[
-              styles.comparisonCard,
-              styles.comparisonCardDisabled,
-              {
-                backgroundColor: isDark ? neutral[800] : neutral[100],
-                borderColor: isDark ? neutral[700] : neutral[200],
-              },
-            ]}
-          >
+          <View style={styles.comparisonItem}>
             <View style={styles.comparisonHeader}>
               <Ionicons
                 name="location-outline"
-                size={18}
+                size={16}
                 color={isDark ? neutral[500] : neutral[400]}
               />
               <Text size="xs" weight="medium" color={isDark ? neutral[500] : neutral[400]}>
                 {t('preOnboarding.locationPermission.comparison.without')}
               </Text>
             </View>
-            <View style={styles.comparisonContent}>
-              <Text size="lg" weight="semibold" color={isDark ? neutral[400] : neutral[500]}>
-                {t('preOnboarding.locationPermission.comparison.withoutExample')}
-              </Text>
-            </View>
+            <Text size="lg" weight="semibold" color={isDark ? neutral[400] : neutral[500]}>
+              {t('preOnboarding.locationPermission.comparison.withoutExample')}
+            </Text>
           </View>
 
           {/* Arrow */}
@@ -119,26 +108,16 @@ export function LocationPermissionStep({
           </View>
 
           {/* With GPS */}
-          <View
-            style={[
-              styles.comparisonCard,
-              {
-                backgroundColor: isDark ? 'rgba(34, 197, 94, 0.1)' : 'rgba(34, 197, 94, 0.08)',
-                borderColor: isDark ? status.success.DEFAULT : status.success.light,
-              },
-            ]}
-          >
+          <View style={styles.comparisonItem}>
             <View style={styles.comparisonHeader}>
-              <Ionicons name="navigate" size={18} color={status.success.DEFAULT} />
+              <Ionicons name="navigate" size={16} color={status.success.DEFAULT} />
               <Text size="xs" weight="medium" color={status.success.DEFAULT}>
                 {t('preOnboarding.locationPermission.comparison.with')}
               </Text>
             </View>
-            <View style={styles.comparisonContent}>
-              <Text size="lg" weight="bold" color={status.success.DEFAULT}>
-                {t('preOnboarding.locationPermission.comparison.withExample')}
-              </Text>
-            </View>
+            <Text size="lg" weight="bold" color={status.success.DEFAULT}>
+              {t('preOnboarding.locationPermission.comparison.withExample')}
+            </Text>
           </View>
         </Animated.View>
 
@@ -147,18 +126,20 @@ export function LocationPermissionStep({
           {[
             {
               icon: 'speedometer' as const,
-              title: t('preOnboarding.locationPermission.benefits.item1'),
-              highlight: true,
+              title: t('preOnboarding.locationPermission.benefits.preciseDistance.title'),
+              description: t(
+                'preOnboarding.locationPermission.benefits.preciseDistance.description'
+              ),
             },
             {
               icon: 'golf' as const,
-              title: t('preOnboarding.locationPermission.benefits.item2'),
-              highlight: false,
+              title: t('preOnboarding.locationPermission.benefits.closestCourts.title'),
+              description: t('preOnboarding.locationPermission.benefits.closestCourts.description'),
             },
             {
               icon: 'notifications' as const,
-              title: t('preOnboarding.locationPermission.benefits.item3'),
-              highlight: false,
+              title: t('preOnboarding.locationPermission.benefits.nearbyAlerts.title'),
+              description: t('preOnboarding.locationPermission.benefits.nearbyAlerts.description'),
             },
           ].map((benefit, index) => (
             <Animated.View
@@ -170,76 +151,51 @@ export function LocationPermissionStep({
                 style={[
                   styles.benefitIconContainer,
                   {
-                    backgroundColor: benefit.highlight
-                      ? isDark
-                        ? 'rgba(34, 197, 94, 0.15)'
-                        : 'rgba(34, 197, 94, 0.1)'
-                      : isDark
-                        ? neutral[800]
-                        : neutral[100],
+                    backgroundColor: isDark ? 'rgba(115, 115, 115, 0.18)' : neutral[100],
                   },
                 ]}
               >
                 <Ionicons
                   name={benefit.icon}
                   size={18}
-                  color={
-                    benefit.highlight
-                      ? status.success.DEFAULT
-                      : isDark
-                        ? neutral[400]
-                        : neutral[500]
-                  }
+                  color={isDark ? neutral[400] : neutral[500]}
                 />
               </View>
-              <Text
-                size="sm"
-                color={isDark ? neutral[300] : neutral[600]}
-                style={styles.benefitText}
-              >
-                {benefit.title}
-              </Text>
+              <View style={styles.benefitContent}>
+                <Text size="base" weight="semibold" color={colors.foreground}>
+                  {benefit.title}
+                </Text>
+                <Text size="sm" color={colors.textMuted} style={styles.benefitDescription}>
+                  {benefit.description}
+                </Text>
+              </View>
             </Animated.View>
           ))}
         </View>
+      </View>
 
-        {/* Privacy Note */}
-        <Animated.View
-          entering={FadeInUp.delay(500).springify()}
-          style={[
-            styles.privacyContainer,
-            {
-              backgroundColor: isDark ? neutral[800] : neutral[50],
-              borderColor: isDark ? neutral[700] : neutral[100],
-            },
-          ]}
+      {/* Bottom Section (pinned) */}
+      <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.bottomSection}>
+        <Button
+          variant="primary"
+          onPress={handleEnableLocation}
+          disabled={isRequesting}
+          style={styles.enableButton}
         >
+          {isRequesting ? t('common.loading') : t('preOnboarding.locationPermission.enable')}
+        </Button>
+
+        <View style={styles.privacyContainer}>
           <Ionicons
             name="shield-checkmark"
-            size={16}
+            size={14}
             color={isDark ? primary[400] : primary[600]}
           />
           <Text size="xs" color={colors.textMuted} style={styles.privacyText}>
             {t('preOnboarding.locationPermission.privacyNote')}
           </Text>
-        </Animated.View>
-
-        {/* Bottom Section */}
-        <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.bottomSection}>
-          <Button
-            variant="primary"
-            onPress={handleEnableLocation}
-            disabled={isRequesting}
-            style={styles.enableButton}
-          >
-            {isRequesting ? t('common.loading') : t('preOnboarding.locationPermission.enable')}
-          </Button>
-
-          <Text size="xs" color={colors.textMuted} style={styles.settingsHint}>
-            {t('preOnboarding.locationPermission.settingsHint')}
-          </Text>
-        </Animated.View>
-      </ScrollView>
+        </View>
+      </Animated.View>
     </View>
   );
 }
@@ -249,10 +205,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   inner: {
-    flexGrow: 1,
+    flex: 1,
     paddingHorizontal: spacingPixels[5],
-    justifyContent: 'space-between',
-    paddingBottom: spacingPixels[4],
   },
 
   // Header section
@@ -267,6 +221,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacingPixels[3],
+    ...shadowsNative.md,
+    shadowColor: primary[500],
+    shadowOpacity: 0.25,
   },
   title: {
     textAlign: 'center',
@@ -283,44 +240,30 @@ const styles = StyleSheet.create({
   comparisonSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacingPixels[4],
+    marginTop: spacingPixels[8],
     gap: spacingPixels[2],
   },
-  comparisonCard: {
+  comparisonItem: {
     flex: 1,
-    padding: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1.5,
-  },
-  comparisonCardDisabled: {
-    opacity: 0.85,
+    alignItems: 'center',
+    gap: spacingPixels[1],
   },
   comparisonHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[1],
-    marginBottom: spacingPixels[1],
-  },
-  comparisonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  comparisonIcon: {
-    marginLeft: spacingPixels[1],
   },
   arrowContainer: {
     width: 28,
     height: 28,
-    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   // Benefits section
   benefitsSection: {
-    marginTop: spacingPixels[4],
-    gap: spacingPixels[2],
+    marginTop: spacingPixels[10],
+    gap: spacingPixels[8],
   },
   benefitRow: {
     flexDirection: 'row',
@@ -334,37 +277,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: spacingPixels[3],
   },
-  benefitText: {
+  benefitContent: {
     flex: 1,
-    lineHeight: 20,
+  },
+  benefitDescription: {
+    marginTop: 2,
+    lineHeight: 16,
   },
 
   // Privacy note
   privacyContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-    marginTop: spacingPixels[4],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacingPixels[5],
+    paddingHorizontal: spacingPixels[8],
   },
   privacyText: {
     marginLeft: spacingPixels[2],
-    flex: 1,
+    textAlign: 'center',
     lineHeight: 18,
+    flexShrink: 1,
   },
 
-  // Bottom section
+  // Bottom section (pinned outside scroll)
   bottomSection: {
-    paddingTop: spacingPixels[4],
+    paddingHorizontal: spacingPixels[5],
+    paddingTop: spacingPixels[3],
+    paddingBottom: spacingPixels[4],
     alignItems: 'center',
   },
   enableButton: {
     width: '100%',
-  },
-  settingsHint: {
-    marginTop: spacingPixels[4],
-    textAlign: 'center',
   },
 });
 

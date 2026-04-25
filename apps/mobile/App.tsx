@@ -78,7 +78,6 @@ import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-
 import AppNavigator from './src/navigation/AppNavigator';
 import { navigationRef } from './src/navigation';
 import { linking } from './src/navigation/linking';
-import BetaNoticeModal from './src/components/BetaNoticeModal';
 import {
   ThemeProvider,
   useTheme,
@@ -707,8 +706,6 @@ function AppContent() {
         tourId={lastCompletedTourId || undefined}
       />
       */}
-      {/* Beta notice - shown once on first launch during beta period */}
-      <BetaNoticeModal isSplashComplete={isSplashComplete} />
     </>
   );
 }
