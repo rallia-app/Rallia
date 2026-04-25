@@ -81,7 +81,6 @@ import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
 import ProfileCompletionBanner from '../features/profile/components/ProfileCompletionBanner';
 import { SuggestionsFeedSection } from '../components/SuggestionsFeedSection';
 import BillingIssueBanner from '../components/BillingIssueBanner';
-import LaunchCountdownBanner from '../components/LaunchCountdownBanner';
 import ReferenceRequestsBanner from '../components/ReferenceRequestsBanner';
 import { useSubscription } from '../context';
 
@@ -796,48 +795,65 @@ const Home = () => {
   // Render empty state with helpful message about travel distance (signed in) or simple message (signed out)
   const renderEmptyComponent = useCallback(
     () => (
-      <View style={styles.emptyContainer}>
-        <View style={[styles.emptyIconContainer, { backgroundColor: colors.card }]}>
-          <Ionicons name="location-outline" size={48} color={colors.textMuted} />
+      <>
+        <View style={styles.emptyContainer}>
+          <View style={[styles.emptyIconContainer, { backgroundColor: colors.card }]}>
+            <Ionicons name="location-outline" size={48} color={colors.textMuted} />
+          </View>
+          <Text size="lg" weight="semibold" color={colors.text} style={styles.emptyTitle}>
+            {t('home.nearbyEmpty.title')}
+          </Text>
+          <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
+            {session
+              ? t('home.nearbyEmpty.description', { distance: maxTravelDistanceKm })
+              : t('home.nearbyEmpty.guestDescription')}
+          </Text>
+          {session && (
+            <>
+              <Text size="sm" color={colors.textMuted} style={styles.emptySuggestion}>
+                {t('home.nearbyEmpty.suggestion')}
+              </Text>
+              <Button
+                variant="outline"
+                onPress={() => appNavigation.navigate('Settings')}
+                style={styles.updateSettingsButton}
+                isDark={isDark}
+                themeColors={{
+                  primary: colors.primary,
+                  primaryForeground: colors.primaryForeground,
+                  buttonActive: colors.buttonActive,
+                  buttonInactive: colors.buttonInactive,
+                  buttonTextActive: colors.buttonTextActive,
+                  buttonTextInactive: colors.buttonTextInactive,
+                  text: colors.text,
+                  textMuted: colors.textMuted,
+                  border: colors.border,
+                  background: colors.background,
+                }}
+              >
+                {t('home.nearbyEmpty.updateSettings')}
+              </Button>
+            </>
+          )}
         </View>
-        <Text size="lg" weight="semibold" color={colors.text} style={styles.emptyTitle}>
-          {t('home.nearbyEmpty.title')}
-        </Text>
-        <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-          {session
-            ? t('home.nearbyEmpty.description', { distance: maxTravelDistanceKm })
-            : t('home.nearbyEmpty.guestDescription')}
-        </Text>
-        {session && (
-          <>
-            <Text size="sm" color={colors.textMuted} style={styles.emptySuggestion}>
-              {t('home.nearbyEmpty.suggestion')}
-            </Text>
-            <Button
-              variant="outline"
-              onPress={() => appNavigation.navigate('Settings')}
-              style={styles.updateSettingsButton}
-              isDark={isDark}
-              themeColors={{
-                primary: colors.primary,
-                primaryForeground: colors.primaryForeground,
-                buttonActive: colors.buttonActive,
-                buttonInactive: colors.buttonInactive,
-                buttonTextActive: colors.buttonTextActive,
-                buttonTextInactive: colors.buttonTextInactive,
-                text: colors.text,
-                textMuted: colors.textMuted,
-                border: colors.border,
-                background: colors.background,
-              }}
-            >
-              {t('home.nearbyEmpty.updateSettings')}
-            </Button>
-          </>
-        )}
-      </View>
+        <SuggestionsFeedSection
+          playerId={player?.id}
+          sportId={selectedSport?.id}
+          sportName={selectedSport?.name}
+        />
+      </>
     ),
-    [colors, t, maxTravelDistanceKm, session, appNavigation, isDark]
+    [
+      colors,
+      t,
+      maxTravelDistanceKm,
+      session,
+      appNavigation,
+      isDark,
+      player?.id,
+      selectedSport?.id,
+      selectedSport?.name,
+    ]
   );
 
   // Render section header with "Soon & Nearby" title, location selector, and "View All" button
@@ -1030,9 +1046,6 @@ const Home = () => {
   // Render list header (welcome section for logged-in users)
   const renderListHeader = useCallback(() => {
     const headerComponents = [];
-
-    // Launch countdown — shown above everything until LAUNCH_MS
-    headerComponents.push(<LaunchCountdownBanner key="launch-countdown" isDark={isDark} />);
 
     if (!session) {
       // Not signed in: show sign-in prompt

@@ -487,11 +487,9 @@ export const LocationStep: React.FC<LocationStepProps> = ({
         )}
       </View>
 
-      {/* Privacy Info Box */}
-      <View
-        style={[styles.infoBox, { backgroundColor: isDark ? darkTheme.card : lightTheme.muted }]}
-      >
-        <Ionicons name="shield-checkmark" size={24} color={colors.buttonActive} />
+      {/* Privacy Info */}
+      <View style={styles.infoBox}>
+        <Ionicons name="shield-checkmark" size={20} color={colors.buttonActive} />
         <View style={styles.infoTextContainer}>
           <Text size="sm" weight="semibold" color={colors.text} style={styles.infoTitle}>
             {t('onboarding.locationStep.privacyTitle')}
@@ -633,8 +631,6 @@ const styles = StyleSheet.create({
   infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    padding: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
     marginTop: spacingPixels[4],
     gap: spacingPixels[3],
   },

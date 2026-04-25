@@ -1649,7 +1649,9 @@
       "feedPromptTitle": "Want more options?",
       "feedPromptSubtitle": "We can find players that match your level and schedule nearby.",
       "feedPromptButton": "Generate Suggestions",
-      "feedSectionTitle": "Your Top Matches",
+      "feedSectionTitle": "Matchup suggestions",
+      "feedSectionSubtitle": "Based on your sport and area — not live matches you can join",
+      "feedRefreshButton": "Show different matchups",
       "feedEmptyTitle": "No suggestions available",
       "feedEmptySubtitle": "Check back later as more players join.",
       "selectDate": "Select a date",
@@ -3794,7 +3796,7 @@
         },
         "exclusive": {
           "title": "Exclusive Features",
-          "description": "Get early access to beta features and new releases before anyone else."
+          "description": "Get early access to new features and releases before anyone else."
         },
         "community": {
           "title": "Founding Community",
@@ -3812,14 +3814,14 @@
       "button": "Join the Waitlist"
     },
     "socialProof": {
-      "sectionTitle": "What Beta Testers Are Saying",
-      "sectionBadge": "Early Feedback",
+      "sectionTitle": "What Players Are Saying",
+      "sectionBadge": "Player Feedback",
       "testimonials": {
         "first": {
           "name": "Sarah M.",
           "location": "Toronto, ON",
           "rating": "5",
-          "text": "I tested the beta and the skill matching is incredible. Can't wait for the full launch - this will completely change how I find tennis partners!"
+          "text": "The skill matching is incredible. This completely changed how I find tennis partners!"
         },
         "second": {
           "name": "Michael R.",
@@ -3831,16 +3833,16 @@
           "name": "Jennifer L.",
           "location": "Montreal, QC",
           "rating": "5",
-          "text": "The scheduling feature alone is worth it. As a beta tester, I'm excited to see where this goes. Sign up for the waitlist!"
+          "text": "The scheduling feature alone is worth it. I'm excited to see where this goes. Download the app today!"
         }
       },
       "stats": {
         "players": "2,500+",
         "playersLabel": "Waitlist Signups",
         "matches": "500+",
-        "matchesLabel": "Beta Test Games",
+        "matchesLabel": "Games Played",
         "rating": "4.9/5",
-        "ratingLabel": "Beta Tester Rating"
+        "ratingLabel": "Player Rating"
       }
     },
     "waitlist": {
@@ -3879,7 +3881,7 @@
         },
         "availability": {
           "question": "When will Rallia be available?",
-          "answer": "We're currently in beta testing and plan to launch publicly in early 2026. Join our waitlist to get early access and be notified when we launch in your area."
+          "answer": "Rallia is now live. Download the app on iOS or Android to start playing today."
         },
         "platforms": {
           "question": "What platforms is Rallia available on?",
@@ -3889,7 +3891,7 @@
     },
     "landing": {
       "hero": {
-        "badge": "Beta",
+        "badge": "New",
         "headline": "Your next game starts here.",
         "subheadline": "Download the app, connect with players at your level, and start playing today.",
         "downloadButton": "Download the App",
@@ -3935,33 +3937,6 @@
           "description": "Show up, play, and rate your experience. Build your network of reliable players."
         }
       },
-      "whyJoinBeta": {
-        "sectionTitle": "Why Join the Beta?",
-        "sectionBadge": "Beta Tester Perks",
-        "description": "Be part of the founding community and help shape the future of racquet sports.",
-        "benefits": {
-          "free": {
-            "title": "Completely Free",
-            "description": "The beta is 100% free. No credit card, no hidden fees. Just download and play."
-          },
-          "influence": {
-            "title": "Shape the Product",
-            "description": "Your feedback directly influences features. Help us build exactly what players need."
-          },
-          "community": {
-            "title": "Founding Community",
-            "description": "Connect with other early adopters and build your network before the crowd arrives."
-          },
-          "exclusive": {
-            "title": "Exclusive Features",
-            "description": "Get early access to new features and releases before anyone else."
-          },
-          "support": {
-            "title": "VIP Support",
-            "description": "Direct line to our team. Get priority support and help shape our service standards."
-          }
-        }
-      },
       "downloadCta": {
         "headline": "Ready to play?",
         "description": "Download Rallia and find your next game today. Available on iOS and Android."
@@ -3977,7 +3952,7 @@
         "questions": {
           "cost": {
             "question": "Is Rallia free to use?",
-            "answer": "Rallia is completely free during the beta. We're focused on building the best experience for players right now. Future pricing will be announced before launch."
+            "answer": "Rallia is free to download. We're focused on building the best experience for players right now. Future pricing will be announced ahead of any change."
           },
           "sports": {
             "question": "What sports are supported?",
@@ -4280,11 +4255,10 @@
     "title": "Rallia",
     "description": "The platform that will connect tennis and pickleball players for better games, every time.",
     "quickLinks": "Quick Links",
-    "joinBeta": "Download the App",
+    "download": "Download the App",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
-    "rights": "All rights reserved.",
-    "comingSoon": "Now in Beta"
+    "rights": "All rights reserved."
   },
   "signIn": {
     "title": "Organization Sign In",
@@ -7064,6 +7038,7 @@
       "placeholderUS": "e.g., 90210",
       "verifying": "Finding your area...",
       "verified": "Perfect! We found your area",
+      "statusHint": "We currently only support Canadian postal codes",
       "continue": "Find Matches Near Me",
       "benefits": {
         "title": "With your postal code, you'll:",
@@ -7107,14 +7082,46 @@
       },
       "benefits": {
         "title": "With precise location, you'll:",
-        "item1": "See exact distances to matches",
-        "item2": "Find the closest available courts",
-        "item3": "Get real-time match alerts when you're nearby",
-        "item4": "Discover players in your neighborhood"
+        "preciseDistance": {
+          "title": "Exact distances",
+          "description": "Know how long it takes to get there"
+        },
+        "closestCourts": {
+          "title": "Closest courts first",
+          "description": "Sorted by real travel distance"
+        },
+        "nearbyAlerts": {
+          "title": "Real-time alerts",
+          "description": "Hear about matches forming nearby"
+        }
       },
       "enable": "Enable Precise Location",
-      "privacyNote": "Your location stays on your device and is only used to calculate distances. We never track or store your movements.",
-      "settingsHint": "You can change this anytime in your device Settings."
+      "privacyNote": "Your location stays on your device — change this anytime in Settings."
+    },
+    "notificationPermission": {
+      "title": "Stay in the game",
+      "subtitle": "Get notified the moment a match needs you so you never miss out.",
+      "preview": {
+        "timestamp": "now",
+        "title": "A spot just opened up",
+        "body": "A spot just opened in a match at Tennis Club Westmount on Saturday at 7:00pm. Join now!"
+      },
+      "benefits": {
+        "matchInvites": {
+          "title": "Match invites",
+          "description": "Be the first to know when a spot opens"
+        },
+        "matchAlerts": {
+          "title": "Real-time alerts",
+          "description": "Hear about matches forming nearby"
+        },
+        "confirmations": {
+          "title": "Score confirmations",
+          "description": "Resolve scores and disputes instantly"
+        }
+      },
+      "enable": "Enable Notifications",
+      "privacyNote": "You can change this anytime in Settings."
     },
     "discovery": {
       "title": "How did you hear about us?",
@@ -8439,29 +8446,6 @@
     "viewMatch": "View Linked Match",
     "cancelBooking": "Cancel Booking",
     "viewMyBookings": "View My Bookings"
-  },
-  "beta": {
-    "badge": "BETA",
-    "noticeTitle": "Welcome to the Rallia Beta!",
-    "noticeMessage": "You're using an early version of Rallia. Some players and games you see may be simulated to help you explore the app. Facilities and courts, however, are real and accurate. Court availabilities from public facilities across Montreal will progressively become available over the next few weeks — some are already live in the app!",
-    "noticeDismiss": "Got it!"
-  },
-  "launch": {
-    "bannerPrefix": "Public launch in",
-    "bannerSuffix": "— download the app",
-    "bannerCta": "Download the app",
-    "dismissLabel": "Dismiss",
-    "days": "d",
-    "hours": "h",
-    "minutes": "m",
-    "seconds": "s",
-    "mobileTitle": "Rallia launches Saturday",
-    "mobileSubtitle": "Going live in",
-    "daysLabel": "Days",
-    "hoursLabel": "Hours",
-    "minutesLabel": "Minutes",
-    "secondsLabel": "Seconds",
-    "earlyAccessPitch": "Get early access — be a beta user today"
   },
   "playerInterest": {
     "title": "Play for Free - Rallia",

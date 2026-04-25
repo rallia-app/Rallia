@@ -37,11 +37,9 @@ interface EmptyStateProps {
   playerId: string | undefined;
   sportId: string | undefined;
   sportName: string | undefined;
-  isAuthenticated: boolean;
 }
 
-function EmptyState({ playerId, sportId, sportName, isAuthenticated }: EmptyStateProps) {
-  if (!isAuthenticated) return null;
+function EmptyState({ playerId, sportId, sportName }: EmptyStateProps) {
   return (
     <View style={styles.emptyWrapper}>
       <SuggestionsFeedSection playerId={playerId} sportId={sportId} sportName={sportName} />
@@ -299,10 +297,9 @@ export default function PublicMatches() {
         playerId={player?.id}
         sportId={selectedSport?.id}
         sportName={selectedSport?.name}
-        isAuthenticated={!!session?.user}
       />
     );
-  }, [isLoading, isSearching, player?.id, selectedSport?.id, selectedSport?.name, session?.user]);
+  }, [isLoading, isSearching, player?.id, selectedSport?.id, selectedSport?.name]);
 
   // Render footer with loading indicator or suggestions prompt
   const renderFooter = useCallback(() => {
@@ -313,7 +310,7 @@ export default function PublicMatches() {
         </View>
       );
     }
-    if (!hasNextPage && sortedMatches.length > 0 && !isLoading && session?.user) {
+    if (!hasNextPage && sortedMatches.length > 0 && !isLoading) {
       return (
         <SuggestionsFeedSection
           playerId={player?.id}
@@ -329,7 +326,6 @@ export default function PublicMatches() {
     isLoading,
     sortedMatches.length,
     colors.primary,
-    session?.user,
     player?.id,
     selectedSport?.id,
     selectedSport?.name,

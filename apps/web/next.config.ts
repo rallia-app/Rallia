@@ -32,16 +32,6 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
-        source: '/:locale/beta',
-        destination: '/:locale',
-        permanent: false,
-      },
-      {
-        source: '/beta',
-        destination: '/',
-        permanent: false,
-      },
-      {
         source: '/:locale/waitlist',
         destination: '/:locale',
         permanent: false,

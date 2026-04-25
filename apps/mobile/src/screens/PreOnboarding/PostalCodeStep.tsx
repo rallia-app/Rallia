@@ -6,26 +6,51 @@
  * Persuasive UI design to encourage users to provide their location.
  */
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, StyleSheet, TextInput, Keyboard, Platform, ScrollView } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, StyleSheet, TextInput, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button, Spinner } from '@rallia/shared-components';
 import { SportIcon } from '../../components/SportIcon';
-import { spacingPixels, radiusPixels, primary, neutral, status } from '@rallia/design-system';
-import { usePostalCodeGeocode, useCoverageCheck } from '@rallia/shared-hooks';
+import {
+  spacingPixels,
+  radiusPixels,
+  primary,
+  neutral,
+  status,
+  shadowsNative,
+} from '@rallia/design-system';
+import {
+  usePostalCodeGeocode,
+  useCoverageCheck,
+  type PostalCodeLocation,
+} from '@rallia/shared-hooks';
 import { selectionHaptic, formatPostalCodeInput } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../hooks';
 import { useUserHomeLocation } from '../../context';
 
 interface PostalCodeStepProps {
+  /** Current postal code input, owned by the parent so it survives remounts. */
+  postalCode: string;
+  onPostalCodeChange: (code: string) => void;
+  /** Cached verified geocode so returning to this step skips re-geocoding. */
+  verifiedResult: PostalCodeLocation | null;
+  onVerifiedResultChange: (result: PostalCodeLocation | null) => void;
   /** Called when postal code is verified and user taps Continue */
   onContinue: () => void;
   /** Whether the step is currently active */
   isActive?: boolean;
 }
 
-export function PostalCodeStep({ onContinue, isActive = true }: PostalCodeStepProps) {
+export function PostalCodeStep({
+  postalCode,
+  onPostalCodeChange,
+  verifiedResult,
+  onVerifiedResultChange,
+  onContinue,
+  isActive = true,
+}: PostalCodeStepProps) {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const {
@@ -45,57 +70,20 @@ export function PostalCodeStep({ onContinue, isActive = true }: PostalCodeStepPr
   } = useCoverageCheck();
   const { setHomeLocation } = useUserHomeLocation();
 
-  const [postalCode, setPostalCode] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [outOfCoverage, setOutOfCoverage] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [isInputFocused, setIsInputFocused] = useState(false);
-  const scrollViewRef = useRef<ScrollView>(null);
-
-  // Track keyboard height for proper scroll adjustment
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const showSubscription = Keyboard.addListener(showEvent, e => {
-      setKeyboardHeight(e.endCoordinates.height);
-    });
-    const hideSubscription = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
-      setIsInputFocused(false);
-    });
-
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, []);
-
-  // Scroll to input when keyboard shows so the field stays in view (same pattern as WhereStep custom location)
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-
-    const keyboardShowListener = Keyboard.addListener(showEvent, () => {
-      if (isInputFocused && scrollViewRef.current) {
-        setTimeout(() => {
-          scrollViewRef.current?.scrollTo({ y: 400, animated: true });
-        }, 100);
-      }
-    });
-
-    return () => {
-      keyboardShowListener.remove();
-    };
-  }, [isInputFocused]);
 
   // Effect 1: Debounced geocoding when format is valid
   // US codes are short-circuited (no US facilities exist yet)
+  // If parent already has a cached verifiedResult matching this postal code,
+  // skip the geocode so returning to this step doesn't flicker.
   useEffect(() => {
     const validation = validateFormat(postalCode);
     if (!validation.isValid || !validation.normalized) {
       clearResult();
       resetCoverage();
       setOutOfCoverage(false);
+      if (verifiedResult) onVerifiedResultChange(null);
       return;
     }
     // US postal codes: show out-of-coverage immediately, skip geocode
@@ -103,6 +91,12 @@ export function PostalCodeStep({ onContinue, isActive = true }: PostalCodeStepPr
       clearResult();
       resetCoverage();
       setOutOfCoverage(true);
+      if (verifiedResult) onVerifiedResultChange(null);
+      return;
+    }
+    // Already verified — no work to do.
+    if (verifiedResult && verifiedResult.postalCode === validation.normalized) {
+      setOutOfCoverage(false);
       return;
     }
     setOutOfCoverage(false);
@@ -111,9 +105,18 @@ export function PostalCodeStep({ onContinue, isActive = true }: PostalCodeStepPr
       geocode(postalCode);
     }, 500);
     return () => clearTimeout(timer);
-  }, [postalCode, validateFormat, geocode, clearResult, resetCoverage]);
+  }, [
+    postalCode,
+    validateFormat,
+    geocode,
+    clearResult,
+    resetCoverage,
+    verifiedResult,
+    onVerifiedResultChange,
+  ]);
 
-  // Effect 2: When geocode succeeds, check coverage via Supabase RPC
+  // Effect 2: When geocode succeeds, check coverage and cache the verified
+  // location on the parent so back/forward navigation doesn't lose it.
   useEffect(() => {
     if (!result) return;
 
@@ -122,6 +125,9 @@ export function PostalCodeStep({ onContinue, isActive = true }: PostalCodeStepPr
       if (cancelled) return;
       if (!inCoverage) {
         setOutOfCoverage(true);
+        onVerifiedResultChange(null);
+      } else {
+        onVerifiedResultChange(result);
       }
     });
     return () => {
@@ -130,25 +136,28 @@ export function PostalCodeStep({ onContinue, isActive = true }: PostalCodeStepPr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result]);
 
-  const handlePostalCodeChange = useCallback((text: string) => {
-    setPostalCode(formatPostalCodeInput(text));
-  }, []);
+  const handlePostalCodeChange = useCallback(
+    (text: string) => {
+      onPostalCodeChange(formatPostalCodeInput(text));
+    },
+    [onPostalCodeChange]
+  );
 
   const handleContinue = useCallback(async () => {
-    if (!result || isSaving) return;
+    if (!verifiedResult || isSaving) return;
 
     setIsSaving(true);
     selectionHaptic();
 
     try {
-      await setHomeLocation(result);
+      await setHomeLocation(verifiedResult);
       onContinue();
     } catch (err) {
       console.error('Failed to save location:', err);
     } finally {
       setIsSaving(false);
     }
-  }, [result, isSaving, setHomeLocation, onContinue]);
+  }, [verifiedResult, isSaving, setHomeLocation, onContinue]);
 
   const isLoading = isGeocoding || isChecking;
 
@@ -173,219 +182,210 @@ export function PostalCodeStep({ onContinue, isActive = true }: PostalCodeStepPr
     }
   };
 
-  const hasValidInput = result !== null && isInCoverage === true;
+  const normalizedCurrent = validateFormat(postalCode).normalized;
+  const hasValidInput =
+    verifiedResult !== null &&
+    normalizedCurrent !== null &&
+    verifiedResult.postalCode === normalizedCurrent &&
+    !outOfCoverage;
   const showError =
     (geocodeError && postalCode.length >= 3) ||
     (outOfCoverage && postalCode.length >= 3) ||
     (coverageError && postalCode.length >= 3);
   const errorMessage = getErrorMessage();
 
-  if (!isActive) return null;
-
   return (
     <View style={styles.container}>
-      <ScrollView
-        ref={scrollViewRef}
-        contentContainerStyle={[
-          styles.inner,
-          { paddingBottom: keyboardHeight > 0 ? keyboardHeight : spacingPixels[4] },
-        ]}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header Section */}
-        <Animated.View entering={FadeInDown.delay(50).springify()} style={styles.headerSection}>
-          <View
-            style={[
-              styles.iconContainer,
-              { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)' },
-            ]}
-          >
-            <Ionicons
-              name="location-outline"
-              size={36}
-              color={isDark ? primary[400] : primary[600]}
-            />
-          </View>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View style={styles.inner}>
+          {/* Header Section */}
+          <Animated.View entering={FadeInDown.delay(50).springify()} style={styles.headerSection}>
+            <LinearGradient
+              colors={isDark ? [primary[800], primary[900]] : [primary[50], primary[100]]}
+              style={styles.iconContainer}
+            >
+              <Ionicons
+                name="location-outline"
+                size={36}
+                color={isDark ? primary[200] : primary[600]}
+              />
+            </LinearGradient>
 
-          <Text size="xl" weight="bold" color={colors.foreground} style={styles.title}>
-            {t('preOnboarding.postalCode.title')}
-          </Text>
+            <Text size="xl" weight="bold" color={colors.foreground} style={styles.title}>
+              {t('preOnboarding.postalCode.title')}
+            </Text>
 
-          <Text size="sm" color={colors.textMuted} style={styles.subtitle}>
-            {t('preOnboarding.postalCode.subtitle')} {t('preOnboarding.postalCode.coverageNote')}
-          </Text>
-        </Animated.View>
+            <Text size="sm" color={colors.textMuted} style={styles.subtitle}>
+              {t('preOnboarding.postalCode.subtitle')} {t('preOnboarding.postalCode.coverageNote')}
+            </Text>
+          </Animated.View>
 
-        {/* Benefits Section */}
-        <View style={styles.benefitsSection}>
-          {[
-            {
-              icon: 'people' as const,
-              title: t('preOnboarding.postalCode.benefits.findPlayers.title'),
-              description: t('preOnboarding.postalCode.benefits.findPlayers.description'),
-            },
-            {
-              icon: 'tennisball' as const,
-              title: t('preOnboarding.postalCode.benefits.discoverCourts.title'),
-              description: t('preOnboarding.postalCode.benefits.discoverCourts.description'),
-            },
-            {
-              icon: 'calendar' as const,
-              title: t('preOnboarding.postalCode.benefits.joinEvents.title'),
-              description: t('preOnboarding.postalCode.benefits.joinEvents.description'),
-            },
-          ].map((benefit, index) => (
-            <Animated.View
-              key={benefit.icon}
-              entering={FadeInDown.delay(100 + index * 100).springify()}
+          {/* Input Section */}
+          <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.inputSection}>
+            <View
               style={[
-                styles.benefitCard,
+                styles.inputContainer,
                 {
                   backgroundColor: isDark ? neutral[800] : neutral[50],
-                  borderColor: isDark ? neutral[700] : neutral[100],
+                  borderColor: showError
+                    ? status.error.DEFAULT
+                    : hasValidInput
+                      ? status.success.DEFAULT
+                      : isDark
+                        ? neutral[700]
+                        : neutral[200],
                 },
               ]}
             >
-              <View
-                style={[
-                  styles.benefitIconContainer,
-                  {
-                    backgroundColor: isDark
-                      ? 'rgba(59, 130, 246, 0.15)'
-                      : 'rgba(59, 130, 246, 0.1)',
-                  },
-                ]}
-              >
-                {benefit.icon === 'tennisball' ? (
-                  <SportIcon
-                    sportName="tennis"
-                    size={20}
-                    color={isDark ? primary[400] : primary[600]}
-                  />
-                ) : (
+              <Ionicons
+                name="mail-outline"
+                size={22}
+                color={isDark ? neutral[500] : neutral[400]}
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={[styles.input, { color: colors.foreground }]}
+                value={postalCode}
+                onChangeText={handlePostalCodeChange}
+                placeholder={t('preOnboarding.postalCode.placeholder')}
+                placeholderTextColor={isDark ? neutral[500] : neutral[400]}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                maxLength={7}
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+              />
+              {isLoading && <Spinner size="sm" style={styles.inputSpinner} />}
+              {hasValidInput && !isLoading && (
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={24}
+                  color={status.success.DEFAULT}
+                />
+              )}
+            </View>
+
+            {/* Status Message — reserved space so layout doesn't shift */}
+            <View style={styles.statusSlot}>
+              {!isLoading && !hasValidInput && !showError && (
+                <Text size="xs" color={colors.textMuted} style={styles.statusText}>
+                  {t('preOnboarding.postalCode.statusHint')}
+                </Text>
+              )}
+              {isLoading && (
+                <Text size="sm" color={colors.textMuted} style={styles.statusText}>
+                  {t('preOnboarding.postalCode.verifying')}
+                </Text>
+              )}
+              {hasValidInput && !isLoading && (
+                <View style={styles.verifiedContainer}>
                   <Ionicons
-                    name={benefit.icon}
-                    size={20}
-                    color={isDark ? primary[400] : primary[600]}
+                    name="checkmark-circle-outline"
+                    size={16}
+                    color={status.success.DEFAULT}
                   />
-                )}
-              </View>
-              <View style={styles.benefitContent}>
-                <Text size="sm" weight="semibold" color={colors.foreground}>
-                  {benefit.title}
-                </Text>
-                <Text size="xs" color={colors.textMuted} style={styles.benefitDescription}>
-                  {benefit.description}
-                </Text>
-              </View>
-            </Animated.View>
-          ))}
-        </View>
+                  <Text size="sm" color={status.success.DEFAULT} style={styles.verifiedText}>
+                    {t('preOnboarding.postalCode.verified')}
+                  </Text>
+                  <Text size="sm" color={colors.textMuted}>
+                    {' — '}
+                    {verifiedResult?.formattedAddress}
+                  </Text>
+                </View>
+              )}
+              {showError && errorMessage && (
+                <View style={styles.errorContainer}>
+                  <Ionicons name="alert-circle-outline" size={16} color={status.error.DEFAULT} />
+                  <Text size="sm" color={status.error.DEFAULT} style={styles.errorText}>
+                    {errorMessage}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </Animated.View>
 
-        {/* Input Section */}
-        <Animated.View entering={FadeInDown.delay(400).springify()} style={styles.inputSection}>
-          <View
-            style={[
-              styles.inputContainer,
+          {/* Benefits Section */}
+          <View style={styles.benefitsSection}>
+            {[
               {
-                backgroundColor: isDark ? neutral[800] : neutral[50],
-                borderColor: showError
-                  ? status.error.DEFAULT
-                  : hasValidInput
-                    ? status.success.DEFAULT
-                    : isDark
-                      ? neutral[700]
-                      : neutral[200],
+                icon: 'people' as const,
+                title: t('preOnboarding.postalCode.benefits.findPlayers.title'),
+                description: t('preOnboarding.postalCode.benefits.findPlayers.description'),
               },
-            ]}
-          >
-            <Ionicons
-              name="mail-outline"
-              size={22}
-              color={isDark ? neutral[500] : neutral[400]}
-              style={styles.inputIcon}
-            />
-            <TextInput
-              style={[styles.input, { color: colors.foreground }]}
-              value={postalCode}
-              onChangeText={handlePostalCodeChange}
-              placeholder={t('preOnboarding.postalCode.placeholder')}
-              placeholderTextColor={isDark ? neutral[500] : neutral[400]}
-              autoCapitalize="characters"
-              autoCorrect={false}
-              maxLength={7}
-              returnKeyType="done"
-              onSubmitEditing={Keyboard.dismiss}
-              onFocus={() => setIsInputFocused(true)}
-            />
-            {isLoading && <Spinner size="sm" style={styles.inputSpinner} />}
-            {hasValidInput && !isLoading && (
-              <Ionicons name="checkmark-circle-outline" size={24} color={status.success.DEFAULT} />
-            )}
+              {
+                icon: 'tennisball' as const,
+                title: t('preOnboarding.postalCode.benefits.discoverCourts.title'),
+                description: t('preOnboarding.postalCode.benefits.discoverCourts.description'),
+              },
+              {
+                icon: 'calendar' as const,
+                title: t('preOnboarding.postalCode.benefits.joinEvents.title'),
+                description: t('preOnboarding.postalCode.benefits.joinEvents.description'),
+              },
+            ].map((benefit, index) => (
+              <Animated.View
+                key={benefit.icon}
+                entering={FadeInDown.delay(250 + index * 100).springify()}
+                style={styles.benefitRow}
+              >
+                <View
+                  style={[
+                    styles.benefitIconContainer,
+                    {
+                      backgroundColor: isDark ? 'rgba(115, 115, 115, 0.18)' : neutral[100],
+                    },
+                  ]}
+                >
+                  {benefit.icon === 'tennisball' ? (
+                    <SportIcon
+                      sportName="tennis"
+                      size={18}
+                      color={isDark ? neutral[400] : neutral[500]}
+                    />
+                  ) : (
+                    <Ionicons
+                      name={benefit.icon}
+                      size={18}
+                      color={isDark ? neutral[400] : neutral[500]}
+                    />
+                  )}
+                </View>
+                <View style={styles.benefitContent}>
+                  <Text size="base" weight="semibold" color={colors.foreground}>
+                    {benefit.title}
+                  </Text>
+                  <Text size="sm" color={colors.textMuted} style={styles.benefitDescription}>
+                    {benefit.description}
+                  </Text>
+                </View>
+              </Animated.View>
+            ))}
           </View>
+        </View>
+      </TouchableWithoutFeedback>
 
-          {/* Status Message */}
-          {isLoading && (
-            <Text size="sm" color={colors.textMuted} style={styles.statusText}>
-              {t('preOnboarding.postalCode.verifying')}
-            </Text>
-          )}
-          {hasValidInput && !isLoading && (
-            <View style={styles.verifiedContainer}>
-              <Ionicons name="checkmark-circle-outline" size={16} color={status.success.DEFAULT} />
-              <Text size="sm" color={status.success.DEFAULT} style={styles.verifiedText}>
-                {t('preOnboarding.postalCode.verified')}
-              </Text>
-              <Text size="sm" color={colors.textMuted}>
-                {' — '}
-                {result.formattedAddress}
-              </Text>
-            </View>
-          )}
-          {showError && errorMessage && (
-            <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle-outline" size={16} color={status.error.DEFAULT} />
-              <Text size="sm" color={status.error.DEFAULT} style={styles.errorText}>
-                {errorMessage}
-              </Text>
-            </View>
-          )}
-        </Animated.View>
-
-        {/* Privacy Note */}
-        <Animated.View
-          entering={FadeInUp.delay(500).springify()}
-          style={[
-            styles.privacyContainer,
-            {
-              backgroundColor: isDark ? neutral[800] : neutral[50],
-              borderColor: isDark ? neutral[700] : neutral[100],
-            },
-          ]}
+      {/* Bottom Section (pinned) */}
+      <Animated.View entering={FadeInUp.delay(450).springify()} style={styles.bottomSection}>
+        <Button
+          variant="primary"
+          onPress={handleContinue}
+          disabled={!hasValidInput || isSaving}
+          style={styles.continueButton}
         >
+          {isSaving ? t('common.loading') : t('preOnboarding.postalCode.continue')}
+        </Button>
+
+        <View style={styles.privacyContainer}>
           <Ionicons
             name="shield-checkmark"
-            size={16}
+            size={14}
             color={isDark ? primary[400] : primary[600]}
           />
           <Text size="xs" color={colors.textMuted} style={styles.privacyText}>
             {t('preOnboarding.postalCode.privacy')}
           </Text>
-        </Animated.View>
-
-        {/* Bottom Section */}
-        <Animated.View entering={FadeInUp.delay(450).springify()} style={styles.bottomSection}>
-          <Button
-            variant="primary"
-            onPress={handleContinue}
-            disabled={!hasValidInput || isSaving}
-            style={styles.continueButton}
-          >
-            {isSaving ? t('common.loading') : t('preOnboarding.postalCode.continue')}
-          </Button>
-        </Animated.View>
-      </ScrollView>
+        </View>
+      </Animated.View>
     </View>
   );
 }
@@ -395,10 +395,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   inner: {
-    flexGrow: 1,
+    flex: 1,
     paddingHorizontal: spacingPixels[5],
-    justifyContent: 'space-between',
-    paddingBottom: spacingPixels[4],
   },
 
   // Header section
@@ -413,6 +411,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacingPixels[3],
+    ...shadowsNative.md,
+    shadowColor: primary[500],
+    shadowOpacity: 0.25,
   },
   title: {
     textAlign: 'center',
@@ -427,19 +428,16 @@ const styles = StyleSheet.create({
 
   // Benefits section
   benefitsSection: {
-    marginTop: spacingPixels[4],
-    gap: spacingPixels[2],
+    marginTop: spacingPixels[10],
+    gap: spacingPixels[8],
   },
-  benefitCard: {
+  benefitRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
   },
   benefitIconContainer: {
-    width: 40,
-    height: 40,
+    width: 32,
+    height: 32,
     borderRadius: radiusPixels.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -455,7 +453,7 @@ const styles = StyleSheet.create({
 
   // Input section
   inputSection: {
-    marginTop: spacingPixels[4],
+    marginTop: spacingPixels[8],
   },
   inputContainer: {
     flexDirection: 'row',
@@ -479,14 +477,16 @@ const styles = StyleSheet.create({
   },
 
   // Status messages
-  statusText: {
+  statusSlot: {
     marginTop: spacingPixels[2],
+    minHeight: 44,
+  },
+  statusText: {
     textAlign: 'center',
   },
   verifiedContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacingPixels[2],
     flexWrap: 'wrap',
     justifyContent: 'center',
   },
@@ -496,7 +496,6 @@ const styles = StyleSheet.create({
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacingPixels[2],
     justifyContent: 'center',
   },
   errorText: {
@@ -506,21 +505,23 @@ const styles = StyleSheet.create({
   // Privacy note
   privacyContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-    marginTop: spacingPixels[4],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacingPixels[5],
+    paddingHorizontal: spacingPixels[2],
   },
   privacyText: {
     marginLeft: spacingPixels[2],
-    flex: 1,
+    textAlign: 'center',
     lineHeight: 18,
   },
 
-  // Bottom section
+  // Bottom section (pinned outside scroll)
   bottomSection: {
-    paddingTop: spacingPixels[4],
+    paddingHorizontal: spacingPixels[5],
+    paddingTop: spacingPixels[3],
+    paddingBottom: spacingPixels[4],
+    alignItems: 'center',
   },
   continueButton: {
     width: '100%',

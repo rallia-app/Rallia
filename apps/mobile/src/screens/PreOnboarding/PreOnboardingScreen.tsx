@@ -5,6 +5,8 @@
  * 1. Sports selection (required)
  * 2. Postal code for location (required)
  * 3. Device location permission (skippable)
+ * 4. Push notification permission (skippable)
+ * 5. Discovery / acquisition channel (skippable)
  *
  * Data is stored in AsyncStorage and synced to database after sign-up.
  */
@@ -22,13 +24,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SportStep, type Sport } from './SportStep';
 import { PostalCodeStep } from './PostalCodeStep';
 import { LocationPermissionStep } from './LocationPermissionStep';
+import { NotificationPermissionStep } from './NotificationPermissionStep';
 import { DiscoveryStep } from './DiscoveryStep';
+import type { PostalCodeLocation } from '@rallia/shared-hooks';
+import { SportService, Logger } from '@rallia/shared-services';
+import type { Sport as DatabaseSport } from '@rallia/shared-types';
 import * as Analytics from '../../services/analytics';
 import { ACQUISITION_CHANNEL_KEY } from '../../navigation/deepLinkStore';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-type WizardStep = 1 | 2 | 3 | 4;
+type WizardStep = 1 | 2 | 3 | 4 | 5;
 
 export function PreOnboardingScreen() {
   const insets = useSafeAreaInsets();
@@ -37,11 +43,64 @@ export function PreOnboardingScreen() {
   const { setSelectedSportsOrdered } = useSport();
   const { setLocationMode } = useLocationMode();
 
-  // Wizard state
+  // Wizard state — all persistent fields live here so each step can unmount
+  // during navigation without losing user input.
   const [currentStep, setCurrentStep] = useState<WizardStep>(1);
   const [selectedSports, setSelectedSports] = useState<Sport[]>([]);
+  const [postalCode, setPostalCode] = useState('');
+  const [geocodeResult, setGeocodeResult] = useState<PostalCodeLocation | null>(null);
+  const [discoveryMode, setDiscoveryMode] = useState<'chips' | 'friendCode'>('chips');
+  const [referralCode, setReferralCode] = useState('');
+
+  // Sports catalog — fetched once so returning to step 1 is instant.
+  const [sports, setSports] = useState<Sport[]>([]);
+  const [isSportsLoading, setIsSportsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await SportService.getAllSports();
+        if (cancelled) return;
+        if (error || !data) {
+          if (error) Logger.error('Failed to fetch sports for pre-onboarding', error as Error);
+          setSports([
+            { id: 'tennis-fallback', name: 'tennis', display_name: 'Tennis' },
+            { id: 'pickleball-fallback', name: 'pickleball', display_name: 'Pickleball' },
+          ]);
+        } else {
+          setSports(
+            data
+              .filter((s: DatabaseSport) => s.is_active)
+              .map((s: DatabaseSport) => ({
+                id: s.id,
+                name: s.name,
+                display_name: s.display_name,
+                icon_url: s.icon_url,
+              }))
+          );
+        }
+      } catch (err) {
+        if (cancelled) return;
+        Logger.error('Unexpected error fetching sports', err as Error);
+        setSports([
+          { id: 'tennis-fallback', name: 'tennis', display_name: 'Tennis' },
+          { id: 'pickleball-fallback', name: 'pickleball', display_name: 'Pickleball' },
+        ]);
+      } finally {
+        if (!cancelled) setIsSportsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Animation values
+  // slideAnim is the horizontal pager offset: 0 for step 1, -SCREEN_WIDTH
+  // for step 2, etc. All four steps live side-by-side in a row that's
+  // SCREEN_WIDTH × 4 wide, so a single translateX animation moves between
+  // them — no display toggling, no mid-animation state updates, no flash.
   const slideAnim = useMemo(() => new Animated.Value(0), []);
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
 
@@ -119,27 +178,16 @@ export function PreOnboardingScreen() {
     decorOpacity,
   ]);
 
-  // Animate step transitions
+  // Animate step transitions — single translateX animation on the pager row.
   const animateToStep = useCallback(
-    (newStep: WizardStep, direction: 'forward' | 'back') => {
-      const toValue = direction === 'forward' ? -SCREEN_WIDTH : SCREEN_WIDTH;
-
-      Animated.sequence([
-        Animated.timing(slideAnim, {
-          toValue: toValue,
-          duration: 200,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 0,
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      // Update step after animation starts
-      setTimeout(() => setCurrentStep(newStep), 100);
+    (newStep: WizardStep, _direction: 'forward' | 'back') => {
+      setCurrentStep(newStep);
+      Animated.timing(slideAnim, {
+        toValue: -(newStep - 1) * SCREEN_WIDTH,
+        duration: 280,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
     },
     [slideAnim]
   );
@@ -148,7 +196,6 @@ export function PreOnboardingScreen() {
   const handleSportsContinue = useCallback(
     async (orderedSports: Sport[]) => {
       mediumHaptic();
-      setSelectedSports(orderedSports);
       await setSelectedSportsOrdered(orderedSports);
       animateToStep(2, 'forward');
     },
@@ -170,7 +217,16 @@ export function PreOnboardingScreen() {
     [animateToStep]
   );
 
-  // Step 4: Discovery channel selected (or skipped)
+  // Step 4: Notification permission complete (or skipped)
+  const handleNotificationContinue = useCallback(
+    (_notificationsEnabled: boolean) => {
+      mediumHaptic();
+      animateToStep(5, 'forward');
+    },
+    [animateToStep]
+  );
+
+  // Step 5: Discovery channel selected (or skipped)
   const handleDiscoveryContinue = useCallback(
     async (channel: string | null) => {
       if (channel) {
@@ -193,6 +249,8 @@ export function PreOnboardingScreen() {
       animateToStep(2, 'back');
     } else if (currentStep === 4) {
       animateToStep(3, 'back');
+    } else if (currentStep === 5) {
+      animateToStep(4, 'back');
     }
   }, [currentStep, animateToStep]);
 
@@ -271,7 +329,7 @@ export function PreOnboardingScreen() {
         )}
 
         <View style={styles.progressContainer}>
-          {[1, 2, 3, 4].map(step => (
+          {[1, 2, 3, 4, 5].map(step => (
             <View
               key={step}
               style={[
@@ -289,31 +347,55 @@ export function PreOnboardingScreen() {
         <View style={styles.backButtonPlaceholder} />
       </Animated.View>
 
-      {/* Step Content */}
-      <Animated.View
-        style={[
-          styles.stepContainer,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateX: slideAnim }],
-          },
-        ]}
-      >
-        {currentStep === 1 && (
-          <SportStep onContinue={handleSportsContinue} isActive={currentStep === 1} />
-        )}
-        {currentStep === 2 && (
-          <PostalCodeStep onContinue={handlePostalCodeContinue} isActive={currentStep === 2} />
-        )}
-        {currentStep === 3 && (
-          <LocationPermissionStep
-            onContinue={handleLocationContinue}
-            isActive={currentStep === 3}
-          />
-        )}
-        {currentStep === 4 && (
-          <DiscoveryStep onContinue={handleDiscoveryContinue} isActive={currentStep === 4} />
-        )}
+      {/* Step Content — horizontal pager. All 5 steps render side-by-side
+          and we slide the row via translateX. No display toggling, no
+          mid-animation state changes, so no Android flash. */}
+      <Animated.View style={[styles.stepViewport, { opacity: fadeAnim }]}>
+        <Animated.View style={[styles.stepRow, { transform: [{ translateX: slideAnim }] }]}>
+          <View style={styles.stepSlot}>
+            <SportStep
+              sports={sports}
+              isSportsLoading={isSportsLoading}
+              value={selectedSports}
+              onChange={setSelectedSports}
+              onContinue={handleSportsContinue}
+              isActive={currentStep === 1}
+            />
+          </View>
+          <View style={styles.stepSlot}>
+            <PostalCodeStep
+              postalCode={postalCode}
+              onPostalCodeChange={setPostalCode}
+              verifiedResult={geocodeResult}
+              onVerifiedResultChange={setGeocodeResult}
+              onContinue={handlePostalCodeContinue}
+              isActive={currentStep === 2}
+            />
+          </View>
+          <View style={styles.stepSlot}>
+            <LocationPermissionStep
+              onContinue={handleLocationContinue}
+              isActive={currentStep === 3}
+            />
+          </View>
+          <View style={styles.stepSlot}>
+            <NotificationPermissionStep
+              onContinue={handleNotificationContinue}
+              primarySportName={selectedSports[0]?.name}
+              isActive={currentStep === 4}
+            />
+          </View>
+          <View style={styles.stepSlot}>
+            <DiscoveryStep
+              mode={discoveryMode}
+              onModeChange={setDiscoveryMode}
+              code={referralCode}
+              onCodeChange={setReferralCode}
+              onContinue={handleDiscoveryContinue}
+              isActive={currentStep === 5}
+            />
+          </View>
+        </Animated.View>
       </Animated.View>
     </View>
   );
@@ -391,9 +473,19 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
 
-  // Step container
-  stepContainer: {
+  // Step container — horizontal pager.
+  stepViewport: {
     flex: 1,
+    overflow: 'hidden',
+  },
+  stepRow: {
+    flex: 1,
+    flexDirection: 'row',
+    width: SCREEN_WIDTH * 5,
+  },
+  stepSlot: {
+    width: SCREEN_WIDTH,
+    height: '100%',
   },
 });
 

@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Linking, TouchableOpacity } from 'react-native';
 import RevenueCatUI from 'react-native-purchases-ui';
-import type { CustomerInfo } from 'react-native-purchases';
+import type { CustomerInfo, PurchasesOffering } from 'react-native-purchases';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
@@ -15,6 +15,7 @@ import {
   restorePurchasesSuccess,
 } from '../services/analytics';
 import { useTranslation } from '../hooks';
+import { getPaywallOffering } from '../lib/revenuecat';
 
 const Paywall: React.FC = () => {
   const navigation = useAppNavigation();
@@ -22,9 +23,13 @@ const Paywall: React.FC = () => {
   const isDark = theme === 'dark';
   const themeColors = isDark ? darkTheme : lightTheme;
   const { t } = useTranslation();
+  const [offering, setOffering] = useState<PurchasesOffering | null>(null);
 
   useEffect(() => {
     paywallViewed();
+    getPaywallOffering()
+      .then(setOffering)
+      .catch(() => {});
   }, []);
 
   const handleDismiss = () => {
@@ -63,6 +68,7 @@ const Paywall: React.FC = () => {
       {/* RevenueCat managed paywall */}
       <RevenueCatUI.Paywall
         style={styles.paywall}
+        options={offering ? { offering } : undefined}
         onPurchaseCompleted={handlePurchaseCompleted}
         onPurchaseCancelled={handleDismiss}
         onPurchaseError={() => {}}

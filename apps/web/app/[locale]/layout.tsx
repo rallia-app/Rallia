@@ -51,7 +51,6 @@ export const metadata: Metadata = {
     'pickleball app',
     'sports matchmaking',
     'download',
-    'beta',
   ],
   authors: [{ name: 'Rallia' }],
   creator: 'Rallia',

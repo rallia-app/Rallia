@@ -1,9 +1,10 @@
 /**
  * SuggestionsFeedSection Component
  *
- * Appended at the end of match lists (Home, Public Matches).
- * Shows a prompt banner → user taps "Generate" → loads and displays suggestion cards.
- * Reuses SuggestionCard, useMatchSuggestions, and per-card invite state.
+ * Appended at the end of match lists (Home, Public Matches) and rendered in
+ * their empty states. Auto-fires the matchup suggestions query as soon as the
+ * section mounts with valid inputs (sport + playerId or lat/lng). Reuses
+ * SuggestionCard, useMatchSuggestions, and per-card invite state.
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -21,14 +22,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
+import { spacingPixels, primary, neutral } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
 import { useMatchSuggestions } from '@rallia/shared-hooks';
 import { createMatchFromSuggestion } from '@rallia/shared-services';
 import { useQueryClient } from '@tanstack/react-query';
-import { useThemeStyles, useTranslation } from '../hooks';
+import { useThemeStyles, useTranslation, useEffectiveLocation } from '../hooks';
 import { useAuth, usePlayer } from '../hooks';
-import { useSport } from '../context';
+import { useActionsSheet, useSport } from '../context';
 import { usePlayerSports } from '@rallia/shared-hooks';
 import { SuggestionCard, type SuggestionCardLabels, type InvitePayload } from './SuggestionCard';
 
@@ -50,35 +51,51 @@ export const SuggestionsFeedSection: React.FC<SuggestionsFeedSectionProps> = ({
   const { session } = useAuth();
   const { player } = usePlayer();
   const { selectedSport } = useSport();
+  const { openSheet: openAuthSheet } = useActionsSheet();
+  const { location: effectiveLocation } = useEffectiveLocation();
   const { playerSports } = usePlayerSports(session?.user?.id);
   const callerSportPrefs = playerSports.find(ps => ps.sport_id === (selectedSport?.id ?? sportId));
   const callerDuration = callerSportPrefs?.preferred_match_duration ?? '60';
   const callerMatchType = callerSportPrefs?.preferred_match_type ?? 'both';
   const queryClient = useQueryClient();
 
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  const isAnon = !playerId;
+  const anonLat = isAnon ? effectiveLocation?.latitude : undefined;
+  const anonLng = isAnon ? effectiveLocation?.longitude : undefined;
 
-  const { suggestions, isLoading } = useMatchSuggestions({
+  // No inputs → render nothing (e.g., signed-out user with no location yet)
+  const hasInputs = !!sportId && (!!playerId || (anonLat != null && anonLng != null));
+
+  const { suggestions, isLoading, isRefetching, refetch } = useMatchSuggestions({
     playerId,
     sportId,
     sportName,
+    latitude: anonLat,
+    longitude: anonLng,
     limit: MAX_CARDS,
-    enabled: showSuggestions,
+    enabled: true,
   });
 
   // Per-card invite state
   const [inviteStates, setInviteStates] = useState<Record<string, 'idle' | 'sending' | 'sent'>>({});
-
-  const handleGenerate = useCallback(() => {
-    lightHaptic();
-    setShowSuggestions(true);
-  }, []);
-
   const inviteStatesRef = useRef(inviteStates);
   inviteStatesRef.current = inviteStates;
 
+  const handleRefresh = useCallback(async () => {
+    if (isRefetching || isLoading) return;
+    lightHaptic();
+    await refetch();
+  }, [refetch, isRefetching, isLoading]);
+
   const handleSendInvite = useCallback(
     async (payload: InvitePayload) => {
+      // Signed-out users: route to auth instead of creating a match
+      if (!session?.user) {
+        lightHaptic();
+        openAuthSheet();
+        return;
+      }
+
       const id = payload.suggestion.opponentId;
       if (inviteStatesRef.current[id] === 'sending' || inviteStatesRef.current[id] === 'sent')
         return;
@@ -106,12 +123,13 @@ export const SuggestionsFeedSection: React.FC<SuggestionsFeedSectionProps> = ({
     },
     [
       player?.id,
-      session?.user?.id,
+      session?.user,
       selectedSport?.id,
       sportId,
       callerDuration,
       callerMatchType,
       queryClient,
+      openAuthSheet,
     ]
   );
 
@@ -134,7 +152,7 @@ export const SuggestionsFeedSection: React.FC<SuggestionsFeedSectionProps> = ({
     [t]
   );
 
-  // Loading animation
+  // Pulsing loading animation
   const pulseScale = useSharedValue(1);
   const pulseOpacity = useSharedValue(0.6);
 
@@ -164,6 +182,25 @@ export const SuggestionsFeedSection: React.FC<SuggestionsFeedSectionProps> = ({
     opacity: pulseOpacity.value,
   }));
 
+  // Spinning refresh icon animation
+  const spinRotation = useSharedValue(0);
+
+  useEffect(() => {
+    if (isLoading || isRefetching) {
+      spinRotation.value = withRepeat(
+        withTiming(360, { duration: 800, easing: Easing.linear }),
+        -1,
+        false
+      );
+    } else {
+      spinRotation.value = withTiming(0, { duration: 200 });
+    }
+  }, [isLoading, isRefetching, spinRotation]);
+
+  const spinStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${spinRotation.value}deg` }],
+  }));
+
   // Card stagger animation
   const cardOpacities = useRef(Array.from({ length: MAX_CARDS }, () => makeMutable(0))).current;
   const cardTranslateYs = useRef(Array.from({ length: MAX_CARDS }, () => makeMutable(20))).current;
@@ -184,71 +221,100 @@ export const SuggestionsFeedSection: React.FC<SuggestionsFeedSectionProps> = ({
 
   const accentColor = isDark ? primary[400] : primary[500];
 
-  // ── Not yet opted in → prompt banner ────────────────────────────────
-  if (!showSuggestions) {
-    return (
-      <View
-        style={[
-          styles.promptBanner,
-          {
-            backgroundColor: isDark ? `${primary[900]}40` : primary[50],
-            borderColor: isDark ? primary[700] : primary[200],
-          },
-        ]}
-      >
-        <Ionicons name="sparkles" size={28} color={accentColor} style={styles.promptIcon} />
-        <Text size="base" weight="semibold" color={colors.foreground} style={styles.promptTitle}>
-          {t('onboarding.suggestions.feedPromptTitle')}
-        </Text>
-        <Text size="sm" color={colors.textMuted} style={styles.promptSubtitle}>
-          {t('onboarding.suggestions.feedPromptSubtitle')}
-        </Text>
-        <TouchableOpacity
-          style={[styles.promptButton, { backgroundColor: accentColor }]}
-          onPress={handleGenerate}
-          activeOpacity={0.8}
+  // ── No inputs available → render nothing ────────────────────────────
+  if (!hasInputs) return null;
+
+  const dividerColor = isDark ? neutral[700] : neutral[200];
+
+  const boundary = (
+    <>
+      <View style={styles.boundary}>
+        <View style={[styles.boundaryLine, { backgroundColor: dividerColor }]} />
+        <View
+          style={[
+            styles.boundaryPill,
+            {
+              backgroundColor: isDark ? `${primary[900]}40` : primary[50],
+              borderColor: isDark ? primary[700] : primary[200],
+            },
+          ]}
         >
-          <Ionicons
-            name="sparkles-outline"
-            size={16}
-            color="#ffffff"
-            style={styles.promptButtonIcon}
-          />
-          <Text size="sm" weight="bold" color="#ffffff">
-            {t('onboarding.suggestions.feedPromptButton')}
+          <Ionicons name="sparkles" size={14} color={accentColor} />
+          <Text
+            size="xs"
+            weight="bold"
+            color={isDark ? primary[300] : primary[700]}
+            style={styles.boundaryLabel}
+          >
+            {t('onboarding.suggestions.feedSectionTitle')}
           </Text>
-        </TouchableOpacity>
+        </View>
+        <View style={[styles.boundaryLine, { backgroundColor: dividerColor }]} />
       </View>
-    );
-  }
+      <Text size="xs" color={colors.textMuted} style={styles.boundarySubtitle}>
+        {t('onboarding.suggestions.feedSectionSubtitle')}
+      </Text>
+    </>
+  );
 
   // ── Loading state ───────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <Animated.View
-          style={[styles.loadingIcon, { backgroundColor: `${accentColor}15` }, pulseStyle]}
-        >
-          <Ionicons name="sparkles" size={28} color={accentColor} />
-        </Animated.View>
-        <Text size="sm" color={colors.textMuted} style={styles.loadingText}>
-          {t('onboarding.suggestions.loading')}
-        </Text>
+      <View style={styles.section}>
+        {boundary}
+        <View style={styles.loadingContainer}>
+          <Animated.View
+            style={[styles.loadingIcon, { backgroundColor: `${accentColor}15` }, pulseStyle]}
+          >
+            <Ionicons name="sparkles" size={28} color={accentColor} />
+          </Animated.View>
+          <Text size="sm" color={colors.textMuted} style={styles.loadingText}>
+            {t('onboarding.suggestions.loading')}
+          </Text>
+        </View>
       </View>
     );
   }
 
+  const refreshButton = !session?.user ? null : (
+    <TouchableOpacity
+      onPress={handleRefresh}
+      disabled={isRefetching || isLoading}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={t('onboarding.suggestions.feedRefreshButton')}
+      style={[
+        styles.refreshButton,
+        {
+          backgroundColor: isDark ? `${primary[900]}30` : primary[50],
+          borderColor: isDark ? primary[700] : primary[200],
+        },
+      ]}
+    >
+      <Animated.View style={spinStyle}>
+        <Ionicons name="refresh-outline" size={16} color={accentColor} />
+      </Animated.View>
+      <Text size="sm" weight="semibold" color={accentColor}>
+        {t('onboarding.suggestions.feedRefreshButton')}
+      </Text>
+    </TouchableOpacity>
+  );
+
   // ── Empty result ────────────────────────────────────────────────────
   if (suggestions.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Ionicons name="search-outline" size={32} color={colors.textMuted} />
-        <Text size="sm" weight="semibold" color={colors.foreground} style={styles.emptyTitle}>
-          {t('onboarding.suggestions.feedEmptyTitle')}
-        </Text>
-        <Text size="xs" color={colors.textMuted}>
-          {t('onboarding.suggestions.feedEmptySubtitle')}
-        </Text>
+      <View style={styles.section}>
+        {boundary}
+        <View style={styles.emptyContainer}>
+          <Ionicons name="search-outline" size={32} color={colors.textMuted} />
+          <Text size="sm" weight="semibold" color={colors.foreground} style={styles.emptyTitle}>
+            {t('onboarding.suggestions.feedEmptyTitle')}
+          </Text>
+          <Text size="xs" color={colors.textMuted} style={styles.emptySubtitle}>
+            {t('onboarding.suggestions.feedEmptySubtitle')}
+          </Text>
+          {refreshButton}
+        </View>
       </View>
     );
   }
@@ -256,15 +322,8 @@ export const SuggestionsFeedSection: React.FC<SuggestionsFeedSectionProps> = ({
   // ── Suggestion cards ────────────────────────────────────────────────
   return (
     <View style={styles.section}>
-      {/* Section header */}
-      <View style={styles.sectionHeader}>
-        <Ionicons name="sparkles" size={18} color={accentColor} />
-        <Text size="base" weight="bold" color={colors.foreground} style={styles.sectionTitle}>
-          {t('onboarding.suggestions.feedSectionTitle')}
-        </Text>
-      </View>
+      {boundary}
 
-      {/* Cards */}
       {suggestions.slice(0, MAX_CARDS).map((suggestion, index) => {
         const animStyle =
           index < MAX_CARDS
@@ -292,6 +351,8 @@ export const SuggestionsFeedSection: React.FC<SuggestionsFeedSectionProps> = ({
           </Animated.View>
         );
       })}
+
+      <View style={styles.refreshFooter}>{refreshButton}</View>
     </View>
   );
 };
@@ -301,38 +362,6 @@ export const SuggestionsFeedSection: React.FC<SuggestionsFeedSectionProps> = ({
 // =============================================================================
 
 const styles = StyleSheet.create({
-  // Prompt banner
-  promptBanner: {
-    alignItems: 'center',
-    padding: spacingPixels[5],
-    marginHorizontal: spacingPixels[4],
-    marginBottom: spacingPixels[4],
-    borderRadius: radiusPixels.xl,
-    borderWidth: 1,
-  },
-  promptIcon: {
-    marginBottom: spacingPixels[2],
-  },
-  promptTitle: {
-    textAlign: 'center',
-    marginBottom: spacingPixels[1],
-  },
-  promptSubtitle: {
-    textAlign: 'center',
-    marginBottom: spacingPixels[4],
-    paddingHorizontal: spacingPixels[2],
-  },
-  promptButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacingPixels[3],
-    paddingHorizontal: spacingPixels[5],
-    borderRadius: radiusPixels.lg,
-    gap: spacingPixels[2],
-  },
-  promptButtonIcon: {},
-
   // Loading
   loadingContainer: {
     alignItems: 'center',
@@ -360,19 +389,60 @@ const styles = StyleSheet.create({
     marginTop: spacingPixels[2],
     textAlign: 'center',
   },
-
-  // Section with cards
-  section: {
-    marginTop: spacingPixels[4],
-    paddingHorizontal: spacingPixels[4],
+  emptySubtitle: {
+    marginBottom: spacingPixels[4],
+    textAlign: 'center',
   },
-  sectionHeader: {
+
+  // Refresh CTA
+  refreshFooter: {
+    alignItems: 'center',
+    marginTop: spacingPixels[3],
+    marginBottom: spacingPixels[2],
+  },
+  refreshButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[2],
-    marginBottom: spacingPixels[3],
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[5],
+    borderRadius: 999,
+    borderWidth: 1,
   },
-  sectionTitle: {},
+
+  // Section with cards
+  section: {
+    marginTop: spacingPixels[6],
+    paddingHorizontal: spacingPixels[4],
+  },
+  boundary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    marginBottom: spacingPixels[2],
+  },
+  boundaryLine: {
+    flex: 1,
+    height: 1,
+  },
+  boundaryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  boundaryLabel: {
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  boundarySubtitle: {
+    textAlign: 'center',
+    marginBottom: spacingPixels[4],
+    paddingHorizontal: spacingPixels[4],
+  },
 });
 
 export default SuggestionsFeedSection;

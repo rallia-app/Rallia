@@ -5,20 +5,18 @@
  * Tracks selection order so the first-selected sport becomes the default view.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Spinner, Button } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
-import { SportService, Logger } from '@rallia/shared-services';
+import { spacingPixels, radiusPixels, primary, shadowsNative } from '@rallia/design-system';
 import { selectionHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../hooks';
 import { SportIcon } from '../../components/SportIcon';
 import TennisIcon from '../../../assets/icons/tennis.svg';
 import PickleballIcon from '../../../assets/icons/pickleball.svg';
-import type { Sport as DatabaseSport } from '@rallia/shared-types';
 
 const BASE_WHITE = '#ffffff';
 
@@ -31,73 +29,46 @@ export interface Sport {
 }
 
 interface SportStepProps {
+  /** Sports catalog, owned by parent so it is fetched once. */
+  sports: Sport[];
+  isSportsLoading: boolean;
+  /** Currently selected sports, in tap order. Owned by the parent so the
+   * selection survives when the step unmounts on back/forward navigation. */
+  value: Sport[];
+  /** Update the selection on the parent. */
+  onChange: (next: Sport[]) => void;
   /** Called when user taps Continue with their selected sports */
   onContinue: (orderedSports: Sport[]) => void;
   /** Whether the step is currently active */
   isActive?: boolean;
 }
 
-export function SportStep({ onContinue, isActive = true }: SportStepProps) {
+export function SportStep({
+  sports,
+  isSportsLoading,
+  value,
+  onChange,
+  onContinue,
+  isActive = true,
+}: SportStepProps) {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
 
-  // State
-  const [sports, setSports] = useState<Sport[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [orderedSelection, setOrderedSelection] = useState<Sport[]>([]);
+  const isLoading = isSportsLoading;
+  const orderedSelection = value;
 
-  // Fetch sports on mount
-  useEffect(() => {
-    const fetchSports = async () => {
-      setIsLoading(true);
-      try {
-        const { data, error } = await SportService.getAllSports();
-
-        if (error) {
-          Logger.error('Failed to fetch sports for selection screen', error as Error);
-          // Fallback sports
-          setSports([
-            { id: 'tennis-fallback', name: 'tennis', display_name: 'Tennis' },
-            { id: 'pickleball-fallback', name: 'pickleball', display_name: 'Pickleball' },
-          ]);
-        } else if (data) {
-          const activeSports: Sport[] = data
-            .filter((sport: DatabaseSport) => sport.is_active)
-            .map((sport: DatabaseSport) => ({
-              id: sport.id,
-              name: sport.name,
-              display_name: sport.display_name,
-              icon_url: sport.icon_url,
-            }));
-          setSports(activeSports);
-        }
-      } catch (error) {
-        Logger.error('Unexpected error fetching sports', error as Error);
-        setSports([
-          { id: 'tennis-fallback', name: 'tennis', display_name: 'Tennis' },
-          { id: 'pickleball-fallback', name: 'pickleball', display_name: 'Pickleball' },
-        ]);
-      }
-      setIsLoading(false);
-    };
-
-    fetchSports();
-  }, []);
-
-  const toggleSport = useCallback((sport: Sport) => {
-    selectionHaptic();
-
-    setOrderedSelection(prev => {
-      const existingIndex = prev.findIndex(s => s.id === sport.id);
+  const toggleSport = useCallback(
+    (sport: Sport) => {
+      selectionHaptic();
+      const existingIndex = value.findIndex(s => s.id === sport.id);
       if (existingIndex >= 0) {
-        // Remove from selection
-        return prev.filter(s => s.id !== sport.id);
+        onChange(value.filter(s => s.id !== sport.id));
       } else {
-        // Add to selection (order matters)
-        return [...prev, sport];
+        onChange([...value, sport]);
       }
-    });
-  }, []);
+    },
+    [value, onChange]
+  );
 
   const handleContinue = useCallback(() => {
     if (orderedSelection.length === 0) return;
@@ -119,25 +90,17 @@ export function SportStep({ onContinue, isActive = true }: SportStepProps) {
     return index >= 0 ? index + 1 : null;
   };
 
-  if (!isActive) return null;
-
   return (
     <View style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.inner}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
+      <View style={styles.inner}>
         {/* Header Section */}
         <Animated.View entering={FadeInDown.delay(50).springify()} style={styles.headerSection}>
-          <View
-            style={[
-              styles.iconContainer,
-              { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)' },
-            ]}
+          <LinearGradient
+            colors={isDark ? [primary[800], primary[900]] : [primary[50], primary[100]]}
+            style={styles.iconContainer}
           >
-            <SportIcon sportName="tennis" size={36} color={isDark ? primary[400] : primary[600]} />
-          </View>
+            <SportIcon sportName="tennis" size={36} color={isDark ? primary[200] : primary[600]} />
+          </LinearGradient>
 
           <Text size="xl" weight="bold" color={colors.foreground} style={styles.title}>
             {t('sportSelectionOverlay.title')}
@@ -246,44 +209,44 @@ export function SportStep({ onContinue, isActive = true }: SportStepProps) {
             })
           )}
         </View>
+      </View>
 
-        {/* Bottom Section */}
-        <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.bottomSection}>
-          {orderedSelection.length > 1 && (
-            <View
-              style={[
-                styles.hintBanner,
-                {
-                  backgroundColor: isDark ? neutral[800] : primary[50],
-                  borderColor: isDark ? neutral[700] : primary[100],
-                },
-              ]}
-            >
-              <Ionicons
-                name="information-circle-outline"
-                size={18}
-                color={isDark ? primary[400] : primary[600]}
-              />
-              <Text size="sm" color={isDark ? primary[300] : primary[700]} style={styles.hintText}>
-                {t('sportSelectionOverlay.selectionHint', {
-                  sport: orderedSelection[0].display_name.toLowerCase(),
-                })}
-              </Text>
-            </View>
-          )}
+      {/* Bottom Section (pinned) */}
+      <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.bottomSection}>
+        <Button
+          variant="primary"
+          onPress={handleContinue}
+          disabled={orderedSelection.length === 0}
+          style={styles.continueButton}
+        >
+          {t('sportSelectionOverlay.getStarted')}
+        </Button>
 
-          <Button
-            variant="primary"
-            onPress={handleContinue}
-            disabled={orderedSelection.length === 0}
-            style={styles.continueButton}
+        <View
+          style={styles.hintContainer}
+          accessible={orderedSelection.length !== 1}
+          importantForAccessibility={orderedSelection.length === 1 ? 'no-hide-descendants' : 'yes'}
+          pointerEvents="none"
+        >
+          <Ionicons
+            name="information-circle-outline"
+            size={14}
+            color={isDark ? primary[400] : primary[600]}
+            style={{ opacity: orderedSelection.length === 1 ? 0 : 1 }}
+          />
+          <Text
+            size="xs"
+            color={colors.textMuted}
+            style={[styles.hintText, { opacity: orderedSelection.length === 1 ? 0 : 1 }]}
           >
-            {orderedSelection.length === 0
-              ? t('sportSelectionOverlay.selectAtLeastOne')
-              : t('sportSelectionOverlay.getStarted')}
-          </Button>
-        </Animated.View>
-      </ScrollView>
+            {orderedSelection.length > 1
+              ? t('sportSelectionOverlay.selectionHint', {
+                  sport: orderedSelection[0].display_name.toLowerCase(),
+                })
+              : t('sportSelectionOverlay.selectAtLeastOne')}
+          </Text>
+        </View>
+      </Animated.View>
     </View>
   );
 }
@@ -293,10 +256,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   inner: {
-    flexGrow: 1,
+    flex: 1,
     paddingHorizontal: spacingPixels[5],
-    justifyContent: 'space-between',
-    paddingBottom: spacingPixels[4],
   },
 
   // Header section
@@ -311,6 +272,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacingPixels[3],
+    ...shadowsNative.md,
+    shadowColor: primary[500],
+    shadowOpacity: 0.25,
   },
   title: {
     textAlign: 'center',
@@ -423,19 +387,19 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.4)',
   },
 
-  // Bottom section
+  // Bottom section (pinned outside scroll)
   bottomSection: {
-    paddingTop: spacingPixels[2],
+    paddingHorizontal: spacingPixels[5],
+    paddingTop: spacingPixels[3],
+    paddingBottom: spacingPixels[4],
+    alignItems: 'center',
   },
-  hintBanner: {
+  hintContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-    marginBottom: spacingPixels[3],
+    marginTop: spacingPixels[5],
+    paddingHorizontal: spacingPixels[2],
   },
   hintText: {
     marginLeft: spacingPixels[2],

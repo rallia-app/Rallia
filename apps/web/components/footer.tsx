@@ -36,7 +36,7 @@ export async function Footer() {
                   href="/#download"
                   className="text-gray-600 dark:text-gray-400 hover:text-foreground transition-colors"
                 >
-                  {t('joinBeta')}
+                  {t('download')}
                 </Link>
               </li>
             </ul>
@@ -50,7 +50,6 @@ export async function Footer() {
           <p>
             &copy; {new Date().getFullYear()} {t('title')}. {t('rights')}
           </p>
-          <p className="text-xs">{t('comingSoon')}</p>
         </div>
       </div>
     </footer>
