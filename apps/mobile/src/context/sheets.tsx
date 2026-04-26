@@ -103,6 +103,8 @@ declare module 'react-native-actions-sheet' {
     'feedback-report': SheetDefinition<{
       payload: {
         trigger?: import('./BugReportSheetContext').FeedbackReportTrigger | null;
+        initialView?: import('./BugReportSheetContext').FeedbackReportInitialView;
+        initialCategory?: import('./BugReportSheetContext').FeedbackReportInitialCategory;
       };
     }>;
     'create-community': SheetDefinition<{
