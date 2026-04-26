@@ -370,70 +370,11 @@ export async function getOrCreateDirectConversation(
 // ============================================================================
 // MATCH CHAT OPERATIONS
 // ============================================================================
-
-/**
- * Create a match chat when a match becomes full (all players confirmed)
- * - Singles (2 players): Creates a direct chat linked to the match
- * - Doubles (4 players): Creates a group chat linked to the match
- *
- * @param matchId - The match ID
- * @param createdBy - The player ID who triggered the full match (e.g., last to join or host who accepted)
- * @param participantIds - All player IDs in the match (including host)
- * @param matchFormat - 'singles' or 'doubles'
- * @param sportName - The sport name for the chat title
- * @param matchDate - The match date for the chat title
- * @returns The created conversation
- */
-export async function createMatchChat(
-  matchId: string,
-  createdBy: string,
-  participantIds: string[],
-  matchFormat: 'singles' | 'doubles',
-  sportName: string,
-  matchDate: string
-): Promise<Conversation> {
-  // First check if a chat for this match already exists
-  const { data: existingConv } = await supabase
-    .from('conversation')
-    .select('*')
-    .eq('match_id', matchId)
-    .single();
-
-  if (existingConv) {
-    // Chat already exists for this match, return it
-    return existingConv;
-  }
-
-  // Generate title: "Sport - Date" format
-  const formattedDate = new Date(matchDate).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
-  const title = `${sportName} - ${formattedDate}`;
-
-  // Singles = direct chat with match_id, Doubles = group chat with match_id
-  const conversationType: ConversationType = matchFormat === 'singles' ? 'direct' : 'group';
-
-  try {
-    return await createConversation({
-      conversation_type: conversationType,
-      title: conversationType === 'group' ? title : undefined, // Direct chats don't need title
-      participant_ids: participantIds,
-      created_by: createdBy,
-      match_id: matchId,
-    });
-  } catch (err) {
-    // A concurrent join may have inserted the match chat first. Partial UNIQUE
-    // index on conversation.match_id raises 23505; resolve against the winner.
-    if ((err as { code?: string })?.code === '23505') {
-      const existing = await getMatchChat(matchId);
-      if (existing) {
-        return existing;
-      }
-    }
-    throw err;
-  }
-}
+// Match chats are created and their participants are kept in sync entirely by
+// Postgres triggers on `match` and `match_participant` (see migration
+// 20260426120000_match_chat_lifecycle_via_triggers.sql). No client-side
+// create/ensure helper exists — call sites simply read the conversation by
+// match_id when they need it.
 
 /**
  * Check if a match chat exists for a given match

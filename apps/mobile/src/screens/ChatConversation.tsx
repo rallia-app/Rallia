@@ -291,7 +291,8 @@ export default function ChatConversationScreen() {
 
     if (
       isGroupConversationType(conversation.conversation_type) ||
-      conversation.conversation_type === 'announcement'
+      conversation.conversation_type === 'announcement' ||
+      conversation.conversation_type === 'match'
     ) {
       const count = networkInfo?.member_count || conversation.participants?.length || 0;
       return `${count} participant${count !== 1 ? 's' : ''}`;

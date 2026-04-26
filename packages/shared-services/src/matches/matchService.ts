@@ -22,14 +22,7 @@ import {
   countRecentCancellationEvents,
 } from '../reputation/reputationService';
 import { calculateCancellationPenalty } from '../reputation/reputationPenalties';
-import {
-  createMatchChat,
-  getMatchChat,
-  syncMatchConversationTitle,
-  updateConversation,
-  removeConversationParticipant,
-  addConversationParticipant,
-} from '../chat/chatService';
+import { syncMatchConversationTitle, updateConversation } from '../chat/chatService';
 import type {
   Match,
   TablesInsert,
@@ -1166,108 +1159,12 @@ export async function deleteMatch(matchId: string): Promise<void> {
 }
 
 // =============================================================================
-// MATCH CHAT HELPERS
-// =============================================================================
-
-// =============================================================================
 // MATCH PARTICIPANT ACTIONS
 // =============================================================================
-
-/**
- * Ensures a match chat exists and that the new joiner is a participant.
- * Creates the conversation on the first join, and adds subsequent joiners
- * to the existing conversation.
- *
- * @param matchId - The match ID
- * @param newPlayerId - The player who just joined and needs to be in the chat
- */
-async function ensureMatchChat(matchId: string, newPlayerId: string): Promise<void> {
-  try {
-    // Check if a conversation already exists for this match
-    const existingConversation = await getMatchChat(matchId);
-
-    if (existingConversation) {
-      // Chat exists — just add the new player
-      await addConversationParticipant(existingConversation.id, newPlayerId);
-      return;
-    }
-
-    // No chat yet — fetch match details to create one
-    const { data: match, error: matchError } = await supabase
-      .from('match')
-      .select(
-        `
-        id,
-        format,
-        match_date,
-        created_by,
-        sport:sport_id (
-          name
-        ),
-        participants:match_participant (
-          player_id,
-          status
-        )
-      `
-      )
-      .eq('id', matchId)
-      .single();
-
-    if (matchError || !match) {
-      Logger.error('[ensureMatchChat] Failed to fetch match:', matchError);
-      return;
-    }
-
-    // Collect all player IDs: host + all joined participants
-    const joinedParticipants =
-      match.participants?.filter((p: { status: string }) => p.status === 'joined') ?? [];
-    const allPlayerIds = [
-      match.created_by,
-      ...joinedParticipants.map((p: { player_id: string }) => p.player_id),
-    ];
-    const uniquePlayerIds = [...new Set(allPlayerIds)];
-
-    const sportName = (match.sport as { name?: string } | null)?.name || 'Match';
-    const matchFormat = match.format as 'singles' | 'doubles';
-
-    // Create the match chat (may return existing conv in a race condition)
-    const conversation = await createMatchChat(
-      matchId,
-      newPlayerId,
-      uniquePlayerIds,
-      matchFormat,
-      sportName,
-      match.match_date
-    );
-
-    // Ensure the new player is a participant even if createMatchChat
-    // returned an already-existing conversation (race condition safety)
-    await addConversationParticipant(conversation.id, newPlayerId);
-  } catch (error) {
-    Logger.error(
-      '[ensureMatchChat] Error',
-      error instanceof Error ? error : new Error(String(error))
-    );
-  }
-}
-
-/**
- * Helper to remove a player from the match chat when they leave or are kicked.
- * Fire-and-forget — errors are logged but don't block the caller.
- */
-async function removePlayerFromMatchChat(matchId: string, playerId: string): Promise<void> {
-  try {
-    const conversation = await getMatchChat(matchId);
-    if (!conversation) return;
-
-    await removeConversationParticipant(conversation.id, playerId);
-  } catch (error) {
-    Logger.error(
-      '[removePlayerFromMatchChat] Error',
-      error instanceof Error ? error : new Error(String(error))
-    );
-  }
-}
+// Match chat membership is maintained by Postgres triggers on `match` and
+// `match_participant`. The TS layer no longer creates, updates, or deletes
+// conversation_participant rows for match chats — see migration
+// 20260426120000_match_chat_lifecycle_via_triggers.sql.
 
 /**
  * Join match result with status info
@@ -1563,14 +1460,7 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
       });
     }
 
-    // Ensure match chat exists and add the new player
-    ensureMatchChat(matchId, playerId).catch(err => {
-      Logger.error(
-        '[joinMatch] Failed to ensure match chat',
-        err instanceof Error ? err : new Error(String(err)),
-        { matchId, playerId }
-      );
-    });
+    // Match chat membership is synced by DB triggers on match_participant.
   }
 
   return {
@@ -1786,10 +1676,7 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
     }
   }
 
-  // Remove the player from the match chat (fire and forget)
-  removePlayerFromMatchChat(matchId, playerId).catch(err => {
-    Logger.error('[leaveMatch] Failed to remove player from match chat:', err);
-  });
+  // Match chat membership is synced by DB triggers on match_participant.
 }
 
 /**
@@ -1943,14 +1830,7 @@ export async function acceptJoinRequest(
     Logger.error('Failed to send join accepted notification:', err);
   });
 
-  // Ensure match chat exists and add the accepted player
-  ensureMatchChat(matchId, participant.player_id).catch(err => {
-    Logger.error(
-      '[acceptJoinRequest] Failed to ensure match chat',
-      err instanceof Error ? err : new Error(String(err)),
-      { matchId, playerId: participant.player_id }
-    );
-  });
+  // Match chat membership is synced by DB triggers on match_participant.
 
   return updatedParticipant as MatchParticipant;
 }
@@ -2243,10 +2123,7 @@ export async function kickParticipant(
       });
     }
 
-    // Remove the kicked player from the match chat (fire and forget)
-    removePlayerFromMatchChat(matchId, participantRecord.player_id).catch(err => {
-      Logger.error('[kickParticipant] Failed to remove player from match chat:', err);
-    });
+    // Match chat membership is synced by DB triggers on match_participant.
   }
 
   return updatedParticipant as MatchParticipant;
