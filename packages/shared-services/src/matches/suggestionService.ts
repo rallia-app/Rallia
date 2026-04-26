@@ -297,7 +297,15 @@ function generateNoSourceSlots(
 export async function getMatchSuggestions(
   params: GetMatchSuggestionsParams
 ): Promise<MatchSuggestion[]> {
-  const { playerId, sportId, sportName, latitude, longitude, maxDistanceKm = 25 } = params;
+  const {
+    playerId,
+    sportId,
+    sportName,
+    latitude,
+    longitude,
+    maxDistanceKm = 25,
+    limit = 10,
+  } = params;
   const isAnon = !playerId;
 
   if (isAnon && (latitude == null || longitude == null)) {
@@ -309,6 +317,10 @@ export async function getMatchSuggestions(
   const startDate = dates[0];
   const endDate = dates[dates.length - 1];
 
+  // RPC returns one row per (opponent, facility) and many opponents drop out
+  // during conflict-filtering — ask for 4× headroom so the final cap can be hit.
+  const rpcLimit = Math.max(50, limit * 4);
+
   // ── Step 1: Call SQL RPC ────────────────────────────────────────────
   const { data: scoredRows, error } = isAnon
     ? await supabase.rpc('get_match_suggestions_anon', {
@@ -316,12 +328,12 @@ export async function getMatchSuggestions(
         p_lat: latitude!,
         p_lng: longitude!,
         p_max_distance_km: maxDistanceKm,
-        p_limit: 50,
+        p_limit: rpcLimit,
       })
     : await supabase.rpc('get_match_suggestions_scored', {
         p_player_id: playerId!,
         p_sport_id: sportId,
-        p_limit: 50,
+        p_limit: rpcLimit,
       });
 
   if (error) {
@@ -569,7 +581,7 @@ export async function getMatchSuggestions(
   // ── Step 7: Sort and apply quality threshold ──────────────────────
   scoredSuggestions.sort((a, b) => b.playerCompatibility - a.playerCompatibility);
 
-  const MIN_GUARANTEED = 10;
+  const MIN_GUARANTEED = Math.min(10, limit);
   const QUALITY_THRESHOLD = 0.35;
 
   let result: MatchSuggestion[];
@@ -585,7 +597,7 @@ export async function getMatchSuggestions(
         : scoredSuggestions.slice(0, MIN_GUARANTEED);
   }
 
-  return result;
+  return result.slice(0, limit);
 }
 
 // =============================================================================

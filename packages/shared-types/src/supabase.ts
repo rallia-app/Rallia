@@ -5261,6 +5261,48 @@ export type Database = {
           },
         ]
       }
+      proof_reaction: {
+        Row: {
+          created_at: string
+          id: string
+          proof_id: string
+          reaction: string
+          reactor_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          proof_id: string
+          reaction: string
+          reactor_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          proof_id?: string
+          reaction?: string
+          reactor_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proof_reaction_proof_id_fkey"
+            columns: ["proof_id"]
+            isOneToOne: false
+            referencedRelation: "rating_proof"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proof_reaction_reactor_id_fkey"
+            columns: ["reactor_id"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proof_report: {
         Row: {
           admin_notes: string | null

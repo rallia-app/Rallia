@@ -18,7 +18,7 @@ export async function Footer() {
             </p>
             <div className="flex gap-4">
               <a
-                href="mailto:apprallia@gmail.com"
+                href="mailto:contact@rallia.ca"
                 className="text-gray-600 dark:text-gray-400 hover:text-[var(--secondary-500)] transition-colors"
                 aria-label="Email"
               >

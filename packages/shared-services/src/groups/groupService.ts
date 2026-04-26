@@ -29,10 +29,36 @@ export type {
   MatchSet,
   GroupMatch,
   LeaderboardEntry,
+  LeaderboardSkillRating,
+  NetworkPulse,
+  NetworkPulseDiscover,
+  NetworkPulseFormStripEntry,
+  NetworkPulseH2HCell,
+  NetworkPulseHeadlineInsight,
+  NetworkPulseHeatmapDay,
+  NetworkPulseLeaderboardEntry,
+  NetworkPulseMatchupExtreme,
+  NetworkPulseMoment,
+  NetworkPulsePersonalRecord,
+  NetworkPulsePowerPair,
+  NetworkPulseRivalry,
+  NetworkPulseScoreDistEntry,
+  NetworkPulseSetStats,
+  NetworkPulseSettlingInEntry,
+  NetworkPulseSkillRating,
+  NetworkPulseUnplayedPairing,
+  NetworkPulseYourSummary,
+  LeaderboardOutcome,
   SetScore,
   CreatePlayedMatchInput,
   PendingScoreConfirmation,
 } from './groupTypes';
+
+// ============================================================================
+// NETWORK PULSE
+// ============================================================================
+
+export { getNetworkPulse } from './networkPulseService';
 
 // ============================================================================
 // GROUP CRUD OPERATIONS
@@ -89,6 +115,7 @@ export {
   getGroupMatches,
   getMostRecentGroupMatch,
   getGroupLeaderboard,
+  MIN_GAMES_FOR_WIN_RATE,
   postMatchToGroup,
   removeMatchFromGroup,
   getNetworkMemberUpcomingMatches,

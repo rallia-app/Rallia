@@ -217,7 +217,7 @@ const CommunityCard: React.FC<{
             <View style={[styles.memberBadge, { backgroundColor: '#34C75920' }]}>
               <Ionicons name="checkmark-circle" size={12} color="#34C759" />
               <Text size="xs" style={{ color: '#34C759', marginLeft: 4 }}>
-                {t('community.members.title')}
+                {t('community.memberBadge')}
               </Text>
             </View>
           )}

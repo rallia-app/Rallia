@@ -6,7 +6,8 @@
  */
 
 import { useState, useCallback } from 'react';
-import { normalizePostalCode } from '@rallia/shared-utils';
+import { normalizePostalCode, shouldUseApiMocks } from '@rallia/shared-utils';
+import { mockGeocodePostalCode } from './devMocks/googlePlaces';
 
 // =============================================================================
 // TYPES
@@ -107,6 +108,26 @@ export function usePostalCodeGeocode(): UsePostalCodeGeocodeReturn {
    */
   const geocode = useCallback(
     async (postalCode: string): Promise<PostalCodeLocation | null> => {
+      // Validate format first (cheap, no network)
+      const validation = validateFormat(postalCode);
+
+      if (!validation.isValid || !validation.country || !validation.normalized) {
+        setError('invalid');
+        return null;
+      }
+
+      if (shouldUseApiMocks()) {
+        setIsLoading(true);
+        setError(null);
+        try {
+          const mocked = await mockGeocodePostalCode(validation.normalized, validation.country);
+          setResult(mocked);
+          return mocked;
+        } finally {
+          setIsLoading(false);
+        }
+      }
+
       const apiKey = getApiKey();
 
       if (!apiKey) {
@@ -114,14 +135,6 @@ export function usePostalCodeGeocode(): UsePostalCodeGeocodeReturn {
           'Google API key not configured. ' + 'Ensure EXPO_PUBLIC_GOOGLE_PLACES_API_KEY is set.';
         console.error(errorMsg);
         setError(errorMsg);
-        return null;
-      }
-
-      // Validate format first
-      const validation = validateFormat(postalCode);
-
-      if (!validation.isValid || !validation.country || !validation.normalized) {
-        setError('invalid');
         return null;
       }
 

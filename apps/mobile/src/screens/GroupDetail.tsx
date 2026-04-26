@@ -23,18 +23,8 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import Svg, { Circle } from 'react-native-svg';
-
 import { Text, Button } from '@rallia/shared-components';
 import { lightHaptic, selectionHaptic, mediumHaptic, getShortName } from '@rallia/shared-utils';
-import {
-  useThemeStyles,
-  useAuth,
-  useTranslation,
-  useNavigateToPlayerProfile,
-  useRequireOnboarding,
-} from '../hooks';
-import { useSport } from '../context';
-import { SportIcon } from '../components/SportIcon';
 import {
   useGroupWithMembers,
   useGroupStats,
@@ -42,9 +32,6 @@ import {
   useIsGroupModerator,
   useLeaveGroup,
   useDeleteGroup,
-  useGroupMatches,
-  useMostRecentGroupMatch,
-  useGroupLeaderboard,
   useGroupRealtime,
   useScoreConfirmationsRealtime,
   useConversationUnreadCount,
@@ -55,7 +42,6 @@ import {
   type GroupActivity as GroupActivityType,
   type GroupMatch,
 } from '@rallia/shared-hooks';
-import type { RootStackParamList } from '../navigation/types';
 import { SheetManager } from 'react-native-actions-sheet';
 import {
   primary,
@@ -66,6 +52,17 @@ import {
   fontSizePixels,
   radiusPixels,
 } from '@rallia/design-system';
+
+import {
+  useThemeStyles,
+  useAuth,
+  useTranslation,
+  useNavigateToPlayerProfile,
+  useRequireOnboarding,
+} from '../hooks';
+import { useSport } from '../context';
+import { SportIcon } from '../components/SportIcon';
+import type { RootStackParamList } from '../navigation/types';
 import {
   AddScoreIntroModal,
   AddScoreModal,
@@ -73,7 +70,7 @@ import {
   type MatchType,
 } from '../features/matches';
 import { NetworkFavoriteFacilities } from '../components/NetworkFavoriteFacilities';
-import { NetworkMatchesTab } from '../features/matches/components';
+import { NetworkLeaderboardTab, NetworkMatchesTab } from '../features/matches/components';
 
 const HEADER_HEIGHT = 140;
 
@@ -117,7 +114,6 @@ export default function GroupDetailScreen() {
   }, [sports]);
 
   const [activeTab, setActiveTab] = useState<TabKey>('games');
-  const [leaderboardPeriod, setLeaderboardPeriod] = useState<30 | 90 | 180 | 0>(30);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   // Add Score flow state
   const [showAddScoreIntro, setShowAddScoreIntro] = useState(false);
@@ -146,12 +142,6 @@ export default function GroupDetailScreen() {
   const { data: stats } = useGroupStats(groupId);
   const { data: activities } = useGroupActivity(groupId, 50);
   const { data: isModerator } = useIsGroupModerator(groupId, playerId);
-  const { data: recentMatch } = useMostRecentGroupMatch(groupId);
-  const { data: allMatches } = useGroupMatches(groupId, 180, 100);
-  const { data: leaderboard } = useGroupLeaderboard(
-    groupId,
-    leaderboardPeriod === 0 ? 3650 : leaderboardPeriod
-  );
 
   // Get unread message count for the group chat badge (all unread)
   const { data: unreadChatCount } = useConversationUnreadCount(
@@ -476,520 +466,15 @@ export default function GroupDetailScreen() {
 
     switch (activeTab) {
       case 'leaderboard': {
-        const periodOptions = [
-          { value: 30, label: t('groups.leaderboardPeriod.30days') },
-          { value: 90, label: t('groups.leaderboardPeriod.90days') },
-          { value: 180, label: t('groups.leaderboardPeriod.180days') },
-          { value: 0, label: t('groups.leaderboardPeriod.allTime') },
-        ];
-
         return (
-          <View style={styles.tabContent}>
-            {/* Recent Games Section */}
-            <View style={styles.sectionHeader}>
-              <Text size="lg" weight="bold" style={{ color: colors.text }}>
-                {t('groups.recentGames.title')}
-              </Text>
-              <TouchableOpacity
-                onPress={() =>
-                  SheetManager.show('recent-games', {
-                    payload: {
-                      matches: allMatches || [],
-                      onMatchPress: (match: unknown) => {
-                        SheetManager.hide('recent-games');
-                        navigation.navigate('PlayedMatchDetail', { match: match as GroupMatch });
-                      },
-                      onPlayerPress: (playerId: string) => {
-                        SheetManager.hide('recent-games');
-                        navigateToPlayerProfile(playerId);
-                      },
-                    },
-                  })
-                }
-              >
-                <Text size="sm" style={{ color: colors.primary }}>
-                  {t('groups.recentGames.viewAll')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <View
-              style={[
-                styles.recentGamesCard,
-                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-              ]}
-            >
-              {/* Most Recent Match Card */}
-              {recentMatch?.match ? (
-                <TouchableOpacity
-                  style={[
-                    styles.matchCard,
-                    { backgroundColor: isDark ? '#1C1C1E' : '#F8F8F8', borderColor: colors.border },
-                  ]}
-                  onPress={() => {
-                    navigation.navigate('PlayedMatchDetail', { match: recentMatch });
-                  }}
-                  activeOpacity={0.7}
-                >
-                  {/* Match Header */}
-                  <View style={styles.matchHeader}>
-                    <View style={styles.matchInfo}>
-                      <SportIcon
-                        sportName={recentMatch.match.sport?.name ?? 'tennis'}
-                        size={16}
-                        color={colors.textSecondary}
-                      />
-                      <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 6 }}>
-                        {recentMatch.match.sport?.name || t('common.game')} ·{' '}
-                        {new Date(recentMatch.match.match_date).toLocaleDateString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                        })}
-                      </Text>
-                    </View>
-                    <View
-                      style={[
-                        styles.matchBadge,
-                        {
-                          backgroundColor:
-                            recentMatch.match.player_expectation === 'competitive'
-                              ? '#E8F5E9'
-                              : '#FFF3E0',
-                        },
-                      ]}
-                    >
-                      <Ionicons
-                        name={
-                          recentMatch.match.player_expectation === 'competitive'
-                            ? 'trophy'
-                            : 'fitness'
-                        }
-                        size={12}
-                        color={
-                          recentMatch.match.player_expectation === 'competitive'
-                            ? '#2E7D32'
-                            : '#EF6C00'
-                        }
-                      />
-                      <Text
-                        size="xs"
-                        weight="semibold"
-                        style={{
-                          color:
-                            recentMatch.match.player_expectation === 'competitive'
-                              ? '#2E7D32'
-                              : '#EF6C00',
-                          marginLeft: 4,
-                        }}
-                      >
-                        {recentMatch.match.player_expectation === 'competitive'
-                          ? t('groups.recentGames.competitive')
-                          : t('groups.recentGames.practice')}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Players - Team-based layout */}
-                  <View style={styles.matchPlayersContainer}>
-                    {/* Team 1 Card */}
-                    {(() => {
-                      const team1Players = recentMatch.match.participants.filter(
-                        p => p.team_number === 1
-                      );
-                      const isWinner = recentMatch.match?.result?.winning_team === 1;
-
-                      return (
-                        <View
-                          style={[
-                            styles.teamCard,
-                            isWinner && styles.winnerTeamCard,
-                            isWinner && { borderColor: '#F59E0B' },
-                          ]}
-                        >
-                          {isWinner && (
-                            <View style={styles.teamWinnerBadge}>
-                              <Ionicons name="trophy-outline" size={12} color="#F59E0B" />
-                            </View>
-                          )}
-
-                          {/* Team Avatars - overlapping for doubles, tappable to view profile */}
-                          <View style={styles.teamAvatarsContainer}>
-                            {team1Players.map((participant, index) => (
-                              <TouchableOpacity
-                                key={participant.id}
-                                style={[
-                                  styles.teamPlayerAvatar,
-                                  { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
-                                  index > 0 && styles.teamAvatarOverlap,
-                                ]}
-                                onPress={() =>
-                                  participant.player_id &&
-                                  navigateToPlayerProfile(participant.player_id)
-                                }
-                                activeOpacity={0.7}
-                              >
-                                {participant.player?.profile?.profile_picture_url ? (
-                                  <Image
-                                    source={{ uri: participant.player.profile.profile_picture_url }}
-                                    style={styles.teamAvatarImage}
-                                  />
-                                ) : (
-                                  <Ionicons
-                                    name="person-outline"
-                                    size={20}
-                                    color={colors.textMuted}
-                                  />
-                                )}
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-
-                          {/* Team Names */}
-                          <Text
-                            size="xs"
-                            weight={isWinner ? 'semibold' : 'regular'}
-                            style={{ color: colors.text, marginTop: 6, textAlign: 'center' }}
-                            numberOfLines={2}
-                          >
-                            {team1Players
-                              .map(
-                                p => p.player?.profile?.first_name || t('groups.recentGames.player')
-                              )
-                              .join(', ')}
-                          </Text>
-
-                          {/* Team Score - same for all team members */}
-                          {recentMatch.match?.result && (
-                            <Text
-                              size="sm"
-                              weight="bold"
-                              style={{
-                                color: isWinner ? '#F59E0B' : colors.textMuted,
-                                marginTop: 4,
-                              }}
-                            >
-                              {recentMatch.match.result.sets &&
-                              recentMatch.match.result.sets.length > 0
-                                ? recentMatch.match.result.sets
-                                    .sort((a, b) => a.set_number - b.set_number)
-                                    .map(set => set.team1_score)
-                                    .join('  ')
-                                : (recentMatch.match.result.team1_score ?? '-')}
-                            </Text>
-                          )}
-                        </View>
-                      );
-                    })()}
-
-                    {/* VS */}
-                    <Text
-                      weight="semibold"
-                      style={{ color: colors.textMuted, marginHorizontal: 12 }}
-                    >
-                      vs
-                    </Text>
-
-                    {/* Team 2 Card */}
-                    {(() => {
-                      const team2Players = recentMatch.match.participants.filter(
-                        p => p.team_number === 2
-                      );
-                      const isWinner = recentMatch.match?.result?.winning_team === 2;
-
-                      return (
-                        <View
-                          style={[
-                            styles.teamCard,
-                            isWinner && styles.winnerTeamCard,
-                            isWinner && { borderColor: '#F59E0B' },
-                          ]}
-                        >
-                          {isWinner && (
-                            <View style={styles.teamWinnerBadge}>
-                              <Ionicons name="trophy-outline" size={12} color="#F59E0B" />
-                            </View>
-                          )}
-
-                          {/* Team Avatars - overlapping for doubles, tappable to view profile */}
-                          <View style={styles.teamAvatarsContainer}>
-                            {team2Players.map((participant, index) => (
-                              <TouchableOpacity
-                                key={participant.id}
-                                style={[
-                                  styles.teamPlayerAvatar,
-                                  { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
-                                  index > 0 && styles.teamAvatarOverlap,
-                                ]}
-                                onPress={() =>
-                                  participant.player_id &&
-                                  navigateToPlayerProfile(participant.player_id)
-                                }
-                                activeOpacity={0.7}
-                              >
-                                {participant.player?.profile?.profile_picture_url ? (
-                                  <Image
-                                    source={{ uri: participant.player.profile.profile_picture_url }}
-                                    style={styles.teamAvatarImage}
-                                  />
-                                ) : (
-                                  <Ionicons
-                                    name="person-outline"
-                                    size={20}
-                                    color={colors.textMuted}
-                                  />
-                                )}
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-
-                          {/* Team Names */}
-                          <Text
-                            size="xs"
-                            weight={isWinner ? 'semibold' : 'regular'}
-                            style={{ color: colors.text, marginTop: 6, textAlign: 'center' }}
-                            numberOfLines={2}
-                          >
-                            {team2Players
-                              .map(
-                                p => p.player?.profile?.first_name || t('groups.recentGames.player')
-                              )
-                              .join(', ')}
-                          </Text>
-
-                          {/* Team Score - same for all team members */}
-                          {recentMatch.match?.result && (
-                            <Text
-                              size="sm"
-                              weight="bold"
-                              style={{
-                                color: isWinner ? '#F59E0B' : colors.textMuted,
-                                marginTop: 4,
-                              }}
-                            >
-                              {recentMatch.match.result.sets &&
-                              recentMatch.match.result.sets.length > 0
-                                ? recentMatch.match.result.sets
-                                    .sort((a, b) => a.set_number - b.set_number)
-                                    .map(set => set.team2_score)
-                                    .join('  ')
-                                : (recentMatch.match.result.team2_score ?? '-')}
-                            </Text>
-                          )}
-                        </View>
-                      );
-                    })()}
-                  </View>
-                </TouchableOpacity>
-              ) : (
-                <View style={styles.emptyMatch}>
-                  <SportIcon
-                    sportName={selectedSport?.name ?? 'tennis'}
-                    size={32}
-                    color={colors.textMuted}
-                  />
-                  <Text size="sm" style={{ color: colors.textSecondary, marginTop: 8 }}>
-                    {t('groups.recentGames.noGames')}
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            {/* Leaderboard Section */}
-            <View style={styles.sectionHeader}>
-              <Text size="lg" weight="bold" style={{ color: colors.text }}>
-                {t('groups.leaderboard.title')}
-              </Text>
-
-              {/* Period Filter Dropdown */}
-              <TouchableOpacity
-                style={[styles.periodFilter, { backgroundColor: isDark ? '#2C2C2E' : '#F0F0F0' }]}
-                onPress={() => {
-                  const nextIndex =
-                    (periodOptions.findIndex(o => o.value === leaderboardPeriod) + 1) %
-                    periodOptions.length;
-                  setLeaderboardPeriod(periodOptions[nextIndex].value as 30 | 90 | 180 | 0);
-                }}
-              >
-                <Text size="sm" style={{ color: colors.text }}>
-                  {periodOptions.find(o => o.value === leaderboardPeriod)?.label}
-                </Text>
-                <Ionicons
-                  name="chevron-down"
-                  size={16}
-                  color={colors.textMuted}
-                  style={{ marginLeft: 4 }}
-                />
-              </TouchableOpacity>
-            </View>
-
-            <View
-              style={[
-                styles.leaderboardCard,
-                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-              ]}
-            >
-              {leaderboard && leaderboard.length > 0 ? (
-                <>
-                  {/* Podium for top 3 */}
-                  {leaderboard.length >= 3 && (
-                    <View style={styles.podiumContainer}>
-                      {/* 2nd Place */}
-                      <View style={styles.podiumItem}>
-                        <View
-                          style={[
-                            styles.podiumAvatar,
-                            styles.podiumAvatar2nd,
-                            { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
-                          ]}
-                        >
-                          {leaderboard[1].player?.profile?.profile_picture_url ? (
-                            <Image
-                              source={{ uri: leaderboard[1].player.profile.profile_picture_url }}
-                              style={styles.avatarImage}
-                            />
-                          ) : (
-                            <Ionicons name="person-outline" size={28} color={colors.textMuted} />
-                          )}
-                          <View style={[styles.rankBadge, { backgroundColor: '#C0C0C0' }]}>
-                            <Text size="xs" weight="bold" style={{ color: '#FFF' }}>
-                              2
-                            </Text>
-                          </View>
-                        </View>
-                      </View>
-
-                      {/* 1st Place */}
-                      <View style={styles.podiumItem}>
-                        <View
-                          style={[
-                            styles.podiumAvatar,
-                            styles.podiumAvatar1st,
-                            { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
-                          ]}
-                        >
-                          {leaderboard[0].player?.profile?.profile_picture_url ? (
-                            <Image
-                              source={{ uri: leaderboard[0].player.profile.profile_picture_url }}
-                              style={styles.avatarImage}
-                            />
-                          ) : (
-                            <Ionicons name="person-outline" size={32} color={colors.textMuted} />
-                          )}
-                          <View
-                            style={[
-                              styles.rankBadge,
-                              styles.rankBadge1st,
-                              { backgroundColor: '#FFD700' },
-                            ]}
-                          >
-                            <Ionicons name="trophy-outline" size={14} color="#FFF" />
-                          </View>
-                        </View>
-                      </View>
-
-                      {/* 3rd Place */}
-                      <View style={styles.podiumItem}>
-                        <View
-                          style={[
-                            styles.podiumAvatar,
-                            styles.podiumAvatar3rd,
-                            { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
-                          ]}
-                        >
-                          {leaderboard[2].player?.profile?.profile_picture_url ? (
-                            <Image
-                              source={{ uri: leaderboard[2].player.profile.profile_picture_url }}
-                              style={styles.avatarImage}
-                            />
-                          ) : (
-                            <Ionicons name="person-outline" size={24} color={colors.textMuted} />
-                          )}
-                          <View style={[styles.rankBadge, { backgroundColor: '#CD7F32' }]}>
-                            <Text size="xs" weight="bold" style={{ color: '#FFF' }}>
-                              3
-                            </Text>
-                          </View>
-                        </View>
-                      </View>
-                    </View>
-                  )}
-
-                  {/* Stats Header */}
-                  <View style={styles.leaderboardHeader}>
-                    <Text size="xs" style={{ color: colors.textMuted, flex: 1 }}>
-                      {t('groups.leaderboard.players')}
-                    </Text>
-                    <Text
-                      size="xs"
-                      style={{ color: colors.textMuted, width: 80, textAlign: 'center' }}
-                    >
-                      {t('groups.leaderboard.gamesPlayed')}
-                    </Text>
-                  </View>
-
-                  {/* Leaderboard List */}
-                  {leaderboard.map((entry, index) => (
-                    <View
-                      key={entry.player_id}
-                      style={[styles.leaderboardRow, { borderBottomColor: colors.border }]}
-                    >
-                      <View style={styles.leaderboardRank}>
-                        {index < 3 ? (
-                          <View
-                            style={[
-                              styles.topRankBadge,
-                              {
-                                backgroundColor:
-                                  index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : '#CD7F32',
-                              },
-                            ]}
-                          >
-                            <Text size="xs" weight="bold" style={{ color: '#FFF' }}>
-                              {index + 1}
-                            </Text>
-                          </View>
-                        ) : (
-                          <Text style={{ color: colors.textMuted }}>{index + 1}</Text>
-                        )}
-                      </View>
-                      <View
-                        style={[
-                          styles.leaderboardAvatar,
-                          { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
-                        ]}
-                      >
-                        {entry.player?.profile?.profile_picture_url ? (
-                          <Image
-                            source={{ uri: entry.player.profile.profile_picture_url }}
-                            style={styles.avatarImage}
-                          />
-                        ) : (
-                          <Ionicons name="person-outline" size={18} color={colors.textMuted} />
-                        )}
-                      </View>
-                      <Text size="sm" style={{ color: colors.text, flex: 1, marginLeft: 12 }}>
-                        {getShortName(entry.player?.profile, t('groups.recentGames.player'))}
-                      </Text>
-                      <Text
-                        size="sm"
-                        weight="semibold"
-                        style={{ color: colors.text, width: 80, textAlign: 'center' }}
-                      >
-                        {entry.games_played}
-                      </Text>
-                    </View>
-                  ))}
-                </>
-              ) : (
-                <View style={styles.emptyLeaderboard}>
-                  <Ionicons name="trophy-outline" size={48} color={colors.textMuted} />
-                  <Text style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
-                    {t('groups.detail.playGamesToAppear')}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
+          <NetworkLeaderboardTab
+            networkId={groupId}
+            networkType="group"
+            currentPlayerId={playerId ?? undefined}
+            onAddScorePress={handleAddGame}
+            onPlayerPress={navigateToPlayerProfile}
+            onChallengePress={() => handleAddGame()}
+          />
         );
       }
 
@@ -1458,20 +943,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  navBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  navButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   scrollContent: {
     paddingBottom: 20,
   },
@@ -1552,136 +1023,10 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
-  tabContent: {
-    padding: 16,
-    gap: 16,
-  },
-  groupStatsCard: {
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  groupStatsList: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  groupStatItem: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  groupStatIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  groupStatInfo: {
-    flex: 1,
-  },
-  statsCard: {
-    padding: 20,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statCircle: {
-    marginRight: 24,
-  },
-  donutContainer: {
-    width: 100,
-    height: 100,
-    position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  donutCenter: {
-    position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statsList: {
-    flex: 1,
-    gap: 16,
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
   aboutCard: {
     padding: 20,
     borderRadius: 16,
     borderWidth: 1,
-  },
-  aboutHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  leaderboardPreview: {
-    padding: 20,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  sectionTitle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  leaderboardCard: {
-    padding: 20,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  emptyLeaderboard: {
-    alignItems: 'center',
-    paddingVertical: 32,
-  },
-  activitySection: {
-    marginBottom: 8,
-  },
-  activityDayHeader: {
-    marginBottom: 8,
-    marginLeft: 4,
-  },
-  activityItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 8,
-  },
-  activityAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-    overflow: 'hidden',
-  },
-  avatarImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-  activityContent: {
-    flex: 1,
-  },
-  emptyActivity: {
-    padding: 40,
-    borderRadius: 16,
-    borderWidth: 1,
-    alignItems: 'center',
   },
   chatButton: {
     position: 'absolute',
@@ -1709,276 +1054,14 @@ const styles = StyleSheet.create({
     lineHeight: 12,
   },
   // Leaderboard Preview List
-  leaderboardPreviewList: {
-    marginTop: 12,
-  },
-  leaderboardPreviewItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  smallAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
   // Matches Preview styles
-  matchesPreview: {
-    padding: 20,
-    borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: 12,
-  },
-  matchesPreviewList: {
-    marginTop: 16,
-    gap: 12,
-  },
-  matchPreviewCard: {
-    padding: 12,
-    borderRadius: 12,
-  },
-  matchPreviewHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  matchSlotBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  matchPreviewDetails: {
-    marginTop: 10,
-    gap: 4,
-  },
-  matchPreviewRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  matchesEmptyState: {
-    alignItems: 'center',
-    paddingVertical: 24,
-  },
   // Recent Games Card
-  recentGamesCard: {
-    padding: 20,
-    borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: 16,
-  },
   // Match Card Styles
-  matchCard: {
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  matchHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  matchInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  matchBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  matchPlayersContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 16,
-    paddingHorizontal: 8,
-  },
-  teamContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   // New Team Card styles for Recent Games (groups players per team)
-  teamCard: {
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    minWidth: 90,
-    maxWidth: 120,
-  },
-  winnerTeamCard: {
-    borderWidth: 2,
-  },
-  teamAvatarsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  teamPlayerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  teamAvatarOverlap: {
-    marginLeft: -12,
-  },
-  teamAvatarImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-  teamWinnerBadge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: '#FFF',
-    borderRadius: 10,
-    padding: 2,
-  },
   // Original player card styles (kept for backward compatibility)
-  playerCard: {
-    alignItems: 'center',
-    padding: 8,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  winnerCard: {
-    borderWidth: 2,
-  },
-  playerAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  winnerBadge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: '#FFF',
-    borderRadius: 10,
-    padding: 2,
-  },
-  scoresRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  emptyMatch: {
-    alignItems: 'center',
-    paddingVertical: 24,
-  },
   // Leaderboard Section Styles
-  infoButton: {
-    marginLeft: 8,
-  },
-  periodFilter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
   // Podium Styles
-  podiumContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-    marginVertical: 24,
-  },
-  podiumItem: {
-    alignItems: 'center',
-    marginHorizontal: 8,
-  },
-  podiumAvatar: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 35,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  podiumAvatar1st: {
-    width: 70,
-    height: 70,
-  },
-  podiumAvatar2nd: {
-    width: 56,
-    height: 56,
-    marginBottom: 12,
-    borderRadius: 28,
-  },
-  podiumAvatar3rd: {
-    width: 48,
-    height: 48,
-    marginBottom: 20,
-    borderRadius: 24,
-  },
-  rankBadge: {
-    position: 'absolute',
-    bottom: -4,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  rankBadge1st: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    bottom: -6,
-  },
   // Leaderboard List Styles
-  leaderboardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-  },
-  leaderboardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-  },
-  leaderboardRank: {
-    width: 32,
-    alignItems: 'center',
-  },
-  topRankBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  leaderboardAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
   // Options dropdown menu
   menuOverlay: {
     flex: 1,

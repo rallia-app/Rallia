@@ -1,0 +1,197 @@
+/**
+ * Canned Google Places / Geocoding / Time Zone fixtures for dev mode.
+ *
+ * Activated by `shouldUseApiMocks()` in shared-utils — see callers in
+ * usePlacesAutocomplete and usePostalCodeGeocode. Tailored to the GMA
+ * bounding box that the autocomplete already restricts to.
+ */
+
+import type { AddressComponent, PlacePrediction } from '@rallia/shared-types';
+import type { PlaceDetails } from '../usePlacesAutocomplete';
+import type { PostalCodeLocation } from '../usePostalCodeGeocode';
+
+const MOCK_DELAY_MS = 250;
+
+const wait = (ms = MOCK_DELAY_MS) => new Promise<void>(r => setTimeout(r, ms));
+
+interface MockPlace {
+  placeId: string;
+  name: string;
+  streetNumber: string;
+  route: string;
+  city: string;
+  province: string; // short
+  provinceLong: string;
+  postalCode: string;
+  country: string;
+  countryCode: string;
+  latitude: number;
+  longitude: number;
+}
+
+const MOCK_PLACES: MockPlace[] = [
+  {
+    placeId: 'mock_jeanne_mance',
+    name: 'Parc Jeanne-Mance Tennis Courts',
+    streetNumber: '4422',
+    route: 'Avenue de l’Esplanade',
+    city: 'Montréal',
+    province: 'QC',
+    provinceLong: 'Québec',
+    postalCode: 'H2W 1S4',
+    country: 'Canada',
+    countryCode: 'CA',
+    latitude: 45.5181,
+    longitude: -73.5876,
+  },
+  {
+    placeId: 'mock_lafontaine',
+    name: 'Parc La Fontaine Tennis',
+    streetNumber: '3819',
+    route: 'Avenue Calixa-Lavallée',
+    city: 'Montréal',
+    province: 'QC',
+    provinceLong: 'Québec',
+    postalCode: 'H2L 3A7',
+    country: 'Canada',
+    countryCode: 'CA',
+    latitude: 45.527,
+    longitude: -73.5687,
+  },
+  {
+    placeId: 'mock_kent_park',
+    name: 'Kent Park Tennis Club',
+    streetNumber: '5765',
+    route: 'Chemin de la Côte-des-Neiges',
+    city: 'Montréal',
+    province: 'QC',
+    provinceLong: 'Québec',
+    postalCode: 'H3T 1Y8',
+    country: 'Canada',
+    countryCode: 'CA',
+    latitude: 45.4925,
+    longitude: -73.6225,
+  },
+  {
+    placeId: 'mock_laval_centre',
+    name: 'Centre Sportif Laval',
+    streetNumber: '955',
+    route: 'Avenue Bois-de-Boulogne',
+    city: 'Laval',
+    province: 'QC',
+    provinceLong: 'Québec',
+    postalCode: 'H7N 4G1',
+    country: 'Canada',
+    countryCode: 'CA',
+    latitude: 45.585,
+    longitude: -73.7361,
+  },
+  {
+    placeId: 'mock_brossard_club',
+    name: 'Club de Tennis Brossard',
+    streetNumber: '7415',
+    route: 'Boulevard Marie-Victorin',
+    city: 'Brossard',
+    province: 'QC',
+    provinceLong: 'Québec',
+    postalCode: 'J4W 1A6',
+    country: 'Canada',
+    countryCode: 'CA',
+    latitude: 45.4408,
+    longitude: -73.4631,
+  },
+];
+
+const MOCK_TIMEZONE = 'America/Toronto';
+
+function findPlace(placeId: string): MockPlace {
+  return MOCK_PLACES.find(p => p.placeId === placeId) ?? MOCK_PLACES[0]!;
+}
+
+function buildAddressComponents(p: MockPlace): AddressComponent[] {
+  return [
+    { longText: p.streetNumber, shortText: p.streetNumber, types: ['street_number'] },
+    { longText: p.route, shortText: p.route, types: ['route'] },
+    { longText: p.city, shortText: p.city, types: ['locality', 'political'] },
+    {
+      longText: p.provinceLong,
+      shortText: p.province,
+      types: ['administrative_area_level_1', 'political'],
+    },
+    {
+      longText: p.country,
+      shortText: p.countryCode,
+      types: ['country', 'political'],
+    },
+    { longText: p.postalCode, shortText: p.postalCode, types: ['postal_code'] },
+  ];
+}
+
+function fuzzyFilter(query: string): MockPlace[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return MOCK_PLACES;
+  const matches = MOCK_PLACES.filter(
+    p =>
+      p.name.toLowerCase().includes(q) ||
+      p.city.toLowerCase().includes(q) ||
+      p.route.toLowerCase().includes(q)
+  );
+  return matches.length > 0 ? matches : MOCK_PLACES.slice(0, 3);
+}
+
+export async function mockPlacePredictions(query: string): Promise<PlacePrediction[]> {
+  await wait();
+  return fuzzyFilter(query).map(p => ({
+    placeId: p.placeId,
+    name: p.name,
+    address: `${p.streetNumber} ${p.route}, ${p.city}, ${p.province}`,
+  }));
+}
+
+export async function mockPlaceDetails(placeId: string): Promise<PlaceDetails> {
+  await wait();
+  const p = findPlace(placeId);
+  return {
+    placeId: p.placeId,
+    name: p.name,
+    address: `${p.streetNumber} ${p.route}, ${p.city}, ${p.province} ${p.postalCode}, ${p.country}`,
+    latitude: p.latitude,
+    longitude: p.longitude,
+    timezone: MOCK_TIMEZONE,
+    addressComponents: buildAddressComponents(p),
+    city: p.city,
+    province: p.province,
+    postalCode: p.postalCode,
+  };
+}
+
+/**
+ * Deterministic pseudo-coordinates for a postal code so repeated geocodes
+ * are stable. Anchors near GMA for CA, near NYC for US.
+ */
+function deterministicJitter(seed: string): number {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) {
+    h = (h * 31 + seed.charCodeAt(i)) | 0;
+  }
+  // Map to small offset in [-0.05, 0.05]
+  return ((h % 1000) / 1000 - 0.5) * 0.1;
+}
+
+export async function mockGeocodePostalCode(
+  normalizedPostal: string,
+  country: 'CA' | 'US'
+): Promise<PostalCodeLocation> {
+  await wait();
+  const baseLat = country === 'CA' ? 45.5017 : 40.7128;
+  const baseLng = country === 'CA' ? -73.5673 : -74.006;
+  const lat = baseLat + deterministicJitter(normalizedPostal + 'lat');
+  const lng = baseLng + deterministicJitter(normalizedPostal + 'lng');
+  return {
+    postalCode: normalizedPostal,
+    country,
+    formattedAddress: `${normalizedPostal}, ${country === 'CA' ? 'Canada' : 'USA'}`,
+    latitude: lat,
+    longitude: lng,
+  };
+}

@@ -893,6 +893,8 @@ const PlayerPortfolioSection: React.FC<PlayerPortfolioSectionProps> = ({
           setSelectedProof(null);
         }}
         proof={selectedProof}
+        currentUserId={currentUserId}
+        isOwnProfile={false}
       />
     </View>
   );

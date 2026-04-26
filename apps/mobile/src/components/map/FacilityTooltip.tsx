@@ -62,7 +62,7 @@ export function FacilityTooltip({ facility, colors, t, onPress }: FacilityToolti
             </Text>
             {(facility.address || facility.city) && (
               <Text size="sm" color={colors.textMuted} numberOfLines={1}>
-                {facility.address || facility.city}
+                {[facility.address, facility.city].filter(Boolean).join(', ')}
               </Text>
             )}
             <View style={styles.meta}>

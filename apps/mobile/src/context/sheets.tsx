@@ -18,6 +18,7 @@ import { GroupOptionsActionSheet } from '../features/groups/components/GroupOpti
 import { MemberOptionsActionSheet } from '../features/groups/components/MemberOptionsModal';
 import { InviteLinkActionSheet } from '../features/groups/components/InviteLinkModal';
 import { RecentGamesActionSheet } from '../features/groups/components/RecentGamesModal';
+import { ComparisonOverlay } from '../features/matches/components/leaderboard/ComparisonOverlay';
 import { AddGroupMemberActionSheet } from '../features/groups/components/AddGroupMemberModal';
 import { MemberListActionSheet } from '../features/groups/components/MemberListModal';
 import { EditGroupActionSheet } from '../features/groups/components/EditGroupModal';
@@ -238,6 +239,15 @@ declare module 'react-native-actions-sheet' {
       payload: {
         matches: unknown[];
         onMatchPress?: (match: unknown) => void;
+        onPlayerPress?: (playerId: string) => void;
+      };
+    }>;
+    'leaderboard-comparison': SheetDefinition<{
+      payload: {
+        pulse: unknown;
+        callerId: string | undefined;
+        peerId: string;
+        onChallenge?: (peerId: string) => void;
         onPlayerPress?: (playerId: string) => void;
       };
     }>;
@@ -718,6 +728,7 @@ export const Sheets = () => {
         'member-options': MemberOptionsActionSheet,
         'invite-link': InviteLinkActionSheet,
         'recent-games': RecentGamesActionSheet,
+        'leaderboard-comparison': ComparisonOverlay,
         'add-group-member': AddGroupMemberActionSheet,
         'member-list': MemberListActionSheet,
         'edit-group': EditGroupActionSheet,
