@@ -1383,12 +1383,15 @@ export const MatchDetailSheet: React.FC = () => {
   }, [playerId, cancelRequest]);
 
   // Handle edit match - opens the match creation wizard in edit mode
-  const handleEditMatch = useCallback(() => {
+  const handleEditMatch = useCallback(async () => {
     if (!selectedMatch) return;
     mediumHaptic();
-    closeSheet(); // Close the detail sheet first
-    openSheetForEdit(selectedMatch); // Open actions sheet in edit mode
-  }, [selectedMatch, closeSheet, openSheetForEdit]);
+    const matchToEdit = selectedMatch;
+    await SheetManager.hide('match-detail');
+    setTimeout(() => {
+      openSheetForEdit(matchToEdit);
+    }, 300);
+  }, [selectedMatch, openSheetForEdit]);
 
   // Handle invite players - opens the player invite sheet
   const handleInvitePlayers = useCallback(() => {
