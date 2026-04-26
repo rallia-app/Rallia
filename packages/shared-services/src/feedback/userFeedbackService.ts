@@ -238,7 +238,7 @@ export async function listPublicFeedback(
     .range(offset, offset + limit - 1);
 
   if (search && search.trim().length > 0) {
-    const term = search.trim().replace(/[%_]/g, '\\$&');
+    const term = search.trim().replace(/[\\%_]/g, '\\$&');
     query = query.or(`subject.ilike.%${term}%,message.ilike.%${term}%`);
   }
 
