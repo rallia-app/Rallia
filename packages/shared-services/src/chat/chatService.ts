@@ -49,7 +49,6 @@ export {
   getConversation,
   createConversation,
   getOrCreateDirectConversation,
-  createMatchChat,
   getMatchChat,
   syncMatchConversationTitle,
   updateConversation,
