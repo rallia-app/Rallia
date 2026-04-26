@@ -8719,6 +8719,43 @@
       "clearPlace": "Modifier",
       "detailsLabel": "Détails supplémentaires",
       "detailsPlaceholder": "Décrivez l'emplacement s'il n'apparaît pas ci-dessus, ou ajoutez des détails (nombre de terrains, type de surface, horaires...)"
+    },
+    "browse": {
+      "tabs": {
+        "bugs": "Bogues",
+        "features": "Suggestions"
+      },
+      "searchPlaceholder": "Rechercher des signalements...",
+      "empty": {
+        "bug": "Aucun bogue signalé pour l'instant. Soyez le premier à en signaler un.",
+        "feature": "Aucune suggestion pour l'instant. Proposez une nouveauté."
+      },
+      "dontSeeYours": "Vous ne trouvez pas ce que vous cherchez?",
+      "submitNew": "Soumettre un nouveau signalement",
+      "anonymous": "Anonyme",
+      "byPlayer": "Soumis par un joueur",
+      "upvote": "Voter · {{n}}",
+      "upvoted": "Voté · {{n}}",
+      "upvoteAria": "Voter pour ce signalement",
+      "upvotedAria": "Retirer votre vote",
+      "statusPill": {
+        "new": "Nouveau",
+        "reviewed": "Examiné",
+        "in_progress": "En cours",
+        "resolved": "Résolu",
+        "closed": "Fermé"
+      },
+      "time": {
+        "now": "à l'instant",
+        "min": "il y a {{n}} min",
+        "hour": "il y a {{n}} h",
+        "day": "il y a {{n}} j",
+        "month": "il y a {{n}} mois"
+      },
+      "detail": {
+        "backToList": "Retour",
+        "adminNoteLabel": "Mise à jour de l'équipe"
+      }
     }
   },
   "bugReport": {

@@ -8717,6 +8717,43 @@
       "clearPlace": "Change",
       "detailsLabel": "Additional Details",
       "detailsPlaceholder": "Describe the location if not found above, or add details (number of courts, surface type, hours...)"
+    },
+    "browse": {
+      "tabs": {
+        "bugs": "Bugs",
+        "features": "Feature Requests"
+      },
+      "searchPlaceholder": "Search reports...",
+      "empty": {
+        "bug": "No bug reports yet. Be the first to report one.",
+        "feature": "No feature requests yet. Suggest something new."
+      },
+      "dontSeeYours": "Don't see what you're looking for?",
+      "submitNew": "Submit a new report",
+      "anonymous": "Anonymous",
+      "byPlayer": "Submitted by a player",
+      "upvote": "Upvote · {{n}}",
+      "upvoted": "Upvoted · {{n}}",
+      "upvoteAria": "Upvote this report",
+      "upvotedAria": "Remove your upvote",
+      "statusPill": {
+        "new": "New",
+        "reviewed": "Reviewed",
+        "in_progress": "In progress",
+        "resolved": "Resolved",
+        "closed": "Closed"
+      },
+      "time": {
+        "now": "just now",
+        "min": "{{n}}m ago",
+        "hour": "{{n}}h ago",
+        "day": "{{n}}d ago",
+        "month": "{{n}}mo ago"
+      },
+      "detail": {
+        "backToList": "Back",
+        "adminNoteLabel": "Update from the team"
+      }
     }
   },
   "bugReport": {

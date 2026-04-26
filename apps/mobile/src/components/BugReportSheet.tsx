@@ -8,7 +8,7 @@
  * Uses react-native-actions-sheet for cross-platform keyboard handling.
  */
 
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -34,6 +34,10 @@ import {
   type FeatureFeedbackMetadata,
   type ImprovementFeedbackMetadata,
   type MissingCourtFeedbackMetadata,
+  type PublicFeedback,
+  type PublicFeedbackCategory,
+  upvoteFeedback,
+  removeFeedbackUpvote,
 } from '@rallia/shared-services';
 import { lightHaptic, successHaptic, warningHaptic, selectionHaptic } from '@rallia/shared-utils';
 import {
@@ -49,6 +53,8 @@ import {
 
 import { useAuth, useTranslation, type TranslationKey, useImagePicker } from '../hooks';
 import { uploadImage } from '../services/imageUpload';
+import { FeedbackBrowseList } from './feedback/FeedbackBrowseList';
+import { FeedbackDetailView } from './feedback/FeedbackDetailView';
 
 const MIN_TEXT_LENGTH = 3;
 const MAX_TEXT_LENGTH = 2000;
@@ -155,6 +161,8 @@ const DISAPPOINTMENT_OPTIONS: {
 
 export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-report'>) {
   const trigger = payload?.trigger ?? null;
+  const initialView = payload?.initialView ?? 'browse';
+  const initialCategory = payload?.initialCategory ?? null;
   const { theme } = useTheme();
   const { session } = useAuth();
   const { t } = useTranslation();
@@ -162,8 +170,17 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
   const isDark = theme === 'dark';
   const { pickMultipleFromGallery } = useImagePicker({ skipEditing: true });
 
+  // View router state
+  const [view, setView] = useState<'browse' | 'detail' | 'compose'>(initialView);
+  const [browseCategory, setBrowseCategory] = useState<PublicFeedbackCategory>(
+    initialCategory === 'feature' ? 'feature' : 'bug'
+  );
+  const [detailItem, setDetailItem] = useState<PublicFeedback | null>(null);
+
   // Shared state
-  const [selectedCategory, setSelectedCategory] = useState<UserFeedbackCategory | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<UserFeedbackCategory | null>(
+    initialCategory
+  );
   const [selectedModule, setSelectedModule] = useState<UserFeedbackModule | null>(null);
   const [screenshots, setScreenshots] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -319,8 +336,71 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
       setScreenshots([]);
       setIsSubmitting(false);
       resetCategoryFields();
+      setView('browse');
+      setDetailItem(null);
     }, 300);
   }, [resetCategoryFields]);
+
+  // Browse → compose CTA: prefill category from active tab.
+  const handleStartCompose = useCallback(() => {
+    void lightHaptic();
+    setSelectedCategory(browseCategory);
+    setView('compose');
+  }, [browseCategory]);
+
+  const handleSelectBrowseItem = useCallback((item: PublicFeedback) => {
+    void lightHaptic();
+    setDetailItem(item);
+    setView('detail');
+  }, []);
+
+  const handleBackFromDetail = useCallback(() => {
+    void lightHaptic();
+    setDetailItem(null);
+    setView('browse');
+  }, []);
+
+  const handleBackFromCompose = useCallback(() => {
+    void lightHaptic();
+    setView('browse');
+  }, []);
+
+  // Toggle vote inside the detail view (not via the browse hook).
+  const handleDetailToggleVote = useCallback(async () => {
+    if (!detailItem || !session?.user?.id) return;
+    const wasVoted = detailItem.has_voted;
+
+    // Optimistic update locally on the detail snapshot.
+    setDetailItem(prev =>
+      prev
+        ? {
+            ...prev,
+            has_voted: !wasVoted,
+            upvote_count: Math.max(0, prev.upvote_count + (wasVoted ? -1 : 1)),
+          }
+        : prev
+    );
+
+    try {
+      if (wasVoted) {
+        await removeFeedbackUpvote(detailItem.id, session.user.id);
+      } else {
+        await upvoteFeedback(detailItem.id, session.user.id);
+      }
+    } catch (error) {
+      // Roll back.
+      setDetailItem(prev =>
+        prev
+          ? {
+              ...prev,
+              has_voted: wasVoted,
+              upvote_count: Math.max(0, prev.upvote_count + (wasVoted ? 1 : -1)),
+            }
+          : prev
+      );
+      Logger.error('Failed to toggle vote', error as Error);
+    }
+  }, [detailItem, session?.user?.id]);
 
   // Handle category selection — reset fields when switching
   const handleCategorySelect = useCallback(
@@ -1032,6 +1112,69 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
     }
   };
 
+  // ── View-router branches ────────────────────────────────────────────────────
+
+  if (view === 'browse') {
+    return (
+      <ActionSheet
+        gestureEnabled
+        onClose={handleSheetClose}
+        containerStyle={[
+          styles.sheetBackground,
+          styles.sheetContainer,
+          { backgroundColor: colors.cardBackground },
+        ]}
+        indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+      >
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={[styles.badge, { backgroundColor: secondary[500] }]}>
+            <Ionicons name="chatbox-ellipses-outline" size={14} color={base.white} />
+            <Text size="sm" weight="semibold" color={base.white}>
+              {t('feedback.sheetTitle' as TranslationKey)}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={handleClose}
+            style={styles.closeButton}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        <FeedbackBrowseList
+          category={browseCategory}
+          onCategoryChange={setBrowseCategory}
+          onSelectItem={handleSelectBrowseItem}
+          onCreate={handleStartCompose}
+          playerId={session?.user?.id ?? null}
+        />
+      </ActionSheet>
+    );
+  }
+
+  if (view === 'detail' && detailItem) {
+    return (
+      <ActionSheet
+        gestureEnabled
+        onClose={handleSheetClose}
+        containerStyle={[
+          styles.sheetBackground,
+          styles.sheetContainer,
+          { backgroundColor: colors.cardBackground },
+        ]}
+        indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+      >
+        <FeedbackDetailView
+          item={detailItem}
+          onBack={handleBackFromDetail}
+          onToggleVote={handleDetailToggleVote}
+        />
+      </ActionSheet>
+    );
+  }
+
   return (
     <ActionSheet
       gestureEnabled
@@ -1045,6 +1188,18 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
     >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        {/* Back button — only when we came from browse (i.e., bug/feature) */}
+        {(initialView === 'browse' || browseCategory) && (
+          <TouchableOpacity
+            onPress={handleBackFromCompose}
+            style={styles.backInline}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="chevron-back" size={22} color={colors.textMuted} />
+          </TouchableOpacity>
+        )}
+
         <View style={[styles.badge, { backgroundColor: secondary[500] }]}>
           <Ionicons name="chatbox-ellipses-outline" size={14} color={base.white} />
           <Text size="sm" weight="semibold" color={base.white}>
@@ -1217,6 +1372,11 @@ const styles = StyleSheet.create({
   closeButton: {
     position: 'absolute',
     right: 16,
+    padding: spacingPixels[1],
+  },
+  backInline: {
+    position: 'absolute',
+    left: 16,
     padding: spacingPixels[1],
   },
 
