@@ -24,8 +24,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useEventListener } from 'expo';
 import { WebView } from 'react-native-webview';
-import { Text } from '@rallia/shared-components';
-import { Logger } from '@rallia/shared-services';
+import { Text, useToast } from '@rallia/shared-components';
+import { Logger, supabase } from '@rallia/shared-services';
+import { lightHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import { resolveStorageUrl } from '../../../services/imageUpload';
 import {
@@ -71,9 +72,16 @@ const ProofViewer: React.FC<ProofViewerProps> = ({
 }) => {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resolvedFileUrl, setResolvedFileUrl] = useState<string | null>(null);
+
+  const canReact = isOwnProfile === false && !!currentUserId;
+  const [likeCount, setLikeCount] = useState(0);
+  const [dislikeCount, setDislikeCount] = useState(0);
+  const [userReaction, setUserReaction] = useState<'like' | 'dislike' | null>(null);
+  const [reactionPending, setReactionPending] = useState(false);
 
   const isVideoProof = proof?.proof_type === 'video' || proof?.file?.file_type === 'video';
 
@@ -111,6 +119,107 @@ const ProofViewer: React.FC<ProofViewerProps> = ({
       cancelled = true;
     };
   }, [proof?.file?.url]);
+
+  // Fetch like/dislike reactions when the viewer opens for a proof
+  useEffect(() => {
+    if (!visible || !proof?.id || !canReact) {
+      setLikeCount(0);
+      setDislikeCount(0);
+      setUserReaction(null);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      const { data, error: fetchError } = await supabase
+        .from('proof_reaction')
+        .select('reaction, reactor_id')
+        .eq('proof_id', proof.id);
+
+      if (cancelled) return;
+      if (fetchError) {
+        Logger.error('Failed to fetch proof reactions', fetchError);
+        return;
+      }
+
+      let likes = 0;
+      let dislikes = 0;
+      let mine: 'like' | 'dislike' | null = null;
+      for (const row of data ?? []) {
+        if (row.reaction === 'like') likes += 1;
+        else if (row.reaction === 'dislike') dislikes += 1;
+        if (row.reactor_id === currentUserId) {
+          mine = row.reaction as 'like' | 'dislike';
+        }
+      }
+      setLikeCount(likes);
+      setDislikeCount(dislikes);
+      setUserReaction(mine);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, proof?.id, canReact, currentUserId]);
+
+  const handleReact = async (next: 'like' | 'dislike') => {
+    if (!canReact || !proof?.id || !currentUserId || reactionPending) return;
+
+    const previous = userReaction;
+    const prevLikes = likeCount;
+    const prevDislikes = dislikeCount;
+
+    // Optimistic update
+    if (previous === next) {
+      // Un-react
+      setUserReaction(null);
+      if (next === 'like') setLikeCount(c => Math.max(0, c - 1));
+      else setDislikeCount(c => Math.max(0, c - 1));
+    } else {
+      setUserReaction(next);
+      if (next === 'like') {
+        setLikeCount(c => c + 1);
+        if (previous === 'dislike') setDislikeCount(c => Math.max(0, c - 1));
+      } else {
+        setDislikeCount(c => c + 1);
+        if (previous === 'like') setLikeCount(c => Math.max(0, c - 1));
+      }
+    }
+
+    setReactionPending(true);
+    lightHaptic();
+
+    try {
+      if (previous === next) {
+        const { error: deleteError } = await supabase
+          .from('proof_reaction')
+          .delete()
+          .eq('proof_id', proof.id)
+          .eq('reactor_id', currentUserId);
+        if (deleteError) throw deleteError;
+      } else {
+        const { error: upsertError } = await supabase.from('proof_reaction').upsert(
+          {
+            proof_id: proof.id,
+            reactor_id: currentUserId,
+            reaction: next,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'proof_id,reactor_id' }
+        );
+        if (upsertError) throw upsertError;
+      }
+    } catch (err) {
+      Logger.error('Failed to submit proof reaction', err as Error);
+      // Revert optimistic update
+      setUserReaction(previous);
+      setLikeCount(prevLikes);
+      setDislikeCount(prevDislikes);
+      toast.error(t('profile.ratingProofs.reactions.failedToReact'));
+    } finally {
+      setReactionPending(false);
+    }
+  };
 
   if (!proof) return null;
 
@@ -400,6 +509,68 @@ const ProofViewer: React.FC<ProofViewerProps> = ({
           )}
         </View>
 
+        {/* Reactions row — only when viewing someone else's proof */}
+        {canReact && (
+          <View style={styles.reactionsRow}>
+            <TouchableOpacity
+              style={[
+                styles.reactionButton,
+                { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                userReaction === 'like' && {
+                  backgroundColor: `${colors.primary}15`,
+                  borderColor: colors.primary,
+                },
+              ]}
+              onPress={() => handleReact('like')}
+              disabled={reactionPending}
+              accessibilityRole="button"
+              accessibilityLabel={t('profile.ratingProofs.reactions.likeAccessibility')}
+            >
+              <Ionicons
+                name={userReaction === 'like' ? 'thumbs-up' : 'thumbs-up-outline'}
+                size={20}
+                color={userReaction === 'like' ? colors.primary : colors.text}
+              />
+              <Text
+                style={[
+                  styles.reactionCount,
+                  { color: userReaction === 'like' ? colors.primary : colors.text },
+                ]}
+              >
+                {likeCount}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.reactionButton,
+                { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                userReaction === 'dislike' && {
+                  backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                  borderColor: '#EF4444',
+                },
+              ]}
+              onPress={() => handleReact('dislike')}
+              disabled={reactionPending}
+              accessibilityRole="button"
+              accessibilityLabel={t('profile.ratingProofs.reactions.dislikeAccessibility')}
+            >
+              <Ionicons
+                name={userReaction === 'dislike' ? 'thumbs-down' : 'thumbs-down-outline'}
+                size={20}
+                color={userReaction === 'dislike' ? '#EF4444' : colors.text}
+              />
+              <Text
+                style={[
+                  styles.reactionCount,
+                  { color: userReaction === 'dislike' ? '#EF4444' : colors.text },
+                ]}
+              >
+                {dislikeCount}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Footer with description */}
         {proof.description && proof.proof_type !== 'external_link' && (
           <View
@@ -590,6 +761,30 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     fontSize: fontSizePixels.sm,
+  },
+  // Reactions
+  reactionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
+    paddingBottom: spacingPixels[6],
+  },
+  reactionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    paddingVertical: spacingPixels[2],
+    paddingHorizontal: spacingPixels[4],
+    borderRadius: radiusPixels.full,
+    borderWidth: 1,
+    minWidth: 80,
+    justifyContent: 'center',
+  },
+  reactionCount: {
+    fontSize: fontSizePixels.sm,
+    fontWeight: fontWeightNumeric.semibold,
   },
   // Footer
   footer: {

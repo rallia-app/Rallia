@@ -33,7 +33,7 @@ import { useActionsSheet, useSport } from '../context';
 import { usePlayerSports } from '@rallia/shared-hooks';
 import { SuggestionCard, type SuggestionCardLabels, type InvitePayload } from './SuggestionCard';
 
-const MAX_CARDS = 10;
+const MAX_CARDS = 20;
 
 interface SuggestionsFeedSectionProps {
   playerId: string | undefined;
@@ -251,7 +251,7 @@ export const SuggestionsFeedSection: React.FC<SuggestionsFeedSectionProps> = ({
         </View>
         <View style={[styles.boundaryLine, { backgroundColor: dividerColor }]} />
       </View>
-      <Text size="xs" color={colors.textMuted} style={styles.boundarySubtitle}>
+      <Text size="xs" color={colors.textMuted} style={styles.boundarySubtitle} numberOfLines={1}>
         {t('onboarding.suggestions.feedSectionSubtitle')}
       </Text>
     </>

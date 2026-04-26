@@ -11,6 +11,8 @@ export { default as MatchFiltersBar } from './MatchFiltersBar';
 
 // Network matches tab (for group/community detail)
 export { default as NetworkMatchesTab } from './NetworkMatchesTab';
+export { default as NetworkLeaderboardTab } from './NetworkLeaderboardTab';
+export type { NetworkLeaderboardTabProps } from './NetworkLeaderboardTab';
 
 // Player matches components
 export { default as PlayerMatchFilterChips } from './PlayerMatchFilterChips';

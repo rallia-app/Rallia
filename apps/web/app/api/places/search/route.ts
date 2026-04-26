@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { shouldUseApiMocks } from '@rallia/shared-utils';
+import { buildMockPlacesSearchResponse } from './mocks';
 
 export async function POST(request: NextRequest) {
   try {
@@ -6,6 +8,10 @@ export async function POST(request: NextRequest) {
 
     if (!query || typeof query !== 'string') {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 });
+    }
+
+    if (shouldUseApiMocks()) {
+      return NextResponse.json(await buildMockPlacesSearchResponse(query));
     }
 
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;

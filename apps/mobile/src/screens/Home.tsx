@@ -639,8 +639,8 @@ const Home = () => {
   const { favorites } = useFavoriteFacilities(session?.user?.id ?? null, selectedSport?.id);
   const favoriteFacilityIds = useMemo(() => favorites.map(f => f.facilityId), [favorites]);
 
-  // Default search radius for signed-out users (10km)
-  const GUEST_SEARCH_RADIUS_KM = 15;
+  // Default search radius for signed-out users
+  const GUEST_SEARCH_RADIUS_KM = 20;
 
   // Use player's travel distance if signed in, otherwise use guest default
   const searchRadiusKm = session ? maxTravelDistanceKm : GUEST_SEARCH_RADIUS_KM;
@@ -754,10 +754,11 @@ const Home = () => {
 
   // Handle end reached for infinite scroll
   const handleEndReached = useCallback(() => {
+    if (matches.length === 0) return;
     if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [matches.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Render individual match card
   const renderMatchCard = useCallback(
@@ -787,6 +788,8 @@ const Home = () => {
 
   // Render footer with loading indicator
   const renderFooter = useCallback(() => {
+    // Empty list: ListEmptyComponent already renders suggestions — skip footer
+    if (matches.length === 0) return null;
     if (isFetchingNextPage) {
       return (
         <View style={styles.footerLoader}>
@@ -794,7 +797,7 @@ const Home = () => {
         </View>
       );
     }
-    if (!hasNextPage && isOnboarded) {
+    if (!hasNextPage) {
       return (
         <SuggestionsFeedSection
           playerId={player?.id}
@@ -805,59 +808,24 @@ const Home = () => {
     }
     return null;
   }, [
+    matches.length,
     isFetchingNextPage,
     hasNextPage,
-    isOnboarded,
     colors.primary,
-    isDark,
     player?.id,
     selectedSport?.id,
     selectedSport?.name,
   ]);
 
-  // Render empty state with helpful message about travel distance (signed in) or simple message (signed out)
+  // Compact empty state followed by suggestions feed
   const renderEmptyComponent = useCallback(
     () => (
       <>
         <View style={styles.emptyContainer}>
-          <View style={[styles.emptyIconContainer, { backgroundColor: colors.card }]}>
-            <Ionicons name="location-outline" size={48} color={colors.textMuted} />
-          </View>
-          <Text size="lg" weight="semibold" color={colors.text} style={styles.emptyTitle}>
+          <Ionicons name="location-outline" size={20} color={colors.textMuted} />
+          <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
             {t('home.nearbyEmpty.title')}
           </Text>
-          <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-            {session
-              ? t('home.nearbyEmpty.description', { distance: maxTravelDistanceKm })
-              : t('home.nearbyEmpty.guestDescription')}
-          </Text>
-          {session && (
-            <>
-              <Text size="sm" color={colors.textMuted} style={styles.emptySuggestion}>
-                {t('home.nearbyEmpty.suggestion')}
-              </Text>
-              <Button
-                variant="outline"
-                onPress={() => appNavigation.navigate('Settings')}
-                style={styles.updateSettingsButton}
-                isDark={isDark}
-                themeColors={{
-                  primary: colors.primary,
-                  primaryForeground: colors.primaryForeground,
-                  buttonActive: colors.buttonActive,
-                  buttonInactive: colors.buttonInactive,
-                  buttonTextActive: colors.buttonTextActive,
-                  buttonTextInactive: colors.buttonTextInactive,
-                  text: colors.text,
-                  textMuted: colors.textMuted,
-                  border: colors.border,
-                  background: colors.background,
-                }}
-              >
-                {t('home.nearbyEmpty.updateSettings')}
-              </Button>
-            </>
-          )}
         </View>
         <SuggestionsFeedSection
           playerId={player?.id}
@@ -866,17 +834,7 @@ const Home = () => {
         />
       </>
     ),
-    [
-      colors,
-      t,
-      maxTravelDistanceKm,
-      session,
-      appNavigation,
-      isDark,
-      player?.id,
-      selectedSport?.id,
-      selectedSport?.name,
-    ]
+    [colors.textMuted, t, player?.id, selectedSport?.id, selectedSport?.name]
   );
 
   // Render section header with "Soon & Nearby" title, location selector, and "View All" button
@@ -1089,7 +1047,9 @@ const Home = () => {
             color={colors.text}
             style={styles.matchesSectionIcon}
           />
-          <Heading level={3}>{t('home.yourMatches')}</Heading>
+          <Heading level={3} color={colors.text}>
+            {t('home.yourMatches')}
+          </Heading>
           <Text size="sm" color={colors.textMuted} style={styles.sectionSubtitle}>
             {t('home.signInPrompt')}
           </Text>
@@ -1117,7 +1077,9 @@ const Home = () => {
             color={colors.text}
             style={styles.matchesSectionIcon}
           />
-          <Heading level={3}>{t('home.yourMatches')}</Heading>
+          <Heading level={3} color={colors.text}>
+            {t('home.yourMatches')}
+          </Heading>
           <Text size="sm" color={colors.textMuted} style={styles.sectionSubtitle}>
             {t('home.onboardingPrompt')}
           </Text>
@@ -1494,35 +1456,16 @@ const styles = StyleSheet.create({
     marginTop: spacingPixels[2],
   },
   emptyContainer: {
-    padding: spacingPixels[8],
-    paddingTop: spacingPixels[10],
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  emptyIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacingPixels[4],
-  },
-  emptyTitle: {
-    textAlign: 'center',
-    marginBottom: spacingPixels[2],
+    gap: spacingPixels[2],
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
   },
   emptyDescription: {
+    flexShrink: 1,
     textAlign: 'center',
-    marginBottom: spacingPixels[3],
-    paddingHorizontal: spacingPixels[4],
-  },
-  emptySuggestion: {
-    textAlign: 'center',
-    marginBottom: spacingPixels[5],
-    paddingHorizontal: spacingPixels[4],
-  },
-  updateSettingsButton: {
-    marginTop: spacingPixels[2],
   },
   footerLoader: {
     padding: spacingPixels[4],

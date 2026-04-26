@@ -121,7 +121,7 @@ export default function FacilityCard({
   }, [facility, onToggleFavorite]);
 
   const distanceText = formatDistance(facility.distance_meters);
-  const addressText = facility.address || facility.city || '';
+  const addressText = [facility.address, facility.city].filter(Boolean).join(', ');
 
   // Court availability
   const { slotsByDate, isLoading: slotsLoading } = useCourtAvailability({

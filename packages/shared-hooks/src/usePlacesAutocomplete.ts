@@ -7,7 +7,9 @@
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import type { PlacePrediction, AddressComponent } from '@rallia/shared-types';
+import { shouldUseApiMocks } from '@rallia/shared-utils';
 import { useDebounce } from './useDebounce';
+import { mockPlaceDetails, mockPlacePredictions } from './devMocks/googlePlaces';
 
 // =============================================================================
 // TYPES
@@ -142,6 +144,11 @@ export function usePlacesAutocomplete(
 
   // Fetch place details (including coordinates) for a given placeId
   const getPlaceDetails = useCallback(async (placeId: string): Promise<PlaceDetails | null> => {
+    if (shouldUseApiMocks()) {
+      sessionTokenRef.current = generateSessionToken();
+      return mockPlaceDetails(placeId);
+    }
+
     const apiKey = getApiKey();
 
     if (!apiKey) {
@@ -247,6 +254,23 @@ export function usePlacesAutocomplete(
   // Perform the search
   const performSearch = useCallback(
     async (query: string) => {
+      if (shouldUseApiMocks()) {
+        if (query.length < minQueryLength) {
+          setPredictions([]);
+          setIsLoading(false);
+          return;
+        }
+        setIsLoading(true);
+        setError(null);
+        try {
+          const results = await mockPlacePredictions(query);
+          setPredictions(results);
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
       const apiKey = getApiKey();
 
       if (!apiKey) {

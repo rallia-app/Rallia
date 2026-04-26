@@ -28,6 +28,8 @@ import {
   getGroupMatches,
   getMostRecentGroupMatch,
   getGroupLeaderboard,
+  MIN_GAMES_FOR_WIN_RATE,
+  getNetworkPulse,
   postMatchToGroup,
   removeMatchFromGroup,
   createPlayedMatch,
@@ -56,6 +58,8 @@ import {
   type GroupMatch,
   type MatchSet,
   type LeaderboardEntry,
+  type LeaderboardSkillRating,
+  type NetworkPulse,
   type CreatePlayedMatchInput,
   type SubmitMatchResultForMatchParams,
   type PendingScoreConfirmation,
@@ -85,6 +89,8 @@ export const groupKeys = {
   recentMatch: (groupId: string) => [...groupKeys.detail(groupId), 'recentMatch'] as const,
   leaderboard: (groupId: string, daysBack?: number) =>
     [...groupKeys.detail(groupId), 'leaderboard', daysBack] as const,
+  pulse: (groupId: string, daysBack?: number) =>
+    [...groupKeys.detail(groupId), 'pulse', daysBack] as const,
   pendingConfirmations: (playerId: string) =>
     [...groupKeys.all, 'pendingConfirmations', playerId] as const,
   memberUpcomingMatches: (
@@ -456,6 +462,23 @@ export function useGroupLeaderboard(groupId: string | undefined, daysBack: numbe
 }
 
 /**
+ * Get the full story-driven leaderboard payload for a network (group or
+ * community). Single round-trip for everything the leaderboard tab needs:
+ * headline insight, form strip, your_summary (with stats and matchup
+ * extremes), ranked leaderboard, settling-in members, and discover-lane data.
+ */
+export function useNetworkPulse(
+  networkId: string | undefined,
+  daysBack: number = 30
+): UseQueryResult<NetworkPulse> {
+  return useQuery({
+    queryKey: groupKeys.pulse(networkId!, daysBack),
+    queryFn: () => getNetworkPulse(networkId!, daysBack),
+    enabled: !!networkId,
+  });
+}
+
+/**
  * Get upcoming public matches of network (community/group) members.
  * Returns matches where a network member is either the creator or a participant.
  *
@@ -516,7 +539,7 @@ export function usePostMatchToGroup() {
             key[0] === 'groups' &&
             key[1] === 'detail' &&
             key[2] === variables.groupId &&
-            key[3] === 'leaderboard'
+            (key[3] === 'leaderboard' || key[3] === 'pulse')
           );
         },
       });
@@ -546,7 +569,7 @@ export function useRemoveMatchFromGroup() {
             key[0] === 'groups' &&
             key[1] === 'detail' &&
             key[2] === variables.groupId &&
-            key[3] === 'leaderboard'
+            (key[3] === 'leaderboard' || key[3] === 'pulse')
           );
         },
       });
@@ -587,7 +610,7 @@ export function useCreatePlayedMatch() {
               key[0] === 'groups' &&
               key[1] === 'detail' &&
               key[2] === variables.networkId &&
-              key[3] === 'leaderboard'
+              (key[3] === 'leaderboard' || key[3] === 'pulse')
             );
           },
         });
@@ -858,8 +881,32 @@ export type {
   GroupMatch,
   MatchSet,
   LeaderboardEntry,
+  LeaderboardSkillRating,
+  NetworkPulse,
   CreatePlayedMatchInput,
   PendingScoreConfirmation,
   NetworkMemberMatch,
   NetworkMatchFilters,
 };
+export type {
+  NetworkPulseDiscover,
+  NetworkPulseFormStripEntry,
+  NetworkPulseH2HCell,
+  NetworkPulseHeadlineInsight,
+  NetworkPulseHeatmapDay,
+  NetworkPulseLeaderboardEntry,
+  NetworkPulseMatchupExtreme,
+  NetworkPulseMoment,
+  NetworkPulsePersonalRecord,
+  NetworkPulsePowerPair,
+  NetworkPulseRivalry,
+  NetworkPulseScoreDistEntry,
+  NetworkPulseSetStats,
+  NetworkPulseSettlingInEntry,
+  NetworkPulseSkillRating,
+  NetworkPulseUnplayedPairing,
+  NetworkPulseYourSummary,
+  LeaderboardOutcome,
+} from '@rallia/shared-services';
+
+export { MIN_GAMES_FOR_WIN_RATE };

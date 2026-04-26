@@ -201,34 +201,124 @@ export async function getMostRecentGroupMatch(groupId: string): Promise<GroupMat
 // ============================================================================
 
 /**
- * Get leaderboard for a group based on games played
+ * Minimum games a player must have played in the window for their win-rate to
+ * be ranked. Below this threshold, `win_rate` is returned as `null` so the UI
+ * can fade or down-weight the row in win-rate sort views.
+ */
+export const MIN_GAMES_FOR_WIN_RATE = 5;
+
+interface PlayerProfileRow {
+  id: string;
+  profile?: {
+    first_name: string;
+    last_name: string | null;
+    display_name: string | null;
+    profile_picture_url: string | null;
+  };
+}
+
+/**
+ * Get leaderboard for a network (group or community).
+ *
+ * Match attribution is the union of:
+ *   1. Matches explicitly posted via `match_network` for this network
+ *      (`posted_at >= cutoff`).
+ *   2. Auto-attribution: any match whose `match_date >= cutoff` and where at
+ *      least 2 active members of the network were participants.
+ *
+ * Only members of the network are ranked; only matches with a verified result
+ * (or whose confirmation deadline has passed) are counted.
  */
 export async function getGroupLeaderboard(
-  groupId: string,
+  networkId: string,
   daysBack: number = 30
 ): Promise<LeaderboardEntry[]> {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+  const cutoffISO = cutoffDate.toISOString();
+  const cutoffDateOnly = cutoffISO.split('T')[0];
 
-  // First get all matches posted to this group within the time period
-  const { data: matchNetworks, error: mnError } = await supabase
-    .from('match_network')
-    .select('match_id')
-    .eq('network_id', groupId)
-    .gte('posted_at', cutoffDate.toISOString());
+  // 1. Fetch network info (sport_id) and active member IDs in parallel.
+  const [networkRes, membersRes, networkMatchesRes] = await Promise.all([
+    supabase.from('network').select('sport_id').eq('id', networkId).maybeSingle(),
+    supabase
+      .from('network_member')
+      .select('player_id')
+      .eq('network_id', networkId)
+      .eq('status', 'active'),
+    supabase
+      .from('match_network')
+      .select('match_id')
+      .eq('network_id', networkId)
+      .gte('posted_at', cutoffISO),
+  ]);
 
-  if (mnError) {
-    console.error('Error fetching match networks:', mnError);
-    throw new Error(mnError.message);
+  if (networkRes.error) {
+    console.error('Error fetching network:', networkRes.error);
+    throw new Error(networkRes.error.message);
+  }
+  if (membersRes.error) {
+    console.error('Error fetching network members:', membersRes.error);
+    throw new Error(membersRes.error.message);
+  }
+  if (networkMatchesRes.error) {
+    console.error('Error fetching match_network rows:', networkMatchesRes.error);
+    throw new Error(networkMatchesRes.error.message);
   }
 
-  if (!matchNetworks || matchNetworks.length === 0) {
+  const networkSportId = (networkRes.data?.sport_id as string | null) ?? null;
+  const memberIds = (membersRes.data ?? []).map(m => m.player_id as string);
+
+  if (memberIds.length === 0) {
     return [];
   }
+  const memberIdSet = new Set(memberIds);
 
-  const matchIds = matchNetworks.map(mn => mn.match_id);
+  // 2. Find auto-attributed match IDs: matches in window where ≥2 active
+  //    members participated. We pull all member participations in window,
+  //    then count distinct member players per match client-side.
+  const { data: memberParticipations, error: mpAutoErr } = await supabase
+    .from('match_participant')
+    .select(
+      `
+      match_id,
+      player_id,
+      match:match_id!inner (
+        id,
+        match_date
+      )
+    `
+    )
+    .in('player_id', memberIds)
+    .gte('match.match_date', cutoffDateOnly);
 
-  // Get all participants and results for these matches (only verified scores)
+  if (mpAutoErr) {
+    console.error('Error fetching member participations:', mpAutoErr);
+    throw new Error(mpAutoErr.message);
+  }
+
+  const matchMemberCounts = new Map<string, Set<string>>();
+  for (const mp of memberParticipations ?? []) {
+    const matchData = Array.isArray(mp.match) ? mp.match[0] : mp.match;
+    if (!matchData) continue;
+    const matchId = mp.match_id as string;
+    if (!matchMemberCounts.has(matchId)) matchMemberCounts.set(matchId, new Set());
+    matchMemberCounts.get(matchId)!.add(mp.player_id as string);
+  }
+
+  const matchIdSet = new Set<string>();
+  for (const [matchId, players] of matchMemberCounts) {
+    if (players.size >= 2) matchIdSet.add(matchId);
+  }
+  for (const nm of networkMatchesRes.data ?? []) {
+    matchIdSet.add(nm.match_id as string);
+  }
+
+  if (matchIdSet.size === 0) return [];
+
+  const matchIds = Array.from(matchIdSet);
+
+  // 3. Fetch all participants + result + match_date for the unioned match set.
   const { data: participants, error: pError } = await supabase
     .from('match_participant')
     .select(
@@ -237,6 +327,7 @@ export async function getGroupLeaderboard(
       team_number,
       match:match_id (
         id,
+        match_date,
         result:match_result (
           winning_team,
           is_verified,
@@ -261,67 +352,150 @@ export async function getGroupLeaderboard(
     throw new Error(pError.message);
   }
 
-  // Aggregate by player (only count verified scores or auto-confirmed after deadline)
-  const leaderboardMap = new Map<string, LeaderboardEntry>();
+  // 4. Aggregate per player. Only members are ranked; only verified or
+  //    auto-confirmed matches are counted.
   const now = new Date();
+  type Pending = {
+    profile?: PlayerProfileRow;
+    outcomes: Array<{ won: boolean; date: string }>;
+  };
+  const pending = new Map<string, Pending>();
 
-  for (const p of participants || []) {
-    const playerId = p.player_id;
-    // Handle Supabase nested response - match can be array or object
+  for (const p of participants ?? []) {
+    const playerId = p.player_id as string;
+    if (!memberIdSet.has(playerId)) continue;
+
     const matchData = Array.isArray(p.match) ? p.match[0] : p.match;
-    const resultData = matchData?.result;
+    if (!matchData) continue;
+    const resultData = (matchData as { result?: unknown }).result;
     const result = Array.isArray(resultData) ? resultData[0] : resultData;
-
-    // Skip if no result or if not verified and deadline hasn't passed
     if (!result) continue;
 
-    const isVerified = result.is_verified as boolean;
-    const confirmationDeadline = result.confirmation_deadline
-      ? new Date(result.confirmation_deadline as string)
-      : null;
-    const deadlinePassed = confirmationDeadline ? now > confirmationDeadline : true;
-
-    // Only count if verified OR deadline has passed (auto-confirmed)
+    const isVerified = (result as { is_verified: boolean }).is_verified;
+    const deadlineRaw = (result as { confirmation_deadline?: string | null }).confirmation_deadline;
+    const deadline = deadlineRaw ? new Date(deadlineRaw) : null;
+    const deadlinePassed = deadline ? now > deadline : true;
     if (!isVerified && !deadlinePassed) continue;
 
-    const winningTeam = result.winning_team as number | null;
-    const isWinner = winningTeam !== null && p.team_number === winningTeam;
+    const winningTeam = (result as { winning_team: number | null }).winning_team;
+    const isWinner = winningTeam !== null && (p.team_number as number | null) === winningTeam;
+    const matchDate = (matchData as { match_date: string }).match_date;
 
-    // Handle player data similarly
-    const playerData = Array.isArray(p.player) ? p.player[0] : p.player;
-    const profileData = playerData?.profile;
-    const profile = Array.isArray(profileData) ? profileData[0] : profileData;
-
-    if (!leaderboardMap.has(playerId)) {
-      leaderboardMap.set(playerId, {
-        player_id: playerId,
-        games_played: 0,
-        games_won: 0,
-        player: playerData
+    if (!pending.has(playerId)) {
+      const playerData = Array.isArray(p.player) ? p.player[0] : p.player;
+      let profileData: PlayerProfileRow['profile'] | undefined;
+      if (playerData) {
+        const rawProfile = (playerData as { profile?: unknown }).profile;
+        const rawProfileObj = Array.isArray(rawProfile) ? rawProfile[0] : rawProfile;
+        if (rawProfileObj && typeof rawProfileObj === 'object') {
+          const rp = rawProfileObj as Record<string, unknown>;
+          profileData = {
+            first_name: rp.first_name as string,
+            last_name: (rp.last_name as string | null) ?? null,
+            display_name: (rp.display_name as string | null) ?? null,
+            profile_picture_url: (rp.profile_picture_url as string | null) ?? null,
+          };
+        }
+      }
+      pending.set(playerId, {
+        profile: playerData
           ? {
-              id: playerData.id as string,
-              profile: profile
-                ? {
-                    first_name: profile.first_name as string,
-                    last_name: profile.last_name as string | null,
-                    display_name: profile.display_name as string | null,
-                    profile_picture_url: profile.profile_picture_url as string | null,
-                  }
-                : undefined,
+              id: (playerData as { id: string }).id,
+              profile: profileData,
             }
           : undefined,
+        outcomes: [],
       });
     }
 
-    const entry = leaderboardMap.get(playerId)!;
-    entry.games_played += 1;
-    if (isWinner) {
-      entry.games_won += 1;
+    pending.get(playerId)!.outcomes.push({ won: isWinner, date: matchDate });
+  }
+
+  // 5. Fetch skill ratings for ranked members in the network's sport.
+  const rankedPlayerIds = Array.from(pending.keys());
+  const skillByPlayer = new Map<string, LeaderboardEntry['skill_rating']>();
+
+  if (networkSportId && rankedPlayerIds.length > 0) {
+    const { data: ratingRows, error: rErr } = await supabase
+      .from('player_rating_scores')
+      .select(
+        `
+        player_id,
+        is_certified,
+        assigned_at,
+        rating_score:rating_score_id (
+          value,
+          rating_system:rating_system_id (
+            code,
+            sport_id
+          )
+        )
+      `
+      )
+      .in('player_id', rankedPlayerIds)
+      .order('assigned_at', { ascending: false });
+
+    if (rErr) {
+      // Non-fatal — leaderboard still renders without ratings.
+      console.warn('Error fetching player ratings (continuing without):', rErr);
+    } else {
+      for (const row of ratingRows ?? []) {
+        const playerId = row.player_id as string;
+        if (skillByPlayer.has(playerId)) continue;
+        const ratingScore = Array.isArray(row.rating_score)
+          ? row.rating_score[0]
+          : row.rating_score;
+        if (!ratingScore) continue;
+        const value = (ratingScore as { value: number | null }).value;
+        if (value == null) continue;
+        const rs = (ratingScore as { rating_system?: unknown }).rating_system;
+        const ratingSystem = Array.isArray(rs) ? rs[0] : rs;
+        if (!ratingSystem) continue;
+        const sportId = (ratingSystem as { sport_id: string }).sport_id;
+        if (sportId !== networkSportId) continue;
+        skillByPlayer.set(playerId, {
+          value,
+          system_code: (ratingSystem as { code: string }).code,
+          certification_status: (row.is_certified as boolean) ? 'certified' : 'self_declared',
+        });
+      }
     }
   }
 
-  // Convert to array and sort by games played (descending)
-  return Array.from(leaderboardMap.values()).sort((a, b) => b.games_played - a.games_played);
+  // 6. Build the final entries.
+  const entries: LeaderboardEntry[] = [];
+  for (const [playerId, { profile, outcomes }] of pending) {
+    outcomes.sort((a, b) => b.date.localeCompare(a.date));
+    const games_played = outcomes.length;
+    const wins = outcomes.reduce((n, o) => n + (o.won ? 1 : 0), 0);
+    const losses = games_played - wins;
+    const win_rate = games_played >= MIN_GAMES_FOR_WIN_RATE ? wins / games_played : null;
+
+    let streak = 0;
+    if (outcomes.length > 0) {
+      const recentResult = outcomes[0].won;
+      for (const o of outcomes) {
+        if (o.won === recentResult) streak += 1;
+        else break;
+      }
+      streak = recentResult ? streak : -streak;
+    }
+
+    entries.push({
+      player_id: playerId,
+      games_played,
+      games_won: wins,
+      wins,
+      losses,
+      win_rate,
+      current_streak: streak,
+      last_match_date: outcomes[0]?.date ?? null,
+      skill_rating: skillByPlayer.get(playerId) ?? null,
+      player: profile,
+    });
+  }
+
+  return entries.sort((a, b) => b.games_played - a.games_played);
 }
 
 // ============================================================================

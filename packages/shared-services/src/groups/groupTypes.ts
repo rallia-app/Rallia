@@ -260,16 +260,33 @@ export interface GroupMatch {
 }
 
 /**
- * Entry in a group's leaderboard
- * @property player_id - ID of the player
- * @property games_played - Total games played in this group
- * @property games_won - Total games won in this group
- * @property player - Optional nested player profile data
+ * Skill rating snapshot for a player in a specific sport.
+ */
+export interface LeaderboardSkillRating {
+  value: number;
+  system_code: string;
+  certification_status: 'self_declared' | 'certified' | 'disputed';
+}
+
+/**
+ * Entry in a network's leaderboard.
+ * @property games_played - Verified or auto-confirmed matches played in window
+ * @property games_won / wins / losses - Win/loss tallies (wins is alias for games_won kept for clarity)
+ * @property win_rate - 0..1, null when below MIN_GAMES_FOR_WIN_RATE
+ * @property current_streak - signed streak counted from most recent match: positive=wins, negative=losses, 0 if no matches
+ * @property last_match_date - ISO date of most recent counted match (used for tiebreakers)
+ * @property skill_rating - rating in the network's sport, if known
  */
 export interface LeaderboardEntry {
   player_id: string;
   games_played: number;
   games_won: number;
+  wins: number;
+  losses: number;
+  win_rate: number | null;
+  current_streak: number;
+  last_match_date: string | null;
+  skill_rating: LeaderboardSkillRating | null;
   player?: {
     id: string;
     profile?: {
@@ -279,6 +296,200 @@ export interface LeaderboardEntry {
       profile_picture_url: string | null;
     };
   };
+}
+
+// ============================================================================
+// NETWORK PULSE (story-driven leaderboard payload)
+// ============================================================================
+
+/**
+ * Generic translation reference: a translation key + the parameters needed to
+ * interpolate it. Server returns these so the client renders localized copy.
+ */
+export interface I18nRef {
+  title_key: string;
+  title_params?: Record<string, string | number>;
+}
+
+export type LeaderboardOutcome = 'W' | 'L';
+
+export interface NetworkPulseSkillRating {
+  value: number;
+  system_code: string;
+  certification_status: 'self_declared' | 'certified' | 'disputed';
+}
+
+export interface NetworkPulseHeadlineInsight extends I18nRef {
+  type:
+    | 'hot_streak'
+    | 'first_time_beat'
+    | 'new_face'
+    | 'activity_spike'
+    | 'comeback'
+    | 'player_of_week'
+    | 'quiet';
+  primary_player_id?: string | null;
+  secondary_player_id?: string | null;
+}
+
+export interface NetworkPulseFormStripEntry {
+  player_id: string;
+  first_name: string;
+  last5: LeaderboardOutcome[];
+  current_streak: number;
+}
+
+export interface NetworkPulseLeaderboardEntry {
+  player_id: string;
+  first_name: string;
+  last_name: string | null;
+  profile_picture_url: string | null;
+  games_played: number;
+  wins: number;
+  losses: number;
+  win_rate: number | null;
+  current_streak: number;
+  last_match_date: string | null;
+  last5: LeaderboardOutcome[];
+  skill_rating: NetworkPulseSkillRating | null;
+}
+
+export interface NetworkPulseSettlingInEntry {
+  player_id: string;
+  first_name: string;
+  last_name: string | null;
+  profile_picture_url: string | null;
+  games_played: number;
+  skill_rating: NetworkPulseSkillRating | null;
+}
+
+export interface NetworkPulsePersonalRecord extends I18nRef {
+  type: 'biggest_beat' | 'best_streak' | 'best_comeback' | 'fastest_win';
+  opponent_id?: string;
+  opponent_name?: string;
+  opponent_rating?: number | null;
+  happened_at?: string;
+  streak_len?: number;
+  start_date?: string;
+  end_date?: string;
+}
+
+export interface NetworkPulseSetStats {
+  first_set_win_pct: number | null;
+  third_set_win_pct: number | null;
+  sets_won_pct: number | null;
+  tiebreaks: { wins: number; losses: number } | null;
+}
+
+export interface NetworkPulseScoreDistEntry {
+  set_score: string;
+  count: number;
+}
+
+export interface NetworkPulseHeatmapDay {
+  date: string;
+  match_count: number;
+}
+
+export interface NetworkPulseMatchupExtreme {
+  opponent_id: string;
+  opponent_name: string;
+  wins: number;
+  losses: number;
+}
+
+export interface NetworkPulseYourSummary {
+  rank: number | null;
+  rank_total: number;
+  rank_delta: number | null;
+  wins: number;
+  losses: number;
+  current_streak: number;
+  last5: LeaderboardOutcome[];
+  diagnostic_key: string | null;
+  diagnostic_params: Record<string, string | number>;
+  next_move: null | {
+    type: 'challenge_unplayed' | 'log_missing_score' | 'climb_one' | 'first_match';
+    copy_key: string;
+    copy_params?: Record<string, string | number>;
+    target_player_id?: string;
+    deep_link?: string;
+  };
+  stats: {
+    activity_heatmap: NetworkPulseHeatmapDay[];
+    personal_records: NetworkPulsePersonalRecord[];
+    set_stats: NetworkPulseSetStats;
+    score_distribution: NetworkPulseScoreDistEntry[];
+  };
+  matchup_extremes: {
+    favorite: NetworkPulseMatchupExtreme | null;
+    nemesis: NetworkPulseMatchupExtreme | null;
+  };
+}
+
+export interface NetworkPulseUnplayedPairing {
+  peer_player_id: string;
+  first_name: string;
+  last_name: string | null;
+  profile_picture_url: string | null;
+  rating_value: number | null;
+  games_played: number;
+}
+
+export interface NetworkPulseRivalry {
+  player_a_id: string;
+  player_b_id: string;
+  a_first_name: string;
+  b_first_name: string;
+  a_wins: number;
+  b_wins: number;
+  matches: number;
+}
+
+export interface NetworkPulsePowerPair {
+  player_a_id: string;
+  player_b_id: string;
+  a_first_name: string;
+  b_first_name: string;
+  wins: number;
+  losses: number;
+}
+
+export interface NetworkPulseMoment extends I18nRef {
+  type: 'streak';
+  player_id: string;
+  happened_at: string;
+}
+
+export interface NetworkPulseH2HCell {
+  row_player_id: string;
+  col_player_id: string;
+  wins: number;
+  losses: number;
+}
+
+export interface NetworkPulseDiscover {
+  unplayed_pairings: NetworkPulseUnplayedPairing[];
+  rivalry_of_week: NetworkPulseRivalry | null;
+  power_pair: NetworkPulsePowerPair | null;
+  moments: NetworkPulseMoment[];
+  h2h_matrix: NetworkPulseH2HCell[] | null;
+}
+
+export interface NetworkPulse {
+  meta: {
+    network_id: string;
+    days_back: number;
+    is_group: boolean;
+    sport_id: string | null;
+    computed_at: string;
+  };
+  headline_insight: NetworkPulseHeadlineInsight;
+  form_strip: NetworkPulseFormStripEntry[];
+  leaderboard: NetworkPulseLeaderboardEntry[];
+  settling_in: NetworkPulseSettlingInEntry[];
+  your_summary: NetworkPulseYourSummary | null;
+  discover: NetworkPulseDiscover;
 }
 
 // ============================================================================

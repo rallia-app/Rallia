@@ -89,6 +89,7 @@ import {
   usePendingFeedbackCheck,
   useUpdateLastSeen,
   ProfileCompletenessProvider,
+  useMatchSuggestions,
 } from '@rallia/shared-hooks';
 import { useBadgeCountSync } from '@rallia/shared-hooks/src/useBadgeCountSync';
 // TEMPORARILY DISABLED: User walkthrough deactivated
@@ -127,7 +128,7 @@ import {
   // useTour, // TEMPORARILY DISABLED: User walkthrough deactivated
   TourProvider,
 } from './src/context';
-import { usePushNotifications } from './src/hooks';
+import { usePushNotifications, useEffectiveLocation } from './src/hooks';
 import { PostHogProvider, posthogClient } from './src/providers/PostHogProvider';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { SheetManager, SheetProvider } from 'react-native-actions-sheet';
@@ -348,6 +349,7 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
           <PlayerProvider userId={userId}>
             <SportProvider userId={userId}>
               <SubscriptionProvider>
+                <MatchSuggestionsWarmer />
                 <ProfileCompletenessBridge>{children}</ProfileCompletenessBridge>
               </SubscriptionProvider>
             </SportProvider>
@@ -356,6 +358,28 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
       </LocationModeProvider>
     </UserLocationProvider>
   );
+}
+
+/**
+ * Warms the matchup-suggestions cache as soon as sport (+player or location) is
+ * known, so Home/PublicMatches render the suggestions feed instantly.
+ */
+function MatchSuggestionsWarmer() {
+  const { player } = usePlayer();
+  const { selectedSport } = useSport();
+  const { location } = useEffectiveLocation();
+
+  useMatchSuggestions({
+    playerId: player?.id,
+    sportId: selectedSport?.id,
+    sportName: selectedSport?.name,
+    latitude: !player?.id ? location?.latitude : undefined,
+    longitude: !player?.id ? location?.longitude : undefined,
+    limit: 20,
+    enabled: true,
+  });
+
+  return null;
 }
 
 /**

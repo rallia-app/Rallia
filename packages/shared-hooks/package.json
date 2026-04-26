@@ -19,6 +19,7 @@
   "dependencies": {
     "@rallia/shared-services": "*",
     "@rallia/shared-types": "*",
+    "@rallia/shared-utils": "*",
     "@rallia/design-system": "*"
   },
   "devDependencies": {

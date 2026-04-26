@@ -37,11 +37,31 @@ interface EmptyStateProps {
   playerId: string | undefined;
   sportId: string | undefined;
   sportName: string | undefined;
+  hasFilters: boolean;
+  textMutedColor: string;
+  t: (key: TranslationKey) => string;
 }
 
-function EmptyState({ playerId, sportId, sportName }: EmptyStateProps) {
+function EmptyState({
+  playerId,
+  sportId,
+  sportName,
+  hasFilters,
+  textMutedColor,
+  t,
+}: EmptyStateProps) {
   return (
     <View style={styles.emptyWrapper}>
+      <View style={styles.inlineEmpty}>
+        <Ionicons
+          name={hasFilters ? 'filter-outline' : 'search-outline'}
+          size={20}
+          color={textMutedColor}
+        />
+        <Text size="sm" color={textMutedColor} style={styles.inlineEmptyText}>
+          {hasFilters ? t('publicMatches.empty.title') : t('publicMatches.empty.noFilters.title')}
+        </Text>
+      </View>
       <SuggestionsFeedSection playerId={playerId} sportId={sportId} sportName={sportName} />
     </View>
   );
@@ -297,9 +317,22 @@ export default function PublicMatches() {
         playerId={player?.id}
         sportId={selectedSport?.id}
         sportName={selectedSport?.name}
+        hasFilters={hasActiveFilters || debouncedSearchQuery.length > 0}
+        textMutedColor={colors.textMuted}
+        t={t as (key: TranslationKey) => string}
       />
     );
-  }, [isLoading, isSearching, player?.id, selectedSport?.id, selectedSport?.name]);
+  }, [
+    isLoading,
+    isSearching,
+    player?.id,
+    selectedSport?.id,
+    selectedSport?.name,
+    hasActiveFilters,
+    debouncedSearchQuery,
+    colors.textMuted,
+    t,
+  ]);
 
   // Render footer with loading indicator or suggestions prompt
   const renderFooter = useCallback(() => {
@@ -523,6 +556,18 @@ const styles = StyleSheet.create({
   },
   emptyWrapper: {
     paddingTop: spacingPixels[2],
+  },
+  inlineEmpty: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
+  },
+  inlineEmptyText: {
+    flexShrink: 1,
+    textAlign: 'center',
   },
   emptyContainer: {
     padding: spacingPixels[8],
