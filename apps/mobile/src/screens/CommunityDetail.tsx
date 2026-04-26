@@ -81,7 +81,7 @@ type CommunityDetailRouteProp = RouteProp<RootStackParamList, 'CommunityDetail'>
 
 type TabKey = 'leaderboard' | 'games';
 
-const TAB_KEYS: TabKey[] = ['games', 'leaderboard'];
+const TAB_KEYS: TabKey[] = ['games'];
 
 const TAB_ICONS: Record<TabKey, keyof typeof Ionicons.glyphMap> = {
   leaderboard: 'podium-outline',
