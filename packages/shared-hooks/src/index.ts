@@ -47,6 +47,7 @@ export * from './useInviteToMatch';
 export * from './usePlayerReputation';
 export * from './useGroups';
 export * from './usePendingFeedbackCheck';
+export * from './useFeedbackBrowse';
 export * from './useCommunities';
 export * from './useChat';
 export * from './useConversationFilter';

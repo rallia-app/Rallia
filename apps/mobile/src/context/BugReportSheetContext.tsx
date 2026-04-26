@@ -19,9 +19,23 @@ import { useActionsSheet } from './ActionsSheetContext';
 
 export type FeedbackReportTrigger = 'help_menu' | 'settings' | 'fab';
 
+export type FeedbackReportInitialView = 'browse' | 'compose';
+
+export type FeedbackReportInitialCategory = 'bug' | 'feature' | 'improvement' | 'missing_court';
+
+export interface OpenFeedbackReportOptions {
+  trigger?: FeedbackReportTrigger;
+  /** Which view to land on. Defaults to 'browse' for bug/feature, 'compose' otherwise. */
+  view?: FeedbackReportInitialView;
+  /** Pre-select a category (skips category picker in compose mode). */
+  category?: FeedbackReportInitialCategory;
+}
+
 interface FeedbackReportSheetContextType {
   /** Open the feedback report sheet */
-  openFeedbackReport: (trigger?: FeedbackReportTrigger) => void;
+  openFeedbackReport: (
+    triggerOrOptions?: FeedbackReportTrigger | OpenFeedbackReportOptions
+  ) => void;
 
   /** Close the feedback report sheet */
   closeFeedbackReport: () => void;
@@ -64,7 +78,13 @@ export const FeedbackReportSheetProvider: React.FC<FeedbackReportSheetProviderPr
    * If not ready, opens the actions sheet (sign-in / onboarding) instead.
    */
   const openFeedbackReport = useCallback(
-    (triggerSource: FeedbackReportTrigger = 'help_menu') => {
+    (triggerOrOptions?: FeedbackReportTrigger | OpenFeedbackReportOptions) => {
+      const opts: OpenFeedbackReportOptions =
+        typeof triggerOrOptions === 'string'
+          ? { trigger: triggerOrOptions }
+          : (triggerOrOptions ?? {});
+      const triggerSource: FeedbackReportTrigger = opts.trigger ?? 'help_menu';
+
       const isSignedIn = Boolean(session?.user);
       const isOnboarded = Boolean(profile?.onboarding_completed);
 
@@ -73,10 +93,21 @@ export const FeedbackReportSheetProvider: React.FC<FeedbackReportSheetProviderPr
         return;
       }
 
+      // Default view: browse for bug/feature, compose otherwise.
+      const initialView: FeedbackReportInitialView =
+        opts.view ??
+        (opts.category && opts.category !== 'bug' && opts.category !== 'feature'
+          ? 'compose'
+          : 'browse');
+
       setTrigger(triggerSource);
       setIsOpen(true);
       SheetManager.show('feedback-report', {
-        payload: { trigger: triggerSource },
+        payload: {
+          trigger: triggerSource,
+          initialView,
+          initialCategory: opts.category,
+        },
         onClose: () => {
           setIsOpen(false);
           setTrigger(null);

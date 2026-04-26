@@ -172,3 +172,135 @@ export async function getUserFeedbackById(
   }
   return data;
 }
+
+// =============================================================================
+// PUBLIC FEEDBACK BROWSE & UPVOTE
+// =============================================================================
+
+export type PublicFeedbackCategory = Extract<UserFeedbackCategory, 'bug' | 'feature'>;
+
+export interface PublicFeedback {
+  id: string;
+  category: PublicFeedbackCategory;
+  module: UserFeedbackModule;
+  subject: string;
+  message: string;
+  metadata: UserFeedbackMetadata | null;
+  status: UserFeedbackStatus;
+  admin_notes: string | null;
+  screenshot_urls: string[] | null;
+  upvote_count: number;
+  created_at: string;
+  is_anonymous: boolean;
+  has_voted: boolean;
+}
+
+export interface ListPublicFeedbackParams {
+  category: PublicFeedbackCategory;
+  playerId: string;
+  limit?: number;
+  offset?: number;
+  search?: string;
+}
+
+interface FeedbackBrowseRow {
+  id: string;
+  player_id: string | null;
+  category: PublicFeedbackCategory;
+  module: UserFeedbackModule;
+  subject: string;
+  message: string;
+  metadata: UserFeedbackMetadata | null;
+  status: UserFeedbackStatus;
+  admin_notes: string | null;
+  screenshot_urls: string[] | null;
+  upvote_count: number;
+  created_at: string;
+}
+
+const DEFAULT_BROWSE_LIMIT = 25;
+
+export async function listPublicFeedback(
+  params: ListPublicFeedbackParams
+): Promise<PublicFeedback[]> {
+  const { category, playerId, limit = DEFAULT_BROWSE_LIMIT, offset = 0, search } = params;
+
+  let query = supabase
+    .from('feedback')
+    .select(
+      'id, player_id, category, module, subject, message, metadata, status, admin_notes, screenshot_urls, upvote_count, created_at'
+    )
+    .eq('category', category)
+    .eq('visibility', 'public')
+    .is('hidden_at', null)
+    .order('upvote_count', { ascending: false })
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (search && search.trim().length > 0) {
+    const term = search.trim().replace(/[\\%_]/g, '\\$&');
+    query = query.or(`subject.ilike.%${term}%,message.ilike.%${term}%`);
+  }
+
+  const { data: rows, error } = await query;
+  if (error) {
+    console.error('[listPublicFeedback] error:', error);
+    throw new Error('Failed to load reports.');
+  }
+  if (!rows || rows.length === 0) return [];
+
+  // Fetch the requesting player's votes on the returned set in one round trip.
+  const ids = rows.map(r => r.id);
+  const { data: votes, error: votesError } = await supabase
+    .from('feedback_vote')
+    .select('feedback_id')
+    .eq('player_id', playerId)
+    .in('feedback_id', ids);
+
+  if (votesError) {
+    console.error('[listPublicFeedback] votes error:', votesError);
+  }
+
+  const votedIds = new Set((votes ?? []).map(v => v.feedback_id));
+
+  return (rows as FeedbackBrowseRow[]).map(r => ({
+    id: r.id,
+    category: r.category,
+    module: r.module,
+    subject: r.subject,
+    message: r.message,
+    metadata: r.metadata,
+    status: r.status,
+    admin_notes: r.admin_notes,
+    screenshot_urls: r.screenshot_urls,
+    upvote_count: r.upvote_count,
+    created_at: r.created_at,
+    is_anonymous: r.player_id === null,
+    has_voted: votedIds.has(r.id),
+  }));
+}
+
+export async function upvoteFeedback(feedbackId: string, playerId: string): Promise<void> {
+  const { error } = await supabase
+    .from('feedback_vote')
+    .insert({ feedback_id: feedbackId, player_id: playerId });
+
+  // Treat unique-violation as success (idempotent toggle-on).
+  if (error && error.code !== '23505') {
+    console.error('[upvoteFeedback] error:', error);
+    throw new Error('Failed to upvote.');
+  }
+}
+
+export async function removeFeedbackUpvote(feedbackId: string, playerId: string): Promise<void> {
+  const { error } = await supabase
+    .from('feedback_vote')
+    .delete()
+    .eq('feedback_id', feedbackId)
+    .eq('player_id', playerId);
+
+  if (error) {
+    console.error('[removeFeedbackUpvote] error:', error);
+    throw new Error('Failed to remove upvote.');
+  }
+}
