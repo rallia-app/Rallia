@@ -19,9 +19,14 @@ const sentryNavigationIntegration = Sentry.reactNavigationIntegration({
   enableTimeToInitialDisplay: !isRunningInExpoGo(),
 });
 
+if (!__DEV__ && !process.env.EXPO_PUBLIC_SENTRY_DSN) {
+  console.warn('[Sentry] EXPO_PUBLIC_SENTRY_DSN is missing — events will not be reported.');
+}
+
 Sentry.init({
   dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
   enabled: !__DEV__,
+  environment: process.env.EXPO_PUBLIC_APP_ENV,
   tracesSampleRate: 0.2,
   replaysOnErrorSampleRate: 1.0,
   replaysSessionSampleRate: 0.1,
