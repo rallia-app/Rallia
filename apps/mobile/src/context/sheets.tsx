@@ -56,6 +56,7 @@ import { ReportUserActionSheet } from '../features/chat/components/ReportUserMod
 import { ChatAgreementActionSheet } from '../features/chat/components/ChatAgreementModal';
 import { AddMembersToChatActionSheet } from '../features/chat/components/AddMembersToChatModal';
 import { CreateGroupChatActionSheet } from '../features/chat/components/CreateGroupChatModal';
+import { AttachmentPickerActionSheet } from '../features/chat/components/AttachmentPickerActionSheet';
 // Onboarding/Profile components
 import { PersonalInformationActionSheet } from '../features/onboarding/components/overlays/PersonalInformationOverlay';
 import { PlayerInformationActionSheet } from '../features/onboarding/components/overlays/PlayerInformationOverlay';
@@ -192,6 +193,11 @@ declare module 'react-native-actions-sheet' {
     'create-group-chat': SheetDefinition<{
       payload: {
         onSuccess?: (conversationId: string) => void;
+      };
+    }>;
+    'attachment-picker': SheetDefinition<{
+      payload: {
+        onSelect: (option: 'photo' | 'video' | 'library' | 'document') => void;
       };
     }>;
     // Group sheets
@@ -723,6 +729,7 @@ export const Sheets = () => {
         'chat-agreement': ChatAgreementActionSheet,
         'add-members-to-chat': AddMembersToChatActionSheet,
         'create-group-chat': CreateGroupChatActionSheet,
+        'attachment-picker': AttachmentPickerActionSheet,
         // Group sheets
         'group-options': GroupOptionsActionSheet,
         'member-options': MemberOptionsActionSheet,

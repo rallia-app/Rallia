@@ -16,12 +16,15 @@ import {
   PanResponder,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
 import { Text } from '@rallia/shared-components';
 import { getShortName } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary, status } from '@rallia/design-system';
 import type { MessageWithSender, ReactionSummary } from '@rallia/shared-services';
+import { isOptimisticMessageId } from '@rallia/shared-hooks';
+
+import { useThemeStyles, useTranslation } from '../../../hooks';
+
+import { MessageAttachments } from './MessageAttachments';
 
 interface MessageBubbleProps {
   message: MessageWithSender;
@@ -34,6 +37,10 @@ interface MessageBubbleProps {
   searchQuery?: string;
   isHighlighted?: boolean;
   isCurrentHighlight?: boolean;
+  /** Retry an optimistic message that failed to send. */
+  onRetrySend?: (tmpId: string) => void;
+  /** Discard an optimistic message that failed to send. */
+  onDismissSend?: (tmpId: string) => void;
 }
 
 // Regex to detect URLs in text
@@ -53,6 +60,8 @@ function MessageBubbleComponent({
   searchQuery = '',
   isHighlighted = false,
   isCurrentHighlight = false,
+  onRetrySend,
+  onDismissSend,
 }: MessageBubbleProps) {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
@@ -73,6 +82,9 @@ function MessageBubbleComponent({
 
   const isEdited = message.is_edited ?? false;
   const isDeleted = message.deleted_at != null;
+  const isOptimistic = isOptimisticMessageId(message.id);
+  const isSending = isOptimistic && message.status === 'sending';
+  const isFailedSend = isOptimistic && message.status === 'failed';
 
   // Pan responder for swipe gesture - using useMemo for stable instance
   const panResponder = useMemo(
@@ -86,6 +98,7 @@ function MessageBubbleComponent({
             Math.abs(gestureState.dx) > Math.abs(gestureState.dy) &&
             gestureState.dx > 0 && // Only swipe right
             !isDeleted &&
+            !isOptimistic && // Can't reply to a message that doesn't exist server-side yet
             onReplyPress != null
           );
         },
@@ -206,7 +219,7 @@ function MessageBubbleComponent({
       );
     }
 
-    const parts = message.content.split(URL_REGEX);
+    const parts = (message.content ?? '').split(URL_REGEX);
 
     return parts.map((part, index) => {
       const baseStyle = [styles.messageText, { color: isOwnMessage ? '#FFFFFF' : colors.text }];
@@ -281,7 +294,13 @@ function MessageBubbleComponent({
           {/* Spacer for messages without avatar */}
           {!isOwnMessage && !showSenderInfo && <View style={styles.avatarSpacer} />}
 
-          <View style={[styles.bubbleContainer, isOwnMessage && styles.bubbleContainerOwn]}>
+          <View
+            style={[
+              styles.bubbleContainer,
+              isOwnMessage && styles.bubbleContainerOwn,
+              isSending && styles.sendingBubbleContainer,
+            ]}
+          >
             {/* Sender name */}
             {!isOwnMessage && showSenderInfo && (
               <Text style={[styles.senderName, { color: primary[500] }]}>{senderName}</Text>
@@ -339,7 +358,20 @@ function MessageBubbleComponent({
                 </TouchableOpacity>
               )}
 
-              <View style={styles.messageContent}>{renderContent()}</View>
+              {/* Attachments (images/videos/documents) */}
+              {message.attachments && message.attachments.length > 0 && !isDeleted && (
+                <View style={styles.attachmentsWrap}>
+                  <MessageAttachments
+                    attachments={message.attachments}
+                    isOwnMessage={isOwnMessage}
+                  />
+                </View>
+              )}
+
+              {/* Text content — hide entirely when message has attachments and no text */}
+              {(isDeleted || (message.content && message.content.length > 0)) && (
+                <View style={styles.messageContent}>{renderContent()}</View>
+              )}
 
               {/* Timestamp, edited indicator, and delivery status */}
               <View style={styles.timestampRow}>
@@ -408,6 +440,41 @@ function MessageBubbleComponent({
                 )}
               </View>
             </Pressable>
+
+            {/* Failed-send retry / dismiss row (optimistic messages only) */}
+            {isFailedSend && (onRetrySend || onDismissSend) && (
+              <View style={styles.failedRow}>
+                {onRetrySend && (
+                  <TouchableOpacity
+                    onPress={() => onRetrySend(message.id)}
+                    style={[styles.failedAction, { backgroundColor: status.error.DEFAULT }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('chat.message.retrySend')}
+                  >
+                    <Ionicons name="refresh" size={14} color="#FFFFFF" />
+                    <Text style={[styles.failedActionLabel, { color: '#FFFFFF' }]}>
+                      {t('chat.message.retrySend')}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {onDismissSend && (
+                  <TouchableOpacity
+                    onPress={() => onDismissSend(message.id)}
+                    style={[
+                      styles.failedAction,
+                      { backgroundColor: isDark ? colors.card : '#F0F0F0' },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('chat.message.dismissSend')}
+                  >
+                    <Ionicons name="close" size={14} color={colors.text} />
+                    <Text style={[styles.failedActionLabel, { color: colors.text }]}>
+                      {t('chat.message.dismissSend')}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
 
             {/* Reactions */}
             {reactions.length > 0 && (
@@ -501,6 +568,27 @@ const styles = StyleSheet.create({
   bubbleContainerOwn: {
     alignItems: 'flex-end',
   },
+  sendingBubbleContainer: {
+    opacity: 0.7,
+  },
+  failedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacingPixels[1],
+    gap: spacingPixels[2],
+  },
+  failedAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    paddingVertical: spacingPixels[0.5],
+    paddingHorizontal: spacingPixels[2],
+    borderRadius: 12,
+  },
+  failedActionLabel: {
+    fontSize: fontSizePixels.xs,
+    fontWeight: '600',
+  },
   senderName: {
     fontSize: fontSizePixels.sm,
     fontWeight: '600',
@@ -530,6 +618,11 @@ const styles = StyleSheet.create({
   },
   replyText: {
     fontSize: fontSizePixels.xs,
+  },
+  attachmentsWrap: {
+    marginBottom: spacingPixels[1.5],
+    marginHorizontal: -spacingPixels[2],
+    marginTop: -spacingPixels[1],
   },
   messageContent: {
     flexDirection: 'row',

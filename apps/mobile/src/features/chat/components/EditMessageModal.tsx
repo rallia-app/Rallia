@@ -39,7 +39,7 @@ function EditMessageModalComponent({ payload }: SheetProps<'edit-message'>) {
   // Initialize content when modal opens with a new message (defer setState to avoid synchronous setState-in-effect)
   useEffect(() => {
     if (message) {
-      const content = message.content;
+      const content = message.content ?? '';
       queueMicrotask(() => {
         setTextValue(content);
         setCharCount(content.length);

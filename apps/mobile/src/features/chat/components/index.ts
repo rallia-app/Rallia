@@ -24,3 +24,6 @@ export { AddMembersToChatModal } from './AddMembersToChatModal';
 export { ReportUserModal } from './ReportUserModal';
 export { ChatMemberOptionsModal } from './ChatMemberOptionsModal';
 export { ConversationFilterChips } from './ConversationFilterChips';
+export { AttachmentPickerActionSheet } from './AttachmentPickerActionSheet';
+export { MessageAttachments } from './MessageAttachments';
+export { AttachmentViewerModal } from './AttachmentViewerModal';

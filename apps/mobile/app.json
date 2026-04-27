@@ -19,6 +19,7 @@
         "NSLocationAlwaysUsageDescription": "$(PRODUCT_NAME) uses your location to show nearby courts and facilities sorted by distance, for example \"Tennis Club 0.3 km away\".",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "$(PRODUCT_NAME) uses your location to show nearby courts and facilities sorted by distance, for example \"Tennis Club 0.3 km away\".",
         "NSMicrophoneUsageDescription": "$(PRODUCT_NAME) uses your microphone to capture audio when recording video proof of your playing level, for example recording the sound during a rally video.",
+        "NSPhotoLibraryAddUsageDescription": "$(PRODUCT_NAME) saves photos and videos shared in chat to your photo library when you tap Save.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "bundleIdentifier": "com.mathisl971.rallia-app",
@@ -123,6 +124,14 @@
           "photosPermission": "$(PRODUCT_NAME) uses your photo library to set a player, group, or community profile picture and to submit rating proof, for example selecting a video of your gameplay to verify your skill level.",
           "cameraPermission": "$(PRODUCT_NAME) uses your camera to take a profile picture or record video proof of your playing level, for example filming yourself during a rally to verify your skill rating.",
           "microphonePermission": "$(PRODUCT_NAME) uses your microphone to capture audio when recording video proof of your playing level, for example recording the sound during a rally video."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "$(PRODUCT_NAME) accesses your photo library when you save a photo or video shared in chat.",
+          "savePhotosPermission": "$(PRODUCT_NAME) saves photos and videos shared in chat to your photo library when you tap Save.",
+          "isAccessForAll": false
         }
       ],
       [

@@ -4,7 +4,80 @@
  */
 
 import { supabase } from '../supabase';
-import type { Message, MessageWithSender, MessageStatus, SendMessageInput } from './chatTypes';
+import type {
+  Message,
+  MessageWithSender,
+  MessageStatus,
+  SendMessageInput,
+  ChatAttachment,
+  ChatAttachmentFile,
+} from './chatTypes';
+
+// PostgREST returns nested files as either an object or a single-element array
+// depending on the relationship; this normalises both forms.
+function normaliseAttachments(raw: unknown): ChatAttachment[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  return (raw as Array<Record<string, unknown>>)
+    .map(row => {
+      const fileRaw = row.file;
+      const file = (Array.isArray(fileRaw) ? fileRaw[0] : fileRaw) as
+        | ChatAttachmentFile
+        | undefined;
+      if (!file) return null;
+      return {
+        id: row.id as string,
+        message_id: row.message_id as string,
+        file_id: row.file_id as string,
+        position: (row.position as number) ?? 0,
+        created_at: row.created_at as string,
+        file,
+      } satisfies ChatAttachment;
+    })
+    .filter((a): a is ChatAttachment => a !== null)
+    .sort((a, b) => a.position - b.position);
+}
+
+const MESSAGE_SELECT = `
+  id,
+  conversation_id,
+  sender_id,
+  content,
+  status,
+  read_by,
+  created_at,
+  updated_at,
+  reply_to_message_id,
+  is_edited,
+  edited_at,
+  deleted_at,
+  sender:player!message_sender_id_fkey (
+    id,
+    profile (
+      first_name,
+      last_name,
+      display_name,
+      profile_picture_url
+    )
+  ),
+  attachments:message_attachment (
+    id,
+    message_id,
+    file_id,
+    position,
+    created_at,
+    file:file (
+      id,
+      file_type,
+      url,
+      thumbnail_url,
+      mime_type,
+      file_size,
+      original_name,
+      storage_key,
+      metadata
+    )
+  )
+`;
 
 // ============================================================================
 // READ OPERATIONS
@@ -26,31 +99,7 @@ export async function getMessages(
 
   let query = supabase
     .from('message')
-    .select(
-      `
-      id,
-      conversation_id,
-      sender_id,
-      content,
-      status,
-      read_by,
-      created_at,
-      updated_at,
-      reply_to_message_id,
-      is_edited,
-      edited_at,
-      deleted_at,
-      sender:player!message_sender_id_fkey (
-        id,
-        profile (
-          first_name,
-          last_name,
-          display_name,
-          profile_picture_url
-        )
-      )
-    `
-    )
+    .select(MESSAGE_SELECT)
     .eq('conversation_id', conversationId)
     .is('deleted_at', null) // Don't fetch soft-deleted messages
     .order('created_at', { ascending: false })
@@ -96,7 +145,7 @@ export async function getMessages(
         const sender = rm.sender as unknown as { profile: { first_name: string } | null };
         replyToMap.set(rm.id, {
           id: rm.id,
-          content: rm.content,
+          content: rm.content ?? '',
           sender_name: sender?.profile?.first_name || 'Unknown',
         });
       }
@@ -109,75 +158,30 @@ export async function getMessages(
     read_by: msg.read_by as string[] | null,
     sender: msg.sender as unknown as MessageWithSender['sender'],
     reply_to: msg.reply_to_message_id ? (replyToMap.get(msg.reply_to_message_id) ?? null) : null,
+    attachments: normaliseAttachments((msg as Record<string, unknown>).attachments),
   }));
 }
 
-// ============================================================================
-// WRITE OPERATIONS
-// ============================================================================
-
 /**
- * Send a new message (supports replies)
- * Returns the message with reply_to data populated if it's a reply
+ * Fetch a single message with sender and attachments populated.
+ * Used by the realtime path to hydrate INSERT events that don't include joins.
  */
-export async function sendMessage(input: SendMessageInput): Promise<MessageWithSender> {
-  const insertData: Record<string, unknown> = {
-    conversation_id: input.conversation_id,
-    sender_id: input.sender_id,
-    content: input.content,
-    status: 'sent',
-  };
-
-  // Add reply_to_message_id if provided
-  if (input.reply_to_message_id) {
-    insertData.reply_to_message_id = input.reply_to_message_id;
-  }
-
+export async function getMessageById(messageId: string): Promise<MessageWithSender | null> {
   const { data, error } = await supabase
     .from('message')
-    .insert(insertData)
-    .select(
-      `
-      id,
-      conversation_id,
-      sender_id,
-      content,
-      status,
-      read_by,
-      created_at,
-      updated_at,
-      reply_to_message_id,
-      is_edited,
-      edited_at,
-      deleted_at,
-      sender:player!message_sender_id_fkey (
-        id,
-        profile (
-          first_name,
-          last_name,
-          display_name,
-          profile_picture_url
-        )
-      )
-    `
-    )
-    .single();
+    .select(MESSAGE_SELECT)
+    .eq('id', messageId)
+    .maybeSingle();
 
   if (error) {
-    console.error('Error sending message:', error);
+    console.error('Error fetching message by id:', error);
     throw error;
   }
+  if (!data) return null;
 
-  // Update conversation's updated_at
-  await supabase
-    .from('conversation')
-    .update({ updated_at: new Date().toISOString() })
-    .eq('id', input.conversation_id);
-
-  // Build reply_to data if this is a reply
+  // Reply preview, if any
   let replyTo: { id: string; content: string; sender_name: string } | null = null;
-
-  if (input.reply_to_message_id) {
+  if (data.reply_to_message_id) {
     const { data: replyMessage } = await supabase
       .from('message')
       .select(
@@ -191,14 +195,14 @@ export async function sendMessage(input: SendMessageInput): Promise<MessageWithS
         )
       `
       )
-      .eq('id', input.reply_to_message_id)
+      .eq('id', data.reply_to_message_id)
       .single();
 
     if (replyMessage) {
       const sender = replyMessage.sender as unknown as { profile: { first_name: string } | null };
       replyTo = {
         id: replyMessage.id,
-        content: replyMessage.content,
+        content: replyMessage.content ?? '',
         sender_name: sender?.profile?.first_name || 'Unknown',
       };
     }
@@ -210,7 +214,82 @@ export async function sendMessage(input: SendMessageInput): Promise<MessageWithS
     read_by: data.read_by as string[] | null,
     sender: data.sender as unknown as MessageWithSender['sender'],
     reply_to: replyTo,
+    attachments: normaliseAttachments((data as Record<string, unknown>).attachments),
   };
+}
+
+// ============================================================================
+// WRITE OPERATIONS
+// ============================================================================
+
+/**
+ * Send a new message (supports replies and attachments)
+ * Returns the message with reply_to and attachments populated.
+ */
+export async function sendMessage(input: SendMessageInput): Promise<MessageWithSender> {
+  const trimmedContent = input.content?.trim() ?? '';
+  const attachmentIds = input.attachment_file_ids ?? [];
+
+  if (!trimmedContent && attachmentIds.length === 0) {
+    throw new Error('Cannot send an empty message without attachments');
+  }
+
+  const insertData: Record<string, unknown> = {
+    conversation_id: input.conversation_id,
+    sender_id: input.sender_id,
+    content: trimmedContent.length > 0 ? trimmedContent : null,
+    status: 'sent',
+  };
+
+  // Add reply_to_message_id if provided
+  if (input.reply_to_message_id) {
+    insertData.reply_to_message_id = input.reply_to_message_id;
+  }
+
+  // 1. Insert the message
+  const { data: messageRow, error: messageError } = await supabase
+    .from('message')
+    .insert(insertData)
+    .select('id')
+    .single();
+
+  if (messageError || !messageRow) {
+    console.error('Error sending message:', messageError);
+    throw messageError ?? new Error('Failed to send message');
+  }
+
+  // 2. Insert attachment rows in order
+  if (attachmentIds.length > 0) {
+    const attachmentRows = attachmentIds.map((fileId, position) => ({
+      message_id: messageRow.id,
+      file_id: fileId,
+      position,
+    }));
+
+    const { error: attachmentError } = await supabase
+      .from('message_attachment')
+      .insert(attachmentRows);
+
+    if (attachmentError) {
+      console.error('Error attaching files to message:', attachmentError);
+      // Roll back the message row so the chat doesn't show a half-sent message.
+      await supabase.from('message').delete().eq('id', messageRow.id);
+      throw attachmentError;
+    }
+  }
+
+  // 3. Update conversation timestamp (trigger also handles this; harmless redundancy)
+  await supabase
+    .from('conversation')
+    .update({ updated_at: new Date().toISOString() })
+    .eq('id', input.conversation_id);
+
+  // 4. Re-fetch the full message with sender + attachments
+  const fullMessage = await getMessageById(messageRow.id);
+  if (!fullMessage) {
+    throw new Error('Sent message could not be re-fetched');
+  }
+  return fullMessage;
 }
 
 /**

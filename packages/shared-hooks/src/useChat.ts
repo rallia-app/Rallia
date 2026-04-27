@@ -12,6 +12,7 @@ import {
   createConversation,
   getOrCreateDirectConversation,
   getMessages,
+  getMessageById,
   sendMessage,
   markMessagesAsRead,
   markMessagesAsDelivered,
@@ -50,6 +51,8 @@ import {
   type PlayerOnlineStatus,
   type TypingIndicator,
   type SearchMessageResult,
+  type ChatAttachment,
+  type ChatAttachmentKind,
 } from '@rallia/shared-services';
 import type { ConversationFilter } from '@rallia/shared-types';
 
@@ -320,6 +323,515 @@ export function useSendMessage() {
       });
     },
   });
+}
+
+// ============================================================================
+// OPTIMISTIC SEND WITH ATTACHMENTS
+// ============================================================================
+
+/**
+ * Subset of `ChatAttachmentKind` the composer can actually produce. The wider
+ * server-side type also includes `'audio' | 'other'`, but those never come
+ * from a user-facing picker.
+ */
+export type UploadableAttachmentKind = 'image' | 'video' | 'document';
+
+/**
+ * Local file picked by the composer, not yet uploaded.
+ */
+export interface LocalChatAttachment {
+  localId: string;
+  uri: string;
+  thumbnailUri: string | null;
+  kind: UploadableAttachmentKind;
+  mimeType: string;
+  size: number;
+  originalName: string;
+}
+
+/**
+ * Upload contract the hook delegates to. Callers wire up their platform's
+ * uploader (mobile: `uploadChatAttachment` in apps/mobile/src/services).
+ */
+export type ChatAttachmentUploader = (input: {
+  fileUri: string;
+  fileType: UploadableAttachmentKind;
+  originalName: string;
+  mimeType: string;
+  fileSize: number;
+  userId: string;
+  conversationId: string;
+  onProgress?: (percent: number) => void;
+}) => Promise<{
+  success: boolean;
+  fileId?: string;
+  url?: string;
+  thumbnailUrl?: string | null;
+  error?: string;
+}>;
+
+export interface SendMessageWithUploadsInput {
+  conversation_id: string;
+  sender_id: string;
+  user_id: string;
+  content: string;
+  reply_to_message_id?: string;
+  attachments: LocalChatAttachment[];
+  sender_profile: MessageWithSender['sender'];
+}
+
+interface InFlightAttachment extends LocalChatAttachment {
+  /** File id once uploaded (skipped on retry). */
+  fileId?: string;
+  status: 'pending' | 'uploading' | 'uploaded' | 'failed';
+  progress: number;
+  error?: string;
+}
+
+interface InFlightMessage {
+  tmpId: string;
+  input: SendMessageWithUploadsInput;
+  attachments: InFlightAttachment[];
+  /** Local URI map for swap-aware rendering. */
+  createdAt: string;
+}
+
+const TMP_ID_PREFIX = 'tmp-';
+
+function makeTmpId(): string {
+  return `${TMP_ID_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export function isOptimisticMessageId(id: string): boolean {
+  return id.startsWith(TMP_ID_PREFIX);
+}
+
+function buildOptimisticMessage(state: InFlightMessage): MessageWithSender {
+  return {
+    id: state.tmpId,
+    conversation_id: state.input.conversation_id,
+    sender_id: state.input.sender_id,
+    content: state.input.content.length > 0 ? state.input.content : null,
+    status: 'sending',
+    read_by: null,
+    created_at: state.createdAt,
+    updated_at: state.createdAt,
+    reply_to_message_id: state.input.reply_to_message_id ?? null,
+    is_edited: false,
+    edited_at: null,
+    deleted_at: null,
+    sender: state.input.sender_profile,
+    attachments: state.attachments.map<ChatAttachment>((att, position) => ({
+      id: `${TMP_ID_PREFIX}att-${att.localId}`,
+      message_id: state.tmpId,
+      file_id: att.fileId ?? `${TMP_ID_PREFIX}file-${att.localId}`,
+      position,
+      created_at: state.createdAt,
+      file: {
+        id: att.fileId ?? `${TMP_ID_PREFIX}file-${att.localId}`,
+        file_type: att.kind,
+        url: att.uri,
+        thumbnail_url: att.thumbnailUri,
+        mime_type: att.mimeType,
+        file_size: att.size,
+        original_name: att.originalName,
+        storage_key: '',
+        metadata: null,
+      },
+      __upload: {
+        status: att.status,
+        progress: att.progress,
+        error: att.error,
+      },
+    })),
+  };
+}
+
+type MessagesPages = { pages: MessageWithSender[][]; pageParams: number[] } | undefined;
+
+/**
+ * Prepend a real (server-confirmed) message to the messages cache, deduping
+ * if the realtime sub already inserted it.
+ */
+function prependRealMessage(oldData: MessagesPages, message: MessageWithSender): MessagesPages {
+  if (!oldData?.pages) {
+    return { pages: [[message]], pageParams: [0] };
+  }
+  if (oldData.pages.flat().some(m => m.id === message.id)) {
+    return oldData;
+  }
+  const firstPage = oldData.pages[0] || [];
+  return {
+    ...oldData,
+    pages: [[message, ...firstPage], ...oldData.pages.slice(1)],
+  };
+}
+
+/**
+ * Snapshot persisted by the optional persistence layer. Same shape as the
+ * mobile outbox row in apps/mobile/src/features/chat/services/outboxStore.ts.
+ */
+export interface PersistedOutboxRow {
+  tmpId: string;
+  conversationId: string;
+  senderId: string;
+  userId: string;
+  content: string;
+  replyToMessageId?: string;
+  attachments: Array<{
+    localId: string;
+    uri: string;
+    thumbnailUri: string | null;
+    kind: UploadableAttachmentKind;
+    mimeType: string;
+    size: number;
+    originalName: string;
+    fileId?: string;
+    status: 'pending' | 'uploading' | 'uploaded' | 'failed';
+    error?: string;
+  }>;
+  status: 'sending' | 'failed';
+  createdAt: string;
+}
+
+export interface PersistenceAdapter {
+  /** Called whenever a row's persisted snapshot should be saved. */
+  onPersist: (row: PersistedOutboxRow) => void;
+  /** Called when a row should be removed (sent or dismissed). */
+  onRemove: (tmpId: string) => void;
+}
+
+export interface UseSendMessageWithUploadsResult {
+  /** Kick off an optimistic send. Returns the tmp id immediately. */
+  sendMessageWithUploads: (input: SendMessageWithUploadsInput) => string;
+  /** Re-run a failed send. No-op if the tmp id is unknown. */
+  retryMessage: (tmpId: string) => void;
+  /** Discard a failed optimistic message. */
+  dismissMessage: (tmpId: string) => void;
+  /**
+   * Re-hydrate an optimistic message previously persisted, and (if its
+   * persisted status was `sending`) re-run the upload+send pipeline.
+   * Failed rows park until the user taps retry.
+   */
+  replayMessage: (row: PersistedOutboxRow, senderProfile: MessageWithSender['sender']) => void;
+  /**
+   * Optimistic messages currently being sent or failed-and-parked, keyed by
+   * conversation id. Callers merge these into their messages list at render
+   * time so other invalidations to `chatKeys.messages` cannot wipe them.
+   */
+  optimisticMessages: MessageWithSender[];
+  /** True while at least one optimistic send is pending. */
+  isSending: boolean;
+}
+
+/**
+ * Optimistic chat send: splices a `tmp-…` MessageWithSender into the messages
+ * cache immediately, uploads attachments in parallel, then calls `sendMessage`
+ * with the resulting fileIds and swaps the optimistic row with the real one.
+ *
+ * On failure the tmp message stays in the cache as `status: 'failed'` and
+ * `retryMessage(tmpId)` re-runs the pipeline, reusing already-uploaded fileIds.
+ */
+export function useSendMessageWithUploads(options: {
+  uploader: ChatAttachmentUploader;
+  persistence?: PersistenceAdapter;
+}): UseSendMessageWithUploadsResult {
+  const { uploader, persistence } = options;
+  const queryClient = useQueryClient();
+  const inFlightRef = useRef<Map<string, InFlightMessage>>(new Map());
+  const [optimisticMap, setOptimisticMap] = useState<Map<string, MessageWithSender>>(
+    () => new Map()
+  );
+  const [pendingCount, setPendingCount] = useState(0);
+
+  const persistRow = useCallback(
+    (state: InFlightMessage, status: 'sending' | 'failed') => {
+      if (!persistence) return;
+      const row: PersistedOutboxRow = {
+        tmpId: state.tmpId,
+        conversationId: state.input.conversation_id,
+        senderId: state.input.sender_id,
+        userId: state.input.user_id,
+        content: state.input.content,
+        replyToMessageId: state.input.reply_to_message_id,
+        attachments: state.attachments.map(att => ({
+          localId: att.localId,
+          uri: att.uri,
+          thumbnailUri: att.thumbnailUri,
+          kind: att.kind,
+          mimeType: att.mimeType,
+          size: att.size,
+          originalName: att.originalName,
+          fileId: att.fileId,
+          status: att.status,
+          error: att.error,
+        })),
+        status,
+        createdAt: state.createdAt,
+      };
+      persistence.onPersist(row);
+    },
+    [persistence]
+  );
+
+  // Optimistic messages live in component state, NOT in the React Query cache.
+  // Other mutations (reactions, edits, deletes, on-mount refetch) invalidate
+  // `chatKeys.messages` — keeping tmp rows out of the cache is the only way
+  // to make sure those don't wipe in-flight or failed sends.
+  const writeOptimistic = useCallback((state: InFlightMessage) => {
+    const msg = buildOptimisticMessage(state);
+    setOptimisticMap(prev => {
+      const next = new Map(prev);
+      next.set(state.tmpId, msg);
+      return next;
+    });
+  }, []);
+
+  const removeOptimistic = useCallback((tmpId: string) => {
+    setOptimisticMap(prev => {
+      if (!prev.has(tmpId)) return prev;
+      const next = new Map(prev);
+      next.delete(tmpId);
+      return next;
+    });
+  }, []);
+
+  const setAttachmentState = useCallback(
+    (tmpId: string, localId: string, patch: Partial<InFlightAttachment>) => {
+      const state = inFlightRef.current.get(tmpId);
+      if (!state) return;
+      const next: InFlightMessage = {
+        ...state,
+        attachments: state.attachments.map(a => (a.localId === localId ? { ...a, ...patch } : a)),
+      };
+      inFlightRef.current.set(tmpId, next);
+      writeOptimistic(next);
+    },
+    [writeOptimistic]
+  );
+
+  const setMessageStatus = useCallback((tmpId: string, status: 'sending' | 'failed') => {
+    const state = inFlightRef.current.get(tmpId);
+    if (!state) return;
+    setOptimisticMap(prev => {
+      const existing = prev.get(tmpId);
+      if (!existing || existing.status === status) return prev;
+      const next = new Map(prev);
+      next.set(tmpId, { ...existing, status });
+      return next;
+    });
+  }, []);
+
+  const runPipeline = useCallback(
+    async (tmpId: string) => {
+      const state = inFlightRef.current.get(tmpId);
+      if (!state) return;
+
+      setPendingCount(c => c + 1);
+      setMessageStatus(tmpId, 'sending');
+      persistRow(state, 'sending');
+
+      try {
+        // 1. Upload all attachments in parallel (skip already-uploaded).
+        const uploadResults = await Promise.all(
+          state.attachments.map(async att => {
+            if (att.fileId) {
+              return { localId: att.localId, fileId: att.fileId, ok: true as const };
+            }
+            setAttachmentState(tmpId, att.localId, {
+              status: 'uploading',
+              progress: 0,
+              error: undefined,
+            });
+            const result = await uploader({
+              fileUri: att.uri,
+              fileType: att.kind,
+              originalName: att.originalName,
+              mimeType: att.mimeType,
+              fileSize: att.size,
+              userId: state.input.user_id,
+              conversationId: state.input.conversation_id,
+              onProgress: percent => {
+                setAttachmentState(tmpId, att.localId, {
+                  status: 'uploading',
+                  progress: percent,
+                });
+              },
+            });
+            if (result.success && result.fileId) {
+              setAttachmentState(tmpId, att.localId, {
+                status: 'uploaded',
+                progress: 100,
+                fileId: result.fileId,
+              });
+              // Persist after each individual upload success so an app kill
+              // won't cause us to re-upload (and orphan) already-stored files.
+              const snapshot = inFlightRef.current.get(tmpId);
+              if (snapshot) persistRow(snapshot, 'sending');
+              return { localId: att.localId, fileId: result.fileId, ok: true as const };
+            }
+            setAttachmentState(tmpId, att.localId, {
+              status: 'failed',
+              error: result.error ?? 'Upload failed',
+            });
+            return {
+              localId: att.localId,
+              ok: false as const,
+              error: result.error ?? 'Upload failed',
+            };
+          })
+        );
+
+        const failedUploads = uploadResults.filter(r => !r.ok);
+        if (failedUploads.length > 0) {
+          throw new Error(failedUploads[0].ok === false ? failedUploads[0].error : 'Upload failed');
+        }
+
+        // Re-read state after uploads — fileIds are now stamped on it.
+        const latest = inFlightRef.current.get(tmpId);
+        if (!latest) return;
+
+        const fileIds = latest.attachments
+          .map(a => a.fileId)
+          .filter((id): id is string => Boolean(id));
+
+        // 2. Create the real message row.
+        const realMessage = await sendMessage({
+          conversation_id: latest.input.conversation_id,
+          sender_id: latest.input.sender_id,
+          content: latest.input.content,
+          reply_to_message_id: latest.input.reply_to_message_id,
+          attachment_file_ids: fileIds.length > 0 ? fileIds : undefined,
+        });
+
+        // 3. Drop the optimistic from local state and prepend the real
+        //    message into the cache — same shape the existing useSendMessage
+        //    relies on (with realtime-dedupe).
+        removeOptimistic(tmpId);
+        queryClient.setQueryData<MessagesPages>(
+          chatKeys.messages(latest.input.conversation_id),
+          old => prependRealMessage(old, realMessage)
+        );
+        queryClient.invalidateQueries({ queryKey: chatKeys.conversations() });
+        inFlightRef.current.delete(tmpId);
+        persistence?.onRemove(tmpId);
+      } catch (err) {
+        setMessageStatus(tmpId, 'failed');
+        const failed = inFlightRef.current.get(tmpId);
+        if (failed) persistRow(failed, 'failed');
+      } finally {
+        setPendingCount(c => Math.max(0, c - 1));
+      }
+    },
+    [
+      queryClient,
+      setAttachmentState,
+      setMessageStatus,
+      uploader,
+      persistRow,
+      persistence,
+      removeOptimistic,
+    ]
+  );
+
+  const sendMessageWithUploads = useCallback(
+    (input: SendMessageWithUploadsInput): string => {
+      const tmpId = makeTmpId();
+      const state: InFlightMessage = {
+        tmpId,
+        input,
+        createdAt: new Date().toISOString(),
+        attachments: input.attachments.map(att => ({
+          ...att,
+          status: 'pending',
+          progress: 0,
+        })),
+      };
+      inFlightRef.current.set(tmpId, state);
+      writeOptimistic(state);
+      persistRow(state, 'sending');
+      void runPipeline(tmpId);
+      return tmpId;
+    },
+    [persistRow, runPipeline, writeOptimistic]
+  );
+
+  const retryMessage = useCallback(
+    (tmpId: string) => {
+      if (!inFlightRef.current.has(tmpId)) return;
+      void runPipeline(tmpId);
+    },
+    [runPipeline]
+  );
+
+  const dismissMessage = useCallback(
+    (tmpId: string) => {
+      removeOptimistic(tmpId);
+      inFlightRef.current.delete(tmpId);
+      persistence?.onRemove(tmpId);
+    },
+    [persistence, removeOptimistic]
+  );
+
+  const replayMessage = useCallback(
+    (row: PersistedOutboxRow, senderProfile: MessageWithSender['sender']) => {
+      if (inFlightRef.current.has(row.tmpId)) return;
+      const state: InFlightMessage = {
+        tmpId: row.tmpId,
+        createdAt: row.createdAt,
+        input: {
+          conversation_id: row.conversationId,
+          sender_id: row.senderId,
+          user_id: row.userId,
+          content: row.content,
+          reply_to_message_id: row.replyToMessageId,
+          attachments: row.attachments.map(att => ({
+            localId: att.localId,
+            uri: att.uri,
+            thumbnailUri: att.thumbnailUri,
+            kind: att.kind,
+            mimeType: att.mimeType,
+            size: att.size,
+            originalName: att.originalName,
+          })),
+          sender_profile: senderProfile,
+        },
+        attachments: row.attachments.map(att => ({
+          localId: att.localId,
+          uri: att.uri,
+          thumbnailUri: att.thumbnailUri,
+          kind: att.kind,
+          mimeType: att.mimeType,
+          size: att.size,
+          originalName: att.originalName,
+          fileId: att.fileId,
+          status: att.status,
+          progress: att.status === 'uploaded' ? 100 : 0,
+          error: att.error,
+        })),
+      };
+      inFlightRef.current.set(row.tmpId, state);
+      writeOptimistic(state);
+      // Auto-resume non-failed rows. Failed rows park until the user taps retry.
+      if (row.status === 'sending') {
+        void runPipeline(row.tmpId);
+      } else {
+        setMessageStatus(row.tmpId, 'failed');
+      }
+    },
+    [runPipeline, setMessageStatus, writeOptimistic]
+  );
+
+  const optimisticMessages = useMemo(() => Array.from(optimisticMap.values()), [optimisticMap]);
+
+  return {
+    sendMessageWithUploads,
+    retryMessage,
+    dismissMessage,
+    replayMessage,
+    optimisticMessages,
+    isSending: pendingCount > 0,
+  };
 }
 
 /**
@@ -686,7 +1198,9 @@ export function useChatRealtime(
       onInsert: newMessage => {
         if (newMessage.sender_id === playerId) return;
 
-        // Enrich the raw message with sender profile from the cached conversation
+        // Enrich the raw message with sender profile from the cached conversation.
+        // The realtime payload doesn't include attachments; we hydrate them via
+        // a follow-up fetch below.
         const conversation = queryClient.getQueryData<ConversationWithDetails>(
           chatKeys.conversation(conversationId)
         );
@@ -716,6 +1230,28 @@ export function useChatRealtime(
             };
           }
         );
+
+        // Hydrate attachments + fresh sender by re-fetching the full row.
+        // We don't await this — the bubble appears immediately with text and
+        // attachments fill in within a few hundred ms.
+        void getMessageById(newMessage.id)
+          .then(full => {
+            if (!full) return;
+            queryClient.setQueryData(
+              chatKeys.messages(conversationId),
+              (oldData: { pages: MessageWithSender[][]; pageParams: number[] } | undefined) => {
+                if (!oldData) return oldData;
+                const newPages = oldData.pages.map(page =>
+                  page.map(msg => (msg.id === full.id ? { ...msg, ...full } : msg))
+                );
+                return { ...oldData, pages: newPages };
+              }
+            );
+          })
+          .catch(err => {
+            // Non-fatal — the lightweight enriched message is already shown.
+            console.warn('Failed to hydrate realtime message', err);
+          });
 
         // Call custom handler via ref (avoids stale closure)
         callbacksRef.current?.onNewMessage?.(newMessage);

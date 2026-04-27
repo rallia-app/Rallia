@@ -43,12 +43,13 @@ export function isGroupConversationType(type: ConversationType): boolean {
 
 /**
  * Delivery status of a message
+ * - 'sending': Optimistic local-only state while uploads/send are in flight (client-only)
  * - 'sent': Message sent to server
  * - 'delivered': Message delivered to recipient(s)
  * - 'read': Message read by recipient(s)
  * - 'failed': Message failed to send
  */
-export type MessageStatus = 'sent' | 'delivered' | 'read' | 'failed';
+export type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
 
 /**
  * Core conversation entity
@@ -101,7 +102,7 @@ export interface ConversationParticipant {
  * @property id - Unique message ID
  * @property conversation_id - ID of the conversation
  * @property sender_id - ID of the sender
- * @property content - Message text content
+ * @property content - Message text content (may be empty when message is attachment-only)
  * @property status - Delivery status
  * @property read_by - Deprecated: use conversation_participant.last_read_at instead
  * @property created_at - ISO timestamp of creation
@@ -115,7 +116,7 @@ export interface Message {
   id: string;
   conversation_id: string;
   sender_id: string;
-  content: string;
+  content: string | null;
   status: MessageStatus;
   read_by: string[] | null;
   created_at: string;
@@ -124,6 +125,56 @@ export interface Message {
   is_edited?: boolean;
   edited_at?: string | null;
   deleted_at?: string | null;
+}
+
+// ============================================================================
+// ATTACHMENT TYPES
+// ============================================================================
+
+/**
+ * Kind of chat attachment, for client-side rendering decisions.
+ */
+export type ChatAttachmentKind = 'image' | 'video' | 'document' | 'audio' | 'other';
+
+/**
+ * File row joined onto a chat attachment.
+ */
+export interface ChatAttachmentFile {
+  id: string;
+  file_type: ChatAttachmentKind;
+  url: string;
+  thumbnail_url: string | null;
+  mime_type: string;
+  file_size: number;
+  original_name: string;
+  storage_key: string;
+  metadata: Record<string, unknown> | null;
+}
+
+/**
+ * Client-only upload state stamped on optimistic attachments before they are
+ * persisted server-side. Never present on attachments returned from the API.
+ */
+export interface ChatAttachmentUploadState {
+  status: 'pending' | 'uploading' | 'uploaded' | 'failed';
+  progress: number;
+  error?: string;
+}
+
+/**
+ * A single attachment on a message.
+ *
+ * `__upload` is a client-only marker for optimistic rows; when present, the
+ * `file.url` is a local URI rather than a remote storage URL.
+ */
+export interface ChatAttachment {
+  id: string;
+  message_id: string;
+  file_id: string;
+  position: number;
+  created_at: string;
+  file: ChatAttachmentFile;
+  __upload?: ChatAttachmentUploadState;
 }
 
 // ============================================================================
@@ -181,6 +232,7 @@ export interface ReactionSummary {
  * @property sender - Nested sender profile data
  * @property reactions - Aggregated reaction summaries
  * @property reply_to - The message being replied to (if any)
+ * @property attachments - Files attached to this message, ordered by position
  */
 export interface MessageWithSender extends Message {
   sender: {
@@ -199,6 +251,7 @@ export interface MessageWithSender extends Message {
     content: string;
     sender_name: string;
   } | null;
+  attachments?: ChatAttachment[];
 }
 
 // ============================================================================
@@ -260,6 +313,10 @@ export interface ConversationPreview {
   last_message_content: string | null;
   last_message_at: string | null;
   last_message_sender_name: string | null;
+  /** Kind of the last message's primary attachment (for inbox preview when content is empty). */
+  last_message_attachment_kind?: ChatAttachmentKind | null;
+  /** Total number of attachments on the last message. */
+  last_message_attachment_count?: number;
   unread_count: number;
   participant_count: number;
   // For direct messages, show the other participant
@@ -296,15 +353,17 @@ export interface ConversationPreview {
 /**
  * Input for sending a new message
  * @property conversation_id - ID of the conversation to send to
- * @property content - Message text content
+ * @property content - Message text content (may be empty when sending attachments only)
  * @property sender_id - ID of the sending player
  * @property reply_to_message_id - Optional ID of message being replied to
+ * @property attachment_file_ids - Optional ordered list of file IDs to attach
  */
 export interface SendMessageInput {
   conversation_id: string;
   content: string;
   sender_id: string;
   reply_to_message_id?: string;
+  attachment_file_ids?: string[];
 }
 
 /**

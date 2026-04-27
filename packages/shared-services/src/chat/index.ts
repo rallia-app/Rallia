@@ -20,6 +20,10 @@ export {
   type PlayerOnlineStatus,
   type TypingIndicator,
   type SearchMessageResult,
+  type ChatAttachment,
+  type ChatAttachmentFile,
+  type ChatAttachmentKind,
+  type ChatAttachmentUploadState,
 
   // Helpers
   isGroupConversationType,
@@ -38,6 +42,7 @@ export {
 
   // Message Operations
   getMessages,
+  getMessageById,
   sendMessage,
   markMessagesAsRead,
   markMessagesAsDelivered,
@@ -93,6 +98,12 @@ export {
   // Chat Agreement
   hasAgreedToChatRules,
   agreeToChatRules,
+
+  // Attachments
+  CHAT_ATTACHMENTS_BUCKET,
+  SIGNED_URL_TTL_SECONDS,
+  createChatAttachmentSignedUrl,
+  createChatAttachmentSignedUrls,
 
   // Conversation Management
   type UpdateConversationInput,

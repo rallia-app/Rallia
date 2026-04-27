@@ -49,6 +49,10 @@ interface MessageListProps {
   searchQuery?: string;
   highlightedMessageIds?: string[];
   currentHighlightedId?: string;
+  /** Retry an optimistic message that failed to send. */
+  onRetrySend?: (tmpId: string) => void;
+  /** Discard an optimistic message that failed to send. */
+  onDismissSend?: (tmpId: string) => void;
 }
 
 // Threshold for showing scroll-to-bottom button (in pixels)
@@ -115,6 +119,8 @@ function MessageListComponent(
     searchQuery = '',
     highlightedMessageIds = [],
     currentHighlightedId,
+    onRetrySend,
+    onDismissSend,
   }: MessageListProps,
   ref: React.Ref<MessageListRef>
 ) {
@@ -272,6 +278,8 @@ function MessageListComponent(
             searchQuery={searchQuery}
             isHighlighted={isHighlighted}
             isCurrentHighlight={isCurrentHighlight}
+            onRetrySend={onRetrySend}
+            onDismissSend={onDismissSend}
           />
         );
       }
@@ -288,6 +296,8 @@ function MessageListComponent(
       searchQuery,
       highlightedSet,
       currentHighlightedId,
+      onRetrySend,
+      onDismissSend,
     ]
   );
 

@@ -35,6 +35,10 @@ export type {
   PlayerOnlineStatus,
   TypingIndicator,
   SearchMessageResult,
+  ChatAttachment,
+  ChatAttachmentFile,
+  ChatAttachmentKind,
+  ChatAttachmentUploadState,
 } from './chatTypes';
 
 export { isGroupConversationType } from './chatTypes';
@@ -69,6 +73,7 @@ export type {
 
 export {
   getMessages,
+  getMessageById,
   sendMessage,
   markMessagesAsRead,
   markMessagesAsDelivered,
@@ -77,6 +82,17 @@ export {
   editMessage,
   clearChatForUser,
 } from './messageService';
+
+// ============================================================================
+// ATTACHMENT OPERATIONS
+// ============================================================================
+
+export {
+  CHAT_ATTACHMENTS_BUCKET,
+  SIGNED_URL_TTL_SECONDS,
+  createChatAttachmentSignedUrl,
+  createChatAttachmentSignedUrls,
+} from './attachmentService';
 
 // ============================================================================
 // PARTICIPANT OPERATIONS

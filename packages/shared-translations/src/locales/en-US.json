@@ -2079,10 +2079,55 @@
     },
     "message": {
       "deleted": "This message was deleted",
-      "edited": "edited"
+      "edited": "edited",
+      "retrySend": "Retry",
+      "dismissSend": "Discard"
     },
     "input": {
-      "replyingTo": "Replying to {name}"
+      "replyingTo": "Replying to {name}",
+      "attach": "Attach",
+      "attachmentPicker": {
+        "title": "Send an attachment",
+        "takePhoto": "Take Photo",
+        "recordVideo": "Record Video",
+        "photoLibrary": "Photo Library",
+        "document": "Document"
+      },
+      "attachment": {
+        "uploading": "Uploading…",
+        "uploadFailed": "Upload failed",
+        "tooLarge": "{name} is too large (max {size})",
+        "retry": "Retry",
+        "remove": "Remove attachment"
+      }
+    },
+    "attachment": {
+      "photo": "Photo",
+      "video": "Video",
+      "document": "Document",
+      "openFullscreen": "Open full screen",
+      "openDocument": "Open document",
+      "save": "Save",
+      "share": "Share",
+      "savedToPhotos": "Saved to your photo library",
+      "downloadFailed": "Download failed",
+      "permissionDenied": "Permission required to save",
+      "downloading": "Downloading…",
+      "tapToUnmute": "Tap to unmute",
+      "imageCount": "{count, plural, one {# photo} other {# photos}}",
+      "videoCount": "{count, plural, one {# video} other {# videos}}",
+      "fileCount": "{count, plural, one {# file} other {# files}}"
+    },
+    "lastMessage": {
+      "photo": "📷 Photo",
+      "video": "🎥 Video",
+      "file": "📎 File",
+      "photos": "📷 {count} photos",
+      "videos": "🎥 {count} videos",
+      "files": "📎 {count} files",
+      "withCaptionPhoto": "📷 {caption}",
+      "withCaptionVideo": "🎥 {caption}",
+      "withCaptionFile": "📎 {caption}"
     },
     "searchInChat": {
       "placeholder": "Search in chat...",

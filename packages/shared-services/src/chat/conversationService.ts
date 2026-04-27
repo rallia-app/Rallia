@@ -26,6 +26,8 @@ interface ConversationRPCRow {
   last_message_content: string | null;
   last_message_at: string | null;
   last_message_sender_first_name: string | null;
+  last_message_attachment_kind: string | null;
+  last_message_attachment_count: number | null;
   is_pinned: boolean;
   is_muted: boolean;
   is_archived: boolean;
@@ -110,6 +112,10 @@ export async function getPlayerConversations(
         last_message_content: row.last_message_content,
         last_message_at: row.last_message_at,
         last_message_sender_name: row.last_message_sender_first_name,
+        last_message_attachment_kind:
+          (row.last_message_attachment_kind as ConversationPreview['last_message_attachment_kind']) ??
+          null,
+        last_message_attachment_count: Number(row.last_message_attachment_count) || 0,
         unread_count: Number(row.unread_count) || 0,
         participant_count: Number(row.participant_count) || 0,
         other_participant: otherParticipant,
@@ -527,6 +533,8 @@ interface FilteredConversationRPCRow {
   last_message_at: string | null;
   last_message_sender_id: string | null;
   last_message_sender_first_name: string | null;
+  last_message_attachment_kind: string | null;
+  last_message_attachment_count: number | null;
   is_pinned: boolean;
   is_muted: boolean;
   is_archived: boolean;
@@ -641,6 +649,10 @@ export async function getPlayerConversationsFiltered(
           last_message_content: row.last_message_content,
           last_message_at: row.last_message_at,
           last_message_sender_name: row.last_message_sender_first_name,
+          last_message_attachment_kind:
+            (row.last_message_attachment_kind as ConversationPreview['last_message_attachment_kind']) ??
+            null,
+          last_message_attachment_count: Number(row.last_message_attachment_count) || 0,
           unread_count: row.unread_count || 0,
           participant_count: row.participant_count || 0,
           other_participant: otherParticipant,

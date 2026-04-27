@@ -23,7 +23,8 @@ import { lightHaptic } from '@rallia/shared-utils';
 import {
   useConversation,
   useMessages,
-  useSendMessage,
+  useSendMessageWithUploads,
+  isOptimisticMessageId,
   useMarkMessagesAsRead,
   useToggleReaction,
   useChatRealtime,
@@ -36,6 +37,7 @@ import {
   useBlockedStatus,
   useFavoriteStatus,
   chatKeys,
+  type LocalChatAttachment,
 } from '@rallia/shared-hooks';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -61,6 +63,13 @@ import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import type { MessageListRef } from '../features/chat';
 import type { RootStackParamList } from '../navigation/types';
 import * as Analytics from '../services/analytics';
+import { uploadChatAttachment } from '../services/chatAttachmentUpload';
+import {
+  listByConversation as listOutboxByConversation,
+  upsertRow as upsertOutboxRow,
+  removeRow as removeOutboxRow,
+  type OutboxRow,
+} from '../features/chat/services/outboxStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type ChatRouteProp = RouteProp<RootStackParamList, 'ChatConversation'>;
@@ -164,11 +173,37 @@ export default function ChatConversationScreen() {
     refetch: refetchMessages,
   } = useMessages(conversationId);
 
-  // Flatten pages into a single array
-  const messages = useMemo(() => messagesData?.pages.flat() || [], [messagesData]);
+  // Mutations (declared before `messages` so optimisticMessages can be merged in).
+  const {
+    sendMessageWithUploads,
+    retryMessage,
+    dismissMessage,
+    replayMessage,
+    optimisticMessages,
+  } = useSendMessageWithUploads({
+    uploader: uploadChatAttachment,
+    persistence: {
+      onPersist: row => {
+        // Fire-and-forget AsyncStorage write; don't block the UI on it.
+        void upsertOutboxRow(row as OutboxRow);
+      },
+      onRemove: tmpId => {
+        void removeOutboxRow(tmpId);
+      },
+    },
+  });
 
-  // Mutations
-  const sendMessageMutation = useSendMessage();
+  // Flatten server pages, then prepend optimistic messages for this
+  // conversation so they always render at the top regardless of any cache
+  // invalidations triggered by reactions / edits / deletes / on-mount fetch.
+  const messages = useMemo(() => {
+    const server = messagesData?.pages.flat() || [];
+    const ownOptimistic = optimisticMessages
+      .filter(m => m.conversation_id === conversationId)
+      // Newest tmp first — FlatList is inverted (newest at bottom of screen).
+      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+    return ownOptimistic.length > 0 ? [...ownOptimistic, ...server] : server;
+  }, [messagesData, optimisticMessages, conversationId]);
   const markAsReadMutation = useMarkMessagesAsRead();
   const toggleReactionMutation = useToggleReaction();
   const editMessageMutation = useEditMessage();
@@ -202,17 +237,43 @@ export default function ChatConversationScreen() {
   // Real-time subscription for reactions
   useReactionsRealtime(conversationId);
 
-  // Invalidate messages cache and mark as read when entering the conversation
-  // This ensures message statuses (sent → read) are fresh from the server
+  // On mount: refresh messages from server, mark as read, and only then
+  // splice in any persisted optimistic messages from the outbox. Doing the
+  // replay before the refetch settles would let the refetch wipe our tmp rows.
+  const replayedConvIdRef = React.useRef<string | null>(null);
   useEffect(() => {
-    if (conversationId && playerId) {
-      queryClient.invalidateQueries({
+    if (!conversationId || !playerId) return;
+    if (replayedConvIdRef.current === conversationId) return;
+    // Profile is required to render optimistic bubbles correctly. Wait for it.
+    if (!profile) return;
+    replayedConvIdRef.current = conversationId;
+
+    const senderProfile = {
+      id: playerId,
+      profile: {
+        first_name: (profile as { first_name?: string }).first_name ?? '',
+        last_name: (profile as { last_name?: string | null }).last_name ?? null,
+        display_name: (profile as { display_name?: string | null }).display_name ?? null,
+        profile_picture_url:
+          (profile as { profile_picture_url?: string | null }).profile_picture_url ?? null,
+      },
+    };
+
+    void (async () => {
+      // Wait for the messages cache refresh to complete (invalidate returns
+      // a promise that resolves after active refetches settle).
+      await queryClient.invalidateQueries({
         queryKey: chatKeys.messages(conversationId),
       });
       markAsReadMutation.mutate({ conversationId, playerId });
-    }
+
+      const rows = await listOutboxByConversation(conversationId);
+      for (const row of rows) {
+        replayMessage(row, senderProfile);
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationId, playerId]);
+  }, [conversationId, playerId, profile, replayMessage]);
 
   // Avoid bottom safe area spacer when keyboard is open (removes gap between input and keyboard)
   useEffect(() => {
@@ -249,12 +310,14 @@ export default function ChatConversationScreen() {
     fetchNetworkInfo();
   }, [conversation, conversationId]);
 
-  // Fetch reactions for visible messages
+  // Fetch reactions for visible messages. Skip optimistic tmp- ids — those
+  // don't exist server-side yet and would otherwise hit Postgres with a
+  // non-uuid value, raising 22P02.
   const fetchReactions = useCallback(async () => {
     if (messages.length === 0 || !playerId) return;
 
     try {
-      const messageIds = messages.map(m => m.id);
+      const messageIds = messages.map(m => m.id).filter(id => !isOptimisticMessageId(id));
 
       if (messageIds.length === 0) return;
 
@@ -528,24 +591,40 @@ export default function ChatConversationScreen() {
   }, []);
 
   const handleSendMessage = useCallback(
-    (content: string, replyToMessageId?: string) => {
+    (content: string, replyToMessageId?: string, attachments?: LocalChatAttachment[]) => {
       if (!playerId || !conversationId) return;
 
       Analytics.messageSent({
         conversation_type: conversation?.conversation_type ?? 'unknown',
       });
 
-      sendMessageMutation.mutate({
+      const senderProfile = profile
+        ? {
+            id: playerId,
+            profile: {
+              first_name: (profile as { first_name?: string }).first_name ?? '',
+              last_name: (profile as { last_name?: string | null }).last_name ?? null,
+              display_name: (profile as { display_name?: string | null }).display_name ?? null,
+              profile_picture_url:
+                (profile as { profile_picture_url?: string | null }).profile_picture_url ?? null,
+            },
+          }
+        : null;
+
+      sendMessageWithUploads({
         conversation_id: conversationId,
         sender_id: playerId,
+        user_id: playerId,
         content,
         reply_to_message_id: replyToMessageId,
+        attachments: attachments ?? [],
+        sender_profile: senderProfile,
       });
 
       // Clear reply state after sending
       setReplyToMessage(null);
     },
-    [playerId, conversationId, sendMessageMutation, conversation?.conversation_type]
+    [playerId, conversationId, sendMessageWithUploads, conversation?.conversation_type, profile]
   );
 
   const handleReact = useCallback(
@@ -766,6 +845,8 @@ export default function ChatConversationScreen() {
         searchQuery={searchQuery}
         highlightedMessageIds={highlightedMessageIds}
         currentHighlightedId={currentHighlightedId}
+        onRetrySend={retryMessage}
+        onDismissSend={dismissMessage}
       />
 
       {/* Typing indicators */}

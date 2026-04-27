@@ -2079,10 +2079,55 @@
     },
     "message": {
       "deleted": "Ce message a été supprimé",
-      "edited": "modifié"
+      "edited": "modifié",
+      "retrySend": "Réessayer",
+      "dismissSend": "Annuler"
     },
     "input": {
-      "replyingTo": "Répondre à {name}"
+      "replyingTo": "Répondre à {name}",
+      "attach": "Joindre",
+      "attachmentPicker": {
+        "title": "Envoyer une pièce jointe",
+        "takePhoto": "Prendre une photo",
+        "recordVideo": "Enregistrer une vidéo",
+        "photoLibrary": "Photothèque",
+        "document": "Document"
+      },
+      "attachment": {
+        "uploading": "Téléversement…",
+        "uploadFailed": "Échec du téléversement",
+        "tooLarge": "{name} est trop volumineux (max {size})",
+        "retry": "Réessayer",
+        "remove": "Retirer la pièce jointe"
+      }
+    },
+    "attachment": {
+      "photo": "Photo",
+      "video": "Vidéo",
+      "document": "Document",
+      "openFullscreen": "Ouvrir en plein écran",
+      "openDocument": "Ouvrir le document",
+      "save": "Enregistrer",
+      "share": "Partager",
+      "savedToPhotos": "Enregistré dans votre photothèque",
+      "downloadFailed": "Échec du téléchargement",
+      "permissionDenied": "Autorisation requise pour enregistrer",
+      "downloading": "Téléchargement…",
+      "tapToUnmute": "Touchez pour activer le son",
+      "imageCount": "{count, plural, one {# photo} other {# photos}}",
+      "videoCount": "{count, plural, one {# vidéo} other {# vidéos}}",
+      "fileCount": "{count, plural, one {# fichier} other {# fichiers}}"
+    },
+    "lastMessage": {
+      "photo": "📷 Photo",
+      "video": "🎥 Vidéo",
+      "file": "📎 Fichier",
+      "photos": "📷 {count} photos",
+      "videos": "🎥 {count} vidéos",
+      "files": "📎 {count} fichiers",
+      "withCaptionPhoto": "📷 {caption}",
+      "withCaptionVideo": "🎥 {caption}",
+      "withCaptionFile": "📎 {caption}"
     },
     "searchInChat": {
       "placeholder": "Rechercher dans la conversation...",

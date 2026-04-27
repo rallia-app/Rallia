@@ -142,15 +142,59 @@ function ConversationItemComponent({
   let previewText = '';
   let isBlockedPreview = false;
 
+  // Resolve a label for an attachment-only or attachment+caption last message.
+  const attachmentKind = conversation.last_message_attachment_kind;
+  const attachmentCount = conversation.last_message_attachment_count ?? 0;
+  const hasAttachment =
+    attachmentCount > 0 &&
+    (attachmentKind === 'image' || attachmentKind === 'video' || attachmentKind === 'document');
+
+  function attachmentLabel(): string {
+    if (!hasAttachment || !attachmentKind) return '';
+    if (attachmentCount > 1) {
+      const key =
+        attachmentKind === 'image'
+          ? 'chat.lastMessage.photos'
+          : attachmentKind === 'video'
+            ? 'chat.lastMessage.videos'
+            : 'chat.lastMessage.files';
+      return t(key, { count: attachmentCount });
+    }
+    return t(
+      attachmentKind === 'image'
+        ? 'chat.lastMessage.photo'
+        : attachmentKind === 'video'
+          ? 'chat.lastMessage.video'
+          : 'chat.lastMessage.file'
+    );
+  }
+
   if (isBlocked && conversation.conversation_type === 'direct') {
     // Show blocked message for direct chats where user has blocked the other person
     previewText = t('chat.conversation.blockedUser');
     isBlockedPreview = true;
   } else if (conversation.last_message_content) {
+    let body: string = conversation.last_message_content;
+    if (hasAttachment && attachmentKind) {
+      const captionKey =
+        attachmentKind === 'image'
+          ? 'chat.lastMessage.withCaptionPhoto'
+          : attachmentKind === 'video'
+            ? 'chat.lastMessage.withCaptionVideo'
+            : 'chat.lastMessage.withCaptionFile';
+      body = t(captionKey, { caption: conversation.last_message_content });
+    }
     if (conversation.conversation_type !== 'direct' && conversation.last_message_sender_name) {
-      previewText = `${conversation.last_message_sender_name}: ${conversation.last_message_content}`;
+      previewText = `${conversation.last_message_sender_name}: ${body}`;
     } else {
-      previewText = conversation.last_message_content;
+      previewText = body;
+    }
+  } else if (hasAttachment) {
+    const body = attachmentLabel();
+    if (conversation.conversation_type !== 'direct' && conversation.last_message_sender_name) {
+      previewText = `${conversation.last_message_sender_name}: ${body}`;
+    } else {
+      previewText = body;
     }
   }
 
