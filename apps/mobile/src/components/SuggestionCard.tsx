@@ -460,9 +460,12 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
 
   const effectiveDateChip = visibleDates.find(d => d.key === effectiveDateKey);
   const dateLabel = effectiveDateChip?.label ?? labels.selectDate;
-  const timeLabel = effectiveTime
-    ? formatHour(effectiveTime.getHours(), locale)
-    : labels.noAvailableTimes;
+  const timeLabel =
+    effectiveTime && effectiveEndTime
+      ? `${formatHour(effectiveTime.getHours(), locale)} – ${formatHour(effectiveEndTime.getHours(), locale)}`
+      : effectiveTime
+        ? formatHour(effectiveTime.getHours(), locale)
+        : labels.noAvailableTimes;
 
   return (
     <Animated.View style={{ transform: [{ scale: cardScaleAnimation }] }}>
@@ -511,7 +514,7 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
             </View>
           </View>
 
-          {/* Summary pills (one-tap defaults; tap to override) */}
+          {/* Facility summary pill (one-tap default; tap to override) */}
           <View style={styles.summaryRow}>
             {renderPill(
               'facility',
@@ -520,8 +523,6 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
               hasMultipleFacilities,
               selectedFacility?.hasAvailabilitySource ? <LiveDot /> : undefined
             )}
-            {renderPill('date', 'calendar-outline', dateLabel, visibleDates.length > 1)}
-            {renderPill('time', 'time-outline', timeLabel, availableHoursForDate.length > 1)}
           </View>
 
           {/* Expanded panel: facility chips */}
@@ -561,6 +562,12 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
               })}
             </ScrollView>
           )}
+
+          {/* Date + time summary pills */}
+          <View style={styles.summaryRow}>
+            {renderPill('date', 'calendar-outline', dateLabel, visibleDates.length > 1)}
+            {renderPill('time', 'time-outline', timeLabel, availableHoursForDate.length > 1)}
+          </View>
 
           {/* Expanded panel: date chips */}
           {expandedSection === 'date' && visibleDates.length > 0 && (
@@ -804,7 +811,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacingPixels[1.5],
-    marginBottom: spacingPixels[1],
+    marginBottom: spacingPixels[2],
   },
   summaryPill: {
     flexDirection: 'row',
@@ -824,8 +831,7 @@ const styles = StyleSheet.create({
 
   // Expanded chip panels
   expandedScroll: {
-    marginTop: spacingPixels[1.5],
-    marginBottom: spacingPixels[1],
+    marginBottom: spacingPixels[2],
   },
   liveDot: {
     width: 7,
