@@ -97,9 +97,8 @@ import {
   useMatchSuggestions,
 } from '@rallia/shared-hooks';
 import { useBadgeCountSync } from '@rallia/shared-hooks/src/useBadgeCountSync';
-// TEMPORARILY DISABLED: User walkthrough deactivated
-// import { WelcomeTourModal } from './src/components/WelcomeTourModal';
-// import { TourCompleteModal } from './src/components/TourCompleteModal';
+import { WelcomeTourModal } from './src/components/WelcomeTourModal';
+import { TourCompleteModal } from './src/components/TourCompleteModal';
 import { ErrorBoundary, ToastProvider, NetworkProvider } from '@rallia/shared-components';
 import type { ErrorBoundaryTranslations } from '@rallia/shared-components';
 import { getLocales } from 'expo-localization';
@@ -130,7 +129,7 @@ import {
   useUserHomeLocation,
   LocationModeProvider,
   SubscriptionProvider,
-  // useTour, // TEMPORARILY DISABLED: User walkthrough deactivated
+  useTour,
   TourProvider,
 } from './src/context';
 import { usePushNotifications, useEffectiveLocation } from './src/hooks';
@@ -617,8 +616,7 @@ function AppContent() {
       .catch(() => {})
       .finally(() => setSplashComplete(true));
   }, [isCheckingUpdate, setSplashComplete]);
-  // TEMPORARILY DISABLED: User walkthrough deactivated
-  // const { showCompletionModal, dismissCompletionModal, lastCompletedTourId } = useTour();
+  const { showCompletionModal, dismissCompletionModal, lastCompletedTourId } = useTour();
 
   // Track app opened event on mount
   useEffect(() => {
@@ -678,14 +676,12 @@ function AppContent() {
       {/* Session Expiry Handler - shows toast when session expires */}
       <SessionExpiryHandler />
       <AccountSuspendedHandler />
-      {/* TEMPORARILY DISABLED: User walkthrough deactivated
       <WelcomeTourModal splashComplete={isSplashComplete} permissionsHandled={permissionsHandled} />
       <TourCompleteModal
         visible={showCompletionModal}
         onDismiss={dismissCompletionModal}
         tourId={lastCompletedTourId || undefined}
       />
-      */}
     </>
   );
 }

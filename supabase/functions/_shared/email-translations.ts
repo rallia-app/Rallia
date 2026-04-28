@@ -61,14 +61,6 @@ const translations: Translations = {
       "You're receiving this email because of your notification preferences on Rallia.",
     'notification.supportText': "If you're having trouble, please contact our support team.",
 
-    // Notification subject prefixes
-    'notification.prefix.match_invitation': 'Match Invitation',
-    'notification.prefix.reminder': 'Reminder',
-    'notification.prefix.payment': 'Payment',
-    'notification.prefix.support': 'Support',
-    'notification.prefix.chat': 'New Message',
-    'notification.prefix.system': 'System Notification',
-
     // Match email (send-notification)
     'match.sport': 'Sport',
     'match.when': 'When',
@@ -201,24 +193,24 @@ const translations: Translations = {
     'layout.managePreferences': 'Gérer les préférences de notification',
 
     // Preheaders
-    'preheader.confirmation': "Votre code de vérification Rallia est à l'intérieur",
-    'preheader.magicLink': 'Votre code de connexion à usage unique pour Rallia',
-    'preheader.invitation': 'Vous avez été invité(e) à rejoindre {networkName} sur Rallia',
-    'preheader.matchInvitation': '{playerName} veut jouer au {sportName} avec vous',
-    'preheader.matchJoinRequest': '{playerName} veut rejoindre votre partie',
-    'preheader.matchJoinAccepted': 'Confirmé ! Votre partie est réservée',
-    'preheader.matchJoinRejected': "Votre demande n'a pas été acceptée",
-    'preheader.matchPlayerJoined': '{playerName} a rejoint votre partie',
-    'preheader.matchCancelled': 'Une partie à laquelle vous participiez a été annulée',
-    'preheader.matchUpdated': 'Les détails de votre partie ont été mis à jour',
-    'preheader.matchStartingSoon': 'Votre partie commence bientôt — échauffez-vous !',
+    'preheader.confirmation': "Ton code de vérification Rallia est à l'intérieur",
+    'preheader.magicLink': 'Ton code de connexion à usage unique pour Rallia',
+    'preheader.invitation': 'Tu as été invité à rejoindre {networkName} sur Rallia',
+    'preheader.matchInvitation': '{playerName} veut jouer au {sportName} avec toi',
+    'preheader.matchJoinRequest': '{playerName} veut rejoindre ta partie',
+    'preheader.matchJoinAccepted': "C'est confirmé — ta partie est réservée",
+    'preheader.matchJoinRejected': "Ta demande n'a pas été retenue",
+    'preheader.matchPlayerJoined': '{playerName} a rejoint ta partie',
+    'preheader.matchCancelled': 'Une partie à laquelle tu participais a été annulée',
+    'preheader.matchUpdated': 'Les détails de ta partie ont changé',
+    'preheader.matchStartingSoon': "Ta partie commence bientôt — c'est l'heure de t'échauffer",
     'preheader.matchCheckInAvailable':
-      "L'enregistrement est maintenant ouvert — confirmez votre présence à votre arrivée",
-    'preheader.playerKicked': "Vous avez été retiré(e) d'une partie",
-    'preheader.playerLeft': 'Un joueur a quitté votre partie',
-    'preheader.reminder': "N'oubliez pas votre prochaine partie",
-    'preheader.feedbackRequest': 'Soumettez votre score et évaluez votre partie',
-    'preheader.feedbackReminder': 'Votre score et votre évaluation sont toujours en attente',
+      "L'enregistrement est ouvert — confirme ta présence à l'arrivée",
+    'preheader.playerKicked': "Tu as été retiré d'une partie",
+    'preheader.playerLeft': 'Un joueur a quitté ta partie',
+    'preheader.reminder': "N'oublie pas ta prochaine partie",
+    'preheader.feedbackRequest': 'Soumets ton score et évalue ta partie',
+    'preheader.feedbackReminder': 'Ton score et ton évaluation sont toujours en attente',
     'preheader.notification': '{body}',
     'preheader.orgBooking': 'Mise à jour de réservation de {orgName}',
     'preheader.orgMember': 'Mise à jour de membre de {orgName}',
@@ -226,35 +218,24 @@ const translations: Translations = {
     'preheader.orgGeneral': 'Mise à jour de {orgName}',
 
     // Invitation
-    'invitation.subject': 'Vous êtes invité(e) à rejoindre Rallia',
-    'invitation.heading': 'Vous êtes invité(e) !',
+    'invitation.subject': 'Tu es invité à rejoindre Rallia',
+    'invitation.heading': 'Tu es invité !',
     'invitation.ctaButton': "Accepter l'invitation",
     'invitation.expiresAt': 'Cette invitation expire le',
-    'invitation.disclaimer':
-      "Si vous n'attendiez pas cette invitation, vous pouvez ignorer ce courriel.",
-    'invitation.footerNote':
-      'Vous recevez ce courriel car vous avez été invité(e) à rejoindre Rallia.',
+    'invitation.disclaimer': "Si tu n'attendais pas cette invitation, tu peux ignorer ce courriel.",
+    'invitation.footerNote': 'Tu reçois ce courriel parce que tu as été invité à rejoindre Rallia.',
     'invitation.messageOrg':
-      '{inviter} vous a invité(e) à rejoindre {org} sur Rallia en tant que {role}.',
-    'invitation.messagePlatform':
-      '{inviter} vous a invité(e) à rejoindre Rallia en tant que {role}.',
+      "{inviter} t'a invité à rejoindre {org} sur Rallia en tant que {role}.",
+    'invitation.messagePlatform': "{inviter} t'a invité à rejoindre Rallia en tant que {role}.",
     'invitation.ctaDescription':
-      'Cliquez sur le bouton ci-dessous pour accepter votre invitation et créer votre compte.',
+      'Touche le bouton ci-dessous pour accepter ton invitation et créer ton compte.',
 
     // Notification (send-email)
     'notification.disclaimer':
-      "Si vous n'attendiez pas cette notification, vous pouvez ignorer ce courriel.",
+      "Si tu n'attendais pas cette notification, tu peux ignorer ce courriel.",
     'notification.footerNote':
-      'Vous recevez ce courriel en raison de vos préférences de notification sur Rallia.',
-    'notification.supportText': 'En cas de problème, contactez notre équipe de soutien.',
-
-    // Notification subject prefixes
-    'notification.prefix.match_invitation': 'Invitation de partie',
-    'notification.prefix.reminder': 'Rappel',
-    'notification.prefix.payment': 'Paiement',
-    'notification.prefix.support': 'Soutien',
-    'notification.prefix.chat': 'Nouveau message',
-    'notification.prefix.system': 'Notification système',
+      'Tu reçois ce courriel en raison de tes préférences de notification sur Rallia.',
+    'notification.supportText': 'En cas de problème, écris à notre équipe de soutien.',
 
     // Match email (send-notification)
     'match.sport': 'Sport',
@@ -263,10 +244,9 @@ const translations: Translations = {
     'match.with': 'Avec',
     'match.address': 'Adresse',
     'match.duration': 'Durée',
-    'match.disclaimer':
-      "Si vous n'attendiez pas cette notification, vous pouvez ignorer ce courriel.",
+    'match.disclaimer': "Si tu n'attendais pas cette notification, tu peux ignorer ce courriel.",
     'match.footerNote':
-      'Vous recevez ce courriel en raison de vos préférences de notification sur Rallia.',
+      'Tu reçois ce courriel en raison de tes préférences de notification sur Rallia.',
     'match.managePreferences': 'Gérer les préférences',
     'match.viewOnMap': 'Voir sur la carte',
 
@@ -278,7 +258,7 @@ const translations: Translations = {
     'match.button.viewInvitation': "Voir l'invitation",
     'match.button.reviewRequest': 'Examiner la demande',
     'match.button.browseGames': 'Parcourir les parties',
-    'match.button.rateGame': 'Évaluer votre partie',
+    'match.button.rateGame': 'Évaluer ta partie',
     'match.button.viewGame': 'Voir la partie',
     'match.button.viewGameDetails': 'Voir les détails de la partie',
     'match.button.viewMessage': 'Voir le message',
@@ -339,18 +319,18 @@ const translations: Translations = {
     'welcome.ctaButton': 'Ouvrir Rallia',
     'welcome.footerTagline': 'On se voit sur le terrain.',
     'welcome.disclaimer':
-      'Vous recevez ce courriel parce que vous venez de terminer la création de votre compte Rallia.',
-    'welcome.footerNote': 'Rallia — Trouvez des joueurs, rejoignez des parties, jouez plus',
+      'Tu reçois ce courriel parce que tu viens de terminer la création de ton compte Rallia.',
+    'welcome.footerNote': 'Rallia — Trouve des joueurs, rejoins des parties, joue plus',
 
     // Match Interest (public visitor conversion email)
-    'matchInterest.subject': 'Rejoignez cette partie de {sportName} sur Rallia',
+    'matchInterest.subject': 'Rejoins cette partie de {sportName} sur Rallia',
     'matchInterest.preheader':
-      'Téléchargez Rallia pour rejoindre la partie de {sportName} le {matchDate}',
-    'matchInterest.heading': 'Votre place vous attend',
-    'matchInterest.greeting': 'Bonjour {name},',
-    'matchInterest.greetingDefault': 'Bonjour,',
+      'Télécharge Rallia pour rejoindre la partie de {sportName} le {matchDate}',
+    'matchInterest.heading': "Ta place t'attend",
+    'matchInterest.greeting': 'Salut {name},',
+    'matchInterest.greetingDefault': 'Salut,',
     'matchInterest.body':
-      "Vous n'êtes qu'à un pas de rejoindre cette partie. Téléchargez l'application Rallia et créez votre compte gratuit pour réserver votre place.",
+      "Tu es à un pas de rejoindre cette partie. Télécharge l'application Rallia et crée ton compte gratuit pour réserver ta place.",
     'matchInterest.ctaButton': 'Télécharger Rallia et rejoindre',
     'matchInterest.gameInfoLabel': 'Détails de la partie',
     'matchInterest.sport': 'Sport',
@@ -358,10 +338,10 @@ const translations: Translations = {
     'matchInterest.time': 'Heure',
     'matchInterest.location': 'Lieu',
     'matchInterest.valueProp':
-      "Une fois inscrit(e), vous pourrez aussi découvrir d'autres parties près de chez vous, rencontrer des joueurs locaux et organiser vos propres matchs.",
+      "Une fois inscrit, tu pourras aussi découvrir d'autres parties près de chez toi, rencontrer des joueurs locaux et organiser tes propres matchs.",
     'matchInterest.disclaimer':
-      "Vous recevez ce courriel car vous avez manifesté de l'intérêt pour une partie sur Rallia. Si ce n'était pas vous, ignorez simplement ce courriel.",
-    'matchInterest.footerNote': 'Rallia — Trouvez des joueurs, rejoignez des parties, jouez plus',
+      "Tu reçois ce courriel parce que tu as manifesté de l'intérêt pour une partie sur Rallia. Si ce n'était pas toi, ignore simplement ce courriel.",
+    'matchInterest.footerNote': 'Rallia — Trouve des joueurs, rejoins des parties, joue plus',
 
     // SMS formatter
     'sms.prefix': 'Rallia : ',

@@ -47,7 +47,7 @@ async function getOrganizationInfo(organizationId: string): Promise<Organization
     return null;
   }
 
-  return data as OrganizationInfo;
+  return data;
 }
 
 /**
@@ -258,7 +258,7 @@ async function sendViaChannel(
       return sendEmail(notification, contact.email, contact.preferred_locale);
 
     case 'push':
-      return sendPush(notification, contact.expo_push_token, badgeCount);
+      return sendPush(notification, contact.expo_push_token, badgeCount, supabase);
 
     case 'sms':
       return sendSms(notification, contact.phone, contact.preferred_locale);

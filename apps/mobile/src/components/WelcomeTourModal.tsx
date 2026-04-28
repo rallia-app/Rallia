@@ -12,11 +12,12 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Modal, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from '../hooks';
-import { COLORS } from '@rallia/shared-constants';
+import { useThemeStyles } from '@rallia/shared-hooks';
 import { useTour } from '../context/TourContext';
 import { tourService } from '@rallia/shared-services';
 import { Logger } from '@rallia/shared-services';
 import { Ionicons } from '@expo/vector-icons';
+import { lightHaptic, mediumHaptic } from '../utils/haptics';
 
 interface WelcomeTourModalProps {
   /** Whether the splash animation is complete */
@@ -30,8 +31,19 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
   permissionsHandled = true,
 }) => {
   const { t } = useTranslation();
+  const { colors } = useThemeStyles();
   const { startTour, isTourCompleted, isLoading } = useTour();
   const insets = useSafeAreaInsets();
+  const tintedPrimaryBg = `${colors.primary}26`; // ~15% alpha tint for icon rings
+
+  const FeatureItem: React.FC<FeatureItemProps> = ({ icon, text }) => (
+    <View style={styles.featureItem}>
+      <View style={[styles.featureIconContainer, { backgroundColor: tintedPrimaryBg }]}>
+        <Ionicons name={icon} size={20} color={colors.primary} />
+      </View>
+      <Text style={[styles.featureText, { color: colors.text }]}>{text}</Text>
+    </View>
+  );
 
   const [visible, setVisible] = useState(false);
   const [isReturningUser, setIsReturningUser] = useState(false);
@@ -80,6 +92,7 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
   }, [isLoading, splashComplete, permissionsHandled, isTourCompleted, fadeAnim, slideAnim]);
 
   const handleStartTour = () => {
+    mediumHaptic();
     Logger.logUserAction('welcome_modal_start_tour', { isReturningUser });
     animateOut(() => {
       setVisible(false);
@@ -89,6 +102,7 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
   };
 
   const handleSkipTour = async () => {
+    lightHaptic();
     Logger.logUserAction('welcome_modal_skip_tour', { isReturningUser });
     animateOut(async () => {
       setVisible(false);
@@ -129,23 +143,24 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
           style={[
             styles.container,
             {
+              backgroundColor: colors.cardBackground,
               transform: [{ translateY: slideAnim }],
               paddingBottom: insets.bottom + 24,
             },
           ]}
         >
           {/* Icon */}
-          <View style={styles.iconContainer}>
-            <Ionicons name="map-outline" size={48} color={COLORS.primary} />
+          <View style={[styles.iconContainer, { backgroundColor: tintedPrimaryBg }]}>
+            <Ionicons name="map-outline" size={48} color={colors.primary} />
           </View>
 
           {/* Title */}
-          <Text style={styles.title}>
+          <Text style={[styles.title, { color: colors.text }]}>
             {isReturningUser ? t('tour.welcome.returnUser.title') : t('tour.welcome.title')}
           </Text>
 
           {/* Subtitle */}
-          <Text style={styles.subtitle}>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             {isReturningUser ? t('tour.welcome.returnUser.subtitle') : t('tour.welcome.subtitle')}
           </Text>
 
@@ -162,7 +177,7 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
           {/* Buttons */}
           <View style={styles.buttonContainer}>
             <TouchableOpacity
-              style={styles.primaryButton}
+              style={[styles.primaryButton, { backgroundColor: colors.primary }]}
               onPress={handleStartTour}
               accessibilityLabel={
                 isReturningUser
@@ -171,7 +186,7 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
               }
               accessibilityRole="button"
             >
-              <Text style={styles.primaryButtonText}>
+              <Text style={[styles.primaryButtonText, { color: colors.primaryForeground }]}>
                 {isReturningUser
                   ? t('tour.welcome.returnUser.takeTour')
                   : t('tour.welcome.startTour')}
@@ -186,7 +201,7 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
               }
               accessibilityRole="button"
             >
-              <Text style={styles.secondaryButtonText}>
+              <Text style={[styles.secondaryButtonText, { color: colors.textSecondary }]}>
                 {isReturningUser
                   ? t('tour.welcome.returnUser.noThanks')
                   : t('tour.welcome.skipTour')}
@@ -199,20 +214,11 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
   );
 };
 
-// Feature item component
+// Feature item component (rendered inside WelcomeTourModal so it shares the themed colors closure)
 interface FeatureItemProps {
   icon: keyof typeof Ionicons.glyphMap;
   text: string;
 }
-
-const FeatureItem: React.FC<FeatureItemProps> = ({ icon, text }) => (
-  <View style={styles.featureItem}>
-    <View style={styles.featureIconContainer}>
-      <Ionicons name={icon} size={20} color={COLORS.primary} />
-    </View>
-    <Text style={styles.featureText}>{text}</Text>
-  </View>
-);
 
 const styles = StyleSheet.create({
   overlay: {
@@ -221,14 +227,13 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   container: {
-    backgroundColor: COLORS.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
     alignItems: 'center',
     ...Platform.select({
       ios: {
-        shadowColor: COLORS.black,
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: -4 },
         shadowOpacity: 0.15,
         shadowRadius: 12,
@@ -242,7 +247,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: COLORS.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -250,13 +254,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: COLORS.dark,
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: COLORS.darkGray,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 24,
@@ -276,14 +278,12 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: COLORS.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
   featureText: {
     fontSize: 12,
     fontWeight: '500',
-    color: COLORS.dark,
     textAlign: 'center',
   },
   buttonContainer: {
@@ -294,13 +294,11 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingVertical: 16,
     borderRadius: 12,
-    backgroundColor: COLORS.primary,
     alignItems: 'center',
   },
   primaryButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.white,
   },
   secondaryButton: {
     width: '100%',
@@ -312,7 +310,6 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     fontSize: 16,
     fontWeight: '500',
-    color: COLORS.darkGray,
   },
 });
 

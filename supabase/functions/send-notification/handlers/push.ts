@@ -3,29 +3,31 @@
  * Uses Expo Push Notification API to send push notifications
  */
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import type { NotificationRecord, DeliveryResult } from '../types.ts';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
 /**
- * Sport emoji mapping for visual context in push notifications
+ * Expo ticket errors that mean the device token will never deliver again.
+ * https://docs.expo.dev/push-notifications/sending-notifications/#push-ticket-errors
  */
-const SPORT_EMOJIS: Record<string, string> = {
-  tennis: '🎾',
-  pickleball: '',
-  badminton: '🏸',
-  squash: '🎾',
-  padel: '🎾',
-  default: '🏃',
-};
+const FATAL_TOKEN_ERRORS = new Set(['DeviceNotRegistered', 'InvalidCredentials']);
 
 /**
- * Get emoji for a sport name
+ * Clear a stale Expo push token from the player record so we stop retrying.
  */
-function getSportEmoji(sportName?: string): string {
-  if (!sportName) return '';
-  const normalized = sportName.toLowerCase().trim();
-  return SPORT_EMOJIS[normalized] || SPORT_EMOJIS.default;
+async function clearStalePushToken(supabase: SupabaseClient, expoPushToken: string): Promise<void> {
+  const { error } = await supabase
+    .from('player')
+    .update({ expo_push_token: null })
+    .eq('expo_push_token', expoPushToken);
+  if (error) {
+    console.error('Failed to clear stale push token:', error);
+  } else {
+    console.log('Cleared stale push token');
+  }
 }
 
 /**
@@ -54,7 +56,8 @@ function getCategoryId(type: string): string | undefined {
 export async function sendPush(
   notification: NotificationRecord,
   expoPushToken: string,
-  badgeCount?: number
+  badgeCount?: number,
+  supabase?: SupabaseClient
 ): Promise<DeliveryResult> {
   try {
     // Validate token format
@@ -95,6 +98,10 @@ export async function sendPush(
     // Check for ticket errors
     const ticket = data?.data?.[0];
     if (ticket?.status === 'error') {
+      const errorCode = ticket?.details?.error as string | undefined;
+      if (errorCode && FATAL_TOKEN_ERRORS.has(errorCode) && supabase) {
+        await clearStalePushToken(supabase, expoPushToken);
+      }
       return {
         channel: 'push',
         status: 'failed',
@@ -130,18 +137,6 @@ function buildPushPayload(
   // Map priority to Expo priority
   const expoPriority = priority === 'urgent' || priority === 'high' ? 'high' : 'normal';
 
-  // Get sport emoji for visual context
-  const sportName = payload?.sportName as string | undefined;
-  const sportEmoji = getSportEmoji(sportName);
-
-  // Enhance title with sport emoji for match-related notifications
-  const enhancedTitle =
-    type.startsWith('match_') || type === 'reminder'
-      ? sportEmoji
-        ? `${sportEmoji} ${title}`
-        : title
-      : title;
-
   // Build data payload for deep linking
   const data: Record<string, unknown> = {
     notificationId: notification.id,
@@ -165,7 +160,7 @@ function buildPushPayload(
 
   return {
     to: expoPushToken,
-    title: enhancedTitle,
+    title,
     body: body || undefined,
     data,
     sound: priority === 'urgent' ? 'default' : 'default',
@@ -191,17 +186,20 @@ function buildPushPayload(
 export async function sendPushBatch(
   notification: NotificationRecord,
   expoPushTokens: string[],
-  badgeCount?: number
+  badgeCount?: number,
+  supabase?: SupabaseClient
 ): Promise<DeliveryResult[]> {
   if (expoPushTokens.length === 0) {
     return [];
   }
 
   try {
-    // Build payloads for all tokens
-    const payloads = expoPushTokens
-      .filter(token => token.startsWith('ExponentPushToken[') || token.startsWith('ExpoPushToken['))
-      .map(token => buildPushPayload(notification, token, badgeCount));
+    // Track which tokens we actually sent (in order) so we can map ticket
+    // results back to the originating token for stale-token cleanup.
+    const validTokens = expoPushTokens.filter(
+      token => token.startsWith('ExponentPushToken[') || token.startsWith('ExpoPushToken[')
+    );
+    const payloads = validTokens.map(token => buildPushPayload(notification, token, badgeCount));
 
     if (payloads.length === 0) {
       return expoPushTokens.map(() => ({
@@ -232,9 +230,22 @@ export async function sendPushBatch(
       }));
     }
 
-    // Map tickets to results
-    return (data?.data || []).map((ticket: { status: string; message?: string; id?: string }) => {
+    type Ticket = {
+      status: string;
+      message?: string;
+      id?: string;
+      details?: { error?: string };
+    };
+    const tickets: Ticket[] = data?.data || [];
+
+    return tickets.map((ticket, idx) => {
       if (ticket.status === 'error') {
+        const errorCode = ticket?.details?.error;
+        const tokenForTicket = validTokens[idx];
+        if (errorCode && FATAL_TOKEN_ERRORS.has(errorCode) && supabase && tokenForTicket) {
+          // Fire-and-forget; surfacing failures via console.error inside helper.
+          void clearStalePushToken(supabase, tokenForTicket);
+        }
         return {
           channel: 'push' as const,
           status: 'failed' as const,

@@ -884,7 +884,7 @@ function HomeTabIcon({ color, size }: { color: string; size: number }) {
 function CourtsTabIcon({ color, size }: { color: string; size: number }) {
   const { t } = useTranslation();
   return (
-    <CopilotStep text={t('tour.mainNavigation.matches.description')} order={2} name="courts-tab">
+    <CopilotStep text={t('tour.mainNavigation.courts.description')} order={2} name="courts-tab">
       <WalkthroughableView
         style={{
           width: size + TAB_ICON_PADDING * 2,
@@ -908,11 +908,7 @@ function ActionsTabIcon({ color, size }: { color: string; size: number }) {
   const { t } = useTranslation();
   const adjustedSize = size * 1.2;
   return (
-    <CopilotStep
-      text={t('tour.matchesScreen.createMatch.description')}
-      order={3}
-      name="actions-tab"
-    >
+    <CopilotStep text={t('tour.mainNavigation.actions.description')} order={3} name="actions-tab">
       <WalkthroughableView
         style={{
           width: adjustedSize + TAB_ICON_PADDING * 2,
@@ -934,7 +930,7 @@ function CommunityTabIcon({ color, size }: { color: string; size: number }) {
   const { t } = useTranslation();
   return (
     <CopilotStep
-      text={t('tour.profileScreen.sportProfiles.description')}
+      text={t('tour.mainNavigation.community.description')}
       order={4}
       name="community-tab"
     >

@@ -1,16 +1,13 @@
 /**
  * useTourSequence - Manages the sequence of screen-specific tours
  *
- * This hook determines when to trigger screen-specific tours based on:
- * 1. Main navigation tour completion
- * 2. Screen visit patterns (first visit)
- * 3. User preferences
+ * Triggers a screen-specific tour on first visit, but only after the main
+ * navigation tour has been completed and once data on the screen is ready.
  *
  * Tour sequence:
  * 1. Main Navigation Tour (tabs) - triggered by WelcomeTourModal
- * 2. Home Screen Tour - triggered on first visit after main tour
- * 3. Profile Screen Tour - triggered on first visit
- * 4. Chat Screen Tour - triggered on first visit
+ * 2. Home / Profile / Chat / Match-creation tours - triggered on first visit
+ *    once main_navigation is complete
  */
 
 import { useCallback, useEffect, useRef } from 'react';
@@ -18,7 +15,6 @@ import { useTour } from '../context/TourContext';
 import { TourId } from '@rallia/shared-services';
 import { Logger } from '@rallia/shared-services';
 
-// Screen tour IDs
 export const SCREEN_TOURS: Record<string, TourId> = {
   home: 'home_screen',
   profile: 'profile_screen',
@@ -27,24 +23,16 @@ export const SCREEN_TOURS: Record<string, TourId> = {
 };
 
 interface UseTourSequenceOptions {
-  /** The screen this hook is being used on */
   screenId: keyof typeof SCREEN_TOURS;
-  /** Whether the screen is ready to show the tour (data loaded, etc.) */
   isReady?: boolean;
-  /** Delay before starting the tour (ms) */
   delay?: number;
-  /** Whether to automatically start the tour */
   autoStart?: boolean;
 }
 
 interface UseTourSequenceResult {
-  /** Whether this screen's tour should be shown */
   shouldShowTour: boolean;
-  /** Start the tour manually */
   startScreenTour: () => void;
-  /** Whether this screen's tour has been completed */
   isTourCompleted: boolean;
-  /** Skip this screen's tour */
   skipScreenTour: () => void;
 }
 
@@ -52,23 +40,88 @@ export const useTourSequence = ({
   screenId,
   isReady = true,
   delay = 500,
-  autoStart = false, // DISABLED by default for now to prevent loops
+  autoStart = false,
 }: UseTourSequenceOptions): UseTourSequenceResult => {
-  // TEMPORARILY DISABLED: Return static values to prevent infinite loops
-  // TODO: Re-enable after fixing the loop issue properly
+  const tourId = SCREEN_TOURS[screenId];
+  const {
+    startTour,
+    completeTour,
+    isTourCompleted: isTourCompletedFn,
+    activeTourId,
+    isLoading,
+  } = useTour();
+
+  // Stash the latest tour state in refs so the auto-start effect can read it
+  // without listing them as dependencies (which previously caused an infinite
+  // loop: completion writes -> tourStatus update -> effect re-run -> start).
+  const isTourCompletedRef = useRef(isTourCompletedFn);
+  isTourCompletedRef.current = isTourCompletedFn;
+
+  const activeTourIdRef = useRef(activeTourId);
+  activeTourIdRef.current = activeTourId;
+
+  const startTourRef = useRef(startTour);
+  startTourRef.current = startTour;
+
+  // Per-mount guard: only attempt auto-start once per screen mount.
+  const hasAttemptedRef = useRef(false);
+
+  useEffect(() => {
+    if (!autoStart) return;
+    if (isLoading) return;
+    if (!isReady) return;
+    if (hasAttemptedRef.current) return;
+
+    // Wait for the main navigation tour to be done before any screen tour.
+    if (!isTourCompletedRef.current('main_navigation')) return;
+
+    // Don't auto-start if this screen's tour is already done.
+    if (isTourCompletedRef.current(tourId)) return;
+
+    // Don't start if another tour is currently active.
+    if (activeTourIdRef.current) return;
+
+    hasAttemptedRef.current = true;
+
+    const timeout = setTimeout(() => {
+      // Re-check active tour at fire time in case one started during the delay.
+      if (activeTourIdRef.current) return;
+      if (isTourCompletedRef.current(tourId)) return;
+      Logger.logUserAction('tour_auto_start', { screenId, tourId });
+      startTourRef.current(tourId).catch((error: unknown) => {
+        Logger.error('Auto-start tour failed', error as Error, { tourId });
+      });
+    }, delay);
+
+    return () => clearTimeout(timeout);
+    // Intentionally omit refs and tourId (stable per screen) from deps.
+  }, [autoStart, isLoading, isReady, delay, screenId, tourId]);
 
   const startScreenTour = useCallback(() => {
-    Logger.warn('useTourSequence is temporarily disabled', { screenId });
-  }, [screenId]);
+    if (activeTourIdRef.current) return;
+    startTourRef.current(tourId).catch((error: unknown) => {
+      Logger.error('Manual start tour failed', error as Error, { tourId });
+    });
+  }, [tourId]);
 
   const skipScreenTour = useCallback(() => {
-    Logger.warn('useTourSequence is temporarily disabled', { screenId });
-  }, [screenId]);
+    completeTour(tourId).catch((error: unknown) => {
+      Logger.error('Skip tour failed', error as Error, { tourId });
+    });
+  }, [completeTour, tourId]);
+
+  const isTourCompleted = isTourCompletedFn(tourId);
+  const shouldShowTour =
+    !isLoading &&
+    isReady &&
+    isTourCompletedFn('main_navigation') &&
+    !isTourCompleted &&
+    !activeTourId;
 
   return {
-    shouldShowTour: false,
+    shouldShowTour,
     startScreenTour,
-    isTourCompleted: true,
+    isTourCompleted,
     skipScreenTour,
   };
 };

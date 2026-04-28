@@ -81,6 +81,7 @@ const REFERENCE_RESPONSE_NOTIFICATION_TYPES: string[] = [
 
 const BASE_WHITE = '#ffffff';
 import { lightHaptic, mediumHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
+import * as Analytics from '../services/analytics';
 
 // Helper function to format relative time
 function formatRelativeTime(
@@ -443,6 +444,7 @@ const Notifications: React.FC = () => {
       if (!notification.read_at) {
         successHaptic();
         markAsRead(notification.id);
+        Analytics.notificationMarkedRead({ type: notification.type, source: 'tap' });
       }
 
       // Navigate to target based on notification type and target_id
@@ -579,6 +581,7 @@ const Notifications: React.FC = () => {
           onPress={() => {
             successHaptic();
             markAllAsRead();
+            Analytics.notificationMarkedRead({ type: 'all', source: 'mark_all' });
           }}
           disabled={isMarkingAllAsRead}
           style={styles.markAllButton}

@@ -170,13 +170,13 @@
     "delete": "Supprimer",
     "timeAgo": "il y a {time}",
     "signInRequired": "Connexion requise",
-    "signInPrompt": "Veuillez vous connecter pour voir vos notifications",
-    "onboardingRequired": "Complétez votre profil",
-    "onboardingPrompt": "Terminez la configuration de votre profil pour recevoir et voir vos notifications",
+    "signInPrompt": "Connecte-toi pour voir tes notifications",
+    "onboardingRequired": "Complète ton profil",
+    "onboardingPrompt": "Termine la configuration de ton profil pour recevoir et voir tes notifications",
     "completeOnboarding": "Compléter le profil",
     "sportSwitch": {
       "title": "Changer de sport?",
-      "message": "Cette partie est pour le {sportName}. Changer mettra à jour votre fil de parties pour afficher les parties de ce sport.",
+      "message": "Cette partie est pour le {sportName}. Changer mettra à jour ton fil de parties pour afficher les parties de ce sport.",
       "confirm": "Changer et voir"
     },
     "time": {
@@ -187,25 +187,25 @@
       "earlier": "Plus tôt"
     },
     "types": {
-      "match_invitation": "Invitation\nà une partie",
-      "match_join_request": "Demande\nde participation",
-      "match_join_accepted": "Demande\nacceptée",
-      "match_join_rejected": "Demande\nrefusée",
-      "match_player_joined": "Joueur\ninscrit",
-      "match_cancelled": "Partie\nannulée",
-      "match_updated": "Partie\nmise à jour",
-      "match_starting_soon": "Partie\nimminente",
-      "match_check_in_available": "Enregistrement\ndisponible",
-      "match_new_available": "Nouvelle partie\ndans un groupe",
-      "match_spot_opened": "Place\nlibérée",
-      "nearby_match_available": "Partie\nà proximité",
-      "player_kicked": "Retiré\nde la partie",
-      "player_left": "Joueur\nparti",
-      "new_message": "Nouveau\nmessage",
-      "rating_verified": "Classement\nvérifié",
-      "reference_request_received": "Référence\ndemandée",
-      "reference_request_accepted": "Référence\nacceptée",
-      "reference_request_declined": "Référence\nrefusée",
+      "match_invitation": "Invitation à une partie",
+      "match_join_request": "Demande de participation",
+      "match_join_accepted": "Demande acceptée",
+      "match_join_rejected": "Demande refusée",
+      "match_player_joined": "Joueur inscrit",
+      "match_cancelled": "Partie annulée",
+      "match_updated": "Partie mise à jour",
+      "match_starting_soon": "Partie imminente",
+      "match_check_in_available": "Enregistrement disponible",
+      "match_new_available": "Nouvelle partie dans un groupe",
+      "match_spot_opened": "Place libérée",
+      "nearby_match_available": "Partie à proximité",
+      "player_kicked": "Retiré de la partie",
+      "player_left": "Joueur parti",
+      "new_message": "Nouveau message",
+      "rating_verified": "Classement vérifié",
+      "reference_request_received": "Référence demandée",
+      "reference_request_accepted": "Référence acceptée",
+      "reference_request_declined": "Référence refusée",
       "reminder": "Rappel",
       "payment": "Paiement",
       "support": "Support",
@@ -217,21 +217,21 @@
       "community_join_request": "Demande d'adhésion",
       "community_join_accepted": "Demande approuvée",
       "community_join_rejected": "Demande refusée",
-      "booking_created": "Réservation\ncréée",
-      "booking_cancelled_by_player": "Réservation annulée\n(joueur)",
-      "booking_modified": "Réservation\nmodifiée",
-      "new_member_joined": "Nouveau\nmembre",
-      "member_left": "Départ d'un\nmembre",
-      "member_role_changed": "Rôle\nmodifié",
-      "payment_received": "Paiement\nreçu",
-      "payment_failed": "Paiement\néchoué",
-      "refund_processed": "Remboursement\neffectué",
-      "daily_summary": "Résumé\nquotidien",
-      "weekly_report": "Rapport\nhebdo",
-      "booking_confirmed": "Réservation\nconfirmée",
-      "booking_reminder": "Rappel de\nréservation",
-      "booking_cancelled_by_org": "Réservation annulée\n(établissement)",
-      "membership_approved": "Adhésion\napprouvée",
+      "booking_created": "Réservation créée",
+      "booking_cancelled_by_player": "Réservation annulée par le joueur",
+      "booking_modified": "Réservation modifiée",
+      "new_member_joined": "Nouveau membre",
+      "member_left": "Départ d'un membre",
+      "member_role_changed": "Rôle modifié",
+      "payment_received": "Paiement reçu",
+      "payment_failed": "Paiement échoué",
+      "refund_processed": "Remboursement effectué",
+      "daily_summary": "Résumé quotidien",
+      "weekly_report": "Rapport hebdomadaire",
+      "booking_confirmed": "Réservation confirmée",
+      "booking_reminder": "Rappel de réservation",
+      "booking_cancelled_by_org": "Réservation annulée par l'établissement",
+      "membership_approved": "Adhésion approuvée",
       "org_announcement": "Annonce"
     },
     "categories": {
@@ -247,60 +247,60 @@
     },
     "preferences": {
       "title": "Préférences de notifications",
-      "description": "Choisissez comment vous souhaitez être notifié pour différents événements. Activez ou désactivez chaque option.",
+      "description": "Choisis comment tu souhaites être notifié pour chaque type d'événement. Active ou désactive chaque option.",
       "enabled": "Activé",
       "disabled": "Désactivé",
       "default": "Par défaut"
     },
     "messages": {
       "match_invitation": {
-        "title": "Partie en vue!",
-        "body": "{playerName} veut jouer au {sportName} avec vous le {matchDate}{startTime} à {locationName}"
+        "title": "{playerName} t'invite à une partie de {sportName}",
+        "body": "{playerName} veut jouer le {matchDate}{startTime}{locationName}. Touche pour accepter."
       },
       "match_join_request": {
-        "title": "{playerName} veut rejoindre",
-        "body": "{playerName} souhaite rejoindre votre partie de {sportName} du {matchDate}"
+        "title": "{playerName} veut rejoindre ta partie de {sportName}",
+        "body": "{playerName} a demandé à rejoindre ta partie le {matchDate}. Examine et approuve."
       },
       "match_join_accepted": {
-        "title": "Vous êtes inscrit!",
-        "body": "Votre partie de {sportName} du {matchDate} à {locationName} est confirmée. À bientôt!"
+        "title": "C'est confirmé — ta partie de {sportName} arrive",
+        "body": "Ta partie le {matchDate}{locationName} est confirmée. Ajoute-la à ton agenda pour ne pas l'oublier."
       },
       "match_join_rejected": {
-        "title": "Demande refusée",
-        "body": "Votre demande pour la partie de {sportName} du {matchDate} n'a pas été acceptée. Découvrez d'autres parties près de chez vous."
+        "title": "Ta demande n'a pas été approuvée",
+        "body": "Ta demande pour la partie de {sportName} le {matchDate} n'a pas été retenue cette fois. D'autres parties sont ouvertes près de chez toi — touche pour les voir."
       },
       "match_player_joined": {
-        "title": "Nouveau joueur!",
-        "body": "{playerName} a rejoint votre partie de {sportName} — {spotsLeft} restante(s)!",
-        "body_full": "{playerName} a rejoint votre partie de {sportName}. La partie est complète!"
+        "title": "{playerName} a rejoint ta partie",
+        "body": "{playerName} embarque pour ta partie de {sportName} le {matchDate} — {spotsLeft} place(s) restante(s).",
+        "body_full": "{playerName} a pris la dernière place — ta partie de {sportName} le {matchDate} est complète."
       },
       "match_cancelled": {
-        "title": "Partie annulée",
-        "body": "La partie de {sportName} du {matchDate} à {locationName} a été annulée. On espère vous revoir bientôt!"
+        "title": "Ta partie de {sportName} a été annulée",
+        "body": "La partie de {sportName} le {matchDate}{locationName} a été annulée. Touche pour trouver une autre partie près de chez toi."
       },
       "match_updated": {
-        "title": "Partie modifiée",
-        "body": "Votre partie de {sportName} du {matchDate} a été mise à jour. Consultez les nouveaux détails."
+        "title": "Attention — ta partie a changé",
+        "body": "Ta partie de {sportName} le {matchDate} a été mise à jour. Touche pour voir les nouveaux détails."
       },
       "match_starting_soon": {
-        "title": "Préparez-vous!",
-        "body": "Votre partie de {sportName} à {locationName} commence {timeUntil}. C'est l'heure de s'échauffer!"
+        "title": "Ta partie commence {timeUntil}",
+        "body": "Ta partie de {sportName}{locationName} commence {timeUntil}. C'est l'heure de t'échauffer."
       },
       "match_check_in_available": {
-        "title": "C'est l'heure de pointer!",
-        "body": "Enregistrez-vous une fois arrivé(e) sur place pour confirmer votre présence."
+        "title": "Enregistre-toi pour ta partie",
+        "body": "Touche pour t'enregistrer et confirmer ton arrivée à {locationName}."
       },
       "match_new_available": {
-        "title": "Nouvelle partie",
-        "body": "Une partie de {sportName} le {matchDate} cherche des joueurs. Inscrivez-vous avant qu'il ne soit trop tard!"
+        "title": "Nouvelle partie de {sportName} dans ton groupe",
+        "body": "Une nouvelle partie de {sportName} est ouverte le {matchDate}{startTime}. Inscris-toi avant qu'elle se remplisse."
       },
       "player_kicked": {
-        "title": "Retiré de la partie",
-        "body": "Vous avez été retiré de la partie de {sportName} du {matchDate}. Découvrez d'autres parties près de chez vous."
+        "title": "Retiré d'une partie",
+        "body": "Tu as été retiré de la partie de {sportName} le {matchDate}. Touche pour trouver une autre partie près de chez toi."
       },
       "player_left": {
-        "title": "Joueur parti",
-        "body": "{playerName} a quitté votre partie de {sportName} — {spotsLeft} place(s) maintenant disponible(s)."
+        "title": "{playerName} a quitté ta partie",
+        "body": "{playerName} s'est désisté de ta partie de {sportName} — {spotsLeft} place(s) maintenant ouverte(s). Invite un ami?"
       },
       "new_message": {
         "title": "Message de {senderName}",
@@ -308,135 +308,135 @@
       },
       "chat": {
         "title": "Nouveau message",
-        "body": "Vous avez un nouveau message qui vous attend"
+        "body": "Tu as un nouveau message en attente."
       },
       "rating_verified": {
-        "title": "Classement vérifié!",
-        "body": "Félicitations! Votre classement {ratingSystemName} de {ratingValue} pour le {sportName} est maintenant vérifié."
+        "title": "Ton niveau en {sportName} est certifié",
+        "body": "Ton classement {ratingSystemName} de {ratingValue} est maintenant certifié. Le badge vérifié apparaîtra sur ton profil."
       },
       "reminder": {
-        "title": "Partie à venir",
-        "body": "N'oubliez pas votre partie de {sportName} le {matchDate} à {locationName}"
+        "title": "Partie à venir le {matchDate}",
+        "body": "Rappel : ta partie de {sportName} le {matchDate}{startTime}{locationName}. Touche pour les détails."
       },
       "payment": {
         "title": "Mise à jour de paiement",
-        "body": "Votre statut de paiement a été mis à jour. Appuyez pour voir les détails."
+        "body": "Ton statut de paiement a changé. Touche pour voir les détails."
       },
       "support": {
-        "title": "Message de Rallia",
-        "body": "Notre équipe de support vous a envoyé un message. Appuyez pour lire."
+        "title": "Message du soutien Rallia",
+        "body": "Notre équipe t'a répondu. Touche pour lire."
       },
       "system": {
         "title": "Mise à jour Rallia",
-        "body": "Nous avons une mise à jour pour vous. Appuyez pour en savoir plus."
+        "body": "Touche pour en savoir plus."
       },
       "feedback_request": {
-        "title": "Comment était votre partie?",
-        "body": "Soumettez votre score et évaluez votre partie de {sportName} avec {opponentNames} tant que c'est frais!"
+        "title": "Comment s'est passée ta partie avec {opponentNames}?",
+        "body": "Soumets le score et évalue ta partie de {sportName} pendant que c'est frais. Ça prend une minute."
       },
       "feedback_reminder": {
-        "title": "Votre partie attend un score",
-        "body": "Votre score et évaluation de {sportName} avec {opponentNames} sont toujours en attente — complétez-les avant la date limite."
+        "title": "Ton score est toujours en attente",
+        "body": "Ta partie de {sportName} avec {opponentNames} attend toujours un score et une évaluation. Complète-les avant la date limite."
       },
       "score_confirmation": {
-        "title": "Confirmer le score",
-        "body": "{playerName} a soumis un score pour votre partie de {sportName}. Veuillez confirmer ou contester."
+        "title": "Confirme le score de ta partie",
+        "body": "{playerName} a soumis un score pour ta partie de {sportName}. Touche pour confirmer ou contester."
       },
       "community_join_request": {
-        "title": "Nouvelle demande d'adhésion",
-        "body": "{requesterName} souhaite rejoindre {communityName}"
+        "title": "{requesterName} veut rejoindre {communityName}",
+        "body": "Touche pour examiner et approuver sa demande."
       },
       "community_join_accepted": {
-        "title": "Demande approuvée!",
-        "body": "Vous êtes maintenant membre de {communityName}"
+        "title": "Te voilà membre de {communityName}",
+        "body": "Ta demande pour rejoindre {communityName} a été approuvée. Touche pour voir les parties à venir."
       },
       "community_join_rejected": {
-        "title": "Demande non approuvée",
-        "body": "Votre demande pour rejoindre {communityName} n'a pas été approuvée"
+        "title": "Demande pour {communityName} non approuvée",
+        "body": "Ta demande pour rejoindre {communityName} n'a pas été approuvée. Touche pour découvrir d'autres communautés près de chez toi."
       },
       "reference_request_received": {
-        "title": "Référence demandée",
-        "body": "{playerName} aimerait que vous vérifiiez son niveau en {sportName}."
+        "title": "{playerName} te demande de vérifier son niveau",
+        "body": "{playerName} t'a indiqué comme référence pour son niveau en {sportName}. Touche pour confirmer ou refuser."
       },
       "reference_request_accepted": {
-        "title": "Référence acceptée !",
-        "body": "{playerName} a confirmé votre niveau en {sportName} ({ratingLabel})."
+        "title": "{playerName} a vérifié ton niveau",
+        "body": "{playerName} a confirmé ton niveau en {sportName} ({ratingLabel}). Continue à recueillir des références pour certifier ton niveau."
       },
       "reference_request_declined": {
-        "title": "Référence refusée",
-        "body": "{playerName} n'a pas pu confirmer votre niveau en {sportName}."
+        "title": "{playerName} a refusé ta référence",
+        "body": "{playerName} n'a pas pu confirmer ton niveau en {sportName}. Touche pour demander à un autre joueur."
       },
       "match_spot_opened": {
-        "title": "Une place vient de se libérer",
-        "body": "Une place s'est libérée dans une partie de {sportName} à {locationName} le {matchDate}{startTime}"
+        "title": "Une place s'est libérée en {sportName}",
+        "body": "Une place vient de se libérer le {matchDate}{startTime}{locationName}. Touche pour la prendre avant qu'elle disparaisse."
       },
       "nearby_match_available": {
-        "title": "Nouvelle partie de {sportName} près de vous",
-        "body": "Une nouvelle partie est disponible à {locationName} le {matchDate}{startTime}"
+        "title": "Nouvelle partie de {sportName} près de toi",
+        "body": "Une partie de {sportName} est ouverte le {matchDate}{startTime}{locationName}. Touche pour t'inscrire."
       },
       "booking_created": {
-        "title": "Nouvelle réservation",
-        "body": "{playerName} a réservé {courtName} le {bookingDate}{startTime}"
+        "title": "Nouvelle réservation de {playerName}",
+        "body": "{playerName} a réservé {courtName} le {bookingDate}{startTime}."
       },
       "booking_cancelled_by_player": {
-        "title": "Réservation annulée",
-        "body": "{playerName} a annulé sa réservation de {courtName} le {bookingDate}"
+        "title": "Réservation annulée par {playerName}",
+        "body": "{playerName} a annulé sa réservation de {courtName} le {bookingDate}."
       },
       "booking_modified": {
         "title": "Réservation modifiée",
         "body": "La réservation de {courtName} le {bookingDate} a été modifiée."
       },
       "new_member_joined": {
-        "title": "Nouveau membre",
-        "body": "{playerName} a rejoint {orgName}."
+        "title": "{playerName} a rejoint {orgName}",
+        "body": "Touchez pour voir le profil du nouveau membre."
       },
       "member_left": {
-        "title": "Départ d'un membre",
-        "body": "{playerName} a quitté {orgName}."
+        "title": "{playerName} a quitté {orgName}",
+        "body": "Touchez pour voir l'activité des membres."
       },
       "member_role_changed": {
-        "title": "Rôle modifié",
+        "title": "Rôle modifié pour {playerName}",
         "body": "Le rôle de {playerName} a été changé en {memberRole}."
       },
       "payment_received": {
-        "title": "Paiement reçu",
+        "title": "Paiement reçu : {amountFormatted}",
         "body": "{amountFormatted} reçu de {playerName}."
       },
       "payment_failed": {
-        "title": "Paiement échoué",
-        "body": "Le paiement de {amountFormatted} de {playerName} a échoué."
+        "title": "Paiement échoué : {amountFormatted}",
+        "body": "Le paiement de {amountFormatted} de {playerName} a échoué. Touchez pour réessayer ou contacter le joueur."
       },
       "refund_processed": {
-        "title": "Remboursement effectué",
+        "title": "Remboursement émis : {amountFormatted}",
         "body": "{amountFormatted} ont été remboursés à {playerName}."
       },
       "daily_summary": {
-        "title": "Résumé quotidien",
-        "body": "Résumé des réservations et activités pour {orgName}."
+        "title": "Résumé quotidien — {orgName}",
+        "body": "Touchez pour consulter les réservations et activités d'aujourd'hui."
       },
       "weekly_report": {
-        "title": "Rapport hebdomadaire",
-        "body": "Votre rapport hebdomadaire pour {orgName} est prêt."
+        "title": "Rapport hebdomadaire — {orgName}",
+        "body": "Votre rapport hebdomadaire est prêt. Touchez pour le consulter."
       },
       "booking_confirmed": {
         "title": "Réservation confirmée",
-        "body": "Votre réservation de {courtName} le {bookingDate}{startTime} est confirmée."
+        "body": "Ta réservation de {courtName} le {bookingDate}{startTime} est confirmée."
       },
       "booking_reminder": {
-        "title": "Rappel de réservation",
-        "body": "Rappel : vous avez réservé {courtName} le {bookingDate}{startTime}"
+        "title": "Réservation à venir le {bookingDate}",
+        "body": "Rappel : tu as réservé {courtName} le {bookingDate}{startTime}."
       },
       "booking_cancelled_by_org": {
-        "title": "Réservation annulée",
-        "body": "{orgName} a annulé votre réservation de {courtName} le {bookingDate}."
+        "title": "Ta réservation a été annulée",
+        "body": "{orgName} a annulé ta réservation de {courtName} le {bookingDate}. Touche pour réserver à nouveau."
       },
       "membership_approved": {
-        "title": "Adhésion approuvée",
-        "body": "Votre adhésion à {orgName} a été approuvée."
+        "title": "Adhésion approuvée à {orgName}",
+        "body": "Tu es maintenant membre de {orgName}. Touche pour découvrir les terrains et réservations."
       },
       "org_announcement": {
         "title": "Annonce de {orgName}",
-        "body": "{orgName} a partagé une nouvelle annonce."
+        "body": "{orgName} a partagé une nouvelle annonce. Touche pour lire."
       }
     }
   },
@@ -493,7 +493,7 @@
       "notificationsDesc": "Préférences email et SMS"
     },
     "notifications": "Notifications",
-    "notificationsDescription": "Choisissez comment vous souhaitez être notifié pour différents événements. Activez ou désactivez chaque option.",
+    "notificationsDescription": "Choisis comment tu souhaites être notifié pour chaque type d'événement. Active ou désactive chaque option.",
     "notificationPreferences": {
       "title": "Préférences de notifications",
       "description": "Configurez quelles notifications votre organisation reçoit et comment elles sont livrées.",
@@ -8288,16 +8288,20 @@
     },
     "mainNavigation": {
       "home": {
-        "title": "Accueil",
-        "description": "Votre tableau de bord affichant les matchs à venir, les notifications et les actions rapides."
+        "title": "Parties",
+        "description": "Vos parties à venir en un coup d'œil, ainsi que les matchs qui se déroulent près de chez vous."
       },
       "courts": {
         "title": "Terrains",
-        "description": "Découvrez les terrains et installations sportives près de chez vous sur la carte interactive."
+        "description": "Parcourez les terrains et installations sportives à proximité, consultez les détails et réservez un créneau."
       },
       "actions": {
         "title": "Actions",
-        "description": "Accès rapide pour créer des matchs, trouver des joueurs et plus encore."
+        "description": "Créez une partie, invitez des joueurs ou lancez un réseau — le tout au même endroit."
+      },
+      "community": {
+        "title": "Joueurs",
+        "description": "Trouvez des joueurs autour de vous et parcourez les groupes et communautés que vous avez rejoints."
       },
       "matches": {
         "title": "Parties",

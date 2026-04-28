@@ -19,10 +19,12 @@ export async function sendSms(
   locale: string = 'en-US'
 ): Promise<DeliveryResult> {
   if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_PHONE_NUMBER) {
+    // Treat as skipped (not failed) so the metric reflects an unconfigured provider
+    // rather than a real delivery failure.
     return {
       channel: 'sms',
-      status: 'failed',
-      errorMessage: 'Twilio credentials not configured',
+      status: 'skipped_missing_contact',
+      errorMessage: 'SMS provider not configured',
     };
   }
 
@@ -76,18 +78,12 @@ export async function sendSms(
 }
 
 /**
- * Get sport prefix for SMS messages
- * Keeps sport name in lowercase as per user preference
- */
-function getSportPrefix(sportName?: string): string {
-  if (!sportName) return '';
-  const sport = sportName.toLowerCase().trim();
-  return `[${sport}] `;
-}
-
-/**
  * Get the most important info for SMS based on notification type
  * Prioritizes critical info that fits in 160 chars
+ *
+ * All SMS use a uniform "Rallia: " prefix (sms.prefix) — no bracketed
+ * `[sport]` tags. Sport context, when relevant, is baked into the title/body
+ * via the shared translations (see specs/08-communications/notifications.md).
  */
 function getPrioritizedContent(
   notification: NotificationRecord,
@@ -98,13 +94,12 @@ function getPrioritizedContent(
   extra?: string;
 } {
   const { type, title, body, payload, priority } = notification;
-  const sportName = payload?.sportName as string | undefined;
   const matchDate = payload?.matchDate as string | undefined;
   const locationName = payload?.locationName as string | undefined;
   const playerName = payload?.playerName as string | undefined;
   const timeUntil = payload?.timeUntil as string | undefined;
 
-  const sportPrefix = getSportPrefix(sportName);
+  const prefix = t(locale, 'sms.prefix');
   const atLocation = locationName ? t(locale, 'sms.at', { location: locationName }) : undefined;
   const gameOnDate = matchDate ? t(locale, 'sms.gameOn', { date: matchDate }) : undefined;
 
@@ -113,7 +108,7 @@ function getPrioritizedContent(
     switch (type) {
       case 'match_starting_soon':
         return {
-          prefix: `${sportPrefix}`,
+          prefix,
           core: timeUntil
             ? t(locale, 'sms.urgent.startingSoon', { timeUntil: timeUntil.toUpperCase() })
             : t(locale, 'sms.urgent.startingSoonFallback'),
@@ -121,13 +116,13 @@ function getPrioritizedContent(
         };
       case 'match_check_in_available':
         return {
-          prefix: `${sportPrefix}`,
+          prefix,
           core: t(locale, 'sms.urgent.checkInOpen'),
           extra: atLocation,
         };
       case 'match_cancelled':
         return {
-          prefix: `${sportPrefix}`,
+          prefix,
           core: t(locale, 'sms.urgent.cancelled'),
           extra: gameOnDate,
         };
@@ -138,7 +133,7 @@ function getPrioritizedContent(
   switch (type) {
     case 'match_invitation':
       return {
-        prefix: `${sportPrefix}`,
+        prefix,
         core: title,
         extra:
           matchDate && playerName
@@ -148,7 +143,7 @@ function getPrioritizedContent(
 
     case 'match_join_accepted':
       return {
-        prefix: `${sportPrefix}`,
+        prefix,
         core: t(locale, 'sms.youreIn'),
         extra:
           matchDate && locationName
@@ -158,7 +153,7 @@ function getPrioritizedContent(
 
     case 'match_starting_soon':
       return {
-        prefix: `${sportPrefix}`,
+        prefix,
         core: timeUntil
           ? t(locale, 'sms.startsIn', { timeUntil })
           : t(locale, 'sms.startsInFallback'),
@@ -167,14 +162,14 @@ function getPrioritizedContent(
 
     case 'match_check_in_available':
       return {
-        prefix: `${sportPrefix}`,
+        prefix,
         core: t(locale, 'sms.checkInOpen'),
         extra: atLocation,
       };
 
     case 'reminder':
       return {
-        prefix: `${sportPrefix}`,
+        prefix,
         core: t(locale, 'sms.reminder'),
         extra:
           matchDate && locationName
@@ -184,7 +179,7 @@ function getPrioritizedContent(
 
     default:
       return {
-        prefix: sportPrefix || t(locale, 'sms.prefix'),
+        prefix,
         core: title,
         extra: body || undefined,
       };

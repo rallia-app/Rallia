@@ -1,20 +1,18 @@
 /**
- * TourCompleteModal - Celebration modal shown after completing a tour
+ * TourCompleteModal - Confirmation sheet shown after completing the main tour.
  *
- * This modal appears when:
- * 1. User completes all steps of the main navigation tour
- * 2. User finishes on the last step (not skip)
- *
- * It celebrates the completion and encourages the user to start exploring.
+ * Mirrors the WelcomeTourModal bottom-sheet pattern (icon ring, title, copy,
+ * primary CTA) so the start and end of the tour read as a matched pair.
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, Modal, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from '../hooks';
-import { COLORS } from '@rallia/shared-constants';
+import { useThemeStyles } from '@rallia/shared-hooks';
 import { Logger } from '@rallia/shared-services';
 import { Ionicons } from '@expo/vector-icons';
+import { lightHaptic } from '../utils/haptics';
 
 interface TourCompleteModalProps {
   /** Whether the modal should be visible */
@@ -31,78 +29,52 @@ export const TourCompleteModal: React.FC<TourCompleteModalProps> = ({
   tourId = 'main_navigation',
 }) => {
   const { t } = useTranslation();
+  const { colors } = useThemeStyles();
   const insets = useSafeAreaInsets();
+  const tintedPrimaryBg = `${colors.primary}26`;
 
   const [fadeAnim] = useState(new Animated.Value(0));
-  const [scaleAnim] = useState(new Animated.Value(0.8));
-  const [confettiAnim] = useState(new Animated.Value(0));
+  const [slideAnim] = useState(new Animated.Value(50));
 
-  // Animate in when visible changes
   useEffect(() => {
-    if (visible) {
-      // Animate in with a bouncy effect
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          friction: 8,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-        // Confetti animation
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(confettiAnim, {
-              toValue: 1,
-              duration: 1500,
-              useNativeDriver: true,
-            }),
-            Animated.timing(confettiAnim, {
-              toValue: 0,
-              duration: 1500,
-              useNativeDriver: true,
-            }),
-          ])
-        ),
-      ]).start();
-
-      Logger.logUserAction('tour_complete_modal_shown', { tourId });
-    }
-  }, [visible, fadeAnim, scaleAnim, confettiAnim, tourId]);
+    if (!visible) return;
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    Logger.logUserAction('tour_complete_modal_shown', { tourId });
+  }, [visible, fadeAnim, slideAnim, tourId]);
 
   const handleDismiss = useCallback(() => {
+    lightHaptic();
     Logger.logUserAction('tour_complete_modal_dismissed', { tourId });
-
-    // Animate out
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 0,
         duration: 200,
         useNativeDriver: true,
       }),
-      Animated.timing(scaleAnim, {
-        toValue: 0.8,
+      Animated.timing(slideAnim, {
+        toValue: 50,
         duration: 200,
         useNativeDriver: true,
       }),
     ]).start(() => {
       onDismiss();
     });
-  }, [fadeAnim, scaleAnim, onDismiss, tourId]);
+  }, [fadeAnim, slideAnim, onDismiss, tourId]);
 
   if (!visible) {
     return null;
   }
-
-  // Confetti rotation interpolation
-  const confettiRotate = confettiAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '15deg'],
-  });
 
   return (
     <Modal
@@ -117,195 +89,105 @@ export const TourCompleteModal: React.FC<TourCompleteModalProps> = ({
           style={[
             styles.container,
             {
-              transform: [{ scale: scaleAnim }],
-              marginBottom: insets.bottom,
+              backgroundColor: colors.cardBackground,
+              transform: [{ translateY: slideAnim }],
+              paddingBottom: insets.bottom + 24,
             },
           ]}
         >
-          {/* Celebration icon with animation */}
-          <Animated.View
-            style={[styles.iconContainer, { transform: [{ rotate: confettiRotate }] }]}
-          >
-            <Text style={styles.emoji}>🎉</Text>
-          </Animated.View>
-
-          {/* Checkmark badge */}
-          <View style={styles.checkBadge}>
-            <Ionicons name="checkmark-circle" size={32} color={COLORS.success} />
+          <View style={[styles.iconContainer, { backgroundColor: tintedPrimaryBg }]}>
+            <Ionicons name="checkmark-circle" size={48} color={colors.primary} />
           </View>
 
-          {/* Title */}
-          <Text style={styles.title}>{t('tour.complete.title')}</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t('tour.complete.title')}</Text>
 
-          {/* Description */}
-          <Text style={styles.description}>{t('tour.complete.description')}</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+            {t('tour.complete.description')}
+          </Text>
 
-          {/* Feature summary */}
-          <View style={styles.summaryContainer}>
-            <SummaryItem icon="home-outline" label={t('tour.mainNavigation.home.title')} />
-            <SummaryItem icon="map-outline" label={t('tour.mainNavigation.courts.title')} />
-            <SummaryItem icon="add-circle-outline" label={t('tour.mainNavigation.actions.title')} />
-            <SummaryItem icon="chatbubbles-outline" label={t('tour.mainNavigation.chat.title')} />
-            <SummaryItem icon="person-outline" label={t('tour.mainNavigation.profile.title')} />
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+              onPress={handleDismiss}
+              accessibilityLabel={t('tour.complete.button')}
+              accessibilityRole="button"
+            >
+              <Text style={[styles.primaryButtonText, { color: colors.primaryForeground }]}>
+                {t('tour.complete.button')}
+              </Text>
+            </TouchableOpacity>
           </View>
 
-          {/* CTA Button */}
-          <TouchableOpacity
-            style={styles.ctaButton}
-            onPress={handleDismiss}
-            accessibilityLabel={t('tour.complete.button')}
-            accessibilityRole="button"
-          >
-            <Text style={styles.ctaButtonText}>{t('tour.complete.button')}</Text>
-            <Ionicons
-              name="arrow-forward-outline"
-              size={20}
-              color={COLORS.white}
-              style={styles.ctaIcon}
-            />
-          </TouchableOpacity>
-
-          {/* Subtle tip */}
-          <Text style={styles.tip}>{t('tour.complete.tip')}</Text>
+          <Text style={[styles.tip, { color: colors.textMuted }]}>{t('tour.complete.tip')}</Text>
         </Animated.View>
       </Animated.View>
     </Modal>
   );
 };
 
-// Summary item component
-interface SummaryItemProps {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-}
-
-const SummaryItem: React.FC<SummaryItemProps> = ({ icon, label }) => (
-  <View style={styles.summaryItem}>
-    <View style={styles.summaryIconContainer}>
-      <Ionicons name={icon} size={16} color={COLORS.primary} />
-    </View>
-    <Text style={styles.summaryLabel}>{label}</Text>
-    <Ionicons name="checkmark-outline" size={16} color={COLORS.success} />
-  </View>
-);
-
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
+    justifyContent: 'flex-end',
   },
   container: {
-    backgroundColor: COLORS.white,
-    borderRadius: 24,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     padding: 24,
     alignItems: 'center',
-    width: '100%',
-    maxWidth: 340,
     ...Platform.select({
       ios: {
-        shadowColor: COLORS.black,
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.2,
-        shadowRadius: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
       },
       android: {
-        elevation: 12,
+        elevation: 16,
       },
     }),
   },
   iconContainer: {
-    marginBottom: 8,
-  },
-  emoji: {
-    fontSize: 64,
-  },
-  checkBadge: {
-    position: 'absolute',
-    top: 70,
-    right: '35%',
-    backgroundColor: COLORS.white,
-    borderRadius: 20,
-    padding: 2,
-    ...Platform.select({
-      ios: {
-        shadowColor: COLORS.black,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: COLORS.dark,
-    marginTop: 8,
+    textAlign: 'center',
     marginBottom: 8,
-    textAlign: 'center',
   },
-  description: {
+  subtitle: {
     fontSize: 16,
-    lineHeight: 24,
-    color: COLORS.darkGray,
     textAlign: 'center',
-    marginBottom: 20,
+    lineHeight: 24,
+    marginBottom: 24,
+    paddingHorizontal: 16,
   },
-  summaryContainer: {
+  buttonContainer: {
     width: '100%',
-    backgroundColor: COLORS.veryLightGray,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 20,
+    gap: 12,
   },
-  summaryItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  summaryIconContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: COLORS.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  summaryLabel: {
-    flex: 1,
-    fontSize: 14,
-    color: COLORS.dark,
-  },
-  ctaButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.primary,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    borderRadius: 12,
+  primaryButton: {
     width: '100%',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
   },
-  ctaButtonText: {
+  primaryButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.white,
-  },
-  ctaIcon: {
-    marginLeft: 8,
   },
   tip: {
     marginTop: 16,
     fontSize: 13,
-    color: COLORS.gray,
     textAlign: 'center',
-    fontStyle: 'italic',
+    paddingHorizontal: 16,
   },
 });
 
