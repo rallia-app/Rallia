@@ -6,6 +6,7 @@
  */
 
 import { supabase } from '../supabase';
+import type { InvitationType } from '../invitation/invitationLinkService';
 
 // =============================================================================
 // TYPES
@@ -85,6 +86,32 @@ export interface DashboardWidget {
   changeType?: 'increase' | 'decrease' | 'neutral';
   trend?: MetricTrendPoint[];
 }
+
+/** Per-invitation_type click + conversion stats */
+export interface InvitationStat {
+  invitationType: InvitationType;
+  clicks: number;
+  uniqueDevices: number;
+  matchedInstalls: number;
+  attributedSignups: number;
+  conversionRate: number;
+}
+
+/** Top target_id values for a given invitation_type */
+export interface InvitationTopTarget {
+  targetId: string;
+  clicks: number;
+  uniqueDevices: number;
+}
+
+/** A single daily click bucket for one invitation_type */
+export interface InvitationTimeseriesPoint {
+  date: string;
+  clicks: number;
+}
+
+/** Daily click counts per invitation_type, zero-filled across the window */
+export type InvitationTimeseries = Partial<Record<InvitationType, InvitationTimeseriesPoint[]>>;
 
 // =============================================================================
 // SERVICE FUNCTIONS
@@ -2963,6 +2990,130 @@ function getDefaultSportFacilityData(): SportFacilityData[] {
   ];
 }
 
+/**
+ * Invitation / referral click stats grouped by invitation_type.
+ * Backed by `get_invitation_stats` RPC (admin-gated, SECURITY DEFINER).
+ */
+export async function getInvitationStats(days: number = 30): Promise<InvitationStat[]> {
+  try {
+    const { data, error } = await supabase.rpc('get_invitation_stats', { p_days: days });
+    if (error) {
+      console.error('Error fetching invitation stats:', error);
+      return [];
+    }
+    if (!data) return [];
+    return data.map((row: Record<string, unknown>) => {
+      const clicks = Number(row.clicks) || 0;
+      const uniqueDevices = Number(row.unique_devices) || 0;
+      const matchedInstalls = Number(row.matched_installs) || 0;
+      const attributedSignups = Number(row.attributed_signups) || 0;
+      const conversionRate = uniqueDevices > 0 ? Math.min(1, attributedSignups / uniqueDevices) : 0;
+      return {
+        invitationType: String(row.invitation_type) as InvitationType,
+        clicks,
+        uniqueDevices,
+        matchedInstalls,
+        attributedSignups,
+        conversionRate,
+      };
+    });
+  } catch (error) {
+    console.error('Error in getInvitationStats:', error);
+    return [];
+  }
+}
+
+/**
+ * Top target_id values for a given invitation_type, ordered by click volume.
+ * Used as a drill-down on the per-type row.
+ */
+export async function getInvitationTopTargets(
+  invitationType: InvitationType,
+  days: number = 30,
+  limit: number = 5
+): Promise<InvitationTopTarget[]> {
+  try {
+    const { data, error } = await supabase.rpc('get_invitation_top_targets', {
+      p_invitation_type: invitationType,
+      p_days: days,
+      p_limit: limit,
+    });
+    if (error) {
+      console.error('Error fetching invitation top targets:', error);
+      return [];
+    }
+    if (!data) return [];
+    return data.map((row: Record<string, unknown>) => ({
+      targetId: String(row.target_id),
+      clicks: Number(row.clicks) || 0,
+      uniqueDevices: Number(row.unique_devices) || 0,
+    }));
+  } catch (error) {
+    console.error('Error in getInvitationTopTargets:', error);
+    return [];
+  }
+}
+
+/**
+ * Daily click counts per invitation_type, zero-filled. Backed by
+ * `get_invitation_clicks_timeseries` RPC (admin-gated).
+ */
+export async function getInvitationTimeseries(days: number = 30): Promise<InvitationTimeseries> {
+  try {
+    const { data, error } = await supabase.rpc('get_invitation_clicks_timeseries', {
+      p_days: days,
+    });
+    if (error) {
+      console.error('Error fetching invitation timeseries:', error);
+      return {};
+    }
+    if (!data) return {};
+    const grouped: InvitationTimeseries = {};
+    for (const row of data as Array<Record<string, unknown>>) {
+      const type = String(row.invitation_type) as InvitationType;
+      const date = String(row.bucket_date);
+      const clicks = Number(row.clicks) || 0;
+      const list = grouped[type] ?? [];
+      list.push({ date, clicks });
+      grouped[type] = list;
+    }
+    return grouped;
+  } catch (error) {
+    console.error('Error in getInvitationTimeseries:', error);
+    return {};
+  }
+}
+
+/**
+ * Resolve raw target_id values to friendly entity names for the drill-down.
+ * Backed by `resolve_invitation_targets` RPC.
+ */
+export async function resolveInvitationTargets(
+  invitationType: InvitationType,
+  targetIds: string[]
+): Promise<Map<string, string>> {
+  if (targetIds.length === 0) return new Map();
+  try {
+    const { data, error } = await supabase.rpc('resolve_invitation_targets', {
+      p_invitation_type: invitationType,
+      p_target_ids: targetIds,
+    });
+    if (error) {
+      console.error('Error resolving invitation targets:', error);
+      return new Map();
+    }
+    const map = new Map<string, string>();
+    if (!data) return map;
+    for (const row of data as Array<Record<string, unknown>>) {
+      map.set(String(row.target_id), String(row.display_name));
+    }
+    return map;
+  } catch (error) {
+    console.error('Error in resolveInvitationTargets:', error);
+    return new Map();
+  }
+}
+
 export default {
   getRealtimeUserStats,
   getMatchStatistics,
@@ -3007,4 +3158,9 @@ export default {
   getSportActivityComparison,
   getSportGrowthTrends,
   getSportFacilityData,
+  // Invitations & Referrals
+  getInvitationStats,
+  getInvitationTopTargets,
+  getInvitationTimeseries,
+  resolveInvitationTargets,
 };

@@ -22,6 +22,10 @@ import {
   getWidgetTrends,
   buildDashboardWidgets,
   getPendingReportsCount,
+  getInvitationStats,
+  getInvitationTopTargets,
+  getInvitationTimeseries,
+  resolveInvitationTargets,
   type KPISummary,
   type RealtimeUserStats,
   type MatchStatistics,
@@ -29,6 +33,11 @@ import {
   type OnboardingFunnelStep,
   type MetricTrendPoint,
   type DashboardWidget,
+  type InvitationStat,
+  type InvitationTopTarget,
+  type InvitationType,
+  type InvitationTimeseries,
+  type InvitationTimeseriesPoint,
 } from '@rallia/shared-services';
 
 // =============================================================================
@@ -662,6 +671,209 @@ export function useAdminDashboardStats(enabled: boolean = true): UseAdminDashboa
   };
 }
 
+/**
+ * Hook for invitation/referral click stats grouped by invitation_type.
+ */
+export function useInvitationStats(days: number = 30): {
+  stats: InvitationStat[];
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<void>;
+} {
+  const [stats, setStats] = useState<InvitationStat[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const isMounted = useRef(true);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getInvitationStats(days);
+      if (isMounted.current) {
+        setStats(data);
+      }
+    } catch (err) {
+      console.error('Error fetching invitation stats:', err);
+      if (isMounted.current) {
+        setError(err as Error);
+      }
+    } finally {
+      if (isMounted.current) {
+        setLoading(false);
+      }
+    }
+  }, [days]);
+
+  useEffect(() => {
+    isMounted.current = true;
+    fetchData();
+    return () => {
+      isMounted.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [days]);
+
+  return { stats, loading, error, refetch: fetchData };
+}
+
+/**
+ * Hook for top target_id values within a single invitation_type.
+ * Pass `null` to skip the fetch (no type selected for drill-down).
+ */
+export function useInvitationTopTargets(
+  invitationType: InvitationType | null,
+  days: number = 30,
+  limit: number = 5
+): {
+  targets: InvitationTopTarget[];
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<void>;
+} {
+  const [targets, setTargets] = useState<InvitationTopTarget[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const isMounted = useRef(true);
+
+  const fetchData = useCallback(async () => {
+    if (!invitationType) {
+      setTargets([]);
+      return;
+    }
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getInvitationTopTargets(invitationType, days, limit);
+      if (isMounted.current) {
+        setTargets(data);
+      }
+    } catch (err) {
+      console.error('Error fetching invitation top targets:', err);
+      if (isMounted.current) {
+        setError(err as Error);
+      }
+    } finally {
+      if (isMounted.current) {
+        setLoading(false);
+      }
+    }
+  }, [invitationType, days, limit]);
+
+  useEffect(() => {
+    isMounted.current = true;
+    fetchData();
+    return () => {
+      isMounted.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invitationType, days, limit]);
+
+  return { targets, loading, error, refetch: fetchData };
+}
+
+/**
+ * Hook for daily invitation-click time-series, grouped by invitation_type.
+ */
+export function useInvitationTimeseries(days: number = 30): {
+  data: InvitationTimeseries;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<void>;
+} {
+  const [data, setData] = useState<InvitationTimeseries>({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const isMounted = useRef(true);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await getInvitationTimeseries(days);
+      if (isMounted.current) {
+        setData(result);
+      }
+    } catch (err) {
+      console.error('Error fetching invitation timeseries:', err);
+      if (isMounted.current) {
+        setError(err as Error);
+      }
+    } finally {
+      if (isMounted.current) {
+        setLoading(false);
+      }
+    }
+  }, [days]);
+
+  useEffect(() => {
+    isMounted.current = true;
+    fetchData();
+    return () => {
+      isMounted.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [days]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
+/**
+ * Hook for resolving raw target_id values to friendly entity names.
+ * Re-fetches when invitationType changes or when the joined targetIds string changes.
+ */
+export function useInvitationTargetNames(
+  invitationType: InvitationType | null,
+  targetIds: string[]
+): {
+  names: Map<string, string>;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<void>;
+} {
+  const [names, setNames] = useState<Map<string, string>>(new Map());
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const isMounted = useRef(true);
+  const idsKey = targetIds.join('|');
+
+  const fetchData = useCallback(async () => {
+    if (!invitationType || targetIds.length === 0) {
+      setNames(new Map());
+      return;
+    }
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await resolveInvitationTargets(invitationType, targetIds);
+      if (isMounted.current) {
+        setNames(result);
+      }
+    } catch (err) {
+      console.error('Error resolving invitation target names:', err);
+      if (isMounted.current) {
+        setError(err as Error);
+      }
+    } finally {
+      if (isMounted.current) {
+        setLoading(false);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invitationType, idsKey]);
+
+  useEffect(() => {
+    isMounted.current = true;
+    fetchData();
+    return () => {
+      isMounted.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invitationType, idsKey]);
+
+  return { names, loading, error, refetch: fetchData };
+}
+
 // Re-export types for convenience
 export type {
   KPISummary,
@@ -671,6 +883,11 @@ export type {
   OnboardingFunnelStep,
   MetricTrendPoint,
   DashboardWidget,
+  InvitationStat,
+  InvitationTopTarget,
+  InvitationType,
+  InvitationTimeseries,
+  InvitationTimeseriesPoint,
 } from '@rallia/shared-services';
 
 export default useAdminAnalytics;
