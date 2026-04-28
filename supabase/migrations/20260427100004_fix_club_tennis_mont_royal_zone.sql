@@ -1,6 +1,6 @@
 -- =============================================================================
 -- Migration: Fix Club de Tennis Mont-Royal zone assignment
--- Description: docs/GMA_Communautes_v2.xlsx (sheet 3) lists Club de Tennis
+-- Description: rallia-business/growth-strategy/GMA_Communautes_v2.xlsx (sheet 3) lists Club de Tennis
 --              Mont-Royal under the Jarry Serve (nord) communities, but the
 --              club's physical address (2106 Av. Grey, H4A 3N4) is in NDG,
 --              which the same spreadsheet maps to Monkland Ace (ouest). The

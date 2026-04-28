@@ -1,6 +1,6 @@
 -- =============================================================================
 -- Migration: Link GMA communities to existing facilities
--- Description: For each venue listed in docs/GMA_Communautes_v2.xlsx (sheet 3),
+-- Description: For each venue listed in rallia-business/growth-strategy/GMA_Communautes_v2.xlsx (sheet 3),
 --              find the matching facility by name (accent-insensitive) and
 --              insert network_favorite_facility rows for each assigned
 --              community. Unmatched venues are logged via RAISE NOTICE so they
