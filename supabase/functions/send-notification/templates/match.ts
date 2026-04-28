@@ -370,3 +370,150 @@ export function generateEmailHtml(
     ...(siteUrl && { siteUrl }),
   });
 }
+
+/**
+ * Mirrors `formatIntuitiveDateInTimezone` from
+ * packages/shared-utils/src/formatters/dateFormatter.ts so notifications use the
+ * same Today / Tomorrow / Weekday / Date cascade as the in-app match cards.
+ *
+ * - Today / Tomorrow → translated label (Today, Aujourd'hui, …).
+ * - Within 6 days → weekday name (Wednesday, Mercredi).
+ * - Further out → "Mon, Apr 28" / "lun. 28 avr." style.
+ */
+function formatNearbyDate(matchDate: string | undefined, timezone: string, locale: string): string {
+  if (!matchDate) return '';
+  const parts = matchDate.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(n => Number.isNaN(n))) return '';
+
+  const tz = timezone || 'America/Toronto';
+  const ymd = (d: Date) =>
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(d);
+
+  const now = new Date();
+  const today = ymd(now);
+  const tomorrowDate = new Date();
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrow = ymd(tomorrowDate);
+
+  if (matchDate === today) {
+    return t(locale, 'notification.nearby.today');
+  }
+  if (matchDate === tomorrow) {
+    return t(locale, 'notification.nearby.tomorrow');
+  }
+
+  // Compute day delta from midnight in the target timezone (matches util logic)
+  const todayMidnight = new Date(`${today}T00:00:00`);
+  const targetMidnight = new Date(`${matchDate}T00:00:00`);
+  const daysDiff = Math.round(
+    (targetMidnight.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  const capitalize = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+  // Anchor at 12:00 UTC like the shared util, so the date doesn't slip across timezones
+  const [y, m, d] = parts;
+  const anchored = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+
+  if (daysDiff >= 2 && daysDiff <= 6) {
+    const weekday = new Intl.DateTimeFormat(locale, {
+      timeZone: tz,
+      weekday: 'long',
+    }).format(anchored);
+    return capitalize(weekday);
+  }
+
+  return capitalize(
+    new Intl.DateTimeFormat(locale, {
+      timeZone: tz,
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    }).format(anchored)
+  );
+}
+
+/**
+ * Format a HH:MM time for the nearby_match push body.
+ * EN: "6:30 PM". FR: "18:30".
+ */
+function formatNearbyTime(startTime: string | undefined, locale: string): string {
+  if (!startTime) return '';
+  const [hStr, mStr] = startTime.split(':');
+  const h = Number(hStr);
+  const m = Number(mStr);
+  if (Number.isNaN(h) || Number.isNaN(m)) return '';
+  if (locale.startsWith('fr')) {
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${period}`;
+}
+
+/**
+ * Render the localized {title, body} for a `nearby_match_available` push.
+ *
+ * The trigger writes a compact English fallback into notification.title/body,
+ * but the lock-screen experience should be in the recipient's preferred locale.
+ * Each segment is conditionally rendered so a match without a min rating, a
+ * custom location, or unknown spots count doesn't leak empty placeholders.
+ */
+export function renderNearbyMatchPush(
+  payload: Record<string, unknown> | null | undefined,
+  locale: string
+): { title: string; body: string } {
+  const sportNameRaw = (payload?.sportName as string | undefined)?.trim();
+  const sportName = sportNameRaw ? sportNameRaw.toLowerCase() : '';
+
+  const hostNameRaw = (payload?.hostName as string | undefined)?.trim();
+  const timezone = (payload?.timezone as string | undefined) ?? 'America/Toronto';
+
+  const matchDate = formatNearbyDate(payload?.matchDate as string | undefined, timezone, locale);
+  const timeFormatted = formatNearbyTime(payload?.startTime as string | undefined, locale);
+  const startTime = timeFormatted
+    ? t(locale, 'notification.nearby.startTimePrefix', { time: timeFormatted })
+    : '';
+  const locationNameRaw = (payload?.locationName as string | undefined)?.trim();
+  const locationName = locationNameRaw
+    ? t(locale, 'notification.nearby.locationPrefix', { location: locationNameRaw })
+    : '';
+
+  const minRating = payload?.minRatingScore as string | undefined;
+  const minRatingLabel = minRating
+    ? t(locale, 'notification.nearby.minRatingPrefix', { score: minRating })
+    : '';
+
+  const spotsRaw = payload?.spotsLeft;
+  const spotsCount = typeof spotsRaw === 'number' ? spotsRaw : Number(spotsRaw);
+  const spotsLabel =
+    Number.isFinite(spotsCount) && spotsCount > 0
+      ? t(
+          locale,
+          spotsCount === 1
+            ? 'notification.nearby.spotsLabel'
+            : 'notification.nearby.spotsLabel_plural',
+          { count: String(spotsCount) }
+        )
+      : '';
+
+  const hostLabel = hostNameRaw
+    ? t(locale, 'notification.nearby.hostLabel', { hostName: hostNameRaw })
+    : '';
+
+  const title = t(locale, 'notification.nearby.title', { sportName });
+  const body = t(locale, 'notification.nearby.body', {
+    matchDate,
+    startTime,
+    locationName,
+    minRatingLabel,
+    spotsLabel,
+    hostLabel,
+  });
+
+  return { title, body: body.trim() };
+}

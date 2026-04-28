@@ -180,6 +180,34 @@ const translations: Translations = {
     'sms.at': 'at {location}',
     'sms.gameOn': 'Game on {date}',
     'sms.separator': ' - ',
+
+    // Push: nearby_match_available
+    'notification.nearby.title': 'New {sportName} game nearby',
+    'notification.nearby.body':
+      '{matchDate}{startTime}{locationName}{minRatingLabel}{spotsLabel}{hostLabel}',
+    'notification.nearby.hostLabel': ' · with {hostName}',
+    'notification.nearby.startTimePrefix': ' at {time}',
+    'notification.nearby.locationPrefix': ' · {location}',
+    'notification.nearby.minRatingPrefix': ' · {score}+',
+    'notification.nearby.spotsLabel': ' · {count} spot left',
+    'notification.nearby.spotsLabel_plural': ' · {count} spots left',
+    'notification.nearby.today': 'Today',
+    'notification.nearby.tomorrow': 'Tomorrow',
+
+    // Morning digest
+    'digest.subject': 'Your morning game briefing',
+    'digest.preheader': 'Upcoming games near you + players to challenge this week',
+    'digest.heading': 'Good morning, {firstName}',
+    'digest.headingDefault': 'Good morning',
+    'digest.intro': "Here's what's coming up near you this week.",
+    'digest.matchesSection': 'Games near you',
+    'digest.suggestionsSection': 'Players to challenge',
+    'digest.joinButton': 'Join',
+    'digest.challengeButton': 'Challenge',
+    'digest.browseAll': 'Browse all games',
+    'digest.disclaimer':
+      "You're receiving this email because you have a Rallia account. To stop these emails, update your notification preferences in the app.",
+    'digest.footerNote': 'Rallia — Find players, join games, play more',
   },
 
   'fr-CA': {
@@ -357,6 +385,34 @@ const translations: Translations = {
     'sms.at': 'à {location}',
     'sms.gameOn': 'Partie le {date}',
     'sms.separator': ' — ',
+
+    // Push: nearby_match_available
+    'notification.nearby.title': 'Nouvelle partie de {sportName} près de toi',
+    'notification.nearby.body':
+      '{matchDate}{startTime}{locationName}{minRatingLabel}{spotsLabel}{hostLabel}',
+    'notification.nearby.hostLabel': ' · avec {hostName}',
+    'notification.nearby.startTimePrefix': ' à {time}',
+    'notification.nearby.locationPrefix': ' · {location}',
+    'notification.nearby.minRatingPrefix': ' · {score}+',
+    'notification.nearby.spotsLabel': ' · {count} place libre',
+    'notification.nearby.spotsLabel_plural': ' · {count} places libres',
+    'notification.nearby.today': "Aujourd'hui",
+    'notification.nearby.tomorrow': 'Demain',
+
+    // Morning digest
+    'digest.subject': 'Ton briefing matinal de partie',
+    'digest.preheader': 'Parties à venir près de toi + joueurs à défier cette semaine',
+    'digest.heading': 'Bonjour, {firstName}',
+    'digest.headingDefault': 'Bonjour',
+    'digest.intro': 'Voici ce qui se passe près de toi cette semaine.',
+    'digest.matchesSection': 'Parties près de toi',
+    'digest.suggestionsSection': 'Joueurs à défier',
+    'digest.joinButton': 'Rejoindre',
+    'digest.challengeButton': 'Défier',
+    'digest.browseAll': 'Voir toutes les parties',
+    'digest.disclaimer':
+      "Tu reçois ce courriel parce que tu as un compte Rallia. Pour arrêter ces courriels, modifie tes préférences de notification dans l'application.",
+    'digest.footerNote': 'Rallia — Trouve des joueurs, rejoins des parties, joue plus',
   },
 };
 
