@@ -19,10 +19,10 @@
   },
   "devDependencies": {
     "@rallia/eslint-config": "*",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   },
   "peerDependencies": {
-    "tailwindcss": ">=3.0.0"
+    "tailwindcss": "^4.2.4"
   },
   "peerDependenciesMeta": {
     "tailwindcss": {
