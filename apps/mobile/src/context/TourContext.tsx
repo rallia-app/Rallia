@@ -26,10 +26,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
-  StatusBar,
   InteractionManager,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from '../hooks';
 import { useThemeStyles } from '@rallia/shared-hooks';
 import { tourService, TourId, TourStatus } from '@rallia/shared-services';
@@ -554,36 +552,20 @@ const buildSpotlightPath = (args: any): string => {
 };
 
 export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
-  const insets = useSafeAreaInsets();
   const { colors } = useThemeStyles();
 
-  // Calculate the correct vertical offset for Android
-  // On Android with translucent status bar:
-  // - measure() returns coordinates from top of window (below status bar)
-  // - But the Modal in copilot renders from top of screen (including status bar)
-  // - So we need to ADD the status bar height as offset
-  //
-  // On iOS:
-  // - measure() returns coordinates including safe area
-  // - No adjustment needed
-  const androidStatusBarHeight = StatusBar.currentHeight || 0;
-
-  // Use negative offset on Android to move highlight UP to match the actual element
-  // The safe area top inset is more accurate than StatusBar.currentHeight on many devices
-  // We use the larger of the two values to ensure proper offset
-  const offset = Math.max(androidStatusBarHeight, insets.top);
-  const verticalOffset = Platform.OS === 'android' ? -offset : 0;
-
+  // With `androidStatusBarVisible={true}` and expo-status-bar (translucent by
+  // default), the Copilot Modal and `measure()` share the same coordinate
+  // origin (top of the window, including the status bar area on Android), so
+  // no manual offset is needed on either platform.
   return (
     <CopilotProvider
       tooltipComponent={CustomTooltip}
       stepNumberComponent={() => null} // We handle step numbers in the tooltip
       animated
       overlay="svg"
-      // androidStatusBarVisible={true} = copilot won't subtract StatusBar.currentHeight
-      // We handle the offset ourselves for more control
       androidStatusBarVisible={true}
-      verticalOffset={verticalOffset}
+      verticalOffset={0}
       arrowColor={colors.cardBackground}
       backdropColor="rgba(0, 0, 0, 0.7)"
       svgMaskPath={buildSpotlightPath}
