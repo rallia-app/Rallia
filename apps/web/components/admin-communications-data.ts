@@ -188,6 +188,7 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
   { id: 'auth_confirmation', label: 'Confirmation', category: 'Auth' },
   { id: 'auth_magic_link', label: 'Magic Link', category: 'Auth' },
   { id: 'welcome', label: 'Onboarding Complete', category: 'Onboarding' },
+  { id: 'morning_digest', label: 'Morning Digest', category: 'Digest' },
   { id: 'invitation_org', label: 'Organization', category: 'Invitation' },
   { id: 'invitation_platform', label: 'Platform', category: 'Invitation' },
   { id: 'notification_generic', label: 'Generic', category: 'Notification', notifType: 'system' },

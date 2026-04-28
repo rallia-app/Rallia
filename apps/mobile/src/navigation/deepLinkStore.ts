@@ -36,6 +36,8 @@ export type DeepLinkPayload =
   | { type: 'match'; matchId: string }
   | { type: 'group'; inviteCode: string }
   | { type: 'community'; inviteCode: string }
+  | { type: 'publicMatches' }
+  | { type: 'matchupSuggestions' }
   | {
       type: 'invitation';
       referralCode: string;
@@ -111,6 +113,10 @@ function persistToAsyncStorage(payload: DeepLinkPayload): void {
         targetId: payload.targetId,
       };
       break;
+    case 'publicMatches':
+      return; // nothing to persist
+    case 'matchupSuggestions':
+      return; // nothing to persist
   }
   AsyncStorage.setItem(PENDING_REFERRAL_KEY, JSON.stringify(referral)).catch(() => {});
 }
