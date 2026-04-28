@@ -62,6 +62,16 @@ function extractDeepLinkPayload(path: string): DeepLinkPayload | null {
     return { type: 'match', matchId: matchLink[1] };
   }
 
+  // /games — browse public matches
+  if (path === '/games' || path.startsWith('/games?')) {
+    return { type: 'publicMatches' };
+  }
+
+  // /suggestions — open matchup suggestions sheet
+  if (path === '/suggestions' || path.startsWith('/suggestions?')) {
+    return { type: 'matchupSuggestions' };
+  }
+
   // /invite/:referralCode?type=...&id=...
   const inviteLink = path.match(/^\/invite\/([A-Za-z0-9]+)/);
   if (inviteLink) {

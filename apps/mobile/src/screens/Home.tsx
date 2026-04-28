@@ -393,6 +393,17 @@ const Home = () => {
           }
           break;
         }
+        case 'publicMatches': {
+          appNavigation.navigate('Main', {
+            screen: 'Home',
+            params: { screen: 'PublicMatches' },
+          } as never);
+          break;
+        }
+        case 'matchupSuggestions': {
+          SheetManager.show('match-suggestions');
+          break;
+        }
         case 'invitation': {
           if (payload.invitationType === 'match' && payload.targetId) {
             const match = await getMatchWithDetails(payload.targetId);

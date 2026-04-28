@@ -78,6 +78,36 @@
               "scheme": "https",
               "host": "rallia.app",
               "pathPattern": "/.*/community/join/.*"
+            },
+            {
+              "scheme": "https",
+              "host": "rallia.app",
+              "pathPrefix": "/player"
+            },
+            {
+              "scheme": "https",
+              "host": "rallia.app",
+              "pathPattern": "/.*/player/.*"
+            },
+            {
+              "scheme": "https",
+              "host": "rallia.app",
+              "path": "/games"
+            },
+            {
+              "scheme": "https",
+              "host": "rallia.app",
+              "pathPattern": "/.*/games"
+            },
+            {
+              "scheme": "https",
+              "host": "rallia.app",
+              "path": "/suggestions"
+            },
+            {
+              "scheme": "https",
+              "host": "rallia.app",
+              "pathPattern": "/.*/suggestions"
             }
           ],
           "category": ["BROWSABLE", "DEFAULT"]

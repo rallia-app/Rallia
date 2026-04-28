@@ -13,6 +13,7 @@ import { renderInvitationEmail } from '../send-email/templates/invitation.ts';
 import { renderNotificationEmail } from '../send-email/templates/notification.ts';
 import { renderMatchInterestEmail } from '../send-email/templates/match-interest.ts';
 import { renderWelcomeEmail } from '../send-email/templates/welcome.ts';
+import { renderMorningDigestEmail } from '../send-morning-digest/template.ts';
 import type { NotificationRecord, OrganizationInfo } from '../send-notification/types.ts';
 import type {
   InvitationEmailPayload,
@@ -1094,6 +1095,124 @@ const TEMPLATES: TemplateEntry[] = [
         openAppUrl: PREVIEW_SITE_URL,
       };
       return renderWelcomeEmail(payload, locale).html;
+    },
+  },
+
+  // ---- Morning digest ----
+  {
+    id: 'morning_digest',
+    label: 'Morning Digest',
+    category: 'Digest',
+    render: locale => {
+      const DAY2 = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
+      const DAY4 = new Date(Date.now() + 4 * 86400000).toISOString().slice(0, 10);
+      return renderMorningDigestEmail({
+        firstName: 'Alex',
+        locale,
+        appUrl: PREVIEW_SITE_URL,
+        matches: [
+          {
+            id: 'match-preview-001',
+            match_date: MATCH_DATE,
+            start_time: '14:00:00',
+            end_time: '15:30:00',
+            sport_name: 'Tennis',
+            facility_name: 'Parc La Fontaine',
+            facility_city: 'Montréal',
+            format: 'singles',
+            join_mode: 'direct',
+            player_expectation: 'casual',
+            is_court_free: true,
+            estimated_cost: null,
+            court_status: 'confirmed',
+            joined_count: 1,
+            total_spots: 2,
+            distance_km: 1.2,
+          },
+          {
+            id: 'match-preview-002',
+            match_date: DAY2,
+            start_time: '18:00:00',
+            end_time: '20:00:00',
+            sport_name: 'Tennis',
+            facility_name: 'Centre Claude-Robillard',
+            facility_city: 'Montréal',
+            format: 'doubles',
+            join_mode: 'request',
+            player_expectation: 'competitive',
+            is_court_free: false,
+            estimated_cost: 20,
+            court_status: null,
+            joined_count: 2,
+            total_spots: 4,
+            distance_km: 3.8,
+          },
+          {
+            id: 'match-preview-003',
+            match_date: DAY4,
+            start_time: '10:00:00',
+            end_time: '11:30:00',
+            sport_name: 'Padel',
+            facility_name: 'Club Sportif MAA',
+            facility_city: 'Montréal',
+            format: 'doubles',
+            join_mode: 'direct',
+            player_expectation: 'both',
+            is_court_free: false,
+            estimated_cost: 40,
+            court_status: 'confirmed',
+            joined_count: 3,
+            total_spots: 4,
+            distance_km: 6.1,
+          },
+        ],
+        suggestions: [
+          {
+            opponent_id: 'player-preview-001',
+            opponent_first_name: 'Alex',
+            opponent_last_name: 'Johnson',
+            opponent_rating_label: '3.5 · Intermédiaire',
+            opponent_reputation_tier: 'gold',
+            sport_name: 'Tennis',
+            facility_name: 'Parc La Fontaine',
+            facility_city: 'Montréal',
+            overlapping_days_periods: [
+              { day: 'monday', period: 'morning' },
+              { day: 'wednesday', period: 'morning' },
+              { day: 'friday', period: 'afternoon' },
+            ],
+          },
+          {
+            opponent_id: 'player-preview-002',
+            opponent_first_name: 'Marie',
+            opponent_last_name: 'Dupont',
+            opponent_rating_label: '4.0 · Avancé',
+            opponent_reputation_tier: 'platinum',
+            sport_name: 'Tennis',
+            facility_name: 'Club Sportif MAA',
+            facility_city: 'Montréal',
+            overlapping_days_periods: [
+              { day: 'tuesday', period: 'evening' },
+              { day: 'thursday', period: 'evening' },
+              { day: 'saturday', period: 'morning' },
+            ],
+          },
+          {
+            opponent_id: 'player-preview-003',
+            opponent_first_name: 'Luca',
+            opponent_last_name: 'Rossi',
+            opponent_rating_label: '3.0 · Débutant avancé',
+            opponent_reputation_tier: 'silver',
+            sport_name: 'Tennis',
+            facility_name: 'Parc La Fontaine',
+            facility_city: 'Montréal',
+            overlapping_days_periods: [
+              { day: 'wednesday', period: 'afternoon' },
+              { day: 'saturday', period: 'afternoon' },
+            ],
+          },
+        ],
+      }).html;
     },
   },
 
