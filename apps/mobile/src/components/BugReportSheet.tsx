@@ -9,6 +9,7 @@
  */
 
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   View,
   StyleSheet,
@@ -23,7 +24,13 @@ import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-
 import { Ionicons } from '@expo/vector-icons';
 import * as Application from 'expo-application';
 import { Text, useToast } from '@rallia/shared-components';
-import { useTheme, usePlacesAutocomplete, type PlaceDetails } from '@rallia/shared-hooks';
+import {
+  useTheme,
+  usePlacesAutocomplete,
+  useToggleFeedbackVote,
+  getCachedFeedbackById,
+  type PlaceDetails,
+} from '@rallia/shared-hooks';
 import {
   submitUserFeedback,
   Logger,
@@ -36,8 +43,6 @@ import {
   type MissingCourtFeedbackMetadata,
   type PublicFeedback,
   type PublicFeedbackCategory,
-  upvoteFeedback,
-  removeFeedbackUpvote,
 } from '@rallia/shared-services';
 import { lightHaptic, successHaptic, warningHaptic, selectionHaptic } from '@rallia/shared-utils';
 import {
@@ -52,6 +57,7 @@ import {
 } from '@rallia/design-system';
 
 import { useAuth, useTranslation, type TranslationKey, useImagePicker } from '../hooks';
+import { useActionsSheet } from '../context';
 import { uploadImage } from '../services/imageUpload';
 import { FeedbackBrowseList } from './feedback/FeedbackBrowseList';
 import { FeedbackDetailView } from './feedback/FeedbackDetailView';
@@ -169,13 +175,22 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
   const toast = useToast();
   const isDark = theme === 'dark';
   const { pickMultipleFromGallery } = useImagePicker({ skipEditing: true });
+  const queryClient = useQueryClient();
+  const toggleFeedbackVote = useToggleFeedbackVote();
+  const { openSheet: openAuthSheet } = useActionsSheet();
 
   // View router state
   const [view, setView] = useState<'browse' | 'detail' | 'compose'>(initialView);
   const [browseCategory, setBrowseCategory] = useState<PublicFeedbackCategory>(
     initialCategory === 'feature' ? 'feature' : 'bug'
   );
-  const [detailItem, setDetailItem] = useState<PublicFeedback | null>(null);
+  // Detail view tracks the row id and a snapshot. The cache is the source of
+  // truth — the snapshot is only a fallback for rows that fall out of the
+  // active list query (e.g., category swap with detail still open).
+  const [detailItemId, setDetailItemId] = useState<string | null>(null);
+  const detailSnapshotRef = useRef<PublicFeedback | null>(null);
+  const cachedDetail = detailItemId ? getCachedFeedbackById(queryClient, detailItemId) : undefined;
+  const detailItem = cachedDetail ?? detailSnapshotRef.current;
 
   // Shared state
   const [selectedCategory, setSelectedCategory] = useState<UserFeedbackCategory | null>(
@@ -337,7 +352,8 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
       setIsSubmitting(false);
       resetCategoryFields();
       setView('browse');
-      setDetailItem(null);
+      setDetailItemId(null);
+      detailSnapshotRef.current = null;
     }, 300);
   }, [resetCategoryFields]);
 
@@ -350,13 +366,15 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
 
   const handleSelectBrowseItem = useCallback((item: PublicFeedback) => {
     void lightHaptic();
-    setDetailItem(item);
+    detailSnapshotRef.current = item;
+    setDetailItemId(item.id);
     setView('detail');
   }, []);
 
   const handleBackFromDetail = useCallback(() => {
     void lightHaptic();
-    setDetailItem(null);
+    setDetailItemId(null);
+    detailSnapshotRef.current = null;
     setView('browse');
   }, []);
 
@@ -365,42 +383,28 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
     setView('browse');
   }, []);
 
-  // Toggle vote inside the detail view (not via the browse hook).
-  const handleDetailToggleVote = useCallback(async () => {
-    if (!detailItem || !session?.user?.id) return;
-    const wasVoted = detailItem.has_voted;
-
-    // Optimistic update locally on the detail snapshot.
-    setDetailItem(prev =>
-      prev
-        ? {
-            ...prev,
-            has_voted: !wasVoted,
-            upvote_count: Math.max(0, prev.upvote_count + (wasVoted ? -1 : 1)),
-          }
-        : prev
-    );
-
-    try {
-      if (wasVoted) {
-        await removeFeedbackUpvote(detailItem.id, session.user.id);
-      } else {
-        await upvoteFeedback(detailItem.id, session.user.id);
-      }
-    } catch (error) {
-      // Roll back.
-      setDetailItem(prev =>
-        prev
-          ? {
-              ...prev,
-              has_voted: wasVoted,
-              upvote_count: Math.max(0, prev.upvote_count + (wasVoted ? 1 : -1)),
-            }
-          : prev
-      );
-      Logger.error('Failed to toggle vote', error as Error);
+  // Toggle vote inside the detail view. The mutation updates the shared
+  // browse cache, so the list reflects the new state when the user navigates
+  // back without an extra refetch.
+  const handleDetailToggleVote = useCallback(() => {
+    if (!detailItem) return;
+    if (!session?.user?.id) {
+      openAuthSheet();
+      return;
     }
-  }, [detailItem, session?.user?.id]);
+    toggleFeedbackVote.mutate(
+      {
+        feedbackId: detailItem.id,
+        wasVoted: detailItem.has_voted,
+        playerId: session.user.id,
+      },
+      {
+        onError: error => {
+          Logger.error('Failed to toggle vote', error as Error);
+        },
+      }
+    );
+  }, [detailItem, session?.user?.id, openAuthSheet, toggleFeedbackVote]);
 
   // Handle category selection — reset fields when switching
   const handleCategorySelect = useCallback(

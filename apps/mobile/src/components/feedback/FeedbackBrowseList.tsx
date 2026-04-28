@@ -10,6 +10,7 @@
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  FlatList,
   RefreshControl,
   StyleSheet,
   TextInput,
@@ -17,7 +18,6 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ScrollView } from 'react-native-actions-sheet';
 
 import { Text } from '@rallia/shared-components';
 import {
@@ -29,12 +29,19 @@ import {
   secondary,
   spacingPixels,
 } from '@rallia/design-system';
-import { useDebounce, useFeedbackBrowse, useTheme } from '@rallia/shared-hooks';
+import {
+  useDebounce,
+  useFeedbackBrowse,
+  useTheme,
+  useToggleFeedbackVote,
+} from '@rallia/shared-hooks';
 import type { PublicFeedback, PublicFeedbackCategory } from '@rallia/shared-services';
 import { selectionHaptic } from '@rallia/shared-utils';
 
+import { useActionsSheet } from '../../context';
 import { useTranslation, type TranslationKey } from '../../hooks';
 import { FeedbackListItem } from './FeedbackListItem';
+import { FeedbackListItemSkeleton } from './FeedbackListItemSkeleton';
 
 interface FeedbackBrowseListProps {
   category: PublicFeedbackCategory;
@@ -43,6 +50,8 @@ interface FeedbackBrowseListProps {
   onCreate: () => void;
   playerId: string | null | undefined;
 }
+
+const SKELETON_ROWS = 4;
 
 const CATEGORY_TABS: Array<{
   value: PublicFeedbackCategory;
@@ -62,14 +71,24 @@ export const FeedbackBrowseList: React.FC<FeedbackBrowseListProps> = ({
 }) => {
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const { openSheet: openAuthSheet } = useActionsSheet();
   const isDark = theme === 'dark';
   const themeColors = isDark ? darkTheme : lightTheme;
 
   const [searchText, setSearchText] = useState('');
   const debouncedSearch = useDebounce(searchText, 300);
 
-  const { items, isLoading, isLoadingMore, hasMore, refresh, loadMore, toggleVote } =
-    useFeedbackBrowse({ category, playerId, search: debouncedSearch });
+  const {
+    items,
+    isLoading,
+    isRefetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    refresh,
+  } = useFeedbackBrowse({ category, playerId, search: debouncedSearch });
+
+  const toggleVote = useToggleFeedbackVote();
 
   const handleTabPress = useCallback(
     (next: PublicFeedbackCategory) => {
@@ -81,8 +100,29 @@ export const FeedbackBrowseList: React.FC<FeedbackBrowseListProps> = ({
   );
 
   const handleEndReached = useCallback(() => {
-    if (!isLoadingMore && hasMore) void loadMore();
-  }, [isLoadingMore, hasMore, loadMore]);
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const handleRefresh = useCallback(() => {
+    void refresh();
+  }, [refresh]);
+
+  const handleToggleVote = useCallback(
+    (item: PublicFeedback) => {
+      if (!playerId) {
+        openAuthSheet();
+        return;
+      }
+      toggleVote.mutate({
+        feedbackId: item.id,
+        wasVoted: item.has_voted,
+        playerId,
+      });
+    },
+    [playerId, openAuthSheet, toggleVote]
+  );
 
   const colors = {
     text: themeColors.foreground,
@@ -92,6 +132,49 @@ export const FeedbackBrowseList: React.FC<FeedbackBrowseListProps> = ({
     inputBg: isDark ? neutral[800] : neutral[50],
     tabInactive: isDark ? neutral[800] : neutral[100],
   };
+
+  const renderItem = useCallback(
+    ({ item }: { item: PublicFeedback }) => (
+      <FeedbackListItem
+        item={item}
+        onPress={() => onSelectItem(item)}
+        onToggleVote={() => handleToggleVote(item)}
+        isDark={isDark}
+        textColor={colors.text}
+        mutedColor={colors.muted}
+        borderColor={colors.border}
+        cardColor={colors.card}
+      />
+    ),
+    [onSelectItem, handleToggleVote, isDark, colors.text, colors.muted, colors.border, colors.card]
+  );
+
+  const renderEmpty = useCallback(
+    () => (
+      <View style={styles.centered}>
+        <Ionicons
+          name={category === 'bug' ? 'bug-outline' : 'bulb-outline'}
+          size={42}
+          color={colors.muted}
+        />
+        <Text size="sm" color={colors.muted} style={styles.emptyText}>
+          {t(
+            (category === 'bug'
+              ? 'feedback.browse.empty.bug'
+              : 'feedback.browse.empty.feature') as TranslationKey
+          )}
+        </Text>
+      </View>
+    ),
+    [category, colors.muted, t]
+  );
+
+  const renderFooter = useCallback(() => {
+    if (!isFetchingNextPage) return null;
+    return (
+      <ActivityIndicator color={secondary[500]} style={{ marginVertical: spacingPixels[3] }} />
+    );
+  }, [isFetchingNextPage]);
 
   return (
     <View style={styles.root}>
@@ -148,62 +231,41 @@ export const FeedbackBrowseList: React.FC<FeedbackBrowseListProps> = ({
       </View>
 
       {/* List */}
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={isLoading && items.length > 0}
-            onRefresh={refresh}
-            tintColor={colors.muted}
-          />
-        }
-        onScrollEndDrag={handleEndReached}
-        keyboardShouldPersistTaps="handled"
-      >
-        {isLoading && items.length === 0 ? (
-          <View style={styles.centered}>
-            <ActivityIndicator color={secondary[500]} />
-          </View>
-        ) : items.length === 0 ? (
-          <View style={styles.centered}>
-            <Ionicons
-              name={category === 'bug' ? 'bug-outline' : 'bulb-outline'}
-              size={42}
-              color={colors.muted}
+      {isLoading && items.length === 0 ? (
+        <View style={styles.skeletonList}>
+          {Array.from({ length: SKELETON_ROWS }).map((_, i) => (
+            <FeedbackListItemSkeleton
+              key={i}
+              isDark={isDark}
+              borderColor={colors.border}
+              cardColor={colors.card}
             />
-            <Text size="sm" color={colors.muted} style={styles.emptyText}>
-              {t(
-                (category === 'bug'
-                  ? 'feedback.browse.empty.bug'
-                  : 'feedback.browse.empty.feature') as TranslationKey
-              )}
-            </Text>
-          </View>
-        ) : (
-          <>
-            {items.map(item => (
-              <FeedbackListItem
-                key={item.id}
-                item={item}
-                onPress={() => onSelectItem(item)}
-                onToggleVote={() => void toggleVote(item.id)}
-                isDark={isDark}
-                textColor={colors.text}
-                mutedColor={colors.muted}
-                borderColor={colors.border}
-                cardColor={colors.card}
-              />
-            ))}
-            {isLoadingMore && (
-              <ActivityIndicator
-                color={secondary[500]}
-                style={{ marginVertical: spacingPixels[3] }}
-              />
-            )}
-          </>
-        )}
-      </ScrollView>
+          ))}
+        </View>
+      ) : (
+        <FlatList
+          data={items}
+          keyExtractor={item => item.id}
+          renderItem={renderItem}
+          ListEmptyComponent={renderEmpty}
+          ListFooterComponent={renderFooter}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.3}
+          contentContainerStyle={[
+            styles.scrollContent,
+            items.length === 0 && styles.emptyListContent,
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={handleRefresh}
+              tintColor={colors.muted}
+            />
+          }
+        />
+      )}
 
       {/* Sticky CTA */}
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
@@ -261,12 +323,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     padding: 0,
   },
-  scroll: {
-    flex: 1,
-  },
   scrollContent: {
     padding: spacingPixels[4],
     paddingBottom: spacingPixels[6],
+  },
+  emptyListContent: {
+    flexGrow: 1,
+  },
+  skeletonList: {
+    flex: 1,
+    padding: spacingPixels[4],
   },
   centered: {
     alignItems: 'center',
