@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import Purchases, { LOG_LEVEL } from 'react-native-purchases';
 import type { CustomerInfo, PurchasesOffering } from 'react-native-purchases';
+import { Logger } from '../services/logger';
 
 const RC_API_KEY_IOS = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? '';
 const RC_OFFERING_OVERRIDE = process.env.EXPO_PUBLIC_REVENUECAT_OFFERING ?? '';
@@ -10,14 +11,22 @@ export const PRO_ENTITLEMENT_ID = 'Rallia Pro';
 // RevenueCat is currently configured for iOS only. Calling into the native
 // module on Android with an iOS-only API key crashes the app, so every entry
 // point here must short-circuit on non-iOS platforms.
-export const isRevenueCatSupported = Platform.OS === 'ios';
+export const isRevenueCatSupported = Platform.OS === 'ios' && RC_API_KEY_IOS.length > 0;
 
 let _initialized = false;
 
 export function initRevenueCat(): void {
-  if (!isRevenueCatSupported) return;
+  if (Platform.OS !== 'ios') return;
   if (_initialized) return;
   _initialized = true;
+  if (!RC_API_KEY_IOS) {
+    // Inlined at build time — empty here means the EAS env var was missing for this build profile.
+    Logger.error(
+      'RevenueCat iOS key missing at build time; skipping configure',
+      new Error('EXPO_PUBLIC_REVENUECAT_IOS_KEY is empty')
+    );
+    return;
+  }
   if (__DEV__) {
     Purchases.setLogLevel(LOG_LEVEL.DEBUG);
   }
