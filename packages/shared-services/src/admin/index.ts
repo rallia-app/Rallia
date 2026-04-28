@@ -74,6 +74,10 @@ export type {
   SportActivityComparison,
   SportGrowthTrend,
   SportFacilityData,
+  InvitationStat,
+  InvitationTopTarget,
+  InvitationTimeseriesPoint,
+  InvitationTimeseries,
 } from './analyticsService';
 
 // Analytics Service - Functions
@@ -118,6 +122,10 @@ export {
   getSportActivityComparison,
   getSportGrowthTrends,
   getSportFacilityData,
+  getInvitationStats,
+  getInvitationTopTargets,
+  getInvitationTimeseries,
+  resolveInvitationTargets,
 } from './analyticsService';
 
 // Audit Service - Types

@@ -28,6 +28,7 @@ import { EditCommunityActionSheet } from '../features/communities/components/Edi
 import { PendingRequestsActionSheet } from '../features/communities/components/PendingRequestsSheet';
 // Matches components
 import { MatchTypeActionSheet } from '../features/matches/components/MatchTypeModal';
+import { ShareToFacebookActionSheet } from '../features/matches/components/ShareToFacebookSheet';
 import { ScoreConfirmationActionSheet } from '../features/matches/components/ScoreConfirmationModal';
 import { RegisterMatchScoreActionSheet } from '../features/matches/components/RegisterMatchScoreSheet';
 import { CourtSelectionActionSheet } from '../features/matches/components/CourtSelectionSheet';
@@ -298,6 +299,11 @@ declare module 'react-native-actions-sheet' {
     'match-type': SheetDefinition<{
       payload: {
         onSelect?: (type: 'single' | 'double') => void;
+      };
+    }>;
+    'share-to-facebook': SheetDefinition<{
+      payload: {
+        matchId: string;
       };
     }>;
     'score-confirmation': SheetDefinition<{
@@ -736,6 +742,7 @@ export const Sheets = () => {
         'edit-community': EditCommunityActionSheet,
         'pending-requests': PendingRequestsActionSheet,
         'match-type': MatchTypeActionSheet,
+        'share-to-facebook': ShareToFacebookActionSheet,
         'score-confirmation': ScoreConfirmationActionSheet,
         'register-match-score': RegisterMatchScoreActionSheet,
         'court-selection': CourtSelectionActionSheet,

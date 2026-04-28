@@ -166,3 +166,176 @@ export async function shareMatch(match: MatchDetailData, options: ShareOptions):
     title: `${match.sport?.name || 'Game'} on Rallia`,
   });
 }
+
+/**
+ * Capitalize the first character of a string.
+ */
+function capitalizeFirst(value: string): string {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+/**
+ * Format a money amount for inline use in the share message.
+ * Drops trailing `.00` for whole dollars, keeps two decimals otherwise.
+ */
+function formatMoney(amount: number): string {
+  const rounded = Math.round(amount * 100) / 100;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
+}
+
+/**
+ * Format a rating score (e.g. NTRP 3.0, UTR 4.5) with at least one decimal —
+ * "3" → "3.0", "3.5" → "3.5", "4" → "4.0".
+ */
+function formatRatingScore(score: number): string {
+  return Number.isInteger(score) ? score.toFixed(1) : String(score);
+}
+
+/**
+ * Generate a conversational Facebook-group-style post for a match.
+ *
+ * Designed to read like an actual human post in a Facebook group, not a
+ * structured invitation. Each available field (location, format, duration,
+ * rating) flows inline as a sentence rather than being labelled.
+ *
+ * @example (English, singles + casual + court booked + free + 3.5+)
+ * "Looking for a partner on Mon, Jan 20 at 2:00 PM. Heading to Central Park Courts, court's already booked. It's free. Pretty chill, about 1 hour, 3.5+ would be great.
+ *
+ * Hit the link if you're in.
+ * https://rallia.app/match/abc123"
+ */
+export function generateFacebookPostMessage(match: MatchDetailData, options: ShareOptions): string {
+  const { t, locale } = options;
+  const date = formatShareDate(match.match_date, locale, match.timezone);
+  const time = match.start_time ? formatShareTime(match.start_time, locale) : '';
+  const location = match.location_name || match.facility?.name || null;
+  const deepLink = generateMatchDeepLink(match.id, options.referralCode);
+
+  // contentParts collects sentences that will be joined with a space into one
+  // prose paragraph, avoiding a bullet-pointish look.
+  const contentParts: string[] = [];
+
+  // Intro line — phrasing depends on format (singles vs doubles)
+  // since the ask is fundamentally different ("partner" vs "group of players")
+  const hasTime = !!time;
+  let introKey: TranslationKey;
+  if (match.format === 'singles') {
+    introKey = hasTime
+      ? 'matchCreation.shareToFacebook.message.introSingles'
+      : 'matchCreation.shareToFacebook.message.introSinglesNoTime';
+  } else if (match.format === 'doubles') {
+    introKey = hasTime
+      ? 'matchCreation.shareToFacebook.message.introDoubles'
+      : 'matchCreation.shareToFacebook.message.introDoublesNoTime';
+  } else {
+    introKey = hasTime
+      ? 'matchCreation.shareToFacebook.message.introGeneric'
+      : 'matchCreation.shareToFacebook.message.introGenericNoTime';
+  }
+  contentParts.push(t(introKey, hasTime ? { date, time } : { date }));
+
+  // Location + court booking status — one sentence.
+  const courtBooked = match.court_status === 'reserved';
+  const courtToBook = match.court_status === 'to_reserve';
+  if (location) {
+    if (courtBooked) {
+      contentParts.push(
+        t('matchCreation.shareToFacebook.message.locationLineBooked', { location })
+      );
+    } else if (courtToBook) {
+      contentParts.push(
+        t('matchCreation.shareToFacebook.message.locationLineToBook', { location })
+      );
+    } else {
+      contentParts.push(t('matchCreation.shareToFacebook.message.locationLine', { location }));
+    }
+  } else if (courtBooked) {
+    contentParts.push(t('matchCreation.shareToFacebook.message.courtBookedAlone'));
+  } else if (courtToBook) {
+    contentParts.push(t('matchCreation.shareToFacebook.message.courtToBookAlone'));
+  }
+
+  // Cost — one sentence, flows inline with the rest of the paragraph.
+  if (match.is_court_free === true) {
+    contentParts.push(t('matchCreation.shareToFacebook.message.costFree'));
+  } else if (
+    match.is_court_free === false &&
+    typeof match.estimated_cost === 'number' &&
+    match.estimated_cost > 0
+  ) {
+    const totalLabel = `$${formatMoney(match.estimated_cost)}`;
+    if (match.cost_split_type === 'host_pays') {
+      contentParts.push(
+        t('matchCreation.shareToFacebook.message.costHostPays', { total: totalLabel })
+      );
+    } else if (match.cost_split_type === 'split_equal') {
+      const playerCount = match.format === 'doubles' ? 4 : 2;
+      const perPerson = `$${formatMoney(match.estimated_cost / playerCount)}`;
+      contentParts.push(
+        t('matchCreation.shareToFacebook.message.costSplitEqual', {
+          perPerson,
+          total: totalLabel,
+        })
+      );
+    } else {
+      contentParts.push(
+        t('matchCreation.shareToFacebook.message.costGeneric', { total: totalLabel })
+      );
+    }
+  }
+
+  // Inline details: gender filter + vibe + duration + level — joined naturally.
+  // Gender goes first since it's the most defining filter; 'any'/'other'/null
+  // fall through (no preference). 'both' on player_expectation falls through too.
+  const detailParts: string[] = [];
+  if (match.preferred_opponent_gender === 'male') {
+    detailParts.push(t('matchCreation.shareToFacebook.message.preferMale'));
+  } else if (match.preferred_opponent_gender === 'female') {
+    detailParts.push(t('matchCreation.shareToFacebook.message.preferFemale'));
+  }
+  if (match.player_expectation === 'casual') {
+    detailParts.push(t('matchCreation.shareToFacebook.message.casual'));
+  } else if (match.player_expectation === 'competitive') {
+    detailParts.push(t('matchCreation.shareToFacebook.message.competitive'));
+  }
+  if (match.duration) {
+    const durationLabel =
+      match.duration === 'custom' && match.custom_duration_minutes
+        ? `${match.custom_duration_minutes} min`
+        : t(`matchCreation.duration.${match.duration}` as TranslationKey);
+    detailParts.push(
+      t('matchCreation.shareToFacebook.message.duration', { duration: durationLabel })
+    );
+  }
+  if (match.min_rating_score) {
+    // Use the bare numeric score (e.g. "3.5") rather than the system-prefixed
+    // label (e.g. "NTRP 3.5"), since FB groups are sport-specific. Always
+    // render with at least one decimal place ("3.0" not "3") to match how
+    // ratings are conventionally written in tennis/pickleball groups.
+    const numericScore = match.min_rating_score.value;
+    let scoreLabel: string;
+    if (typeof numericScore === 'number') {
+      scoreLabel = formatRatingScore(numericScore);
+    } else {
+      // Fallback: pull the trailing number out of labels like "NTRP 3.5"
+      const trailing = match.min_rating_score.label.match(/[\d.]+\s*$/);
+      const parsed = trailing ? Number(trailing[0]) : NaN;
+      scoreLabel = Number.isFinite(parsed)
+        ? formatRatingScore(parsed)
+        : match.min_rating_score.label;
+    }
+    detailParts.push(t('matchCreation.shareToFacebook.message.level', { level: scoreLabel }));
+  }
+  if (detailParts.length > 0) {
+    contentParts.push(`${capitalizeFirst(detailParts.join(', '))}.`);
+  }
+
+  // Join all sentences into one flowing paragraph, then CTA + link.
+  return [
+    contentParts.join(' '),
+    '',
+    t('matchCreation.shareToFacebook.message.cta'),
+    deepLink,
+  ].join('\n');
+}

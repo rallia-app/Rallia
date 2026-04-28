@@ -3707,6 +3707,31 @@ export const MatchDetailSheet: React.FC = () => {
             </TouchableOpacity>
           )}
 
+          {/* Share to Facebook - host-only; message is written in the host's voice */}
+          {isCreator && startTimeDiffMs >= 0 && !isCancelled && !hasMatchEnded && (
+            <TouchableOpacity
+              style={[
+                styles.invitePlayersButton,
+                {
+                  backgroundColor: isDark ? '#1877F215' : '#1877F210',
+                  borderColor: '#1877F2',
+                },
+              ]}
+              onPress={() => {
+                lightHaptic();
+                SheetManager.show('share-to-facebook', {
+                  payload: { matchId: match.id },
+                });
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="logo-facebook" size={18} color="#1877F2" />
+              <Text size="sm" weight="medium" color="#1877F2" style={styles.inviteButtonText}>
+                {t('matchCreation.shareToFacebook.button')}
+              </Text>
+            </TouchableOpacity>
+          )}
+
           {/* QR code + copyable link button - for in-person invites and paste-anywhere sharing */}
           {startTimeDiffMs >= 0 && !isCancelled && !hasMatchEnded && (
             <TouchableOpacity

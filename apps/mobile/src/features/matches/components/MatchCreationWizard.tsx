@@ -23,6 +23,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { SheetManager } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import * as Localization from 'expo-localization';
 import { Text, useToast } from '@rallia/shared-components';
@@ -1197,6 +1198,29 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                     </>
                   )}
                 </TouchableOpacity>
+                {/* Share to Facebook - copy + open FB; only for new matches */}
+                {!isEditMode && (
+                  <TouchableOpacity
+                    style={[styles.successButton, { backgroundColor: '#1877F2' }]}
+                    onPress={() => {
+                      if (!successMatchId) return;
+                      lightHaptic();
+                      SheetManager.show('share-to-facebook', {
+                        payload: { matchId: successMatchId },
+                      });
+                    }}
+                  >
+                    <Ionicons
+                      name="logo-facebook"
+                      size={20}
+                      color={base.white}
+                      style={styles.buttonIcon}
+                    />
+                    <Text size="base" weight="semibold" color={base.white}>
+                      {t('matchCreation.shareToFacebook.button')}
+                    </Text>
+                  </TouchableOpacity>
+                )}
                 {/* Invite Players button - only for new matches */}
                 {!isEditMode && (
                   <TouchableOpacity

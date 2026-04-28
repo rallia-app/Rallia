@@ -18,6 +18,7 @@ import { tourService } from '@rallia/shared-services';
 import { Logger } from '@rallia/shared-services';
 import { Ionicons } from '@expo/vector-icons';
 import { lightHaptic, mediumHaptic } from '../utils/haptics';
+import { TOURS_ENABLED } from '../hooks/useTourSequence';
 
 interface WelcomeTourModalProps {
   /** Whether the splash animation is complete */
@@ -53,6 +54,7 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
   // Check if we should show the modal
   useEffect(() => {
     const checkShowModal = async () => {
+      if (!TOURS_ENABLED) return;
       // Wait for tour loading to complete and prerequisites
       if (isLoading || !splashComplete || !permissionsHandled) {
         return;
