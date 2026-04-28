@@ -8890,8 +8890,8 @@
       "submitNew": "Soumettre un nouveau signalement",
       "anonymous": "Anonyme",
       "byPlayer": "Soumis par un joueur",
-      "upvote": "Voter · {{n}}",
-      "upvoted": "Voté · {{n}}",
+      "upvote": "Voter · {n}",
+      "upvoted": "Voté · {n}",
       "upvoteAria": "Voter pour ce signalement",
       "upvotedAria": "Retirer votre vote",
       "statusPill": {
@@ -8903,10 +8903,10 @@
       },
       "time": {
         "now": "à l'instant",
-        "min": "il y a {{n}} min",
-        "hour": "il y a {{n}} h",
-        "day": "il y a {{n}} j",
-        "month": "il y a {{n}} mois"
+        "min": "il y a {n} min",
+        "hour": "il y a {n} h",
+        "day": "il y a {n} j",
+        "month": "il y a {n} mois"
       },
       "detail": {
         "backToList": "Retour",
@@ -9091,8 +9091,8 @@
     "status_cancelling": "Annulation en cours",
     "status_expired": "Expiré",
     "status_billing_issue": "Problème de paiement",
-    "renews_on": "Renouvellement le {{date}}",
-    "cancels_on": "Accès jusqu'au {{date}}",
+    "renews_on": "Renouvellement le {date}",
+    "cancels_on": "Accès jusqu'au {date}",
     "billing_banner_title": "Problème de paiement avec votre abonnement",
     "billing_banner_cta": "Mettre à jour",
     "manage_via_apple": "Gérez votre abonnement via les réglages Apple",

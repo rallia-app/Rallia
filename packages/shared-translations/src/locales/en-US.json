@@ -8888,8 +8888,8 @@
       "submitNew": "Submit a new report",
       "anonymous": "Anonymous",
       "byPlayer": "Submitted by a player",
-      "upvote": "Upvote · {{n}}",
-      "upvoted": "Upvoted · {{n}}",
+      "upvote": "Upvote · {n}",
+      "upvoted": "Upvoted · {n}",
       "upvoteAria": "Upvote this report",
       "upvotedAria": "Remove your upvote",
       "statusPill": {
@@ -8901,10 +8901,10 @@
       },
       "time": {
         "now": "just now",
-        "min": "{{n}}m ago",
-        "hour": "{{n}}h ago",
-        "day": "{{n}}d ago",
-        "month": "{{n}}mo ago"
+        "min": "{n}m ago",
+        "hour": "{n}h ago",
+        "day": "{n}d ago",
+        "month": "{n}mo ago"
       },
       "detail": {
         "backToList": "Back",
@@ -9089,8 +9089,8 @@
     "status_cancelling": "Cancelling",
     "status_expired": "Expired",
     "status_billing_issue": "Payment Issue",
-    "renews_on": "Renews {{date}}",
-    "cancels_on": "Access until {{date}}",
+    "renews_on": "Renews {date}",
+    "cancels_on": "Access until {date}",
     "billing_banner_title": "Payment issue with your subscription",
     "billing_banner_cta": "Update payment",
     "manage_via_apple": "Manage your subscription via Apple Settings",
