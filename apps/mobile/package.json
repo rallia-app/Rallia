@@ -82,7 +82,7 @@
     "posthog-react-native": "^4.39.1",
     "puppeteer-core": "^24.40.0",
     "react": "19.2.0",
-    "react-dom": "19.2.0",
+    "react-dom": "19.2.5",
     "react-hook-form": "^7.68.0",
     "react-i18next": "^16.4.0",
     "react-native": "0.83.6",
