@@ -372,7 +372,11 @@
       },
       "nearby_match_available": {
         "title": "New {sportName} game nearby",
-        "body": "A {sportName} game is open on {matchDate}{startTime}{locationName}. Tap to join."
+        "body": "{matchDate}{startTime}{locationName}{minRatingLabel}{spotsLabel}{hostLabel}",
+        "minRatingPrefix": " · {score}+",
+        "spotsLabel": " · {count} spot left",
+        "spotsLabel_plural": " · {count} spots left",
+        "hostLabel": " · with {hostName}"
       },
       "booking_created": {
         "title": "New booking from {playerName}",

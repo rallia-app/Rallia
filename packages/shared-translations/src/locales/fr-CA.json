@@ -372,7 +372,11 @@
       },
       "nearby_match_available": {
         "title": "Nouvelle partie de {sportName} près de toi",
-        "body": "Une partie de {sportName} est ouverte le {matchDate}{startTime}{locationName}. Touche pour t'inscrire."
+        "body": "{matchDate}{startTime}{locationName}{minRatingLabel}{spotsLabel}{hostLabel}",
+        "minRatingPrefix": " · {score}+",
+        "spotsLabel": " · {count} place libre",
+        "spotsLabel_plural": " · {count} places libres",
+        "hostLabel": " · avec {hostName}"
       },
       "booking_created": {
         "title": "Nouvelle réservation de {playerName}",

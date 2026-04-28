@@ -15,6 +15,7 @@ import { createClient } from '@supabase/supabase-js';
 import { sendEmail, sendOrgEmail } from './handlers/email.ts';
 import { sendPush } from './handlers/push.ts';
 import { sendSms, isValidPhoneNumber } from './handlers/sms.ts';
+import { renderNearbyMatchPush } from './templates/match.ts';
 import type {
   NotificationRecord,
   UserContactInfo,
@@ -257,8 +258,17 @@ async function sendViaChannel(
       }
       return sendEmail(notification, contact.email, contact.preferred_locale);
 
-    case 'push':
-      return sendPush(notification, contact.expo_push_token, badgeCount, supabase);
+    case 'push': {
+      // Localize lock-screen title/body for notification types whose payload
+      // carries enough fields to render in the recipient's preferred locale.
+      // The trigger writes an English fallback into notification.title/body for
+      // the in-app list and unsupported channels.
+      let pushOverride: { title: string; body: string } | undefined;
+      if (notification.type === 'nearby_match_available') {
+        pushOverride = renderNearbyMatchPush(notification.payload, contact.preferred_locale);
+      }
+      return sendPush(notification, contact.expo_push_token, badgeCount, supabase, pushOverride);
+    }
 
     case 'sms':
       return sendSms(notification, contact.phone, contact.preferred_locale);
