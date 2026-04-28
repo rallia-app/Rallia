@@ -604,18 +604,22 @@ function useOTAUpdate() {
 function AppContent() {
   const { theme } = useTheme();
   const { setSplashComplete, isSplashComplete, permissionsHandled } = useOverlay();
+  const { isReady: isLocaleReady } = useLocale();
   const isCheckingUpdate = useOTAUpdate();
   const hasHiddenSplashRef = useRef(false);
 
-  // Hide the native splash (cross-fade via setOptions above) once OTA check is done.
-  // Gate setSplashComplete on this so downstream handlers keep their current ordering.
+  // Hide the native splash (cross-fade via setOptions above) once the OTA
+  // check is done AND i18next has finished loading. Without the locale gate,
+  // a slow device can mount the navigator before translations are available
+  // and react-navigation paints raw keys (e.g. `screens.publicMatches`) into
+  // headers that don't always re-render once the bundle arrives.
   useEffect(() => {
-    if (isCheckingUpdate || hasHiddenSplashRef.current) return;
+    if (isCheckingUpdate || !isLocaleReady || hasHiddenSplashRef.current) return;
     hasHiddenSplashRef.current = true;
     SplashScreen.hideAsync()
       .catch(() => {})
       .finally(() => setSplashComplete(true));
-  }, [isCheckingUpdate, setSplashComplete]);
+  }, [isCheckingUpdate, isLocaleReady, setSplashComplete]);
   const { showCompletionModal, dismissCompletionModal, lastCompletedTourId } = useTour();
 
   // Track app opened event on mount
