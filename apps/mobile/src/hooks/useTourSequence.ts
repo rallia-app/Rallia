@@ -15,7 +15,7 @@ import { useTour } from '../context/TourContext';
 import { TourId } from '@rallia/shared-services';
 import { Logger } from '@rallia/shared-services';
 
-const TOURS_ENABLED = false;
+export const TOURS_ENABLED = false;
 
 export const SCREEN_TOURS: Record<string, TourId> = {
   home: 'home_screen',
