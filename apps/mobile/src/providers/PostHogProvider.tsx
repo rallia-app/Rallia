@@ -3,6 +3,13 @@ import { PostHog, PostHogProvider as PHProvider } from 'posthog-react-native';
 const isProduction = process.env.EXPO_PUBLIC_APP_ENV === 'production';
 const isEnabled = isProduction && !!process.env.EXPO_PUBLIC_POSTHOG_KEY;
 
+if (!__DEV__ && !process.env.EXPO_PUBLIC_APP_ENV) {
+  console.warn('[PostHog] EXPO_PUBLIC_APP_ENV is missing — analytics will not be reported.');
+}
+if (!__DEV__ && isProduction && !process.env.EXPO_PUBLIC_POSTHOG_KEY) {
+  console.warn('[PostHog] EXPO_PUBLIC_POSTHOG_KEY is missing — analytics will not be reported.');
+}
+
 /**
  * Pre-instantiated PostHog client (docs pattern #2).
  * Created at module level so it's available immediately — no React context needed.
