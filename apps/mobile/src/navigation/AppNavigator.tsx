@@ -770,56 +770,66 @@ function CenterTabButton({
   accessibilityState?: { selected?: boolean };
   testID?: string;
 }) {
+  const { t } = useTranslation();
   const { openSheet } = useActionsSheet();
-  const { colors, isDark } = useThemeStyles();
+  const { isDark } = useThemeStyles();
 
   return (
     <View style={[{ flex: 1, alignItems: 'center' }, style]}>
-      <TouchableOpacity
-        onPress={() => {
-          lightHaptic();
-          openSheet();
-        }}
-        activeOpacity={0.85}
-        style={{
-          position: 'absolute',
-          top: -CENTER_TAB_SIZE / 4,
-          width: CENTER_TAB_SIZE,
-          height: CENTER_TAB_SIZE,
-          borderRadius: CENTER_TAB_SIZE / 2,
-          borderWidth: 1,
-          borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.8)',
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.15,
-          shadowRadius: 10,
-          ...(Platform.OS === 'ios' && { elevation: 6 }),
-          overflow: 'hidden',
-        }}
-      >
-        {/* Base gradient — light refraction from top-left to bottom-right */}
-        <LinearGradient
-          colors={
-            isDark
-              ? ['rgba(255,255,255,0.18)', 'rgba(255,255,255,0.04)', 'rgba(0,0,0,0.1)']
-              : ['rgba(255,255,255,0.95)', 'rgba(220,230,235,0.6)', 'rgba(180,200,210,0.4)']
-          }
-          locations={[0, 0.5, 1]}
-          start={{ x: 0.2, y: 0 }}
-          end={{ x: 0.8, y: 1 }}
+      <CopilotStep text={t('tour.mainNavigation.actions.description')} order={3} name="actions-tab">
+        <WalkthroughableView
           style={{
-            flex: 1,
-            justifyContent: 'center',
-            alignItems: 'center',
+            position: 'absolute',
+            top: -CENTER_TAB_SIZE / 4,
+            width: CENTER_TAB_SIZE,
+            height: CENTER_TAB_SIZE,
+            borderRadius: CENTER_TAB_SIZE / 2,
           }}
         >
-          <Ionicons
-            name="add"
-            size={34}
-            color={isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.35)'}
-          />
-        </LinearGradient>
-      </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              lightHaptic();
+              openSheet();
+            }}
+            activeOpacity={0.85}
+            style={{
+              flex: 1,
+              borderRadius: CENTER_TAB_SIZE / 2,
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.8)',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.15,
+              shadowRadius: 10,
+              ...(Platform.OS === 'ios' && { elevation: 6 }),
+              overflow: 'hidden',
+            }}
+          >
+            {/* Base gradient — light refraction from top-left to bottom-right */}
+            <LinearGradient
+              colors={
+                isDark
+                  ? ['rgba(255,255,255,0.18)', 'rgba(255,255,255,0.04)', 'rgba(0,0,0,0.1)']
+                  : ['rgba(255,255,255,0.95)', 'rgba(220,230,235,0.6)', 'rgba(180,200,210,0.4)']
+              }
+              locations={[0, 0.5, 1]}
+              start={{ x: 0.2, y: 0 }}
+              end={{ x: 0.8, y: 1 }}
+              style={{
+                flex: 1,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
+              <Ionicons
+                name="add"
+                size={34}
+                color={isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.35)'}
+              />
+            </LinearGradient>
+          </TouchableOpacity>
+        </WalkthroughableView>
+      </CopilotStep>
     </View>
   );
 }
@@ -884,7 +894,7 @@ function HomeTabIcon({ color, size }: { color: string; size: number }) {
 function CourtsTabIcon({ color, size }: { color: string; size: number }) {
   const { t } = useTranslation();
   return (
-    <CopilotStep text={t('tour.mainNavigation.matches.description')} order={2} name="courts-tab">
+    <CopilotStep text={t('tour.mainNavigation.courts.description')} order={2} name="courts-tab">
       <WalkthroughableView
         style={{
           width: size + TAB_ICON_PADDING * 2,
@@ -902,39 +912,13 @@ function CourtsTabIcon({ color, size }: { color: string; size: number }) {
 }
 
 /**
- * Actions/Create tab icon with tour step
- */
-function ActionsTabIcon({ color, size }: { color: string; size: number }) {
-  const { t } = useTranslation();
-  const adjustedSize = size * 1.2;
-  return (
-    <CopilotStep
-      text={t('tour.matchesScreen.createMatch.description')}
-      order={3}
-      name="actions-tab"
-    >
-      <WalkthroughableView
-        style={{
-          width: adjustedSize + TAB_ICON_PADDING * 2,
-          height: adjustedSize + TAB_ICON_PADDING * 2,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Ionicons name="add-circle-outline" size={adjustedSize} color={color} />
-      </WalkthroughableView>
-    </CopilotStep>
-  );
-}
-
-/**
  * Community tab icon with tour step
  */
 function CommunityTabIcon({ color, size }: { color: string; size: number }) {
   const { t } = useTranslation();
   return (
     <CopilotStep
-      text={t('tour.profileScreen.sportProfiles.description')}
+      text={t('tour.mainNavigation.community.description')}
       order={4}
       name="community-tab"
     >

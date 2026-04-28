@@ -380,10 +380,13 @@ export function usePushNotifications(
   useEffect(() => {
     // Listen for incoming notifications while app is foregrounded
     notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+      const data = notification.request.content.data as NotificationPayload;
+      const type = (data?.type as string | undefined) ?? 'unknown';
       Logger.logUserAction('push_notification_received', {
         title: notification.request.content.title,
         data: notification.request.content.data,
       });
+      Analytics.notificationReceived({ type, channel: 'push' });
     });
 
     // Listen for user interactions with notifications (while app is running/backgrounded)

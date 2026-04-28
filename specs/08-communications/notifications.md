@@ -47,27 +47,27 @@ Multi-channel notification system for match updates, messages, and system alerts
 
 ## Sport Context
 
-All notifications must indicate sport context:
+Match notifications carry `payload.sportName` so the renderer can include sport context in the title or body where it adds value. **Do not** wrap subjects with bracketed tags like `[Tennis]` or use emojis in any notification surface (push, email, SMS) — keep all copy as plain prose.
 
 ### Examples
 
-**Push Notification:**
+**Push notification:**
 
 ```
-🎾 [Tennis] New match invitation
-Jean D. wants to play tomorrow at 3pm
+New game invitation from Jean D.
+Jean D. wants to play tennis tomorrow at 3pm.
 ```
 
-**Email Subject:**
+**Email subject:**
 
 ```
-[Rallia Tennis] Match confirmed for Saturday
+Your tennis game on Saturday is confirmed
 ```
 
 **SMS:**
 
 ```
-[Rallia Tennis] Reminder: Your match with Jean is in 2 hours
+Rallia: Your tennis game with Jean starts in 2h
 ```
 
 ## Notification Preferences
@@ -76,54 +76,28 @@ Users can control notifications:
 
 ### Global Settings
 
-| Setting             | Options                    |
-| ------------------- | -------------------------- |
-| Push Notifications  | On / Off                   |
-| Email Notifications | All / Important Only / Off |
-| SMS Notifications   | On / Off                   |
-| Quiet Hours         | Set time range             |
+| Setting             | Options  |
+| ------------------- | -------- |
+| Push Notifications  | On / Off |
+| Email Notifications | On / Off |
+| SMS Notifications   | On / Off |
 
 ### Per-Type Settings
 
-| Type              | Can Disable                |
-| ----------------- | -------------------------- |
-| Match invitations | ❌ No (core functionality) |
-| Match reminders   | ✅ Yes                     |
-| Chat messages     | ✅ Yes                     |
-| Marketing/Tips    | ✅ Yes                     |
-| System alerts     | ❌ No                      |
+Per `notification_type × delivery_channel` toggles in the in-app preferences screen. All types are user-controllable; defaults are defined in `supabase/functions/send-notification/types.ts` (`DEFAULT_PREFERENCES`).
 
 ### Per-Conversation Settings
 
 - Mute individual chats
 - Mute specific groups/communities
 
-## Batching
-
-To avoid notification overload:
-
-### Auto-Generated Matches
-
-When weekly match suggestions are generated:
-
-- Batch into single daily email
-- Single push with summary
-- Not individual notifications per match
-
-### Popular Players
-
-Players who receive many invitations:
-
-- Batch invitations in periodic summaries
-- Option to enable individual notifications
-
 ## Match Reminders
 
-| Timing          | Channel         | Content                     |
-| --------------- | --------------- | --------------------------- |
-| 24 hours before | Push + Email    | Full match details          |
-| Day of match    | Push + SMS      | Time and location reminder  |
-| 2 hours before  | Push (optional) | "Get ready for your match!" |
+| Timing          | Channel      | Content                     |
+| --------------- | ------------ | --------------------------- |
+| 24 hours before | Push + Email | Full match details          |
+| Day of match    | Push + SMS   | Time and location reminder  |
+| 2 hours before  | Push         | "Get ready for your match!" |
 
 ## Sport-Based Filtering
 
@@ -146,7 +120,15 @@ The in-app Notifications screen filters notifications by the currently selected 
 
 ## Technical Notes
 
-- Use FCM for Android push
-- Use APNs for iOS push
-- Email via transactional service (SendGrid, etc.)
-- SMS via Twilio or similar
+- Push delivered via Expo Push API (which uses APNs for iOS and FCM for Android)
+- Email via transactional service (Resend) with branded org templates rendered server-side
+- SMS via Twilio
+- All copy lives in `packages/shared-translations/src/locales/{en-US,fr-CA}.json` under `notifications.*`. Edge functions import the same source — never duplicate strings.
+
+## Future work (deferred)
+
+The following were considered for the initial launch but are deferred:
+
+- **Quiet hours** — per-user, timezone-aware suppression window. Will require `profile.quiet_hours_start/end` and dispatch-time checks in `send-notification`.
+- **Batching for fan-out events** — nearby/group match-created notifications currently fire 1:1 per recipient. A daily digest or per-user-per-day cap is desirable once volume warrants it.
+- **Popular-player invitation batching** — for users who receive many invitations, batch into a periodic summary with an opt-in to individual notifications.

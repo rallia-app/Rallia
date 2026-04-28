@@ -22,10 +22,7 @@ export function renderNotificationEmail(
   locale: string = 'en-US',
   siteUrl?: string
 ): EmailContent {
-  // Map notification types to translated subject prefixes
-  const subjectPrefixKey = `notification.prefix.${payload.notificationType}`;
-  const subjectPrefix = t(locale, subjectPrefixKey);
-  const subject = `${subjectPrefix}: ${escapeHtml(payload.title)}`;
+  const subject = payload.title;
 
   // Build preheader from body, truncated to 100 chars
   const preheaderBody = payload.body

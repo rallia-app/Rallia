@@ -187,51 +187,51 @@
       "earlier": "Earlier"
     },
     "types": {
-      "match_invitation": "Game\nInvitation",
-      "match_join_request": "Join\nRequest",
-      "match_join_accepted": "Request\nAccepted",
-      "match_join_rejected": "Request\nDeclined",
-      "match_player_joined": "Player\nJoined",
-      "match_cancelled": "Game\nCancelled",
-      "match_updated": "Game\nUpdated",
-      "match_starting_soon": "Starting\nSoon",
-      "match_check_in_available": "Check-in\nAvailable",
-      "match_new_available": "New Game\nin Group",
-      "match_spot_opened": "Spot\nOpened",
-      "nearby_match_available": "Nearby\nGame",
-      "player_kicked": "Removed\nfrom Game",
-      "player_left": "Player\nLeft",
-      "new_message": "New\nMessage",
-      "rating_verified": "Rating\nVerified",
-      "reference_request_received": "Reference\nRequested",
-      "reference_request_accepted": "Reference\nAccepted",
-      "reference_request_declined": "Reference\nDeclined",
+      "match_invitation": "Game invitation",
+      "match_join_request": "Join request",
+      "match_join_accepted": "Request accepted",
+      "match_join_rejected": "Request declined",
+      "match_player_joined": "Player joined",
+      "match_cancelled": "Game cancelled",
+      "match_updated": "Game updated",
+      "match_starting_soon": "Starting soon",
+      "match_check_in_available": "Check-in available",
+      "match_new_available": "New game in group",
+      "match_spot_opened": "Spot opened",
+      "nearby_match_available": "Nearby game",
+      "player_kicked": "Removed from game",
+      "player_left": "Player left",
+      "new_message": "New message",
+      "rating_verified": "Rating verified",
+      "reference_request_received": "Reference requested",
+      "reference_request_accepted": "Reference accepted",
+      "reference_request_declined": "Reference declined",
       "reminder": "Reminder",
       "payment": "Payment",
       "support": "Support",
       "chat": "Message",
       "system": "System",
-      "feedback_request": "Feedback Request",
-      "feedback_reminder": "Feedback Reminder",
-      "score_confirmation": "Score Confirmation",
-      "community_join_request": "Community Join Request",
-      "community_join_accepted": "Request Approved",
-      "community_join_rejected": "Request Declined",
-      "booking_created": "Booking\nCreated",
-      "booking_cancelled_by_player": "Booking Cancelled\n(player)",
-      "booking_modified": "Booking\nModified",
-      "new_member_joined": "New\nMember",
-      "member_left": "Member\nLeft",
-      "member_role_changed": "Role\nChanged",
-      "payment_received": "Payment\nReceived",
-      "payment_failed": "Payment\nFailed",
-      "refund_processed": "Refund\nProcessed",
-      "daily_summary": "Daily\nSummary",
-      "weekly_report": "Weekly\nReport",
-      "booking_confirmed": "Booking\nConfirmed",
-      "booking_reminder": "Booking\nReminder",
-      "booking_cancelled_by_org": "Booking Cancelled\n(facility)",
-      "membership_approved": "Membership\nApproved",
+      "feedback_request": "Feedback request",
+      "feedback_reminder": "Feedback reminder",
+      "score_confirmation": "Score confirmation",
+      "community_join_request": "Community join request",
+      "community_join_accepted": "Request approved",
+      "community_join_rejected": "Request declined",
+      "booking_created": "Booking created",
+      "booking_cancelled_by_player": "Booking cancelled by player",
+      "booking_modified": "Booking modified",
+      "new_member_joined": "New member",
+      "member_left": "Member left",
+      "member_role_changed": "Role changed",
+      "payment_received": "Payment received",
+      "payment_failed": "Payment failed",
+      "refund_processed": "Refund processed",
+      "daily_summary": "Daily summary",
+      "weekly_report": "Weekly report",
+      "booking_confirmed": "Booking confirmed",
+      "booking_reminder": "Booking reminder",
+      "booking_cancelled_by_org": "Booking cancelled by facility",
+      "membership_approved": "Membership approved",
       "org_announcement": "Announcement"
     },
     "categories": {
@@ -254,53 +254,53 @@
     },
     "messages": {
       "match_invitation": {
-        "title": "You've been invited to play!",
-        "body": "{playerName} wants to play {sportName} with you on {matchDate}{startTime} at {locationName}"
+        "title": "{playerName} invited you to a {sportName} game",
+        "body": "{playerName} wants to play on {matchDate}{startTime}{locationName}. Tap to accept."
       },
       "match_join_request": {
-        "title": "{playerName} wants to join",
-        "body": "{playerName} wants to join your {sportName} game on {matchDate}"
+        "title": "{playerName} wants to join your {sportName} game",
+        "body": "{playerName} asked to join your game on {matchDate}. Review and approve."
       },
       "match_join_accepted": {
-        "title": "You're in!",
-        "body": "Your {sportName} game on {matchDate} at {locationName} is confirmed. See you there!"
+        "title": "You're in — your {sportName} game is confirmed",
+        "body": "Your game on {matchDate}{locationName} is confirmed. Add it to your calendar so you don't forget."
       },
       "match_join_rejected": {
-        "title": "Request declined",
-        "body": "Your request to join the {sportName} game on {matchDate} wasn't accepted this time. Check out other games near you."
+        "title": "Request not approved this time",
+        "body": "Your request for the {sportName} game on {matchDate} wasn't approved. Plenty of other games are open near you — tap to browse."
       },
       "match_player_joined": {
-        "title": "New player joined!",
-        "body": "{playerName} joined your {sportName} game — {spotsLeft} left!",
-        "body_full": "{playerName} joined your {sportName} game. The game is full!"
+        "title": "{playerName} joined your game",
+        "body": "{playerName} is in for {sportName} on {matchDate} — {spotsLeft} spot(s) left.",
+        "body_full": "{playerName} took the last spot — your {sportName} game on {matchDate} is full."
       },
       "match_cancelled": {
-        "title": "Game cancelled",
-        "body": "The {sportName} game on {matchDate} at {locationName} has been cancelled. We hope to see you playing soon!"
+        "title": "Your {sportName} game was cancelled",
+        "body": "The {sportName} game on {matchDate}{locationName} was cancelled. Tap to find another game near you."
       },
       "match_updated": {
-        "title": "Game updated",
-        "body": "Your {sportName} game on {matchDate} has been updated. Check the updated details."
+        "title": "Heads up — your game changed",
+        "body": "Your {sportName} game on {matchDate} was updated. Tap to see the new details."
       },
       "match_starting_soon": {
-        "title": "Get ready!",
-        "body": "Your {sportName} game at {locationName} starts {timeUntil}. Time to warm up!"
+        "title": "Your game starts {timeUntil}",
+        "body": "Your {sportName} game{locationName} starts {timeUntil}. Time to warm up."
       },
       "match_check_in_available": {
-        "title": "Time to check in!",
-        "body": "Check in once you arrive at the venue to confirm your presence."
+        "title": "Check in to your game",
+        "body": "Tap to check in and confirm you've arrived at {locationName}."
       },
       "match_new_available": {
-        "title": "New game nearby",
-        "body": "A {sportName} game on {matchDate} is looking for players. Join before it fills up!"
+        "title": "New {sportName} game in your group",
+        "body": "A new {sportName} game is open on {matchDate}{startTime}. Join before it fills up."
       },
       "player_kicked": {
-        "title": "Removed from game",
-        "body": "You've been removed from the {sportName} game on {matchDate}. Check out other games near you."
+        "title": "Removed from a game",
+        "body": "You were removed from the {sportName} game on {matchDate}. Tap to find another game near you."
       },
       "player_left": {
-        "title": "Player left",
-        "body": "{playerName} left your {sportName} game — {spotsLeft} spot(s) now open."
+        "title": "{playerName} left your game",
+        "body": "{playerName} dropped out of your {sportName} game — {spotsLeft} spot(s) now open. Invite a friend?"
       },
       "new_message": {
         "title": "Message from {senderName}",
@@ -308,135 +308,135 @@
       },
       "chat": {
         "title": "New message",
-        "body": "You have a new message waiting for you"
+        "body": "You have a new message waiting."
       },
       "rating_verified": {
-        "title": "Rating verified!",
-        "body": "Congrats! Your {ratingSystemName} rating of {ratingValue} for {sportName} is now verified."
+        "title": "Your {sportName} rating is verified",
+        "body": "Your {ratingSystemName} rating of {ratingValue} is now certified. Players will see the verified badge on your profile."
       },
       "reminder": {
-        "title": "Game coming up",
-        "body": "Don't forget your {sportName} game on {matchDate} at {locationName}"
+        "title": "Game coming up on {matchDate}",
+        "body": "Reminder: your {sportName} game on {matchDate}{startTime}{locationName}. Tap for details."
       },
       "payment": {
         "title": "Payment update",
-        "body": "Your payment status has been updated. Tap to view details."
+        "body": "Your payment status changed. Tap to view details."
       },
       "support": {
-        "title": "Message from Rallia",
-        "body": "Our support team has sent you a message. Tap to read."
+        "title": "Message from Rallia support",
+        "body": "Our support team replied to you. Tap to read."
       },
       "system": {
-        "title": "Rallia Update",
-        "body": "We have an update for you. Tap to learn more."
+        "title": "Update from Rallia",
+        "body": "Tap to learn more."
       },
       "feedback_request": {
-        "title": "How was your game?",
-        "body": "Submit your score and rate your {sportName} game with {opponentNames} while it's fresh!"
+        "title": "How was your game with {opponentNames}?",
+        "body": "Submit the score and rate your {sportName} game while it's fresh. It only takes a minute."
       },
       "feedback_reminder": {
-        "title": "Your game still needs a score",
-        "body": "Your {sportName} score and rating with {opponentNames} are still pending — complete them before the deadline."
+        "title": "Your score is still pending",
+        "body": "Your {sportName} game with {opponentNames} still needs a score and rating. Complete it before the deadline."
       },
       "score_confirmation": {
-        "title": "Confirm Game Score",
-        "body": "{playerName} submitted a score for your {sportName} game. Please confirm or dispute."
+        "title": "Confirm the score from your game",
+        "body": "{playerName} submitted a score for your {sportName} game. Tap to confirm or dispute it."
       },
       "community_join_request": {
-        "title": "New Join Request",
-        "body": "{requesterName} wants to join {communityName}"
+        "title": "{requesterName} wants to join {communityName}",
+        "body": "Tap to review and approve their request."
       },
       "community_join_accepted": {
-        "title": "Request Approved!",
-        "body": "You are now a member of {communityName}"
+        "title": "You're in {communityName}",
+        "body": "Your request to join {communityName} was approved. Tap to explore upcoming games."
       },
       "community_join_rejected": {
-        "title": "Request Not Approved",
-        "body": "Your request to join {communityName} was not approved"
+        "title": "Request to join {communityName} not approved",
+        "body": "Your request to join {communityName} wasn't approved. Tap to find other communities near you."
       },
       "reference_request_received": {
-        "title": "Reference Requested",
-        "body": "{playerName} would like you to verify their {sportName} rating."
+        "title": "{playerName} asked you to verify their rating",
+        "body": "{playerName} listed you as a reference for their {sportName} level. Tap to confirm or decline."
       },
       "reference_request_accepted": {
-        "title": "Reference Accepted!",
-        "body": "{playerName} verified your {sportName} rating ({ratingLabel})."
+        "title": "{playerName} verified your rating",
+        "body": "{playerName} confirmed your {sportName} rating ({ratingLabel}). Keep collecting references to certify your level."
       },
       "reference_request_declined": {
-        "title": "Reference Declined",
-        "body": "{playerName} could not confirm your {sportName} rating."
+        "title": "{playerName} declined your reference",
+        "body": "{playerName} couldn't confirm your {sportName} rating. Tap to ask another player."
       },
       "match_spot_opened": {
-        "title": "A spot just opened up",
-        "body": "A spot opened in a {sportName} game at {locationName} on {matchDate}{startTime}"
+        "title": "A spot opened in a {sportName} game",
+        "body": "A spot just opened on {matchDate}{startTime}{locationName}. Tap to claim it before it's gone."
       },
       "nearby_match_available": {
         "title": "New {sportName} game nearby",
-        "body": "A new game is available at {locationName} on {matchDate}{startTime}"
+        "body": "A {sportName} game is open on {matchDate}{startTime}{locationName}. Tap to join."
       },
       "booking_created": {
-        "title": "New booking",
-        "body": "{playerName} booked {courtName} on {bookingDate}{startTime}"
+        "title": "New booking from {playerName}",
+        "body": "{playerName} booked {courtName} on {bookingDate}{startTime}."
       },
       "booking_cancelled_by_player": {
-        "title": "Booking cancelled",
-        "body": "{playerName} cancelled their booking for {courtName} on {bookingDate}"
+        "title": "Booking cancelled by {playerName}",
+        "body": "{playerName} cancelled their booking for {courtName} on {bookingDate}."
       },
       "booking_modified": {
         "title": "Booking updated",
         "body": "The booking for {courtName} on {bookingDate} was updated."
       },
       "new_member_joined": {
-        "title": "New member",
-        "body": "{playerName} joined {orgName}."
+        "title": "{playerName} joined {orgName}",
+        "body": "Tap to view the new member's profile."
       },
       "member_left": {
-        "title": "Member left",
-        "body": "{playerName} left {orgName}."
+        "title": "{playerName} left {orgName}",
+        "body": "Tap to view membership activity."
       },
       "member_role_changed": {
-        "title": "Role updated",
+        "title": "Role updated for {playerName}",
         "body": "{playerName}'s role was changed to {memberRole}."
       },
       "payment_received": {
-        "title": "Payment received",
+        "title": "Payment received: {amountFormatted}",
         "body": "{amountFormatted} received from {playerName}."
       },
       "payment_failed": {
-        "title": "Payment failed",
-        "body": "Payment of {amountFormatted} from {playerName} failed."
+        "title": "Payment failed: {amountFormatted}",
+        "body": "Payment of {amountFormatted} from {playerName} failed. Tap to retry or contact the player."
       },
       "refund_processed": {
-        "title": "Refund processed",
+        "title": "Refund issued: {amountFormatted}",
         "body": "{amountFormatted} was refunded to {playerName}."
       },
       "daily_summary": {
-        "title": "Daily summary",
-        "body": "Summary of bookings and activity for {orgName}."
+        "title": "Daily summary for {orgName}",
+        "body": "Tap to review today's bookings and activity."
       },
       "weekly_report": {
-        "title": "Weekly report",
-        "body": "Your weekly report for {orgName} is ready."
+        "title": "Weekly report for {orgName}",
+        "body": "Your weekly report is ready. Tap to view."
       },
       "booking_confirmed": {
         "title": "Booking confirmed",
         "body": "Your booking for {courtName} on {bookingDate}{startTime} is confirmed."
       },
       "booking_reminder": {
-        "title": "Booking reminder",
-        "body": "Reminder: you have {courtName} booked on {bookingDate}{startTime}"
+        "title": "Upcoming booking on {bookingDate}",
+        "body": "Reminder: you have {courtName} booked on {bookingDate}{startTime}."
       },
       "booking_cancelled_by_org": {
-        "title": "Booking cancelled",
-        "body": "{orgName} cancelled your booking for {courtName} on {bookingDate}."
+        "title": "Your booking was cancelled",
+        "body": "{orgName} cancelled your booking for {courtName} on {bookingDate}. Tap to rebook."
       },
       "membership_approved": {
-        "title": "Membership approved",
-        "body": "Your membership at {orgName} has been approved."
+        "title": "Membership approved at {orgName}",
+        "body": "You're a member of {orgName}. Tap to explore courts and bookings."
       },
       "org_announcement": {
         "title": "Announcement from {orgName}",
-        "body": "{orgName} shared a new announcement."
+        "body": "{orgName} shared a new announcement. Tap to read."
       }
     }
   },
@@ -8286,16 +8286,20 @@
     },
     "mainNavigation": {
       "home": {
-        "title": "Home",
-        "description": "Your dashboard showing upcoming matches, notifications, and quick actions."
+        "title": "Games",
+        "description": "Your upcoming games at a glance, plus matches happening near you."
       },
       "courts": {
         "title": "Courts",
-        "description": "Discover courts and sports facilities near you on the interactive map."
+        "description": "Browse nearby courts and sports facilities, view details, and book a slot."
       },
       "actions": {
         "title": "Actions",
-        "description": "Quick access to create matches, find players, and more."
+        "description": "Create a match, invite players, or start a network — all from one place."
+      },
+      "community": {
+        "title": "Players",
+        "description": "Find players around you and browse the groups and communities you've joined."
       },
       "matches": {
         "title": "Games",

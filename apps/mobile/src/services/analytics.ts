@@ -278,6 +278,17 @@ export function pushNotificationOpened(props: { type: string }): void {
   capture('push_notification_opened', props);
 }
 
+export function notificationReceived(props: { type: string; channel: 'push' | 'in_app' }): void {
+  capture('notification_received', props);
+}
+
+export function notificationMarkedRead(props: {
+  type: string;
+  source: 'tap' | 'mark_all' | 'auto';
+}): void {
+  capture('notification_marked_read', props);
+}
+
 // ---- Monetization ----
 
 export function bookingInitiated(props: {

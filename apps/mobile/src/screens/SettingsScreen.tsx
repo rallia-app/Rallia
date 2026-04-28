@@ -337,19 +337,17 @@ const SettingsScreen: React.FC = () => {
             title={t('settings.permissions')}
             onPress={handlePermissions}
           />
+          <SettingsItem
+            icon="refresh-outline"
+            title={t('tour.settings.restartTour')}
+            onPress={handleResetTour}
+          />
           {isOnboarded && (
-            <>
-              <SettingsItem
-                icon="refresh-outline"
-                title={t('tour.settings.restartTour')}
-                onPress={handleResetTour}
-              />
-              <SettingsItem
-                icon="chatbox-ellipses-outline"
-                title={t('settings.feedback')}
-                onPress={handleFeedback}
-              />
-            </>
+            <SettingsItem
+              icon="chatbox-ellipses-outline"
+              title={t('settings.feedback')}
+              onPress={handleFeedback}
+            />
           )}
           <SettingsItem
             icon="document-text-outline"

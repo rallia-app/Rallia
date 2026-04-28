@@ -26,14 +26,13 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
-  StatusBar,
   InteractionManager,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from '../hooks';
-import { COLORS } from '@rallia/shared-constants';
+import { useThemeStyles } from '@rallia/shared-hooks';
 import { tourService, TourId, TourStatus } from '@rallia/shared-services';
 import { Logger } from '@rallia/shared-services';
+import { lightHaptic, selectionHaptic, successHaptic } from '../utils/haptics';
 
 // =============================================================================
 // TYPES
@@ -89,6 +88,7 @@ interface TooltipProps {
 
 const CustomTooltip: React.FC<TooltipProps> = ({ labels }) => {
   const { t } = useTranslation();
+  const { colors } = useThemeStyles();
   const {
     goToNext,
     goToPrev,
@@ -107,6 +107,12 @@ const CustomTooltip: React.FC<TooltipProps> = ({ labels }) => {
   const finishLabel = t('tour.buttons.finish') || labels?.finish || 'Finish';
 
   const handleNext = async () => {
+    // Subtle tick on every step advance; success notification on the final tap.
+    if (isLastStep) {
+      successHaptic();
+    } else {
+      selectionHaptic();
+    }
     try {
       await goToNext();
     } catch (error) {
@@ -115,6 +121,7 @@ const CustomTooltip: React.FC<TooltipProps> = ({ labels }) => {
   };
 
   const handlePrev = async () => {
+    selectionHaptic();
     try {
       await goToPrev();
     } catch (error) {
@@ -123,6 +130,12 @@ const CustomTooltip: React.FC<TooltipProps> = ({ labels }) => {
   };
 
   const handleStop = async () => {
+    // The same handler is used for "Skip" (first step) and "Finish" (last step).
+    if (isLastStep) {
+      successHaptic();
+    } else {
+      lightHaptic();
+    }
     try {
       await stop();
     } catch (error) {
@@ -131,9 +144,9 @@ const CustomTooltip: React.FC<TooltipProps> = ({ labels }) => {
   };
 
   return (
-    <View style={tooltipStyles.container}>
+    <View style={[tooltipStyles.container, { backgroundColor: colors.cardBackground }]}>
       {/* Step content */}
-      <Text style={tooltipStyles.text}>{currentStep?.text || ''}</Text>
+      <Text style={[tooltipStyles.text, { color: colors.text }]}>{currentStep?.text || ''}</Text>
 
       {/* Navigation buttons */}
       <View style={tooltipStyles.buttonContainer}>
@@ -141,11 +154,13 @@ const CustomTooltip: React.FC<TooltipProps> = ({ labels }) => {
         {isFirstStep && (
           <TouchableOpacity
             onPress={handleStop}
-            style={tooltipStyles.skipButton}
+            style={[tooltipStyles.skipButton, { backgroundColor: colors.buttonInactive }]}
             accessibilityLabel={skipLabel}
             accessibilityRole="button"
           >
-            <Text style={tooltipStyles.skipButtonText}>{skipLabel}</Text>
+            <Text style={[tooltipStyles.skipButtonText, { color: colors.textSecondary }]}>
+              {skipLabel}
+            </Text>
           </TouchableOpacity>
         )}
 
@@ -153,11 +168,13 @@ const CustomTooltip: React.FC<TooltipProps> = ({ labels }) => {
         {!isFirstStep && (
           <TouchableOpacity
             onPress={handlePrev}
-            style={tooltipStyles.prevButton}
+            style={[tooltipStyles.prevButton, { backgroundColor: colors.buttonInactive }]}
             accessibilityLabel={previousLabel}
             accessibilityRole="button"
           >
-            <Text style={tooltipStyles.prevButtonText}>{previousLabel}</Text>
+            <Text style={[tooltipStyles.prevButtonText, { color: colors.textSecondary }]}>
+              {previousLabel}
+            </Text>
           </TouchableOpacity>
         )}
 
@@ -167,17 +184,19 @@ const CustomTooltip: React.FC<TooltipProps> = ({ labels }) => {
         {/* Next/Finish button */}
         <TouchableOpacity
           onPress={isLastStep ? handleStop : handleNext}
-          style={tooltipStyles.nextButton}
+          style={[tooltipStyles.nextButton, { backgroundColor: colors.primary }]}
           accessibilityLabel={isLastStep ? finishLabel : nextLabel}
           accessibilityRole="button"
         >
-          <Text style={tooltipStyles.nextButtonText}>{isLastStep ? finishLabel : nextLabel}</Text>
+          <Text style={[tooltipStyles.nextButtonText, { color: colors.primaryForeground }]}>
+            {isLastStep ? finishLabel : nextLabel}
+          </Text>
         </TouchableOpacity>
       </View>
 
       {/* Step indicator */}
       {currentStep && (
-        <Text style={tooltipStyles.stepIndicator}>
+        <Text style={[tooltipStyles.stepIndicator, { color: colors.textMuted }]}>
           {t('tour.stepIndicator', { current: currentStepNumber, total: totalStepsNumber })}
         </Text>
       )}
@@ -187,13 +206,12 @@ const CustomTooltip: React.FC<TooltipProps> = ({ labels }) => {
 
 const tooltipStyles = StyleSheet.create({
   container: {
-    backgroundColor: COLORS.white,
     borderRadius: 16,
     padding: 16,
     maxWidth: 320,
     ...Platform.select({
       ios: {
-        shadowColor: COLORS.black,
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.15,
         shadowRadius: 12,
@@ -206,7 +224,6 @@ const tooltipStyles = StyleSheet.create({
   text: {
     fontSize: 16,
     lineHeight: 24,
-    color: COLORS.dark,
     marginBottom: 16,
   },
   buttonContainer: {
@@ -217,23 +234,19 @@ const tooltipStyles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: COLORS.veryLightGray,
   },
   skipButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.darkGray,
   },
   prevButton: {
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: COLORS.veryLightGray,
   },
   prevButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.darkGray,
   },
   spacer: {
     flex: 1,
@@ -242,17 +255,14 @@ const tooltipStyles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
-    backgroundColor: COLORS.primary,
   },
   nextButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.white,
   },
   stepIndicator: {
     marginTop: 12,
     fontSize: 12,
-    color: COLORS.gray,
     textAlign: 'center',
   },
 });
@@ -480,39 +490,94 @@ interface TourProviderProps {
   children: ReactNode;
 }
 
+/**
+ * SVG path for the spotlight cutout: full-canvas outer rect with a rounded-rect
+ * hole around the highlighted element. We inflate the measured rect by `pad` so
+ * tightly-measured targets (tab icons, header buttons) get a comfortable halo
+ * instead of cropping flush to the content.
+ */
+const SPOTLIGHT_PADDING = 8;
+const SPOTLIGHT_RADIUS = 14;
+
+// react-native-copilot's TS type claims Animated.ValueXY for size/position/canvasSize,
+// but at runtime it actually passes plain `{x: number, y: number}`. We accept either.
+const num = (v: unknown): number => {
+  if (typeof v === 'number') return v;
+  if (v && typeof v === 'object') {
+    const maybeAnim = v as { __getValue?: () => number; _value?: number };
+    if (typeof maybeAnim.__getValue === 'function') return maybeAnim.__getValue();
+    if (typeof maybeAnim._value === 'number') return maybeAnim._value;
+  }
+  return 0;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const buildSpotlightPath = (args: any): string => {
+  const { size, position, canvasSize, step } = args;
+  const px = num(position?.x);
+  const py = num(position?.y);
+  const sx = num(size?.x);
+  const sy = num(size?.y);
+  const cx = num(canvasSize?.x);
+  const cy = num(canvasSize?.y);
+
+  // Bottom-tab icons are wrapped tightly around the glyph but the tab cell also
+  // reserves space below for the label. Without compensation, the spotlight sits
+  // at the icon's vertical center and reads as "too high" relative to the tab
+  // slot. Shift it downward by reducing top pad and adding bottom pad.
+  const stepName: string | undefined = step?.name;
+  const isTabStep = typeof stepName === 'string' && stepName.endsWith('-tab');
+  const padTop = isTabStep ? 2 : SPOTLIGHT_PADDING;
+  const padBottom = isTabStep ? 18 : SPOTLIGHT_PADDING;
+  const padX = SPOTLIGHT_PADDING;
+
+  const x = px - padX;
+  const y = py - padTop;
+  const w = sx + padX * 2;
+  const h = sy + padTop + padBottom;
+  const r = Math.max(0, Math.min(SPOTLIGHT_RADIUS, w / 2, h / 2));
+  // Outer canvas rect (even-odd / non-zero fill rule -> hole), then rounded cutout.
+  return (
+    `M0,0 H${cx} V${cy} H0 V0 Z ` +
+    `M${x + r},${y} ` +
+    `h${w - 2 * r} ` +
+    `a${r},${r} 0 0 1 ${r},${r} ` +
+    `v${h - 2 * r} ` +
+    `a${r},${r} 0 0 1 -${r},${r} ` +
+    `h-${w - 2 * r} ` +
+    `a${r},${r} 0 0 1 -${r},-${r} ` +
+    `v-${h - 2 * r} ` +
+    `a${r},${r} 0 0 1 ${r},-${r} Z`
+  );
+};
+
 export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
-  const insets = useSafeAreaInsets();
+  const { colors } = useThemeStyles();
 
-  // Calculate the correct vertical offset for Android
-  // On Android with translucent status bar:
-  // - measure() returns coordinates from top of window (below status bar)
-  // - But the Modal in copilot renders from top of screen (including status bar)
-  // - So we need to ADD the status bar height as offset
-  //
-  // On iOS:
-  // - measure() returns coordinates including safe area
-  // - No adjustment needed
-  const androidStatusBarHeight = StatusBar.currentHeight || 0;
-
-  // Use negative offset on Android to move highlight UP to match the actual element
-  // The safe area top inset is more accurate than StatusBar.currentHeight on many devices
-  // We use the larger of the two values to ensure proper offset
-  const offset = Math.max(androidStatusBarHeight, insets.top);
-  const verticalOffset = Platform.OS === 'android' ? -offset : 0;
-
+  // With `androidStatusBarVisible={true}` and expo-status-bar (translucent by
+  // default), the Copilot Modal and `measure()` share the same coordinate
+  // origin (top of the window, including the status bar area on Android), so
+  // no manual offset is needed on either platform.
   return (
     <CopilotProvider
       tooltipComponent={CustomTooltip}
       stepNumberComponent={() => null} // We handle step numbers in the tooltip
       animated
       overlay="svg"
-      // androidStatusBarVisible={true} = copilot won't subtract StatusBar.currentHeight
-      // We handle the offset ourselves for more control
       androidStatusBarVisible={true}
-      verticalOffset={verticalOffset}
-      arrowColor={COLORS.white}
+      verticalOffset={0}
+      arrowColor={colors.cardBackground}
       backdropColor="rgba(0, 0, 0, 0.7)"
+      svgMaskPath={buildSpotlightPath}
+      // Copilot wraps the tooltipComponent in its own card. We render the card
+      // ourselves inside CustomTooltip so the wrapper has to be a transparent
+      // passthrough — otherwise we get a stale white card behind the themed one.
       tooltipStyle={{
+        backgroundColor: 'transparent',
+        padding: 0,
+        shadowOpacity: 0,
+        shadowRadius: 0,
+        elevation: 0,
         borderRadius: 16,
       }}
       stopOnOutsideClick={false}

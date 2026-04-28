@@ -36,20 +36,11 @@ function toUniversalLink(deepLink: string, siteUrl?: string, locale: string = 'e
 }
 
 /**
- * Generate email subject with sport context
+ * Generate email subject from the notification title.
+ * Sport context belongs in the title/body itself, not as a bracketed tag.
  */
 export function generateEmailSubject(notification: NotificationRecord): string {
-  const { title, type, payload } = notification;
-  const sportName = payload?.sportName as string | undefined;
-
-  if (type.startsWith('match_') || type === 'feedback_request' || type === 'reminder') {
-    if (sportName) {
-      const capitalized = sportName.charAt(0).toUpperCase() + sportName.slice(1).toLowerCase();
-      return `[${capitalized}] ${title}`;
-    }
-  }
-
-  return title;
+  return notification.title;
 }
 
 /**
