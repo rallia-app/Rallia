@@ -50,8 +50,8 @@ AS $$
     p.email,
     p.first_name,
     COALESCE(p.preferred_locale, 'en-US')                    AS preferred_locale,
-    extensions.ST_Y(pl.location::geometry)                   AS lat,
-    extensions.ST_X(pl.location::geometry)                   AS lng,
+    extensions.ST_Y(pl.location::extensions.geometry)        AS lat,
+    extensions.ST_X(pl.location::extensions.geometry)        AS lng,
     COALESCE(pl.max_travel_distance, 25)                     AS max_travel_distance_km,
     ps.sport_id,
     s.name                                                   AS sport_name
