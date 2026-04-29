@@ -406,6 +406,22 @@ const Home = () => {
           SheetManager.show('match-suggestions');
           break;
         }
+        case 'matchInviteConfirm': {
+          // Email-driven one-tap invite confirm. The sheet calls
+          // validate_and_create_match_from_email_invite to atomically
+          // re-validate the slot before creating the match.
+          SheetManager.show('match-invite-confirm', {
+            payload: {
+              opponentId: payload.opponentId,
+              facilityId: payload.facilityId,
+              sportId: payload.sportId,
+              matchDate: payload.matchDate,
+              startTime: payload.startTime,
+              endTime: payload.endTime,
+            },
+          });
+          break;
+        }
         case 'invitation': {
           if (payload.invitationType === 'match' && payload.targetId) {
             const match = await getMatchWithDetails(payload.targetId);

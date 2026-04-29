@@ -1414,6 +1414,25 @@
     "rotate": "Rotate",
     "processing": "Processing..."
   },
+  "inviteConfirmSheet": {
+    "title": "Send invite?",
+    "subtitleWithOpponent": "Invite {opponentName} to play at {facility} on {dateTime}.",
+    "subtitle": "Invite this player at the time and place from the email.",
+    "confirmButton": "Send invite",
+    "cancelButton": "Cancel",
+    "successToast": "Invite sent",
+    "errorMessage": "Something went wrong. Please try again.",
+    "callerBusyMessage": "You already have a match at this time.",
+    "opponentBusyMessage": "This time isn't available anymore.",
+    "seeOtherSuggestions": "See other suggestions"
+  },
+  "digestUnsubscribe": {
+    "successTitle": "You're unsubscribed",
+    "successMessage": "You won't get the morning digest anymore. You can re-enable it anytime from your notification preferences.",
+    "errorTitle": "Couldn't unsubscribe",
+    "errorMessage": "This unsubscribe link looks invalid or expired. Please update your preferences in the app instead.",
+    "managePreferences": "Manage notification preferences"
+  },
   "onboarding": {
     "pageTitle": "Create Your Organization",
     "pageDescription": "Set up your organization profile to get started",
@@ -3853,7 +3872,7 @@
         "home": "Home",
         "games": "Games",
         "communities": "Communities",
-        "donate": "Donate"
+        "donate": "Support"
       }
     },
     "hero": {
@@ -8776,6 +8795,38 @@
       "doubles": "Doubles"
     }
   },
+  "inviteScanner": {
+    "title": "Scan QR Code",
+    "instructions": "Point at a Rallia invite or match QR code",
+    "processing": "Processing...",
+    "invalidTitle": "Invalid QR Code",
+    "invalidMessage": "This isn't a Rallia invite or match QR code.",
+    "matchNotFoundTitle": "Match Unavailable",
+    "matchNotFoundMessage": "This match no longer exists or you don't have access to it.",
+    "joinFailedTitle": "Could Not Join",
+    "joinFailedMessage": "Failed to join. Please try again.",
+    "joinedGroupTitle": "Group Joined!",
+    "joinedGroupMessage": "You've joined {name}.",
+    "ratingRequiredGeneric": "You need a rating to join this community.",
+    "pendingRequestExists": "You already have a pending request to join this community.",
+    "communityRequestSentTitle": "Request Sent",
+    "communityRequestSentMessage": "Your request to join {name} has been sent for approval.",
+    "tryAgain": "Try Again",
+    "cameraPermissionRequired": "Camera Permission Required",
+    "cameraPermissionMessage": "Please enable camera access in your device settings to scan QR codes.",
+    "openSettings": "Open Settings",
+    "cameraAccessRequired": "Camera Access Required",
+    "cameraAccessDescription": "To scan invite QR codes, we need access to your camera.",
+    "allowCameraAccess": "Allow Camera Access",
+    "enterInviteCode": "Enter Invite Code",
+    "enterInviteCodeDescription": "Enter the 8-character invite code manually",
+    "pleaseEnterInviteCode": "Please enter an invite code",
+    "scanQR": "Scan QR",
+    "enterCode": "Enter Code",
+    "lightOn": "Light On",
+    "lightOff": "Light Off",
+    "join": "Join"
+  },
   "invitePage": {
     "title": "Join Rallia",
     "description": "Download Rallia to find players, join matches, and play more.",
@@ -8796,7 +8847,16 @@
     "notFound": "Invite not found",
     "notFoundDescription": "This invite link may be invalid or expired.",
     "downloadCta": "Download Rallia",
-    "clipboardHint": "The link will be saved so the app can connect your invitation.",
+    "iosCodeLabel": "Your invite code",
+    "iosCodeHint": "Tap to copy. After installing, paste it on the onboarding screen to claim your invite.",
+    "iosCopyCode": "Copy code",
+    "iosCodeCopied": "Copied! Now install the app and paste your code during onboarding.",
+    "iosGroupCodeLabel": "Group invite code",
+    "iosGroupCodeHint": "Tap to copy. After installing, open Groups → Join with code and paste it.",
+    "iosGroupCodeCopied": "Copied! Open Groups → Join with code in the app to enter it.",
+    "iosCommunityCodeLabel": "Community invite code",
+    "iosCommunityCodeHint": "Tap to copy. After installing, open Communities → Join with code and paste it.",
+    "iosCommunityCodeCopied": "Copied! Open Communities → Join with code in the app to enter it.",
     "physicalTitle": "Welcome to Rallia",
     "physicalHeading": "Welcome to Rallia",
     "physicalDescription": "Download the app to find players, join matches, and play more."
