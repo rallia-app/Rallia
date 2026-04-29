@@ -85,6 +85,19 @@ export interface SuggestionCardProps {
   onSendInvite?: (payload: InvitePayload) => void;
   disabled?: boolean;
   inviteState?: InviteState;
+  /** When true, the facility / date / time pills are display-only and the
+   *  auto-picked defaults can't be changed. Used in the unified feed where
+   *  each suggestion should look like a concrete pre-filled match. */
+  lockSelections?: boolean;
+  /** Locked-mode override: explicit slot to display. Required to keep the
+   *  card's displayed time identical to the slot used by the unified feed's
+   *  chronological sort key. Ignored in interactive (non-locked) mode. */
+  pickedSlot?: AvailableTimeSlot;
+  /** Locked-mode override: index into `suggestion.facilities` of the facility
+   *  whose `pickedSlot` was chosen. The facility-fallback in
+   *  `pickSlotForSuggestion` may pick from a non-default facility, so the
+   *  location row needs this to render the right name. Defaults to 0. */
+  pickedFacilityIndex?: number;
 }
 
 // =============================================================================
@@ -166,10 +179,13 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
   onSendInvite,
   disabled,
   inviteState = 'idle',
+  lockSelections = false,
+  pickedSlot,
+  pickedFacilityIndex,
 }) => {
   // Local selection state. `null` for date/time means "use the auto-pick";
   // a non-null value means the user manually overrode that field.
-  const [selectedFacilityIndex, setSelectedFacilityIndex] = useState(0);
+  const [selectedFacilityIndex, setSelectedFacilityIndex] = useState(pickedFacilityIndex ?? 0);
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<Date | null>(null);
   const [selectedEndTime, setSelectedEndTime] = useState<Date | null>(null);
@@ -180,11 +196,16 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
   const randomPickRef = useRef(new Map<string, AvailableTimeSlot>());
 
   // Tick every minute so past time chips drop off while the sheet stays open.
+  // In locked mode (used by the unified feed) this is unnecessary — the feed's
+  // own ticker drives slot expiry — so we skip the timer to avoid pointless
+  // re-renders across many cards.
+  const lockedAndPicked = lockSelections && !!pickedSlot;
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
+    if (lockedAndPicked) return;
     const id = setInterval(() => setNowMs(Date.now()), 60_000);
     return () => clearInterval(id);
-  }, []);
+  }, [lockedAndPicked]);
 
   const selectedFacility = suggestion.facilities[selectedFacilityIndex];
 
@@ -256,6 +277,10 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
     label: string;
     periods: string[];
   }> => {
+    // Locked mode renders only the static match-style rows — no date pill, no
+    // hour pill — so the (relatively expensive) shared-availability ∩ slot
+    // join is wasted work. Short-circuit.
+    if (lockedAndPicked) return [];
     if (!selectedFacility) return [];
 
     const now = new Date(nowMs);
@@ -286,7 +311,11 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
       if (dateMap.has(key)) {
         dateMap.get(key)!.periods.push(slot.period);
       } else {
-        const result = formatIntuitiveDateInTimezone(key, 'UTC', locale);
+        // The `key` is built from the user's *local* date components, so we
+        // must compare against "today" in the same (device) timezone — not
+        // UTC, which can be a day ahead/behind and produce a wrong label.
+        const deviceTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const result = formatIntuitiveDateInTimezone(key, deviceTz, locale);
         let dateLabel: string;
         if (result.type === 'today') {
           dateLabel = labels.today;
@@ -306,7 +335,7 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
     }
 
     return Array.from(dateMap.values()).sort((a, b) => a.date.getTime() - b.date.getTime());
-  }, [suggestion.sharedAvailability, selectedFacility, locale, labels, nowMs]);
+  }, [suggestion.sharedAvailability, selectedFacility, locale, labels, nowMs, lockedAndPicked]);
 
   // Effective date = manual override (if still valid) else soonest visible date.
   const effectiveDateKey = useMemo<string | null>(() => {
@@ -318,6 +347,8 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
 
   // Hours available on the effective date, deduped by hour and dropping past slots.
   const availableHoursForDate = useMemo((): AvailableTimeSlot[] => {
+    // Locked mode renders no hour pills — skip the work.
+    if (lockedAndPicked) return [];
     if (!effectiveDateKey || !selectedFacility) return [];
 
     const selectedDateChip = visibleDates.find(d => d.key === effectiveDateKey);
@@ -345,12 +376,19 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
     return Array.from(byHour.values()).sort(
       (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
     );
-  }, [effectiveDateKey, selectedFacility, visibleDates, nowMs]);
+  }, [effectiveDateKey, selectedFacility, visibleDates, nowMs, lockedAndPicked]);
 
   // Auto-picked time: a stable random slot per (facility, date). Re-rolls only
   // when the cached slot is no longer in availableHoursForDate (e.g. it slid
   // into the past via the 1-min tick, or the user changed facility/date).
   const autoPickedTime = useMemo<AvailableTimeSlot | null>(() => {
+    // Locked mode: use the slot pre-picked by useUnifiedMatchFeed so the
+    // displayed time is exactly the slot used as the chronological sort key.
+    // Falls back to the first available slot if no pickedSlot was provided
+    // (defensive — the feed always passes one).
+    if (lockSelections) {
+      return pickedSlot ?? availableHoursForDate[0] ?? null;
+    }
     if (!selectedFacility || !effectiveDateKey || availableHoursForDate.length === 0) {
       return null;
     }
@@ -365,7 +403,7 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
     const pick = availableHoursForDate[Math.floor(Math.random() * availableHoursForDate.length)];
     randomPickRef.current.set(cacheKey, pick);
     return pick;
-  }, [selectedFacility, effectiveDateKey, availableHoursForDate]);
+  }, [selectedFacility, effectiveDateKey, availableHoursForDate, lockSelections, pickedSlot]);
 
   // Effective time = manual override (if still in the available list) else auto-pick.
   const manualSlotStillValid = useMemo(() => {
@@ -459,7 +497,21 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
   };
 
   const effectiveDateChip = visibleDates.find(d => d.key === effectiveDateKey);
-  const dateLabel = effectiveDateChip?.label ?? labels.selectDate;
+  // In locked mode the feed pre-selects an exact slot; derive the date label
+  // straight from it so it always matches the displayed start time. In
+  // interactive mode keep the visible-dates-driven label for the date pill.
+  const dateLabel = (() => {
+    if (lockSelections && effectiveTime) {
+      const d = effectiveTime;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const deviceTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const result = formatIntuitiveDateInTimezone(key, deviceTz, locale);
+      if (result.type === 'today') return labels.today;
+      if (result.type === 'tomorrow') return labels.tomorrow;
+      return result.label;
+    }
+    return effectiveDateChip?.label ?? labels.selectDate;
+  })();
   const timeLabel =
     effectiveTime && effectiveEndTime
       ? `${formatHour(effectiveTime.getHours(), locale)} – ${formatHour(effectiveEndTime.getHours(), locale)}`
@@ -467,10 +519,57 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
         ? formatHour(effectiveTime.getHours(), locale)
         : labels.noAvailableTimes;
 
+  // Match-card-style "{date} • {start} • {duration}" label, used when locked.
+  const TIME_SEPARATOR = ' • ';
+  const startTimeText = effectiveTime
+    ? effectiveTime.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' })
+    : null;
+  const durationText = (() => {
+    if (!effectiveTime || !effectiveEndTime) return null;
+    let mins = Math.round((effectiveEndTime.getTime() - effectiveTime.getTime()) / 60000);
+    if (mins <= 0) mins += 24 * 60;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return m > 0 ? `${h}h${m.toString().padStart(2, '0')}` : `${h}h`;
+  })();
+  const matchStyleTimeLabel = effectiveTime
+    ? [dateLabel, startTimeText, durationText].filter(Boolean).join(TIME_SEPARATOR)
+    : labels.noAvailableTimes;
+
   return (
     <Animated.View style={{ transform: [{ scale: cardScaleAnimation }] }}>
       <View style={[styles.card, { backgroundColor: cardBg, borderColor }]}>
         <View style={styles.content}>
+          {/* Match-style time + location rows shown when selections are locked */}
+          {lockSelections && (
+            <>
+              <View style={styles.matchStyleTimeRow}>
+                <Ionicons name="calendar-outline" size={16} color={tierAccent} />
+                <Text
+                  size="base"
+                  weight="bold"
+                  color={colors.text}
+                  numberOfLines={1}
+                  style={styles.matchStyleTimeText}
+                >
+                  {matchStyleTimeLabel}
+                </Text>
+              </View>
+              <View style={styles.matchStyleLocationRow}>
+                <Ionicons name="location" size={14} color={colors.textMuted} />
+                {selectedFacility?.hasAvailabilitySource && <LiveDot />}
+                <Text
+                  size="sm"
+                  color={colors.textMuted}
+                  numberOfLines={1}
+                  style={styles.matchStyleLocationText}
+                >
+                  {selectedFacility?.facilityName ?? ''}
+                </Text>
+              </View>
+            </>
+          )}
+
           {/* Opponent row */}
           <View style={styles.opponentRow}>
             <View style={[styles.avatar, { borderColor: tierAccent }]}>
@@ -514,19 +613,22 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
             </View>
           </View>
 
-          {/* Facility summary pill (one-tap default; tap to override) */}
-          <View style={styles.summaryRow}>
-            {renderPill(
-              'facility',
-              'location',
-              selectedFacility?.facilityName ?? '',
-              hasMultipleFacilities,
-              selectedFacility?.hasAvailabilitySource ? <LiveDot /> : undefined
-            )}
-          </View>
+          {/* Facility summary pill — interactive mode only (locked mode renders a
+              match-style location row above instead). */}
+          {!lockSelections && (
+            <View style={styles.summaryRow}>
+              {renderPill(
+                'facility',
+                'location',
+                selectedFacility?.facilityName ?? '',
+                hasMultipleFacilities,
+                selectedFacility?.hasAvailabilitySource ? <LiveDot /> : undefined
+              )}
+            </View>
+          )}
 
           {/* Expanded panel: facility chips */}
-          {expandedSection === 'facility' && hasMultipleFacilities && (
+          {!lockSelections && expandedSection === 'facility' && hasMultipleFacilities && (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -563,14 +665,16 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
             </ScrollView>
           )}
 
-          {/* Date + time summary pills */}
-          <View style={styles.summaryRow}>
-            {renderPill('date', 'calendar-outline', dateLabel, visibleDates.length > 1)}
-            {renderPill('time', 'time-outline', timeLabel, availableHoursForDate.length > 1)}
-          </View>
+          {/* Date + time summary pills — interactive mode only. */}
+          {!lockSelections && (
+            <View style={styles.summaryRow}>
+              {renderPill('date', 'calendar-outline', dateLabel, visibleDates.length > 1)}
+              {renderPill('time', 'time-outline', timeLabel, availableHoursForDate.length > 1)}
+            </View>
+          )}
 
           {/* Expanded panel: date chips */}
-          {expandedSection === 'date' && visibleDates.length > 0 && (
+          {!lockSelections && expandedSection === 'date' && visibleDates.length > 0 && (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -605,7 +709,7 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
           )}
 
           {/* Expanded panel: hour chips */}
-          {expandedSection === 'time' && (
+          {!lockSelections && expandedSection === 'time' && (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -762,6 +866,24 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacingPixels[4],
+  },
+  matchStyleTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacingPixels[2],
+    gap: spacingPixels[1.5],
+  },
+  matchStyleTimeText: {
+    flexShrink: 1,
+  },
+  matchStyleLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacingPixels[3],
+    gap: spacingPixels[1.5],
+  },
+  matchStyleLocationText: {
+    flexShrink: 1,
   },
 
   // Opponent

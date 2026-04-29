@@ -26,7 +26,7 @@ import { Text } from '@rallia/shared-components';
 import { SuggestionCard } from './SuggestionCard';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
-import { useMatchSuggestions } from '@rallia/shared-hooks';
+import { useMatchSuggestions, pickSlotForSuggestion, suggestionKeys } from '@rallia/shared-hooks';
 import { createMatchFromSuggestion } from '@rallia/shared-services';
 import { useQueryClient } from '@tanstack/react-query';
 import type { InvitePayload } from './SuggestionCard';
@@ -191,6 +191,7 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
         setInviteStates(prev => ({ ...prev, [id]: 'sent' }));
         queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'player'] });
         queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'nearby'] });
+        queryClient.invalidateQueries({ queryKey: suggestionKeys.all });
       } catch {
         setInviteStates(prev => ({ ...prev, [id]: 'idle' }));
       }
@@ -305,6 +306,8 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
                       transform: [{ translateY: cardTranslateYs[index] }],
                     }
                   : undefined;
+              const picked = pickSlotForSuggestion(suggestion, Date.now());
+              if (!picked) return null;
               return (
                 <Animated.View key={suggestion.opponentId} style={animStyle}>
                   <SuggestionCard
@@ -323,6 +326,9 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
                     locale={locale}
                     onSendInvite={handleSendInvite}
                     inviteState={inviteStates[suggestion.opponentId] ?? 'idle'}
+                    lockSelections
+                    pickedSlot={picked.slot}
+                    pickedFacilityIndex={picked.facilityIndex}
                   />
                 </Animated.View>
               );

@@ -100,6 +100,10 @@ export interface GetMatchSuggestionsParams {
   longitude?: number;
   /** Anon mode: search radius in km (defaults to 25). */
   maxDistanceKm?: number;
+  /** Cancellation signal — wired through TanStack's queryFn. The scoring RPC
+   *  honors `.abortSignal(signal)`; long-running downstream availability /
+   *  busy-slot fetches are short-circuited via `signal.aborted` checks. */
+  signal?: AbortSignal;
 }
 
 /** A player's existing match time window for conflict detection */
@@ -305,6 +309,7 @@ export async function getMatchSuggestions(
     longitude,
     maxDistanceKm = 25,
     limit = 10,
+    signal,
   } = params;
   const isAnon = !playerId;
 
@@ -322,19 +327,22 @@ export async function getMatchSuggestions(
   const rpcLimit = Math.max(50, limit * 4);
 
   // ── Step 1: Call SQL RPC ────────────────────────────────────────────
-  const { data: scoredRows, error } = isAnon
-    ? await supabase.rpc('get_match_suggestions_anon', {
+  const rpcBuilder = isAnon
+    ? supabase.rpc('get_match_suggestions_anon', {
         p_sport_id: sportId,
         p_lat: latitude!,
         p_lng: longitude!,
         p_max_distance_km: maxDistanceKm,
         p_limit: rpcLimit,
       })
-    : await supabase.rpc('get_match_suggestions_scored', {
+    : supabase.rpc('get_match_suggestions_scored', {
         p_player_id: playerId!,
         p_sport_id: sportId,
         p_limit: rpcLimit,
       });
+  if (signal) rpcBuilder.abortSignal(signal);
+  const { data: scoredRows, error } = await rpcBuilder;
+  if (signal?.aborted) return [];
 
   if (error) {
     console.error('[SuggestionService] RPC error:', error);
@@ -398,6 +406,7 @@ export async function getMatchSuggestions(
     // Fetch busy times for caller + all opponents
     fetchBusySlots(allPlayerIds, startDate, endDate),
   ]);
+  if (signal?.aborted) return [];
 
   const availByFacility = new Map<string, { slots: AvailabilitySlot[]; hasSource: boolean }>();
   for (const result of availabilityResults) {

@@ -24,7 +24,7 @@ import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { successHaptic } from '@rallia/shared-utils';
 import { createMatchFromSuggestion } from '@rallia/shared-services';
 import { useQueryClient } from '@tanstack/react-query';
-import { usePlayerSports } from '@rallia/shared-hooks';
+import { usePlayerSports, pickSlotForSuggestion } from '@rallia/shared-hooks';
 import type { MatchSuggestion } from '@rallia/shared-services';
 import type { InvitePayload } from '../../../../../components/SuggestionCard';
 import type { TranslationKey } from '@rallia/shared-translations';
@@ -251,6 +251,8 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
                 opacity: cardOpacities[index],
                 transform: [{ translateY: cardTranslateYs[index] }],
               };
+              const picked = pickSlotForSuggestion(suggestion, Date.now());
+              if (!picked) return null;
               return (
                 <Animated.View key={suggestion.opponentId} style={cardAnimatedStyle}>
                   <SuggestionCard
@@ -261,6 +263,9 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
                     inviteState={inviteStates[suggestion.opponentId] ?? 'idle'}
                     labels={cardLabels}
                     locale={locale}
+                    lockSelections
+                    pickedSlot={picked.slot}
+                    pickedFacilityIndex={picked.facilityIndex}
                   />
                 </Animated.View>
               );
