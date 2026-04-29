@@ -6,7 +6,7 @@
  * Uses the shared SuggestionCard and useMatchSuggestions hook.
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { TouchableOpacity } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
@@ -25,16 +25,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { SuggestionCard } from './SuggestionCard';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { lightHaptic, successHaptic } from '@rallia/shared-utils';
+import { lightHaptic } from '@rallia/shared-utils';
 import { useMatchSuggestions, pickSlotForSuggestion } from '@rallia/shared-hooks';
-import { suggestionSlotKey } from '../hooks/useSuggestionInviteHandler';
-import { createMatchFromSuggestion } from '@rallia/shared-services';
-import { useQueryClient } from '@tanstack/react-query';
-import type { InvitePayload } from './SuggestionCard';
+import { suggestionSlotKey, useSuggestionInviteHandler } from '../hooks/useSuggestionInviteHandler';
 import { useThemeStyles, useTranslation, useEffectiveLocation } from '../hooks';
-import { useActionsSheet, useSport } from '../context';
+import { useSport } from '../context';
 import { useAuth, usePlayer } from '../hooks';
-import { usePlayerSports } from '@rallia/shared-hooks';
 
 export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestions'>) {
   const { colors, isDark } = useThemeStyles();
@@ -42,14 +38,7 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
   const { session } = useAuth();
   const { player } = usePlayer();
   const { selectedSport } = useSport();
-  const { openSheet: openAuthSheet } = useActionsSheet();
   const { location: effectiveLocation } = useEffectiveLocation();
-  const { playerSports } = usePlayerSports(session?.user?.id);
-  const callerSportPrefs = playerSports.find(ps => ps.sport_id === selectedSport?.id);
-  const callerDuration = callerSportPrefs?.preferred_match_duration ?? '60';
-  const callerMatchType = callerSportPrefs?.preferred_match_type ?? 'both';
-
-  const queryClient = useQueryClient();
 
   const resolvedPlayerId = player?.id ?? session?.user?.id;
   const isAnon = !resolvedPlayerId;
@@ -156,79 +145,9 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
     await refetch();
   }, [refetch]);
 
-  // Per-card invite state
-  const [inviteStates, setInviteStates] = useState<Record<string, 'idle' | 'sending' | 'sent'>>({});
-  const inviteStatesRef = useRef(inviteStates);
-  inviteStatesRef.current = inviteStates;
-
-  const handleSendInvite = useCallback(
-    async (payload: InvitePayload) => {
-      // Signed-out users: dismiss this sheet and route to auth
-      if (!session?.user) {
-        lightHaptic();
-        SheetManager.hide('match-suggestions');
-        openAuthSheet();
-        return;
-      }
-
-      const key = suggestionSlotKey(
-        payload.suggestion.opponentId,
-        payload.selectedFacility.facilityId,
-        payload.selectedTime
-      );
-      if (inviteStatesRef.current[key] === 'sending' || inviteStatesRef.current[key] === 'sent')
-        return;
-
-      setInviteStates(prev => ({ ...prev, [key]: 'sending' }));
-      try {
-        await createMatchFromSuggestion({
-          createdBy: player?.id ?? session?.user?.id ?? '',
-          opponentId: payload.suggestion.opponentId,
-          sportId: selectedSport?.id ?? '',
-          matchType: callerMatchType,
-          matchDuration: callerDuration,
-          facilityId: payload.selectedFacility.facilityId,
-          startTime: payload.selectedTime,
-          endTime: payload.selectedEndTime,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        });
-        successHaptic();
-        setInviteStates(prev => ({ ...prev, [key]: 'sent' }));
-        queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'player'] });
-        queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'nearby'] });
-      } catch {
-        setInviteStates(prev => ({ ...prev, [key]: 'idle' }));
-      }
-    },
-    [
-      player?.id,
-      session?.user,
-      selectedSport?.id,
-      callerDuration,
-      callerMatchType,
-      queryClient,
-      openAuthSheet,
-    ]
-  );
-
-  const cardLabels = useMemo(
-    () => ({
-      facility: t('onboarding.suggestions.facility'),
-      when: t('onboarding.suggestions.when'),
-      noAvailableTimes: t('onboarding.suggestions.noAvailableTimes'),
-      unknownPlayer: t('onboarding.suggestions.unknownPlayer'),
-      sendInvite: t('onboarding.suggestions.sendInvite'),
-      inviteSent: t('onboarding.suggestions.inviteSent'),
-      periodMorning: t('onboarding.suggestions.periodMorning'),
-      periodAfternoon: t('onboarding.suggestions.periodAfternoon'),
-      periodEvening: t('onboarding.suggestions.periodEvening'),
-      today: t('common.time.today'),
-      tomorrow: t('common.time.tomorrow'),
-      selectDate: t('onboarding.suggestions.selectDate'),
-      selectTime: t('onboarding.suggestions.selectTime'),
-    }),
-    [t]
-  );
+  const { cardLabels, inviteStates, handleSendInvite } = useSuggestionInviteHandler({
+    onAuthRequired: () => SheetManager.hide('match-suggestions'),
+  });
 
   return (
     <ActionSheet

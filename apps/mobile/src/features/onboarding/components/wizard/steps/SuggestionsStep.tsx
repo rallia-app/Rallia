@@ -6,7 +6,7 @@
  * Includes confirmation modal for "Send Game Invite" and staggered animations.
  */
 
-import React, { useEffect, useCallback, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useCallback, useMemo, useRef } from 'react';
 import { StyleSheet, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import Animated, {
@@ -21,15 +21,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { SuggestionCard } from '../../../../../components/SuggestionCard';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { successHaptic } from '@rallia/shared-utils';
-import { createMatchFromSuggestion } from '@rallia/shared-services';
-import { useQueryClient } from '@tanstack/react-query';
-import { usePlayerSports, pickSlotForSuggestion } from '@rallia/shared-hooks';
+import { pickSlotForSuggestion } from '@rallia/shared-hooks';
 import type { MatchSuggestion } from '@rallia/shared-services';
-import type { InvitePayload } from '../../../../../components/SuggestionCard';
 import type { TranslationKey } from '@rallia/shared-translations';
 import * as Analytics from '../../../../../services/analytics';
-import { suggestionSlotKey } from '../../../../../hooks/useSuggestionInviteHandler';
+import {
+  suggestionSlotKey,
+  useSuggestionInviteHandler,
+} from '../../../../../hooks/useSuggestionInviteHandler';
 
 const BASE_WHITE = '#ffffff';
 const MAX_CARDS = 5;
@@ -76,14 +75,15 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
   currentSport,
   playerId,
 }) => {
-  const queryClient = useQueryClient();
-  const { playerSports } = usePlayerSports(playerId ?? undefined);
-  const callerSportPrefs = playerSports.find(ps => ps.sport_id === currentSport?.id);
-  const callerDuration = callerSportPrefs?.preferred_match_duration ?? '60';
-  const callerMatchType = callerSportPrefs?.preferred_match_type ?? 'both';
-
-  // Per-card invite state: 'idle' | 'sending' | 'sent'
-  const [inviteStates, setInviteStates] = useState<Record<string, 'idle' | 'sending' | 'sent'>>({});
+  const { cardLabels, inviteStates, handleSendInvite } = useSuggestionInviteHandler({
+    sportId: currentSport?.id,
+    playerId: playerId ?? undefined,
+    onSendSuccess: () =>
+      Analytics.onboardingStepCompleted({
+        step_name: 'suggestions_invite_sent',
+        step_index: -1,
+      }),
+  });
 
   // Animation values
   const headerOpacity = useSharedValue(0);
@@ -126,47 +126,6 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
     opacity: skipOpacity.value,
   }));
 
-  const inviteStatesRef = useRef(inviteStates);
-  inviteStatesRef.current = inviteStates;
-
-  const handleSendInvite = useCallback(
-    async (payload: InvitePayload) => {
-      const key = suggestionSlotKey(
-        payload.suggestion.opponentId,
-        payload.selectedFacility.facilityId,
-        payload.selectedTime
-      );
-      if (inviteStatesRef.current[key] === 'sending' || inviteStatesRef.current[key] === 'sent')
-        return;
-
-      setInviteStates(prev => ({ ...prev, [key]: 'sending' }));
-      try {
-        await createMatchFromSuggestion({
-          createdBy: playerId ?? '',
-          opponentId: payload.suggestion.opponentId,
-          sportId: currentSport?.id ?? '',
-          matchType: callerMatchType,
-          matchDuration: callerDuration,
-          facilityId: payload.selectedFacility.facilityId,
-          startTime: payload.selectedTime,
-          endTime: payload.selectedEndTime,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        });
-        successHaptic();
-        Analytics.onboardingStepCompleted({
-          step_name: 'suggestions_invite_sent',
-          step_index: -1,
-        });
-        setInviteStates(prev => ({ ...prev, [key]: 'sent' }));
-        queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'player'] });
-        queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'nearby'] });
-      } catch {
-        setInviteStates(prev => ({ ...prev, [key]: 'idle' }));
-      }
-    },
-    [playerId, currentSport?.id, callerDuration, callerMatchType, queryClient]
-  );
-
   const hasSentInvite = useMemo(
     () => Object.values(inviteStates).some(state => state === 'sent'),
     [inviteStates]
@@ -179,25 +138,6 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
     });
     onComplete();
   }, [onComplete, hasSentInvite]);
-
-  const cardLabels = useMemo(
-    () => ({
-      facility: t('onboarding.suggestions.facility' as TranslationKey),
-      when: t('onboarding.suggestions.when' as TranslationKey),
-      noAvailableTimes: t('onboarding.suggestions.noAvailableTimes' as TranslationKey),
-      unknownPlayer: t('onboarding.suggestions.unknownPlayer' as TranslationKey),
-      sendInvite: t('onboarding.suggestions.sendInvite' as TranslationKey),
-      inviteSent: t('onboarding.suggestions.inviteSent' as TranslationKey),
-      periodMorning: t('onboarding.suggestions.periodMorning' as TranslationKey),
-      periodAfternoon: t('onboarding.suggestions.periodAfternoon' as TranslationKey),
-      periodEvening: t('onboarding.suggestions.periodEvening' as TranslationKey),
-      today: t('common.time.today' as TranslationKey),
-      tomorrow: t('common.time.tomorrow' as TranslationKey),
-      selectDate: t('onboarding.suggestions.selectDate' as TranslationKey),
-      selectTime: t('onboarding.suggestions.selectTime' as TranslationKey),
-    }),
-    [t]
-  );
 
   return (
     <View style={styles.wrapper}>

@@ -1,13 +1,15 @@
 /**
  * useSuggestionInviteHandler
  *
- * Centralizes the per-card invite state and the createMatchFromSuggestion
- * call used by every surface that renders a SuggestionCard inside a feed
- * (Home, Public Matches). Lifted out of SuggestionsFeedSection so multiple
- * lists can share a single invite handler without duplicating plumbing.
+ * Single source of truth for the per-card invite state, the
+ * createMatchFromSuggestion call, and the labels used by every surface that
+ * renders a SuggestionCard (Home, Public Matches, MatchSuggestionsSheet,
+ * onboarding SuggestionsStep).
  *
- * Invite state is keyed by (opponentId, facilityId, startTimeISO) so that
- * the same opponent re-suggested at a different time renders as 'idle'.
+ * Invite state is keyed by (opponentId, facilityId, startTimeISO) so the same
+ * opponent re-suggested at a different time renders as 'idle'. The match list
+ * queries are invalidated on success; suggestion queries are intentionally NOT
+ * invalidated so the just-invited card stays in place with its 'sent' badge.
  */
 
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -34,6 +36,20 @@ export function suggestionSlotKey(
   return `${opponentId}|${facilityId}|${iso}`;
 }
 
+export interface UseSuggestionInviteHandlerOptions {
+  /** Override the sport pulled from `useSport()`. Useful when a surface drives
+   *  its own selected-sport state (e.g. the onboarding wizard). */
+  sportId?: string;
+  /** Override the caller pulled from `usePlayer()` / `useAuth()`. */
+  playerId?: string;
+  /** Pre-hook that fires before the default `openAuthSheet()` when the caller
+   *  is signed out — for surfaces that must dismiss themselves first. */
+  onAuthRequired?: () => void;
+  /** Fires after a successful invite. Surface-specific side effects
+   *  (analytics, telemetry) belong here. */
+  onSendSuccess?: (payload: InvitePayload, slotKey: string) => void;
+}
+
 export interface UseSuggestionInviteHandlerResult {
   cardLabels: SuggestionCardLabels;
   inviteStates: Record<string, InviteState>;
@@ -42,8 +58,13 @@ export interface UseSuggestionInviteHandlerResult {
 }
 
 export function useSuggestionInviteHandler(
-  fallbackSportId?: string
+  options: UseSuggestionInviteHandlerOptions | string = {}
 ): UseSuggestionInviteHandlerResult {
+  // Back-compat: allow passing a bare sportId string.
+  const opts: UseSuggestionInviteHandlerOptions =
+    typeof options === 'string' ? { sportId: options } : options;
+  const { sportId: optionSportId, playerId: optionPlayerId, onAuthRequired, onSendSuccess } = opts;
+
   const { t } = useTranslation();
   const { session } = useAuth();
   const { player } = usePlayer();
@@ -52,7 +73,7 @@ export function useSuggestionInviteHandler(
   const { playerSports } = usePlayerSports(session?.user?.id);
   const queryClient = useQueryClient();
 
-  const sportId = selectedSport?.id ?? fallbackSportId;
+  const sportId = selectedSport?.id ?? optionSportId;
   const callerSportPrefs = playerSports.find(ps => ps.sport_id === sportId);
   const callerDuration = callerSportPrefs?.preferred_match_duration ?? '60';
   const callerMatchType = callerSportPrefs?.preferred_match_type ?? 'both';
@@ -65,6 +86,7 @@ export function useSuggestionInviteHandler(
     async (payload: InvitePayload) => {
       if (!session?.user) {
         lightHaptic();
+        onAuthRequired?.();
         openAuthSheet();
         return;
       }
@@ -81,7 +103,7 @@ export function useSuggestionInviteHandler(
       setInviteStates(prev => ({ ...prev, [key]: 'sending' }));
       try {
         await createMatchFromSuggestion({
-          createdBy: player?.id ?? session?.user?.id ?? '',
+          createdBy: optionPlayerId ?? player?.id ?? session?.user?.id ?? '',
           opponentId: payload.suggestion.opponentId,
           sportId: sportId ?? '',
           matchType: callerMatchType,
@@ -96,11 +118,13 @@ export function useSuggestionInviteHandler(
         queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'player'] });
         queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'nearby'] });
         queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'public'] });
+        onSendSuccess?.(payload, key);
       } catch {
         setInviteStates(prev => ({ ...prev, [key]: 'idle' }));
       }
     },
     [
+      optionPlayerId,
       player?.id,
       session?.user,
       sportId,
@@ -108,6 +132,8 @@ export function useSuggestionInviteHandler(
       callerMatchType,
       queryClient,
       openAuthSheet,
+      onAuthRequired,
+      onSendSuccess,
     ]
   );
 

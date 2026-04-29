@@ -231,12 +231,15 @@ export function InviteLinkActionSheet({ payload }: SheetProps<'invite-link'>) {
                 /* QR Code Display */
                 <View style={[styles.qrContainer, { backgroundColor: colors.buttonInactive }]}>
                   {inviteLink && (
-                    <QRCode
-                      value={inviteLink}
-                      size={180}
-                      backgroundColor={colors.buttonInactive}
-                      color={colors.text}
-                    />
+                    <View style={styles.qrCanvas}>
+                      <QRCode
+                        value={inviteLink}
+                        size={220}
+                        backgroundColor="#FFFFFF"
+                        color="#000000"
+                        ecl="M"
+                      />
+                    </View>
                   )}
                   <Text size="xs" color={colors.textMuted} style={styles.qrHint}>
                     {t('groups.scanToJoin', { typeLabel })}
@@ -411,6 +414,11 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: radiusPixels.lg,
     marginBottom: spacingPixels[4],
+  },
+  qrCanvas: {
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: radiusPixels.md,
   },
   qrHint: {
     marginTop: spacingPixels[2],
