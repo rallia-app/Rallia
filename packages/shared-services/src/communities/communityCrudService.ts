@@ -351,6 +351,24 @@ export async function deleteCommunity(communityId: string, playerId: string): Pr
 // ============================================================================
 
 /**
+ * Known business-logic errors raised by request_to_join_community / related RPCs.
+ * These are expected outcomes (rating gate, already-member, etc.) and shouldn't
+ * surface as platform errors via console.error.
+ */
+const EXPECTED_JOIN_ERROR_PREFIXES = [
+  'RATING_TOO_LOW',
+  'RATING_REQUIRED',
+  'CERTIFIED_REQUIRED',
+  'ALREADY_MEMBER',
+  'PENDING_REQUEST',
+];
+
+function isExpectedJoinError(message: string | undefined): boolean {
+  if (!message) return false;
+  return EXPECTED_JOIN_ERROR_PREFIXES.some(prefix => message.includes(prefix));
+}
+
+/**
  * Request to join a public community
  */
 export async function requestToJoinCommunity(
@@ -363,7 +381,9 @@ export async function requestToJoinCommunity(
   });
 
   if (error) {
-    console.error('Error requesting to join community:', error);
+    if (!isExpectedJoinError(error.message)) {
+      console.error('Error requesting to join community:', error);
+    }
     throw new Error(error.message);
   }
 

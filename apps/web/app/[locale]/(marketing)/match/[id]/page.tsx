@@ -10,7 +10,6 @@ import { getRelativeDateLabel, formatDuration } from '../../games/_components/ut
 import { getMatch } from './_lib/get-match';
 import { getLandingContext } from '@/lib/landing-attribution';
 import { logReferralClick, buildPlayStoreUrl, APP_STORE_URL } from '@/lib/referral-tracking';
-import { ClipboardDownloadButton } from '../../invite/[code]/_components/clipboard-download-button';
 
 type Props = {
   params: Promise<{ id: string; locale: string }>;
@@ -81,8 +80,6 @@ export default async function MatchPage({ params }: Props) {
   if (platform === 'android') {
     redirect(buildPlayStoreUrl(undefined, 'match', id));
   }
-
-  const matchUrl = `https://rallia.app/${locale}/match/${id}`;
 
   const match = await getMatch(id);
   const t = await getTranslations({ locale, namespace: 'matchPage' });
@@ -298,31 +295,24 @@ export default async function MatchPage({ params }: Props) {
             <h2 className="text-xl font-bold">{t('downloadTitle')}</h2>
             <p className="text-sm text-muted-foreground">{t('downloadDescription')}</p>
 
-            {platform === 'ios' ? (
-              <ClipboardDownloadButton
-                inviteUrl={matchUrl}
-                appStoreUrl={APP_STORE_URL}
-                label={t('downloadTitle')}
-                hint={t('downloadDescription')}
-              />
-            ) : (
-              <div className="flex gap-4">
-                <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
-                  <Image
-                    src="/app-store-badge-light.svg"
-                    alt={t('appStore')}
-                    width={120}
-                    height={40}
-                    className="button-scale block dark:hidden"
-                  />
-                  <Image
-                    src="/app-store-badge.svg"
-                    alt={t('appStore')}
-                    width={120}
-                    height={40}
-                    className="button-scale hidden dark:block"
-                  />
-                </a>
+            <div className="flex gap-4">
+              <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
+                <Image
+                  src="/app-store-badge-light.svg"
+                  alt={t('appStore')}
+                  width={120}
+                  height={40}
+                  className="button-scale block dark:hidden"
+                />
+                <Image
+                  src="/app-store-badge.svg"
+                  alt={t('appStore')}
+                  width={120}
+                  height={40}
+                  className="button-scale hidden dark:block"
+                />
+              </a>
+              {platform !== 'ios' ? (
                 <a
                   href={buildPlayStoreUrl(undefined, 'match', id)}
                   target="_blank"
@@ -343,8 +333,8 @@ export default async function MatchPage({ params }: Props) {
                     className="button-scale hidden dark:block"
                   />
                 </a>
-              </div>
-            )}
+              ) : null}
+            </div>
           </div>
         </section>
       </div>
