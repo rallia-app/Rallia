@@ -29,6 +29,7 @@ import type { MatchSuggestion } from '@rallia/shared-services';
 import type { InvitePayload } from '../../../../../components/SuggestionCard';
 import type { TranslationKey } from '@rallia/shared-translations';
 import * as Analytics from '../../../../../services/analytics';
+import { suggestionSlotKey } from '../../../../../hooks/useSuggestionInviteHandler';
 
 const BASE_WHITE = '#ffffff';
 const MAX_CARDS = 5;
@@ -130,11 +131,15 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
 
   const handleSendInvite = useCallback(
     async (payload: InvitePayload) => {
-      const id = payload.suggestion.opponentId;
-      if (inviteStatesRef.current[id] === 'sending' || inviteStatesRef.current[id] === 'sent')
+      const key = suggestionSlotKey(
+        payload.suggestion.opponentId,
+        payload.selectedFacility.facilityId,
+        payload.selectedTime
+      );
+      if (inviteStatesRef.current[key] === 'sending' || inviteStatesRef.current[key] === 'sent')
         return;
 
-      setInviteStates(prev => ({ ...prev, [id]: 'sending' }));
+      setInviteStates(prev => ({ ...prev, [key]: 'sending' }));
       try {
         await createMatchFromSuggestion({
           createdBy: playerId ?? '',
@@ -152,11 +157,11 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
           step_name: 'suggestions_invite_sent',
           step_index: -1,
         });
-        setInviteStates(prev => ({ ...prev, [id]: 'sent' }));
+        setInviteStates(prev => ({ ...prev, [key]: 'sent' }));
         queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'player'] });
         queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'nearby'] });
       } catch {
-        setInviteStates(prev => ({ ...prev, [id]: 'idle' }));
+        setInviteStates(prev => ({ ...prev, [key]: 'idle' }));
       }
     },
     [playerId, currentSport?.id, callerDuration, callerMatchType, queryClient]
@@ -253,6 +258,12 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
               };
               const picked = pickSlotForSuggestion(suggestion, Date.now());
               if (!picked) return null;
+              const pickedFacility = suggestion.facilities[picked.facilityIndex];
+              const slotKey = suggestionSlotKey(
+                suggestion.opponentId,
+                pickedFacility.facilityId,
+                picked.slot.datetime
+              );
               return (
                 <Animated.View key={suggestion.opponentId} style={cardAnimatedStyle}>
                   <SuggestionCard
@@ -260,7 +271,7 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
                     colors={colors}
                     isDark={isDark}
                     onSendInvite={handleSendInvite}
-                    inviteState={inviteStates[suggestion.opponentId] ?? 'idle'}
+                    inviteState={inviteStates[slotKey] ?? 'idle'}
                     labels={cardLabels}
                     locale={locale}
                     lockSelections

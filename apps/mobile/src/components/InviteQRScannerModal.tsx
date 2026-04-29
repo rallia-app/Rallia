@@ -25,7 +25,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Text, useToast } from '@rallia/shared-components';
 import { useJoinByInviteCode } from '@rallia/shared-hooks';
-import { getMatchWithDetails } from '@rallia/shared-services';
+import { getMatchWithDetails, parseInvitationUrl } from '@rallia/shared-services';
 
 import { useThemeStyles, useTranslation } from '../hooks';
 import * as Analytics from '../services/analytics';
@@ -34,27 +34,40 @@ import { getJoinErrorToastMessage } from '../utils/joinErrorToast';
 
 type ScanResult = { kind: 'invite-code'; code: string } | { kind: 'match'; matchId: string } | null;
 
-const INVITE_CODE_RE = /^\/(?:community\/)?join\/([A-Z0-9]{8})\/?$/i;
-const MATCH_PATH_RE =
-  /^\/match\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i;
 const RAW_CODE_RE = /^[A-Z0-9]{8}$/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ALLOWED_HOSTS = new Set(['rallia.app', 'www.rallia.app']);
 
 export function parseRalliaQR(raw: string): ScanResult {
   const trimmed = raw.trim();
 
+  // Validate host before delegating to parseInvitationUrl, which doesn't host-check
+  // and would happily accept https://evil.com/community/join/{code}.
+  let isLikelyUrl = false;
   try {
     const url = new URL(trimmed);
-    if (url.host !== 'rallia.app') return null;
+    isLikelyUrl = true;
+    if (!ALLOWED_HOSTS.has(url.host)) return null;
+  } catch {
+    // Not a URL — fall through
+  }
 
-    const inviteMatch = url.pathname.match(INVITE_CODE_RE);
-    if (inviteMatch) return { kind: 'invite-code', code: inviteMatch[1].toUpperCase() };
+  if (isLikelyUrl) {
+    const parsed = parseInvitationUrl(trimmed);
+    if (!parsed) return null;
 
-    const matchMatch = url.pathname.match(MATCH_PATH_RE);
-    if (matchMatch) return { kind: 'match', matchId: matchMatch[1].toLowerCase() };
+    if (parsed.type === 'match' && parsed.targetId && UUID_RE.test(parsed.targetId)) {
+      return { kind: 'match', matchId: parsed.targetId.toLowerCase() };
+    }
+
+    if ((parsed.type === 'group' || parsed.type === 'community') && parsed.targetId) {
+      const code = parsed.targetId.toUpperCase();
+      if (RAW_CODE_RE.test(code)) {
+        return { kind: 'invite-code', code };
+      }
+    }
 
     return null;
-  } catch {
-    // Not a URL — try raw code
   }
 
   if (RAW_CODE_RE.test(trimmed)) {

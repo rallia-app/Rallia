@@ -26,7 +26,8 @@ import { Text } from '@rallia/shared-components';
 import { SuggestionCard } from './SuggestionCard';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
-import { useMatchSuggestions, pickSlotForSuggestion, suggestionKeys } from '@rallia/shared-hooks';
+import { useMatchSuggestions, pickSlotForSuggestion } from '@rallia/shared-hooks';
+import { suggestionSlotKey } from '../hooks/useSuggestionInviteHandler';
 import { createMatchFromSuggestion } from '@rallia/shared-services';
 import { useQueryClient } from '@tanstack/react-query';
 import type { InvitePayload } from './SuggestionCard';
@@ -170,11 +171,15 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
         return;
       }
 
-      const id = payload.suggestion.opponentId;
-      if (inviteStatesRef.current[id] === 'sending' || inviteStatesRef.current[id] === 'sent')
+      const key = suggestionSlotKey(
+        payload.suggestion.opponentId,
+        payload.selectedFacility.facilityId,
+        payload.selectedTime
+      );
+      if (inviteStatesRef.current[key] === 'sending' || inviteStatesRef.current[key] === 'sent')
         return;
 
-      setInviteStates(prev => ({ ...prev, [id]: 'sending' }));
+      setInviteStates(prev => ({ ...prev, [key]: 'sending' }));
       try {
         await createMatchFromSuggestion({
           createdBy: player?.id ?? session?.user?.id ?? '',
@@ -188,12 +193,11 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         });
         successHaptic();
-        setInviteStates(prev => ({ ...prev, [id]: 'sent' }));
+        setInviteStates(prev => ({ ...prev, [key]: 'sent' }));
         queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'player'] });
         queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'nearby'] });
-        queryClient.invalidateQueries({ queryKey: suggestionKeys.all });
       } catch {
-        setInviteStates(prev => ({ ...prev, [id]: 'idle' }));
+        setInviteStates(prev => ({ ...prev, [key]: 'idle' }));
       }
     },
     [
@@ -308,6 +312,12 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
                   : undefined;
               const picked = pickSlotForSuggestion(suggestion, Date.now());
               if (!picked) return null;
+              const pickedFacility = suggestion.facilities[picked.facilityIndex];
+              const slotKey = suggestionSlotKey(
+                suggestion.opponentId,
+                pickedFacility.facilityId,
+                picked.slot.datetime
+              );
               return (
                 <Animated.View key={suggestion.opponentId} style={animStyle}>
                   <SuggestionCard
@@ -325,7 +335,7 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
                     labels={cardLabels}
                     locale={locale}
                     onSendInvite={handleSendInvite}
-                    inviteState={inviteStates[suggestion.opponentId] ?? 'idle'}
+                    inviteState={inviteStates[slotKey] ?? 'idle'}
                     lockSelections
                     pickedSlot={picked.slot}
                     pickedFacilityIndex={picked.facilityIndex}

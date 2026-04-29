@@ -24,7 +24,7 @@ export interface FeedItemCardProps {
   currentPlayerId?: string;
   themeColors: ThemeColors;
   suggestionLabels: SuggestionCardLabels;
-  getInviteState: (opponentId: string) => InviteState;
+  getInviteState: (opponentId: string, facilityId: string, startTime: Date | string) => InviteState;
   onMatchPress: (match: UnifiedFeedMatch) => void;
   onSendInvite: (payload: InvitePayload) => void;
 }
@@ -63,6 +63,10 @@ function FeedItemCardImpl({
   }
 
   const suggestion = item.data;
+  const pickedFacility = suggestion.facilities[item.pickedFacilityIndex ?? 0];
+  const inviteState = pickedFacility
+    ? getInviteState(suggestion.opponentId, pickedFacility.facilityId, item.pickedSlot.datetime)
+    : 'idle';
   return (
     <View style={styles.suggestionWrapper}>
       <SuggestionCard
@@ -80,7 +84,7 @@ function FeedItemCardImpl({
         labels={suggestionLabels}
         locale={locale}
         onSendInvite={onSendInvite}
-        inviteState={getInviteState(suggestion.opponentId)}
+        inviteState={inviteState}
         lockSelections
         pickedSlot={item.pickedSlot}
         pickedFacilityIndex={item.pickedFacilityIndex}

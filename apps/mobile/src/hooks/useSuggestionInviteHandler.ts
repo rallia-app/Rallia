@@ -5,13 +5,16 @@
  * call used by every surface that renders a SuggestionCard inside a feed
  * (Home, Public Matches). Lifted out of SuggestionsFeedSection so multiple
  * lists can share a single invite handler without duplicating plumbing.
+ *
+ * Invite state is keyed by (opponentId, facilityId, startTimeISO) so that
+ * the same opponent re-suggested at a different time renders as 'idle'.
  */
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { createMatchFromSuggestion } from '@rallia/shared-services';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
-import { usePlayerSports, suggestionKeys } from '@rallia/shared-hooks';
+import { usePlayerSports } from '@rallia/shared-hooks';
 import { usePlayer } from '@rallia/shared-hooks';
 import { useAuth } from './useAuth';
 import { useTranslation } from './useTranslation';
@@ -22,10 +25,19 @@ import type {
   SuggestionCardLabels,
 } from '../components/SuggestionCard';
 
+export function suggestionSlotKey(
+  opponentId: string,
+  facilityId: string,
+  startTime: Date | string
+): string {
+  const iso = typeof startTime === 'string' ? startTime : startTime.toISOString();
+  return `${opponentId}|${facilityId}|${iso}`;
+}
+
 export interface UseSuggestionInviteHandlerResult {
   cardLabels: SuggestionCardLabels;
   inviteStates: Record<string, InviteState>;
-  getInviteState: (opponentId: string) => InviteState;
+  getInviteState: (opponentId: string, facilityId: string, startTime: Date | string) => InviteState;
   handleSendInvite: (payload: InvitePayload) => Promise<void>;
 }
 
@@ -57,12 +69,16 @@ export function useSuggestionInviteHandler(
         return;
       }
 
-      const id = payload.suggestion.opponentId;
-      if (inviteStatesRef.current[id] === 'sending' || inviteStatesRef.current[id] === 'sent') {
+      const key = suggestionSlotKey(
+        payload.suggestion.opponentId,
+        payload.selectedFacility.facilityId,
+        payload.selectedTime
+      );
+      if (inviteStatesRef.current[key] === 'sending' || inviteStatesRef.current[key] === 'sent') {
         return;
       }
 
-      setInviteStates(prev => ({ ...prev, [id]: 'sending' }));
+      setInviteStates(prev => ({ ...prev, [key]: 'sending' }));
       try {
         await createMatchFromSuggestion({
           createdBy: player?.id ?? session?.user?.id ?? '',
@@ -76,15 +92,12 @@ export function useSuggestionInviteHandler(
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         });
         successHaptic();
-        setInviteStates(prev => ({ ...prev, [id]: 'sent' }));
+        setInviteStates(prev => ({ ...prev, [key]: 'sent' }));
         queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'player'] });
         queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'nearby'] });
         queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'public'] });
-        // Drop the just-invited opponent from every suggestion surface so the
-        // card doesn't reappear on next render.
-        queryClient.invalidateQueries({ queryKey: suggestionKeys.all });
       } catch {
-        setInviteStates(prev => ({ ...prev, [id]: 'idle' }));
+        setInviteStates(prev => ({ ...prev, [key]: 'idle' }));
       }
     },
     [
@@ -118,7 +131,8 @@ export function useSuggestionInviteHandler(
   );
 
   const getInviteState = useCallback(
-    (opponentId: string): InviteState => inviteStates[opponentId] ?? 'idle',
+    (opponentId: string, facilityId: string, startTime: Date | string): InviteState =>
+      inviteStates[suggestionSlotKey(opponentId, facilityId, startTime)] ?? 'idle',
     [inviteStates]
   );
 
