@@ -62,6 +62,42 @@ function extractDeepLinkPayload(path: string): DeepLinkPayload | null {
     return { type: 'match', matchId: matchLink[1] };
   }
 
+  // /games — browse public matches
+  if (path === '/games' || path.startsWith('/games?')) {
+    return { type: 'publicMatches' };
+  }
+
+  // /suggestions — open matchup suggestions sheet
+  if (path === '/suggestions' || path.startsWith('/suggestions?')) {
+    return { type: 'matchupSuggestions' };
+  }
+
+  // /match-invite/confirm — opens the one-tap email-invite confirmation sheet.
+  // Sent by the morning digest email; query params carry the picked slot.
+  if (path === '/match-invite/confirm' || path.startsWith('/match-invite/confirm?')) {
+    const queryMatch = path.match(/\?(.*)/);
+    const params = new URLSearchParams(queryMatch?.[1] ?? '');
+    const opponentId = params.get('opponent') ?? undefined;
+    const facilityId = params.get('facility') ?? undefined;
+    const sportId = params.get('sport') ?? undefined;
+    const matchDate = params.get('date') ?? undefined;
+    const startTime = params.get('start_time') ?? undefined;
+    const endTime = params.get('end_time') ?? undefined;
+    if (opponentId && facilityId && sportId && matchDate && startTime && endTime) {
+      return {
+        type: 'matchInviteConfirm',
+        opponentId,
+        facilityId,
+        sportId,
+        matchDate,
+        startTime,
+        endTime,
+      };
+    }
+    // Missing/invalid params → fall through to the generic suggestions sheet.
+    return { type: 'matchupSuggestions' };
+  }
+
   // /invite/:referralCode?type=...&id=...
   const inviteLink = path.match(/^\/invite\/([A-Za-z0-9]+)/);
   if (inviteLink) {

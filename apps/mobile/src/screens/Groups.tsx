@@ -4,7 +4,7 @@
  * Grid card layout with cover images
  */
 
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   FlatList,
@@ -26,7 +26,8 @@ import { SheetManager } from 'react-native-actions-sheet';
 import { Text, Skeleton, Button } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useAuth, useTranslation, useRequireOnboarding } from '../hooks';
-import { useSport } from '../context';
+import { useSport, useMatchDetailSheet } from '../context';
+import type { MatchDetailData } from '../context';
 import {
   usePlayerGroups,
   usePlayerGroupsRealtime,
@@ -35,6 +36,10 @@ import {
   type Group,
 } from '@rallia/shared-hooks';
 import type { RootStackParamList } from '../navigation/types';
+import {
+  InviteQRScannerModal,
+  type InviteScanJoinResult,
+} from '../components/InviteQRScannerModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_GAP = 12;
@@ -162,7 +167,32 @@ export default function GroupsScreen() {
   const { t } = useTranslation();
   const { guardAction } = useRequireOnboarding();
   const { selectedSport } = useSport();
+  const { openSheet: openMatchDetail } = useMatchDetailSheet();
   const playerId = session?.user?.id;
+
+  const [showScannerModal, setShowScannerModal] = useState(false);
+
+  const openScanner = useCallback(() => {
+    lightHaptic();
+    if (!guardAction()) return;
+    setShowScannerModal(true);
+  }, [guardAction]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={openScanner}
+          style={styles.headerButton}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel={t('inviteScanner.title')}
+        >
+          <Ionicons name="qr-code-outline" size={24} color={colors.headerForeground} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, openScanner, colors.headerForeground, t]);
 
   // Filter groups by selected sport
   const {
@@ -190,6 +220,37 @@ export default function GroupsScreen() {
       ]);
     },
     [refetch, navigation, t]
+  );
+
+  const handleScannerJoined = useCallback(
+    (result: InviteScanJoinResult) => {
+      if (result.kind === 'group') {
+        handleGroupJoined(result.networkId, result.name);
+        return;
+      }
+      Alert.alert(
+        t('inviteScanner.communityRequestSentTitle'),
+        t('inviteScanner.communityRequestSentMessage', { name: result.name }),
+        [
+          {
+            text: t('common.ok'),
+            onPress: () =>
+              navigation.navigate('CommunityDetail', {
+                communityId: result.networkId,
+                communityName: result.name,
+              }),
+          },
+        ]
+      );
+    },
+    [handleGroupJoined, navigation, t]
+  );
+
+  const handleMatchScanned = useCallback(
+    (match: MatchDetailData) => {
+      openMatchDetail(match);
+    },
+    [openMatchDetail]
   );
 
   const handleGroupPress = useCallback(
@@ -369,6 +430,16 @@ export default function GroupsScreen() {
           </TouchableOpacity>
         </View>
       )}
+
+      {playerId && (
+        <InviteQRScannerModal
+          visible={showScannerModal}
+          onClose={() => setShowScannerModal(false)}
+          playerId={playerId}
+          onJoined={handleScannerJoined}
+          onMatchScanned={handleMatchScanned}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -536,5 +607,12 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     gap: 12,
     marginTop: 8,
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 4,
   },
 });

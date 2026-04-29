@@ -203,6 +203,12 @@ export interface ListPublicFeedbackParams {
   search?: string;
 }
 
+export interface PublicFeedbackPage {
+  items: PublicFeedback[];
+  nextOffset: number | null;
+  hasMore: boolean;
+}
+
 interface FeedbackBrowseRow {
   id: string;
   player_id: string | null;
@@ -222,7 +228,7 @@ const DEFAULT_BROWSE_LIMIT = 25;
 
 export async function listPublicFeedback(
   params: ListPublicFeedbackParams
-): Promise<PublicFeedback[]> {
+): Promise<PublicFeedbackPage> {
   const { category, playerId, limit = DEFAULT_BROWSE_LIMIT, offset = 0, search } = params;
 
   let query = supabase
@@ -247,7 +253,9 @@ export async function listPublicFeedback(
     console.error('[listPublicFeedback] error:', error);
     throw new Error('Failed to load reports.');
   }
-  if (!rows || rows.length === 0) return [];
+  if (!rows || rows.length === 0) {
+    return { items: [], nextOffset: null, hasMore: false };
+  }
 
   // Fetch the requesting player's votes on the returned set in one round trip.
   const ids = rows.map(r => r.id);
@@ -263,7 +271,7 @@ export async function listPublicFeedback(
 
   const votedIds = new Set((votes ?? []).map(v => v.feedback_id));
 
-  return (rows as FeedbackBrowseRow[]).map(r => ({
+  const items: PublicFeedback[] = (rows as FeedbackBrowseRow[]).map(r => ({
     id: r.id,
     category: r.category,
     module: r.module,
@@ -278,6 +286,13 @@ export async function listPublicFeedback(
     is_anonymous: r.player_id === null,
     has_voted: votedIds.has(r.id),
   }));
+
+  const hasMore = items.length === limit;
+  return {
+    items,
+    hasMore,
+    nextOffset: hasMore ? offset + items.length : null,
+  };
 }
 
 export async function upvoteFeedback(feedbackId: string, playerId: string): Promise<void> {

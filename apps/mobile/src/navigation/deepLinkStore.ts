@@ -36,6 +36,20 @@ export type DeepLinkPayload =
   | { type: 'match'; matchId: string }
   | { type: 'group'; inviteCode: string }
   | { type: 'community'; inviteCode: string }
+  | { type: 'publicMatches' }
+  | { type: 'matchupSuggestions' }
+  | {
+      /** Sent by the morning digest email's "Send invite" CTA. Opens a
+       *  one-tap confirmation bottom sheet where the user accepts or cancels
+       *  the proposed slot before createMatchFromSuggestion fires. */
+      type: 'matchInviteConfirm';
+      opponentId: string;
+      facilityId: string;
+      sportId: string;
+      matchDate: string; // YYYY-MM-DD
+      startTime: string; // HH:MM:SS
+      endTime: string; // HH:MM:SS
+    }
   | {
       type: 'invitation';
       referralCode: string;
@@ -111,6 +125,12 @@ function persistToAsyncStorage(payload: DeepLinkPayload): void {
         targetId: payload.targetId,
       };
       break;
+    case 'publicMatches':
+      return; // nothing to persist
+    case 'matchupSuggestions':
+      return; // nothing to persist
+    case 'matchInviteConfirm':
+      return; // sheet payload — no AsyncStorage persistence needed
   }
   AsyncStorage.setItem(PENDING_REFERRAL_KEY, JSON.stringify(referral)).catch(() => {});
 }

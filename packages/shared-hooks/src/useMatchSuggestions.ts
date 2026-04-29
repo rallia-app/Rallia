@@ -101,7 +101,7 @@ export function useMatchSuggestions(
     refetch: queryRefetch,
   } = useQuery({
     queryKey,
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       getMatchSuggestions({
         playerId: playerId ?? undefined,
         sportId: sportId!,
@@ -110,10 +110,13 @@ export function useMatchSuggestions(
         longitude: longitude ?? undefined,
         maxDistanceKm,
         limit,
+        signal,
       }),
     enabled: queryEnabled,
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 
   const refetch = useCallback(async () => {

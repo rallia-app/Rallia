@@ -14,7 +14,6 @@ import { useScrollToTop } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import {
-  MatchCard,
   MyMatchCard,
   Text,
   Heading,
@@ -34,6 +33,7 @@ import {
   useEffectiveLocation,
   useTourSequence,
   usePendingReferenceRequestsCount,
+  useSuggestionInviteHandler,
 } from '../hooks';
 import {
   useOverlay,
@@ -50,6 +50,8 @@ import {
   useTheme,
   usePlayer,
   useNearbyMatches,
+  useMatchSuggestions,
+  useUnifiedMatchFeed,
   usePlayerMatches,
   usePlayerSports,
   useRatingScoresForSport,
@@ -61,7 +63,7 @@ import {
   useReferral,
 } from '@rallia/shared-hooks';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { NearbyMatch, MatchScoringPreferences } from '@rallia/shared-hooks';
+import type { MatchScoringPreferences, UnifiedFeedItem } from '@rallia/shared-hooks';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import {
   Logger,
@@ -76,11 +78,11 @@ import {
   getPendingDeepLink,
   addDeepLinkListener,
 } from '../navigation/deepLinkStore';
-import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
+import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { SportIcon } from '../components/SportIcon';
 import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
 import ProfileCompletionBanner from '../features/profile/components/ProfileCompletionBanner';
-import { SuggestionsFeedSection } from '../components/SuggestionsFeedSection';
+import { FeedItemCard } from '../features/matches/components/FeedItemCard';
 import BillingIssueBanner from '../components/BillingIssueBanner';
 import ReferenceRequestsBanner from '../components/ReferenceRequestsBanner';
 import { useSubscription } from '../context';
@@ -391,6 +393,33 @@ const Home = () => {
           } else {
             toast.error(r.error || t('community.joinFailedViaLink'));
           }
+          break;
+        }
+        case 'publicMatches': {
+          appNavigation.navigate('Main', {
+            screen: 'Home',
+            params: { screen: 'PublicMatches' },
+          } as never);
+          break;
+        }
+        case 'matchupSuggestions': {
+          SheetManager.show('match-suggestions');
+          break;
+        }
+        case 'matchInviteConfirm': {
+          // Email-driven one-tap invite confirm. The sheet calls
+          // validate_and_create_match_from_email_invite to atomically
+          // re-validate the slot before creating the match.
+          SheetManager.show('match-invite-confirm', {
+            payload: {
+              opponentId: payload.opponentId,
+              facilityId: payload.facilityId,
+              sportId: payload.sportId,
+              matchDate: payload.matchDate,
+              startTime: payload.startTime,
+              endTime: payload.endTime,
+            },
+          });
           break;
         }
         case 'invitation': {
@@ -714,6 +743,31 @@ const Home = () => {
   // Sort nearby matches by relevance score
   const matches = useSortedNearbyMatches(filteredMatches, scoringPreferences);
 
+  // Fetch matchup suggestions to fill the feed up to ≥30 items.
+  const {
+    suggestions,
+    isLoading: loadingSuggestions,
+    refetch: refetchSuggestions,
+  } = useMatchSuggestions({
+    playerId: player?.id,
+    sportId: selectedSport?.id,
+    sportName: selectedSport?.name,
+    latitude: !player?.id ? location?.latitude : undefined,
+    longitude: !player?.id ? location?.longitude : undefined,
+    limit: 30,
+    enabled: showNearbySection,
+  });
+
+  // Build the unified chronological feed.
+  const feed = useUnifiedMatchFeed({ matches, suggestions });
+
+  // Suggestion invite plumbing (shared with PublicMatches via the hook).
+  const {
+    cardLabels: suggestionLabels,
+    handleSendInvite,
+    getInviteState,
+  } = useSuggestionInviteHandler(selectedSport?.id);
+
   // Use TanStack Query hook for fetching player's upcoming matches
   // Filters by selected sport to match the Soon & Nearby section
   const {
@@ -752,89 +806,89 @@ const Home = () => {
     return () => setOnHomeScreen(false);
   }, [setOnHomeScreen]);
 
+  // Auto-paginate matches up to 30 before relying on suggestions to fill the feed.
+  useEffect(() => {
+    if (
+      showNearbySection &&
+      !loadingMatches &&
+      !isFetchingNextPage &&
+      hasNextPage &&
+      matches.length < 30
+    ) {
+      fetchNextPage();
+    }
+  }, [
+    showNearbySection,
+    loadingMatches,
+    isFetchingNextPage,
+    hasNextPage,
+    matches.length,
+    fetchNextPage,
+  ]);
+
   // Handle end reached for infinite scroll
   const handleEndReached = useCallback(() => {
-    if (matches.length === 0) return;
+    if (feed.length === 0) return;
     if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
-  }, [matches.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [feed.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Render individual match card
-  const renderMatchCard = useCallback(
-    ({ item }: { item: NearbyMatch }) => (
-      <MatchCard
-        key={item.id}
-        match={item}
+  // Render individual feed item (match or suggestion)
+  const renderFeedItem = useCallback(
+    ({ item }: { item: UnifiedFeedItem }) => (
+      <FeedItemCard
+        item={item}
         isDark={isDark}
-        t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
         locale={locale}
+        t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
         currentPlayerId={player?.id}
-        sportIcon={
-          <SportIcon
-            sportName={item.sport?.name ?? 'tennis'}
-            size={100}
-            color={isDark ? neutral[600] : neutral[400]}
-          />
-        }
-        onPress={() => {
-          Logger.logUserAction('match_pressed', { matchId: item.id });
-          openMatchDetail(item);
+        themeColors={colors}
+        suggestionLabels={suggestionLabels}
+        getInviteState={getInviteState}
+        onMatchPress={match => {
+          Logger.logUserAction('match_pressed', { matchId: match.id });
+          openMatchDetail(match as MatchDetailData);
         }}
+        onSendInvite={handleSendInvite}
       />
     ),
-    [isDark, t, locale, openMatchDetail, player?.id]
+    [
+      isDark,
+      t,
+      locale,
+      openMatchDetail,
+      player?.id,
+      colors,
+      suggestionLabels,
+      getInviteState,
+      handleSendInvite,
+    ]
   );
 
   // Render footer with loading indicator
   const renderFooter = useCallback(() => {
-    // Empty list: ListEmptyComponent already renders suggestions — skip footer
-    if (matches.length === 0) return null;
-    if (isFetchingNextPage) {
+    if (isFetchingNextPage || (loadingSuggestions && feed.length < 30)) {
       return (
         <View style={styles.footerLoader}>
           <ActivityIndicator size="small" color={colors.primary} />
         </View>
       );
     }
-    if (!hasNextPage) {
-      return (
-        <SuggestionsFeedSection
-          playerId={player?.id}
-          sportId={selectedSport?.id}
-          sportName={selectedSport?.name}
-        />
-      );
-    }
     return null;
-  }, [
-    matches.length,
-    isFetchingNextPage,
-    hasNextPage,
-    colors.primary,
-    player?.id,
-    selectedSport?.id,
-    selectedSport?.name,
-  ]);
+  }, [isFetchingNextPage, loadingSuggestions, feed.length, colors.primary]);
 
-  // Compact empty state followed by suggestions feed
+  // Compact empty state for the rare case both matches and suggestions are empty.
   const renderEmptyComponent = useCallback(
     () => (
-      <>
-        <View style={styles.emptyContainer}>
-          <Ionicons name="location-outline" size={20} color={colors.textMuted} />
-          <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-            {t('home.nearbyEmpty.title')}
-          </Text>
-        </View>
-        <SuggestionsFeedSection
-          playerId={player?.id}
-          sportId={selectedSport?.id}
-          sportName={selectedSport?.name}
-        />
-      </>
+      <View style={styles.emptyContainer}>
+        <Ionicons name="location-outline" size={20} color={colors.textMuted} />
+        <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
+          {t('home.nearbyEmpty.title')}
+        </Text>
+      </View>
     ),
-    [colors.textMuted, t, player?.id, selectedSport?.id, selectedSport?.name]
+    [colors.textMuted, t]
   );
 
   // Render section header with "Soon & Nearby" title, location selector, and "View All" button
@@ -1286,8 +1340,8 @@ const Home = () => {
         <FlatList
           ref={flatListRef}
           data={[]}
-          renderItem={renderMatchCard}
-          keyExtractor={item => item.id}
+          renderItem={renderFeedItem}
+          keyExtractor={item => item.key}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           automaticallyAdjustContentInsets={false}
@@ -1299,7 +1353,7 @@ const Home = () => {
   } else {
     content = (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-        {loadingMatches ? (
+        {loadingMatches || loadingSuggestions ? (
           <View style={styles.loadingContainer}>
             {renderListHeader()}
             <View style={styles.skeletonSection}>
@@ -1321,9 +1375,9 @@ const Home = () => {
         ) : (
           <FlatList
             ref={flatListRef}
-            data={matches}
-            renderItem={renderMatchCard}
-            keyExtractor={item => item.id}
+            data={feed}
+            renderItem={renderFeedItem}
+            keyExtractor={item => item.key}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             automaticallyAdjustContentInsets={false}
@@ -1338,6 +1392,7 @@ const Home = () => {
                 onRefresh={() => {
                   isManualRefresh.current = true;
                   refetch();
+                  refetchSuggestions();
                   if (session?.user?.id) {
                     refetchMyMatches();
                   }

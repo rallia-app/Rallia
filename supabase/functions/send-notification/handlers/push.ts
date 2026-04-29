@@ -51,13 +51,22 @@ function getCategoryId(type: string): string | undefined {
 }
 
 /**
+ * Optional locale-rendered title/body that replaces the stored English fallback.
+ */
+export interface PushOverride {
+  title: string;
+  body: string;
+}
+
+/**
  * Send a push notification via Expo
  */
 export async function sendPush(
   notification: NotificationRecord,
   expoPushToken: string,
   badgeCount?: number,
-  supabase?: SupabaseClient
+  supabase?: SupabaseClient,
+  override?: PushOverride
 ): Promise<DeliveryResult> {
   try {
     // Validate token format
@@ -72,7 +81,7 @@ export async function sendPush(
       };
     }
 
-    const pushPayload = buildPushPayload(notification, expoPushToken, badgeCount);
+    const pushPayload = buildPushPayload(notification, expoPushToken, badgeCount, override);
 
     const response = await fetch(EXPO_PUSH_URL, {
       method: 'POST',
@@ -130,9 +139,12 @@ export async function sendPush(
 function buildPushPayload(
   notification: NotificationRecord,
   expoPushToken: string,
-  badgeCount?: number
+  badgeCount?: number,
+  override?: PushOverride
 ) {
-  const { title, body, type, target_id, payload, priority } = notification;
+  const { type, target_id, payload, priority } = notification;
+  const title = override?.title ?? notification.title;
+  const body = override?.body ?? notification.body;
 
   // Map priority to Expo priority
   const expoPriority = priority === 'urgent' || priority === 'high' ? 'high' : 'normal';

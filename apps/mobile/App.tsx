@@ -563,7 +563,8 @@ function DeepLinkHandler() {
 
 /**
  * useOTAUpdate - Check for OTA updates while the splash screen is visible.
- * If an update is found, download it and reload before the user sees the app.
+ * If an update is found, download it and let it apply on the next app launch.
+ * This avoids any splash screen flash or loading spinner during the reload.
  * Returns whether the check is still in progress (to hold the splash open).
  */
 function useOTAUpdate() {
@@ -581,10 +582,9 @@ function useOTAUpdate() {
 
         if (isAvailable) {
           await Updates.fetchUpdateAsync();
-          if (!cancelled) {
-            // Reload immediately — splash is still visible so the restart is seamless
-            await Updates.reloadAsync();
-          }
+          // Don't reload immediately — the update will apply on next launch.
+          // This prevents the splash screen from flashing or showing a spinner.
+          Logger.info('OTA update downloaded, will apply on next launch');
         }
       } catch (e) {
         Logger.warn('OTA update check failed', { error: e });
@@ -604,18 +604,22 @@ function useOTAUpdate() {
 function AppContent() {
   const { theme } = useTheme();
   const { setSplashComplete, isSplashComplete, permissionsHandled } = useOverlay();
+  const { isReady: isLocaleReady } = useLocale();
   const isCheckingUpdate = useOTAUpdate();
   const hasHiddenSplashRef = useRef(false);
 
-  // Hide the native splash (cross-fade via setOptions above) once OTA check is done.
-  // Gate setSplashComplete on this so downstream handlers keep their current ordering.
+  // Hide the native splash (cross-fade via setOptions above) once the OTA
+  // check is done AND i18next has finished loading. Without the locale gate,
+  // a slow device can mount the navigator before translations are available
+  // and react-navigation paints raw keys (e.g. `screens.publicMatches`) into
+  // headers that don't always re-render once the bundle arrives.
   useEffect(() => {
-    if (isCheckingUpdate || hasHiddenSplashRef.current) return;
+    if (isCheckingUpdate || !isLocaleReady || hasHiddenSplashRef.current) return;
     hasHiddenSplashRef.current = true;
     SplashScreen.hideAsync()
       .catch(() => {})
       .finally(() => setSplashComplete(true));
-  }, [isCheckingUpdate, setSplashComplete]);
+  }, [isCheckingUpdate, isLocaleReady, setSplashComplete]);
   const { showCompletionModal, dismissCompletionModal, lastCompletedTourId } = useTour();
 
   // Track app opened event on mount

@@ -1,7 +1,10 @@
 /**
- * CommunityQRScannerModal
- * Modal with camera view for scanning community invite QR codes
- * Scanning creates a join request that requires moderator approval
+ * InviteQRScannerModal
+ * Unified scanner for any Rallia QR code:
+ *   - https://rallia.app/join/{8-char}            → join group
+ *   - https://rallia.app/community/join/{8-char}  → request to join community
+ *   - https://rallia.app/match/{uuid}             → open match detail sheet
+ *   - raw 8-char invite code                       → group / community (auto-detected)
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
@@ -20,26 +23,98 @@ import {
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 
-import { Text } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation } from '../../../hooks';
-import { useRequestToJoinCommunityByInviteCode } from '@rallia/shared-hooks';
-import * as Analytics from '../../../services/analytics';
+import { Text, useToast } from '@rallia/shared-components';
+import { useJoinByInviteCode } from '@rallia/shared-hooks';
+import { getMatchWithDetails, parseInvitationUrl } from '@rallia/shared-services';
 
-interface CommunityQRScannerModalProps {
+import { useThemeStyles, useTranslation } from '../hooks';
+import * as Analytics from '../services/analytics';
+import type { MatchDetailData } from '../context/MatchDetailSheetContext';
+import { getJoinErrorToastMessage } from '../utils/joinErrorToast';
+
+type ScanResult = { kind: 'invite-code'; code: string } | { kind: 'match'; matchId: string } | null;
+
+const RAW_CODE_RE = /^[A-Z0-9]{8}$/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ALLOWED_HOSTS = new Set(['rallia.app', 'www.rallia.app']);
+
+export function parseRalliaQR(raw: string): ScanResult {
+  const trimmed = raw.trim();
+
+  // Validate host before delegating to parseInvitationUrl, which doesn't host-check
+  // and would happily accept https://evil.com/community/join/{code}.
+  let isLikelyUrl = false;
+  try {
+    const url = new URL(trimmed);
+    isLikelyUrl = true;
+    if (!ALLOWED_HOSTS.has(url.host)) return null;
+  } catch {
+    // Not a URL — fall through
+  }
+
+  if (isLikelyUrl) {
+    const parsed = parseInvitationUrl(trimmed);
+    if (!parsed) return null;
+
+    if (parsed.type === 'match' && parsed.targetId && UUID_RE.test(parsed.targetId)) {
+      return { kind: 'match', matchId: parsed.targetId.toLowerCase() };
+    }
+
+    if ((parsed.type === 'group' || parsed.type === 'community') && parsed.targetId) {
+      const code = parsed.targetId.toUpperCase();
+      if (RAW_CODE_RE.test(code)) {
+        return { kind: 'invite-code', code };
+      }
+    }
+
+    return null;
+  }
+
+  if (RAW_CODE_RE.test(trimmed)) {
+    return { kind: 'invite-code', code: trimmed.toUpperCase() };
+  }
+
+  return null;
+}
+
+export interface InviteScanJoinResult {
+  kind: 'group' | 'community';
+  networkId: string;
+  name: string;
+  sportId?: string | null;
+}
+
+interface InviteQRScannerModalProps {
   visible: boolean;
   onClose: () => void;
   playerId: string;
-  onRequestSent: (communityId: string, communityName: string) => void;
+  onJoined: (result: InviteScanJoinResult) => void;
+  onMatchScanned: (match: MatchDetailData) => void;
 }
 
-export function CommunityQRScannerModal({
+const NON_RETRYABLE_PREFIXES = [
+  'RATING_TOO_LOW',
+  'RATING_REQUIRED',
+  'CERTIFIED_REQUIRED',
+  'ALREADY_MEMBER',
+  'PENDING_REQUEST',
+];
+
+function isNonRetryable(message: string | undefined): boolean {
+  if (!message) return false;
+  return NON_RETRYABLE_PREFIXES.some(prefix => message.includes(prefix));
+}
+
+export function InviteQRScannerModal({
   visible,
   onClose,
   playerId,
-  onRequestSent,
-}: CommunityQRScannerModalProps) {
+  onJoined,
+  onMatchScanned,
+}: InviteQRScannerModalProps) {
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
+  const toast = useToast();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -48,10 +123,8 @@ export function CommunityQRScannerModal({
   const [manualCode, setManualCode] = useState('');
   const cameraRef = useRef<CameraView>(null);
 
-  const joinCommunityMutation = useRequestToJoinCommunityByInviteCode();
+  const joinMutation = useJoinByInviteCode();
 
-  // Reset scanned state when modal opens
-  // This effect resets modal state when it becomes visible - standard modal reset pattern
   useEffect(() => {
     if (visible) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional reset of modal state on open
@@ -63,128 +136,124 @@ export function CommunityQRScannerModal({
     }
   }, [visible]);
 
-  // Extract invite code from URL or raw code
-  const extractInviteCode = useCallback((data: string): string | null => {
-    // Check if it's a full URL (e.g., https://rallia.app/join/ABC12345)
-    const urlMatch = data.match(/\/join\/([A-Z0-9]{8})/i);
-    if (urlMatch) {
-      return urlMatch[1].toUpperCase();
-    }
+  const showRetryAlert = useCallback(
+    (title: string, message: string) => {
+      Alert.alert(title, message, [
+        {
+          text: t('inviteScanner.tryAgain'),
+          onPress: () => {
+            setScanned(false);
+            setIsProcessing(false);
+          },
+        },
+        {
+          text: t('common.cancel'),
+          style: 'cancel',
+          onPress: onClose,
+        },
+      ]);
+    },
+    [onClose, t]
+  );
 
-    // Check if it's just the code (8 alphanumeric characters)
-    const codeMatch = data.match(/^[A-Z0-9]{8}$/i);
-    if (codeMatch) {
-      return data.toUpperCase();
-    }
-
-    return null;
-  }, []);
-
-  const handleBarCodeScanned = useCallback(
-    async ({ data }: { data: string }) => {
+  const handleScan = useCallback(
+    async (raw: string) => {
       if (scanned || isProcessing) return;
-
       setScanned(true);
       setIsProcessing(true);
 
-      const inviteCode = extractInviteCode(data);
+      const parsed = parseRalliaQR(raw);
 
-      if (!inviteCode) {
-        Alert.alert(
-          t('community.qrScanner.invalidCode'),
-          t('community.qrScanner.invalidCodeMessage'),
-          [
-            {
-              text: t('common.tryAgain'),
-              onPress: () => {
-                setScanned(false);
-                setIsProcessing(false);
-              },
-            },
-            {
-              text: t('common.cancel'),
-              style: 'cancel',
-              onPress: onClose,
-            },
-          ]
-        );
+      if (!parsed) {
+        showRetryAlert(t('inviteScanner.invalidTitle'), t('inviteScanner.invalidMessage'));
         return;
       }
 
+      if (parsed.kind === 'match') {
+        try {
+          const match = await getMatchWithDetails(parsed.matchId);
+          if (!match) {
+            showRetryAlert(
+              t('inviteScanner.matchNotFoundTitle'),
+              t('inviteScanner.matchNotFoundMessage')
+            );
+            return;
+          }
+          Analytics.matchOpenedFromQR();
+          onClose();
+          onMatchScanned(match as MatchDetailData);
+        } catch {
+          showRetryAlert(
+            t('inviteScanner.matchNotFoundTitle'),
+            t('inviteScanner.matchNotFoundMessage')
+          );
+        }
+        return;
+      }
+
+      const handleJoinFailure = (rawError: string | undefined) => {
+        if (isNonRetryable(rawError)) {
+          onClose();
+          toast.error(getJoinErrorToastMessage(rawError, t));
+          return;
+        }
+        showRetryAlert(
+          t('inviteScanner.joinFailedTitle'),
+          rawError || t('inviteScanner.joinFailedMessage')
+        );
+      };
+
       try {
-        const result = await joinCommunityMutation.mutateAsync({
-          inviteCode,
+        const result = await joinMutation.mutateAsync({
+          inviteCode: parsed.code,
           playerId,
         });
 
-        if (result.success && result.communityId && result.communityName) {
-          Analytics.communityJoined({ source: 'qr' });
-          onClose();
-          onRequestSent(result.communityId, result.communityName);
-        } else {
-          Alert.alert(
-            t('community.qrScanner.requestFailed'),
-            result.error || t('community.qrScanner.requestFailedMessage'),
-            [
-              {
-                text: t('common.tryAgain'),
-                onPress: () => {
-                  setScanned(false);
-                  setIsProcessing(false);
-                },
-              },
-              {
-                text: t('common.cancel'),
-                style: 'cancel',
-                onPress: onClose,
-              },
-            ]
-          );
+        if (!result.success) {
+          handleJoinFailure(result.error);
+          return;
         }
+
+        if (result.kind === 'group') {
+          Analytics.groupJoined({ source: 'qr' });
+        } else {
+          Analytics.communityJoined({ source: 'qr' });
+        }
+
+        onClose();
+        onJoined({
+          kind: result.kind,
+          networkId: result.networkId,
+          name: result.name,
+          sportId: result.sportId ?? null,
+        });
       } catch (error) {
-        Alert.alert(
-          t('common.error'),
-          error instanceof Error ? error.message : t('community.qrScanner.requestFailedMessage'),
-          [
-            {
-              text: t('common.tryAgain'),
-              onPress: () => {
-                setScanned(false);
-                setIsProcessing(false);
-              },
-            },
-            {
-              text: t('common.cancel'),
-              style: 'cancel',
-              onPress: onClose,
-            },
-          ]
-        );
+        handleJoinFailure(error instanceof Error ? error.message : undefined);
       }
     },
     [
       scanned,
       isProcessing,
-      extractInviteCode,
-      joinCommunityMutation,
+      joinMutation,
       playerId,
       onClose,
-      onRequestSent,
+      onJoined,
+      onMatchScanned,
+      showRetryAlert,
+      toast,
       t,
     ]
   );
 
-  // Handle manual code submission
   const handleManualSubmit = useCallback(() => {
-    if (!manualCode.trim()) {
-      Alert.alert(t('common.error'), t('community.qrScanner.enterCodeError'));
+    const code = manualCode.trim();
+    if (!code) {
+      Alert.alert(t('common.error'), t('inviteScanner.pleaseEnterInviteCode'));
       return;
     }
-    // Simulate barcode scan with manual entry
-    handleBarCodeScanned({ data: manualCode.trim().toUpperCase() });
-  }, [manualCode, handleBarCodeScanned, t]);
+    handleScan(code);
+  }, [manualCode, handleScan, t]);
 
-  // Toggle flashlight
   const toggleTorch = useCallback(() => {
     setTorchEnabled(prev => !prev);
   }, []);
@@ -193,17 +262,16 @@ export function CommunityQRScannerModal({
     const result = await requestPermission();
     if (!result.granted) {
       Alert.alert(
-        t('community.qrScanner.cameraPermissionRequired'),
-        t('community.qrScanner.cameraPermissionMessage'),
+        t('inviteScanner.cameraPermissionRequired'),
+        t('inviteScanner.cameraPermissionMessage'),
         [
           { text: t('common.cancel'), style: 'cancel', onPress: onClose },
-          { text: t('common.openSettings'), onPress: () => Linking.openSettings() },
+          { text: t('inviteScanner.openSettings'), onPress: () => Linking.openSettings() },
         ]
       );
     }
   }, [requestPermission, onClose, t]);
 
-  // Render permission request screen
   const renderPermissionRequest = () => (
     <View style={styles.permissionContainer}>
       <Ionicons name="camera-outline" size={64} color={colors.textMuted} />
@@ -212,7 +280,7 @@ export function CommunityQRScannerModal({
         size="lg"
         style={{ color: colors.text, marginTop: 16, textAlign: 'center' }}
       >
-        {t('community.qrScanner.cameraAccessRequired')}
+        {t('inviteScanner.cameraAccessRequired')}
       </Text>
       <Text
         style={{
@@ -222,20 +290,19 @@ export function CommunityQRScannerModal({
           paddingHorizontal: 32,
         }}
       >
-        {t('community.qrScanner.cameraAccessMessage')}
+        {t('inviteScanner.cameraAccessDescription')}
       </Text>
       <TouchableOpacity
         style={[styles.permissionButton, { backgroundColor: colors.primary }]}
         onPress={handleRequestPermission}
       >
         <Text weight="semibold" style={{ color: '#FFFFFF' }}>
-          {t('community.qrScanner.allowCameraAccess')}
+          {t('inviteScanner.allowCameraAccess')}
         </Text>
       </TouchableOpacity>
     </View>
   );
 
-  // Render manual entry form
   const renderManualEntry = () => (
     <KeyboardAvoidingView
       style={styles.manualEntryContainer}
@@ -248,10 +315,10 @@ export function CommunityQRScannerModal({
           size="lg"
           style={{ color: colors.text, marginTop: 16, textAlign: 'center' }}
         >
-          {t('community.qrScanner.enterCodeTitle')}
+          {t('inviteScanner.enterInviteCode')}
         </Text>
         <Text style={{ color: colors.textSecondary, marginTop: 8, textAlign: 'center' }}>
-          {t('community.qrScanner.enterCodeDescription')}
+          {t('inviteScanner.enterInviteCodeDescription')}
         </Text>
 
         <TextInput
@@ -281,7 +348,7 @@ export function CommunityQRScannerModal({
           >
             <Ionicons name="camera-outline" size={20} color={colors.text} />
             <Text weight="medium" style={{ color: colors.text, marginLeft: 8 }}>
-              {t('community.qrScanner.scanQR')}
+              {t('inviteScanner.scanQR')}
             </Text>
           </TouchableOpacity>
 
@@ -294,9 +361,9 @@ export function CommunityQRScannerModal({
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <>
-                <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+                <Ionicons name="arrow-forward-outline" size={20} color="#FFFFFF" />
                 <Text weight="medium" style={{ color: '#FFFFFF', marginLeft: 8 }}>
-                  {t('community.qrScanner.joinButton')}
+                  {t('inviteScanner.join')}
                 </Text>
               </>
             )}
@@ -306,7 +373,6 @@ export function CommunityQRScannerModal({
     </KeyboardAvoidingView>
   );
 
-  // Render scanner
   const renderScanner = () => (
     <View style={styles.scannerContainer}>
       <CameraView
@@ -314,46 +380,34 @@ export function CommunityQRScannerModal({
         style={StyleSheet.absoluteFillObject}
         facing="back"
         enableTorch={torchEnabled}
-        barcodeScannerSettings={{
-          barcodeTypes: ['qr'],
-        }}
-        onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+        barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+        onBarcodeScanned={scanned ? undefined : ({ data }) => handleScan(data)}
       />
 
-      {/* Overlay with scan frame */}
       <View style={styles.overlay}>
-        {/* Top dark area */}
         <View style={styles.overlayTop} />
 
-        {/* Middle row with scan frame */}
         <View style={styles.overlayMiddle}>
           <View style={styles.overlaySide} />
-
-          {/* Scan frame */}
           <View style={styles.scanFrame}>
-            {/* Corner markers */}
             <View style={[styles.corner, styles.cornerTopLeft]} />
             <View style={[styles.corner, styles.cornerTopRight]} />
             <View style={[styles.corner, styles.cornerBottomLeft]} />
             <View style={[styles.corner, styles.cornerBottomRight]} />
           </View>
-
           <View style={styles.overlaySide} />
         </View>
 
-        {/* Bottom dark area with instructions and controls */}
         <View style={styles.overlayBottom}>
           <Text weight="medium" style={styles.instructionText}>
-            {isProcessing ? t('common.processing') : t('community.qrScanner.instructions')}
+            {isProcessing ? t('inviteScanner.processing') : t('inviteScanner.instructions')}
           </Text>
           {isProcessing && (
             <ActivityIndicator size="small" color="#FFFFFF" style={{ marginTop: 12 }} />
           )}
 
-          {/* Scanner controls */}
           {!isProcessing && (
             <View style={styles.scannerControls}>
-              {/* Flashlight toggle */}
               <TouchableOpacity
                 style={[styles.controlButton, torchEnabled && styles.controlButtonActive]}
                 onPress={toggleTorch}
@@ -364,20 +418,17 @@ export function CommunityQRScannerModal({
                   color="#FFFFFF"
                 />
                 <Text size="xs" style={styles.controlButtonText}>
-                  {torchEnabled
-                    ? t('community.qrScanner.lightOn')
-                    : t('community.qrScanner.lightOff')}
+                  {torchEnabled ? t('inviteScanner.lightOn') : t('inviteScanner.lightOff')}
                 </Text>
               </TouchableOpacity>
 
-              {/* Manual entry */}
               <TouchableOpacity
                 style={styles.controlButton}
                 onPress={() => setShowManualEntry(true)}
               >
                 <Ionicons name="keypad-outline" size={24} color="#FFFFFF" />
                 <Text size="xs" style={styles.controlButtonText}>
-                  {t('community.qrScanner.enterCode')}
+                  {t('inviteScanner.enterCode')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -395,18 +446,16 @@ export function CommunityQRScannerModal({
       onRequestClose={onClose}
     >
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Header */}
         <View style={[styles.header, { backgroundColor: 'rgba(0,0,0,0.7)' }]}>
           <View style={styles.headerSpacer} />
           <Text weight="semibold" size="lg" style={styles.headerTitle}>
-            {t('community.qrScanner.title')}
+            {t('inviteScanner.title')}
           </Text>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Ionicons name="close-outline" size={28} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
 
-        {/* Content */}
         {!permission?.granted
           ? renderPermissionRequest()
           : showManualEntry

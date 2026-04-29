@@ -2,7 +2,7 @@
 -- Migration: Add zone columns to network and seed GMA communities
 -- Description: Adds zone, skill_level, neighborhoods, reference_location to
 --              public.network. Seeds 30 GMA communities (5 zones x 2 sports x
---              3 levels) from docs/GMA_Communautes_v2.xlsx (sheet 1).
+--              3 levels) from rallia-business/go-to-market/acquisition-channels/GMA_Communautes_v2.xlsx (sheet 1).
 -- =============================================================================
 
 -- =============================================================================

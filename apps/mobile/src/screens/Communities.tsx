@@ -4,7 +4,7 @@
  * Features a segmented control to switch between "Discover" and "My Communities"
  */
 
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useLayoutEffect, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   FlatList,
@@ -23,7 +23,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { Text, Skeleton, Button } from '@rallia/shared-components';
+import { Text, Skeleton, Button, useToast } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
 import {
   useThemeStyles,
@@ -32,7 +32,8 @@ import {
   useRequireOnboarding,
   type TranslationKey,
 } from '../hooks';
-import { useSport } from '../context';
+import { useSport, useMatchDetailSheet } from '../context';
+import type { MatchDetailData } from '../context';
 import {
   usePublicCommunities,
   usePlayerCommunities,
@@ -44,7 +45,11 @@ import {
 } from '@rallia/shared-hooks';
 import type { RootStackParamList, CommunityStackParamList } from '../navigation/types';
 import type { CompositeNavigationProp } from '@react-navigation/native';
-import { CommunityQRScannerModal } from '../features/communities';
+import {
+  InviteQRScannerModal,
+  type InviteScanJoinResult,
+} from '../components/InviteQRScannerModal';
+import { getJoinErrorToastMessage } from '../utils/joinErrorToast';
 import { SheetManager } from 'react-native-actions-sheet';
 import { InfoModal } from '../components/InfoModal';
 
@@ -236,10 +241,34 @@ export default function CommunitiesScreen() {
   const { t } = useTranslation();
   const { guardAction } = useRequireOnboarding();
   const { selectedSport } = useSport();
+  const { openSheet: openMatchDetail } = useMatchDetailSheet();
+  const toast = useToast();
   const playerId = session?.user?.id;
 
   const [activeTab, setActiveTab] = useState<TabType>('discover');
   const [showQRScanner, setShowQRScanner] = useState(false);
+
+  const openScanner = useCallback(() => {
+    lightHaptic();
+    if (!guardAction()) return;
+    setShowQRScanner(true);
+  }, [guardAction]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={openScanner}
+          style={styles.headerButton}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel={t('inviteScanner.title')}
+        >
+          <Ionicons name="qr-code-outline" size={24} color={colors.headerForeground} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, openScanner, colors.headerForeground, t]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successModalCommunityName, setSuccessModalCommunityName] = useState('');
 
@@ -315,13 +344,10 @@ export default function CommunitiesScreen() {
         setSuccessModalCommunityName(communityName);
         setShowSuccessModal(true);
       } catch (error) {
-        Alert.alert(
-          'Error',
-          error instanceof Error ? error.message : 'Failed to send join request'
-        );
+        toast.error(getJoinErrorToastMessage(error, t));
       }
     },
-    [guardAction, playerId, requestToJoinMutation]
+    [guardAction, playerId, requestToJoinMutation, toast, t]
   );
 
   const handleCommunityPress = useCallback(
@@ -332,10 +358,37 @@ export default function CommunitiesScreen() {
     [navigation]
   );
 
-  const handleQRRequestSent = useCallback((communityId: string, communityName: string) => {
-    setSuccessModalCommunityName(communityName);
-    setShowSuccessModal(true);
-  }, []);
+  const handleScannerJoined = useCallback(
+    (result: InviteScanJoinResult) => {
+      if (result.kind === 'community') {
+        setSuccessModalCommunityName(result.name);
+        setShowSuccessModal(true);
+        return;
+      }
+      Alert.alert(
+        t('inviteScanner.joinedGroupTitle'),
+        t('inviteScanner.joinedGroupMessage', { name: result.name }),
+        [
+          {
+            text: t('common.ok'),
+            onPress: () =>
+              navigation.navigate('GroupDetail', {
+                groupId: result.networkId,
+                groupName: result.name,
+              }),
+          },
+        ]
+      );
+    },
+    [navigation, t]
+  );
+
+  const handleScannerMatchScanned = useCallback(
+    (match: MatchDetailData) => {
+      openMatchDetail(match);
+    },
+    [openMatchDetail]
+  );
 
   const handleTabChange = useCallback(
     (tab: TabType) => {
@@ -566,11 +619,12 @@ export default function CommunitiesScreen() {
 
       {/* QR Scanner Modal */}
       {playerId && (
-        <CommunityQRScannerModal
+        <InviteQRScannerModal
           visible={showQRScanner}
           onClose={() => setShowQRScanner(false)}
           playerId={playerId}
-          onRequestSent={handleQRRequestSent}
+          onJoined={handleScannerJoined}
+          onMatchScanned={handleScannerMatchScanned}
         />
       )}
 
@@ -783,5 +837,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 4,
   },
 });

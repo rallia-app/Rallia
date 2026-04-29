@@ -787,14 +787,14 @@ const PlayerProfile = () => {
       if (statsResult.data) {
         type MatchData = {
           match_id: string;
-          match: { duration_minutes: number | null; host_id: string }[] | null;
+          match: { duration_minutes: number | null; host_id: string } | null;
         };
         const matchData = statsResult.data as unknown as MatchData[];
         const totalMinutes = matchData.reduce(
-          (sum, m) => sum + (m.match?.[0]?.duration_minutes || 0),
+          (sum, m) => sum + (m.match?.duration_minutes || 0),
           0
         );
-        const hostedMatches = matchData.filter(m => m.match?.[0]?.host_id === playerId).length;
+        const hostedMatches = matchData.filter(m => m.match?.host_id === playerId).length;
         setStats({
           hoursPlayed: Math.round(totalMinutes / 60),
           gamesHosted: hostedMatches,

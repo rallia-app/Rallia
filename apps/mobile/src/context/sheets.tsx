@@ -8,6 +8,7 @@ import type {
 
 import { FeedbackReportActionSheet } from '../components/BugReportSheet';
 import { MatchSuggestionsActionSheet } from '../components/MatchSuggestionsSheet';
+import { MatchInviteConfirmActionSheet } from '../components/MatchInviteConfirmSheet';
 import { CreateCommunityActionSheet } from '../features/communities/components/CreateCommunityModal';
 import { CreateListActionSheet } from '../features/shared-lists/components/CreateListModal';
 import { ShareMatchActionSheet } from '../features/shared-lists/components/ShareMatchModal';
@@ -697,6 +698,16 @@ declare module 'react-native-actions-sheet' {
     'match-suggestions': SheetDefinition<{
       payload?: Record<string, never>;
     }>;
+    'match-invite-confirm': SheetDefinition<{
+      payload: {
+        opponentId: string;
+        facilityId: string;
+        sportId: string;
+        matchDate: string;
+        startTime: string;
+        endTime: string;
+      };
+    }>;
     'report-proof': SheetDefinition<{
       payload: {
         reporterId: string;
@@ -792,6 +803,7 @@ export const Sheets = () => {
         'rating-explainer': RatingExplainerActionSheet,
         'reputation-explainer': ReputationExplainerActionSheet,
         'match-suggestions': MatchSuggestionsActionSheet,
+        'match-invite-confirm': MatchInviteConfirmActionSheet,
       }}
     />
   );

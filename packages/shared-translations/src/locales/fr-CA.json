@@ -372,7 +372,11 @@
       },
       "nearby_match_available": {
         "title": "Nouvelle partie de {sportName} près de toi",
-        "body": "Une partie de {sportName} est ouverte le {matchDate}{startTime}{locationName}. Touche pour t'inscrire."
+        "body": "{matchDate}{startTime}{locationName}{minRatingLabel}{spotsLabel}{hostLabel}",
+        "minRatingPrefix": " · {score}+",
+        "spotsLabel": " · {count} place libre",
+        "spotsLabel_plural": " · {count} places libres",
+        "hostLabel": " · avec {hostName}"
       },
       "booking_created": {
         "title": "Nouvelle réservation de {playerName}",
@@ -1409,6 +1413,25 @@
     "cropSquare": "Rogner carré",
     "rotate": "Pivoter",
     "processing": "Traitement..."
+  },
+  "inviteConfirmSheet": {
+    "title": "Envoyer l'invitation ?",
+    "subtitleWithOpponent": "Invite {opponentName} à jouer à {facility} le {dateTime}.",
+    "subtitle": "Invite ce joueur à l'horaire et au lieu indiqués dans le courriel.",
+    "confirmButton": "Envoyer l'invitation",
+    "cancelButton": "Annuler",
+    "successToast": "Invitation envoyée",
+    "errorMessage": "Une erreur est survenue. Réessaie.",
+    "callerBusyMessage": "Tu as déjà une partie à ce moment.",
+    "opponentBusyMessage": "Cet horaire n'est plus disponible.",
+    "seeOtherSuggestions": "Voir d'autres suggestions"
+  },
+  "digestUnsubscribe": {
+    "successTitle": "Désabonnement effectué",
+    "successMessage": "Tu ne recevras plus le résumé matinal. Tu peux le réactiver à tout moment depuis tes préférences de notification.",
+    "errorTitle": "Impossible de te désabonner",
+    "errorMessage": "Ce lien de désabonnement semble invalide ou expiré. Modifie tes préférences dans l'application.",
+    "managePreferences": "Gérer les préférences de notification"
   },
   "onboarding": {
     "pageTitle": "Créer votre organisation",
@@ -3849,7 +3872,7 @@
         "home": "Accueil",
         "games": "Parties",
         "communities": "Communautés",
-        "donate": "Faire un don"
+        "donate": "Soutenir"
       }
     },
     "hero": {
@@ -8774,6 +8797,38 @@
       "doubles": "Double"
     }
   },
+  "inviteScanner": {
+    "title": "Scanner un code QR",
+    "instructions": "Pointez vers un code QR d'invitation ou de partie Rallia",
+    "processing": "Traitement...",
+    "invalidTitle": "Code QR invalide",
+    "invalidMessage": "Ce n'est pas un code QR d'invitation ou de partie Rallia.",
+    "matchNotFoundTitle": "Partie indisponible",
+    "matchNotFoundMessage": "Cette partie n'existe plus ou vous n'y avez pas accès.",
+    "joinFailedTitle": "Impossible de rejoindre",
+    "joinFailedMessage": "Échec. Veuillez réessayer.",
+    "joinedGroupTitle": "Groupe rejoint !",
+    "joinedGroupMessage": "Vous avez rejoint {name}.",
+    "ratingRequiredGeneric": "Vous devez avoir une cote pour rejoindre cette communauté.",
+    "pendingRequestExists": "Vous avez déjà une demande en attente pour rejoindre cette communauté.",
+    "communityRequestSentTitle": "Demande envoyée",
+    "communityRequestSentMessage": "Votre demande pour rejoindre {name} a été envoyée pour approbation.",
+    "tryAgain": "Réessayer",
+    "cameraPermissionRequired": "Autorisation caméra requise",
+    "cameraPermissionMessage": "Veuillez activer l'accès à la caméra dans les paramètres de votre appareil pour scanner les codes QR.",
+    "openSettings": "Ouvrir les paramètres",
+    "cameraAccessRequired": "Accès à la caméra requis",
+    "cameraAccessDescription": "Pour scanner les codes QR d'invitation, nous avons besoin d'accéder à votre caméra.",
+    "allowCameraAccess": "Autoriser la caméra",
+    "enterInviteCode": "Entrer le code d'invitation",
+    "enterInviteCodeDescription": "Saisissez manuellement le code d'invitation à 8 caractères",
+    "pleaseEnterInviteCode": "Veuillez entrer un code d'invitation",
+    "scanQR": "Scanner",
+    "enterCode": "Entrer le code",
+    "lightOn": "Lampe allumée",
+    "lightOff": "Lampe éteinte",
+    "join": "Rejoindre"
+  },
   "invitePage": {
     "title": "Rejoignez Rallia",
     "description": "Téléchargez Rallia pour trouver des joueurs, rejoindre des parties et jouer plus.",
@@ -8794,7 +8849,16 @@
     "notFound": "Invitation non trouvée",
     "notFoundDescription": "Ce lien d'invitation est peut-être invalide ou expiré.",
     "downloadCta": "Télécharger Rallia",
-    "clipboardHint": "Le lien sera sauvegardé pour que l'app puisse connecter votre invitation.",
+    "iosCodeLabel": "Votre code d'invitation",
+    "iosCodeHint": "Touchez pour copier. Après l'installation, collez-le dans l'écran d'inscription pour réclamer votre invitation.",
+    "iosCopyCode": "Copier le code",
+    "iosCodeCopied": "Copié ! Installez l'app et collez votre code lors de l'inscription.",
+    "iosGroupCodeLabel": "Code d'invitation du groupe",
+    "iosGroupCodeHint": "Touchez pour copier. Après l'installation, ouvrez Groupes → Rejoindre avec un code et collez-le.",
+    "iosGroupCodeCopied": "Copié ! Ouvrez Groupes → Rejoindre avec un code dans l'app pour l'entrer.",
+    "iosCommunityCodeLabel": "Code d'invitation de la communauté",
+    "iosCommunityCodeHint": "Touchez pour copier. Après l'installation, ouvrez Communautés → Rejoindre avec un code et collez-le.",
+    "iosCommunityCodeCopied": "Copié ! Ouvrez Communautés → Rejoindre avec un code dans l'app pour l'entrer.",
     "physicalTitle": "Bienvenue sur Rallia",
     "physicalHeading": "Bienvenue sur Rallia",
     "physicalDescription": "Téléchargez l'app pour trouver des joueurs, rejoindre des parties et jouer plus."
@@ -8886,8 +8950,8 @@
       "submitNew": "Soumettre un nouveau signalement",
       "anonymous": "Anonyme",
       "byPlayer": "Soumis par un joueur",
-      "upvote": "Voter · {{n}}",
-      "upvoted": "Voté · {{n}}",
+      "upvote": "Voter · {n}",
+      "upvoted": "Voté · {n}",
       "upvoteAria": "Voter pour ce signalement",
       "upvotedAria": "Retirer votre vote",
       "statusPill": {
@@ -8899,10 +8963,10 @@
       },
       "time": {
         "now": "à l'instant",
-        "min": "il y a {{n}} min",
-        "hour": "il y a {{n}} h",
-        "day": "il y a {{n}} j",
-        "month": "il y a {{n}} mois"
+        "min": "il y a {n} min",
+        "hour": "il y a {n} h",
+        "day": "il y a {n} j",
+        "month": "il y a {n} mois"
       },
       "detail": {
         "backToList": "Retour",
@@ -9087,8 +9151,8 @@
     "status_cancelling": "Annulation en cours",
     "status_expired": "Expiré",
     "status_billing_issue": "Problème de paiement",
-    "renews_on": "Renouvellement le {{date}}",
-    "cancels_on": "Accès jusqu'au {{date}}",
+    "renews_on": "Renouvellement le {date}",
+    "cancels_on": "Accès jusqu'au {date}",
     "billing_banner_title": "Problème de paiement avec votre abonnement",
     "billing_banner_cta": "Mettre à jour",
     "manage_via_apple": "Gérez votre abonnement via les réglages Apple",

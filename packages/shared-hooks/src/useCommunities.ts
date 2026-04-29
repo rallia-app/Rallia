@@ -44,6 +44,8 @@ import {
   type CommunityRatingCheckResult,
   // Invite link helper
   getCommunityInviteLink,
+  // Unified invite-code join
+  joinByInviteCode,
   // Types
   type Community,
   type CommunityWithStatus,
@@ -53,6 +55,7 @@ import {
   type UpdateCommunityInput,
   type PendingMemberRequest,
 } from '@rallia/shared-services';
+import { groupKeys } from './useGroups';
 
 // Query Keys
 export const communityKeys = {
@@ -383,6 +386,37 @@ export function useRequestToJoinCommunityByInviteCode() {
       if (result.success && result.communityId) {
         queryClient.invalidateQueries({
           queryKey: communityKeys.membershipStatus(result.communityId, variables.playerId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: communityKeys.publicCommunities(variables.playerId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: communityKeys.playerCommunities(variables.playerId),
+        });
+      }
+    },
+  });
+}
+
+/**
+ * Unified invite-code join (group or community), used by the QR scanner.
+ * Looks up the network type and dispatches to the appropriate flow,
+ * invalidating the relevant React Query caches on success.
+ */
+export function useJoinByInviteCode() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ inviteCode, playerId }: { inviteCode: string; playerId: string }) =>
+      joinByInviteCode(inviteCode, playerId),
+    onSuccess: (result, variables) => {
+      if (!result.success) return;
+      if (result.kind === 'group') {
+        queryClient.invalidateQueries({ queryKey: groupKeys.lists() });
+        queryClient.invalidateQueries({ queryKey: groupKeys.detail(result.networkId) });
+      } else {
+        queryClient.invalidateQueries({
+          queryKey: communityKeys.membershipStatus(result.networkId, variables.playerId),
         });
         queryClient.invalidateQueries({
           queryKey: communityKeys.publicCommunities(variables.playerId),

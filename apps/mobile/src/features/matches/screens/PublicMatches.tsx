@@ -7,8 +7,7 @@ import React, { useCallback, useMemo, useEffect, useState, useRef } from 'react'
 import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { MatchCard, Text, SkeletonMatchCard } from '@rallia/shared-components';
-import { SportIcon } from '../../../components/SportIcon';
+import { Text, SkeletonMatchCard } from '@rallia/shared-components';
 import {
   useTheme,
   usePlayer,
@@ -18,38 +17,37 @@ import {
   useRatingScoresForSport,
   useSortedNearbyMatches,
   useFavoriteFacilities,
-  type PublicMatch,
+  useMatchSuggestions,
+  useUnifiedMatchFeed,
   type MatchScoringPreferences,
+  type UnifiedFeedItem,
 } from '@rallia/shared-hooks';
-import { useAuth, useThemeStyles, useTranslation, useEffectiveLocation } from '../../../hooks';
+import {
+  useAuth,
+  useThemeStyles,
+  useTranslation,
+  useEffectiveLocation,
+  useSuggestionInviteHandler,
+} from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { useMatchDetailSheet, useSport, useUserHomeLocation } from '../../../context';
+import type { MatchDetailData } from '../../../context/MatchDetailSheetContext';
 import { Logger, supabase } from '@rallia/shared-services';
-import { spacingPixels, neutral } from '@rallia/design-system';
+import { spacingPixels } from '@rallia/design-system';
 import { SearchBar, MatchFiltersBar } from '../components';
-import { SuggestionsFeedSection } from '../../../components/SuggestionsFeedSection';
+import { FeedItemCard } from '../components/FeedItemCard';
 
 // =============================================================================
 // HELPER COMPONENTS
 // =============================================================================
 
 interface EmptyStateProps {
-  playerId: string | undefined;
-  sportId: string | undefined;
-  sportName: string | undefined;
   hasFilters: boolean;
   textMutedColor: string;
   t: (key: TranslationKey) => string;
 }
 
-function EmptyState({
-  playerId,
-  sportId,
-  sportName,
-  hasFilters,
-  textMutedColor,
-  t,
-}: EmptyStateProps) {
+function EmptyState({ hasFilters, textMutedColor, t }: EmptyStateProps) {
   return (
     <View style={styles.emptyWrapper}>
       <View style={styles.inlineEmpty}>
@@ -62,7 +60,6 @@ function EmptyState({
           {hasFilters ? t('publicMatches.empty.title') : t('publicMatches.empty.noFilters.title')}
         </Text>
       </View>
-      <SuggestionsFeedSection playerId={playerId} sportId={sportId} sportName={sportName} />
     </View>
   );
 }
@@ -231,6 +228,51 @@ export default function PublicMatches() {
   // Sort: chronological primary, relevance score as tiebreaker for same date+time
   const sortedMatches = useSortedNearbyMatches(filteredMatches, scoringPreferences);
 
+  // Fetch matchup suggestions to fill the feed up to ≥30 items.
+  const {
+    suggestions,
+    isLoading: loadingSuggestions,
+    refetch: refetchSuggestions,
+  } = useMatchSuggestions({
+    playerId: player?.id,
+    sportId: selectedSport?.id,
+    sportName: selectedSport?.name,
+    latitude: !player?.id ? location?.latitude : undefined,
+    longitude: !player?.id ? location?.longitude : undefined,
+    limit: 30,
+    enabled: showMatches,
+  });
+
+  // Build the unified chronological feed (matches + suggestions interleaved).
+  const feed = useUnifiedMatchFeed({ matches: sortedMatches, suggestions });
+
+  // Suggestion invite plumbing (shared with Home).
+  const {
+    cardLabels: suggestionLabels,
+    handleSendInvite,
+    getInviteState,
+  } = useSuggestionInviteHandler(selectedSport?.id);
+
+  // Auto-paginate matches up to 30 before relying on suggestions to fill the feed.
+  useEffect(() => {
+    if (
+      showMatches &&
+      !isLoading &&
+      !isFetchingNextPage &&
+      hasNextPage &&
+      sortedMatches.length < 30
+    ) {
+      fetchNextPage();
+    }
+  }, [
+    showMatches,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    sortedMatches.length,
+    fetchNextPage,
+  ]);
+
   // Handle infinite scroll
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -238,29 +280,36 @@ export default function PublicMatches() {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Render match card
-  const renderMatchCard = useCallback(
-    ({ item }: { item: PublicMatch }) => (
-      <MatchCard
-        match={item}
+  // Render feed item (match or suggestion)
+  const renderFeedItem = useCallback(
+    ({ item }: { item: UnifiedFeedItem }) => (
+      <FeedItemCard
+        item={item}
         isDark={isDark}
-        t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
         locale={locale}
+        t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
         currentPlayerId={player?.id}
-        sportIcon={
-          <SportIcon
-            sportName={item.sport?.name ?? 'tennis'}
-            size={100}
-            color={isDark ? neutral[600] : neutral[400]}
-          />
-        }
-        onPress={() => {
-          Logger.logUserAction('public_match_pressed', { matchId: item.id });
-          openMatchDetail(item);
+        themeColors={colors}
+        suggestionLabels={suggestionLabels}
+        getInviteState={getInviteState}
+        onMatchPress={match => {
+          Logger.logUserAction('public_match_pressed', { matchId: match.id });
+          openMatchDetail(match as MatchDetailData);
         }}
+        onSendInvite={handleSendInvite}
       />
     ),
-    [isDark, t, locale, openMatchDetail, player?.id]
+    [
+      isDark,
+      t,
+      locale,
+      openMatchDetail,
+      player?.id,
+      colors,
+      suggestionLabels,
+      getInviteState,
+      handleSendInvite,
+    ]
   );
 
   // Check if we're loading due to filter/search changes (not initial load or pagination)
@@ -309,60 +358,29 @@ export default function PublicMatches() {
     t,
   ]);
 
-  // Render empty state
+  // Render empty state — only shows when both matches AND suggestions are empty.
   const renderEmptyComponent = useCallback(() => {
     if (isLoading || isSearching) return null;
     return (
       <EmptyState
-        playerId={player?.id}
-        sportId={selectedSport?.id}
-        sportName={selectedSport?.name}
         hasFilters={hasActiveFilters || debouncedSearchQuery.length > 0}
         textMutedColor={colors.textMuted}
         t={t as (key: TranslationKey) => string}
       />
     );
-  }, [
-    isLoading,
-    isSearching,
-    player?.id,
-    selectedSport?.id,
-    selectedSport?.name,
-    hasActiveFilters,
-    debouncedSearchQuery,
-    colors.textMuted,
-    t,
-  ]);
+  }, [isLoading, isSearching, hasActiveFilters, debouncedSearchQuery, colors.textMuted, t]);
 
-  // Render footer with loading indicator or suggestions prompt
+  // Render footer — pagination spinner or suggestion-loading spinner.
   const renderFooter = useCallback(() => {
-    if (isFetchingNextPage) {
+    if (isFetchingNextPage || (loadingSuggestions && feed.length < 30)) {
       return (
         <View style={styles.footerLoader}>
           <ActivityIndicator size="small" color={colors.primary} />
         </View>
       );
     }
-    if (!hasNextPage && sortedMatches.length > 0 && !isLoading) {
-      return (
-        <SuggestionsFeedSection
-          playerId={player?.id}
-          sportId={selectedSport?.id}
-          sportName={selectedSport?.name}
-        />
-      );
-    }
     return null;
-  }, [
-    isFetchingNextPage,
-    hasNextPage,
-    isLoading,
-    sortedMatches.length,
-    colors.primary,
-    player?.id,
-    selectedSport?.id,
-    selectedSport?.name,
-  ]);
+  }, [isFetchingNextPage, loadingSuggestions, feed.length, colors.primary]);
 
   // Loading state for initial data
   const isInitialLoading = playerLoading || sportLoading;
@@ -454,7 +472,7 @@ export default function PublicMatches() {
       </View>
 
       {/* Match List */}
-      {isLoading ? (
+      {isLoading || loadingSuggestions ? (
         <View style={styles.listLoadingContainer}>
           {[1, 2, 3, 4].map(i => (
             <SkeletonMatchCard
@@ -470,25 +488,22 @@ export default function PublicMatches() {
         </View>
       ) : (
         <FlatList
-          data={sortedMatches}
-          renderItem={renderMatchCard}
-          keyExtractor={item => item.id}
+          data={feed}
+          renderItem={renderFeedItem}
+          keyExtractor={item => item.key}
           ListHeaderComponent={renderResultsInfo}
           ListEmptyComponent={renderEmptyComponent}
           ListFooterComponent={renderFooter}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.3}
-          contentContainerStyle={[
-            styles.listContent,
-            sortedMatches.length === 0 && styles.emptyListContent,
-          ]}
+          contentContainerStyle={[styles.listContent, feed.length === 0 && styles.emptyListContent]}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching && isManualRefresh.current}
               onRefresh={() => {
                 isManualRefresh.current = true;
-                refetch().finally(() => {
+                Promise.all([refetch(), refetchSuggestions()]).finally(() => {
                   isManualRefresh.current = false;
                 });
               }}
