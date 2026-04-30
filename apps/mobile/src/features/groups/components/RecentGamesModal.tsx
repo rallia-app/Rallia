@@ -9,6 +9,7 @@ import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
+import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import { SportIcon } from '../../../components/SportIcon';
 import type { GroupMatch } from '@rallia/shared-hooks';
@@ -126,7 +127,11 @@ export function RecentGamesActionSheet({ payload }: SheetProps<'recent-games'>) 
                   >
                     {participant.player?.profile?.profile_picture_url ? (
                       <Image
-                        source={{ uri: participant.player.profile.profile_picture_url }}
+                        source={{
+                          uri:
+                            getProfilePictureUrl(participant.player.profile.profile_picture_url) ??
+                            '',
+                        }}
                         style={styles.avatarImage}
                       />
                     ) : (
@@ -201,7 +206,11 @@ export function RecentGamesActionSheet({ payload }: SheetProps<'recent-games'>) 
                   >
                     {participant.player?.profile?.profile_picture_url ? (
                       <Image
-                        source={{ uri: participant.player.profile.profile_picture_url }}
+                        source={{
+                          uri:
+                            getProfilePictureUrl(participant.player.profile.profile_picture_url) ??
+                            '',
+                        }}
                         style={styles.avatarImage}
                       />
                     ) : (

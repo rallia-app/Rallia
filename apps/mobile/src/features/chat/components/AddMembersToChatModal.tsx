@@ -9,6 +9,7 @@ import ActionSheet, { SheetManager, SheetProps, FlatList } from 'react-native-ac
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text, Button, Skeleton } from '@rallia/shared-components';
+import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { usePlayerSearch } from '@rallia/shared-hooks';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import { useThemeStyles, useTranslation } from '../../../hooks';
@@ -99,7 +100,7 @@ export function AddMembersToChatActionSheet({ payload }: SheetProps<'add-members
               >
                 {player.profile_picture_url ? (
                   <Image
-                    source={{ uri: player.profile_picture_url }}
+                    source={{ uri: getProfilePictureUrl(player.profile_picture_url) ?? '' }}
                     style={styles.selectedChipAvatarImage}
                   />
                 ) : (
@@ -188,7 +189,10 @@ export function AddMembersToChatActionSheet({ payload }: SheetProps<'add-members
           {/* Avatar */}
           <View style={[styles.playerAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
             {item.profile_picture_url ? (
-              <Image source={{ uri: item.profile_picture_url }} style={styles.avatarImage} />
+              <Image
+                source={{ uri: getProfilePictureUrl(item.profile_picture_url) ?? '' }}
+                style={styles.avatarImage}
+              />
             ) : (
               <Ionicons name="person-outline" size={24} color={colors.textMuted} />
             )}

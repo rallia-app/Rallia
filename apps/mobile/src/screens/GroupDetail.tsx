@@ -24,7 +24,13 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import Svg, { Circle } from 'react-native-svg';
 import { Text, Button } from '@rallia/shared-components';
-import { lightHaptic, selectionHaptic, mediumHaptic, getShortName } from '@rallia/shared-utils';
+import {
+  lightHaptic,
+  selectionHaptic,
+  mediumHaptic,
+  getShortName,
+  getProfilePictureUrl,
+} from '@rallia/shared-utils';
 import {
   useGroupWithMembers,
   useGroupStats,
@@ -613,7 +619,9 @@ export default function GroupDetailScreen() {
                 >
                   {member.player?.profile?.profile_picture_url ? (
                     <Image
-                      source={{ uri: member.player.profile.profile_picture_url }}
+                      source={{
+                        uri: getProfilePictureUrl(member.player.profile.profile_picture_url) ?? '',
+                      }}
                       style={styles.memberAvatarImage}
                     />
                   ) : (

@@ -25,7 +25,12 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import Svg, { Circle } from 'react-native-svg';
 import { Text, Button, useToast } from '@rallia/shared-components';
-import { lightHaptic, mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
+import {
+  lightHaptic,
+  mediumHaptic,
+  selectionHaptic,
+  getProfilePictureUrl,
+} from '@rallia/shared-utils';
 import {
   useCommunityWithMembers,
   useIsCommunityModerator,
@@ -762,7 +767,10 @@ export default function CommunityDetailScreen() {
                   >
                     {member.player?.profile?.profile_picture_url ? (
                       <Image
-                        source={{ uri: member.player.profile.profile_picture_url }}
+                        source={{
+                          uri:
+                            getProfilePictureUrl(member.player.profile.profile_picture_url) ?? '',
+                        }}
                         style={styles.memberAvatarImage}
                       />
                     ) : (
@@ -1070,7 +1078,9 @@ export default function CommunityDetailScreen() {
                 >
                   {member.player?.profile?.profile_picture_url ? (
                     <Image
-                      source={{ uri: member.player.profile.profile_picture_url }}
+                      source={{
+                        uri: getProfilePictureUrl(member.player.profile.profile_picture_url) ?? '',
+                      }}
                       style={styles.memberAvatarImage}
                     />
                   ) : (

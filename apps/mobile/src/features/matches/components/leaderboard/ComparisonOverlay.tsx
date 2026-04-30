@@ -16,7 +16,7 @@ import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-shee
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { neutral, primary, radiusPixels, spacingPixels, status } from '@rallia/design-system';
-import { getHumanName } from '@rallia/shared-utils';
+import { getHumanName, getProfilePictureUrl } from '@rallia/shared-utils';
 import type { NetworkPulse } from '@rallia/shared-hooks';
 
 import { useThemeStyles, useTranslation } from '../../../../hooks';
@@ -91,7 +91,10 @@ export function ComparisonOverlay({ payload }: SheetProps<typeof SHEET_ID>) {
         <View style={styles.identity}>
           <View style={[styles.avatar, { backgroundColor: isDark ? neutral[800] : neutral[200] }]}>
             {peer.profile_picture_url ? (
-              <Image source={{ uri: peer.profile_picture_url }} style={styles.avatarImage} />
+              <Image
+                source={{ uri: getProfilePictureUrl(peer.profile_picture_url) ?? '' }}
+                style={styles.avatarImage}
+              />
             ) : (
               <Ionicons name="person-outline" size={28} color={colors.textMuted} />
             )}

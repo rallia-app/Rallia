@@ -57,7 +57,7 @@ import {
   neutral,
   status,
 } from '@rallia/design-system';
-import { lightHaptic, getHumanName } from '@rallia/shared-utils';
+import { lightHaptic, getHumanName, getProfilePictureUrl } from '@rallia/shared-utils';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -307,7 +307,7 @@ const AdminUsersScreen: React.FC = () => {
           <View style={styles.userCardContent}>
             {/* Avatar */}
             <Image
-              source={{ uri: item.profile_picture_url || DEFAULT_AVATAR }}
+              source={{ uri: getProfilePictureUrl(item.profile_picture_url) ?? DEFAULT_AVATAR }}
               style={styles.avatar}
             />
 
