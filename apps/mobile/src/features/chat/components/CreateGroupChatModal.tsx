@@ -26,6 +26,7 @@ import ActionSheet, {
 } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Skeleton } from '@rallia/shared-components';
+import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { useGetOrCreateDirectConversation, usePlayerSearch } from '@rallia/shared-hooks';
 import { primary, spacingPixels, fontSizePixels, radiusPixels } from '@rallia/design-system';
 import type { PlayerSearchResult } from '@rallia/shared-services';
@@ -293,7 +294,10 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
         >
           <View style={[styles.playerAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
             {item.profile_picture_url ? (
-              <Image source={{ uri: item.profile_picture_url }} style={styles.avatarImage} />
+              <Image
+                source={{ uri: getProfilePictureUrl(item.profile_picture_url) ?? '' }}
+                style={styles.avatarImage}
+              />
             ) : (
               <Ionicons name="person-outline" size={24} color={colors.textMuted} />
             )}

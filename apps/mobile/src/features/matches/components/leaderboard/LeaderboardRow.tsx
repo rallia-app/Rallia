@@ -10,7 +10,7 @@ import { Image, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { neutral, primary, radiusPixels, spacingPixels, status } from '@rallia/design-system';
-import { getHumanName } from '@rallia/shared-utils';
+import { getHumanName, getProfilePictureUrl } from '@rallia/shared-utils';
 import type { NetworkPulseLeaderboardEntry } from '@rallia/shared-hooks';
 
 import { useThemeStyles, useTranslation } from '../../../../hooks';
@@ -67,7 +67,10 @@ export function LeaderboardRow({
 
       <View style={[styles.avatar, { backgroundColor: isDark ? neutral[800] : neutral[200] }]}>
         {entry.profile_picture_url ? (
-          <Image source={{ uri: entry.profile_picture_url }} style={styles.avatarImage} />
+          <Image
+            source={{ uri: getProfilePictureUrl(entry.profile_picture_url) ?? '' }}
+            style={styles.avatarImage}
+          />
         ) : (
           <Ionicons name="person-outline" size={16} color={colors.textMuted} />
         )}

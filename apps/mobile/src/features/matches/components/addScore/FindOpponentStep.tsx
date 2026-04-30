@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, Button, Skeleton } from '@rallia/shared-components';
 import { usePlayerSearch } from '@rallia/shared-hooks';
 import type { PlayerSearchResult } from '@rallia/shared-services';
-import { getHumanName } from '@rallia/shared-utils';
+import { getHumanName, getProfilePictureUrl } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
 import { useAuth } from '../../../../hooks';
 import { useSport } from '../../../../context';
@@ -182,7 +182,10 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
       >
         <View style={[styles.playerAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
           {item.profile_picture_url ? (
-            <Image source={{ uri: item.profile_picture_url }} style={styles.avatarImage} />
+            <Image
+              source={{ uri: getProfilePictureUrl(item.profile_picture_url) ?? '' }}
+              style={styles.avatarImage}
+            />
           ) : (
             <Ionicons name="person-outline" size={24} color={colors.textMuted} />
           )}

@@ -3,6 +3,7 @@ import { View, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 're
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
+import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { supabase, Logger } from '@rallia/shared-services';
 import { selectionHaptic, mediumHaptic } from '../../../utils/haptics';
 import { useThemeStyles } from '../../../hooks';
@@ -245,7 +246,10 @@ function PeerRatingRequestOverlayComponent({ payload }: SheetProps<'peer-rating-
         {/* Avatar */}
         <View style={styles.avatarContainer}>
           {player.profile_picture_url ? (
-            <Image source={{ uri: player.profile_picture_url }} style={styles.avatar} />
+            <Image
+              source={{ uri: getProfilePictureUrl(player.profile_picture_url) ?? '' }}
+              style={styles.avatar}
+            />
           ) : (
             <View
               style={[styles.avatar, styles.avatarPlaceholder, { backgroundColor: colors.divider }]}

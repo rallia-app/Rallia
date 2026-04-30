@@ -61,7 +61,12 @@ import {
   neutral,
   status,
 } from '@rallia/design-system';
-import { lightHaptic, mediumHaptic, getHumanName } from '@rallia/shared-utils';
+import {
+  lightHaptic,
+  mediumHaptic,
+  getHumanName,
+  getProfilePictureUrl,
+} from '@rallia/shared-utils';
 
 type RouteParams = RouteProp<RootStackParamList, 'AdminUserDetail'>;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -851,7 +856,7 @@ const AdminUserDetailScreen: React.FC = () => {
           ]}
         >
           <Image
-            source={{ uri: user.profile_picture_url || DEFAULT_AVATAR }}
+            source={{ uri: getProfilePictureUrl(user.profile_picture_url) ?? DEFAULT_AVATAR }}
             style={styles.profileAvatar}
           />
           <View style={styles.profileInfo}>

@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
+import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import { isPlayerOnline } from '@rallia/shared-services';
@@ -131,7 +132,10 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
         {/* Profile Picture with Online Indicator */}
         <View style={styles.avatarContainer}>
           {player.profile_picture_url ? (
-            <Image source={{ uri: player.profile_picture_url }} style={styles.avatar} />
+            <Image
+              source={{ uri: getProfilePictureUrl(player.profile_picture_url) ?? '' }}
+              style={styles.avatar}
+            />
           ) : (
             <View style={[styles.avatarPlaceholder, { backgroundColor: colors.border }]}>
               <Ionicons name="person-outline" size={24} color={colors.textMuted} />

@@ -26,6 +26,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
 import { Text, Skeleton, SkeletonAvatar } from '@rallia/shared-components';
+import { getProfilePictureUrl } from '@rallia/shared-utils';
 import {
   useThemeStyles,
   useAuth,
@@ -217,7 +218,10 @@ export default function GroupChatInfoScreen() {
         >
           {/* Avatar */}
           {profile?.profile_picture_url ? (
-            <Image source={{ uri: profile.profile_picture_url }} style={styles.memberAvatar} />
+            <Image
+              source={{ uri: getProfilePictureUrl(profile.profile_picture_url) ?? '' }}
+              style={styles.memberAvatar}
+            />
           ) : (
             <View style={[styles.memberAvatarPlaceholder, { backgroundColor: primary[100] }]}>
               <Ionicons name="person" size={20} color={primary[500]} />
