@@ -120,7 +120,7 @@ export function normalizeStorageUrl(
  */
 export function getStorageImageUrl(
   url: string | null | undefined,
-  options: { width?: number; quality?: number } = {}
+  options: { width?: number; height?: number; quality?: number } = {}
 ): string | null {
   if (!url) return null;
   if (!url.includes('.supabase.co')) return url;
@@ -129,6 +129,7 @@ export function getStorageImageUrl(
   const renderUrl = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
   const params = new URLSearchParams();
   if (options.width) params.set('width', String(options.width));
+  if (options.height) params.set('height', String(options.height));
   if (options.quality) params.set('quality', String(options.quality));
   const qs = params.toString();
   return qs ? `${renderUrl}?${qs}` : renderUrl;
@@ -143,5 +144,5 @@ export function getStorageImageUrl(
  */
 export function getProfilePictureUrl(profilePictureUrl: string | null | undefined): string | null {
   const normalized = normalizeStorageUrl(profilePictureUrl, 'profile-pictures');
-  return getStorageImageUrl(normalized, { width: 200, quality: 75 });
+  return getStorageImageUrl(normalized, { width: 200, height: 200, quality: 75 });
 }
