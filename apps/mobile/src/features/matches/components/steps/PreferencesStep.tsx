@@ -341,20 +341,13 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
     };
   }, [focusedField]);
 
-  // Reset the ref when minRatingScoreId becomes undefined (form reset)
-  // and set player's rating as default when appropriate
+  // Set player's rating as default once on initial load (never override user's explicit selection)
   useEffect(() => {
-    // Reset ref when minRatingScoreId becomes undefined (form reset)
-    if (!minRatingScoreId) {
-      hasSetDefaultRating.current = false;
-    }
-
-    // Set player's rating as default when loaded (only once, after ref reset)
-    if (playerRatingScoreId && !hasSetDefaultRating.current && !minRatingScoreId) {
+    if (playerRatingScoreId && !hasSetDefaultRating.current) {
       setValue('minRatingScoreId', playerRatingScoreId, { shouldDirty: false });
       hasSetDefaultRating.current = true;
     }
-  }, [playerRatingScoreId, minRatingScoreId, setValue]);
+  }, [playerRatingScoreId, setValue]);
 
   // Set default court status to 'to_book' when location is specified and status is not set
   useEffect(() => {
