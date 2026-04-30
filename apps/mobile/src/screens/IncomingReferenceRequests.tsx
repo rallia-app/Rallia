@@ -27,7 +27,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
 import { useThemeStyles, useTranslation, useNavigateToPlayerProfile } from '../hooks';
-import { lightHaptic } from '@rallia/shared-utils';
+import { lightHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 import {
   spacingPixels,
   radiusPixels,
@@ -266,7 +266,10 @@ const IncomingReferenceRequests: React.FC = () => {
             onPress={() => handleViewRequesterProfile(item.requester.id)}
           >
             {item.requester.profile_picture_url ? (
-              <Image source={{ uri: item.requester.profile_picture_url }} style={styles.avatar} />
+              <Image
+                source={{ uri: getProfilePictureUrl(item.requester.profile_picture_url) ?? '' }}
+                style={styles.avatar}
+              />
             ) : (
               <View
                 style={[

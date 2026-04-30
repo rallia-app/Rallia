@@ -30,7 +30,7 @@ import {
   computeBadgeStatus,
 } from '@rallia/shared-services';
 import { usePlayer } from '@rallia/shared-hooks';
-import { lightHaptic, getHumanName } from '@rallia/shared-utils';
+import { lightHaptic, getHumanName, getProfilePictureUrl } from '@rallia/shared-utils';
 import type { RatingReferencesScreenParams } from '@rallia/shared-types';
 import {
   spacingPixels,
@@ -485,7 +485,10 @@ const RatingReferences: React.FC = () => {
           onPress={() => item.referee && navigateToPlayerProfile(item.referee.id)}
         >
           {item.referee?.profile_picture_url ? (
-            <Image source={{ uri: item.referee.profile_picture_url }} style={styles.avatar} />
+            <Image
+              source={{ uri: getProfilePictureUrl(item.referee.profile_picture_url) ?? '' }}
+              style={styles.avatar}
+            />
           ) : (
             <View
               style={[

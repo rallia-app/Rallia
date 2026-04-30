@@ -11,6 +11,7 @@ import { View, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 're
 import { SheetManager, SheetProps, FlatList } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
+import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { useRatingScoreReferees, type RatingScoreReferee } from '@rallia/shared-hooks';
 import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
 
@@ -58,7 +59,10 @@ export function ReferencesListActionSheet({ payload }: SheetProps<'references-li
           activeOpacity={0.7}
         >
           {item.profile_picture_url ? (
-            <Image source={{ uri: item.profile_picture_url }} style={styles.avatar} />
+            <Image
+              source={{ uri: getProfilePictureUrl(item.profile_picture_url) ?? '' }}
+              style={styles.avatar}
+            />
           ) : (
             <View
               style={[

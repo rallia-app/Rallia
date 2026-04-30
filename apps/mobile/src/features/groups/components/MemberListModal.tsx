@@ -9,6 +9,7 @@ import ActionSheet, { SheetManager, SheetProps, FlatList } from 'react-native-ac
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text, useToast } from '@rallia/shared-components';
+import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import {
   useRemoveGroupMember,
@@ -289,7 +290,9 @@ export function MemberListActionSheet({ payload }: SheetProps<'member-list'>) {
             >
               {item.player?.profile?.profile_picture_url ? (
                 <Image
-                  source={{ uri: item.player.profile.profile_picture_url }}
+                  source={{
+                    uri: getProfilePictureUrl(item.player.profile.profile_picture_url) ?? '',
+                  }}
                   style={styles.avatarImage}
                 />
               ) : (
