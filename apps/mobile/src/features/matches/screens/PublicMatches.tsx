@@ -7,6 +7,7 @@ import React, { useCallback, useMemo, useEffect, useState, useRef } from 'react'
 import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { Text, SkeletonMatchCard } from '@rallia/shared-components';
 import {
   useTheme,
@@ -73,6 +74,15 @@ export default function PublicMatches() {
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
   const { colors } = useThemeStyles();
+  const navigation = useNavigation();
+
+  // Keep the header title in sync with the loaded translations.
+  // On Android, the navigator can mount before i18next is ready, so the
+  // options-function snapshot may contain the raw key. setOptions is reactive
+  // and will patch the header the moment t() returns the real string.
+  useEffect(() => {
+    navigation.setOptions({ headerTitle: t('screens.publicMatches') });
+  }, [navigation, t]);
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
   const isDark = theme === 'dark';
 
