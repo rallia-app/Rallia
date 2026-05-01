@@ -378,7 +378,8 @@ export function renderMorningDigestEmail(payload: DigestEmailPayload): {
     footerNote: t(locale, 'digest.footerNote'),
     preheader,
     locale,
-    showUnsubscribe: false,
+    showUnsubscribe: true,
+    unsubscribeUrl: `${appUrl}/notifications/preferences`,
   });
 
   return { subject, html };

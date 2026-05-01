@@ -57,6 +57,7 @@ export interface LayoutOptions {
   locale?: string;
   preheader?: string;
   showUnsubscribe?: boolean;
+  unsubscribeUrl?: string;
 }
 
 /** Generate dark mode CSS block */
@@ -158,6 +159,7 @@ export function wrapInLayout(options: LayoutOptions): string {
     locale = 'en-US',
     preheader,
     showUnsubscribe = false,
+    unsubscribeUrl,
   } = options;
 
   const isFr = locale === 'fr-CA' || locale === 'fr';
@@ -195,7 +197,7 @@ export function wrapInLayout(options: LayoutOptions): string {
           <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
             <tr>
               <td align="center" style="padding: 0 0 12px 0;">
-                <a href="${siteUrl}/settings/notifications" style="font-size: 12px; color: ${T.neutral500}; text-decoration: underline;">
+                <a href="${unsubscribeUrl ?? siteUrl + '/settings/notifications'}" style="font-size: 12px; color: ${T.neutral500}; text-decoration: underline;">
                   ${isFr ? 'Gérer les préférences de notification' : 'Manage notification preferences'}
                 </a>
               </td>

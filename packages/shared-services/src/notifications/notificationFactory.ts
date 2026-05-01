@@ -399,6 +399,7 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
   program_waitlist_promoted: 'normal',
   program_payment_due: 'high',
   program_payment_received: 'normal',
+  morning_digest: 'low',
 };
 
 /**
@@ -471,6 +472,7 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   program_waitlist_promoted: "You're In!",
   program_payment_due: 'Payment Due',
   program_payment_received: 'Payment Received',
+  morning_digest: 'Morning Digest',
 };
 
 /**
@@ -564,6 +566,7 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   program_payment_due:
     'Payment for {programName} is due. Please complete payment to secure your spot.',
   program_payment_received: 'Payment for {programName} has been received. Thank you!',
+  morning_digest: 'Your morning digest is ready.',
 };
 
 /**
