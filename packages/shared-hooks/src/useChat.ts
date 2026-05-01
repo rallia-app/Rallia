@@ -374,7 +374,7 @@ export interface SendMessageWithUploadsInput {
   conversation_id: string;
   sender_id: string;
   user_id: string;
-  content: string;
+  content: string | null;
   reply_to_message_id?: string;
   attachments: LocalChatAttachment[];
   sender_profile: MessageWithSender['sender'];
@@ -411,7 +411,7 @@ function buildOptimisticMessage(state: InFlightMessage): MessageWithSender {
     id: state.tmpId,
     conversation_id: state.input.conversation_id,
     sender_id: state.input.sender_id,
-    content: state.input.content.length > 0 ? state.input.content : null,
+    content: state.input.content?.length ? state.input.content : null,
     status: 'sending',
     read_by: null,
     created_at: state.createdAt,
@@ -476,7 +476,7 @@ export interface PersistedOutboxRow {
   conversationId: string;
   senderId: string;
   userId: string;
-  content: string;
+  content: string | null;
   replyToMessageId?: string;
   attachments: Array<{
     localId: string;
@@ -699,12 +699,18 @@ export function useSendMessageWithUploads(options: {
         const realMessage = await sendMessage({
           conversation_id: latest.input.conversation_id,
           sender_id: latest.input.sender_id,
-          content: latest.input.content,
+          content: latest.input.content?.length ? latest.input.content : null,
           reply_to_message_id: latest.input.reply_to_message_id,
           attachment_file_ids: fileIds.length > 0 ? fileIds : undefined,
         });
 
-        // 3. Drop the optimistic from local state and prepend the real
+        // 3. Clean up persistence first — UI state mutations (setQueryData etc.)
+        //    could theoretically throw, and we must not leave the outbox entry
+        //    behind for a message that was already successfully sent.
+        inFlightRef.current.delete(tmpId);
+        persistence?.onRemove(tmpId);
+
+        // 4. Drop the optimistic from local state and prepend the real
         //    message into the cache — same shape the existing useSendMessage
         //    relies on (with realtime-dedupe).
         removeOptimistic(tmpId);
@@ -713,8 +719,6 @@ export function useSendMessageWithUploads(options: {
           old => prependRealMessage(old, realMessage)
         );
         queryClient.invalidateQueries({ queryKey: chatKeys.conversations() });
-        inFlightRef.current.delete(tmpId);
-        persistence?.onRemove(tmpId);
       } catch (err) {
         setMessageStatus(tmpId, 'failed');
         const failed = inFlightRef.current.get(tmpId);

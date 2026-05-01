@@ -14,7 +14,6 @@
  * documents go to Supabase Storage.
  */
 
-import * as FileSystem from 'expo-file-system/legacy';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { supabase, Logger } from '@rallia/shared-services';
 
@@ -64,13 +63,38 @@ export const CHAT_ATTACHMENT_MAX_SIZE: Record<ChatAttachmentKind, number> = {
 // Helpers
 // =============================================================================
 
-function base64ToUint8Array(base64: string): Uint8Array {
-  const binaryString = atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
+/**
+ * Read a local file URI into an ArrayBuffer.
+ * React Native's Blob does not expose .arrayBuffer(), so we wrap the blob
+ * in a new Response and call arrayBuffer() there — the Response Fetch API is
+ * more complete in both Hermes and JSC.
+ */
+async function readFileAsArrayBuffer(uri: string): Promise<ArrayBuffer> {
+  const response = await fetch(uri);
+  if (!response.ok) throw new Error(`Failed to read local file (status ${response.status})`);
+  const blob = await response.blob();
+  return new Response(blob).arrayBuffer();
+}
+
+/**
+ * Retry a fallible async operation with exponential backoff.
+ * Does not retry 4xx errors (auth/validation failures are not transient).
+ */
+async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 3, baseDelayMs = 1000): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      const status = (err as { status?: number })?.status;
+      if (status !== undefined && status >= 400 && status < 500) throw err;
+      if (attempt < maxAttempts - 1) {
+        await new Promise(r => setTimeout(r, baseDelayMs * 2 ** attempt));
+      }
+    }
   }
-  return bytes;
+  throw lastErr;
 }
 
 function deriveExtension(originalName: string, fallback: string): string {
@@ -128,12 +152,10 @@ async function uploadToSupabase(params: {
 
   onProgress?.(0);
 
-  const base64Data = await FileSystem.readAsStringAsync(fileUri, { encoding: 'base64' });
-  const bytes = base64ToUint8Array(base64Data);
-
+  const arrayBuffer = await readFileAsArrayBuffer(fileUri);
   const path = makeStoragePath(conversationId, tempId, fileName);
 
-  const { error } = await supabase.storage.from(CHAT_BUCKET).upload(path, bytes, {
+  const { error } = await supabase.storage.from(CHAT_BUCKET).upload(path, arrayBuffer, {
     contentType: mimeType,
     upsert: false,
   });
@@ -165,10 +187,9 @@ async function generateAndUploadVideoThumbnail(
       time: 1000,
       quality: 0.6,
     });
-    const base64 = await FileSystem.readAsStringAsync(thumbUri, { encoding: 'base64' });
-    const bytes = base64ToUint8Array(base64);
+    const arrayBuffer = await readFileAsArrayBuffer(thumbUri);
     const path = `${conversationId}/${tempId}/${THUMBNAIL_FOLDER}/${Date.now()}.jpg`;
-    const { error } = await supabase.storage.from(CHAT_BUCKET).upload(path, bytes, {
+    const { error } = await supabase.storage.from(CHAT_BUCKET).upload(path, arrayBuffer, {
       contentType: 'image/jpeg',
       upsert: false,
     });
@@ -288,14 +309,9 @@ export async function uploadChatAttachment(
       const thumb = await generateAndUploadVideoThumbnail(fileUri, conversationId, tempId);
       thumbnailUrl = thumb.url;
     } else {
-      const sup = await uploadToSupabase({
-        fileUri,
-        conversationId,
-        tempId,
-        fileName,
-        mimeType,
-        onProgress,
-      });
+      const sup = await withRetry(() =>
+        uploadToSupabase({ fileUri, conversationId, tempId, fileName, mimeType, onProgress })
+      );
       url = sup.url;
       storageKey = sup.storageKey;
 

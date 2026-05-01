@@ -10,7 +10,6 @@
  */
 
 import * as FileSystem from 'expo-file-system/legacy';
-import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import {
   Logger,
@@ -51,6 +50,7 @@ function destinationFromAttachment(attachment: ChatAttachment): string {
 }
 
 async function ensureMediaLibraryPermission(): Promise<boolean> {
+  const MediaLibrary = await import('expo-media-library');
   const current = await MediaLibrary.getPermissionsAsync(true /* writeOnly */);
   if (current.status === 'granted' || current.accessPrivileges === 'all') return true;
   if (!current.canAskAgain) return false;
@@ -99,6 +99,7 @@ async function saveMediaToLibrary(
       return { ok: false, reason: 'network' };
     }
 
+    const MediaLibrary = await import('expo-media-library');
     await MediaLibrary.saveToLibraryAsync(downloaded.uri);
 
     // Best-effort cleanup of the cached copy.

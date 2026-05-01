@@ -44,19 +44,24 @@ export async function createChatAttachmentSignedUrl(
 }
 
 /**
- * Batch-mint signed URLs for many attachments. Concurrency-bounded to avoid
- * fanning out 50 requests when a long conversation lands.
+ * Batch-mint signed URLs for many attachments.
+ * Processed in chunks of 10 to avoid fanning out unlimited parallel requests
+ * when a long conversation has many attachments.
  */
 export async function createChatAttachmentSignedUrls(
   storageKeys: string[],
   expiresIn: number = SIGNED_URL_TTL_SECONDS
 ): Promise<Map<string, string>> {
+  const BATCH_SIZE = 10;
   const out = new Map<string, string>();
-  await Promise.all(
-    storageKeys.map(async key => {
-      const url = await createChatAttachmentSignedUrl(key, expiresIn);
-      if (url) out.set(key, url);
-    })
-  );
+  for (let i = 0; i < storageKeys.length; i += BATCH_SIZE) {
+    const batch = storageKeys.slice(i, i + BATCH_SIZE);
+    await Promise.all(
+      batch.map(async key => {
+        const url = await createChatAttachmentSignedUrl(key, expiresIn);
+        if (url) out.set(key, url);
+      })
+    );
+  }
   return out;
 }

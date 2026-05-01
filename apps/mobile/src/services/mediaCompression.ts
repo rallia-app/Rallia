@@ -58,14 +58,15 @@ export async function compressImage(
   }
 
   try {
-    const result = await ImageManipulator.manipulateAsync(
-      uri,
-      [{ resize: { width: IMAGE_MAX_DIMENSION } }],
-      {
-        compress: IMAGE_QUALITY,
-        format: ImageManipulator.SaveFormat.JPEG,
-      }
-    );
+    // Probe dimensions first to avoid upscaling images narrower than the limit.
+    const probe = await ImageManipulator.manipulateAsync(uri, [], {});
+    const actions: ImageManipulator.Action[] =
+      probe.width > IMAGE_MAX_DIMENSION ? [{ resize: { width: IMAGE_MAX_DIMENSION } }] : [];
+
+    const result = await ImageManipulator.manipulateAsync(uri, actions, {
+      compress: IMAGE_QUALITY,
+      format: ImageManipulator.SaveFormat.JPEG,
+    });
     const newSize = await fileSize(result.uri);
     return {
       uri: result.uri,

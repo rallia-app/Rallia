@@ -11,6 +11,7 @@ module.exports = {
     '<rootDir>/packages/shared-services',
     '<rootDir>/packages/shared-utils',
     '<rootDir>/packages/shared-components',
+    '<rootDir>/apps/mobile',
   ],
 
   // Coverage configuration

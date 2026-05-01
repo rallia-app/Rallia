@@ -41,7 +41,13 @@ ON CONFLICT (id) DO UPDATE SET
 DROP POLICY IF EXISTS "Participants can upload chat attachments" ON storage.objects;
 DROP POLICY IF EXISTS "Participants can view chat attachments" ON storage.objects;
 DROP POLICY IF EXISTS "Participants can update chat attachments" ON storage.objects;
+DROP POLICY IF EXISTS "Uploaders can update chat attachments" ON storage.objects;
 DROP POLICY IF EXISTS "Uploaders can delete chat attachments" ON storage.objects;
+
+-- Helper macro: validate the path's first segment is a UUID before casting.
+-- Without this guard a crafted non-UUID path would raise a Postgres exception
+-- (not a policy denial), which could be used as a DoS vector.
+-- Applied to all four policies below.
 
 -- INSERT: caller is a participant of the conversation in the path's first folder
 CREATE POLICY "Participants can upload chat attachments"
@@ -49,6 +55,7 @@ ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK (
   bucket_id = 'chat-attachments'
+  AND (storage.foldername(name))[1] ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
   AND (storage.foldername(name))[1]::uuid IN (
     SELECT get_user_conversation_ids(auth.uid())
   )
@@ -61,23 +68,29 @@ ON storage.objects FOR SELECT
 TO authenticated
 USING (
   bucket_id = 'chat-attachments'
+  AND (storage.foldername(name))[1] ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
   AND (storage.foldername(name))[1]::uuid IN (
     SELECT get_user_conversation_ids(auth.uid())
   )
 );
 
--- UPDATE: same membership check (allows resumable upload finalisation)
-CREATE POLICY "Participants can update chat attachments"
+-- UPDATE: restricted to the original uploader (owner) so no other participant
+-- can overwrite a file they didn't upload.
+CREATE POLICY "Uploaders can update chat attachments"
 ON storage.objects FOR UPDATE
 TO authenticated
 USING (
   bucket_id = 'chat-attachments'
+  AND owner = auth.uid()
+  AND (storage.foldername(name))[1] ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
   AND (storage.foldername(name))[1]::uuid IN (
     SELECT get_user_conversation_ids(auth.uid())
   )
 )
 WITH CHECK (
   bucket_id = 'chat-attachments'
+  AND owner = auth.uid()
+  AND (storage.foldername(name))[1] ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
   AND (storage.foldername(name))[1]::uuid IN (
     SELECT get_user_conversation_ids(auth.uid())
   )
@@ -90,6 +103,7 @@ TO authenticated
 USING (
   bucket_id = 'chat-attachments'
   AND owner = auth.uid()
+  AND (storage.foldername(name))[1] ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
 );
 
 -- =============================================================================

@@ -483,6 +483,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[2.5],
     paddingHorizontal: spacingPixels[3],
     borderRadius: radiusPixels.lg,
+    minWidth: MAX_MEDIA_WIDTH,
   },
   docIconBox: {
     width: 40,

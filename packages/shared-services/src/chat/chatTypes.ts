@@ -353,14 +353,14 @@ export interface ConversationPreview {
 /**
  * Input for sending a new message
  * @property conversation_id - ID of the conversation to send to
- * @property content - Message text content (may be empty when sending attachments only)
+ * @property content - Message text content; null for attachment-only messages
  * @property sender_id - ID of the sending player
  * @property reply_to_message_id - Optional ID of message being replied to
  * @property attachment_file_ids - Optional ordered list of file IDs to attach
  */
 export interface SendMessageInput {
   conversation_id: string;
-  content: string;
+  content: string | null;
   sender_id: string;
   reply_to_message_id?: string;
   attachment_file_ids?: string[];

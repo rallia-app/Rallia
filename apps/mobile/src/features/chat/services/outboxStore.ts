@@ -11,6 +11,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Logger } from '@rallia/shared-services';
 
 const STORAGE_KEY = 'chat:outbox:v1';
 
@@ -32,11 +33,27 @@ export interface OutboxRow {
   conversationId: string;
   senderId: string;
   userId: string;
-  content: string;
+  content: string | null;
   replyToMessageId?: string;
   attachments: OutboxAttachment[];
   status: 'sending' | 'failed';
   createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Internal: serialized write queue
+// All mutating operations go through enqueueWrite so concurrent calls never
+// race on the readAll → mutate → writeAll cycle.
+// ---------------------------------------------------------------------------
+
+let writeQueue: Promise<void> = Promise.resolve();
+
+function enqueueWrite(fn: () => Promise<void>): Promise<void> {
+  const next = writeQueue.then(fn);
+  // Keep the shared chain alive regardless of whether fn throws.
+  // Return `next` (not the silenced version) so callers can observe errors.
+  writeQueue = next.catch(() => {});
+  return next;
 }
 
 async function readAll(): Promise<OutboxRow[]> {
@@ -51,10 +68,15 @@ async function readAll(): Promise<OutboxRow[]> {
 }
 
 async function writeAll(rows: OutboxRow[]): Promise<void> {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+  } catch (err) {
+    Logger.error('OutboxStore: failed to persist rows', err as Error);
+    throw err;
+  }
 }
 
-export async function listAll(): Promise<OutboxRow[]> {
+export function listAll(): Promise<OutboxRow[]> {
   return readAll();
 }
 
@@ -63,22 +85,23 @@ export async function listByConversation(conversationId: string): Promise<Outbox
   return all.filter(r => r.conversationId === conversationId);
 }
 
-export async function upsertRow(row: OutboxRow): Promise<void> {
-  const rows = await readAll();
-  const idx = rows.findIndex(r => r.tmpId === row.tmpId);
-  if (idx === -1) {
-    rows.push(row);
-  } else {
-    rows[idx] = row;
-  }
-  await writeAll(rows);
+export function upsertRow(row: OutboxRow): Promise<void> {
+  return enqueueWrite(async () => {
+    const rows = await readAll();
+    const idx = rows.findIndex(r => r.tmpId === row.tmpId);
+    if (idx === -1) rows.push(row);
+    else rows[idx] = row;
+    await writeAll(rows);
+  });
 }
 
-export async function removeRow(tmpId: string): Promise<void> {
-  const rows = await readAll();
-  await writeAll(rows.filter(r => r.tmpId !== tmpId));
+export function removeRow(tmpId: string): Promise<void> {
+  return enqueueWrite(async () => {
+    const rows = await readAll();
+    await writeAll(rows.filter(r => r.tmpId !== tmpId));
+  });
 }
 
-export async function clearAll(): Promise<void> {
-  await AsyncStorage.removeItem(STORAGE_KEY);
+export function clearAll(): Promise<void> {
+  return enqueueWrite(() => AsyncStorage.removeItem(STORAGE_KEY));
 }
