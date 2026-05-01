@@ -17,11 +17,9 @@
  * - 'club': Club network chat
  * - 'match': Chat created for a specific match
  * - 'announcement': Broadcast channel (future)
- * - 'group': Legacy value kept for backward compat
  */
 export type ConversationType =
   | 'direct'
-  | 'group'
   | 'group_chat'
   | 'player_group'
   | 'community'
@@ -29,8 +27,8 @@ export type ConversationType =
   | 'match'
   | 'announcement';
 
+// Migration 20260312100001 renamed all 'group' rows to their exact types.
 const GROUP_CONVERSATION_TYPES: ConversationType[] = [
-  'group',
   'group_chat',
   'player_group',
   'community',

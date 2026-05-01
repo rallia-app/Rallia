@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, SkeletonConversation } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
+import { getConversationDisplayName } from '@rallia/shared-services';
 import { spacingPixels, fontSizePixels, primary } from '@rallia/design-system';
 import {
   useFilteredConversations,
@@ -231,10 +232,10 @@ const Chat = () => {
       lightHaptic();
       rootNavigation.navigate('ChatConversation', {
         conversationId: conversation.id,
-        title: conversation.title || undefined,
+        title: getConversationDisplayName(conversation, t as (key: string) => string),
       });
     },
-    [rootNavigation]
+    [rootNavigation, t]
   );
 
   const handleConversationLongPress = useCallback(

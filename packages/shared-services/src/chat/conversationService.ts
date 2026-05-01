@@ -715,7 +715,7 @@ export async function syncMatchConversationTitle(
     // Build new title
     const sportName = (matchData.sport as { name?: string } | null)?.name || 'Match';
     const dateStr = matchDate
-      ? new Date(matchDate).toLocaleDateString('en-US', {
+      ? new Date(matchDate).toLocaleDateString(undefined, {
           month: 'short',
           day: 'numeric',
         })

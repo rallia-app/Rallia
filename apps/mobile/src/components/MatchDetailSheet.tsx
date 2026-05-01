@@ -1290,13 +1290,24 @@ export const MatchDetailSheet: React.FC = () => {
     pendingReopenRef.current = selectedMatch;
     closeSheet();
 
-    // Short delay so navigation runs after sheet close animation.
-    // Navigate to the Chat conversation screen (full screen, no tabs)
-    // Don't pass a custom title — let ChatConversation use the DB conversation title
+    // Derive the match chat title from live match data (not the stored DB title,
+    // which may be null for chats created by the trigger before any sync ran).
+    const sportName = (selectedMatch.sport as { name?: string } | null)?.name ?? '';
+    const matchFormat = selectedMatch.format ?? 'singles';
+    const formatLabel =
+      matchFormat === 'doubles' ? t('match.format.doubles') : t('match.format.singles');
+    const matchDate = (selectedMatch as { match_date?: string | null }).match_date;
+    const dateStr = matchDate
+      ? new Date(matchDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+      : '';
+    const matchTitle = dateStr
+      ? `${sportName} ${formatLabel} - ${dateStr}`
+      : `${sportName} ${formatLabel}`;
+
     setTimeout(() => {
       navigation.navigate('ChatConversation', {
         conversationId: matchConversationId,
-        title: undefined,
+        title: matchTitle,
       });
     }, 100);
   }, [matchConversationId, selectedMatch, isReady, openActionsSheet, closeSheet, navigation]);

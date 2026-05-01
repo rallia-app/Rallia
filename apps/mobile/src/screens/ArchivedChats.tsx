@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text, SkeletonConversation } from '@rallia/shared-components';
+import { getConversationDisplayName } from '@rallia/shared-services';
 import { useThemeStyles, useAuth, useTranslation, type TranslationKey } from '../hooks';
 import { spacingPixels, fontSizePixels, primary } from '@rallia/design-system';
 import {
@@ -60,10 +61,10 @@ const ArchivedChats = () => {
     (conversation: ConversationPreview) => {
       navigation.navigate('ChatConversation', {
         conversationId: conversation.id,
-        title: conversation.title || undefined,
+        title: getConversationDisplayName(conversation, t as (key: string) => string),
       });
     },
-    [navigation]
+    [navigation, t]
   );
 
   const handleConversationLongPress = useCallback(

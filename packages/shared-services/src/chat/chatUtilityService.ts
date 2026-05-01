@@ -4,8 +4,56 @@
  */
 
 import { supabase } from '../supabase';
-import type { PlayerOnlineStatus, SearchMessageResult } from './chatTypes';
+import type { PlayerOnlineStatus, SearchMessageResult, ConversationPreview } from './chatTypes';
 import { getPlayerConversations } from './conversationService';
+
+// ============================================================================
+// DISPLAY NAME UTILITY
+// ============================================================================
+
+/**
+ * Derive the display name for a conversation from its data.
+ *
+ * Single source of truth — replaces the duplicated name-resolution logic
+ * that previously existed in ConversationItem, ConversationActionsSheet, and
+ * ChatConversation.
+ *
+ * Priority for each type:
+ *  - direct  → other_participant full name
+ *  - match   → "{Sport} {Singles|Doubles} - {MMM d}" derived from match_info
+ *              (never trusts the stored title, which may be stale or null)
+ *  - all others → stored conversation title, fallback to t('chat.conversation.groupChat')
+ */
+export function getConversationDisplayName(
+  conversation: ConversationPreview,
+  t: (key: string) => string
+): string {
+  if (conversation.conversation_type === 'direct') {
+    const p = conversation.other_participant;
+    if (!p) return t('chat.conversation.groupChat');
+    return p.last_name ? `${p.first_name} ${p.last_name}` : p.first_name;
+  }
+
+  if (conversation.conversation_type === 'match') {
+    const mi = conversation.match_info;
+    if (mi) {
+      const formatLabel =
+        mi.format === 'doubles' ? t('match.format.doubles') : t('match.format.singles');
+      const dateStr = mi.match_date
+        ? new Date(mi.match_date).toLocaleDateString(undefined, {
+            month: 'short',
+            day: 'numeric',
+          })
+        : '';
+      return dateStr
+        ? `${mi.sport_name} ${formatLabel} - ${dateStr}`
+        : `${mi.sport_name} ${formatLabel}`;
+    }
+    return conversation.title || t('chat.filters.match');
+  }
+
+  return conversation.title || t('chat.conversation.groupChat');
+}
 
 // ============================================================================
 // ONLINE STATUS OPERATIONS

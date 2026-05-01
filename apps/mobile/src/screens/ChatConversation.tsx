@@ -92,6 +92,7 @@ export default function ChatConversationScreen() {
 
   const [reactions, setReactions] = useState<Map<string, ReactionSummary[]>>(new Map());
   const [networkInfo, setNetworkInfo] = useState<NetworkInfo | null>(null);
+  const [derivedMatchTitle, setDerivedMatchTitle] = useState<string | null>(null);
 
   // Reply state
   const [replyToMessage, setReplyToMessage] = useState<MessageWithSender | null>(null);
@@ -249,6 +250,32 @@ export default function ChatConversationScreen() {
     fetchNetworkInfo();
   }, [conversation, conversationId]);
 
+  // Derive match title from match data when routeTitle is absent (e.g. deep links)
+  useEffect(() => {
+    if (
+      conversation?.conversation_type !== 'match' ||
+      !conversation.match_id ||
+      routeTitle ||
+      conversation.title
+    ) {
+      return;
+    }
+    getMatchWithDetails(conversation.match_id).then(match => {
+      if (!match) return;
+      const sportName = (match.sport as { name?: string } | null)?.name ?? '';
+      const format = match.format ?? 'singles';
+      const formatLabel =
+        format === 'doubles' ? t('match.format.doubles') : t('match.format.singles');
+      const matchDate = (match as { match_date?: string | null }).match_date;
+      const dateStr = matchDate
+        ? new Date(matchDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+        : '';
+      setDerivedMatchTitle(
+        dateStr ? `${sportName} ${formatLabel} - ${dateStr}` : `${sportName} ${formatLabel}`
+      );
+    });
+  }, [conversation, routeTitle, t]);
+
   // Fetch reactions for visible messages
   const fetchReactions = useCallback(async () => {
     if (messages.length === 0 || !playerId) return;
@@ -273,6 +300,7 @@ export default function ChatConversationScreen() {
   const headerTitle = useMemo(() => {
     if (routeTitle) return routeTitle;
     if (conversation?.title) return conversation.title;
+    if (derivedMatchTitle) return derivedMatchTitle;
 
     // For direct conversations, show the other participant's name
     if (conversation?.conversation_type === 'direct' && conversation.participants) {
@@ -284,7 +312,7 @@ export default function ChatConversationScreen() {
     }
 
     return t('chat.title');
-  }, [routeTitle, conversation, playerId, t]);
+  }, [routeTitle, conversation, playerId, t, derivedMatchTitle]);
 
   const headerSubtitle = useMemo(() => {
     if (!conversation) return undefined;
