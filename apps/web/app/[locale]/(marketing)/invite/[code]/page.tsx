@@ -16,11 +16,11 @@ import Image from 'next/image';
 import { QRCodeSVG } from 'qrcode.react';
 import { ClipboardDownloadButton } from './_components/clipboard-download-button';
 
-type InvitationType = 'referral' | 'match' | 'group' | 'community' | 'flyer' | 'poster';
+type InvitationType = 'referral' | 'match' | 'group' | 'community' | 'flyer' | 'poster' | 'social';
 
-const PHYSICAL_CHANNEL_TYPES: readonly InvitationType[] = ['flyer', 'poster'] as const;
-function isPhysicalChannel(type: InvitationType): boolean {
-  return (PHYSICAL_CHANNEL_TYPES as readonly string[]).includes(type);
+const CHANNEL_TYPES: readonly InvitationType[] = ['flyer', 'poster', 'social'] as const;
+function isChannelType(type: InvitationType): boolean {
+  return (CHANNEL_TYPES as readonly string[]).includes(type);
 }
 
 type Props = {
@@ -77,7 +77,10 @@ async function getCommunityDetails(inviteCode: string) {
 }
 
 function parseInvitationType(type?: string): InvitationType {
-  if (type && ['match', 'group', 'community', 'referral', 'flyer', 'poster'].includes(type)) {
+  if (
+    type &&
+    ['match', 'group', 'community', 'referral', 'flyer', 'poster', 'social'].includes(type)
+  ) {
     return type as InvitationType;
   }
   return 'referral';
@@ -89,7 +92,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const invitationType = parseInvitationType(query.type);
   const t = await getTranslations({ locale, namespace: 'invitePage' });
 
-  if (isPhysicalChannel(invitationType)) {
+  if (isChannelType(invitationType)) {
     const title = t('physicalTitle');
     return {
       title,
@@ -158,12 +161,12 @@ export default async function InvitePage({ params, searchParams }: Props) {
 
   // iOS + Desktop: show landing page (iOS gets clipboard CTA, desktop gets QR code)
   const t = await getTranslations({ locale, namespace: 'invitePage' });
-  const isPhysical = isPhysicalChannel(invitationType);
+  const isChannel = isChannelType(invitationType);
 
   // Physical channels (flyer/poster) have no referring user — skip inviter lookup
-  const inviter = isPhysical ? null : await getInviter(code);
+  const inviter = isChannel ? null : await getInviter(code);
 
-  if (!isPhysical && !inviter) {
+  if (!isChannel && !inviter) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-24 w-full">
         <h1 className="text-2xl font-bold">{t('notFound')}</h1>
@@ -222,13 +225,13 @@ export default async function InvitePage({ params, searchParams }: Props) {
 
   const heading =
     contextHeading ||
-    (isPhysical
+    (isChannel
       ? t('physicalHeading')
       : inviter?.first_name
         ? t('invitedBy', { name: inviter.first_name })
         : t('invitedByGeneric'));
 
-  const fallbackDescription = isPhysical ? t('physicalDescription') : t('description');
+  const fallbackDescription = isChannel ? t('physicalDescription') : t('description');
 
   return (
     <div className="flex flex-col items-center gap-8 py-16 w-full max-w-lg mx-auto animate-fade-in">

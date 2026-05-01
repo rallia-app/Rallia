@@ -7,7 +7,7 @@
 import { createHash } from 'crypto';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 
-type InvitationType = 'referral' | 'match' | 'group' | 'community' | 'flyer' | 'poster';
+type InvitationType = 'referral' | 'match' | 'group' | 'community' | 'flyer' | 'poster' | 'social';
 
 /**
  * Extract stable device traits from any iOS user agent string.
