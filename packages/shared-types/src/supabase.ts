@@ -2178,6 +2178,7 @@ export type Database = {
           created_at: string | null
           feedback_completed: boolean
           feedback_reminder_sent_at: string | null
+          has_paid: boolean
           id: string
           initial_feedback_notification_sent_at: string | null
           is_host: boolean | null
@@ -2188,6 +2189,7 @@ export type Database = {
             | Database["public"]["Enums"]["match_outcome_enum"]
             | null
           match_starting_soon_sent_at: string | null
+          payment_intent_id: string | null
           player_id: string
           score: number | null
           showed_up: boolean | null
@@ -2209,6 +2211,7 @@ export type Database = {
           created_at?: string | null
           feedback_completed?: boolean
           feedback_reminder_sent_at?: string | null
+          has_paid?: boolean
           id?: string
           initial_feedback_notification_sent_at?: string | null
           is_host?: boolean | null
@@ -2219,6 +2222,7 @@ export type Database = {
             | Database["public"]["Enums"]["match_outcome_enum"]
             | null
           match_starting_soon_sent_at?: string | null
+          payment_intent_id?: string | null
           player_id: string
           score?: number | null
           showed_up?: boolean | null
@@ -2240,6 +2244,7 @@ export type Database = {
           created_at?: string | null
           feedback_completed?: boolean
           feedback_reminder_sent_at?: string | null
+          has_paid?: boolean
           id?: string
           initial_feedback_notification_sent_at?: string | null
           is_host?: boolean | null
@@ -2250,6 +2255,7 @@ export type Database = {
             | Database["public"]["Enums"]["match_outcome_enum"]
             | null
           match_starting_soon_sent_at?: string | null
+          payment_intent_id?: string | null
           player_id?: string
           score?: number | null
           showed_up?: boolean | null

@@ -1320,6 +1320,13 @@
       "private": "Private",
       "publicDescription": "Other players can see when you're available to play.",
       "privateDescription": "Your availability is hidden from other players."
+    },
+    "payments": {
+      "section": "Payments",
+      "connectAccount": "Connect Account",
+      "continueSetup": "Finish Setup",
+      "connected": "Payments connected",
+      "setupPrompt": "Set up payments to receive your share from players"
     }
   },
   "playerProfile": {
@@ -3169,7 +3176,18 @@
     "scoreConfirmProgress_one": "{confirmed}/{total} player confirmed",
     "scoreConfirmProgress_other": "{confirmed}/{total} players confirmed",
     "yourScoreConfirmed": "Your confirmation received",
-    "reviewRebuttal": "Review Score"
+    "reviewRebuttal": "Review Score",
+    "reimbursement": "Reimbursement",
+    "payNow": "Pay Now",
+    "markAsPaid": "Mark as Paid",
+    "markedAsPaid": "Marked as paid",
+    "paymentSuccess": "Payment sent!",
+    "paymentError": "Payment failed. Try again.",
+    "youHavePaid": "✓ You've paid your share ({amount})",
+    "youOweHost": "{amount} owed to {name}",
+    "payDirectly": "Pay {name} directly · {amount}",
+    "hostNotConnected": "{name} hasn't set up payments yet",
+    "paidCount": "{paid}/{total} players have paid"
   },
   "registerMatchScore": {
     "title": "Register score",

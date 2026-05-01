@@ -138,7 +138,7 @@ import { StripeProvider } from '@stripe/stripe-react-native';
 import { SheetManager, SheetProvider } from 'react-native-actions-sheet';
 import { Sheets } from './src/context/sheets';
 import { useToast } from '@rallia/shared-components';
-import { getMatchWithDetails } from '@rallia/shared-services';
+import { getMatchWithDetails, supabase } from '@rallia/shared-services';
 import type { MatchDetailData } from './src/context/MatchDetailSheetContext';
 import { attemptFirstLaunchAttribution } from './src/utils/referralAttribution';
 
@@ -230,6 +230,7 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
   const { syncLocaleToDatabase, isReady: isLocaleReady } = useLocale();
   const { setPendingMatchId } = useDeepLink();
   const { isSplashComplete } = useOverlay();
+  const toast = useToast();
   const userId = user?.id;
 
   // Track user activity app-wide by updating last_seen_at
@@ -269,17 +270,31 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
       const matchId = parseMatchIdFromUrl(url);
       const inviteCode = url.match(/\/invite\/([A-Za-z0-9]+)/)?.[1];
 
+      const isStripeConnectReturn =
+        url.includes('stripe-connect-return') || url.includes('/stripe-connect-return');
+
       if (matchId) {
         Logger.logNavigation('deep_link_received', { url, matchId });
         deepLinkOpened({ link_type: 'match', ...utmParams });
         setPendingMatchId(matchId);
+      } else if (isStripeConnectReturn) {
+        supabase
+          .from('player_stripe_account')
+          .select('onboarding_completed')
+          .eq('player_id', user?.id ?? '')
+          .single()
+          .then(({ data }) => {
+            if (data?.onboarding_completed) {
+              toast.success('Payments connected!');
+            }
+          });
       } else if (inviteCode) {
         deepLinkOpened({ link_type: 'invite', referral_code: inviteCode, ...utmParams });
       } else if (utmParams) {
         deepLinkOpened({ link_type: 'utm', ...utmParams });
       }
     },
-    [setPendingMatchId]
+    [setPendingMatchId, user?.id, toast]
   );
 
   // After authentication, set UTM params as PostHog person properties (once per install)
@@ -743,7 +758,7 @@ function App() {
                                               publishableKey={
                                                 process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
                                               }
-                                              merchantIdentifier="merchant.com.rallia"
+                                              merchantIdentifier="merchant.com.mathisl971.rallia-app"
                                             >
                                               <AppContent />
                                             </StripeProvider>

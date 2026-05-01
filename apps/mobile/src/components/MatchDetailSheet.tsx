@@ -23,6 +23,7 @@ import {
   Modal,
   Image,
   Platform,
+  ActivityIndicator,
   Animated as RNAnimated,
   Easing,
 } from 'react-native';
@@ -91,7 +92,9 @@ import {
   getTierForScore,
   getTierConfig,
   MIN_EVENTS_FOR_PUBLIC,
+  supabase,
 } from '@rallia/shared-services';
+import { useStripe } from '@stripe/stripe-react-native';
 import { SheetManager } from 'react-native-actions-sheet';
 import { shareMatch } from '../utils';
 import { openInMaps } from '../utils/openInMaps';
@@ -720,6 +723,7 @@ export const MatchDetailSheet: React.FC = () => {
   const { location: locationPermission } = usePermissions();
   const isDark = theme === 'dark';
   const toast = useToast();
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const playerId = player?.id;
   const navigation = useAppNavigation();
   const { display: _creatorReputationDisplay } = usePlayerReputation(
@@ -2040,6 +2044,82 @@ export const MatchDetailSheet: React.FC = () => {
   const totalCost = match.estimated_cost ?? 0;
   const perPlayerCost =
     participantInfo.total > 0 ? (totalCost / participantInfo.total).toFixed(2) : '0.00';
+
+  // Reimbursement
+  const showReimbursement =
+    hasMatchEnded &&
+    !isCourtFree &&
+    totalCost > 0 &&
+    match.cost_split_type === 'split_equal' &&
+    !!currentPlayerParticipant;
+  const isNonHostParticipant = showReimbursement && !currentPlayerParticipant?.is_host;
+  const [isPaying, setIsPaying] = useState(false);
+  const [hostStripeConnected, setHostStripeConnected] = useState<boolean | null>(null);
+  const paidParticipants =
+    match.participants?.filter(p => p.status === 'joined' && p.has_paid).length ?? 0;
+  const totalParticipants = match.participants?.filter(p => p.status === 'joined').length ?? 0;
+  const perPlayerCostFormatted = `$${perPlayerCost}`;
+
+  useEffect(() => {
+    if (!showReimbursement) return;
+    supabase
+      .from('player_stripe_account')
+      .select('onboarding_completed')
+      .eq('player_id', match.created_by)
+      .maybeSingle()
+      .then(({ data }) => setHostStripeConnected(data?.onboarding_completed ?? false));
+  }, [showReimbursement, match.created_by]);
+
+  const handlePayNow = useCallback(async () => {
+    if (!match.id) return;
+    setIsPaying(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('match-reimbursement-create', {
+        body: { matchId: match.id },
+      });
+      if (error || !data?.clientSecret) throw new Error(error?.message ?? 'No client secret');
+
+      const { error: initError } = await initPaymentSheet({
+        paymentIntentClientSecret: data.clientSecret,
+        merchantDisplayName: 'Rallia',
+        merchantCountryCode: 'CA',
+      });
+      if (initError) throw new Error(initError.message);
+
+      const { error: paymentError } = await presentPaymentSheet();
+      if (paymentError?.code === 'Canceled') return;
+      if (paymentError) throw new Error(paymentError.message);
+
+      updateSelectedMatch({
+        ...match,
+        participants: match.participants?.map(p =>
+          p.player_id === playerId ? { ...p, has_paid: true } : p
+        ),
+      });
+      toast.success(t('matchDetail.paymentSuccess' as TranslationKey));
+    } catch {
+      toast.error(t('matchDetail.paymentError' as TranslationKey));
+    } finally {
+      setIsPaying(false);
+    }
+  }, [match, playerId, initPaymentSheet, presentPaymentSheet, updateSelectedMatch, toast, t]);
+
+  const handleMarkAsPaid = useCallback(async () => {
+    if (!match.id || !playerId) return;
+    await supabase
+      .from('match_participant')
+      .update({ has_paid: true })
+      .eq('match_id', match.id)
+      .eq('player_id', playerId);
+
+    updateSelectedMatch({
+      ...match,
+      participants: match.participants?.map(p =>
+        p.player_id === playerId ? { ...p, has_paid: true } : p
+      ),
+    });
+    toast.success(t('matchDetail.markedAsPaid' as TranslationKey));
+  }, [match, playerId, updateSelectedMatch, toast, t]);
 
   // Location display
   const facilityName = match.facility?.name || match.location_name;
@@ -4444,6 +4524,132 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
                     </Text>
                   </View>
                 </View>
+              </View>
+            )}
+          </Animated.View>
+        )}
+
+        {/* Reimbursement Section */}
+        {showReimbursement && (
+          <Animated.View
+            entering={FadeInDown.delay(325).springify()}
+            style={[styles.section, { borderBottomColor: colors.border }]}
+          >
+            <View style={styles.sectionHeader}>
+              <Ionicons name="cash-outline" size={20} color={colors.iconMuted} />
+              <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
+                {t('matchDetail.reimbursement' as TranslationKey)}
+              </Text>
+            </View>
+
+            {isNonHostParticipant ? (
+              currentPlayerParticipant?.has_paid ? (
+                <View
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}
+                >
+                  <Ionicons name="checkmark-circle" size={20} color={status.success.DEFAULT} />
+                  <Text
+                    size="sm"
+                    weight="medium"
+                    color={isDark ? status.success.light : status.success.dark}
+                  >
+                    {t('matchDetail.youHavePaid' as TranslationKey, {
+                      amount: perPlayerCostFormatted,
+                    })}
+                  </Text>
+                </View>
+              ) : hostStripeConnected ? (
+                <View style={{ gap: 8 }}>
+                  <Text size="sm" color={colors.textMuted}>
+                    {t('matchDetail.youOweHost' as TranslationKey, {
+                      amount: perPlayerCostFormatted,
+                      name: hostName,
+                    })}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={handlePayNow}
+                    disabled={isPaying}
+                    style={{
+                      backgroundColor: colors.primary,
+                      borderRadius: 8,
+                      paddingVertical: 10,
+                      paddingHorizontal: 16,
+                      alignItems: 'center',
+                      alignSelf: 'flex-start',
+                    }}
+                  >
+                    {isPaying ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text size="sm" weight="semibold" color="#FFFFFF">
+                        {t('matchDetail.payNow' as TranslationKey)}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={{ gap: 8 }}>
+                  <Text size="sm" color={colors.textMuted}>
+                    {t('matchDetail.payDirectly' as TranslationKey, {
+                      amount: perPlayerCostFormatted,
+                      name: hostName,
+                    })}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={handleMarkAsPaid}
+                    style={{
+                      backgroundColor: colors.card,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      borderRadius: 8,
+                      paddingVertical: 10,
+                      paddingHorizontal: 16,
+                      alignItems: 'center',
+                      alignSelf: 'flex-start',
+                    }}
+                  >
+                    <Text size="sm" weight="semibold" color={colors.text}>
+                      {t('matchDetail.markAsPaid' as TranslationKey)}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )
+            ) : (
+              // Host view
+              <View style={{ gap: 8 }}>
+                <Text size="sm" color={colors.textMuted}>
+                  {t('matchDetail.paidCount' as TranslationKey, {
+                    paid: paidParticipants,
+                    total: totalParticipants,
+                  })}
+                </Text>
+                {match.participants
+                  ?.filter(p => p.status === 'joined' && !p.is_host)
+                  .map(p => (
+                    <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      {p.has_paid ? (
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={16}
+                          color={status.success.DEFAULT}
+                        />
+                      ) : (
+                        <Ionicons name="time-outline" size={16} color={colors.textMuted} />
+                      )}
+                      <Text
+                        size="sm"
+                        color={
+                          p.has_paid
+                            ? isDark
+                              ? status.success.light
+                              : status.success.dark
+                            : colors.textMuted
+                        }
+                      >
+                        {getShortName(p.player?.profile, '')}
+                      </Text>
+                    </View>
+                  ))}
               </View>
             )}
           </Animated.View>

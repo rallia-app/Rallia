@@ -8,6 +8,7 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -121,6 +122,38 @@ const UserProfile = () => {
     sport: SportWithRating | null;
     recordId: string | null;
   }>({ visible: false, sport: null, recordId: null });
+
+  const [stripeAccount, setStripeAccount] = useState<
+    | {
+        onboarding_completed: boolean;
+      }
+    | null
+    | undefined
+  >(undefined);
+  const [stripeOnboarding, setStripeOnboarding] = useState(false);
+
+  useEffect(() => {
+    if (!player?.id) return;
+    supabase
+      .from('player_stripe_account')
+      .select('onboarding_completed')
+      .eq('player_id', player.id)
+      .maybeSingle()
+      .then(({ data }) => setStripeAccount(data));
+  }, [player?.id]);
+
+  const handleStripeOnboard = useCallback(async () => {
+    setStripeOnboarding(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('player-stripe-onboard');
+      if (error || !data?.url) throw new Error(error?.message);
+      await Linking.openURL(data.url);
+    } catch {
+      toast.error('Failed to start Stripe onboarding. Please try again.');
+    } finally {
+      setStripeOnboarding(false);
+    }
+  }, [toast]);
 
   // Derive sport cards from shared contexts (updated automatically by SportProfile)
   const sports: SportWithRating[] = useMemo(() => {
@@ -1512,6 +1545,53 @@ const UserProfile = () => {
             )}
           </WalkthroughableView>
         </CopilotStep>
+
+        {/* Payments Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+              {t('profile.payments.section' as TranslationKey)}
+            </Text>
+          </View>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            {stripeAccount?.onboarding_completed ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="checkmark-circle" size={20} color="#22c55e" />
+                <Text weight="medium" color={colors.text}>
+                  {t('profile.payments.connected' as TranslationKey)}
+                </Text>
+              </View>
+            ) : (
+              <View style={{ gap: 12 }}>
+                <Text color={colors.textMuted} size="sm">
+                  {t('profile.payments.setupPrompt' as TranslationKey)}
+                </Text>
+                <TouchableOpacity
+                  onPress={handleStripeOnboard}
+                  disabled={stripeOnboarding}
+                  style={{
+                    backgroundColor: colors.primary,
+                    borderRadius: 8,
+                    paddingVertical: 10,
+                    paddingHorizontal: 16,
+                    alignItems: 'center',
+                    alignSelf: 'flex-start',
+                  }}
+                >
+                  {stripeOnboarding ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text weight="semibold" color="#FFFFFF" size="sm">
+                      {stripeAccount === null
+                        ? t('profile.payments.connectAccount' as TranslationKey)
+                        : t('profile.payments.continueSetup' as TranslationKey)}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
 
         {/* Bottom Spacing */}
         <View style={{ height: 40 }} />

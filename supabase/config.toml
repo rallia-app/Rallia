@@ -417,6 +417,15 @@ verify_jwt = false
 [functions.calendar-event]
 verify_jwt = false
 
+[functions.player-stripe-onboard]
+verify_jwt = false
+
+[functions.match-reimbursement-create]
+verify_jwt = false
+
+[functions.stripe-match-webhook]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

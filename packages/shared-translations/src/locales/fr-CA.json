@@ -1320,6 +1320,13 @@
       "private": "Privée",
       "publicDescription": "Les autres joueurs peuvent voir quand vous êtes disponible pour jouer.",
       "privateDescription": "Vos disponibilités sont cachées des autres joueurs."
+    },
+    "payments": {
+      "section": "Paiements",
+      "connectAccount": "Connecter un compte",
+      "continueSetup": "Terminer la configuration",
+      "connected": "Paiements connectés",
+      "setupPrompt": "Configurez les paiements pour recevoir votre part des joueurs"
     }
   },
   "playerProfile": {
@@ -3169,7 +3176,18 @@
     "scoreConfirmProgress_one": "{confirmed}/{total} joueur confirmé",
     "scoreConfirmProgress_other": "{confirmed}/{total} joueurs confirmés",
     "yourScoreConfirmed": "Votre confirmation reçue",
-    "reviewRebuttal": "Revoir le score"
+    "reviewRebuttal": "Revoir le score",
+    "reimbursement": "Remboursement",
+    "payNow": "Payer maintenant",
+    "markAsPaid": "Marquer comme payé",
+    "markedAsPaid": "Marqué comme payé",
+    "paymentSuccess": "Paiement envoyé !",
+    "paymentError": "Paiement échoué. Réessayez.",
+    "youHavePaid": "✓ Vous avez payé votre part ({amount})",
+    "youOweHost": "{amount} dû à {name}",
+    "payDirectly": "Payer {name} directement · {amount}",
+    "hostNotConnected": "{name} n'a pas encore configuré les paiements",
+    "paidCount": "{paid}/{total} joueurs ont payé"
   },
   "registerMatchScore": {
     "title": "Enregistrer le score",
