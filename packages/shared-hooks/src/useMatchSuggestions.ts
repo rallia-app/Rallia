@@ -17,7 +17,7 @@ export const suggestionKeys = {
   all: ['matches', 'suggestions'] as const,
   list: (
     params:
-      | { mode: 'auth'; playerId: string; sportId: string }
+      | { mode: 'auth'; playerId: string; sportId: string; lat?: number; lng?: number }
       | { mode: 'anon'; lat: number; lng: number; sportId: string; maxDistanceKm: number }
   ) => [...suggestionKeys.all, params] as const,
 };
@@ -73,6 +73,7 @@ export function useMatchSuggestions(
   const hasAuth = !!playerId;
   const hasAnonInputs = latitude != null && longitude != null;
   const queryEnabled = enabled && !!sportId && (hasAuth || hasAnonInputs);
+  const hasLocationOverride = latitude != null && longitude != null;
 
   // Round lat/lng to ~3 decimals (~110m) to dedupe small movements in the cache key
   const roundedLat = latitude != null ? Math.round(latitude * 1000) / 1000 : 0;
@@ -83,6 +84,7 @@ export function useMatchSuggestions(
         mode: 'auth' as const,
         playerId: playerId!,
         sportId: sportId ?? '',
+        ...(hasLocationOverride ? { lat: roundedLat, lng: roundedLng } : {}),
       })
     : suggestionKeys.list({
         mode: 'anon' as const,
@@ -106,8 +108,8 @@ export function useMatchSuggestions(
         playerId: playerId ?? undefined,
         sportId: sportId!,
         sportName,
-        latitude: latitude ?? undefined,
-        longitude: longitude ?? undefined,
+        latitude: hasLocationOverride ? (latitude ?? undefined) : undefined,
+        longitude: hasLocationOverride ? (longitude ?? undefined) : undefined,
         maxDistanceKm,
         limit,
         signal,

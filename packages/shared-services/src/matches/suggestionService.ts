@@ -339,6 +339,8 @@ export async function getMatchSuggestions(
         p_player_id: playerId!,
         p_sport_id: sportId,
         p_limit: rpcLimit,
+        p_lat: latitude ?? null,
+        p_lng: longitude ?? null,
       });
   if (signal) rpcBuilder.abortSignal(signal);
   const { data: scoredRows, error } = await rpcBuilder;
@@ -682,8 +684,8 @@ export async function createMatchFromSuggestion(
     locationType: 'facility' as const,
     facilityId: input.facilityId,
     courtStatus: 'to_book',
-    visibility: 'public' as const,
-    joinMode: 'request' as const,
+    visibility: 'private' as const,
+    joinMode: 'direct' as const,
   });
 
   const result = await invitePlayersToMatch(match.id, [input.opponentId], input.createdBy);

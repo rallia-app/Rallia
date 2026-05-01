@@ -243,17 +243,11 @@ export function generateFacebookPostMessage(match: MatchDetailData, options: Sha
       contentParts.push(
         t('matchCreation.shareToFacebook.message.locationLineBooked', { location })
       );
-    } else if (courtToBook) {
-      contentParts.push(
-        t('matchCreation.shareToFacebook.message.locationLineToBook', { location })
-      );
     } else {
       contentParts.push(t('matchCreation.shareToFacebook.message.locationLine', { location }));
     }
   } else if (courtBooked) {
     contentParts.push(t('matchCreation.shareToFacebook.message.courtBookedAlone'));
-  } else if (courtToBook) {
-    contentParts.push(t('matchCreation.shareToFacebook.message.courtToBookAlone'));
   }
 
   // Cost — one sentence, flows inline with the rest of the paragraph.

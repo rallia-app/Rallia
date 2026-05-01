@@ -7119,7 +7119,7 @@ export type Database = {
         }[]
       }
       get_match_suggestions_scored: {
-        Args: { p_limit?: number; p_player_id: string; p_sport_id: string }
+        Args: { p_limit?: number; p_player_id: string; p_sport_id: string; p_lat?: number | null; p_lng?: number | null }
         Returns: {
           facility_address: string
           facility_affinity: number

@@ -3649,7 +3649,7 @@ export const MatchDetailSheet: React.FC = () => {
             ))}
           </View>
 
-          {/* Invite Players Button - only visible to host when spots available and match not ended or in progress */}
+          {/* Row 1: Invite Players - host only, full width */}
           {isCreator &&
             participantInfo.spotsLeft > 0 &&
             !hasMatchEnded &&
@@ -3678,87 +3678,85 @@ export const MatchDetailSheet: React.FC = () => {
               </TouchableOpacity>
             )}
 
-          {/* Share Match Button - visible to all users when match hasn't started */}
+          {/* Row 2: Share / Facebook / QR — external sharing options in a single row */}
           {startTimeDiffMs >= 0 && !isCancelled && !hasMatchEnded && (
-            <TouchableOpacity
-              style={[
-                styles.invitePlayersButton,
-                {
-                  backgroundColor: isDark ? `${secondary[500]}15` : `${secondary[500]}10`,
-                  borderColor: isDark ? secondary[400] : secondary[500],
-                },
-              ]}
-              onPress={handleShare}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name="share-social"
-                size={18}
-                color={isDark ? secondary[400] : secondary[500]}
-              />
-              <Text
-                size="sm"
-                weight="medium"
-                color={isDark ? secondary[400] : secondary[500]}
-                style={styles.inviteButtonText}
+            <View style={styles.shareRow}>
+              <TouchableOpacity
+                style={[
+                  styles.shareRowButton,
+                  {
+                    backgroundColor: isDark ? `${secondary[500]}15` : `${secondary[500]}10`,
+                    borderColor: isDark ? secondary[400] : secondary[500],
+                  },
+                ]}
+                onPress={handleShare}
+                activeOpacity={0.7}
               >
-                {t('matchDetail.share')}
-              </Text>
-            </TouchableOpacity>
-          )}
+                <Ionicons
+                  name="share-social"
+                  size={18}
+                  color={isDark ? secondary[400] : secondary[500]}
+                />
+                <Text
+                  size="sm"
+                  weight="medium"
+                  color={isDark ? secondary[400] : secondary[500]}
+                  style={styles.inviteButtonText}
+                >
+                  {t('matchDetail.share')}
+                </Text>
+              </TouchableOpacity>
 
-          {/* Share to Facebook - host-only; message is written in the host's voice */}
-          {isCreator && startTimeDiffMs >= 0 && !isCancelled && !hasMatchEnded && (
-            <TouchableOpacity
-              style={[
-                styles.invitePlayersButton,
-                {
-                  backgroundColor: isDark ? '#1877F215' : '#1877F210',
-                  borderColor: '#1877F2',
-                },
-              ]}
-              onPress={() => {
-                lightHaptic();
-                SheetManager.show('share-to-facebook', {
-                  payload: { matchId: match.id },
-                });
-              }}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="logo-facebook" size={18} color="#1877F2" />
-              <Text size="sm" weight="medium" color="#1877F2" style={styles.inviteButtonText}>
-                {t('matchCreation.shareToFacebook.button')}
-              </Text>
-            </TouchableOpacity>
-          )}
+              {isCreator && (
+                <TouchableOpacity
+                  style={[
+                    styles.shareRowButton,
+                    {
+                      backgroundColor: isDark ? '#1877F215' : '#1877F210',
+                      borderColor: '#1877F2',
+                    },
+                  ]}
+                  onPress={() => {
+                    lightHaptic();
+                    SheetManager.show('share-to-facebook', {
+                      payload: { matchId: match.id },
+                    });
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="logo-facebook" size={18} color="#1877F2" />
+                  <Text size="sm" weight="medium" color="#1877F2" style={styles.inviteButtonText}>
+                    {t('matchCreation.shareToFacebook.button')}
+                  </Text>
+                </TouchableOpacity>
+              )}
 
-          {/* QR code + copyable link button - for in-person invites and paste-anywhere sharing */}
-          {startTimeDiffMs >= 0 && !isCancelled && !hasMatchEnded && (
-            <TouchableOpacity
-              style={[
-                styles.invitePlayersButton,
-                {
-                  backgroundColor: isDark ? `${secondary[500]}15` : `${secondary[500]}10`,
-                  borderColor: isDark ? secondary[400] : secondary[500],
-                },
-              ]}
-              onPress={handleOpenQRModal}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name="qr-code-outline"
-                size={18}
-                color={isDark ? secondary[400] : secondary[500]}
-              />
-              <Text
-                size="sm"
-                weight="medium"
-                color={isDark ? secondary[400] : secondary[500]}
-                style={styles.inviteButtonText}
+              <TouchableOpacity
+                style={[
+                  styles.shareRowButton,
+                  {
+                    backgroundColor: isDark ? `${secondary[500]}15` : `${secondary[500]}10`,
+                    borderColor: isDark ? secondary[400] : secondary[500],
+                  },
+                ]}
+                onPress={handleOpenQRModal}
+                activeOpacity={0.7}
               >
-                {t('matchDetail.qrAndLink')}
-              </Text>
-            </TouchableOpacity>
+                <Ionicons
+                  name="qr-code-outline"
+                  size={18}
+                  color={isDark ? secondary[400] : secondary[500]}
+                />
+                <Text
+                  size="sm"
+                  weight="medium"
+                  color={isDark ? secondary[400] : secondary[500]}
+                  style={styles.inviteButtonText}
+                >
+                  {t('matchDetail.qrAndLink')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           )}
 
           {/* Pending Requests Section - only visible to host */}
@@ -5045,6 +5043,22 @@ const styles = StyleSheet.create({
   },
   inviteButtonText: {
     // No additional styles needed
+  },
+  shareRow: {
+    flexDirection: 'row',
+    marginTop: spacingPixels[3],
+    gap: spacingPixels[2],
+  },
+  shareRowButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[2],
+    paddingHorizontal: spacingPixels[2],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+    gap: spacingPixels[1],
   },
 
   // Pending requests (host only)

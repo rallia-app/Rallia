@@ -47,8 +47,8 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
     playerId: resolvedPlayerId,
     sportId: selectedSport?.id,
     sportName: selectedSport?.name,
-    latitude: isAnon ? effectiveLocation?.latitude : undefined,
-    longitude: isAnon ? effectiveLocation?.longitude : undefined,
+    latitude: effectiveLocation?.latitude,
+    longitude: effectiveLocation?.longitude,
     limit: 10,
     enabled: true,
   });
