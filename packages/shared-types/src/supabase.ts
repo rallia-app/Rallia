@@ -8442,6 +8442,7 @@ export type Database = {
         | "reference_request_accepted"
         | "reference_request_declined"
         | "nearby_match_available"
+        | "morning_digest"
       organization_nature_enum: "public" | "private"
       organization_type:
         | "club"

@@ -232,7 +232,8 @@
       "booking_reminder": "Rappel de réservation",
       "booking_cancelled_by_org": "Réservation annulée par l'établissement",
       "membership_approved": "Adhésion approuvée",
-      "org_announcement": "Annonce"
+      "org_announcement": "Annonce",
+      "morning_digest": "Récapitulatif matinal"
     },
     "categories": {
       "match": "Notifications de parties",

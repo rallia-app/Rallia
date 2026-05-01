@@ -232,7 +232,8 @@
       "booking_reminder": "Booking reminder",
       "booking_cancelled_by_org": "Booking cancelled by facility",
       "membership_approved": "Membership approved",
-      "org_announcement": "Announcement"
+      "org_announcement": "Announcement",
+      "morning_digest": "Morning Digest"
     },
     "categories": {
       "match": "Game Notifications",
