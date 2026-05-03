@@ -313,7 +313,16 @@ function buildFeed(matches: DigestMatch[], suggestions: DigestSuggestion[]): Dig
     if (!Number.isFinite(sortTime)) continue;
     items.push({ kind: 'match', sortTime, data: match });
   }
+
+  // Deduplicate suggestions by day+hour — only one per time slot.
+  // Suggestions arrive sorted by matchup_score desc, so first-seen = highest-scored.
+  const seenSlotKeys = new Set<string>();
   for (const suggestion of suggestions) {
+    const hour = suggestion.start_time.slice(0, 2);
+    const key = `${suggestion.match_date} ${hour}`;
+    if (seenSlotKeys.has(key)) continue;
+    seenSlotKeys.add(key);
+
     const sortTime = Date.parse(`${suggestion.match_date}T${suggestion.start_time}`);
     if (!Number.isFinite(sortTime)) continue;
     items.push({ kind: 'suggestion', sortTime, data: suggestion });

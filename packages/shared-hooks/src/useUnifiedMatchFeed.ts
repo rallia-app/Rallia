@@ -12,6 +12,7 @@ import type { AvailableTimeSlot, MatchSuggestion } from '@rallia/shared-services
 import type { NearbyMatch } from './useNearbyMatches';
 import type { PublicMatch } from './usePublicMatches';
 import type { PublicMatchFilters } from './usePublicMatchFilters';
+import { deduplicateSuggestionsByTimeSlot } from './deduplicateSuggestions';
 
 export type UnifiedFeedMatch = NearbyMatch | PublicMatch;
 
@@ -267,17 +268,17 @@ export function useUnifiedMatchFeed(options: UseUnifiedMatchFeedOptions): Unifie
       });
     }
 
-    for (const suggestion of suggestions) {
-      const picked = pickSlotForSuggestion(suggestion, nowMs);
-      if (!picked) continue;
-      const t = getSlotMs(picked.slot);
+    const dedupedSuggestions = deduplicateSuggestionsByTimeSlot(suggestions, nowMs);
+
+    for (const { suggestion, pickedSlot, pickedFacilityIndex } of dedupedSuggestions) {
+      const t = getSlotMs(pickedSlot);
       if (!Number.isFinite(t)) continue;
 
       // Apply filters to suggestions when provided (PublicMatches screen).
       // When omitted (Home screen), all suggestions pass through.
       if (
         filters &&
-        !doesSuggestionPassFilters(suggestion, picked.slot, picked.facilityIndex, filters, nowMs)
+        !doesSuggestionPassFilters(suggestion, pickedSlot, pickedFacilityIndex, filters, nowMs)
       ) {
         continue;
       }
@@ -287,8 +288,8 @@ export function useUnifiedMatchFeed(options: UseUnifiedMatchFeedOptions): Unifie
         key: `suggestion:${suggestion.opponentId}`,
         sortTime: t,
         data: suggestion,
-        pickedSlot: picked.slot,
-        pickedFacilityIndex: picked.facilityIndex,
+        pickedSlot,
+        pickedFacilityIndex,
       });
     }
 

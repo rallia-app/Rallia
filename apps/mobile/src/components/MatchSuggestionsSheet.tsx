@@ -6,7 +6,7 @@
  * Uses the shared SuggestionCard and useMatchSuggestions hook.
  */
 
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { TouchableOpacity } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
@@ -26,7 +26,7 @@ import { Text } from '@rallia/shared-components';
 import { SuggestionCard } from './SuggestionCard';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
-import { useMatchSuggestions, pickSlotForSuggestion } from '@rallia/shared-hooks';
+import { useMatchSuggestions, deduplicateSuggestionsByTimeSlot } from '@rallia/shared-hooks';
 import { suggestionSlotKey, useSuggestionInviteHandler } from '../hooks/useSuggestionInviteHandler';
 import { useThemeStyles, useTranslation, useEffectiveLocation } from '../hooks';
 import { useSport } from '../context';
@@ -149,6 +149,12 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
     onAuthRequired: () => SheetManager.hide('match-suggestions'),
   });
 
+  // Deduplicate suggestions by day+hour — only one card per time slot
+  const dedupedSuggestions = useMemo(
+    () => deduplicateSuggestionsByTimeSlot(suggestions, Date.now()),
+    [suggestions]
+  );
+
   return (
     <ActionSheet
       gestureEnabled
@@ -221,7 +227,7 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
           </View>
         ) : (
           <View style={styles.cardsContainer}>
-            {suggestions.map((suggestion, index) => {
+            {dedupedSuggestions.map(({ suggestion, pickedSlot, pickedFacilityIndex }, index) => {
               const animStyle =
                 index < MAX_ANIMATED
                   ? {
@@ -229,13 +235,11 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
                       transform: [{ translateY: cardTranslateYs[index] }],
                     }
                   : undefined;
-              const picked = pickSlotForSuggestion(suggestion, Date.now());
-              if (!picked) return null;
-              const pickedFacility = suggestion.facilities[picked.facilityIndex];
+              const pickedFacility = suggestion.facilities[pickedFacilityIndex];
               const slotKey = suggestionSlotKey(
                 suggestion.opponentId,
                 pickedFacility.facilityId,
-                picked.slot.datetime
+                pickedSlot.datetime
               );
               return (
                 <Animated.View key={suggestion.opponentId} style={animStyle}>
@@ -256,8 +260,8 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
                     onSendInvite={handleSendInvite}
                     inviteState={inviteStates[slotKey] ?? 'idle'}
                     lockSelections
-                    pickedSlot={picked.slot}
-                    pickedFacilityIndex={picked.facilityIndex}
+                    pickedSlot={pickedSlot}
+                    pickedFacilityIndex={pickedFacilityIndex}
                   />
                 </Animated.View>
               );

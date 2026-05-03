@@ -21,7 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { SuggestionCard } from '../../../../../components/SuggestionCard';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { pickSlotForSuggestion } from '@rallia/shared-hooks';
+import { deduplicateSuggestionsByTimeSlot } from '@rallia/shared-hooks';
 import type { MatchSuggestion } from '@rallia/shared-services';
 import type { TranslationKey } from '@rallia/shared-translations';
 import * as Analytics from '../../../../../services/analytics';
@@ -84,6 +84,12 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
         step_index: -1,
       }),
   });
+
+  // Deduplicate suggestions by day+hour — only one card per time slot
+  const dedupedSuggestions = useMemo(
+    () => deduplicateSuggestionsByTimeSlot(suggestions, Date.now()),
+    [suggestions]
+  );
 
   // Animation values
   const headerOpacity = useSharedValue(0);
@@ -191,36 +197,36 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
           </View>
         ) : (
           <View style={styles.cardsContainer}>
-            {suggestions.slice(0, MAX_CARDS).map((suggestion, index) => {
-              const cardAnimatedStyle = {
-                opacity: cardOpacities[index],
-                transform: [{ translateY: cardTranslateYs[index] }],
-              };
-              const picked = pickSlotForSuggestion(suggestion, Date.now());
-              if (!picked) return null;
-              const pickedFacility = suggestion.facilities[picked.facilityIndex];
-              const slotKey = suggestionSlotKey(
-                suggestion.opponentId,
-                pickedFacility.facilityId,
-                picked.slot.datetime
-              );
-              return (
-                <Animated.View key={suggestion.opponentId} style={cardAnimatedStyle}>
-                  <SuggestionCard
-                    suggestion={suggestion}
-                    colors={colors}
-                    isDark={isDark}
-                    onSendInvite={handleSendInvite}
-                    inviteState={inviteStates[slotKey] ?? 'idle'}
-                    labels={cardLabels}
-                    locale={locale}
-                    lockSelections
-                    pickedSlot={picked.slot}
-                    pickedFacilityIndex={picked.facilityIndex}
-                  />
-                </Animated.View>
-              );
-            })}
+            {dedupedSuggestions
+              .slice(0, MAX_CARDS)
+              .map(({ suggestion, pickedSlot, pickedFacilityIndex }, index) => {
+                const cardAnimatedStyle = {
+                  opacity: cardOpacities[index],
+                  transform: [{ translateY: cardTranslateYs[index] }],
+                };
+                const pickedFacility = suggestion.facilities[pickedFacilityIndex];
+                const slotKey = suggestionSlotKey(
+                  suggestion.opponentId,
+                  pickedFacility.facilityId,
+                  pickedSlot.datetime
+                );
+                return (
+                  <Animated.View key={suggestion.opponentId} style={cardAnimatedStyle}>
+                    <SuggestionCard
+                      suggestion={suggestion}
+                      colors={colors}
+                      isDark={isDark}
+                      onSendInvite={handleSendInvite}
+                      inviteState={inviteStates[slotKey] ?? 'idle'}
+                      labels={cardLabels}
+                      locale={locale}
+                      lockSelections
+                      pickedSlot={pickedSlot}
+                      pickedFacilityIndex={pickedFacilityIndex}
+                    />
+                  </Animated.View>
+                );
+              })}
           </View>
         )}
 
