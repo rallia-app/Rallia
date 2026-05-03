@@ -22,6 +22,8 @@ import type {
   SpecificDateFilter,
   SpotsAvailableFilter,
   SpecificTimeFilter,
+  ReputationFilter,
+  RatingFilter,
 } from '@rallia/shared-types';
 
 // Re-export filter types for consumers that import from this hook
@@ -41,6 +43,8 @@ export type {
   SpecificDateFilter,
   SpotsAvailableFilter,
   SpecificTimeFilter,
+  ReputationFilter,
+  RatingFilter,
 };
 
 /**
@@ -124,6 +128,8 @@ export interface PublicMatchFilters {
   spotsAvailable: SpotsAvailableFilter;
   favoritesOnly: boolean;
   specificTime: SpecificTimeFilter;
+  reputation: ReputationFilter;
+  rating: RatingFilter;
 }
 
 /**
@@ -158,8 +164,10 @@ export interface UsePublicMatchFiltersReturn {
   setDateRange: (dateRange: DateRangeFilter) => void;
   /** Set the time of day filter */
   setTimeOfDay: (timeOfDay: TimeOfDayFilter) => void;
-  /** Set the skill level filter */
+  /** Set the skill level filter (legacy — prefer setRating) */
   setSkillLevel: (skillLevel: SkillLevelFilter) => void;
+  /** Set the rating filter (multi-select rating score IDs) */
+  setRating: (rating: RatingFilter) => void;
   /** Set the gender filter */
   setGender: (gender: GenderFilter) => void;
   /** Set the cost filter */
@@ -170,8 +178,10 @@ export interface UsePublicMatchFiltersReturn {
   setDistance: (distance: DistanceFilter) => void;
   /** Set the duration filter */
   setDuration: (duration: DurationFilter) => void;
-  /** Set the court status filter */
+  /** Set the court status filter (no longer exposed in UI) */
   setCourtStatus: (courtStatus: CourtStatusFilter) => void;
+  /** Set the reputation filter */
+  setReputation: (reputation: ReputationFilter) => void;
   /** Set the match tier filter */
   setMatchTier: (matchTier: MatchTierFilter) => void;
   /** Set the specific date filter */
@@ -219,6 +229,8 @@ export function usePublicMatchFilters(
     spotsAvailable: 'all',
     favoritesOnly: false,
     specificTime: null,
+    reputation: 'all',
+    rating: [],
   };
 
   // Initialize filters with defaults merged with any initial values
@@ -247,12 +259,13 @@ export function usePublicMatchFilters(
       filters.cost !== 'all' ||
       filters.joinMode !== 'all' ||
       filters.duration !== 'all' ||
-      filters.courtStatus !== 'all' ||
       filters.matchTier !== 'all' ||
       filters.specificDate !== null ||
       filters.spotsAvailable !== 'all' ||
       filters.favoritesOnly !== false ||
-      filters.specificTime !== null
+      filters.specificTime !== null ||
+      filters.reputation !== 'all' ||
+      filters.rating.length > 0
     );
   }, [filters]);
 
@@ -268,12 +281,13 @@ export function usePublicMatchFilters(
     if (filters.cost !== 'all') count++;
     if (filters.joinMode !== 'all') count++;
     if (filters.duration !== 'all') count++;
-    if (filters.courtStatus !== 'all') count++;
     if (filters.matchTier !== 'all') count++;
     if (filters.specificDate !== null) count++;
     if (filters.spotsAvailable !== 'all') count++;
     if (filters.favoritesOnly) count++;
     if (filters.specificTime !== null) count++;
+    if (filters.reputation !== 'all') count++;
+    if (filters.rating.length > 0) count++;
     return count;
   }, [filters]);
 
@@ -346,6 +360,14 @@ export function usePublicMatchFilters(
     setFilters(prev => ({ ...prev, specificTime }));
   }, []);
 
+  const setReputation = useCallback((reputation: ReputationFilter) => {
+    setFilters(prev => ({ ...prev, reputation }));
+  }, []);
+
+  const setRating = useCallback((rating: RatingFilter) => {
+    setFilters(prev => ({ ...prev, rating }));
+  }, []);
+
   // Reset all filters to defaults (uses player's initial distance preference)
   const resetFilters = useCallback(() => {
     setFilters({
@@ -366,6 +388,8 @@ export function usePublicMatchFilters(
       spotsAvailable: 'all',
       favoritesOnly: false,
       specificTime: null,
+      reputation: 'all',
+      rating: [],
     });
   }, [defaultDistance]);
 
@@ -396,6 +420,8 @@ export function usePublicMatchFilters(
     setSpotsAvailable,
     setFavoritesOnly,
     setSpecificTime,
+    setReputation,
+    setRating,
     resetFilters,
     clearSearch,
   };

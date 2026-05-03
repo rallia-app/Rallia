@@ -32,8 +32,8 @@ export type TimeOfDayFilter = 'all' | 'morning' | 'afternoon' | 'evening';
 /** Skill level presets */
 export type SkillLevelFilter = 'all' | 'beginner' | 'intermediate' | 'advanced';
 
-/** Cost filter */
-export type CostFilter = 'all' | 'free' | 'paid';
+/** Cost filter — price ranges for per-person cost */
+export type CostFilter = 'all' | 'free' | 'under_5' | 'under_10' | 'under_20' | '20_plus';
 
 /** Distance filter (in km) — 'all' means no distance constraint */
 export type DistanceFilter = 'all' | 2 | 5 | 10;
@@ -52,6 +52,12 @@ export type SpotsAvailableFilter = 'all' | '1' | '2' | '3';
 
 /** Specific time filter — HH:MM format or null */
 export type SpecificTimeFilter = string | null;
+
+/** Reputation filter — based on host's reputation tier */
+export type ReputationFilter = 'all' | 'bronze' | 'silver' | 'gold' | 'platinum';
+
+/** Rating filter — array of selected rating score IDs (empty = no filter) */
+export type RatingFilter = string[];
 
 // ============================================
 // PLAYER MATCH FILTERS

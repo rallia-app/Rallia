@@ -4232,7 +4232,10 @@
         "label": "Cost",
         "all": "Any",
         "free": "Free",
-        "paid": "Paid"
+        "under_5": "Under $5",
+        "under_10": "Under $10",
+        "under_20": "Under $20",
+        "20_plus": "$20+"
       },
       "joinMode": {
         "label": "Join",
@@ -4257,6 +4260,19 @@
         "all": "Any",
         "reserved": "Reserved",
         "to_reserve": "To book"
+      },
+      "reputation": {
+        "label": "Reputation",
+        "all": "Any",
+        "bronze": "Bronze",
+        "silver": "Silver",
+        "gold": "Gold",
+        "platinum": "Platinum"
+      },
+      "rating": {
+        "label": "Rating",
+        "all": "Any",
+        "countActive": "Rating ({count})"
       },
       "tier": {
         "label": "Tier",

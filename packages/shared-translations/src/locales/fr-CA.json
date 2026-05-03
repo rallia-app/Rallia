@@ -4232,7 +4232,10 @@
         "label": "Coût",
         "all": "Tous",
         "free": "Gratuit",
-        "paid": "Payant"
+        "under_5": "Moins de 5$",
+        "under_10": "Moins de 10$",
+        "under_20": "Moins de 20$",
+        "20_plus": "20$+"
       },
       "joinMode": {
         "label": "Inscription",
@@ -4257,6 +4260,19 @@
         "all": "Tous",
         "reserved": "Réservé",
         "to_reserve": "À réserver"
+      },
+      "reputation": {
+        "label": "Réputation",
+        "all": "Toutes",
+        "bronze": "Bronze",
+        "silver": "Argent",
+        "gold": "Or",
+        "platinum": "Platine"
+      },
+      "rating": {
+        "label": "Cote",
+        "all": "Toutes",
+        "countActive": "Cote ({count})"
       },
       "tier": {
         "label": "Catégorie",
