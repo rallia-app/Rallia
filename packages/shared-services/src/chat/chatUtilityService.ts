@@ -45,9 +45,10 @@ export function getConversationDisplayName(
             day: 'numeric',
           })
         : '';
-      return dateStr
-        ? `${mi.sport_name} ${formatLabel} - ${dateStr}`
-        : `${mi.sport_name} ${formatLabel}`;
+      const sportName = mi.sport_name
+        ? mi.sport_name.charAt(0).toUpperCase() + mi.sport_name.slice(1)
+        : '';
+      return dateStr ? `${sportName} ${formatLabel} - ${dateStr}` : `${sportName} ${formatLabel}`;
     }
     return conversation.title || t('chat.filters.match');
   }
