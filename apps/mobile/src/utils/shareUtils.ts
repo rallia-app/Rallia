@@ -6,6 +6,7 @@
 
 import { Share } from 'react-native';
 import { generateInvitationLink } from '@rallia/shared-services';
+import { formatIntuitiveDateInTimezone } from '@rallia/shared-utils';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import type { TranslationKey } from '../hooks';
 
@@ -81,6 +82,39 @@ function formatShareTime(timeStr: string, locale: string): string {
     });
   } catch {
     return timeStr?.substring(0, 5) || '';
+  }
+}
+
+/**
+ * Build a date phrase with the correct preposition for inline use in
+ * conversational share messages.
+ *
+ * Uses `formatIntuitiveDateInTimezone` to detect today/tomorrow/weekday,
+ * then wraps the result in a locale-aware phrase that includes the
+ * appropriate preposition (EN: "today", "this Wednesday", "on Mon, Jan 20";
+ * FR: "aujourd'hui", "mercredi", "le lun. 20 janv.").
+ */
+function buildDatePhrase(
+  dateStr: string,
+  timezone: string,
+  locale: string,
+  t: TranslateFunction
+): string {
+  const result = formatIntuitiveDateInTimezone(dateStr, timezone || 'UTC', locale);
+  switch (result.type) {
+    case 'today':
+      return t('matchCreation.shareToFacebook.message.datePhraseToday' as TranslationKey);
+    case 'tomorrow':
+      return t('matchCreation.shareToFacebook.message.datePhraseTomorrow' as TranslationKey);
+    case 'weekday':
+      return t('matchCreation.shareToFacebook.message.datePhraseWeekday' as TranslationKey, {
+        weekday: result.label,
+      });
+    case 'date':
+    default:
+      return t('matchCreation.shareToFacebook.message.datePhraseDate' as TranslationKey, {
+        date: result.label,
+      });
   }
 }
 
@@ -207,7 +241,7 @@ function formatRatingScore(score: number): string {
  */
 export function generateFacebookPostMessage(match: MatchDetailData, options: ShareOptions): string {
   const { t, locale } = options;
-  const date = formatShareDate(match.match_date, locale, match.timezone);
+  const datePhrase = buildDatePhrase(match.match_date, match.timezone || 'UTC', locale, t);
   const time = match.start_time ? formatShareTime(match.start_time, locale) : '';
   const location = match.location_name || match.facility?.name || null;
   const deepLink = generateMatchDeepLink(match.id, options.referralCode);
@@ -233,55 +267,15 @@ export function generateFacebookPostMessage(match: MatchDetailData, options: Sha
       ? 'matchCreation.shareToFacebook.message.introGeneric'
       : 'matchCreation.shareToFacebook.message.introGenericNoTime';
   }
-  contentParts.push(t(introKey, hasTime ? { date, time } : { date }));
+  contentParts.push(t(introKey, hasTime ? { datePhrase, time } : { datePhrase }));
 
-  // Location + court booking status — one sentence.
-  const courtBooked = match.court_status === 'reserved';
-  const courtToBook = match.court_status === 'to_reserve';
+  // Location — simple, no court booking or cost details.
   if (location) {
-    if (courtBooked) {
-      contentParts.push(
-        t('matchCreation.shareToFacebook.message.locationLineBooked', { location })
-      );
-    } else {
-      contentParts.push(t('matchCreation.shareToFacebook.message.locationLine', { location }));
-    }
-  } else if (courtBooked) {
-    contentParts.push(t('matchCreation.shareToFacebook.message.courtBookedAlone'));
+    contentParts.push(t('matchCreation.shareToFacebook.message.locationLine', { location }));
   }
 
-  // Cost — one sentence, flows inline with the rest of the paragraph.
-  if (match.is_court_free === true) {
-    contentParts.push(t('matchCreation.shareToFacebook.message.costFree'));
-  } else if (
-    match.is_court_free === false &&
-    typeof match.estimated_cost === 'number' &&
-    match.estimated_cost > 0
-  ) {
-    const totalLabel = `$${formatMoney(match.estimated_cost)}`;
-    if (match.cost_split_type === 'host_pays') {
-      contentParts.push(
-        t('matchCreation.shareToFacebook.message.costHostPays', { total: totalLabel })
-      );
-    } else if (match.cost_split_type === 'split_equal') {
-      const playerCount = match.format === 'doubles' ? 4 : 2;
-      const perPerson = `$${formatMoney(match.estimated_cost / playerCount)}`;
-      contentParts.push(
-        t('matchCreation.shareToFacebook.message.costSplitEqual', {
-          perPerson,
-          total: totalLabel,
-        })
-      );
-    } else {
-      contentParts.push(
-        t('matchCreation.shareToFacebook.message.costGeneric', { total: totalLabel })
-      );
-    }
-  }
-
-  // Inline details: gender filter + vibe + duration + level — joined naturally.
-  // Gender goes first since it's the most defining filter; 'any'/'other'/null
-  // fall through (no preference). 'both' on player_expectation falls through too.
+  // Inline details: gender filter + vibe + duration — comma-joined into one
+  // sentence. Level gets its own sentence for emphasis.
   const detailParts: string[] = [];
   if (match.preferred_opponent_gender === 'male') {
     detailParts.push(t('matchCreation.shareToFacebook.message.preferMale'));
@@ -302,27 +296,27 @@ export function generateFacebookPostMessage(match: MatchDetailData, options: Sha
       t('matchCreation.shareToFacebook.message.duration', { duration: durationLabel })
     );
   }
+  if (detailParts.length > 0) {
+    contentParts.push(`${capitalizeFirst(detailParts.join(', '))}.`);
+  }
+
+  // Level as its own sentence — reads as an inviting suggestion rather than
+  // the tail of a comma list.
   if (match.min_rating_score) {
-    // Use the bare numeric score (e.g. "3.5") rather than the system-prefixed
-    // label (e.g. "NTRP 3.5"), since FB groups are sport-specific. Always
-    // render with at least one decimal place ("3.0" not "3") to match how
-    // ratings are conventionally written in tennis/pickleball groups.
     const numericScore = match.min_rating_score.value;
     let scoreLabel: string;
     if (typeof numericScore === 'number') {
       scoreLabel = formatRatingScore(numericScore);
     } else {
-      // Fallback: pull the trailing number out of labels like "NTRP 3.5"
       const trailing = match.min_rating_score.label.match(/[\d.]+\s*$/);
       const parsed = trailing ? Number(trailing[0]) : NaN;
       scoreLabel = Number.isFinite(parsed)
         ? formatRatingScore(parsed)
         : match.min_rating_score.label;
     }
-    detailParts.push(t('matchCreation.shareToFacebook.message.level', { level: scoreLabel }));
-  }
-  if (detailParts.length > 0) {
-    contentParts.push(`${capitalizeFirst(detailParts.join(', '))}.`);
+    contentParts.push(
+      `${capitalizeFirst(t('matchCreation.shareToFacebook.message.level', { level: scoreLabel }))}.`
+    );
   }
 
   // Join all sentences into one flowing paragraph, then CTA + link.
