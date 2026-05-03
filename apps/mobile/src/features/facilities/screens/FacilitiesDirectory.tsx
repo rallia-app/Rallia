@@ -105,16 +105,6 @@ function LoadingSkeleton({
 
   return (
     <View style={styles.skeletonContainer}>
-      {/* Results count skeleton */}
-      <View style={styles.skeletonResultsInfo}>
-        <Skeleton
-          width={100}
-          height={16}
-          backgroundColor={skeletonBg}
-          highlightColor={skeletonHighlight}
-        />
-      </View>
-
       {/* Facility card skeletons */}
       {[1, 2, 3, 4, 5].map(i => (
         <View
@@ -257,7 +247,6 @@ export default function FacilitiesDirectory() {
   // Fetch facilities
   const {
     facilities,
-    totalCount,
     isLoading,
     isFetching,
     isFetchingNextPage,
@@ -612,26 +601,6 @@ export default function FacilitiesDirectory() {
     rootNavigation,
   ]);
 
-  // Render results count (used inside list header)
-  const renderResultsInfo = useCallback(() => {
-    if (isLoading || !showFacilities) return null;
-
-    // Use totalCount from database if available, otherwise fall back to displayed count
-    const count = totalCount ?? facilities.length;
-    const countText =
-      count === 1
-        ? t('facilitiesTab.results.countSingular')
-        : t('facilitiesTab.results.count').replace('{count}', String(count));
-
-    return (
-      <View style={styles.resultsInfo}>
-        <Text size="sm" color={colors.textMuted}>
-          {countText}
-        </Text>
-      </View>
-    );
-  }, [isLoading, showFacilities, totalCount, facilities.length, colors.textMuted, t]);
-
   // Full list header: My Bookings, title, search, filters, error, then results info or skeleton
   const renderListHeader = useCallback(() => {
     return (
@@ -684,11 +653,8 @@ export default function FacilitiesDirectory() {
             </Text>
           </View>
         )}
-        {isLoading || sportLoading ? (
-          <LoadingSkeleton colors={colors} isDark={isDark} />
-        ) : (
-          renderResultsInfo()
-        )}
+        {(isLoading || sportLoading) && <LoadingSkeleton colors={colors} isDark={isDark} />}
+        <View style={styles.headerBottomSpacer} />
       </>
     );
   }, [
@@ -710,7 +676,6 @@ export default function FacilitiesDirectory() {
     isLoading,
     sportLoading,
     isDark,
-    renderResultsInfo,
     rootNavigation,
     location,
   ]);
@@ -802,6 +767,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  headerBottomSpacer: {
+    height: spacingPixels[2],
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -822,10 +790,6 @@ const styles = StyleSheet.create({
   emptyListContent: {
     flexGrow: 1,
     paddingBottom: 0,
-  },
-  resultsInfo: {
-    paddingHorizontal: spacingPixels[4],
-    paddingBottom: spacingPixels[2],
   },
   footerLoader: {
     paddingVertical: spacingPixels[4],
@@ -855,10 +819,6 @@ const styles = StyleSheet.create({
   skeletonContainer: {
     paddingTop: spacingPixels[3],
     paddingBottom: spacingPixels[4],
-  },
-  skeletonResultsInfo: {
-    paddingHorizontal: spacingPixels[4],
-    paddingBottom: spacingPixels[2],
   },
   skeletonCard: {
     flexDirection: 'row',

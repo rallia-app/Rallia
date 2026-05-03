@@ -519,16 +519,6 @@ export default function FacilityFiltersBar({
           </View>
         )}
 
-        {/* Has Availabilities Toggle (bookable facilities) */}
-        <FilterChip
-          value={t('facilitiesTab.filters.hasAvailabilities.label')}
-          isActive={filters.hasAvailabilities}
-          onPress={handleHasAvailabilitiesToggle}
-          isDark={isDark}
-          hasDropdown={false}
-          icon="calendar-outline"
-        />
-
         {/* Distance Filter */}
         <FilterChip
           value={distanceDisplay}
@@ -538,13 +528,14 @@ export default function FacilityFiltersBar({
           icon={filters.distance !== 'all' ? 'navigate-outline' : undefined}
         />
 
-        {/* Facility Type Filter */}
+        {/* Has Availabilities Toggle (bookable facilities) */}
         <FilterChip
-          value={facilityTypeDisplay}
-          isActive={filters.facilityType !== 'all'}
-          onPress={() => setShowFacilityTypeDropdown(true)}
+          value={t('facilitiesTab.filters.hasAvailabilities.label')}
+          isActive={filters.hasAvailabilities}
+          onPress={handleHasAvailabilitiesToggle}
           isDark={isDark}
-          icon={filters.facilityType !== 'all' ? 'business-outline' : undefined}
+          hasDropdown={false}
+          icon="calendar-outline"
         />
 
         {/* Court Type Filter */}
@@ -562,6 +553,15 @@ export default function FacilityFiltersBar({
           isActive={filters.surfaceType !== 'all'}
           onPress={() => setShowSurfaceTypeDropdown(true)}
           isDark={isDark}
+        />
+
+        {/* Facility Type Filter */}
+        <FilterChip
+          value={facilityTypeDisplay}
+          isActive={filters.facilityType !== 'all'}
+          onPress={() => setShowFacilityTypeDropdown(true)}
+          isDark={isDark}
+          icon={filters.facilityType !== 'all' ? 'business-outline' : undefined}
         />
 
         {/* Lighting Filter */}

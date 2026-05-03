@@ -662,15 +662,6 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
         icon: filters.favorites ? 'heart' : 'heart-outline',
         show: isAuthenticated,
       },
-      // Gender Filter
-      {
-        key: 'gender',
-        label: t('playerDirectory.filters.gender'),
-        value: genderDisplay,
-        isActive: filters.gender !== 'all',
-        onPress: () => setShowGenderDropdown(true),
-        show: true,
-      },
       // Skill Level Filter
       {
         key: 'skillLevel',
@@ -687,6 +678,15 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
         value: distanceDisplay,
         isActive: filters.maxDistance !== 'all',
         onPress: () => setShowDistanceDropdown(true),
+        show: true,
+      },
+      // Gender Filter
+      {
+        key: 'gender',
+        label: t('playerDirectory.filters.gender'),
+        value: genderDisplay,
+        isActive: filters.gender !== 'all',
+        onPress: () => setShowGenderDropdown(true),
         show: true,
       },
       // Availability Filter
@@ -725,6 +725,16 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
         onPress: () => setShowStyleDropdown(true),
         show: true,
       },
+      // Sort Option
+      {
+        key: 'sort',
+        label: t('playerDirectory.filters.sortBy'),
+        value: sortDisplay,
+        isActive: filters.sortBy !== 'distance',
+        onPress: () => setShowSortDropdown(true),
+        icon: 'swap-vertical-outline',
+        show: true,
+      },
       // Blocked Toggle
       {
         key: 'blocked',
@@ -735,16 +745,6 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
         hasDropdown: false,
         icon: filters.blocked ? 'ban' : 'ban-outline',
         show: isAuthenticated,
-      },
-      // Sort Option
-      {
-        key: 'sort',
-        label: t('playerDirectory.filters.sortBy'),
-        value: sortDisplay,
-        isActive: filters.sortBy !== 'distance',
-        onPress: () => setShowSortDropdown(true),
-        icon: 'swap-vertical-outline',
-        show: true,
       },
     ],
     [

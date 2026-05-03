@@ -108,18 +108,18 @@ export default function PublicMatches() {
     setMatchType,
     setDateRange,
     setTimeOfDay,
-    setSkillLevel,
     setGender,
     setCost,
     setJoinMode,
     setDistance,
     setDuration,
-    setCourtStatus,
     setMatchTier,
     setSpecificDate,
     setSpotsAvailable,
     setFavoritesOnly,
     setSpecificTime,
+    setReputation,
+    setRating,
     resetFilters,
     clearSearch,
   } = usePublicMatchFilters();
@@ -150,7 +150,6 @@ export default function PublicMatches() {
   const isManualRefresh = useRef(false);
   const {
     matches,
-    totalCount,
     isLoading,
     isFetching,
     isRefetching,
@@ -354,49 +353,6 @@ export default function PublicMatches() {
   // Check if we're loading due to filter/search changes (not initial load or pagination)
   const isSearching = isFetching && !isLoading && !isRefetching && !isFetchingNextPage;
 
-  // Render results count or loading indicator in list
-  const renderResultsInfo = useCallback(() => {
-    // Show loading indicator when searching/filtering
-    if (isSearching) {
-      return (
-        <View style={styles.headerLoadingContainer}>
-          <ActivityIndicator size="small" color={colors.primary} />
-        </View>
-      );
-    }
-
-    // Show results count when we have matches
-    // When client-side filtering is active (e.g. favoritesOnly), use displayed count
-    // otherwise use totalCount from database
-    const count = filters.favoritesOnly
-      ? sortedMatches.length
-      : (totalCount ?? sortedMatches.length);
-    if (!isLoading && count > 0) {
-      return (
-        <View style={styles.resultsContainer}>
-          <Text size="sm" color={colors.textMuted}>
-            {count === 1
-              ? t('publicMatches.results.countSingular')
-              : t('publicMatches.results.count', {
-                  count,
-                })}
-          </Text>
-        </View>
-      );
-    }
-
-    return null;
-  }, [
-    isSearching,
-    isLoading,
-    totalCount,
-    sortedMatches.length,
-    filters.favoritesOnly,
-    colors.primary,
-    colors.textMuted,
-    t,
-  ]);
-
   // Render empty state — only shows when both matches AND suggestions are empty.
   const renderEmptyComponent = useCallback(() => {
     if (isLoading || isSearching) return null;
@@ -471,34 +427,35 @@ export default function PublicMatches() {
           matchType={filters.matchType}
           dateRange={filters.dateRange}
           timeOfDay={filters.timeOfDay}
-          skillLevel={filters.skillLevel}
           gender={filters.gender}
           cost={filters.cost}
           joinMode={filters.joinMode}
           distance={filters.distance}
           duration={filters.duration}
-          courtStatus={filters.courtStatus}
           matchTier={filters.matchTier}
           specificDate={filters.specificDate}
           spotsAvailable={filters.spotsAvailable}
           favoritesOnly={filters.favoritesOnly}
           specificTime={filters.specificTime}
+          reputation={filters.reputation}
+          rating={filters.rating}
           onFormatChange={setFormat}
           onMatchTypeChange={setMatchType}
           onDateRangeChange={setDateRange}
           onTimeOfDayChange={setTimeOfDay}
-          onSkillLevelChange={setSkillLevel}
           onGenderChange={setGender}
           onCostChange={setCost}
           onJoinModeChange={setJoinMode}
           onDistanceChange={setDistance}
           onDurationChange={setDuration}
-          onCourtStatusChange={setCourtStatus}
           onMatchTierChange={setMatchTier}
           onSpecificDateChange={setSpecificDate}
           onSpotsAvailableChange={setSpotsAvailable}
           onFavoritesOnlyChange={setFavoritesOnly}
           onSpecificTimeChange={setSpecificTime}
+          onReputationChange={setReputation}
+          onRatingChange={setRating}
+          ratingOptions={ratingScores}
           isAuthenticated={!!session?.user}
           onReset={resetFilters}
           hasActiveFilters={hasActiveFilters}
@@ -530,7 +487,7 @@ export default function PublicMatches() {
           data={feed}
           renderItem={renderFeedItem}
           keyExtractor={item => item.key}
-          ListHeaderComponent={renderResultsInfo}
+          ListHeaderComponent={null}
           ListEmptyComponent={renderEmptyComponent}
           ListFooterComponent={renderFooter}
           onEndReached={handleEndReached}
@@ -576,10 +533,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     gap: spacingPixels[3],
   },
-  headerLoadingContainer: {
-    alignItems: 'center',
-    paddingVertical: spacingPixels[4],
-  },
   noLocationText: {
     textAlign: 'center',
     marginTop: spacingPixels[2],
@@ -597,12 +550,9 @@ const styles = StyleSheet.create({
   searchContainer: {
     flex: 1,
   },
-  resultsContainer: {
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[2],
-  },
   listContent: {
     flexGrow: 1,
+    paddingTop: spacingPixels[2],
     paddingBottom: spacingPixels[5],
   },
   emptyListContent: {
