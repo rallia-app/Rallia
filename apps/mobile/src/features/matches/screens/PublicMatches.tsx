@@ -253,8 +253,37 @@ export default function PublicMatches() {
     enabled: showMatches,
   });
 
+  // Build suggestion-applicable filters (stable ref via useMemo).
+  // Uses debouncedSearchQuery to avoid re-filtering on every keystroke.
+  const suggestionFilters = useMemo(
+    () => ({
+      searchQuery: debouncedSearchQuery,
+      matchType: filters.matchType,
+      duration: filters.duration,
+      format: filters.format,
+      dateRange: filters.dateRange,
+      timeOfDay: filters.timeOfDay,
+      specificDate: filters.specificDate,
+      specificTime: filters.specificTime,
+    }),
+    [
+      debouncedSearchQuery,
+      filters.matchType,
+      filters.duration,
+      filters.format,
+      filters.dateRange,
+      filters.timeOfDay,
+      filters.specificDate,
+      filters.specificTime,
+    ]
+  );
+
   // Build the unified chronological feed (matches + suggestions interleaved).
-  const feed = useUnifiedMatchFeed({ matches: sortedMatches, suggestions });
+  const feed = useUnifiedMatchFeed({
+    matches: sortedMatches,
+    suggestions,
+    filters: suggestionFilters,
+  });
 
   // Suggestion invite plumbing (shared with Home).
   const {

@@ -11,6 +11,7 @@ import { createDateInTimezone } from '@rallia/shared-utils';
 import type { AvailableTimeSlot, MatchSuggestion } from '@rallia/shared-services';
 import type { NearbyMatch } from './useNearbyMatches';
 import type { PublicMatch } from './usePublicMatches';
+import type { PublicMatchFilters } from './usePublicMatchFilters';
 
 export type UnifiedFeedMatch = NearbyMatch | PublicMatch;
 
@@ -31,9 +32,25 @@ export type UnifiedFeedItem =
       pickedFacilityIndex: number;
     };
 
+/** Subset of PublicMatchFilters applicable to suggestions client-side. */
+export type SuggestionApplicableFilters = Pick<
+  PublicMatchFilters,
+  | 'searchQuery'
+  | 'matchType'
+  | 'duration'
+  | 'format'
+  | 'dateRange'
+  | 'timeOfDay'
+  | 'specificDate'
+  | 'specificTime'
+>;
+
 export interface UseUnifiedMatchFeedOptions {
   matches: UnifiedFeedMatch[];
   suggestions: MatchSuggestion[];
+  /** When provided, applicable filters are applied to suggestions client-side.
+   *  Omit for screens that don't use filters (e.g. Home). */
+  filters?: SuggestionApplicableFilters;
 }
 
 function getSlotMs(slot: { datetime: Date | string }): number {
@@ -108,6 +125,110 @@ export function pickSlotForSuggestion(
   return null;
 }
 
+// =============================================================================
+// SUGGESTION FILTER PREDICATE
+// =============================================================================
+
+/**
+ * Check whether a suggestion passes the currently active filters.
+ * Pure function — exported for unit testing.
+ */
+export function doesSuggestionPassFilters(
+  suggestion: MatchSuggestion,
+  pickedSlot: AvailableTimeSlot,
+  pickedFacilityIndex: number,
+  filters: SuggestionApplicableFilters,
+  nowMs: number
+): boolean {
+  // ── searchQuery ──
+  if (filters.searchQuery.length > 0) {
+    const q = filters.searchQuery.toLowerCase();
+    const opponentName =
+      `${suggestion.opponentFirstName} ${suggestion.opponentLastName}`.toLowerCase();
+    const facility = suggestion.facilities[pickedFacilityIndex];
+    const facilityName = facility?.facilityName?.toLowerCase() ?? '';
+    const facilityCity = facility?.facilityCity?.toLowerCase() ?? '';
+    if (!opponentName.includes(q) && !facilityName.includes(q) && !facilityCity.includes(q)) {
+      return false;
+    }
+  }
+
+  // ── matchType ── ('casual' also accepts 'both', mirrors RPC logic)
+  if (filters.matchType !== 'all') {
+    const st = suggestion.matchType;
+    if (st !== filters.matchType && st !== 'both') return false;
+  }
+
+  // ── duration ──
+  if (filters.duration !== 'all') {
+    if (filters.duration === '120+') {
+      if (parseInt(suggestion.matchDuration, 10) < 120) return false;
+    } else if (suggestion.matchDuration !== filters.duration) {
+      return false;
+    }
+  }
+
+  // ── format ── (suggestions are singles-only)
+  if (filters.format !== 'all' && filters.format !== 'singles') {
+    return false;
+  }
+
+  // Resolve slot date for date/time checks
+  const slotDate =
+    pickedSlot.datetime instanceof Date ? pickedSlot.datetime : new Date(pickedSlot.datetime);
+  const slotHour = slotDate.getHours();
+
+  // ── specificDate (overrides dateRange) ──
+  if (filters.specificDate !== null) {
+    if (localDateKey(slotDate) !== filters.specificDate) return false;
+  } else if (filters.dateRange !== 'all') {
+    // ── dateRange ──
+    const now = new Date(nowMs);
+    const slotKey = localDateKey(slotDate);
+    switch (filters.dateRange) {
+      case 'today':
+        if (slotKey !== localDateKey(now)) return false;
+        break;
+      case 'tomorrow': {
+        const tomorrow = new Date(nowMs + 86_400_000);
+        if (slotKey !== localDateKey(tomorrow)) return false;
+        break;
+      }
+      case 'week': {
+        const weekEnd = new Date(nowMs + 7 * 86_400_000);
+        if (slotDate < now || slotDate > weekEnd) return false;
+        break;
+      }
+      case 'weekend': {
+        const day = slotDate.getDay();
+        if (day !== 0 && day !== 6) return false;
+        break;
+      }
+    }
+  }
+
+  // ── specificTime (overrides timeOfDay) ──
+  if (filters.specificTime !== null) {
+    const filterHour = parseInt(filters.specificTime.split(':')[0], 10);
+    if (slotHour !== filterHour) return false;
+  } else if (filters.timeOfDay !== 'all') {
+    // ── timeOfDay ── (morning [6,12), afternoon [12,18), evening [18,24))
+    switch (filters.timeOfDay) {
+      case 'morning':
+        if (slotHour < 6 || slotHour >= 12) return false;
+        break;
+      case 'afternoon':
+        if (slotHour < 12 || slotHour >= 18) return false;
+        break;
+      case 'evening':
+        if (slotHour < 18) return false;
+        break;
+    }
+  }
+
+  return true;
+}
+
 function getMatchSortTime(match: UnifiedFeedMatch): number {
   // `match.start_time` is "HH:MM:SS"; the actual day is on `match.match_date`.
   // Combine them in the match's timezone so the chronological sort is correct.
@@ -131,7 +252,7 @@ function useNowTicker(intervalMs = 60_000): number {
 }
 
 export function useUnifiedMatchFeed(options: UseUnifiedMatchFeedOptions): UnifiedFeedItem[] {
-  const { matches, suggestions } = options;
+  const { matches, suggestions, filters } = options;
   const nowMs = useNowTicker();
 
   return useMemo(() => {
@@ -151,6 +272,16 @@ export function useUnifiedMatchFeed(options: UseUnifiedMatchFeedOptions): Unifie
       if (!picked) continue;
       const t = getSlotMs(picked.slot);
       if (!Number.isFinite(t)) continue;
+
+      // Apply filters to suggestions when provided (PublicMatches screen).
+      // When omitted (Home screen), all suggestions pass through.
+      if (
+        filters &&
+        !doesSuggestionPassFilters(suggestion, picked.slot, picked.facilityIndex, filters, nowMs)
+      ) {
+        continue;
+      }
+
       items.push({
         kind: 'suggestion',
         key: `suggestion:${suggestion.opponentId}`,
@@ -163,7 +294,7 @@ export function useUnifiedMatchFeed(options: UseUnifiedMatchFeedOptions): Unifie
 
     items.sort((a, b) => a.sortTime - b.sortTime);
     return items;
-  }, [matches, suggestions, nowMs]);
+  }, [matches, suggestions, nowMs, filters]);
 }
 
 export default useUnifiedMatchFeed;
