@@ -18,7 +18,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
-import { errorHaptic, lightHaptic, successHaptic } from '@rallia/shared-utils';
+import {
+  errorHaptic,
+  lightHaptic,
+  successHaptic,
+  getProfilePictureUrl,
+} from '@rallia/shared-utils';
 import { Logger, supabase } from '@rallia/shared-services';
 import { suggestionKeys } from '@rallia/shared-hooks';
 import { useThemeStyles, useTranslation } from '../hooks';
@@ -99,8 +104,9 @@ export function MatchInviteConfirmActionSheet(props: SheetProps<'match-invite-co
           firstName: (profileResp.data as { first_name: string | null }).first_name,
           lastName: (profileResp.data as { last_name: string | null }).last_name,
           avatar:
-            (profileResp.data as { profile_picture_url: string | null }).profile_picture_url ??
-            null,
+            getProfilePictureUrl(
+              (profileResp.data as { profile_picture_url: string | null }).profile_picture_url
+            ) ?? null,
         });
       }
       if (facilityResp.data) {

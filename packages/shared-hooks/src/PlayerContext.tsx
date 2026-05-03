@@ -16,7 +16,13 @@ import React, {
   useMemo,
   ReactNode,
 } from 'react';
-import { supabase, computeBadgeStatus } from '@rallia/shared-services';
+import {
+  supabase,
+  computeBadgeStatus,
+  getTierConfig,
+  getTierForScore,
+} from '@rallia/shared-services';
+import type { ReputationDisplay } from '@rallia/shared-services';
 import type { Player } from '@rallia/shared-types';
 
 // =============================================================================
@@ -89,6 +95,12 @@ export interface PlayerContextType {
 
   /** All sport preferences keyed by sport_id (loads instantly with player data) */
   sportPreferences: Record<string, SportPreferences>;
+
+  /** Reputation display data (loaded with player data, no extra fetch needed) */
+  reputationDisplay: ReputationDisplay | null;
+
+  /** Total reputation events count (for coveted badge calculation) */
+  reputationTotalEvents: number;
 }
 
 // =============================================================================
@@ -112,6 +124,8 @@ export const PlayerProvider: React.FC<PlayerProviderProps> = ({ children, userId
   const [primaryRating, setPrimaryRating] = useState<PrimaryRating | null>(null);
   const [sportRatings, setSportRatings] = useState<Record<string, PrimaryRating>>({});
   const [sportPreferences, setSportPreferences] = useState<Record<string, SportPreferences>>({});
+  const [reputationDisplay, setReputationDisplay] = useState<ReputationDisplay | null>(null);
+  const [reputationTotalEvents, setReputationTotalEvents] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -122,6 +136,8 @@ export const PlayerProvider: React.FC<PlayerProviderProps> = ({ children, userId
       setPrimaryRating(null);
       setSportRatings({});
       setSportPreferences({});
+      setReputationDisplay(null);
+      setReputationTotalEvents(0);
       setLoading(false);
       return;
     }
@@ -131,7 +147,7 @@ export const PlayerProvider: React.FC<PlayerProviderProps> = ({ children, userId
       setError(null);
 
       // Fetch player and primary sport rating in parallel
-      const [playerResult, primarySportResult, ratingsResult, preferencesResult] =
+      const [playerResult, primarySportResult, ratingsResult, preferencesResult, reputationResult] =
         await Promise.all([
           // Player data
           supabase.from('player').select('*').eq('id', userId).single(),
@@ -190,6 +206,13 @@ export const PlayerProvider: React.FC<PlayerProviderProps> = ({ children, userId
           `
             )
             .eq('player_id', userId),
+
+          // Reputation data
+          supabase
+            .from('player_reputation')
+            .select('reputation_score, reputation_tier, total_events, matches_completed, is_public')
+            .eq('player_id', userId)
+            .maybeSingle(),
         ]);
 
       // Handle player result
@@ -200,6 +223,8 @@ export const PlayerProvider: React.FC<PlayerProviderProps> = ({ children, userId
           setPrimaryRating(null);
           setSportRatings({});
           setSportPreferences({});
+          setReputationDisplay(null);
+          setReputationTotalEvents(0);
           setLoading(false);
           return;
         }
@@ -207,6 +232,31 @@ export const PlayerProvider: React.FC<PlayerProviderProps> = ({ children, userId
       }
 
       setPlayer(playerResult.data);
+
+      // Process reputation
+      if (reputationResult.data) {
+        const rep = reputationResult.data as {
+          reputation_score: number;
+          reputation_tier: string;
+          total_events: number;
+          matches_completed: number;
+          is_public: boolean;
+        };
+        const tier = getTierForScore(rep.reputation_score, rep.total_events);
+        const tierConfig = getTierConfig(tier);
+        setReputationDisplay({
+          tier,
+          score: rep.reputation_score,
+          isVisible: rep.is_public,
+          tierLabel: tierConfig.label,
+          tierColor: tierConfig.color,
+          tierIcon: tierConfig.icon,
+        });
+        setReputationTotalEvents(rep.total_events);
+      } else {
+        setReputationDisplay(null);
+        setReputationTotalEvents(0);
+      }
 
       // Build sport ratings map from all ratings
       const ratingsMap: Record<string, PrimaryRating> = {};
@@ -347,6 +397,8 @@ export const PlayerProvider: React.FC<PlayerProviderProps> = ({ children, userId
     primaryRating,
     sportRatings,
     sportPreferences,
+    reputationDisplay,
+    reputationTotalEvents,
   };
 
   return <PlayerContext.Provider value={contextValue}>{children}</PlayerContext.Provider>;

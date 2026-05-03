@@ -19,7 +19,7 @@ import {
   useNavigateToPlayerProfile,
   type TranslationKey,
 } from '../hooks';
-import { lightHaptic } from '@rallia/shared-utils';
+import { lightHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 import {
   useConversation,
   useMessages,
@@ -352,7 +352,7 @@ export default function ChatConversationScreen() {
     // For direct messages, show the other participant's avatar
     if (conversation?.conversation_type === 'direct' && conversation.participants) {
       const otherParticipant = conversation.participants.find(p => p.player_id !== playerId);
-      return otherParticipant?.player?.profile?.profile_picture_url || null;
+      return getProfilePictureUrl(otherParticipant?.player?.profile?.profile_picture_url) || null;
     }
 
     return null;

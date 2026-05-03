@@ -9,6 +9,7 @@ import { View, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
+import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
 import type { ConversationPreview } from '@rallia/shared-services';
@@ -103,7 +104,7 @@ function getConversationInfo(
   if (conversation.conversation_type === 'direct' && conversation.other_participant) {
     return {
       name,
-      avatar: conversation.other_participant.profile_picture_url,
+      avatar: getProfilePictureUrl(conversation.other_participant.profile_picture_url),
       iconName: 'person',
       sportIconName: null,
       isOnline: conversation.other_participant.is_online ?? false,

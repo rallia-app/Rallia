@@ -40,7 +40,8 @@ interface RatingProofWithRatingScore extends RatingProofWithFile {
   } | null;
 }
 
-/** Resolve a storage URL to a signed URL if it's in a private bucket. */
+/** Resolve a storage URL to a signed URL if it's in a private bucket.
+ *  Uses 24h TTL to reduce repeated storage egress for videos. */
 function useSignedUrl(url: string | null | undefined): string | null {
   const [signed, setSigned] = useState<string | null>(null);
   useEffect(() => {
@@ -53,7 +54,7 @@ function useSignedUrl(url: string | null | undefined): string | null {
       return;
     }
     let cancelled = false;
-    resolveStorageUrl(url).then(resolved => {
+    resolveStorageUrl(url, 86400).then(resolved => {
       if (!cancelled) setSigned(resolved);
     });
     return () => {

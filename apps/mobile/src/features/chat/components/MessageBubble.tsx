@@ -18,7 +18,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { getShortName } from '@rallia/shared-utils';
+import { getShortName, getProfilePictureUrl } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary, status } from '@rallia/design-system';
 import type { MessageWithSender, ReactionSummary } from '@rallia/shared-services';
@@ -64,7 +64,7 @@ function MessageBubbleComponent({
 
   const senderName = getShortName(message.sender?.profile, 'Unknown');
 
-  const senderAvatar = message.sender?.profile?.profile_picture_url;
+  const senderAvatar = getProfilePictureUrl(message.sender?.profile?.profile_picture_url);
 
   const formattedTime = new Date(message.created_at).toLocaleTimeString([], {
     hour: '2-digit',

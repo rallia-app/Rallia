@@ -79,7 +79,6 @@ import {
   usePlayer,
   useReferral,
   useMatchActions,
-  usePlayerReputation,
   useConfirmMatchScore,
   useAcceptRebuttalScore,
   useDisputeRebuttalScore,
@@ -722,10 +721,21 @@ export const MatchDetailSheet: React.FC = () => {
   const toast = useToast();
   const playerId = player?.id;
   const navigation = useAppNavigation();
-  const { display: _creatorReputationDisplay } = usePlayerReputation(
-    selectedMatch?.created_by_player?.id
-  );
-  const creatorReputationDisplay = _creatorReputationDisplay;
+  // Derive reputation display from the match data (already fetched with the match)
+  const creatorReputationDisplay = useMemo(() => {
+    const rep = selectedMatch?.created_by_player?.player_reputation;
+    if (!rep) return null;
+    const tier = getTierForScore(rep.reputation_score, rep.total_events);
+    const tierConfig = getTierConfig(tier);
+    return {
+      tier,
+      score: rep.reputation_score,
+      isVisible: rep.total_events >= MIN_EVENTS_FOR_PUBLIC,
+      tierLabel: tierConfig.label,
+      tierColor: tierConfig.color,
+      tierIcon: tierConfig.icon,
+    };
+  }, [selectedMatch?.created_by_player?.player_reputation]);
 
   // Ref to hold the match that should reopen after navigating back from PlayerProfile
   const pendingReopenRef = useRef<MatchDetailData | null>(null);
@@ -1267,7 +1277,7 @@ export const MatchDetailSheet: React.FC = () => {
           playerId: p.player_id,
           name,
           fullName,
-          avatarUrl: profile?.profile_picture_url || null,
+          avatarUrl: getProfilePictureUrl(profile?.profile_picture_url) || null,
           hasExistingFeedback: false,
           hasExistingReport: false,
         };
@@ -4198,7 +4208,10 @@ export const MatchDetailSheet: React.FC = () => {
                     }
                     isDark={isDark}
                   />
-                  <ReputationBadge reputationDisplay={creatorReputationDisplay} isDark={isDark} />
+                  <ReputationBadge
+                    reputationDisplay={creatorReputationDisplay ?? undefined}
+                    isDark={isDark}
+                  />
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.iconMuted} />
