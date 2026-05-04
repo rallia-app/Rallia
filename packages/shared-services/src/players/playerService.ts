@@ -54,11 +54,16 @@ export type SortByFilter =
   | 'rating_low'
   | 'recently_active';
 
+export type ReputationFilter = 'all' | 'bronze' | 'silver' | 'gold' | 'platinum';
+
 export interface PlayerFilters {
   favorites?: boolean;
   blocked?: boolean;
   gender?: GenderFilter;
-  skillLevel?: SkillLevelFilter;
+  skillLevel?: SkillLevelFilter; // kept for backward compat, no longer set by UI
+  rating?: string[]; // rating score IDs (multi-select)
+  reputation?: ReputationFilter; // reputation tier filter
+  certifiedOnly?: boolean; // show only certified players
   maxDistance?: DistanceFilter;
   availability?: AvailabilityFilter;
   day?: DayFilter;
@@ -223,6 +228,14 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
 
   const gender = filters.gender && filters.gender !== 'all' ? filters.gender : null;
 
+  // New filter mappings
+  const ratingScoreIds = filters.rating && filters.rating.length > 0 ? filters.rating : null;
+
+  const reputationTier =
+    filters.reputation && filters.reputation !== 'all' ? filters.reputation : null;
+
+  const certifiedOnly = !!filters.certifiedOnly;
+
   // Favorites toggle ON with empty favorites list → short-circuit to empty result
   // (the RPC would return all players otherwise since the filter wouldn't apply).
   if (filters.favorites && favoritePlayerIds.length === 0) {
@@ -254,6 +267,9 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     p_sort_by: filters.sortBy ?? 'distance',
     p_limit: limit,
     p_offset: offset,
+    p_rating_score_ids: ratingScoreIds,
+    p_reputation_tier: reputationTier,
+    p_certified_only: certifiedOnly,
   });
 
   if (error) {

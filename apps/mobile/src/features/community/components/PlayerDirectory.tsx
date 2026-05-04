@@ -11,7 +11,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Skeleton, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { usePlayerSearch, usePlayer } from '@rallia/shared-hooks';
+import { usePlayerSearch, usePlayer, useRatingScoresForSport } from '@rallia/shared-hooks';
 import { useTranslation } from '../../../hooks';
 import { useEffectiveLocation } from '../../../hooks/useEffectiveLocation';
 import { useUserHomeLocation } from '../../../context';
@@ -59,6 +59,9 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
   // Get user's max travel distance preference
   const { maxTravelDistanceKm, player } = usePlayer();
 
+  // Get rating scores for current sport (for multi-select rating filter)
+  const { ratingScores } = useRatingScoresForSport(sportName, sportId, currentUserId);
+
   // Location for distance sorting
   const { location, locationMode, setLocationMode, hasHomeLocation, hasBothLocationOptions } =
     useEffectiveLocation();
@@ -75,7 +78,9 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
       filters.favorites ||
       filters.blocked ||
       filters.gender !== 'all' ||
-      filters.skillLevel !== 'all' ||
+      filters.rating.length > 0 ||
+      filters.reputation !== 'all' ||
+      filters.certifiedOnly ||
       filters.availability !== 'all' ||
       filters.day !== 'all' ||
       filters.playStyle !== 'all' ||
@@ -90,7 +95,9 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
       favorites: filters.favorites,
       blocked: filters.blocked,
       gender: filters.gender,
-      skillLevel: filters.skillLevel,
+      rating: filters.rating,
+      reputation: filters.reputation,
+      certifiedOnly: filters.certifiedOnly,
       availability: filters.availability,
       day: filters.day,
       playStyle: filters.playStyle,
@@ -644,6 +651,7 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
         onLocationModeChange={setLocationMode}
         hasHomeLocation={hasHomeLocation}
         homeLocationLabel={homeLocationLabel}
+        ratingOptions={ratingScores}
       />
     </>
   );

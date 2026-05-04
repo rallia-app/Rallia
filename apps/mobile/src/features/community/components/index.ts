@@ -12,6 +12,5 @@ export type {
   AvailabilityFilter,
   PlayStyleFilter,
   DistanceFilter,
-  NtrpFilter,
-  DuprFilter,
+  ReputationFilter,
 } from './PlayerFiltersBar';

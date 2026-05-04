@@ -2838,7 +2838,23 @@
       "dayThursday": "Jeudi",
       "dayFriday": "Vendredi",
       "daySaturday": "Samedi",
-      "daySunday": "Dimanche"
+      "daySunday": "Dimanche",
+      "rating": {
+        "label": "Cote",
+        "all": "Toutes",
+        "countActive": "Cote ({count})"
+      },
+      "reputation": {
+        "label": "Réputation",
+        "all": "Toutes",
+        "bronze": "Bronze",
+        "silver": "Argent",
+        "gold": "Or",
+        "platinum": "Platine"
+      },
+      "certified": "Certifié",
+      "selectRating": "Sélectionner la cote",
+      "selectReputation": "Sélectionner la réputation"
     },
     "results": {
       "count": "{count} joueurs",

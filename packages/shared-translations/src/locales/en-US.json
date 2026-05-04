@@ -2838,7 +2838,23 @@
       "dayThursday": "Thursday",
       "dayFriday": "Friday",
       "daySaturday": "Saturday",
-      "daySunday": "Sunday"
+      "daySunday": "Sunday",
+      "rating": {
+        "label": "Rating",
+        "all": "Any",
+        "countActive": "Rating ({count})"
+      },
+      "reputation": {
+        "label": "Reputation",
+        "all": "Any",
+        "bronze": "Bronze",
+        "silver": "Silver",
+        "gold": "Gold",
+        "platinum": "Platinum"
+      },
+      "certified": "Certified",
+      "selectRating": "Select Rating",
+      "selectReputation": "Select Reputation"
     },
     "results": {
       "count": "{count} players",
