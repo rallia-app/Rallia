@@ -1,6 +1,6 @@
 /**
  * FacilitiesDirectory Screen
- * Displays facilities with search, filtering, infinite scroll, and favorites.
+ * Displays facilities with search, filtering, and favorites.
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
@@ -8,7 +8,6 @@ import {
   View,
   StyleSheet,
   FlatList,
-  ActivityIndicator,
   RefreshControl,
   ScrollView,
   TouchableOpacity,
@@ -244,14 +243,11 @@ export default function FacilitiesDirectory() {
     location.longitude !== undefined &&
     !!selectedSport;
 
-  // Fetch facilities
+  // Fetch facilities (all at once — ~200 total, no need for pagination)
   const {
     facilities,
     isLoading,
     isFetching,
-    isFetchingNextPage,
-    hasNextPage,
-    fetchNextPage,
     refetch,
     error: queryError,
   } = useFacilitySearch({
@@ -262,6 +258,7 @@ export default function FacilitiesDirectory() {
     filters,
     userGender: player?.gender,
     playerId: player?.id,
+    pageSize: 500,
     enabled: showFacilities,
   });
 
@@ -270,13 +267,6 @@ export default function FacilitiesDirectory() {
     useFavoriteFacilities(player?.id ?? null, selectedSport?.id);
 
   // Facilities are already sorted by the DB: favorites first, then by distance
-
-  // Handle infinite scroll
-  const handleEndReached = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Handle facility press
   const handleFacilityPress = useCallback(
@@ -680,16 +670,6 @@ export default function FacilitiesDirectory() {
     location,
   ]);
 
-  // Render footer (loading indicator for infinite scroll)
-  const renderFooter = useCallback(() => {
-    if (!isFetchingNextPage) return null;
-    return (
-      <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color={colors.primary} />
-      </View>
-    );
-  }, [isFetchingNextPage, colors.primary]);
-
   // Render empty state
   const renderEmptyComponent = useCallback(() => {
     if (isLoading) return null;
@@ -718,12 +698,9 @@ export default function FacilitiesDirectory() {
         keyExtractor={item => item.id}
         ListHeaderComponent={renderListHeader()}
         ListEmptyComponent={renderEmptyComponent}
-        ListFooterComponent={renderFooter}
-        onEndReached={handleEndReached}
-        onEndReachedThreshold={0.3}
         refreshControl={
           <RefreshControl
-            refreshing={isFetching && !isFetchingNextPage && !isLoading}
+            refreshing={isFetching && !isLoading}
             onRefresh={handleRefresh}
             tintColor={colors.primary}
           />
@@ -790,10 +767,6 @@ const styles = StyleSheet.create({
   emptyListContent: {
     flexGrow: 1,
     paddingBottom: 0,
-  },
-  footerLoader: {
-    paddingVertical: spacingPixels[4],
-    alignItems: 'center',
   },
   emptyContainer: {
     flex: 1,
