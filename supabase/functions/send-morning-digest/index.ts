@@ -571,7 +571,7 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const resendApiKey = Deno.env.get('RESEND_API_KEY');
 const fromEmail = Deno.env.get('FROM_EMAIL');
-const jwtSecret = Deno.env.get('SUPABASE_JWT_SECRET');
+const jwtSecret = Deno.env.get('JWT_SECRET') ?? Deno.env.get('SUPABASE_JWT_SECRET');
 const appUrl =
   Deno.env.get('NEXT_PUBLIC_BASE_URL') ??
   Deno.env.get('NEXT_PUBLIC_SITE_URL') ??

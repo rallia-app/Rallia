@@ -685,6 +685,8 @@ export async function createMatchFromSuggestion(
     facilityId: input.facilityId,
     courtStatus: 'to_book',
     visibility: 'private' as const,
+    visibleInGroups: false,
+    visibleInCommunities: false,
     joinMode: 'direct' as const,
   });
 
