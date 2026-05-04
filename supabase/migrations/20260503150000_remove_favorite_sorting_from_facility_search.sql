@@ -1,6 +1,6 @@
--- Migration: Remove favorite-first sorting from facility search
--- Description: Facilities now sort purely by distance. The is_favorite field
---              is still returned so the client can filter favorites locally.
+-- Migration: Remove favorite-first sorting, add favorites-only filter
+-- Description: Facilities now sort purely by distance. Added p_favorites_only
+--              parameter to filter results to only the player's favorited facilities.
 
 DROP FUNCTION IF EXISTS search_facilities_nearby;
 
@@ -19,7 +19,8 @@ CREATE OR REPLACE FUNCTION search_facilities_nearby(
   p_limit INT DEFAULT 20,
   p_offset INT DEFAULT 0,
   p_user_gender TEXT DEFAULT NULL,
-  p_player_id UUID DEFAULT NULL
+  p_player_id UUID DEFAULT NULL,
+  p_favorites_only BOOLEAN DEFAULT NULL
 )
 RETURNS TABLE(
   id UUID,
@@ -195,6 +196,15 @@ BEGIN
             AND cota.is_available = TRUE
             AND cota.availability_date >= CURRENT_DATE
         )
+      )
+      AND (
+        p_favorites_only IS NOT TRUE
+        OR (p_player_id IS NOT NULL AND EXISTS (
+          SELECT 1 FROM player_favorite_facility pff
+          WHERE pff.facility_id = f.id
+            AND pff.player_id = p_player_id
+            AND pff.sport_id = ANY(p_sport_ids)
+        ))
       )
     GROUP BY f.id, f.name, f.city, f.address, f.location, f.facility_type,
              f.data_provider_id, f.external_provider_id, f.timezone,

@@ -211,6 +211,7 @@ export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilit
         userGender,
         playerId
       ),
+      filters.favoritesOnly,
       pageSize,
     ],
     queryFn: async ({ pageParam }) => {
@@ -238,6 +239,7 @@ export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilit
         hasLighting,
         membershipRequired,
         hasAvailabilities: filters.hasAvailabilities ? true : undefined,
+        favoritesOnly: filters.favoritesOnly ? true : undefined,
         userGender,
         playerId,
         limit: pageSize,
