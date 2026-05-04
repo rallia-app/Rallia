@@ -6,7 +6,7 @@
  */
 
 import * as React from 'react';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -17,7 +17,6 @@ import {
   ScrollView,
 } from 'react-native';
 import { Text } from '@rallia/shared-components';
-import { usePlayerReputation } from '@rallia/shared-hooks';
 import { ReputationBadge } from './ReputationBadge';
 import {
   lightTheme,
@@ -36,6 +35,7 @@ import {
   getHumanName,
 } from '@rallia/shared-utils';
 import { useTheme } from '@rallia/shared-hooks';
+import { getTierForScore, getTierConfig, MIN_EVENTS_FOR_PUBLIC } from '@rallia/shared-services';
 import { useTranslation } from '../hooks';
 import type { MatchParticipantWithPlayer } from '@rallia/shared-types';
 import type { PlayerWithProfile } from '@rallia/shared-types';
@@ -107,18 +107,28 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
   const isDark = theme === 'dark';
   const themeColors = isDark ? darkTheme : lightTheme;
 
-  // Get player ID for reputation lookup
+  // Get player data
   const playerData = participant
     ? Array.isArray(participant.player)
       ? participant.player[0]
       : participant.player
     : null;
-  const playerId = playerData?.id;
 
-  // Player reputation data
-  const { display: reputationDisplay } = usePlayerReputation(playerId, {
-    skip: !visible || !playerId,
-  });
+  // Derive reputation display from the participant data (already fetched with the match)
+  const reputationDisplay = useMemo(() => {
+    const rep = (playerData as PlayerWithProfile | null)?.player_reputation;
+    if (!rep) return null;
+    const tier = getTierForScore(rep.reputation_score, rep.total_events);
+    const tierConfig = getTierConfig(tier);
+    return {
+      tier,
+      score: rep.reputation_score,
+      isVisible: rep.total_events >= MIN_EVENTS_FOR_PUBLIC,
+      tierLabel: tierConfig.label,
+      tierColor: tierConfig.color,
+      tierIcon: tierConfig.icon,
+    };
+  }, [playerData]);
 
   // Theme-aware colors
   const colors = {
@@ -287,8 +297,11 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                 {/* Reputation and Rating Badges */}
                 <View style={styles.badgesRow}>
                   {/* Reputation Badge */}
-                  {playerId && (
-                    <ReputationBadge reputationDisplay={reputationDisplay} isDark={isDark} />
+                  {playerData?.id && (
+                    <ReputationBadge
+                      reputationDisplay={reputationDisplay ?? undefined}
+                      isDark={isDark}
+                    />
                   )}
 
                   {/* Rating Badge */}

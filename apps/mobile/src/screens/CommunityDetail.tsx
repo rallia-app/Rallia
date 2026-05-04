@@ -24,8 +24,13 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import Svg, { Circle } from 'react-native-svg';
-import { Text, Button } from '@rallia/shared-components';
-import { lightHaptic, mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
+import { Text, Button, useToast } from '@rallia/shared-components';
+import {
+  lightHaptic,
+  mediumHaptic,
+  selectionHaptic,
+  getProfilePictureUrl,
+} from '@rallia/shared-utils';
 import {
   useCommunityWithMembers,
   useIsCommunityModerator,
@@ -66,6 +71,7 @@ import {
   useRequireOnboarding,
 } from '../hooks';
 import { useSport } from '../context';
+import { getJoinErrorToastMessage } from '../utils/joinErrorToast';
 import { SportIcon } from '../components/SportIcon';
 import RatingBadge from '../components/RatingBadge';
 import type { RootStackParamList } from '../navigation/types';
@@ -99,6 +105,7 @@ export default function CommunityDetailScreen() {
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
   const { t, locale } = useTranslation();
+  const toast = useToast();
   const { guardAction } = useRequireOnboarding();
   const { selectedSport } = useSport();
   const { sports } = useSports();
@@ -209,9 +216,18 @@ export default function CommunityDetailScreen() {
       // Refetch access info to update the UI
       refetchAccess();
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to send join request');
+      toast.error(getJoinErrorToastMessage(error, t));
     }
-  }, [playerId, community, guardAction, communityId, requestToJoinMutation, refetchAccess]);
+  }, [
+    playerId,
+    community,
+    guardAction,
+    communityId,
+    requestToJoinMutation,
+    refetchAccess,
+    toast,
+    t,
+  ]);
 
   // Helper to show join prompt for logged-in non-members
   const showJoinPrompt = useCallback(() => {
@@ -751,7 +767,10 @@ export default function CommunityDetailScreen() {
                   >
                     {member.player?.profile?.profile_picture_url ? (
                       <Image
-                        source={{ uri: member.player.profile.profile_picture_url }}
+                        source={{
+                          uri:
+                            getProfilePictureUrl(member.player.profile.profile_picture_url) ?? '',
+                        }}
                         style={styles.memberAvatarImage}
                       />
                     ) : (
@@ -1059,7 +1078,9 @@ export default function CommunityDetailScreen() {
                 >
                   {member.player?.profile?.profile_picture_url ? (
                     <Image
-                      source={{ uri: member.player.profile.profile_picture_url }}
+                      source={{
+                        uri: getProfilePictureUrl(member.player.profile.profile_picture_url) ?? '',
+                      }}
                       style={styles.memberAvatarImage}
                     />
                   ) : (

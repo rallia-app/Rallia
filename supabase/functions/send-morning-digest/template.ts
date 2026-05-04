@@ -6,6 +6,7 @@ import {
   EMAIL_TOKENS,
 } from '../_shared/email-layout.ts';
 import { t } from '../_shared/email-translations.ts';
+import { formatIntuitiveDate, timezoneForLocale } from '../_shared/intuitive-date.ts';
 
 export interface DigestMatch {
   id: string;
@@ -31,73 +32,36 @@ export interface DigestSuggestion {
   opponent_first_name: string;
   opponent_last_name: string;
   opponent_rating_label: string | null;
+  opponent_badge_status: string | null;
   opponent_reputation_tier: string | null;
+  sport_id: string;
   sport_name: string;
+  facility_id: string;
   facility_name: string;
   facility_city: string;
-  overlapping_days_periods: Array<{ day: string; period: string }>;
+  match_date: string;
+  start_time: string;
+  end_time: string;
 }
+
+/**
+ * Discriminated union sent to the template. Built by the edge function as
+ * a single chronologically-sorted feed (matches + suggestions interleaved).
+ */
+export type DigestFeedItem =
+  | { kind: 'match'; sortTime: number; data: DigestMatch }
+  | { kind: 'suggestion'; sortTime: number; data: DigestSuggestion };
 
 export interface DigestEmailPayload {
   firstName: string | null;
   locale: string;
-  matches: DigestMatch[];
-  suggestions: DigestSuggestion[];
+  feed: DigestFeedItem[];
   appUrl: string;
+  /** Signed one-click unsubscribe URL — also wired into the
+   *  `List-Unsubscribe` header by the edge function. */
+  unsubscribeUrl: string;
 }
 
-const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-
-const DAY_ABBR: Record<string, Record<string, string>> = {
-  'en-US': {
-    monday: 'Mon',
-    tuesday: 'Tue',
-    wednesday: 'Wed',
-    thursday: 'Thu',
-    friday: 'Fri',
-    saturday: 'Sat',
-    sunday: 'Sun',
-  },
-  'fr-CA': {
-    monday: 'Lun',
-    tuesday: 'Mar',
-    wednesday: 'Mer',
-    thursday: 'Jeu',
-    friday: 'Ven',
-    saturday: 'Sam',
-    sunday: 'Dim',
-  },
-};
-
-const PERIOD_ORDER = ['morning', 'afternoon', 'evening'] as const;
-
-function formatGroupedAvailability(
-  slots: Array<{ day: string; period: string }>,
-  locale: string
-): string {
-  if (slots.length === 0) return '';
-  const abbr = locale.startsWith('fr') ? DAY_ABBR['fr-CA'] : DAY_ABBR['en-US'];
-  const byPeriod: Record<string, Set<string>> = {};
-  for (const slot of slots) {
-    if (!byPeriod[slot.period]) byPeriod[slot.period] = new Set();
-    byPeriod[slot.period].add(slot.day);
-  }
-  const parts: string[] = [];
-  for (const period of PERIOD_ORDER) {
-    const days = byPeriod[period];
-    if (!days) continue;
-    const dayStr = [...days]
-      .sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b))
-      .slice(0, 3)
-      .map(d => abbr[d] ?? d)
-      .join(', ');
-    const periodLabel = t(locale, `digest.period.${period}`);
-    parts.push(`${periodLabel}: ${dayStr}`);
-  }
-  return parts.join(' · ');
-}
-
-// Tier badge display — mirrors TIER_COLORS from shared-services/reputationConfig.ts
 const TIER_BADGE: Record<string, { bg: string; text: string; label: string }> = {
   platinum: { bg: '#F0FDFA', text: '#134E4A', label: 'Platinum' },
   gold: { bg: '#FEF9C3', text: '#713F12', label: 'Gold' },
@@ -121,14 +85,13 @@ function formatMatchDateTime(
   endTime: string,
   locale: string
 ): string {
-  // matchDate is "YYYY-MM-DD", startTime/endTime are "HH:MM:SS"
+  const tz = timezoneForLocale(locale);
+  const dateLabel = formatIntuitiveDate(matchDate, tz, locale, {
+    today: t(locale, 'digest.dateLabel.today'),
+    tomorrow: t(locale, 'digest.dateLabel.tomorrow'),
+  }).label;
+
   const [h, m] = startTime.split(':').map(Number);
-  const dateObj = new Date(`${matchDate}T00:00:00`);
-  const dateStr = dateObj.toLocaleDateString(locale, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
   const timeObj = new Date();
   timeObj.setHours(h, m, 0, 0);
   const timeStr = timeObj.toLocaleTimeString(locale, {
@@ -137,7 +100,7 @@ function formatMatchDateTime(
     hour12: !locale.startsWith('fr'),
   });
   const duration = formatDuration(startTime, endTime);
-  return `${dateStr} · ${timeStr} · ${duration}`;
+  return `${dateLabel} · ${timeStr} · ${duration}`;
 }
 
 function renderMatchCard(match: DigestMatch, locale: string, appUrl: string): string {
@@ -147,16 +110,13 @@ function renderMatchCard(match: DigestMatch, locale: string, appUrl: string): st
   const dateTime = formatMatchDateTime(match.match_date, match.start_time, match.end_time, locale);
   const location = [match.facility_name, match.facility_city].filter(Boolean).join(', ');
 
-  // CTA label
   const ctaLabel =
     match.join_mode === 'request'
       ? t(locale, 'digest.askToJoinButton')
       : t(locale, 'digest.joinButton');
 
-  // Distance
   const distanceStr = match.distance_km != null ? `${match.distance_km.toFixed(1)} km` : '';
 
-  // Spots chip
   const spotsLeft = match.total_spots - match.joined_count;
   let spotsLabel: string;
   if (spotsLeft <= 0) {
@@ -164,20 +124,18 @@ function renderMatchCard(match: DigestMatch, locale: string, appUrl: string): st
   } else if (spotsLeft === 1) {
     spotsLabel = t(locale, 'digest.spotLeft');
   } else {
-    spotsLabel = t(locale, 'digest.spotsLeft', { count: spotsLeft });
+    spotsLabel = t(locale, 'digest.spotsLeft', { count: String(spotsLeft) });
   }
   const spotsColor =
     spotsLeft <= 0 ? T.neutral500 : spotsLeft === 1 ? T.secondary500 : T.primary600;
   const spotsBg =
-    spotsLeft <= 0 ? T.neutral100 : spotsLeft === 1 ? `${T.secondary500}18` : `${T.primary600}12`;
+    spotsLeft <= 0 ? T.neutral200 : spotsLeft === 1 ? `${T.secondary500}18` : `${T.primary600}12`;
 
-  // Format chip
   const formatLabel =
     match.format === 'doubles'
       ? t(locale, 'digest.formatDoubles')
       : t(locale, 'digest.formatSingles');
 
-  // Vibe chip (only when not 'both')
   const vibeLabel =
     match.player_expectation && match.player_expectation !== 'both'
       ? t(
@@ -188,7 +146,6 @@ function renderMatchCard(match: DigestMatch, locale: string, appUrl: string): st
         )
       : null;
 
-  // Cost chip
   let costLabel: string | null = null;
   if (match.is_court_free) {
     costLabel = t(locale, 'digest.costFree');
@@ -197,8 +154,7 @@ function renderMatchCard(match: DigestMatch, locale: string, appUrl: string): st
     costLabel = `$${perPlayer}/player`;
   }
 
-  // Court booked badge
-  const courtBooked = match.court_status === 'confirmed';
+  const courtBooked = match.court_status === 'reserved';
 
   const chipStyle = (bg: string, color: string) =>
     `display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 600; background-color: ${bg}; color: ${color}; margin-right: 4px;`;
@@ -223,7 +179,6 @@ function renderMatchCard(match: DigestMatch, locale: string, appUrl: string): st
                   <tr>
                     <td class="email-detail-card" style="background-color: ${T.primary50}; border: 1px solid ${T.primary100}; border-radius: 8px; padding: 14px 16px;">
 
-                      <!-- Sport + distance -->
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 4px;">
                         <tr>
                           <td>
@@ -233,18 +188,14 @@ function renderMatchCard(match: DigestMatch, locale: string, appUrl: string): st
                         </tr>
                       </table>
 
-                      <!-- Date / time / duration -->
                       <p style="margin: 0 0 3px 0; font-size: 14px; font-weight: 700; color: ${T.neutral900}; line-height: 1.3;">
                         ${escapeHtml(dateTime)}
                       </p>
 
-                      <!-- Location -->
                       ${location ? `<p style="margin: 0 0 8px 0; font-size: 13px; color: ${T.neutral600};">&#128205; ${escapeHtml(location)}</p>` : ''}
 
-                      <!-- Chips: format · spots · vibe · cost -->
                       <p style="margin: 0 0 10px 0; line-height: 1.8;">${chips}</p>
 
-                      <!-- Footer: court booked + CTA -->
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                         <tr>
                           <td style="vertical-align: middle;">
@@ -265,50 +216,61 @@ function renderMatchCard(match: DigestMatch, locale: string, appUrl: string): st
 
 function renderSuggestionCard(s: DigestSuggestion, locale: string, appUrl: string): string {
   const T = EMAIL_TOKENS;
-  const profileUrl = `${appUrl}/player/${s.opponent_id}?src=email_digest`;
-  const name = `${escapeHtml(s.opponent_first_name)} ${escapeHtml(s.opponent_last_name.charAt(0))}.`;
-  const location = [s.facility_name, s.facility_city].filter(Boolean).join(', ');
-  const availability = formatGroupedAvailability(s.overlapping_days_periods, locale);
-  const challengeLabel = t(locale, 'digest.challengeButton');
+  const urlLocale = locale.startsWith('fr') ? 'fr-CA' : 'en-US';
+  const params = new URLSearchParams({
+    opponent: s.opponent_id,
+    facility: s.facility_id,
+    sport: s.sport_id,
+    date: s.match_date,
+    start_time: s.start_time,
+    end_time: s.end_time,
+    src: 'email_digest',
+  });
+  const inviteUrl = `${appUrl}/${urlLocale}/match-invite/confirm?${params.toString()}`;
 
-  // Reputation tier badge
+  const dateTime = formatMatchDateTime(s.match_date, s.start_time, s.end_time, locale);
+  const location = [s.facility_name, s.facility_city].filter(Boolean).join(', ');
+  const name = `${escapeHtml(s.opponent_first_name)} ${escapeHtml(s.opponent_last_name.charAt(0))}.`;
+  const ctaLabel = t(locale, 'digest.suggestionInviteButton');
+
   const tier = s.opponent_reputation_tier?.toLowerCase();
   const tierBadge = tier && TIER_BADGE[tier] ? TIER_BADGE[tier] : null;
 
   return `
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 10px;">
                   <tr>
-                    <td style="background-color: ${T.neutral50}; border: 1px solid ${T.neutral200}; border-radius: 8px; padding: 14px 16px;">
+                    <td class="email-detail-card" style="background-color: ${T.primary50}; border: 1px solid ${T.primary100}; border-radius: 8px; padding: 14px 16px;">
 
-                      <!-- Sport label -->
-                      <p style="margin: 0 0 6px 0; font-size: 11px; font-weight: 700; color: ${T.neutral500}; text-transform: uppercase; letter-spacing: 0.07em;">
-                        ${escapeHtml(s.sport_name)}
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 4px;">
+                        <tr>
+                          <td>
+                            <span style="font-size: 11px; font-weight: 700; color: ${T.primary600}; text-transform: uppercase; letter-spacing: 0.07em;">${escapeHtml(s.sport_name)}</span>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <p style="margin: 0 0 3px 0; font-size: 14px; font-weight: 700; color: ${T.neutral900}; line-height: 1.3;">
+                        ${escapeHtml(dateTime)}
                       </p>
 
-                      <!-- Name + rating + tier badge -->
-                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 3px;">
+                      ${location ? `<p style="margin: 0 0 8px 0; font-size: 13px; color: ${T.neutral600};">&#128205; ${escapeHtml(location)}</p>` : ''}
+
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 8px;">
                         <tr>
                           <td style="vertical-align: middle;">
-                            <span style="font-size: 15px; font-weight: 700; color: ${T.neutral900};">${name}</span>
+                            <span style="font-size: 13px; font-weight: 600; color: ${T.neutral900};">${name}</span>
                             ${s.opponent_rating_label ? `<span style="font-size: 12px; font-weight: 500; color: ${T.primary600}; margin-left: 6px;">${escapeHtml(s.opponent_rating_label)}</span>` : ''}
                           </td>
                           ${tierBadge ? `<td align="right" style="vertical-align: middle; padding-left: 8px; white-space: nowrap;"><span style="display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 700; background-color: ${tierBadge.bg}; color: ${tierBadge.text};">${escapeHtml(tierBadge.label)}</span></td>` : ''}
                         </tr>
                       </table>
 
-                      <!-- Location -->
-                      ${location ? `<p style="margin: 0 0 4px 0; font-size: 13px; color: ${T.neutral600};">&#128205; ${escapeHtml(location)}</p>` : ''}
-
-                      <!-- Grouped availability -->
-                      ${availability ? `<p style="margin: 0 0 10px 0; font-size: 12px; color: ${T.neutral500};">&#128197; ${escapeHtml(availability)}</p>` : '<p style="margin: 0 0 10px 0;"></p>'}
-
-                      <!-- CTA -->
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                         <tr>
                           <td style="vertical-align: middle;">&nbsp;</td>
                           <td align="right" style="vertical-align: middle; padding-left: 12px; white-space: nowrap;">
-                            <a href="${profileUrl}" style="display: inline-block; padding: 7px 14px; border: 2px solid ${T.primary600}; color: ${T.primary600}; font-size: 12px; font-weight: 600; text-decoration: none; border-radius: 6px; font-family: Inter, Arial, Helvetica, sans-serif;">
-                              ${escapeHtml(challengeLabel)} →
+                            <a href="${inviteUrl}" style="display: inline-block; padding: 7px 14px; background-color: ${T.secondary500}; color: #ffffff; font-size: 12px; font-weight: 600; text-decoration: none; border-radius: 6px; font-family: Inter, Arial, Helvetica, sans-serif;">
+                              ${escapeHtml(ctaLabel)} →
                             </a>
                           </td>
                         </tr>
@@ -319,10 +281,16 @@ function renderSuggestionCard(s: DigestSuggestion, locale: string, appUrl: strin
                 </table>`;
 }
 
-function renderSectionHeading(text: string, topSpacing: boolean): string {
+function renderFeedItem(item: DigestFeedItem, locale: string, appUrl: string): string {
+  return item.kind === 'match'
+    ? renderMatchCard(item.data, locale, appUrl)
+    : renderSuggestionCard(item.data, locale, appUrl);
+}
+
+function renderSectionHeading(text: string): string {
   const T = EMAIL_TOKENS;
   return `
-                <p style="margin: ${topSpacing ? '24px' : '0'} 0 12px 0; font-size: 11px; font-weight: 700; color: ${T.neutral600}; text-transform: uppercase; letter-spacing: 0.07em;">
+                <p style="margin: 0 0 12px 0; font-size: 11px; font-weight: 700; color: ${T.neutral600}; text-transform: uppercase; letter-spacing: 0.07em;">
                   ${escapeHtml(text)}
                 </p>`;
 }
@@ -331,7 +299,7 @@ export function renderMorningDigestEmail(payload: DigestEmailPayload): {
   subject: string;
   html: string;
 } {
-  const { firstName, locale, matches, suggestions, appUrl } = payload;
+  const { firstName, locale, feed, appUrl, unsubscribeUrl } = payload;
   const T = EMAIL_TOKENS;
 
   const subject = t(locale, 'digest.subject');
@@ -342,20 +310,12 @@ export function renderMorningDigestEmail(payload: DigestEmailPayload): {
 
   const urlLocale = locale.startsWith('fr') ? 'fr-CA' : 'en-US';
   const browseGamesUrl = `${appUrl}/${urlLocale}/games?src=email_digest`;
-  const discoverSuggestionsUrl = `${appUrl}/suggestions?src=email_digest`;
 
-  const matchesSectionHtml =
-    matches.length > 0
-      ? renderSectionHeading(t(locale, 'digest.matchesSection'), false) +
-        matches.map(m => renderMatchCard(m, locale, appUrl)).join('') +
+  const feedSectionHtml =
+    feed.length > 0
+      ? renderSectionHeading(t(locale, 'digest.feedSection')) +
+        feed.map(item => renderFeedItem(item, locale, appUrl)).join('') +
         renderCtaButton(t(locale, 'digest.browseAllGames'), browseGamesUrl)
-      : '';
-
-  const suggestionsSectionHtml =
-    suggestions.length > 0
-      ? renderSectionHeading(t(locale, 'digest.suggestionsSection'), matches.length > 0) +
-        suggestions.map(s => renderSuggestionCard(s, locale, appUrl)).join('') +
-        renderCtaButton(t(locale, 'digest.discoverAllSuggestions'), discoverSuggestionsUrl)
       : '';
 
   const content = `
@@ -367,8 +327,7 @@ export function renderMorningDigestEmail(payload: DigestEmailPayload): {
                   ${escapeHtml(t(locale, 'digest.intro'))}
                 </p>
 
-                ${matchesSectionHtml}
-                ${suggestionsSectionHtml}
+                ${feedSectionHtml}
 
                 ${renderDividerAndDisclaimer(t(locale, 'digest.disclaimer'))}`;
 
@@ -378,7 +337,8 @@ export function renderMorningDigestEmail(payload: DigestEmailPayload): {
     footerNote: t(locale, 'digest.footerNote'),
     preheader,
     locale,
-    showUnsubscribe: false,
+    showUnsubscribe: true,
+    unsubscribeUrl,
   });
 
   return { subject, html };

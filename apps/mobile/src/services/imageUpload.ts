@@ -1,4 +1,15 @@
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+
 import { supabase, Logger } from '@rallia/shared-services';
+
+const RESIZE_BUCKETS = new Set(['profile-pictures', 'facility-images']);
+
+async function resizeImageForUpload(uri: string): Promise<string> {
+  const context = ImageManipulator.manipulate(uri);
+  const rendered = await context.resize({ width: 800 }).renderAsync();
+  const result = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: 0.85 });
+  return result.uri;
+}
 
 export interface UploadResult {
   url: string | null;
@@ -100,10 +111,13 @@ export async function uploadImage(
       Logger.debug('Got user ID for image upload', { userId });
     }
 
+    // Resize before upload for relevant buckets to cap stored file size
+    const sourceUri = RESIZE_BUCKETS.has(bucket) ? await resizeImageForUpload(imageUri) : imageUri;
+
     // Create unique filename with folder structure for RLS policy
     // RLS policy expects: (storage.foldername(name))[1] = auth.uid()::text
     // So we must upload to: {userId}/{filename}.ext
-    const rawExt = (imageUri.split('.').pop()?.split('?')[0] || 'jpg').toLowerCase();
+    const rawExt = (sourceUri.split('.').pop()?.split('?')[0] || 'jpg').toLowerCase();
     // Normalize HEIC/HEIF to JPEG — Supabase Storage doesn't support HEIC
     const fileExt = rawExt === 'heic' || rawExt === 'heif' ? 'jpg' : rawExt;
     const fileName = `${Date.now()}.${fileExt}`;
@@ -114,12 +128,12 @@ export async function uploadImage(
 
     if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       // Web: Convert data URI or blob URL to blob
-      const response = await fetch(imageUri);
+      const response = await fetch(sourceUri);
       uploadData = await response.blob();
     } else {
       // React Native: Use XMLHttpRequest to get the file as a blob, then use FileReader to convert to ArrayBuffer
       Logger.debug('Reading image file for upload', {
-        imageUri: imageUri.substring(0, 50) + '...',
+        imageUri: sourceUri.substring(0, 50) + '...',
       });
       uploadData = await new Promise<ArrayBuffer>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -152,7 +166,7 @@ export async function uploadImage(
           reject(new Error('Failed to load image file'));
         };
         xhr.responseType = 'blob';
-        xhr.open('GET', imageUri, true);
+        xhr.open('GET', sourceUri, true);
         xhr.send(null);
       });
     }

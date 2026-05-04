@@ -89,6 +89,7 @@ export {
   getNetworkByConversationId,
   getConversationUnreadCount,
   getConversationUnreadCountLast7Days,
+  getConversationDisplayName,
 
   // Chat Agreement
   hasAgreedToChatRules,

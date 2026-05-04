@@ -578,7 +578,8 @@ function DeepLinkHandler() {
 
 /**
  * useOTAUpdate - Check for OTA updates while the splash screen is visible.
- * If an update is found, download it and reload before the user sees the app.
+ * If an update is found, download it and let it apply on the next app launch.
+ * This avoids any splash screen flash or loading spinner during the reload.
  * Returns whether the check is still in progress (to hold the splash open).
  */
 function useOTAUpdate() {
@@ -596,10 +597,9 @@ function useOTAUpdate() {
 
         if (isAvailable) {
           await Updates.fetchUpdateAsync();
-          if (!cancelled) {
-            // Reload immediately — splash is still visible so the restart is seamless
-            await Updates.reloadAsync();
-          }
+          // Don't reload immediately — the update will apply on next launch.
+          // This prevents the splash screen from flashing or showing a spinner.
+          Logger.info('OTA update downloaded, will apply on next launch');
         }
       } catch (e) {
         Logger.warn('OTA update check failed', { error: e });

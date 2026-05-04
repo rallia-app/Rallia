@@ -232,7 +232,8 @@
       "booking_reminder": "Rappel de réservation",
       "booking_cancelled_by_org": "Réservation annulée par l'établissement",
       "membership_approved": "Adhésion approuvée",
-      "org_announcement": "Annonce"
+      "org_announcement": "Annonce",
+      "morning_digest": "Récapitulatif matinal"
     },
     "categories": {
       "match": "Notifications de parties",
@@ -1420,6 +1421,25 @@
     "cropSquare": "Rogner carré",
     "rotate": "Pivoter",
     "processing": "Traitement..."
+  },
+  "inviteConfirmSheet": {
+    "title": "Envoyer l'invitation ?",
+    "subtitleWithOpponent": "Invite {opponentName} à jouer à {facility} le {dateTime}.",
+    "subtitle": "Invite ce joueur à l'horaire et au lieu indiqués dans le courriel.",
+    "confirmButton": "Envoyer l'invitation",
+    "cancelButton": "Annuler",
+    "successToast": "Invitation envoyée",
+    "errorMessage": "Une erreur est survenue. Réessaie.",
+    "callerBusyMessage": "Tu as déjà une partie à ce moment.",
+    "opponentBusyMessage": "Cet horaire n'est plus disponible.",
+    "seeOtherSuggestions": "Voir d'autres suggestions"
+  },
+  "digestUnsubscribe": {
+    "successTitle": "Désabonnement effectué",
+    "successMessage": "Tu ne recevras plus le résumé matinal. Tu peux le réactiver à tout moment depuis tes préférences de notification.",
+    "errorTitle": "Impossible de te désabonner",
+    "errorMessage": "Ce lien de désabonnement semble invalide ou expiré. Modifie tes préférences dans l'application.",
+    "managePreferences": "Gérer les préférences de notification"
   },
   "onboarding": {
     "pageTitle": "Créer votre organisation",
@@ -2825,7 +2845,23 @@
       "dayThursday": "Jeudi",
       "dayFriday": "Vendredi",
       "daySaturday": "Samedi",
-      "daySunday": "Dimanche"
+      "daySunday": "Dimanche",
+      "rating": {
+        "label": "Cote",
+        "all": "Toutes",
+        "countActive": "Cote ({count})"
+      },
+      "reputation": {
+        "label": "Réputation",
+        "all": "Toutes",
+        "bronze": "Bronze",
+        "silver": "Argent",
+        "gold": "Or",
+        "platinum": "Platine"
+      },
+      "certified": "Certifié",
+      "selectRating": "Sélectionner la cote",
+      "selectReputation": "Sélectionner la réputation"
     },
     "results": {
       "count": "{count} joueurs",
@@ -3575,7 +3611,7 @@
     "viewMatch": "Voir la partie",
     "createAnother": "Créer une autre",
     "shareToFacebook": {
-      "button": "Partager sur Facebook",
+      "button": "Facebook",
       "title": "Partage avec ta communauté Facebook",
       "hint": "Modifie le message si tu veux, puis copie-le et colle-le dans ton groupe Facebook.",
       "copy": "Copier le message",
@@ -3586,28 +3622,24 @@
       "openFacebookHint": "On ouvre Facebook, colle le message dans ton groupe.",
       "previewLabel": "Aperçu du message",
       "message": {
-        "introSingles": "Cherche un partenaire le {date} à {time}.",
-        "introSinglesNoTime": "Cherche un partenaire le {date}.",
-        "introDoubles": "Partie de double le {date} à {time}, ça prendrait deux joueurs de plus.",
-        "introDoublesNoTime": "Partie de double le {date}, ça prendrait deux joueurs de plus.",
-        "introGeneric": "Quelqu'un pour jouer le {date} à {time}?",
-        "introGenericNoTime": "Quelqu'un pour jouer le {date}?",
-        "locationLine": "Rendez-vous à {location}.",
-        "locationLineBooked": "Rendez-vous à {location}, terrain déjà réservé.",
-        "locationLineToBook": "Rendez-vous à {location}, reste à réserver le terrain.",
-        "courtBookedAlone": "Terrain déjà réservé.",
-        "courtToBookAlone": "Reste à réserver le terrain.",
-        "costFree": "C'est gratuit.",
-        "costHostPays": "Je m'occupe du terrain ({total}).",
-        "costSplitEqual": "{perPerson} chacun pour le terrain.",
-        "costGeneric": "Terrain à environ {total}, on partage.",
+        "datePhraseToday": "aujourd'hui",
+        "datePhraseTomorrow": "demain",
+        "datePhraseWeekday": "{weekday}",
+        "datePhraseDate": "le {date}",
+        "introSingles": "Cherche un partenaire {datePhrase} à {time}.",
+        "introSinglesNoTime": "Cherche un partenaire {datePhrase}.",
+        "introDoubles": "Double {datePhrase} à {time}, il manque du monde.",
+        "introDoublesNoTime": "Double {datePhrase}, il manque du monde.",
+        "introGeneric": "Quelqu'un pour jouer {datePhrase} à {time}?",
+        "introGenericNoTime": "Quelqu'un pour jouer {datePhrase}?",
+        "locationLine": "On joue à {location}.",
         "preferMale": "pour des gars",
         "preferFemale": "pour des filles",
-        "casual": "pour le fun",
+        "casual": "juste pour taper la balle",
         "competitive": "on garde le score",
         "duration": "{duration} environ",
-        "level": "{level}+ idéalement",
-        "cta": "Clique sur le lien si t'es partant·e."
+        "level": "autour de {level} ce serait parfait",
+        "cta": "Réserve ta place :"
       }
     },
     "editMatch": "Modifier la partie",
@@ -3871,7 +3903,7 @@
         "home": "Accueil",
         "games": "Parties",
         "communities": "Communautés",
-        "donate": "Faire un don"
+        "donate": "Soutenir"
       }
     },
     "hero": {
@@ -4234,7 +4266,10 @@
         "label": "Coût",
         "all": "Tous",
         "free": "Gratuit",
-        "paid": "Payant"
+        "under_5": "Moins de 5$",
+        "under_10": "Moins de 10$",
+        "under_20": "Moins de 20$",
+        "20_plus": "20$+"
       },
       "joinMode": {
         "label": "Inscription",
@@ -4259,6 +4294,19 @@
         "all": "Tous",
         "reserved": "Réservé",
         "to_reserve": "À réserver"
+      },
+      "reputation": {
+        "label": "Réputation",
+        "all": "Toutes",
+        "bronze": "Bronze",
+        "silver": "Argent",
+        "gold": "Or",
+        "platinum": "Platine"
+      },
+      "rating": {
+        "label": "Cote",
+        "all": "Toutes",
+        "countActive": "Cote ({count})"
       },
       "tier": {
         "label": "Catégorie",
@@ -8134,6 +8182,18 @@
       },
       "hasAvailabilities": {
         "label": "Réservable"
+      },
+      "hasOpenSlots": {
+        "label": "Disponible"
+      },
+      "organizationNature": {
+        "label": "Type",
+        "all": "Tous",
+        "public": "Public",
+        "private": "Privé"
+      },
+      "favorites": {
+        "label": "Favoris"
       }
     },
     "empty": {
@@ -8796,6 +8856,38 @@
       "doubles": "Double"
     }
   },
+  "inviteScanner": {
+    "title": "Scanner un code QR",
+    "instructions": "Pointez vers un code QR d'invitation ou de partie Rallia",
+    "processing": "Traitement...",
+    "invalidTitle": "Code QR invalide",
+    "invalidMessage": "Ce n'est pas un code QR d'invitation ou de partie Rallia.",
+    "matchNotFoundTitle": "Partie indisponible",
+    "matchNotFoundMessage": "Cette partie n'existe plus ou vous n'y avez pas accès.",
+    "joinFailedTitle": "Impossible de rejoindre",
+    "joinFailedMessage": "Échec. Veuillez réessayer.",
+    "joinedGroupTitle": "Groupe rejoint !",
+    "joinedGroupMessage": "Vous avez rejoint {name}.",
+    "ratingRequiredGeneric": "Vous devez avoir une cote pour rejoindre cette communauté.",
+    "pendingRequestExists": "Vous avez déjà une demande en attente pour rejoindre cette communauté.",
+    "communityRequestSentTitle": "Demande envoyée",
+    "communityRequestSentMessage": "Votre demande pour rejoindre {name} a été envoyée pour approbation.",
+    "tryAgain": "Réessayer",
+    "cameraPermissionRequired": "Autorisation caméra requise",
+    "cameraPermissionMessage": "Veuillez activer l'accès à la caméra dans les paramètres de votre appareil pour scanner les codes QR.",
+    "openSettings": "Ouvrir les paramètres",
+    "cameraAccessRequired": "Accès à la caméra requis",
+    "cameraAccessDescription": "Pour scanner les codes QR d'invitation, nous avons besoin d'accéder à votre caméra.",
+    "allowCameraAccess": "Autoriser la caméra",
+    "enterInviteCode": "Entrer le code d'invitation",
+    "enterInviteCodeDescription": "Saisissez manuellement le code d'invitation à 8 caractères",
+    "pleaseEnterInviteCode": "Veuillez entrer un code d'invitation",
+    "scanQR": "Scanner",
+    "enterCode": "Entrer le code",
+    "lightOn": "Lampe allumée",
+    "lightOff": "Lampe éteinte",
+    "join": "Rejoindre"
+  },
   "invitePage": {
     "title": "Rejoignez Rallia",
     "description": "Téléchargez Rallia pour trouver des joueurs, rejoindre des parties et jouer plus.",
@@ -8816,7 +8908,16 @@
     "notFound": "Invitation non trouvée",
     "notFoundDescription": "Ce lien d'invitation est peut-être invalide ou expiré.",
     "downloadCta": "Télécharger Rallia",
-    "clipboardHint": "Le lien sera sauvegardé pour que l'app puisse connecter votre invitation.",
+    "iosCodeLabel": "Votre code d'invitation",
+    "iosCodeHint": "Touchez pour copier. Après l'installation, collez-le dans l'écran d'inscription pour réclamer votre invitation.",
+    "iosCopyCode": "Copier le code",
+    "iosCodeCopied": "Copié ! Installez l'app et collez votre code lors de l'inscription.",
+    "iosGroupCodeLabel": "Code d'invitation du groupe",
+    "iosGroupCodeHint": "Touchez pour copier. Après l'installation, ouvrez Groupes → Rejoindre avec un code et collez-le.",
+    "iosGroupCodeCopied": "Copié ! Ouvrez Groupes → Rejoindre avec un code dans l'app pour l'entrer.",
+    "iosCommunityCodeLabel": "Code d'invitation de la communauté",
+    "iosCommunityCodeHint": "Touchez pour copier. Après l'installation, ouvrez Communautés → Rejoindre avec un code et collez-le.",
+    "iosCommunityCodeCopied": "Copié ! Ouvrez Communautés → Rejoindre avec un code dans l'app pour l'entrer.",
     "physicalTitle": "Bienvenue sur Rallia",
     "physicalHeading": "Bienvenue sur Rallia",
     "physicalDescription": "Téléchargez l'app pour trouver des joueurs, rejoindre des parties et jouer plus."

@@ -232,7 +232,8 @@
       "booking_reminder": "Booking reminder",
       "booking_cancelled_by_org": "Booking cancelled by facility",
       "membership_approved": "Membership approved",
-      "org_announcement": "Announcement"
+      "org_announcement": "Announcement",
+      "morning_digest": "Morning Digest"
     },
     "categories": {
       "match": "Game Notifications",
@@ -1420,6 +1421,25 @@
     "cropSquare": "Crop Square",
     "rotate": "Rotate",
     "processing": "Processing..."
+  },
+  "inviteConfirmSheet": {
+    "title": "Send invite?",
+    "subtitleWithOpponent": "Invite {opponentName} to play at {facility} on {dateTime}.",
+    "subtitle": "Invite this player at the time and place from the email.",
+    "confirmButton": "Send invite",
+    "cancelButton": "Cancel",
+    "successToast": "Invite sent",
+    "errorMessage": "Something went wrong. Please try again.",
+    "callerBusyMessage": "You already have a match at this time.",
+    "opponentBusyMessage": "This time isn't available anymore.",
+    "seeOtherSuggestions": "See other suggestions"
+  },
+  "digestUnsubscribe": {
+    "successTitle": "You're unsubscribed",
+    "successMessage": "You won't get the morning digest anymore. You can re-enable it anytime from your notification preferences.",
+    "errorTitle": "Couldn't unsubscribe",
+    "errorMessage": "This unsubscribe link looks invalid or expired. Please update your preferences in the app instead.",
+    "managePreferences": "Manage notification preferences"
   },
   "onboarding": {
     "pageTitle": "Create Your Organization",
@@ -2825,7 +2845,23 @@
       "dayThursday": "Thursday",
       "dayFriday": "Friday",
       "daySaturday": "Saturday",
-      "daySunday": "Sunday"
+      "daySunday": "Sunday",
+      "rating": {
+        "label": "Rating",
+        "all": "Any",
+        "countActive": "Rating ({count})"
+      },
+      "reputation": {
+        "label": "Reputation",
+        "all": "Any",
+        "bronze": "Bronze",
+        "silver": "Silver",
+        "gold": "Gold",
+        "platinum": "Platinum"
+      },
+      "certified": "Certified",
+      "selectRating": "Select Rating",
+      "selectReputation": "Select Reputation"
     },
     "results": {
       "count": "{count} players",
@@ -3575,7 +3611,7 @@
     "viewMatch": "View game",
     "createAnother": "Create another",
     "shareToFacebook": {
-      "button": "Share to Facebook",
+      "button": "Facebook",
       "title": "Share with your Facebook community",
       "hint": "Edit if you'd like, then copy and paste it into your Facebook group.",
       "copy": "Copy message",
@@ -3586,28 +3622,24 @@
       "openFacebookHint": "We'll open Facebook, paste the message in your group.",
       "previewLabel": "Message preview",
       "message": {
-        "introSingles": "Looking for a partner on {date} at {time}.",
-        "introSinglesNoTime": "Looking for a partner on {date}.",
-        "introDoubles": "Doubles game on {date} at {time}, would love a couple more players.",
-        "introDoublesNoTime": "Doubles game on {date}, would love a couple more players.",
-        "introGeneric": "Anyone up for a game on {date} at {time}?",
-        "introGenericNoTime": "Anyone up for a game on {date}?",
-        "locationLine": "Heading to {location}.",
-        "locationLineBooked": "Heading to {location}, court's already booked.",
-        "locationLineToBook": "Heading to {location}, still need to book the court.",
-        "courtBookedAlone": "Court's already booked.",
-        "courtToBookAlone": "Still need to book the court.",
-        "costFree": "It's free.",
-        "costHostPays": "I've got the court covered ({total}).",
-        "costSplitEqual": "{perPerson} each for the court.",
-        "costGeneric": "Court runs about {total}, we'll split it.",
+        "datePhraseToday": "today",
+        "datePhraseTomorrow": "tomorrow",
+        "datePhraseWeekday": "this {weekday}",
+        "datePhraseDate": "on {date}",
+        "introSingles": "Need a partner {datePhrase} at {time}.",
+        "introSinglesNoTime": "Need a partner {datePhrase}.",
+        "introDoubles": "Doubles {datePhrase} at {time}, need a couple more players.",
+        "introDoublesNoTime": "Doubles {datePhrase}, need a couple more players.",
+        "introGeneric": "Anyone up for a game {datePhrase} at {time}?",
+        "introGenericNoTime": "Anyone up for a game {datePhrase}?",
+        "locationLine": "Playing at {location}.",
         "preferMale": "looking for guys",
         "preferFemale": "looking for women",
-        "casual": "pretty chill",
+        "casual": "just looking to hit the ball",
         "competitive": "want to keep score",
         "duration": "about {duration}",
-        "level": "{level}+ would be great",
-        "cta": "Hit the link if you're in."
+        "level": "around {level} would be great",
+        "cta": "Grab your spot:"
       }
     },
     "editMatch": "Edit game",
@@ -3871,7 +3903,7 @@
         "home": "Home",
         "games": "Games",
         "communities": "Communities",
-        "donate": "Donate"
+        "donate": "Support"
       }
     },
     "hero": {
@@ -4234,7 +4266,10 @@
         "label": "Cost",
         "all": "Any",
         "free": "Free",
-        "paid": "Paid"
+        "under_5": "Under $5",
+        "under_10": "Under $10",
+        "under_20": "Under $20",
+        "20_plus": "$20+"
       },
       "joinMode": {
         "label": "Join",
@@ -4259,6 +4294,19 @@
         "all": "Any",
         "reserved": "Reserved",
         "to_reserve": "To book"
+      },
+      "reputation": {
+        "label": "Reputation",
+        "all": "Any",
+        "bronze": "Bronze",
+        "silver": "Silver",
+        "gold": "Gold",
+        "platinum": "Platinum"
+      },
+      "rating": {
+        "label": "Rating",
+        "all": "Any",
+        "countActive": "Rating ({count})"
       },
       "tier": {
         "label": "Tier",
@@ -8132,6 +8180,18 @@
       },
       "hasAvailabilities": {
         "label": "Bookable"
+      },
+      "hasOpenSlots": {
+        "label": "Open Slots"
+      },
+      "organizationNature": {
+        "label": "Ownership",
+        "all": "All",
+        "public": "Public",
+        "private": "Private"
+      },
+      "favorites": {
+        "label": "Favorites"
       }
     },
     "empty": {
@@ -8794,6 +8854,38 @@
       "doubles": "Doubles"
     }
   },
+  "inviteScanner": {
+    "title": "Scan QR Code",
+    "instructions": "Point at a Rallia invite or match QR code",
+    "processing": "Processing...",
+    "invalidTitle": "Invalid QR Code",
+    "invalidMessage": "This isn't a Rallia invite or match QR code.",
+    "matchNotFoundTitle": "Match Unavailable",
+    "matchNotFoundMessage": "This match no longer exists or you don't have access to it.",
+    "joinFailedTitle": "Could Not Join",
+    "joinFailedMessage": "Failed to join. Please try again.",
+    "joinedGroupTitle": "Group Joined!",
+    "joinedGroupMessage": "You've joined {name}.",
+    "ratingRequiredGeneric": "You need a rating to join this community.",
+    "pendingRequestExists": "You already have a pending request to join this community.",
+    "communityRequestSentTitle": "Request Sent",
+    "communityRequestSentMessage": "Your request to join {name} has been sent for approval.",
+    "tryAgain": "Try Again",
+    "cameraPermissionRequired": "Camera Permission Required",
+    "cameraPermissionMessage": "Please enable camera access in your device settings to scan QR codes.",
+    "openSettings": "Open Settings",
+    "cameraAccessRequired": "Camera Access Required",
+    "cameraAccessDescription": "To scan invite QR codes, we need access to your camera.",
+    "allowCameraAccess": "Allow Camera Access",
+    "enterInviteCode": "Enter Invite Code",
+    "enterInviteCodeDescription": "Enter the 8-character invite code manually",
+    "pleaseEnterInviteCode": "Please enter an invite code",
+    "scanQR": "Scan QR",
+    "enterCode": "Enter Code",
+    "lightOn": "Light On",
+    "lightOff": "Light Off",
+    "join": "Join"
+  },
   "invitePage": {
     "title": "Join Rallia",
     "description": "Download Rallia to find players, join matches, and play more.",
@@ -8814,7 +8906,16 @@
     "notFound": "Invite not found",
     "notFoundDescription": "This invite link may be invalid or expired.",
     "downloadCta": "Download Rallia",
-    "clipboardHint": "The link will be saved so the app can connect your invitation.",
+    "iosCodeLabel": "Your invite code",
+    "iosCodeHint": "Tap to copy. After installing, paste it on the onboarding screen to claim your invite.",
+    "iosCopyCode": "Copy code",
+    "iosCodeCopied": "Copied! Now install the app and paste your code during onboarding.",
+    "iosGroupCodeLabel": "Group invite code",
+    "iosGroupCodeHint": "Tap to copy. After installing, open Groups → Join with code and paste it.",
+    "iosGroupCodeCopied": "Copied! Open Groups → Join with code in the app to enter it.",
+    "iosCommunityCodeLabel": "Community invite code",
+    "iosCommunityCodeHint": "Tap to copy. After installing, open Communities → Join with code and paste it.",
+    "iosCommunityCodeCopied": "Copied! Open Communities → Join with code in the app to enter it.",
     "physicalTitle": "Welcome to Rallia",
     "physicalHeading": "Welcome to Rallia",
     "physicalDescription": "Download the app to find players, join matches, and play more."

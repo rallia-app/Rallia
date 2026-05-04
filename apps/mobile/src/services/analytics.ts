@@ -272,6 +272,10 @@ export function communityJoined(props: { source: string }): void {
   capture('community_joined', props);
 }
 
+export function matchOpenedFromQR(): void {
+  capture('match_opened_from_qr', {});
+}
+
 // ---- Notifications ----
 
 export function pushNotificationOpened(props: { type: string }): void {

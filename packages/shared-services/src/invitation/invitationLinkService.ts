@@ -10,7 +10,14 @@
 // TYPES
 // ============================================================================
 
-export type InvitationType = 'referral' | 'match' | 'group' | 'community' | 'flyer' | 'poster';
+export type InvitationType =
+  | 'referral'
+  | 'match'
+  | 'group'
+  | 'community'
+  | 'flyer'
+  | 'poster'
+  | 'social';
 
 export interface InvitationLinkParams {
   type: InvitationType;
@@ -128,7 +135,7 @@ export function parseInvitationUrl(url: string): ParsedInvitationLink | null {
 
       const type: InvitationType =
         typeParam &&
-        ['match', 'group', 'community', 'referral', 'flyer', 'poster'].includes(typeParam)
+        ['match', 'group', 'community', 'referral', 'flyer', 'poster', 'social'].includes(typeParam)
           ? (typeParam as InvitationType)
           : 'referral';
 

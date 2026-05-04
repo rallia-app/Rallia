@@ -10,7 +10,7 @@ import { Image, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-nat
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { neutral, primary, radiusPixels, spacingPixels } from '@rallia/design-system';
-import { getHumanName } from '@rallia/shared-utils';
+import { getHumanName, getProfilePictureUrl } from '@rallia/shared-utils';
 import type { NetworkPulseSettlingInEntry } from '@rallia/shared-hooks';
 
 import { useThemeStyles, useTranslation } from '../../../../hooks';
@@ -53,7 +53,10 @@ export const NewFacesCard = React.forwardRef<View, NewFacesCardProps>(
                 style={[styles.avatar, { backgroundColor: isDark ? neutral[800] : neutral[200] }]}
               >
                 {m.profile_picture_url ? (
-                  <Image source={{ uri: m.profile_picture_url }} style={styles.avatarImage} />
+                  <Image
+                    source={{ uri: getProfilePictureUrl(m.profile_picture_url) ?? '' }}
+                    style={styles.avatarImage}
+                  />
                 ) : (
                   <Ionicons name="person-outline" size={22} color={colors.textMuted} />
                 )}

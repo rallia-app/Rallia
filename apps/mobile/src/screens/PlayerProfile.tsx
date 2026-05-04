@@ -25,8 +25,17 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text, Skeleton, SkeletonAvatar, useToast, Button } from '@rallia/shared-components';
-import { supabase, Logger, isPlayerOnline, computeBadgeStatus } from '@rallia/shared-services';
-import { useGetOrCreateDirectConversation, usePlayerReputation } from '@rallia/shared-hooks';
+import {
+  supabase,
+  Logger,
+  isPlayerOnline,
+  computeBadgeStatus,
+  getTierForScore,
+  getTierConfig,
+  MIN_EVENTS_FOR_PUBLIC,
+} from '@rallia/shared-services';
+import type { ReputationDisplay } from '@rallia/shared-services';
+import { useGetOrCreateDirectConversation } from '@rallia/shared-hooks';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
 import { useSport, useUserHomeLocation } from '../context';
 import { SportIcon } from '../components/SportIcon';
@@ -209,11 +218,8 @@ const PlayerProfile = () => {
   const { selectedSport } = useSport();
   const { homeLocation } = useUserHomeLocation();
   const getOrCreateDirectConversation = useGetOrCreateDirectConversation();
-  const {
-    display: reputationDisplay,
-    reputation,
-    loading: reputationLoading,
-  } = usePlayerReputation(playerId);
+  const [reputationDisplay, setReputationDisplay] = useState<ReputationDisplay | null>(null);
+  const [reputationTotalEvents, setReputationTotalEvents] = useState<number>(0);
   const toast = useToast();
 
   useEffect(() => {
@@ -427,7 +433,7 @@ const PlayerProfile = () => {
         ratingsResult,
         availResult,
         sportProfileResult,
-        ,
+        reputationResult,
         statsResult,
       ] = await Promise.all([
         // Fetch profile data
@@ -522,8 +528,19 @@ const PlayerProfile = () => {
             )
           : Promise.resolve({ data: null, error: null }),
 
-        // Placeholder (kept for array destructuring)
-        Promise.resolve({ data: null, error: null }),
+        // Fetch reputation data
+        withTimeout(
+          (async () =>
+            supabase
+              .from('player_reputation')
+              .select(
+                'reputation_score, reputation_tier, total_events, matches_completed, is_public'
+              )
+              .eq('player_id', playerId)
+              .maybeSingle())(),
+          15000,
+          'Failed to load reputation'
+        ),
 
         // Fetch match statistics
         withTimeout(
@@ -547,6 +564,31 @@ const PlayerProfile = () => {
         throw playerResult.error;
       }
       setPlayer(playerResult.data);
+
+      // Process reputation
+      if (reputationResult.data && !reputationResult.error) {
+        const rep = reputationResult.data as {
+          reputation_score: number;
+          reputation_tier: string;
+          total_events: number;
+          matches_completed: number;
+          is_public: boolean;
+        };
+        const tier = getTierForScore(rep.reputation_score, rep.total_events);
+        const tierConfig = getTierConfig(tier);
+        setReputationDisplay({
+          tier,
+          score: rep.reputation_score,
+          isVisible: rep.is_public,
+          tierLabel: tierConfig.label,
+          tierColor: tierConfig.color,
+          tierIcon: tierConfig.icon,
+        });
+        setReputationTotalEvents(rep.total_events);
+      } else {
+        setReputationDisplay(null);
+        setReputationTotalEvents(0);
+      }
 
       // Process sports
       if (sportsResult.error) throw sportsResult.error;
@@ -787,14 +829,14 @@ const PlayerProfile = () => {
       if (statsResult.data) {
         type MatchData = {
           match_id: string;
-          match: { duration_minutes: number | null; host_id: string }[] | null;
+          match: { duration_minutes: number | null; host_id: string } | null;
         };
         const matchData = statsResult.data as unknown as MatchData[];
         const totalMinutes = matchData.reduce(
-          (sum, m) => sum + (m.match?.[0]?.duration_minutes || 0),
+          (sum, m) => sum + (m.match?.duration_minutes || 0),
           0
         );
-        const hostedMatches = matchData.filter(m => m.match?.[0]?.host_id === playerId).length;
+        const hostedMatches = matchData.filter(m => m.match?.host_id === playerId).length;
         setStats({
           hoursPlayed: Math.round(totalMinutes / 60),
           gamesHosted: hostedMatches,
@@ -1594,9 +1636,9 @@ const PlayerProfile = () => {
           <CovetedBadge
             reputationScore={reputationDisplay?.score}
             certificationStatus={primarySport?.badgeStatus}
-            totalEvents={reputation?.totalEvents}
+            totalEvents={reputationTotalEvents}
             isDark={isDark}
-            isLoading={loading || reputationLoading}
+            isLoading={loading}
           />
 
           {/* Rating & Reputation Badges */}
@@ -1618,9 +1660,9 @@ const PlayerProfile = () => {
               }
             />
             <ReputationBadge
-              reputationDisplay={reputationDisplay}
+              reputationDisplay={reputationDisplay ?? undefined}
               isDark={isDark}
-              isLoading={reputationLoading}
+              isLoading={loading}
               onInfoPress={() => SheetManager.show('reputation-explainer')}
             />
           </View>

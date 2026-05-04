@@ -80,7 +80,12 @@ const ACTIVE_NOTIFICATION_TYPES = new Set<ExtendedNotificationTypeEnum>([
   'reference_request_received',
   'reference_request_accepted',
   'reference_request_declined',
+  // Email digest
+  'morning_digest',
 ] as ExtendedNotificationTypeEnum[]);
+
+// Types where only the email channel is relevant — push and sms toggles are disabled
+const EMAIL_ONLY_NOTIFICATION_TYPES = new Set<ExtendedNotificationTypeEnum>(['morning_digest']);
 
 // Design-system colors for active notification types
 // Teal (primary) = invitations/requests, Green (success) = positive outcomes,
@@ -110,6 +115,7 @@ const NOTIFICATION_DS_COLORS: Partial<Record<ExtendedNotificationTypeEnum, strin
   reference_request_received: primary[500],
   reference_request_accepted: status.success.light,
   reference_request_declined: secondary[500],
+  morning_digest: status.info.DEFAULT,
 };
 
 // Group notification types by category
@@ -233,7 +239,10 @@ const NotificationTypeRow: React.FC<NotificationTypeRowProps> = ({
                 enabled={enabled}
                 isExplicit={isExplicit}
                 onChange={value => onToggle(channel, value)}
-                disabled={isUpdating}
+                disabled={
+                  isUpdating ||
+                  (EMAIL_ONLY_NOTIFICATION_TYPES.has(notificationType) && channel !== 'email')
+                }
                 color={iconColor}
               />
             </View>
@@ -441,6 +450,8 @@ const NotificationPreferencesScreen: React.FC = () => {
         reference_request_received: t('notifications.types.reference_request_received'),
         reference_request_accepted: t('notifications.types.reference_request_accepted'),
         reference_request_declined: t('notifications.types.reference_request_declined'),
+        // Morning digest
+        morning_digest: t('notifications.types.morning_digest'),
         // System category
         reminder: t('notifications.types.reminder'),
         payment: t('notifications.types.payment'),

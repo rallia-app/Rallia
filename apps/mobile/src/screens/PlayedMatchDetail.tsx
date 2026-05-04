@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
 import type { MatchFormatEnum, MatchTypeEnum } from '@rallia/shared-types';
-import { getHumanName } from '@rallia/shared-utils';
+import { getHumanName, getProfilePictureUrl } from '@rallia/shared-utils';
 import { useThemeStyles, useNavigateToPlayerProfile } from '../hooks';
 import { SportIcon } from '../components/SportIcon';
 
@@ -172,7 +172,7 @@ export default function PlayedMatchDetailScreen() {
 
   // Get player avatar
   const getPlayerAvatar = (participant: NonNullable<typeof matchData>['participants'][0]) => {
-    return participant.player?.profile?.profile_picture_url;
+    return getProfilePictureUrl(participant.player?.profile?.profile_picture_url);
   };
 
   const handleBack = () => {

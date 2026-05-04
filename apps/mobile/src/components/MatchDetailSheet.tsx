@@ -80,7 +80,6 @@ import {
   usePlayer,
   useReferral,
   useMatchActions,
-  usePlayerReputation,
   useConfirmMatchScore,
   useAcceptRebuttalScore,
   useDisputeRebuttalScore,
@@ -726,10 +725,21 @@ export const MatchDetailSheet: React.FC = () => {
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const playerId = player?.id;
   const navigation = useAppNavigation();
-  const { display: _creatorReputationDisplay } = usePlayerReputation(
-    selectedMatch?.created_by_player?.id
-  );
-  const creatorReputationDisplay = _creatorReputationDisplay;
+  // Derive reputation display from the match data (already fetched with the match)
+  const creatorReputationDisplay = useMemo(() => {
+    const rep = selectedMatch?.created_by_player?.player_reputation;
+    if (!rep) return null;
+    const tier = getTierForScore(rep.reputation_score, rep.total_events);
+    const tierConfig = getTierConfig(tier);
+    return {
+      tier,
+      score: rep.reputation_score,
+      isVisible: rep.total_events >= MIN_EVENTS_FOR_PUBLIC,
+      tierLabel: tierConfig.label,
+      tierColor: tierConfig.color,
+      tierIcon: tierConfig.icon,
+    };
+  }, [selectedMatch?.created_by_player?.player_reputation]);
 
   // Ref to hold the match that should reopen after navigating back from PlayerProfile
   const pendingReopenRef = useRef<MatchDetailData | null>(null);
@@ -1271,7 +1281,7 @@ export const MatchDetailSheet: React.FC = () => {
           playerId: p.player_id,
           name,
           fullName,
-          avatarUrl: profile?.profile_picture_url || null,
+          avatarUrl: getProfilePictureUrl(profile?.profile_picture_url) || null,
           hasExistingFeedback: false,
           hasExistingReport: false,
         };
@@ -1294,13 +1304,24 @@ export const MatchDetailSheet: React.FC = () => {
     pendingReopenRef.current = selectedMatch;
     closeSheet();
 
-    // Short delay so navigation runs after sheet close animation.
-    // Navigate to the Chat conversation screen (full screen, no tabs)
-    // Don't pass a custom title — let ChatConversation use the DB conversation title
+    // Derive the match chat title from live match data (not the stored DB title,
+    // which may be null for chats created by the trigger before any sync ran).
+    const sportName = (selectedMatch.sport as { name?: string } | null)?.name ?? '';
+    const matchFormat = selectedMatch.format ?? 'singles';
+    const formatLabel =
+      matchFormat === 'doubles' ? t('match.format.doubles') : t('match.format.singles');
+    const matchDate = (selectedMatch as { match_date?: string | null }).match_date;
+    const dateStr = matchDate
+      ? new Date(matchDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+      : '';
+    const matchTitle = dateStr
+      ? `${sportName} ${formatLabel} - ${dateStr}`
+      : `${sportName} ${formatLabel}`;
+
     setTimeout(() => {
       navigation.navigate('ChatConversation', {
         conversationId: matchConversationId,
-        title: undefined,
+        title: matchTitle,
       });
     }, 100);
   }, [matchConversationId, selectedMatch, isReady, openActionsSheet, closeSheet, navigation]);
@@ -3729,7 +3750,7 @@ export const MatchDetailSheet: React.FC = () => {
             ))}
           </View>
 
-          {/* Invite Players Button - only visible to host when spots available and match not ended or in progress */}
+          {/* Row 1: Invite Players - host only, full width */}
           {isCreator &&
             participantInfo.spotsLeft > 0 &&
             !hasMatchEnded &&
@@ -3758,87 +3779,85 @@ export const MatchDetailSheet: React.FC = () => {
               </TouchableOpacity>
             )}
 
-          {/* Share Match Button - visible to all users when match hasn't started */}
+          {/* Row 2: Share / Facebook / QR — external sharing options in a single row */}
           {startTimeDiffMs >= 0 && !isCancelled && !hasMatchEnded && (
-            <TouchableOpacity
-              style={[
-                styles.invitePlayersButton,
-                {
-                  backgroundColor: isDark ? `${secondary[500]}15` : `${secondary[500]}10`,
-                  borderColor: isDark ? secondary[400] : secondary[500],
-                },
-              ]}
-              onPress={handleShare}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name="share-social"
-                size={18}
-                color={isDark ? secondary[400] : secondary[500]}
-              />
-              <Text
-                size="sm"
-                weight="medium"
-                color={isDark ? secondary[400] : secondary[500]}
-                style={styles.inviteButtonText}
+            <View style={styles.shareRow}>
+              <TouchableOpacity
+                style={[
+                  styles.shareRowButton,
+                  {
+                    backgroundColor: isDark ? `${secondary[500]}15` : `${secondary[500]}10`,
+                    borderColor: isDark ? secondary[400] : secondary[500],
+                  },
+                ]}
+                onPress={handleShare}
+                activeOpacity={0.7}
               >
-                {t('matchDetail.share')}
-              </Text>
-            </TouchableOpacity>
-          )}
+                <Ionicons
+                  name="share-social"
+                  size={18}
+                  color={isDark ? secondary[400] : secondary[500]}
+                />
+                <Text
+                  size="sm"
+                  weight="medium"
+                  color={isDark ? secondary[400] : secondary[500]}
+                  style={styles.inviteButtonText}
+                >
+                  {t('matchDetail.share')}
+                </Text>
+              </TouchableOpacity>
 
-          {/* Share to Facebook - host-only; message is written in the host's voice */}
-          {isCreator && startTimeDiffMs >= 0 && !isCancelled && !hasMatchEnded && (
-            <TouchableOpacity
-              style={[
-                styles.invitePlayersButton,
-                {
-                  backgroundColor: isDark ? '#1877F215' : '#1877F210',
-                  borderColor: '#1877F2',
-                },
-              ]}
-              onPress={() => {
-                lightHaptic();
-                SheetManager.show('share-to-facebook', {
-                  payload: { matchId: match.id },
-                });
-              }}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="logo-facebook" size={18} color="#1877F2" />
-              <Text size="sm" weight="medium" color="#1877F2" style={styles.inviteButtonText}>
-                {t('matchCreation.shareToFacebook.button')}
-              </Text>
-            </TouchableOpacity>
-          )}
+              {isCreator && (
+                <TouchableOpacity
+                  style={[
+                    styles.shareRowButton,
+                    {
+                      backgroundColor: isDark ? '#1877F215' : '#1877F210',
+                      borderColor: '#1877F2',
+                    },
+                  ]}
+                  onPress={() => {
+                    lightHaptic();
+                    SheetManager.show('share-to-facebook', {
+                      payload: { matchId: match.id },
+                    });
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="logo-facebook" size={18} color="#1877F2" />
+                  <Text size="sm" weight="medium" color="#1877F2" style={styles.inviteButtonText}>
+                    {t('matchCreation.shareToFacebook.button')}
+                  </Text>
+                </TouchableOpacity>
+              )}
 
-          {/* QR code + copyable link button - for in-person invites and paste-anywhere sharing */}
-          {startTimeDiffMs >= 0 && !isCancelled && !hasMatchEnded && (
-            <TouchableOpacity
-              style={[
-                styles.invitePlayersButton,
-                {
-                  backgroundColor: isDark ? `${secondary[500]}15` : `${secondary[500]}10`,
-                  borderColor: isDark ? secondary[400] : secondary[500],
-                },
-              ]}
-              onPress={handleOpenQRModal}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name="qr-code-outline"
-                size={18}
-                color={isDark ? secondary[400] : secondary[500]}
-              />
-              <Text
-                size="sm"
-                weight="medium"
-                color={isDark ? secondary[400] : secondary[500]}
-                style={styles.inviteButtonText}
+              <TouchableOpacity
+                style={[
+                  styles.shareRowButton,
+                  {
+                    backgroundColor: isDark ? `${secondary[500]}15` : `${secondary[500]}10`,
+                    borderColor: isDark ? secondary[400] : secondary[500],
+                  },
+                ]}
+                onPress={handleOpenQRModal}
+                activeOpacity={0.7}
               >
-                {t('matchDetail.qrAndLink')}
-              </Text>
-            </TouchableOpacity>
+                <Ionicons
+                  name="qr-code-outline"
+                  size={18}
+                  color={isDark ? secondary[400] : secondary[500]}
+                />
+                <Text
+                  size="sm"
+                  weight="medium"
+                  color={isDark ? secondary[400] : secondary[500]}
+                  style={styles.inviteButtonText}
+                >
+                  {t('matchDetail.qrAndLink')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           )}
 
           {/* Pending Requests Section - only visible to host */}
@@ -4269,7 +4288,10 @@ export const MatchDetailSheet: React.FC = () => {
                     }
                     isDark={isDark}
                   />
-                  <ReputationBadge reputationDisplay={creatorReputationDisplay} isDark={isDark} />
+                  <ReputationBadge
+                    reputationDisplay={creatorReputationDisplay ?? undefined}
+                    isDark={isDark}
+                  />
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.iconMuted} />
@@ -5251,6 +5273,22 @@ const styles = StyleSheet.create({
   },
   inviteButtonText: {
     // No additional styles needed
+  },
+  shareRow: {
+    flexDirection: 'row',
+    marginTop: spacingPixels[3],
+    gap: spacingPixels[2],
+  },
+  shareRowButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[2],
+    paddingHorizontal: spacingPixels[2],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+    gap: spacingPixels[1],
   },
 
   // Pending requests (host only)

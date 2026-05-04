@@ -133,4 +133,5 @@ export {
   getUnreadConversationsCount,
   hasAgreedToChatRules,
   agreeToChatRules,
+  getConversationDisplayName,
 } from './chatUtilityService';

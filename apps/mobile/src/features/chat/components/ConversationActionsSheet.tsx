@@ -9,7 +9,7 @@ import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-shee
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { isGroupConversationType } from '@rallia/shared-services';
+import { isGroupConversationType, getConversationDisplayName } from '@rallia/shared-services';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import {
   spacingPixels,
@@ -41,11 +41,7 @@ function ConversationActionsSheetComponent({ payload }: SheetProps<'conversation
   const isArchived = conversation.is_archived ?? false;
   const isGroup = isGroupConversationType(conversation.conversation_type);
 
-  // Get conversation name for display
-  const conversationName =
-    conversation.conversation_type === 'direct' && conversation.other_participant
-      ? `${conversation.other_participant.first_name}${conversation.other_participant.last_name ? ' ' + conversation.other_participant.last_name : ''}`
-      : conversation.title || t('chat.actions.conversation');
+  const conversationName = getConversationDisplayName(conversation, t as (key: string) => string);
 
   type ActionItem = {
     id: string;

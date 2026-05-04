@@ -4,7 +4,7 @@ import { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels } from '@rallia/design-system';
-import { mediumHaptic } from '@rallia/shared-utils';
+import { mediumHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 import {
   useApproveCommunityMember,
   useRejectCommunityMember,
@@ -111,7 +111,7 @@ export function PendingRequestsActionSheet({ payload }: SheetProps<'pending-requ
               <View style={[styles.avatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
                 {request.player_profile_picture ? (
                   <Image
-                    source={{ uri: request.player_profile_picture }}
+                    source={{ uri: getProfilePictureUrl(request.player_profile_picture) ?? '' }}
                     style={styles.avatarImage}
                   />
                 ) : (

@@ -182,13 +182,36 @@ async function setupAndroidChannel(): Promise<void> {
       name: 'Default',
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#4DB8A8', // Primary teal color
+      lightColor: '#4DB8A8',
     });
 
-    // Match-specific channel for high-priority notifications
     await Notifications.setNotificationChannelAsync('match', {
       name: 'Match Notifications',
       importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#4DB8A8',
+    });
+
+    // Urgent match alerts (invitations, join requests) — must match channelId
+    // sent by the send-notification edge function for match_ types with priority=urgent.
+    await Notifications.setNotificationChannelAsync('match_urgent', {
+      name: 'Match Alerts',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#4DB8A8',
+      bypassDnd: true,
+    });
+
+    await Notifications.setNotificationChannelAsync('messages', {
+      name: 'Messages',
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#4DB8A8',
+    });
+
+    await Notifications.setNotificationChannelAsync('feedback', {
+      name: 'Feedback',
+      importance: Notifications.AndroidImportance.DEFAULT,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#4DB8A8',
     });

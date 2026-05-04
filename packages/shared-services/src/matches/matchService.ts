@@ -57,6 +57,7 @@ import type {
   MatchTierFilter,
   SpotsAvailableFilter,
   SpecificTimeFilter,
+  ReputationFilter,
 } from '@rallia/shared-types';
 import { calculateDistanceMeters } from '@rallia/shared-utils';
 
@@ -3139,6 +3140,10 @@ export interface SearchPublicMatchesParams {
   spotsAvailable?: SpotsAvailableFilter;
   /** Specific time filter (HH:MM format), overrides timeOfDay when set */
   specificTime?: SpecificTimeFilter;
+  /** Reputation tier filter for match host */
+  reputation?: ReputationFilter;
+  /** Rating score IDs filter — matches whose min_rating_score_id is in this array */
+  ratingScoreIds?: string[];
   /** The viewing user's gender for eligibility filtering */
   userGender?: string | null;
   /** Filter by specific facility ID - when set, only returns matches at that facility */
@@ -3183,6 +3188,8 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     specificDate,
     spotsAvailable = 'all',
     specificTime,
+    reputation = 'all',
+    ratingScoreIds,
     userGender,
     facilityId,
     limit = 20,
@@ -3215,6 +3222,8 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     p_match_tier: matchTier === 'all' ? null : matchTier,
     p_spots_available: spotsAvailable === 'all' ? null : spotsAvailable,
     p_specific_time: specificTime || null,
+    p_reputation_tier: reputation === 'all' ? null : reputation,
+    p_rating_score_ids: ratingScoreIds?.length ? ratingScoreIds : null,
   };
 
   // Step 1: Get match IDs using RPC with filters + count on first page

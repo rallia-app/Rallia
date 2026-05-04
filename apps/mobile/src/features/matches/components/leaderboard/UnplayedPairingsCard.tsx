@@ -10,7 +10,7 @@ import { Image, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { neutral, primary, radiusPixels, spacingPixels } from '@rallia/design-system';
-import { getHumanName } from '@rallia/shared-utils';
+import { getHumanName, getProfilePictureUrl } from '@rallia/shared-utils';
 import type { NetworkPulseUnplayedPairing } from '@rallia/shared-hooks';
 
 import { useThemeStyles, useTranslation } from '../../../../hooks';
@@ -60,7 +60,10 @@ export function UnplayedPairingsCard({
                 style={[styles.avatar, { backgroundColor: isDark ? neutral[800] : neutral[200] }]}
               >
                 {p.profile_picture_url ? (
-                  <Image source={{ uri: p.profile_picture_url }} style={styles.avatarImage} />
+                  <Image
+                    source={{ uri: getProfilePictureUrl(p.profile_picture_url) ?? '' }}
+                    style={styles.avatarImage}
+                  />
                 ) : (
                   <Ionicons name="person-outline" size={16} color={colors.textMuted} />
                 )}

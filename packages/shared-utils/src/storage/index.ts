@@ -106,6 +106,36 @@ export function normalizeStorageUrl(
 }
 
 /**
+ * Rewrite a public Supabase Storage URL to use the image render endpoint,
+ * which resizes and recompresses the image server-side before delivery.
+ * The rendered result is CDN-cached, so repeated requests are free.
+ *
+ * Only applies to hosted Supabase URLs (*.supabase.co) — local dev URLs
+ * are returned as-is since the render endpoint isn't available locally.
+ *
+ * @param url - Public storage URL to transform
+ * @param options.width - Max width in pixels (image is scaled proportionally)
+ * @param options.quality - JPEG quality 1–100
+ * @returns Transformed URL, or the original URL if transform doesn't apply
+ */
+export function getStorageImageUrl(
+  url: string | null | undefined,
+  options: { width?: number; height?: number; quality?: number } = {}
+): string | null {
+  if (!url) return null;
+  if (!url.includes('.supabase.co')) return url;
+  if (!url.includes('/storage/v1/object/public/')) return url;
+
+  const renderUrl = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+  const params = new URLSearchParams();
+  if (options.width) params.set('width', String(options.width));
+  if (options.height) params.set('height', String(options.height));
+  if (options.quality) params.set('quality', String(options.quality));
+  const qs = params.toString();
+  return qs ? `${renderUrl}?${qs}` : renderUrl;
+}
+
+/**
  * Get the normalized profile picture URL for a user
  * Convenience function that normalizes URLs specifically for profile pictures
  *
@@ -113,5 +143,6 @@ export function normalizeStorageUrl(
  * @returns Normalized URL or null
  */
 export function getProfilePictureUrl(profilePictureUrl: string | null | undefined): string | null {
-  return normalizeStorageUrl(profilePictureUrl, 'profile-pictures');
+  const normalized = normalizeStorageUrl(profilePictureUrl, 'profile-pictures');
+  return getStorageImageUrl(normalized, { width: 200, height: 200, quality: 75 });
 }

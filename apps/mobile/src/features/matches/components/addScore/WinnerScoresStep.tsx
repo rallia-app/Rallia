@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation } from '../../../../hooks';
 import { useProfile } from '@rallia/shared-hooks';
+import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { primary } from '@rallia/design-system';
 import { useAddScore } from './AddScoreContext';
 import { MatchResultConfirmModal } from './MatchResultConfirmModal';
@@ -243,7 +244,7 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
 
           {/* Team 1 avatars */}
           <View style={styles.teamAvatarsRow}>
-            {renderAvatar(profile?.profile_picture_url, 'You', true)}
+            {renderAvatar(getProfilePictureUrl(profile?.profile_picture_url), 'You', true)}
             {isDoubles &&
               partner &&
               renderAvatar(partner.profilePictureUrl, partner.firstName, true, true)}

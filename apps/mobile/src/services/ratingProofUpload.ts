@@ -18,6 +18,8 @@ import {
   BackblazeUploadProgress,
 } from './backblazeUpload';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as VideoThumbnails from 'expo-video-thumbnails';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
 /**
  * Convert base64 string to Uint8Array for Supabase upload
@@ -249,6 +251,58 @@ async function createRatingProofRecord(
 }
 
 /**
+ * Generate a thumbnail from a video file and upload it to storage.
+ * Returns the public URL of the uploaded thumbnail, or null on failure.
+ */
+async function generateAndUploadVideoThumbnail(
+  videoUri: string,
+  userId: string
+): Promise<string | null> {
+  try {
+    // Generate thumbnail at 1 second mark
+    const { uri: thumbnailUri } = await VideoThumbnails.getThumbnailAsync(videoUri, {
+      time: 1000,
+      quality: 0.7,
+    });
+
+    // Resize thumbnail to max 400px wide for minimal storage/egress
+    const context = ImageManipulator.manipulate(thumbnailUri);
+    const rendered = await context.resize({ width: 400 }).renderAsync();
+    const resized = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: 0.75 });
+
+    // Read the resized thumbnail as base64
+    const base64Data = await FileSystem.readAsStringAsync(resized.uri, {
+      encoding: 'base64',
+    });
+    const fileData = base64ToUint8Array(base64Data);
+
+    // Upload to rating-proof-images bucket (reuse for thumbnails)
+    const fileName = `${Date.now()}-thumb.jpg`;
+    const filePath = `${userId}/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('rating-proof-images')
+      .upload(filePath, fileData, {
+        contentType: 'image/jpeg',
+        upsert: false,
+      });
+
+    if (uploadError) {
+      Logger.warn('Failed to upload video thumbnail', { error: uploadError.message });
+      return null;
+    }
+
+    const publicUrl = getStoragePublicUrl('rating-proof-images', filePath);
+    Logger.info('Video thumbnail generated and uploaded', { publicUrl });
+    return publicUrl;
+  } catch (error) {
+    // Thumbnail generation is best-effort — don't block the upload
+    Logger.warn('Failed to generate video thumbnail', { error: (error as Error).message });
+    return null;
+  }
+}
+
+/**
  * Upload a rating proof file (video, image, or document)
  *
  * This is the main entry point for uploading proof files.
@@ -320,6 +374,13 @@ export async function uploadRatingProofFile(
       }
     }
 
+    // Generate and upload thumbnail for videos (best-effort, non-blocking)
+    let thumbnailUrl: string | undefined;
+    if (fileType === 'video') {
+      const thumb = await generateAndUploadVideoThumbnail(fileUri, userId);
+      if (thumb) thumbnailUrl = thumb;
+    }
+
     // Create file record in database
     const fileResult = await createFileRecord(
       userId,
@@ -329,7 +390,8 @@ export async function uploadRatingProofFile(
       fileType,
       mimeType,
       fileSize,
-      storageProvider
+      storageProvider,
+      thumbnailUrl
     );
 
     if (fileResult.error || !fileResult.fileId) {
@@ -354,6 +416,7 @@ export async function uploadRatingProofFile(
       fileId: fileResult.fileId,
       proofId: proofResult.proofId,
       url: uploadResult.url,
+      thumbnailUrl,
     });
 
     return {
@@ -509,6 +572,13 @@ export async function replaceProofFile(
       }
     }
 
+    // Generate and upload thumbnail for videos (best-effort)
+    let thumbnailUrl: string | undefined;
+    if (fileType === 'video') {
+      const thumb = await generateAndUploadVideoThumbnail(fileUri, userId);
+      if (thumb) thumbnailUrl = thumb;
+    }
+
     // Create new file record
     const fileResult = await createFileRecord(
       userId,
@@ -518,7 +588,8 @@ export async function replaceProofFile(
       fileType,
       mimeType,
       fileSize,
-      storageProvider
+      storageProvider,
+      thumbnailUrl
     );
 
     if (fileResult.error || !fileResult.fileId) {

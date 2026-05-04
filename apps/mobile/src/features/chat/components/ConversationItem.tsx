@@ -9,9 +9,11 @@ import { View, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
+import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
 import type { ConversationPreview } from '@rallia/shared-services';
+import { getConversationDisplayName } from '@rallia/shared-services';
 import { SportIcon } from '../../../components/SportIcon';
 
 interface ConversationItemProps {
@@ -63,7 +65,7 @@ function formatLastSeen(dateString: string | null | undefined): string {
 // Translation function type that accepts any key (for internal use)
 type TranslateFn = (key: string, options?: Record<string, string | number | boolean>) => string;
 
-// Map conversation type to a specific fallback icon
+// Map conversation type to a fallback icon
 function getIconForType(type: string): keyof typeof Ionicons.glyphMap {
   switch (type) {
     case 'direct':
@@ -76,6 +78,8 @@ function getIconForType(type: string): keyof typeof Ionicons.glyphMap {
       return 'earth';
     case 'club':
       return 'business';
+    case 'match':
+      return 'trophy';
     case 'announcement':
       return 'megaphone';
     default:
@@ -91,31 +95,39 @@ function getConversationInfo(
   name: string;
   avatar: string | null;
   iconName: keyof typeof Ionicons.glyphMap;
-  useSportIcon: boolean;
+  sportIconName: string | null;
   isOnline: boolean;
   lastSeen: string | null;
 } {
+  const name = getConversationDisplayName(conversation, t);
+
   if (conversation.conversation_type === 'direct' && conversation.other_participant) {
-    const participant = conversation.other_participant;
-    const name = participant.last_name
-      ? `${participant.first_name} ${participant.last_name}`
-      : participant.first_name;
     return {
       name,
-      avatar: participant.profile_picture_url,
+      avatar: getProfilePictureUrl(conversation.other_participant.profile_picture_url),
       iconName: 'person',
-      useSportIcon: false,
-      isOnline: participant.is_online ?? false,
-      lastSeen: participant.last_seen_at ?? null,
+      sportIconName: null,
+      isOnline: conversation.other_participant.is_online ?? false,
+      lastSeen: conversation.other_participant.last_seen_at ?? null,
     };
   }
 
-  // Group or other conversation types
+  if (conversation.conversation_type === 'match') {
+    return {
+      name,
+      avatar: conversation.cover_image_url || null,
+      iconName: 'trophy',
+      sportIconName: conversation.match_info?.sport_name ?? null,
+      isOnline: false,
+      lastSeen: null,
+    };
+  }
+
   return {
-    name: conversation.title || t('chat.conversation.groupChat'),
+    name,
     avatar: conversation.cover_image_url || null,
     iconName: getIconForType(conversation.conversation_type),
-    useSportIcon: conversation.conversation_type === 'match',
+    sportIconName: null,
     isOnline: false,
     lastSeen: null,
   };
@@ -130,7 +142,7 @@ function ConversationItemComponent({
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   // Cast t to TranslateFn for getConversationInfo which uses dynamic keys
-  const { name, avatar, iconName, useSportIcon, isOnline, lastSeen } = getConversationInfo(
+  const { name, avatar, iconName, sportIconName, isOnline, lastSeen } = getConversationInfo(
     conversation,
     t as TranslateFn
   );
@@ -172,8 +184,8 @@ function ConversationItemComponent({
           <Image source={{ uri: avatar }} style={styles.avatar} />
         ) : (
           <View style={[styles.avatarPlaceholder, { backgroundColor: primary[100] }]}>
-            {useSportIcon ? (
-              <SportIcon sportName="tennis" size={24} color={primary[500]} />
+            {sportIconName ? (
+              <SportIcon sportName={sportIconName} size={24} color={primary[500]} />
             ) : (
               <Ionicons name={iconName} size={24} color={primary[500]} />
             )}

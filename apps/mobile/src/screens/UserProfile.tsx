@@ -16,12 +16,7 @@ import { SheetManager } from 'react-native-actions-sheet';
 import { useAppNavigation } from '../navigation/hooks';
 import { Text, Skeleton, SkeletonAvatar, useToast } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
-import {
-  useProfile,
-  usePlayer,
-  usePlayerReputation,
-  useProfileCompleteness,
-} from '@rallia/shared-hooks';
+import { useProfile, usePlayer, useProfileCompleteness } from '@rallia/shared-hooks';
 import type { CompletenessItem } from '@rallia/shared-hooks';
 import { replaceImage } from '../services/imageUpload';
 import {
@@ -96,12 +91,9 @@ const UserProfile = () => {
     sportRatings,
     loading: playerLoading,
     refetch: refetchPlayer,
+    reputationDisplay,
+    reputationTotalEvents,
   } = usePlayer();
-  const {
-    display: reputationDisplay,
-    reputation,
-    loading: reputationLoading,
-  } = usePlayerReputation(player?.id);
   const { userSports, refetch: refetchSportContext } = useSport();
   const loadingCore = profileLoading || playerLoading;
 
@@ -887,9 +879,9 @@ const UserProfile = () => {
                 <CovetedBadge
                   reputationScore={reputationDisplay?.score}
                   certificationStatus={primaryRating?.badge_status}
-                  totalEvents={reputation?.totalEvents}
+                  totalEvents={reputationTotalEvents}
                   isDark={isDark}
-                  isLoading={playerLoading || reputationLoading}
+                  isLoading={playerLoading}
                 />
 
                 {/* Rating & Reputation Badges */}
@@ -910,9 +902,9 @@ const UserProfile = () => {
                     }
                   />
                   <ReputationBadge
-                    reputationDisplay={reputationDisplay}
+                    reputationDisplay={reputationDisplay ?? undefined}
                     isDark={isDark}
-                    isLoading={reputationLoading}
+                    isLoading={playerLoading}
                     onInfoPress={() => SheetManager.show('reputation-explainer')}
                   />
                 </View>
