@@ -752,8 +752,8 @@ const Home = () => {
     playerId: player?.id,
     sportId: selectedSport?.id,
     sportName: selectedSport?.name,
-    latitude: !player?.id ? location?.latitude : undefined,
-    longitude: !player?.id ? location?.longitude : undefined,
+    latitude: location?.latitude,
+    longitude: location?.longitude,
     limit: 30,
     enabled: showNearbySection,
   });
