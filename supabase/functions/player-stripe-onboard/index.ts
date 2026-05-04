@@ -6,6 +6,14 @@
  * system browser (Linking.openURL); Stripe redirects back via Universal Link
  * to https://rallia.app/stripe-connect-return when the user finishes.
  *
+ * Key design decisions for minimal onboarding friction:
+ *   - business_type: 'individual'  → skips "What type of business?" screen
+ *   - Only 'transfers' capability  → host accounts receive money, they don't
+ *     process cards (the platform does), so lighter KYC requirements
+ *   - Pre-fill name, email, DOB, address from Rallia profile/player tables
+ *     so Stripe won't re-ask for information we already have
+ *   - MCC 7941 (Sports Clubs/Fields) for accurate risk classification
+ *
  * POST /player-stripe-onboard  (authenticated — JWT validated internally)
  * Response: { url: string }
  */
@@ -24,6 +32,38 @@ function json(body: unknown, status = 200) {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
+
+/**
+ * Parse a birth_date string (YYYY-MM-DD) into Stripe's { day, month, year }
+ * format. Returns undefined if the string is missing or malformed.
+ */
+function parseDob(birthDate: string | null | undefined) {
+  if (!birthDate) return undefined;
+  const [y, m, d] = birthDate.split('-').map(Number);
+  if (!y || !m || !d) return undefined;
+  return { year: y, month: m, day: d };
+}
+
+/**
+ * Map a Canadian province code (e.g. "QC") to its full Stripe-expected name.
+ * Stripe's Express onboarding for Canada uses the full province/territory name
+ * in the address.state field.
+ */
+const CA_PROVINCE_MAP: Record<string, string> = {
+  AB: 'Alberta',
+  BC: 'British Columbia',
+  MB: 'Manitoba',
+  NB: 'New Brunswick',
+  NL: 'Newfoundland and Labrador',
+  NS: 'Nova Scotia',
+  NT: 'Northwest Territories',
+  NU: 'Nunavut',
+  ON: 'Ontario',
+  PE: 'Prince Edward Island',
+  QC: 'Quebec',
+  SK: 'Saskatchewan',
+  YT: 'Yukon',
+};
 
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') {
@@ -68,12 +108,60 @@ Deno.serve(async req => {
     if (existing) {
       stripeAccountId = existing.stripe_account_id;
     } else {
+      // ---- Fetch profile + player data to pre-fill Stripe onboarding ----
+      // Pre-filled fields are skipped by Stripe's hosted onboarding, which
+      // dramatically shortens the flow for the user.
+      const [{ data: profile }, { data: player }] = await Promise.all([
+        admin
+          .from('profile')
+          .select('first_name, last_name, email, birth_date, phone')
+          .eq('id', playerId)
+          .single(),
+        admin
+          .from('player')
+          .select('address, city, province, postal_code')
+          .eq('id', playerId)
+          .single(),
+      ]);
+
+      // Build the individual object with whatever data we have
+      const individual: Stripe.AccountCreateParams.Individual = {};
+
+      if (profile?.first_name) individual.first_name = profile.first_name;
+      if (profile?.last_name) individual.last_name = profile.last_name;
+      if (profile?.email) individual.email = profile.email;
+      if (profile?.phone) individual.phone = profile.phone;
+
+      const dob = parseDob(profile?.birth_date);
+      if (dob) individual.dob = dob;
+
+      // Build address from player table fields
+      if (player?.address || player?.city || player?.province || player?.postal_code) {
+        individual.address = {
+          country: 'CA',
+          ...(player.address && { line1: player.address }),
+          ...(player.city && { city: player.city }),
+          ...(player.province && {
+            state: CA_PROVINCE_MAP[player.province] ?? player.province,
+          }),
+          ...(player.postal_code && { postal_code: player.postal_code }),
+        };
+      }
+
       const account = await stripe.accounts.create({
         type: 'express',
         country: 'CA',
+        business_type: 'individual',
+        individual,
         capabilities: {
-          card_payments: { requested: true },
           transfers: { requested: true },
+        },
+        business_profile: {
+          mcc: '7941', // Sports Clubs/Fields
+          product_description: 'Receiving court cost reimbursements from co-players',
+        },
+        metadata: {
+          player_id: playerId,
         },
       });
       stripeAccountId = account.id;
