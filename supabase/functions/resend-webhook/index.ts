@@ -192,13 +192,10 @@ Deno.serve(async req => {
     await logEvent(supabase, userId, resendId, event.type, event.created_at, event);
   } catch (err) {
     console.error('[resend-webhook] handler error:', err);
-    return new Response(
-      JSON.stringify({
-        error: 'Internal error',
-        details: err instanceof Error ? err.message : String(err),
-      }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: 'Internal error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   return new Response(JSON.stringify({ ok: true }), {
