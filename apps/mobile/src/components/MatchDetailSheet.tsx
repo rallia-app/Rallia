@@ -2103,7 +2103,8 @@ export const MatchDetailSheet: React.FC = () => {
       const { error: initError } = await initPaymentSheet({
         paymentIntentClientSecret: data.clientSecret,
         merchantDisplayName: 'Rallia',
-        merchantCountryCode: 'CA',
+        applePay: { merchantCountryCode: 'CA' },
+        googlePay: { merchantCountryCode: 'CA' },
       });
       if (initError) throw new Error(initError.message);
 

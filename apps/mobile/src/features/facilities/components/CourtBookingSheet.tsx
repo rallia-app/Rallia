@@ -343,7 +343,8 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
         const { error: initError } = await initPaymentSheet({
           paymentIntentClientSecret: result.clientSecret,
           merchantDisplayName: 'Rallia',
-          merchantCountryCode: 'CA',
+          applePay: { merchantCountryCode: 'CA' },
+          googlePay: { merchantCountryCode: 'CA' },
         });
 
         if (initError) {
