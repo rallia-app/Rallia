@@ -4622,9 +4622,9 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
                     })}
                   </Text>
                   <TouchableOpacity
-                    onPress={handleMarkAsPaid}
+                    onPress={() => handleMarkAsPaid()}
                     style={{
-                      backgroundColor: colors.card,
+                      backgroundColor: colors.cardBackground,
                       borderWidth: 1,
                       borderColor: colors.border,
                       borderRadius: 8,
@@ -4679,7 +4679,7 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
                         <TouchableOpacity
                           onPress={() => handleMarkAsPaid(p.player_id)}
                           style={{
-                            backgroundColor: colors.card,
+                            backgroundColor: colors.cardBackground,
                             borderWidth: 1,
                             borderColor: colors.border,
                             borderRadius: 6,
