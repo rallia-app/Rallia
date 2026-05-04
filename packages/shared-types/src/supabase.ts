@@ -1944,6 +1944,33 @@ export type Database = {
           },
         ]
       }
+      invite_shortlink: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          invitation_type: string
+          referral_code: string
+          slug: string
+          target_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          invitation_type: string
+          referral_code?: string
+          slug: string
+          target_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          invitation_type?: string
+          referral_code?: string
+          slug?: string
+          target_id?: string | null
+        }
+        Relationships: []
+      }
       match: {
         Row: {
           booking_id: string | null
@@ -4746,6 +4773,41 @@ export type Database = {
           },
         ]
       }
+      player_stripe_account: {
+        Row: {
+          created_at: string
+          id: string
+          onboarding_completed: boolean
+          player_id: string
+          stripe_account_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          onboarding_completed?: boolean
+          player_id: string
+          stripe_account_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          onboarding_completed?: boolean
+          player_id?: string
+          stripe_account_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_stripe_account_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: true
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_subscription: {
         Row: {
           cancellation_date: string | null
@@ -6735,6 +6797,14 @@ export type Database = {
         }
         Returns: number
       }
+      create_invite_shortlink: {
+        Args: {
+          p_invitation_type: string
+          p_referral_code?: string
+          p_target_id?: string
+        }
+        Returns: string
+      }
       debug_check_conversation_participant: {
         Args: { p_conversation_id: string; p_player_id: string }
         Returns: {
@@ -6760,6 +6830,7 @@ export type Database = {
         Returns: string
       }
       generate_daily_analytics_snapshot: { Args: never; Returns: undefined }
+      generate_short_slug: { Args: { len?: number }; Returns: string }
       generate_unique_invite_code: { Args: never; Returns: string }
       generate_unique_referral_code: { Args: never; Returns: string }
       generate_weekly_matches_for_all_players: {
@@ -7124,35 +7195,71 @@ export type Database = {
           player_compatibility: number
         }[]
       }
-      get_match_suggestions_scored: {
-        Args: { p_limit?: number; p_player_id: string; p_sport_id: string; p_lat?: number | null; p_lng?: number | null }
-        Returns: {
-          facility_address: string
-          facility_affinity: number
-          facility_booking_url_tpl: string
-          facility_city: string
-          facility_data_provider_id: string
-          facility_external_id: string
-          facility_id: string
-          facility_name: string
-          facility_provider_type: string
-          facility_timezone: string
-          match_duration: Database["public"]["Enums"]["match_duration_enum"]
-          match_type: Database["public"]["Enums"]["match_type_enum"]
-          matchup_score: number
-          opponent_avatar: string
-          opponent_badge_status: Database["public"]["Enums"]["badge_status_enum"]
-          opponent_first_name: string
-          opponent_id: string
-          opponent_last_name: string
-          opponent_rating_label: string
-          opponent_rating_value: number
-          opponent_reputation_score: number
-          opponent_reputation_tier: Database["public"]["Enums"]["reputation_tier"]
-          overlapping_days_periods: Json
-          player_compatibility: number
-        }[]
-      }
+      get_match_suggestions_scored:
+        | {
+            Args: { p_limit?: number; p_player_id: string; p_sport_id: string }
+            Returns: {
+              facility_address: string
+              facility_affinity: number
+              facility_booking_url_tpl: string
+              facility_city: string
+              facility_data_provider_id: string
+              facility_external_id: string
+              facility_id: string
+              facility_name: string
+              facility_provider_type: string
+              facility_timezone: string
+              match_duration: Database["public"]["Enums"]["match_duration_enum"]
+              match_type: Database["public"]["Enums"]["match_type_enum"]
+              matchup_score: number
+              opponent_avatar: string
+              opponent_badge_status: Database["public"]["Enums"]["badge_status_enum"]
+              opponent_first_name: string
+              opponent_id: string
+              opponent_last_name: string
+              opponent_rating_label: string
+              opponent_rating_value: number
+              opponent_reputation_score: number
+              opponent_reputation_tier: Database["public"]["Enums"]["reputation_tier"]
+              overlapping_days_periods: Json
+              player_compatibility: number
+            }[]
+          }
+        | {
+            Args: {
+              p_lat?: number
+              p_limit?: number
+              p_lng?: number
+              p_player_id: string
+              p_sport_id: string
+            }
+            Returns: {
+              facility_address: string
+              facility_affinity: number
+              facility_booking_url_tpl: string
+              facility_city: string
+              facility_data_provider_id: string
+              facility_external_id: string
+              facility_id: string
+              facility_name: string
+              facility_provider_type: string
+              facility_timezone: string
+              match_duration: Database["public"]["Enums"]["match_duration_enum"]
+              match_type: Database["public"]["Enums"]["match_type_enum"]
+              matchup_score: number
+              opponent_avatar: string
+              opponent_badge_status: Database["public"]["Enums"]["badge_status_enum"]
+              opponent_first_name: string
+              opponent_id: string
+              opponent_last_name: string
+              opponent_rating_label: string
+              opponent_rating_value: number
+              opponent_reputation_score: number
+              opponent_reputation_tier: Database["public"]["Enums"]["reputation_tier"]
+              overlapping_days_periods: Json
+              player_compatibility: number
+            }[]
+          }
       get_match_type_types: {
         Args: never
         Returns: {
@@ -7897,6 +8004,17 @@ export type Database = {
           network_name: string
         }[]
       }
+      get_top_referrers: {
+        Args: { p_days?: number; p_limit?: number }
+        Returns: {
+          attributed_signups: number
+          clicks: number
+          first_name: string
+          last_name: string
+          referral_code: string
+          referrer_id: string
+        }[]
+      }
       get_unread_conversations_count: {
         Args: { p_player_id: string }
         Returns: number
@@ -8269,6 +8387,7 @@ export type Database = {
         Args: {
           p_court_types?: string[]
           p_facility_types?: string[]
+          p_favorites_only?: boolean
           p_has_availabilities?: boolean
           p_has_lighting?: boolean
           p_latitude: number
@@ -8277,6 +8396,7 @@ export type Database = {
           p_max_distance_km?: number
           p_membership_required?: boolean
           p_offset?: number
+          p_organization_nature?: string
           p_player_id?: string
           p_search_query?: string
           p_sport_ids: string[]
@@ -8342,6 +8462,7 @@ export type Database = {
           p_availability?: string
           p_blocked_only?: boolean
           p_blocked_player_ids?: string[]
+          p_certified_only?: boolean
           p_current_user_id?: string
           p_day?: string
           p_exclude_player_ids?: string[]
@@ -8355,6 +8476,8 @@ export type Database = {
           p_min_travel_distance_km?: number
           p_offset?: number
           p_play_style?: string
+          p_rating_score_ids?: string[]
+          p_reputation_tier?: string
           p_search_query?: string
           p_sort_by?: string
           p_sport_id: string
@@ -8367,6 +8490,7 @@ export type Database = {
           gender: string
           id: string
           last_name: string
+          last_seen_at: string
           latitude: number
           longitude: number
           profile_picture_url: string
@@ -8374,6 +8498,9 @@ export type Database = {
           rating_is_certified: boolean
           rating_label: string
           rating_value: number
+          reputation_is_public: boolean
+          reputation_score: number
+          reputation_tier: string
           total_count: number
         }[]
       }
@@ -8394,6 +8521,8 @@ export type Database = {
           p_match_type?: string
           p_max_distance_km: number
           p_offset?: number
+          p_rating_score_ids?: string[]
+          p_reputation_tier?: string
           p_search_query?: string
           p_skill_level?: string
           p_specific_date?: string
@@ -8423,6 +8552,8 @@ export type Database = {
           p_match_tier?: string
           p_match_type?: string
           p_max_distance_km?: number
+          p_rating_score_ids?: string[]
+          p_reputation_tier?: string
           p_search_query?: string
           p_skill_level?: string
           p_specific_date?: string
