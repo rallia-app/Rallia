@@ -25,6 +25,6 @@
   "devDependencies": {
     "@rallia/eslint-config": "*",
     "@tanstack/react-query": "^5.62.0",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   }
 }
