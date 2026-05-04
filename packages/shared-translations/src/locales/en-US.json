@@ -442,6 +442,26 @@
       "org_announcement": {
         "title": "Announcement from {orgName}",
         "body": "{orgName} shared a new announcement. Tap to read."
+      },
+      "payouts_setup_required": {
+        "title": "{amount} ready to receive",
+        "body": "A player paid you back. Verify your bank account to get paid (5 min)."
+      },
+      "payouts_released": {
+        "title": "{amount} on the way",
+        "body": "Your reimbursement is heading to your bank — arrives in 1–2 business days."
+      },
+      "payouts_expired_refunded": {
+        "title": "Reimbursement could not be completed",
+        "body": "{amount} was refunded because the payout couldn't be set up in time."
+      },
+      "reimbursement_received": {
+        "title": "Reimbursement received: {amount}",
+        "body": "A player paid {amount} toward your court cost."
+      },
+      "reimbursement_all_received": {
+        "title": "All reimbursements received",
+        "body": "Everyone has paid you back for the game."
       }
     }
   },
@@ -2235,6 +2255,7 @@
       "leaderboard": "Leaderboard",
       "activity": "Activity",
       "games": "Games",
+      "facilities": "Facilities",
       "members": "Members",
       "about": "About"
     },
@@ -2426,6 +2447,7 @@
       "leaderboard": "Leaderboard",
       "activity": "Activity",
       "games": "Games",
+      "facilities": "Facilities",
       "members": "Members",
       "info": "Info"
     },
@@ -3223,7 +3245,23 @@
     "youOweHost": "{amount} owed to {name}",
     "payDirectly": "Pay {name} directly · {amount}",
     "hostNotConnected": "{name} hasn't set up payments yet",
-    "paidCount": "{paid}/{total} players have paid"
+    "hostManualOnly": "{name} prefers to be paid directly · {amount}",
+    "paidCount": "{paid}/{total} players have paid",
+    "payoutsSetupBanner": {
+      "title": "{amount} ready to receive",
+      "body": "Verify your bank account to get paid. Takes about 5 minutes.",
+      "cta": "Get paid"
+    },
+    "choosePayouts": {
+      "title": "How do you want to handle reimbursements?",
+      "stripeOption": "Stripe (recommended)",
+      "stripeDescription": "Players pay with Apple Pay in 3 seconds. Funds go to your bank. ~5 min one-time setup.",
+      "manualOption": "Track only",
+      "manualDescription": "Mark who paid you out-of-band (cash, Interac, etc.). No setup, no fees.",
+      "later": "Decide later"
+    },
+    "switchToStripe": "Switch to Stripe",
+    "trackingOnly": "Tracking payments manually"
   },
   "registerMatchScore": {
     "title": "Register score",

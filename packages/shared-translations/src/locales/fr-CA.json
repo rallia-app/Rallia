@@ -442,6 +442,26 @@
       "org_announcement": {
         "title": "Annonce de {orgName}",
         "body": "{orgName} a partagé une nouvelle annonce. Touche pour lire."
+      },
+      "payouts_setup_required": {
+        "title": "{amount} prêt à recevoir",
+        "body": "Un joueur t'a remboursé. Vérifie ton compte bancaire pour recevoir l'argent (5 min)."
+      },
+      "payouts_released": {
+        "title": "{amount} en route",
+        "body": "Ton remboursement est en route vers ta banque — arrive en 1 à 2 jours ouvrables."
+      },
+      "payouts_expired_refunded": {
+        "title": "Remboursement non complété",
+        "body": "{amount} a été remboursé au joueur car le paiement n'a pas pu être configuré à temps."
+      },
+      "reimbursement_received": {
+        "title": "Remboursement reçu : {amount}",
+        "body": "Un joueur a payé {amount} pour ta réservation."
+      },
+      "reimbursement_all_received": {
+        "title": "Tous les remboursements reçus",
+        "body": "Tout le monde t'a remboursé pour la partie."
       }
     }
   },
@@ -2235,6 +2255,7 @@
       "leaderboard": "Classement",
       "activity": "Activité",
       "games": "Parties",
+      "facilities": "Installations",
       "members": "Membres",
       "about": "À propos"
     },
@@ -2426,6 +2447,7 @@
       "leaderboard": "Classement",
       "activity": "Activité",
       "games": "Parties",
+      "facilities": "Installations",
       "members": "Membres",
       "info": "Info"
     },
@@ -3137,7 +3159,7 @@
     "shareFormat": "Format : {format}",
     "shareDuration": "Durée : {duration}",
     "shareMinLevel": "Niveau minimum : {level}",
-    "qrAndLink": "Code QR et lien",
+    "qrAndLink": "Code QR",
     "qrModalTitle": "Inviter à ce match",
     "qrModalDescription": "Laisse quelqu'un scanner le code, ou copie le lien pour le coller ailleurs",
     "distance": "Distance",
@@ -3223,7 +3245,23 @@
     "youOweHost": "{amount} dû à {name}",
     "payDirectly": "Payer {name} directement · {amount}",
     "hostNotConnected": "{name} n'a pas encore configuré les paiements",
-    "paidCount": "{paid}/{total} joueurs ont payé"
+    "hostManualOnly": "{name} préfère être payé directement · {amount}",
+    "paidCount": "{paid}/{total} joueurs ont payé",
+    "payoutsSetupBanner": {
+      "title": "{amount} prêt à recevoir",
+      "body": "Vérifie ton compte bancaire pour recevoir l'argent. Environ 5 minutes.",
+      "cta": "Recevoir le paiement"
+    },
+    "choosePayouts": {
+      "title": "Comment veux-tu gérer les remboursements?",
+      "stripeOption": "Stripe (recommandé)",
+      "stripeDescription": "Les joueurs paient avec Apple Pay en 3 secondes. L'argent va à ta banque. ~5 min de configuration.",
+      "manualOption": "Suivi seulement",
+      "manualDescription": "Marque qui t'a payé en personne (comptant, Interac, etc.). Aucune configuration, aucuns frais.",
+      "later": "Plus tard"
+    },
+    "switchToStripe": "Passer à Stripe",
+    "trackingOnly": "Suivi manuel des paiements"
   },
   "registerMatchScore": {
     "title": "Enregistrer le score",
