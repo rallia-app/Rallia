@@ -108,6 +108,7 @@ export interface FacilityFilters {
   lighting: LightingFilter;
   membership: MembershipFilter;
   hasAvailabilities: boolean;
+  favoritesOnly: boolean;
 }
 
 /** Default filter values */
@@ -119,6 +120,7 @@ export const DEFAULT_FACILITY_FILTERS: FacilityFilters = {
   lighting: 'all',
   membership: 'all',
   hasAvailabilities: false,
+  favoritesOnly: false,
 };
 
 interface UseFacilitySearchOptions {

@@ -8164,6 +8164,9 @@
       },
       "hasAvailabilities": {
         "label": "Réservable"
+      },
+      "favorites": {
+        "label": "Favoris"
       }
     },
     "empty": {

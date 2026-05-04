@@ -8162,6 +8162,9 @@
       },
       "hasAvailabilities": {
         "label": "Bookable"
+      },
+      "favorites": {
+        "label": "Favorites"
       }
     },
     "empty": {

@@ -498,6 +498,10 @@ export default function FacilityFiltersBar({
     onFiltersChange({ ...filters, hasAvailabilities: !filters.hasAvailabilities });
   }, [filters, onFiltersChange]);
 
+  const handleFavoritesOnlyToggle = useCallback(() => {
+    onFiltersChange({ ...filters, favoritesOnly: !filters.favoritesOnly });
+  }, [filters, onFiltersChange]);
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -518,6 +522,16 @@ export default function FacilityFiltersBar({
             />
           </View>
         )}
+
+        {/* Favorites Filter */}
+        <FilterChip
+          value={t('facilitiesTab.filters.favorites.label')}
+          isActive={filters.favoritesOnly}
+          onPress={handleFavoritesOnlyToggle}
+          isDark={isDark}
+          hasDropdown={false}
+          icon="heart-outline"
+        />
 
         {/* Distance Filter */}
         <FilterChip

@@ -226,7 +226,8 @@ export default function FacilitiesDirectory() {
       filters.courtType !== 'all' ||
       filters.lighting !== 'all' ||
       filters.membership !== 'all' ||
-      filters.hasAvailabilities
+      filters.hasAvailabilities ||
+      filters.favoritesOnly
     );
   }, [filters]);
 
@@ -266,7 +267,11 @@ export default function FacilitiesDirectory() {
   const { favorites, isFavorite, addFavorite, removeFavorite, isMaxReached } =
     useFavoriteFacilities(player?.id ?? null, selectedSport?.id);
 
-  // Facilities are already sorted by the DB: favorites first, then by distance
+  // Apply client-side favorites filter (facilities are sorted by distance from DB)
+  const displayedFacilities = useMemo(
+    () => (filters.favoritesOnly ? facilities.filter(f => f.is_favorite) : facilities),
+    [facilities, filters.favoritesOnly]
+  );
 
   // Handle facility press
   const handleFacilityPress = useCallback(
@@ -693,7 +698,7 @@ export default function FacilitiesDirectory() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <FlatList
-        data={facilities}
+        data={displayedFacilities}
         renderItem={renderFacilityCard}
         keyExtractor={item => item.id}
         ListHeaderComponent={renderListHeader()}
@@ -707,7 +712,7 @@ export default function FacilitiesDirectory() {
         }
         contentContainerStyle={[
           styles.listContent,
-          facilities.length === 0 && styles.emptyListContent,
+          displayedFacilities.length === 0 && styles.emptyListContent,
         ]}
         showsVerticalScrollIndicator={false}
       />
