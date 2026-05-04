@@ -1,16 +1,37 @@
 /**
  * match-reimbursement-create
  *
- * Creates a Stripe PaymentIntent (destination charge) for one participant's
- * share of the court cost and returns the client secret so the mobile app
- * can present the Payment Sheet (which surfaces Apple Pay automatically on iOS).
+ * Creates a Stripe PaymentIntent for one participant's share of the court cost.
+ *
+ * Architecture: Separate charges and transfers (NOT destination charges).
+ *   - Rallia is the merchant of record on the charge.
+ *   - Funds land in Rallia's Stripe platform balance.
+ *   - When the host has completed Stripe Connect onboarding, the webhook
+ *     releases the funds via stripe.transfers.create.
+ *   - Otherwise, the webhook inserts a pending_host_transfer row and prompts
+ *     the host to onboard ("$X ready to receive — finish setup").
+ *
+ * This means a player can pay BEFORE the host has done Stripe onboarding —
+ * which dramatically reduces friction (host onboarding happens with money
+ * visible, not speculatively).
+ *
+ * If the host has chosen payouts_mode='manual_only', this function refuses
+ * to create a PaymentIntent — the host has opted out of payment processing
+ * and players must pay out-of-band (mark_paid_manual).
  *
  * POST /match-reimbursement-create  (authenticated — JWT validated internally)
  * Body:    { matchId: string }
  * Success: { clientSecret: string; amountCents: number; currency: string }
  * Errors:  { error: ErrorCode }
  *
- * ErrorCode: 'invalid_match' | 'not_participant' | 'already_paid' | 'host_not_connected'
+ * ErrorCode:
+ *   - missing_auth | invalid_auth     : caller authentication
+ *   - invalid_body                    : matchId missing/wrong type
+ *   - invalid_match                   : match doesn't exist or isn't eligible
+ *   - not_participant                 : caller isn't a joined non-host participant
+ *   - already_paid                    : caller already paid
+ *   - host_manual_only                : host opted out of Stripe — pay out-of-band
+ *   - internal_error                  : everything else
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -28,7 +49,7 @@ type ErrorCode =
   | 'invalid_match'
   | 'not_participant'
   | 'already_paid'
-  | 'host_not_connected'
+  | 'host_manual_only'
   | 'internal_error';
 
 function json(body: unknown, status = 200) {
@@ -48,7 +69,7 @@ Deno.serve(async req => {
   }
 
   try {
-    // ------------------------------------------------------------------ auth
+    // ---------------------------------------------------------------- auth
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) return err('missing_auth', 401);
 
@@ -68,7 +89,7 @@ Deno.serve(async req => {
 
     const playerId = user.id;
 
-    // ------------------------------------------------------------------ body
+    // ---------------------------------------------------------------- body
     let matchId: string;
     try {
       const body = await req.json();
@@ -81,15 +102,16 @@ Deno.serve(async req => {
     const admin = createClient(supabaseUrl, serviceRoleKey);
     const stripe = new Stripe(stripeSecretKey, { apiVersion: '2023-10-16' });
 
-    // ----------------------------------------------------------------- match
+    // --------------------------------------------------------------- match
     const { data: match } = await admin
       .from('match')
-      .select('id, estimated_cost, cost_split_type, is_court_free, created_by')
+      .select('id, estimated_cost, cost_split_type, is_court_free, created_by, cancelled_at')
       .eq('id', matchId)
       .single();
 
     if (
       !match ||
+      match.cancelled_at ||
       match.is_court_free ||
       match.cost_split_type !== 'split_equal' ||
       !match.estimated_cost ||
@@ -98,52 +120,85 @@ Deno.serve(async req => {
       return err('invalid_match');
     }
 
-    // ------------------------------------------- verify caller is a participant
+    // ----------------------------------------- verify caller is a participant
     const { data: participant } = await admin
       .from('match_participant')
-      .select('id, has_paid')
+      .select('id, has_paid, is_host')
       .eq('match_id', matchId)
       .eq('player_id', playerId)
       .eq('status', 'joined')
-      .neq('is_host', true)
       .single();
 
-    if (!participant) return err('not_participant');
+    if (!participant || participant.is_host) return err('not_participant');
     if (participant.has_paid) return err('already_paid');
 
-    // --------------------------------------------- count joined participants
-    const { count: joinedCount } = await admin
-      .from('match_participant')
-      .select('id', { count: 'exact', head: true })
-      .eq('match_id', matchId)
-      .eq('status', 'joined');
-
-    const totalPlayers = joinedCount ?? 2;
-    const amountCents = Math.ceil((match.estimated_cost / totalPlayers) * 100);
-
-    // -------------------------------------------- host must have Stripe set up
-    const { data: hostStripe } = await admin
-      .from('player_stripe_account')
-      .select('stripe_account_id, onboarding_completed')
-      .eq('player_id', match.created_by)
+    // -------------------------------- host opted out of Stripe (manual only)
+    const { data: host } = await admin
+      .from('player')
+      .select('payouts_mode')
+      .eq('id', match.created_by)
       .single();
 
-    if (!hostStripe?.onboarding_completed) return err('host_not_connected');
+    if (host?.payouts_mode === 'manual_only') {
+      return err('host_manual_only');
+    }
+
+    // ------------------------------------ deterministic split among non-hosts
+    // Compute splits across all joined non-host participants (ordered by
+    // created_at) so that residual cents land on the earliest joiners
+    // deterministically. This caller's amount is the entry at their index.
+    const { data: orderedPayers } = await admin
+      .from('match_participant')
+      .select('id, player_id')
+      .eq('match_id', matchId)
+      .eq('status', 'joined')
+      .eq('is_host', false)
+      .order('created_at', { ascending: true });
+
+    const payerCount = orderedPayers?.length ?? 0;
+    if (payerCount < 1) return err('invalid_match');
+
+    const totalCents = Math.round(match.estimated_cost * 100);
+    const base = Math.floor(totalCents / payerCount);
+    const residual = totalCents - base * payerCount;
+
+    const myIndex = orderedPayers.findIndex(p => p.player_id === playerId);
+    if (myIndex === -1) return err('not_participant');
+
+    const amountCents = base + (myIndex < residual ? 1 : 0);
+    if (amountCents <= 0) return err('invalid_match');
 
     // ---------------------------------------------------- create PaymentIntent
+    // Separate charges and transfers: NO transfer_data on the PaymentIntent.
+    // Rallia is the merchant; the actual payout to the host happens later in
+    // stripe-match-webhook (via stripe.transfers.create when host is ready,
+    // or via a pending_host_transfer row otherwise).
+    //
+    // Idempotency: keyed by (matchId, playerId) so duplicate calls return
+    // the same PI. The DB write below fills in payment_intent_id which the
+    // webhook reads for reconciliation.
     const paymentIntent = await stripe.paymentIntents.create(
       {
         amount: amountCents,
         currency: 'cad',
         automatic_payment_methods: { enabled: true },
-        application_fee_amount: 0, // Rallia platform fee — adjust later
-        transfer_data: { destination: hostStripe.stripe_account_id },
-        metadata: { matchId, playerId },
+        description: 'Rallia — court reimbursement',
+        metadata: {
+          // Used by stripe-match-webhook to find the participant and host
+          matchId,
+          playerId,
+          hostPlayerId: match.created_by,
+          participantId: participant.id,
+          rallia_flow: 'match_reimbursement',
+        },
       },
       { idempotencyKey: `reimburse-${matchId}-${playerId}` }
     );
 
-    // ---------------------------------- persist PI id for webhook reconciliation
+    // ------------------------- persist PI id for webhook reconciliation
+    // The column is still named `payment_intent_id` (legacy from the
+    // destination-charge era). We continue to use it as the external
+    // payment reference; no rename required.
     await admin
       .from('match_participant')
       .update({ payment_intent_id: paymentIntent.id })

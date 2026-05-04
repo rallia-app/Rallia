@@ -123,6 +123,10 @@ const UserProfile = () => {
     | undefined
   >(undefined);
   const [stripeOnboarding, setStripeOnboarding] = useState(false);
+  // Stripe JIT: host's chosen payouts mode and any funds awaiting onboarding
+  const [payoutsMode, setPayoutsMode] = useState<'auto' | 'manual_only' | 'undecided' | null>(null);
+  const [pendingFundsCents, setPendingFundsCents] = useState<number>(0);
+  const [switchingMode, setSwitchingMode] = useState(false);
 
   useEffect(() => {
     if (!player?.id) return;
@@ -132,6 +136,30 @@ const UserProfile = () => {
       .eq('player_id', player.id)
       .maybeSingle()
       .then(({ data }) => setStripeAccount(data));
+  }, [player?.id]);
+
+  // Stripe JIT: load payouts_mode + pending funds totals
+  useEffect(() => {
+    if (!player?.id) return;
+    let cancelled = false;
+    void Promise.all([
+      supabase.from('player').select('payouts_mode').eq('id', player.id).maybeSingle(),
+      supabase
+        .from('pending_host_transfer')
+        .select('amount_cents')
+        .eq('host_player_id', player.id)
+        .eq('status', 'awaiting_onboarding'),
+    ]).then(([{ data: playerRow }, { data: pending }]) => {
+      if (cancelled) return;
+      setPayoutsMode(
+        (playerRow?.payouts_mode as 'auto' | 'manual_only' | 'undecided') ?? 'undecided'
+      );
+      const total = (pending ?? []).reduce((sum, r) => sum + (r.amount_cents ?? 0), 0);
+      setPendingFundsCents(total);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [player?.id]);
 
   const handleStripeOnboard = useCallback(async () => {
@@ -146,6 +174,43 @@ const UserProfile = () => {
       setStripeOnboarding(false);
     }
   }, [toast]);
+
+  // Stripe JIT: switch to manual-only (skip Stripe entirely)
+  const handleSwitchToManual = useCallback(async () => {
+    if (!player?.id) return;
+    setSwitchingMode(true);
+    const { error } = await supabase
+      .from('player')
+      .update({ payouts_mode: 'manual_only' })
+      .eq('id', player.id);
+    setSwitchingMode(false);
+    if (error) {
+      toast.error('Could not update payment mode. Try again.');
+      return;
+    }
+    setPayoutsMode('manual_only');
+  }, [player?.id, toast]);
+
+  // Stripe JIT: switch from manual_only back to auto + open onboarding
+  const handleSwitchToAuto = useCallback(async () => {
+    if (!player?.id) return;
+    setSwitchingMode(true);
+    const { error } = await supabase
+      .from('player')
+      .update({ payouts_mode: 'auto' })
+      .eq('id', player.id);
+    if (error) {
+      setSwitchingMode(false);
+      toast.error('Could not update payment mode. Try again.');
+      return;
+    }
+    setPayoutsMode('auto');
+    setSwitchingMode(false);
+    // If no Stripe account yet, kick off onboarding immediately
+    if (!stripeAccount?.onboarding_completed) {
+      await handleStripeOnboard();
+    }
+  }, [player?.id, stripeAccount?.onboarding_completed, handleStripeOnboard, toast]);
 
   // Derive sport cards from shared contexts (updated automatically by SportProfile)
   const sports: SportWithRating[] = useMemo(() => {
@@ -1546,21 +1611,50 @@ const UserProfile = () => {
             </Text>
           </View>
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            {stripeAccount?.onboarding_completed ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="checkmark-circle" size={20} color="#22c55e" />
-                <Text weight="medium" color={colors.text}>
-                  {t('profile.payments.connected' as TranslationKey)}
-                </Text>
-              </View>
-            ) : (
+            {/* Pending funds banner (host has earned money but hasn't onboarded) */}
+            {pendingFundsCents > 0 &&
+              !stripeAccount?.onboarding_completed &&
+              payoutsMode !== 'manual_only' && (
+                <View
+                  style={{
+                    backgroundColor: colors.primary + '15',
+                    borderColor: colors.primary,
+                    borderWidth: 1,
+                    borderRadius: 8,
+                    padding: 12,
+                    marginBottom: 12,
+                    gap: 4,
+                  }}
+                >
+                  <Text size="sm" weight="semibold" color={colors.text}>
+                    {t('profile.payments.pendingTitle' as TranslationKey, {
+                      amount: new Intl.NumberFormat('en-CA', {
+                        style: 'currency',
+                        currency: 'CAD',
+                      }).format(pendingFundsCents / 100),
+                    })}
+                  </Text>
+                  <Text size="xs" color={colors.textMuted}>
+                    {t('profile.payments.pendingBody' as TranslationKey)}
+                  </Text>
+                </View>
+              )}
+
+            {/* Manual-only mode */}
+            {payoutsMode === 'manual_only' ? (
               <View style={{ gap: 12 }}>
-                <Text color={colors.textMuted} size="sm">
-                  {t('profile.payments.setupPrompt' as TranslationKey)}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="hand-left-outline" size={20} color={colors.textMuted} />
+                  <Text weight="medium" color={colors.text}>
+                    {t('profile.payments.manualMode' as TranslationKey)}
+                  </Text>
+                </View>
+                <Text size="sm" color={colors.textMuted}>
+                  {t('profile.payments.manualModeDescription' as TranslationKey)}
                 </Text>
                 <TouchableOpacity
-                  onPress={handleStripeOnboard}
-                  disabled={stripeOnboarding}
+                  onPress={handleSwitchToAuto}
+                  disabled={switchingMode || stripeOnboarding}
                   style={{
                     backgroundColor: colors.primary,
                     borderRadius: 8,
@@ -1570,16 +1664,96 @@ const UserProfile = () => {
                     alignSelf: 'flex-start',
                   }}
                 >
-                  {stripeOnboarding ? (
+                  {switchingMode || stripeOnboarding ? (
                     <ActivityIndicator size="small" color="#FFFFFF" />
                   ) : (
                     <Text weight="semibold" color="#FFFFFF" size="sm">
-                      {stripeAccount === null
-                        ? t('profile.payments.connectAccount' as TranslationKey)
-                        : t('profile.payments.continueSetup' as TranslationKey)}
+                      {t('profile.payments.switchToStripe' as TranslationKey)}
                     </Text>
                   )}
                 </TouchableOpacity>
+              </View>
+            ) : stripeAccount?.onboarding_completed ? (
+              /* Auto mode + onboarded */
+              <View style={{ gap: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="checkmark-circle" size={20} color="#22c55e" />
+                  <Text weight="medium" color={colors.text}>
+                    {t('profile.payments.connected' as TranslationKey)}
+                  </Text>
+                </View>
+                <Text size="sm" color={colors.textMuted}>
+                  {t('profile.payments.connectedDescription' as TranslationKey)}
+                </Text>
+                <TouchableOpacity
+                  onPress={handleSwitchToManual}
+                  disabled={switchingMode}
+                  style={{
+                    backgroundColor: colors.card,
+                    borderColor: colors.border,
+                    borderWidth: 1,
+                    borderRadius: 8,
+                    paddingVertical: 10,
+                    paddingHorizontal: 16,
+                    alignItems: 'center',
+                    alignSelf: 'flex-start',
+                  }}
+                >
+                  {switchingMode ? (
+                    <ActivityIndicator size="small" color={colors.text} />
+                  ) : (
+                    <Text weight="semibold" color={colors.text} size="sm">
+                      {t('profile.payments.switchToManual' as TranslationKey)}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            ) : (
+              /* Auto / undecided + not onboarded — original setup prompt with manual escape */
+              <View style={{ gap: 12 }}>
+                <Text color={colors.textMuted} size="sm">
+                  {t('profile.payments.setupPrompt' as TranslationKey)}
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                  <TouchableOpacity
+                    onPress={handleStripeOnboard}
+                    disabled={stripeOnboarding || switchingMode}
+                    style={{
+                      backgroundColor: colors.primary,
+                      borderRadius: 8,
+                      paddingVertical: 10,
+                      paddingHorizontal: 16,
+                      alignItems: 'center',
+                    }}
+                  >
+                    {stripeOnboarding ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text weight="semibold" color="#FFFFFF" size="sm">
+                        {stripeAccount === null
+                          ? t('profile.payments.connectAccount' as TranslationKey)
+                          : t('profile.payments.continueSetup' as TranslationKey)}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleSwitchToManual}
+                    disabled={switchingMode || stripeOnboarding}
+                    style={{
+                      backgroundColor: colors.card,
+                      borderColor: colors.border,
+                      borderWidth: 1,
+                      borderRadius: 8,
+                      paddingVertical: 10,
+                      paddingHorizontal: 16,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text weight="semibold" color={colors.text} size="sm">
+                      {t('profile.payments.useManualInstead' as TranslationKey)}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
           </View>

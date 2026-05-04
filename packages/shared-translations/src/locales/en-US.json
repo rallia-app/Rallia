@@ -1347,7 +1347,15 @@
       "connectAccount": "Connect Account",
       "continueSetup": "Finish Setup",
       "connected": "Payments connected",
-      "setupPrompt": "Set up payments to receive your share from players"
+      "connectedDescription": "Players can pay you with Apple Pay. Funds arrive in your bank in 1–2 business days.",
+      "setupPrompt": "Set up payments to receive your share from players",
+      "manualMode": "Tracking payments manually",
+      "manualModeDescription": "You're not using Stripe. Players settle with you directly (cash, Interac, etc.) and you mark them as paid.",
+      "switchToStripe": "Switch to Stripe",
+      "switchToManual": "Switch to manual",
+      "useManualInstead": "Track manually instead",
+      "pendingTitle": "{amount} ready to receive",
+      "pendingBody": "Finish payment setup to get this transferred to your bank."
     }
   },
   "playerProfile": {

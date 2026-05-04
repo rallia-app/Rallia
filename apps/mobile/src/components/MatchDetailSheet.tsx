@@ -26,6 +26,7 @@ import {
   ActivityIndicator,
   Animated as RNAnimated,
   Easing,
+  Linking,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import MapView, { Marker } from 'react-native-maps';
@@ -1676,28 +1677,87 @@ export const MatchDetailSheet: React.FC = () => {
 
   // Reimbursement hooks — must be before early return for hooks rules
   const [isPaying, setIsPaying] = useState(false);
+  // Host's Stripe Connect onboarding status (null while loading)
   const [hostStripeConnected, setHostStripeConnected] = useState<boolean | null>(null);
+  // Host's chosen payouts mode: 'auto' | 'manual_only' | 'undecided' | null while loading
+  const [hostPayoutsMode, setHostPayoutsMode] = useState<
+    'auto' | 'manual_only' | 'undecided' | null
+  >(null);
+  // For host view: total cents currently parked in Rallia balance awaiting their onboarding
+  const [pendingFundsCents, setPendingFundsCents] = useState<number>(0);
+  // Whether to show the "How do you want to handle reimbursements?" choice sheet
+  const [showChoosePayoutsSheet, setShowChoosePayoutsSheet] = useState(false);
 
+  // Hydrate host data: payouts_mode + Stripe onboarding status, in parallel
   useEffect(() => {
     if (
       !selectedMatch ||
       !selectedMatch.estimated_cost ||
       selectedMatch.is_court_free ||
-      selectedMatch.cost_split_type !== 'split_equal'
-    )
+      selectedMatch.cost_split_type !== 'split_equal' ||
+      !selectedMatch.created_by
+    ) {
       return;
-    supabase
-      .from('player_stripe_account')
-      .select('onboarding_completed')
-      .eq('player_id', selectedMatch.created_by)
-      .maybeSingle()
-      .then(({ data }) => setHostStripeConnected(data?.onboarding_completed ?? false));
+    }
+
+    let cancelled = false;
+    Promise.all([
+      supabase
+        .from('player')
+        .select('payouts_mode')
+        .eq('id', selectedMatch.created_by)
+        .maybeSingle(),
+      supabase
+        .from('player_stripe_account')
+        .select('onboarding_completed')
+        .eq('player_id', selectedMatch.created_by)
+        .maybeSingle(),
+    ]).then(([{ data: playerRow }, { data: psaRow }]) => {
+      if (cancelled) return;
+      setHostPayoutsMode(
+        (playerRow?.payouts_mode as 'auto' | 'manual_only' | 'undecided') ?? 'undecided'
+      );
+      setHostStripeConnected(psaRow?.onboarding_completed ?? false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     selectedMatch?.created_by,
     selectedMatch?.cost_split_type,
     selectedMatch?.is_court_free,
     selectedMatch?.estimated_cost,
   ]);
+
+  // For the host: load pending_host_transfer total awaiting their onboarding,
+  // so we can show the "$X ready to receive" banner.
+  useEffect(() => {
+    if (!selectedMatch || !playerId || selectedMatch.created_by !== playerId) {
+      setPendingFundsCents(0);
+      return;
+    }
+    if (hostStripeConnected) {
+      // Already onboarded — no pending banner needed
+      setPendingFundsCents(0);
+      return;
+    }
+
+    let cancelled = false;
+    supabase
+      .from('pending_host_transfer')
+      .select('amount_cents')
+      .eq('host_player_id', playerId)
+      .eq('status', 'awaiting_onboarding')
+      .then(({ data }) => {
+        if (cancelled) return;
+        const total = (data ?? []).reduce((sum, row) => sum + (row.amount_cents ?? 0), 0);
+        setPendingFundsCents(total);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedMatch?.id, selectedMatch?.created_by, playerId, hostStripeConnected]);
 
   const handlePayNow = useCallback(async () => {
     if (!selectedMatch?.id) return;
@@ -1746,11 +1806,31 @@ export const MatchDetailSheet: React.FC = () => {
     async (targetPlayerId?: string) => {
       const pid = targetPlayerId ?? playerId;
       if (!selectedMatch?.id || !pid) return;
-      await supabase
-        .from('match_participant')
-        .update({ has_paid: true })
-        .eq('match_id', selectedMatch.id)
-        .eq('player_id', pid);
+      // Resolve the participant id we want to mark
+      const participant = selectedMatch.participants?.find(p => p.player_id === pid);
+      if (!participant?.id) return;
+
+      // Server-side: handles Stripe refund if there's an in-flight charge.
+      // Falls back to a direct DB update if the function call fails (offline,
+      // host opted into manual_only with no stripe row, etc.).
+      try {
+        const { data, error } = await supabase.functions.invoke('match-payment-mark-manual', {
+          body: { participantId: participant.id },
+        });
+        if (error) throw error;
+        if (data?.error === 'already_paid_via_stripe') {
+          toast.error(t('matchDetail.paymentError' as TranslationKey));
+          return;
+        }
+      } catch {
+        // Fall back to direct DB update — fine for hosts in manual_only mode
+        // since there's no Stripe charge to reconcile.
+        await supabase
+          .from('match_participant')
+          .update({ has_paid: true })
+          .eq('match_id', selectedMatch.id)
+          .eq('player_id', pid);
+      }
 
       updateSelectedMatch({
         ...selectedMatch,
@@ -1761,6 +1841,34 @@ export const MatchDetailSheet: React.FC = () => {
       toast.success(t('matchDetail.markedAsPaid' as TranslationKey));
     },
     [selectedMatch, playerId, updateSelectedMatch, toast, t]
+  );
+
+  // Host taps "Get paid" on the JIT banner → invoke onboarding edge function
+  // and open the returned hosted-onboarding URL.
+  const handleStartPayoutsOnboarding = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('player-stripe-onboard');
+      if (error || !data?.url) throw error ?? new Error('no url');
+      await Linking.openURL(data.url);
+    } catch {
+      toast.error(t('matchDetail.paymentError' as TranslationKey));
+    }
+  }, [toast, t]);
+
+  // Host chooses to opt out of Stripe (manual_only) or in (auto)
+  const handleChoosePayouts = useCallback(
+    async (choice: 'auto' | 'manual_only') => {
+      if (!playerId) return;
+      await supabase.from('player').update({ payouts_mode: choice }).eq('id', playerId);
+      setHostPayoutsMode(choice);
+      setShowChoosePayoutsSheet(false);
+      if (choice === 'auto') {
+        // Immediately kick off onboarding so the host has $ visible if any
+        // payments are already pending.
+        await handleStartPayoutsOnboarding();
+      }
+    },
+    [playerId, handleStartPayoutsOnboarding]
   );
 
   // Render nothing if no match is selected
@@ -4606,7 +4714,36 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
                     })}
                   </Text>
                 </View>
-              ) : hostStripeConnected ? (
+              ) : hostPayoutsMode === 'manual_only' ? (
+                // Host opted into manual-only — no Stripe, pay out-of-band
+                <View style={{ gap: 8 }}>
+                  <Text size="sm" color={colors.textMuted}>
+                    {t('matchDetail.hostManualOnly' as TranslationKey, {
+                      amount: perPlayerCostFormatted,
+                      name: hostName,
+                    })}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => handleMarkAsPaid()}
+                    style={{
+                      backgroundColor: colors.cardBackground,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      borderRadius: 8,
+                      paddingVertical: 10,
+                      paddingHorizontal: 16,
+                      alignItems: 'center',
+                      alignSelf: 'flex-start',
+                    }}
+                  >
+                    <Text size="sm" weight="semibold" color={colors.text}>
+                      {t('matchDetail.markAsPaid' as TranslationKey)}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                // JIT: always show Pay Now regardless of host's Stripe onboarding state.
+                // Funds are held in Rallia's balance and released when host onboards.
                 <View style={{ gap: 8 }}>
                   <Text size="sm" color={colors.textMuted}>
                     {t('matchDetail.youOweHost' as TranslationKey, {
@@ -4635,36 +4772,74 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
                     )}
                   </TouchableOpacity>
                 </View>
-              ) : (
-                <View style={{ gap: 8 }}>
-                  <Text size="sm" color={colors.textMuted}>
-                    {t('matchDetail.payDirectly' as TranslationKey, {
-                      amount: perPlayerCostFormatted,
-                      name: hostName,
-                    })}
-                  </Text>
+              )
+            ) : (
+              // Host view
+              <View style={{ gap: 8 }}>
+                {/* JIT banner: $X ready to receive — appears when funds are
+                    parked in Rallia's balance awaiting this host's onboarding. */}
+                {pendingFundsCents > 0 &&
+                  !hostStripeConnected &&
+                  hostPayoutsMode !== 'manual_only' && (
+                    <View
+                      style={{
+                        backgroundColor: isDark ? primary[900] : primary[50],
+                        borderColor: isDark ? primary[700] : primary[200],
+                        borderWidth: 1,
+                        borderRadius: 12,
+                        padding: 12,
+                        gap: 8,
+                      }}
+                    >
+                      <Text size="sm" weight="semibold" color={colors.text}>
+                        {t('matchDetail.payoutsSetupBanner.title' as TranslationKey, {
+                          amount: new Intl.NumberFormat(locale, {
+                            style: 'currency',
+                            currency: 'CAD',
+                          }).format(pendingFundsCents / 100),
+                        })}
+                      </Text>
+                      <Text size="xs" color={colors.textMuted}>
+                        {t('matchDetail.payoutsSetupBanner.body' as TranslationKey)}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={handleStartPayoutsOnboarding}
+                        style={{
+                          backgroundColor: colors.primary,
+                          borderRadius: 8,
+                          paddingVertical: 8,
+                          paddingHorizontal: 14,
+                          alignItems: 'center',
+                          alignSelf: 'flex-start',
+                        }}
+                      >
+                        <Text size="sm" weight="semibold" color="#FFFFFF">
+                          {t('matchDetail.payoutsSetupBanner.cta' as TranslationKey)}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+                {/* "How do you want to handle reimbursements?" — first-time
+                    prompt for hosts who haven't chosen yet. */}
+                {hostPayoutsMode === 'undecided' && playerId === match.created_by && (
                   <TouchableOpacity
-                    onPress={() => handleMarkAsPaid()}
+                    onPress={() => setShowChoosePayoutsSheet(true)}
                     style={{
                       backgroundColor: colors.cardBackground,
                       borderWidth: 1,
                       borderColor: colors.border,
                       borderRadius: 8,
-                      paddingVertical: 10,
-                      paddingHorizontal: 16,
-                      alignItems: 'center',
-                      alignSelf: 'flex-start',
+                      paddingVertical: 8,
+                      paddingHorizontal: 12,
                     }}
                   >
-                    <Text size="sm" weight="semibold" color={colors.text}>
-                      {t('matchDetail.markAsPaid' as TranslationKey)}
+                    <Text size="sm" weight="medium" color={colors.text}>
+                      {t('matchDetail.choosePayouts.title' as TranslationKey)}
                     </Text>
                   </TouchableOpacity>
-                </View>
-              )
-            ) : (
-              // Host view
-              <View style={{ gap: 8 }}>
+                )}
+
                 <Text size="sm" color={colors.textMuted}>
                   {t('matchDetail.paidCount' as TranslationKey, {
                     paid: paidParticipants,
@@ -4852,6 +5027,82 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
         destructive={!isWaitlisted}
         isLoading={isLeaving}
       />
+
+      {/* Choose payouts mode (Stripe vs manual_only) */}
+      <Modal
+        visible={showChoosePayoutsSheet}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowChoosePayoutsSheet(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setShowChoosePayoutsSheet(false)}>
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              justifyContent: 'center',
+              padding: 20,
+            }}
+          >
+            <TouchableWithoutFeedback>
+              <View
+                style={{
+                  backgroundColor: isDark ? darkTheme.cardBackground : lightTheme.cardBackground,
+                  borderRadius: 16,
+                  padding: 20,
+                  gap: 16,
+                }}
+              >
+                <Text size="lg" weight="bold" color={colors.text}>
+                  {t('matchDetail.choosePayouts.title' as TranslationKey)}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => handleChoosePayouts('auto')}
+                  style={{
+                    borderWidth: 2,
+                    borderColor: colors.primary,
+                    borderRadius: 12,
+                    padding: 14,
+                    gap: 4,
+                  }}
+                >
+                  <Text size="base" weight="semibold" color={colors.primary}>
+                    {t('matchDetail.choosePayouts.stripeOption' as TranslationKey)}
+                  </Text>
+                  <Text size="xs" color={colors.textMuted}>
+                    {t('matchDetail.choosePayouts.stripeDescription' as TranslationKey)}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleChoosePayouts('manual_only')}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    borderRadius: 12,
+                    padding: 14,
+                    gap: 4,
+                  }}
+                >
+                  <Text size="base" weight="semibold" color={colors.text}>
+                    {t('matchDetail.choosePayouts.manualOption' as TranslationKey)}
+                  </Text>
+                  <Text size="xs" color={colors.textMuted}>
+                    {t('matchDetail.choosePayouts.manualDescription' as TranslationKey)}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setShowChoosePayoutsSheet(false)}
+                  style={{ alignSelf: 'center', paddingVertical: 8 }}
+                >
+                  <Text size="sm" color={colors.textMuted}>
+                    {t('matchDetail.choosePayouts.later' as TranslationKey)}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
 
       {/* Cancel Match Confirmation Modal */}
       <ConfirmationModal

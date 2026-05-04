@@ -1347,7 +1347,15 @@
       "connectAccount": "Connecter un compte",
       "continueSetup": "Terminer la configuration",
       "connected": "Paiements connectés",
-      "setupPrompt": "Configurez les paiements pour recevoir votre part des joueurs"
+      "connectedDescription": "Les joueurs peuvent te payer avec Apple Pay. Les fonds arrivent dans ta banque en 1 à 2 jours ouvrables.",
+      "setupPrompt": "Configurez les paiements pour recevoir votre part des joueurs",
+      "manualMode": "Suivi manuel des paiements",
+      "manualModeDescription": "Tu n'utilises pas Stripe. Les joueurs te paient directement (comptant, Interac, etc.) et tu les marques comme payés.",
+      "switchToStripe": "Passer à Stripe",
+      "switchToManual": "Passer au manuel",
+      "useManualInstead": "Suivre manuellement",
+      "pendingTitle": "{amount} prêt à recevoir",
+      "pendingBody": "Termine la configuration des paiements pour transférer cet argent à ta banque."
     }
   },
   "playerProfile": {

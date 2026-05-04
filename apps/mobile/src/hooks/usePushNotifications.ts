@@ -7,8 +7,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
-import { Platform } from 'react-native';
-import { registerPushToken, unregisterPushToken } from '@rallia/shared-services';
+import { Linking, Platform } from 'react-native';
+import { registerPushToken, supabase, unregisterPushToken } from '@rallia/shared-services';
 import { Logger } from '@rallia/shared-services';
 import {
   navigateFromOutside,
@@ -73,6 +73,38 @@ const REFERENCE_NOTIFICATION_TYPES = [
   'reference_request_accepted',
   'reference_request_declined',
 ] as const;
+
+/**
+ * Stripe JIT payouts notifications.
+ * `payouts_setup_required` is the only one with a deep-link action — tapping it
+ * fetches the host's Stripe Connect onboarding URL and opens it in the system
+ * browser. The rest are informational and just open the app.
+ */
+const PAYOUTS_NOTIFICATION_TYPES = [
+  'payouts_setup_required',
+  'payouts_released',
+  'payouts_expired_refunded',
+  'reimbursement_received',
+  'reimbursement_all_received',
+] as const;
+
+/**
+ * Open the Stripe Connect Express hosted onboarding URL for the current user.
+ * Invokes the player-stripe-onboard edge function and opens the returned URL
+ * in the system browser. Stripe redirects back via Universal Link to
+ * https://rallia.app/stripe-connect-return when the host finishes.
+ */
+async function openStripeOnboarding(): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.functions.invoke('player-stripe-onboard');
+    if (error || !data?.url) throw error ?? new Error('no url');
+    await Linking.openURL(data.url as string);
+    return true;
+  } catch (error) {
+    Logger.error('Failed to open Stripe onboarding from push', error as Error);
+    return false;
+  }
+}
 
 /**
  * Check if we're running on a physical device (vs simulator/emulator)
@@ -388,6 +420,32 @@ export function usePushNotifications(
           requestId: data.requestId,
           type: notificationType,
         });
+      }
+    }
+
+    // Handle Stripe JIT payouts notifications
+    if (notificationType) {
+      const isPayoutsNotification = PAYOUTS_NOTIFICATION_TYPES.includes(
+        notificationType as (typeof PAYOUTS_NOTIFICATION_TYPES)[number]
+      );
+
+      if (isPayoutsNotification) {
+        Logger.logUserAction('push_notification_deep_link', {
+          type: notificationType,
+        });
+
+        // Only `payouts_setup_required` has an actionable deep-link: open
+        // hosted onboarding so the host can finish setup. The rest are
+        // informational; tapping them just opens the app (no navigation).
+        if (notificationType === 'payouts_setup_required') {
+          // Fire-and-forget; if onboarding fails, fall back to the user
+          // profile screen so the host can retry from settings.
+          void openStripeOnboarding().then(success => {
+            if (!success) {
+              navigateFromOutside('UserProfile');
+            }
+          });
+        }
       }
     }
 

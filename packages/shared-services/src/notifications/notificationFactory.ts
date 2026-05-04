@@ -75,6 +75,19 @@ export interface ReferenceRequestNotificationPayload {
 }
 
 /**
+ * Payment / reimbursement notifications fired by the Stripe JIT flow.
+ * See supabase/functions/stripe-match-webhook + match-payment-mark-manual.
+ */
+export interface ReimbursementNotificationPayload {
+  matchId?: string;
+  fromPlayerId?: string;
+  /** Always integer cents — formatters render via Intl.NumberFormat */
+  amountCents?: number;
+  /** True when the player is the recipient of an expired-refund notification */
+  asPlayer?: boolean;
+}
+
+/**
  * Union type for all notification payloads
  */
 export type NotificationPayload =
@@ -84,6 +97,7 @@ export type NotificationPayload =
   | RatingNotificationPayload
   | FeedbackNotificationPayload
   | ReferenceRequestNotificationPayload
+  | ReimbursementNotificationPayload
   | Record<string, unknown>;
 
 /**
@@ -267,6 +281,11 @@ function getTranslatedBody(
           (normalizedPayload as Record<string, unknown>).locationName as string | undefined,
           locale
         ),
+        // {amount} from amountCents (Stripe JIT reimbursement notifications)
+        amount: formatCurrencyFromCents(
+          (normalizedPayload as Record<string, unknown>).amountCents as number | undefined,
+          locale
+        ),
       }
     : normalizedPayload;
 
@@ -400,6 +419,13 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
   program_payment_due: 'high',
   program_payment_received: 'normal',
   morning_digest: 'low',
+
+  // Stripe JIT reimbursement notifications (see supabase/migrations/20260504000001_payouts_notification_enum_values.sql)
+  payouts_setup_required: 'high',
+  payouts_released: 'normal',
+  payouts_expired_refunded: 'high',
+  reimbursement_received: 'normal',
+  reimbursement_all_received: 'normal',
 };
 
 /**
@@ -473,6 +499,13 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   program_payment_due: 'Payment Due',
   program_payment_received: 'Payment Received',
   morning_digest: 'Your morning game briefing',
+
+  // Stripe JIT reimbursement
+  payouts_setup_required: 'Reimbursement ready',
+  payouts_released: 'Reimbursement on the way',
+  payouts_expired_refunded: 'Reimbursement could not be completed',
+  reimbursement_received: 'Reimbursement received',
+  reimbursement_all_received: 'All reimbursements received',
 };
 
 /**
@@ -567,7 +600,40 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
     'Payment for {programName} is due. Please complete payment to secure your spot.',
   program_payment_received: 'Payment for {programName} has been received. Thank you!',
   morning_digest: 'Upcoming games near you + players to challenge this week.',
+
+  // Stripe JIT reimbursement — body templates use {amount} which the renderer
+  // formats from amountCents via Intl.NumberFormat for the recipient's locale.
+  payouts_setup_required:
+    'You have {amount} ready to receive. Verify your bank to get paid (5 min).',
+  payouts_released: '{amount} is heading to your bank — arrives in 1–2 business days.',
+  payouts_expired_refunded:
+    'A reimbursement of {amount} could not be completed and has been refunded.',
+  reimbursement_received: 'A player paid {amount} toward your court cost. ✓',
+  reimbursement_all_received: 'Everyone has paid! All reimbursements received.',
 };
+
+/**
+ * Format an integer-cents amount as a localized CAD currency string.
+ * Used by the Stripe JIT reimbursement notifications.
+ *
+ *   formatCurrencyFromCents(1500, 'en-US')  → '$15.00'
+ *   formatCurrencyFromCents(1500, 'fr-CA')  → '15,00 $'
+ *   formatCurrencyFromCents(undefined, ...) → ''   (so absent vars vanish)
+ */
+function formatCurrencyFromCents(amountCents: number | undefined, locale: Locale): string {
+  if (amountCents === undefined || amountCents === null || Number.isNaN(amountCents)) {
+    return '';
+  }
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: 'CAD',
+      currencyDisplay: 'symbol',
+    }).format(amountCents / 100);
+  } catch {
+    return `$${(amountCents / 100).toFixed(2)}`;
+  }
+}
 
 /**
  * Normalize sport name to lowercase for consistent display

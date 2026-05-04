@@ -353,6 +353,12 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   program_payment_received: 'checkmark-done-circle-outline',
   // Morning digest email
   morning_digest: 'mail-outline',
+  // Stripe JIT reimbursement notifications
+  payouts_setup_required: 'card-outline',
+  payouts_released: 'send-outline',
+  payouts_expired_refunded: 'alert-circle-outline',
+  reimbursement_received: 'cash-outline',
+  reimbursement_all_received: 'checkmark-done-circle-outline',
 };
 
 /**
@@ -426,6 +432,12 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   program_payment_received: '#4CAF50', // Green
   // Morning digest email
   morning_digest: '#4DB8A8', // Teal — matches the email primary
+  // Stripe JIT reimbursement notifications
+  payouts_setup_required: '#FF9800', // Orange — action required
+  payouts_released: '#4CAF50', // Green — money on the way
+  payouts_expired_refunded: '#F44336', // Red — failure / refund
+  reimbursement_received: '#4CAF50', // Green — money received
+  reimbursement_all_received: '#4CAF50', // Green — fully done
 };
 
 /**
@@ -495,6 +507,12 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   program_payment_received: 'Payment Received',
   // Morning digest email
   morning_digest: 'Morning Digest',
+  // Stripe JIT reimbursement notifications
+  payouts_setup_required: 'Payouts Setup Required',
+  payouts_released: 'Payouts Released',
+  payouts_expired_refunded: 'Reimbursement Expired',
+  reimbursement_received: 'Reimbursement Received',
+  reimbursement_all_received: 'All Reimbursements Received',
 };
 
 /**
@@ -572,6 +590,12 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   program_payment_received: 'organization',
   // Morning digest email — system category since it's a generated daily summary
   morning_digest: 'system',
+  // Stripe JIT reimbursement notifications — system category (money/admin)
+  payouts_setup_required: 'system',
+  payouts_released: 'system',
+  payouts_expired_refunded: 'system',
+  reimbursement_received: 'system',
+  reimbursement_all_received: 'system',
 };
 
 /**
@@ -689,6 +713,13 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   // Morning digest email — opt-in by default; user can disable via the
   // unsubscribe link in the footer or the in-app notification preferences.
   morning_digest: { email: true, push: false, sms: false },
+  // Stripe JIT reimbursement notifications — money matters, push always on,
+  // email for the high-priority "set up payouts" prompt so it's not missed.
+  payouts_setup_required: { email: true, push: true, sms: false },
+  payouts_released: { email: false, push: true, sms: false },
+  payouts_expired_refunded: { email: true, push: true, sms: false },
+  reimbursement_received: { email: false, push: true, sms: false },
+  reimbursement_all_received: { email: false, push: true, sms: false },
 };
 
 // ============================================
