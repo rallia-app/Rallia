@@ -92,25 +92,6 @@ export async function logReferralClick(
   });
 }
 
-export async function logReferralFingerprint(
-  code: string,
-  fingerprint: string,
-  ip: string,
-  userAgent: string,
-  invitationType: InvitationType = 'referral',
-  targetId?: string
-): Promise<void> {
-  const supabase = createServiceRoleClient();
-  await supabase.rpc('log_referral_fingerprint', {
-    p_referral_code: code.toUpperCase(),
-    p_device_fingerprint: fingerprint,
-    p_ip_address: ip,
-    p_user_agent: userAgent,
-    p_invitation_type: invitationType,
-    p_target_id: targetId,
-  });
-}
-
 import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/store-urls';
 export { APP_STORE_URL, PLAY_STORE_URL };
 

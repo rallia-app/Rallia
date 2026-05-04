@@ -17,6 +17,7 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Text, LocationSelector, type LocationMode } from '@rallia/shared-components';
 import { useTheme, DISTANCE_OPTIONS, MATCH_TIER_OPTIONS } from '@rallia/shared-hooks';
+import type { RatingScoreOption } from '@rallia/shared-hooks';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import {
@@ -36,17 +37,17 @@ import type {
   MatchTypeFilter,
   DateRangeFilter,
   TimeOfDayFilter,
-  SkillLevelFilter,
   GenderFilter,
   CostFilter,
   JoinModeFilter,
   DistanceFilter,
   DurationFilter,
-  CourtStatusFilter,
   MatchTierFilter,
   SpecificDateFilter,
   SpotsAvailableFilter,
   SpecificTimeFilter,
+  ReputationFilter,
+  RatingFilter,
 } from '@rallia/shared-hooks';
 
 // =============================================================================
@@ -58,34 +59,36 @@ interface MatchFiltersBarProps {
   matchType: MatchTypeFilter;
   dateRange: DateRangeFilter;
   timeOfDay: TimeOfDayFilter;
-  skillLevel: SkillLevelFilter;
   gender: GenderFilter;
   cost: CostFilter;
   joinMode: JoinModeFilter;
   distance: DistanceFilter;
   duration: DurationFilter;
-  courtStatus: CourtStatusFilter;
   matchTier: MatchTierFilter;
   specificDate: SpecificDateFilter;
   spotsAvailable: SpotsAvailableFilter;
   favoritesOnly: boolean;
   specificTime: SpecificTimeFilter;
+  reputation: ReputationFilter;
+  rating: RatingFilter;
   onFormatChange: (format: FormatFilter) => void;
   onMatchTypeChange: (matchType: MatchTypeFilter) => void;
   onDateRangeChange: (dateRange: DateRangeFilter) => void;
   onTimeOfDayChange: (timeOfDay: TimeOfDayFilter) => void;
-  onSkillLevelChange: (skillLevel: SkillLevelFilter) => void;
   onGenderChange: (gender: GenderFilter) => void;
   onCostChange: (cost: CostFilter) => void;
   onJoinModeChange: (joinMode: JoinModeFilter) => void;
   onDistanceChange: (distance: DistanceFilter) => void;
   onDurationChange: (duration: DurationFilter) => void;
-  onCourtStatusChange: (courtStatus: CourtStatusFilter) => void;
   onMatchTierChange: (matchTier: MatchTierFilter) => void;
   onSpecificDateChange: (specificDate: SpecificDateFilter) => void;
   onSpotsAvailableChange: (spotsAvailable: SpotsAvailableFilter) => void;
   onFavoritesOnlyChange: (favoritesOnly: boolean) => void;
   onSpecificTimeChange: (specificTime: SpecificTimeFilter) => void;
+  onReputationChange: (reputation: ReputationFilter) => void;
+  onRatingChange: (rating: RatingFilter) => void;
+  /** Available rating score options for the multi-select rating filter */
+  ratingOptions?: RatingScoreOption[];
   isAuthenticated?: boolean;
   onReset?: () => void;
   hasActiveFilters?: boolean;
@@ -101,13 +104,12 @@ interface MatchFiltersBarProps {
 const FORMAT_OPTIONS: FormatFilter[] = ['all', 'singles', 'doubles'];
 const MATCH_TYPE_OPTIONS: MatchTypeFilter[] = ['all', 'casual', 'competitive'];
 const TIME_OF_DAY_OPTIONS: TimeOfDayFilter[] = ['all', 'morning', 'afternoon', 'evening'];
-const SKILL_LEVEL_OPTIONS: SkillLevelFilter[] = ['all', 'beginner', 'intermediate', 'advanced'];
 const GENDER_OPTIONS: GenderFilter[] = ['all', 'male', 'female', 'other'];
-const COST_OPTIONS: CostFilter[] = ['all', 'free', 'paid'];
+const COST_OPTIONS: CostFilter[] = ['all', 'free', 'under_5', 'under_10', 'under_20', '20_plus'];
 const JOIN_MODE_OPTIONS: JoinModeFilter[] = ['all', 'direct', 'request'];
 const DURATION_OPTIONS_LIST: DurationFilter[] = ['all', '30', '60', '90', '120+'];
-const COURT_STATUS_OPTIONS: CourtStatusFilter[] = ['all', 'reserved', 'to_reserve'];
 const SPOTS_AVAILABLE_OPTIONS: SpotsAvailableFilter[] = ['all', '1', '2', '3'];
+const REPUTATION_OPTIONS: ReputationFilter[] = ['all', 'bronze', 'silver', 'gold', 'platinum'];
 
 // =============================================================================
 // FILTER CHIP COMPONENT
@@ -345,6 +347,188 @@ function FilterDropdown<T extends string | number>({
 }
 
 // =============================================================================
+// MULTI-SELECT FILTER DROPDOWN COMPONENT
+// =============================================================================
+
+interface MultiSelectFilterDropdownProps {
+  visible: boolean;
+  title: string;
+  options: { id: string; label: string; sublabel?: string }[];
+  selectedIds: string[];
+  onToggle: (id: string) => void;
+  onClearAll: () => void;
+  onClose: () => void;
+  isDark: boolean;
+}
+
+function MultiSelectFilterDropdown({
+  visible,
+  title,
+  options,
+  selectedIds,
+  onToggle,
+  onClearAll,
+  onClose,
+  isDark,
+}: MultiSelectFilterDropdownProps) {
+  const fadeAnim = useMemo(() => new Animated.Value(0), []);
+  const scaleAnim = useMemo(() => new Animated.Value(0.9), []);
+
+  const themeColors = isDark ? darkTheme : lightTheme;
+  const colors = {
+    dropdownBg: themeColors.card,
+    dropdownBorder: themeColors.border,
+    itemText: themeColors.foreground,
+    itemTextSelected: primary[500],
+    itemBg: 'transparent',
+    itemBgSelected: isDark ? `${primary[500]}20` : `${primary[500]}10`,
+    itemBorder: themeColors.border,
+    overlayBg: 'rgba(0, 0, 0, 0.5)',
+    checkmark: primary[500],
+  };
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: animDuration.fast,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          friction: 8,
+          tension: 100,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      fadeAnim.setValue(0);
+      scaleAnim.setValue(0.9);
+    }
+  }, [visible, fadeAnim, scaleAnim]);
+
+  const handleToggle = (id: string) => {
+    selectionHaptic();
+    onToggle(id);
+  };
+
+  const hasSelection = selectedIds.length > 0;
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
+      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+        <Animated.View
+          style={[
+            styles.overlayBackground,
+            {
+              opacity: fadeAnim,
+              backgroundColor: colors.overlayBg,
+            },
+          ]}
+        />
+        <Animated.View
+          style={[
+            styles.dropdownContainer,
+            {
+              backgroundColor: colors.dropdownBg,
+              borderColor: colors.dropdownBorder,
+              opacity: fadeAnim,
+              transform: [{ scale: scaleAnim }],
+            },
+          ]}
+        >
+          {/* Header */}
+          <View style={[styles.dropdownHeader, { borderBottomColor: colors.itemBorder }]}>
+            <Text size="base" weight="semibold" color={themeColors.foreground}>
+              {title}
+            </Text>
+            <View style={styles.multiSelectHeaderActions}>
+              {hasSelection && (
+                <TouchableOpacity
+                  onPress={() => {
+                    lightHaptic();
+                    onClearAll();
+                  }}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  style={styles.multiSelectClearButton}
+                >
+                  <Text size="sm" color={primary[500]}>
+                    Clear
+                  </Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                onPress={onClose}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="close-outline" size={22} color={themeColors.mutedForeground} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Options list */}
+          <ScrollView
+            style={styles.dropdownScrollView}
+            showsVerticalScrollIndicator={false}
+            bounces={options.length > 6}
+          >
+            {options.map((option, index) => {
+              const isSelected = selectedIds.includes(option.id);
+              const isLast = index === options.length - 1;
+
+              return (
+                <TouchableOpacity
+                  key={option.id}
+                  style={[
+                    styles.dropdownItem,
+                    {
+                      backgroundColor: isSelected ? colors.itemBgSelected : colors.itemBg,
+                      borderBottomColor: isLast ? 'transparent' : colors.itemBorder,
+                    },
+                  ]}
+                  onPress={() => handleToggle(option.id)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.dropdownItemContent}>
+                    <Ionicons
+                      name={isSelected ? 'checkbox' : 'square-outline'}
+                      size={20}
+                      color={isSelected ? colors.checkmark : themeColors.mutedForeground}
+                      style={styles.dropdownItemIcon}
+                    />
+                    <View>
+                      <Text
+                        size="base"
+                        weight={isSelected ? 'semibold' : 'regular'}
+                        color={isSelected ? colors.itemTextSelected : colors.itemText}
+                      >
+                        {option.label}
+                      </Text>
+                      {option.sublabel && (
+                        <Text size="xs" color={themeColors.mutedForeground}>
+                          {option.sublabel}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </Animated.View>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
+// =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 
@@ -353,34 +537,35 @@ export default function MatchFiltersBar({
   matchType,
   dateRange,
   timeOfDay,
-  skillLevel,
   gender,
   cost,
   joinMode,
   distance,
   duration,
-  courtStatus,
   matchTier,
   specificDate,
   spotsAvailable,
   favoritesOnly,
   specificTime,
+  reputation,
+  rating,
   onFormatChange,
   onMatchTypeChange,
   onDateRangeChange,
   onTimeOfDayChange,
-  onSkillLevelChange,
   onGenderChange,
   onCostChange,
   onJoinModeChange,
   onDistanceChange,
   onDurationChange,
-  onCourtStatusChange,
   onMatchTierChange,
   onSpecificDateChange,
   onSpotsAvailableChange,
   onFavoritesOnlyChange,
   onSpecificTimeChange,
+  onReputationChange,
+  onRatingChange,
+  ratingOptions = [],
   isAuthenticated = false,
   onReset,
   hasActiveFilters = false,
@@ -401,15 +586,15 @@ export default function MatchFiltersBar({
   const [showMatchTypeDropdown, setShowMatchTypeDropdown] = useState(false);
   const [showDateDropdown, setShowDateDropdown] = useState(false);
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
-  const [showSkillDropdown, setShowSkillDropdown] = useState(false);
   const [showGenderDropdown, setShowGenderDropdown] = useState(false);
   const [showCostDropdown, setShowCostDropdown] = useState(false);
   const [showJoinModeDropdown, setShowJoinModeDropdown] = useState(false);
   const [showDistanceDropdown, setShowDistanceDropdown] = useState(false);
   const [showDurationDropdown, setShowDurationDropdown] = useState(false);
-  const [showCourtStatusDropdown, setShowCourtStatusDropdown] = useState(false);
   const [showMatchTierDropdown, setShowMatchTierDropdown] = useState(false);
   const [showSpotsDropdown, setShowSpotsDropdown] = useState(false);
+  const [showReputationDropdown, setShowReputationDropdown] = useState(false);
+  const [showRatingDropdown, setShowRatingDropdown] = useState(false);
 
   // Time picker state
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -470,10 +655,6 @@ export default function MatchFiltersBar({
     (v: TimeOfDayFilter) => getFilterLabel('timeOfDay', v),
     [getFilterLabel]
   );
-  const getSkillLevelLabel = useCallback(
-    (v: SkillLevelFilter) => getFilterLabel('skillLevel', v),
-    [getFilterLabel]
-  );
   const getGenderLabel = useCallback(
     (v: GenderFilter) => getFilterLabel('gender', v),
     [getFilterLabel]
@@ -487,8 +668,8 @@ export default function MatchFiltersBar({
     (v: DurationFilter) => t(`publicMatches.filters.duration.${v}`),
     [t]
   );
-  const getCourtStatusLabel = useCallback(
-    (v: CourtStatusFilter) => t(`publicMatches.filters.courtStatus.${v}`),
+  const getReputationLabel = useCallback(
+    (v: ReputationFilter) => t(`publicMatches.filters.reputation.${v}` as TranslationKey),
     [t]
   );
   const getMatchTierLabel = useCallback(
@@ -502,7 +683,7 @@ export default function MatchFiltersBar({
   const getDistanceLabel = useCallback(
     (v: DistanceFilter) => {
       if (v === 'all') return t('publicMatches.filters.distance.all');
-      return `${v} km`;
+      return `< ${v} km`;
     },
     [t]
   );
@@ -532,7 +713,21 @@ export default function MatchFiltersBar({
     const icons: Record<CostFilter, keyof typeof Ionicons.glyphMap | undefined> = {
       all: undefined,
       free: 'checkmark-circle-outline',
-      paid: 'cash-outline',
+      under_5: 'cash-outline',
+      under_10: 'cash-outline',
+      under_20: 'cash-outline',
+      '20_plus': 'cash-outline',
+    };
+    return icons[v];
+  }, []);
+
+  const getReputationIcon = useCallback((v: ReputationFilter) => {
+    const icons: Record<ReputationFilter, keyof typeof Ionicons.glyphMap | undefined> = {
+      all: undefined,
+      bronze: 'shield-outline',
+      silver: 'shield-outline',
+      gold: 'shield',
+      platinum: 'ribbon',
     };
     return icons[v];
   }, []);
@@ -547,23 +742,29 @@ export default function MatchFiltersBar({
     matchType === 'all' ? t('publicMatches.filters.matchType.label') : getMatchTypeLabel(matchType);
   const timeOfDayDisplay =
     timeOfDay === 'all' ? t('publicMatches.filters.timeOfDay.label') : getTimeOfDayLabel(timeOfDay);
-  const skillLevelDisplay =
-    skillLevel === 'all'
-      ? t('publicMatches.filters.skillLevel.label')
-      : getSkillLevelLabel(skillLevel);
   const genderDisplay =
     gender === 'all' ? t('publicMatches.filters.gender.label') : getGenderLabel(gender);
   const costDisplay = cost === 'all' ? t('publicMatches.filters.cost.label') : getCostLabel(cost);
   const joinModeDisplay =
     joinMode === 'all' ? t('publicMatches.filters.joinMode.label') : getJoinModeLabel(joinMode);
   const distanceDisplay =
-    distance === 'all' ? t('publicMatches.filters.distance.label') : `${distance} km`;
+    distance === 'all' ? t('publicMatches.filters.distance.label') : `< ${distance} km`;
   const durationDisplay =
     duration === 'all' ? t('publicMatches.filters.duration.label') : getDurationLabel(duration);
-  const courtStatusDisplay =
-    courtStatus === 'all'
-      ? t('publicMatches.filters.courtStatus.label')
-      : getCourtStatusLabel(courtStatus);
+  const reputationDisplay =
+    reputation === 'all'
+      ? t('publicMatches.filters.reputation.label' as TranslationKey)
+      : getReputationLabel(reputation);
+  const ratingDisplay = useMemo(() => {
+    if (rating.length === 0) return t('publicMatches.filters.rating.label' as TranslationKey);
+    if (rating.length === 1) {
+      const selected = ratingOptions.find(r => r.id === rating[0]);
+      return selected?.label ?? t('publicMatches.filters.rating.label' as TranslationKey);
+    }
+    return t('publicMatches.filters.rating.countActive' as TranslationKey, {
+      count: rating.length,
+    });
+  }, [rating, ratingOptions, t]);
   const matchTierDisplay =
     matchTier === 'all' ? t('publicMatches.filters.tier.label') : getMatchTierLabel(matchTier);
 
@@ -804,6 +1005,32 @@ export default function MatchFiltersBar({
   // SORTED FILTER CHIPS — active filters float to front
   // =============================================================================
 
+  // Rating multi-select handlers
+  const handleRatingToggle = useCallback(
+    (id: string) => {
+      const newRating = rating.includes(id) ? rating.filter(r => r !== id) : [...rating, id];
+      onRatingChange(newRating);
+    },
+    [rating, onRatingChange]
+  );
+
+  const handleRatingClearAll = useCallback(() => {
+    onRatingChange([]);
+  }, [onRatingChange]);
+
+  // Build rating options for the multi-select dropdown
+  const ratingDropdownOptions = useMemo(
+    () =>
+      ratingOptions.map(r => ({
+        id: r.id,
+        label: r.label,
+        sublabel: r.skillLevel
+          ? r.skillLevel.charAt(0).toUpperCase() + r.skillLevel.slice(1)
+          : undefined,
+      })),
+    [ratingOptions]
+  );
+
   const filterChips = useMemo(() => {
     const chips: {
       key: string;
@@ -827,13 +1054,6 @@ export default function MatchFiltersBar({
           ]
         : []),
       {
-        key: 'matchTier',
-        value: matchTierDisplay,
-        isActive: matchTier !== 'all',
-        onPress: () => setShowMatchTierDropdown(true),
-        icon: getMatchTierIcon(matchTier),
-      },
-      {
         key: 'date',
         value: getDateDisplay(),
         isActive: dateRange !== 'all' || specificDate !== null,
@@ -850,23 +1070,17 @@ export default function MatchFiltersBar({
           : getTimeOfDayIcon(timeOfDay),
       },
       {
+        key: 'matchTier',
+        value: matchTierDisplay,
+        isActive: matchTier !== 'all',
+        onPress: () => setShowMatchTierDropdown(true),
+        icon: getMatchTierIcon(matchTier),
+      },
+      {
         key: 'format',
         value: formatDisplay,
         isActive: format !== 'all',
         onPress: () => setShowFormatDropdown(true),
-      },
-      {
-        key: 'matchType',
-        value: matchTypeDisplay,
-        isActive: matchType !== 'all',
-        onPress: () => setShowMatchTypeDropdown(true),
-      },
-      {
-        key: 'duration',
-        value: durationDisplay,
-        isActive: duration !== 'all',
-        onPress: () => setShowDurationDropdown(true),
-        icon: duration !== 'all' ? 'timer-outline' : undefined,
       },
       ...(showDistanceFilter
         ? [
@@ -879,18 +1093,6 @@ export default function MatchFiltersBar({
           ]
         : []),
       {
-        key: 'skillLevel',
-        value: skillLevelDisplay,
-        isActive: skillLevel !== 'all',
-        onPress: () => setShowSkillDropdown(true),
-      },
-      {
-        key: 'gender',
-        value: genderDisplay,
-        isActive: gender !== 'all',
-        onPress: () => setShowGenderDropdown(true),
-      },
-      {
         key: 'cost',
         value: costDisplay,
         isActive: cost !== 'all',
@@ -902,19 +1104,44 @@ export default function MatchFiltersBar({
         value: spotsAvailableDisplay,
         isActive: spotsAvailable !== 'all',
         onPress: () => setShowSpotsDropdown(true),
-        icon: 'people-outline' as keyof typeof Ionicons.glyphMap,
       },
       {
-        key: 'courtStatus',
-        value: courtStatusDisplay,
-        isActive: courtStatus !== 'all',
-        onPress: () => setShowCourtStatusDropdown(true),
+        key: 'rating',
+        value: ratingDisplay,
+        isActive: rating.length > 0,
+        onPress: () => setShowRatingDropdown(true),
+      },
+      {
+        key: 'duration',
+        value: durationDisplay,
+        isActive: duration !== 'all',
+        onPress: () => setShowDurationDropdown(true),
+        icon: duration !== 'all' ? 'timer-outline' : undefined,
+      },
+      {
+        key: 'matchType',
+        value: matchTypeDisplay,
+        isActive: matchType !== 'all',
+        onPress: () => setShowMatchTypeDropdown(true),
+      },
+      {
+        key: 'gender',
+        value: genderDisplay,
+        isActive: gender !== 'all',
+        onPress: () => setShowGenderDropdown(true),
       },
       {
         key: 'joinMode',
         value: joinModeDisplay,
         isActive: joinMode !== 'all',
         onPress: () => setShowJoinModeDropdown(true),
+      },
+      {
+        key: 'reputation',
+        value: reputationDisplay,
+        isActive: reputation !== 'all',
+        onPress: () => setShowReputationDropdown(true),
+        icon: getReputationIcon(reputation),
       },
     ];
 
@@ -946,8 +1173,11 @@ export default function MatchFiltersBar({
     showDistanceFilter,
     distanceDisplay,
     distance,
-    skillLevelDisplay,
-    skillLevel,
+    ratingDisplay,
+    rating,
+    reputationDisplay,
+    reputation,
+    getReputationIcon,
     genderDisplay,
     gender,
     costDisplay,
@@ -955,8 +1185,6 @@ export default function MatchFiltersBar({
     getCostIcon,
     spotsAvailableDisplay,
     spotsAvailable,
-    courtStatusDisplay,
-    courtStatus,
     matchTierDisplay,
     matchTier,
     getMatchTierIcon,
@@ -1101,16 +1329,16 @@ export default function MatchFiltersBar({
         getLabel={getDistanceLabel}
       />
 
-      {/* Skill Level Dropdown */}
-      <FilterDropdown
-        visible={showSkillDropdown}
-        title={t('publicMatches.filters.skillLevel.label')}
-        options={SKILL_LEVEL_OPTIONS}
-        selectedValue={skillLevel}
-        onSelect={onSkillLevelChange}
-        onClose={() => setShowSkillDropdown(false)}
+      {/* Rating Multi-Select Dropdown */}
+      <MultiSelectFilterDropdown
+        visible={showRatingDropdown}
+        title={t('publicMatches.filters.rating.label' as TranslationKey)}
+        options={ratingDropdownOptions}
+        selectedIds={rating}
+        onToggle={handleRatingToggle}
+        onClearAll={handleRatingClearAll}
+        onClose={() => setShowRatingDropdown(false)}
         isDark={isDark}
-        getLabel={getSkillLevelLabel}
       />
 
       {/* Gender Dropdown */}
@@ -1138,16 +1366,17 @@ export default function MatchFiltersBar({
         getIcon={getCostIcon}
       />
 
-      {/* Court Status Dropdown */}
+      {/* Reputation Dropdown */}
       <FilterDropdown
-        visible={showCourtStatusDropdown}
-        title={t('publicMatches.filters.courtStatus.label')}
-        options={COURT_STATUS_OPTIONS}
-        selectedValue={courtStatus}
-        onSelect={onCourtStatusChange}
-        onClose={() => setShowCourtStatusDropdown(false)}
+        visible={showReputationDropdown}
+        title={t('publicMatches.filters.reputation.label' as TranslationKey)}
+        options={REPUTATION_OPTIONS}
+        selectedValue={reputation}
+        onSelect={onReputationChange}
+        onClose={() => setShowReputationDropdown(false)}
         isDark={isDark}
-        getLabel={getCourtStatusLabel}
+        getLabel={getReputationLabel}
+        getIcon={getReputationIcon}
       />
 
       {/* Match Tier Dropdown */}
@@ -1386,6 +1615,15 @@ const styles = StyleSheet.create({
   dropdownItemContent: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  multiSelectHeaderActions: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: spacingPixels[3],
+  },
+  multiSelectClearButton: {
+    paddingVertical: spacingPixels[1],
+    paddingHorizontal: spacingPixels[1],
   },
   dropdownItemIcon: {
     marginRight: spacingPixels[2],

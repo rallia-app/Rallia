@@ -351,7 +351,8 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   program_waitlist_promoted: 'arrow-up-circle-outline',
   program_payment_due: 'card-outline',
   program_payment_received: 'checkmark-done-circle-outline',
-  morning_digest: 'newspaper-outline',
+  // Morning digest email
+  morning_digest: 'mail-outline',
 };
 
 /**
@@ -423,7 +424,8 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   program_waitlist_promoted: '#4DB8A8', // Teal
   program_payment_due: '#FF9800', // Orange
   program_payment_received: '#4CAF50', // Green
-  morning_digest: '#2196F3', // Blue
+  // Morning digest email
+  morning_digest: '#4DB8A8', // Teal — matches the email primary
 };
 
 /**
@@ -491,6 +493,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   program_waitlist_promoted: 'Waitlist Promoted',
   program_payment_due: 'Payment Due',
   program_payment_received: 'Payment Received',
+  // Morning digest email
   morning_digest: 'Morning Digest',
 };
 
@@ -567,6 +570,7 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   program_waitlist_promoted: 'organization',
   program_payment_due: 'organization',
   program_payment_received: 'organization',
+  // Morning digest email — system category since it's a generated daily summary
   morning_digest: 'system',
 };
 
@@ -682,6 +686,8 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   program_waitlist_promoted: { email: true, push: true, sms: false },
   program_payment_due: { email: true, push: true, sms: false },
   program_payment_received: { email: true, push: false, sms: false },
+  // Morning digest email — opt-in by default; user can disable via the
+  // unsubscribe link in the footer or the in-app notification preferences.
   morning_digest: { email: true, push: false, sms: false },
 };
 

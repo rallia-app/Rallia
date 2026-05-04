@@ -472,7 +472,7 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   program_waitlist_promoted: "You're In!",
   program_payment_due: 'Payment Due',
   program_payment_received: 'Payment Received',
-  morning_digest: 'Morning Digest',
+  morning_digest: 'Your morning game briefing',
 };
 
 /**
@@ -566,7 +566,7 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   program_payment_due:
     'Payment for {programName} is due. Please complete payment to secure your spot.',
   program_payment_received: 'Payment for {programName} has been received. Thank you!',
-  morning_digest: 'Your morning digest is ready.',
+  morning_digest: 'Upcoming games near you + players to challenge this week.',
 };
 
 /**

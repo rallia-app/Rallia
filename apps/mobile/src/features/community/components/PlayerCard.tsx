@@ -6,7 +6,7 @@
  * Includes press animation for tactile feedback.
  */
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -21,7 +21,6 @@ import { Text } from '@rallia/shared-components';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
 import type { PlayerSearchResult } from '@rallia/shared-services';
-import { isPlayerOnline } from '@rallia/shared-services';
 import type { ReputationDisplay } from '@rallia/shared-services';
 import RatingBadge from '../../../components/RatingBadge';
 import ReputationBadge from '../../../components/ReputationBadge';
@@ -45,6 +44,8 @@ interface PlayerCardProps {
   onToggleFavorite?: (playerId: string) => void;
   showFavorite?: boolean;
   reputationDisplay?: ReputationDisplay;
+  /** Online status computed by parent from last_seen_at */
+  isOnline?: boolean;
 }
 
 function formatDistance(meters: number | null, nearbyLabel: string): string {
@@ -66,6 +67,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   onToggleFavorite,
   showFavorite = false,
   reputationDisplay,
+  isOnline = false,
 }) => {
   const { t } = useTranslation();
   const colorScheme = useColorScheme();
@@ -73,16 +75,8 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   // Always use first + last name
   const displayName = `${player.first_name || ''} ${player.last_name || ''}`.trim() || 'Unknown';
   const distanceText = formatDistance(player.distance_meters, t('playerDirectory.nearby'));
-  const [isOnline, setIsOnline] = useState(false);
   // Animation value - using useMemo for stable instance
   const scaleAnim = useMemo(() => new Animated.Value(1), []);
-
-  // Check online status
-  useEffect(() => {
-    if (player.id) {
-      isPlayerOnline(player.id).then(setIsOnline);
-    }
-  }, [player.id]);
 
   // Press animation handlers
   const handlePressIn = useCallback(() => {

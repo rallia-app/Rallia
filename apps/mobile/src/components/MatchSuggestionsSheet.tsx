@@ -6,7 +6,7 @@
  * Uses the shared SuggestionCard and useMatchSuggestions hook.
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { TouchableOpacity } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
@@ -25,15 +25,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { SuggestionCard } from './SuggestionCard';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { lightHaptic, successHaptic } from '@rallia/shared-utils';
-import { useMatchSuggestions } from '@rallia/shared-hooks';
-import { createMatchFromSuggestion } from '@rallia/shared-services';
-import { useQueryClient } from '@tanstack/react-query';
-import type { InvitePayload } from './SuggestionCard';
+import { lightHaptic } from '@rallia/shared-utils';
+import { useMatchSuggestions, deduplicateSuggestionsByTimeSlot } from '@rallia/shared-hooks';
+import { suggestionSlotKey, useSuggestionInviteHandler } from '../hooks/useSuggestionInviteHandler';
 import { useThemeStyles, useTranslation, useEffectiveLocation } from '../hooks';
-import { useActionsSheet, useSport } from '../context';
+import { useSport } from '../context';
 import { useAuth, usePlayer } from '../hooks';
-import { usePlayerSports } from '@rallia/shared-hooks';
 
 export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestions'>) {
   const { colors, isDark } = useThemeStyles();
@@ -41,14 +38,7 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
   const { session } = useAuth();
   const { player } = usePlayer();
   const { selectedSport } = useSport();
-  const { openSheet: openAuthSheet } = useActionsSheet();
   const { location: effectiveLocation } = useEffectiveLocation();
-  const { playerSports } = usePlayerSports(session?.user?.id);
-  const callerSportPrefs = playerSports.find(ps => ps.sport_id === selectedSport?.id);
-  const callerDuration = callerSportPrefs?.preferred_match_duration ?? '60';
-  const callerMatchType = callerSportPrefs?.preferred_match_type ?? 'both';
-
-  const queryClient = useQueryClient();
 
   const resolvedPlayerId = player?.id ?? session?.user?.id;
   const isAnon = !resolvedPlayerId;
@@ -57,8 +47,8 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
     playerId: resolvedPlayerId,
     sportId: selectedSport?.id,
     sportName: selectedSport?.name,
-    latitude: isAnon ? effectiveLocation?.latitude : undefined,
-    longitude: isAnon ? effectiveLocation?.longitude : undefined,
+    latitude: effectiveLocation?.latitude,
+    longitude: effectiveLocation?.longitude,
     limit: 10,
     enabled: true,
   });
@@ -155,74 +145,14 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
     await refetch();
   }, [refetch]);
 
-  // Per-card invite state
-  const [inviteStates, setInviteStates] = useState<Record<string, 'idle' | 'sending' | 'sent'>>({});
-  const inviteStatesRef = useRef(inviteStates);
-  inviteStatesRef.current = inviteStates;
+  const { cardLabels, inviteStates, handleSendInvite } = useSuggestionInviteHandler({
+    onAuthRequired: () => SheetManager.hide('match-suggestions'),
+  });
 
-  const handleSendInvite = useCallback(
-    async (payload: InvitePayload) => {
-      // Signed-out users: dismiss this sheet and route to auth
-      if (!session?.user) {
-        lightHaptic();
-        SheetManager.hide('match-suggestions');
-        openAuthSheet();
-        return;
-      }
-
-      const id = payload.suggestion.opponentId;
-      if (inviteStatesRef.current[id] === 'sending' || inviteStatesRef.current[id] === 'sent')
-        return;
-
-      setInviteStates(prev => ({ ...prev, [id]: 'sending' }));
-      try {
-        await createMatchFromSuggestion({
-          createdBy: player?.id ?? session?.user?.id ?? '',
-          opponentId: payload.suggestion.opponentId,
-          sportId: selectedSport?.id ?? '',
-          matchType: callerMatchType,
-          matchDuration: callerDuration,
-          facilityId: payload.selectedFacility.facilityId,
-          startTime: payload.selectedTime,
-          endTime: payload.selectedEndTime,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        });
-        successHaptic();
-        setInviteStates(prev => ({ ...prev, [id]: 'sent' }));
-        queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'player'] });
-        queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'nearby'] });
-      } catch {
-        setInviteStates(prev => ({ ...prev, [id]: 'idle' }));
-      }
-    },
-    [
-      player?.id,
-      session?.user,
-      selectedSport?.id,
-      callerDuration,
-      callerMatchType,
-      queryClient,
-      openAuthSheet,
-    ]
-  );
-
-  const cardLabels = useMemo(
-    () => ({
-      facility: t('onboarding.suggestions.facility'),
-      when: t('onboarding.suggestions.when'),
-      noAvailableTimes: t('onboarding.suggestions.noAvailableTimes'),
-      unknownPlayer: t('onboarding.suggestions.unknownPlayer'),
-      sendInvite: t('onboarding.suggestions.sendInvite'),
-      inviteSent: t('onboarding.suggestions.inviteSent'),
-      periodMorning: t('onboarding.suggestions.periodMorning'),
-      periodAfternoon: t('onboarding.suggestions.periodAfternoon'),
-      periodEvening: t('onboarding.suggestions.periodEvening'),
-      today: t('common.time.today'),
-      tomorrow: t('common.time.tomorrow'),
-      selectDate: t('onboarding.suggestions.selectDate'),
-      selectTime: t('onboarding.suggestions.selectTime'),
-    }),
-    [t]
+  // Deduplicate suggestions by day+hour — only one card per time slot
+  const dedupedSuggestions = useMemo(
+    () => deduplicateSuggestionsByTimeSlot(suggestions, Date.now()),
+    [suggestions]
   );
 
   return (
@@ -297,7 +227,7 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
           </View>
         ) : (
           <View style={styles.cardsContainer}>
-            {suggestions.map((suggestion, index) => {
+            {dedupedSuggestions.map(({ suggestion, pickedSlot, pickedFacilityIndex }, index) => {
               const animStyle =
                 index < MAX_ANIMATED
                   ? {
@@ -305,6 +235,12 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
                       transform: [{ translateY: cardTranslateYs[index] }],
                     }
                   : undefined;
+              const pickedFacility = suggestion.facilities[pickedFacilityIndex];
+              const slotKey = suggestionSlotKey(
+                suggestion.opponentId,
+                pickedFacility.facilityId,
+                pickedSlot.datetime
+              );
               return (
                 <Animated.View key={suggestion.opponentId} style={animStyle}>
                   <SuggestionCard
@@ -322,7 +258,10 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
                     labels={cardLabels}
                     locale={locale}
                     onSendInvite={handleSendInvite}
-                    inviteState={inviteStates[suggestion.opponentId] ?? 'idle'}
+                    inviteState={inviteStates[slotKey] ?? 'idle'}
+                    lockSelections
+                    pickedSlot={pickedSlot}
+                    pickedFacilityIndex={pickedFacilityIndex}
                   />
                 </Animated.View>
               );

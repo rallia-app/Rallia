@@ -62,6 +62,10 @@ export const LIGHTING_OPTIONS: LightingFilter[] = ['all', 'with_lights', 'no_lig
 // Membership filter options
 export const MEMBERSHIP_OPTIONS: MembershipFilter[] = ['all', 'public', 'members_only'];
 
+// Organization nature filter options
+export type OrganizationNatureFilter = 'all' | 'public' | 'private';
+export const ORGANIZATION_NATURE_OPTIONS: OrganizationNatureFilter[] = ['all', 'public', 'private'];
+
 // Query keys for cache management
 export const facilityKeys = {
   all: ['facilities'] as const,
@@ -107,7 +111,10 @@ export interface FacilityFilters {
   courtType: 'all' | CourtTypeFilter;
   lighting: LightingFilter;
   membership: MembershipFilter;
+  organizationNature: OrganizationNatureFilter;
   hasAvailabilities: boolean;
+  hasOpenSlots: boolean;
+  favoritesOnly: boolean;
 }
 
 /** Default filter values */
@@ -118,7 +125,10 @@ export const DEFAULT_FACILITY_FILTERS: FacilityFilters = {
   courtType: 'all',
   lighting: 'all',
   membership: 'all',
+  organizationNature: 'all',
   hasAvailabilities: false,
+  hasOpenSlots: false,
+  favoritesOnly: false,
 };
 
 interface UseFacilitySearchOptions {
@@ -138,6 +148,8 @@ interface UseFacilitySearchOptions {
   playerId?: string | null;
   /** Debounce delay in milliseconds (default: 300) */
   debounceMs?: number;
+  /** Number of results per page (default: 20). Use a large value (e.g. 500) to fetch all at once. */
+  pageSize?: number;
   /** Enable/disable the query */
   enabled?: boolean;
 }
@@ -177,6 +189,7 @@ export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilit
     userGender,
     playerId,
     debounceMs = 300,
+    pageSize,
     enabled = true,
   } = options;
 
@@ -190,21 +203,26 @@ export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilit
   const query = useInfiniteQuery<FacilitiesPage, Error>({
     // Include actual values (including undefined) in query key so React Query properly tracks changes
     // This ensures the query refetches when location/sport loads
-    queryKey: facilityKeys.searchWithParams(
-      sportIds,
-      latitude,
-      longitude,
-      debouncedQuery ?? '',
-      filters.distance,
-      filters.facilityType,
-      filters.surfaceType,
-      filters.courtType,
-      filters.lighting,
-      filters.membership,
-      filters.hasAvailabilities,
-      userGender,
-      playerId
-    ),
+    queryKey: [
+      ...facilityKeys.searchWithParams(
+        sportIds,
+        latitude,
+        longitude,
+        debouncedQuery ?? '',
+        filters.distance,
+        filters.facilityType,
+        filters.surfaceType,
+        filters.courtType,
+        filters.lighting,
+        filters.membership,
+        filters.hasAvailabilities,
+        userGender,
+        playerId
+      ),
+      filters.favoritesOnly,
+      filters.organizationNature,
+      pageSize,
+    ],
     queryFn: async ({ pageParam }) => {
       if (!sportIds?.length || latitude === undefined || longitude === undefined) {
         return { facilities: [], hasMore: false, nextOffset: null };
@@ -230,8 +248,12 @@ export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilit
         hasLighting,
         membershipRequired,
         hasAvailabilities: filters.hasAvailabilities ? true : undefined,
+        favoritesOnly: filters.favoritesOnly ? true : undefined,
+        organizationNature:
+          filters.organizationNature === 'all' ? undefined : filters.organizationNature,
         userGender,
         playerId,
+        limit: pageSize,
         offset: (pageParam as number) ?? 0,
       });
     },

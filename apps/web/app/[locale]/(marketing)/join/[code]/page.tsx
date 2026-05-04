@@ -7,7 +7,7 @@ import { getLandingContext } from '@/lib/landing-attribution';
 import { Card, CardContent } from '@/components/ui/card';
 import Image from 'next/image';
 import { QRCodeSVG } from 'qrcode.react';
-import { ClipboardDownloadButton } from '../../invite/[code]/_components/clipboard-download-button';
+import { IOSCodeHandoff } from '../../invite/[code]/_components/ios-code-handoff';
 
 type Props = {
   params: Promise<{ code: string; locale: string }>;
@@ -82,11 +82,14 @@ export default async function GroupJoinPage({ params }: Props) {
       </div>
 
       {platform === 'ios' ? (
-        <ClipboardDownloadButton
-          inviteUrl={inviteUrl}
+        <IOSCodeHandoff
+          code={code.toUpperCase()}
           appStoreUrl={APP_STORE_URL}
-          label={t('downloadCta')}
-          hint={t('clipboardHint')}
+          downloadLabel={t('downloadCta')}
+          codeLabel={t('iosGroupCodeLabel')}
+          codeHint={t('iosGroupCodeHint')}
+          copyLabel={t('iosCopyCode')}
+          copiedLabel={t('iosGroupCodeCopied')}
         />
       ) : (
         <>

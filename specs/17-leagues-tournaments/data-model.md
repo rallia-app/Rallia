@@ -1,0 +1,821 @@
+# Data Model
+
+> Authoritative Postgres schema for leagues and tournaments. All TypeScript types are derived from this schema via `npx supabase gen types typescript`.
+
+## Conventions
+
+- All primary keys are `uuid DEFAULT gen_random_uuid()`.
+- All tables have `created_at timestamptz NOT NULL DEFAULT now()` and `updated_at timestamptz NOT NULL DEFAULT now()` with an `updated_at` trigger.
+- All mutable rows have `version integer NOT NULL DEFAULT 1` for optimistic locking; clients pass last-seen version on update; mismatch returns `OPTIMISTIC_LOCK_CONFLICT`.
+- All "status" columns are stored enums; _derived_ states (e.g., `expired`) are computed in views or in TS, not stored — mirrors the [match status derivation pattern](../09-matches/match-lifecycle.md#core-status-derivation-derivematchstatus).
+- All times are `timestamptz`. Calendar dates that are time-zone-agnostic (e.g., season `start_date`) are `date`.
+- All FKs use `ON DELETE CASCADE` for owned children, `ON DELETE RESTRICT` for cross-aggregate references (e.g., `user_id`).
+- All RLS-relevant policies are listed in [permissions.md](./permissions.md); this file lists only the column-level definitions.
+
+## Enums
+
+```sql
+CREATE TYPE sport_kind AS ENUM ('tennis', 'pickleball');
+
+CREATE TYPE tournament_status AS ENUM (
+  'draft',
+  'registration_open',
+  'registration_closed',
+  'in_progress',
+  'completed',
+  'cancelled',
+  'archived'
+);
+
+CREATE TYPE tournament_visibility AS ENUM ('public', 'private', 'community');
+
+CREATE TYPE tournament_registration_mode AS ENUM ('open', 'invite_only', 'approval');
+
+CREATE TYPE bracket_type AS ENUM ('single_elimination', 'double_elimination');
+
+CREATE TYPE match_format AS ENUM (
+  'one_set',
+  'two_of_three',
+  'three_of_five',
+  'pickleball_to_11',
+  'pickleball_to_15',
+  'pickleball_to_21'
+);
+
+CREATE TYPE final_set_tiebreak AS ENUM ('none', 'standard_7pt', 'super_tb_10pt');
+
+CREATE TYPE entry_format AS ENUM ('singles', 'doubles', 'mixed_doubles');
+
+CREATE TYPE registration_status AS ENUM (
+  'registered',
+  'pending',
+  'waitlisted',
+  'withdrawn',
+  'disqualified'
+);
+
+CREATE TYPE tournament_match_status AS ENUM (
+  'pending',
+  'in_progress',
+  'completed',
+  'retired',
+  'walkover',
+  'disputed',
+  'cancelled'
+);
+
+CREATE TYPE league_status AS ENUM ('active', 'paused', 'closed');
+
+CREATE TYPE league_role AS ENUM ('organizer', 'co_organizer', 'member');
+
+CREATE TYPE league_member_status AS ENUM ('active', 'pending', 'suspended', 'inactive');
+
+CREATE TYPE season_status AS ENUM ('draft', 'open', 'closed');
+
+CREATE TYPE session_status AS ENUM ('draft', 'published', 'in_progress', 'completed', 'cancelled');
+
+CREATE TYPE session_presence_status AS ENUM ('confirmed', 'declined', 'pending', 'waitlisted');
+
+CREATE TYPE pairing_mode AS ENUM ('random', 'by_rank', 'avoid_repeat', 'swiss', 'balanced_doubles');
+
+CREATE TYPE session_match_status AS ENUM (
+  'pending',
+  'in_progress',
+  'completed',
+  'retired',
+  'walkover',
+  'disputed',
+  'cancelled'
+);
+
+CREATE TYPE score_validation_status AS ENUM ('pending_validation', 'validated', 'rejected');
+
+CREATE TYPE pairing_team AS ENUM ('a', 'b');
+
+CREATE TYPE odd_cardinality_mode AS ENUM ('bye', 'three_player', 'drill');
+```
+
+`odd_cardinality_mode` drives match-sheet behavior when the confirmed roster doesn't divide evenly. The RPC enforces `THREE_PLAYER_NOT_ALLOWED` for tennis sessions attempting `'three_player'`; tennis sessions are restricted to `'bye'`.
+
+## Tournament tables
+
+### `tournaments`
+
+```sql
+CREATE TABLE tournaments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 100),
+  description text,
+  logo_url text,
+  sport sport_kind NOT NULL,
+
+  visibility tournament_visibility NOT NULL DEFAULT 'private',
+  registration_mode tournament_registration_mode NOT NULL DEFAULT 'open',
+
+  surface text,                                -- references facilities surface enum
+  level text,                                  -- e.g. 'open', 'intermediate', 'beginner'
+  categories text[] NOT NULL DEFAULT '{}',     -- 'male', 'female', 'mixed', 'junior', 'senior'
+
+  -- Format
+  max_participants smallint NOT NULL CHECK (max_participants IN (4, 8, 16, 32, 64, 128)),
+  bracket_type bracket_type NOT NULL DEFAULT 'single_elimination',
+  match_format match_format NOT NULL DEFAULT 'two_of_three',
+  games_per_set smallint NOT NULL DEFAULT 6 CHECK (games_per_set IN (4, 6, 8)),
+  final_set_tiebreak final_set_tiebreak NOT NULL DEFAULT 'super_tb_10pt',
+  entry_format entry_format NOT NULL DEFAULT 'singles',
+  seeding_enabled boolean NOT NULL DEFAULT true,
+  max_seeds smallint NOT NULL DEFAULT 4 CHECK (max_seeds IN (0, 2, 4, 8)),
+
+  -- Gates (optional)
+  min_rating numeric(3,1),
+  max_rating numeric(3,1),
+  min_reputation smallint,                     -- 0–100
+  CONSTRAINT rating_range CHECK (min_rating IS NULL OR max_rating IS NULL OR min_rating <= max_rating),
+
+  -- Dates
+  registration_opens_at timestamptz,
+  registration_closes_at timestamptz,
+  start_date timestamptz NOT NULL,
+  end_date timestamptz NOT NULL,
+  CONSTRAINT date_order CHECK (end_date >= start_date),
+  CONSTRAINT reg_order CHECK (
+    registration_opens_at IS NULL OR registration_closes_at IS NULL
+    OR registration_opens_at <= registration_closes_at
+  ),
+
+  -- Venue
+  facility_id uuid REFERENCES facilities(id) ON DELETE SET NULL,
+  venue_name text,
+  venue_address text,
+
+  -- Lifecycle
+  status tournament_status NOT NULL DEFAULT 'draft',
+  cancelled_at timestamptz,
+  cancelled_reason text,
+  archived_at timestamptz,
+  bracket_locked_at timestamptz,               -- set when first match completes
+
+  -- Ownership
+  organizer_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  community_id uuid REFERENCES communities(id) ON DELETE SET NULL,
+
+  -- Concurrency / audit
+  version integer NOT NULL DEFAULT 1,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX tournaments_sport_status_idx ON tournaments(sport, status) WHERE status NOT IN ('archived', 'cancelled');
+CREATE INDEX tournaments_organizer_idx ON tournaments(organizer_id);
+CREATE INDEX tournaments_community_idx ON tournaments(community_id) WHERE community_id IS NOT NULL;
+CREATE INDEX tournaments_facility_idx ON tournaments(facility_id) WHERE facility_id IS NOT NULL;
+CREATE INDEX tournaments_dates_idx ON tournaments(start_date, end_date) WHERE status NOT IN ('archived', 'cancelled');
+```
+
+### `tournament_invite_links`
+
+Tokenized share links for tournaments and leagues. Carried directly from the co-founder's brief ("Lien : L'organisateur peut partager un lien pour rejoindre le tournoi"). One-to-many: an organizer can rotate links and revoke individuals.
+
+```sql
+CREATE TABLE tournament_invite_links (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tournament_id uuid NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+  token text NOT NULL UNIQUE,                  -- 32-char URL-safe; generated server-side
+  label text,                                  -- organizer-readable label, e.g. "Friends list"
+  max_uses integer,                            -- null = unlimited
+  uses integer NOT NULL DEFAULT 0,
+  expires_at timestamptz,
+  created_by uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  revoked_at timestamptz
+);
+
+CREATE INDEX tournament_invite_links_tournament_idx ON tournament_invite_links(tournament_id);
+```
+
+The web URL is `https://app.rallia.app/{locale}/tournaments/join?t={token}`; the mobile deep-link is `rallia://{sport}/tournaments/join?t={token}`. The same shape is mirrored as `league_invite_links` for leagues.
+
+```sql
+CREATE TABLE league_invite_links (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  league_id uuid NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+  token text NOT NULL UNIQUE,
+  label text,
+  max_uses integer,
+  uses integer NOT NULL DEFAULT 0,
+  expires_at timestamptz,
+  created_by uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  revoked_at timestamptz
+);
+
+CREATE INDEX league_invite_links_league_idx ON league_invite_links(league_id);
+```
+
+### `tournament_co_organizers`
+
+```sql
+CREATE TABLE tournament_co_organizers (
+  tournament_id uuid NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  added_by uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  added_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (tournament_id, user_id)
+);
+```
+
+### `tournament_registrations`
+
+```sql
+CREATE TABLE tournament_registrations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tournament_id uuid NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+
+  -- Doubles: paired entry; both rows reference the same partnership_id
+  partnership_id uuid,                         -- null for singles; same uuid for both partners
+  partner_user_id uuid REFERENCES auth.users(id) ON DELETE RESTRICT,
+
+  status registration_status NOT NULL DEFAULT 'registered',
+  seed_rank smallint,                          -- assigned by organizer (1 = top seed); null otherwise
+  self_declared_rank smallint,                 -- player's declared seed preference
+  bracket_position smallint,                   -- assigned at bracket gen
+  notes text,
+
+  registered_at timestamptz NOT NULL DEFAULT now(),
+  withdrawn_at timestamptz,
+  approved_at timestamptz,                     -- only for registration_mode='approval'
+  approved_by uuid REFERENCES auth.users(id),
+
+  version integer NOT NULL DEFAULT 1,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+
+  UNIQUE (tournament_id, user_id),
+  CONSTRAINT seed_unique_per_tournament EXCLUDE USING btree (tournament_id WITH =, seed_rank WITH =) WHERE (seed_rank IS NOT NULL),
+  CONSTRAINT bracket_position_unique EXCLUDE USING btree (tournament_id WITH =, bracket_position WITH =) WHERE (bracket_position IS NOT NULL)
+);
+
+CREATE INDEX tournament_registrations_status_idx ON tournament_registrations(tournament_id, status);
+CREATE INDEX tournament_registrations_user_idx ON tournament_registrations(user_id);
+```
+
+### `tournament_waitlist`
+
+A separate table preserves FIFO order independently of the registrations table.
+
+```sql
+CREATE TABLE tournament_waitlist (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tournament_id uuid NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  partner_user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  position integer NOT NULL,                   -- 1-based, dense
+  joined_at timestamptz NOT NULL DEFAULT now(),
+  promoted_at timestamptz,
+  UNIQUE (tournament_id, user_id),
+  CONSTRAINT waitlist_position_unique EXCLUDE USING btree (tournament_id WITH =, position WITH =) WHERE (promoted_at IS NULL)
+);
+```
+
+### `tournament_matches`
+
+```sql
+CREATE TABLE tournament_matches (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tournament_id uuid NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+
+  -- Bracket coordinates
+  bracket_side text NOT NULL DEFAULT 'main' CHECK (bracket_side IN ('main', 'losers', 'grand_final')),
+  round_number smallint NOT NULL,
+  match_position smallint NOT NULL,            -- 1-based within (bracket_side, round_number)
+
+  -- Participants (singles uses player1/player2; doubles uses partnership refs)
+  player1_registration_id uuid REFERENCES tournament_registrations(id) ON DELETE SET NULL,
+  player2_registration_id uuid REFERENCES tournament_registrations(id) ON DELETE SET NULL,
+  player1_is_bye boolean NOT NULL DEFAULT false,
+  player2_is_bye boolean NOT NULL DEFAULT false,
+
+  -- Result
+  winner_registration_id uuid REFERENCES tournament_registrations(id),
+  score text,                                  -- canonical score string, see score-entry.md
+  status tournament_match_status NOT NULL DEFAULT 'pending',
+
+  -- Scheduling
+  scheduled_at timestamptz,
+  court_id uuid REFERENCES facility_courts(id),
+  played_at timestamptz,
+
+  -- Bracket plumbing (so generation is deterministic and frontend can render)
+  next_match_id uuid REFERENCES tournament_matches(id) ON DELETE SET NULL,
+  next_match_slot smallint CHECK (next_match_slot IN (1, 2)),
+  loser_next_match_id uuid REFERENCES tournament_matches(id) ON DELETE SET NULL,  -- double-elim only
+
+  version integer NOT NULL DEFAULT 1,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+
+  UNIQUE (tournament_id, bracket_side, round_number, match_position)
+);
+
+CREATE INDEX tournament_matches_tournament_idx ON tournament_matches(tournament_id);
+CREATE INDEX tournament_matches_status_idx ON tournament_matches(tournament_id, status) WHERE status IN ('pending', 'in_progress', 'disputed');
+CREATE INDEX tournament_matches_player1_idx ON tournament_matches(player1_registration_id) WHERE player1_registration_id IS NOT NULL;
+CREATE INDEX tournament_matches_player2_idx ON tournament_matches(player2_registration_id) WHERE player2_registration_id IS NOT NULL;
+```
+
+## League tables
+
+### `leagues`
+
+```sql
+CREATE TABLE leagues (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 100),
+  description text,
+  logo_url text,
+  sport sport_kind NOT NULL,
+
+  visibility tournament_visibility NOT NULL DEFAULT 'private',
+  join_mode tournament_registration_mode NOT NULL DEFAULT 'approval',
+
+  facility_id uuid REFERENCES facilities(id) ON DELETE SET NULL,
+  venue_name text,
+  surfaces text[] NOT NULL DEFAULT '{}',
+  categories text[] NOT NULL DEFAULT '{}',
+  level text,
+
+  -- Default rules (cloned to season at season open)
+  default_rules jsonb NOT NULL DEFAULT '{}'::jsonb,
+
+  -- League-level capacity (from co-founder brief: "Limites/quotas: nb max de membres, liste d'attente activable")
+  member_capacity integer,                     -- null = unlimited
+  waitlist_enabled boolean NOT NULL DEFAULT false,
+
+  status league_status NOT NULL DEFAULT 'active',
+
+  organizer_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  community_id uuid REFERENCES communities(id) ON DELETE SET NULL,
+
+  version integer NOT NULL DEFAULT 1,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX leagues_sport_status_idx ON leagues(sport, status);
+CREATE INDEX leagues_organizer_idx ON leagues(organizer_id);
+CREATE INDEX leagues_community_idx ON leagues(community_id) WHERE community_id IS NOT NULL;
+```
+
+The shape of `default_rules` is defined in [ranking.md](./ranking.md#rules-shape).
+
+### `league_members`
+
+```sql
+CREATE TABLE league_members (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  league_id uuid NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  role league_role NOT NULL DEFAULT 'member',
+  status league_member_status NOT NULL DEFAULT 'active',
+
+  joined_at timestamptz NOT NULL DEFAULT now(),
+  approved_at timestamptz,
+  approved_by uuid REFERENCES auth.users(id),
+  suspended_at timestamptz,
+  suspended_until timestamptz,
+  suspended_reason text,
+  left_at timestamptz,
+
+  version integer NOT NULL DEFAULT 1,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+
+  UNIQUE (league_id, user_id)
+);
+
+CREATE INDEX league_members_status_idx ON league_members(league_id, status);
+CREATE INDEX league_members_user_idx ON league_members(user_id, status);
+```
+
+### `league_member_waitlist`
+
+FIFO waitlist for league joins when `member_capacity` is set and `waitlist_enabled = true`. Mirrors `tournament_waitlist`.
+
+```sql
+CREATE TABLE league_member_waitlist (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  league_id uuid NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  position integer NOT NULL,
+  joined_at timestamptz NOT NULL DEFAULT now(),
+  promoted_at timestamptz,
+  UNIQUE (league_id, user_id),
+  CONSTRAINT league_waitlist_position_unique EXCLUDE USING btree (league_id WITH =, position WITH =) WHERE (promoted_at IS NULL)
+);
+
+CREATE INDEX league_member_waitlist_league_idx ON league_member_waitlist(league_id) WHERE promoted_at IS NULL;
+```
+
+### `seasons`
+
+```sql
+CREATE TABLE seasons (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  league_id uuid NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  start_date date NOT NULL,
+  end_date date NOT NULL CHECK (end_date >= start_date),
+
+  status season_status NOT NULL DEFAULT 'draft',
+  rules jsonb NOT NULL,                        -- frozen copy from league.default_rules at OPEN
+  rules_locked_at timestamptz,
+
+  closed_at timestamptz,
+  final_standings jsonb,                       -- snapshot of `season_rankings` rows at close
+
+  version integer NOT NULL DEFAULT 1,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+
+  UNIQUE (league_id, name)
+);
+
+CREATE INDEX seasons_league_status_idx ON seasons(league_id, status);
+```
+
+### `sessions`
+
+```sql
+CREATE TABLE sessions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  season_id uuid NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
+  name text NOT NULL,
+
+  scheduled_at timestamptz NOT NULL,
+  duration_minutes smallint NOT NULL DEFAULT 90,
+  timezone text NOT NULL,                      -- IANA tz
+
+  facility_id uuid REFERENCES facilities(id) ON DELETE SET NULL,
+  venue_name text,
+  capacity smallint,
+  rounds smallint NOT NULL DEFAULT 1 CHECK (rounds BETWEEN 1 AND 6),
+  formats_allowed entry_format[] NOT NULL DEFAULT ARRAY['singles']::entry_format[],
+  match_format match_format,                   -- inherited from season.rules if null
+  pairing_mode pairing_mode NOT NULL DEFAULT 'by_rank',
+
+  -- Guest invitations and odd-cardinality handling (see leagues.md and match-sheet.md)
+  allow_guests boolean NOT NULL DEFAULT false,
+  odd_cardinality_mode odd_cardinality_mode NOT NULL DEFAULT 'bye',
+
+  status session_status NOT NULL DEFAULT 'draft',
+  confirmation_deadline_at timestamptz,
+  published_at timestamptz,
+  completed_at timestamptz,
+  cancelled_at timestamptz,
+  cancelled_reason text,
+
+  version integer NOT NULL DEFAULT 1,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX sessions_season_status_idx ON sessions(season_id, status);
+CREATE INDEX sessions_scheduled_idx ON sessions(scheduled_at) WHERE status NOT IN ('completed', 'cancelled');
+CREATE INDEX sessions_facility_idx ON sessions(facility_id) WHERE facility_id IS NOT NULL;
+```
+
+### `session_courts`
+
+Per-session court reservation; populated when organizer publishes.
+
+```sql
+CREATE TABLE session_courts (
+  session_id uuid NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  court_id uuid NOT NULL REFERENCES facility_courts(id) ON DELETE RESTRICT,
+  PRIMARY KEY (session_id, court_id)
+);
+```
+
+### `session_presence`
+
+```sql
+CREATE TABLE session_presence (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id uuid NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  status session_presence_status NOT NULL DEFAULT 'pending',
+
+  -- Doubles partner pre-pairing (optional; honored by BALANCED_DOUBLES)
+  preferred_partner_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+
+  -- Guest player flag — included in pairings, excluded from ranking
+  is_guest boolean NOT NULL DEFAULT false,
+  guest_invited_by uuid REFERENCES auth.users(id),
+
+  responded_at timestamptz,
+  waitlist_position integer,
+
+  version integer NOT NULL DEFAULT 1,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+
+  UNIQUE (session_id, user_id)
+);
+
+CREATE INDEX session_presence_session_status_idx ON session_presence(session_id, status);
+CREATE INDEX session_presence_user_idx ON session_presence(user_id);
+```
+
+### `session_matches`
+
+```sql
+CREATE TABLE session_matches (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id uuid NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  round_number smallint NOT NULL DEFAULT 1,
+  court_id uuid REFERENCES facility_courts(id),
+  court_label text,                            -- when no court_id (e.g., off-system venue)
+
+  format entry_format NOT NULL DEFAULT 'singles',
+  -- Pickleball drill / 3-player exception modes (from co-founder brief).
+  -- When `is_drill=true`, no points are awarded regardless of score.
+  is_drill boolean NOT NULL DEFAULT false,
+  is_three_player boolean NOT NULL DEFAULT false,
+  team_a_user_ids uuid[] NOT NULL,             -- length = 1 (singles) or 2 (doubles); 1 if 3-player and lone side
+  team_b_user_ids uuid[] NOT NULL,             -- length = 1 (singles) or 2 (doubles)
+  CHECK (cardinality(team_a_user_ids) IN (1, 2)),
+  CHECK (cardinality(team_b_user_ids) IN (1, 2)),
+  CHECK (
+    cardinality(team_a_user_ids) = cardinality(team_b_user_ids)
+    OR is_three_player = true
+  ),
+
+  score text,
+  winner_team pairing_team,
+  status session_match_status NOT NULL DEFAULT 'pending',
+
+  -- Player-edit lock
+  locked boolean NOT NULL DEFAULT false,       -- if true, regenerate-sheet skips this row
+
+  scheduled_at timestamptz,
+  played_at timestamptz,
+
+  version integer NOT NULL DEFAULT 1,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX session_matches_session_idx ON session_matches(session_id);
+CREATE INDEX session_matches_session_round_idx ON session_matches(session_id, round_number);
+CREATE INDEX session_matches_status_idx ON session_matches(status);
+```
+
+### `session_match_scores`
+
+Score submissions; an organizer can override and the override is recorded as a new row with `validated_by = organizer_id`. The match's `score` column always reflects the most recent `validated` row.
+
+```sql
+CREATE TABLE session_match_scores (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_match_id uuid NOT NULL REFERENCES session_matches(id) ON DELETE CASCADE,
+  submitted_by uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  score text NOT NULL,
+  outcome_team pairing_team,                   -- winner team (a/b)
+  retired_team pairing_team,
+  walkover_team pairing_team,
+  status score_validation_status NOT NULL DEFAULT 'pending_validation',
+  validated_by uuid REFERENCES auth.users(id),
+  validated_at timestamptz,
+  rejection_reason text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX session_match_scores_match_idx ON session_match_scores(session_match_id, created_at DESC);
+```
+
+### `tournament_match_scores`
+
+Identical shape to `session_match_scores`, with the FK pointing at `tournament_matches`.
+
+```sql
+CREATE TABLE tournament_match_scores (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tournament_match_id uuid NOT NULL REFERENCES tournament_matches(id) ON DELETE CASCADE,
+  submitted_by uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  score text NOT NULL,
+  outcome_team pairing_team,
+  retired_team pairing_team,
+  walkover_team pairing_team,
+  status score_validation_status NOT NULL DEFAULT 'pending_validation',
+  validated_by uuid REFERENCES auth.users(id),
+  validated_at timestamptz,
+  rejection_reason text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX tournament_match_scores_match_idx ON tournament_match_scores(tournament_match_id, created_at DESC);
+```
+
+### `season_rankings`
+
+Materialized table; rebuilt by the `recalc_season_ranking(season_id)` RPC after each session completion. Reads do not recompute on the fly.
+
+```sql
+CREATE TABLE season_rankings (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  season_id uuid NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+
+  points integer NOT NULL DEFAULT 0,
+  wins integer NOT NULL DEFAULT 0,
+  losses integer NOT NULL DEFAULT 0,
+  draws integer NOT NULL DEFAULT 0,
+  no_shows integer NOT NULL DEFAULT 0,
+
+  sets_won integer NOT NULL DEFAULT 0,
+  sets_lost integer NOT NULL DEFAULT 0,
+  games_won integer NOT NULL DEFAULT 0,
+  games_lost integer NOT NULL DEFAULT 0,
+
+  matches_played integer NOT NULL DEFAULT 0,
+  sessions_attended integer NOT NULL DEFAULT 0,
+  sessions_eligible integer NOT NULL DEFAULT 0,
+
+  rank integer,                                -- 1-based, null when sessions_eligible = 0
+  tiebreak_seed bigint,                        -- deterministic seeded RNG for tiebreak step 6
+
+  last_recalculated_at timestamptz NOT NULL DEFAULT now(),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+
+  UNIQUE (season_id, user_id)
+);
+
+CREATE INDEX season_rankings_season_rank_idx ON season_rankings(season_id, rank);
+CREATE INDEX season_rankings_user_idx ON season_rankings(user_id);
+```
+
+## Audit log
+
+```sql
+CREATE TYPE audit_scope AS ENUM ('tournament', 'league', 'season', 'session', 'tournament_match', 'session_match', 'registration', 'membership');
+
+CREATE TABLE leagues_tournaments_audit (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  scope audit_scope NOT NULL,
+  entity_id uuid NOT NULL,
+  action text NOT NULL,                        -- e.g. 'swap_players', 'override_score', 'cancel'
+  actor_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  payload_before jsonb,
+  payload_after jsonb,
+  occurred_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX audit_scope_entity_idx ON leagues_tournaments_audit(scope, entity_id, occurred_at DESC);
+CREATE INDEX audit_actor_idx ON leagues_tournaments_audit(actor_id);
+```
+
+All organizer-initiated mutations to bracket/sheet structure, score overrides, member status changes, and cancellations write an audit row in the same transaction as the mutation.
+
+## Triggers
+
+| Trigger                                     | Table                                   | Behavior                                                                                                                                                                                                                                                                                               |
+| ------------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `tg_updated_at`                             | all tables with `updated_at`            | Sets `updated_at = now()` on every UPDATE                                                                                                                                                                                                                                                              |
+| `tg_tournaments_lock_bracket`               | `tournament_matches`                    | When any non-BYE match transitions from non-terminal → terminal (`completed`/`walkover`/`retired`), sets `tournaments.bracket_locked_at = now()` if null. Round-1 BYE walkovers established at generation time do NOT trigger the lock (they have `played_at IS NULL` and one `playerX_is_bye = true`) |
+| `tg_tournaments_advance_winner`             | `tournament_matches`                    | When status → `completed/walkover/retired`, populates `next_match_id`'s slot from `winner_registration_id`                                                                                                                                                                                             |
+| `tg_tournaments_recompute_status`           | `tournament_matches`                    | When the final-round match completes, sets `tournaments.status = 'completed'`                                                                                                                                                                                                                          |
+| `tg_session_presence_promote_waitlist`      | `session_presence`                      | When a `confirmed` row → `declined`/`pending`, promotes the next `waitlisted` row (lowest `waitlist_position`)                                                                                                                                                                                         |
+| `tg_sessions_recompute_status`              | `session_matches`                       | When all matches in a session reach a terminal state and at least one is non-cancelled, sets `sessions.status = 'completed'` and queues `recalc_season_ranking(season_id)`                                                                                                                             |
+| `tg_seasons_block_close_with_open_sessions` | `seasons`                               | Rejects UPDATE to `status = 'closed'` if any child session is in `published`/`in_progress`                                                                                                                                                                                                             |
+| `tg_seasons_freeze_rules_on_open`           | `seasons`                               | When `status` transitions DRAFT → OPEN, copies `leagues.default_rules` into `seasons.rules` and sets `rules_locked_at` if not already set                                                                                                                                                              |
+| `tg_score_validate_outcome`                 | `*_match_scores`                        | Re-runs server-side score validation on INSERT; sets `winner` derivation                                                                                                                                                                                                                               |
+| `tg_emit_reputation_events`                 | `tournament_matches`, `session_matches` | When a match terminates, emits reputation events to `reputation_event` (no-show, late-cancel, on-time, completion, ratings)                                                                                                                                                                            |
+| `tg_emit_audit`                             | many                                    | Generic audit emitter installed per-table for organizer-only mutations                                                                                                                                                                                                                                 |
+| `tg_optimistic_lock`                        | all tables with `version`               | BEFORE UPDATE: increments `version`; if client supplied `version_was` (via SECURITY DEFINER RPC), enforces match                                                                                                                                                                                       |
+
+## RPC surface
+
+All write operations are RPCs (`SECURITY DEFINER`) so the optimistic-lock pattern, audit writes, and reputation event emission are encapsulated server-side. RLS still gates SELECTs.
+
+| RPC                                                                               | Returns                    | Purpose                                                                                             |
+| --------------------------------------------------------------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------- |
+| `tournament_create(payload jsonb)`                                                | `tournaments`              | Create draft tournament                                                                             |
+| `tournament_update(id, version_was, payload)`                                     | `tournaments`              | Edit; rejects if `version_was` mismatch or status past DRAFT for structural fields                  |
+| `tournament_open_registration(id, version_was)`                                   | `tournaments`              | DRAFT → REGISTRATION_OPEN                                                                           |
+| `tournament_close_registration(id, version_was)`                                  | `tournaments`              | REGISTRATION_OPEN → REGISTRATION_CLOSED                                                             |
+| `tournament_reopen_registration(id, version_was)`                                 | `tournaments`              | REGISTRATION_CLOSED → REGISTRATION_OPEN; rejected if any match exists                               |
+| `tournament_register(tid, partner_id, seed_pref)`                                 | `tournament_registrations` | Self-register or invite-accept (handles waitlist)                                                   |
+| `tournament_accept_partner(reg_id)`                                               | `tournament_registrations` | Doubles partner accepts pending invitation; flips both rows to `registered`                         |
+| `tournament_decline_partner(reg_id)`                                              | `tournament_registrations` | Doubles partner declines; deletes both pending rows                                                 |
+| `tournament_invite(tid, user_id)`                                                 | `tournament_registrations` | Organizer creates an invite row (used for `invite_only` mode)                                       |
+| `tournament_use_invite_link(token)`                                               | `tournament_registrations` | Consumes a `tournament_invite_links` token; increments `uses`; auto-registers caller                |
+| `tournament_withdraw(reg_id, version_was)`                                        | `tournament_registrations` | Withdraw; promotes waitlist or replaces in bracket                                                  |
+| `tournament_disqualify(reg_id, reason)`                                           | `tournament_registrations` | Organizer-initiated; status → `disqualified`; reputation event `report_upheld` (-15)                |
+| `tournament_assign_seed(reg_id, seed)`                                            | `tournament_registrations` | Organizer-only seed override                                                                        |
+| `tournament_generate_bracket(tid, version_was)`                                   | `tournament_matches[]`     | REGISTRATION_CLOSED → IN_PROGRESS; deterministic seed placement                                     |
+| `tournament_reset_bracket(tid, version_was)`                                      | `tournament_matches[]`     | Discards all matches and unlocks; rejected if any match has been played                             |
+| `tournament_swap_players(match_a, slot_a, match_b, slot_b, version_a, version_b)` | `tournament_matches[]`     | Manual swap with audit; both matches must be `pending` and `bracket_locked_at IS NULL`              |
+| `tournament_replace_from_waitlist(match_id, slot, waitlist_id)`                   | `tournament_matches`       | Withdraws current slot occupant and promotes a waitlist row into the bracket                        |
+| `tournament_reset_match(match_id, version_was)`                                   | `tournament_matches[]`     | Resets a terminal match back to `pending`; recursively resets downstream advancements               |
+| `tournament_reschedule(tid, new_start, new_end, version_was)`                     | `tournaments`              | Shift dates; pending matches' `scheduled_at` shifted by same delta                                  |
+| `tournament_reschedule_match(match_id, scheduled_at, court_id, version_was)`      | `tournament_matches`       | Single-match reschedule with court-conflict validation                                              |
+| `tournament_submit_match_score(match_id, score, retired_team, walkover_team)`     | `tournament_match_scores`  | Player score submission                                                                             |
+| `tournament_validate_score(score_id, accept boolean, reason)`                     | `tournament_match_scores`  | Organizer validation                                                                                |
+| `tournament_override_score(match_id, score, winner_team, reason)`                 | `tournament_match_scores`  | Organizer-direct score override (writes a `validated` row)                                          |
+| `tournament_dispute_score(match_id, reason)`                                      | `tournament_matches`       | Player flags score; status → `disputed`                                                             |
+| `tournament_add_co_organizer(tid, user_id)`                                       | `tournament_co_organizers` | Organizer-only                                                                                      |
+| `tournament_remove_co_organizer(tid, user_id)`                                    | `tournament_co_organizers` | Organizer-only                                                                                      |
+| `tournament_transfer_organizer(tid, new_user_id)`                                 | `tournaments`              | Organizer-only; new owner must be an existing co-organizer                                          |
+| `tournament_cancel(tid, reason, version_was)`                                     | `tournaments`              | Any active state → `cancelled`; refund hook; pending/in-progress matches → `cancelled`              |
+| `tournament_archive(tid, version_was)`                                            | `tournaments`              | `completed` → `archived`                                                                            |
+| `league_create(payload)`                                                          | `leagues`                  | Create league; auto-inserts a `league_members` row for the organizer with role `organizer`          |
+| `league_update(id, version_was, payload)`                                         | `leagues`                  | Edit                                                                                                |
+| `league_pause(id, version_was)`                                                   | `leagues`                  | Active → paused                                                                                     |
+| `league_resume(id, version_was)`                                                  | `leagues`                  | Paused → active                                                                                     |
+| `league_close(id, version_was)`                                                   | `leagues`                  | Active/paused → closed                                                                              |
+| `league_join(league_id)`                                                          | `league_members`           | Join (mode-dependent: active, pending, or waitlisted via `league_member_waitlist`)                  |
+| `league_use_invite_link(token)`                                                   | `league_members`           | Consumes a `league_invite_links` token; auto-joins caller                                           |
+| `league_invite(league_id, user_id)`                                               | `league_members`           | Organizer invites                                                                                   |
+| `league_approve_member(member_id)`                                                | `league_members`           | Pending → active                                                                                    |
+| `league_suspend_member(member_id, until, reason)`                                 | `league_members`           | Active → suspended                                                                                  |
+| `league_leave(league_id)`                                                         | `league_members`           | Active → inactive (member-initiated); preserves season ranking                                      |
+| `league_kick_member(member_id, reason)`                                           | `league_members`           | Organizer-initiated removal                                                                         |
+| `league_promote_waitlist(league_id)`                                              | `league_members`           | Promotes the next `league_member_waitlist` row to `active`; called by trigger or organizer manually |
+| `league_add_co_organizer(league_id, user_id)`                                     | `league_members`           | Organizer-only; sets role `co_organizer`                                                            |
+| `league_remove_co_organizer(league_id, user_id)`                                  | `league_members`           | Organizer-only; demotes to `member`                                                                 |
+| `league_transfer_organizer(league_id, new_user_id)`                               | `leagues`                  | Organizer-only; recipient must be an existing co-organizer                                          |
+| `season_create(league_id, name, start, end, rules_override)`                      | `seasons`                  | Create draft season                                                                                 |
+| `season_open(season_id, version_was)`                                             | `seasons`                  | DRAFT → OPEN; freezes rules                                                                         |
+| `season_close(season_id, version_was)`                                            | `seasons`                  | OPEN → CLOSED; snapshots final standings                                                            |
+| `session_create(season_id, payload)`                                              | `sessions`                 | Create draft session                                                                                |
+| `session_publish(session_id, deadline, version_was)`                              | `sessions`                 | DRAFT → PUBLISHED; sends notifications                                                              |
+| `session_reschedule(session_id, new_scheduled_at, version_was)`                   | `sessions`                 | Shift `scheduled_at` and `confirmation_deadline_at` by the same delta                               |
+| `session_invite_guest(session_id, user_id)`                                       | `session_presence`         | Organizer invites a non-member; gated by `sessions.allow_guests`                                    |
+| `session_confirm_presence(session_id, status, partner_id)`                        | `session_presence`         | Member CONFIRMED/DECLINED                                                                           |
+| `session_generate_sheet(session_id, version_was)`                                 | `session_matches[]`        | Build pairings according to `pairing_mode`                                                          |
+| `session_regenerate_sheet(session_id, version_was)`                               | `session_matches[]`        | Rebuild non-locked rows                                                                             |
+| `session_swap_players(match_a, slot_a, match_b, slot_b, version_a, version_b)`    | `session_matches[]`        | Manual swap                                                                                         |
+| `session_add_match(session_id, payload)`                                          | `session_matches`          | Insert an organizer-defined extra match                                                             |
+| `session_remove_match(match_id, version_was)`                                     | `session_matches`          | Delete a pending match                                                                              |
+| `session_set_match_format(match_id, format)`                                      | `session_matches`          | Per-match format override                                                                           |
+| `session_lock_match(match_id, locked boolean)`                                    | `session_matches`          | Toggle `locked`                                                                                     |
+| `session_submit_match_score(...)`                                                 | `session_match_scores`     | Same shape as tournament                                                                            |
+| `session_validate_score(...)`                                                     | `session_match_scores`     | Same shape                                                                                          |
+| `session_override_score(match_id, score, winner_team, reason)`                    | `session_match_scores`     | Organizer-direct score override                                                                     |
+| `session_award_bonus(match_id, user_id, kind, points)`                            | `season_rankings`          | Manual bonus (e.g., fair-play) when `enableBonuses = true`; writes audit row                        |
+| `session_complete(session_id, version_was)`                                       | `sessions`                 | Force-mark all-pending matches as cancelled and finalize                                            |
+| `session_cancel(session_id, reason, version_was)`                                 | `sessions`                 | Cancel session (rare; sheet may be discarded)                                                       |
+| `recalc_season_ranking(season_id)`                                                | void                       | Idempotent rebuild of `season_rankings` for a season                                                |
+
+Edge functions (cron / async):
+
+| Function                           | Schedule        | Purpose                                                                                                             |
+| ---------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `lt-close-confirmations`           | every 5 min     | Sessions: when `confirmation_deadline_at <= now()`, sets pending presence rows to `declined` and notifies organizer |
+| `lt-close-tournament-registration` | every 5 min     | Tournaments: when `registration_closes_at <= now()`, transitions `registration_open` → `registration_closed`        |
+| `lt-session-reminders`             | every 5 min     | 24h before, 1h before, and at start time per joined participant                                                     |
+| `lt-tournament-reminders`          | every 5 min     | 24h before scheduled match per participant                                                                          |
+| `lt-auto-archive`                  | hourly          | Tournaments completed > 30 days ago → `archived`                                                                    |
+| `lt-lift-suspensions`              | hourly          | Flips `league_members` rows whose `suspended_until <= now()` back to `active` and notifies                          |
+| `lt-update-attendance`             | hourly          | Recomputes `season_rankings.sessions_eligible` after mid-season membership transitions                              |
+| `lt-export-bracket-pdf`            | on-demand       | Generates the bracket PDF and stores it in `tournament-exports` Storage bucket (signed URL)                         |
+| `lt-analytics-rollup`              | daily 04:00 UTC | Computes competitiveness/fairness metrics; emits `lt.metrics.*` PostHog events                                      |
+| `lt-recalc-rankings-batch`         | daily 03:00 UTC | Defensive recalc for all OPEN seasons (mirrors `recalculate-reputation-decay`)                                      |
+
+## Realtime channels
+
+Supabase Realtime channel naming:
+
+| Channel                                  | Subscribers                    | Throttle               |
+| ---------------------------------------- | ------------------------------ | ---------------------- |
+| `tournament:{id}`                        | Anyone (public) or org members | 500ms debounce per row |
+| `tournament:{id}:bracket`                | Same                           | 500ms                  |
+| `league:{id}:season:{season_id}:ranking` | League members + spectators    | 1s debounce            |
+| `session:{id}`                           | Confirmed members + organizers | 500ms                  |
+
+Throttling is implemented client-side; server publishes on every commit.
+
+## Concurrency
+
+Every UPDATE flows through an RPC that takes `version_was`. Implementation:
+
+```sql
+-- Inside an RPC body
+UPDATE tournaments
+   SET name = p_name,
+       version = version + 1,
+       updated_at = now()
+ WHERE id = p_id
+   AND version = p_version_was
+RETURNING *;
+
+-- If 0 rows returned → raise OPTIMISTIC_LOCK_CONFLICT
+```
+
+The client-side React Query hooks reload on conflict and surface a "Someone else made changes — review and retry" toast. UI never silently retries structural edits.
+
+## Migration strategy
+
+A single migration file `supabase/migrations/<ts>_leagues_tournaments_v2.sql` introduces all enums, tables, indexes, triggers, and RPCs. The existing `MVP_SPECS.md §19` placeholder data (none present today) is unaffected. See [rollout.md](./rollout.md) for feature-flag gating.

@@ -11,12 +11,12 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Skeleton, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { usePlayerSearch, usePlayer, useMultipleReputations } from '@rallia/shared-hooks';
+import { usePlayerSearch, usePlayer, useRatingScoresForSport } from '@rallia/shared-hooks';
 import { useTranslation } from '../../../hooks';
 import { useEffectiveLocation } from '../../../hooks/useEffectiveLocation';
 import { useUserHomeLocation } from '../../../context';
-import type { PlayerSearchResult } from '@rallia/shared-services';
-import { supabase, Logger } from '@rallia/shared-services';
+import type { PlayerSearchResult, ReputationTier } from '@rallia/shared-services';
+import { supabase, Logger, getTierConfig } from '@rallia/shared-services';
 import { lightHaptic } from '@rallia/shared-utils';
 import * as Analytics from '../../../services/analytics';
 import { SearchBar } from '../../../components/SearchBar';
@@ -59,6 +59,9 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
   // Get user's max travel distance preference
   const { maxTravelDistanceKm, player } = usePlayer();
 
+  // Get rating scores for current sport (for multi-select rating filter)
+  const { ratingScores } = useRatingScoresForSport(sportName, sportId, currentUserId);
+
   // Location for distance sorting
   const { location, locationMode, setLocationMode, hasHomeLocation, hasBothLocationOptions } =
     useEffectiveLocation();
@@ -75,7 +78,9 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
       filters.favorites ||
       filters.blocked ||
       filters.gender !== 'all' ||
-      filters.skillLevel !== 'all' ||
+      filters.rating.length > 0 ||
+      filters.reputation !== 'all' ||
+      filters.certifiedOnly ||
       filters.availability !== 'all' ||
       filters.day !== 'all' ||
       filters.playStyle !== 'all' ||
@@ -90,7 +95,9 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
       favorites: filters.favorites,
       blocked: filters.blocked,
       gender: filters.gender,
-      skillLevel: filters.skillLevel,
+      rating: filters.rating,
+      reputation: filters.reputation,
+      certifiedOnly: filters.certifiedOnly,
       availability: filters.availability,
       day: filters.day,
       playStyle: filters.playStyle,
@@ -271,7 +278,6 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
 
   const {
     players,
-    totalCount,
     isLoading,
     isFetching,
     isFetchingNextPage,
@@ -291,9 +297,20 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     longitude: location?.longitude,
   });
 
-  // Fetch reputation data for visible players
-  const playerIds = useMemo(() => players.map(p => p.id), [players]);
-  const { reputations } = useMultipleReputations(playerIds);
+  // Derive reputation display data directly from search results (no extra API calls)
+  const getReputationDisplay = useCallback((player: PlayerSearchResult) => {
+    if (!player.reputation_tier || !player.reputation_is_public) return undefined;
+    const tier = player.reputation_tier as ReputationTier;
+    const tierConfig = getTierConfig(tier);
+    return {
+      tier,
+      score: player.reputation_score ?? 100,
+      isVisible: player.reputation_is_public,
+      tierLabel: tierConfig.label,
+      tierColor: tierConfig.color,
+      tierIcon: tierConfig.icon,
+    };
+  }, []);
 
   // Toggle favorite handler
   const handleToggleFavorite = useCallback(
@@ -366,10 +383,22 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
         isFavorite={favoritePlayerIds.includes(item.id)}
         onToggleFavorite={handleToggleFavorite}
         showFavorite={!!currentUserId && currentUserId !== item.id}
-        reputationDisplay={reputations.get(item.id)}
+        reputationDisplay={getReputationDisplay(item)}
+        isOnline={
+          item.last_seen_at
+            ? new Date(item.last_seen_at).getTime() > Date.now() - 5 * 60 * 1000
+            : false
+        }
       />
     ),
-    [colors, onPlayerPress, favoritePlayerIds, handleToggleFavorite, currentUserId, reputations]
+    [
+      colors,
+      onPlayerPress,
+      favoritePlayerIds,
+      handleToggleFavorite,
+      currentUserId,
+      getReputationDisplay,
+    ]
   );
 
   const renderEmpty = () => {
@@ -494,16 +523,6 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
   // Render loading skeleton for list content only
   const renderListSkeleton = () => (
     <View style={styles.loadingContainer}>
-      {/* Results count skeleton */}
-      <View style={styles.resultsInfo}>
-        <Skeleton
-          width={100}
-          height={14}
-          borderRadius={4}
-          backgroundColor={skeletonBg}
-          highlightColor={skeletonHighlight}
-        />
-      </View>
       {[1, 2, 3, 4].map(i => (
         <View
           key={i}
@@ -605,25 +624,6 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     </View>
   );
 
-  // Results count between filters and list
-  const renderResultsInfo = () => {
-    if (isLoading || !sportId) return null;
-
-    const count = totalCount ?? players.length;
-    const countText =
-      count === 1
-        ? t('playerDirectory.results.countSingular')
-        : t('playerDirectory.results.count').replace('{count}', String(count));
-
-    return (
-      <View style={styles.resultsInfo}>
-        <Text size="sm" color={colors.textMuted}>
-          {countText}
-        </Text>
-      </View>
-    );
-  };
-
   // Search bar and filters - rendered inside list header so everything scrolls together
   const renderSearchAndFilters = () => (
     <>
@@ -651,6 +651,7 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
         onLocationModeChange={setLocationMode}
         hasHomeLocation={hasHomeLocation}
         homeLocationLabel={homeLocationLabel}
+        ratingOptions={ratingScores}
       />
     </>
   );
@@ -675,7 +676,7 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
           <>
             {ListHeaderComponent}
             {renderSearchAndFilters()}
-            {!isLoading && !(error && !players.length) && renderResultsInfo()}
+            <View style={styles.headerBottomSpacer} />
           </>
         }
         ListEmptyComponent={emptyComponent}
@@ -722,9 +723,8 @@ const styles = StyleSheet.create({
     paddingTop: spacingPixels[2],
     paddingBottom: spacingPixels[2],
   },
-  resultsInfo: {
-    paddingHorizontal: spacingPixels[4],
-    paddingBottom: spacingPixels[2],
+  headerBottomSpacer: {
+    height: spacingPixels[2],
   },
   listContent: {
     paddingTop: spacingPixels[2],

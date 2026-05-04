@@ -104,21 +104,23 @@ const ProofViewer: React.FC<ProofViewerProps> = ({
   });
 
   // Resolve signed URLs for private storage buckets (rating-proof-*)
+  // Use a longer TTL (24h) for video playback to improve CDN cache hit rates
   useEffect(() => {
     if (!proof?.file?.url) {
       setResolvedFileUrl(null);
       return;
     }
 
+    const ttl = isVideoProof ? 86400 : 3600; // 24h for video, 1h for others
     let cancelled = false;
-    resolveStorageUrl(proof.file.url).then(url => {
+    resolveStorageUrl(proof.file.url, ttl).then(url => {
       if (!cancelled) setResolvedFileUrl(url);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [proof?.file?.url]);
+  }, [proof?.file?.url, isVideoProof]);
 
   // Fetch like/dislike reactions when the viewer opens for a proof
   useEffect(() => {

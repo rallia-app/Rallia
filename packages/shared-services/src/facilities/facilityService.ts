@@ -62,9 +62,13 @@ export interface SearchFacilitiesParams {
   membershipRequired?: boolean;
   /** When true, only return facilities considered bookable (external provider, active court_slot, or upcoming one-time availability) */
   hasAvailabilities?: boolean;
+  /** When true, only return facilities favorited by the player */
+  favoritesOnly?: boolean;
+  /** Filter by organization nature ('public' or 'private') */
+  organizationNature?: string | null;
   /** The viewing user's gender for match eligibility filtering */
   userGender?: string | null;
-  /** Player ID for favorite-first sorting */
+  /** Player ID for favorite sorting and favorites filter */
   playerId?: string | null;
   limit?: number;
   offset?: number;
@@ -240,6 +244,8 @@ export async function searchFacilitiesNearby(
     hasLighting,
     membershipRequired,
     hasAvailabilities,
+    favoritesOnly,
+    organizationNature,
     userGender,
     playerId,
     limit = DEFAULT_PAGE_SIZE,
@@ -264,6 +270,8 @@ export async function searchFacilitiesNearby(
       p_offset: offset,
       p_user_gender: userGender || null,
       p_player_id: playerId || null,
+      p_favorites_only: favoritesOnly ?? null,
+      p_organization_nature: organizationNature || null,
     }),
     // Only fetch count on first page (offset === 0) to avoid unnecessary queries
     offset === 0

@@ -24,8 +24,9 @@ import {
   successHaptic,
   getProfilePictureUrl,
 } from '@rallia/shared-utils';
-import { usePlayerSearch, useInviteToMatch, useMultipleReputations } from '@rallia/shared-hooks';
-import type { PlayerSearchResult } from '@rallia/shared-services';
+import { usePlayerSearch, useInviteToMatch } from '@rallia/shared-hooks';
+import type { PlayerSearchResult, ReputationTier } from '@rallia/shared-services';
+import { getTierConfig } from '@rallia/shared-services';
 import type { MatchParticipantWithPlayer } from '@rallia/shared-types';
 import type { TranslationKey, TranslationOptions } from '../../../hooks/useTranslation';
 import { SearchBar } from '../../../components/SearchBar';
@@ -391,9 +392,23 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
     setIsRefreshing(false);
   }, [refetch]);
 
-  // Fetch reputation data for visible players
-  const playerIds = useMemo(() => (players || []).map(p => p.id), [players]);
-  const { reputations } = useMultipleReputations(playerIds);
+  // Derive reputation display from search results (no extra API calls)
+  const getReputationDisplay = useCallback(
+    (player: PlayerSearchResult): ReputationDisplay | undefined => {
+      if (!player.reputation_tier || !player.reputation_is_public) return undefined;
+      const tier = player.reputation_tier as ReputationTier;
+      const tierConfig = getTierConfig(tier);
+      return {
+        tier,
+        score: player.reputation_score ?? 100,
+        isVisible: player.reputation_is_public,
+        tierLabel: tierConfig.label,
+        tierColor: tierConfig.color,
+        tierIcon: tierConfig.icon,
+      };
+    },
+    []
+  );
 
   // Render player item
   const renderPlayer = useCallback(
@@ -404,10 +419,10 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
         onToggle={handleTogglePlayer}
         colors={colors}
         isDark={isDark}
-        reputationDisplay={reputations.get(item.id)}
+        reputationDisplay={getReputationDisplay(item)}
       />
     ),
-    [selectedPlayerIds, handleTogglePlayer, colors, isDark, reputations]
+    [selectedPlayerIds, handleTogglePlayer, colors, isDark, getReputationDisplay]
   );
 
   // Render footer (loading indicator for infinite scroll)

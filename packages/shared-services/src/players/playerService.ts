@@ -54,11 +54,16 @@ export type SortByFilter =
   | 'rating_low'
   | 'recently_active';
 
+export type ReputationFilter = 'all' | 'bronze' | 'silver' | 'gold' | 'platinum';
+
 export interface PlayerFilters {
   favorites?: boolean;
   blocked?: boolean;
   gender?: GenderFilter;
-  skillLevel?: SkillLevelFilter;
+  skillLevel?: SkillLevelFilter; // kept for backward compat, no longer set by UI
+  rating?: string[]; // rating score IDs (multi-select)
+  reputation?: ReputationFilter; // reputation tier filter
+  certifiedOnly?: boolean; // show only certified players
   maxDistance?: DistanceFilter;
   availability?: AvailabilityFilter;
   day?: DayFilter;
@@ -93,6 +98,14 @@ export interface PlayerSearchResult {
   longitude: number | null;
   /** Distance in meters from the searching user's location (null if location not provided) */
   distance_meters: number | null;
+  /** Reputation tier (null if no reputation record) */
+  reputation_tier: string | null;
+  /** Reputation score 0-100 (null if no reputation record) */
+  reputation_score: number | null;
+  /** Whether reputation is public (enough matches played) */
+  reputation_is_public: boolean;
+  /** Last seen timestamp for online status */
+  last_seen_at: string | null;
 }
 
 /**
@@ -215,6 +228,14 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
 
   const gender = filters.gender && filters.gender !== 'all' ? filters.gender : null;
 
+  // New filter mappings
+  const ratingScoreIds = filters.rating && filters.rating.length > 0 ? filters.rating : null;
+
+  const reputationTier =
+    filters.reputation && filters.reputation !== 'all' ? filters.reputation : null;
+
+  const certifiedOnly = !!filters.certifiedOnly;
+
   // Favorites toggle ON with empty favorites list → short-circuit to empty result
   // (the RPC would return all players otherwise since the filter wouldn't apply).
   if (filters.favorites && favoritePlayerIds.length === 0) {
@@ -246,6 +267,9 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     p_sort_by: filters.sortBy ?? 'distance',
     p_limit: limit,
     p_offset: offset,
+    p_rating_score_ids: ratingScoreIds,
+    p_reputation_tier: reputationTier,
+    p_certified_only: certifiedOnly,
   });
 
   if (error) {
@@ -268,6 +292,10 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     longitude: number | null;
     distance_meters: number | null;
     total_count: number | string;
+    reputation_tier: string | null;
+    reputation_score: number | null;
+    reputation_is_public: boolean | null;
+    last_seen_at: string | null;
   };
 
   const rows = (data ?? []) as RpcRow[];
@@ -292,6 +320,10 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     latitude: row.latitude,
     longitude: row.longitude,
     distance_meters: row.distance_meters,
+    reputation_tier: row.reputation_tier ?? null,
+    reputation_score: row.reputation_score ?? null,
+    reputation_is_public: row.reputation_is_public ?? false,
+    last_seen_at: row.last_seen_at ?? null,
   }));
 
   const hasMore = offset + rows.length < totalCount;

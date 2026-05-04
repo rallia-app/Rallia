@@ -86,8 +86,16 @@ export function useUserLocation(): UseUserLocationReturn {
         longitude: position.coords.longitude,
       });
     } catch (err) {
-      Logger.error('Failed to get user location', err as Error);
-      setError('Failed to get location');
+      const message = err instanceof Error ? err.message : String(err);
+      const isUnavailable =
+        message.includes('location is unavailable') || message.includes('location services');
+      if (isUnavailable) {
+        Logger.debug('user_location_unavailable', { message });
+        setError('Location unavailable');
+      } else {
+        Logger.error('Failed to get user location', err as Error);
+        setError('Failed to get location');
+      }
     } finally {
       setLoading(false);
     }

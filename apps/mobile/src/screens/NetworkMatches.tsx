@@ -118,18 +118,18 @@ export default function NetworkMatchesScreen() {
     setMatchType,
     setDateRange,
     setTimeOfDay,
-    setSkillLevel,
     setGender,
     setCost,
     setJoinMode,
     setDistance,
     setDuration,
-    setCourtStatus,
     setMatchTier,
     setSpecificDate,
     setSpotsAvailable,
     setFavoritesOnly,
     setSpecificTime,
+    setReputation,
+    setRating,
     resetFilters,
     clearSearch,
   } = usePublicMatchFilters();
@@ -292,34 +292,34 @@ export default function NetworkMatchesScreen() {
           matchType={filters.matchType}
           dateRange={filters.dateRange}
           timeOfDay={filters.timeOfDay}
-          skillLevel={filters.skillLevel}
           gender={filters.gender}
           cost={filters.cost}
           joinMode={filters.joinMode}
           distance={filters.distance}
           duration={filters.duration}
-          courtStatus={filters.courtStatus}
           matchTier={filters.matchTier}
           specificDate={filters.specificDate}
           spotsAvailable={filters.spotsAvailable}
           favoritesOnly={filters.favoritesOnly}
           specificTime={filters.specificTime}
+          reputation={filters.reputation}
+          rating={filters.rating}
           onFormatChange={setFormat}
           onMatchTypeChange={setMatchType}
           onDateRangeChange={setDateRange}
           onTimeOfDayChange={setTimeOfDay}
-          onSkillLevelChange={setSkillLevel}
           onGenderChange={setGender}
           onCostChange={setCost}
           onJoinModeChange={setJoinMode}
           onDistanceChange={setDistance}
           onDurationChange={setDuration}
-          onCourtStatusChange={setCourtStatus}
           onMatchTierChange={setMatchTier}
           onSpecificDateChange={setSpecificDate}
           onSpotsAvailableChange={setSpotsAvailable}
           onFavoritesOnlyChange={setFavoritesOnly}
           onSpecificTimeChange={setSpecificTime}
+          onReputationChange={setReputation}
+          onRatingChange={setRating}
           onReset={resetFilters}
           hasActiveFilters={hasActiveFilters}
           showDistanceFilter={false}

@@ -7,14 +7,13 @@ import {
   computeFingerprint,
   detectPlatform,
   logReferralClick,
-  logReferralFingerprint,
   buildPlayStoreUrl,
   APP_STORE_URL,
 } from '@/lib/referral-tracking';
 import { Card, CardContent } from '@/components/ui/card';
 import Image from 'next/image';
 import { QRCodeSVG } from 'qrcode.react';
-import { ClipboardDownloadButton } from './_components/clipboard-download-button';
+import { IOSCodeHandoff } from './_components/ios-code-handoff';
 
 type InvitationType = 'referral' | 'match' | 'group' | 'community' | 'flyer' | 'poster' | 'social';
 
@@ -148,13 +147,6 @@ export default async function InvitePage({ params, searchParams }: Props) {
   // Log click for all visitors (non-blocking)
   logReferralClick(code, fingerprint, ip, userAgent, invitationType, targetId).catch(() => {});
 
-  // Log fingerprint for iOS deferred deep linking (fallback attribution)
-  if (platform === 'ios') {
-    logReferralFingerprint(code, fingerprint, ip, userAgent, invitationType, targetId).catch(
-      () => {}
-    );
-  }
-
   if (platform === 'android') {
     redirect(buildPlayStoreUrl(code, invitationType, targetId));
   }
@@ -247,11 +239,14 @@ export default async function InvitePage({ params, searchParams }: Props) {
       </div>
 
       {platform === 'ios' ? (
-        <ClipboardDownloadButton
-          inviteUrl={inviteUrl}
+        <IOSCodeHandoff
+          code={code.toUpperCase()}
           appStoreUrl={APP_STORE_URL}
-          label={t('downloadCta')}
-          hint={t('clipboardHint')}
+          downloadLabel={t('downloadCta')}
+          codeLabel={t('iosCodeLabel')}
+          codeHint={t('iosCodeHint')}
+          copyLabel={t('iosCopyCode')}
+          copiedLabel={t('iosCodeCopied')}
         />
       ) : (
         <>

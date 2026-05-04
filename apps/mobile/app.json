@@ -12,7 +12,7 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "$(PRODUCT_NAME) uses your camera to take a profile picture or record video proof of your playing level, for example filming yourself during a rally to verify your skill rating.",
+        "NSCameraUsageDescription": "$(PRODUCT_NAME) uses your camera to take a profile picture, record video proof of your playing level (for example, filming yourself during a rally to verify your skill rating), and scan invite QR codes to join groups, communities, or matches.",
         "NSPhotoLibraryUsageDescription": "$(PRODUCT_NAME) uses your photo library to set a player, group, or community profile picture and to submit rating proof, for example selecting a video of your gameplay to verify your skill level.",
         "NSContactsUsageDescription": "$(PRODUCT_NAME) uses your contacts to import them into shared lists, send SMS invitations, and select match opponents, for example inviting a friend to play via text message.",
         "NSLocationWhenInUseUsageDescription": "$(PRODUCT_NAME) uses your location to show nearby courts and facilities sorted by distance, for example \"Tennis Club 0.3 km away\".",
@@ -151,7 +151,7 @@
         "expo-image-picker",
         {
           "photosPermission": "$(PRODUCT_NAME) uses your photo library to set a player, group, or community profile picture and to submit rating proof, for example selecting a video of your gameplay to verify your skill level.",
-          "cameraPermission": "$(PRODUCT_NAME) uses your camera to take a profile picture or record video proof of your playing level, for example filming yourself during a rally to verify your skill rating.",
+          "cameraPermission": "$(PRODUCT_NAME) uses your camera to take a profile picture, record video proof of your playing level (for example, filming yourself during a rally to verify your skill rating), and scan invite QR codes to join groups, communities, or matches.",
           "microphonePermission": "$(PRODUCT_NAME) uses your microphone to capture audio when recording video proof of your playing level, for example recording the sound during a rally video."
         }
       ],

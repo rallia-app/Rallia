@@ -149,7 +149,9 @@ const ProofGallerySection: React.FC<ProofGallerySectionProps> = ({
 
     let cancelled = false;
     Promise.all(
-      urlsToResolve.map(url => resolveStorageUrl(url).then(signed => ({ original: url, signed })))
+      urlsToResolve.map(url =>
+        resolveStorageUrl(url, 86400).then(signed => ({ original: url, signed }))
+      )
     ).then(results => {
       if (cancelled) return;
       const newUrls: Record<string, string> = {};

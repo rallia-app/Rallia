@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '@rallia/shared-services';
 import { useProfile } from '@rallia/shared-hooks';
-import { getHumanName } from '@rallia/shared-utils';
+import { getHumanName, getProfilePictureUrl } from '@rallia/shared-utils';
 import { Text } from './foundation/Text.native';
 import { Heading } from './foundation/Heading.native';
 
@@ -38,7 +38,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
   // Extract user data from profile
   const userName = getHumanName(profile, '');
   const userEmail = profile?.email || '';
-  const profilePictureUrl = profile?.profile_picture_url || null;
+  const profilePictureUrl = getProfilePictureUrl(profile?.profile_picture_url) || null;
 
   useEffect(() => {
     if (visible) {

@@ -1,6 +1,6 @@
 /**
  * FacilitiesDirectory Screen
- * Displays facilities with search, filtering, infinite scroll, and favorites.
+ * Displays facilities with search, filtering, and favorites.
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
@@ -8,7 +8,6 @@ import {
   View,
   StyleSheet,
   FlatList,
-  ActivityIndicator,
   RefreshControl,
   ScrollView,
   TouchableOpacity,
@@ -105,16 +104,6 @@ function LoadingSkeleton({
 
   return (
     <View style={styles.skeletonContainer}>
-      {/* Results count skeleton */}
-      <View style={styles.skeletonResultsInfo}>
-        <Skeleton
-          width={100}
-          height={16}
-          backgroundColor={skeletonBg}
-          highlightColor={skeletonHighlight}
-        />
-      </View>
-
       {/* Facility card skeletons */}
       {[1, 2, 3, 4, 5].map(i => (
         <View
@@ -237,7 +226,10 @@ export default function FacilitiesDirectory() {
       filters.courtType !== 'all' ||
       filters.lighting !== 'all' ||
       filters.membership !== 'all' ||
-      filters.hasAvailabilities
+      filters.organizationNature !== 'all' ||
+      filters.hasAvailabilities ||
+      filters.hasOpenSlots ||
+      filters.favoritesOnly
     );
   }, [filters]);
 
@@ -254,15 +246,11 @@ export default function FacilitiesDirectory() {
     location.longitude !== undefined &&
     !!selectedSport;
 
-  // Fetch facilities
+  // Fetch facilities (all at once — ~200 total, no need for pagination)
   const {
     facilities,
-    totalCount,
     isLoading,
     isFetching,
-    isFetchingNextPage,
-    hasNextPage,
-    fetchNextPage,
     refetch,
     error: queryError,
   } = useFacilitySearch({
@@ -273,6 +261,7 @@ export default function FacilitiesDirectory() {
     filters,
     userGender: player?.gender,
     playerId: player?.id,
+    pageSize: 500,
     enabled: showFacilities,
   });
 
@@ -280,14 +269,23 @@ export default function FacilitiesDirectory() {
   const { favorites, isFavorite, addFavorite, removeFavorite, isMaxReached } =
     useFavoriteFacilities(player?.id ?? null, selectedSport?.id);
 
-  // Facilities are already sorted by the DB: favorites first, then by distance
+  // Track which facilities have open slots (reported by each FacilityCard)
+  const [facilitySlotsMap, setFacilitySlotsMap] = useState<Map<string, boolean>>(new Map());
 
-  // Handle infinite scroll
-  const handleEndReached = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const handleSlotsLoaded = useCallback((facilityId: string, hasSlots: boolean) => {
+    setFacilitySlotsMap(prev => {
+      if (prev.get(facilityId) === hasSlots) return prev;
+      const next = new Map(prev);
+      next.set(facilityId, hasSlots);
+      return next;
+    });
+  }, []);
+
+  // Apply client-side "has open slots" filter
+  const displayedFacilities = useMemo(() => {
+    if (!filters.hasOpenSlots) return facilities;
+    return facilities.filter(f => facilitySlotsMap.get(f.id) === true);
+  }, [facilities, filters.hasOpenSlots, facilitySlotsMap]);
 
   // Handle facility press
   const handleFacilityPress = useCallback(
@@ -369,6 +367,7 @@ export default function FacilitiesDirectory() {
         showFavoriteButton={showFavoriteButton}
         sportName={selectedSport?.name}
         onSlotPress={handleSlotPress}
+        onSlotsLoaded={handleSlotsLoaded}
         isDark={isDark}
         colors={colors}
         t={t}
@@ -379,6 +378,7 @@ export default function FacilitiesDirectory() {
       handleFacilityPress,
       handleToggleFavorite,
       handleSlotPress,
+      handleSlotsLoaded,
       isMaxReached,
       showFavoriteButton,
       selectedSport?.name,
@@ -612,26 +612,6 @@ export default function FacilitiesDirectory() {
     rootNavigation,
   ]);
 
-  // Render results count (used inside list header)
-  const renderResultsInfo = useCallback(() => {
-    if (isLoading || !showFacilities) return null;
-
-    // Use totalCount from database if available, otherwise fall back to displayed count
-    const count = totalCount ?? facilities.length;
-    const countText =
-      count === 1
-        ? t('facilitiesTab.results.countSingular')
-        : t('facilitiesTab.results.count').replace('{count}', String(count));
-
-    return (
-      <View style={styles.resultsInfo}>
-        <Text size="sm" color={colors.textMuted}>
-          {countText}
-        </Text>
-      </View>
-    );
-  }, [isLoading, showFacilities, totalCount, facilities.length, colors.textMuted, t]);
-
   // Full list header: My Bookings, title, search, filters, error, then results info or skeleton
   const renderListHeader = useCallback(() => {
     return (
@@ -684,11 +664,8 @@ export default function FacilitiesDirectory() {
             </Text>
           </View>
         )}
-        {isLoading || sportLoading ? (
-          <LoadingSkeleton colors={colors} isDark={isDark} />
-        ) : (
-          renderResultsInfo()
-        )}
+        {(isLoading || sportLoading) && <LoadingSkeleton colors={colors} isDark={isDark} />}
+        <View style={styles.headerBottomSpacer} />
       </>
     );
   }, [
@@ -710,20 +687,9 @@ export default function FacilitiesDirectory() {
     isLoading,
     sportLoading,
     isDark,
-    renderResultsInfo,
     rootNavigation,
     location,
   ]);
-
-  // Render footer (loading indicator for infinite scroll)
-  const renderFooter = useCallback(() => {
-    if (!isFetchingNextPage) return null;
-    return (
-      <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color={colors.primary} />
-      </View>
-    );
-  }, [isFetchingNextPage, colors.primary]);
 
   // Render empty state
   const renderEmptyComponent = useCallback(() => {
@@ -748,24 +714,21 @@ export default function FacilitiesDirectory() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <FlatList
-        data={facilities}
+        data={displayedFacilities}
         renderItem={renderFacilityCard}
         keyExtractor={item => item.id}
         ListHeaderComponent={renderListHeader()}
         ListEmptyComponent={renderEmptyComponent}
-        ListFooterComponent={renderFooter}
-        onEndReached={handleEndReached}
-        onEndReachedThreshold={0.3}
         refreshControl={
           <RefreshControl
-            refreshing={isFetching && !isFetchingNextPage && !isLoading}
+            refreshing={isFetching && !isLoading}
             onRefresh={handleRefresh}
             tintColor={colors.primary}
           />
         }
         contentContainerStyle={[
           styles.listContent,
-          facilities.length === 0 && styles.emptyListContent,
+          displayedFacilities.length === 0 && styles.emptyListContent,
         ]}
         showsVerticalScrollIndicator={false}
       />
@@ -802,6 +765,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  headerBottomSpacer: {
+    height: spacingPixels[2],
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -822,14 +788,6 @@ const styles = StyleSheet.create({
   emptyListContent: {
     flexGrow: 1,
     paddingBottom: 0,
-  },
-  resultsInfo: {
-    paddingHorizontal: spacingPixels[4],
-    paddingBottom: spacingPixels[2],
-  },
-  footerLoader: {
-    paddingVertical: spacingPixels[4],
-    alignItems: 'center',
   },
   emptyContainer: {
     flex: 1,
@@ -855,10 +813,6 @@ const styles = StyleSheet.create({
   skeletonContainer: {
     paddingTop: spacingPixels[3],
     paddingBottom: spacingPixels[4],
-  },
-  skeletonResultsInfo: {
-    paddingHorizontal: spacingPixels[4],
-    paddingBottom: spacingPixels[2],
   },
   skeletonCard: {
     flexDirection: 'row',
