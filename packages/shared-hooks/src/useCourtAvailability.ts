@@ -384,8 +384,11 @@ export function useCourtAvailability(
         return []; // Graceful degradation
       }
     },
-    // Always enabled - unified service handles both local and external
-    enabled: enabled,
+    // Only fire when an external provider is configured — this prevents 80+ unnecessary
+    // network requests when FlatList renders many cards at once (Android network stack
+    // overload). Facilities with local templates but no external provider are rare and
+    // handled separately in FacilityDetail.
+    enabled: enabled && hasProvider,
     staleTime: 30 * 1000, // 30 seconds
     gcTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
