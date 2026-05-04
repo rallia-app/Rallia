@@ -103,11 +103,29 @@ Deno.serve(async req => {
       .eq('player_id', playerId)
       .single();
 
-    let stripeAccountId: string;
+    let stripeAccountId: string | undefined;
 
     if (existing) {
-      stripeAccountId = existing.stripe_account_id;
-    } else {
+      if (existing.onboarding_completed) {
+        // Already fully onboarded — just reuse it
+        stripeAccountId = existing.stripe_account_id;
+      } else {
+        // Account exists but onboarding isn't done yet — check if it was
+        // created by an older version of this function (missing business_type,
+        // wrong capabilities). If so, delete it and start fresh so the user
+        // gets the streamlined individual onboarding flow.
+        const acct = await stripe.accounts.retrieve(existing.stripe_account_id);
+        if (acct.business_type !== 'individual') {
+          await stripe.accounts.del(existing.stripe_account_id).catch(() => {});
+          await admin.from('player_stripe_account').delete().eq('player_id', playerId);
+          // stripeAccountId stays undefined → falls through to create below
+        } else {
+          stripeAccountId = existing.stripe_account_id;
+        }
+      }
+    }
+
+    if (!stripeAccountId) {
       // ---- Fetch profile + player data to pre-fill Stripe onboarding ----
       // Pre-filled fields are skipped by Stripe's hosted onboarding, which
       // dramatically shortens the flow for the user.
