@@ -536,6 +536,118 @@ export default function FacilityFiltersBar({
     onFiltersChange({ ...filters, hasOpenSlots: !filters.hasOpenSlots });
   }, [filters, onFiltersChange]);
 
+  // =============================================================================
+  // FILTER CHIPS ARRAY — sorted with active filters first
+  // =============================================================================
+
+  const filterChips = useMemo(() => {
+    const chips: {
+      key: string;
+      value: string;
+      isActive: boolean;
+      onPress: () => void;
+      icon?: keyof typeof Ionicons.glyphMap;
+      hasDropdown?: boolean;
+    }[] = [
+      {
+        key: 'favorites',
+        value: t('facilitiesTab.filters.favorites.label'),
+        isActive: filters.favoritesOnly,
+        onPress: handleFavoritesOnlyToggle,
+        icon: 'heart-outline',
+        hasDropdown: false,
+      },
+      {
+        key: 'distance',
+        value: distanceDisplay,
+        isActive: filters.distance !== 'all',
+        onPress: () => setShowDistanceDropdown(true),
+        icon: filters.distance !== 'all' ? 'navigate-outline' : undefined,
+      },
+      {
+        key: 'hasAvailabilities',
+        value: t('facilitiesTab.filters.hasAvailabilities.label'),
+        isActive: filters.hasAvailabilities,
+        onPress: handleHasAvailabilitiesToggle,
+        icon: 'calendar-outline',
+        hasDropdown: false,
+      },
+      {
+        key: 'hasOpenSlots',
+        value: t('facilitiesTab.filters.hasOpenSlots.label'),
+        isActive: filters.hasOpenSlots,
+        onPress: handleHasOpenSlotsToggle,
+        icon: 'time-outline',
+        hasDropdown: false,
+      },
+      {
+        key: 'courtType',
+        value: courtTypeDisplay,
+        isActive: filters.courtType !== 'all',
+        onPress: () => setShowCourtTypeDropdown(true),
+        icon: getCourtTypeIcon(filters.courtType),
+      },
+      {
+        key: 'surfaceType',
+        value: surfaceTypeDisplay,
+        isActive: filters.surfaceType !== 'all',
+        onPress: () => setShowSurfaceTypeDropdown(true),
+      },
+      {
+        key: 'facilityType',
+        value: facilityTypeDisplay,
+        isActive: filters.facilityType !== 'all',
+        onPress: () => setShowFacilityTypeDropdown(true),
+        icon: filters.facilityType !== 'all' ? 'business-outline' : undefined,
+      },
+      {
+        key: 'lighting',
+        value: lightingDisplay,
+        isActive: filters.lighting !== 'all',
+        onPress: () => setShowLightingDropdown(true),
+        icon: getLightingIcon(filters.lighting),
+      },
+      {
+        key: 'membership',
+        value: membershipDisplay,
+        isActive: filters.membership !== 'all',
+        onPress: () => setShowMembershipDropdown(true),
+        icon: getMembershipIcon(filters.membership),
+      },
+      {
+        key: 'organizationNature',
+        value: orgNatureDisplay,
+        isActive: filters.organizationNature !== 'all',
+        onPress: () => setShowOrgNatureDropdown(true),
+        icon: getOrgNatureIcon(filters.organizationNature),
+      },
+    ];
+
+    // Stable sort: active filters first, preserve relative order within each group
+    return [...chips].sort((a, b) => {
+      if (a.isActive && !b.isActive) return -1;
+      if (!a.isActive && b.isActive) return 1;
+      return 0;
+    });
+  }, [
+    t,
+    filters,
+    distanceDisplay,
+    courtTypeDisplay,
+    surfaceTypeDisplay,
+    facilityTypeDisplay,
+    lightingDisplay,
+    membershipDisplay,
+    orgNatureDisplay,
+    handleFavoritesOnlyToggle,
+    handleHasAvailabilitiesToggle,
+    handleHasOpenSlotsToggle,
+    getCourtTypeIcon,
+    getLightingIcon,
+    getMembershipIcon,
+    getOrgNatureIcon,
+  ]);
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -557,99 +669,7 @@ export default function FacilityFiltersBar({
           </View>
         )}
 
-        {/* Favorites Filter */}
-        <FilterChip
-          value={t('facilitiesTab.filters.favorites.label')}
-          isActive={filters.favoritesOnly}
-          onPress={handleFavoritesOnlyToggle}
-          isDark={isDark}
-          hasDropdown={false}
-          icon="heart-outline"
-        />
-
-        {/* Distance Filter */}
-        <FilterChip
-          value={distanceDisplay}
-          isActive={filters.distance !== 'all'}
-          onPress={() => setShowDistanceDropdown(true)}
-          isDark={isDark}
-          icon={filters.distance !== 'all' ? 'navigate-outline' : undefined}
-        />
-
-        {/* Has Availabilities Toggle (bookable facilities) */}
-        <FilterChip
-          value={t('facilitiesTab.filters.hasAvailabilities.label')}
-          isActive={filters.hasAvailabilities}
-          onPress={handleHasAvailabilitiesToggle}
-          isDark={isDark}
-          hasDropdown={false}
-          icon="calendar-outline"
-        />
-
-        {/* Has Open Slots Toggle (facilities with currently available time slots) */}
-        <FilterChip
-          value={t('facilitiesTab.filters.hasOpenSlots.label')}
-          isActive={filters.hasOpenSlots}
-          onPress={handleHasOpenSlotsToggle}
-          isDark={isDark}
-          hasDropdown={false}
-          icon="time-outline"
-        />
-
-        {/* Court Type Filter */}
-        <FilterChip
-          value={courtTypeDisplay}
-          isActive={filters.courtType !== 'all'}
-          onPress={() => setShowCourtTypeDropdown(true)}
-          isDark={isDark}
-          icon={getCourtTypeIcon(filters.courtType)}
-        />
-
-        {/* Surface Type Filter */}
-        <FilterChip
-          value={surfaceTypeDisplay}
-          isActive={filters.surfaceType !== 'all'}
-          onPress={() => setShowSurfaceTypeDropdown(true)}
-          isDark={isDark}
-        />
-
-        {/* Facility Type Filter */}
-        <FilterChip
-          value={facilityTypeDisplay}
-          isActive={filters.facilityType !== 'all'}
-          onPress={() => setShowFacilityTypeDropdown(true)}
-          isDark={isDark}
-          icon={filters.facilityType !== 'all' ? 'business-outline' : undefined}
-        />
-
-        {/* Lighting Filter */}
-        <FilterChip
-          value={lightingDisplay}
-          isActive={filters.lighting !== 'all'}
-          onPress={() => setShowLightingDropdown(true)}
-          isDark={isDark}
-          icon={getLightingIcon(filters.lighting)}
-        />
-
-        {/* Membership Filter */}
-        <FilterChip
-          value={membershipDisplay}
-          isActive={filters.membership !== 'all'}
-          onPress={() => setShowMembershipDropdown(true)}
-          isDark={isDark}
-          icon={getMembershipIcon(filters.membership)}
-        />
-
-        {/* Organization Nature Filter (Public/Private) */}
-        <FilterChip
-          value={orgNatureDisplay}
-          isActive={filters.organizationNature !== 'all'}
-          onPress={() => setShowOrgNatureDropdown(true)}
-          isDark={isDark}
-          icon={getOrgNatureIcon(filters.organizationNature)}
-        />
-
-        {/* Reset Button */}
+        {/* Reset Button — shown after location selector, before filter chips */}
         {hasActiveFilters && onReset && (
           <TouchableOpacity
             style={[
@@ -672,6 +692,19 @@ export default function FacilityFiltersBar({
             </Text>
           </TouchableOpacity>
         )}
+
+        {/* Filter Chips — sorted with active filters first */}
+        {filterChips.map(chip => (
+          <FilterChip
+            key={chip.key}
+            value={chip.value}
+            isActive={chip.isActive}
+            onPress={chip.onPress}
+            isDark={isDark}
+            icon={chip.icon}
+            hasDropdown={chip.hasDropdown}
+          />
+        ))}
       </ScrollView>
 
       {/* =================================================================== */}
