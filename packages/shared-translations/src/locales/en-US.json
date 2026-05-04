@@ -8163,6 +8163,9 @@
       "hasAvailabilities": {
         "label": "Bookable"
       },
+      "hasOpenSlots": {
+        "label": "Open Slots"
+      },
       "favorites": {
         "label": "Favorites"
       }

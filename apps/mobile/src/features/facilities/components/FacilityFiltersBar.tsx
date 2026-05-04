@@ -502,6 +502,10 @@ export default function FacilityFiltersBar({
     onFiltersChange({ ...filters, favoritesOnly: !filters.favoritesOnly });
   }, [filters, onFiltersChange]);
 
+  const handleHasOpenSlotsToggle = useCallback(() => {
+    onFiltersChange({ ...filters, hasOpenSlots: !filters.hasOpenSlots });
+  }, [filters, onFiltersChange]);
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -550,6 +554,16 @@ export default function FacilityFiltersBar({
           isDark={isDark}
           hasDropdown={false}
           icon="calendar-outline"
+        />
+
+        {/* Has Open Slots Toggle (facilities with currently available time slots) */}
+        <FilterChip
+          value={t('facilitiesTab.filters.hasOpenSlots.label')}
+          isActive={filters.hasOpenSlots}
+          onPress={handleHasOpenSlotsToggle}
+          isDark={isDark}
+          hasDropdown={false}
+          icon="time-outline"
         />
 
         {/* Court Type Filter */}
