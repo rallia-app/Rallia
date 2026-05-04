@@ -346,7 +346,7 @@ export default function FacilityFiltersBar({
   const getDistanceLabel = useCallback(
     (v: FacilityDistanceFilter) => {
       if (v === 'all') return t('facilitiesTab.filters.distance.all');
-      return `${v} km`;
+      return `< ${v} km`;
     },
     [t]
   );
@@ -421,7 +421,7 @@ export default function FacilityFiltersBar({
   const distanceDisplay =
     filters.distance === 'all'
       ? t('facilitiesTab.filters.distance.label')
-      : `${filters.distance} km`;
+      : `< ${filters.distance} km`;
   const facilityTypeDisplay =
     filters.facilityType === 'all'
       ? t('facilitiesTab.filters.facilityType.label')
