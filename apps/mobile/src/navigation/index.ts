@@ -76,6 +76,17 @@ export function navigateToIncomingReferenceRequestsFromOutside() {
   }
 }
 
+/**
+ * Navigate to the current user's UserProfile screen from outside the
+ * NavigationContainer. Used as a fallback when push-tap handlers can't
+ * complete their primary action (e.g. opening Stripe onboarding fails).
+ */
+export function navigateToUserProfileFromOutside() {
+  if (navigationRef.isReady()) {
+    navigationRef.navigate('UserProfile', {});
+  }
+}
+
 // Main navigator
 export { default as AppNavigator } from './AppNavigator';
 

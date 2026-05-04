@@ -5047,7 +5047,7 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
             <TouchableWithoutFeedback>
               <View
                 style={{
-                  backgroundColor: isDark ? darkTheme.cardBackground : lightTheme.cardBackground,
+                  backgroundColor: colors.cardBackground,
                   borderRadius: 16,
                   padding: 20,
                   gap: 16,

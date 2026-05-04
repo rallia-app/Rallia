@@ -14,6 +14,7 @@ import {
   navigateFromOutside,
   navigateToCommunityScreen,
   navigateToIncomingReferenceRequestsFromOutside,
+  navigateToUserProfileFromOutside,
 } from '../navigation';
 import * as Analytics from '../services/analytics';
 
@@ -442,7 +443,7 @@ export function usePushNotifications(
           // profile screen so the host can retry from settings.
           void openStripeOnboarding().then(success => {
             if (!success) {
-              navigateFromOutside('UserProfile');
+              navigateToUserProfileFromOutside();
             }
           });
         }
