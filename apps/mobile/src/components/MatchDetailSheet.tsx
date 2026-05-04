@@ -1674,6 +1674,95 @@ export const MatchDetailSheet: React.FC = () => {
     };
   }, [isStartingSoonForAnimation, selectedMatch]);
 
+  // Reimbursement hooks — must be before early return for hooks rules
+  const [isPaying, setIsPaying] = useState(false);
+  const [hostStripeConnected, setHostStripeConnected] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (
+      !selectedMatch ||
+      !selectedMatch.estimated_cost ||
+      selectedMatch.is_court_free ||
+      selectedMatch.cost_split_type !== 'split_equal'
+    )
+      return;
+    supabase
+      .from('player_stripe_account')
+      .select('onboarding_completed')
+      .eq('player_id', selectedMatch.created_by)
+      .maybeSingle()
+      .then(({ data }) => setHostStripeConnected(data?.onboarding_completed ?? false));
+  }, [
+    selectedMatch?.created_by,
+    selectedMatch?.cost_split_type,
+    selectedMatch?.is_court_free,
+    selectedMatch?.estimated_cost,
+  ]);
+
+  const handlePayNow = useCallback(async () => {
+    if (!selectedMatch?.id) return;
+    setIsPaying(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('match-reimbursement-create', {
+        body: { matchId: selectedMatch.id },
+      });
+      if (error || !data?.clientSecret) throw new Error(error?.message ?? 'No client secret');
+
+      const { error: initError } = await initPaymentSheet({
+        paymentIntentClientSecret: data.clientSecret,
+        merchantDisplayName: 'Rallia',
+        applePay: { merchantCountryCode: 'CA' },
+        googlePay: { merchantCountryCode: 'CA' },
+      });
+      if (initError) throw new Error(initError.message);
+
+      const { error: paymentError } = await presentPaymentSheet();
+      if (paymentError?.code === 'Canceled') return;
+      if (paymentError) throw new Error(paymentError.message);
+
+      updateSelectedMatch({
+        ...selectedMatch,
+        participants: selectedMatch.participants?.map(p =>
+          p.player_id === playerId ? { ...p, has_paid: true } : p
+        ),
+      });
+      toast.success(t('matchDetail.paymentSuccess' as TranslationKey));
+    } catch {
+      toast.error(t('matchDetail.paymentError' as TranslationKey));
+    } finally {
+      setIsPaying(false);
+    }
+  }, [
+    selectedMatch,
+    playerId,
+    initPaymentSheet,
+    presentPaymentSheet,
+    updateSelectedMatch,
+    toast,
+    t,
+  ]);
+
+  const handleMarkAsPaid = useCallback(
+    async (targetPlayerId?: string) => {
+      const pid = targetPlayerId ?? playerId;
+      if (!selectedMatch?.id || !pid) return;
+      await supabase
+        .from('match_participant')
+        .update({ has_paid: true })
+        .eq('match_id', selectedMatch.id)
+        .eq('player_id', pid);
+
+      updateSelectedMatch({
+        ...selectedMatch,
+        participants: selectedMatch.participants?.map(p =>
+          p.player_id === pid ? { ...p, has_paid: true } : p
+        ),
+      });
+      toast.success(t('matchDetail.markedAsPaid' as TranslationKey));
+    },
+    [selectedMatch, playerId, updateSelectedMatch, toast, t]
+  );
+
   // Render nothing if no match is selected
   if (!selectedMatch) {
     return (
@@ -2066,7 +2155,7 @@ export const MatchDetailSheet: React.FC = () => {
   const perPlayerCost =
     participantInfo.total > 0 ? (totalCost / participantInfo.total).toFixed(2) : '0.00';
 
-  // Reimbursement
+  // Reimbursement (hooks are above the early return; only derived values here)
   const showReimbursement =
     hasMatchEnded &&
     !isCourtFree &&
@@ -2074,78 +2163,10 @@ export const MatchDetailSheet: React.FC = () => {
     match.cost_split_type === 'split_equal' &&
     !!currentPlayerParticipant;
   const isNonHostParticipant = showReimbursement && !currentPlayerParticipant?.is_host;
-  const [isPaying, setIsPaying] = useState(false);
-  const [hostStripeConnected, setHostStripeConnected] = useState<boolean | null>(null);
   const paidParticipants =
     match.participants?.filter(p => p.status === 'joined' && p.has_paid).length ?? 0;
   const totalParticipants = match.participants?.filter(p => p.status === 'joined').length ?? 0;
   const perPlayerCostFormatted = `$${perPlayerCost}`;
-
-  useEffect(() => {
-    if (!showReimbursement) return;
-    supabase
-      .from('player_stripe_account')
-      .select('onboarding_completed')
-      .eq('player_id', match.created_by)
-      .maybeSingle()
-      .then(({ data }) => setHostStripeConnected(data?.onboarding_completed ?? false));
-  }, [showReimbursement, match.created_by]);
-
-  const handlePayNow = useCallback(async () => {
-    if (!match.id) return;
-    setIsPaying(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('match-reimbursement-create', {
-        body: { matchId: match.id },
-      });
-      if (error || !data?.clientSecret) throw new Error(error?.message ?? 'No client secret');
-
-      const { error: initError } = await initPaymentSheet({
-        paymentIntentClientSecret: data.clientSecret,
-        merchantDisplayName: 'Rallia',
-        applePay: { merchantCountryCode: 'CA' },
-        googlePay: { merchantCountryCode: 'CA' },
-      });
-      if (initError) throw new Error(initError.message);
-
-      const { error: paymentError } = await presentPaymentSheet();
-      if (paymentError?.code === 'Canceled') return;
-      if (paymentError) throw new Error(paymentError.message);
-
-      updateSelectedMatch({
-        ...match,
-        participants: match.participants?.map(p =>
-          p.player_id === playerId ? { ...p, has_paid: true } : p
-        ),
-      });
-      toast.success(t('matchDetail.paymentSuccess' as TranslationKey));
-    } catch {
-      toast.error(t('matchDetail.paymentError' as TranslationKey));
-    } finally {
-      setIsPaying(false);
-    }
-  }, [match, playerId, initPaymentSheet, presentPaymentSheet, updateSelectedMatch, toast, t]);
-
-  const handleMarkAsPaid = useCallback(
-    async (targetPlayerId?: string) => {
-      const pid = targetPlayerId ?? playerId;
-      if (!match.id || !pid) return;
-      await supabase
-        .from('match_participant')
-        .update({ has_paid: true })
-        .eq('match_id', match.id)
-        .eq('player_id', pid);
-
-      updateSelectedMatch({
-        ...match,
-        participants: match.participants?.map(p =>
-          p.player_id === pid ? { ...p, has_paid: true } : p
-        ),
-      });
-      toast.success(t('matchDetail.markedAsPaid' as TranslationKey));
-    },
-    [match, playerId, updateSelectedMatch, toast, t]
-  );
 
   // Location display
   const facilityName = match.facility?.name || match.location_name;
