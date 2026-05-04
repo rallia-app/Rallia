@@ -62,6 +62,10 @@ export const LIGHTING_OPTIONS: LightingFilter[] = ['all', 'with_lights', 'no_lig
 // Membership filter options
 export const MEMBERSHIP_OPTIONS: MembershipFilter[] = ['all', 'public', 'members_only'];
 
+// Organization nature filter options
+export type OrganizationNatureFilter = 'all' | 'public' | 'private';
+export const ORGANIZATION_NATURE_OPTIONS: OrganizationNatureFilter[] = ['all', 'public', 'private'];
+
 // Query keys for cache management
 export const facilityKeys = {
   all: ['facilities'] as const,
@@ -107,6 +111,7 @@ export interface FacilityFilters {
   courtType: 'all' | CourtTypeFilter;
   lighting: LightingFilter;
   membership: MembershipFilter;
+  organizationNature: OrganizationNatureFilter;
   hasAvailabilities: boolean;
   hasOpenSlots: boolean;
   favoritesOnly: boolean;
@@ -120,6 +125,7 @@ export const DEFAULT_FACILITY_FILTERS: FacilityFilters = {
   courtType: 'all',
   lighting: 'all',
   membership: 'all',
+  organizationNature: 'all',
   hasAvailabilities: false,
   hasOpenSlots: false,
   favoritesOnly: false,
@@ -214,6 +220,7 @@ export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilit
         playerId
       ),
       filters.favoritesOnly,
+      filters.organizationNature,
       pageSize,
     ],
     queryFn: async ({ pageParam }) => {
@@ -242,6 +249,8 @@ export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilit
         membershipRequired,
         hasAvailabilities: filters.hasAvailabilities ? true : undefined,
         favoritesOnly: filters.favoritesOnly ? true : undefined,
+        organizationNature:
+          filters.organizationNature === 'all' ? undefined : filters.organizationNature,
         userGender,
         playerId,
         limit: pageSize,

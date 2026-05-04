@@ -1,6 +1,6 @@
--- Migration: Remove favorite-first sorting, add favorites-only filter
+-- Migration: Remove favorite-first sorting, add favorites-only and org nature filters
 -- Description: Facilities now sort purely by distance. Added p_favorites_only
---              parameter to filter results to only the player's favorited facilities.
+--              and p_organization_nature parameters for filtering.
 
 DROP FUNCTION IF EXISTS search_facilities_nearby;
 
@@ -20,7 +20,8 @@ CREATE OR REPLACE FUNCTION search_facilities_nearby(
   p_offset INT DEFAULT 0,
   p_user_gender TEXT DEFAULT NULL,
   p_player_id UUID DEFAULT NULL,
-  p_favorites_only BOOLEAN DEFAULT NULL
+  p_favorites_only BOOLEAN DEFAULT NULL,
+  p_organization_nature TEXT DEFAULT NULL
 )
 RETURNS TABLE(
   id UUID,
@@ -205,6 +206,10 @@ BEGIN
             AND pff.player_id = p_player_id
             AND pff.sport_id = ANY(p_sport_ids)
         ))
+      )
+      AND (
+        p_organization_nature IS NULL
+        OR o.nature::TEXT = p_organization_nature
       )
     GROUP BY f.id, f.name, f.city, f.address, f.location, f.facility_type,
              f.data_provider_id, f.external_provider_id, f.timezone,

@@ -64,6 +64,8 @@ export interface SearchFacilitiesParams {
   hasAvailabilities?: boolean;
   /** When true, only return facilities favorited by the player */
   favoritesOnly?: boolean;
+  /** Filter by organization nature ('public' or 'private') */
+  organizationNature?: string | null;
   /** The viewing user's gender for match eligibility filtering */
   userGender?: string | null;
   /** Player ID for favorite sorting and favorites filter */
@@ -243,6 +245,7 @@ export async function searchFacilitiesNearby(
     membershipRequired,
     hasAvailabilities,
     favoritesOnly,
+    organizationNature,
     userGender,
     playerId,
     limit = DEFAULT_PAGE_SIZE,
@@ -268,6 +271,7 @@ export async function searchFacilitiesNearby(
       p_user_gender: userGender || null,
       p_player_id: playerId || null,
       p_favorites_only: favoritesOnly ?? null,
+      p_organization_nature: organizationNature || null,
     }),
     // Only fetch count on first page (offset === 0) to avoid unnecessary queries
     offset === 0

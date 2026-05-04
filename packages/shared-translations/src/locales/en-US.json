@@ -8166,6 +8166,12 @@
       "hasOpenSlots": {
         "label": "Open Slots"
       },
+      "organizationNature": {
+        "label": "Ownership",
+        "all": "All",
+        "public": "Public",
+        "private": "Private"
+      },
       "favorites": {
         "label": "Favorites"
       }

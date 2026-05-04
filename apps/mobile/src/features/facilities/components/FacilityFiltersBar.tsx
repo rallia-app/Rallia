@@ -16,6 +16,7 @@ import {
   type CourtTypeFilter,
   type LightingFilter,
   type MembershipFilter,
+  type OrganizationNatureFilter,
 } from '@rallia/shared-hooks';
 import { useTranslation } from '../../../hooks';
 import {
@@ -59,6 +60,7 @@ const SURFACE_TYPES: ('all' | SurfaceTypeFilter)[] = [
 const COURT_TYPES: ('all' | CourtTypeFilter)[] = ['all', 'indoor', 'outdoor'];
 const LIGHTING_OPTIONS: LightingFilter[] = ['all', 'with_lights', 'no_lights'];
 const MEMBERSHIP_OPTIONS: MembershipFilter[] = ['all', 'public', 'members_only'];
+const ORGANIZATION_NATURE_OPTIONS: OrganizationNatureFilter[] = ['all', 'public', 'private'];
 
 // =============================================================================
 // FILTER CHIP COMPONENT
@@ -338,6 +340,7 @@ export default function FacilityFiltersBar({
   const [showCourtTypeDropdown, setShowCourtTypeDropdown] = useState(false);
   const [showLightingDropdown, setShowLightingDropdown] = useState(false);
   const [showMembershipDropdown, setShowMembershipDropdown] = useState(false);
+  const [showOrgNatureDropdown, setShowOrgNatureDropdown] = useState(false);
 
   // =============================================================================
   // LABEL GETTERS
@@ -386,6 +389,13 @@ export default function FacilityFiltersBar({
     [t]
   );
 
+  const getOrgNatureLabel = useCallback(
+    (v: OrganizationNatureFilter) => {
+      return t(`facilitiesTab.filters.organizationNature.${v}`);
+    },
+    [t]
+  );
+
   // Icon getters for dropdowns
   const getCourtTypeIcon = useCallback((v: 'all' | CourtTypeFilter) => {
     const icons: Record<'all' | CourtTypeFilter, keyof typeof Ionicons.glyphMap | undefined> = {
@@ -410,6 +420,15 @@ export default function FacilityFiltersBar({
       all: undefined,
       public: 'globe-outline',
       members_only: 'key-outline',
+    };
+    return icons[v];
+  }, []);
+
+  const getOrgNatureIcon = useCallback((v: OrganizationNatureFilter) => {
+    const icons: Record<OrganizationNatureFilter, keyof typeof Ionicons.glyphMap | undefined> = {
+      all: undefined,
+      public: 'business-outline',
+      private: 'lock-closed-outline',
     };
     return icons[v];
   }, []);
@@ -442,6 +461,10 @@ export default function FacilityFiltersBar({
     filters.membership === 'all'
       ? t('facilitiesTab.filters.membership.label')
       : getMembershipLabel(filters.membership);
+  const orgNatureDisplay =
+    filters.organizationNature === 'all'
+      ? t('facilitiesTab.filters.organizationNature.label')
+      : getOrgNatureLabel(filters.organizationNature);
 
   // =============================================================================
   // HANDLERS
@@ -493,6 +516,13 @@ export default function FacilityFiltersBar({
     lightHaptic();
     onReset?.();
   }, [onReset]);
+
+  const handleOrgNatureChange = useCallback(
+    (value: OrganizationNatureFilter) => {
+      onFiltersChange({ ...filters, organizationNature: value });
+    },
+    [filters, onFiltersChange]
+  );
 
   const handleHasAvailabilitiesToggle = useCallback(() => {
     onFiltersChange({ ...filters, hasAvailabilities: !filters.hasAvailabilities });
@@ -610,6 +640,15 @@ export default function FacilityFiltersBar({
           icon={getMembershipIcon(filters.membership)}
         />
 
+        {/* Organization Nature Filter (Public/Private) */}
+        <FilterChip
+          value={orgNatureDisplay}
+          isActive={filters.organizationNature !== 'all'}
+          onPress={() => setShowOrgNatureDropdown(true)}
+          isDark={isDark}
+          icon={getOrgNatureIcon(filters.organizationNature)}
+        />
+
         {/* Reset Button */}
         {hasActiveFilters && onReset && (
           <TouchableOpacity
@@ -712,6 +751,19 @@ export default function FacilityFiltersBar({
         isDark={isDark}
         getLabel={getMembershipLabel}
         getIcon={getMembershipIcon}
+      />
+
+      {/* Organization Nature Dropdown */}
+      <FilterDropdown
+        visible={showOrgNatureDropdown}
+        title={t('facilitiesTab.filters.organizationNature.label')}
+        options={ORGANIZATION_NATURE_OPTIONS}
+        selectedValue={filters.organizationNature}
+        onSelect={handleOrgNatureChange}
+        onClose={() => setShowOrgNatureDropdown(false)}
+        isDark={isDark}
+        getLabel={getOrgNatureLabel}
+        getIcon={getOrgNatureIcon}
       />
     </View>
   );

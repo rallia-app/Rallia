@@ -226,6 +226,7 @@ export default function FacilitiesDirectory() {
       filters.courtType !== 'all' ||
       filters.lighting !== 'all' ||
       filters.membership !== 'all' ||
+      filters.organizationNature !== 'all' ||
       filters.hasAvailabilities ||
       filters.hasOpenSlots ||
       filters.favoritesOnly

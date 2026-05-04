@@ -8168,6 +8168,12 @@
       "hasOpenSlots": {
         "label": "Disponible"
       },
+      "organizationNature": {
+        "label": "Type",
+        "all": "Tous",
+        "public": "Public",
+        "private": "Privé"
+      },
       "favorites": {
         "label": "Favoris"
       }
