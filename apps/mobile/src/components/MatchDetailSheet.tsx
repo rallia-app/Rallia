@@ -2125,22 +2125,26 @@ export const MatchDetailSheet: React.FC = () => {
     }
   }, [match, playerId, initPaymentSheet, presentPaymentSheet, updateSelectedMatch, toast, t]);
 
-  const handleMarkAsPaid = useCallback(async () => {
-    if (!match.id || !playerId) return;
-    await supabase
-      .from('match_participant')
-      .update({ has_paid: true })
-      .eq('match_id', match.id)
-      .eq('player_id', playerId);
+  const handleMarkAsPaid = useCallback(
+    async (targetPlayerId?: string) => {
+      const pid = targetPlayerId ?? playerId;
+      if (!match.id || !pid) return;
+      await supabase
+        .from('match_participant')
+        .update({ has_paid: true })
+        .eq('match_id', match.id)
+        .eq('player_id', pid);
 
-    updateSelectedMatch({
-      ...match,
-      participants: match.participants?.map(p =>
-        p.player_id === playerId ? { ...p, has_paid: true } : p
-      ),
-    });
-    toast.success(t('matchDetail.markedAsPaid' as TranslationKey));
-  }, [match, playerId, updateSelectedMatch, toast, t]);
+      updateSelectedMatch({
+        ...match,
+        participants: match.participants?.map(p =>
+          p.player_id === pid ? { ...p, has_paid: true } : p
+        ),
+      });
+      toast.success(t('matchDetail.markedAsPaid' as TranslationKey));
+    },
+    [match, playerId, updateSelectedMatch, toast, t]
+  );
 
   // Location display
   const facilityName = match.facility?.name || match.location_name;
@@ -4660,6 +4664,7 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
                       )}
                       <Text
                         size="sm"
+                        style={{ flex: 1 }}
                         color={
                           p.has_paid
                             ? isDark
@@ -4670,6 +4675,23 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
                       >
                         {getShortName(p.player?.profile, '')}
                       </Text>
+                      {!p.has_paid && (
+                        <TouchableOpacity
+                          onPress={() => handleMarkAsPaid(p.player_id)}
+                          style={{
+                            backgroundColor: colors.card,
+                            borderWidth: 1,
+                            borderColor: colors.border,
+                            borderRadius: 6,
+                            paddingVertical: 4,
+                            paddingHorizontal: 10,
+                          }}
+                        >
+                          <Text size="xs" weight="medium" color={colors.text}>
+                            {t('matchDetail.markAsPaid' as TranslationKey)}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   ))}
               </View>

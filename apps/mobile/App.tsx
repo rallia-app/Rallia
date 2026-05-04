@@ -278,16 +278,23 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
         deepLinkOpened({ link_type: 'match', ...utmParams });
         setPendingMatchId(matchId);
       } else if (isStripeConnectReturn) {
-        supabase
-          .from('player_stripe_account')
-          .select('onboarding_completed')
-          .eq('player_id', user?.id ?? '')
-          .single()
-          .then(({ data }) => {
-            if (data?.onboarding_completed) {
-              toast.success('Payments connected!');
-            }
-          });
+        // The account.updated webhook may not have fired yet when the user
+        // returns from Stripe onboarding, so we poll a few times with a delay
+        // before giving up.
+        const checkOnboarding = async (attempts = 0): Promise<void> => {
+          const { data } = await supabase
+            .from('player_stripe_account')
+            .select('onboarding_completed')
+            .eq('player_id', user?.id ?? '')
+            .single();
+
+          if (data?.onboarding_completed) {
+            toast.success('Payments connected!');
+          } else if (attempts < 5) {
+            setTimeout(() => checkOnboarding(attempts + 1), 2000);
+          }
+        };
+        checkOnboarding();
       } else if (inviteCode) {
         deepLinkOpened({ link_type: 'invite', referral_code: inviteCode, ...utmParams });
       } else if (utmParams) {
