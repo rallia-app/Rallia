@@ -13,6 +13,32 @@ import type {
 } from '../types';
 
 /**
+ * Parse a JSON response from a provider API, tolerating a few common quirks
+ * that RN's XHR layer doesn't normalize across iOS and Android:
+ *
+ * - **UTF-8 BOM** (`U+FEFF`): emitted by .NET / IIS / some PHP backends
+ *   (e.g. IC3/Otium). iOS strips it at the native XHR layer; Android-Hermes
+ *   passes it through, so `JSON.parse` throws "Unexpected token".
+ * - **XSSI prefix** (`)]}',\n`): Angular / Google APIs / OWASP-recommended
+ *   anti-JSON-hijacking guard. Not currently emitted by any of our providers,
+ *   but cheap to handle defensively.
+ *
+ * Single chokepoint for cross-platform / cross-provider response normalization.
+ * Add new quirks here as we discover them, not in individual providers.
+ */
+export function parseJsonResponse<T>(raw: string): T {
+  let s = raw;
+  if (s.charCodeAt(0) === 0xfeff) {
+    s = s.slice(1);
+  }
+  if (s.startsWith(")]}'")) {
+    const newlineIdx = s.indexOf('\n');
+    s = newlineIdx === -1 ? s.slice(4) : s.slice(newlineIdx + 1);
+  }
+  return JSON.parse(s) as T;
+}
+
+/**
  * Abstract base class for availability providers.
  *
  * Features:
@@ -111,16 +137,7 @@ export abstract class BaseAvailabilityProvider {
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
-            // Strip a leading UTF-8 BOM (﻿) if present. The IC3/Otium
-            // backend prefixes its JSON response with a BOM; iOS strips it at
-            // the native XHR layer (NSURLSession + NSString) but RN-Android on
-            // Hermes passes it through as-is, causing JSON.parse to fail with
-            // "Unexpected token". See Sentry issue 7461110976.
-            const text =
-              xhr.responseText.charCodeAt(0) === 0xfeff
-                ? xhr.responseText.slice(1)
-                : xhr.responseText;
-            resolve(JSON.parse(text) as T);
+            resolve(parseJsonResponse<T>(xhr.responseText));
           } catch {
             reject(
               new Error(
