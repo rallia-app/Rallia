@@ -8,7 +8,6 @@ import {
   View,
   StyleSheet,
   FlatList,
-  ActivityIndicator,
   RefreshControl,
   ScrollView,
   TouchableOpacity,
@@ -229,6 +228,7 @@ export default function FacilitiesDirectory() {
       filters.membership !== 'all' ||
       filters.organizationNature !== 'all' ||
       filters.hasAvailabilities ||
+      filters.hasOpenSlots ||
       filters.favoritesOnly
     );
   }, [filters]);
@@ -246,14 +246,11 @@ export default function FacilitiesDirectory() {
     location.longitude !== undefined &&
     !!selectedSport;
 
-  // Fetch facilities
+  // Fetch facilities (all at once — ~200 total, no need for pagination)
   const {
     facilities,
     isLoading,
     isFetching,
-    isFetchingNextPage,
-    hasNextPage,
-    fetchNextPage,
     refetch,
     error: queryError,
   } = useFacilitySearch({
@@ -264,6 +261,7 @@ export default function FacilitiesDirectory() {
     filters,
     userGender: player?.gender,
     playerId: player?.id,
+    pageSize: 500,
     enabled: showFacilities,
   });
 
@@ -271,12 +269,23 @@ export default function FacilitiesDirectory() {
   const { favorites, isFavorite, addFavorite, removeFavorite, isMaxReached } =
     useFavoriteFacilities(player?.id ?? null, selectedSport?.id);
 
-  // Handle infinite scroll
-  const handleEndReached = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  // Track which facilities have open slots (reported by each FacilityCard)
+  const [facilitySlotsMap, setFacilitySlotsMap] = useState<Map<string, boolean>>(new Map());
+
+  const handleSlotsLoaded = useCallback((facilityId: string, hasSlots: boolean) => {
+    setFacilitySlotsMap(prev => {
+      if (prev.get(facilityId) === hasSlots) return prev;
+      const next = new Map(prev);
+      next.set(facilityId, hasSlots);
+      return next;
+    });
+  }, []);
+
+  // Apply client-side "has open slots" filter
+  const displayedFacilities = useMemo(() => {
+    if (!filters.hasOpenSlots) return facilities;
+    return facilities.filter(f => facilitySlotsMap.get(f.id) === true);
+  }, [facilities, filters.hasOpenSlots, facilitySlotsMap]);
 
   // Handle facility press
   const handleFacilityPress = useCallback(
@@ -358,6 +367,7 @@ export default function FacilitiesDirectory() {
         showFavoriteButton={showFavoriteButton}
         sportName={selectedSport?.name}
         onSlotPress={handleSlotPress}
+        onSlotsLoaded={handleSlotsLoaded}
         isDark={isDark}
         colors={colors}
         t={t}
@@ -368,6 +378,7 @@ export default function FacilitiesDirectory() {
       handleFacilityPress,
       handleToggleFavorite,
       handleSlotPress,
+      handleSlotsLoaded,
       isMaxReached,
       showFavoriteButton,
       selectedSport?.name,
@@ -693,16 +704,6 @@ export default function FacilitiesDirectory() {
     );
   }, [isLoading, hasActiveSearch, location, colors, t]);
 
-  // Render footer (loading indicator for infinite scroll)
-  const renderFooter = useCallback(() => {
-    if (!isFetchingNextPage) return null;
-    return (
-      <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color={colors.primary} />
-      </View>
-    );
-  }, [isFetchingNextPage, colors.primary]);
-
   const handleRefresh = useCallback(() => {
     refetch();
     if (session?.user?.id) {
@@ -713,24 +714,21 @@ export default function FacilitiesDirectory() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <FlatList
-        data={facilities}
+        data={displayedFacilities}
         renderItem={renderFacilityCard}
         keyExtractor={item => item.id}
         ListHeaderComponent={renderListHeader()}
         ListEmptyComponent={renderEmptyComponent}
-        ListFooterComponent={renderFooter}
-        onEndReached={handleEndReached}
-        onEndReachedThreshold={0.3}
         refreshControl={
           <RefreshControl
-            refreshing={isFetching && !isFetchingNextPage && !isLoading}
+            refreshing={isFetching && !isLoading}
             onRefresh={handleRefresh}
             tintColor={colors.primary}
           />
         }
         contentContainerStyle={[
           styles.listContent,
-          facilities.length === 0 && styles.emptyListContent,
+          displayedFacilities.length === 0 && styles.emptyListContent,
         ]}
         showsVerticalScrollIndicator={false}
         // Limit concurrent renders to prevent Android network overload
@@ -795,10 +793,6 @@ const styles = StyleSheet.create({
   emptyListContent: {
     flexGrow: 1,
     paddingBottom: 0,
-  },
-  footerLoader: {
-    paddingVertical: spacingPixels[4],
-    alignItems: 'center',
   },
   emptyContainer: {
     flex: 1,

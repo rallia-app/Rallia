@@ -532,6 +532,10 @@ export default function FacilityFiltersBar({
     onFiltersChange({ ...filters, favoritesOnly: !filters.favoritesOnly });
   }, [filters, onFiltersChange]);
 
+  const handleHasOpenSlotsToggle = useCallback(() => {
+    onFiltersChange({ ...filters, hasOpenSlots: !filters.hasOpenSlots });
+  }, [filters, onFiltersChange]);
+
   // =============================================================================
   // FILTER CHIPS ARRAY — sorted with active filters first
   // =============================================================================
@@ -566,6 +570,14 @@ export default function FacilityFiltersBar({
         isActive: filters.hasAvailabilities,
         onPress: handleHasAvailabilitiesToggle,
         icon: 'calendar-outline',
+        hasDropdown: false,
+      },
+      {
+        key: 'hasOpenSlots',
+        value: t('facilitiesTab.filters.hasOpenSlots.label'),
+        isActive: filters.hasOpenSlots,
+        onPress: handleHasOpenSlotsToggle,
+        icon: 'time-outline',
         hasDropdown: false,
       },
       {
@@ -629,6 +641,7 @@ export default function FacilityFiltersBar({
     orgNatureDisplay,
     handleFavoritesOnlyToggle,
     handleHasAvailabilitiesToggle,
+    handleHasOpenSlotsToggle,
     getCourtTypeIcon,
     getLightingIcon,
     getMembershipIcon,
