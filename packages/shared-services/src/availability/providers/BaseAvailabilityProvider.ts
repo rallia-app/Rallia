@@ -111,7 +111,16 @@ export abstract class BaseAvailabilityProvider {
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
-            resolve(JSON.parse(xhr.responseText) as T);
+            // Strip a leading UTF-8 BOM (﻿) if present. The IC3/Otium
+            // backend prefixes its JSON response with a BOM; iOS strips it at
+            // the native XHR layer (NSURLSession + NSString) but RN-Android on
+            // Hermes passes it through as-is, causing JSON.parse to fail with
+            // "Unexpected token". See Sentry issue 7461110976.
+            const text =
+              xhr.responseText.charCodeAt(0) === 0xfeff
+                ? xhr.responseText.slice(1)
+                : xhr.responseText;
+            resolve(JSON.parse(text) as T);
           } catch {
             reject(
               new Error(
