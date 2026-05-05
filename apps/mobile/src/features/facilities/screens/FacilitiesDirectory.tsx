@@ -228,7 +228,6 @@ export default function FacilitiesDirectory() {
       filters.membership !== 'all' ||
       filters.organizationNature !== 'all' ||
       filters.hasAvailabilities ||
-      filters.hasOpenSlots ||
       filters.favoritesOnly
     );
   }, [filters]);
@@ -268,24 +267,6 @@ export default function FacilitiesDirectory() {
   // Favorites management
   const { favorites, isFavorite, addFavorite, removeFavorite, isMaxReached } =
     useFavoriteFacilities(player?.id ?? null, selectedSport?.id);
-
-  // Track which facilities have open slots (reported by each FacilityCard)
-  const [facilitySlotsMap, setFacilitySlotsMap] = useState<Map<string, boolean>>(new Map());
-
-  const handleSlotsLoaded = useCallback((facilityId: string, hasSlots: boolean) => {
-    setFacilitySlotsMap(prev => {
-      if (prev.get(facilityId) === hasSlots) return prev;
-      const next = new Map(prev);
-      next.set(facilityId, hasSlots);
-      return next;
-    });
-  }, []);
-
-  // Apply client-side "has open slots" filter
-  const displayedFacilities = useMemo(() => {
-    if (!filters.hasOpenSlots) return facilities;
-    return facilities.filter(f => facilitySlotsMap.get(f.id) === true);
-  }, [facilities, filters.hasOpenSlots, facilitySlotsMap]);
 
   // Handle facility press
   const handleFacilityPress = useCallback(
@@ -367,7 +348,6 @@ export default function FacilitiesDirectory() {
         showFavoriteButton={showFavoriteButton}
         sportName={selectedSport?.name}
         onSlotPress={handleSlotPress}
-        onSlotsLoaded={handleSlotsLoaded}
         isDark={isDark}
         colors={colors}
         t={t}
@@ -378,7 +358,6 @@ export default function FacilitiesDirectory() {
       handleFacilityPress,
       handleToggleFavorite,
       handleSlotPress,
-      handleSlotsLoaded,
       isMaxReached,
       showFavoriteButton,
       selectedSport?.name,
@@ -714,7 +693,7 @@ export default function FacilitiesDirectory() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <FlatList
-        data={displayedFacilities}
+        data={facilities}
         renderItem={renderFacilityCard}
         keyExtractor={item => item.id}
         ListHeaderComponent={renderListHeader()}
@@ -728,7 +707,7 @@ export default function FacilitiesDirectory() {
         }
         contentContainerStyle={[
           styles.listContent,
-          displayedFacilities.length === 0 && styles.emptyListContent,
+          facilities.length === 0 && styles.emptyListContent,
         ]}
         showsVerticalScrollIndicator={false}
       />
