@@ -113,7 +113,6 @@ export interface FacilityFilters {
   membership: MembershipFilter;
   organizationNature: OrganizationNatureFilter;
   hasAvailabilities: boolean;
-  hasOpenSlots: boolean;
   favoritesOnly: boolean;
 }
 
@@ -127,7 +126,6 @@ export const DEFAULT_FACILITY_FILTERS: FacilityFilters = {
   membership: 'all',
   organizationNature: 'all',
   hasAvailabilities: false,
-  hasOpenSlots: false,
   favoritesOnly: false,
 };
 

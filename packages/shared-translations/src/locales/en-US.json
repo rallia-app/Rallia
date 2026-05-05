@@ -8163,9 +8163,6 @@
       "hasAvailabilities": {
         "label": "Bookable"
       },
-      "hasOpenSlots": {
-        "label": "Open Slots"
-      },
       "organizationNature": {
         "label": "Ownership",
         "all": "All",
