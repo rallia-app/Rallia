@@ -27,17 +27,14 @@ Sentry.init({
   dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
   enabled: !__DEV__,
   environment: process.env.EXPO_PUBLIC_APP_ENV,
-  // TEMP (debug): disable HTTP/replay instrumentation to test whether
-  // @sentry/react-native@7.11.0's XHR wrapping is breaking the IC3 POST
-  // request on Android in release/preview builds. Restore once diagnosed.
-  tracesSampleRate: 0,
-  replaysOnErrorSampleRate: 0,
-  replaysSessionSampleRate: 0,
+  tracesSampleRate: 0.2,
+  replaysOnErrorSampleRate: 1.0,
+  replaysSessionSampleRate: 0.1,
   integrations: [
     sentryNavigationIntegration,
-    // Removed mobileReplayIntegration — instruments network on the native side.
+    ...(!__DEV__ ? [Sentry.mobileReplayIntegration()] : []),
   ],
-  enableNativeFramesTracking: false,
+  enableNativeFramesTracking: !__DEV__ && !isRunningInExpoGo(),
   sendDefaultPii: true,
 });
 
