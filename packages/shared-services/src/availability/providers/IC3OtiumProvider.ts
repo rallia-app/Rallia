@@ -10,6 +10,7 @@
  */
 
 import { BaseAvailabilityProvider } from './BaseAvailabilityProvider';
+import { Logger } from '../../logger';
 import type {
   AvailabilitySlot,
   FetchAvailabilityParams,
@@ -97,10 +98,20 @@ export class IC3OtiumProvider extends BaseAvailabilityProvider {
 
       return this.parseResponse(response);
     } catch (error) {
-      console.error('[IC3OtiumProvider] Failed to fetch availability:', error);
-      if (error instanceof Error) {
-        console.error('[IC3OtiumProvider] Error details:', error.message, error.name);
-      }
+      // Route through Logger so SentryTransport surfaces this in production.
+      // Sentry RN auto-tags os.name (Android/iOS), giving us platform partitioning.
+      Logger.error(
+        '[IC3OtiumProvider] Failed to fetch availability',
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          provider: 'ic3_otium',
+          apiBaseUrl: this.config.apiBaseUrl,
+          siteId,
+          dates: params.dates,
+          errorName: error instanceof Error ? error.name : undefined,
+          errorMessage: error instanceof Error ? error.message : String(error),
+        }
+      );
       return [];
     }
   }
