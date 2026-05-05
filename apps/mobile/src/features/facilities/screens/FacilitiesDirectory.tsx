@@ -731,11 +731,6 @@ export default function FacilitiesDirectory() {
           displayedFacilities.length === 0 && styles.emptyListContent,
         ]}
         showsVerticalScrollIndicator={false}
-        // Limit concurrent renders to prevent Android network overload
-        // (each FacilityCard fires an availability API call on mount)
-        windowSize={5}
-        maxToRenderPerBatch={5}
-        initialNumToRender={8}
       />
       {/* FAB Container - Bug Report + Map */}
       <View style={styles.fabContainer}>
