@@ -83,13 +83,14 @@ const HEADER_HEIGHT = 140;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type GroupDetailRouteProp = RouteProp<RootStackParamList, 'GroupDetail'>;
 
-type TabKey = 'leaderboard' | 'games';
+type TabKey = 'leaderboard' | 'games' | 'facilities';
 
-const TAB_KEYS: TabKey[] = ['games'];
+const TAB_KEYS: TabKey[] = ['games', 'facilities'];
 
 const TAB_ICONS: Record<TabKey, keyof typeof Ionicons.glyphMap> = {
   leaderboard: 'podium-outline',
   games: 'tennisball-outline', // placeholder, overridden with SportIcon
+  facilities: 'location-outline',
 };
 
 export default function GroupDetailScreen() {
@@ -494,6 +495,23 @@ export default function GroupDetailScreen() {
           />
         );
 
+      case 'facilities':
+        return group?.sport_id ? (
+          <View style={{ marginHorizontal: 16 }}>
+            <NetworkFavoriteFacilities
+              networkId={groupId}
+              currentPlayerId={playerId ?? null}
+              sportId={group.sport_id}
+              latitude={player?.latitude ?? null}
+              longitude={player?.longitude ?? null}
+              translationPrefix="groups"
+              onNavigateToFacility={facilityId =>
+                navigation.navigate('FacilityDetail', { facilityId })
+              }
+            />
+          </View>
+        ) : null;
+
       default:
         return null;
     }
@@ -743,23 +761,6 @@ export default function GroupDetailScreen() {
                 {group.description}
               </Text>
             </View>
-          </View>
-        )}
-
-        {/* Favorite Facilities Section */}
-        {group?.sport_id && (
-          <View style={{ marginHorizontal: 16 }}>
-            <NetworkFavoriteFacilities
-              networkId={groupId}
-              currentPlayerId={playerId ?? null}
-              sportId={group.sport_id}
-              latitude={player?.latitude ?? null}
-              longitude={player?.longitude ?? null}
-              translationPrefix="groups"
-              onNavigateToFacility={facilityId =>
-                navigation.navigate('FacilityDetail', { facilityId })
-              }
-            />
           </View>
         )}
 

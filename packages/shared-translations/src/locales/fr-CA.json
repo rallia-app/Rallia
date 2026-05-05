@@ -2228,6 +2228,7 @@
       "leaderboard": "Classement",
       "activity": "Activité",
       "games": "Parties",
+      "facilities": "Installations",
       "members": "Membres",
       "about": "À propos"
     },
@@ -2419,6 +2420,7 @@
       "leaderboard": "Classement",
       "activity": "Activité",
       "games": "Parties",
+      "facilities": "Installations",
       "members": "Membres",
       "info": "Info"
     },

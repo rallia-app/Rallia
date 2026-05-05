@@ -85,13 +85,14 @@ const HEADER_HEIGHT = 140;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type CommunityDetailRouteProp = RouteProp<RootStackParamList, 'CommunityDetail'>;
 
-type TabKey = 'leaderboard' | 'games';
+type TabKey = 'leaderboard' | 'games' | 'facilities';
 
-const TAB_KEYS: TabKey[] = ['games'];
+const TAB_KEYS: TabKey[] = ['games', 'facilities'];
 
 const TAB_ICONS: Record<TabKey, keyof typeof Ionicons.glyphMap> = {
   leaderboard: 'podium-outline',
   games: 'tennisball-outline', // placeholder, overridden with SportIcon
+  facilities: 'location-outline',
 };
 
 // Storage key for "never show intro again"
@@ -554,6 +555,21 @@ export default function CommunityDetailScreen() {
             inline
           />
         );
+
+      case 'facilities':
+        return community?.sport_id ? (
+          <View style={{ marginHorizontal: 16 }}>
+            <NetworkFavoriteFacilities
+              networkId={communityId}
+              currentPlayerId={playerId ?? null}
+              sportId={community.sport_id}
+              latitude={player?.latitude ?? null}
+              longitude={player?.longitude ?? null}
+              translationPrefix="community"
+              onNavigateToFacility={handleNavigateToFacility}
+            />
+          </View>
+        ) : null;
 
       default:
         return null;
@@ -1219,21 +1235,6 @@ export default function CommunityDetailScreen() {
                 {community.description}
               </Text>
             </View>
-          </View>
-        )}
-
-        {/* Favorite Facilities Section */}
-        {community?.sport_id && (
-          <View style={{ marginHorizontal: 16 }}>
-            <NetworkFavoriteFacilities
-              networkId={communityId}
-              currentPlayerId={playerId ?? null}
-              sportId={community.sport_id}
-              latitude={player?.latitude ?? null}
-              longitude={player?.longitude ?? null}
-              translationPrefix="community"
-              onNavigateToFacility={handleNavigateToFacility}
-            />
           </View>
         )}
 

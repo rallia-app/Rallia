@@ -2228,6 +2228,7 @@
       "leaderboard": "Leaderboard",
       "activity": "Activity",
       "games": "Games",
+      "facilities": "Facilities",
       "members": "Members",
       "about": "About"
     },
@@ -2419,6 +2420,7 @@
       "leaderboard": "Leaderboard",
       "activity": "Activity",
       "games": "Games",
+      "facilities": "Facilities",
       "members": "Members",
       "info": "Info"
     },
