@@ -8165,9 +8165,6 @@
       "hasAvailabilities": {
         "label": "Réservable"
       },
-      "hasOpenSlots": {
-        "label": "Disponible"
-      },
       "organizationNature": {
         "label": "Type",
         "all": "Tous",

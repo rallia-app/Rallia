@@ -4,7 +4,7 @@
  * availability preview, and favorite toggle.
  */
 
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, Animated, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
@@ -29,8 +29,6 @@ interface FacilityCardProps {
   sportName?: string;
   /** Callback when a slot is pressed - receives facility and slot for court selection handling */
   onSlotPress?: (facility: FacilitySearchResult, slot: FormattedSlot) => void;
-  /** Callback when availability has loaded — reports whether this facility has open slots */
-  onSlotsLoaded?: (facilityId: string, hasSlots: boolean) => void;
   /** Whether dark mode is active */
   isDark: boolean;
   colors: {
@@ -109,7 +107,6 @@ export default function FacilityCard({
   showFavoriteButton,
   sportName,
   onSlotPress,
-  onSlotsLoaded,
   isDark,
   colors,
   t,
@@ -136,17 +133,6 @@ export default function FacilityCard({
     facilityTimezone: facility.timezone,
     sportName,
   });
-
-  // Report slot availability to parent for filtering
-  const reportedRef = useRef<boolean | null>(null);
-  useEffect(() => {
-    if (slotsLoading || !onSlotsLoaded) return;
-    const hasSlots = slotsByDate.length > 0;
-    if (reportedRef.current !== hasSlots) {
-      reportedRef.current = hasSlots;
-      onSlotsLoaded(facility.id, hasSlots);
-    }
-  }, [slotsLoading, slotsByDate.length, facility.id, onSlotsLoaded]);
 
   const handleSlotPress = useCallback(
     (slot: FormattedSlot) => {
