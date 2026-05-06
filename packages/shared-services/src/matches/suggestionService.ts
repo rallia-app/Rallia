@@ -3,16 +3,17 @@
  *
  * Orchestrates the match suggestion engine:
  * 1. Calls the SQL RPC for scored (opponent, facility) pairs
- * 2. Fetches real court availability per facility (parallel)
- * 3. Fetches busy times for caller + all opponents (conflict detection)
+ * 2. Fetches busy times for caller + all opponents (conflict detection)
+ * 3. Generates hour slots from shared availability (with conflict filtering)
  * 4. Groups by opponent with all compatible facilities + conflict-free slots
- * 5. Generates hour slots for no-source facilities (with conflict filtering)
- * 6. Ranks opponents by player compatibility and returns quality-filtered results
+ * 5. Ranks opponents by player compatibility and returns quality-filtered results
+ *
+ * NOTE: Realtime court availability fetching is temporarily disabled for
+ * performance. All facilities flow through the no-source slot generator and
+ * `hasAvailabilitySource` is always false.
  */
 
 import { supabase } from '../supabase';
-import { fetchUnifiedAvailability } from '../availability';
-import type { AvailabilitySlot } from '../availability';
 import { createMatch, invitePlayersToMatch } from './matchService';
 import type { MatchTypeEnum, MatchDurationEnum, MatchFormatEnum } from '@rallia/shared-types';
 
@@ -116,23 +117,6 @@ interface BusySlot {
 // =============================================================================
 // TIME PERIOD MAPPING
 // =============================================================================
-
-function hourToTimePeriod(hour: number): string | null {
-  if (hour >= 8 && hour <= 12) return 'morning';
-  if (hour >= 13 && hour <= 17) return 'afternoon';
-  if (hour >= 18 && hour <= 21) return 'evening';
-  return null;
-}
-
-const DAY_MAP: Record<number, string> = {
-  0: 'sunday',
-  1: 'monday',
-  2: 'tuesday',
-  3: 'wednesday',
-  4: 'thursday',
-  5: 'friday',
-  6: 'saturday',
-};
 
 const PERIOD_HOURS: Record<string, number[]> = {
   morning: [8, 9, 10, 11, 12],
@@ -357,70 +341,16 @@ export async function getMatchSuggestions(
 
   const scored = scoredRows as ScoredMatchup[];
 
-  // ── Step 2: Group by facility for batch availability fetching ───────
-  const facilityMap = new Map<
-    string,
-    {
-      facilityId: string;
-      dataProviderId: string | null;
-      externalId: string | null;
-    }
-  >();
-
-  for (const row of scored) {
-    if (!facilityMap.has(row.facility_id)) {
-      facilityMap.set(row.facility_id, {
-        facilityId: row.facility_id,
-        dataProviderId: row.facility_data_provider_id,
-        externalId: row.facility_external_id,
-      });
-    }
-  }
-
-  // ── Step 3: Fetch court availability + busy slots IN PARALLEL ──────
+  // ── Step 2: Fetch busy times for caller + all opponents ─────────────
   const uniqueOpponentIds = [...new Set(scored.map(r => r.opponent_id))];
-  // In anon mode there's no caller to fetch busy slots for.
   const allPlayerIds = isAnon ? uniqueOpponentIds : [playerId!, ...uniqueOpponentIds];
 
-  const facilityEntries = Array.from(facilityMap.entries());
-
-  const [availabilityResults, busyByPlayer] = await Promise.all([
-    // Fetch court availability per facility
-    Promise.all(
-      facilityEntries.map(async ([facilityId, group]) => {
-        const hasConfiguredSource = !!(group.dataProviderId && group.externalId);
-        try {
-          const result = await fetchUnifiedAvailability({
-            facilityId,
-            dates,
-            dataProviderId: group.dataProviderId,
-            externalProviderId: group.externalId,
-            searchString: sportName,
-          });
-          const hasSource = hasConfiguredSource || result.slots.length > 0;
-          return { facilityId, slots: result.slots, hasSource };
-        } catch (err) {
-          console.warn(`[SuggestionService] Availability fetch failed for ${facilityId}:`, err);
-          return { facilityId, slots: [] as AvailabilitySlot[], hasSource: false };
-        }
-      })
-    ),
-    // Fetch busy times for caller + all opponents
-    fetchBusySlots(allPlayerIds, startDate, endDate),
-  ]);
+  const busyByPlayer = await fetchBusySlots(allPlayerIds, startDate, endDate);
   if (signal?.aborted) return [];
-
-  const availByFacility = new Map<string, { slots: AvailabilitySlot[]; hasSource: boolean }>();
-  for (const result of availabilityResults) {
-    availByFacility.set(result.facilityId, {
-      slots: result.slots,
-      hasSource: result.hasSource,
-    });
-  }
 
   const callerBusy = isAnon ? [] : (busyByPlayer.get(playerId!) ?? []);
 
-  // ── Step 4: Group by opponent, build facilities + conflict-free slots ─
+  // ── Step 3: Group by opponent, build facilities + conflict-free slots ─
   const now = new Date();
   const opponentMap = new Map<
     string,
@@ -431,7 +361,6 @@ export async function getMatchSuggestions(
         {
           row: ScoredMatchup;
           slots: AvailableTimeSlot[];
-          hasSource: boolean;
         }
       >;
     }
@@ -445,64 +374,27 @@ export async function getMatchSuggestions(
     const opponentBusy = busyByPlayer.get(row.opponent_id) ?? [];
 
     if (!opponent.facilities.has(row.facility_id)) {
-      const facilityAvail = availByFacility.get(row.facility_id);
-      const hasConfiguredSource = facilityAvail?.hasSource ?? false;
       const overlaps = row.overlapping_days_periods || [];
+      const generated = generateNoSourceSlots(overlaps, now, dates);
 
       const facilitySlots: AvailableTimeSlot[] = [];
-
-      if (facilityAvail && facilityAvail.slots.length > 0) {
-        // Facility WITH availability source — filter real slots
-        const overlapSet = new Set(overlaps.map(o => `${o.day}:${o.period}`));
-
-        for (const slot of facilityAvail.slots) {
-          const slotDate = new Date(slot.datetime);
-          if (slotDate <= now) continue;
-
-          const dayOfWeek = DAY_MAP[slotDate.getDay()];
-          const hour = slotDate.getHours();
-          const period = hourToTimePeriod(hour);
-
-          if (!dayOfWeek || !period) continue;
-          if (!overlapSet.has(`${dayOfWeek}:${period}`)) continue;
-
-          // Conflict check: skip if either player is busy
-          const dateStr = `${slotDate.getFullYear()}-${String(slotDate.getMonth() + 1).padStart(2, '0')}-${String(slotDate.getDate()).padStart(2, '0')}`;
-          const endHour = hour + 1; // assume 1-hour slot for conflict check
-          if (hasTimeConflict(dateStr, hour, endHour, callerBusy)) continue;
-          if (hasTimeConflict(dateStr, hour, endHour, opponentBusy)) continue;
-
-          facilitySlots.push({
-            datetime: slotDate,
-            endDatetime: new Date(slot.endDateTime),
-            courtCount: slot.courtCount,
-            bookingUrl: slot.bookingUrl ?? null,
-          });
-        }
-      } else if (!hasConfiguredSource) {
-        // Facility WITHOUT availability source — generate hour slots
-        const generated = generateNoSourceSlots(overlaps, now, dates);
-
-        // Filter out conflicting slots
-        for (const slot of generated) {
-          const d = slot.datetime;
-          const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-          const hour = d.getHours();
-          if (hasTimeConflict(dateStr, hour, hour + 1, callerBusy)) continue;
-          if (hasTimeConflict(dateStr, hour, hour + 1, opponentBusy)) continue;
-          facilitySlots.push(slot);
-        }
+      for (const slot of generated) {
+        const d = slot.datetime;
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const hour = d.getHours();
+        if (hasTimeConflict(dateStr, hour, hour + 1, callerBusy)) continue;
+        if (hasTimeConflict(dateStr, hour, hour + 1, opponentBusy)) continue;
+        facilitySlots.push(slot);
       }
 
       opponent.facilities.set(row.facility_id, {
         row,
         slots: facilitySlots,
-        hasSource: hasConfiguredSource,
       });
     }
   }
 
-  // ── Step 5: Build final suggestions ────────────────────────────────
+  // ── Step 4: Build final suggestions ────────────────────────────────
   const suggestions: MatchSuggestion[] = [];
 
   for (const [, opponent] of opponentMap) {
@@ -519,7 +411,7 @@ export async function getMatchSuggestions(
           facilityCity: fac.row.facility_city,
           facilityAffinity: fac.row.facility_affinity,
           availableSlots: fac.slots.sort((a, b) => a.datetime.getTime() - b.datetime.getTime()),
-          hasAvailabilitySource: fac.hasSource,
+          hasAvailabilitySource: false,
         });
       }
     }
@@ -546,7 +438,7 @@ export async function getMatchSuggestions(
     });
   }
 
-  // ── Step 6: Compute final score with actionability + urgency + jitter ─
+  // ── Step 5: Compute final score with actionability + urgency + jitter ─
   const scoredSuggestions = suggestions.map(s => {
     // Actionability: more available slots across all facilities = higher boost
     const totalSlots = s.facilities.reduce((sum, f) => sum + f.availableSlots.length, 0);
@@ -589,7 +481,7 @@ export async function getMatchSuggestions(
     return { ...s, playerCompatibility: finalScore };
   });
 
-  // ── Step 7: Sort and apply quality threshold ──────────────────────
+  // ── Step 6: Sort and apply quality threshold ──────────────────────
   scoredSuggestions.sort((a, b) => b.playerCompatibility - a.playerCompatibility);
 
   const MIN_GUARANTEED = Math.min(10, limit);
