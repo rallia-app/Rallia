@@ -202,7 +202,8 @@ Deno.serve(async req => {
     const accountLink = await stripe.accountLinks.create({
       account: stripeAccountId,
       type: 'account_onboarding',
-      return_url: 'https://rallia.app/stripe-connect-return',
+      return_url:
+        Deno.env.get('STRIPE_CONNECT_RETURN_URL') ?? 'https://rallia.app/stripe-connect-return',
       refresh_url: `${functionUrl}?refresh=1`,
     });
 

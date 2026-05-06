@@ -28,6 +28,8 @@
  *   - missing_auth | invalid_auth     : caller authentication
  *   - invalid_body                    : matchId missing/wrong type
  *   - invalid_match                   : match doesn't exist or isn't eligible
+ *   - match_not_finished              : match end time hasn't passed yet
+ *   - match_not_full                  : match didn't fill up (singles needs 2, doubles 4)
  *   - not_participant                 : caller isn't a joined non-host participant
  *   - already_paid                    : caller already paid
  *   - host_manual_only                : host opted out of Stripe — pay out-of-band
@@ -47,10 +49,43 @@ type ErrorCode =
   | 'invalid_auth'
   | 'invalid_body'
   | 'invalid_match'
+  | 'match_not_finished'
+  | 'match_not_full'
   | 'not_participant'
   | 'already_paid'
   | 'host_manual_only'
   | 'internal_error';
+
+/**
+ * Returns true if the match's end time (in its own timezone) is in the past.
+ * Uses the `sv-SE` locale trick: it formats dates as `YYYY-MM-DD HH:MM:SS`,
+ * which makes lexicographic string comparison equivalent to chronological
+ * comparison when both sides are normalized to the same timezone.
+ */
+function isMatchFinished(matchDate: string, endTime: string, timezone: string): boolean {
+  const matchEndLocal = `${matchDate}T${endTime}`;
+  const nowInMatchTz = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  })
+    .format(new Date())
+    .replace(' ', 'T');
+  return nowInMatchTz > matchEndLocal;
+}
+
+/**
+ * Expected number of joined participants for a full match, based on format.
+ * singles = 1v1 (2 players), doubles = 2v2 (4 players).
+ */
+function expectedJoinedCount(format: string | null | undefined): number {
+  return format === 'doubles' ? 4 : 2;
+}
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -105,7 +140,9 @@ Deno.serve(async req => {
     // --------------------------------------------------------------- match
     const { data: match } = await admin
       .from('match')
-      .select('id, estimated_cost, cost_split_type, is_court_free, created_by, cancelled_at')
+      .select(
+        'id, estimated_cost, cost_split_type, is_court_free, created_by, cancelled_at, match_date, end_time, timezone, format'
+      )
       .eq('id', matchId)
       .single();
 
@@ -118,6 +155,26 @@ Deno.serve(async req => {
       match.estimated_cost <= 0
     ) {
       return err('invalid_match');
+    }
+
+    // ------------------------------------------------- match must be finished
+    // Players can only pay for matches that have already ended in their own
+    // timezone. This prevents charging for matches that were never played.
+    if (!isMatchFinished(match.match_date, match.end_time, match.timezone)) {
+      return err('match_not_finished');
+    }
+
+    // ----------------------------------------------- match must have been full
+    // Players can only pay for matches that filled all their slots — a likely
+    // signal the match actually happened. Singles requires 2 joined, doubles 4.
+    const { count: joinedCount } = await admin
+      .from('match_participant')
+      .select('id', { count: 'exact', head: true })
+      .eq('match_id', matchId)
+      .eq('status', 'joined');
+
+    if ((joinedCount ?? 0) < expectedJoinedCount(match.format)) {
+      return err('match_not_full');
     }
 
     // ----------------------------------------- verify caller is a participant
@@ -144,9 +201,13 @@ Deno.serve(async req => {
     }
 
     // ------------------------------------ deterministic split among non-hosts
-    // Compute splits across all joined non-host participants (ordered by
-    // created_at) so that residual cents land on the earliest joiners
-    // deterministically. This caller's amount is the entry at their index.
+    // `split_equal` means the cost is divided across ALL joined players
+    // including the host. The host's share is implicit: they paid the court
+    // upfront and aren't charged through Stripe. Each non-host owes their
+    // own share via Stripe.
+    //
+    // Residual cents (when totalCents isn't evenly divisible) land on the
+    // earliest non-host joiners deterministically.
     const { data: orderedPayers } = await admin
       .from('match_participant')
       .select('id, player_id')
@@ -158,13 +219,16 @@ Deno.serve(async req => {
     const payerCount = orderedPayers?.length ?? 0;
     if (payerCount < 1) return err('invalid_match');
 
+    const splitCount = joinedCount ?? payerCount + 1;
     const totalCents = Math.round(match.estimated_cost * 100);
-    const base = Math.floor(totalCents / payerCount);
-    const residual = totalCents - base * payerCount;
+    const base = Math.floor(totalCents / splitCount);
+    const residual = totalCents - base * splitCount;
 
     const myIndex = orderedPayers.findIndex(p => p.player_id === playerId);
     if (myIndex === -1) return err('not_participant');
 
+    // Residual is at most splitCount - 1, and payerCount = splitCount - 1,
+    // so the residual always fits within the non-host payer set.
     const amountCents = base + (myIndex < residual ? 1 : 0);
     if (amountCents <= 0) return err('invalid_match');
 

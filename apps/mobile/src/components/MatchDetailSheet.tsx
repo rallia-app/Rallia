@@ -1772,7 +1772,7 @@ export const MatchDetailSheet: React.FC = () => {
         paymentIntentClientSecret: data.clientSecret,
         merchantDisplayName: 'Rallia',
         applePay: { merchantCountryCode: 'CA' },
-        googlePay: { merchantCountryCode: 'CA' },
+        googlePay: { merchantCountryCode: 'CA', currencyCode: 'CAD', testEnv: __DEV__ },
       });
       if (initError) throw new Error(initError.message);
 
@@ -2264,16 +2264,23 @@ export const MatchDetailSheet: React.FC = () => {
     participantInfo.total > 0 ? (totalCost / participantInfo.total).toFixed(2) : '0.00';
 
   // Reimbursement (hooks are above the early return; only derived values here)
+  // Gated on isFull: the server rejects PaymentIntent creation for unfilled
+  // matches, so we hide the section entirely to match.
   const showReimbursement =
     hasMatchEnded &&
+    isFull &&
     !isCourtFree &&
     totalCost > 0 &&
     match.cost_split_type === 'split_equal' &&
     !!currentPlayerParticipant;
   const isNonHostParticipant = showReimbursement && !currentPlayerParticipant?.is_host;
+  // Reimbursement progress counts non-hosts only. The host's share is paid
+  // implicitly upfront when they booked the court, so they don't appear in
+  // the "X/Y players have paid" tracker.
   const paidParticipants =
-    match.participants?.filter(p => p.status === 'joined' && p.has_paid).length ?? 0;
-  const totalParticipants = match.participants?.filter(p => p.status === 'joined').length ?? 0;
+    match.participants?.filter(p => p.status === 'joined' && !p.is_host && p.has_paid).length ?? 0;
+  const totalParticipants =
+    match.participants?.filter(p => p.status === 'joined' && !p.is_host).length ?? 0;
   const perPlayerCostFormatted = `$${perPlayerCost}`;
 
   // Location display

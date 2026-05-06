@@ -36,7 +36,9 @@ Deno.serve(async req => {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+    // Deno's edge runtime uses Web Crypto (SubtleCrypto), which is async-only.
+    // Must use constructEventAsync — the sync variant throws in this runtime.
+    event = await stripe.webhooks.constructEventAsync(body, sig, webhookSecret);
   } catch (err) {
     console.error('[stripe-connect-webhook] Invalid signature:', err);
     return new Response('Webhook signature verification failed', { status: 400 });
