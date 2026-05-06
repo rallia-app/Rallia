@@ -138,10 +138,18 @@ export abstract class BaseAvailabilityProvider {
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
             resolve(parseJsonResponse<T>(xhr.responseText));
-          } catch {
+          } catch (parseErr) {
+            const raw = xhr.responseText;
+            const char0 = raw.charCodeAt(0);
+            const parseMessage = parseErr instanceof Error ? parseErr.message : String(parseErr);
+            // tail tells us whether the body is truncated (ends mid-value) vs
+            // genuinely malformed (ends with `}` but invalid somewhere inside).
+            // parseMessage typically includes the position where parsing failed.
+            const head = raw.slice(0, 50);
+            const tail = raw.slice(-50);
             reject(
               new Error(
-                `Provider API returned non-JSON response (${xhr.responseText.length} chars): ${xhr.responseText.slice(0, 200)}`
+                `Provider API returned non-JSON response (${raw.length} chars, char0=0x${char0.toString(16)}, parseError="${parseMessage}", head=${JSON.stringify(head)}, tail=${JSON.stringify(tail)})`
               )
             );
           }
