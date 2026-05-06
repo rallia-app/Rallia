@@ -104,11 +104,6 @@ export const NetworkFavoriteFacilities: React.FC<NetworkFavoriteFacilitiesProps>
     });
   }, [sportId, latitude, longitude, favorites, networkId, refetch]);
 
-  // Hide section entirely for non-moderators with no favorites
-  if (favorites.length === 0 && !canManage) {
-    return null;
-  }
-
   const skeletonBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
   const skeletonHighlight = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.02)';
 
@@ -201,18 +196,21 @@ export const NetworkFavoriteFacilities: React.FC<NetworkFavoriteFacilitiesProps>
             </TouchableOpacity>
           ))}
         </View>
-      ) : canManage ? (
-        /* Empty State for Moderators */
+      ) : (
+        /* Empty State — moderators see the "Add facilities" call-to-action,
+           non-moderators see only the headline */
         <View style={[styles.emptyState, { borderColor: colors.border }]}>
           <Ionicons name="location-outline" size={32} color={colors.textMuted} />
           <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
             {t(`${translationPrefix}.noFavoriteFacilities` as TranslationKey)}
           </Text>
-          <Text style={[styles.emptyStateHint, { color: colors.textMuted }]}>
-            {t(`${translationPrefix}.addFavoriteFacilitiesHint` as TranslationKey)}
-          </Text>
+          {canManage && (
+            <Text style={[styles.emptyStateHint, { color: colors.textMuted }]}>
+              {t(`${translationPrefix}.addFavoriteFacilitiesHint` as TranslationKey)}
+            </Text>
+          )}
         </View>
-      ) : null}
+      )}
     </View>
   );
 };
