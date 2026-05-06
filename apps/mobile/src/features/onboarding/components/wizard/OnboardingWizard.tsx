@@ -341,14 +341,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   // Resolves sport from context or onboarding data
   const suggestionSport = selectedSport ?? selectedSportsForSuccess[0];
   const {
-    suggestions: matchSuggestions,
+    days: matchSuggestionDays,
     isLoading: suggestionsLoading,
     refetch: refetchSuggestions,
   } = useMatchSuggestions({
     playerId: successPlayerId,
     sportId: suggestionSport?.id,
     sportName: suggestionSport?.name,
-    limit: 5,
     enabled: currentStepId === 'success' || currentStepId === 'suggestions',
   });
 
@@ -1210,7 +1209,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       case 'suggestions':
         return (
           <SuggestionsStep
-            suggestions={matchSuggestions}
+            days={matchSuggestionDays}
             isLoading={suggestionsLoading}
             onComplete={onComplete}
             onRefresh={handleRefreshSuggestions}
@@ -1260,7 +1259,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           />
         ) : (
           <SuggestionsStep
-            suggestions={matchSuggestions}
+            days={matchSuggestionDays}
             isLoading={suggestionsLoading}
             onComplete={onComplete}
             onRefresh={handleRefreshSuggestions}

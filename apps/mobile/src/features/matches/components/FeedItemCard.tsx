@@ -63,10 +63,11 @@ function FeedItemCardImpl({
   }
 
   const suggestion = item.data;
-  const pickedFacility = suggestion.facilities[item.pickedFacilityIndex ?? 0];
-  const inviteState = pickedFacility
-    ? getInviteState(suggestion.opponentId, pickedFacility.facilityId, item.pickedSlot.datetime)
-    : 'idle';
+  const inviteState = getInviteState(
+    suggestion.opponentId,
+    suggestion.facility.facilityId,
+    suggestion.slot.datetime
+  );
   return (
     <View style={styles.suggestionWrapper}>
       <SuggestionCard
@@ -85,9 +86,6 @@ function FeedItemCardImpl({
         locale={locale}
         onSendInvite={onSendInvite}
         inviteState={inviteState}
-        lockSelections
-        pickedSlot={item.pickedSlot}
-        pickedFacilityIndex={item.pickedFacilityIndex}
       />
     </View>
   );

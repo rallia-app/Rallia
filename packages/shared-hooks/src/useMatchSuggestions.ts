@@ -1,18 +1,17 @@
 /**
  * useMatchSuggestions Hook
  *
- * Fetches personalized match suggestions for the current player.
- * Reusable across onboarding, home screen, and any other surface.
+ * Returns the 7-day grid of personalized match suggestions for the current
+ * player (or for an anon caller when only lat/lng + sport are known).
  */
 
 import { useQuery } from '@tanstack/react-query';
 import { getMatchSuggestions } from '@rallia/shared-services';
-import type { MatchSuggestion } from '@rallia/shared-services';
+import type { DaySuggestions } from '@rallia/shared-services';
 import { useCallback } from 'react';
 
-export type { MatchSuggestion } from '@rallia/shared-services';
+export type { DaySuggestions, SlotSuggestion } from '@rallia/shared-services';
 
-/** Query key factory for match suggestions */
 export const suggestionKeys = {
   all: ['matches', 'suggestions'] as const,
   list: (
@@ -23,36 +22,23 @@ export const suggestionKeys = {
 };
 
 export interface UseMatchSuggestionsOptions {
-  /** Player ID to fetch suggestions for. Omit for anon mode (provide lat/lng instead). */
+  /** Player ID. Omit for anon mode (provide lat/lng instead). */
   playerId?: string | undefined | null;
-  /** Sport ID to filter by */
   sportId: string | undefined | null;
-  /** Sport name for external provider search filtering */
   sportName?: string;
-  /** Anon mode: caller latitude */
   latitude?: number | null;
-  /** Anon mode: caller longitude */
   longitude?: number | null;
-  /** Anon mode: search radius in km (default 25) */
   maxDistanceKm?: number;
-  /** Max number of suggestions to return */
-  limit?: number;
-  /** Enable/disable the query */
   enabled?: boolean;
 }
 
 export interface UseMatchSuggestionsResult {
-  /** List of match suggestions */
-  suggestions: MatchSuggestion[];
-  /** Whether the initial fetch is loading */
+  /** Always 7 entries (one per upcoming day, oldest first). May contain empty days. */
+  days: DaySuggestions[];
   isLoading: boolean;
-  /** Whether a refetch is in progress */
   isRefetching: boolean;
-  /** Whether the query has errored */
   isError: boolean;
-  /** Error object if query failed */
   error: Error | null;
-  /** Manually refetch suggestions */
   refetch: () => Promise<void>;
 }
 
@@ -66,7 +52,6 @@ export function useMatchSuggestions(
     latitude,
     longitude,
     maxDistanceKm = 25,
-    limit = 10,
     enabled = true,
   } = options;
 
@@ -75,7 +60,6 @@ export function useMatchSuggestions(
   const queryEnabled = enabled && !!sportId && (hasAuth || hasAnonInputs);
   const hasLocationOverride = latitude != null && longitude != null;
 
-  // Round lat/lng to ~3 decimals (~110m) to dedupe small movements in the cache key
   const roundedLat = latitude != null ? Math.round(latitude * 1000) / 1000 : 0;
   const roundedLng = longitude != null ? Math.round(longitude * 1000) / 1000 : 0;
 
@@ -111,12 +95,11 @@ export function useMatchSuggestions(
         latitude: hasLocationOverride ? (latitude ?? undefined) : undefined,
         longitude: hasLocationOverride ? (longitude ?? undefined) : undefined,
         maxDistanceKm,
-        limit,
         signal,
       }),
     enabled: queryEnabled,
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   });
@@ -126,7 +109,7 @@ export function useMatchSuggestions(
   }, [queryRefetch]);
 
   return {
-    suggestions: data ?? [],
+    days: data ?? [],
     isLoading: queryEnabled ? isLoading : false,
     isRefetching,
     isError,

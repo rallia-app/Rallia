@@ -401,7 +401,6 @@ function MatchSuggestionsWarmer() {
     sportName: selectedSport?.name,
     latitude: !player?.id ? location?.latitude : undefined,
     longitude: !player?.id ? location?.longitude : undefined,
-    limit: 20,
     enabled: true,
   });
 

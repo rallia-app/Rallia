@@ -21,8 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { SuggestionCard } from '../../../../../components/SuggestionCard';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { deduplicateSuggestionsByTimeSlot } from '@rallia/shared-hooks';
-import type { MatchSuggestion } from '@rallia/shared-services';
+import type { DaySuggestions, SlotSuggestion } from '@rallia/shared-services';
 import type { TranslationKey } from '@rallia/shared-translations';
 import * as Analytics from '../../../../../services/analytics';
 import {
@@ -47,7 +46,7 @@ interface ThemeColors {
 }
 
 interface SuggestionsStepProps {
-  suggestions: MatchSuggestion[];
+  days: DaySuggestions[];
   isLoading: boolean;
   onComplete: () => void;
   onRefresh?: () => void;
@@ -64,7 +63,7 @@ interface SuggestionsStepProps {
 // =============================================================================
 
 export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
-  suggestions,
+  days,
   isLoading,
   onComplete,
   onRefresh,
@@ -85,11 +84,18 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
       }),
   });
 
-  // Deduplicate suggestions by day+hour — only one card per time slot
-  const dedupedSuggestions = useMemo(
-    () => deduplicateSuggestionsByTimeSlot(suggestions, Date.now()),
-    [suggestions]
-  );
+  // Onboarding shows a quick preview — flatten the soonest non-empty days and
+  // show up to MAX_CARDS suggestions in chronological order.
+  const previewSuggestions = useMemo<SlotSuggestion[]>(() => {
+    const out: SlotSuggestion[] = [];
+    for (const day of days) {
+      for (const s of day.suggestions) {
+        out.push(s);
+        if (out.length >= MAX_CARDS) return out;
+      }
+    }
+    return out;
+  }, [days]);
 
   // Animation values
   const headerOpacity = useSharedValue(0);
@@ -101,8 +107,8 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
   useEffect(() => {
     headerOpacity.value = withDelay(100, withTiming(1, { duration: 300 }));
 
-    if (!isLoading && suggestions.length > 0) {
-      suggestions.forEach((_, index) => {
+    if (!isLoading && previewSuggestions.length > 0) {
+      previewSuggestions.forEach((_, index) => {
         if (index < MAX_CARDS) {
           cardOpacities[index].value = withDelay(
             300 + index * 150,
@@ -116,13 +122,13 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
       });
 
       skipOpacity.value = withDelay(
-        300 + Math.min(suggestions.length, MAX_CARDS) * 150 + 200,
+        300 + Math.min(previewSuggestions.length, MAX_CARDS) * 150 + 200,
         withTiming(1, { duration: 400 })
       );
     } else if (!isLoading) {
       skipOpacity.value = withDelay(600, withTiming(1, { duration: 400 }));
     }
-  }, [isLoading, suggestions.length]);
+  }, [isLoading, previewSuggestions.length]);
 
   const headerAnimatedStyle = useAnimatedStyle(() => ({
     opacity: headerOpacity.value,
@@ -173,7 +179,7 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
               {t('onboarding.suggestions.loading' as TranslationKey)}
             </Text>
           </View>
-        ) : suggestions.length === 0 ? (
+        ) : previewSuggestions.length === 0 ? (
           <View style={styles.centeredState}>
             <Ionicons name="search-outline" size={48} color={colors.textMuted} />
             <Text size="base" weight="semibold" color={colors.text} style={styles.stateText}>
@@ -197,36 +203,30 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
           </View>
         ) : (
           <View style={styles.cardsContainer}>
-            {dedupedSuggestions
-              .slice(0, MAX_CARDS)
-              .map(({ suggestion, pickedSlot, pickedFacilityIndex }, index) => {
-                const cardAnimatedStyle = {
-                  opacity: cardOpacities[index],
-                  transform: [{ translateY: cardTranslateYs[index] }],
-                };
-                const pickedFacility = suggestion.facilities[pickedFacilityIndex];
-                const slotKey = suggestionSlotKey(
-                  suggestion.opponentId,
-                  pickedFacility.facilityId,
-                  pickedSlot.datetime
-                );
-                return (
-                  <Animated.View key={suggestion.opponentId} style={cardAnimatedStyle}>
-                    <SuggestionCard
-                      suggestion={suggestion}
-                      colors={colors}
-                      isDark={isDark}
-                      onSendInvite={handleSendInvite}
-                      inviteState={inviteStates[slotKey] ?? 'idle'}
-                      labels={cardLabels}
-                      locale={locale}
-                      lockSelections
-                      pickedSlot={pickedSlot}
-                      pickedFacilityIndex={pickedFacilityIndex}
-                    />
-                  </Animated.View>
-                );
-              })}
+            {previewSuggestions.map((s, index) => {
+              const cardAnimatedStyle = {
+                opacity: cardOpacities[index],
+                transform: [{ translateY: cardTranslateYs[index] }],
+              };
+              const slotKey = suggestionSlotKey(
+                s.opponentId,
+                s.facility.facilityId,
+                s.slot.datetime
+              );
+              return (
+                <Animated.View key={slotKey} style={cardAnimatedStyle}>
+                  <SuggestionCard
+                    suggestion={s}
+                    colors={colors}
+                    isDark={isDark}
+                    onSendInvite={handleSendInvite}
+                    inviteState={inviteStates[slotKey] ?? 'idle'}
+                    labels={cardLabels}
+                    locale={locale}
+                  />
+                </Animated.View>
+              );
+            })}
           </View>
         )}
 

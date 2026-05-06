@@ -24,7 +24,7 @@ import {
   SkeletonMyMatchCard,
   useToast,
 } from '@rallia/shared-components';
-import { lightHaptic } from '@rallia/shared-utils';
+import { lightHaptic, formatIntuitiveDateInTimezone } from '@rallia/shared-utils';
 import { SheetManager } from 'react-native-actions-sheet';
 import {
   useAuth,
@@ -743,9 +743,9 @@ const Home = () => {
   // Sort nearby matches by relevance score
   const matches = useSortedNearbyMatches(filteredMatches, scoringPreferences);
 
-  // Fetch matchup suggestions to fill the feed up to ≥30 items.
+  // Fetch the 7-day suggestion grid (5 per day × 7 days).
   const {
-    suggestions,
+    days,
     isLoading: loadingSuggestions,
     refetch: refetchSuggestions,
   } = useMatchSuggestions({
@@ -754,12 +754,27 @@ const Home = () => {
     sportName: selectedSport?.name,
     latitude: location?.latitude,
     longitude: location?.longitude,
-    limit: 30,
     enabled: showNearbySection,
   });
 
-  // Build the unified chronological feed.
-  const feed = useUnifiedMatchFeed({ matches, suggestions });
+  // Build the unified per-day feed (matches + suggestions, both bucketed by day).
+  const feedDays = useUnifiedMatchFeed({ matches, days });
+
+  // Flatten into a single FlatList stream with date-header rows between days.
+  type HomeFeedRow =
+    | { kind: 'header'; key: string; date: string }
+    | { kind: 'item'; key: string; data: UnifiedFeedItem };
+  const feed = useMemo<HomeFeedRow[]>(() => {
+    const out: HomeFeedRow[] = [];
+    for (const day of feedDays) {
+      if (day.items.length === 0) continue;
+      out.push({ kind: 'header', key: `header:${day.date}`, date: day.date });
+      for (const it of day.items) {
+        out.push({ kind: 'item', key: it.key, data: it });
+      }
+    }
+    return out;
+  }, [feedDays]);
 
   // Suggestion invite plumbing (shared with PublicMatches via the hook).
   const {
@@ -834,26 +849,43 @@ const Home = () => {
     }
   }, [feed.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Render individual feed item (match or suggestion)
+  const deviceTz = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, []);
+
+  // Render individual feed row — either a date header or a match/suggestion card.
   const renderFeedItem = useCallback(
-    ({ item }: { item: UnifiedFeedItem }) => (
-      <FeedItemCard
-        item={item}
-        isDark={isDark}
-        locale={locale}
-        t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
-        currentPlayerId={player?.id}
-        themeColors={colors}
-        suggestionLabels={suggestionLabels}
-        getInviteState={getInviteState}
-        onMatchPress={match => {
-          Logger.logUserAction('match_pressed', { matchId: match.id });
-          openMatchDetail(match as MatchDetailData);
-        }}
-        onSendInvite={handleSendInvite}
-      />
-    ),
+    ({ item }: { item: HomeFeedRow }) => {
+      if (item.kind === 'header') {
+        const result = formatIntuitiveDateInTimezone(item.date, deviceTz, locale);
+        let label: string;
+        if (result.type === 'today') label = t('common.time.today');
+        else if (result.type === 'tomorrow') label = t('common.time.tomorrow');
+        else label = result.label;
+        return (
+          <Text size="sm" weight="bold" color={colors.textMuted} style={styles.dayHeader}>
+            {label}
+          </Text>
+        );
+      }
+      return (
+        <FeedItemCard
+          item={item.data}
+          isDark={isDark}
+          locale={locale}
+          t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
+          currentPlayerId={player?.id}
+          themeColors={colors}
+          suggestionLabels={suggestionLabels}
+          getInviteState={getInviteState}
+          onMatchPress={match => {
+            Logger.logUserAction('match_pressed', { matchId: match.id });
+            openMatchDetail(match as MatchDetailData);
+          }}
+          onSendInvite={handleSendInvite}
+        />
+      );
+    },
     [
+      deviceTz,
       isDark,
       t,
       locale,
@@ -1490,6 +1522,13 @@ const styles = StyleSheet.create({
   listContent: {
     flexGrow: 1,
     paddingTop: spacingPixels[2],
+  },
+  dayHeader: {
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    paddingHorizontal: spacingPixels[4],
+    marginTop: -spacingPixels[1],
+    marginBottom: spacingPixels[2],
   },
   matchesSection: {
     padding: spacingPixels[5],

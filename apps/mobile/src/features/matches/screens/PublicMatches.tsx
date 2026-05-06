@@ -34,6 +34,7 @@ import type { TranslationKey } from '@rallia/shared-translations';
 import { useMatchDetailSheet, useSport, useUserHomeLocation } from '../../../context';
 import type { MatchDetailData } from '../../../context/MatchDetailSheetContext';
 import { Logger, supabase } from '@rallia/shared-services';
+import { formatIntuitiveDateInTimezone } from '@rallia/shared-utils';
 import { spacingPixels } from '@rallia/design-system';
 import { SearchBar, MatchFiltersBar } from '../components';
 import { FeedItemCard } from '../components/FeedItemCard';
@@ -237,9 +238,9 @@ export default function PublicMatches() {
   // Sort: chronological primary, relevance score as tiebreaker for same date+time
   const sortedMatches = useSortedNearbyMatches(filteredMatches, scoringPreferences);
 
-  // Fetch matchup suggestions to fill the feed up to ≥30 items.
+  // Fetch the 7-day suggestion grid (5 per day × 7 days).
   const {
-    suggestions,
+    days,
     isLoading: loadingSuggestions,
     refetch: refetchSuggestions,
   } = useMatchSuggestions({
@@ -248,7 +249,6 @@ export default function PublicMatches() {
     sportName: selectedSport?.name,
     latitude: location?.latitude,
     longitude: location?.longitude,
-    limit: 30,
     enabled: showMatches,
   });
 
@@ -277,12 +277,28 @@ export default function PublicMatches() {
     ]
   );
 
-  // Build the unified chronological feed (matches + suggestions interleaved).
-  const feed = useUnifiedMatchFeed({
+  // Build the unified per-day feed (matches + suggestions, both bucketed by day).
+  const feedDays = useUnifiedMatchFeed({
     matches: sortedMatches,
-    suggestions,
+    days,
     filters: suggestionFilters,
   });
+
+  // Flatten into a single stream with date-header rows between days.
+  type PublicFeedRow =
+    | { kind: 'header'; key: string; date: string }
+    | { kind: 'item'; key: string; data: UnifiedFeedItem };
+  const feed = useMemo<PublicFeedRow[]>(() => {
+    const out: PublicFeedRow[] = [];
+    for (const day of feedDays) {
+      if (day.items.length === 0) continue;
+      out.push({ kind: 'header', key: `header:${day.date}`, date: day.date });
+      for (const it of day.items) {
+        out.push({ kind: 'item', key: it.key, data: it });
+      }
+    }
+    return out;
+  }, [feedDays]);
 
   // Suggestion invite plumbing (shared with Home).
   const {
@@ -318,26 +334,43 @@ export default function PublicMatches() {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Render feed item (match or suggestion)
+  const deviceTz = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, []);
+
+  // Render feed row — date header or match/suggestion card.
   const renderFeedItem = useCallback(
-    ({ item }: { item: UnifiedFeedItem }) => (
-      <FeedItemCard
-        item={item}
-        isDark={isDark}
-        locale={locale}
-        t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
-        currentPlayerId={player?.id}
-        themeColors={colors}
-        suggestionLabels={suggestionLabels}
-        getInviteState={getInviteState}
-        onMatchPress={match => {
-          Logger.logUserAction('public_match_pressed', { matchId: match.id });
-          openMatchDetail(match as MatchDetailData);
-        }}
-        onSendInvite={handleSendInvite}
-      />
-    ),
+    ({ item }: { item: PublicFeedRow }) => {
+      if (item.kind === 'header') {
+        const result = formatIntuitiveDateInTimezone(item.date, deviceTz, locale);
+        let label: string;
+        if (result.type === 'today') label = t('common.time.today');
+        else if (result.type === 'tomorrow') label = t('common.time.tomorrow');
+        else label = result.label;
+        return (
+          <Text size="sm" weight="bold" color={colors.textMuted} style={styles.dayHeader}>
+            {label}
+          </Text>
+        );
+      }
+      return (
+        <FeedItemCard
+          item={item.data}
+          isDark={isDark}
+          locale={locale}
+          t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
+          currentPlayerId={player?.id}
+          themeColors={colors}
+          suggestionLabels={suggestionLabels}
+          getInviteState={getInviteState}
+          onMatchPress={match => {
+            Logger.logUserAction('public_match_pressed', { matchId: match.id });
+            openMatchDetail(match as MatchDetailData);
+          }}
+          onSendInvite={handleSendInvite}
+        />
+      );
+    },
     [
+      deviceTz,
       isDark,
       t,
       locale,
@@ -597,5 +630,12 @@ const styles = StyleSheet.create({
   footerLoader: {
     padding: spacingPixels[4],
     alignItems: 'center',
+  },
+  dayHeader: {
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    paddingHorizontal: spacingPixels[4],
+    marginTop: -spacingPixels[1],
+    marginBottom: spacingPixels[2],
   },
 });

@@ -31,8 +31,8 @@ interface MockPlace {
 
 const MOCK_PLACES: MockPlace[] = [
   {
-    placeId: 'mock_jeanne_mance',
-    name: 'Parc Jeanne-Mance Tennis Courts',
+    placeId: 'mock_addr_esplanade',
+    name: '4422 Avenue de l’Esplanade',
     streetNumber: '4422',
     route: 'Avenue de l’Esplanade',
     city: 'Montréal',
@@ -45,8 +45,8 @@ const MOCK_PLACES: MockPlace[] = [
     longitude: -73.5876,
   },
   {
-    placeId: 'mock_lafontaine',
-    name: 'Parc La Fontaine Tennis',
+    placeId: 'mock_addr_calixa',
+    name: '3819 Avenue Calixa-Lavallée',
     streetNumber: '3819',
     route: 'Avenue Calixa-Lavallée',
     city: 'Montréal',
@@ -59,8 +59,8 @@ const MOCK_PLACES: MockPlace[] = [
     longitude: -73.5687,
   },
   {
-    placeId: 'mock_kent_park',
-    name: 'Kent Park Tennis Club',
+    placeId: 'mock_addr_cdn',
+    name: '5765 Chemin de la Côte-des-Neiges',
     streetNumber: '5765',
     route: 'Chemin de la Côte-des-Neiges',
     city: 'Montréal',
@@ -73,8 +73,8 @@ const MOCK_PLACES: MockPlace[] = [
     longitude: -73.6225,
   },
   {
-    placeId: 'mock_laval_centre',
-    name: 'Centre Sportif Laval',
+    placeId: 'mock_addr_bois_boulogne',
+    name: '955 Avenue Bois-de-Boulogne',
     streetNumber: '955',
     route: 'Avenue Bois-de-Boulogne',
     city: 'Laval',
@@ -87,8 +87,8 @@ const MOCK_PLACES: MockPlace[] = [
     longitude: -73.7361,
   },
   {
-    placeId: 'mock_brossard_club',
-    name: 'Club de Tennis Brossard',
+    placeId: 'mock_addr_marie_victorin',
+    name: '7415 Boulevard Marie-Victorin',
     streetNumber: '7415',
     route: 'Boulevard Marie-Victorin',
     city: 'Brossard',

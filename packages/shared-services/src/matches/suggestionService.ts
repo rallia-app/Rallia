@@ -1,16 +1,18 @@
 /**
  * Match Suggestion Service
  *
- * Orchestrates the match suggestion engine:
- * 1. Calls the SQL RPC for scored (opponent, facility) pairs
- * 2. Fetches busy times for caller + all opponents (conflict detection)
- * 3. Generates hour slots from shared availability (with conflict filtering)
- * 4. Groups by opponent with all compatible facilities + conflict-free slots
- * 5. Ranks opponents by player compatibility and returns quality-filtered results
+ * Produces a 7-day grid of personalized match suggestions:
+ *   - For each of the next 7 days, returns up to 5 (opponent, facility, slot)
+ *     triplets — at most one per opponent per day.
+ *   - Slot times come from the 6 fixed product hours: 8, 10, 14, 16, 18, 20.
+ *     A slot is only emitted when both its day-of-week AND its period are in
+ *     the suggéreur's shared availability with the caller.
+ *   - Scoring per triplet = playerCompatibility (from RPC) +
+ *     actionabilityBoost (per-opponent slot count) + urgencyBoost (sooner
+ *     slots) + jitter.
  *
- * NOTE: Realtime court availability fetching is temporarily disabled for
- * performance. All facilities flow through the no-source slot generator and
- * `hasAvailabilitySource` is always false.
+ * NOTE: Realtime court availability is not used here — slots are generated
+ * from the shared day×period overlap. `hasAvailabilitySource` is always false.
  */
 
 import { supabase } from '../supabase';
@@ -50,15 +52,8 @@ interface ScoredMatchup {
 }
 
 export interface OverlapSlot {
-  day: string; // e.g. 'monday'
-  period: string; // e.g. 'morning'
-}
-
-export interface AvailableTimeSlot {
-  datetime: Date;
-  endDatetime: Date;
-  courtCount: number;
-  bookingUrl: string | null;
+  day: string; // 'monday' .. 'sunday'
+  period: string; // 'morning' | 'afternoon' | 'evening'
 }
 
 export interface SuggestionFacility {
@@ -67,12 +62,17 @@ export interface SuggestionFacility {
   facilityAddress: string;
   facilityCity: string;
   facilityAffinity: number;
-  availableSlots: AvailableTimeSlot[];
   hasAvailabilitySource: boolean;
 }
 
-/** Final suggestion returned to the client — one per opponent */
-export interface MatchSuggestion {
+export interface SuggestionSlot {
+  datetime: Date;
+  endDatetime: Date;
+  bookingUrl: string | null;
+}
+
+/** A single (opponent, facility, slot) triplet — one card. */
+export interface SlotSuggestion {
   opponentId: string;
   opponentFirstName: string;
   opponentLastName: string;
@@ -84,9 +84,20 @@ export interface MatchSuggestion {
   opponentBadgeStatus: string | null;
   matchType: string;
   matchDuration: string;
+
+  facility: SuggestionFacility;
+  slot: SuggestionSlot;
+
+  /** Final ordering score within a day. */
+  score: number;
+  /** Per-opponent compatibility from the RPC, before per-slot boosts. */
   playerCompatibility: number;
-  facilities: SuggestionFacility[];
-  sharedAvailability: OverlapSlot[];
+}
+
+/** A single day in the 7-day grid. `suggestions` may be empty. */
+export interface DaySuggestions {
+  date: string; // YYYY-MM-DD (caller's local calendar)
+  suggestions: SlotSuggestion[]; // 0..MAX_PER_DAY
 }
 
 export interface GetMatchSuggestionsParams {
@@ -94,20 +105,16 @@ export interface GetMatchSuggestionsParams {
   playerId?: string;
   sportId: string;
   sportName?: string;
-  limit?: number;
   /** Anon mode: caller latitude. Required when playerId is not provided. */
   latitude?: number;
   /** Anon mode: caller longitude. Required when playerId is not provided. */
   longitude?: number;
   /** Anon mode: search radius in km (defaults to 25). */
   maxDistanceKm?: number;
-  /** Cancellation signal — wired through TanStack's queryFn. The scoring RPC
-   *  honors `.abortSignal(signal)`; long-running downstream availability /
-   *  busy-slot fetches are short-circuited via `signal.aborted` checks. */
+  /** Cancellation signal — wired through TanStack's queryFn. */
   signal?: AbortSignal;
 }
 
-/** A player's existing match time window for conflict detection */
 interface BusySlot {
   matchDate: string;
   startTime: string;
@@ -115,70 +122,75 @@ interface BusySlot {
 }
 
 // =============================================================================
-// TIME PERIOD MAPPING
+// CONSTANTS
 // =============================================================================
 
-const PERIOD_HOURS: Record<string, number[]> = {
-  morning: [8, 9, 10, 11, 12],
-  afternoon: [13, 14, 15, 16, 17],
-  evening: [18, 19, 20, 21],
+const DAYS_AHEAD = 7;
+const MAX_PER_DAY = 5;
+
+/** Fixed candidate hours per period (product spec). */
+const PERIOD_FIXED_HOURS: Record<string, number[]> = {
+  morning: [8, 10],
+  afternoon: [14, 16],
+  evening: [18, 20],
 };
+
+const DAY_NAMES = [
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+] as const;
 
 // =============================================================================
 // DATE HELPERS
 // =============================================================================
 
-function getNextNDays(n: number): string[] {
-  const dates: string[] = [];
-  const now = new Date();
+function dateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function getNextNDays(n: number): { date: Date; key: string }[] {
+  const out: { date: Date; key: string }[] = [];
+  const base = new Date();
+  base.setHours(0, 0, 0, 0);
   for (let i = 0; i < n; i++) {
-    const d = new Date(now);
+    const d = new Date(base);
     d.setDate(d.getDate() + i);
-    dates.push(
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-    );
+    out.push({ date: d, key: dateKey(d) });
   }
-  return dates;
+  return out;
 }
 
 // =============================================================================
 // CONFLICT DETECTION
 // =============================================================================
 
-/**
- * Check if a proposed time slot overlaps with any of the player's existing matches.
- * Uses simple time-string comparison on the same date.
- */
 function hasTimeConflict(
-  proposedDate: string, // YYYY-MM-DD
+  proposedDate: string,
   proposedStartHour: number,
   proposedEndHour: number,
   busySlots: BusySlot[]
 ): boolean {
   const proposedStart = `${String(proposedStartHour).padStart(2, '0')}:00`;
   const proposedEnd = `${String(proposedEndHour).padStart(2, '0')}:00`;
-
   return busySlots.some(slot => {
     if (slot.matchDate !== proposedDate) return false;
-    // Standard overlap: start1 < end2 AND start2 < end1
     return proposedStart < slot.endTime && proposedEnd > slot.startTime;
   });
 }
 
-/**
- * Fetch busy times for a list of player IDs within a date range.
- * Returns a map of playerId → BusySlot[].
- */
 async function fetchBusySlots(
   playerIds: string[],
   startDate: string,
   endDate: string
 ): Promise<Map<string, BusySlot[]>> {
   const busyByPlayer = new Map<string, BusySlot[]>();
-
   if (playerIds.length === 0) return busyByPlayer;
 
-  // Query all active match participations for these players within the date window
   const { data, error } = await supabase
     .from('match_participant')
     .select(
@@ -207,17 +219,11 @@ async function fetchBusySlots(
       end_time: string;
       cancelled_at: string | null;
     };
-
-    // Skip cancelled matches
     if (!match || match.cancelled_at) continue;
-
-    // Skip matches outside our date window
     if (match.match_date < startDate || match.match_date > endDate) continue;
 
     const playerId = row.player_id as string;
-    if (!busyByPlayer.has(playerId)) {
-      busyByPlayer.set(playerId, []);
-    }
+    if (!busyByPlayer.has(playerId)) busyByPlayer.set(playerId, []);
     busyByPlayer.get(playerId)!.push({
       matchDate: match.match_date,
       startTime: match.start_time,
@@ -229,86 +235,91 @@ async function fetchBusySlots(
 }
 
 // =============================================================================
-// NO-SOURCE SLOT GENERATION
+// SLOT GENERATION (FIXED HOURS)
 // =============================================================================
 
 /**
- * Generate on-the-hour slots for a facility without real-time availability data.
- * Slots are generated for each shared availability period within the date window.
+ * For a single (opponent, facility) row, emit one candidate slot per matching
+ * (date, fixed-hour) cell across the 7-day window. Returns slots already
+ * filtered against the caller's and the opponent's busy windows.
  */
-function generateNoSourceSlots(
+function generateFixedHourSlots(
   overlaps: OverlapSlot[],
-  now: Date,
-  dates: string[]
-): AvailableTimeSlot[] {
-  const slots: AvailableTimeSlot[] = [];
-  const todayIndex = now.getDay();
-  const currentHour = now.getHours();
-  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  window: { date: Date; key: string }[],
+  callerBusy: BusySlot[],
+  opponentBusy: BusySlot[],
+  now: Date
+): SuggestionSlot[] {
+  if (overlaps.length === 0) return [];
 
-  for (const overlap of overlaps) {
-    const targetDayIndex = dayNames.indexOf(overlap.day);
-    let daysAhead = targetDayIndex - todayIndex;
-    if (daysAhead < 0) daysAhead += 7;
+  // Build a Set of "day:period" pairs for O(1) lookup
+  const overlapSet = new Set(overlaps.map(o => `${o.day}:${o.period}`));
 
-    const targetDate = new Date(now);
-    targetDate.setDate(targetDate.getDate() + daysAhead);
-    const dateStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
+  const out: SuggestionSlot[] = [];
+  const nowMs = now.getTime();
 
-    // Only generate slots within our fetch window
-    if (!dates.includes(dateStr)) continue;
+  for (const { date, key } of window) {
+    const dayName = DAY_NAMES[date.getDay()];
+    for (const period of Object.keys(PERIOD_FIXED_HOURS)) {
+      if (!overlapSet.has(`${dayName}:${period}`)) continue;
+      const hours = PERIOD_FIXED_HOURS[period];
+      for (const h of hours) {
+        const slotStart = new Date(date);
+        slotStart.setHours(h, 0, 0, 0);
+        if (slotStart.getTime() <= nowMs) continue;
+        if (hasTimeConflict(key, h, h + 1, callerBusy)) continue;
+        if (hasTimeConflict(key, h, h + 1, opponentBusy)) continue;
 
-    const hours = PERIOD_HOURS[overlap.period] ?? [];
-    const isToday = daysAhead === 0;
-
-    for (const h of hours) {
-      if (isToday && h <= currentHour) continue;
-
-      const d = new Date(targetDate);
-      d.setHours(h, 0, 0, 0);
-      slots.push({
-        datetime: d,
-        endDatetime: new Date(d.getTime() + 60 * 60 * 1000),
-        courtCount: 0,
-        bookingUrl: null,
-      });
+        out.push({
+          datetime: slotStart,
+          endDatetime: new Date(slotStart.getTime() + 60 * 60 * 1000),
+          bookingUrl: null,
+        });
+      }
     }
   }
-
-  return slots.sort((a, b) => a.datetime.getTime() - b.datetime.getTime());
+  return out;
 }
 
 // =============================================================================
-// MAIN FUNCTION
+// SCORE BOOSTS
+// =============================================================================
+
+function urgencyBoostForDate(slotDate: Date, now: Date): number {
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const slotStart = new Date(slotDate.getFullYear(), slotDate.getMonth(), slotDate.getDate());
+  const daysAway = Math.round((slotStart.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24));
+  if (daysAway <= 1) return 0.05;
+  if (daysAway === 2) return 0.03;
+  if (daysAway === 3) return 0.01;
+  return 0;
+}
+
+function actionabilityBoostFor(totalSlotsForOpponent: number): number {
+  return Math.min(0.1, Math.max(0, (totalSlotsForOpponent - 1) * 0.012));
+}
+
+// =============================================================================
+// MAIN
 // =============================================================================
 
 export async function getMatchSuggestions(
   params: GetMatchSuggestionsParams
-): Promise<MatchSuggestion[]> {
-  const {
-    playerId,
-    sportId,
-    sportName,
-    latitude,
-    longitude,
-    maxDistanceKm = 25,
-    limit = 10,
-    signal,
-  } = params;
+): Promise<DaySuggestions[]> {
+  const { playerId, sportId, latitude, longitude, maxDistanceKm = 25, signal } = params;
   const isAnon = !playerId;
+
+  const window = getNextNDays(DAYS_AHEAD);
+  const emptyGrid: DaySuggestions[] = window.map(w => ({ date: w.key, suggestions: [] }));
 
   if (isAnon && (latitude == null || longitude == null)) {
     console.warn('[SuggestionService] Anon mode requires latitude/longitude');
-    return [];
+    return emptyGrid;
   }
 
-  const dates = getNextNDays(3);
-  const startDate = dates[0];
-  const endDate = dates[dates.length - 1];
-
-  // RPC returns one row per (opponent, facility) and many opponents drop out
-  // during conflict-filtering — ask for 4× headroom so the final cap can be hit.
-  const rpcLimit = Math.max(50, limit * 4);
+  // Headroom — we want enough opponents/facilities to fill 5 cards × 7 days
+  // after conflict + dedupe filtering.
+  const rpcLimit = Math.max(140, MAX_PER_DAY * DAYS_AHEAD * 4);
 
   // ── Step 1: Call SQL RPC ────────────────────────────────────────────
   const rpcBuilder = isAnon
@@ -328,179 +339,143 @@ export async function getMatchSuggestions(
       });
   if (signal) rpcBuilder.abortSignal(signal);
   const { data: scoredRows, error } = await rpcBuilder;
-  if (signal?.aborted) return [];
+  if (signal?.aborted) return emptyGrid;
 
   if (error) {
     console.error('[SuggestionService] RPC error:', error);
-    return [];
+    return emptyGrid;
   }
-
   if (!scoredRows || scoredRows.length === 0) {
-    return [];
+    return emptyGrid;
   }
 
   const scored = scoredRows as ScoredMatchup[];
 
-  // ── Step 2: Fetch busy times for caller + all opponents ─────────────
+  // ── Step 2: Busy slots for caller + opponents (conflict detection) ──
   const uniqueOpponentIds = [...new Set(scored.map(r => r.opponent_id))];
   const allPlayerIds = isAnon ? uniqueOpponentIds : [playerId!, ...uniqueOpponentIds];
+  const startDate = window[0].key;
+  const endDate = window[window.length - 1].key;
 
   const busyByPlayer = await fetchBusySlots(allPlayerIds, startDate, endDate);
-  if (signal?.aborted) return [];
-
+  if (signal?.aborted) return emptyGrid;
   const callerBusy = isAnon ? [] : (busyByPlayer.get(playerId!) ?? []);
 
-  // ── Step 3: Group by opponent, build facilities + conflict-free slots ─
+  // ── Step 3: Expand RPC rows into candidate triplets ─────────────────
   const now = new Date();
-  const opponentMap = new Map<
-    string,
-    {
-      row: ScoredMatchup;
-      facilities: Map<
-        string,
-        {
-          row: ScoredMatchup;
-          slots: AvailableTimeSlot[];
-        }
-      >;
-    }
-  >();
+
+  interface Triplet {
+    row: ScoredMatchup;
+    slot: SuggestionSlot;
+    dateKey: string;
+  }
+
+  const triplets: Triplet[] = [];
+  /** opponent_id → total slot count across all facilities, used for actionability */
+  const slotCountByOpponent = new Map<string, number>();
 
   for (const row of scored) {
-    if (!opponentMap.has(row.opponent_id)) {
-      opponentMap.set(row.opponent_id, { row, facilities: new Map() });
-    }
-    const opponent = opponentMap.get(row.opponent_id)!;
     const opponentBusy = busyByPlayer.get(row.opponent_id) ?? [];
+    const slots = generateFixedHourSlots(
+      row.overlapping_days_periods || [],
+      window,
+      callerBusy,
+      opponentBusy,
+      now
+    );
+    if (slots.length === 0) continue;
 
-    if (!opponent.facilities.has(row.facility_id)) {
-      const overlaps = row.overlapping_days_periods || [];
-      const generated = generateNoSourceSlots(overlaps, now, dates);
+    slotCountByOpponent.set(
+      row.opponent_id,
+      (slotCountByOpponent.get(row.opponent_id) ?? 0) + slots.length
+    );
 
-      const facilitySlots: AvailableTimeSlot[] = [];
-      for (const slot of generated) {
-        const d = slot.datetime;
-        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        const hour = d.getHours();
-        if (hasTimeConflict(dateStr, hour, hour + 1, callerBusy)) continue;
-        if (hasTimeConflict(dateStr, hour, hour + 1, opponentBusy)) continue;
-        facilitySlots.push(slot);
-      }
-
-      opponent.facilities.set(row.facility_id, {
-        row,
-        slots: facilitySlots,
-      });
+    for (const slot of slots) {
+      triplets.push({ row, slot, dateKey: dateKey(slot.datetime) });
     }
   }
 
-  // ── Step 4: Build final suggestions ────────────────────────────────
-  const suggestions: MatchSuggestion[] = [];
-
-  for (const [, opponent] of opponentMap) {
-    const { row } = opponent;
-
-    const facilities: SuggestionFacility[] = [];
-    for (const [, fac] of opponent.facilities) {
-      // Only include if there are conflict-free slots available
-      if (fac.slots.length > 0) {
-        facilities.push({
-          facilityId: fac.row.facility_id,
-          facilityName: fac.row.facility_name,
-          facilityAddress: fac.row.facility_address,
-          facilityCity: fac.row.facility_city,
-          facilityAffinity: fac.row.facility_affinity,
-          availableSlots: fac.slots.sort((a, b) => a.datetime.getTime() - b.datetime.getTime()),
-          hasAvailabilitySource: false,
-        });
-      }
-    }
-
-    if (facilities.length === 0) continue;
-
-    facilities.sort((a, b) => b.facilityAffinity - a.facilityAffinity);
-
-    suggestions.push({
-      opponentId: row.opponent_id,
-      opponentFirstName: row.opponent_first_name,
-      opponentLastName: row.opponent_last_name,
-      opponentAvatar: row.opponent_avatar,
-      opponentReputationScore: row.opponent_reputation_score,
-      opponentReputationTier: row.opponent_reputation_tier,
-      opponentRatingScoreValue: row.opponent_rating_value,
-      opponentRatingLabel: row.opponent_rating_label,
-      opponentBadgeStatus: row.opponent_badge_status,
-      matchType: row.match_type,
-      matchDuration: row.match_duration,
-      playerCompatibility: row.player_compatibility,
-      facilities,
-      sharedAvailability: row.overlapping_days_periods || [],
-    });
+  // ── Step 4: Score each triplet ──────────────────────────────────────
+  interface ScoredTriplet extends Triplet {
+    score: number;
   }
 
-  // ── Step 5: Compute final score with actionability + urgency + jitter ─
-  const scoredSuggestions = suggestions.map(s => {
-    // Actionability: more available slots across all facilities = higher boost
-    const totalSlots = s.facilities.reduce((sum, f) => sum + f.availableSlots.length, 0);
-    const actionabilityBoost = Math.min(0.1, Math.max(0, (totalSlots - 1) * 0.012));
-
-    // Urgency: soonest available slot gets a time-based bonus
-    const allSlots = s.facilities.flatMap(f => f.availableSlots);
-    const soonestSlot =
-      allSlots.length > 0
-        ? allSlots.reduce((earliest, slot) =>
-            slot.datetime.getTime() < earliest.datetime.getTime() ? slot : earliest
-          )
-        : null;
-
-    let urgencyBoost = 0;
-    if (soonestSlot) {
-      const nowDate = new Date();
-      const todayStart = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate());
-      const slotStart = new Date(
-        soonestSlot.datetime.getFullYear(),
-        soonestSlot.datetime.getMonth(),
-        soonestSlot.datetime.getDate()
-      );
-      const daysAway = Math.round(
-        (slotStart.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      if (daysAway <= 0)
-        urgencyBoost = 0.05; // today
-      else if (daysAway === 1)
-        urgencyBoost = 0.05; // tomorrow
-      else if (daysAway === 2) urgencyBoost = 0.03;
-      else if (daysAway === 3) urgencyBoost = 0.01;
-    }
-
-    // Random jitter ±3% for feed freshness across sessions
+  const scoredTriplets: ScoredTriplet[] = triplets.map(t => {
+    const action = actionabilityBoostFor(slotCountByOpponent.get(t.row.opponent_id) ?? 0);
+    const urgency = urgencyBoostForDate(t.slot.datetime, now);
     const jitter = (Math.random() - 0.5) * 0.06;
-
-    const finalScore = s.playerCompatibility + actionabilityBoost + urgencyBoost + jitter;
-
-    return { ...s, playerCompatibility: finalScore };
+    const score = Number(t.row.player_compatibility) + action + urgency + jitter;
+    return { ...t, score };
   });
 
-  // ── Step 6: Sort and apply quality threshold ──────────────────────
-  scoredSuggestions.sort((a, b) => b.playerCompatibility - a.playerCompatibility);
+  // ── Step 5: Bucket by day, dedupe by opponent, cap at 5 per day ────
+  return bucketByDay(
+    window.map(w => w.key),
+    scoredTriplets
+  );
+}
 
-  const MIN_GUARANTEED = Math.min(10, limit);
-  const QUALITY_THRESHOLD = 0.35;
-
-  let result: MatchSuggestion[];
-  if (scoredSuggestions.length <= MIN_GUARANTEED) {
-    result = scoredSuggestions;
-  } else {
-    const aboveThreshold = scoredSuggestions.filter(
-      s => s.playerCompatibility >= QUALITY_THRESHOLD
-    );
-    result =
-      aboveThreshold.length >= MIN_GUARANTEED
-        ? aboveThreshold
-        : scoredSuggestions.slice(0, MIN_GUARANTEED);
+/**
+ * Pure helper — buckets scored triplets by day-key, dedupes by opponent within
+ * each day, sorts by score desc, and caps each day at `MAX_PER_DAY`. Exported
+ * for unit testing.
+ */
+export function bucketByDay(
+  dayKeys: string[],
+  triplets: { row: ScoredMatchup; slot: SuggestionSlot; dateKey: string; score: number }[]
+): DaySuggestions[] {
+  const byDay = new Map<string, typeof triplets>();
+  for (const key of dayKeys) byDay.set(key, []);
+  for (const t of triplets) {
+    const bucket = byDay.get(t.dateKey);
+    if (bucket) bucket.push(t);
   }
 
-  return result.slice(0, limit);
+  return dayKeys.map(key => {
+    const bucket = byDay.get(key) ?? [];
+    bucket.sort((a, b) => b.score - a.score);
+    const picked: SlotSuggestion[] = [];
+    const seenOpponents = new Set<string>();
+    for (const t of bucket) {
+      if (picked.length >= MAX_PER_DAY) break;
+      if (seenOpponents.has(t.row.opponent_id)) continue;
+      seenOpponents.add(t.row.opponent_id);
+      picked.push(toSlotSuggestion(t));
+    }
+    return { date: key, suggestions: picked };
+  });
+}
+
+function toSlotSuggestion(t: {
+  row: ScoredMatchup;
+  slot: SuggestionSlot;
+  score: number;
+}): SlotSuggestion {
+  const r = t.row;
+  return {
+    opponentId: r.opponent_id,
+    opponentFirstName: r.opponent_first_name,
+    opponentLastName: r.opponent_last_name,
+    opponentAvatar: r.opponent_avatar,
+    opponentReputationScore: r.opponent_reputation_score,
+    opponentReputationTier: r.opponent_reputation_tier,
+    opponentRatingScoreValue: r.opponent_rating_value,
+    opponentRatingLabel: r.opponent_rating_label,
+    opponentBadgeStatus: r.opponent_badge_status,
+    matchType: r.match_type,
+    matchDuration: r.match_duration,
+    facility: {
+      facilityId: r.facility_id,
+      facilityName: r.facility_name,
+      facilityAddress: r.facility_address,
+      facilityCity: r.facility_city,
+      facilityAffinity: Number(r.facility_affinity),
+      hasAvailabilitySource: false,
+    },
+    slot: t.slot,
+    score: t.score,
+    playerCompatibility: Number(r.player_compatibility),
+  };
 }
 
 // =============================================================================
@@ -515,14 +490,11 @@ export interface CreateFromSuggestionInput {
   matchDuration: string;
   facilityId: string;
   startTime: Date;
-  /** End time from the court availability slot — if provided, duration is derived from the slot length */
+  /** End time from the slot — when provided, duration is derived from its length. */
   endTime?: Date | null;
   timezone: string;
 }
 
-/**
- * Compute end time string (HH:MM) from start time and duration.
- */
 function computeEndTime(startHour: number, duration: string): string {
   const durationMinutes = parseInt(duration, 10) || 60;
   const endMinutes = startHour * 60 + durationMinutes;
@@ -531,11 +503,6 @@ function computeEndTime(startHour: number, duration: string): string {
   return `${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`;
 }
 
-/**
- * Create a match from a suggestion and invite the opponent.
- * The caller becomes the host (via created_by), and the opponent
- * gets a 'pending' invitation with an automatic push notification.
- */
 export async function createMatchFromSuggestion(
   input: CreateFromSuggestionInput
 ): Promise<{ matchId: string; invited: boolean }> {
@@ -544,8 +511,6 @@ export async function createMatchFromSuggestion(
   const matchDate = `${input.startTime.getFullYear()}-${String(input.startTime.getMonth() + 1).padStart(2, '0')}-${String(input.startTime.getDate()).padStart(2, '0')}`;
   const startTimeStr = `${String(startHour).padStart(2, '0')}:${String(startMin).padStart(2, '0')}`;
 
-  // If a slot end time is provided (from real-time availability), use it directly
-  // and derive duration from the slot length. Otherwise fall back to caller's preferred duration.
   let endTimeStr: string;
   let duration = input.matchDuration;
 
@@ -554,7 +519,6 @@ export async function createMatchFromSuggestion(
     const endM = input.endTime.getMinutes();
     endTimeStr = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
     const slotMinutes = Math.round((input.endTime.getTime() - input.startTime.getTime()) / 60000);
-    // Map slot duration to the closest match_duration_enum value
     if (slotMinutes <= 30) duration = '30';
     else if (slotMinutes <= 60) duration = '60';
     else if (slotMinutes <= 90) duration = '90';
