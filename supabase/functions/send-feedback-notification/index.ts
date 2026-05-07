@@ -555,12 +555,25 @@ Deno.serve(async req => {
     });
   }
 
-  // Validate anon key - this function is called by DB triggers using anon_key from Vault
-  const expectedAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
-  if (expectedAnonKey) {
-    const authHeader = req.headers.get('Authorization');
-    const token = authHeader?.replace(/^Bearer\s+/i, '').trim();
-    if (!token || token !== expectedAnonKey) {
+  // Auth check per https://supabase.com/docs/guides/functions/auth:
+  // accept SUPABASE_PUBLISHABLE_KEYS["default"] in apikey or Authorization: Bearer.
+  const expectedKey = (() => {
+    try {
+      return (
+        JSON.parse(Deno.env.get('SUPABASE_PUBLISHABLE_KEYS') ?? '{}') as Record<string, string>
+      )['default'];
+    } catch {
+      return undefined;
+    }
+  })();
+  if (expectedKey) {
+    const apikey = req.headers.get('apikey');
+    const bearer = req.headers
+      .get('Authorization')
+      ?.replace(/^Bearer\s+/i, '')
+      .trim();
+    const token = apikey || bearer;
+    if (!token || token !== expectedKey) {
       return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
@@ -615,16 +628,13 @@ Deno.serve(async req => {
     if (error) {
       console.error('Resend API error:', error.message);
 
-      return new Response(
-        JSON.stringify({ success: false, error: error.message } as EmailResponse),
-        {
-          status: 400,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          },
-        }
-      );
+      return new Response(JSON.stringify({ success: false, error: error.message }), {
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      });
     }
 
     // Return success response
@@ -649,7 +659,7 @@ Deno.serve(async req => {
       JSON.stringify({
         success: false,
         error: error instanceof Error ? error.message : 'Internal server error',
-      } as EmailResponse),
+      }),
       {
         status: 500,
         headers: {

@@ -370,7 +370,18 @@ deno_version = 2
 
 # Edge Function configurations
 # Disable JWT verification for functions called by pg_net (cron jobs, triggers)
-# These functions use x-service-key custom header for authentication instead
+# and external webhooks. Auth is done in-function (publishable-key check or
+# webhook signature verification) per https://supabase.com/docs/guides/functions/auth.
+
+# External webhooks — auth via provider signature verification inside the function:
+# Resend uses Svix (svix-id/svix-timestamp/svix-signature headers).
+[functions.resend-webhook]
+verify_jwt = false
+
+# RevenueCat sends `Authorization: Bearer <RC_WEBHOOK_SECRET>` (their shared
+# secret). Function validates it internally; gateway must not require a JWT.
+[functions.revenuecat-webhook]
+verify_jwt = false
 
 [functions.send-email]
 verify_jwt = false
@@ -400,6 +411,15 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.send-morning-digest]
+verify_jwt = false
+
+[functions.send-match-reminders]
+verify_jwt = false
+
+[functions.send-check-in-reminders]
+verify_jwt = false
+
+[functions.recalculate-reputation-decay]
 verify_jwt = false
 
 # Client-invoked functions: gateway JWT verification disabled because these
