@@ -1355,7 +1355,12 @@
       "switchToManual": "Passer au manuel",
       "useManualInstead": "Suivre manuellement",
       "pendingTitle": "{amount} prêt à recevoir",
-      "pendingBody": "Termine la configuration des paiements pour transférer cet argent à ta banque."
+      "pendingBody": "Termine la configuration des paiements pour transférer cet argent à ta banque.",
+      "connectedToast": "Paiements connectés !",
+      "onboardingError": "Échec du démarrage de la configuration. Réessayez.",
+      "modeUpdateError": "Impossible de mettre à jour le mode de paiement. Réessayez.",
+      "switchToManualConfirmTitle": "Passer au suivi manuel?",
+      "switchToManualConfirmMessage": "Les paiements futurs ne passeront plus par Stripe — tu marqueras chaque joueur comme payé toi-même. Les paiements en attente dans Stripe te seront quand même versés."
     }
   },
   "playerProfile": {
@@ -3244,29 +3249,50 @@
     "yourScoreConfirmed": "Votre confirmation reçue",
     "reviewRebuttal": "Revoir le score",
     "reimbursement": "Remboursement",
+    "matchCost": "Coût du match",
     "payNow": "Payer maintenant",
     "markAsPaid": "Marquer comme payé",
     "markedAsPaid": "Marqué comme payé",
+    "markedAsPaidWithAmount": "{name} marqué comme payé · {amount}",
     "paymentSuccess": "Paiement envoyé !",
+    "paymentSuccessWithDetails": "Paiement envoyé — {amount} à {name}",
     "paymentError": "Paiement échoué. Réessayez.",
+    "payErrors": {
+      "matchNotFinished": "Tu pourras payer une fois le match terminé.",
+      "matchNotFull": "Ce match n'a pas rempli ses places — aucun remboursement collecté.",
+      "hostManualOnly": "{name} préfère être payé directement.",
+      "alreadyPaid": "Tu as déjà payé ta part.",
+      "alreadyPaidViaStripe": "Déjà payé via Rallia. Pas besoin de marquer manuellement."
+    },
+    "payNote": "Aucuns frais · Propulsé par Stripe",
+    "yourShare": "Ta part · {amount}",
+    "yourShareSubtitle": "{name} recevra ce montant directement",
     "youHavePaid": "✓ Vous avez payé votre part ({amount})",
     "youOweHost": "{amount} dû à {name}",
+    "youOweHostWithDate": "{amount} pour le match du {date} avec {name}",
     "payDirectly": "Payer {name} directement · {amount}",
     "hostNotConnected": "{name} n'a pas encore configuré les paiements",
     "hostManualOnly": "{name} préfère être payé directement · {amount}",
     "paidCount": "{paid}/{total} joueurs ont payé",
+    "everyonePaid": "Tout le monde t'a remboursé",
     "payoutsSetupBanner": {
       "title": "{amount} prêt à recevoir",
-      "body": "Vérifie ton compte bancaire pour recevoir l'argent. Environ 5 minutes.",
+      "body": "Les fonds arrivent 1 à 2 jours ouvrables après la configuration.",
       "cta": "Recevoir le paiement"
     },
     "choosePayouts": {
       "title": "Comment veux-tu gérer les remboursements?",
+      "subtitle": "Choisis comment les joueurs te remboursent le terrain.",
+      "prompt": "Comment veux-tu être remboursé?",
       "stripeOption": "Stripe (recommandé)",
       "stripeDescription": "Les joueurs paient avec Apple Pay en 3 secondes. L'argent va à ta banque. ~5 min de configuration.",
+      "stripeBadge": "~5 min de configuration",
       "manualOption": "Suivi seulement",
       "manualDescription": "Marque qui t'a payé en personne (comptant, Interac, etc.). Aucune configuration, aucuns frais.",
-      "later": "Plus tard"
+      "manualBadge": "Aucuns frais",
+      "later": "Plus tard",
+      "switchToManualConfirmTitle": "Passer au suivi manuel?",
+      "switchToManualConfirmMessage": "Les paiements futurs ne passeront plus par Stripe — tu marqueras chaque joueur comme payé toi-même. Les paiements en attente dans Stripe te seront quand même versés."
     },
     "switchToStripe": "Passer à Stripe",
     "trackingOnly": "Suivi manuel des paiements"

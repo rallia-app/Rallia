@@ -23,18 +23,26 @@ import {
   Modal,
   Image,
   Platform,
-  ActivityIndicator,
   Animated as RNAnimated,
   Easing,
-  Linking,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import * as WebBrowser from 'expo-web-browser';
 import MapView, { Marker } from 'react-native-maps';
 import { WebView } from 'react-native-webview';
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { BaseActionSheet } from './BaseActionSheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Button, useToast } from '@rallia/shared-components';
+import {
+  Text,
+  Button,
+  useToast,
+  Card,
+  Badge as DSBadge,
+  VStack,
+  HStack,
+  Divider,
+} from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -111,6 +119,17 @@ import * as Analytics from '../services/analytics';
 import { MatchAvailableCourtsSection } from '../features/matches/components/MatchAvailableCourtsSection';
 
 // Use base.white from design system for consistency
+
+/**
+ * Format a CAD amount (in cents) using the active locale.
+ * Use this anywhere money is displayed — never hand-roll `$${X}` strings.
+ */
+function formatCAD(cents: number, locale: string): string {
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: 'CAD',
+  }).format(cents / 100);
+}
 
 // =============================================================================
 // TYPES & CONSTANTS
@@ -1687,7 +1706,11 @@ export const MatchDetailSheet: React.FC = () => {
   // For host view: total cents currently parked in Rallia balance awaiting their onboarding
   const [pendingFundsCents, setPendingFundsCents] = useState<number>(0);
   // Whether to show the "How do you want to handle reimbursements?" choice sheet
-  const [showChoosePayoutsSheet, setShowChoosePayoutsSheet] = useState(false);
+  // Confirmation modal before host opts into manual_only when they have pending funds
+  const [showSwitchToManualConfirm, setShowSwitchToManualConfirm] = useState(false);
+  // Per-participant in-flight tracker for the host's "Mark as Paid" buttons
+  // and the non-host "Mark as Paid" button. Keyed by participant.id.
+  const [markingPaid, setMarkingPaid] = useState<Set<string>>(() => new Set());
 
   // Hydrate host data: payouts_mode + Stripe onboarding status, in parallel
   useEffect(() => {
@@ -1764,11 +1787,44 @@ export const MatchDetailSheet: React.FC = () => {
 
   const handlePayNow = useCallback(async () => {
     if (!selectedMatch?.id) return;
+    lightHaptic();
     setIsPaying(true);
     try {
       const { data, error } = await supabase.functions.invoke('match-reimbursement-create', {
         body: { matchId: selectedMatch.id },
       });
+
+      // Map server-side guard codes to specific, actionable toasts.
+      const guardCode = (data as { error?: string } | null)?.error;
+      if (guardCode) {
+        const hostName = getHumanName(
+          selectedMatch.created_by_player?.profile,
+          t('matchDetail.host' as TranslationKey)
+        );
+        switch (guardCode) {
+          case 'match_not_finished':
+            warningHaptic();
+            toast.error(t('matchDetail.payErrors.matchNotFinished' as TranslationKey));
+            return;
+          case 'match_not_full':
+            warningHaptic();
+            toast.error(t('matchDetail.payErrors.matchNotFull' as TranslationKey));
+            return;
+          case 'host_manual_only':
+            warningHaptic();
+            toast.error(
+              t('matchDetail.payErrors.hostManualOnly' as TranslationKey, { name: hostName })
+            );
+            return;
+          case 'already_paid':
+            warningHaptic();
+            toast.error(t('matchDetail.payErrors.alreadyPaid' as TranslationKey));
+            return;
+          default:
+            break;
+        }
+      }
+
       if (error || !data?.clientSecret) throw new Error(error?.message ?? 'No client secret');
 
       const { error: initError } = await initPaymentSheet({
@@ -1789,8 +1845,20 @@ export const MatchDetailSheet: React.FC = () => {
           p.player_id === playerId ? { ...p, has_paid: true } : p
         ),
       });
-      toast.success(t('matchDetail.paymentSuccess' as TranslationKey));
+      successHaptic();
+      const paidAmount = formatCAD(data.amountCents ?? 0, locale);
+      const hostNameForToast = getHumanName(
+        selectedMatch.created_by_player?.profile,
+        t('matchDetail.host' as TranslationKey)
+      );
+      toast.success(
+        t('matchDetail.paymentSuccessWithDetails' as TranslationKey, {
+          amount: paidAmount,
+          name: hostNameForToast,
+        })
+      );
     } catch {
+      errorHaptic();
       toast.error(t('matchDetail.paymentError' as TranslationKey));
     } finally {
       setIsPaying(false);
@@ -1803,6 +1871,7 @@ export const MatchDetailSheet: React.FC = () => {
     updateSelectedMatch,
     toast,
     t,
+    locale,
   ]);
 
   const handleMarkAsPaid = useCallback(
@@ -1813,6 +1882,17 @@ export const MatchDetailSheet: React.FC = () => {
       const participant = selectedMatch.participants?.find(p => p.player_id === pid);
       if (!participant?.id) return;
 
+      // Track per-row in-flight state so the Mark-as-Paid button can disable
+      // and avoid double-fire on rapid taps.
+      lightHaptic();
+      setMarkingPaid(prev => {
+        if (prev.has(participant.id)) return prev;
+        const next = new Set(prev);
+        next.add(participant.id);
+        return next;
+      });
+
+      let alreadyPaidViaStripe = false;
       // Server-side: handles Stripe refund if there's an in-flight charge.
       // Falls back to a direct DB update if the function call fails (offline,
       // host opted into manual_only with no stripe row, etc.).
@@ -1821,9 +1901,8 @@ export const MatchDetailSheet: React.FC = () => {
           body: { participantId: participant.id },
         });
         if (error) throw error;
-        if (data?.error === 'already_paid_via_stripe') {
-          toast.error(t('matchDetail.paymentError' as TranslationKey));
-          return;
+        if ((data as { error?: string } | null)?.error === 'already_paid_via_stripe') {
+          alreadyPaidViaStripe = true;
         }
       } catch {
         // Fall back to direct DB update — fine for hosts in manual_only mode
@@ -1833,6 +1912,19 @@ export const MatchDetailSheet: React.FC = () => {
           .update({ has_paid: true })
           .eq('match_id', selectedMatch.id)
           .eq('player_id', pid);
+      } finally {
+        setMarkingPaid(prev => {
+          if (!prev.has(participant.id)) return prev;
+          const next = new Set(prev);
+          next.delete(participant.id);
+          return next;
+        });
+      }
+
+      if (alreadyPaidViaStripe) {
+        errorHaptic();
+        toast.error(t('matchDetail.payErrors.alreadyPaidViaStripe' as TranslationKey));
+        return;
       }
 
       updateSelectedMatch({
@@ -1841,38 +1933,89 @@ export const MatchDetailSheet: React.FC = () => {
           p.player_id === pid ? { ...p, has_paid: true } : p
         ),
       });
-      toast.success(t('matchDetail.markedAsPaid' as TranslationKey));
+      successHaptic();
+      const targetParticipant = selectedMatch.participants?.find(p => p.player_id === pid);
+      const targetName = getShortName(targetParticipant?.player?.profile, '');
+      const totalCostCentsForToast = Math.round((selectedMatch.estimated_cost ?? 0) * 100);
+      const joinedCount =
+        selectedMatch.participants?.filter(p => p.status === 'joined').length ?? 0;
+      const perPlayerCentsForToast =
+        joinedCount > 0 ? Math.round(totalCostCentsForToast / joinedCount) : 0;
+      const amountFormatted = formatCAD(perPlayerCentsForToast, locale);
+      toast.success(
+        targetName
+          ? t('matchDetail.markedAsPaidWithAmount' as TranslationKey, {
+              name: targetName,
+              amount: amountFormatted,
+            })
+          : t('matchDetail.markedAsPaid' as TranslationKey)
+      );
     },
-    [selectedMatch, playerId, updateSelectedMatch, toast, t]
+    [selectedMatch, playerId, updateSelectedMatch, toast, t, locale]
   );
 
   // Host taps "Get paid" on the JIT banner → invoke onboarding edge function
-  // and open the returned hosted-onboarding URL.
+  // and open the returned hosted-onboarding URL inside an in-app browser.
   const handleStartPayoutsOnboarding = useCallback(async () => {
+    lightHaptic();
     try {
       const { data, error } = await supabase.functions.invoke('player-stripe-onboard');
       if (error || !data?.url) throw error ?? new Error('no url');
-      await Linking.openURL(data.url);
+      await WebBrowser.openAuthSessionAsync(data.url, 'https://rallia.app/stripe-connect-return');
     } catch {
-      toast.error(t('matchDetail.paymentError' as TranslationKey));
+      errorHaptic();
+      toast.error(t('profile.payments.onboardingError' as TranslationKey));
     }
   }, [toast, t]);
 
-  // Host chooses to opt out of Stripe (manual_only) or in (auto)
+  // Host chooses to opt out of Stripe (manual_only) or in (auto). When the
+  // host has pending Stripe-routed funds, opting into manual_only is gated
+  // by a confirmation dialog to avoid surprising the host.
   const handleChoosePayouts = useCallback(
     async (choice: 'auto' | 'manual_only') => {
       if (!playerId) return;
-      await supabase.from('player').update({ payouts_mode: choice }).eq('id', playerId);
+      selectionHaptic();
+      // Guard: if there are funds awaiting Stripe release, confirm the switch.
+      if (choice === 'manual_only' && hostStripeConnected !== true && pendingFundsCents > 0) {
+        setShowSwitchToManualConfirm(true);
+        return;
+      }
+      const { error: dbError } = await supabase
+        .from('player')
+        .update({ payouts_mode: choice })
+        .eq('id', playerId);
+      if (dbError) {
+        errorHaptic();
+        toast.error(t('profile.payments.modeUpdateError' as TranslationKey));
+        return;
+      }
+      successHaptic();
       setHostPayoutsMode(choice);
-      setShowChoosePayoutsSheet(false);
       if (choice === 'auto') {
         // Immediately kick off onboarding so the host has $ visible if any
         // payments are already pending.
         await handleStartPayoutsOnboarding();
       }
     },
-    [playerId, handleStartPayoutsOnboarding]
+    [playerId, handleStartPayoutsOnboarding, hostStripeConnected, pendingFundsCents, toast, t]
   );
+
+  // Confirmed path for the host opting into manual_only despite pending funds.
+  const handleConfirmSwitchToManual = useCallback(async () => {
+    if (!playerId) return;
+    const { error: dbError } = await supabase
+      .from('player')
+      .update({ payouts_mode: 'manual_only' })
+      .eq('id', playerId);
+    if (dbError) {
+      errorHaptic();
+      toast.error(t('profile.payments.modeUpdateError' as TranslationKey));
+      return;
+    }
+    successHaptic();
+    setHostPayoutsMode('manual_only');
+    setShowSwitchToManualConfirm(false);
+  }, [playerId, toast, t]);
 
   // Render nothing if no match is selected
   if (!selectedMatch) {
@@ -2263,8 +2406,11 @@ export const MatchDetailSheet: React.FC = () => {
   const isCourtFree = !!match.is_court_free;
   const hasCostData = isCourtFree || !!match.estimated_cost;
   const totalCost = match.estimated_cost ?? 0;
-  const perPlayerCost =
-    participantInfo.total > 0 ? (totalCost / participantInfo.total).toFixed(2) : '0.00';
+  const totalCents = Math.round(totalCost * 100);
+  const perPlayerCents =
+    participantInfo.total > 0 ? Math.round(totalCents / participantInfo.total) : 0;
+  const totalCostFormatted = formatCAD(totalCents, locale);
+  const perPlayerCostFormatted = formatCAD(perPlayerCents, locale);
 
   // Reimbursement (hooks are above the early return; only derived values here)
   // Gated on isFull: the server rejects PaymentIntent creation for unfilled
@@ -2285,7 +2431,6 @@ export const MatchDetailSheet: React.FC = () => {
     match.participants?.filter(p => p.status === 'joined' && !p.is_host && p.has_paid).length ?? 0;
   const totalParticipants =
     match.participants?.filter(p => p.status === 'joined' && !p.is_host).length ?? 0;
-  const perPlayerCostFormatted = `$${perPlayerCost}`;
 
   // Location display
   const facilityName = match.facility?.name || match.location_name;
@@ -4607,7 +4752,7 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
             availability and no court is booked yet. */}
         <MatchAvailableCourtsSection match={match} isCreator={isCreator} />
 
-        {/* Cost Section */}
+        {/* Match Cost Section — merged cost breakdown + reimbursement controls */}
         {hasCostData && (
           <Animated.View
             entering={FadeInDown.delay(300).springify()}
@@ -4616,293 +4761,381 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
             <View style={styles.sectionHeader}>
               <Ionicons name="wallet-outline" size={20} color={colors.iconMuted} />
               <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
-                {t('matchDetail.estimatedCost')}
+                {t('matchDetail.matchCost' as TranslationKey)}
               </Text>
             </View>
+
             {isCourtFree ? (
-              <View
-                style={[
-                  styles.costCard,
-                  {
-                    backgroundColor: isDark ? 'rgba(5, 150, 105, 0.12)' : 'rgba(5, 150, 105, 0.06)',
-                    borderColor: isDark ? 'rgba(5, 150, 105, 0.25)' : 'rgba(5, 150, 105, 0.15)',
-                  },
-                ]}
+              <Card
+                variant="outlined"
+                padding={spacingPixels[4]}
+                borderRadius={radiusPixels.xl}
+                backgroundColor={
+                  isDark ? `${status.success.DEFAULT}1F` : `${status.success.DEFAULT}0F`
+                }
+                style={{
+                  borderColor: isDark
+                    ? `${status.success.DEFAULT}40`
+                    : `${status.success.DEFAULT}26`,
+                }}
               >
-                <View style={styles.costFreeContent}>
+                <HStack spacing={spacingPixels[2]} align="center">
                   <Ionicons name="checkmark-circle" size={22} color={status.success.DEFAULT} />
                   <Text
                     size="lg"
                     weight="bold"
                     color={isDark ? status.success.light : status.success.dark}
-                    style={styles.costFreeText}
                   >
                     {t('matchDetail.free')}
                   </Text>
-                </View>
-              </View>
+                </HStack>
+              </Card>
             ) : (
-              <View
-                style={[
-                  styles.costCard,
-                  {
-                    backgroundColor: isDark ? `${primary[500]}14` : `${primary[500]}0A`,
+              <VStack spacing={spacingPixels[3]}>
+                {/* Cost split breakdown */}
+                <Card
+                  variant="outlined"
+                  padding={spacingPixels[4]}
+                  borderRadius={radiusPixels.xl}
+                  backgroundColor={isDark ? `${primary[500]}14` : `${primary[500]}0A`}
+                  style={{
                     borderColor: isDark ? `${primary[500]}40` : `${primary[500]}26`,
-                  },
-                ]}
-              >
-                <View style={styles.costCardMain}>
-                  {/* Total cost */}
-                  <View style={styles.costCardColumn}>
-                    <Text size="sm" weight="semibold" color={colors.textMuted}>
-                      {t('matchDetail.totalCost')}
-                    </Text>
-                    <Text
-                      size="xl"
-                      weight="bold"
-                      color={colors.textSecondary}
-                      style={styles.costAmount}
-                    >
-                      ${totalCost}
-                    </Text>
-                  </View>
-
-                  {/* Divider */}
-                  <View style={styles.costCardDivider}>
-                    <View
-                      style={[
-                        styles.costCardDividerLine,
-                        { backgroundColor: isDark ? neutral[600] : neutral[300] },
-                      ]}
-                    />
-                  </View>
-
-                  {/* Per player cost */}
-                  <View style={styles.costCardColumn}>
-                    <Text size="sm" weight="semibold" color={colors.textMuted}>
-                      {isCreator
-                        ? match.format === 'singles'
-                          ? t('matchDetail.perPlayerCostOrganizer')
-                          : t('matchDetail.perPlayerCostOrganizerDoubles')
-                        : t('matchDetail.perPlayerCostPlayer')}
-                    </Text>
-                    <Text size={30} weight="bold" color={colors.primary} style={styles.costAmount}>
-                      ${perPlayerCost}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            )}
-          </Animated.View>
-        )}
-
-        {/* Reimbursement Section */}
-        {showReimbursement && (
-          <Animated.View
-            entering={FadeInDown.delay(325).springify()}
-            style={[styles.section, { borderBottomColor: colors.border }]}
-          >
-            <View style={styles.sectionHeader}>
-              <Ionicons name="cash-outline" size={20} color={colors.iconMuted} />
-              <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
-                {t('matchDetail.reimbursement' as TranslationKey)}
-              </Text>
-            </View>
-
-            {isNonHostParticipant ? (
-              currentPlayerParticipant?.has_paid ? (
-                <View
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}
+                  }}
                 >
-                  <Ionicons name="checkmark-circle" size={20} color={status.success.DEFAULT} />
-                  <Text
-                    size="sm"
-                    weight="medium"
-                    color={isDark ? status.success.light : status.success.dark}
-                  >
-                    {t('matchDetail.youHavePaid' as TranslationKey, {
-                      amount: perPlayerCostFormatted,
-                    })}
-                  </Text>
-                </View>
-              ) : hostPayoutsMode === 'manual_only' ? (
-                // Host opted into manual-only — no Stripe, pay out-of-band
-                <View style={{ gap: 8 }}>
-                  <Text size="sm" color={colors.textMuted}>
-                    {t('matchDetail.hostManualOnly' as TranslationKey, {
-                      amount: perPlayerCostFormatted,
-                      name: hostName,
-                    })}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => handleMarkAsPaid()}
-                    style={{
-                      backgroundColor: colors.cardBackground,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                      borderRadius: 8,
-                      paddingVertical: 10,
-                      paddingHorizontal: 16,
-                      alignItems: 'center',
-                      alignSelf: 'flex-start',
-                    }}
-                  >
-                    <Text size="sm" weight="semibold" color={colors.text}>
-                      {t('matchDetail.markAsPaid' as TranslationKey)}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                // JIT: always show Pay Now regardless of host's Stripe onboarding state.
-                // Funds are held in Rallia's balance and released when host onboards.
-                <View style={{ gap: 8 }}>
-                  <Text size="sm" color={colors.textMuted}>
-                    {t('matchDetail.youOweHost' as TranslationKey, {
-                      amount: perPlayerCostFormatted,
-                      name: hostName,
-                    })}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={handlePayNow}
-                    disabled={isPaying}
-                    style={{
-                      backgroundColor: colors.primary,
-                      borderRadius: 8,
-                      paddingVertical: 10,
-                      paddingHorizontal: 16,
-                      alignItems: 'center',
-                      alignSelf: 'flex-start',
-                    }}
-                  >
-                    {isPaying ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <Text size="sm" weight="semibold" color="#FFFFFF">
-                        {t('matchDetail.payNow' as TranslationKey)}
+                  <HStack align="center" justify="space-between">
+                    <VStack spacing={spacingPixels[1]} align="start" style={{ flex: 1 }}>
+                      <Text size="sm" weight="semibold" color={colors.textMuted}>
+                        {t('matchDetail.totalCost')}
                       </Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              )
-            ) : (
-              // Host view
-              <View style={{ gap: 8 }}>
-                {/* JIT banner: $X ready to receive — appears when funds are
-                    parked in Rallia's balance awaiting this host's onboarding. */}
-                {pendingFundsCents > 0 &&
-                  !hostStripeConnected &&
-                  hostPayoutsMode !== 'manual_only' && (
-                    <View
-                      style={{
-                        backgroundColor: isDark ? primary[900] : primary[50],
-                        borderColor: isDark ? primary[700] : primary[200],
-                        borderWidth: 1,
-                        borderRadius: 12,
-                        padding: 12,
-                        gap: 8,
-                      }}
-                    >
-                      <Text size="sm" weight="semibold" color={colors.text}>
-                        {t('matchDetail.payoutsSetupBanner.title' as TranslationKey, {
-                          amount: new Intl.NumberFormat(locale, {
-                            style: 'currency',
-                            currency: 'CAD',
-                          }).format(pendingFundsCents / 100),
-                        })}
+                      <Text size="xl" weight="bold" color={colors.textSecondary}>
+                        {totalCostFormatted}
                       </Text>
-                      <Text size="xs" color={colors.textMuted}>
-                        {t('matchDetail.payoutsSetupBanner.body' as TranslationKey)}
+                    </VStack>
+                    <Divider
+                      orientation="vertical"
+                      length={40}
+                      spacing={spacingPixels[3]}
+                      color={isDark ? neutral[600] : neutral[300]}
+                    />
+                    <VStack spacing={spacingPixels[1]} align="start" style={{ flex: 1 }}>
+                      <Text size="sm" weight="semibold" color={colors.textMuted}>
+                        {isCreator
+                          ? match.format === 'singles'
+                            ? t('matchDetail.perPlayerCostOrganizer')
+                            : t('matchDetail.perPlayerCostOrganizerDoubles')
+                          : t('matchDetail.perPlayerCostPlayer')}
                       </Text>
-                      <TouchableOpacity
-                        onPress={handleStartPayoutsOnboarding}
-                        style={{
-                          backgroundColor: colors.primary,
-                          borderRadius: 8,
-                          paddingVertical: 8,
-                          paddingHorizontal: 14,
-                          alignItems: 'center',
-                          alignSelf: 'flex-start',
-                        }}
-                      >
-                        <Text size="sm" weight="semibold" color="#FFFFFF">
-                          {t('matchDetail.payoutsSetupBanner.cta' as TranslationKey)}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
+                      <Text size="xl" weight="bold" color={colors.primary}>
+                        {perPlayerCostFormatted}
+                      </Text>
+                    </VStack>
+                  </HStack>
+                </Card>
 
-                {/* "How do you want to handle reimbursements?" — first-time
-                    prompt for hosts who haven't chosen yet. */}
-                {hostPayoutsMode === 'undecided' && playerId === match.created_by && (
-                  <TouchableOpacity
-                    onPress={() => setShowChoosePayoutsSheet(true)}
-                    style={{
-                      backgroundColor: colors.cardBackground,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                      borderRadius: 8,
-                      paddingVertical: 8,
-                      paddingHorizontal: 12,
-                    }}
-                  >
-                    <Text size="sm" weight="medium" color={colors.text}>
-                      {t('matchDetail.choosePayouts.title' as TranslationKey)}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-
-                <Text size="sm" color={colors.textMuted}>
-                  {t('matchDetail.paidCount' as TranslationKey, {
-                    paid: paidParticipants,
-                    total: totalParticipants,
-                  })}
-                </Text>
-                {match.participants
-                  ?.filter(p => p.status === 'joined' && !p.is_host)
-                  .map(p => (
-                    <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      {p.has_paid ? (
-                        <Ionicons
-                          name="checkmark-circle"
-                          size={16}
-                          color={status.success.DEFAULT}
-                        />
-                      ) : (
-                        <Ionicons name="time-outline" size={16} color={colors.textMuted} />
-                      )}
-                      <Text
-                        size="sm"
-                        style={{ flex: 1 }}
-                        color={
-                          p.has_paid
-                            ? isDark
-                              ? status.success.light
-                              : status.success.dark
-                            : colors.textMuted
-                        }
-                      >
-                        {getShortName(p.player?.profile, '')}
-                      </Text>
-                      {!p.has_paid && (
-                        <TouchableOpacity
-                          onPress={() => handleMarkAsPaid(p.player_id)}
-                          style={{
-                            backgroundColor: colors.cardBackground,
-                            borderWidth: 1,
-                            borderColor: colors.border,
-                            borderRadius: 6,
-                            paddingVertical: 4,
-                            paddingHorizontal: 10,
-                          }}
+                {/* Payment controls — only for finished, full, paid matches */}
+                {showReimbursement && (
+                  <>
+                    {isNonHostParticipant ? (
+                      currentPlayerParticipant?.has_paid ? (
+                        // Player has paid — compact success row
+                        <HStack
+                          spacing={spacingPixels[2]}
+                          align="center"
+                          style={{ paddingVertical: spacingPixels[1] }}
                         >
-                          <Text size="xs" weight="medium" color={colors.text}>
-                            {t('matchDetail.markAsPaid' as TranslationKey)}
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={20}
+                            color={status.success.DEFAULT}
+                          />
+                          <Text
+                            size="sm"
+                            weight="medium"
+                            color={isDark ? status.success.light : status.success.dark}
+                          >
+                            {t('matchDetail.youHavePaid' as TranslationKey, {
+                              amount: perPlayerCostFormatted,
+                            })}
                           </Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  ))}
-              </View>
+                        </HStack>
+                      ) : hostPayoutsMode === 'manual_only' ? (
+                        // Host opted into manual-only — no Stripe, pay out-of-band
+                        <Card
+                          variant="outlined"
+                          padding={spacingPixels[3]}
+                          borderRadius={radiusPixels.lg}
+                          backgroundColor={colors.cardBackground}
+                          style={{ borderColor: colors.border }}
+                        >
+                          <VStack spacing={spacingPixels[2]} align="start">
+                            <Text size="sm" color={colors.textMuted}>
+                              {t('matchDetail.hostManualOnly' as TranslationKey, {
+                                amount: perPlayerCostFormatted,
+                                name: hostName,
+                              })}
+                            </Text>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onPress={() => handleMarkAsPaid()}
+                              loading={
+                                !!currentPlayerParticipant?.id &&
+                                markingPaid.has(currentPlayerParticipant.id)
+                              }
+                              isDark={isDark}
+                              themeColors={{
+                                primary: colors.primary,
+                                primaryForeground: base.white,
+                                buttonActive: colors.primary,
+                                buttonInactive: isDark ? neutral[700] : neutral[300],
+                                buttonTextActive: base.white,
+                                buttonTextInactive: isDark ? neutral[400] : neutral[500],
+                                text: colors.text,
+                                textMuted: colors.textMuted,
+                                border: colors.border,
+                                background: colors.cardBackground,
+                              }}
+                            >
+                              {t('matchDetail.markAsPaid' as TranslationKey)}
+                            </Button>
+                          </VStack>
+                        </Card>
+                      ) : (
+                        // JIT: always show Pay Now regardless of host's Stripe onboarding state.
+                        // Funds are held in Rallia's balance and released when host onboards.
+                        <Card
+                          variant="outlined"
+                          padding={spacingPixels[3]}
+                          borderRadius={radiusPixels.lg}
+                          backgroundColor={colors.cardBackground}
+                          style={{ borderColor: colors.border }}
+                        >
+                          <VStack spacing={spacingPixels[2]} align="start">
+                            <Text size="sm" color={colors.textMuted}>
+                              {t('matchDetail.yourShareSubtitle' as TranslationKey, {
+                                name: hostName,
+                              })}
+                            </Text>
+                            <Button
+                              variant="primary"
+                              size="md"
+                              onPress={handlePayNow}
+                              loading={isPaying}
+                              leftIcon={
+                                <Ionicons name="card-outline" size={18} color={base.white} />
+                              }
+                              isDark={isDark}
+                              themeColors={{
+                                primary: colors.primary,
+                                primaryForeground: base.white,
+                                buttonActive: colors.primary,
+                                buttonInactive: isDark ? neutral[700] : neutral[300],
+                                buttonTextActive: base.white,
+                                buttonTextInactive: isDark ? neutral[400] : neutral[500],
+                                text: colors.text,
+                                textMuted: colors.textMuted,
+                                border: colors.border,
+                                background: colors.cardBackground,
+                              }}
+                            >
+                              {t('matchDetail.payNow' as TranslationKey)}
+                            </Button>
+                            <HStack spacing={spacingPixels[2]} align="center">
+                              {Platform.OS === 'ios' && (
+                                <Ionicons name="logo-apple" size={14} color={colors.textMuted} />
+                              )}
+                              {Platform.OS === 'android' && (
+                                <Ionicons name="logo-google" size={14} color={colors.textMuted} />
+                              )}
+                              <Text size="xs" color={colors.textMuted}>
+                                {t('matchDetail.payNote' as TranslationKey)}
+                              </Text>
+                            </HStack>
+                          </VStack>
+                        </Card>
+                      )
+                    ) : (
+                      // Host view
+                      <VStack spacing={spacingPixels[3]}>
+                        {/* JIT banner: $X ready to receive — appears when funds are
+                            parked in Rallia's balance awaiting this host's onboarding. */}
+                        {pendingFundsCents > 0 &&
+                          !hostStripeConnected &&
+                          hostPayoutsMode !== 'manual_only' && (
+                            <Card
+                              variant="outlined"
+                              padding={spacingPixels[3]}
+                              borderRadius={radiusPixels.lg}
+                              backgroundColor={isDark ? primary[900] : primary[50]}
+                              style={{
+                                borderColor: isDark ? primary[700] : primary[200],
+                              }}
+                            >
+                              <VStack spacing={spacingPixels[2]} align="start">
+                                <HStack spacing={spacingPixels[2]} align="center">
+                                  <Ionicons
+                                    name="time-outline"
+                                    size={18}
+                                    color={isDark ? primary[300] : primary[600]}
+                                  />
+                                  <Text size="sm" weight="semibold" color={colors.text}>
+                                    {t('matchDetail.payoutsSetupBanner.title' as TranslationKey, {
+                                      amount: formatCAD(pendingFundsCents, locale),
+                                    })}
+                                  </Text>
+                                </HStack>
+                                <Text size="xs" color={colors.textMuted}>
+                                  {t('matchDetail.payoutsSetupBanner.body' as TranslationKey)}
+                                </Text>
+                                <Button
+                                  variant="primary"
+                                  size="sm"
+                                  onPress={handleStartPayoutsOnboarding}
+                                  isDark={isDark}
+                                  themeColors={{
+                                    primary: colors.primary,
+                                    primaryForeground: base.white,
+                                    buttonActive: colors.primary,
+                                    buttonInactive: isDark ? neutral[700] : neutral[300],
+                                    buttonTextActive: base.white,
+                                    buttonTextInactive: isDark ? neutral[400] : neutral[500],
+                                    text: colors.text,
+                                    textMuted: colors.textMuted,
+                                    border: colors.border,
+                                    background: colors.cardBackground,
+                                  }}
+                                >
+                                  {t('matchDetail.payoutsSetupBanner.cta' as TranslationKey)}
+                                </Button>
+                              </VStack>
+                            </Card>
+                          )}
+
+                        {/* First-time prompt for hosts who haven't chosen yet */}
+                        {hostPayoutsMode === 'undecided' && playerId === match.created_by && (
+                          <Card
+                            variant="outlined"
+                            padding={spacingPixels[3]}
+                            borderRadius={radiusPixels.lg}
+                            backgroundColor={colors.cardBackground}
+                            style={{ borderColor: colors.border }}
+                            onPress={async () => {
+                              mediumHaptic();
+                              await SheetManager.show('choose-payouts', {
+                                payload: {
+                                  onChoose: handleChoosePayouts,
+                                },
+                              });
+                            }}
+                          >
+                            <HStack align="center" justify="space-between">
+                              <Text size="sm" weight="medium" color={colors.text}>
+                                {t('matchDetail.choosePayouts.prompt' as TranslationKey)}
+                              </Text>
+                              <Ionicons name="chevron-forward" size={18} color={colors.iconMuted} />
+                            </HStack>
+                          </Card>
+                        )}
+
+                        {/* Progress: all paid → celebratory row, otherwise per-row list */}
+                        {paidParticipants === totalParticipants && totalParticipants > 0 ? (
+                          <HStack spacing={spacingPixels[2]} align="center">
+                            <Ionicons
+                              name="checkmark-done-circle"
+                              size={22}
+                              color={status.success.DEFAULT}
+                            />
+                            <DSBadge variant="success" size="md">
+                              {t('matchDetail.everyonePaid' as TranslationKey)}
+                            </DSBadge>
+                          </HStack>
+                        ) : (
+                          <VStack spacing={spacingPixels[2]}>
+                            <Text size="sm" color={colors.textMuted}>
+                              {t('matchDetail.paidCount' as TranslationKey, {
+                                paid: paidParticipants,
+                                total: totalParticipants,
+                              })}
+                            </Text>
+                            {match.participants
+                              ?.filter(p => p.status === 'joined' && !p.is_host)
+                              .map(p => {
+                                const isMarking = !!p.id && markingPaid.has(p.id);
+                                const playerName = getShortName(p.player?.profile, '');
+                                return (
+                                  <HStack key={p.id} spacing={spacingPixels[2]} align="center">
+                                    {p.has_paid ? (
+                                      <Ionicons
+                                        name="checkmark-circle"
+                                        size={16}
+                                        color={status.success.DEFAULT}
+                                      />
+                                    ) : (
+                                      <Ionicons
+                                        name="time-outline"
+                                        size={16}
+                                        color={colors.textMuted}
+                                      />
+                                    )}
+                                    <TouchableOpacity
+                                      style={{ flex: 1 }}
+                                      onPress={() => {
+                                        if (p.player_id) {
+                                          lightHaptic();
+                                          navigation.navigate('PlayerProfile', {
+                                            playerId: p.player_id,
+                                          });
+                                        }
+                                      }}
+                                      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                                    >
+                                      <Text
+                                        size="sm"
+                                        color={
+                                          p.has_paid
+                                            ? isDark
+                                              ? status.success.light
+                                              : status.success.dark
+                                            : colors.text
+                                        }
+                                      >
+                                        {playerName}
+                                      </Text>
+                                    </TouchableOpacity>
+                                    {!p.has_paid && (
+                                      <Button
+                                        variant="outline"
+                                        size="xs"
+                                        onPress={() => handleMarkAsPaid(p.player_id)}
+                                        loading={isMarking}
+                                        disabled={isMarking}
+                                        isDark={isDark}
+                                        themeColors={{
+                                          primary: colors.primary,
+                                          primaryForeground: base.white,
+                                          buttonActive: colors.primary,
+                                          buttonInactive: isDark ? neutral[700] : neutral[300],
+                                          buttonTextActive: base.white,
+                                          buttonTextInactive: isDark ? neutral[400] : neutral[500],
+                                          text: colors.text,
+                                          textMuted: colors.textMuted,
+                                          border: colors.border,
+                                          background: colors.cardBackground,
+                                        }}
+                                      >
+                                        {t('matchDetail.markAsPaid' as TranslationKey)}
+                                      </Button>
+                                    )}
+                                  </HStack>
+                                );
+                              })}
+                          </VStack>
+                        )}
+                      </VStack>
+                    )}
+                  </>
+                )}
+              </VStack>
             )}
           </Animated.View>
         )}
@@ -5039,81 +5272,16 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
         isLoading={isLeaving}
       />
 
-      {/* Choose payouts mode (Stripe vs manual_only) */}
-      <Modal
-        visible={showChoosePayoutsSheet}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowChoosePayoutsSheet(false)}
-      >
-        <TouchableWithoutFeedback onPress={() => setShowChoosePayoutsSheet(false)}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'rgba(0,0,0,0.5)',
-              justifyContent: 'center',
-              padding: 20,
-            }}
-          >
-            <TouchableWithoutFeedback>
-              <View
-                style={{
-                  backgroundColor: colors.cardBackground,
-                  borderRadius: 16,
-                  padding: 20,
-                  gap: 16,
-                }}
-              >
-                <Text size="lg" weight="bold" color={colors.text}>
-                  {t('matchDetail.choosePayouts.title' as TranslationKey)}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => handleChoosePayouts('auto')}
-                  style={{
-                    borderWidth: 2,
-                    borderColor: colors.primary,
-                    borderRadius: 12,
-                    padding: 14,
-                    gap: 4,
-                  }}
-                >
-                  <Text size="base" weight="semibold" color={colors.primary}>
-                    {t('matchDetail.choosePayouts.stripeOption' as TranslationKey)}
-                  </Text>
-                  <Text size="xs" color={colors.textMuted}>
-                    {t('matchDetail.choosePayouts.stripeDescription' as TranslationKey)}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleChoosePayouts('manual_only')}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                    borderRadius: 12,
-                    padding: 14,
-                    gap: 4,
-                  }}
-                >
-                  <Text size="base" weight="semibold" color={colors.text}>
-                    {t('matchDetail.choosePayouts.manualOption' as TranslationKey)}
-                  </Text>
-                  <Text size="xs" color={colors.textMuted}>
-                    {t('matchDetail.choosePayouts.manualDescription' as TranslationKey)}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setShowChoosePayoutsSheet(false)}
-                  style={{ alignSelf: 'center', paddingVertical: 8 }}
-                >
-                  <Text size="sm" color={colors.textMuted}>
-                    {t('matchDetail.choosePayouts.later' as TranslationKey)}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
+      {/* Switch-to-manual confirmation when host has pending Stripe-routed funds */}
+      <ConfirmationModal
+        visible={showSwitchToManualConfirm}
+        onClose={() => setShowSwitchToManualConfirm(false)}
+        onConfirm={handleConfirmSwitchToManual}
+        title={t('matchDetail.choosePayouts.switchToManualConfirmTitle' as TranslationKey)}
+        message={t('matchDetail.choosePayouts.switchToManualConfirmMessage' as TranslationKey)}
+        confirmLabel={t('matchDetail.choosePayouts.manualOption' as TranslationKey)}
+        cancelLabel={t('common.cancel')}
+      />
 
       {/* Cancel Match Confirmation Modal */}
       <ConfirmationModal
@@ -5822,47 +5990,6 @@ const styles = StyleSheet.create({
     gap: spacingPixels[2],
   },
   matchEndedText: {
-    textAlign: 'center',
-  },
-  // Cost section – breakdown card
-  costCard: {
-    borderRadius: radiusPixels.xl,
-    borderWidth: 1,
-    paddingVertical: spacingPixels[4],
-    paddingHorizontal: spacingPixels[4],
-    alignItems: 'center',
-  },
-  costCardMain: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[5],
-  },
-  costCardColumn: {
-    alignItems: 'center',
-    minWidth: 72,
-  },
-  costAmount: {
-    marginTop: spacingPixels[1],
-    lineHeight: 40,
-  },
-  costCardDivider: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacingPixels[4],
-  },
-  costCardDividerLine: {
-    width: 20,
-    height: 2,
-    borderRadius: 1,
-  },
-  costFreeContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[2],
-  },
-  costFreeText: {
     textAlign: 'center',
   },
   // Date & time section – breakdown card

@@ -132,7 +132,13 @@ import {
   useTour,
   TourProvider,
 } from './src/context';
-import { usePushNotifications, useEffectiveLocation } from './src/hooks';
+import {
+  usePushNotifications,
+  useEffectiveLocation,
+  useTranslation,
+  type TranslationKey,
+} from './src/hooks';
+import { successHaptic } from '@rallia/shared-utils';
 import { PostHogProvider, posthogClient } from './src/providers/PostHogProvider';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { SheetManager, SheetProvider } from 'react-native-actions-sheet';
@@ -231,6 +237,7 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
   const { setPendingMatchId } = useDeepLink();
   const { isSplashComplete } = useOverlay();
   const toast = useToast();
+  const { t } = useTranslation();
   const userId = user?.id;
 
   // Track user activity app-wide by updating last_seen_at
@@ -289,7 +296,8 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
             .single();
 
           if (data?.onboarding_completed) {
-            toast.success('Payments connected!');
+            successHaptic();
+            toast.success(t('profile.payments.connectedToast' as TranslationKey));
           } else if (attempts < 5) {
             setTimeout(() => checkOnboarding(attempts + 1), 2000);
           }
@@ -301,7 +309,7 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
         deepLinkOpened({ link_type: 'utm', ...utmParams });
       }
     },
-    [setPendingMatchId, user?.id, toast]
+    [setPendingMatchId, user?.id, toast, t]
   );
 
   // After authentication, set UTM params as PostHog person properties (once per install)

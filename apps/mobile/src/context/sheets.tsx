@@ -90,6 +90,8 @@ import {
   RatingExplainerActionSheet,
   ReputationExplainerActionSheet,
 } from '../components/explainers';
+// Reimbursement sheets
+import { ChoosePayoutsActionSheet } from '../components/ChoosePayoutsSheet';
 // Define WeeklyAvailability inline to avoid circular dependencies
 type DayOfWeek = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
 interface DayAvailability {
@@ -695,6 +697,12 @@ declare module 'react-native-actions-sheet' {
     'reputation-explainer': SheetDefinition<{
       payload?: Record<string, never>;
     }>;
+    'choose-payouts': SheetDefinition<{
+      payload: {
+        onChoose?: (choice: 'auto' | 'manual_only') => void;
+        onLater?: () => void;
+      };
+    }>;
     'match-suggestions': SheetDefinition<{
       payload?: Record<string, never>;
     }>;
@@ -802,6 +810,8 @@ export const Sheets = () => {
         // Explainer sheets
         'rating-explainer': RatingExplainerActionSheet,
         'reputation-explainer': ReputationExplainerActionSheet,
+        // Reimbursement sheets
+        'choose-payouts': ChoosePayoutsActionSheet,
         'match-suggestions': MatchSuggestionsActionSheet,
         'match-invite-confirm': MatchInviteConfirmActionSheet,
       }}
