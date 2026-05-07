@@ -96,6 +96,7 @@ import {
 } from '@rallia/shared-services';
 import { useStripe } from '@stripe/stripe-react-native';
 import { SheetManager } from 'react-native-actions-sheet';
+import { MATCH_REIMBURSEMENT_ENABLED } from '../constants/features';
 import { shareMatch } from '../utils';
 import { openInMaps } from '../utils/openInMaps';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
@@ -1690,6 +1691,7 @@ export const MatchDetailSheet: React.FC = () => {
 
   // Hydrate host data: payouts_mode + Stripe onboarding status, in parallel
   useEffect(() => {
+    if (!MATCH_REIMBURSEMENT_ENABLED) return;
     if (
       !selectedMatch ||
       !selectedMatch.estimated_cost ||
@@ -1733,6 +1735,7 @@ export const MatchDetailSheet: React.FC = () => {
   // For the host: load pending_host_transfer total awaiting their onboarding,
   // so we can show the "$X ready to receive" banner.
   useEffect(() => {
+    if (!MATCH_REIMBURSEMENT_ENABLED) return;
     if (!selectedMatch || !playerId || selectedMatch.created_by !== playerId) {
       setPendingFundsCents(0);
       return;
@@ -2267,6 +2270,7 @@ export const MatchDetailSheet: React.FC = () => {
   // Gated on isFull: the server rejects PaymentIntent creation for unfilled
   // matches, so we hide the section entirely to match.
   const showReimbursement =
+    MATCH_REIMBURSEMENT_ENABLED &&
     hasMatchEnded &&
     isFull &&
     !isCourtFree &&
