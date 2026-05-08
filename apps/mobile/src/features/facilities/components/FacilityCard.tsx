@@ -15,6 +15,7 @@ import { useCourtAvailability, type FormattedSlot } from '@rallia/shared-hooks';
 import { useAuth } from '../../../context';
 import { useRequireOnboarding } from '../../../hooks';
 import { SportIcon } from '../../../components/SportIcon';
+import * as Analytics from '../../../services/analytics';
 import type { TranslationKey, TranslationOptions } from '../../../hooks';
 
 interface FacilityCardProps {
@@ -143,9 +144,16 @@ export default function FacilityCard({
         onSlotPress(facility, slot);
       } else if (slot.bookingUrl) {
         Linking.openURL(slot.bookingUrl);
+        Analytics.bookingRedirected({
+          facility_id: facility.id,
+          sport_id: 'unknown',
+          sport_name: sportName ?? 'unknown',
+          is_match_linked: false,
+          source: 'facility_card',
+        });
       }
     },
-    [facility, onSlotPress, guardAction]
+    [facility, onSlotPress, guardAction, sportName]
   );
 
   // Determine if favorite toggle should be disabled

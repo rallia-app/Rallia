@@ -5,7 +5,7 @@
  * the invite for that exact slot.
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   TouchableOpacity,
@@ -20,6 +20,8 @@ import { spacingPixels, radiusPixels, primary, neutral, base } from '@rallia/des
 import { TIER_CONFIGS } from '@rallia/shared-services';
 import type { ReputationDisplay, SlotSuggestion } from '@rallia/shared-services';
 import { lightHaptic, formatIntuitiveDateInTimezone } from '@rallia/shared-utils';
+import * as Analytics from '../services/analytics';
+import type { SuggestionSource } from '../services/analytics';
 import RatingBadge from './RatingBadge';
 import ReputationBadge from './ReputationBadge';
 
@@ -56,6 +58,11 @@ export interface SuggestionCardProps {
   onSendInvite?: (payload: InvitePayload) => void;
   disabled?: boolean;
   inviteState?: InviteState;
+  /** Where this card is rendered — used for analytics breakdowns. */
+  source?: SuggestionSource;
+  /** Sport context for analytics (when known by the parent surface). */
+  sportId?: string;
+  sportName?: string;
 }
 
 function buildReputationDisplay(s: SlotSuggestion): ReputationDisplay | undefined {
@@ -92,7 +99,29 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
   onSendInvite,
   disabled,
   inviteState = 'idle',
+  source,
+  sportId,
+  sportName,
 }) => {
+  // Fire an impression event once per mount. List virtualization may remount
+  // the card as the user scrolls; each remount counts as a fresh impression,
+  // which is the right semantic for this metric.
+  useEffect(() => {
+    if (!source) return;
+    const slotStart =
+      suggestion.slot.datetime instanceof Date
+        ? suggestion.slot.datetime.toISOString()
+        : new Date(suggestion.slot.datetime).toISOString();
+    Analytics.matchSuggestionShown({
+      source,
+      opponent_id: suggestion.opponentId,
+      facility_id: suggestion.facility.facilityId,
+      slot_start: slotStart,
+      sport_id: sportId,
+      sport_name: sportName,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const slotStart = useMemo(
     () =>
       suggestion.slot.datetime instanceof Date

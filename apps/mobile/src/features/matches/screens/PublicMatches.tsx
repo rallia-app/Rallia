@@ -305,7 +305,7 @@ export default function PublicMatches() {
     cardLabels: suggestionLabels,
     handleSendInvite,
     getInviteState,
-  } = useSuggestionInviteHandler(selectedSport?.id);
+  } = useSuggestionInviteHandler({ sportId: selectedSport?.id, source: 'feed' });
 
   // Auto-paginate matches up to 30 before relying on suggestions to fill the feed.
   useEffect(() => {
@@ -366,6 +366,8 @@ export default function PublicMatches() {
             openMatchDetail(match as MatchDetailData);
           }}
           onSendInvite={handleSendInvite}
+          sportId={selectedSport?.id}
+          sportName={selectedSport?.name}
         />
       );
     },

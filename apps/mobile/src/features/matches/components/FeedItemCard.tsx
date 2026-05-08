@@ -27,6 +27,9 @@ export interface FeedItemCardProps {
   getInviteState: (opponentId: string, facilityId: string, startTime: Date | string) => InviteState;
   onMatchPress: (match: UnifiedFeedMatch) => void;
   onSendInvite: (payload: InvitePayload) => void;
+  /** Optional sport context for suggestion analytics breakdowns. */
+  sportId?: string;
+  sportName?: string;
 }
 
 function FeedItemCardImpl({
@@ -40,6 +43,8 @@ function FeedItemCardImpl({
   getInviteState,
   onMatchPress,
   onSendInvite,
+  sportId,
+  sportName,
 }: FeedItemCardProps) {
   if (item.kind === 'match') {
     const match = item.data;
@@ -86,6 +91,9 @@ function FeedItemCardImpl({
         locale={locale}
         onSendInvite={onSendInvite}
         inviteState={inviteState}
+        source="feed"
+        sportId={sportId}
+        sportName={sportName}
       />
     </View>
   );

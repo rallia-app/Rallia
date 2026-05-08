@@ -890,19 +890,21 @@ export const MatchDetailSheet: React.FC = () => {
     onJoinSuccess: result => {
       const sport_id = selectedMatch?.sport?.id ?? 'unknown';
       const sport_name = selectedMatch?.sport?.name ?? 'unknown';
+      const match_id = selectedMatch?.id ?? 'unknown';
       if (result.status === 'joined') {
-        Analytics.matchJoined({ sport_id, sport_name });
+        Analytics.matchJoined({ match_id, sport_id, sport_name });
         if (selectedMatch && getParticipantInfo(selectedMatch).spotsLeft === 1) {
           Analytics.matchFilled({
+            match_id: selectedMatch.id,
             sport_id,
             sport_name,
             format: selectedMatch.format ?? 'unknown',
           });
         }
       } else if (result.status === 'waitlisted') {
-        Analytics.waitlistJoined({ sport_id, sport_name });
+        Analytics.waitlistJoined({ match_id, sport_id, sport_name });
       } else {
-        Analytics.matchJoinRequested({ sport_id, sport_name });
+        Analytics.matchJoinRequested({ match_id, sport_id, sport_name });
       }
       successHaptic();
       closeSheet();
@@ -1307,7 +1309,15 @@ export const MatchDetailSheet: React.FC = () => {
           hasExistingReport: false,
         };
       });
-    openFeedbackSheet(selectedMatch.id, playerId, participant.id, opponents);
+    openFeedbackSheet(
+      selectedMatch.id,
+      playerId,
+      participant.id,
+      opponents,
+      selectedMatch.sport
+        ? { id: selectedMatch.sport.id, name: selectedMatch.sport.name }
+        : undefined
+    );
   }, [selectedMatch, playerId, openFeedbackSheet]);
 
   // Handle opening the match chat conversation

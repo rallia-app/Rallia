@@ -19,6 +19,8 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Webhook } from 'https://esm.sh/svix@1';
 
+import { captureEvent } from '../_shared/posthog.ts';
+
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const webhookSecret = Deno.env.get('RESEND_WEBHOOK_SECRET');
@@ -190,6 +192,34 @@ Deno.serve(async req => {
     }
 
     await logEvent(supabase, userId, resendId, event.type, event.created_at, event);
+
+    // Mirror the lifecycle to PostHog so the email funnel
+    // (sent → delivered → opened → clicked) is visible in dashboards.
+    // Skipped if userId is null (we couldn't map the email back to a user).
+    if (userId) {
+      const eventNameMap: Record<string, string> = {
+        'email.delivered': 'email_delivered',
+        'email.opened': 'email_opened',
+        'email.clicked': 'email_clicked',
+        'email.bounced': 'email_bounced',
+        'email.complained': 'email_complained',
+      };
+      const phEvent = eventNameMap[event.type];
+      if (phEvent) {
+        void captureEvent({
+          distinctId: userId,
+          event: phEvent,
+          properties: {
+            resend_id: resendId,
+            // Resend's link-click events include the clicked URL in data.click.link
+            // (when present). For other event types this is undefined and dropped.
+            link: (event.data as { click?: { link?: string } })?.click?.link,
+            subject: event.data.subject,
+            from: event.data.from,
+          },
+        });
+      }
+    }
   } catch (err) {
     console.error('[resend-webhook] handler error:', err);
     return new Response(JSON.stringify({ error: 'Internal error' }), {

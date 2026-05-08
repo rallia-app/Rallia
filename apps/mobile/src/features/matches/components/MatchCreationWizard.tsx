@@ -582,11 +582,10 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   const { createMatch, isCreating } = useCreateMatch({
     onSuccess: match => {
       Analytics.matchCreated({
+        match_id: match.id,
         sport_id: values.sportId,
         sport_name:
-          selectedSport?.id === values.sportId
-            ? (selectedSport?.display_name ?? 'unknown')
-            : 'unknown',
+          selectedSport?.id === values.sportId ? (selectedSport?.name ?? 'unknown') : 'unknown',
         format: values.format,
         is_public: values.visibility === 'public',
         player_count: values.playerExpectation,
@@ -872,18 +871,27 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   const handleShareSuccess = useCallback(async () => {
     if (!successMatchId) return;
     lightHaptic();
+    Analytics.matchCreationSuccessAction({
+      match_id: successMatchId,
+      action: 'share',
+      is_edit_mode: isEditMode,
+    });
     setIsSharing(true);
     try {
       const match = await getMatchWithDetails(successMatchId);
       if (match) {
         await shareMatch(match as MatchDetailData, { t, locale });
+        Analytics.invitationLinkGenerated({
+          invitation_type: 'match',
+          channel: 'share_sheet',
+        });
       }
     } catch {
       // Silently handle errors (same as MatchDetailSheet)
     } finally {
       setIsSharing(false);
     }
-  }, [successMatchId, t, locale]);
+  }, [successMatchId, t, locale, isEditMode]);
 
   // Handle form submission
   const handleSubmit = useCallback(async () => {
@@ -1107,6 +1115,22 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showSuccess]);
 
+  // Fire analytics once per success-screen view; ref guards against re-fires
+  // from unrelated re-renders, and resets when the screen closes so a
+  // subsequent match re-fires correctly.
+  const successViewedFiredFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (showSuccess && successMatchId && successViewedFiredFor.current !== successMatchId) {
+      Analytics.matchCreationSuccessViewed({
+        match_id: successMatchId,
+        is_edit_mode: isEditMode,
+      });
+      successViewedFiredFor.current = successMatchId;
+    } else if (!showSuccess) {
+      successViewedFiredFor.current = null;
+    }
+  }, [showSuccess, successMatchId, isEditMode]);
+
   // Animate transition to invite step
   useEffect(() => {
     if (showInviteStep) {
@@ -1146,6 +1170,13 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
               <TouchableOpacity
                 onPress={() => {
                   lightHaptic();
+                  if (successMatchId) {
+                    Analytics.matchCreationSuccessAction({
+                      match_id: successMatchId,
+                      action: 'close',
+                      is_edit_mode: isEditMode,
+                    });
+                  }
                   onClose();
                 }}
                 style={styles.successCloseButton}
@@ -1205,6 +1236,11 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                     onPress={() => {
                       if (!successMatchId) return;
                       lightHaptic();
+                      Analytics.matchCreationSuccessAction({
+                        match_id: successMatchId,
+                        action: 'share_facebook',
+                        is_edit_mode: false,
+                      });
                       SheetManager.show('share-to-facebook', {
                         payload: { matchId: successMatchId },
                       });
@@ -1227,6 +1263,13 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                     style={[styles.successButton, { backgroundColor: colors.buttonActive }]}
                     onPress={() => {
                       lightHaptic();
+                      if (successMatchId) {
+                        Analytics.matchCreationSuccessAction({
+                          match_id: successMatchId,
+                          action: 'invite_players',
+                          is_edit_mode: false,
+                        });
+                      }
                       setShowInviteStep(true);
                     }}
                   >
@@ -1248,7 +1291,16 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                       backgroundColor: isEditMode ? colors.buttonActive : colors.buttonInactive,
                     },
                   ]}
-                  onPress={() => onSuccess?.(successMatchId)}
+                  onPress={() => {
+                    if (successMatchId) {
+                      Analytics.matchCreationSuccessAction({
+                        match_id: successMatchId,
+                        action: 'view_match',
+                        is_edit_mode: isEditMode,
+                      });
+                    }
+                    onSuccess?.(successMatchId);
+                  }}
                 >
                   <Text
                     size="base"
@@ -1262,6 +1314,13 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                   <TouchableOpacity
                     style={[styles.successButton, { backgroundColor: 'transparent' }]}
                     onPress={() => {
+                      if (successMatchId) {
+                        Analytics.matchCreationSuccessAction({
+                          match_id: successMatchId,
+                          action: 'create_another',
+                          is_edit_mode: false,
+                        });
+                      }
                       // Reset animations and state for next creation
                       successOpacity.value = 0;
                       successScale.value = 0.8;

@@ -34,6 +34,7 @@ import {
 
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import { useTranslation } from '../hooks/useTranslation';
+import * as Analytics from '../services/analytics';
 
 import { useActionsSheet } from './ActionsSheetContext';
 import { useMatchDetailSheet, type MatchDetailData } from './MatchDetailSheetContext';
@@ -58,6 +59,9 @@ interface PendingBookingData {
   /** When the booking was initiated for an existing match, we update that match on confirm
    *  instead of opening the match-creation wizard. */
   matchId?: string;
+  /** Sport context, when known — propagated to analytics on confirm */
+  sportId?: string;
+  sportName?: string;
   /** Timestamp when the booking was initiated */
   timestamp: number;
 }
@@ -131,8 +135,15 @@ export const PendingExternalBookingProvider: React.FC<PendingExternalBookingProv
 
   const handleMatchConfirm = useCallback(async () => {
     if (!matchConfirmBooking || isConfirming) return;
-    const { facility, slot, selectedCourt, matchId } = matchConfirmBooking;
+    const { facility, slot, selectedCourt, matchId, sportId, sportName } = matchConfirmBooking;
     if (!matchId) return;
+
+    Analytics.bookingConfirmed({
+      facility_id: facility.id,
+      sport_id: sportId ?? 'unknown',
+      sport_name: sportName ?? 'unknown',
+      is_match_linked: true,
+    });
 
     setIsConfirming(true);
 
@@ -220,7 +231,14 @@ export const PendingExternalBookingProvider: React.FC<PendingExternalBookingProv
 
   const handleDirectoryConfirm = useCallback(
     async (booking: PendingBookingData) => {
-      const { facility, slot, selectedCourt } = booking;
+      const { facility, slot, selectedCourt, sportId, sportName } = booking;
+
+      Analytics.bookingConfirmed({
+        facility_id: facility.id,
+        sport_id: sportId ?? 'unknown',
+        sport_name: sportName ?? 'unknown',
+        is_match_linked: false,
+      });
 
       const externalCourtId = selectedCourt?.externalCourtId || slot.externalCourtId;
       const courtName = selectedCourt?.courtName || slot.courtOptions[0]?.courtName || 'Court';

@@ -77,6 +77,7 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
   const { cardLabels, inviteStates, handleSendInvite } = useSuggestionInviteHandler({
     sportId: currentSport?.id,
     playerId: playerId ?? undefined,
+    source: 'onboarding',
     onSendSuccess: () =>
       Analytics.onboardingStepCompleted({
         step_name: 'suggestions_invite_sent',
@@ -223,6 +224,9 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
                     inviteState={inviteStates[slotKey] ?? 'idle'}
                     labels={cardLabels}
                     locale={locale}
+                    source="onboarding"
+                    sportId={currentSport?.id}
+                    sportName={currentSport?.name}
                   />
                 </Animated.View>
               );

@@ -781,7 +781,7 @@ const Home = () => {
     cardLabels: suggestionLabels,
     handleSendInvite,
     getInviteState,
-  } = useSuggestionInviteHandler(selectedSport?.id);
+  } = useSuggestionInviteHandler({ sportId: selectedSport?.id, source: 'feed' });
 
   // Use TanStack Query hook for fetching player's upcoming matches
   // Filters by selected sport to match the Soon & Nearby section
@@ -881,6 +881,8 @@ const Home = () => {
             openMatchDetail(match as MatchDetailData);
           }}
           onSendInvite={handleSendInvite}
+          sportId={selectedSport?.id}
+          sportName={selectedSport?.name}
         />
       );
     },

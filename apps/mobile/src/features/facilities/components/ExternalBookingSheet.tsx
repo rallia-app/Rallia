@@ -74,6 +74,9 @@ export function ExternalBookingActionSheet({ payload }: SheetProps<'external-boo
       selectedCourt: selectedCourt ?? undefined,
       bookingUrl,
       matchId,
+      source: 'external_sheet',
+      sportId: selectedSport?.id,
+      sportName: selectedSport?.name,
     });
 
     if (success) {
@@ -92,6 +95,8 @@ export function ExternalBookingActionSheet({ payload }: SheetProps<'external-boo
     t,
     openExternalBooking,
     matchId,
+    selectedSport?.id,
+    selectedSport?.name,
   ]);
 
   // Format date for display

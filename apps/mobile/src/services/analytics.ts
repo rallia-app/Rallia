@@ -46,6 +46,7 @@ export function onboardingAbandoned(props: {
 // ---- Core Loop ----
 
 export function matchCreated(props: {
+  match_id: string;
   sport_id: string;
   sport_name: string;
   format: string;
@@ -56,6 +57,7 @@ export function matchCreated(props: {
 }
 
 export function matchJoined(props: {
+  match_id: string;
   sport_id: string;
   sport_name: string;
   discovery_source?: string;
@@ -63,11 +65,20 @@ export function matchJoined(props: {
   capture('match_joined', props);
 }
 
-export function matchFilled(props: { sport_id: string; sport_name: string; format: string }): void {
+export function matchFilled(props: {
+  match_id: string;
+  sport_id: string;
+  sport_name: string;
+  format: string;
+}): void {
   capture('match_filled', props);
 }
 
-export function matchJoinRequested(props: { sport_id: string; sport_name: string }): void {
+export function matchJoinRequested(props: {
+  match_id: string;
+  sport_id: string;
+  sport_name: string;
+}): void {
   capture('match_join_requested', props);
 }
 
@@ -95,6 +106,32 @@ export function matchFeedbackSubmitted(props: { sport_id: string; sport_name: st
   capture('match_feedback_submitted', props);
 }
 
+export type MatchOutcomeKind = 'played' | 'mutual_cancel' | 'opponent_no_show';
+export type CancellationReasonKind = 'weather' | 'court_unavailable' | 'emergency' | 'other';
+
+export function matchOutcomeSubmitted(props: {
+  match_id: string;
+  sport_id: string;
+  sport_name: string;
+  outcome: MatchOutcomeKind;
+  cancellation_reason?: CancellationReasonKind;
+  no_show_count?: number;
+  opponent_count: number;
+}): void {
+  capture('match_outcome_submitted', props);
+}
+
+export function opponentFeedbackSubmitted(props: {
+  match_id: string;
+  sport_id: string;
+  sport_name: string;
+  showed_up: boolean;
+  was_late: boolean | null;
+  star_rating: number | null;
+}): void {
+  capture('opponent_feedback_submitted', props);
+}
+
 export function matchCreationAbandoned(props: {
   last_step: number;
   duration_seconds: number;
@@ -118,6 +155,56 @@ export function matchDeclined(props: { sport_id: string; sport_name: string }): 
 
 export function matchCreationStarted(): void {
   capture('match_creation_started');
+}
+
+export type MatchCreationSuccessAction =
+  | 'share'
+  | 'share_facebook'
+  | 'invite_players'
+  | 'view_match'
+  | 'create_another'
+  | 'close';
+
+export function matchCreationSuccessAction(props: {
+  match_id: string;
+  action: MatchCreationSuccessAction;
+  is_edit_mode: boolean;
+}): void {
+  capture('match_creation_success_action', props);
+}
+
+export function matchCreationSuccessViewed(props: {
+  match_id: string;
+  is_edit_mode: boolean;
+}): void {
+  capture('match_creation_success_viewed', props);
+}
+
+// ---- In-App Match Suggestions ----
+
+export type SuggestionSource = 'feed' | 'sheet' | 'onboarding';
+
+export function matchSuggestionShown(props: {
+  source: SuggestionSource;
+  opponent_id: string;
+  facility_id: string;
+  slot_start: string;
+  sport_id?: string;
+  sport_name?: string;
+}): void {
+  capture('match_suggestion_shown', props);
+}
+
+export function matchSuggestionInviteSent(props: {
+  source: SuggestionSource;
+  opponent_id: string;
+  facility_id: string;
+  slot_start: string;
+  match_id: string;
+  sport_id?: string;
+  sport_name?: string;
+}): void {
+  capture('match_suggestion_invite_sent', props);
 }
 
 export function matchCheckInCompleted(props: { sport_id: string; sport_name: string }): void {
@@ -303,13 +390,43 @@ export function bookingInitiated(props: {
   capture('booking_initiated', props);
 }
 
+export function bookingRedirected(props: {
+  facility_id: string;
+  sport_id: string;
+  sport_name: string;
+  is_match_linked?: boolean;
+  source:
+    | 'match_creation'
+    | 'facility_directory'
+    | 'facility_card'
+    | 'match_courts'
+    | 'map'
+    | 'external_sheet'
+    | 'unknown';
+}): void {
+  capture('booking_redirected', props);
+}
+
+export function bookingConfirmed(props: {
+  facility_id: string;
+  sport_id: string;
+  sport_name: string;
+  is_match_linked?: boolean;
+}): void {
+  capture('booking_confirmed', props);
+}
+
 export function bookingCancelled(props: { reason?: string }): void {
   capture('booking_cancelled', props);
 }
 
 // ---- Waitlist ----
 
-export function waitlistJoined(props: { sport_id: string; sport_name: string }): void {
+export function waitlistJoined(props: {
+  match_id: string;
+  sport_id: string;
+  sport_name: string;
+}): void {
   capture('waitlist_joined', props);
 }
 

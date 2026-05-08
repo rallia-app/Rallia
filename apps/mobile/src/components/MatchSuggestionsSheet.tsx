@@ -161,6 +161,7 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
   }, [refetch]);
 
   const { cardLabels, inviteStates, handleSendInvite } = useSuggestionInviteHandler({
+    source: 'sheet',
     onAuthRequired: () => SheetManager.hide('match-suggestions'),
   });
 
@@ -287,6 +288,7 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
                     locale={locale}
                     onSendInvite={handleSendInvite}
                     inviteState={inviteStates[slotKey] ?? 'idle'}
+                    source="sheet"
                   />
                 </Animated.View>
               );

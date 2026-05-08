@@ -198,7 +198,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
       });
       if (result.action === Share.sharedAction) {
         Analytics.invitationLinkGenerated({
-          invitation_type: 'onboarding_referral',
+          invitation_type: 'referral',
           channel: 'share_sheet',
         });
         successHaptic();
@@ -251,7 +251,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
       const { result } = await SMS.sendSMSAsync(phones, message);
       if (result === 'sent') {
         Analytics.invitationLinkGenerated({
-          invitation_type: 'onboarding_referral',
+          invitation_type: 'referral',
           channel: 'sms_contacts',
         });
         successHaptic();

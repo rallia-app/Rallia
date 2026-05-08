@@ -499,7 +499,14 @@ const Map = () => {
             timeLabel: slot.time ?? '',
             onSelect: (court: unknown) => {
               const c = court as CourtOption;
-              openExternalBooking({ facility: f, slot, selectedCourt: c });
+              openExternalBooking({
+                facility: f,
+                slot,
+                selectedCourt: c,
+                source: 'map',
+                sportId: selectedSport?.id,
+                sportName: selectedSport?.name,
+              });
             },
             onCancel: () => {},
           },
@@ -507,9 +514,15 @@ const Map = () => {
         return;
       }
 
-      openExternalBooking({ facility: f, slot });
+      openExternalBooking({
+        facility: f,
+        slot,
+        source: 'map',
+        sportId: selectedSport?.id,
+        sportName: selectedSport?.name,
+      });
     },
-    [openExternalBooking]
+    [openExternalBooking, selectedSport?.id, selectedSport?.name]
   );
 
   const PEEK = 24;

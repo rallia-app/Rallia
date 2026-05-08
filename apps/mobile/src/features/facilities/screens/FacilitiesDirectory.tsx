@@ -322,7 +322,14 @@ export default function FacilitiesDirectory() {
             timeLabel: slot.time ?? '',
             onSelect: (court: unknown) => {
               const c = court as CourtOption;
-              openExternalBooking({ facility, slot, selectedCourt: c });
+              openExternalBooking({
+                facility,
+                slot,
+                selectedCourt: c,
+                source: 'facility_directory',
+                sportId: selectedSport?.id,
+                sportName: selectedSport?.name,
+              });
             },
             onCancel: () => {},
           },
@@ -331,9 +338,15 @@ export default function FacilitiesDirectory() {
       }
 
       // Single court or no options - open booking URL with pending tracking
-      openExternalBooking({ facility, slot });
+      openExternalBooking({
+        facility,
+        slot,
+        source: 'facility_directory',
+        sportId: selectedSport?.id,
+        sportName: selectedSport?.name,
+      });
     },
-    [guardAction, openExternalBooking]
+    [guardAction, openExternalBooking, selectedSport?.id, selectedSport?.name]
   );
 
   // Render facility card

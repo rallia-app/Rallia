@@ -11,6 +11,7 @@ import { Linking } from 'react-native';
 import type { FormattedSlot, CourtOption } from '@rallia/shared-hooks';
 import { Logger } from '@rallia/shared-services';
 
+import * as Analytics from '../services/analytics';
 import { usePendingExternalBooking } from '../context/PendingExternalBookingContext';
 
 interface FacilityForBooking {
@@ -29,13 +30,27 @@ interface OpenExternalBookingParams {
   bookingUrl?: string;
   /** When set, the confirmation flow will update this match instead of opening the match creation wizard */
   matchId?: string;
+  /** Where in the app the redirect was initiated, for analytics breakdowns */
+  source?: 'facility_directory' | 'facility_card' | 'match_courts' | 'map' | 'external_sheet';
+  /** Sport context, when known */
+  sportId?: string;
+  sportName?: string;
 }
 
 export function useOpenExternalBooking() {
   const { setPendingBooking } = usePendingExternalBooking();
 
   const openExternalBooking = useCallback(
-    async ({ facility, slot, selectedCourt, bookingUrl, matchId }: OpenExternalBookingParams) => {
+    async ({
+      facility,
+      slot,
+      selectedCourt,
+      bookingUrl,
+      matchId,
+      source,
+      sportId,
+      sportName,
+    }: OpenExternalBookingParams) => {
       // Resolve booking URL
       const url =
         bookingUrl ||
@@ -50,7 +65,7 @@ export function useOpenExternalBooking() {
         if (!canOpen) return false;
 
         // Store pending booking context before leaving the app
-        setPendingBooking({ facility, slot, selectedCourt, matchId });
+        setPendingBooking({ facility, slot, selectedCourt, matchId, sportId, sportName });
 
         Logger.logUserAction('external_booking_opened', {
           facilityId: facility.id,
@@ -62,6 +77,15 @@ export function useOpenExternalBooking() {
         });
 
         await Linking.openURL(url);
+
+        Analytics.bookingRedirected({
+          facility_id: facility.id,
+          sport_id: sportId ?? 'unknown',
+          sport_name: sportName ?? 'unknown',
+          is_match_linked: !!matchId,
+          source: source ?? 'unknown',
+        });
+
         return true;
       } catch (error) {
         Logger.error('Failed to open external booking URL', error as Error);

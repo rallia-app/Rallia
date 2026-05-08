@@ -958,13 +958,20 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       // Open external booking URL
       try {
         await Linking.openURL(bookingUrl);
+        Analytics.bookingRedirected({
+          facility_id: facility.id,
+          sport_id: sportId ?? 'unknown',
+          sport_name: sportName ?? 'unknown',
+          is_match_linked: false,
+          source: 'match_creation',
+        });
       } catch (error) {
         console.error('Failed to open booking URL:', error);
         setPendingBookingSlot(null);
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sportId, location, handleCourtBookingSuccess]
+    [sportId, sportName, location, handleCourtBookingSuccess]
   );
 
   // Handle court selection from modal (external slots only - local slots use court-booking sheet)
@@ -983,6 +990,13 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       // Open the selected court's booking URL
       try {
         await Linking.openURL(court.bookingUrl);
+        Analytics.bookingRedirected({
+          facility_id: facility.id,
+          sport_id: sportId ?? 'unknown',
+          sport_name: sportName ?? 'unknown',
+          is_match_linked: false,
+          source: 'match_creation',
+        });
       } catch (error) {
         console.error('Failed to open booking URL:', error);
         setPendingBookingSlot(null);
@@ -990,7 +1004,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
 
       setCourtSelectionData(null);
     },
-    []
+    [sportId, sportName]
   );
 
   // Handle court selection cancel
@@ -1002,6 +1016,13 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   const handleBookingConfirm = useCallback(async () => {
     if (pendingBookingSlot) {
       const { facility, slot, selectedCourt } = pendingBookingSlot;
+
+      Analytics.bookingConfirmed({
+        facility_id: facility.id,
+        sport_id: sportId ?? 'unknown',
+        sport_name: sportName ?? 'unknown',
+        is_match_linked: false,
+      });
 
       // Update form with the booked facility
       setValue('facilityId', facility.id);
@@ -1061,7 +1082,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     }
     setPendingBookingSlot(null);
     setShowBookingConfirmation(false);
-  }, [pendingBookingSlot, setValue, deviceTimezone, onSlotBooked]);
+  }, [pendingBookingSlot, setValue, deviceTimezone, onSlotBooked, sportId, sportName]);
 
   // Handle booking cancel
   const handleBookingCancel = useCallback(() => {

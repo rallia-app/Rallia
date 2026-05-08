@@ -13,6 +13,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 import { requireSecretApikey } from '../_shared/auth.ts';
+import { captureEvent } from '../_shared/posthog.ts';
 
 import { sendEmail, sendOrgEmail } from './handlers/email.ts';
 import { sendPush } from './handlers/push.ts';
@@ -386,6 +387,23 @@ async function handleNotification(notification: NotificationRecord): Promise<voi
       error_message: errorMessage,
       provider_response: providerResponse,
     });
+
+    // Fire a PostHog `notification_sent` event for any actual send attempt
+    // (not skipped). Successful or failed delivery still counts as a "send
+    // attempt" from the user's POV — `status` differentiates.
+    if (status !== 'skipped_preference' && status !== 'skipped_missing_contact') {
+      void captureEvent({
+        distinctId: userId,
+        event: 'notification_sent',
+        properties: {
+          channel,
+          notification_type: notificationType,
+          status,
+          notification_id: notificationId,
+          is_org_notification: isOrgNotif,
+        },
+      });
+    }
 
     attemptNumber++;
   }
