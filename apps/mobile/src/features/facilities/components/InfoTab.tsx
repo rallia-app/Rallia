@@ -204,7 +204,7 @@ export default function InfoTab({
   const [showAllCommunities, setShowAllCommunities] = useState(false);
   const [addressCopied, setAddressCopied] = useState(false);
 
-  const { communities } = useCommunitiesForFacility(facility.id);
+  const { communities } = useCommunitiesForFacility(facility.id, selectedSport?.id ?? null);
 
   const facilityData = facility.facilityData;
   const fullAddress = buildFullAddress(facility);

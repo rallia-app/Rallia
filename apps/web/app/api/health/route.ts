@@ -1,10 +1,9 @@
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
-export const dynamic = 'force-dynamic';
-
 const COMMIT_SHA = process.env.VERCEL_GIT_COMMIT_SHA || 'unknown';
 const DB_TIMEOUT_MS = 5000;
+const HEALTHY_CACHE_CONTROL = 's-maxage=30, stale-while-revalidate=60';
 
 export async function GET() {
   const timestamp = new Date().toISOString();
@@ -50,6 +49,11 @@ export async function GET() {
       commit: COMMIT_SHA,
       components,
     },
-    { status: overallStatus === 'healthy' ? 200 : 503 }
+    {
+      status: overallStatus === 'healthy' ? 200 : 503,
+      headers: {
+        'Cache-Control': overallStatus === 'healthy' ? HEALTHY_CACHE_CONTROL : 'no-store',
+      },
+    }
   );
 }

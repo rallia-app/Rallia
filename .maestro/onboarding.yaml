@@ -1,0 +1,12 @@
+appId: com.mathisl971.rallia-app
+name: App launch
+---
+# Minimal smoke flow: launch the app and let the splash + first screen render.
+# Once you have this recording working end-to-end, expand with real taps/swipes
+# discovered via `maestro studio`.
+- launchApp:
+    clearState: false
+- waitForAnimationToEnd:
+    timeout: 5000
+# Tail dwell on the home screen is handled by the recording script
+# (TAIL_SECONDS env var) so the MP4 captures a few seconds of the UI.
