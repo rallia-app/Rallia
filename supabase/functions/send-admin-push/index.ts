@@ -9,6 +9,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
+import { requireSecretApikey } from '../_shared/auth.ts';
+
 // Initialize Supabase client with service role
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -247,31 +249,8 @@ serve(async (req: Request) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
-  // Auth check per https://supabase.com/docs/guides/functions/auth:
-  // accept SUPABASE_PUBLISHABLE_KEYS["default"] in apikey or Authorization: Bearer.
-  const expectedKey = (() => {
-    try {
-      return (
-        JSON.parse(Deno.env.get('SUPABASE_PUBLISHABLE_KEYS') ?? '{}') as Record<string, string>
-      )['default'];
-    } catch {
-      return undefined;
-    }
-  })();
-  if (expectedKey) {
-    const apikey = req.headers.get('apikey');
-    const bearer = req.headers
-      .get('Authorization')
-      ?.replace(/^Bearer\s+/i, '')
-      .trim();
-    const token = apikey || bearer;
-    if (!token || token !== expectedKey) {
-      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-  }
+  const authError = requireSecretApikey(req);
+  if (authError) return authError;
 
   try {
     const payload: AdminPushRequest = await req.json();

@@ -13,6 +13,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+import { requireSecretApikey } from '../_shared/auth.ts';
 import { reportHeartbeat } from '../_shared/heartbeat.ts';
 
 import {
@@ -356,32 +357,8 @@ Deno.serve(async req => {
     });
   }
 
-  // Auth check per https://supabase.com/docs/guides/functions/auth:
-  // accept the auto-injected SUPABASE_PUBLISHABLE_KEYS["default"] in either the
-  // apikey header (canonical) or Authorization: Bearer (transitional).
-  const expectedKey = (() => {
-    try {
-      return (
-        JSON.parse(Deno.env.get('SUPABASE_PUBLISHABLE_KEYS') ?? '{}') as Record<string, string>
-      )['default'];
-    } catch {
-      return undefined;
-    }
-  })();
-  if (expectedKey) {
-    const apikey = req.headers.get('apikey');
-    const bearer = req.headers
-      .get('Authorization')
-      ?.replace(/^Bearer\s+/i, '')
-      .trim();
-    const token = apikey || bearer;
-    if (!token || token !== expectedKey) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-  }
+  const authError = requireSecretApikey(req);
+  if (authError) return authError;
 
   console.log('Starting match closure job...');
   const startTime = Date.now();
