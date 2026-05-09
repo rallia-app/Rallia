@@ -147,6 +147,68 @@ interface PlayerStats {
   weekStreak: number;
 }
 
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+// Returns the timestamp of Monday 00:00 (local time) for the week containing `date`.
+const getWeekStart = (date: Date): number => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d.getTime();
+};
+
+// Resolves a match's duration in minutes from the (duration, custom_duration_minutes)
+// pair stored on `match`. Returns 0 when neither is usable.
+const matchDurationMinutes = (m: {
+  duration: '30' | '60' | '90' | '120' | 'custom' | null;
+  custom_duration_minutes: number | null;
+}): number => {
+  if (m.duration === 'custom') return m.custom_duration_minutes ?? 0;
+  if (m.duration == null) return 0;
+  const n = Number(m.duration);
+  return Number.isFinite(n) ? n : 0;
+};
+
+// Parse "YYYY-MM-DD" in local time. `new Date("YYYY-MM-DD")` would be UTC midnight,
+// which can shift the day for users west of UTC and break week-bucketing.
+const parseYMDLocal = (ymd: string): Date | null => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd);
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+// Counts consecutive weeks (ending at the current or previous week) that contain
+// at least one match. Caller is expected to pass already-filtered past dates.
+const calculateWeekStreak = (matchDates: string[]): number => {
+  if (matchDates.length === 0) return 0;
+  const now = new Date();
+  const currentWeekStart = getWeekStart(now);
+  const playedWeeks = new Set<number>();
+  for (const dateStr of matchDates) {
+    const d = parseYMDLocal(dateStr);
+    if (!d) continue;
+    playedWeeks.add(getWeekStart(d));
+  }
+  if (playedWeeks.size === 0) return 0;
+  let cursor: number;
+  if (playedWeeks.has(currentWeekStart)) {
+    cursor = currentWeekStart;
+  } else if (playedWeeks.has(currentWeekStart - WEEK_MS)) {
+    cursor = currentWeekStart - WEEK_MS;
+  } else {
+    return 0;
+  }
+  let streak = 0;
+  while (playedWeeks.has(cursor)) {
+    streak++;
+    cursor -= WEEK_MS;
+  }
+  return streak;
+};
+
 /** Small card component so thumbnail hooks can be called per proof. */
 const ProofGalleryCard: React.FC<{
   item: RatingProofData;
@@ -542,14 +604,22 @@ const PlayerProfile = () => {
           'Failed to load reputation'
         ),
 
-        // Fetch match statistics
+        // Fetch match statistics. A match counts as "actually played" when:
+        //   - participant.status = 'joined' (player committed)
+        //   - participant.showed_up != false (NULL = feedback pending; treat as played)
+        //   - match.closed_at IS NOT NULL (match was finalized 48h after end_time)
+        //   - match.cancelled_at IS NULL (not cancelled)
+        //   - match.mutually_cancelled IS NOT TRUE (not all-mutual no-show)
+        // closed_at being non-null implies the match is in the past, so no extra date check.
         withTimeout(
           (async () =>
             supabase
               .from('match_participant')
-              .select('match_id, match:match_id (duration_minutes, host_id)')
+              .select(
+                'match_id, showed_up, match:match_id (match_date, duration, custom_duration_minutes, created_by, closed_at, cancelled_at, mutually_cancelled)'
+              )
               .eq('player_id', playerId)
-              .eq('status', 'confirmed'))(),
+              .eq('status', 'joined'))(),
           15000,
           'Failed to load stats'
         ),
@@ -826,21 +896,48 @@ const PlayerProfile = () => {
       setAvailabilities(availGrid);
 
       // Process stats
-      if (statsResult.data) {
+      if (statsResult.error) {
+        Logger.error('Failed to load player stats', statsResult.error as Error, { playerId });
+      } else if (statsResult.data) {
+        type MatchRow = {
+          match_date: string | null;
+          duration: '30' | '60' | '90' | '120' | 'custom' | null;
+          custom_duration_minutes: number | null;
+          created_by: string;
+          closed_at: string | null;
+          cancelled_at: string | null;
+          mutually_cancelled: boolean | null;
+        };
         type MatchData = {
           match_id: string;
-          match: { duration_minutes: number | null; host_id: string } | null;
+          showed_up: boolean | null;
+          match: MatchRow | null;
         };
         const matchData = statsResult.data as unknown as MatchData[];
-        const totalMinutes = matchData.reduce(
-          (sum, m) => sum + (m.match?.duration_minutes || 0),
+
+        // Matches that actually happened with this player on the court.
+        const playedMatches = matchData.filter(
+          m =>
+            !!m.match &&
+            m.match.closed_at !== null &&
+            m.match.cancelled_at === null &&
+            m.match.mutually_cancelled !== true &&
+            m.showed_up !== false
+        );
+
+        const totalMinutes = playedMatches.reduce(
+          (sum, m) => sum + matchDurationMinutes(m.match!),
           0
         );
-        const hostedMatches = matchData.filter(m => m.match?.host_id === playerId).length;
+        const hostedMatches = playedMatches.filter(m => m.match!.created_by === playerId).length;
+        const playedDates = playedMatches
+          .map(m => m.match!.match_date)
+          .filter((d): d is string => !!d);
+
         setStats({
           hoursPlayed: Math.round(totalMinutes / 60),
           gamesHosted: hostedMatches,
-          weekStreak: 0, // TODO: Calculate actual streak
+          weekStreak: calculateWeekStreak(playedDates),
         });
       }
     } catch (error) {

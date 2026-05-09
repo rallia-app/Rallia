@@ -1354,6 +1354,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                   // Close invite step and go to match detail
                   onSuccess?.(successMatchId);
                 }}
+                onBack={() => setShowInviteStep(false)}
                 colors={{
                   ...colors,
                   background: colors.cardBackground,
