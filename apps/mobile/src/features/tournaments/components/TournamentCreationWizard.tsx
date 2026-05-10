@@ -49,7 +49,7 @@ import { useSport } from '../../../context';
 import { SportIcon } from '../../../components/SportIcon';
 
 const BASE_WHITE = '#ffffff';
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 2;
 const BRACKET_SIZES = [4, 8, 16, 32] as const;
 type BracketSize = (typeof BRACKET_SIZES)[number];
 
@@ -141,8 +141,7 @@ const ProgressBar: React.FC<{
 }> = ({ currentStep, colors, t }) => {
   const pct = (currentStep / TOTAL_STEPS) * 100;
   const stepNames = [
-    t('tournamentCreation.stepNames.basics' as TranslationKey),
-    t('tournamentCreation.stepNames.schedule' as TranslationKey),
+    t('tournamentCreation.stepNames.details' as TranslationKey),
     t('tournamentCreation.stepNames.visibility' as TranslationKey),
   ];
   return (
@@ -257,103 +256,6 @@ const FieldLabel: React.FC<{ children: string; colors: ThemeColors }> = ({ child
 // STEPS
 // =============================================================================
 
-const BasicsStep: React.FC<{
-  name: string;
-  setName: (v: string) => void;
-  bracketSize: BracketSize;
-  setBracketSize: (v: BracketSize) => void;
-  errors: Record<string, string | undefined>;
-  colors: ThemeColors;
-  t: (k: TranslationKey) => string;
-}> = ({ name, setName, bracketSize, setBracketSize, errors, colors, t }) => (
-  <SheetScrollView
-    style={styles.stepContainer}
-    contentContainerStyle={styles.stepContent}
-    showsVerticalScrollIndicator={false}
-    keyboardShouldPersistTaps="handled"
-    keyboardDismissMode="interactive"
-  >
-    <View style={styles.stepHeader}>
-      <Text size="lg" weight="bold" color={colors.text}>
-        {t('tournamentCreation.step1Title' as TranslationKey)}
-      </Text>
-      <Text size="sm" color={colors.textMuted}>
-        {t('tournamentCreation.step1Description' as TranslationKey)}
-      </Text>
-    </View>
-
-    <View style={styles.fieldGroup}>
-      <FieldLabel colors={colors}>
-        {t('tournamentCreation.fields.name' as TranslationKey)}
-      </FieldLabel>
-      <TextInput
-        style={[
-          styles.textInput,
-          {
-            backgroundColor: colors.inputBackground,
-            borderColor: errors.name ? colors.error : colors.inputBorder,
-            color: colors.text,
-          },
-        ]}
-        placeholder={t('tournamentCreation.fields.namePlaceholder' as TranslationKey)}
-        placeholderTextColor={colors.textMuted}
-        value={name}
-        onChangeText={setName}
-        maxLength={120}
-        autoCapitalize="sentences"
-        autoCorrect={false}
-        returnKeyType="done"
-      />
-      {errors.name && (
-        <Text size="xs" color={colors.error} style={styles.errorText}>
-          {errors.name}
-        </Text>
-      )}
-    </View>
-
-    <View style={styles.fieldGroup}>
-      <FieldLabel colors={colors}>
-        {t('tournamentCreation.fields.maxParticipants' as TranslationKey)}
-      </FieldLabel>
-      <View style={styles.optionsRow}>
-        {BRACKET_SIZES.map(n => {
-          const selected = n === bracketSize;
-          return (
-            <TouchableOpacity
-              key={n}
-              onPress={() => {
-                lightHaptic();
-                setBracketSize(n);
-              }}
-              activeOpacity={0.7}
-              style={[
-                styles.bracketChip,
-                {
-                  backgroundColor: selected ? `${colors.buttonActive}15` : colors.buttonInactive,
-                  borderColor: selected ? colors.buttonActive : colors.border,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityState={{ selected }}
-            >
-              <Text
-                size="base"
-                weight={selected ? 'semibold' : 'regular'}
-                color={selected ? colors.buttonActive : colors.text}
-              >
-                {n}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-      <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
-        {t('tournamentCreation.fields.maxParticipantsHint' as TranslationKey)}
-      </Text>
-    </View>
-  </SheetScrollView>
-);
-
 const DateField: React.FC<{
   label: string;
   date: Date | null;
@@ -395,7 +297,11 @@ const DateField: React.FC<{
   );
 };
 
-const ScheduleStep: React.FC<{
+const DetailsStep: React.FC<{
+  name: string;
+  setName: (v: string) => void;
+  bracketSize: BracketSize;
+  setBracketSize: (v: BracketSize) => void;
   startDate: Date | null;
   endDate: Date | null;
   setStartDate: (d: Date) => void;
@@ -405,7 +311,21 @@ const ScheduleStep: React.FC<{
   t: (k: TranslationKey) => string;
   locale: string;
   isDark: boolean;
-}> = ({ startDate, endDate, setStartDate, setEndDate, errors, colors, t, locale, isDark }) => {
+}> = ({
+  name,
+  setName,
+  bracketSize,
+  setBracketSize,
+  startDate,
+  endDate,
+  setStartDate,
+  setEndDate,
+  errors,
+  colors,
+  t,
+  locale,
+  isDark,
+}) => {
   const [pickerOpen, setPickerOpen] = useState<'start' | 'end' | null>(null);
   const minimumDate = useMemo(() => {
     const d = new Date();
@@ -429,13 +349,84 @@ const ScheduleStep: React.FC<{
       contentContainerStyle={styles.stepContent}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
     >
       <View style={styles.stepHeader}>
         <Text size="lg" weight="bold" color={colors.text}>
-          {t('tournamentCreation.step2Title' as TranslationKey)}
+          {t('tournamentCreation.step1Title' as TranslationKey)}
         </Text>
         <Text size="sm" color={colors.textMuted}>
-          {t('tournamentCreation.step2Description' as TranslationKey)}
+          {t('tournamentCreation.step1Description' as TranslationKey)}
+        </Text>
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <FieldLabel colors={colors}>
+          {t('tournamentCreation.fields.name' as TranslationKey)}
+        </FieldLabel>
+        <TextInput
+          style={[
+            styles.textInput,
+            {
+              backgroundColor: colors.inputBackground,
+              borderColor: errors.name ? colors.error : colors.inputBorder,
+              color: colors.text,
+            },
+          ]}
+          placeholder={t('tournamentCreation.fields.namePlaceholder' as TranslationKey)}
+          placeholderTextColor={colors.textMuted}
+          value={name}
+          onChangeText={setName}
+          maxLength={120}
+          autoCapitalize="sentences"
+          autoCorrect={false}
+          returnKeyType="done"
+        />
+        {errors.name && (
+          <Text size="xs" color={colors.error} style={styles.errorText}>
+            {errors.name}
+          </Text>
+        )}
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <FieldLabel colors={colors}>
+          {t('tournamentCreation.fields.maxParticipants' as TranslationKey)}
+        </FieldLabel>
+        <View style={styles.optionsRow}>
+          {BRACKET_SIZES.map(n => {
+            const selected = n === bracketSize;
+            return (
+              <TouchableOpacity
+                key={n}
+                onPress={() => {
+                  lightHaptic();
+                  setBracketSize(n);
+                }}
+                activeOpacity={0.7}
+                style={[
+                  styles.bracketChip,
+                  {
+                    backgroundColor: selected ? `${colors.buttonActive}15` : colors.buttonInactive,
+                    borderColor: selected ? colors.buttonActive : colors.border,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+              >
+                <Text
+                  size="base"
+                  weight={selected ? 'semibold' : 'regular'}
+                  color={selected ? colors.buttonActive : colors.text}
+                >
+                  {n}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
+          {t('tournamentCreation.fields.maxParticipantsHint' as TranslationKey)}
         </Text>
       </View>
 
@@ -518,10 +509,10 @@ const VisibilityStep: React.FC<{
   >
     <View style={styles.stepHeader}>
       <Text size="lg" weight="bold" color={colors.text}>
-        {t('tournamentCreation.step3Title' as TranslationKey)}
+        {t('tournamentCreation.step2Title' as TranslationKey)}
       </Text>
       <Text size="sm" color={colors.textMuted}>
-        {t('tournamentCreation.step3Description' as TranslationKey)}
+        {t('tournamentCreation.step2Description' as TranslationKey)}
       </Text>
     </View>
 
@@ -668,8 +659,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
         if (!trimmed) next.name = t('tournamentCreation.validation.nameRequired' as TranslationKey);
         else if (trimmed.length > 100)
           next.name = t('tournamentCreation.validation.nameTooLong' as TranslationKey);
-      }
-      if (step === 2) {
+
         if (!startDate || !endDate) {
           next.startDate = !startDate
             ? t('tournamentCreation.validation.datesRequired' as TranslationKey)
@@ -707,8 +697,8 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
 
   const handleSubmit = useCallback(async () => {
     if (!selectedSport?.id) return;
-    if (!validateStep(2)) {
-      setCurrentStep(2);
+    if (!validateStep(1)) {
+      setCurrentStep(1);
       return;
     }
     if (!startDate || !endDate) return;
@@ -823,18 +813,11 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
 
       <View style={styles.body}>
         {currentStep === 1 && (
-          <BasicsStep
+          <DetailsStep
             name={name}
             setName={setName}
             bracketSize={bracketSize}
             setBracketSize={setBracketSize}
-            errors={errors}
-            colors={colors}
-            t={t}
-          />
-        )}
-        {currentStep === 2 && (
-          <ScheduleStep
             startDate={startDate}
             endDate={endDate}
             setStartDate={handleSetStartDate}
@@ -846,7 +829,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
             isDark={isDark}
           />
         )}
-        {currentStep === 3 && (
+        {currentStep === 2 && (
           <VisibilityStep
             visibility={visibility}
             setVisibility={setVisibility}
