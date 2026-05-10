@@ -8,6 +8,7 @@ import { Resend } from 'resend';
 import type { NotificationRecord, DeliveryResult, OrganizationInfo } from '../types.ts';
 import { renderOrgEmail } from '../templates/organization.ts';
 import { generateEmailHtml, generateEmailSubject } from '../templates/match.ts';
+import { isFakeSeedEmail } from '../../_shared/email-guards.ts';
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'noreply@rallia.com';
@@ -26,6 +27,14 @@ export async function sendEmail(
       channel: 'email',
       status: 'failed',
       errorMessage: 'RESEND_API_KEY not configured',
+    };
+  }
+
+  if (isFakeSeedEmail(recipientEmail)) {
+    return {
+      channel: 'email',
+      status: 'skipped_missing_contact',
+      errorMessage: 'fake seed user — no real inbox',
     };
   }
 
@@ -78,6 +87,14 @@ export async function sendOrgEmail(
       channel: 'email',
       status: 'failed',
       errorMessage: 'RESEND_API_KEY not configured',
+    };
+  }
+
+  if (isFakeSeedEmail(recipientEmail)) {
+    return {
+      channel: 'email',
+      status: 'skipped_missing_contact',
+      errorMessage: 'fake seed user — no real inbox',
     };
   }
 

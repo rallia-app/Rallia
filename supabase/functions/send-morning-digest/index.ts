@@ -21,6 +21,7 @@ import { Resend } from 'resend';
 import { SignJWT } from 'https://esm.sh/jose@5';
 
 import { requireSecretApikey } from '../_shared/auth.ts';
+import { isFakeSeedEmail } from '../_shared/email-guards.ts';
 import { reportHeartbeat } from '../_shared/heartbeat.ts';
 import { composeJustForYou, type ComposedSuggestion } from '../_shared/justForYouComposer.ts';
 import type { Scorable, MatchScoringPreferences } from '../_shared/matchScoring.ts';
@@ -316,6 +317,11 @@ async function sendDigestEmail(
   appUrl: string,
   unsubscribeUrl: string
 ): Promise<SendResult> {
+  if (isFakeSeedEmail(user.email)) {
+    console.log(`[send-morning-digest] Skipping seed user ${user.email}`);
+    return { ok: true };
+  }
+
   const { subject, html } = renderMorningDigestEmail({
     firstName: user.firstName,
     locale: user.locale,

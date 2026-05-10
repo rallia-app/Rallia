@@ -2,6 +2,7 @@ import { Resend } from 'resend';
 import { ZodError } from 'zod';
 
 import { requireSecretApikey } from '../_shared/auth.ts';
+import { isFakeSeedEmail } from '../_shared/email-guards.ts';
 
 import { getHandler } from './registry.ts';
 import { EmailRequestSchema } from './schemas.ts';
@@ -40,6 +41,15 @@ Deno.serve(async req => {
     const handler = getHandler(validatedRequest.emailType);
     const validatedPayload = handler.validate(validatedRequest);
     const recipient = await handler.getRecipient(validatedPayload);
+
+    if (isFakeSeedEmail(recipient)) {
+      console.log(`[send-email] Skipping ${validatedRequest.emailType} to seed user ${recipient}`);
+      return new Response(JSON.stringify({ success: true } satisfies EmailResponse), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const { subject, html } = await handler.getContent(validatedPayload);
     const resend = new Resend(RESEND_API_KEY);
     const { data, error } = await resend.emails.send({
