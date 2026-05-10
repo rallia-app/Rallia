@@ -1018,6 +1018,54 @@ const Home = () => {
   const renderListHeader = useCallback(() => {
     const headerComponents = [];
 
+    // Quick-nav row: 3 circular FABs (community / book a court / find a game).
+    // Shown for everyone — signed-out users land on the same destinations,
+    // which gate themselves where needed.
+    const SportIconComponent =
+      selectedSport?.name?.toLowerCase() === 'pickleball' ? PickleballIcon : TennisIcon;
+    const splitQuickNavLabel = locale.startsWith('fr');
+    headerComponents.push(
+      <View key="quick-nav" style={quickNavStyles.row}>
+        <QuickNavButton
+          icon={<Ionicons name="people-outline" size={32} color="#FFFFFF" />}
+          label={t('home.quickNav.joinCommunity')}
+          splitLabel={splitQuickNavLabel}
+          onPress={() =>
+            appNavigation.navigate('Main', {
+              screen: 'Community',
+              params: {
+                screen: 'Communities',
+                // Keep PlayerDirectory as the Community tab root so back from
+                // Communities returns to the Community screen, not Home.
+                initial: false,
+              },
+            } as never)
+          }
+        />
+        <QuickNavButton
+          icon={
+            <View style={{ transform: [{ rotate: '90deg' }] }}>
+              <TennisCourtIcon width={32} height={32} stroke="#FFFFFF" />
+            </View>
+          }
+          label={t('home.quickNav.bookCourt')}
+          splitLabel={splitQuickNavLabel}
+          onPress={() =>
+            appNavigation.navigate('Main', {
+              screen: 'Courts',
+              params: { screen: 'FacilitiesDirectory' },
+            } as never)
+          }
+        />
+        <QuickNavButton
+          icon={<SportIconComponent width={32} height={32} fill="#FFFFFF" />}
+          label={t('home.quickNav.findGame')}
+          splitLabel={splitQuickNavLabel}
+          onPress={() => navigation.navigate('PublicMatches')}
+        />
+      </View>
+    );
+
     if (!session) {
       // Not signed in: show sign-in prompt
       headerComponents.push(
@@ -1180,54 +1228,6 @@ const Home = () => {
           </HomeBannerLayoutProvider>
         );
       }
-
-      // Quick-nav row: 3 circular FABs (community / book a court / find a game).
-      // Icons mirror the bottom-tab bar so users learn the visual mapping in
-      // one place.
-      const SportIconComponent =
-        selectedSport?.name?.toLowerCase() === 'pickleball' ? PickleballIcon : TennisIcon;
-      const splitQuickNavLabel = locale.startsWith('fr');
-      headerComponents.push(
-        <View key="quick-nav" style={quickNavStyles.row}>
-          <QuickNavButton
-            icon={<Ionicons name="people-outline" size={32} color="#FFFFFF" />}
-            label={t('home.quickNav.joinCommunity')}
-            splitLabel={splitQuickNavLabel}
-            onPress={() =>
-              appNavigation.navigate('Main', {
-                screen: 'Community',
-                params: {
-                  screen: 'Communities',
-                  // Keep PlayerDirectory as the Community tab root so back from
-                  // Communities returns to the Community screen, not Home.
-                  initial: false,
-                },
-              } as never)
-            }
-          />
-          <QuickNavButton
-            icon={
-              <View style={{ transform: [{ rotate: '90deg' }] }}>
-                <TennisCourtIcon width={32} height={32} stroke="#FFFFFF" />
-              </View>
-            }
-            label={t('home.quickNav.bookCourt')}
-            splitLabel={splitQuickNavLabel}
-            onPress={() =>
-              appNavigation.navigate('Main', {
-                screen: 'Courts',
-                params: { screen: 'FacilitiesDirectory' },
-              } as never)
-            }
-          />
-          <QuickNavButton
-            icon={<SportIconComponent width={32} height={32} fill="#FFFFFF" />}
-            label={t('home.quickNav.findGame')}
-            splitLabel={splitQuickNavLabel}
-            onPress={() => navigation.navigate('PublicMatches')}
-          />
-        </View>
-      );
 
       // Add "My Matches" section for fully onboarded users
       headerComponents.push(<View key="my-matches">{renderMyMatchesSection()}</View>);
