@@ -144,9 +144,11 @@ export const ProfileCompletenessProvider: React.FC<ProfileCompletenessProviderPr
 
   const fetchAsyncData = useCallback(async () => {
     if (!playerId) {
-      setAvailabilityCount(0);
-      setProofCount(0);
-      setFavoritesCount(0);
+      // Cold start: keep counts as null so `loading` stays true until the real
+      // player/profile load and counts are fetched. Seeding with 0 here would
+      // briefly compute isComplete=false against placeholder data, causing the
+      // banner/ring to flash on screen and then disappear once the real counts
+      // come in.
       return;
     }
 
