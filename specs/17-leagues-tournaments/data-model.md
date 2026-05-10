@@ -14,9 +14,9 @@
 
 ## Enums
 
-```sql
-CREATE TYPE sport_kind AS ENUM ('tennis', 'pickleball');
+> Sport identity is **not** an enum. Rallia stores sports in a `public.sport` table; every L&T entity uses `sport_id uuid REFERENCES sport(id)`. See [integrations.md §02 Sport Modes](./integrations.md#02-sport-modes) for the lookup pattern.
 
+```sql
 CREATE TYPE tournament_status AS ENUM (
   'draft',
   'registration_open',
@@ -107,7 +107,7 @@ CREATE TABLE tournaments (
   name text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 100),
   description text,
   logo_url text,
-  sport sport_kind NOT NULL,
+  sport_id uuid NOT NULL REFERENCES sport(id) ON DELETE RESTRICT,
 
   visibility tournament_visibility NOT NULL DEFAULT 'private',
   registration_mode tournament_registration_mode NOT NULL DEFAULT 'open',
@@ -144,7 +144,7 @@ CREATE TABLE tournaments (
   ),
 
   -- Venue
-  facility_id uuid REFERENCES facilities(id) ON DELETE SET NULL,
+  facility_id uuid REFERENCES facility(id) ON DELETE SET NULL,
   venue_name text,
   venue_address text,
 
@@ -156,8 +156,11 @@ CREATE TABLE tournaments (
   bracket_locked_at timestamptz,               -- set when first match completes
 
   -- Ownership
-  organizer_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
-  community_id uuid REFERENCES communities(id) ON DELETE SET NULL,
+  organizer_id uuid NOT NULL REFERENCES player(id) ON DELETE RESTRICT,
+  -- Optional community-network scope. References any `network` row; the create RPC
+  -- enforces that the network's network_type.code = 'community'. FK alone cannot
+  -- enforce this since it crosses tables.
+  network_id uuid REFERENCES network(id) ON DELETE SET NULL,
 
   -- Concurrency / audit
   version integer NOT NULL DEFAULT 1,
@@ -165,9 +168,9 @@ CREATE TABLE tournaments (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX tournaments_sport_status_idx ON tournaments(sport, status) WHERE status NOT IN ('archived', 'cancelled');
+CREATE INDEX tournaments_sport_status_idx ON tournaments(sport_id, status) WHERE status NOT IN ('archived', 'cancelled');
 CREATE INDEX tournaments_organizer_idx ON tournaments(organizer_id);
-CREATE INDEX tournaments_community_idx ON tournaments(community_id) WHERE community_id IS NOT NULL;
+CREATE INDEX tournaments_network_idx ON tournaments(network_id) WHERE network_id IS NOT NULL;
 CREATE INDEX tournaments_facility_idx ON tournaments(facility_id) WHERE facility_id IS NOT NULL;
 CREATE INDEX tournaments_dates_idx ON tournaments(start_date, end_date) WHERE status NOT IN ('archived', 'cancelled');
 ```
@@ -185,7 +188,7 @@ CREATE TABLE tournament_invite_links (
   max_uses integer,                            -- null = unlimited
   uses integer NOT NULL DEFAULT 0,
   expires_at timestamptz,
-  created_by uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  created_by uuid NOT NULL REFERENCES player(id) ON DELETE RESTRICT,
   created_at timestamptz NOT NULL DEFAULT now(),
   revoked_at timestamptz
 );
@@ -204,7 +207,7 @@ CREATE TABLE league_invite_links (
   max_uses integer,
   uses integer NOT NULL DEFAULT 0,
   expires_at timestamptz,
-  created_by uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  created_by uuid NOT NULL REFERENCES player(id) ON DELETE RESTRICT,
   created_at timestamptz NOT NULL DEFAULT now(),
   revoked_at timestamptz
 );
@@ -217,8 +220,8 @@ CREATE INDEX league_invite_links_league_idx ON league_invite_links(league_id);
 ```sql
 CREATE TABLE tournament_co_organizers (
   tournament_id uuid NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  added_by uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  user_id uuid NOT NULL REFERENCES player(id) ON DELETE CASCADE,
+  added_by uuid NOT NULL REFERENCES player(id) ON DELETE RESTRICT,
   added_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (tournament_id, user_id)
 );
@@ -230,11 +233,11 @@ CREATE TABLE tournament_co_organizers (
 CREATE TABLE tournament_registrations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tournament_id uuid NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  user_id uuid NOT NULL REFERENCES player(id) ON DELETE RESTRICT,
 
   -- Doubles: paired entry; both rows reference the same partnership_id
   partnership_id uuid,                         -- null for singles; same uuid for both partners
-  partner_user_id uuid REFERENCES auth.users(id) ON DELETE RESTRICT,
+  partner_user_id uuid REFERENCES player(id) ON DELETE RESTRICT,
 
   status registration_status NOT NULL DEFAULT 'registered',
   seed_rank smallint,                          -- assigned by organizer (1 = top seed); null otherwise
@@ -245,7 +248,7 @@ CREATE TABLE tournament_registrations (
   registered_at timestamptz NOT NULL DEFAULT now(),
   withdrawn_at timestamptz,
   approved_at timestamptz,                     -- only for registration_mode='approval'
-  approved_by uuid REFERENCES auth.users(id),
+  approved_by uuid REFERENCES player(id),
 
   version integer NOT NULL DEFAULT 1,
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -268,8 +271,8 @@ A separate table preserves FIFO order independently of the registrations table.
 CREATE TABLE tournament_waitlist (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tournament_id uuid NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  partner_user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES player(id) ON DELETE CASCADE,
+  partner_user_id uuid REFERENCES player(id) ON DELETE CASCADE,
   position integer NOT NULL,                   -- 1-based, dense
   joined_at timestamptz NOT NULL DEFAULT now(),
   promoted_at timestamptz,
@@ -303,7 +306,7 @@ CREATE TABLE tournament_matches (
 
   -- Scheduling
   scheduled_at timestamptz,
-  court_id uuid REFERENCES facility_courts(id),
+  court_id uuid REFERENCES court(id),
   played_at timestamptz,
 
   -- Bracket plumbing (so generation is deterministic and frontend can render)
@@ -334,12 +337,12 @@ CREATE TABLE leagues (
   name text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 100),
   description text,
   logo_url text,
-  sport sport_kind NOT NULL,
+  sport_id uuid NOT NULL REFERENCES sport(id) ON DELETE RESTRICT,
 
   visibility tournament_visibility NOT NULL DEFAULT 'private',
   join_mode tournament_registration_mode NOT NULL DEFAULT 'approval',
 
-  facility_id uuid REFERENCES facilities(id) ON DELETE SET NULL,
+  facility_id uuid REFERENCES facility(id) ON DELETE SET NULL,
   venue_name text,
   surfaces text[] NOT NULL DEFAULT '{}',
   categories text[] NOT NULL DEFAULT '{}',
@@ -354,17 +357,19 @@ CREATE TABLE leagues (
 
   status league_status NOT NULL DEFAULT 'active',
 
-  organizer_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
-  community_id uuid REFERENCES communities(id) ON DELETE SET NULL,
+  organizer_id uuid NOT NULL REFERENCES player(id) ON DELETE RESTRICT,
+  -- Optional community-network scope. References any `network` row; the create RPC
+  -- enforces that the network's network_type.code = 'community'.
+  network_id uuid REFERENCES network(id) ON DELETE SET NULL,
 
   version integer NOT NULL DEFAULT 1,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX leagues_sport_status_idx ON leagues(sport, status);
+CREATE INDEX leagues_sport_status_idx ON leagues(sport_id, status);
 CREATE INDEX leagues_organizer_idx ON leagues(organizer_id);
-CREATE INDEX leagues_community_idx ON leagues(community_id) WHERE community_id IS NOT NULL;
+CREATE INDEX leagues_network_idx ON leagues(network_id) WHERE network_id IS NOT NULL;
 ```
 
 The shape of `default_rules` is defined in [ranking.md](./ranking.md#rules-shape).
@@ -375,13 +380,13 @@ The shape of `default_rules` is defined in [ranking.md](./ranking.md#rules-shape
 CREATE TABLE league_members (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   league_id uuid NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  user_id uuid NOT NULL REFERENCES player(id) ON DELETE RESTRICT,
   role league_role NOT NULL DEFAULT 'member',
   status league_member_status NOT NULL DEFAULT 'active',
 
   joined_at timestamptz NOT NULL DEFAULT now(),
   approved_at timestamptz,
-  approved_by uuid REFERENCES auth.users(id),
+  approved_by uuid REFERENCES player(id),
   suspended_at timestamptz,
   suspended_until timestamptz,
   suspended_reason text,
@@ -406,7 +411,7 @@ FIFO waitlist for league joins when `member_capacity` is set and `waitlist_enabl
 CREATE TABLE league_member_waitlist (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   league_id uuid NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES player(id) ON DELETE CASCADE,
   position integer NOT NULL,
   joined_at timestamptz NOT NULL DEFAULT now(),
   promoted_at timestamptz,
@@ -456,7 +461,7 @@ CREATE TABLE sessions (
   duration_minutes smallint NOT NULL DEFAULT 90,
   timezone text NOT NULL,                      -- IANA tz
 
-  facility_id uuid REFERENCES facilities(id) ON DELETE SET NULL,
+  facility_id uuid REFERENCES facility(id) ON DELETE SET NULL,
   venue_name text,
   capacity smallint,
   rounds smallint NOT NULL DEFAULT 1 CHECK (rounds BETWEEN 1 AND 6),
@@ -492,7 +497,7 @@ Per-session court reservation; populated when organizer publishes.
 ```sql
 CREATE TABLE session_courts (
   session_id uuid NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-  court_id uuid NOT NULL REFERENCES facility_courts(id) ON DELETE RESTRICT,
+  court_id uuid NOT NULL REFERENCES court(id) ON DELETE RESTRICT,
   PRIMARY KEY (session_id, court_id)
 );
 ```
@@ -503,15 +508,15 @@ CREATE TABLE session_courts (
 CREATE TABLE session_presence (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id uuid NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  user_id uuid NOT NULL REFERENCES player(id) ON DELETE RESTRICT,
   status session_presence_status NOT NULL DEFAULT 'pending',
 
   -- Doubles partner pre-pairing (optional; honored by BALANCED_DOUBLES)
-  preferred_partner_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  preferred_partner_id uuid REFERENCES player(id) ON DELETE SET NULL,
 
   -- Guest player flag — included in pairings, excluded from ranking
   is_guest boolean NOT NULL DEFAULT false,
-  guest_invited_by uuid REFERENCES auth.users(id),
+  guest_invited_by uuid REFERENCES player(id),
 
   responded_at timestamptz,
   waitlist_position integer,
@@ -534,7 +539,7 @@ CREATE TABLE session_matches (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id uuid NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
   round_number smallint NOT NULL DEFAULT 1,
-  court_id uuid REFERENCES facility_courts(id),
+  court_id uuid REFERENCES court(id),
   court_label text,                            -- when no court_id (e.g., off-system venue)
 
   format entry_format NOT NULL DEFAULT 'singles',
@@ -579,13 +584,13 @@ Score submissions; an organizer can override and the override is recorded as a n
 CREATE TABLE session_match_scores (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   session_match_id uuid NOT NULL REFERENCES session_matches(id) ON DELETE CASCADE,
-  submitted_by uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  submitted_by uuid NOT NULL REFERENCES player(id) ON DELETE RESTRICT,
   score text NOT NULL,
   outcome_team pairing_team,                   -- winner team (a/b)
   retired_team pairing_team,
   walkover_team pairing_team,
   status score_validation_status NOT NULL DEFAULT 'pending_validation',
-  validated_by uuid REFERENCES auth.users(id),
+  validated_by uuid REFERENCES player(id),
   validated_at timestamptz,
   rejection_reason text,
   created_at timestamptz NOT NULL DEFAULT now()
@@ -602,13 +607,13 @@ Identical shape to `session_match_scores`, with the FK pointing at `tournament_m
 CREATE TABLE tournament_match_scores (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tournament_match_id uuid NOT NULL REFERENCES tournament_matches(id) ON DELETE CASCADE,
-  submitted_by uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  submitted_by uuid NOT NULL REFERENCES player(id) ON DELETE RESTRICT,
   score text NOT NULL,
   outcome_team pairing_team,
   retired_team pairing_team,
   walkover_team pairing_team,
   status score_validation_status NOT NULL DEFAULT 'pending_validation',
-  validated_by uuid REFERENCES auth.users(id),
+  validated_by uuid REFERENCES player(id),
   validated_at timestamptz,
   rejection_reason text,
   created_at timestamptz NOT NULL DEFAULT now()
@@ -625,7 +630,7 @@ Materialized table; rebuilt by the `recalc_season_ranking(season_id)` RPC after 
 CREATE TABLE season_rankings (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   season_id uuid NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES player(id) ON DELETE CASCADE,
 
   points integer NOT NULL DEFAULT 0,
   wins integer NOT NULL DEFAULT 0,
@@ -666,7 +671,7 @@ CREATE TABLE leagues_tournaments_audit (
   scope audit_scope NOT NULL,
   entity_id uuid NOT NULL,
   action text NOT NULL,                        -- e.g. 'swap_players', 'override_score', 'cancel'
-  actor_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  actor_id uuid NOT NULL REFERENCES player(id) ON DELETE RESTRICT,
   payload_before jsonb,
   payload_after jsonb,
   occurred_at timestamptz NOT NULL DEFAULT now()
@@ -699,6 +704,23 @@ All organizer-initiated mutations to bracket/sheet structure, score overrides, m
 
 All write operations are RPCs (`SECURITY DEFINER`) so the optimistic-lock pattern, audit writes, and reputation event emission are encapsulated server-side. RLS still gates SELECTs.
 
+### Sport-scope validation in every write RPC
+
+There is no JWT claim for "active sport" in Rallia. Every L&T write RPC validates sport scope explicitly:
+
+- **Create RPCs** (`tournament_create`, `league_create`) take `p_sport_id uuid` in the payload. The RPC verifies the caller has `player_sport.is_active = true` for that sport via:
+  ```sql
+  IF NOT EXISTS (
+    SELECT 1 FROM player_sport
+     WHERE player_id = auth.uid() AND sport_id = p_sport_id AND is_active = true
+  ) THEN RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = 'SPORT_MISMATCH';
+  END IF;
+  ```
+- **Action RPCs** on existing entities derive `sport_id` from the entity (`SELECT sport_id FROM tournaments WHERE id = p_id`) and run the same check. No client-supplied sport is needed for these.
+- **Network-scoped creates** also verify the network is a community (`SELECT 1 FROM network n JOIN network_type nt ON nt.id = n.network_type_id WHERE n.id = p_network_id AND nt.code = 'community'`) when `network_id` is provided.
+
+See [permissions.md §Sport-scope enforcement](./permissions.md#sport-scope-enforcement) for the canonical helper.
+
 | RPC                                                                               | Returns                    | Purpose                                                                                             |
 | --------------------------------------------------------------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------- |
 | `tournament_create(payload jsonb)`                                                | `tournaments`              | Create draft tournament                                                                             |
@@ -728,7 +750,7 @@ All write operations are RPCs (`SECURITY DEFINER`) so the optimistic-lock patter
 | `tournament_add_co_organizer(tid, user_id)`                                       | `tournament_co_organizers` | Organizer-only                                                                                      |
 | `tournament_remove_co_organizer(tid, user_id)`                                    | `tournament_co_organizers` | Organizer-only                                                                                      |
 | `tournament_transfer_organizer(tid, new_user_id)`                                 | `tournaments`              | Organizer-only; new owner must be an existing co-organizer                                          |
-| `tournament_cancel(tid, reason, version_was)`                                     | `tournaments`              | Any active state → `cancelled`; refund hook; pending/in-progress matches → `cancelled`              |
+| `tournament_cancel(tid, reason, version_was)`                                     | `tournaments`              | Any active state → `cancelled`; pending/in-progress matches → `cancelled`                           |
 | `tournament_archive(tid, version_was)`                                            | `tournaments`              | `completed` → `archived`                                                                            |
 | `league_create(payload)`                                                          | `leagues`                  | Create league; auto-inserts a `league_members` row for the organizer with role `organizer`          |
 | `league_update(id, version_was, payload)`                                         | `leagues`                  | Edit                                                                                                |

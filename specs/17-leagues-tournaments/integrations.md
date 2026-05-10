@@ -4,11 +4,11 @@
 
 ## 02 Sport Modes
 
-Each `tournaments.sport` and `leagues.sport` is exactly one of `tennis` / `pickleball`. The mobile sport-mode separation in [02-sport-modes/data-separation.md](../02-sport-modes/data-separation.md) is enforced:
+Each `tournaments.sport_id` and `leagues.sport_id` references exactly one row in `public.sport`. The mobile sport-mode separation in [02-sport-modes/data-separation.md](../02-sport-modes/data-separation.md) is enforced:
 
-- L&T entities created in the Tennis universe are not visible in the Pickleball universe (and vice versa).
-- The mobile JWT carries `app_metadata.active_sport`. All write RPCs validate `entity.sport == active_sport` (else `SPORT_MISMATCH`).
-- Push notifications include `sport` in the payload so the deep-link opens in the correct universe.
+- L&T entities created in the Tennis universe are not visible in the Pickleball universe (and vice versa). The mobile client filters list queries by the user's currently-selected sport.
+- Sport-scope on writes is enforced via the `assert_caller_plays_sport(p_sport_id)` helper documented in [permissions.md §Sport-scope enforcement](./permissions.md#sport-scope-enforcement). The helper checks `player_sport (player_id, sport_id, is_active = true)` — there is no JWT claim involved, so web sessions and mobile sessions behave identically.
+- Push notifications include `sport_id` (and `sportName` for display, mirroring [02-sport-modes/interface-switching.md](../02-sport-modes/interface-switching.md)) in the payload so the deep-link opens in the correct universe.
 - iCal exports include sport in the event description.
 
 A user with both sports active sees independent lists and rankings. There is no cross-sport league or tournament in v1.
@@ -93,7 +93,7 @@ These are read from `season_rankings`, `tournament_registrations`, `tournament_m
 
 A community can own a league/tournament:
 
-- `tournaments.community_id` / `leagues.community_id` set the owning community.
+- `tournaments.network_id` / `leagues.network_id` set the owning community-network. The create RPC validates the referenced `network` row has `network_type.code = 'community'`.
 - `visibility = 'community'` makes the entity visible only to active members of the community.
 - Joining the community **does not** auto-join the league — joining is still gated by `join_mode`.
 - Leaving the community demotes the league member to `inactive` (preserves historical ranking).
@@ -147,7 +147,7 @@ Web UI specifics in [web-organizer-ux.md](./web-organizer-ux.md).
 
 ### Venue resolution
 
-`tournaments.facility_id` and `sessions.facility_id` reference `facilities.id`. The mobile and web surfaces:
+`tournaments.facility_id` and `sessions.facility_id` reference `facility.id` (singular table — `court` FKs directly to `facility`, there is no `facility_courts` join). The mobile and web surfaces:
 
 - Show the facility's name, address, photos, contact info.
 - Open in-app navigation to the facility.
@@ -213,7 +213,7 @@ Full PostHog event taxonomy in [analytics.md](./analytics.md).
 
 ## 18 Monetization
 
-See [monetization.md](./monetization.md). The integration boundary for entry fees and refunds is defined there. v1 ships with `tournaments.entry_fee_amount` and `entry_fee_currency` columns reserved (NULL) but no checkout flow — the column reservation prevents a future migration churn.
+**Deferred from v1.** No paid flows, no reserved schema columns, no Stripe wiring. See [monetization.md](./monetization.md) for the rationale and the additive-migration plan that brings monetization back when `specs/18-monetization/` is written.
 
 ## Authentication & progressive auth
 

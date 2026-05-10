@@ -20,7 +20,7 @@ Roles are resolved at request time per entity:
 | (none) AND `visibility = 'community'` AND user is community member                                  | Spectator (community-scoped) |
 | (none) AND `visibility = 'private'`                                                                 | No access                    |
 
-The Rallia GOD MODE admin (system 15) overrides all checks; identified by `app_metadata.is_admin = true`.
+The Rallia GOD MODE admin (system 15) overrides all checks. Admin status is checked via the existing `public.is_admin()` SQL function (defined in migration `20260321090000_fix_admin_rls_infinite_recursion.sql`), which returns `EXISTS (SELECT 1 FROM public.admin WHERE id = auth.uid())`. There is no JWT app_metadata flag for admin.
 
 ## Tournament action matrix
 
@@ -127,12 +127,9 @@ Each table has RLS enabled (`ALTER TABLE ... ENABLE ROW LEVEL SECURITY`). Below 
 
 ### Helper functions
 
-```sql
-CREATE OR REPLACE FUNCTION is_admin() RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER AS $$
-  SELECT coalesce((auth.jwt() -> 'app_metadata' ->> 'is_admin')::boolean, false);
-$$;
+`public.is_admin(check_uid uuid DEFAULT auth.uid())` already exists (see migration `20260321090000_fix_admin_rls_infinite_recursion.sql`); this spec reuses it. The L&T migration only adds the role helpers below.
 
+```sql
 CREATE OR REPLACE FUNCTION is_tournament_organizer(p_tournament_id uuid) RETURNS boolean
 LANGUAGE sql STABLE AS $$
   SELECT EXISTS (
@@ -171,19 +168,19 @@ $$;
 
 ```sql
 CREATE POLICY tournaments_select ON tournaments FOR SELECT USING (
-  is_admin()
+  public.is_admin()
   OR visibility = 'public'
   OR organizer_id = auth.uid()
   OR is_tournament_organizer(id)
   OR EXISTS (SELECT 1 FROM tournament_registrations r WHERE r.tournament_id = id AND r.user_id = auth.uid())
   OR (
     visibility = 'community'
-    AND community_id IS NOT NULL
+    AND network_id IS NOT NULL
     AND EXISTS (
-      SELECT 1 FROM community_members cm
-      WHERE cm.community_id = tournaments.community_id
-        AND cm.user_id = auth.uid()
-        AND cm.status = 'active'
+      SELECT 1 FROM network_member nm
+      WHERE nm.network_id = tournaments.network_id
+        AND nm.player_id = auth.uid()
+        AND nm.status = 'active'
     )
   )
 );
@@ -193,13 +190,13 @@ CREATE POLICY tournaments_insert ON tournaments FOR INSERT WITH CHECK (
 );
 
 CREATE POLICY tournaments_update ON tournaments FOR UPDATE USING (
-  is_admin() OR is_tournament_organizer(id)
+  public.is_admin() OR is_tournament_organizer(id)
 ) WITH CHECK (
-  is_admin() OR is_tournament_organizer(id)
+  public.is_admin() OR is_tournament_organizer(id)
 );
 
 CREATE POLICY tournaments_delete ON tournaments FOR DELETE USING (
-  is_admin() OR organizer_id = auth.uid()
+  public.is_admin() OR organizer_id = auth.uid()
 );
 ```
 
@@ -207,7 +204,7 @@ CREATE POLICY tournaments_delete ON tournaments FOR DELETE USING (
 
 ```sql
 CREATE POLICY treg_select ON tournament_registrations FOR SELECT USING (
-  is_admin()
+  public.is_admin()
   OR user_id = auth.uid()
   OR is_tournament_organizer(tournament_id)
   OR EXISTS (SELECT 1 FROM tournaments t WHERE t.id = tournament_id AND t.visibility = 'public')
@@ -221,7 +218,7 @@ CREATE POLICY treg_no_direct_write ON tournament_registrations FOR ALL USING (fa
 
 ```sql
 CREATE POLICY tmatches_select ON tournament_matches FOR SELECT USING (
-  is_admin()
+  public.is_admin()
   OR EXISTS (SELECT 1 FROM tournaments t WHERE t.id = tournament_id AND t.visibility = 'public')
   OR is_tournament_organizer(tournament_id)
   OR EXISTS (
@@ -237,28 +234,28 @@ CREATE POLICY tmatches_no_direct_write ON tournament_matches FOR ALL USING (fals
 
 ```sql
 CREATE POLICY leagues_select ON leagues FOR SELECT USING (
-  is_admin()
+  public.is_admin()
   OR visibility = 'public'
   OR organizer_id = auth.uid()
   OR EXISTS (SELECT 1 FROM league_members m WHERE m.league_id = id AND m.user_id = auth.uid())
   OR (
     visibility = 'community'
-    AND community_id IS NOT NULL
+    AND network_id IS NOT NULL
     AND EXISTS (
-      SELECT 1 FROM community_members cm
-      WHERE cm.community_id = leagues.community_id
-        AND cm.user_id = auth.uid()
-        AND cm.status = 'active'
+      SELECT 1 FROM network_member nm
+      WHERE nm.network_id = leagues.network_id
+        AND nm.player_id = auth.uid()
+        AND nm.status = 'active'
     )
   )
 );
 
 CREATE POLICY leagues_insert ON leagues FOR INSERT WITH CHECK (organizer_id = auth.uid());
 CREATE POLICY leagues_update ON leagues FOR UPDATE USING (
-  is_admin() OR is_league_organizer(id)
+  public.is_admin() OR is_league_organizer(id)
 );
 CREATE POLICY leagues_delete ON leagues FOR DELETE USING (
-  is_admin() OR organizer_id = auth.uid()
+  public.is_admin() OR organizer_id = auth.uid()
 );
 ```
 
@@ -266,7 +263,7 @@ CREATE POLICY leagues_delete ON leagues FOR DELETE USING (
 
 ```sql
 CREATE POLICY lm_select ON league_members FOR SELECT USING (
-  is_admin()
+  public.is_admin()
   OR user_id = auth.uid()
   OR is_league_organizer(league_id)
   OR is_active_league_member(league_id)
@@ -284,7 +281,7 @@ All four tables follow the same pattern:
 
 ```sql
 CREATE POLICY seasons_select ON seasons FOR SELECT USING (
-  is_admin()
+  public.is_admin()
   OR is_league_organizer(league_id)
   OR is_active_league_member(league_id)
   OR EXISTS (SELECT 1 FROM leagues l WHERE l.id = league_id AND l.visibility = 'public')
@@ -292,7 +289,7 @@ CREATE POLICY seasons_select ON seasons FOR SELECT USING (
 CREATE POLICY seasons_no_direct_write ON seasons FOR ALL USING (false) WITH CHECK (false);
 
 CREATE POLICY sessions_select ON sessions FOR SELECT USING (
-  is_admin()
+  public.is_admin()
   OR EXISTS (
     SELECT 1 FROM seasons s JOIN leagues l ON l.id = s.league_id
     WHERE s.id = season_id AND (
@@ -305,7 +302,7 @@ CREATE POLICY sessions_select ON sessions FOR SELECT USING (
 CREATE POLICY sessions_no_direct_write ON sessions FOR ALL USING (false) WITH CHECK (false);
 
 CREATE POLICY session_presence_select ON session_presence FOR SELECT USING (
-  is_admin()
+  public.is_admin()
   OR user_id = auth.uid()
   OR EXISTS (
     SELECT 1 FROM sessions ss JOIN seasons s ON s.id = ss.season_id JOIN leagues l ON l.id = s.league_id
@@ -315,7 +312,7 @@ CREATE POLICY session_presence_select ON session_presence FOR SELECT USING (
 CREATE POLICY session_presence_no_direct_write ON session_presence FOR ALL USING (false) WITH CHECK (false);
 
 CREATE POLICY session_matches_select ON session_matches FOR SELECT USING (
-  is_admin()
+  public.is_admin()
   OR EXISTS (
     SELECT 1 FROM sessions ss JOIN seasons s ON s.id = ss.season_id JOIN leagues l ON l.id = s.league_id
     WHERE ss.id = session_id AND (
@@ -332,7 +329,7 @@ CREATE POLICY session_matches_no_direct_write ON session_matches FOR ALL USING (
 
 ```sql
 CREATE POLICY rankings_select ON season_rankings FOR SELECT USING (
-  is_admin()
+  public.is_admin()
   OR EXISTS (
     SELECT 1 FROM seasons s JOIN leagues l ON l.id = s.league_id
     WHERE s.id = season_id AND (
@@ -349,7 +346,7 @@ CREATE POLICY rankings_no_direct_write ON season_rankings FOR ALL USING (false) 
 
 ```sql
 CREATE POLICY audit_select ON leagues_tournaments_audit FOR SELECT USING (
-  is_admin()
+  public.is_admin()
   OR (scope = 'tournament' AND is_tournament_organizer(entity_id))
   OR (scope = 'league' AND is_league_organizer(entity_id))
 );
@@ -358,32 +355,51 @@ CREATE POLICY audit_select ON leagues_tournaments_audit FOR SELECT USING (
 CREATE POLICY audit_no_direct_write ON leagues_tournaments_audit FOR ALL USING (false) WITH CHECK (false);
 ```
 
-## Sport-universe enforcement
+## Sport-scope enforcement
 
-Every write RPC begins with:
+Rallia does **not** carry an "active sport" JWT claim. Every L&T write RPC validates the caller's relationship to the entity's sport explicitly via the existing `player_sport` table (`player_id`, `sport_id`, `is_active`). The check is identical for tournaments and leagues; only the source of `sport_id` differs.
+
+Canonical helper used by every L&T RPC:
 
 ```sql
--- Reject if the active_sport claim is missing — never silently fall back to a default
-IF (auth.jwt() -> 'app_metadata' ->> 'active_sport') IS NULL THEN
-  RAISE EXCEPTION 'SPORT_MISMATCH';
-END IF;
-
-IF (SELECT sport FROM tournaments WHERE id = p_tournament_id) <>
-   ((auth.jwt() -> 'app_metadata' ->> 'active_sport')::sport_kind)
-THEN
-  RAISE EXCEPTION 'SPORT_MISMATCH';
-END IF;
+CREATE OR REPLACE FUNCTION assert_caller_plays_sport(p_sport_id uuid)
+RETURNS void
+LANGUAGE plpgsql STABLE AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM player_sport
+     WHERE player_id = auth.uid()
+       AND sport_id  = p_sport_id
+       AND is_active = true
+  ) THEN
+    RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = 'SPORT_MISMATCH';
+  END IF;
+END;
+$$;
 ```
 
-The mobile client sets `active_sport` in JWT app_metadata on every sport switch (per [02-sport-modes](../02-sport-modes/data-separation.md)).
+Usage:
+
+- **Create RPCs** (`tournament_create`, `league_create`) accept `p_sport_id uuid` in their payload and call `assert_caller_plays_sport(p_sport_id)` before INSERT.
+- **Existing-entity RPCs** derive `sport_id` from the entity row, e.g.:
+
+  ```sql
+  PERFORM assert_caller_plays_sport(
+    (SELECT sport_id FROM tournaments WHERE id = p_tournament_id)
+  );
+  ```
+
+- **No JWT claim is ever read.** This means web sessions (no sport-switcher mobile UI) work without changes, and there is no "JWT refresh after sport switch" timing window.
+
+The `SPORT_MISMATCH` error code is unchanged in the [error code index](./README.md#error-code-index); only its detection path changed.
 
 ## Anti-abuse
 
-| Concern                       | Mitigation                                                                                           |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------- |
-| Alt-account registrations     | One registration per user_id per tournament (UNIQUE constraint)                                      |
-| Spam tournament creation      | Soft rate limit: 5 tournaments / user / 24h via `auth.users.last_tournament_created_at` check in RPC |
-| Bot self-validation of scores | Score validation requires distinct `submitted_by` and `validated_by`                                 |
-| Score collusion               | Disputes from any participant flip status to `disputed`; organizer must rule                         |
-| Public-bracket scraping       | Realtime channels rate-limited to 50 subs / IP via Supabase project settings                         |
-| Reputation laundering         | Reputation events emitted with the same impact as casual matches; no T&L-specific bonus              |
+| Concern                       | Mitigation                                                                                                                                                                                   |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Alt-account registrations     | One registration per user_id per tournament (UNIQUE constraint)                                                                                                                              |
+| Spam tournament creation      | Soft rate limit: 5 tournaments / user / 24h, enforced in `tournament_create` by counting `tournaments` rows where `organizer_id = auth.uid()` AND `created_at > now() - interval '24 hours'` |
+| Bot self-validation of scores | Score validation requires distinct `submitted_by` and `validated_by`                                                                                                                         |
+| Score collusion               | Disputes from any participant flip status to `disputed`; organizer must rule                                                                                                                 |
+| Public-bracket scraping       | Realtime channels rate-limited to 50 subs / IP via Supabase project settings                                                                                                                 |
+| Reputation laundering         | Reputation events emitted with the same impact as casual matches; no T&L-specific bonus                                                                                                      |

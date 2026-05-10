@@ -254,7 +254,7 @@ Matches default to unscheduled (`scheduled_at = NULL`). The organizer can:
 
 - Bulk-set times: "Round 1 starts Apr 10 09:00, 30 min apart per match" → server populates each round-1 match's `scheduled_at`.
 - Manually drag a match to a different time slot.
-- Assign a `court_id` from the venue's `facility_courts` (system 11). Court conflicts are detected in the same RPC and rejected.
+- Assign a `court_id` from the venue's `court` rows (the `court` table FKs directly to `facility`; see system 11). Court conflicts are detected in the same RPC and rejected.
 
 Rescheduling a single match emits `tournament_match_rescheduled` to the two players.
 
