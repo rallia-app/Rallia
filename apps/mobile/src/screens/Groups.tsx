@@ -24,7 +24,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SheetManager } from 'react-native-actions-sheet';
 
 import { Text, Skeleton, Button } from '@rallia/shared-components';
-import { lightHaptic } from '@rallia/shared-utils';
+import { getCoverImageUrl, lightHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useAuth, useTranslation, useRequireOnboarding } from '../hooks';
 import { useSport, useMatchDetailSheet } from '../context';
 import type { MatchDetailData } from '../context';
@@ -107,7 +107,7 @@ const GroupCard: React.FC<{
         <View style={styles.imageContainer}>
           {item.cover_image_url ? (
             <Image
-              source={{ uri: item.cover_image_url }}
+              source={{ uri: getCoverImageUrl(item.cover_image_url) ?? '' }}
               style={styles.coverImage}
               resizeMode="cover"
             />

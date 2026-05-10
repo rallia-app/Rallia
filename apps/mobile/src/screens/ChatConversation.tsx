@@ -19,7 +19,7 @@ import {
   useNavigateToPlayerProfile,
   type TranslationKey,
 } from '../hooks';
-import { lightHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
+import { getCoverImageUrl, lightHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 import {
   useConversation,
   useMessages,
@@ -337,7 +337,7 @@ export default function ChatConversationScreen() {
       isGroupConversationType(conversation.conversation_type) &&
       networkInfo?.cover_image_url
     ) {
-      return networkInfo.cover_image_url;
+      return getCoverImageUrl(networkInfo.cover_image_url, { width: 200, height: 200 });
     }
 
     // For simple group chats (no network), use conversation picture_url
@@ -346,7 +346,7 @@ export default function ChatConversationScreen() {
       isGroupConversationType(conversation.conversation_type) &&
       conversation.picture_url
     ) {
-      return conversation.picture_url;
+      return getCoverImageUrl(conversation.picture_url, { width: 200, height: 200 });
     }
 
     // For direct messages, show the other participant's avatar

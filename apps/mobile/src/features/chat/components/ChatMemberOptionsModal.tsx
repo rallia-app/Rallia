@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
+import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 
 interface OptionItem {
@@ -76,7 +77,10 @@ export function ChatMemberOptionsModal({
                   disabled={!member.playerId || !onAvatarPress}
                 >
                   {member.profilePictureUrl ? (
-                    <Image source={{ uri: member.profilePictureUrl }} style={styles.avatarImage} />
+                    <Image
+                      source={{ uri: getProfilePictureUrl(member.profilePictureUrl) ?? '' }}
+                      style={styles.avatarImage}
+                    />
                   ) : (
                     <Ionicons name="person" size={32} color={colors.textMuted} />
                   )}

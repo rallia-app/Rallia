@@ -247,7 +247,12 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
             {renderAvatar(getProfilePictureUrl(profile?.profile_picture_url), 'You', true)}
             {isDoubles &&
               partner &&
-              renderAvatar(partner.profilePictureUrl, partner.firstName, true, true)}
+              renderAvatar(
+                getProfilePictureUrl(partner.profilePictureUrl),
+                partner.firstName,
+                true,
+                true
+              )}
           </View>
 
           <Text
@@ -282,11 +287,15 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
           {/* Team 2 avatars */}
           <View style={styles.teamAvatarsRow}>
             {team2Players[0] &&
-              renderAvatar(team2Players[0].profilePictureUrl, team2Players[0].firstName, false)}
+              renderAvatar(
+                getProfilePictureUrl(team2Players[0].profilePictureUrl),
+                team2Players[0].firstName,
+                false
+              )}
             {isDoubles &&
               team2Players[1] &&
               renderAvatar(
-                team2Players[1].profilePictureUrl,
+                getProfilePictureUrl(team2Players[1].profilePictureUrl),
                 team2Players[1].firstName,
                 false,
                 true

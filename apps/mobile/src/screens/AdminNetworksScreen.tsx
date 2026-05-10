@@ -61,7 +61,7 @@ import {
 } from '@rallia/shared-hooks';
 import { Logger } from '@rallia/shared-services';
 import type { TranslationKey } from '@rallia/shared-translations';
-import { lightHaptic, selectionHaptic } from '@rallia/shared-utils';
+import { getCoverImageUrl, lightHaptic, selectionHaptic } from '@rallia/shared-utils';
 
 import { useTranslation } from '../hooks';
 import type { RootStackParamList } from '../navigation/types';
@@ -713,7 +713,9 @@ const AdminNetworksScreen: React.FC = () => {
           {/* Cover Image */}
           <View style={styles.coverContainer}>
             <Image
-              source={{ uri: item.cover_image_url || DEFAULT_COVER }}
+              source={{
+                uri: getCoverImageUrl(item.cover_image_url) || DEFAULT_COVER,
+              }}
               style={styles.coverImage}
             />
             <View style={styles.coverOverlay} />

@@ -3,7 +3,7 @@
  * Handles post-match feedback database operations.
  */
 
-import { getHumanName, getShortName } from '@rallia/shared-utils';
+import { getHumanName, getProfilePictureUrl, getShortName } from '@rallia/shared-utils';
 import { supabase } from '../supabase';
 import { createReputationEvent } from '../reputation/reputationService';
 import type {
@@ -319,7 +319,7 @@ export async function getOpponentsForFeedback(
       playerId: p.player_id,
       name,
       fullName,
-      avatarUrl: profile?.profile_picture_url || null,
+      avatarUrl: getProfilePictureUrl(profile?.profile_picture_url) || null,
       hasExistingFeedback: ratedOpponentIds.has(p.player_id),
       hasExistingReport: reportedOpponentIds.has(p.player_id),
       checkedInAt: p.checked_in_at || null,

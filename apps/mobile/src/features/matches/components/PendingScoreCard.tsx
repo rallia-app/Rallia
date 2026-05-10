@@ -9,6 +9,7 @@ import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
+import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { useThemeStyles } from '../../../hooks';
 import type { PendingScoreConfirmation } from '@rallia/shared-hooks';
 
@@ -61,7 +62,10 @@ export function PendingScoreCard({ confirmation, onPress }: PendingScoreCardProp
         {/* Avatar */}
         <View style={[styles.avatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
           {confirmation.submitted_by_avatar ? (
-            <Image source={{ uri: confirmation.submitted_by_avatar }} style={styles.avatarImage} />
+            <Image
+              source={{ uri: getProfilePictureUrl(confirmation.submitted_by_avatar) ?? '' }}
+              style={styles.avatarImage}
+            />
           ) : (
             <Ionicons name="person-outline" size={20} color={colors.textMuted} />
           )}

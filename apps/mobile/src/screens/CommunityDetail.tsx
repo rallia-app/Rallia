@@ -26,6 +26,7 @@ import type { RouteProp } from '@react-navigation/native';
 import Svg, { Circle } from 'react-native-svg';
 import { Text, Button, useToast } from '@rallia/shared-components';
 import {
+  getCoverImageUrl,
   lightHaptic,
   mediumHaptic,
   selectionHaptic,
@@ -651,7 +652,14 @@ export default function CommunityDetailScreen() {
           {/* Cover Image */}
           {community.cover_image_url ? (
             <Image
-              source={{ uri: community.cover_image_url }}
+              source={{
+                uri:
+                  getCoverImageUrl(community.cover_image_url, {
+                    width: 1200,
+                    height: 600,
+                    quality: 75,
+                  }) ?? '',
+              }}
               style={styles.coverImage}
               resizeMode="cover"
             />
@@ -950,7 +958,14 @@ export default function CommunityDetailScreen() {
         {/* Header Section */}
         {community.cover_image_url ? (
           <Image
-            source={{ uri: community.cover_image_url }}
+            source={{
+              uri:
+                getCoverImageUrl(community.cover_image_url, {
+                  width: 1200,
+                  height: 600,
+                  quality: 75,
+                }) ?? '',
+            }}
             style={styles.coverImage}
             resizeMode="cover"
           />

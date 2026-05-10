@@ -3,6 +3,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { getStorageImageUrl } from '@rallia/shared-utils';
 import {
   Calendar,
   Check,
@@ -83,7 +84,10 @@ function PlayerSlots({ match }: { match: PublicMatch }) {
   return (
     <div className="flex items-center -space-x-1.5">
       {slots.map((slot, i) => {
-        const avatarUrl = slot.participant?.player?.profile?.profile_picture_url;
+        const avatarUrl = getStorageImageUrl(
+          slot.participant?.player?.profile?.profile_picture_url,
+          { width: 96, height: 96, quality: 70 }
+        );
         const displayName = slot.participant?.player?.profile?.display_name;
 
         return (

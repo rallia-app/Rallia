@@ -241,7 +241,7 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
                 >
                   {player.profilePictureUrl ? (
                     <Image
-                      source={{ uri: player.profilePictureUrl }}
+                      source={{ uri: getProfilePictureUrl(player.profilePictureUrl) ?? '' }}
                       style={styles.selectedAvatarImage}
                     />
                   ) : (

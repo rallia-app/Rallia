@@ -1,6 +1,22 @@
 import { isAdmin } from '@/lib/supabase/check-admin';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import sharp from 'sharp';
+
+async function compressImage(
+  buffer: Buffer,
+  mimeType: string
+): Promise<{ buffer: Buffer; contentType: string }> {
+  if (!mimeType.startsWith('image/') || mimeType === 'image/gif') {
+    return { buffer, contentType: mimeType };
+  }
+  const out = await sharp(buffer)
+    .rotate()
+    .resize({ width: 1600, withoutEnlargement: true })
+    .jpeg({ quality: 85, mozjpeg: true })
+    .toBuffer();
+  return { buffer: out, contentType: 'image/jpeg' };
+}
 
 async function authorize(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -108,15 +124,20 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       // Full storage key to store in DB (includes bucket prefix)
       const storageKey = `facility-images/${fileName}`;
 
-      // Convert File to Blob
+      // Resize/compress before upload to cap stored file size
       const arrayBuffer = await file.arrayBuffer();
-      const fileData = new Blob([arrayBuffer], { type: file.type });
+      const { buffer: compressedBuffer, contentType: uploadContentType } = await compressImage(
+        Buffer.from(arrayBuffer),
+        file.type
+      );
+      const fileData = new Blob([new Uint8Array(compressedBuffer)], { type: uploadContentType });
 
       // Upload to storage (use path within bucket)
       const { error: uploadError } = await supabase.storage
         .from('facility-images')
         .upload(storagePath, fileData, {
-          contentType: file.type,
+          contentType: uploadContentType,
+          cacheControl: '604800',
           upsert: false,
         });
 
@@ -138,8 +159,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           facility_id: id,
           storage_key: storageKey,
           url: urlData.publicUrl,
-          file_size: file.size,
-          mime_type: file.type,
+          file_size: compressedBuffer.length,
+          mime_type: uploadContentType,
           display_order: nextDisplayOrder++,
           is_primary: false, // Will be set manually or via update
         })

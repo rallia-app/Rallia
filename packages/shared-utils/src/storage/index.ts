@@ -113,6 +113,9 @@ export function normalizeStorageUrl(
  * Only applies to hosted Supabase URLs (*.supabase.co) — local dev URLs
  * are returned as-is since the render endpoint isn't available locally.
  *
+ * Note: Supabase's render endpoint negotiates WebP/AVIF automatically via
+ * the client's `Accept` header — no explicit `format` param needed.
+ *
  * @param url - Public storage URL to transform
  * @param options.width - Max width in pixels (image is scaled proportionally)
  * @param options.quality - JPEG quality 1–100
@@ -145,4 +148,24 @@ export function getStorageImageUrl(
 export function getProfilePictureUrl(profilePictureUrl: string | null | undefined): string | null {
   const normalized = normalizeStorageUrl(profilePictureUrl, 'profile-pictures');
   return getStorageImageUrl(normalized, { width: 200, height: 200, quality: 75 });
+}
+
+/**
+ * Get a thumbnail URL for a group/community cover image.
+ * Defaults to 400×200 q70 list-row sizing; override per surface for headers.
+ *
+ * @param coverImageUrl - The URL stored in the group/community row
+ * @param options - Optional sizing overrides
+ * @returns Transformed URL or null
+ */
+export function getCoverImageUrl(
+  coverImageUrl: string | null | undefined,
+  options: { width?: number; height?: number; quality?: number } = {}
+): string | null {
+  const normalized = normalizeStorageUrl(coverImageUrl, 'group-images');
+  return getStorageImageUrl(normalized, {
+    width: options.width ?? 400,
+    height: options.height ?? 200,
+    quality: options.quality ?? 70,
+  });
 }

@@ -3,6 +3,8 @@
  * Handles all match-related database operations using Supabase.
  */
 
+import { getProfilePictureUrl } from '@rallia/shared-utils';
+
 import { supabase } from '../supabase';
 import { Logger } from '../logger';
 import {
@@ -1365,7 +1367,7 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
     profileData?.first_name && profileData?.last_name
       ? `${profileData.first_name} ${profileData.last_name}`
       : profileData?.first_name || 'A player';
-  const playerAvatarUrl = profileData?.profile_picture_url ?? undefined;
+  const playerAvatarUrl = getProfilePictureUrl(profileData?.profile_picture_url) ?? undefined;
 
   // Send notification to host if this is a join request
   if (participantStatus === 'requested') {
