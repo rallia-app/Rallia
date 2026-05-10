@@ -183,17 +183,19 @@ const QuickNavButton: React.FC<{
 };
 
 const quickNavStyles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'flex-start',
-    paddingHorizontal: spacingPixels[4],
+  scrollView: {
     paddingTop: spacingPixels[5],
     paddingBottom: spacingPixels[2],
   },
+  scrollContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: spacingPixels[4],
+    gap: spacingPixels[3],
+  },
   item: {
     alignItems: 'center',
-    flex: 1,
+    width: 88,
     gap: spacingPixels[1.5],
   },
   fab: {
@@ -1137,7 +1139,13 @@ const Home = () => {
       selectedSport?.name?.toLowerCase() === 'pickleball' ? PickleballIcon : TennisIcon;
     const splitQuickNavLabel = locale.startsWith('fr');
     headerComponents.push(
-      <View key="quick-nav" style={quickNavStyles.row}>
+      <ScrollView
+        key="quick-nav"
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={quickNavStyles.scrollContent}
+        style={quickNavStyles.scrollView}
+      >
         <QuickNavButton
           icon={<Ionicons name="people-outline" size={32} color="#FFFFFF" />}
           label={t('home.quickNav.joinCommunity')}
@@ -1189,7 +1197,7 @@ const Home = () => {
             } as never)
           }
         />
-      </View>
+      </ScrollView>
     );
 
     if (!session) {
