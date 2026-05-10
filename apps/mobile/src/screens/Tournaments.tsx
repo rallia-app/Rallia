@@ -36,7 +36,12 @@ import {
   primary,
   neutral,
 } from '@rallia/design-system';
-import { useTheme, useVisibleTournaments, useAuth } from '@rallia/shared-hooks';
+import {
+  useTheme,
+  useVisibleTournaments,
+  useMyActiveRegistrations,
+  useAuth,
+} from '@rallia/shared-hooks';
 import type { Tables, Enums } from '@rallia/shared-types';
 
 import { useTranslation, type TranslationKey } from '../hooks';
@@ -174,6 +179,11 @@ export const Tournaments: React.FC = () => {
     refetch,
     isRefetching,
   } = useVisibleTournaments(selectedSport?.id);
+  const { data: myRegistrations = [] } = useMyActiveRegistrations(userId);
+  const registeredIds = useMemo(
+    () => new Set(myRegistrations.map(r => r.tournament_id)),
+    [myRegistrations]
+  );
   const [refreshing, setRefreshing] = useState(false);
 
   const themeColors = isDark ? darkTheme : lightTheme;
@@ -198,6 +208,7 @@ export const Tournaments: React.FC = () => {
   );
 
   const sections = useMemo<Section[]>(() => {
+    const registered: Tournament[] = [];
     const mine: Tournament[] = [];
     const open: Tournament[] = [];
     const upcoming: Tournament[] = [];
@@ -205,9 +216,14 @@ export const Tournaments: React.FC = () => {
     const drafts: Tournament[] = [];
 
     for (const tn of tournaments) {
-      if (tn.organizer_id === userId && tn.status === 'draft') {
+      const isMine = tn.organizer_id === userId;
+      const isRegistered = !isMine && registeredIds.has(tn.id);
+
+      if (isRegistered) {
+        registered.push(tn);
+      } else if (isMine && tn.status === 'draft') {
         drafts.push(tn);
-      } else if (tn.organizer_id === userId) {
+      } else if (isMine) {
         mine.push(tn);
       } else if (tn.status === 'registration_open') {
         open.push(tn);
@@ -219,6 +235,11 @@ export const Tournaments: React.FC = () => {
     }
 
     const out: Section[] = [];
+    if (registered.length)
+      out.push({
+        titleKey: 'tournamentList.sectionRegistered' as TranslationKey,
+        items: registered,
+      });
     if (mine.length)
       out.push({ titleKey: 'tournamentList.sectionMine' as TranslationKey, items: mine });
     if (open.length)
@@ -230,7 +251,7 @@ export const Tournaments: React.FC = () => {
     if (past.length)
       out.push({ titleKey: 'tournamentList.sectionPast' as TranslationKey, items: past });
     return out;
-  }, [tournaments, userId]);
+  }, [tournaments, userId, registeredIds]);
 
   const handlePress = useCallback(
     (tournamentId: string, name: string) => {

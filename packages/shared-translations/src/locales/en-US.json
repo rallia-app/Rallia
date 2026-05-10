@@ -3942,6 +3942,7 @@
     "retry": "Try again",
     "empty": "No tournaments yet",
     "emptyDescription": "Create one from the action menu to get started.",
+    "sectionRegistered": "You're registered",
     "sectionMine": "Yours",
     "sectionOpen": "Open for registration",
     "sectionUpcoming": "Upcoming",

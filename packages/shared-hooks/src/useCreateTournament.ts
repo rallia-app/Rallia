@@ -10,6 +10,7 @@ import {
   getTournament,
   listVisibleTournaments,
   listActiveRegistrations,
+  listMyActiveRegistrations,
   getMyRegistration,
   openTournamentRegistration,
   closeTournamentRegistration,
@@ -30,7 +31,20 @@ export const tournamentKeys = {
     [...tournamentKeys.all, 'registrations', tournamentId] as const,
   myRegistration: (tournamentId: string, userId: string) =>
     [...tournamentKeys.all, 'myRegistration', tournamentId, userId] as const,
+  myActiveRegistrations: (userId: string) =>
+    [...tournamentKeys.all, 'myActiveRegistrations', userId] as const,
 };
+
+/**
+ * List all of the caller's active registrations across visible tournaments.
+ */
+export function useMyActiveRegistrations(userId: string | undefined) {
+  return useQuery<TournamentRegistration[]>({
+    queryKey: tournamentKeys.myActiveRegistrations(userId ?? ''),
+    queryFn: () => listMyActiveRegistrations(userId!),
+    enabled: !!userId,
+  });
+}
 
 /**
  * List tournaments visible to the caller, optionally scoped to a sport.
@@ -89,6 +103,7 @@ function useTournamentDetailInvalidator() {
     qc.invalidateQueries({ queryKey: tournamentKeys.detail(tournamentId) });
     qc.invalidateQueries({ queryKey: tournamentKeys.registrations(tournamentId) });
     qc.invalidateQueries({ queryKey: [...tournamentKeys.all, 'myRegistration', tournamentId] });
+    qc.invalidateQueries({ queryKey: [...tournamentKeys.all, 'myActiveRegistrations'] });
   };
 }
 

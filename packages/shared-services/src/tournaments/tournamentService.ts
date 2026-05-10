@@ -121,6 +121,21 @@ export async function listActiveRegistrations(
 }
 
 /**
+ * List the caller's active registrations across all tournaments.
+ * Used by the discovery list to mark which tournaments the user is
+ * already registered in.
+ */
+export async function listMyActiveRegistrations(userId: string): Promise<TournamentRegistration[]> {
+  const { data, error } = await supabase
+    .from('tournament_registrations')
+    .select('*')
+    .eq('user_id', userId)
+    .in('status', ['registered', 'pending']);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as TournamentRegistration[];
+}
+
+/**
  * Fetch the caller's registration row for a tournament, if any.
  * Returns null when the caller has never registered.
  */
