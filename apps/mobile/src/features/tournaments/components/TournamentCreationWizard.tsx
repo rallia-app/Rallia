@@ -5,10 +5,14 @@
  * tournament-creation flow. Three steps (Basics → Schedule → Visibility),
  * single screen, no draft persistence, no analytics, no post-success invite.
  *
- * Mirrors the structure of MatchCreationWizard but intentionally tighter:
- * - Plain useState form state, not react-hook-form
- * - Inline step components in the same file
- * - Steps render conditionally (no horizontal slide)
+ * Mirrors MatchCreationWizard styling conventions:
+ *   - Fixed-width header sides (40) so the sport badge stays centered
+ *   - SheetScrollView per step, padding spacing[4], paddingBottom spacing[8]
+ *   - stepHeader / fieldGroup / label structure
+ *   - OptionCard pattern (icon + checkmark on selected)
+ *   - Footer nextButton: paddingVertical[4], borderRadius lg, row layout
+ *   - Disabled state via opacity 0.6
+ *   - Success view: padding[6]/[4], absolute close button, successButtons wrapper
  *
  * Spec: specs/17-leagues-tournaments/rollout.md §V1
  */
@@ -24,6 +28,7 @@ import {
   Modal,
   Keyboard,
 } from 'react-native';
+import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
@@ -55,6 +60,7 @@ interface ThemeColors {
   background: string;
   cardBackground: string;
   text: string;
+  textSecondary: string;
   textMuted: string;
   border: string;
   buttonActive: string;
@@ -64,7 +70,6 @@ interface ThemeColors {
   progressInactive: string;
   inputBackground: string;
   inputBorder: string;
-  inputBorderFocused: string;
   error: string;
   success: string;
 }
@@ -89,7 +94,7 @@ const WizardHeader: React.FC<{
   colors: ThemeColors;
 }> = ({ currentStep, onBack, onBackToLanding, onClose, sportName, sportKey, colors }) => (
   <View style={[styles.header, { borderBottomColor: colors.border }]}>
-    <View style={styles.headerSide}>
+    <View style={styles.headerLeft}>
       <TouchableOpacity
         onPress={() => {
           Keyboard.dismiss();
@@ -97,7 +102,7 @@ const WizardHeader: React.FC<{
           if (currentStep === 1) onBackToLanding();
           else onBack();
         }}
-        style={styles.iconButton}
+        style={styles.headerButton}
         accessibilityRole="button"
         accessibilityLabel="Back"
       >
@@ -112,14 +117,14 @@ const WizardHeader: React.FC<{
       </Text>
     </View>
 
-    <View style={[styles.headerSide, styles.headerRight]}>
+    <View style={styles.headerRight}>
       <TouchableOpacity
         onPress={() => {
           Keyboard.dismiss();
           lightHaptic();
           onClose();
         }}
-        style={styles.iconButton}
+        style={styles.headerButton}
         accessibilityRole="button"
         accessibilityLabel="Close"
       >
@@ -165,60 +170,92 @@ const ProgressBar: React.FC<{
 };
 
 // =============================================================================
-// STEPS
+// REUSABLE OPTION CARD (mirrors PreferencesStep.tsx)
 // =============================================================================
 
-const SegmentedChips = <T extends string | number>({
-  options,
-  value,
-  onChange,
-  renderLabel,
-  colors,
-}: {
-  options: readonly T[];
-  value: T;
-  onChange: (v: T) => void;
-  renderLabel: (v: T) => string;
+interface OptionCardProps {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  description?: string;
+  selected: boolean;
+  onPress: () => void;
   colors: ThemeColors;
+  compact?: boolean;
+}
+
+const OptionCard: React.FC<OptionCardProps> = ({
+  icon,
+  title,
+  description,
+  selected,
+  onPress,
+  colors,
+  compact = false,
 }) => (
-  <View style={styles.chipsRow}>
-    {options.map(opt => {
-      const selected = opt === value;
-      return (
-        <TouchableOpacity
-          key={String(opt)}
-          onPress={() => {
-            lightHaptic();
-            onChange(opt);
-          }}
-          style={[
-            styles.chip,
-            {
-              backgroundColor: selected ? colors.buttonActive : colors.buttonInactive,
-              borderColor: selected ? colors.buttonActive : colors.inputBorder,
-            },
-          ]}
-          accessibilityRole="button"
-          accessibilityState={{ selected }}
+  <TouchableOpacity
+    style={[
+      compact ? styles.optionCardCompact : styles.optionCard,
+      {
+        backgroundColor: selected ? `${colors.buttonActive}15` : colors.buttonInactive,
+        borderColor: selected ? colors.buttonActive : colors.border,
+      },
+    ]}
+    onPress={() => {
+      lightHaptic();
+      onPress();
+    }}
+    activeOpacity={0.7}
+  >
+    {compact ? (
+      <View style={styles.optionContentCompact}>
+        <Ionicons name={icon} size={24} color={selected ? colors.buttonActive : colors.textMuted} />
+        <Text
+          size="sm"
+          weight={selected ? 'semibold' : 'regular'}
+          color={selected ? colors.buttonActive : colors.text}
+          style={styles.compactTitle}
         >
-          <Text
-            size="sm"
-            weight={selected ? 'semibold' : 'medium'}
-            color={selected ? colors.buttonTextActive : colors.text}
-          >
-            {renderLabel(opt)}
-          </Text>
-        </TouchableOpacity>
-      );
-    })}
-  </View>
+          {title}
+        </Text>
+      </View>
+    ) : (
+      <>
+        <View style={styles.optionContent}>
+          <Ionicons
+            name={icon}
+            size={20}
+            color={selected ? colors.buttonActive : colors.textMuted}
+          />
+          <View style={styles.optionTextContainer}>
+            <Text
+              size="base"
+              weight={selected ? 'semibold' : 'regular'}
+              color={selected ? colors.buttonActive : colors.text}
+            >
+              {title}
+            </Text>
+            {description && (
+              <Text size="xs" color={colors.textMuted}>
+                {description}
+              </Text>
+            )}
+          </View>
+        </View>
+        {selected && <Ionicons name="checkmark-circle" size={20} color={colors.buttonActive} />}
+      </>
+    )}
+  </TouchableOpacity>
 );
 
 const FieldLabel: React.FC<{ children: string; colors: ThemeColors }> = ({ children, colors }) => (
-  <Text size="sm" weight="semibold" color={colors.text} style={styles.fieldLabel}>
+  <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
     {children}
   </Text>
 );
+
+// =============================================================================
+// STEPS
+// =============================================================================
 
 const BasicsStep: React.FC<{
   name: string;
@@ -229,56 +266,95 @@ const BasicsStep: React.FC<{
   colors: ThemeColors;
   t: (k: TranslationKey) => string;
 }> = ({ name, setName, bracketSize, setBracketSize, errors, colors, t }) => (
-  <View style={styles.stepContent}>
-    <Text size="lg" weight="bold" color={colors.text} style={styles.stepTitle}>
-      {t('tournamentCreation.step1Title' as TranslationKey)}
-    </Text>
-    <Text size="sm" color={colors.textMuted} style={styles.stepDescription}>
-      {t('tournamentCreation.step1Description' as TranslationKey)}
-    </Text>
-
-    <FieldLabel colors={colors}>{t('tournamentCreation.fields.name' as TranslationKey)}</FieldLabel>
-    <TextInput
-      style={[
-        styles.input,
-        {
-          backgroundColor: colors.inputBackground,
-          borderColor: errors.name ? colors.error : colors.inputBorder,
-          color: colors.text,
-        },
-      ]}
-      placeholder={t('tournamentCreation.fields.namePlaceholder' as TranslationKey)}
-      placeholderTextColor={colors.textMuted}
-      value={name}
-      onChangeText={setName}
-      maxLength={120}
-      autoCapitalize="sentences"
-      autoCorrect={false}
-      returnKeyType="done"
-    />
-    {errors.name && (
-      <Text size="xs" color={colors.error} style={styles.errorText}>
-        {errors.name}
+  <SheetScrollView
+    style={styles.stepContainer}
+    contentContainerStyle={styles.stepContent}
+    showsVerticalScrollIndicator={false}
+    keyboardShouldPersistTaps="handled"
+    keyboardDismissMode="interactive"
+  >
+    <View style={styles.stepHeader}>
+      <Text size="lg" weight="bold" color={colors.text}>
+        {t('tournamentCreation.step1Title' as TranslationKey)}
       </Text>
-    )}
+      <Text size="sm" color={colors.textMuted}>
+        {t('tournamentCreation.step1Description' as TranslationKey)}
+      </Text>
+    </View>
 
-    <FieldLabel colors={colors}>
-      {t('tournamentCreation.fields.maxParticipants' as TranslationKey)}
-    </FieldLabel>
-    <SegmentedChips
-      options={BRACKET_SIZES}
-      value={bracketSize}
-      onChange={setBracketSize}
-      renderLabel={n => String(n)}
-      colors={colors}
-    />
-    <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
-      {t('tournamentCreation.fields.maxParticipantsHint' as TranslationKey)}
-    </Text>
-  </View>
+    <View style={styles.fieldGroup}>
+      <FieldLabel colors={colors}>
+        {t('tournamentCreation.fields.name' as TranslationKey)}
+      </FieldLabel>
+      <TextInput
+        style={[
+          styles.textInput,
+          {
+            backgroundColor: colors.inputBackground,
+            borderColor: errors.name ? colors.error : colors.inputBorder,
+            color: colors.text,
+          },
+        ]}
+        placeholder={t('tournamentCreation.fields.namePlaceholder' as TranslationKey)}
+        placeholderTextColor={colors.textMuted}
+        value={name}
+        onChangeText={setName}
+        maxLength={120}
+        autoCapitalize="sentences"
+        autoCorrect={false}
+        returnKeyType="done"
+      />
+      {errors.name && (
+        <Text size="xs" color={colors.error} style={styles.errorText}>
+          {errors.name}
+        </Text>
+      )}
+    </View>
+
+    <View style={styles.fieldGroup}>
+      <FieldLabel colors={colors}>
+        {t('tournamentCreation.fields.maxParticipants' as TranslationKey)}
+      </FieldLabel>
+      <View style={styles.optionsRow}>
+        {BRACKET_SIZES.map(n => {
+          const selected = n === bracketSize;
+          return (
+            <TouchableOpacity
+              key={n}
+              onPress={() => {
+                lightHaptic();
+                setBracketSize(n);
+              }}
+              activeOpacity={0.7}
+              style={[
+                styles.bracketChip,
+                {
+                  backgroundColor: selected ? `${colors.buttonActive}15` : colors.buttonInactive,
+                  borderColor: selected ? colors.buttonActive : colors.border,
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+            >
+              <Text
+                size="base"
+                weight={selected ? 'semibold' : 'regular'}
+                color={selected ? colors.buttonActive : colors.text}
+              >
+                {n}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
+        {t('tournamentCreation.fields.maxParticipantsHint' as TranslationKey)}
+      </Text>
+    </View>
+  </SheetScrollView>
 );
 
-const DateRow: React.FC<{
+const DateField: React.FC<{
   label: string;
   date: Date | null;
   onPress: () => void;
@@ -291,12 +367,12 @@ const DateRow: React.FC<{
     ? date.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' })
     : placeholder;
   return (
-    <View>
+    <View style={styles.fieldGroup}>
       <FieldLabel colors={colors}>{label}</FieldLabel>
       <TouchableOpacity
         onPress={onPress}
+        activeOpacity={0.7}
         style={[
-          styles.input,
           styles.dateButton,
           {
             backgroundColor: colors.inputBackground,
@@ -328,7 +404,8 @@ const ScheduleStep: React.FC<{
   colors: ThemeColors;
   t: (k: TranslationKey) => string;
   locale: string;
-}> = ({ startDate, endDate, setStartDate, setEndDate, errors, colors, t, locale }) => {
+  isDark: boolean;
+}> = ({ startDate, endDate, setStartDate, setEndDate, errors, colors, t, locale, isDark }) => {
   const [pickerOpen, setPickerOpen] = useState<'start' | 'end' | null>(null);
   const minimumDate = useMemo(() => {
     const d = new Date();
@@ -338,9 +415,7 @@ const ScheduleStep: React.FC<{
 
   const onChange = useCallback(
     (_event: unknown, selected?: Date) => {
-      if (Platform.OS === 'android') {
-        setPickerOpen(null);
-      }
+      if (Platform.OS === 'android') setPickerOpen(null);
       if (!selected) return;
       if (pickerOpen === 'start') setStartDate(selected);
       if (pickerOpen === 'end') setEndDate(selected);
@@ -349,15 +424,22 @@ const ScheduleStep: React.FC<{
   );
 
   return (
-    <View style={styles.stepContent}>
-      <Text size="lg" weight="bold" color={colors.text} style={styles.stepTitle}>
-        {t('tournamentCreation.step2Title' as TranslationKey)}
-      </Text>
-      <Text size="sm" color={colors.textMuted} style={styles.stepDescription}>
-        {t('tournamentCreation.step2Description' as TranslationKey)}
-      </Text>
+    <SheetScrollView
+      style={styles.stepContainer}
+      contentContainerStyle={styles.stepContent}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
+      <View style={styles.stepHeader}>
+        <Text size="lg" weight="bold" color={colors.text}>
+          {t('tournamentCreation.step2Title' as TranslationKey)}
+        </Text>
+        <Text size="sm" color={colors.textMuted}>
+          {t('tournamentCreation.step2Description' as TranslationKey)}
+        </Text>
+      </View>
 
-      <DateRow
+      <DateField
         label={t('tournamentCreation.fields.startDate' as TranslationKey)}
         date={startDate}
         onPress={() => setPickerOpen('start')}
@@ -367,7 +449,7 @@ const ScheduleStep: React.FC<{
         locale={locale}
       />
 
-      <DateRow
+      <DateField
         label={t('tournamentCreation.fields.endDate' as TranslationKey)}
         date={endDate}
         onPress={() => setPickerOpen('end')}
@@ -390,11 +472,12 @@ const ScheduleStep: React.FC<{
                 display="spinner"
                 minimumDate={pickerOpen === 'end' && startDate ? startDate : minimumDate}
                 onChange={onChange}
-                themeVariant={colors.background === darkTheme.background ? 'dark' : 'light'}
+                themeVariant={isDark ? 'dark' : 'light'}
               />
               <TouchableOpacity
                 onPress={() => setPickerOpen(null)}
                 style={[styles.modalDoneButton, { backgroundColor: colors.buttonActive }]}
+                accessibilityRole="button"
               >
                 <Text size="base" weight="semibold" color={colors.buttonTextActive}>
                   Done
@@ -415,51 +498,9 @@ const ScheduleStep: React.FC<{
           onChange={onChange}
         />
       ) : null}
-    </View>
+    </SheetScrollView>
   );
 };
-
-const RadioOption: React.FC<{
-  selected: boolean;
-  title: string;
-  description: string;
-  onPress: () => void;
-  colors: ThemeColors;
-}> = ({ selected, title, description, onPress, colors }) => (
-  <TouchableOpacity
-    onPress={() => {
-      lightHaptic();
-      onPress();
-    }}
-    style={[
-      styles.radioOption,
-      {
-        borderColor: selected ? colors.buttonActive : colors.inputBorder,
-        backgroundColor: selected ? `${colors.buttonActive}10` : colors.inputBackground,
-      },
-    ]}
-    accessibilityRole="radio"
-    accessibilityState={{ selected }}
-  >
-    <View style={styles.radioOptionTop}>
-      <View
-        style={[
-          styles.radioDot,
-          {
-            borderColor: selected ? colors.buttonActive : colors.inputBorder,
-            backgroundColor: selected ? colors.buttonActive : 'transparent',
-          },
-        ]}
-      />
-      <Text size="base" weight="semibold" color={colors.text}>
-        {title}
-      </Text>
-    </View>
-    <Text size="sm" color={colors.textMuted} style={styles.radioDescription}>
-      {description}
-    </Text>
-  </TouchableOpacity>
-);
 
 const VisibilityStep: React.FC<{
   visibility: Visibility;
@@ -469,61 +510,85 @@ const VisibilityStep: React.FC<{
   colors: ThemeColors;
   t: (k: TranslationKey) => string;
 }> = ({ visibility, setVisibility, registrationMode, setRegistrationMode, colors, t }) => (
-  <View style={styles.stepContent}>
-    <Text size="lg" weight="bold" color={colors.text} style={styles.stepTitle}>
-      {t('tournamentCreation.step3Title' as TranslationKey)}
-    </Text>
-    <Text size="sm" color={colors.textMuted} style={styles.stepDescription}>
-      {t('tournamentCreation.step3Description' as TranslationKey)}
-    </Text>
+  <SheetScrollView
+    style={styles.stepContainer}
+    contentContainerStyle={styles.stepContent}
+    showsVerticalScrollIndicator={false}
+    keyboardShouldPersistTaps="handled"
+  >
+    <View style={styles.stepHeader}>
+      <Text size="lg" weight="bold" color={colors.text}>
+        {t('tournamentCreation.step3Title' as TranslationKey)}
+      </Text>
+      <Text size="sm" color={colors.textMuted}>
+        {t('tournamentCreation.step3Description' as TranslationKey)}
+      </Text>
+    </View>
 
-    <FieldLabel colors={colors}>
-      {t('tournamentCreation.fields.visibility' as TranslationKey)}
-    </FieldLabel>
-    <RadioOption
-      selected={visibility === 'private'}
-      title={t('tournamentCreation.fields.visibilityPrivate' as TranslationKey)}
-      description={t('tournamentCreation.fields.visibilityPrivateDescription' as TranslationKey)}
-      onPress={() => setVisibility('private')}
-      colors={colors}
-    />
-    <RadioOption
-      selected={visibility === 'public'}
-      title={t('tournamentCreation.fields.visibilityPublic' as TranslationKey)}
-      description={t('tournamentCreation.fields.visibilityPublicDescription' as TranslationKey)}
-      onPress={() => setVisibility('public')}
-      colors={colors}
-    />
+    <View style={styles.fieldGroup}>
+      <FieldLabel colors={colors}>
+        {t('tournamentCreation.fields.visibility' as TranslationKey)}
+      </FieldLabel>
+      <View style={styles.optionsColumn}>
+        <OptionCard
+          icon="lock-closed-outline"
+          title={t('tournamentCreation.fields.visibilityPrivate' as TranslationKey)}
+          description={t(
+            'tournamentCreation.fields.visibilityPrivateDescription' as TranslationKey
+          )}
+          selected={visibility === 'private'}
+          onPress={() => setVisibility('private')}
+          colors={colors}
+        />
+        <OptionCard
+          icon="globe-outline"
+          title={t('tournamentCreation.fields.visibilityPublic' as TranslationKey)}
+          description={t('tournamentCreation.fields.visibilityPublicDescription' as TranslationKey)}
+          selected={visibility === 'public'}
+          onPress={() => setVisibility('public')}
+          colors={colors}
+        />
+      </View>
+    </View>
 
-    <FieldLabel colors={colors}>
-      {t('tournamentCreation.fields.registrationMode' as TranslationKey)}
-    </FieldLabel>
-    <RadioOption
-      selected={registrationMode === 'open'}
-      title={t('tournamentCreation.fields.registrationModeOpen' as TranslationKey)}
-      description={t('tournamentCreation.fields.registrationModeOpenDescription' as TranslationKey)}
-      onPress={() => setRegistrationMode('open')}
-      colors={colors}
-    />
-    <RadioOption
-      selected={registrationMode === 'approval'}
-      title={t('tournamentCreation.fields.registrationModeApproval' as TranslationKey)}
-      description={t(
-        'tournamentCreation.fields.registrationModeApprovalDescription' as TranslationKey
-      )}
-      onPress={() => setRegistrationMode('approval')}
-      colors={colors}
-    />
-    <RadioOption
-      selected={registrationMode === 'invite_only'}
-      title={t('tournamentCreation.fields.registrationModeInviteOnly' as TranslationKey)}
-      description={t(
-        'tournamentCreation.fields.registrationModeInviteOnlyDescription' as TranslationKey
-      )}
-      onPress={() => setRegistrationMode('invite_only')}
-      colors={colors}
-    />
-  </View>
+    <View style={styles.fieldGroup}>
+      <FieldLabel colors={colors}>
+        {t('tournamentCreation.fields.registrationMode' as TranslationKey)}
+      </FieldLabel>
+      <View style={styles.optionsColumn}>
+        <OptionCard
+          icon="enter-outline"
+          title={t('tournamentCreation.fields.registrationModeOpen' as TranslationKey)}
+          description={t(
+            'tournamentCreation.fields.registrationModeOpenDescription' as TranslationKey
+          )}
+          selected={registrationMode === 'open'}
+          onPress={() => setRegistrationMode('open')}
+          colors={colors}
+        />
+        <OptionCard
+          icon="checkmark-done-outline"
+          title={t('tournamentCreation.fields.registrationModeApproval' as TranslationKey)}
+          description={t(
+            'tournamentCreation.fields.registrationModeApprovalDescription' as TranslationKey
+          )}
+          selected={registrationMode === 'approval'}
+          onPress={() => setRegistrationMode('approval')}
+          colors={colors}
+        />
+        <OptionCard
+          icon="mail-outline"
+          title={t('tournamentCreation.fields.registrationModeInviteOnly' as TranslationKey)}
+          description={t(
+            'tournamentCreation.fields.registrationModeInviteOnlyDescription' as TranslationKey
+          )}
+          selected={registrationMode === 'invite_only'}
+          onPress={() => setRegistrationMode('invite_only')}
+          colors={colors}
+        />
+      </View>
+    </View>
+  </SheetScrollView>
 );
 
 // =============================================================================
@@ -547,6 +612,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       background: themeColors.background,
       cardBackground: themeColors.card,
       text: themeColors.foreground,
+      textSecondary: isDark ? primary[300] : neutral[600],
       textMuted: themeColors.mutedForeground,
       border: themeColors.border,
       buttonActive: isDark ? primary[500] : primary[600],
@@ -556,14 +622,12 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       progressInactive: themeColors.muted,
       inputBackground: isDark ? neutral[800] : neutral[100],
       inputBorder: isDark ? neutral[700] : neutral[200],
-      inputBorderFocused: isDark ? primary[500] : primary[600],
       error: '#dc2626',
       success: '#16a34a',
     }),
     [themeColors, isDark]
   );
 
-  // Form state
   const [currentStep, setCurrentStep] = useState(1);
   const [name, setName] = useState('');
   const [bracketSize, setBracketSize] = useState<BracketSize>(8);
@@ -588,7 +652,6 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     },
   });
 
-  // Auto-set end_date when start_date set and end is empty/before start
   const handleSetStartDate = useCallback(
     (d: Date) => {
       setStartDate(d);
@@ -694,8 +757,17 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   // Success view
   if (showSuccess) {
     return (
-      <View style={[styles.root, { backgroundColor: colors.cardBackground }]}>
+      <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
         <View style={styles.successContainer}>
+          <TouchableOpacity
+            onPress={onClose}
+            style={styles.successCloseButton}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+          >
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
+
           <View style={[styles.successIcon, { backgroundColor: colors.success }]}>
             <Ionicons name="trophy-outline" size={48} color={BASE_WHITE} />
           </View>
@@ -705,26 +777,31 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
           <Text size="base" color={colors.textMuted} style={styles.successDescription}>
             {t('tournamentCreation.successDescription' as TranslationKey)}
           </Text>
-          <TouchableOpacity
-            onPress={() => {
-              if (createdId) onSuccess(createdId);
-            }}
-            style={[styles.primaryButton, { backgroundColor: colors.buttonActive }]}
-            accessibilityRole="button"
-          >
-            <Text size="base" weight="semibold" color={colors.buttonTextActive}>
-              {t('tournamentCreation.viewTournament' as TranslationKey)}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleCreateAnother}
-            style={styles.secondaryButton}
-            accessibilityRole="button"
-          >
-            <Text size="base" weight="semibold" color={colors.buttonActive}>
-              {t('tournamentCreation.createAnother' as TranslationKey)}
-            </Text>
-          </TouchableOpacity>
+
+          <View style={styles.successButtons}>
+            <TouchableOpacity
+              onPress={() => {
+                if (createdId) onSuccess(createdId);
+              }}
+              style={[styles.successButton, { backgroundColor: colors.buttonActive }]}
+              accessibilityRole="button"
+            >
+              <Ionicons name="eye-outline" size={20} color={colors.buttonTextActive} />
+              <Text size="base" weight="semibold" color={colors.buttonTextActive}>
+                {t('tournamentCreation.viewTournament' as TranslationKey)}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleCreateAnother}
+              style={[styles.successButton, { backgroundColor: colors.buttonInactive }]}
+              accessibilityRole="button"
+            >
+              <Ionicons name="add-outline" size={20} color={colors.buttonActive} />
+              <Text size="base" weight="semibold" color={colors.buttonActive}>
+                {t('tournamentCreation.createAnother' as TranslationKey)}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
@@ -732,7 +809,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
 
   // Wizard
   return (
-    <View style={[styles.root, { backgroundColor: colors.cardBackground }]}>
+    <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
       <WizardHeader
         currentStep={currentStep}
         onBack={goBack}
@@ -766,6 +843,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
             colors={colors}
             t={t}
             locale={locale}
+            isDark={isDark}
           />
         )}
         {currentStep === 3 && (
@@ -785,10 +863,9 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
           onPress={currentStep === TOTAL_STEPS ? handleSubmit : goNext}
           disabled={isCreating}
           style={[
-            styles.primaryButton,
-            {
-              backgroundColor: isCreating ? colors.buttonInactive : colors.buttonActive,
-            },
+            styles.nextButton,
+            { backgroundColor: colors.buttonActive },
+            isCreating && styles.buttonDisabled,
           ]}
           accessibilityRole="button"
         >
@@ -799,6 +876,9 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
                 : t('tournamentCreation.createTournament' as TranslationKey)
               : t('tournamentCreation.next' as TranslationKey)}
           </Text>
+          {currentStep !== TOTAL_STEPS && (
+            <Ionicons name="arrow-forward" size={20} color={colors.buttonTextActive} />
+          )}
         </TouchableOpacity>
       </View>
     </View>
@@ -806,41 +886,52 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
 };
 
 // =============================================================================
-// STYLES
+// STYLES — mirrors MatchCreationWizard + PreferencesStep conventions
 // =============================================================================
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  container: {
+    flex: 1,
+    flexDirection: 'column',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[3],
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: 1,
   },
-  headerSide: { flex: 1 },
-  headerRight: { alignItems: 'flex-end' },
-  iconButton: { padding: spacingPixels[1] },
+  headerLeft: {
+    width: 40,
+  },
+  headerRight: {
+    width: 40,
+    alignItems: 'flex-end',
+  },
+  headerButton: {
+    padding: spacingPixels[1],
+  },
   sportBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacingPixels[1],
-    paddingHorizontal: spacingPixels[2],
-    paddingVertical: spacingPixels[1],
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[1.5],
     borderRadius: radiusPixels.full,
+    gap: spacingPixels[1.5],
   },
   progressContainer: {
-    paddingHorizontal: spacingPixels[5],
-    paddingTop: spacingPixels[3],
-    paddingBottom: spacingPixels[2],
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
   },
   progressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: spacingPixels[2],
   },
   progressBarBg: {
-    height: 6,
+    height: 4,
     borderRadius: radiusPixels.full,
     overflow: 'hidden',
   },
@@ -850,84 +941,120 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
-    paddingHorizontal: spacingPixels[5],
-    paddingTop: spacingPixels[3],
   },
-  stepContent: { gap: spacingPixels[2] },
-  stepTitle: { marginBottom: spacingPixels[1] },
-  stepDescription: { marginBottom: spacingPixels[3] },
-  fieldLabel: { marginTop: spacingPixels[3], marginBottom: spacingPixels[1] },
-  fieldHint: { marginTop: spacingPixels[1] },
-  errorText: { marginTop: spacingPixels[1] },
-  input: {
+  stepContainer: {
+    flex: 1,
+  },
+  stepContent: {
+    padding: spacingPixels[4],
+    paddingBottom: spacingPixels[8],
+  },
+  stepHeader: {
+    marginBottom: spacingPixels[6],
+  },
+  fieldGroup: {
+    marginBottom: spacingPixels[5],
+  },
+  label: {
+    marginBottom: spacingPixels[2],
+  },
+  fieldHint: {
+    marginTop: spacingPixels[2],
+  },
+  errorText: {
+    marginTop: spacingPixels[1],
+  },
+  textInput: {
+    padding: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
     borderWidth: 1,
-    borderRadius: radiusPixels.md,
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[3],
     fontSize: 16,
   },
   dateButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    padding: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
   },
-  chipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  optionsColumn: {
     gap: spacingPixels[2],
   },
-  chip: {
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[2],
-    borderRadius: radiusPixels.full,
-    borderWidth: 1,
-    minWidth: 56,
-    alignItems: 'center',
+  optionsRow: {
+    flexDirection: 'row',
+    gap: spacingPixels[2],
   },
-  radioOption: {
+  optionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
     borderWidth: 1,
-    borderRadius: radiusPixels.md,
+  },
+  optionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: spacingPixels[3],
+  },
+  optionTextContainer: {
+    flex: 1,
+  },
+  optionCardCompact: {
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: spacingPixels[3],
-    marginTop: spacingPixels[2],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+    flex: 1,
+    minHeight: 70,
   },
-  radioOptionTop: {
-    flexDirection: 'row',
+  optionContentCompact: {
     alignItems: 'center',
-    gap: spacingPixels[2],
+    justifyContent: 'center',
+    gap: spacingPixels[1],
   },
-  radioDot: {
-    width: 18,
-    height: 18,
-    borderRadius: radiusPixels.full,
-    borderWidth: 2,
+  compactTitle: {
+    textAlign: 'center',
   },
-  radioDescription: {
-    marginTop: spacingPixels[1],
-    marginLeft: spacingPixels[6],
+  bracketChip: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[3],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
   },
   footer: {
-    paddingHorizontal: spacingPixels[5],
-    paddingVertical: spacingPixels[3],
-    borderTopWidth: StyleSheet.hairlineWidth,
+    padding: spacingPixels[4],
+    borderTopWidth: 1,
   },
-  primaryButton: {
-    paddingVertical: spacingPixels[3],
-    borderRadius: radiusPixels.md,
+  nextButton: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    gap: spacingPixels[2],
   },
-  secondaryButton: {
-    paddingVertical: spacingPixels[3],
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacingPixels[2],
+  buttonDisabled: {
+    opacity: 0.6,
   },
   successContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacingPixels[6],
-    gap: spacingPixels[3],
+    padding: spacingPixels[6],
+    paddingBottom: spacingPixels[4],
+    position: 'relative',
+  },
+  successCloseButton: {
+    position: 'absolute',
+    top: spacingPixels[4],
+    right: spacingPixels[4],
+    padding: spacingPixels[1],
   },
   successIcon: {
     width: 80,
@@ -935,10 +1062,28 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.full,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: spacingPixels[4],
+  },
+  successTitle: {
+    textAlign: 'center',
     marginBottom: spacingPixels[2],
   },
-  successTitle: { textAlign: 'center' },
-  successDescription: { textAlign: 'center', marginBottom: spacingPixels[3] },
+  successDescription: {
+    textAlign: 'center',
+    marginBottom: spacingPixels[6],
+  },
+  successButtons: {
+    gap: spacingPixels[3],
+    width: '100%',
+  },
+  successButton: {
+    flexDirection: 'row',
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
+  },
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
@@ -953,8 +1098,8 @@ const styles = StyleSheet.create({
   },
   modalDoneButton: {
     marginTop: spacingPixels[2],
-    paddingVertical: spacingPixels[3],
-    borderRadius: radiusPixels.md,
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
     alignItems: 'center',
   },
 });
