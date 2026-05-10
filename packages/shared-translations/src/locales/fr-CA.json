@@ -4008,6 +4008,8 @@
       "registrationClosedLabel": "Inscriptions fermées",
       "registrationPendingLabel": "Inscription en attente d'approbation",
       "registeredLabel": "Vous êtes inscrit",
+      "generateBracket": "Générer le tableau",
+      "generating": "Génération du tableau...",
       "comingSoon": "Bientôt disponible"
     },
     "registrations": {
@@ -4015,6 +4017,23 @@
       "count": "{count} sur {max} inscrits",
       "empty": "Aucune inscription pour le moment",
       "emptyOrganizer": "Ouvrez les inscriptions pour commencer à accepter des joueurs."
+    },
+    "bracket": {
+      "sectionTitle": "Tableau",
+      "round": "Tour {n}",
+      "final": "Finale",
+      "semifinal": "Demi-finale",
+      "quarterfinal": "Quart de finale",
+      "bye": "EXEMPT",
+      "tbd": "À déterminer",
+      "winnerSuffix": "(gagnant)",
+      "phantom": "—"
+    },
+    "generateBracketErrors": {
+      "insufficientParticipants": "Au moins 2 joueurs doivent être inscrits.",
+      "alreadyGenerated": "Le tableau existe déjà.",
+      "wrongStatus": "Fermez les inscriptions avant de générer le tableau.",
+      "generic": "Impossible de générer le tableau. Veuillez réessayer."
     },
     "errors": {
       "openFailed": "Impossible d'ouvrir les inscriptions. Veuillez réessayer.",

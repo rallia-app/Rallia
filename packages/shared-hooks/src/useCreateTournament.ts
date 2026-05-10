@@ -16,9 +16,12 @@ import {
   closeTournamentRegistration,
   registerForTournament,
   withdrawFromTournament,
+  listTournamentMatches,
+  generateTournamentBracket,
   type CreateTournamentInput,
   type Tournament,
   type TournamentRegistration,
+  type TournamentMatch,
 } from '@rallia/shared-services';
 
 export const tournamentKeys = {
@@ -33,6 +36,7 @@ export const tournamentKeys = {
     [...tournamentKeys.all, 'myRegistration', tournamentId, userId] as const,
   myActiveRegistrations: (userId: string) =>
     [...tournamentKeys.all, 'myActiveRegistrations', userId] as const,
+  matches: (tournamentId: string) => [...tournamentKeys.all, 'matches', tournamentId] as const,
 };
 
 /**
@@ -102,8 +106,45 @@ function useTournamentDetailInvalidator() {
   return (tournamentId: string) => {
     qc.invalidateQueries({ queryKey: tournamentKeys.detail(tournamentId) });
     qc.invalidateQueries({ queryKey: tournamentKeys.registrations(tournamentId) });
+    qc.invalidateQueries({ queryKey: tournamentKeys.matches(tournamentId) });
     qc.invalidateQueries({ queryKey: [...tournamentKeys.all, 'myRegistration', tournamentId] });
     qc.invalidateQueries({ queryKey: [...tournamentKeys.all, 'myActiveRegistrations'] });
+  };
+}
+
+/**
+ * List all matches for a tournament's bracket.
+ */
+export function useTournamentMatches(tournamentId: string | undefined) {
+  return useQuery<TournamentMatch[]>({
+    queryKey: tournamentKeys.matches(tournamentId ?? ''),
+    queryFn: () => listTournamentMatches(tournamentId!),
+    enabled: !!tournamentId,
+  });
+}
+
+/**
+ * Organizer generates the bracket for a registration_closed tournament.
+ */
+export function useGenerateTournamentBracket(options: MutationOptions<TournamentMatch[]> = {}) {
+  const invalidate = useTournamentDetailInvalidator();
+  const mutation = useMutation<
+    TournamentMatch[],
+    Error,
+    { tournamentId: string; versionWas: number }
+  >({
+    mutationFn: ({ tournamentId, versionWas }) =>
+      generateTournamentBracket(tournamentId, versionWas),
+    onSuccess: (matches, vars) => {
+      invalidate(vars.tournamentId);
+      options.onSuccess?.(matches);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
   };
 }
 

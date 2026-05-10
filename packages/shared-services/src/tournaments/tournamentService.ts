@@ -11,6 +11,7 @@ import { supabase } from '../supabase';
 
 export type Tournament = Tables<'tournaments'>;
 export type TournamentRegistration = Tables<'tournament_registrations'>;
+export type TournamentMatch = Tables<'tournament_matches'>;
 
 export interface CreateTournamentInput {
   name: string;
@@ -194,6 +195,36 @@ export async function registerForTournament(tournamentId: string): Promise<Tourn
   });
   if (error) throw new Error(error.message);
   return data as TournamentRegistration;
+}
+
+/**
+ * List all matches for a tournament, ordered by round + position.
+ */
+export async function listTournamentMatches(tournamentId: string): Promise<TournamentMatch[]> {
+  const { data, error } = await supabase
+    .from('tournament_matches')
+    .select('*')
+    .eq('tournament_id', tournamentId)
+    .order('round_number', { ascending: true })
+    .order('match_position', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as TournamentMatch[];
+}
+
+/**
+ * Organizer generates the bracket for a registration_closed tournament.
+ * Status transitions to in_progress and all match rows are created.
+ */
+export async function generateTournamentBracket(
+  tournamentId: string,
+  versionWas: number
+): Promise<TournamentMatch[]> {
+  const { data, error } = await supabase.rpc('tournament_generate_bracket', {
+    p_tournament_id: tournamentId,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as TournamentMatch[];
 }
 
 /**

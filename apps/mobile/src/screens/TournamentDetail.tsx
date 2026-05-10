@@ -35,10 +35,12 @@ import {
   useCloseTournamentRegistration,
   useRegisterForTournament,
   useWithdrawFromTournament,
+  useTournamentMatches,
+  useGenerateTournamentBracket,
   useSports,
   useAuth,
 } from '@rallia/shared-hooks';
-import type { Enums } from '@rallia/shared-types';
+import type { Enums, Tables } from '@rallia/shared-types';
 
 import { useTranslation, type TranslationKey } from '../hooks';
 import { SportIcon } from '../components/SportIcon';
@@ -228,6 +230,21 @@ export const TournamentDetail: React.FC = () => {
     onSuccess: () => successHaptic(),
     onError: e => showError(e.message, 'tournamentDetail.errors.withdrawFailed' as TranslationKey),
   });
+  const generateBracket = useGenerateTournamentBracket({
+    onSuccess: () => successHaptic(),
+    onError: e => {
+      const lower = e.message.toLowerCase();
+      const key: TranslationKey = lower.includes('insufficient_participants')
+        ? ('tournamentDetail.generateBracketErrors.insufficientParticipants' as TranslationKey)
+        : lower.includes('bracket_already_generated')
+          ? ('tournamentDetail.generateBracketErrors.alreadyGenerated' as TranslationKey)
+          : lower.includes('tournament_not_draft')
+            ? ('tournamentDetail.generateBracketErrors.wrongStatus' as TranslationKey)
+            : ('tournamentDetail.generateBracketErrors.generic' as TranslationKey);
+      warningHaptic();
+      toast.error(t(key));
+    },
+  });
 
   const onOpen = useCallback(() => {
     if (!tournament) return;
@@ -256,6 +273,41 @@ export const TournamentDetail: React.FC = () => {
       tournamentId: tournament.id,
     });
   }, [tournament, myActiveRegistration, withdraw]);
+
+  const onGenerateBracket = useCallback(() => {
+    if (!tournament) return;
+    lightHaptic();
+    generateBracket.mutate({ tournamentId: tournament.id, versionWas: tournament.version });
+  }, [tournament, generateBracket]);
+
+  // Bracket: only fetch when the bracket has been generated (status >= in_progress).
+  const bracketStatuses: ReadonlyArray<Enums<'tournament_status'>> = [
+    'in_progress',
+    'completed',
+    'archived',
+  ];
+  const shouldFetchBracket = !!tournament && bracketStatuses.includes(tournament.status);
+  const { data: matches = [] } = useTournamentMatches(
+    shouldFetchBracket ? tournament?.id : undefined
+  );
+
+  // Map registration_id → seed number (1-indexed). The order matches the
+  // RPC's seeding criteria so the labels here line up with the bracket.
+  const seedByRegId = useMemo(() => {
+    const map = new Map<string, number>();
+    [...registrations]
+      .sort((a, b) => {
+        const sa = a.seed_rank ?? Number.MAX_SAFE_INTEGER;
+        const sb = b.seed_rank ?? Number.MAX_SAFE_INTEGER;
+        if (sa !== sb) return sa - sb;
+        const ta = new Date(a.registered_at).getTime();
+        const tb = new Date(b.registered_at).getTime();
+        if (ta !== tb) return ta - tb;
+        return a.id.localeCompare(b.id);
+      })
+      .forEach((r, i) => map.set(r.id, i + 1));
+    return map;
+  }, [registrations]);
 
   const themeColors = isDark ? darkTheme : lightTheme;
   const colors = useMemo<ScreenColors>(
@@ -437,6 +489,11 @@ export const TournamentDetail: React.FC = () => {
           </Section>
         )}
 
+        {/* Bracket */}
+        {shouldFetchBracket && matches.length > 0 && (
+          <BracketSection matches={matches} seedByRegId={seedByRegId} colors={colors} t={t} />
+        )}
+
         {/* Action panel */}
         {(() => {
           // Organizer actions
@@ -466,6 +523,21 @@ export const TournamentDetail: React.FC = () => {
                 icon="lock-closed-outline"
                 onPress={onClose}
                 disabled={close.isPending}
+                colors={colors}
+              />
+            );
+          }
+          if (isOrganizer && tournament.status === 'registration_closed') {
+            return (
+              <PrimaryActionButton
+                label={
+                  generateBracket.isPending
+                    ? t('tournamentDetail.actions.generating' as TranslationKey)
+                    : t('tournamentDetail.actions.generateBracket' as TranslationKey)
+                }
+                icon="git-network-outline"
+                onPress={onGenerateBracket}
+                disabled={generateBracket.isPending}
                 colors={colors}
               />
             );
@@ -520,6 +592,148 @@ export const TournamentDetail: React.FC = () => {
     </SafeAreaView>
   );
 };
+
+type MatchRow = Tables<'tournament_matches'>;
+
+const roundLabel = (
+  round: number,
+  totalRounds: number,
+  t: (k: TranslationKey) => string
+): string => {
+  if (round === totalRounds) return t('tournamentDetail.bracket.final' as TranslationKey);
+  if (round === totalRounds - 1) return t('tournamentDetail.bracket.semifinal' as TranslationKey);
+  if (round === totalRounds - 2)
+    return t('tournamentDetail.bracket.quarterfinal' as TranslationKey);
+  return t('tournamentDetail.bracket.round' as TranslationKey).replace('{n}', String(round));
+};
+
+const slotLabel = (
+  regId: string | null,
+  isBye: boolean,
+  isPhantom: boolean,
+  seedByRegId: Map<string, number>,
+  t: (k: TranslationKey) => string
+): string => {
+  if (isPhantom) return t('tournamentDetail.bracket.phantom' as TranslationKey);
+  if (isBye) return t('tournamentDetail.bracket.bye' as TranslationKey);
+  if (!regId) return t('tournamentDetail.bracket.tbd' as TranslationKey);
+  const seed = seedByRegId.get(regId);
+  return seed !== undefined ? `Seed ${seed}` : t('tournamentDetail.bracket.tbd' as TranslationKey);
+};
+
+const BracketSection: React.FC<{
+  matches: MatchRow[];
+  seedByRegId: Map<string, number>;
+  colors: ScreenColors;
+  t: (k: TranslationKey) => string;
+}> = ({ matches, seedByRegId, colors, t }) => {
+  const totalRounds = matches.reduce((max, m) => Math.max(max, m.round_number), 0);
+  const byRound = new Map<number, MatchRow[]>();
+  for (const m of matches) {
+    const arr = byRound.get(m.round_number) ?? [];
+    arr.push(m);
+    byRound.set(m.round_number, arr);
+  }
+  const roundNumbers = [...byRound.keys()].sort((a, b) => a - b);
+
+  return (
+    <View style={styles.section}>
+      <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.sectionTitle}>
+        {t('tournamentDetail.bracket.sectionTitle' as TranslationKey).toUpperCase()}
+      </Text>
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: colors.cardBackground, borderColor: colors.border },
+        ]}
+      >
+        {roundNumbers.map((round, idx) => {
+          const roundMatches = (byRound.get(round) ?? []).sort(
+            (a, b) => a.match_position - b.match_position
+          );
+          return (
+            <View
+              key={round}
+              style={[
+                styles.bracketRound,
+                idx > 0 && {
+                  borderTopColor: colors.border,
+                  borderTopWidth: StyleSheet.hairlineWidth,
+                },
+              ]}
+            >
+              <Text
+                size="xs"
+                weight="semibold"
+                color={colors.primary}
+                style={styles.bracketRoundLabel}
+              >
+                {roundLabel(round, totalRounds, t).toUpperCase()}
+              </Text>
+              {roundMatches.map(m => {
+                const isPhantom =
+                  m.player1_is_bye && m.player2_is_bye && m.winner_registration_id === null;
+                const winnerSlot =
+                  m.winner_registration_id === m.player1_registration_id
+                    ? 1
+                    : m.winner_registration_id === m.player2_registration_id
+                      ? 2
+                      : 0;
+                return (
+                  <View key={m.id} style={[styles.bracketMatch, { borderColor: colors.border }]}>
+                    <BracketSlot
+                      label={slotLabel(
+                        m.player1_registration_id,
+                        m.player1_is_bye,
+                        isPhantom,
+                        seedByRegId,
+                        t
+                      )}
+                      isWinner={winnerSlot === 1}
+                      isBye={m.player1_is_bye}
+                      colors={colors}
+                    />
+                    <View style={[styles.bracketSlotDivider, { backgroundColor: colors.border }]} />
+                    <BracketSlot
+                      label={slotLabel(
+                        m.player2_registration_id,
+                        m.player2_is_bye,
+                        isPhantom,
+                        seedByRegId,
+                        t
+                      )}
+                      isWinner={winnerSlot === 2}
+                      isBye={m.player2_is_bye}
+                      colors={colors}
+                    />
+                  </View>
+                );
+              })}
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+};
+
+const BracketSlot: React.FC<{
+  label: string;
+  isWinner: boolean;
+  isBye: boolean;
+  colors: ScreenColors;
+}> = ({ label, isWinner, isBye, colors }) => (
+  <View style={styles.bracketSlot}>
+    <Text
+      size="sm"
+      weight={isWinner ? 'semibold' : 'regular'}
+      color={isBye ? colors.textMuted : isWinner ? colors.primary : colors.text}
+    >
+      {label}
+    </Text>
+    {isWinner && <Ionicons name="checkmark-circle" size={14} color={colors.primary} />}
+  </View>
+);
 
 const PrimaryActionButton: React.FC<{
   label: string;
@@ -690,6 +904,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     marginBottom: spacingPixels[3],
+  },
+  bracketRound: {
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    gap: spacingPixels[2],
+  },
+  bracketRoundLabel: {
+    letterSpacing: 0.5,
+  },
+  bracketMatch: {
+    borderWidth: 1,
+    borderRadius: radiusPixels.md,
+    overflow: 'hidden',
+  },
+  bracketSlot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacingPixels[2.5],
+    paddingHorizontal: spacingPixels[3],
+  },
+  bracketSlotDivider: {
+    height: StyleSheet.hairlineWidth,
   },
 });
 

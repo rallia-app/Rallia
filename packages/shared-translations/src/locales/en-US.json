@@ -4008,6 +4008,8 @@
       "registrationClosedLabel": "Registration closed",
       "registrationPendingLabel": "Registration pending approval",
       "registeredLabel": "You're registered",
+      "generateBracket": "Generate bracket",
+      "generating": "Generating bracket...",
       "comingSoon": "Coming soon"
     },
     "registrations": {
@@ -4015,6 +4017,23 @@
       "count": "{count} of {max} registered",
       "empty": "No registrations yet",
       "emptyOrganizer": "Open registration to start accepting players."
+    },
+    "bracket": {
+      "sectionTitle": "Bracket",
+      "round": "Round {n}",
+      "final": "Final",
+      "semifinal": "Semifinal",
+      "quarterfinal": "Quarterfinal",
+      "bye": "BYE",
+      "tbd": "TBD",
+      "winnerSuffix": "(winner)",
+      "phantom": "—"
+    },
+    "generateBracketErrors": {
+      "insufficientParticipants": "At least 2 players must be registered.",
+      "alreadyGenerated": "The bracket already exists.",
+      "wrongStatus": "Close registration first to generate the bracket.",
+      "generic": "Couldn't generate the bracket. Please try again."
     },
     "errors": {
       "openFailed": "Couldn't open registration. Please try again.",
