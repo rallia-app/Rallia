@@ -6,3 +6,5 @@
 
 export * from './matchService';
 export * from './suggestionService';
+export * from './matchScoring';
+export * from './justForYouComposer';

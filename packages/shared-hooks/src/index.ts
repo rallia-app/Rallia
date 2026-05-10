@@ -29,6 +29,7 @@ export * from './useMatchFeedback';
 export * from './useNearbyMatches';
 export * from './useMatchSuggestions';
 export * from './useTopSuggestions';
+export * from './useJustForYou';
 export * from './useUnifiedMatchFeed';
 export * from './suggestionFilters';
 export * from './useMatchRelevanceScore';

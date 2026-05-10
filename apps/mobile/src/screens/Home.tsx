@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import {
   View,
   StyleSheet,
-  FlatList,
   Animated,
   RefreshControl,
   TouchableOpacity,
@@ -24,7 +23,7 @@ import {
   SkeletonMyMatchCard,
   useToast,
 } from '@rallia/shared-components';
-import { lightHaptic, formatIntuitiveDateInTimezone } from '@rallia/shared-utils';
+import { lightHaptic } from '@rallia/shared-utils';
 import { SheetManager } from 'react-native-actions-sheet';
 import {
   useAuth,
@@ -49,13 +48,10 @@ import {
   useProfile,
   useTheme,
   usePlayer,
-  useNearbyMatches,
-  useMatchSuggestions,
-  useUnifiedMatchFeed,
+  useJustForYou,
   usePlayerMatches,
   usePlayerSports,
   useRatingScoresForSport,
-  useSortedNearbyMatches,
   useFavoriteFacilities,
   useOtherSportsUnreadCount,
   useSports,
@@ -63,7 +59,7 @@ import {
   useReferral,
 } from '@rallia/shared-hooks';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { MatchScoringPreferences, UnifiedFeedItem } from '@rallia/shared-hooks';
+import type { MatchScoringPreferences } from '@rallia/shared-hooks';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import {
   Logger,
@@ -82,7 +78,7 @@ import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { SportIcon } from '../components/SportIcon';
 import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
 import ProfileCompletionBanner from '../features/profile/components/ProfileCompletionBanner';
-import { FeedItemCard } from '../features/matches/components/FeedItemCard';
+import { JustForYouCard } from '../features/home/components/JustForYouCard';
 import BillingIssueBanner from '../components/BillingIssueBanner';
 import ReferenceRequestsBanner from '../components/ReferenceRequestsBanner';
 import { useSubscription } from '../context';
@@ -680,47 +676,7 @@ const Home = () => {
 
   // Use TanStack Query hook for fetching nearby matches with infinite scrolling
   // Query refetches automatically when sportId or player gender changes (included in query key)
-  const {
-    matches: allNearbyMatches,
-    isLoading: loadingMatches,
-    isRefetching,
-    isFetchingNextPage,
-    hasNextPage,
-    fetchNextPage,
-    refetch,
-    error: matchesError,
-  } = useNearbyMatches({
-    latitude: location?.latitude,
-    longitude: location?.longitude,
-    maxDistanceKm: searchRadiusKm,
-    sportId: selectedSport?.id,
-    userGender: player?.gender,
-    limit: 20,
-    enabled: showNearbySection,
-  });
-
-  // Filter out matches where user is creator or participant (these show in "My Matches" section)
-  const filteredMatches = useMemo(() => {
-    if (!session?.user?.id) return allNearbyMatches;
-
-    return allNearbyMatches.filter(match => {
-      // Exclude if user is the creator
-      if (match.created_by === session.user.id) return false;
-
-      // Exclude if user is a participant, has requested to join, or is waitlisted
-      const isInvolved = match.participants?.some(
-        p =>
-          p.player_id === session.user.id &&
-          p.status != null &&
-          ['joined', 'requested', 'waitlisted'].includes(p.status)
-      );
-      if (isInvolved) return false;
-
-      return true;
-    });
-  }, [allNearbyMatches, session?.user?.id]);
-
-  // Build scoring preferences for match relevance sorting
+  // Build scoring preferences for the "Just for you" composer.
   const scoringPreferences = useMemo<MatchScoringPreferences>(
     () => ({
       playerGender: player?.gender,
@@ -740,41 +696,32 @@ const Home = () => {
     ]
   );
 
-  // Sort nearby matches by relevance score
-  const matches = useSortedNearbyMatches(filteredMatches, scoringPreferences);
-
-  // Fetch the 7-day suggestion grid (5 per day × 7 days).
+  // Just for you: top 5 = best matches in the area, padded with suggestions
+  // when matches < 5. Score-ordered, opponent-deduped on the suggestion side,
+  // creator/participant matches filtered out by the composer's exclude set.
+  const excludeUserIds = useMemo(
+    () => (session?.user?.id ? [session.user.id] : []),
+    [session?.user?.id]
+  );
   const {
-    days,
-    isLoading: loadingSuggestions,
-    refetch: refetchSuggestions,
-  } = useMatchSuggestions({
-    playerId: player?.id,
+    matches: jfyMatches,
+    suggestions: jfySuggestions,
+    isLoading: loadingJustForYou,
+    isRefetching,
+    refetch: refetchJustForYou,
+  } = useJustForYou({
+    playerId: player?.id ?? session?.user?.id,
     sportId: selectedSport?.id,
     sportName: selectedSport?.name,
     latitude: location?.latitude,
     longitude: location?.longitude,
-    enabled: showNearbySection,
+    maxDistanceKm: searchRadiusKm,
+    userGender: player?.gender,
+    scoringPreferences,
+    excludeUserIds,
+    matchLimit: 5,
+    enabled: showNearbySection && !!session?.user?.id,
   });
-
-  // Build the unified per-day feed (matches + suggestions, both bucketed by day).
-  const feedDays = useUnifiedMatchFeed({ matches, days });
-
-  // Flatten into a single FlatList stream with date-header rows between days.
-  type HomeFeedRow =
-    | { kind: 'header'; key: string; date: string }
-    | { kind: 'item'; key: string; data: UnifiedFeedItem };
-  const feed = useMemo<HomeFeedRow[]>(() => {
-    const out: HomeFeedRow[] = [];
-    for (const day of feedDays) {
-      if (day.items.length === 0) continue;
-      out.push({ kind: 'header', key: `header:${day.date}`, date: day.date });
-      for (const it of day.items) {
-        out.push({ kind: 'item', key: it.key, data: it });
-      }
-    }
-    return out;
-  }, [feedDays]);
 
   // Suggestion invite plumbing (shared with PublicMatches via the hook).
   const {
@@ -797,9 +744,9 @@ const Home = () => {
     enabled: !!session?.user?.id,
   });
 
-  const flatListRef = useRef<FlatList>(null);
+  const scrollRef = useRef<ScrollView>(null);
   const isManualRefresh = useRef(false);
-  useScrollToTop(flatListRef);
+  useScrollToTop(scrollRef);
 
   // Clear manual refresh flag when refetching completes
   useEffect(() => {
@@ -808,121 +755,20 @@ const Home = () => {
     }
   }, [isRefetching]);
 
-  // Log errors from match fetching
-  useEffect(() => {
-    if (matchesError) {
-      Logger.error('Failed to fetch matches', matchesError);
-    }
-  }, [matchesError]);
-
   // Notify OverlayContext that we're on Home screen (safe to show permission overlays)
   useEffect(() => {
     setOnHomeScreen(true);
     return () => setOnHomeScreen(false);
   }, [setOnHomeScreen]);
 
-  // Auto-paginate matches up to 30 before relying on suggestions to fill the feed.
-  useEffect(() => {
-    if (
-      showNearbySection &&
-      !loadingMatches &&
-      !isFetchingNextPage &&
-      hasNextPage &&
-      matches.length < 30
-    ) {
-      fetchNextPage();
-    }
-  }, [
-    showNearbySection,
-    loadingMatches,
-    isFetchingNextPage,
-    hasNextPage,
-    matches.length,
-    fetchNextPage,
-  ]);
-
-  // Handle end reached for infinite scroll
-  const handleEndReached = useCallback(() => {
-    if (feed.length === 0) return;
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [feed.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  const deviceTz = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, []);
-
-  // Render individual feed row — either a date header or a match/suggestion card.
-  const renderFeedItem = useCallback(
-    ({ item }: { item: HomeFeedRow }) => {
-      if (item.kind === 'header') {
-        const result = formatIntuitiveDateInTimezone(item.date, deviceTz, locale);
-        let label: string;
-        if (result.type === 'today') label = t('common.time.today');
-        else if (result.type === 'tomorrow') label = t('common.time.tomorrow');
-        else label = result.label;
-        return (
-          <Text size="sm" weight="bold" color={colors.textMuted} style={styles.dayHeader}>
-            {label}
-          </Text>
-        );
-      }
-      return (
-        <FeedItemCard
-          item={item.data}
-          isDark={isDark}
-          locale={locale}
-          t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
-          currentPlayerId={player?.id}
-          themeColors={colors}
-          suggestionLabels={suggestionLabels}
-          getInviteState={getInviteState}
-          onMatchPress={match => {
-            Logger.logUserAction('match_pressed', { matchId: match.id });
-            openMatchDetail(match as MatchDetailData);
-          }}
-          onSendInvite={handleSendInvite}
-          sportId={selectedSport?.id}
-          sportName={selectedSport?.name}
-        />
-      );
-    },
-    [
-      deviceTz,
-      isDark,
-      t,
-      locale,
-      openMatchDetail,
-      player?.id,
-      colors,
-      suggestionLabels,
-      getInviteState,
-      handleSendInvite,
-    ]
-  );
-
-  // Render footer with loading indicator
-  const renderFooter = useCallback(() => {
-    if (isFetchingNextPage || (loadingSuggestions && feed.length < 30)) {
-      return (
-        <View style={styles.footerLoader}>
-          <ActivityIndicator size="small" color={colors.primary} />
-        </View>
-      );
-    }
-    return null;
-  }, [isFetchingNextPage, loadingSuggestions, feed.length, colors.primary]);
-
-  // Compact empty state for the rare case both matches and suggestions are empty.
-  const renderEmptyComponent = useCallback(
-    () => (
-      <View style={styles.emptyContainer}>
-        <Ionicons name="location-outline" size={20} color={colors.textMuted} />
-        <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-          {t('home.nearbyEmpty.title')}
-        </Text>
-      </View>
-    ),
-    [colors.textMuted, t]
+  // Combined Just-for-you items (matches first, suggestions tail). Always
+  // exactly `matchLimit` long when fully loaded.
+  const justForYouItems = useMemo(
+    () => [
+      ...jfyMatches.map(m => ({ kind: 'match' as const, data: m })),
+      ...jfySuggestions.map(s => ({ kind: 'suggestion' as const, data: s })),
+    ],
+    [jfyMatches, jfySuggestions]
   );
 
   // Render section header with "Soon & Nearby" title, location selector, and "View All" button
@@ -934,11 +780,15 @@ const Home = () => {
       ? [player.address.split(',')[0].trim(), player.city].filter(Boolean).join(', ')
       : homeLocation?.postalCode || homeLocation?.formattedAddress?.split(',')[0];
 
+    // Signed-in users get the personalized "Just for you" title; signed-out
+    // sees the original "Nearby" since the only signal is geographic.
+    const titleKey = session?.user?.id ? 'home.justForYou' : 'home.soonAndNearby';
+
     return (
       <View style={[styles.sectionHeader]}>
         <View style={styles.sectionTitleRow}>
           <Text size="xl" weight="bold" color={colors.text}>
-            {t('home.soonAndNearby')}
+            {t(titleKey)}
           </Text>
           {/* Only show LocationSelector when both GPS and home location are available */}
           {hasBothLocationOptions && (
@@ -987,6 +837,7 @@ const Home = () => {
     isDark,
     player?.address,
     player?.city,
+    session?.user?.id,
   ]);
 
   // Render "My Matches" section with horizontal scroll
@@ -1368,75 +1219,118 @@ const Home = () => {
         </View>
       </SafeAreaView>
     );
-  } else if (!showNearbySection) {
+  } else {
+    // Compose the Just-for-you carousel — exactly 5 cards (or skeletons),
+    // horizontally scrollable. Empty pool is rare; we surface a compact
+    // empty-state row in that case.
+    const showJfyEmpty = !loadingJustForYou && justForYouItems.length === 0;
+
     content = (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-        <FlatList
-          ref={flatListRef}
-          data={[]}
-          renderItem={renderFeedItem}
-          keyExtractor={item => item.key}
+        <ScrollView
+          ref={scrollRef}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          automaticallyAdjustContentInsets={false}
-          ListHeaderComponent={renderListHeader()}
-          ListEmptyComponent={null}
-        />
-      </SafeAreaView>
-    );
-  } else {
-    content = (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-        {loadingMatches || loadingSuggestions ? (
-          <View style={styles.loadingContainer}>
-            {renderListHeader()}
-            <View style={styles.skeletonSection}>
-              {[1, 2, 3].map(i => (
-                <SkeletonMatchCard
-                  key={i}
-                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-                  style={{
-                    backgroundColor: isDark ? '#1C1C1E' : '#FAFAFA',
-                    borderColor: colors.border,
-                    marginHorizontal: spacingPixels[4],
-                    marginBottom: spacingPixels[3],
-                  }}
-                />
-              ))}
-            </View>
-          </View>
-        ) : (
-          <FlatList
-            ref={flatListRef}
-            data={feed}
-            renderItem={renderFeedItem}
-            keyExtractor={item => item.key}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            automaticallyAdjustContentInsets={false}
-            ListHeaderComponent={renderListHeader()}
-            ListEmptyComponent={renderEmptyComponent()}
-            ListFooterComponent={renderFooter()}
-            onEndReached={handleEndReached}
-            onEndReachedThreshold={0.3}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefetching && isManualRefresh.current}
-                onRefresh={() => {
-                  isManualRefresh.current = true;
-                  refetch();
-                  refetchSuggestions();
-                  if (session?.user?.id) {
-                    refetchMyMatches();
-                  }
-                }}
-                tintColor={colors.primary}
-                colors={[colors.primary]}
-              />
-            }
-          />
-        )}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching && isManualRefresh.current}
+              onRefresh={() => {
+                isManualRefresh.current = true;
+                refetchJustForYou();
+                if (session?.user?.id) refetchMyMatches();
+              }}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
+        >
+          {renderListHeader()}
+
+          {showNearbySection && (
+            <>
+              {loadingJustForYou ? (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.justForYouScrollContent}
+                >
+                  {[1, 2, 3].map(i => (
+                    <View key={i} style={styles.jfySkeleton}>
+                      <SkeletonMatchCard
+                        backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                        highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                        style={{
+                          backgroundColor: isDark ? '#1C1C1E' : '#FAFAFA',
+                          borderColor: colors.border,
+                        }}
+                      />
+                    </View>
+                  ))}
+                </ScrollView>
+              ) : showJfyEmpty ? (
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="location-outline" size={20} color={colors.textMuted} />
+                  <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
+                    {t('home.nearbyEmpty.title')}
+                  </Text>
+                </View>
+              ) : (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.justForYouScrollContent}
+                >
+                  {justForYouItems.map((item, idx) => {
+                    const key =
+                      item.kind === 'match'
+                        ? `match:${item.data.id}`
+                        : `suggestion:${item.data.opponentId}:${(item.data.slot.datetime as Date).getTime?.() ?? idx}`;
+                    return (
+                      <View key={key} style={styles.jfyCardWrapper}>
+                        <JustForYouCard
+                          item={item}
+                          colors={{
+                            cardBackground: colors.card,
+                            text: colors.text,
+                            textSecondary: colors.textSecondary,
+                            textMuted: colors.textMuted,
+                            border: colors.border,
+                            primary: colors.primary,
+                          }}
+                          isDark={isDark}
+                          locale={locale}
+                          t={
+                            t as (
+                              key: string,
+                              options?: Record<string, string | number | boolean>
+                            ) => string
+                          }
+                          suggestionLabels={suggestionLabels}
+                          inviteState={
+                            item.kind === 'suggestion'
+                              ? getInviteState(
+                                  item.data.opponentId,
+                                  item.data.facility.facilityId,
+                                  item.data.slot.datetime
+                                )
+                              : undefined
+                          }
+                          onMatchPress={match => {
+                            Logger.logUserAction('match_pressed', { matchId: match.id });
+                            openMatchDetail(match as MatchDetailData);
+                          }}
+                          onSendInvite={handleSendInvite}
+                          sportName={selectedSport?.name}
+                        />
+                      </View>
+                    );
+                  })}
+                </ScrollView>
+              )}
+            </>
+          )}
+        </ScrollView>
+
         {/* FAB buttons */}
         <View style={styles.fabContainer}>
           {isOnboarded && (
@@ -1524,13 +1418,21 @@ const styles = StyleSheet.create({
   listContent: {
     flexGrow: 1,
     paddingTop: spacingPixels[2],
+    paddingBottom: spacingPixels[6],
   },
-  dayHeader: {
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  justForYouScrollContent: {
     paddingHorizontal: spacingPixels[4],
-    marginTop: -spacingPixels[1],
-    marginBottom: spacingPixels[2],
+    paddingBottom: spacingPixels[2],
+    gap: spacingPixels[3],
+  },
+  jfyCardWrapper: {
+    // gap is handled at the container level
+  },
+  jfySkeleton: {
+    width: 240,
+    height: 130,
+    borderRadius: radiusPixels.lg,
+    overflow: 'hidden',
   },
   matchesSection: {
     padding: spacingPixels[5],
@@ -1562,10 +1464,6 @@ const styles = StyleSheet.create({
   emptyDescription: {
     flexShrink: 1,
     textAlign: 'center',
-  },
-  footerLoader: {
-    padding: spacingPixels[4],
-    alignItems: 'center',
   },
   sectionHeader: {
     flexDirection: 'row',
