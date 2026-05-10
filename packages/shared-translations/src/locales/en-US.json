@@ -4291,6 +4291,7 @@
   "publicMatches": {
     "title": "Public Games",
     "searchPlaceholder": "Search games, locations, players...",
+    "suggestionsFrontier": "Suggestions for you",
     "filters": {
       "format": {
         "label": "Format",

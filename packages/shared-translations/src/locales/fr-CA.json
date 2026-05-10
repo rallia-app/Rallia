@@ -4291,6 +4291,7 @@
   "publicMatches": {
     "title": "Parties publiques",
     "searchPlaceholder": "Rechercher parties, lieux, joueurs...",
+    "suggestionsFrontier": "Suggestions pour vous",
     "filters": {
       "format": {
         "label": "Format",

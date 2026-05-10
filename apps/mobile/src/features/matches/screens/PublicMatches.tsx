@@ -18,8 +18,8 @@ import {
   useRatingScoresForSport,
   useSortedNearbyMatches,
   useFavoriteFacilities,
-  useMatchSuggestions,
-  useUnifiedMatchFeed,
+  useTopSuggestions,
+  doesSuggestionPassFilters,
   type MatchScoringPreferences,
   type UnifiedFeedItem,
 } from '@rallia/shared-hooks';
@@ -34,7 +34,6 @@ import type { TranslationKey } from '@rallia/shared-translations';
 import { useMatchDetailSheet, useSport, useUserHomeLocation } from '../../../context';
 import type { MatchDetailData } from '../../../context/MatchDetailSheetContext';
 import { Logger, supabase } from '@rallia/shared-services';
-import { formatIntuitiveDateInTimezone } from '@rallia/shared-utils';
 import { spacingPixels } from '@rallia/design-system';
 import { SearchBar, MatchFiltersBar } from '../components';
 import { FeedItemCard } from '../components/FeedItemCard';
@@ -238,17 +237,19 @@ export default function PublicMatches() {
   // Sort: chronological primary, relevance score as tiebreaker for same date+time
   const sortedMatches = useSortedNearbyMatches(filteredMatches, scoringPreferences);
 
-  // Fetch the 7-day suggestion grid (5 per day × 7 days).
+  // Fetch a flat top-N list of opponent-deduped, score-sorted suggestions.
+  // Used to pad the feed when there are fewer than 30 real matches.
   const {
-    days,
+    suggestions: rawSuggestions,
     isLoading: loadingSuggestions,
     refetch: refetchSuggestions,
-  } = useMatchSuggestions({
+  } = useTopSuggestions({
     playerId: player?.id,
     sportId: selectedSport?.id,
     sportName: selectedSport?.name,
     latitude: location?.latitude,
     longitude: location?.longitude,
+    maxItems: 30,
     enabled: showMatches,
   });
 
@@ -277,28 +278,46 @@ export default function PublicMatches() {
     ]
   );
 
-  // Build the unified per-day feed (matches + suggestions, both bucketed by day).
-  const feedDays = useUnifiedMatchFeed({
-    matches: sortedMatches,
-    days,
-    filters: suggestionFilters,
-  });
+  // Apply user-selected filters to suggestions (matches are already filtered server-side).
+  const filteredSuggestions = useMemo(() => {
+    const nowMs = Date.now();
+    return rawSuggestions.filter(s => doesSuggestionPassFilters(s, suggestionFilters, nowMs));
+  }, [rawSuggestions, suggestionFilters]);
 
-  // Flatten into a single stream with date-header rows between days.
+  // Build the flat feed: matches first (chronological with score tiebreak),
+  // then a single light "Suggestions for you" divider, then up-to-N suggestions
+  // padding to a minimum of 30 total — but only once matches finish paginating.
   type PublicFeedRow =
-    | { kind: 'header'; key: string; date: string }
-    | { kind: 'item'; key: string; data: UnifiedFeedItem };
+    | { kind: 'item'; key: string; data: UnifiedFeedItem }
+    | { kind: 'frontier'; key: string };
   const feed = useMemo<PublicFeedRow[]>(() => {
-    const out: PublicFeedRow[] = [];
-    for (const day of feedDays) {
-      if (day.items.length === 0) continue;
-      out.push({ kind: 'header', key: `header:${day.date}`, date: day.date });
-      for (const it of day.items) {
-        out.push({ kind: 'item', key: it.key, data: it });
-      }
-    }
-    return out;
-  }, [feedDays]);
+    const matchItems: PublicFeedRow[] = sortedMatches.map(m => ({
+      kind: 'item' as const,
+      key: `match:${m.id}`,
+      data: { kind: 'match', key: `match:${m.id}`, sortTime: 0, data: m } as UnifiedFeedItem,
+    }));
+
+    // Suggestions only kick in when matches genuinely exhausted (no more pages)
+    // and the feed has fewer than 30 real matches.
+    const padCount = Math.max(0, 30 - matchItems.length);
+    if (padCount === 0 || hasNextPage) return matchItems;
+
+    const suggestionItems: PublicFeedRow[] = filteredSuggestions.slice(0, padCount).map(s => ({
+      kind: 'item' as const,
+      key: `suggestion:${s.opponentId}:${(s.slot.datetime as Date).getTime()}`,
+      data: {
+        kind: 'suggestion',
+        key: `suggestion:${s.opponentId}:${(s.slot.datetime as Date).getTime()}`,
+        sortTime: 0,
+        data: s,
+      } as UnifiedFeedItem,
+    }));
+
+    if (suggestionItems.length === 0) return matchItems;
+
+    const frontier: PublicFeedRow = { kind: 'frontier', key: 'frontier' };
+    return [...matchItems, frontier, ...suggestionItems];
+  }, [sortedMatches, filteredSuggestions, hasNextPage]);
 
   // Suggestion invite plumbing (shared with Home).
   const {
@@ -334,21 +353,19 @@ export default function PublicMatches() {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const deviceTz = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, []);
-
-  // Render feed row — date header or match/suggestion card.
+  // Render feed row — either a match/suggestion card or the single hairline
+  // divider between the match block and the suggestion tail.
   const renderFeedItem = useCallback(
     ({ item }: { item: PublicFeedRow }) => {
-      if (item.kind === 'header') {
-        const result = formatIntuitiveDateInTimezone(item.date, deviceTz, locale);
-        let label: string;
-        if (result.type === 'today') label = t('common.time.today');
-        else if (result.type === 'tomorrow') label = t('common.time.tomorrow');
-        else label = result.label;
+      if (item.kind === 'frontier') {
         return (
-          <Text size="sm" weight="bold" color={colors.textMuted} style={styles.dayHeader}>
-            {label}
-          </Text>
+          <View style={styles.frontierRow}>
+            <View style={[styles.frontierLine, { backgroundColor: colors.border }]} />
+            <Text size="xs" color={colors.textMuted} style={styles.frontierLabel}>
+              {t('publicMatches.suggestionsFrontier')}
+            </Text>
+            <View style={[styles.frontierLine, { backgroundColor: colors.border }]} />
+          </View>
         );
       }
       return (
@@ -372,7 +389,6 @@ export default function PublicMatches() {
       );
     },
     [
-      deviceTz,
       isDark,
       t,
       locale,
@@ -633,11 +649,19 @@ const styles = StyleSheet.create({
     padding: spacingPixels[4],
     alignItems: 'center',
   },
-  dayHeader: {
+  frontierRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[4],
+    gap: spacingPixels[3],
+  },
+  frontierLine: {
+    flex: 1,
+    height: 1,
+  },
+  frontierLabel: {
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    paddingHorizontal: spacingPixels[4],
-    marginTop: -spacingPixels[1],
-    marginBottom: spacingPixels[2],
   },
 });
