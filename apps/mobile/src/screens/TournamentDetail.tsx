@@ -1,21 +1,22 @@
 /**
  * TournamentDetail Screen
  *
- * V1 of the L&T vertical slice plan: read-only summary of a tournament,
- * shown after the wizard creates a draft. Action affordances
- * (open registration, manage bracket, etc.) are placeholder "Coming soon"
- * buttons; they ship in subsequent vertical slices V2+.
+ * Read-only summary plus organizer/registrant action affordances.
  *
- * Spec: specs/17-leagues-tournaments/rollout.md §V1
+ * V1: hero, format/schedule/visibility cards, "Coming soon" placeholder.
+ * V2: open/close registration (organizer), self-register/withdraw
+ *     (registrant), registrations count.
+ *
+ * Spec: specs/17-leagues-tournaments/rollout.md §V1, §V2
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
-import { Text } from '@rallia/shared-components';
+import { Text, useToast } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -24,7 +25,19 @@ import {
   primary,
   neutral,
 } from '@rallia/design-system';
-import { useTheme, useTournament, useSports } from '@rallia/shared-hooks';
+import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
+import {
+  useTheme,
+  useTournament,
+  useTournamentRegistrations,
+  useMyTournamentRegistration,
+  useOpenTournamentRegistration,
+  useCloseTournamentRegistration,
+  useRegisterForTournament,
+  useWithdrawFromTournament,
+  useSports,
+  useAuth,
+} from '@rallia/shared-hooks';
 import type { Enums } from '@rallia/shared-types';
 
 import { useTranslation, type TranslationKey } from '../hooks';
@@ -159,10 +172,90 @@ export const TournamentDetail: React.FC = () => {
   const { params } = useRoute<TournamentDetailRoute>();
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
+  const { session } = useAuth();
+  const toast = useToast();
   const isDark = theme === 'dark';
+  const userId = session?.user?.id;
 
   const { data: tournament, isLoading, isError, refetch } = useTournament(params.tournamentId);
+  const { data: registrations = [] } = useTournamentRegistrations(params.tournamentId);
+  const { data: myRegistration } = useMyTournamentRegistration(params.tournamentId, userId);
   const { sports } = useSports();
+
+  const isOrganizer = !!tournament && !!userId && tournament.organizer_id === userId;
+  const myActiveRegistration =
+    myRegistration &&
+    (myRegistration.status === 'registered' || myRegistration.status === 'pending')
+      ? myRegistration
+      : null;
+  const activeCount = registrations.length;
+
+  const showError = useCallback(
+    (errMsg: string, fallbackKey: TranslationKey) => {
+      const lower = errMsg.toLowerCase();
+      const key: TranslationKey = lower.includes('sport_mismatch')
+        ? ('tournamentDetail.errors.sportMismatch' as TranslationKey)
+        : lower.includes('tournament_full')
+          ? ('tournamentDetail.errors.tournamentFull' as TranslationKey)
+          : lower.includes('already_registered')
+            ? ('tournamentDetail.errors.alreadyRegistered' as TranslationKey)
+            : lower.includes('not_invited')
+              ? ('tournamentDetail.errors.notInvited' as TranslationKey)
+              : lower.includes('optimistic_lock')
+                ? ('tournamentDetail.errors.lockConflict' as TranslationKey)
+                : lower.includes('tournament_reg_closed') || lower.includes('reg_closed')
+                  ? ('tournamentDetail.errors.regClosed' as TranslationKey)
+                  : fallbackKey;
+      warningHaptic();
+      toast.error(t(key));
+    },
+    [t, toast]
+  );
+
+  const open = useOpenTournamentRegistration({
+    onSuccess: () => successHaptic(),
+    onError: e => showError(e.message, 'tournamentDetail.errors.openFailed' as TranslationKey),
+  });
+  const close = useCloseTournamentRegistration({
+    onSuccess: () => successHaptic(),
+    onError: e => showError(e.message, 'tournamentDetail.errors.closeFailed' as TranslationKey),
+  });
+  const register = useRegisterForTournament({
+    onSuccess: () => successHaptic(),
+    onError: e => showError(e.message, 'tournamentDetail.errors.registerFailed' as TranslationKey),
+  });
+  const withdraw = useWithdrawFromTournament({
+    onSuccess: () => successHaptic(),
+    onError: e => showError(e.message, 'tournamentDetail.errors.withdrawFailed' as TranslationKey),
+  });
+
+  const onOpen = useCallback(() => {
+    if (!tournament) return;
+    lightHaptic();
+    open.mutate({ tournamentId: tournament.id, versionWas: tournament.version });
+  }, [tournament, open]);
+
+  const onClose = useCallback(() => {
+    if (!tournament) return;
+    lightHaptic();
+    close.mutate({ tournamentId: tournament.id, versionWas: tournament.version });
+  }, [tournament, close]);
+
+  const onRegister = useCallback(() => {
+    if (!tournament) return;
+    lightHaptic();
+    register.mutate({ tournamentId: tournament.id });
+  }, [tournament, register]);
+
+  const onWithdraw = useCallback(() => {
+    if (!tournament || !myActiveRegistration) return;
+    lightHaptic();
+    withdraw.mutate({
+      registrationId: myActiveRegistration.id,
+      versionWas: myActiveRegistration.version,
+      tournamentId: tournament.id,
+    });
+  }, [tournament, myActiveRegistration, withdraw]);
 
   const themeColors = isDark ? darkTheme : lightTheme;
   const colors = useMemo<ScreenColors>(
@@ -325,31 +418,160 @@ export const TournamentDetail: React.FC = () => {
           />
         </Section>
 
-        {/* Placeholder action — wires up in V2 (open registration RPC) */}
-        {tournament.status === 'draft' && (
-          <View style={styles.section}>
-            <View
-              style={[
-                styles.placeholderButton,
-                { backgroundColor: colors.statusMutedBg, borderColor: colors.border },
-              ]}
-            >
-              <Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} />
-              <Text size="base" weight="semibold" color={colors.textMuted}>
-                {t('tournamentDetail.actions.openRegistration' as TranslationKey)}
+        {/* Registrations summary */}
+        {(tournament.status === 'registration_open' ||
+          tournament.status === 'registration_closed' ||
+          tournament.status === 'in_progress') && (
+          <Section
+            title={t('tournamentDetail.registrations.sectionTitle' as TranslationKey)}
+            colors={colors}
+          >
+            <View style={styles.registrationsRow}>
+              <Ionicons name="people-outline" size={20} color={colors.textMuted} />
+              <Text size="base" weight="semibold" color={colors.text}>
+                {t('tournamentDetail.registrations.count' as TranslationKey)
+                  .replace('{count}', String(activeCount))
+                  .replace('{max}', String(tournament.max_participants))}
               </Text>
-              <View style={[styles.comingSoonChip, { backgroundColor: colors.background }]}>
-                <Text size="xs" weight="semibold" color={colors.textMuted}>
-                  {t('tournamentDetail.actions.comingSoon' as TranslationKey)}
-                </Text>
-              </View>
             </View>
-          </View>
+          </Section>
         )}
+
+        {/* Action panel */}
+        {(() => {
+          // Organizer actions
+          if (isOrganizer && tournament.status === 'draft') {
+            return (
+              <PrimaryActionButton
+                label={
+                  open.isPending
+                    ? t('tournamentDetail.actions.opening' as TranslationKey)
+                    : t('tournamentDetail.actions.openRegistration' as TranslationKey)
+                }
+                icon="lock-open-outline"
+                onPress={onOpen}
+                disabled={open.isPending}
+                colors={colors}
+              />
+            );
+          }
+          if (isOrganizer && tournament.status === 'registration_open') {
+            return (
+              <PrimaryActionButton
+                label={
+                  close.isPending
+                    ? t('tournamentDetail.actions.closing' as TranslationKey)
+                    : t('tournamentDetail.actions.closeRegistration' as TranslationKey)
+                }
+                icon="lock-closed-outline"
+                onPress={onClose}
+                disabled={close.isPending}
+                colors={colors}
+              />
+            );
+          }
+
+          // Registrant actions
+          if (!isOrganizer && tournament.status === 'registration_open' && !myActiveRegistration) {
+            return (
+              <PrimaryActionButton
+                label={
+                  register.isPending
+                    ? t('tournamentDetail.actions.registering' as TranslationKey)
+                    : t('tournamentDetail.actions.register' as TranslationKey)
+                }
+                icon="person-add-outline"
+                onPress={onRegister}
+                disabled={register.isPending}
+                colors={colors}
+              />
+            );
+          }
+          if (!isOrganizer && myActiveRegistration) {
+            const statusLabelKey =
+              myActiveRegistration.status === 'pending'
+                ? 'tournamentDetail.actions.registrationPendingLabel'
+                : 'tournamentDetail.actions.registeredLabel';
+            return (
+              <View style={styles.section}>
+                <View style={[styles.statusInline, { backgroundColor: colors.statusPositiveBg }]}>
+                  <Ionicons name="checkmark-circle" size={18} color={colors.statusPositiveText} />
+                  <Text size="sm" weight="semibold" color={colors.statusPositiveText}>
+                    {t(statusLabelKey as TranslationKey)}
+                  </Text>
+                </View>
+                <SecondaryActionButton
+                  label={
+                    withdraw.isPending
+                      ? t('tournamentDetail.actions.withdrawing' as TranslationKey)
+                      : t('tournamentDetail.actions.withdraw' as TranslationKey)
+                  }
+                  icon="exit-outline"
+                  onPress={onWithdraw}
+                  disabled={withdraw.isPending}
+                  colors={colors}
+                />
+              </View>
+            );
+          }
+          return null;
+        })()}
       </ScrollView>
     </SafeAreaView>
   );
 };
+
+const PrimaryActionButton: React.FC<{
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  onPress: () => void;
+  disabled?: boolean;
+  colors: ScreenColors;
+}> = ({ label, icon, onPress, disabled, colors }) => (
+  <View style={styles.section}>
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={disabled}
+      activeOpacity={0.7}
+      style={[
+        styles.primaryButton,
+        { backgroundColor: colors.primary },
+        disabled && styles.buttonDisabled,
+      ]}
+      accessibilityRole="button"
+    >
+      <Ionicons name={icon} size={20} color="#ffffff" />
+      <Text size="base" weight="semibold" color="#ffffff">
+        {label}
+      </Text>
+    </TouchableOpacity>
+  </View>
+);
+
+const SecondaryActionButton: React.FC<{
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  onPress: () => void;
+  disabled?: boolean;
+  colors: ScreenColors;
+}> = ({ label, icon, onPress, disabled, colors }) => (
+  <TouchableOpacity
+    onPress={onPress}
+    disabled={disabled}
+    activeOpacity={0.7}
+    style={[
+      styles.secondaryButton,
+      { borderColor: colors.border, backgroundColor: colors.cardBackground },
+      disabled && styles.buttonDisabled,
+    ]}
+    accessibilityRole="button"
+  >
+    <Ionicons name={icon} size={18} color={colors.text} />
+    <Text size="base" weight="semibold" color={colors.text}>
+      {label}
+    </Text>
+  </TouchableOpacity>
+);
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
@@ -433,6 +655,41 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[2],
     paddingVertical: spacingPixels[0.5],
     borderRadius: radiusPixels.full,
+  },
+  registrationsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[4],
+  },
+  primaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+  },
+  secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+  },
+  buttonDisabled: { opacity: 0.6 },
+  statusInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    marginBottom: spacingPixels[3],
   },
 });
 

@@ -3982,7 +3982,35 @@
     },
     "actions": {
       "openRegistration": "Open registration",
+      "closeRegistration": "Close registration",
+      "register": "Register",
+      "withdraw": "Withdraw",
+      "registering": "Registering...",
+      "withdrawing": "Withdrawing...",
+      "opening": "Opening...",
+      "closing": "Closing...",
+      "registrationClosedLabel": "Registration closed",
+      "registrationPendingLabel": "Registration pending approval",
+      "registeredLabel": "You're registered",
       "comingSoon": "Coming soon"
+    },
+    "registrations": {
+      "sectionTitle": "Registrations",
+      "count": "{count} of {max} registered",
+      "empty": "No registrations yet",
+      "emptyOrganizer": "Open registration to start accepting players."
+    },
+    "errors": {
+      "openFailed": "Couldn't open registration. Please try again.",
+      "closeFailed": "Couldn't close registration. Please try again.",
+      "registerFailed": "Couldn't complete registration. Please try again.",
+      "withdrawFailed": "Couldn't withdraw. Please try again.",
+      "tournamentFull": "This tournament is full.",
+      "alreadyRegistered": "You're already registered for this tournament.",
+      "sportMismatch": "You don't have this sport active on your profile.",
+      "regClosed": "Registration is no longer open.",
+      "notInvited": "This tournament is invite-only and you haven't been invited.",
+      "lockConflict": "Someone else made changes — please refresh and try again."
     }
   },
   "tournamentCreation": {

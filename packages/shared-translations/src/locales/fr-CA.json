@@ -3982,7 +3982,35 @@
     },
     "actions": {
       "openRegistration": "Ouvrir les inscriptions",
+      "closeRegistration": "Fermer les inscriptions",
+      "register": "S'inscrire",
+      "withdraw": "Se retirer",
+      "registering": "Inscription...",
+      "withdrawing": "Retrait...",
+      "opening": "Ouverture...",
+      "closing": "Fermeture...",
+      "registrationClosedLabel": "Inscriptions fermées",
+      "registrationPendingLabel": "Inscription en attente d'approbation",
+      "registeredLabel": "Vous êtes inscrit",
       "comingSoon": "Bientôt disponible"
+    },
+    "registrations": {
+      "sectionTitle": "Inscriptions",
+      "count": "{count} sur {max} inscrits",
+      "empty": "Aucune inscription pour le moment",
+      "emptyOrganizer": "Ouvrez les inscriptions pour commencer à accepter des joueurs."
+    },
+    "errors": {
+      "openFailed": "Impossible d'ouvrir les inscriptions. Veuillez réessayer.",
+      "closeFailed": "Impossible de fermer les inscriptions. Veuillez réessayer.",
+      "registerFailed": "Impossible de finaliser l'inscription. Veuillez réessayer.",
+      "withdrawFailed": "Impossible de se retirer. Veuillez réessayer.",
+      "tournamentFull": "Ce tournoi est complet.",
+      "alreadyRegistered": "Vous êtes déjà inscrit à ce tournoi.",
+      "sportMismatch": "Vous n'avez pas ce sport actif sur votre profil.",
+      "regClosed": "Les inscriptions ne sont plus ouvertes.",
+      "notInvited": "Ce tournoi est sur invitation et vous n'avez pas été invité.",
+      "lockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer."
     }
   },
   "tournamentCreation": {
