@@ -3585,6 +3585,8 @@
     "createShareListDescription": "Create a list of people outside the app to invite to your games",
     "createNetwork": "Create Network",
     "createNetworkDescription": "Start a group or community to organize regular games with others",
+    "createTournament": "Create Tournament",
+    "createTournamentDescription": "Organize a tournament with a bracket and registrations",
     "createEvent": "Create Event",
     "createEventDescription": "Organize a tournament or league and manage brackets and schedules",
     "selectNetworkType": "Create Network",
@@ -3931,6 +3933,66 @@
       "invitationsSentCount": "Sent {count} invitation(s)",
       "shareWithContacts": "Share with {count} contact(s)",
       "selectContactsFromLists": "Select contacts from your lists"
+    }
+  },
+  "tournamentCreation": {
+    "title": "Create a tournament",
+    "forSport": "Creating tournament for {sport}",
+    "step": "Step {current} of {total}",
+    "stepNames": {
+      "basics": "Basics",
+      "schedule": "Schedule",
+      "visibility": "Visibility"
+    },
+    "step1Title": "Basics",
+    "step1Description": "Name your tournament and choose its size",
+    "step2Title": "Schedule",
+    "step2Description": "When does the tournament run?",
+    "step3Title": "Visibility",
+    "step3Description": "Who can see and register?",
+    "next": "Next",
+    "back": "Back",
+    "createTournament": "Create tournament",
+    "creating": "Creating...",
+    "success": "Tournament created!",
+    "successDescription": "Your draft tournament is ready. Open registration when you're ready to invite players.",
+    "viewTournament": "View tournament",
+    "createAnother": "Create another",
+    "fields": {
+      "name": "Name",
+      "namePlaceholder": "e.g., Spring Singles 2026",
+      "maxParticipants": "Bracket size",
+      "maxParticipantsHint": "Number of players the bracket holds",
+      "startDate": "Start date",
+      "startDatePlaceholder": "Select date",
+      "endDate": "End date",
+      "endDatePlaceholder": "Select date",
+      "visibility": "Visibility",
+      "visibilityPrivate": "Private",
+      "visibilityPrivateDescription": "Only people you invite can see this",
+      "visibilityPublic": "Public",
+      "visibilityPublicDescription": "Anyone in your sport can find and register",
+      "visibilityCommunity": "Community",
+      "visibilityCommunityDescription": "Visible to members of a community you choose",
+      "registrationMode": "Registration mode",
+      "registrationModeOpen": "Open",
+      "registrationModeOpenDescription": "Anyone visible can self-register",
+      "registrationModeApproval": "Approval",
+      "registrationModeApprovalDescription": "You approve each registration",
+      "registrationModeInviteOnly": "Invite only",
+      "registrationModeInviteOnlyDescription": "Only people you invite can register"
+    },
+    "validation": {
+      "nameRequired": "Tournament name is required",
+      "nameTooLong": "Name must be 100 characters or fewer",
+      "datesRequired": "Both start and end dates are required",
+      "endBeforeStart": "End date must be on or after the start date",
+      "startInPast": "Start date must be in the future"
+    },
+    "errors": {
+      "sportMismatch": "You don't have this sport active on your profile",
+      "rateLimited": "You've created the maximum number of tournaments today. Try again tomorrow.",
+      "generic": "Couldn't create the tournament. Please try again."
     }
   },
   "home": {

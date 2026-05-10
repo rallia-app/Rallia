@@ -3585,6 +3585,8 @@
     "createShareListDescription": "Créez une liste de personnes hors application à inviter à vos parties",
     "createNetwork": "Créer un réseau",
     "createNetworkDescription": "Créez un groupe ou une communauté pour organiser des parties régulières",
+    "createTournament": "Créer un tournoi",
+    "createTournamentDescription": "Organisez un tournoi avec un tableau et des inscriptions",
     "createEvent": "Créer un événement",
     "createEventDescription": "Organisez un tournoi ou une ligue et gérez les tableaux et horaires",
     "selectNetworkType": "Créer un réseau",
@@ -3931,6 +3933,66 @@
       "invitationsSentCount": "{count} invitation(s) envoyée(s)",
       "shareWithContacts": "Partager avec {count} contact(s)",
       "selectContactsFromLists": "Sélectionner des contacts dans vos listes"
+    }
+  },
+  "tournamentCreation": {
+    "title": "Créer un tournoi",
+    "forSport": "Création d'un tournoi pour {sport}",
+    "step": "Étape {current} sur {total}",
+    "stepNames": {
+      "basics": "Détails",
+      "schedule": "Calendrier",
+      "visibility": "Visibilité"
+    },
+    "step1Title": "Détails",
+    "step1Description": "Nommez votre tournoi et choisissez sa taille",
+    "step2Title": "Calendrier",
+    "step2Description": "Quand le tournoi a-t-il lieu?",
+    "step3Title": "Visibilité",
+    "step3Description": "Qui peut le voir et s'inscrire?",
+    "next": "Suivant",
+    "back": "Retour",
+    "createTournament": "Créer le tournoi",
+    "creating": "Création...",
+    "success": "Tournoi créé!",
+    "successDescription": "Votre brouillon de tournoi est prêt. Ouvrez les inscriptions quand vous voulez inviter des joueurs.",
+    "viewTournament": "Voir le tournoi",
+    "createAnother": "En créer un autre",
+    "fields": {
+      "name": "Nom",
+      "namePlaceholder": "ex. : Simples du printemps 2026",
+      "maxParticipants": "Taille du tableau",
+      "maxParticipantsHint": "Nombre de joueurs que le tableau accueille",
+      "startDate": "Date de début",
+      "startDatePlaceholder": "Choisir une date",
+      "endDate": "Date de fin",
+      "endDatePlaceholder": "Choisir une date",
+      "visibility": "Visibilité",
+      "visibilityPrivate": "Privé",
+      "visibilityPrivateDescription": "Seules les personnes que vous invitez le voient",
+      "visibilityPublic": "Public",
+      "visibilityPublicDescription": "Toute personne dans votre sport peut le trouver et s'inscrire",
+      "visibilityCommunity": "Communauté",
+      "visibilityCommunityDescription": "Visible aux membres d'une communauté que vous choisissez",
+      "registrationMode": "Mode d'inscription",
+      "registrationModeOpen": "Ouvert",
+      "registrationModeOpenDescription": "Toute personne qui voit le tournoi peut s'inscrire",
+      "registrationModeApproval": "Approbation",
+      "registrationModeApprovalDescription": "Vous approuvez chaque inscription",
+      "registrationModeInviteOnly": "Sur invitation",
+      "registrationModeInviteOnlyDescription": "Seules les personnes invitées peuvent s'inscrire"
+    },
+    "validation": {
+      "nameRequired": "Le nom du tournoi est requis",
+      "nameTooLong": "Le nom doit contenir au plus 100 caractères",
+      "datesRequired": "Les dates de début et de fin sont requises",
+      "endBeforeStart": "La date de fin doit être après ou égale à la date de début",
+      "startInPast": "La date de début doit être dans le futur"
+    },
+    "errors": {
+      "sportMismatch": "Vous n'avez pas ce sport actif sur votre profil",
+      "rateLimited": "Vous avez créé le nombre maximal de tournois pour aujourd'hui. Réessayez demain.",
+      "generic": "Impossible de créer le tournoi. Veuillez réessayer."
     }
   },
   "home": {
