@@ -188,7 +188,7 @@ const quickNavStyles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'flex-start',
     paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[3],
+    paddingTop: spacingPixels[5],
     paddingBottom: spacingPixels[2],
   },
   item: {
@@ -695,9 +695,17 @@ const Home = () => {
   // Use player's travel distance if signed in, otherwise use guest default
   const searchRadiusKm = session ? maxTravelDistanceKm : GUEST_SEARCH_RADIUS_KM;
 
-  // Determine if we should show the nearby matches section
-  // For dev: always show since we're using hardcoded location
-  const showNearbySection = !!location && !!selectedSport;
+  // The section becomes visible as soon as we have sport + location, and
+  // stays visible across transitions (sign-in, sport switching) so the
+  // header (title / location selector / view all) doesn't flash out while
+  // the carousel re-fetches. The carousel itself swaps to skeletons via
+  // `showJfyLoading` when the fetch isn't ready yet.
+  const isNearbyFetchReady = !!location && !!selectedSport;
+  const [hasShownNearby, setHasShownNearby] = useState(false);
+  useEffect(() => {
+    if (isNearbyFetchReady) setHasShownNearby(true);
+  }, [isNearbyFetchReady]);
+  const showNearbySection = isNearbyFetchReady || hasShownNearby;
 
   // Use TanStack Query hook for fetching nearby matches with infinite scrolling
   // Query refetches automatically when sportId or player gender changes (included in query key)
@@ -1018,6 +1026,110 @@ const Home = () => {
   const renderListHeader = useCallback(() => {
     const headerComponents = [];
 
+    // Banners go first so they sit above everything else on the home screen,
+    // including the quick-nav FAB row. Only signed-in + onboarded users see
+    // them; the bucket is built up below and only flushed if non-empty.
+    const bannerCards: React.ReactNode[] = [];
+
+    if (session && isOnboarded) {
+      // Billing issue banner (shown when subscription payment has failed)
+      if (subscriptionStatus === 'billing_issue') {
+        bannerCards.push(
+          <BillingIssueBanner
+            key="billing-issue"
+            onManagePress={() => appNavigation.navigate('SubscriptionManagement')}
+          />
+        );
+      }
+
+      // Pending incoming reference requests
+      if (pendingReferenceRequestsCount > 0) {
+        bannerCards.push(
+          <ReferenceRequestsBanner
+            key="reference-requests"
+            count={pendingReferenceRequestsCount}
+            onPress={() => appNavigation.navigate('IncomingReferenceRequests')}
+            t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
+          />
+        );
+      }
+
+      // Cross-sport banners for unread notifications in other sports
+      Object.entries(otherSportsUnreadCount).forEach(([sportName, count]) => {
+        if (count > 0 && !dismissedBannerSports.has(sportName)) {
+          const sport = userSports.find(s => s.name === sportName);
+          if (sport) {
+            bannerCards.push(
+              <CrossSportBanner
+                key={`cross-sport-${sportName}`}
+                sportName={sportName}
+                displayName={sport.display_name.toLowerCase()}
+                count={count}
+                onSwitch={() => setSelectedSport(sport)}
+                onDismiss={() => setDismissedBannerSports(prev => new Set(prev).add(sportName))}
+                t={
+                  t as (key: string, options?: Record<string, string | number | boolean>) => string
+                }
+              />
+            );
+          }
+        }
+      });
+
+      // Second sport activation banner (for users with only 1 sport)
+      if (shouldShowSecondSportBanner && inactiveSports.length > 0) {
+        const sportToActivate = inactiveSports[0];
+        bannerCards.push(
+          <SecondSportBanner
+            key="second-sport-banner"
+            sportName={sportToActivate.name}
+            displayName={sportToActivate.display_name.toLowerCase()}
+            onActivate={handleActivateSecondSport}
+            onDismiss={handleDismissSecondSportBanner}
+            fadeAnim={secondSportFadeAnim}
+            t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
+          />
+        );
+      }
+
+      // Profile completion banner
+      if (!profileCompleteness.isComplete && !profileCompleteness.loading) {
+        bannerCards.push(
+          <ProfileCompletionBanner
+            key="profile-completion"
+            percentage={profileCompleteness.percentage}
+            nextAction={profileCompleteness.nextAction}
+            isComplete={profileCompleteness.isComplete}
+            loading={profileCompleteness.loading}
+            onAction={handleCompletionBannerAction}
+            t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
+          />
+        );
+      }
+    }
+
+    // Single banner gets the full row; multiple banners scroll horizontally
+    // as a carousel (matching My Matches / Just for you below).
+    if (bannerCards.length === 1) {
+      headerComponents.push(
+        <HomeBannerLayoutProvider key="banner-single" layout="fullWidth">
+          <View style={styles.bannerSingleWrap}>{bannerCards[0]}</View>
+        </HomeBannerLayoutProvider>
+      );
+    } else if (bannerCards.length > 1) {
+      headerComponents.push(
+        <HomeBannerLayoutProvider key="banner-carousel" layout="card">
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.bannerCarouselContent}
+          >
+            {bannerCards}
+          </ScrollView>
+        </HomeBannerLayoutProvider>
+      );
+    }
+
     // Quick-nav row: 3 circular FABs (community / book a court / find a game).
     // Shown for everyone — signed-out users land on the same destinations,
     // which gate themselves where needed.
@@ -1127,108 +1239,6 @@ const Home = () => {
         </View>
       );
     } else {
-      // Collect every header banner into one bucket so they can scroll
-      // horizontally as a group, mirroring the My Matches / Just for you
-      // carousels on the same screen.
-      const bannerCards: React.ReactNode[] = [];
-
-      // Billing issue banner (shown when subscription payment has failed)
-      if (subscriptionStatus === 'billing_issue') {
-        bannerCards.push(
-          <BillingIssueBanner
-            key="billing-issue"
-            onManagePress={() => appNavigation.navigate('SubscriptionManagement')}
-          />
-        );
-      }
-
-      // Pending incoming reference requests
-      if (pendingReferenceRequestsCount > 0) {
-        bannerCards.push(
-          <ReferenceRequestsBanner
-            key="reference-requests"
-            count={pendingReferenceRequestsCount}
-            onPress={() => appNavigation.navigate('IncomingReferenceRequests')}
-            t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
-          />
-        );
-      }
-
-      // Cross-sport banners for unread notifications in other sports
-      Object.entries(otherSportsUnreadCount).forEach(([sportName, count]) => {
-        if (count > 0 && !dismissedBannerSports.has(sportName)) {
-          const sport = userSports.find(s => s.name === sportName);
-          if (sport) {
-            bannerCards.push(
-              <CrossSportBanner
-                key={`cross-sport-${sportName}`}
-                sportName={sportName}
-                displayName={sport.display_name.toLowerCase()}
-                count={count}
-                onSwitch={() => setSelectedSport(sport)}
-                onDismiss={() => setDismissedBannerSports(prev => new Set(prev).add(sportName))}
-                t={
-                  t as (key: string, options?: Record<string, string | number | boolean>) => string
-                }
-              />
-            );
-          }
-        }
-      });
-
-      // Second sport activation banner (for users with only 1 sport)
-      if (shouldShowSecondSportBanner && inactiveSports.length > 0) {
-        const sportToActivate = inactiveSports[0];
-        bannerCards.push(
-          <SecondSportBanner
-            key="second-sport-banner"
-            sportName={sportToActivate.name}
-            displayName={sportToActivate.display_name.toLowerCase()}
-            onActivate={handleActivateSecondSport}
-            onDismiss={handleDismissSecondSportBanner}
-            fadeAnim={secondSportFadeAnim}
-            t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
-          />
-        );
-      }
-
-      // Profile completion banner
-      if (!profileCompleteness.isComplete && !profileCompleteness.loading) {
-        bannerCards.push(
-          <ProfileCompletionBanner
-            key="profile-completion"
-            percentage={profileCompleteness.percentage}
-            nextAction={profileCompleteness.nextAction}
-            isComplete={profileCompleteness.isComplete}
-            loading={profileCompleteness.loading}
-            onAction={handleCompletionBannerAction}
-            t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
-          />
-        );
-      }
-
-      // Single banner gets the full row; multiple banners scroll horizontally
-      // as a carousel (matching My Matches / Just for you below).
-      if (bannerCards.length === 1) {
-        headerComponents.push(
-          <HomeBannerLayoutProvider key="banner-single" layout="fullWidth">
-            <View style={styles.bannerSingleWrap}>{bannerCards[0]}</View>
-          </HomeBannerLayoutProvider>
-        );
-      } else if (bannerCards.length > 1) {
-        headerComponents.push(
-          <HomeBannerLayoutProvider key="banner-carousel" layout="card">
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.bannerCarouselContent}
-            >
-              {bannerCards}
-            </ScrollView>
-          </HomeBannerLayoutProvider>
-        );
-      }
-
       // Add "My Matches" section for fully onboarded users
       headerComponents.push(<View key="my-matches">{renderMyMatchesSection()}</View>);
     }
@@ -1279,7 +1289,10 @@ const Home = () => {
   // its own loading state, so the page renders immediately and the relevant
   // section shows its skeleton until its data arrives. Avoids the layout
   // flicker that came from swapping a full-page skeleton in and out.
-  const showJfyEmpty = !loadingJustForYou && justForYouItems.length === 0;
+  // Treat "fetch not yet ready" as a loading state so the carousel renders
+  // skeletons (instead of the empty card) while sport/location settle.
+  const showJfyLoading = loadingJustForYou || !isNearbyFetchReady;
+  const showJfyEmpty = !showJfyLoading && justForYouItems.length === 0;
 
   const content = (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
@@ -1311,7 +1324,7 @@ const Home = () => {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.justForYouScrollContent}
           >
-            {loadingJustForYou ? (
+            {showJfyLoading ? (
               [1, 2, 3].map(i => (
                 <View key={i} style={styles.jfyCardWrapper}>
                   <SkeletonMatchCard
