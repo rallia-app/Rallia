@@ -46,7 +46,7 @@ import {
   requestToJoinCommunityByInviteCode,
   syncHomeLocation as syncHomeLocationToPlayer,
 } from '@rallia/shared-services';
-import { useProfile, usePlayer, useMatchSuggestions } from '@rallia/shared-hooks';
+import { useProfile, usePlayer, useTopSuggestions } from '@rallia/shared-hooks';
 import {
   PENDING_REFERRAL_KEY,
   ACQUISITION_CHANNEL_KEY,
@@ -337,17 +337,18 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   // Player ID for referral sharing on success step
   const [successPlayerId, setSuccessPlayerId] = useState<string | null>(null);
 
-  // Match suggestions for post-success step
-  // Resolves sport from context or onboarding data
+  // Match suggestions for post-success step — pedagogical preview, suggestions
+  // only (no real matches mixed in). Top-5 by score, opponent-deduped.
   const suggestionSport = selectedSport ?? selectedSportsForSuccess[0];
   const {
-    days: matchSuggestionDays,
+    suggestions: matchSuggestions,
     isLoading: suggestionsLoading,
     refetch: refetchSuggestions,
-  } = useMatchSuggestions({
+  } = useTopSuggestions({
     playerId: successPlayerId,
     sportId: suggestionSport?.id,
     sportName: suggestionSport?.name,
+    maxItems: 5,
     enabled: currentStepId === 'success' || currentStepId === 'suggestions',
   });
 
@@ -1209,7 +1210,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       case 'suggestions':
         return (
           <SuggestionsStep
-            days={matchSuggestionDays}
+            suggestions={matchSuggestions}
             isLoading={suggestionsLoading}
             onComplete={onComplete}
             onRefresh={handleRefreshSuggestions}
@@ -1259,7 +1260,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           />
         ) : (
           <SuggestionsStep
-            days={matchSuggestionDays}
+            suggestions={matchSuggestions}
             isLoading={suggestionsLoading}
             onComplete={onComplete}
             onRefresh={handleRefreshSuggestions}

@@ -21,7 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { SuggestionCard } from '../../../../../components/SuggestionCard';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import type { DaySuggestions, SlotSuggestion } from '@rallia/shared-services';
+import type { SlotSuggestion } from '@rallia/shared-services';
 import type { TranslationKey } from '@rallia/shared-translations';
 import * as Analytics from '../../../../../services/analytics';
 import {
@@ -46,7 +46,8 @@ interface ThemeColors {
 }
 
 interface SuggestionsStepProps {
-  days: DaySuggestions[];
+  /** Flat top-N suggestions, opponent-deduped, score-ordered (best first). */
+  suggestions: SlotSuggestion[];
   isLoading: boolean;
   onComplete: () => void;
   onRefresh?: () => void;
@@ -63,7 +64,7 @@ interface SuggestionsStepProps {
 // =============================================================================
 
 export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
-  days,
+  suggestions,
   isLoading,
   onComplete,
   onRefresh,
@@ -85,18 +86,12 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
       }),
   });
 
-  // Onboarding shows a quick preview — flatten the soonest non-empty days and
-  // show up to MAX_CARDS suggestions in chronological order.
-  const previewSuggestions = useMemo<SlotSuggestion[]>(() => {
-    const out: SlotSuggestion[] = [];
-    for (const day of days) {
-      for (const s of day.suggestions) {
-        out.push(s);
-        if (out.length >= MAX_CARDS) return out;
-      }
-    }
-    return out;
-  }, [days]);
+  // Top-N from useTopSuggestions is already opponent-deduped + score-sorted.
+  // Slice defensively in case caller passes more than MAX_CARDS.
+  const previewSuggestions = useMemo<SlotSuggestion[]>(
+    () => suggestions.slice(0, MAX_CARDS),
+    [suggestions]
+  );
 
   // Animation values
   const headerOpacity = useSharedValue(0);
