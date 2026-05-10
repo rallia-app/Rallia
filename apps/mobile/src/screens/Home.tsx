@@ -13,6 +13,7 @@ import { useScrollToTop } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import {
+  MatchCard,
   MyMatchCard,
   Text,
   Heading,
@@ -23,6 +24,7 @@ import {
   SkeletonMyMatchCard,
   useToast,
 } from '@rallia/shared-components';
+import { neutral } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import { SheetManager } from 'react-native-actions-sheet';
 import {
@@ -78,7 +80,7 @@ import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { SportIcon } from '../components/SportIcon';
 import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
 import ProfileCompletionBanner from '../features/profile/components/ProfileCompletionBanner';
-import { FeedItemCard } from '../features/matches/components/FeedItemCard';
+import { SuggestionCard } from '../components/SuggestionCard';
 import type { UnifiedFeedItem } from '@rallia/shared-hooks';
 import BillingIssueBanner from '../components/BillingIssueBanner';
 import ReferenceRequestsBanner from '../components/ReferenceRequestsBanner';
@@ -1292,32 +1294,67 @@ const Home = () => {
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.justForYouScrollContent}
                 >
-                  {justForYouItems.map(item => (
-                    <View key={item.key} style={styles.jfyCardWrapper}>
-                      <FeedItemCard
-                        item={item}
-                        isDark={isDark}
-                        locale={locale}
-                        t={
-                          t as (
-                            key: string,
-                            options?: Record<string, string | number | boolean>
-                          ) => string
-                        }
-                        currentPlayerId={player?.id}
-                        themeColors={colors}
-                        suggestionLabels={suggestionLabels}
-                        getInviteState={getInviteState}
-                        onMatchPress={match => {
-                          Logger.logUserAction('match_pressed', { matchId: match.id });
-                          openMatchDetail(match as MatchDetailData);
-                        }}
-                        onSendInvite={handleSendInvite}
-                        sportId={selectedSport?.id}
-                        sportName={selectedSport?.name}
-                      />
-                    </View>
-                  ))}
+                  {justForYouItems.map(item =>
+                    item.kind === 'match' ? (
+                      <View key={item.key} style={styles.jfyCardWrapper}>
+                        {/* MatchCard has built-in marginHorizontal:16; the
+                            negative wrapper margin neutralizes it so the card
+                            fills our 320px slot exactly. */}
+                        <View style={styles.jfyMatchInner}>
+                          <MatchCard
+                            match={item.data}
+                            isDark={isDark}
+                            t={
+                              t as (
+                                key: string,
+                                options?: Record<string, string | number | boolean>
+                              ) => string
+                            }
+                            locale={locale}
+                            currentPlayerId={player?.id}
+                            sportIcon={
+                              <SportIcon
+                                sportName={item.data.sport?.name ?? selectedSport?.name ?? 'tennis'}
+                                size={100}
+                                color={isDark ? neutral[600] : neutral[400]}
+                              />
+                            }
+                            onPress={() => {
+                              Logger.logUserAction('match_pressed', { matchId: item.data.id });
+                              openMatchDetail(item.data as MatchDetailData);
+                            }}
+                          />
+                        </View>
+                      </View>
+                    ) : (
+                      <View key={item.key} style={styles.jfyCardWrapper}>
+                        <SuggestionCard
+                          suggestion={item.data}
+                          colors={{
+                            cardBackground: colors.cardBackground,
+                            text: colors.foreground,
+                            textSecondary: colors.textSecondary,
+                            textMuted: colors.textMuted,
+                            border: colors.border,
+                            buttonActive: colors.primary,
+                            buttonTextActive: '#ffffff',
+                          }}
+                          isDark={isDark}
+                          labels={suggestionLabels}
+                          locale={locale}
+                          onSendInvite={handleSendInvite}
+                          inviteState={getInviteState(
+                            item.data.opponentId,
+                            item.data.facility.facilityId,
+                            item.data.slot.datetime
+                          )}
+                          source="feed"
+                          sportId={selectedSport?.id}
+                          sportName={selectedSport?.name}
+                        />
+                      </View>
+                    )
+                  )}
                 </ScrollView>
               )}
             </>
@@ -1414,15 +1451,21 @@ const styles = StyleSheet.create({
     paddingBottom: spacingPixels[6],
   },
   justForYouScrollContent: {
-    paddingHorizontal: spacingPixels[4],
+    paddingHorizontal: spacingPixels[4], // leading & trailing edge from screen
     paddingBottom: spacingPixels[2],
-    gap: spacingPixels[3],
+    gap: spacingPixels[3], // inter-card spacing (12px)
   },
-  // Fixed width so MatchCard / SuggestionCard (designed for width:'100%')
-  // render at a consistent size in horizontal scroll. Slightly under typical
-  // phone width so the next card peeks and signals scrollability.
+  // 320px slot per card — slightly under typical phone width so the next card
+  // peeks and signals horizontal scrollability.
   jfyCardWrapper: {
     width: 320,
+  },
+  // MatchCard ships with marginHorizontal: spacingPixels[4] built in (so it
+  // sits flush in vertical lists). In a horizontal carousel that margin would
+  // shrink the visible card and add unwanted gap. Negative margin neutralizes
+  // it so the card fills the 320px slot exactly.
+  jfyMatchInner: {
+    marginHorizontal: -spacingPixels[4],
   },
   jfySkeleton: {
     width: 320,
