@@ -4027,7 +4027,8 @@
       "bye": "BYE",
       "tbd": "TBD",
       "winnerSuffix": "(winner)",
-      "phantom": "—"
+      "phantom": "—",
+      "openMatch": "Open match to enter score"
     },
     "generateBracketErrors": {
       "insufficientParticipants": "At least 2 players must be registered.",

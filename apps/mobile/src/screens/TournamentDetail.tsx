@@ -44,6 +44,8 @@ import type { Enums, Tables } from '@rallia/shared-types';
 
 import { useTranslation, type TranslationKey } from '../hooks';
 import { SportIcon } from '../components/SportIcon';
+import { useMatchDetailSheet } from '../context';
+import { getMatchWithDetails } from '@rallia/shared-services';
 import type { RootStackParamList } from '../navigation';
 
 type TournamentDetailRoute = RouteProp<RootStackParamList, 'TournamentDetail'>;
@@ -309,6 +311,29 @@ export const TournamentDetail: React.FC = () => {
     return map;
   }, [registrations]);
 
+  // Map registration_id → user_id, used to decide whether the caller can
+  // tap into a bracket match.
+  const userByRegId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const r of registrations) map.set(r.id, r.user_id);
+    return map;
+  }, [registrations]);
+
+  const { openSheet: openMatchDetail } = useMatchDetailSheet();
+
+  const handleBracketMatchTap = useCallback(
+    async (matchId: string) => {
+      lightHaptic();
+      try {
+        const matchDetails = await getMatchWithDetails(matchId);
+        if (matchDetails) openMatchDetail(matchDetails);
+      } catch (err) {
+        console.error('Failed to open tournament match', err);
+      }
+    },
+    [openMatchDetail]
+  );
+
   const themeColors = isDark ? darkTheme : lightTheme;
   const colors = useMemo<ScreenColors>(
     () => ({
@@ -491,7 +516,15 @@ export const TournamentDetail: React.FC = () => {
 
         {/* Bracket */}
         {shouldFetchBracket && matches.length > 0 && (
-          <BracketSection matches={matches} seedByRegId={seedByRegId} colors={colors} t={t} />
+          <BracketSection
+            matches={matches}
+            seedByRegId={seedByRegId}
+            userByRegId={userByRegId}
+            currentUserId={userId}
+            onMatchPress={handleBracketMatchTap}
+            colors={colors}
+            t={t}
+          />
         )}
 
         {/* Action panel */}
@@ -624,9 +657,12 @@ const slotLabel = (
 const BracketSection: React.FC<{
   matches: MatchRow[];
   seedByRegId: Map<string, number>;
+  userByRegId: Map<string, string>;
+  currentUserId: string | undefined;
+  onMatchPress: (matchId: string) => void;
   colors: ScreenColors;
   t: (k: TranslationKey) => string;
-}> = ({ matches, seedByRegId, colors, t }) => {
+}> = ({ matches, seedByRegId, userByRegId, currentUserId, onMatchPress, colors, t }) => {
   const totalRounds = matches.reduce((max, m) => Math.max(max, m.round_number), 0);
   const byRound = new Map<number, MatchRow[]>();
   for (const m of matches) {
@@ -679,8 +715,26 @@ const BracketSection: React.FC<{
                     : m.winner_registration_id === m.player2_registration_id
                       ? 2
                       : 0;
-                return (
-                  <View key={m.id} style={[styles.bracketMatch, { borderColor: colors.border }]}>
+
+                const p1User = m.player1_registration_id
+                  ? userByRegId.get(m.player1_registration_id)
+                  : undefined;
+                const p2User = m.player2_registration_id
+                  ? userByRegId.get(m.player2_registration_id)
+                  : undefined;
+                const callerIsParticipant =
+                  !!currentUserId && (currentUserId === p1User || currentUserId === p2User);
+                const isPlayable =
+                  m.status === 'pending' &&
+                  m.match_id !== null &&
+                  !m.player1_is_bye &&
+                  !m.player2_is_bye &&
+                  !!m.player1_registration_id &&
+                  !!m.player2_registration_id;
+                const isTappable = isPlayable && callerIsParticipant;
+
+                const matchInner = (
+                  <>
                     <BracketSlot
                       label={slotLabel(
                         m.player1_registration_id,
@@ -706,6 +760,38 @@ const BracketSection: React.FC<{
                       isBye={m.player2_is_bye}
                       colors={colors}
                     />
+                    {m.score && (
+                      <View style={[styles.bracketScoreRow, { borderTopColor: colors.border }]}>
+                        <Text size="xs" color={colors.textMuted}>
+                          {m.score}
+                        </Text>
+                      </View>
+                    )}
+                  </>
+                );
+
+                if (isTappable && m.match_id) {
+                  return (
+                    <TouchableOpacity
+                      key={m.id}
+                      onPress={() => onMatchPress(m.match_id!)}
+                      activeOpacity={0.7}
+                      style={[
+                        styles.bracketMatch,
+                        styles.bracketMatchPlayable,
+                        { borderColor: colors.primary },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('tournamentDetail.bracket.openMatch' as TranslationKey)}
+                    >
+                      {matchInner}
+                    </TouchableOpacity>
+                  );
+                }
+
+                return (
+                  <View key={m.id} style={[styles.bracketMatch, { borderColor: colors.border }]}>
+                    {matchInner}
                   </View>
                 );
               })}
@@ -917,6 +1003,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radiusPixels.md,
     overflow: 'hidden',
+  },
+  bracketMatchPlayable: {
+    borderWidth: 2,
+  },
+  bracketScoreRow: {
+    paddingVertical: spacingPixels[2],
+    paddingHorizontal: spacingPixels[3],
+    borderTopWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
   },
   bracketSlot: {
     flexDirection: 'row',

@@ -4027,7 +4027,8 @@
       "bye": "EXEMPT",
       "tbd": "À déterminer",
       "winnerSuffix": "(gagnant)",
-      "phantom": "—"
+      "phantom": "—",
+      "openMatch": "Ouvrir le match pour entrer le score"
     },
     "generateBracketErrors": {
       "insufficientParticipants": "Au moins 2 joueurs doivent être inscrits.",

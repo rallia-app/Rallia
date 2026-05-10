@@ -7723,6 +7723,7 @@ export type Database = {
           created_at: string
           id: string
           loser_next_match_id: string | null
+          match_id: string | null
           match_position: number
           next_match_id: string | null
           next_match_slot: number | null
@@ -7746,6 +7747,7 @@ export type Database = {
           created_at?: string
           id?: string
           loser_next_match_id?: string | null
+          match_id?: string | null
           match_position: number
           next_match_id?: string | null
           next_match_slot?: number | null
@@ -7769,6 +7771,7 @@ export type Database = {
           created_at?: string
           id?: string
           loser_next_match_id?: string | null
+          match_id?: string | null
           match_position?: number
           next_match_id?: string | null
           next_match_slot?: number | null
@@ -7799,6 +7802,13 @@ export type Database = {
             columns: ["loser_next_match_id"]
             isOneToOne: false
             referencedRelation: "tournament_matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_matches_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: true
+            referencedRelation: "match"
             referencedColumns: ["id"]
           },
           {
@@ -9771,6 +9781,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      lt_advance_tournament_winner: {
+        Args: {
+          p_tournament_match_id: string
+          p_winner_registration_id: string
+        }
+        Returns: undefined
+      }
+      lt_create_match_for_tournament_match: {
+        Args: { p_tm_id: string }
+        Returns: string
+      }
       lt_seed_positions: { Args: { p_size: number }; Returns: number[] }
       mark_alert_read: {
         Args: { p_admin_id: string; p_alert_id: string }
@@ -10124,26 +10145,16 @@ export type Database = {
         Args: { p_player_id: string; p_utm: Json }
         Returns: undefined
       }
-      submit_match_result_for_match:
-        | {
-            Args: {
-              p_match_id: string
-              p_sets: Json
-              p_submitted_by: string
-              p_winning_team: number
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_match_id: string
-              p_partner_id?: string
-              p_sets: Json
-              p_submitted_by: string
-              p_winning_team: number
-            }
-            Returns: string
-          }
+      submit_match_result_for_match: {
+        Args: {
+          p_match_id: string
+          p_partner_id?: string
+          p_sets: Json
+          p_submitted_by: string
+          p_winning_team: number
+        }
+        Returns: string
+      }
       tournament_close_registration: {
         Args: { p_tournament_id: string; p_version_was: number }
         Returns: {
@@ -10267,6 +10278,7 @@ export type Database = {
           created_at: string
           id: string
           loser_next_match_id: string | null
+          match_id: string | null
           match_position: number
           next_match_id: string | null
           next_match_slot: number | null
