@@ -1,11 +1,11 @@
 /**
  * Match Suggestions Bottom Sheet
  *
- * Renders the 7-day suggestion grid: each day has a date header and up to 5
- * single-slot cards. Accessible from the Home screen via the FAB.
+ * Renders a flat list of up to 15 score-ordered match suggestions.
+ * Accessible from the Home screen via the FAB.
  */
 
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { TouchableOpacity } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
@@ -24,12 +24,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { SuggestionCard } from './SuggestionCard';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { lightHaptic, formatIntuitiveDateInTimezone } from '@rallia/shared-utils';
-import { useMatchSuggestions } from '@rallia/shared-hooks';
+import { lightHaptic } from '@rallia/shared-utils';
+import { useTopSuggestions } from '@rallia/shared-hooks';
 import { suggestionSlotKey, useSuggestionInviteHandler } from '../hooks/useSuggestionInviteHandler';
 import { useThemeStyles, useTranslation, useEffectiveLocation } from '../hooks';
 import { useSport } from '../context';
 import { useAuth, usePlayer } from '../hooks';
+
+const MAX_SUGGESTIONS = 15;
 
 export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestions'>) {
   const { colors, isDark } = useThemeStyles();
@@ -41,12 +43,13 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
 
   const resolvedPlayerId = player?.id ?? session?.user?.id;
 
-  const { days, isLoading, isRefetching, refetch } = useMatchSuggestions({
+  const { suggestions, isLoading, isRefetching, refetch } = useTopSuggestions({
     playerId: resolvedPlayerId,
     sportId: selectedSport?.id,
     sportName: selectedSport?.name,
     latitude: effectiveLocation?.latitude,
     longitude: effectiveLocation?.longitude,
+    maxItems: MAX_SUGGESTIONS,
     enabled: true,
   });
 
@@ -99,39 +102,19 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
     transform: [{ rotate: `${spinRotation.value}deg` }],
   }));
 
-  // Flatten the day grid for staggered entry animation
-  const flatItems = useMemo(() => {
-    const out: Array<
-      | { kind: 'header'; date: string }
-      | {
-          kind: 'card';
-          index: number;
-          suggestion: import('@rallia/shared-services').SlotSuggestion;
-        }
-    > = [];
-    let cardIndex = 0;
-    for (const day of days) {
-      if (day.suggestions.length === 0) continue;
-      out.push({ kind: 'header', date: day.date });
-      for (const s of day.suggestions) {
-        out.push({ kind: 'card', index: cardIndex++, suggestion: s });
-      }
-    }
-    return out;
-  }, [days]);
-
-  const totalCards = flatItems.filter(i => i.kind === 'card').length;
-  const MAX_ANIMATED = 35;
-  const cardOpacities = useRef(Array.from({ length: MAX_ANIMATED }, () => makeMutable(0))).current;
+  const totalCards = suggestions.length;
+  const cardOpacities = useRef(
+    Array.from({ length: MAX_SUGGESTIONS }, () => makeMutable(0))
+  ).current;
   const cardTranslateYs = useRef(
-    Array.from({ length: MAX_ANIMATED }, () => makeMutable(20))
+    Array.from({ length: MAX_SUGGESTIONS }, () => makeMutable(20))
   ).current;
   const hasAnimated = useRef(false);
 
   useEffect(() => {
     if (!isLoading && totalCards > 0 && !hasAnimated.current) {
       hasAnimated.current = true;
-      for (let i = 0; i < Math.min(totalCards, MAX_ANIMATED); i++) {
+      for (let i = 0; i < Math.min(totalCards, MAX_SUGGESTIONS); i++) {
         cardOpacities[i].value = withDelay(i * 60, withTiming(1, { duration: 300 }));
         cardTranslateYs[i].value = withDelay(
           i * 60,
@@ -164,24 +147,6 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
     source: 'sheet',
     onAuthRequired: () => SheetManager.hide('match-suggestions'),
   });
-
-  const deviceTz = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, []);
-
-  const renderDateHeader = useCallback(
-    (dateKey: string) => {
-      const result = formatIntuitiveDateInTimezone(dateKey, deviceTz, locale);
-      let label: string;
-      if (result.type === 'today') label = t('common.time.today');
-      else if (result.type === 'tomorrow') label = t('common.time.tomorrow');
-      else label = result.label;
-      return (
-        <Text size="sm" weight="bold" color={colors.textMuted} style={styles.sectionHeader}>
-          {label}
-        </Text>
-      );
-    },
-    [deviceTz, locale, t, colors.textMuted]
-  );
 
   return (
     <ActionSheet
@@ -253,25 +218,21 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
           </View>
         ) : (
           <View style={styles.cardsContainer}>
-            {flatItems.map((item, idx) => {
-              if (item.kind === 'header') {
-                return <View key={`h:${item.date}`}>{renderDateHeader(item.date)}</View>;
-              }
-              const s = item.suggestion;
+            {suggestions.map((s, index) => {
               const slotKey = suggestionSlotKey(
                 s.opponentId,
                 s.facility.facilityId,
                 s.slot.datetime
               );
               const animStyle =
-                item.index < MAX_ANIMATED
+                index < MAX_SUGGESTIONS
                   ? {
-                      opacity: cardOpacities[item.index],
-                      transform: [{ translateY: cardTranslateYs[item.index] }],
+                      opacity: cardOpacities[index],
+                      transform: [{ translateY: cardTranslateYs[index] }],
                     }
                   : undefined;
               return (
-                <Animated.View key={`c:${slotKey}:${idx}`} style={animStyle}>
+                <Animated.View key={`c:${slotKey}:${index}`} style={animStyle}>
                   <SuggestionCard
                     suggestion={s}
                     colors={{
@@ -336,12 +297,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cardsContainer: {},
-  sectionHeader: {
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginTop: spacingPixels[3],
-    marginBottom: spacingPixels[2],
-  },
   loadingState: {
     alignItems: 'center',
   },

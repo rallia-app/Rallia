@@ -28,6 +28,7 @@ export * from './useMatchActions';
 export * from './useMatchFeedback';
 export * from './useNearbyMatches';
 export * from './useMatchSuggestions';
+export * from './useTopSuggestions';
 export * from './useUnifiedMatchFeed';
 export * from './useMatchRelevanceScore';
 export * from './usePlayerMatches';

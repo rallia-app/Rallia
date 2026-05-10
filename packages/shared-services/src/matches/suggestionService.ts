@@ -115,7 +115,7 @@ export interface GetMatchSuggestionsParams {
   signal?: AbortSignal;
 }
 
-interface BusySlot {
+export interface BusySlot {
   matchDate: string;
   startTime: string;
   endTime: string;
@@ -169,7 +169,7 @@ function getNextNDays(n: number): { date: Date; key: string }[] {
 // CONFLICT DETECTION
 // =============================================================================
 
-function hasTimeConflict(
+export function hasTimeConflict(
   proposedDate: string,
   proposedStartHour: number,
   proposedEndHour: number,
@@ -242,8 +242,10 @@ async function fetchBusySlots(
  * For a single (opponent, facility) row, emit one candidate slot per matching
  * (date, fixed-hour) cell across the 7-day window. Returns slots already
  * filtered against the caller's and the opponent's busy windows.
+ *
+ * Exported for unit testing.
  */
-function generateFixedHourSlots(
+export function generateFixedHourSlots(
   overlaps: OverlapSlot[],
   window: { date: Date; key: string }[],
   callerBusy: BusySlot[],
@@ -300,21 +302,39 @@ function actionabilityBoostFor(totalSlotsForOpponent: number): number {
 }
 
 // =============================================================================
-// MAIN
+// PIPELINE — Steps 1-4 (RPC → busy slots → triplet expansion → scoring)
 // =============================================================================
 
-export async function getMatchSuggestions(
+interface ScoredTriplet {
+  row: ScoredMatchup;
+  slot: SuggestionSlot;
+  dateKey: string;
+  score: number;
+}
+
+interface ComputeTripletsResult {
+  triplets: ScoredTriplet[];
+  windowKeys: string[];
+  aborted: boolean;
+}
+
+/**
+ * Shared pipeline for both `getMatchSuggestions` (per-day grid) and
+ * `getTopSuggestions` (flat top-N). Returns scored, conflict-filtered triplets
+ * — the consumer decides how to bucket/order/cap them.
+ */
+async function computeScoredTriplets(
   params: GetMatchSuggestionsParams
-): Promise<DaySuggestions[]> {
+): Promise<ComputeTripletsResult> {
   const { playerId, sportId, latitude, longitude, maxDistanceKm = 25, signal } = params;
   const isAnon = !playerId;
 
   const window = getNextNDays(DAYS_AHEAD);
-  const emptyGrid: DaySuggestions[] = window.map(w => ({ date: w.key, suggestions: [] }));
+  const windowKeys = window.map(w => w.key);
 
   if (isAnon && (latitude == null || longitude == null)) {
     console.warn('[SuggestionService] Anon mode requires latitude/longitude');
-    return emptyGrid;
+    return { triplets: [], windowKeys, aborted: false };
   }
 
   // Headroom — we want enough opponents/facilities to fill 5 cards × 7 days
@@ -339,14 +359,14 @@ export async function getMatchSuggestions(
       });
   if (signal) rpcBuilder.abortSignal(signal);
   const { data: scoredRows, error } = await rpcBuilder;
-  if (signal?.aborted) return emptyGrid;
+  if (signal?.aborted) return { triplets: [], windowKeys, aborted: true };
 
   if (error) {
     console.error('[SuggestionService] RPC error:', error);
-    return emptyGrid;
+    return { triplets: [], windowKeys, aborted: false };
   }
   if (!scoredRows || scoredRows.length === 0) {
-    return emptyGrid;
+    return { triplets: [], windowKeys, aborted: false };
   }
 
   const scored = scoredRows as ScoredMatchup[];
@@ -358,19 +378,19 @@ export async function getMatchSuggestions(
   const endDate = window[window.length - 1].key;
 
   const busyByPlayer = await fetchBusySlots(allPlayerIds, startDate, endDate);
-  if (signal?.aborted) return emptyGrid;
+  if (signal?.aborted) return { triplets: [], windowKeys, aborted: true };
   const callerBusy = isAnon ? [] : (busyByPlayer.get(playerId!) ?? []);
 
   // ── Step 3: Expand RPC rows into candidate triplets ─────────────────
   const now = new Date();
 
-  interface Triplet {
+  interface RawTriplet {
     row: ScoredMatchup;
     slot: SuggestionSlot;
     dateKey: string;
   }
 
-  const triplets: Triplet[] = [];
+  const rawTriplets: RawTriplet[] = [];
   /** opponent_id → total slot count across all facilities, used for actionability */
   const slotCountByOpponent = new Map<string, number>();
 
@@ -391,16 +411,12 @@ export async function getMatchSuggestions(
     );
 
     for (const slot of slots) {
-      triplets.push({ row, slot, dateKey: dateKey(slot.datetime) });
+      rawTriplets.push({ row, slot, dateKey: dateKey(slot.datetime) });
     }
   }
 
   // ── Step 4: Score each triplet ──────────────────────────────────────
-  interface ScoredTriplet extends Triplet {
-    score: number;
-  }
-
-  const scoredTriplets: ScoredTriplet[] = triplets.map(t => {
+  const triplets: ScoredTriplet[] = rawTriplets.map(t => {
     const action = actionabilityBoostFor(slotCountByOpponent.get(t.row.opponent_id) ?? 0);
     const urgency = urgencyBoostForDate(t.slot.datetime, now);
     const jitter = (Math.random() - 0.5) * 0.06;
@@ -408,11 +424,66 @@ export async function getMatchSuggestions(
     return { ...t, score };
   });
 
-  // ── Step 5: Bucket by day, dedupe by opponent, cap at 5 per day ────
-  return bucketByDay(
-    window.map(w => w.key),
-    scoredTriplets
-  );
+  return { triplets, windowKeys, aborted: false };
+}
+
+// =============================================================================
+// MAIN — Per-day grid (legacy, used by `useMatchSuggestions` for now)
+// =============================================================================
+
+export async function getMatchSuggestions(
+  params: GetMatchSuggestionsParams
+): Promise<DaySuggestions[]> {
+  const { triplets, windowKeys, aborted } = await computeScoredTriplets(params);
+  if (aborted) return windowKeys.map(k => ({ date: k, suggestions: [] }));
+  return bucketByDay(windowKeys, triplets);
+}
+
+// =============================================================================
+// MAIN — Flat top-N (used by Suggestion Sheet, Onboarding, Public Matches,
+// and the daily-digest composer)
+// =============================================================================
+
+export interface GetTopSuggestionsParams extends GetMatchSuggestionsParams {
+  /** Maximum number of suggestions to return after global opponent dedup. */
+  maxItems: number;
+}
+
+/**
+ * Returns up to `maxItems` suggestions, deduped by opponent globally (one slot
+ * per opponent — the highest-scored), sorted by score desc. Same 7-day horizon
+ * as `getMatchSuggestions` — the difference is only in how the scored triplets
+ * are bucketed at the end.
+ */
+export async function getTopSuggestions(
+  params: GetTopSuggestionsParams
+): Promise<SlotSuggestion[]> {
+  const { triplets, aborted } = await computeScoredTriplets(params);
+  if (aborted) return [];
+  return pickTopGlobal(triplets, params.maxItems);
+}
+
+/**
+ * Pure helper — picks at most one slot per opponent (the highest-scored),
+ * sorts those slots by score desc across all opponents, and caps at
+ * `maxItems`. Exported for unit testing.
+ */
+export function pickTopGlobal(
+  triplets: { row: ScoredMatchup; slot: SuggestionSlot; dateKey: string; score: number }[],
+  maxItems: number
+): SlotSuggestion[] {
+  if (maxItems <= 0) return [];
+  const bestByOpponent = new Map<string, (typeof triplets)[number]>();
+  for (const t of triplets) {
+    const existing = bestByOpponent.get(t.row.opponent_id);
+    if (!existing || t.score > existing.score) {
+      bestByOpponent.set(t.row.opponent_id, t);
+    }
+  }
+  return [...bestByOpponent.values()]
+    .sort((a, b) => b.score - a.score)
+    .slice(0, maxItems)
+    .map(toSlotSuggestion);
 }
 
 /**
