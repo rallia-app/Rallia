@@ -3935,6 +3935,21 @@
       "selectContactsFromLists": "Select contacts from your lists"
     }
   },
+  "tournamentList": {
+    "title": "Tournaments",
+    "loading": "Loading tournaments...",
+    "loadError": "Couldn't load tournaments",
+    "retry": "Try again",
+    "empty": "No tournaments yet",
+    "emptyDescription": "Create one from the action menu to get started.",
+    "sectionMine": "Yours",
+    "sectionOpen": "Open for registration",
+    "sectionUpcoming": "Upcoming",
+    "sectionPast": "Completed",
+    "sectionDraft": "Drafts",
+    "participantCount": "{count}/{max}",
+    "dateRange": "{start} – {end}"
+  },
   "tournamentDetail": {
     "title": "Tournament",
     "loading": "Loading tournament...",
@@ -4086,7 +4101,8 @@
     "quickNav": {
       "joinCommunity": "Join a community",
       "bookCourt": "Book a court",
-      "findGame": "Find a game"
+      "findGame": "Find a game",
+      "tournaments": "Tournaments"
     },
     "myMatchesEmpty": {
       "title": "No upcoming games",

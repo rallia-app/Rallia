@@ -1175,6 +1175,20 @@ const Home = () => {
           splitLabel={splitQuickNavLabel}
           onPress={() => navigation.navigate('PublicMatches')}
         />
+        <QuickNavButton
+          icon={<Ionicons name="trophy-outline" size={32} color="#FFFFFF" />}
+          label={t('home.quickNav.tournaments')}
+          splitLabel={splitQuickNavLabel}
+          onPress={() =>
+            appNavigation.navigate('Main', {
+              screen: 'Community',
+              params: {
+                screen: 'Tournaments',
+                initial: false,
+              },
+            } as never)
+          }
+        />
       </View>
     );
 

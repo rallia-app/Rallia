@@ -91,6 +91,7 @@ import PlayedMatchDetail from '../screens/PlayedMatchDetail';
 import Communities from '../screens/Communities';
 import CommunityDetail from '../screens/CommunityDetail';
 import TournamentDetail from '../screens/TournamentDetail';
+import Tournaments from '../screens/Tournaments';
 import NetworkMatches from '../screens/NetworkMatches';
 import AdminPanelScreen from '../screens/AdminPanelScreen';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
@@ -687,6 +688,15 @@ function CommunityStack() {
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('community.communities') || 'Communities',
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+      <CommunityStackNavigator.Screen
+        name="Tournaments"
+        component={Tournaments}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('tournamentList.title'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />

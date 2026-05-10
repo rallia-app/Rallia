@@ -32,6 +32,26 @@ export interface CreateTournamentInput {
 }
 
 /**
+ * List tournaments visible to the caller, optionally scoped to a sport.
+ * RLS gates which rows are returned (organizer / public / community-member /
+ * registrant). Most-recent first.
+ */
+export async function listVisibleTournaments(
+  opts: {
+    sportId?: string;
+    excludeArchived?: boolean;
+  } = {}
+): Promise<Tournament[]> {
+  let query = supabase.from('tournaments').select('*').order('created_at', { ascending: false });
+  if (opts.sportId) query = query.eq('sport_id', opts.sportId);
+  if (opts.excludeArchived) query = query.neq('status', 'archived');
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Tournament[];
+}
+
+/**
  * Fetch a single tournament by ID. Returns null if not found or not visible
  * to the caller (RLS hides rows the caller doesn't have permission to see).
  */

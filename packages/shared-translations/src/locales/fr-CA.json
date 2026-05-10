@@ -3935,6 +3935,21 @@
       "selectContactsFromLists": "Sélectionner des contacts dans vos listes"
     }
   },
+  "tournamentList": {
+    "title": "Tournois",
+    "loading": "Chargement des tournois...",
+    "loadError": "Impossible de charger les tournois",
+    "retry": "Réessayer",
+    "empty": "Aucun tournoi pour le moment",
+    "emptyDescription": "Créez-en un depuis le menu d'actions pour commencer.",
+    "sectionMine": "Les vôtres",
+    "sectionOpen": "Inscriptions ouvertes",
+    "sectionUpcoming": "À venir",
+    "sectionPast": "Terminés",
+    "sectionDraft": "Brouillons",
+    "participantCount": "{count}/{max}",
+    "dateRange": "{start} – {end}"
+  },
   "tournamentDetail": {
     "title": "Tournoi",
     "loading": "Chargement du tournoi...",
@@ -4086,7 +4101,8 @@
     "quickNav": {
       "joinCommunity": "Rejoindre une communauté",
       "bookCourt": "Réserver un terrain",
-      "findGame": "Trouver une partie"
+      "findGame": "Trouver une partie",
+      "tournaments": "Tournois"
     },
     "myMatchesEmpty": {
       "title": "Aucune partie à venir",

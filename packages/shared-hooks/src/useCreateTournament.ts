@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createTournament,
   getTournament,
+  listVisibleTournaments,
   listActiveRegistrations,
   getMyRegistration,
   openTournamentRegistration,
@@ -22,6 +23,7 @@ import {
 export const tournamentKeys = {
   all: ['tournaments'] as const,
   lists: () => [...tournamentKeys.all, 'list'] as const,
+  list: (sportId?: string) => [...tournamentKeys.lists(), sportId ?? 'all'] as const,
   detail: (tournamentId: string) => [...tournamentKeys.all, 'detail', tournamentId] as const,
   byOrganizer: (userId: string) => [...tournamentKeys.all, 'byOrganizer', userId] as const,
   registrations: (tournamentId: string) =>
@@ -29,6 +31,16 @@ export const tournamentKeys = {
   myRegistration: (tournamentId: string, userId: string) =>
     [...tournamentKeys.all, 'myRegistration', tournamentId, userId] as const,
 };
+
+/**
+ * List tournaments visible to the caller, optionally scoped to a sport.
+ */
+export function useVisibleTournaments(sportId?: string) {
+  return useQuery<Tournament[]>({
+    queryKey: tournamentKeys.list(sportId),
+    queryFn: () => listVisibleTournaments({ sportId, excludeArchived: true }),
+  });
+}
 
 /**
  * Fetch a single tournament by ID.
