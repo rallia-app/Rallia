@@ -216,15 +216,12 @@ export const ProfileCompletenessProvider: React.FC<ProfileCompletenessProviderPr
     }
   }, [playerId, selectedSportId]);
 
-  // Reset sport-specific counts synchronously when selectedSportId changes,
-  // so stale values from the previous sport are never used in the useMemo
-  // before fetchAsyncData runs.
-  useEffect(() => {
-    setProofCount(null);
-    setFavoritesCount(null);
-  }, [selectedSportId]);
-
-  // Fetch once on mount and when stable keys change
+  // When selectedSportId changes, refetch in the background but keep the
+  // previous counts visible until the new ones arrive. Resetting to null
+  // would briefly flip `loading` back to true and cause consumers (e.g. the
+  // Home ProfileCompletionBanner) to flicker out and back in. The slightly
+  // stale percentage during the ~100ms refetch window is far less jarring
+  // than a disappearing banner.
   useEffect(() => {
     fetchAsyncData();
   }, [fetchAsyncData]);
