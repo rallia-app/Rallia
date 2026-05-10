@@ -827,7 +827,7 @@ const Home = () => {
           activeOpacity={0.7}
         >
           <Text size="base" weight="medium" color={colors.primary}>
-            {t('home.viewAll')}
+            {t('home.viewAllGames')}
           </Text>
           <Ionicons
             name="chevron-forward"
