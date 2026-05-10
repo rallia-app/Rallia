@@ -4,6 +4,8 @@
  * Provides functionality for admin moderation of player reports and bans.
  */
 
+import { getProfilePictureUrl } from '@rallia/shared-utils';
+
 import { supabase } from '../supabase';
 import { Logger } from '../logger';
 
@@ -317,7 +319,7 @@ export async function getPlayerBans(
             playerProfile.display_name ||
             'Unknown'
           : 'Unknown',
-        player_avatar: playerProfile?.profile_picture_url || null,
+        player_avatar: getProfilePictureUrl(playerProfile?.profile_picture_url) || null,
         banned_by: ban.banned_by_admin_id,
         banned_by_name: 'Admin', // Admin names require additional lookup
         ban_type: ban.ban_type as BanType,

@@ -9,7 +9,7 @@ import { View, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { getProfilePictureUrl } from '@rallia/shared-utils';
+import { getCoverImageUrl, getProfilePictureUrl } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
 import type { ConversationPreview } from '@rallia/shared-services';
@@ -115,7 +115,7 @@ function getConversationInfo(
   if (conversation.conversation_type === 'match') {
     return {
       name,
-      avatar: conversation.cover_image_url || null,
+      avatar: getCoverImageUrl(conversation.cover_image_url, { width: 200, height: 200 }) || null,
       iconName: 'trophy',
       sportIconName: conversation.match_info?.sport_name ?? null,
       isOnline: false,
@@ -125,7 +125,7 @@ function getConversationInfo(
 
   return {
     name,
-    avatar: conversation.cover_image_url || null,
+    avatar: getCoverImageUrl(conversation.cover_image_url, { width: 200, height: 200 }) || null,
     iconName: getIconForType(conversation.conversation_type),
     sportIconName: null,
     isOnline: false,

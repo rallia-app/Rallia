@@ -2,7 +2,13 @@ import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
 import { supabase, Logger } from '@rallia/shared-services';
 
-const RESIZE_BUCKETS = new Set(['profile-pictures', 'facility-images']);
+const RESIZE_BUCKETS = new Set([
+  'profile-pictures',
+  'facility-images',
+  'group-images',
+  'feedback-screenshots',
+  'report-evidence',
+]);
 
 async function resizeImageForUpload(uri: string): Promise<string> {
   const context = ImageManipulator.manipulate(uri);
@@ -177,6 +183,7 @@ export async function uploadImage(
       .from(bucket)
       .upload(filePath, uploadData, {
         contentType,
+        cacheControl: '604800',
         upsert: false, // Create new file each time
       });
 

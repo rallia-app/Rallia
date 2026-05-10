@@ -52,7 +52,12 @@ import {
 } from '@rallia/shared-hooks';
 import { Logger } from '@rallia/shared-services';
 import type { TranslationKey } from '@rallia/shared-translations';
-import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
+import {
+  getCoverImageUrl,
+  getProfilePictureUrl,
+  lightHaptic,
+  mediumHaptic,
+} from '@rallia/shared-utils';
 
 import { useTranslation } from '../hooks';
 import type { RootStackParamList } from '../navigation/types';
@@ -257,7 +262,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
         }}
       >
         <Image
-          source={{ uri: member.player_avatar || DEFAULT_AVATAR }}
+          source={{ uri: getProfilePictureUrl(member.player_avatar) || DEFAULT_AVATAR }}
           style={styles.memberAvatar}
         />
         <View style={styles.memberInfo}>
@@ -397,7 +402,14 @@ const AdminNetworkDetailScreen: React.FC = () => {
         {/* Cover Image & Header */}
         <View style={styles.headerSection}>
           <Image
-            source={{ uri: network.cover_image_url || DEFAULT_COVER }}
+            source={{
+              uri:
+                getCoverImageUrl(network.cover_image_url, {
+                  width: 1200,
+                  height: 600,
+                  quality: 75,
+                }) || DEFAULT_COVER,
+            }}
             style={styles.coverImage}
           />
           <View style={styles.coverOverlay} />

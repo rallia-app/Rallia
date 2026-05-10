@@ -18,6 +18,7 @@ import { GraduationCap, Loader2, Plus, Star, Trash2, UserPlus } from 'lucide-rea
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { getStorageImageUrl } from '@rallia/shared-utils';
 
 interface Instructor {
   id: string;
@@ -266,7 +267,13 @@ export default function ProgramInstructorsPage() {
                     <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center">
                       {pi.instructor?.avatar_url ? (
                         <img
-                          src={pi.instructor.avatar_url}
+                          src={
+                            getStorageImageUrl(pi.instructor.avatar_url, {
+                              width: 96,
+                              height: 96,
+                              quality: 70,
+                            }) ?? ''
+                          }
                           alt={pi.instructor.display_name}
                           className="size-12 rounded-full object-cover"
                         />
@@ -367,7 +374,13 @@ export default function ProgramInstructorsPage() {
                     <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                       {instructor.avatar_url ? (
                         <img
-                          src={instructor.avatar_url}
+                          src={
+                            getStorageImageUrl(instructor.avatar_url, {
+                              width: 80,
+                              height: 80,
+                              quality: 70,
+                            }) ?? ''
+                          }
                           alt={instructor.display_name}
                           className="size-10 rounded-full object-cover"
                         />

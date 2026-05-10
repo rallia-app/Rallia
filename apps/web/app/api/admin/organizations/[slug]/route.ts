@@ -2,6 +2,22 @@ import { requireApiRole } from '@/lib/supabase/check-admin';
 import { createClient } from '@/lib/supabase/server';
 import { Enums, Tables } from '@/types';
 import { NextRequest, NextResponse } from 'next/server';
+import sharp from 'sharp';
+
+async function compressImage(
+  buffer: Buffer,
+  mimeType: string
+): Promise<{ buffer: Buffer; contentType: string }> {
+  if (!mimeType.startsWith('image/') || mimeType === 'image/gif') {
+    return { buffer, contentType: mimeType };
+  }
+  const out = await sharp(buffer)
+    .rotate()
+    .resize({ width: 1600, withoutEnlargement: true })
+    .jpeg({ quality: 85, mozjpeg: true })
+    .toBuffer();
+  return { buffer: out, contentType: 'image/jpeg' };
+}
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -166,18 +182,22 @@ async function uploadFacilityImages(
     const fileName = `${facilityId}/${timestamp}-${randomId}.${fileExt}`;
     const storageKey = `facility-images/${fileName}`;
 
-    // Convert File to Blob
+    // Resize/compress before upload to cap stored file size
     let fileData: Blob;
+    let uploadContentType = imageFile.type;
     try {
       const arrayBuffer = await imageFile.arrayBuffer();
-      fileData = new Blob([arrayBuffer], { type: imageFile.type });
+      const compressed = await compressImage(Buffer.from(arrayBuffer), imageFile.type);
+      uploadContentType = compressed.contentType;
+      fileData = new Blob([new Uint8Array(compressed.buffer)], { type: uploadContentType });
     } catch {
       fileData = imageFile;
     }
 
     // Upload with timeout
     const uploadPromise = supabase.storage.from('facility-images').upload(storageKey, fileData, {
-      contentType: imageFile.type,
+      contentType: uploadContentType,
+      cacheControl: '604800',
       upsert: false,
     });
 

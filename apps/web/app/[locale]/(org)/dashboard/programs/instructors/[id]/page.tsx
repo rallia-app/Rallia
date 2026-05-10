@@ -9,6 +9,7 @@ import { Calendar, Edit, GraduationCap, Mail, Phone } from 'lucide-react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
+import { getStorageImageUrl } from '@rallia/shared-utils';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('programs.instructors.detail');
@@ -102,7 +103,13 @@ export default async function InstructorDetailPage({
             <div className="size-14 rounded-full bg-primary/10 flex items-center justify-center">
               {instructor.avatar_url ? (
                 <img
-                  src={instructor.avatar_url}
+                  src={
+                    getStorageImageUrl(instructor.avatar_url, {
+                      width: 200,
+                      height: 200,
+                      quality: 75,
+                    }) ?? ''
+                  }
                   alt={instructor.display_name}
                   className="size-16 rounded-full object-cover"
                 />

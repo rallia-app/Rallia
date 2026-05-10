@@ -25,6 +25,7 @@ import type { RouteProp } from '@react-navigation/native';
 import Svg, { Circle } from 'react-native-svg';
 import { Text, Button } from '@rallia/shared-components';
 import {
+  getCoverImageUrl,
   lightHaptic,
   selectionHaptic,
   mediumHaptic,
@@ -570,7 +571,14 @@ export default function GroupDetailScreen() {
         {/* Header Section - with cover image or default icon */}
         {group.cover_image_url ? (
           <Image
-            source={{ uri: group.cover_image_url }}
+            source={{
+              uri:
+                getCoverImageUrl(group.cover_image_url, {
+                  width: 1200,
+                  height: 600,
+                  quality: 75,
+                }) ?? '',
+            }}
             style={styles.coverImage}
             resizeMode="cover"
           />

@@ -1,5 +1,6 @@
 import { ImageResponse } from 'next/og';
 import { getTranslations } from 'next-intl/server';
+import { getStorageImageUrl } from '@rallia/shared-utils';
 import { getMatch } from './_lib/get-match';
 
 export const alt = 'Rallia Match';
@@ -104,7 +105,12 @@ export default async function Image({
     const participant = sorted[i];
     return {
       filled: !!participant,
-      avatarUrl: participant?.player?.profile?.profile_picture_url ?? null,
+      avatarUrl:
+        getStorageImageUrl(participant?.player?.profile?.profile_picture_url, {
+          width: 200,
+          height: 200,
+          quality: 75,
+        }) ?? null,
       initials: participant?.player?.profile?.display_name?.charAt(0).toUpperCase() ?? null,
     };
   });

@@ -9,6 +9,7 @@ import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
+import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
 import { primary } from '@rallia/design-system';
 import { useAddScore } from './AddScoreContext';
@@ -71,7 +72,10 @@ export function CreateTeamsStep({ onContinue }: CreateTeamsStepProps) {
       >
         <View style={[styles.playerAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
           {player.profilePictureUrl ? (
-            <Image source={{ uri: player.profilePictureUrl }} style={styles.avatarImage} />
+            <Image
+              source={{ uri: getProfilePictureUrl(player.profilePictureUrl) ?? '' }}
+              style={styles.avatarImage}
+            />
           ) : (
             <Text weight="bold" size="lg" style={{ color: colors.primary }}>
               {(player.firstName || 'P')[0].toUpperCase()}
@@ -139,7 +143,7 @@ export function CreateTeamsStep({ onContinue }: CreateTeamsStepProps) {
               >
                 {selectedPartner.profilePictureUrl ? (
                   <Image
-                    source={{ uri: selectedPartner.profilePictureUrl }}
+                    source={{ uri: getProfilePictureUrl(selectedPartner.profilePictureUrl) ?? '' }}
                     style={styles.previewAvatarImage}
                   />
                 ) : (
@@ -184,7 +188,7 @@ export function CreateTeamsStep({ onContinue }: CreateTeamsStepProps) {
                   >
                     {player.profilePictureUrl ? (
                       <Image
-                        source={{ uri: player.profilePictureUrl }}
+                        source={{ uri: getProfilePictureUrl(player.profilePictureUrl) ?? '' }}
                         style={styles.previewAvatarImage}
                       />
                     ) : (

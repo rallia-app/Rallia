@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Calendar, CircleDollarSign, Clock, MapPin, Swords, User, Users } from 'lucide-react';
 import Image from 'next/image';
+import { getStorageImageUrl } from '@rallia/shared-utils';
 import { getRelativeDateLabel, formatDuration } from '../../games/_components/utils';
 import { getMatch } from './_lib/get-match';
 import { getLandingContext } from '@/lib/landing-attribution';
@@ -226,7 +227,10 @@ export default async function MatchPage({ params }: Props) {
             <div className="flex items-center justify-between">
               <div className="flex items-center -space-x-1.5">
                 {slots.map((slot, i) => {
-                  const avatarUrl = slot.participant?.player?.profile?.profile_picture_url;
+                  const avatarUrl = getStorageImageUrl(
+                    slot.participant?.player?.profile?.profile_picture_url,
+                    { width: 96, height: 96, quality: 70 }
+                  );
                   const displayName = slot.participant?.player?.profile?.display_name;
                   return (
                     <div key={i} className="relative" style={{ zIndex: i }}>
