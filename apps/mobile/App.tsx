@@ -231,6 +231,65 @@ function parseUtmParams(url: string): UtmParams | null {
  * AuthenticatedProviders - Wraps providers that need userId from auth context.
  * This component sits inside AuthProvider and passes userId to ProfileProvider and PlayerProvider.
  */
+/**
+ * Holds the native splash up until the Home screen has all the data it needs
+ * to render without flicker (auth resolved, profile/player/sport loaded for
+ * signed-in users, locale + OTA check done). Has a 5s safety timeout so a
+ * stuck provider can never deadlock the app.
+ *
+ * Signed-out users skip the profile/player/sport gates — the splash hides as
+ * soon as auth resolves to "no session".
+ */
+function SplashGate({ children }: PropsWithChildren) {
+  const { setSplashComplete } = useOverlay();
+  const { session, loading: authLoading } = useAuth();
+  const { loading: profileLoading } = useProfile();
+  const { loading: playerLoading } = usePlayer();
+  const { isLoading: sportLoading } = useSport();
+  const { isReady: isLocaleReady } = useLocale();
+  const isCheckingUpdate = useOTAUpdate();
+  const hasHiddenSplashRef = useRef(false);
+  const [timedOut, setTimedOut] = useState(false);
+
+  // Safety net — if any provider hangs, hide splash after 5s anyway.
+  useEffect(() => {
+    const t = setTimeout(() => setTimedOut(true), 5000);
+    return () => clearTimeout(t);
+  }, []);
+
+  const isAppReady = useMemo(() => {
+    if (isCheckingUpdate) return false;
+    if (!isLocaleReady) return false;
+    if (authLoading) return false;
+    // Signed-out: nothing per-user to wait on.
+    if (!session) return true;
+    // Signed-in: wait for all three user-scoped contexts to settle.
+    if (profileLoading) return false;
+    if (playerLoading) return false;
+    if (sportLoading) return false;
+    return true;
+  }, [
+    isCheckingUpdate,
+    isLocaleReady,
+    authLoading,
+    session,
+    profileLoading,
+    playerLoading,
+    sportLoading,
+  ]);
+
+  useEffect(() => {
+    if (hasHiddenSplashRef.current) return;
+    if (!isAppReady && !timedOut) return;
+    hasHiddenSplashRef.current = true;
+    SplashScreen.hideAsync()
+      .catch(() => {})
+      .finally(() => setSplashComplete(true));
+  }, [isAppReady, timedOut, setSplashComplete]);
+
+  return <>{children}</>;
+}
+
 function AuthenticatedProviders({ children }: PropsWithChildren) {
   const { user } = useAuth();
   const { syncLocaleToDatabase, isReady: isLocaleReady } = useLocale();
@@ -384,7 +443,9 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
             <SportProvider userId={userId}>
               <SubscriptionProvider>
                 <MatchSuggestionsWarmer />
-                <ProfileCompletenessBridge>{children}</ProfileCompletenessBridge>
+                <SplashGate>
+                  <ProfileCompletenessBridge>{children}</ProfileCompletenessBridge>
+                </SplashGate>
               </SubscriptionProvider>
             </SportProvider>
           </PlayerProvider>
@@ -635,23 +696,9 @@ function useOTAUpdate() {
 
 function AppContent() {
   const { theme } = useTheme();
-  const { setSplashComplete, isSplashComplete, permissionsHandled } = useOverlay();
-  const { isReady: isLocaleReady } = useLocale();
-  const isCheckingUpdate = useOTAUpdate();
-  const hasHiddenSplashRef = useRef(false);
-
-  // Hide the native splash (cross-fade via setOptions above) once the OTA
-  // check is done AND i18next has finished loading. Without the locale gate,
-  // a slow device can mount the navigator before translations are available
-  // and react-navigation paints raw keys (e.g. `screens.publicMatches`) into
-  // headers that don't always re-render once the bundle arrives.
-  useEffect(() => {
-    if (isCheckingUpdate || !isLocaleReady || hasHiddenSplashRef.current) return;
-    hasHiddenSplashRef.current = true;
-    SplashScreen.hideAsync()
-      .catch(() => {})
-      .finally(() => setSplashComplete(true));
-  }, [isCheckingUpdate, isLocaleReady, setSplashComplete]);
+  // Splash hide is owned by SplashGate (which lives inside AuthenticatedProviders
+  // so it can wait on profile/player/sport before revealing Home).
+  const { isSplashComplete, permissionsHandled } = useOverlay();
   const { showCompletionModal, dismissCompletionModal, lastCompletedTourId } = useTour();
 
   // Track app opened event on mount
