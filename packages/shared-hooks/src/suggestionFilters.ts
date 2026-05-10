@@ -6,9 +6,6 @@
  * specific time). Matches don't go through this — server-side
  * `search_public_matches` already filters them. Suggestions are produced
  * separately and need the same filters applied client-side.
- *
- * Extracted from `useUnifiedMatchFeed.ts` so the predicate survives that
- * hook's eventual removal.
  */
 
 import type { SlotSuggestion } from '@rallia/shared-services';

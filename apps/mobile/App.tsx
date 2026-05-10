@@ -94,7 +94,7 @@ import {
   usePendingFeedbackCheck,
   useUpdateLastSeen,
   ProfileCompletenessProvider,
-  useMatchSuggestions,
+  useTopSuggestions,
 } from '@rallia/shared-hooks';
 import { useBadgeCountSync } from '@rallia/shared-hooks/src/useBadgeCountSync';
 import { WelcomeTourModal } from './src/components/WelcomeTourModal';
@@ -395,20 +395,23 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
 }
 
 /**
- * Warms the matchup-suggestions cache as soon as sport (+player or location) is
- * known, so Home/PublicMatches render the suggestions feed instantly.
+ * Warms the top-suggestions cache as soon as sport (+player or location) is
+ * known, so the Suggestion Sheet and Public Matches suggestion-pad render
+ * instantly. Pre-warms the maxItems=15 query (the largest of the surfaces);
+ * smaller-cap callers reuse the same cache key when their inputs match.
  */
 function MatchSuggestionsWarmer() {
   const { player } = usePlayer();
   const { selectedSport } = useSport();
   const { location } = useEffectiveLocation();
 
-  useMatchSuggestions({
+  useTopSuggestions({
     playerId: player?.id,
     sportId: selectedSport?.id,
     sportName: selectedSport?.name,
     latitude: !player?.id ? location?.latitude : undefined,
     longitude: !player?.id ? location?.longitude : undefined,
+    maxItems: 15,
     enabled: true,
   });
 

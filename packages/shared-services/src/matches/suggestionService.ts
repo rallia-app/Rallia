@@ -88,16 +88,10 @@ export interface SlotSuggestion {
   facility: SuggestionFacility;
   slot: SuggestionSlot;
 
-  /** Final ordering score within a day. */
+  /** Final ordering score (player_compatibility + boosts + jitter). */
   score: number;
   /** Per-opponent compatibility from the RPC, before per-slot boosts. */
   playerCompatibility: number;
-}
-
-/** A single day in the 7-day grid. `suggestions` may be empty. */
-export interface DaySuggestions {
-  date: string; // YYYY-MM-DD (caller's local calendar)
-  suggestions: SlotSuggestion[]; // 0..MAX_PER_DAY
 }
 
 export interface GetMatchSuggestionsParams {
@@ -125,8 +119,8 @@ export interface BusySlot {
 // CONSTANTS
 // =============================================================================
 
+/** Lookahead window for slot generation. */
 const DAYS_AHEAD = 7;
-const MAX_PER_DAY = 5;
 
 /** Fixed candidate hours per period (product spec). */
 const PERIOD_FIXED_HOURS: Record<string, number[]> = {
@@ -337,9 +331,10 @@ async function computeScoredTriplets(
     return { triplets: [], windowKeys, aborted: false };
   }
 
-  // Headroom — we want enough opponents/facilities to fill 5 cards × 7 days
-  // after conflict + dedupe filtering.
-  const rpcLimit = Math.max(140, MAX_PER_DAY * DAYS_AHEAD * 4);
+  // Headroom — we want enough opponents/facilities to survive conflict and
+  // opponent-dedup filtering downstream. 140 is empirically safe for the
+  // 30-item Public Matches padding cap.
+  const rpcLimit = 140;
 
   // ── Step 1: Call SQL RPC ────────────────────────────────────────────
   const rpcBuilder = isAnon
@@ -428,20 +423,8 @@ async function computeScoredTriplets(
 }
 
 // =============================================================================
-// MAIN — Per-day grid (legacy, used by `useMatchSuggestions` for now)
-// =============================================================================
-
-export async function getMatchSuggestions(
-  params: GetMatchSuggestionsParams
-): Promise<DaySuggestions[]> {
-  const { triplets, windowKeys, aborted } = await computeScoredTriplets(params);
-  if (aborted) return windowKeys.map(k => ({ date: k, suggestions: [] }));
-  return bucketByDay(windowKeys, triplets);
-}
-
-// =============================================================================
-// MAIN — Flat top-N (used by Suggestion Sheet, Onboarding, Public Matches,
-// and the daily-digest composer)
+// MAIN — Flat top-N (used by every consumer: Suggestion Sheet, Onboarding,
+// Public Matches padding, daily-digest composer, JustForYou composer)
 // =============================================================================
 
 export interface GetTopSuggestionsParams extends GetMatchSuggestionsParams {
@@ -451,9 +434,8 @@ export interface GetTopSuggestionsParams extends GetMatchSuggestionsParams {
 
 /**
  * Returns up to `maxItems` suggestions, deduped by opponent globally (one slot
- * per opponent — the highest-scored), sorted by score desc. Same 7-day horizon
- * as `getMatchSuggestions` — the difference is only in how the scored triplets
- * are bucketed at the end.
+ * per opponent — the highest-scored), sorted by score desc, over the next
+ * 7 days.
  */
 export async function getTopSuggestions(
   params: GetTopSuggestionsParams
@@ -484,37 +466,6 @@ export function pickTopGlobal(
     .sort((a, b) => b.score - a.score)
     .slice(0, maxItems)
     .map(toSlotSuggestion);
-}
-
-/**
- * Pure helper — buckets scored triplets by day-key, dedupes by opponent within
- * each day, sorts by score desc, and caps each day at `MAX_PER_DAY`. Exported
- * for unit testing.
- */
-export function bucketByDay(
-  dayKeys: string[],
-  triplets: { row: ScoredMatchup; slot: SuggestionSlot; dateKey: string; score: number }[]
-): DaySuggestions[] {
-  const byDay = new Map<string, typeof triplets>();
-  for (const key of dayKeys) byDay.set(key, []);
-  for (const t of triplets) {
-    const bucket = byDay.get(t.dateKey);
-    if (bucket) bucket.push(t);
-  }
-
-  return dayKeys.map(key => {
-    const bucket = byDay.get(key) ?? [];
-    bucket.sort((a, b) => b.score - a.score);
-    const picked: SlotSuggestion[] = [];
-    const seenOpponents = new Set<string>();
-    for (const t of bucket) {
-      if (picked.length >= MAX_PER_DAY) break;
-      if (seenOpponents.has(t.row.opponent_id)) continue;
-      seenOpponents.add(t.row.opponent_id);
-      picked.push(toSlotSuggestion(t));
-    }
-    return { date: key, suggestions: picked };
-  });
 }
 
 function toSlotSuggestion(t: {
