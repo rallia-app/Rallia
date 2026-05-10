@@ -31,6 +31,25 @@ export interface CreateTournamentInput {
 }
 
 /**
+ * Fetch a single tournament by ID. Returns null if not found or not visible
+ * to the caller (RLS hides rows the caller doesn't have permission to see).
+ */
+export async function getTournament(tournamentId: string): Promise<Tournament | null> {
+  const { data, error } = await supabase
+    .from('tournaments')
+    .select('*')
+    .eq('id', tournamentId)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') return null; // Not found / RLS hidden
+    throw new Error(error.message);
+  }
+
+  return data as Tournament;
+}
+
+/**
  * Create a draft tournament.
  *
  * Throws if the caller doesn't play the requested sport, the network

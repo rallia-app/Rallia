@@ -3935,6 +3935,56 @@
       "selectContactsFromLists": "Select contacts from your lists"
     }
   },
+  "tournamentDetail": {
+    "title": "Tournament",
+    "loading": "Loading tournament...",
+    "notFound": "Tournament not found",
+    "notFoundDescription": "This tournament may have been deleted or you don't have permission to view it.",
+    "loadError": "Couldn't load the tournament",
+    "retry": "Try again",
+    "status": {
+      "draft": "Draft",
+      "registration_open": "Registration open",
+      "registration_closed": "Registration closed",
+      "in_progress": "In progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "archived": "Archived"
+    },
+    "sections": {
+      "format": "Format",
+      "schedule": "Schedule",
+      "visibility": "Visibility & registration",
+      "organizer": "Organizer"
+    },
+    "labels": {
+      "bracketSize": "Bracket size",
+      "bracketType": "Bracket type",
+      "matchFormat": "Match format",
+      "entryFormat": "Entry format",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "visibility": "Visibility",
+      "registrationMode": "Registration mode"
+    },
+    "values": {
+      "singleElimination": "Single elimination",
+      "doubleElimination": "Double elimination",
+      "singles": "Singles",
+      "doubles": "Doubles",
+      "mixedDoubles": "Mixed doubles",
+      "private": "Private",
+      "public": "Public",
+      "community": "Community",
+      "open": "Open",
+      "approval": "Approval required",
+      "inviteOnly": "Invite only"
+    },
+    "actions": {
+      "openRegistration": "Open registration",
+      "comingSoon": "Coming soon"
+    }
+  },
   "tournamentCreation": {
     "title": "Create a tournament",
     "forSport": "Creating tournament for {sport}",

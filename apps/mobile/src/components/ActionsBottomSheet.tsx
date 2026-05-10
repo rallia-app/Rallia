@@ -382,14 +382,22 @@ export const ActionsBottomSheet: React.FC = () => {
     slideOut(() => setShowTournamentWizard(false));
   }, [slideOut]);
 
-  // Handle tournament wizard success - close sheet for V1 (detail screen comes in next slice)
+  // Handle tournament wizard success - close sheet and navigate to detail screen
   const handleTournamentSuccess = useCallback(
-    (_tournamentId: string) => {
+    (tournamentId: string) => {
       successHaptic();
       closeSheet();
       setShowTournamentWizard(false);
       // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
       slideProgress.value = 0;
+
+      // Wait for the sheet's close animation before pushing the screen so
+      // the navigation transition isn't competing with the sheet collapse.
+      setTimeout(() => {
+        if (navigationRef.isReady()) {
+          navigationRef.navigate('TournamentDetail', { tournamentId });
+        }
+      }, 300);
     },
     [closeSheet, slideProgress]
   );

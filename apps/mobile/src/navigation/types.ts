@@ -45,6 +45,7 @@ export type RootStackParamList = {
   IncomingReferenceRequests: undefined; // Incoming reference requests from other players
   GroupDetail: { groupId: string; groupName?: string; fromChat?: boolean }; // Group detail view
   CommunityDetail: { communityId: string; communityName?: string; fromChat?: boolean }; // Community detail view
+  TournamentDetail: { tournamentId: string; tournamentName?: string }; // Tournament detail view
   FacilityDetail: FacilityDetailScreenParams; // Facility detail (root-level for external navigation)
   GroupChatInfo: { conversationId: string }; // Group chat info/settings view
   ChatConversation: { conversationId: string; title?: string }; // Direct chat navigation

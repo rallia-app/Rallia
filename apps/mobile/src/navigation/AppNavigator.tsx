@@ -90,6 +90,7 @@ import GroupChatInfo from '../screens/GroupChatInfo';
 import PlayedMatchDetail from '../screens/PlayedMatchDetail';
 import Communities from '../screens/Communities';
 import CommunityDetail from '../screens/CommunityDetail';
+import TournamentDetail from '../screens/TournamentDetail';
 import NetworkMatches from '../screens/NetworkMatches';
 import AdminPanelScreen from '../screens/AdminPanelScreen';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
@@ -1506,6 +1507,16 @@ export default function AppNavigator() {
         options={({ route, navigation }) => ({
           ...sharedOptions,
           headerTitle: route.params?.communityName || t('community.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="TournamentDetail"
+        component={TournamentDetail}
+        options={({ route, navigation }) => ({
+          ...sharedOptions,
+          headerTitle: route.params?.tournamentName || t('tournamentDetail.title'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />

@@ -4,9 +4,10 @@
  * TanStack Query mutation wrapping createTournament. Mirrors useCreateMatch.
  */
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createTournament,
+  getTournament,
   type CreateTournamentInput,
   type Tournament,
 } from '@rallia/shared-services';
@@ -17,6 +18,17 @@ export const tournamentKeys = {
   detail: (tournamentId: string) => [...tournamentKeys.all, 'detail', tournamentId] as const,
   byOrganizer: (userId: string) => [...tournamentKeys.all, 'byOrganizer', userId] as const,
 };
+
+/**
+ * Fetch a single tournament by ID.
+ */
+export function useTournament(tournamentId: string | undefined) {
+  return useQuery<Tournament | null>({
+    queryKey: tournamentKeys.detail(tournamentId ?? ''),
+    queryFn: () => getTournament(tournamentId!),
+    enabled: !!tournamentId,
+  });
+}
 
 interface UseCreateTournamentOptions {
   onSuccess?: (tournament: Tournament) => void;

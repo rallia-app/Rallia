@@ -3935,6 +3935,56 @@
       "selectContactsFromLists": "Sélectionner des contacts dans vos listes"
     }
   },
+  "tournamentDetail": {
+    "title": "Tournoi",
+    "loading": "Chargement du tournoi...",
+    "notFound": "Tournoi introuvable",
+    "notFoundDescription": "Ce tournoi a peut-être été supprimé ou vous n'avez pas la permission de le voir.",
+    "loadError": "Impossible de charger le tournoi",
+    "retry": "Réessayer",
+    "status": {
+      "draft": "Brouillon",
+      "registration_open": "Inscriptions ouvertes",
+      "registration_closed": "Inscriptions fermées",
+      "in_progress": "En cours",
+      "completed": "Terminé",
+      "cancelled": "Annulé",
+      "archived": "Archivé"
+    },
+    "sections": {
+      "format": "Format",
+      "schedule": "Calendrier",
+      "visibility": "Visibilité et inscriptions",
+      "organizer": "Organisateur"
+    },
+    "labels": {
+      "bracketSize": "Taille du tableau",
+      "bracketType": "Type de tableau",
+      "matchFormat": "Format des matchs",
+      "entryFormat": "Type d'inscription",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "visibility": "Visibilité",
+      "registrationMode": "Mode d'inscription"
+    },
+    "values": {
+      "singleElimination": "Élimination simple",
+      "doubleElimination": "Élimination double",
+      "singles": "Simples",
+      "doubles": "Doubles",
+      "mixedDoubles": "Double mixte",
+      "private": "Privé",
+      "public": "Public",
+      "community": "Communauté",
+      "open": "Ouvert",
+      "approval": "Approbation requise",
+      "inviteOnly": "Sur invitation"
+    },
+    "actions": {
+      "openRegistration": "Ouvrir les inscriptions",
+      "comingSoon": "Bientôt disponible"
+    }
+  },
   "tournamentCreation": {
     "title": "Créer un tournoi",
     "forSport": "Création d'un tournoi pour {sport}",
