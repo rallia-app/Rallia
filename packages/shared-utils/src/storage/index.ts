@@ -106,12 +106,33 @@ export function normalizeStorageUrl(
 }
 
 /**
+ * Whether the current target Supabase tenant has the Image Transformations
+ * addon enabled. Set to `1`/`true` on environments pointing at a paid Supabase
+ * project; leave unset (or `0`/`false`) when targeting a tenant where
+ * `/render/image/` returns 403 `FeatureNotEnabled` (e.g. staging on free plan).
+ */
+function imageTransformsEnabled(): boolean {
+  if (typeof process === 'undefined' || !process.env) return false;
+  const flag =
+    process.env.EXPO_PUBLIC_SUPABASE_IMAGE_TRANSFORMS_ENABLED ||
+    process.env.NEXT_PUBLIC_SUPABASE_IMAGE_TRANSFORMS_ENABLED;
+  if (!flag) return false;
+  const v = flag.toLowerCase();
+  return v === '1' || v === 'true' || v === 'yes';
+}
+
+/**
  * Rewrite a public Supabase Storage URL to use the image render endpoint,
  * which resizes and recompresses the image server-side before delivery.
  * The rendered result is CDN-cached, so repeated requests are free.
  *
- * Only applies to hosted Supabase URLs (*.supabase.co) — local dev URLs
- * are returned as-is since the render endpoint isn't available locally.
+ * Only applies when:
+ *   1. URL is a hosted Supabase URL (*.supabase.co)
+ *   2. URL points at the public object storage path
+ *   3. The build's target tenant has Image Transformations enabled (env flag)
+ *
+ * If any condition fails, the input URL is returned unchanged so images still
+ * render — just without the size/quality optimization.
  *
  * Note: Supabase's render endpoint negotiates WebP/AVIF automatically via
  * the client's `Accept` header — no explicit `format` param needed.
@@ -128,6 +149,7 @@ export function getStorageImageUrl(
   if (!url) return null;
   if (!url.includes('.supabase.co')) return url;
   if (!url.includes('/storage/v1/object/public/')) return url;
+  if (!imageTransformsEnabled()) return url;
 
   const renderUrl = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
   const params = new URLSearchParams();
