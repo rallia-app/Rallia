@@ -78,7 +78,8 @@ import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { SportIcon } from '../components/SportIcon';
 import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
 import ProfileCompletionBanner from '../features/profile/components/ProfileCompletionBanner';
-import { JustForYouCard } from '../features/home/components/JustForYouCard';
+import { FeedItemCard } from '../features/matches/components/FeedItemCard';
+import type { UnifiedFeedItem } from '@rallia/shared-hooks';
 import BillingIssueBanner from '../components/BillingIssueBanner';
 import ReferenceRequestsBanner from '../components/ReferenceRequestsBanner';
 import { useSubscription } from '../context';
@@ -762,11 +763,22 @@ const Home = () => {
   }, [setOnHomeScreen]);
 
   // Combined Just-for-you items (matches first, suggestions tail). Always
-  // exactly `matchLimit` long when fully loaded.
-  const justForYouItems = useMemo(
+  // exactly `matchLimit` long when fully loaded. Shape matches UnifiedFeedItem
+  // so we can pass it straight into FeedItemCard.
+  const justForYouItems = useMemo<UnifiedFeedItem[]>(
     () => [
-      ...jfyMatches.map(m => ({ kind: 'match' as const, data: m })),
-      ...jfySuggestions.map(s => ({ kind: 'suggestion' as const, data: s })),
+      ...jfyMatches.map(m => ({
+        kind: 'match' as const,
+        key: `match:${m.id}`,
+        sortTime: 0,
+        data: m,
+      })),
+      ...jfySuggestions.map(s => ({
+        kind: 'suggestion' as const,
+        key: `suggestion:${s.opponentId}:${(s.slot.datetime as Date).getTime?.() ?? 0}`,
+        sortTime: 0,
+        data: s,
+      })),
     ],
     [jfyMatches, jfySuggestions]
   );
@@ -1280,51 +1292,32 @@ const Home = () => {
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.justForYouScrollContent}
                 >
-                  {justForYouItems.map((item, idx) => {
-                    const key =
-                      item.kind === 'match'
-                        ? `match:${item.data.id}`
-                        : `suggestion:${item.data.opponentId}:${(item.data.slot.datetime as Date).getTime?.() ?? idx}`;
-                    return (
-                      <View key={key} style={styles.jfyCardWrapper}>
-                        <JustForYouCard
-                          item={item}
-                          colors={{
-                            cardBackground: colors.card,
-                            text: colors.text,
-                            textSecondary: colors.textSecondary,
-                            textMuted: colors.textMuted,
-                            border: colors.border,
-                            primary: colors.primary,
-                          }}
-                          isDark={isDark}
-                          locale={locale}
-                          t={
-                            t as (
-                              key: string,
-                              options?: Record<string, string | number | boolean>
-                            ) => string
-                          }
-                          suggestionLabels={suggestionLabels}
-                          inviteState={
-                            item.kind === 'suggestion'
-                              ? getInviteState(
-                                  item.data.opponentId,
-                                  item.data.facility.facilityId,
-                                  item.data.slot.datetime
-                                )
-                              : undefined
-                          }
-                          onMatchPress={match => {
-                            Logger.logUserAction('match_pressed', { matchId: match.id });
-                            openMatchDetail(match as MatchDetailData);
-                          }}
-                          onSendInvite={handleSendInvite}
-                          sportName={selectedSport?.name}
-                        />
-                      </View>
-                    );
-                  })}
+                  {justForYouItems.map(item => (
+                    <View key={item.key} style={styles.jfyCardWrapper}>
+                      <FeedItemCard
+                        item={item}
+                        isDark={isDark}
+                        locale={locale}
+                        t={
+                          t as (
+                            key: string,
+                            options?: Record<string, string | number | boolean>
+                          ) => string
+                        }
+                        currentPlayerId={player?.id}
+                        themeColors={colors}
+                        suggestionLabels={suggestionLabels}
+                        getInviteState={getInviteState}
+                        onMatchPress={match => {
+                          Logger.logUserAction('match_pressed', { matchId: match.id });
+                          openMatchDetail(match as MatchDetailData);
+                        }}
+                        onSendInvite={handleSendInvite}
+                        sportId={selectedSport?.id}
+                        sportName={selectedSport?.name}
+                      />
+                    </View>
+                  ))}
                 </ScrollView>
               )}
             </>
@@ -1425,12 +1418,15 @@ const styles = StyleSheet.create({
     paddingBottom: spacingPixels[2],
     gap: spacingPixels[3],
   },
+  // Fixed width so MatchCard / SuggestionCard (designed for width:'100%')
+  // render at a consistent size in horizontal scroll. Slightly under typical
+  // phone width so the next card peeks and signals scrollability.
   jfyCardWrapper: {
-    // gap is handled at the container level
+    width: 320,
   },
   jfySkeleton: {
-    width: 240,
-    height: 130,
+    width: 320,
+    height: 180,
     borderRadius: radiusPixels.lg,
     overflow: 'hidden',
   },

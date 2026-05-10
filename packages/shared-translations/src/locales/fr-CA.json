@@ -3941,13 +3941,6 @@
     "subtitle": "La meilleure façon de trouver votre prochain partenaire de tennis ou de pickleball",
     "soonAndNearby": "À proximité",
     "justForYou": "Juste pour vous",
-    "justForYouCard": {
-      "matchLabel": "Partie",
-      "suggestionLabel": "Suggestion",
-      "spotsLeft": "{count} places restantes",
-      "full": "Complet",
-      "unknownFacility": "Lieu à déterminer"
-    },
     "publicMatches": "Parties publiques",
     "viewAll": "Voir tout",
     "myMatches": "Mes parties",
