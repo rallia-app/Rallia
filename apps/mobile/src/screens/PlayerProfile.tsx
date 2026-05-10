@@ -43,13 +43,8 @@ import RatingBadge from '../components/RatingBadge';
 import ReputationBadge from '../components/ReputationBadge';
 import CovetedBadge from '../components/CovetedBadge';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
-import {
-  getProfilePictureUrl,
-  lightHaptic,
-  mediumHaptic,
-  formatRelativeTime,
-} from '@rallia/shared-utils';
-import { formatDateMonthYear } from '../utils/dateFormatting';
+import { getProfilePictureUrl, lightHaptic, mediumHaptic } from '@rallia/shared-utils';
+import { formatDateMonthYear, formatRelativeTime } from '../utils/dateFormatting';
 import * as Analytics from '../services/analytics';
 import type { RootStackParamList } from '../navigation/types';
 import type { Profile, Player } from '@rallia/shared-types';
@@ -1782,7 +1777,7 @@ const PlayerProfile = () => {
               {isOnline
                 ? t('profile.status.activeNow')
                 : player?.last_seen_at
-                  ? `${t('profile.status.lastSeen')} ${formatRelativeTime(player.last_seen_at)}`
+                  ? `${t('profile.status.lastSeen')} ${formatRelativeTime(player.last_seen_at, locale)}`
                   : t('profile.status.offline')}
             </Text>
           </View>
