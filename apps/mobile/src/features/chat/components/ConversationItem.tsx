@@ -115,7 +115,9 @@ function getConversationInfo(
   if (conversation.conversation_type === 'match') {
     return {
       name,
-      avatar: getCoverImageUrl(conversation.cover_image_url, { width: 200, height: 200 }) || null,
+      avatar:
+        getCoverImageUrl(conversation.cover_image_url, { width: 400, height: 400, quality: 75 }) ||
+        null,
       iconName: 'trophy',
       sportIconName: conversation.match_info?.sport_name ?? null,
       isOnline: false,
@@ -125,7 +127,9 @@ function getConversationInfo(
 
   return {
     name,
-    avatar: getCoverImageUrl(conversation.cover_image_url, { width: 200, height: 200 }) || null,
+    avatar:
+      getCoverImageUrl(conversation.cover_image_url, { width: 400, height: 400, quality: 75 }) ||
+      null,
     iconName: getIconForType(conversation.conversation_type),
     sportIconName: null,
     isOnline: false,

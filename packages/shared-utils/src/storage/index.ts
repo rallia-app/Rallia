@@ -147,12 +147,13 @@ export function getStorageImageUrl(
  */
 export function getProfilePictureUrl(profilePictureUrl: string | null | undefined): string | null {
   const normalized = normalizeStorageUrl(profilePictureUrl, 'profile-pictures');
-  return getStorageImageUrl(normalized, { width: 200, height: 200, quality: 75 });
+  return getStorageImageUrl(normalized, { width: 400, height: 400, quality: 75 });
 }
 
 /**
  * Get a thumbnail URL for a group/community cover image.
- * Defaults to 400×200 q70 list-row sizing; override per surface for headers.
+ * Defaults to 800×400 q75 list-row sizing (retina-friendly); override per
+ * surface for headers (e.g. 1200×600 for hero) or square avatars.
  *
  * @param coverImageUrl - The URL stored in the group/community row
  * @param options - Optional sizing overrides
@@ -164,8 +165,8 @@ export function getCoverImageUrl(
 ): string | null {
   const normalized = normalizeStorageUrl(coverImageUrl, 'group-images');
   return getStorageImageUrl(normalized, {
-    width: options.width ?? 400,
-    height: options.height ?? 200,
-    quality: options.quality ?? 70,
+    width: options.width ?? 800,
+    height: options.height ?? 400,
+    quality: options.quality ?? 75,
   });
 }
