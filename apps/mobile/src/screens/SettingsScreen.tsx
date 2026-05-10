@@ -4,7 +4,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Image,
   ActivityIndicator,
   Alert,
   Linking,
@@ -33,12 +32,7 @@ import {
 } from '@rallia/design-system';
 
 const BASE_WHITE = '#ffffff';
-import {
-  lightHaptic,
-  warningHaptic,
-  getProfilePictureUrl,
-  getHumanName,
-} from '@rallia/shared-utils';
+import { lightHaptic, warningHaptic } from '@rallia/shared-utils';
 
 // Get app environment (EXPO_PUBLIC_ vars are inlined at build time by Metro)
 const appEnv = process.env.EXPO_PUBLIC_APP_ENV || 'development';
@@ -120,10 +114,6 @@ const SettingsScreen: React.FC = () => {
     } finally {
       setIsChangingLocale(false);
     }
-  };
-
-  const handleEditProfile = () => {
-    navigation.navigate('UserProfile', {});
   };
 
   const handleNotificationPreferences = () => {
@@ -275,54 +265,6 @@ const SettingsScreen: React.FC = () => {
         style={[styles.scrollContent, { backgroundColor: colors.background }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Edit Profile - Only show when fully onboarded */}
-        {isOnboarded && (
-          <View style={[styles.profileGroup, { backgroundColor: colors.background }]}>
-            <View style={[styles.profileSection, { backgroundColor: colors.background }]}>
-              {profile?.profile_picture_url ? (
-                <Image
-                  source={{ uri: getProfilePictureUrl(profile.profile_picture_url) || '' }}
-                  style={styles.profileImage}
-                />
-              ) : (
-                <View style={styles.profileImagePlaceholder}>
-                  <Ionicons name="person-outline" size={32} color={colors.iconMuted} />
-                </View>
-              )}
-              <View style={styles.profileInfo}>
-                <Text size="lg" weight="semibold" color={colors.text}>
-                  {getHumanName(profile, '')}
-                </Text>
-                <Text size="sm" color={colors.textSecondary} style={styles.profileEmail}>
-                  {profile?.email || ''}
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity
-              style={[
-                styles.editProfileButton,
-                { backgroundColor: colors.background, borderBottomColor: colors.border },
-              ]}
-              onPress={() => {
-                lightHaptic();
-                handleEditProfile();
-              }}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="create-outline" size={18} color={colors.icon} />
-              <Text size="base" color={colors.text}>
-                {t('profile.editProfile')}
-              </Text>
-              <Ionicons
-                name="chevron-forward"
-                size={20}
-                color={colors.iconMuted}
-                style={{ marginLeft: 'auto' }}
-              />
-            </TouchableOpacity>
-          </View>
-        )}
-
         {/* Settings Items - Permissions always visible; Notifications and Restart Tour when onboarded */}
         <View style={[styles.settingsGroup, { backgroundColor: colors.background }]}>
           {isOnboarded && (
@@ -611,44 +553,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: spacingPixels[5],
   },
-  profileSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[2],
-  },
-  profileImage: {
-    width: spacingPixels[14],
-    height: spacingPixels[14],
-    borderRadius: radiusPixels.full,
-  },
-  profileImagePlaceholder: {
-    width: spacingPixels[14],
-    height: spacingPixels[14],
-    borderRadius: radiusPixels.full,
-    backgroundColor: neutral[200],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileInfo: {
-    marginLeft: spacingPixels[4],
-    flex: 1,
-  },
-  profileEmail: {
-    marginTop: spacingPixels[1],
-  },
-  editProfileButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[5],
-    paddingVertical: spacingPixels[4],
-    borderBottomWidth: 1,
-    gap: spacingPixels[2],
-  },
   settingsGroup: {
-    paddingHorizontal: spacingPixels[5],
-    paddingVertical: spacingPixels[5],
-  },
-  profileGroup: {
     paddingHorizontal: spacingPixels[5],
     paddingVertical: spacingPixels[5],
   },
