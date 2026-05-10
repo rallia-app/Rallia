@@ -3,6 +3,8 @@
  * Player referral operations: code generation, click tracking, attribution
  */
 
+import { getProfilePictureUrl } from '@rallia/shared-utils';
+
 import { supabase } from '../supabase';
 import { generateInvitationLink } from '../invitation/invitationLinkService';
 import type { InvitationType } from '../invitation/invitationLinkService';
@@ -207,7 +209,7 @@ export async function getReferralLeaderboard(
   return ((data as any[]) ?? []).map(row => ({
     referrerId: row.referrer_id,
     displayName: row.display_name,
-    avatarUrl: row.avatar_url ?? null,
+    avatarUrl: getProfilePictureUrl(row.avatar_url) ?? null,
     referralCount: Number(row.referral_count),
     rank: Number(row.rank),
   }));

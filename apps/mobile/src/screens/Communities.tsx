@@ -24,7 +24,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Text, Skeleton, Button, useToast } from '@rallia/shared-components';
-import { lightHaptic } from '@rallia/shared-utils';
+import { getCoverImageUrl, lightHaptic } from '@rallia/shared-utils';
 import {
   useThemeStyles,
   useAuth,
@@ -136,7 +136,7 @@ const CommunityCard: React.FC<{
         <View style={styles.imageContainer}>
           {item.cover_image_url ? (
             <Image
-              source={{ uri: item.cover_image_url }}
+              source={{ uri: getCoverImageUrl(item.cover_image_url) ?? '' }}
               style={styles.coverImage}
               resizeMode="cover"
             />

@@ -335,7 +335,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
               >
                 {member.profilePictureUrl ? (
                   <Image
-                    source={{ uri: member.profilePictureUrl }}
+                    source={{ uri: getProfilePictureUrl(member.profilePictureUrl) ?? '' }}
                     style={styles.selectedChipAvatarImage}
                   />
                 ) : (
@@ -589,7 +589,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
                 >
                   {member.profilePictureUrl ? (
                     <Image
-                      source={{ uri: member.profilePictureUrl }}
+                      source={{ uri: getProfilePictureUrl(member.profilePictureUrl) ?? '' }}
                       style={styles.memberAvatarImage}
                     />
                   ) : (

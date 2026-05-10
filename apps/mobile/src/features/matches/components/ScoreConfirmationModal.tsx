@@ -10,7 +10,12 @@ import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button, useToast } from '@rallia/shared-components';
-import { successHaptic, warningHaptic, lightHaptic } from '@rallia/shared-utils';
+import {
+  getProfilePictureUrl,
+  successHaptic,
+  warningHaptic,
+  lightHaptic,
+} from '@rallia/shared-utils';
 import { useThemeStyles } from '../../../hooks';
 import { SportIcon } from '../../../components/SportIcon';
 import { useConfirmMatchScore, type PendingScoreConfirmation } from '@rallia/shared-hooks';
@@ -134,7 +139,7 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
             >
               {confirmation.submitted_by_avatar ? (
                 <Image
-                  source={{ uri: confirmation.submitted_by_avatar }}
+                  source={{ uri: getProfilePictureUrl(confirmation.submitted_by_avatar) ?? '' }}
                   style={styles.avatarImage}
                 />
               ) : (

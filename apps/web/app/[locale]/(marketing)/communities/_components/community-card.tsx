@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { BadgeCheck, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { getCoverImageUrl } from '@rallia/shared-utils';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -46,7 +47,7 @@ export default function CommunityCard({ community, sportName, onJoin }: Communit
       {/* Cover image */}
       {community.cover_image_url ? (
         <img
-          src={community.cover_image_url}
+          src={getCoverImageUrl(community.cover_image_url, { width: 600, height: 300 }) ?? ''}
           alt={community.name}
           className="h-36 w-full object-cover"
         />

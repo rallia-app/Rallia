@@ -8,6 +8,7 @@ import { getSelectedOrganization } from '@/lib/supabase/get-selected-organizatio
 import { GraduationCap, Mail, Phone, Plus, UserPlus } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { getStorageImageUrl } from '@rallia/shared-utils';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -177,7 +178,13 @@ export default async function InstructorsPage() {
                     <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                       {instructor.avatar_url ? (
                         <img
-                          src={instructor.avatar_url}
+                          src={
+                            getStorageImageUrl(instructor.avatar_url, {
+                              width: 96,
+                              height: 96,
+                              quality: 70,
+                            }) ?? ''
+                          }
                           alt={instructor.display_name}
                           className="size-12 rounded-full object-cover"
                         />
