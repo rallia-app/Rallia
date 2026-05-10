@@ -480,6 +480,8 @@
     "reviewAndRespond": "Review & Respond",
     "pendingCount": "{count} players are waiting for your rating confirmation",
     "pendingCount_one": "{count} player is waiting for your rating confirmation",
+    "bannerTitle": "{count} pending references",
+    "bannerDescription": "Players you've matched with want your endorsement to verify their level.",
     "reviewCta": "Review",
     "respondTitle": "Verify Rating",
     "respondSubtitle": "Help this player get their rating certified",
@@ -3944,6 +3946,11 @@
     "publicMatches": "Public Games",
     "viewAll": "View All",
     "myMatches": "My upcoming games",
+    "quickNav": {
+      "joinCommunity": "Join a community",
+      "bookCourt": "Book a court",
+      "findGame": "Find a game"
+    },
     "myMatchesEmpty": {
       "title": "No upcoming games",
       "description": "Create a game or join one to see it here"
@@ -3964,10 +3971,14 @@
     },
     "crossSportBanner": {
       "unreadNotifications": "You have {count} pending notification(s) in {sportName}",
+      "bannerTitle": "{count} updates in {sportName}",
+      "bannerDescription": "Switch sports to see notifications you missed in your other sport.",
       "switch": "Switch"
     },
     "secondSportBanner": {
       "message": "Ready to expand your game? Activate your {sportName} profile!",
+      "bannerTitle": "Try {sportName} too",
+      "bannerDescription": "Activate {sportName} to find more matches and players nearby.",
       "activate": "Activate"
     },
     "header": {
@@ -9200,6 +9211,7 @@
     "percentComplete": "{percentage}% complete",
     "complete": "Profile complete",
     "bannerTitle": "{percentage}% complete",
+    "bannerDescription": "Complete your profile to find more matches and stand out to other players.",
     "bannerCta": "Complete",
     "tiers": {
       "getting_started": "Getting started — fill in the basics for better matches",
@@ -9282,6 +9294,7 @@
     "renews_on": "Renews {date}",
     "cancels_on": "Access until {date}",
     "billing_banner_title": "Payment issue with your subscription",
+    "billing_banner_description": "Your subscription is on hold until you update your payment method.",
     "billing_banner_cta": "Update payment",
     "manage_via_apple": "Manage your subscription via Apple Settings",
     "free_plan": "Free Plan",

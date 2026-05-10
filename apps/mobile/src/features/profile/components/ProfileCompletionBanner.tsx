@@ -1,13 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Text, Button } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import type { CompletenessTier, CompletenessItem } from '@rallia/shared-hooks';
-import ProfileCompletionRing from './ProfileCompletionRing';
-import { getTierColors } from '../completionTierColors';
+import type { CompletenessItem } from '@rallia/shared-hooks';
+
+import HomeBanner from '../../../components/HomeBanner';
 
 // =============================================================================
 // CONSTANTS
@@ -29,19 +25,10 @@ const COOLDOWN_MS = [
 
 interface ProfileCompletionBannerProps {
   percentage: number;
-  tier: CompletenessTier;
   nextAction: CompletenessItem | null;
   isComplete: boolean;
   loading: boolean;
   onAction: (item: CompletenessItem) => void;
-  colors: {
-    card: string;
-    text: string;
-    textMuted: string;
-    primary: string;
-    border: string;
-  };
-  isDark: boolean;
   t: (key: string, options?: Record<string, string | number | boolean>) => string;
 }
 
@@ -51,13 +38,10 @@ interface ProfileCompletionBannerProps {
 
 const ProfileCompletionBanner: React.FC<ProfileCompletionBannerProps> = ({
   percentage,
-  tier,
   nextAction,
   isComplete,
   loading,
   onAction,
-  colors,
-  isDark,
   t,
 }) => {
   const [visible, setVisible] = useState(false);
@@ -128,84 +112,22 @@ const ProfileCompletionBanner: React.FC<ProfileCompletionBannerProps> = ({
 
   if (!ready || loading || isComplete || !visible || !nextAction) return null;
 
-  const tierColors = getTierColors(tier, isDark);
-  const accentColor = tierColors.accent;
-  const trackColor = tierColors.trackColor;
-
   return (
-    <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      <View style={styles.content}>
-        <ProfileCompletionRing
-          percentage={percentage}
-          size={40}
-          strokeWidth={4}
-          color={accentColor}
-          trackColor={trackColor}
-          labelColor={colors.text}
-        />
-        <View style={styles.textContainer}>
-          <Text size="sm" weight="semibold" style={{ color: colors.text }} numberOfLines={1}>
-            {t('profileCompletion.bannerTitle', { percentage })}
-          </Text>
-          <Text size="xs" style={{ color: colors.textMuted }} numberOfLines={1}>
-            {t(nextAction.labelKey)}
-          </Text>
-        </View>
-      </View>
-      <View style={styles.actions}>
-        <Button
-          variant="primary"
-          size="xs"
-          onPress={() => {
-            void lightHaptic();
-            onAction(nextAction);
-          }}
-        >
-          {t('profileCompletion.bannerCta')}
-        </Button>
-        <TouchableOpacity
-          onPress={handleDismiss}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="close" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
-      </View>
-    </View>
+    <HomeBanner
+      variant="action"
+      icon="person-circle-outline"
+      title={t('profileCompletion.bannerTitle', { percentage })}
+      description={t('profileCompletion.bannerDescription')}
+      primaryAction={{
+        label: t('profileCompletion.bannerCta'),
+        onPress: () => {
+          void lightHaptic();
+          onAction(nextAction);
+        },
+      }}
+      onDismiss={handleDismiss}
+    />
   );
 };
-
-// =============================================================================
-// STYLES
-// =============================================================================
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginHorizontal: spacingPixels[4],
-    marginTop: spacingPixels[3],
-    marginBottom: spacingPixels[2],
-    padding: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-  },
-  content: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: spacingPixels[2],
-    gap: spacingPixels[2.5],
-  },
-  textContainer: {
-    flex: 1,
-    gap: 2,
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[2],
-  },
-});
 
 export default ProfileCompletionBanner;

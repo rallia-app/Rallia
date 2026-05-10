@@ -480,6 +480,8 @@
     "reviewAndRespond": "Examiner et répondre",
     "pendingCount": "{count} joueurs attendent la confirmation de leur niveau",
     "pendingCount_one": "{count} joueur attend la confirmation de son niveau",
+    "bannerTitle": "{count} références en attente",
+    "bannerDescription": "Des joueurs attendent votre approbation pour confirmer leur niveau officiel.",
     "reviewCta": "Examiner",
     "respondTitle": "Vérifier le niveau",
     "respondSubtitle": "Aidez ce joueur à faire certifier son niveau",
@@ -3944,6 +3946,11 @@
     "publicMatches": "Parties publiques",
     "viewAll": "Voir tout",
     "myMatches": "Mes prochaines parties",
+    "quickNav": {
+      "joinCommunity": "Rejoindre une communauté",
+      "bookCourt": "Réserver un terrain",
+      "findGame": "Trouver une partie"
+    },
     "myMatchesEmpty": {
       "title": "Aucune partie à venir",
       "description": "Créez une partie ou rejoignez-en une pour la voir ici"
@@ -3964,10 +3971,14 @@
     },
     "crossSportBanner": {
       "unreadNotifications": "Vous avez {count} notification(s) en attente pour {sportName}",
+      "bannerTitle": "{count} mises à jour en {sportName}",
+      "bannerDescription": "Changez de sport pour voir les notifications manquées dans l'autre sport.",
       "switch": "Changer"
     },
     "secondSportBanner": {
       "message": "Prêt à élargir vos horizons? Activez votre profil {sportName}!",
+      "bannerTitle": "Essayez {sportName} aussi",
+      "bannerDescription": "Activez {sportName} pour trouver plus de matchs et de joueurs près de chez vous.",
       "activate": "Activer"
     },
     "header": {
@@ -9202,6 +9213,7 @@
     "percentComplete": "{percentage}% complété",
     "complete": "Profil complété",
     "bannerTitle": "Profil à {percentage}%",
+    "bannerDescription": "Complétez votre profil pour obtenir plus de matchs et vous démarquer.",
     "bannerCta": "Compléter",
     "tiers": {
       "getting_started": "Début — remplissez les bases pour de meilleurs matchs",
@@ -9284,6 +9296,7 @@
     "renews_on": "Renouvellement le {date}",
     "cancels_on": "Accès jusqu'au {date}",
     "billing_banner_title": "Problème de paiement avec votre abonnement",
+    "billing_banner_description": "Votre abonnement est en pause jusqu'à la mise à jour de votre paiement.",
     "billing_banner_cta": "Mettre à jour",
     "manage_via_apple": "Gérez votre abonnement via les réglages Apple",
     "free_plan": "Forfait gratuit",

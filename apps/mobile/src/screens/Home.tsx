@@ -75,7 +75,10 @@ import {
   getPendingDeepLink,
   addDeepLinkListener,
 } from '../navigation/deepLinkStore';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, secondary } from '@rallia/design-system';
+import TennisIcon from '../../assets/icons/tennis.svg';
+import PickleballIcon from '../../assets/icons/pickleball.svg';
+import TennisCourtIcon from '../../assets/icons/tennis-court.svg';
 import { SportIcon } from '../components/SportIcon';
 import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
 import ProfileCompletionBanner from '../features/profile/components/ProfileCompletionBanner';
@@ -83,6 +86,7 @@ import { SuggestionCard } from '../components/SuggestionCard';
 import type { UnifiedFeedItem } from '@rallia/shared-hooks';
 import BillingIssueBanner from '../components/BillingIssueBanner';
 import ReferenceRequestsBanner from '../components/ReferenceRequestsBanner';
+import HomeBanner, { HomeBannerLayoutProvider } from '../components/HomeBanner';
 import { useSubscription } from '../context';
 import {
   incrementOnboardedLaunchCount,
@@ -97,64 +101,17 @@ const CrossSportBanner: React.FC<{
   count: number;
   onSwitch: () => void;
   onDismiss: () => void;
-  colors: { card: string; text: string; textMuted: string; primary: string; border: string };
   t: (key: string, options?: Record<string, string | number | boolean>) => string;
-}> = ({ sportName, displayName, count, onSwitch, onDismiss, colors, t }) => (
-  <View
-    style={[
-      crossBannerStyles.container,
-      { backgroundColor: colors.card, borderColor: colors.border },
-    ]}
-  >
-    <View style={crossBannerStyles.content}>
-      <SportIcon
-        sportName={sportName}
-        size={20}
-        color={colors.primary}
-        style={{ marginRight: 8 }}
-      />
-      <Text size="sm" color={colors.text} style={crossBannerStyles.text} numberOfLines={2}>
-        {t('home.crossSportBanner.unreadNotifications', { count, sportName: displayName })}
-      </Text>
-    </View>
-    <View style={crossBannerStyles.actions}>
-      <Button variant="primary" size="xs" onPress={onSwitch}>
-        {t('home.crossSportBanner.switch')}
-      </Button>
-      <TouchableOpacity onPress={onDismiss} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-        <Ionicons name="close" size={18} color={colors.textMuted} />
-      </TouchableOpacity>
-    </View>
-  </View>
+}> = ({ sportName, displayName, count, onSwitch, onDismiss, t }) => (
+  <HomeBanner
+    variant="info"
+    leading={accent => <SportIcon sportName={sportName} size={20} color={accent} />}
+    title={t('home.crossSportBanner.bannerTitle', { count, sportName: displayName })}
+    description={t('home.crossSportBanner.bannerDescription')}
+    primaryAction={{ label: t('home.crossSportBanner.switch'), onPress: onSwitch }}
+    onDismiss={onDismiss}
+  />
 );
-
-const crossBannerStyles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginHorizontal: spacingPixels[4],
-    marginTop: spacingPixels[3],
-    marginBottom: spacingPixels[2],
-    padding: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-  },
-  content: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: spacingPixels[2],
-  },
-  text: {
-    flex: 1,
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[2],
-  },
-});
 
 /** Banner encouraging users with only one sport to activate their second sport */
 const SecondSportBanner: React.FC<{
@@ -163,36 +120,102 @@ const SecondSportBanner: React.FC<{
   onActivate: () => void;
   onDismiss: () => void;
   fadeAnim: Animated.Value;
-  colors: { card: string; text: string; textMuted: string; primary: string; border: string };
   t: (key: string, options?: Record<string, string | number | boolean>) => string;
-}> = ({ sportName, displayName, onActivate, onDismiss, fadeAnim, colors, t }) => (
-  <Animated.View
-    style={[
-      crossBannerStyles.container,
-      { backgroundColor: colors.card, borderColor: colors.border, opacity: fadeAnim },
-    ]}
-  >
-    <View style={crossBannerStyles.content}>
-      <SportIcon
-        sportName={sportName}
-        size={20}
-        color={colors.primary}
-        style={{ marginRight: 8 }}
-      />
-      <Text size="sm" color={colors.text} style={crossBannerStyles.text} numberOfLines={2}>
-        {t('home.secondSportBanner.message', { sportName: displayName })}
-      </Text>
-    </View>
-    <View style={crossBannerStyles.actions}>
-      <Button variant="primary" size="xs" onPress={onActivate}>
-        {t('home.secondSportBanner.activate')}
-      </Button>
-      <TouchableOpacity onPress={onDismiss} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-        <Ionicons name="close" size={18} color={colors.textMuted} />
-      </TouchableOpacity>
-    </View>
-  </Animated.View>
+}> = ({ sportName, displayName, onActivate, onDismiss, fadeAnim, t }) => (
+  <HomeBanner
+    variant="action"
+    leading={accent => <SportIcon sportName={sportName} size={20} color={accent} />}
+    title={t('home.secondSportBanner.bannerTitle', { sportName: displayName })}
+    description={t('home.secondSportBanner.bannerDescription', { sportName: displayName })}
+    primaryAction={{ label: t('home.secondSportBanner.activate'), onPress: onActivate }}
+    onDismiss={onDismiss}
+    fadeAnim={fadeAnim}
+  />
 );
+
+/** Single circular FAB-style quick-nav button — icon + label below.
+ *  In English the label is rendered as a single line; in French it's split at
+ *  the first space (first word on line 1, the rest on line 2) so the row
+ *  reads consistently despite the longer FR copy. */
+const QuickNavButton: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  splitLabel: boolean;
+  onPress: () => void;
+}> = ({ icon, label, splitLabel, onPress }) => {
+  const { colors } = useThemeStyles();
+  const handlePress = () => {
+    void lightHaptic();
+    onPress();
+  };
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      activeOpacity={0.7}
+      style={quickNavStyles.item}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      <View style={[quickNavStyles.fab, { backgroundColor: secondary[500] }]}>{icon}</View>
+      {splitLabel ? (
+        (() => {
+          const firstSpace = label.indexOf(' ');
+          const lineOne = firstSpace === -1 ? label : label.slice(0, firstSpace);
+          const lineTwo = firstSpace === -1 ? '' : label.slice(firstSpace + 1);
+          return (
+            <View style={quickNavStyles.labelBlock}>
+              <Text size="xs" color={colors.text} style={quickNavStyles.label} numberOfLines={1}>
+                {lineOne}
+              </Text>
+              <Text size="xs" color={colors.text} style={quickNavStyles.label} numberOfLines={1}>
+                {lineTwo}
+              </Text>
+            </View>
+          );
+        })()
+      ) : (
+        <Text size="xs" color={colors.text} style={quickNavStyles.label} numberOfLines={1}>
+          {label}
+        </Text>
+      )}
+    </TouchableOpacity>
+  );
+};
+
+const quickNavStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'flex-start',
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
+    paddingBottom: spacingPixels[2],
+  },
+  item: {
+    alignItems: 'center',
+    flex: 1,
+    gap: spacingPixels[1.5],
+  },
+  fab: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    // Subtle elevation so the FABs feel raised against the screen background.
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  labelBlock: {
+    alignItems: 'center',
+  },
+  label: {
+    textAlign: 'center',
+  },
+});
 
 // AsyncStorage key for second sport banner cooldown
 const SECOND_SPORT_BANNER_COOLDOWN_KEY = '@rallia/second-sport-banner-cooldown';
@@ -204,7 +227,7 @@ const Home = () => {
   const { session, loading: authLoading } = useAuth();
   const { profile } = useProfile();
   const { setOnHomeScreen } = useOverlay();
-  const { openSheet } = useActionsSheet();
+  const { openSheet, openSheetForMatchCreation } = useActionsSheet();
   const { subscriptionStatus } = useSubscription();
 
   // User is fully onboarded only if authenticated AND onboarding is complete
@@ -892,24 +915,11 @@ const Home = () => {
             </TouchableOpacity>
           </View>
 
-          {/* Always the same horizontal ScrollView container — only its
-              children change between loading / empty / real states. Avoids
-              layout shift when data resolves. */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.myMatchesScrollContent}
-          >
-            {loadingMyMatches ? (
-              [1, 2, 3].map(i => (
-                <SkeletonMyMatchCard
-                  key={i}
-                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-                  style={{ backgroundColor: colors.card }}
-                />
-              ))
-            ) : myMatches.length === 0 ? (
+          {/* Loading + populated states share the same horizontal ScrollView
+              for layout stability; the empty state breaks out into a static
+              full-width card so the message reads as a section, not a card. */}
+          {!loadingMyMatches && myMatches.length === 0 ? (
+            <View style={styles.myMatchesEmptyWrap}>
               <View style={[styles.myMatchesEmpty, { backgroundColor: colors.card }]}>
                 <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
                 <Text size="sm" color={colors.textMuted} style={styles.myMatchesEmptyText}>
@@ -918,43 +928,70 @@ const Home = () => {
                 <Text size="xs" color={colors.textMuted} style={styles.myMatchesEmptyDescription}>
                   {t('home.myMatchesEmpty.description')}
                 </Text>
+                <Button
+                  variant="primary"
+                  onPress={() => {
+                    void lightHaptic();
+                    openSheetForMatchCreation();
+                  }}
+                  style={styles.myMatchesEmptyCta}
+                >
+                  {t('actions.createMatch')}
+                </Button>
               </View>
-            ) : (
-              myMatches.slice(0, 5).map((match: MatchWithDetails) => {
-                // Check if current player is invited (has pending invitation)
-                const isInvited = !!(
-                  player?.id &&
-                  match.participants?.some(p => p.player_id === player.id && p.status === 'pending')
-                );
-                // Count pending join requests (only relevant if current user is creator)
-                const pendingRequestCount =
-                  match.created_by === player?.id
-                    ? (match.participants?.filter(p => p.status === 'requested').length ?? 0)
-                    : 0;
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.myMatchesScrollContent}
+            >
+              {loadingMyMatches
+                ? [1, 2, 3].map(i => (
+                    <SkeletonMyMatchCard
+                      key={i}
+                      backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                      highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                      style={{ backgroundColor: colors.card }}
+                    />
+                  ))
+                : myMatches.slice(0, 5).map((match: MatchWithDetails) => {
+                    // Check if current player is invited (has pending invitation)
+                    const isInvited = !!(
+                      player?.id &&
+                      match.participants?.some(
+                        p => p.player_id === player.id && p.status === 'pending'
+                      )
+                    );
+                    // Count pending join requests (only relevant if current user is creator)
+                    const pendingRequestCount =
+                      match.created_by === player?.id
+                        ? (match.participants?.filter(p => p.status === 'requested').length ?? 0)
+                        : 0;
 
-                return (
-                  <MyMatchCard
-                    key={match.id}
-                    match={match}
-                    isDark={isDark}
-                    t={
-                      t as (
-                        key: string,
-                        options?: Record<string, string | number | boolean>
-                      ) => string
-                    }
-                    locale={locale}
-                    isInvited={isInvited}
-                    pendingRequestCount={pendingRequestCount}
-                    onPress={() => {
-                      Logger.logUserAction('my_match_pressed', { matchId: match.id });
-                      openMatchDetail(match);
-                    }}
-                  />
-                );
-              })
-            )}
-          </ScrollView>
+                    return (
+                      <MyMatchCard
+                        key={match.id}
+                        match={match}
+                        isDark={isDark}
+                        t={
+                          t as (
+                            key: string,
+                            options?: Record<string, string | number | boolean>
+                          ) => string
+                        }
+                        locale={locale}
+                        isInvited={isInvited}
+                        pendingRequestCount={pendingRequestCount}
+                        onPress={() => {
+                          Logger.logUserAction('my_match_pressed', { matchId: match.id });
+                          openMatchDetail(match);
+                        }}
+                      />
+                    );
+                  })}
+            </ScrollView>
+          )}
         </WalkthroughableView>
       </CopilotStep>
     );
@@ -964,6 +1001,7 @@ const Home = () => {
     colors.text,
     colors.primary,
     colors.textMuted,
+    colors.card,
     t,
     navigation,
     loadingMyMatches,
@@ -971,6 +1009,7 @@ const Home = () => {
     isDark,
     locale,
     openMatchDetail,
+    openSheetForMatchCreation,
     player,
   ]);
 
@@ -1039,9 +1078,14 @@ const Home = () => {
         </View>
       );
     } else {
+      // Collect every header banner into one bucket so they can scroll
+      // horizontally as a group, mirroring the My Matches / Just for you
+      // carousels on the same screen.
+      const bannerCards: React.ReactNode[] = [];
+
       // Billing issue banner (shown when subscription payment has failed)
       if (subscriptionStatus === 'billing_issue') {
-        headerComponents.push(
+        bannerCards.push(
           <BillingIssueBanner
             key="billing-issue"
             onManagePress={() => appNavigation.navigate('SubscriptionManagement')}
@@ -1051,24 +1095,22 @@ const Home = () => {
 
       // Pending incoming reference requests
       if (pendingReferenceRequestsCount > 0) {
-        headerComponents.push(
+        bannerCards.push(
           <ReferenceRequestsBanner
             key="reference-requests"
             count={pendingReferenceRequestsCount}
             onPress={() => appNavigation.navigate('IncomingReferenceRequests')}
-            colors={colors}
             t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
           />
         );
       }
 
-      // Fully onboarded: show My Matches
       // Cross-sport banners for unread notifications in other sports
       Object.entries(otherSportsUnreadCount).forEach(([sportName, count]) => {
         if (count > 0 && !dismissedBannerSports.has(sportName)) {
           const sport = userSports.find(s => s.name === sportName);
           if (sport) {
-            headerComponents.push(
+            bannerCards.push(
               <CrossSportBanner
                 key={`cross-sport-${sportName}`}
                 sportName={sportName}
@@ -1076,7 +1118,6 @@ const Home = () => {
                 count={count}
                 onSwitch={() => setSelectedSport(sport)}
                 onDismiss={() => setDismissedBannerSports(prev => new Set(prev).add(sportName))}
-                colors={colors}
                 t={
                   t as (key: string, options?: Record<string, string | number | boolean>) => string
                 }
@@ -1089,7 +1130,7 @@ const Home = () => {
       // Second sport activation banner (for users with only 1 sport)
       if (shouldShowSecondSportBanner && inactiveSports.length > 0) {
         const sportToActivate = inactiveSports[0];
-        headerComponents.push(
+        bannerCards.push(
           <SecondSportBanner
             key="second-sport-banner"
             sportName={sportToActivate.name}
@@ -1097,7 +1138,6 @@ const Home = () => {
             onActivate={handleActivateSecondSport}
             onDismiss={handleDismissSecondSportBanner}
             fadeAnim={secondSportFadeAnim}
-            colors={colors}
             t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
           />
         );
@@ -1105,21 +1145,88 @@ const Home = () => {
 
       // Profile completion banner
       if (!profileCompleteness.isComplete && !profileCompleteness.loading) {
-        headerComponents.push(
+        bannerCards.push(
           <ProfileCompletionBanner
             key="profile-completion"
             percentage={profileCompleteness.percentage}
-            tier={profileCompleteness.tier}
             nextAction={profileCompleteness.nextAction}
             isComplete={profileCompleteness.isComplete}
             loading={profileCompleteness.loading}
             onAction={handleCompletionBannerAction}
-            colors={colors}
-            isDark={isDark}
             t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
           />
         );
       }
+
+      // Single banner gets the full row; multiple banners scroll horizontally
+      // as a carousel (matching My Matches / Just for you below).
+      if (bannerCards.length === 1) {
+        headerComponents.push(
+          <HomeBannerLayoutProvider key="banner-single" layout="fullWidth">
+            <View style={styles.bannerSingleWrap}>{bannerCards[0]}</View>
+          </HomeBannerLayoutProvider>
+        );
+      } else if (bannerCards.length > 1) {
+        headerComponents.push(
+          <HomeBannerLayoutProvider key="banner-carousel" layout="card">
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.bannerCarouselContent}
+            >
+              {bannerCards}
+            </ScrollView>
+          </HomeBannerLayoutProvider>
+        );
+      }
+
+      // Quick-nav row: 3 circular FABs (community / book a court / find a game).
+      // Icons mirror the bottom-tab bar so users learn the visual mapping in
+      // one place.
+      const SportIconComponent =
+        selectedSport?.name?.toLowerCase() === 'pickleball' ? PickleballIcon : TennisIcon;
+      const splitQuickNavLabel = locale.startsWith('fr');
+      headerComponents.push(
+        <View key="quick-nav" style={quickNavStyles.row}>
+          <QuickNavButton
+            icon={<Ionicons name="people-outline" size={32} color="#FFFFFF" />}
+            label={t('home.quickNav.joinCommunity')}
+            splitLabel={splitQuickNavLabel}
+            onPress={() =>
+              appNavigation.navigate('Main', {
+                screen: 'Community',
+                params: {
+                  screen: 'Communities',
+                  // Keep PlayerDirectory as the Community tab root so back from
+                  // Communities returns to the Community screen, not Home.
+                  initial: false,
+                },
+              } as never)
+            }
+          />
+          <QuickNavButton
+            icon={
+              <View style={{ transform: [{ rotate: '90deg' }] }}>
+                <TennisCourtIcon width={32} height={32} stroke="#FFFFFF" />
+              </View>
+            }
+            label={t('home.quickNav.bookCourt')}
+            splitLabel={splitQuickNavLabel}
+            onPress={() =>
+              appNavigation.navigate('Main', {
+                screen: 'Courts',
+                params: { screen: 'FacilitiesDirectory' },
+              } as never)
+            }
+          />
+          <QuickNavButton
+            icon={<SportIconComponent width={32} height={32} fill="#FFFFFF" />}
+            label={t('home.quickNav.findGame')}
+            splitLabel={splitQuickNavLabel}
+            onPress={() => navigation.navigate('PublicMatches')}
+          />
+        </View>
+      );
 
       // Add "My Matches" section for fully onboarded users
       headerComponents.push(<View key="my-matches">{renderMyMatchesSection()}</View>);
@@ -1457,11 +1564,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Empty-state card that sits inside the same horizontal ScrollView as the
-  // real My Matches cards. Width matches a typical phone screen so the empty
-  // message doesn't feel like a "card" the user can scroll past.
+  // Full-width empty-state card — replaces the carousel entirely when there
+  // are no upcoming games, so the message reads as a section instead of a
+  // single scrollable card.
+  myMatchesEmptyWrap: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: 10,
+    paddingBottom: spacingPixels[2],
+  },
   myMatchesEmpty: {
-    width: 320,
     padding: spacingPixels[6],
     alignItems: 'center',
     justifyContent: 'center',
@@ -1475,12 +1586,27 @@ const styles = StyleSheet.create({
     marginTop: spacingPixels[1],
     textAlign: 'center',
   },
+  myMatchesEmptyCta: {
+    marginTop: spacingPixels[4],
+    minWidth: 180,
+  },
   myMatchesScrollContent: {
     paddingTop: 10, // Minimal space for corner badges (badge extends 8px above card)
     paddingLeft: spacingPixels[4],
     paddingRight: spacingPixels[4],
     paddingBottom: spacingPixels[2],
     gap: spacingPixels[2],
+  },
+  bannerCarouselContent: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
+    paddingBottom: spacingPixels[2],
+    gap: spacingPixels[3],
+  },
+  bannerSingleWrap: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
+    paddingBottom: spacingPixels[2],
   },
   deepLinkOverlay: {
     flex: 1,
