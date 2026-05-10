@@ -228,6 +228,51 @@ async function fetchBusySlots(
   return busyByPlayer;
 }
 
+/**
+ * Returns the set of opponent IDs the caller has an active pending invite to —
+ * i.e. the caller created an upcoming, non-cancelled match and the opponent is
+ * a `pending` participant. Used to suppress repeat suggestions for someone the
+ * caller has already pinged.
+ */
+async function fetchOpponentsWithPendingInviteFromCaller(
+  callerId: string,
+  todayKey: string
+): Promise<Set<string>> {
+  const out = new Set<string>();
+  const { data, error } = await supabase
+    .from('match_participant')
+    .select(
+      `
+      player_id,
+      match:match_id!inner (
+        created_by,
+        match_date,
+        cancelled_at
+      )
+    `
+    )
+    .eq('status', 'pending')
+    .neq('player_id', callerId);
+
+  if (error || !data) {
+    if (error) console.warn('[SuggestionService] Failed to fetch pending invites:', error);
+    return out;
+  }
+
+  for (const row of data) {
+    const m = row.match as unknown as {
+      created_by: string;
+      match_date: string;
+      cancelled_at: string | null;
+    } | null;
+    if (!m || m.cancelled_at) continue;
+    if (m.created_by !== callerId) continue;
+    if (m.match_date < todayKey) continue;
+    out.add(row.player_id as string);
+  }
+  return out;
+}
+
 // =============================================================================
 // SLOT GENERATION (FIXED HOURS)
 // =============================================================================
@@ -364,7 +409,23 @@ async function computeScoredTriplets(
     return { triplets: [], windowKeys, aborted: false };
   }
 
-  const scored = scoredRows as ScoredMatchup[];
+  let scored = scoredRows as ScoredMatchup[];
+
+  // ── Step 1b: Drop opponents the caller has already pinged ──────────
+  // Anon mode has no caller, so nothing to exclude.
+  if (!isAnon) {
+    const alreadyInvited = await fetchOpponentsWithPendingInviteFromCaller(
+      playerId!,
+      window[0].key
+    );
+    if (signal?.aborted) return { triplets: [], windowKeys, aborted: true };
+    if (alreadyInvited.size > 0) {
+      scored = scored.filter(r => !alreadyInvited.has(r.opponent_id));
+    }
+    if (scored.length === 0) {
+      return { triplets: [], windowKeys, aborted: false };
+    }
+  }
 
   // ── Step 2: Busy slots for caller + opponents (conflict detection) ──
   const uniqueOpponentIds = [...new Set(scored.map(r => r.opponent_id))];

@@ -755,6 +755,7 @@ const Home = () => {
     cardLabels: suggestionLabels,
     handleSendInvite,
     getInviteState,
+    callerMatchType,
   } = useSuggestionInviteHandler({ sportId: selectedSport?.id, source: 'feed' });
 
   // Use TanStack Query hook for fetching player's upcoming matches
@@ -1393,6 +1394,7 @@ const Home = () => {
                       source="feed"
                       sportId={selectedSport?.id}
                       sportName={selectedSport?.name}
+                      defaultMatchType={callerMatchType}
                     />
                   </View>
                 )

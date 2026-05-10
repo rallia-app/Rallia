@@ -30,6 +30,8 @@ export interface FeedItemCardProps {
   /** Optional sport context for suggestion analytics breakdowns. */
   sportId?: string;
   sportName?: string;
+  /** Default match-type chip for SuggestionCard (mirrors MatchCard chips). */
+  defaultMatchType?: 'competitive' | 'casual' | 'both';
 }
 
 function FeedItemCardImpl({
@@ -45,6 +47,7 @@ function FeedItemCardImpl({
   onSendInvite,
   sportId,
   sportName,
+  defaultMatchType,
 }: FeedItemCardProps) {
   if (item.kind === 'match') {
     const match = item.data;
@@ -94,6 +97,7 @@ function FeedItemCardImpl({
         source="feed"
         sportId={sportId}
         sportName={sportName}
+        defaultMatchType={defaultMatchType}
       />
     </View>
   );

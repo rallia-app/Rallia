@@ -324,6 +324,7 @@ export default function PublicMatches() {
     cardLabels: suggestionLabels,
     handleSendInvite,
     getInviteState,
+    callerMatchType,
   } = useSuggestionInviteHandler({ sportId: selectedSport?.id, source: 'feed' });
 
   // Auto-paginate matches up to 30 before relying on suggestions to fill the feed.
@@ -385,6 +386,7 @@ export default function PublicMatches() {
           onSendInvite={handleSendInvite}
           sportId={selectedSport?.id}
           sportName={selectedSport?.name}
+          defaultMatchType={callerMatchType}
         />
       );
     },
@@ -653,7 +655,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[4],
+    paddingTop: 0,
+    paddingBottom: spacingPixels[4],
     gap: spacingPixels[3],
   },
   frontierLine: {

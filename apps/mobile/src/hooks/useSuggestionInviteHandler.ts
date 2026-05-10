@@ -51,6 +51,8 @@ export interface UseSuggestionInviteHandlerResult {
   inviteStates: Record<string, InviteState>;
   getInviteState: (opponentId: string, facilityId: string, startTime: Date | string) => InviteState;
   handleSendInvite: (payload: InvitePayload) => Promise<void>;
+  /** Caller's preferred match type for the active sport — fed into SuggestionCard so its default chip row reflects what the match becomes on accept. */
+  callerMatchType: 'competitive' | 'casual' | 'both';
 }
 
 export function useSuggestionInviteHandler(
@@ -140,6 +142,7 @@ export function useSuggestionInviteHandler(
         queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'player'] });
         queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'nearby'] });
         queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'public'] });
+        queryClient.invalidateQueries({ queryKey: ['matches', 'topSuggestions'] });
         onSendSuccess?.(payload, key);
       } catch {
         setInviteStates(prev => ({ ...prev, [key]: 'idle' }));
@@ -169,6 +172,10 @@ export function useSuggestionInviteHandler(
       inviteSent: t('onboarding.suggestions.inviteSent'),
       today: t('common.time.today'),
       tomorrow: t('common.time.tomorrow'),
+      singles: t('match.format.singles'),
+      free: t('match.cost.free'),
+      competitive: t('match.type.competitive'),
+      casual: t('match.type.casual'),
     }),
     [t]
   );
@@ -179,7 +186,16 @@ export function useSuggestionInviteHandler(
     [inviteStates]
   );
 
-  return { cardLabels, inviteStates, getInviteState, handleSendInvite };
+  const normalizedCallerMatchType: 'competitive' | 'casual' | 'both' =
+    callerMatchType === 'competitive' || callerMatchType === 'casual' ? callerMatchType : 'both';
+
+  return {
+    cardLabels,
+    inviteStates,
+    getInviteState,
+    handleSendInvite,
+    callerMatchType: normalizedCallerMatchType,
+  };
 }
 
 export default useSuggestionInviteHandler;

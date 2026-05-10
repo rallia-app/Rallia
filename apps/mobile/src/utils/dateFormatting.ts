@@ -100,19 +100,43 @@ export function formatRelativeTime(dateString: string, locale: Locale): string {
   const diffHour = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHour / 24);
 
-  // Use Intl.RelativeTimeFormat for locale-aware relative time
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+  // Hermes-on-iOS does not always include `Intl.RelativeTimeFormat`; calling
+  // `new` on it throws "Cannot read property 'prototype' of undefined". Fall
+  // back to a small manual formatter for the two locales we ship.
+  const rtf =
+    typeof Intl !== 'undefined' && typeof Intl.RelativeTimeFormat === 'function'
+      ? new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+      : null;
 
-  if (diffSec < 60) {
-    return rtf.format(-diffSec, 'second');
-  } else if (diffMin < 60) {
-    return rtf.format(-diffMin, 'minute');
-  } else if (diffHour < 24) {
-    return rtf.format(-diffHour, 'hour');
-  } else if (diffDay < 7) {
-    return rtf.format(-diffDay, 'day');
-  } else {
-    // For older dates, return formatted date
-    return formatDateShort(dateString, locale);
-  }
+  const format = (value: number, unit: 'second' | 'minute' | 'hour' | 'day'): string => {
+    if (rtf) return rtf.format(value, unit);
+    const isFr = locale.startsWith('fr');
+    const abs = Math.abs(value);
+    if (isFr) {
+      const labels = {
+        second: ['à l’instant', 'il y a 1 seconde', `il y a ${abs} secondes`],
+        minute: ['à l’instant', 'il y a 1 minute', `il y a ${abs} minutes`],
+        hour: ['', 'il y a 1 heure', `il y a ${abs} heures`],
+        day: ['aujourd’hui', 'hier', `il y a ${abs} jours`],
+      } as const;
+      if (abs === 0) return labels[unit][0];
+      if (abs === 1) return labels[unit][1];
+      return labels[unit][2];
+    }
+    const labels = {
+      second: ['just now', '1 second ago', `${abs} seconds ago`],
+      minute: ['just now', '1 minute ago', `${abs} minutes ago`],
+      hour: ['', '1 hour ago', `${abs} hours ago`],
+      day: ['today', 'yesterday', `${abs} days ago`],
+    } as const;
+    if (abs === 0) return labels[unit][0];
+    if (abs === 1) return labels[unit][1];
+    return labels[unit][2];
+  };
+
+  if (diffSec < 60) return format(-diffSec, 'second');
+  if (diffMin < 60) return format(-diffMin, 'minute');
+  if (diffHour < 24) return format(-diffHour, 'hour');
+  if (diffDay < 7) return format(-diffDay, 'day');
+  return formatDateShort(dateString, locale);
 }

@@ -13,17 +13,23 @@ import {
   Image,
   Animated,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary, neutral, base } from '@rallia/design-system';
 import { TIER_CONFIGS } from '@rallia/shared-services';
 import type { ReputationDisplay, SlotSuggestion } from '@rallia/shared-services';
-import { lightHaptic, formatIntuitiveDateInTimezone } from '@rallia/shared-utils';
+import {
+  getProfilePictureUrl,
+  lightHaptic,
+  formatIntuitiveDateInTimezone,
+} from '@rallia/shared-utils';
 import * as Analytics from '../services/analytics';
 import type { SuggestionSource } from '../services/analytics';
 import RatingBadge from './RatingBadge';
 import ReputationBadge from './ReputationBadge';
+import { useNavigateToPlayerProfile } from '../hooks';
 
 export type InviteState = 'idle' | 'sending' | 'sent';
 
@@ -47,6 +53,10 @@ export interface SuggestionCardLabels {
   inviteSent: string;
   today: string;
   tomorrow: string;
+  singles: string;
+  free: string;
+  competitive: string;
+  casual: string;
 }
 
 export interface SuggestionCardProps {
@@ -63,6 +73,11 @@ export interface SuggestionCardProps {
   /** Sport context for analytics (when known by the parent surface). */
   sportId?: string;
   sportName?: string;
+  /**
+   * Caller's preferred match type — drives the casual/competitive default
+   * applied when the invite is accepted. Omitted or 'both' hides the chip.
+   */
+  defaultMatchType?: 'competitive' | 'casual' | 'both';
 }
 
 function buildReputationDisplay(s: SlotSuggestion): ReputationDisplay | undefined {
@@ -102,6 +117,7 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
   source,
   sportId,
   sportName,
+  defaultMatchType,
 }) => {
   // Fire an impression event once per mount. List virtualization may remount
   // the card as the user scrolls; each remount counts as a fresh impression,
@@ -137,6 +153,13 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
     [suggestion.slot.endDatetime]
   );
 
+  const navigateToPlayerProfile = useNavigateToPlayerProfile();
+  const handleAvatarPress = useCallback(() => {
+    if (!suggestion.opponentId) return;
+    lightHaptic();
+    navigateToPlayerProfile(suggestion.opponentId, sportId);
+  }, [navigateToPlayerProfile, suggestion.opponentId, sportId]);
+
   const cardScaleAnimation = useMemo(() => new Animated.Value(1), []);
   const handlePressIn = () => {
     Animated.spring(cardScaleAnimation, {
@@ -161,8 +184,17 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
     onSendInvite({ suggestion });
   }, [suggestion, onSendInvite]);
 
-  const opponentName =
-    `${suggestion.opponentFirstName} ${suggestion.opponentLastName}`.trim() || labels.unknownPlayer;
+  const opponentName = (() => {
+    const first = (suggestion.opponentFirstName ?? '').trim();
+    const last = (suggestion.opponentLastName ?? '').trim();
+    const full = `${first} ${last}`.trim();
+    if (!full) return labels.unknownPlayer;
+    // The opponent row shares space with the rating + reputation badges, so
+    // long full names get squeezed. Fall back to first name once the combined
+    // string exceeds what realistically fits on a single line.
+    if (full.length > 16 && first) return first;
+    return full;
+  })();
   const reputationDisplay = buildReputationDisplay(suggestion);
 
   const dateLabel = useMemo(() => {
@@ -193,6 +225,22 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
   const cardBg = isDark ? primary[950] : primary[50];
   const borderColor = isDark ? `${primary[400]}40` : `${primary[500]}20`;
   const courtGreen = isDark ? '#4ADE80' : '#16A34A';
+
+  // Default match-attribute chips, mirroring MatchCard's badge row. These
+  // reflect what the match becomes when the invite is accepted (singles,
+  // caller's match-type pref, court not booked → free).
+  const chipBg = isDark ? `${primary[400]}30` : `${primary[500]}15`;
+  const chipFg = tierAccent;
+  const defaultChips: Array<{
+    key: string;
+    label: string;
+    icon: keyof typeof Ionicons.glyphMap;
+  }> = [{ key: 'format', label: labels.singles, icon: 'person-outline' }];
+  if (defaultMatchType === 'competitive') {
+    defaultChips.push({ key: 'matchType', label: labels.competitive, icon: 'trophy' });
+  } else if (defaultMatchType === 'casual') {
+    defaultChips.push({ key: 'matchType', label: labels.casual, icon: 'happy' });
+  }
 
   const canSend = inviteState === 'idle' && !disabled;
   const isSending = inviteState === 'sending';
@@ -225,9 +273,19 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
 
           {/* Opponent row */}
           <View style={styles.opponentRow}>
-            <View style={[styles.avatar, { borderColor: tierAccent }]}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={handleAvatarPress}
+              accessibilityRole="button"
+              accessibilityLabel={opponentName}
+              hitSlop={8}
+              style={[styles.avatar, { borderColor: tierAccent }]}
+            >
               {suggestion.opponentAvatar ? (
-                <Image source={{ uri: suggestion.opponentAvatar }} style={styles.avatarImage} />
+                <Image
+                  source={{ uri: getProfilePictureUrl(suggestion.opponentAvatar) ?? '' }}
+                  style={styles.avatarImage}
+                />
               ) : (
                 <View
                   style={[
@@ -242,29 +300,51 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
                   />
                 </View>
               )}
-            </View>
+            </TouchableOpacity>
             <View style={styles.opponentInfo}>
-              <Text size="base" weight="bold" color={colors.text} numberOfLines={1}>
+              <Text
+                size="base"
+                weight="bold"
+                color={colors.text}
+                numberOfLines={1}
+                style={styles.opponentName}
+              >
                 {opponentName}
               </Text>
-              <View style={styles.badgeRow}>
-                <RatingBadge
-                  ratingValue={suggestion.opponentRatingScoreValue}
-                  ratingLabel={suggestion.opponentRatingLabel}
-                  certificationStatus={
-                    suggestion.opponentBadgeStatus as
-                      | 'self_declared'
-                      | 'certified'
-                      | 'disputed'
-                      | null
-                  }
-                  isDark={isDark}
-                  size="sm"
-                />
-                <ReputationBadge reputationDisplay={reputationDisplay} isDark={isDark} size="sm" />
-              </View>
+              <RatingBadge
+                ratingValue={suggestion.opponentRatingScoreValue}
+                ratingLabel={suggestion.opponentRatingLabel}
+                certificationStatus={
+                  suggestion.opponentBadgeStatus as
+                    | 'self_declared'
+                    | 'certified'
+                    | 'disputed'
+                    | null
+                }
+                isDark={isDark}
+                size="sm"
+              />
+              <ReputationBadge reputationDisplay={reputationDisplay} isDark={isDark} size="sm" />
             </View>
           </View>
+
+          {/* Default attribute chips — mirrors MatchCard's badge row */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            nestedScrollEnabled
+            style={styles.chipsScroll}
+            contentContainerStyle={styles.chipsContent}
+          >
+            {defaultChips.map(chip => (
+              <View key={chip.key} style={[styles.chip, { backgroundColor: chipBg }]}>
+                <Ionicons name={chip.icon} size={10} color={chipFg} style={styles.chipIcon} />
+                <Text size="xs" weight="semibold" color={chipFg}>
+                  {chip.label}
+                </Text>
+              </View>
+            ))}
+          </ScrollView>
 
           {/* CTA */}
           {onSendInvite && (
@@ -327,7 +407,7 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
 // Re-export formatHour as it was previously used — kept for any external callers.
 export { formatHour };
 
-const SLOT_SIZE = 40;
+const SLOT_SIZE = 32;
 
 const styles = StyleSheet.create({
   card: {
@@ -340,6 +420,7 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 5,
     marginBottom: spacingPixels[3],
+    minHeight: 244,
   },
   content: {
     padding: spacingPixels[4],
@@ -394,19 +475,35 @@ const styles = StyleSheet.create({
   },
   opponentInfo: {
     flex: 1,
-    marginLeft: spacingPixels[3],
-  },
-  badgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacingPixels[1],
-    gap: spacingPixels[1],
+    marginLeft: spacingPixels[3],
+    gap: spacingPixels[1.5],
+  },
+  opponentName: {
+    flexShrink: 1,
+  },
+  chipsScroll: {
+    marginBottom: spacingPixels[3],
+  },
+  chipsContent: {
+    flexDirection: 'row',
+    gap: spacingPixels[1.5],
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[2.5],
+    paddingVertical: spacingPixels[1],
+    borderRadius: radiusPixels.full,
+  },
+  chipIcon: {
+    marginRight: spacingPixels[1],
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingTop: spacingPixels[3],
-    marginTop: spacingPixels[2],
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   ctaButton: {

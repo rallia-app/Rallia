@@ -1447,6 +1447,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 16,
     elevation: 5,
+    minHeight: 244,
   },
 
   // Tier ribbon badge (top-right corner)
