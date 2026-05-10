@@ -3943,7 +3943,7 @@
     "justForYou": "Just for you",
     "publicMatches": "Public Games",
     "viewAll": "View All",
-    "myMatches": "My Games",
+    "myMatches": "My upcoming games",
     "myMatchesEmpty": {
       "title": "No upcoming games",
       "description": "Create a game or join one to see it here"
