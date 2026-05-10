@@ -1453,12 +1453,12 @@ const styles = StyleSheet.create({
   justForYouScrollContent: {
     paddingHorizontal: spacingPixels[4], // leading & trailing edge from screen
     paddingBottom: spacingPixels[2],
-    gap: spacingPixels[3], // inter-card spacing (12px)
+    gap: spacingPixels[4], // inter-card spacing (16px)
   },
-  // 320px slot per card — slightly under typical phone width so the next card
-  // peeks and signals horizontal scrollability.
+  // 340px slot per card — wider than standard but still leaves a peek of the
+  // next card on typical phone widths, signalling horizontal scrollability.
   jfyCardWrapper: {
-    width: 320,
+    width: 340,
   },
   // MatchCard ships with marginHorizontal: spacingPixels[4] built in (so it
   // sits flush in vertical lists). In a horizontal carousel that margin would
