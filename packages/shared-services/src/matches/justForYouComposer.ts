@@ -20,8 +20,13 @@ import type { Scorable, MatchScoringPreferences } from './matchScoring';
 import type { SlotSuggestion } from './suggestionService';
 
 export interface ComposeJustForYouInput {
-  /** Authenticated caller's player id. Required — there's no anon variant of this composer. */
-  playerId: string;
+  /**
+   * Authenticated caller's player id. When omitted, the composer runs in anon
+   * mode: matches are still scored (using whatever scoring preferences the
+   * caller can provide), and suggestions go through the anon path of
+   * `getTopSuggestions` (location-keyed availability density).
+   */
+  playerId?: string;
   sportId: string;
   sportName?: string;
   latitude: number;

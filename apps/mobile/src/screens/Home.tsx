@@ -722,7 +722,9 @@ const Home = () => {
     scoringPreferences,
     excludeUserIds,
     matchLimit: 5,
-    enabled: showNearbySection && !!session?.user?.id,
+    // Anon-mode supported by the composer/hook — gate only on the location
+    // and sport context that the carousel itself depends on.
+    enabled: showNearbySection,
   });
 
   // Suggestion invite plumbing (shared with PublicMatches via the hook).

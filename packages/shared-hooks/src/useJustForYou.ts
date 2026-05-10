@@ -75,12 +75,10 @@ export function useJustForYou(options: UseJustForYouOptions): UseJustForYouResul
     enabled = true,
   } = options;
 
+  // Anon callers can use this hook too — composer runs without playerId.
+  // Required for both modes: sportId + lat/lng + maxDistanceKm.
   const hasRequired =
-    !!playerId &&
-    !!sportId &&
-    latitude !== undefined &&
-    longitude !== undefined &&
-    maxDistanceKm !== undefined;
+    !!sportId && latitude !== undefined && longitude !== undefined && maxDistanceKm !== undefined;
 
   const queryEnabled = enabled && hasRequired;
   const prefsHash = hashPrefs(scoringPreferences);
@@ -106,7 +104,7 @@ export function useJustForYou(options: UseJustForYouOptions): UseJustForYouResul
     queryKey,
     queryFn: ({ signal }) =>
       composeJustForYou({
-        playerId: playerId!,
+        playerId: playerId ?? undefined,
         sportId: sportId!,
         sportName,
         latitude: latitude!,
