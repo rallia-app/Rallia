@@ -19,7 +19,6 @@ import {
   Heading,
   Button,
   LocationSelector,
-  Skeleton,
   SkeletonMatchCard,
   SkeletonMyMatchCard,
   useToast,
@@ -827,7 +826,7 @@ const Home = () => {
           activeOpacity={0.7}
         >
           <Text size="base" weight="medium" color={colors.primary}>
-            {t('home.viewAllGames')}
+            {t('home.viewAll')}
           </Text>
           <Ionicons
             name="chevron-forward"
@@ -1170,216 +1169,152 @@ const Home = () => {
     pendingReferenceRequestsCount,
   ]);
 
-  // Show loading if auth is loading, or if player/sport data is loading initially
-  // Note: locationLoading is ignored when using hardcoded Montreal location for dev
+  // No more full-page skeleton. Each section (My Matches, Just for you) owns
+  // its own loading state, so the page renders immediately and the relevant
+  // section shows its skeleton until its data arrives. Avoids the layout
+  // flicker that came from swapping a full-page skeleton in and out.
+  const showJfyEmpty = !loadingJustForYou && justForYouItems.length === 0;
 
-  const isInitialLoading = authLoading || playerLoading || sportLoading;
+  const content = (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching && isManualRefresh.current}
+            onRefresh={() => {
+              isManualRefresh.current = true;
+              refetchJustForYou();
+              if (session?.user?.id) refetchMyMatches();
+            }}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+      >
+        {renderListHeader()}
 
-  // Determine main content based on loading / data state
-  let content: React.ReactNode;
-
-  if (isInitialLoading) {
-    content = (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-        <View style={styles.loadingContainer}>
-          {/* My Matches skeleton */}
-          <View style={styles.skeletonSection}>
-            <Skeleton
-              width={120}
-              height={20}
-              backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-              highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-              style={{ marginBottom: 12, marginHorizontal: 16 }}
-            />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.myMatchesScrollContent}
-            >
-              {[1, 2, 3].map(i => (
-                <SkeletonMyMatchCard
-                  key={i}
-                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-                  style={{ backgroundColor: colors.card }}
-                />
-              ))}
-            </ScrollView>
-          </View>
-
-          {/* Nearby Matches skeleton */}
-          <View style={styles.skeletonSection}>
-            <Skeleton
-              width={150}
-              height={20}
-              backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-              highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-              style={{ marginBottom: 12, marginHorizontal: 16 }}
-            />
-            {[1, 2, 3].map(i => (
-              <SkeletonMatchCard
-                key={i}
-                backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-                highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-                style={{
-                  backgroundColor: isDark ? '#1C1C1E' : '#FAFAFA',
-                  borderColor: colors.border,
-                  marginHorizontal: spacingPixels[4],
-                  marginBottom: spacingPixels[3],
-                }}
-              />
-            ))}
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  } else {
-    // Compose the Just-for-you carousel — exactly 5 cards (or skeletons),
-    // horizontally scrollable. Empty pool is rare; we surface a compact
-    // empty-state row in that case.
-    const showJfyEmpty = !loadingJustForYou && justForYouItems.length === 0;
-
-    content = (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-        <ScrollView
-          ref={scrollRef}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefetching && isManualRefresh.current}
-              onRefresh={() => {
-                isManualRefresh.current = true;
-                refetchJustForYou();
-                if (session?.user?.id) refetchMyMatches();
-              }}
-              tintColor={colors.primary}
-              colors={[colors.primary]}
-            />
-          }
-        >
-          {renderListHeader()}
-
-          {showNearbySection && (
-            <>
-              {loadingJustForYou ? (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.justForYouScrollContent}
-                >
-                  {[1, 2, 3].map(i => (
-                    <View key={i} style={styles.jfySkeleton}>
-                      <SkeletonMatchCard
-                        backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-                        highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-                        style={{
-                          backgroundColor: isDark ? '#1C1C1E' : '#FAFAFA',
-                          borderColor: colors.border,
-                        }}
-                      />
-                    </View>
-                  ))}
-                </ScrollView>
-              ) : showJfyEmpty ? (
-                <View style={styles.emptyContainer}>
-                  <Ionicons name="location-outline" size={20} color={colors.textMuted} />
-                  <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-                    {t('home.nearbyEmpty.title')}
-                  </Text>
-                </View>
-              ) : (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.justForYouScrollContent}
-                >
-                  {justForYouItems.map(item =>
-                    item.kind === 'match' ? (
-                      <View key={item.key} style={styles.jfyCardWrapper}>
-                        {/* MatchCard has built-in marginHorizontal:16; the
+        {showNearbySection && (
+          <>
+            {loadingJustForYou ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.justForYouScrollContent}
+              >
+                {[1, 2, 3].map(i => (
+                  <View key={i} style={styles.jfyCardWrapper}>
+                    <SkeletonMatchCard
+                      backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                      highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                      style={{
+                        backgroundColor: isDark ? '#1C1C1E' : '#FAFAFA',
+                        borderColor: colors.border,
+                      }}
+                    />
+                  </View>
+                ))}
+              </ScrollView>
+            ) : showJfyEmpty ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="location-outline" size={20} color={colors.textMuted} />
+                <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
+                  {t('home.nearbyEmpty.title')}
+                </Text>
+              </View>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.justForYouScrollContent}
+              >
+                {justForYouItems.map(item =>
+                  item.kind === 'match' ? (
+                    <View key={item.key} style={styles.jfyCardWrapper}>
+                      {/* MatchCard has built-in marginHorizontal:16; the
                             negative wrapper margin neutralizes it so the card
                             fills our 320px slot exactly. */}
-                        <View style={styles.jfyMatchInner}>
-                          <MatchCard
-                            match={item.data}
-                            isDark={isDark}
-                            t={
-                              t as (
-                                key: string,
-                                options?: Record<string, string | number | boolean>
-                              ) => string
-                            }
-                            locale={locale}
-                            currentPlayerId={player?.id}
-                            sportIcon={
-                              <SportIcon
-                                sportName={item.data.sport?.name ?? selectedSport?.name ?? 'tennis'}
-                                size={100}
-                                color={isDark ? neutral[600] : neutral[400]}
-                              />
-                            }
-                            onPress={() => {
-                              Logger.logUserAction('match_pressed', { matchId: item.data.id });
-                              openMatchDetail(item.data as MatchDetailData);
-                            }}
-                          />
-                        </View>
-                      </View>
-                    ) : (
-                      <View key={item.key} style={styles.jfyCardWrapper}>
-                        <SuggestionCard
-                          suggestion={item.data}
-                          colors={{
-                            cardBackground: colors.cardBackground,
-                            text: colors.foreground,
-                            textSecondary: colors.textSecondary,
-                            textMuted: colors.textMuted,
-                            border: colors.border,
-                            buttonActive: colors.primary,
-                            buttonTextActive: '#ffffff',
-                          }}
+                      <View style={styles.jfyMatchInner}>
+                        <MatchCard
+                          match={item.data}
                           isDark={isDark}
-                          labels={suggestionLabels}
+                          t={
+                            t as (
+                              key: string,
+                              options?: Record<string, string | number | boolean>
+                            ) => string
+                          }
                           locale={locale}
-                          onSendInvite={handleSendInvite}
-                          inviteState={getInviteState(
-                            item.data.opponentId,
-                            item.data.facility.facilityId,
-                            item.data.slot.datetime
-                          )}
-                          source="feed"
-                          sportId={selectedSport?.id}
-                          sportName={selectedSport?.name}
+                          currentPlayerId={player?.id}
+                          sportIcon={
+                            <SportIcon
+                              sportName={item.data.sport?.name ?? selectedSport?.name ?? 'tennis'}
+                              size={100}
+                              color={isDark ? neutral[600] : neutral[400]}
+                            />
+                          }
+                          onPress={() => {
+                            Logger.logUserAction('match_pressed', { matchId: item.data.id });
+                            openMatchDetail(item.data as MatchDetailData);
+                          }}
                         />
                       </View>
-                    )
-                  )}
-                </ScrollView>
-              )}
-            </>
-          )}
-        </ScrollView>
+                    </View>
+                  ) : (
+                    <View key={item.key} style={styles.jfyCardWrapper}>
+                      <SuggestionCard
+                        suggestion={item.data}
+                        colors={{
+                          cardBackground: colors.cardBackground,
+                          text: colors.foreground,
+                          textSecondary: colors.textSecondary,
+                          textMuted: colors.textMuted,
+                          border: colors.border,
+                          buttonActive: colors.primary,
+                          buttonTextActive: '#ffffff',
+                        }}
+                        isDark={isDark}
+                        labels={suggestionLabels}
+                        locale={locale}
+                        onSendInvite={handleSendInvite}
+                        inviteState={getInviteState(
+                          item.data.opponentId,
+                          item.data.facility.facilityId,
+                          item.data.slot.datetime
+                        )}
+                        source="feed"
+                        sportId={selectedSport?.id}
+                        sportName={selectedSport?.name}
+                      />
+                    </View>
+                  )
+                )}
+              </ScrollView>
+            )}
+          </>
+        )}
+      </ScrollView>
 
-        {/* FAB buttons */}
-        <View style={styles.fabContainer}>
-          {isOnboarded && (
-            <TouchableOpacity
-              style={[styles.suggestionsFab, { backgroundColor: colors.primary }]}
-              onPress={() => {
-                lightHaptic();
-                SheetManager.show('match-suggestions');
-              }}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="sparkles" size={24} color="#ffffff" />
-            </TouchableOpacity>
-          )}
-          <FeedbackFAB />
-        </View>
-      </SafeAreaView>
-    );
-  }
+      {/* FAB buttons */}
+      <View style={styles.fabContainer}>
+        {isOnboarded && (
+          <TouchableOpacity
+            style={[styles.suggestionsFab, { backgroundColor: colors.primary }]}
+            onPress={() => {
+              lightHaptic();
+              SheetManager.show('match-suggestions');
+            }}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="sparkles" size={24} color="#ffffff" />
+          </TouchableOpacity>
+        )}
+        <FeedbackFAB />
+      </View>
+    </SafeAreaView>
+  );
 
   return (
     <>
@@ -1438,13 +1373,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
-  loadingContainer: {
-    flex: 1,
-    paddingTop: spacingPixels[2],
-  },
-  skeletonSection: {
-    marginBottom: spacingPixels[6],
-  },
   listContent: {
     flexGrow: 1,
     paddingTop: spacingPixels[2],
@@ -1463,15 +1391,9 @@ const styles = StyleSheet.create({
   // MatchCard ships with marginHorizontal: spacingPixels[4] built in (so it
   // sits flush in vertical lists). In a horizontal carousel that margin would
   // shrink the visible card and add unwanted gap. Negative margin neutralizes
-  // it so the card fills the 320px slot exactly.
+  // it so the card fills the 340px slot exactly.
   jfyMatchInner: {
     marginHorizontal: -spacingPixels[4],
-  },
-  jfySkeleton: {
-    width: 320,
-    height: 180,
-    borderRadius: radiusPixels.lg,
-    overflow: 'hidden',
   },
   matchesSection: {
     padding: spacingPixels[5],
