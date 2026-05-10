@@ -7,11 +7,11 @@
  *   - email_status = 'ok' (no hard bounces or spam complaints)
  *   - Has not opted out of morning_digest via notification_preference
  *
- * The email shows a single chronologically-sorted feed of up to 6 cards
- * mixing real upcoming public matches and matchup suggestions (each with a
- * concrete picked slot via `get_morning_digest_suggestions`). Users with no
- * relevant content are skipped; their `last_morning_digest_sent_at` is left
- * untouched so they remain eligible for the next run.
+ * The email is structured as one section per active sport. Each section has
+ * up to 5 cards composed by `composeJustForYou` — the same shared composer
+ * the mobile Home "Just for you" carousel uses. Top-scored real matches come
+ * first; the tail is padded with suggestions when matches < 5. Users with
+ * zero content across all sections are skipped and stay eligible for tomorrow.
  *
  * Triggered daily at 12:00 UTC via pg_cron.
  */
@@ -22,10 +22,12 @@ import { SignJWT } from 'https://esm.sh/jose@5';
 
 import { requireSecretApikey } from '../_shared/auth.ts';
 import { reportHeartbeat } from '../_shared/heartbeat.ts';
+import { composeJustForYou, type ComposedSuggestion } from '../_shared/justForYouComposer.ts';
+import type { Scorable, MatchScoringPreferences } from '../_shared/matchScoring.ts';
 
 import {
   renderMorningDigestEmail,
-  type DigestFeedItem,
+  type DigestSection,
   type DigestMatch,
   type DigestSuggestion,
 } from './template.ts';
@@ -34,16 +36,12 @@ import {
 // CONFIGURATION
 // =============================================================================
 
-/** Total cards in the unified feed (matches + suggestions interleaved). */
-const MAX_FEED = 6;
-/** Per-sport upper bound on suggestions returned by the new RPC. */
-const MAX_SUGGESTIONS_PER_SPORT = 3;
-/** Per-sport upper bound on matches; we fetch a bit extra for cross-sport dedup. */
-const MATCHES_FETCH_LIMIT = MAX_FEED * 3;
+/** Per-section cap (matches + suggestion padding). */
+const MAX_PER_SECTION = 5;
 
-/** Bounded concurrency for the per-user processing loop (S1). */
+/** Bounded concurrency for the per-user processing loop. */
 const USER_CONCURRENCY = 10;
-/** Soft deadline; we stop dispatching new users when crossed (S2). */
+/** Soft deadline; we stop dispatching new users when crossed. */
 const MAX_RUN_MS = 240_000;
 
 // =============================================================================
@@ -73,54 +71,12 @@ interface DigestUser {
   sports: Array<{ sportId: string; sportName: string }>;
 }
 
-interface PublicMatchRow {
-  match_id: string;
-  distance_meters: number;
-}
-
-interface MatchDetailRow {
-  id: string;
-  match_date: string;
-  start_time: string;
-  end_time: string;
-  format: string;
-  join_mode: string;
-  player_expectation: string | null;
-  is_court_free: boolean;
-  estimated_cost: number | null;
-  court_status: string | null;
-  created_by: string;
-  // Supabase-js types nested foreign-key selects as arrays, not single objects.
-  sport: Array<{ name: string }> | { name: string } | null;
-  facility: Array<{ name: string; city: string }> | { name: string; city: string } | null;
-  participants: Array<{ status: string; player_id: string }> | null;
-}
-
-/** Active-participation statuses that should disqualify a match from the
- *  digest (the user is already in some way committed). Mirrors the mobile
- *  PublicMatches client-side filter. */
-const INVOLVED_STATUSES = new Set(['joined', 'requested', 'pending', 'waitlisted']);
-
-function pickFirst<T>(value: T[] | T | null | undefined): T | null {
-  if (!value) return null;
-  if (Array.isArray(value)) return value[0] ?? null;
-  return value;
-}
-
-interface DigestSuggestionRow {
-  opponent_id: string;
-  opponent_first_name: string;
-  opponent_last_name: string;
-  opponent_rating_label: string | null;
-  opponent_badge_status: string | null;
-  opponent_reputation_tier: string | null;
-  facility_id: string;
-  facility_name: string;
-  facility_city: string;
-  match_date: string;
-  start_time: string;
-  end_time: string;
-  matchup_score: number;
+interface ScoringPrefRow {
+  gender: string | null;
+  preferred_match_type: string | null;
+  preferred_match_duration: string | null;
+  rating_value: number | null;
+  favorite_facility_ids: string[] | null;
 }
 
 // =============================================================================
@@ -156,181 +112,170 @@ async function getEligibleUsers(supabase: SupabaseClient): Promise<DigestUser[]>
   return Array.from(userMap.values());
 }
 
-async function getPublicMatchesForUser(
+/**
+ * Fetch scoring preferences for one (player, sport) pair. Inlined here so
+ * the digest produces the same ranking as Home's "Just for you" carousel,
+ * which uses the full set of MatchScoringPreferences.
+ */
+async function getScoringPreferences(
+  supabase: SupabaseClient,
+  userId: string,
+  sportId: string
+): Promise<MatchScoringPreferences> {
+  const [playerRow, sportPrefRow, ratingRow, favoritesRow] = await Promise.all([
+    supabase.from('player').select('gender, max_travel_distance').eq('id', userId).maybeSingle(),
+    supabase
+      .from('player_sport')
+      .select('preferred_match_type, preferred_match_duration')
+      .eq('player_id', userId)
+      .eq('sport_id', sportId)
+      .maybeSingle(),
+    supabase
+      .from('player_rating_score')
+      .select('rating_score:rating_score_id(value, rating_system:rating_system_id(sport_id))')
+      .eq('player_id', userId)
+      .limit(50),
+    supabase
+      .from('player_favorite_facility')
+      .select('facility_id')
+      .eq('player_id', userId)
+      .eq('sport_id', sportId),
+  ]);
+
+  type RatingRow = {
+    rating_score:
+      | Array<{ value: number | null; rating_system: { sport_id: string } | null }>
+      | { value: number | null; rating_system: { sport_id: string } | null }
+      | null;
+  };
+  function pickRatingValue(rows: RatingRow[] | null | undefined): number | null {
+    if (!rows) return null;
+    for (const r of rows) {
+      const rs = Array.isArray(r.rating_score) ? r.rating_score[0] : r.rating_score;
+      if (!rs) continue;
+      const sys = Array.isArray(rs.rating_system) ? rs.rating_system[0] : rs.rating_system;
+      if (sys?.sport_id === sportId && rs.value != null) return rs.value;
+    }
+    return null;
+  }
+
+  return {
+    playerGender: playerRow.data?.gender ?? null,
+    playerRatingValue: pickRatingValue(ratingRow.data as RatingRow[] | null),
+    preferredMatchDuration: sportPrefRow.data?.preferred_match_duration ?? null,
+    preferredMatchType: sportPrefRow.data?.preferred_match_type ?? null,
+    favoriteFacilityIds: ((favoritesRow.data ?? []) as Array<{ facility_id: string }>).map(
+      r => r.facility_id
+    ),
+    maxTravelDistanceKm: playerRow.data?.max_travel_distance ?? undefined,
+  };
+}
+
+/**
+ * Build one section per active sport for the given user. Calls the shared
+ * composer for each sport, converts results into the email-friendly shapes,
+ * and skips sports that produced zero content.
+ */
+async function buildSectionsForUser(
   supabase: SupabaseClient,
   user: DigestUser
-): Promise<DigestMatch[]> {
-  const matchIds: string[] = [];
-  const seenIds = new Set<string>();
-  const distanceMap = new Map<string, number>();
+): Promise<DigestSection[]> {
+  const sections: DigestSection[] = [];
 
   for (const sport of user.sports) {
-    const { data, error } = await supabase.rpc('search_public_matches', {
-      p_latitude: user.lat,
-      p_longitude: user.lng,
-      p_max_distance_km: user.maxTravelKm,
-      p_sport_id: sport.sportId,
-      p_date_range: 'week',
-      p_limit: MATCHES_FETCH_LIMIT,
-      p_offset: 0,
-    });
+    const scoringPreferences = await getScoringPreferences(supabase, user.userId, sport.sportId);
 
-    if (error) {
+    let composed;
+    try {
+      composed = await composeJustForYou({
+        supabase,
+        playerId: user.userId,
+        sportId: sport.sportId,
+        latitude: user.lat,
+        longitude: user.lng,
+        maxDistanceKm: user.maxTravelKm,
+        userGender: scoringPreferences.playerGender,
+        scoringPreferences,
+        excludeUserIds: [user.userId],
+        matchLimit: MAX_PER_SECTION,
+      });
+    } catch (err) {
       console.warn(
-        `[digest] search_public_matches error for user ${user.userId} sport ${sport.sportId}: ${error.message}`
+        `[digest] composer failed for ${user.userId} sport ${sport.sportId}: ${
+          err instanceof Error ? err.message : String(err)
+        }`
       );
       continue;
     }
 
-    for (const row of (data ?? []) as PublicMatchRow[]) {
-      if (!seenIds.has(row.match_id)) {
-        seenIds.add(row.match_id);
-        matchIds.push(row.match_id);
-        distanceMap.set(row.match_id, row.distance_meters);
-      }
-    }
-  }
-
-  if (matchIds.length === 0) return [];
-
-  const { data: details, error: detailError } = await supabase
-    .from('match')
-    .select(
-      'id, match_date, start_time, end_time, format, join_mode, player_expectation, is_court_free, estimated_cost, court_status, created_by, sport:sport_id(name), facility:facility_id(name, city), participants:match_participant(status, player_id)'
-    )
-    .in('id', matchIds)
-    .order('match_date', { ascending: true })
-    .order('start_time', { ascending: true });
-
-  if (detailError) {
-    console.warn(
-      `[digest] match detail fetch failed for user ${user.userId}: ${detailError.message}`
+    const matchItems = composed.matches.map(m => toDigestMatch(m, sport.sportName));
+    const suggestionItems = composed.suggestions.map(s =>
+      toDigestSuggestion(s, sport.sportId, sport.sportName)
     );
-    return [];
-  }
 
-  const rows = (details ?? []) as unknown as MatchDetailRow[];
-  const out: DigestMatch[] = [];
-  for (const m of rows) {
-    // Skip matches the user can't act on:
-    //   1. They created it (don't email someone their own match).
-    //   2. They're already involved (joined/requested/pending/waitlisted).
-    //   3. The match is full (no joinable spots).
-    if (m.created_by === user.userId) continue;
-    const userInvolved = (m.participants ?? []).some(
-      p => p.player_id === user.userId && p.status != null && INVOLVED_STATUSES.has(p.status)
-    );
-    if (userInvolved) continue;
+    if (matchItems.length === 0 && suggestionItems.length === 0) continue;
 
-    const format = (m.format as 'singles' | 'doubles') ?? 'singles';
-    const totalSpots = format === 'doubles' ? 4 : 2;
-    const joinedCount = (m.participants ?? []).filter(p => p.status === 'joined').length;
-    if (joinedCount >= totalSpots) continue;
-
-    const distMeters = distanceMap.get(m.id);
-    const distKm = distMeters != null ? Math.round(distMeters / 100) / 10 : null;
-    const sportRow = pickFirst(m.sport);
-    const facilityRow = pickFirst(m.facility);
-    out.push({
-      id: m.id,
-      match_date: m.match_date,
-      start_time: m.start_time,
-      end_time: m.end_time,
-      sport_name: sportRow?.name ?? 'Sport',
-      facility_name: facilityRow?.name ?? '',
-      facility_city: facilityRow?.city ?? '',
-      format,
-      join_mode: (m.join_mode as 'direct' | 'request') ?? 'direct',
-      player_expectation: m.player_expectation as 'casual' | 'competitive' | 'both' | null,
-      is_court_free: m.is_court_free ?? false,
-      estimated_cost: m.estimated_cost,
-      court_status: m.court_status,
-      joined_count: joinedCount,
-      total_spots: totalSpots,
-      distance_km: distKm,
+    sections.push({
+      sportId: sport.sportId,
+      sportName: sport.sportName,
+      items: [
+        ...matchItems.map(data => ({ kind: 'match' as const, data })),
+        ...suggestionItems.map(data => ({ kind: 'suggestion' as const, data })),
+      ],
     });
   }
-  return out;
+
+  return sections;
 }
 
-async function getSuggestionsForUser(
-  supabase: SupabaseClient,
-  user: DigestUser
-): Promise<DigestSuggestion[]> {
-  const suggestionMap = new Map<string, DigestSuggestion & { score: number }>();
+/** Convert a Scorable returned by the composer to the email-friendly shape. */
+function toDigestMatch(m: Scorable, sportName: string): DigestMatch {
+  const format: 'singles' | 'doubles' = m.format === 'doubles' ? 'doubles' : 'singles';
+  const totalSpots = format === 'doubles' ? 4 : 2;
+  const joinedCount = m.participants?.filter(p => p.status === 'joined').length ?? 0;
+  const distKm = m.distance_meters != null ? Math.round(m.distance_meters / 100) / 10 : null;
 
-  for (const sport of user.sports) {
-    const { data, error } = await supabase.rpc('get_morning_digest_suggestions', {
-      p_player_id: user.userId,
-      p_sport_id: sport.sportId,
-      p_limit: MAX_SUGGESTIONS_PER_SPORT,
-    });
-
-    if (error) {
-      console.warn(
-        `[digest] get_morning_digest_suggestions error for user ${user.userId} sport ${sport.sportId}: ${error.message}`
-      );
-      continue;
-    }
-
-    for (const row of (data ?? []) as DigestSuggestionRow[]) {
-      // Cross-sport dedup: keep the highest-scored slot per opponent.
-      const existing = suggestionMap.get(row.opponent_id);
-      const score = Number(row.matchup_score);
-      if (!existing || score > existing.score) {
-        suggestionMap.set(row.opponent_id, {
-          opponent_id: row.opponent_id,
-          opponent_first_name: row.opponent_first_name,
-          opponent_last_name: row.opponent_last_name,
-          opponent_rating_label: row.opponent_rating_label,
-          opponent_reputation_tier: row.opponent_reputation_tier,
-          opponent_badge_status: row.opponent_badge_status,
-          sport_id: sport.sportId,
-          sport_name: sport.sportName,
-          facility_id: row.facility_id,
-          facility_name: row.facility_name,
-          facility_city: row.facility_city,
-          match_date: row.match_date,
-          start_time: row.start_time,
-          end_time: row.end_time,
-          score,
-        });
-      }
-    }
-  }
-
-  return Array.from(suggestionMap.values()).map(({ score: _score, ...s }) => s);
+  return {
+    id: m.id,
+    match_date: m.match_date ?? '',
+    start_time: m.start_time ?? '',
+    end_time: m.end_time ?? '',
+    sport_name: m.sport?.name ?? sportName,
+    facility_name: m.facility?.name ?? '',
+    facility_city: m.facility?.city ?? '',
+    format,
+    join_mode: (m.join_mode as 'direct' | 'request' | null) ?? 'direct',
+    player_expectation: m.player_expectation as 'casual' | 'competitive' | 'both' | null,
+    is_court_free: m.is_court_free ?? false,
+    estimated_cost: m.estimated_cost,
+    court_status: m.court_status,
+    joined_count: joinedCount,
+    total_spots: totalSpots,
+    distance_km: distKm,
+  };
 }
 
-// =============================================================================
-// FEED ASSEMBLY
-// =============================================================================
-
-function buildFeed(matches: DigestMatch[], suggestions: DigestSuggestion[]): DigestFeedItem[] {
-  const items: DigestFeedItem[] = [];
-
-  for (const match of matches) {
-    const sortTime = Date.parse(`${match.match_date}T${match.start_time}`);
-    if (!Number.isFinite(sortTime)) continue;
-    items.push({ kind: 'match', sortTime, data: match });
-  }
-
-  // Deduplicate suggestions by day+hour — only one per time slot.
-  // Suggestions arrive sorted by matchup_score desc, so first-seen = highest-scored.
-  const seenSlotKeys = new Set<string>();
-  for (const suggestion of suggestions) {
-    const hour = suggestion.start_time.slice(0, 2);
-    const key = `${suggestion.match_date} ${hour}`;
-    if (seenSlotKeys.has(key)) continue;
-    seenSlotKeys.add(key);
-
-    const sortTime = Date.parse(`${suggestion.match_date}T${suggestion.start_time}`);
-    if (!Number.isFinite(sortTime)) continue;
-    items.push({ kind: 'suggestion', sortTime, data: suggestion });
-  }
-
-  items.sort((a, b) => a.sortTime - b.sortTime);
-  return items.slice(0, MAX_FEED);
+function toDigestSuggestion(
+  s: ComposedSuggestion,
+  sportId: string,
+  sportName: string
+): DigestSuggestion {
+  return {
+    opponent_id: s.opponentId,
+    opponent_first_name: s.opponentFirstName,
+    opponent_last_name: s.opponentLastName,
+    opponent_rating_label: s.opponentRatingLabel,
+    opponent_reputation_tier: s.opponentReputationTier,
+    opponent_badge_status: s.opponentBadgeStatus,
+    sport_id: sportId,
+    sport_name: sportName,
+    facility_id: s.facilityId,
+    facility_name: s.facilityName,
+    facility_city: s.facilityCity,
+    match_date: s.matchDate,
+    start_time: s.startTime,
+    end_time: s.endTime,
+  };
 }
 
 // =============================================================================
@@ -367,14 +312,14 @@ async function sendDigestEmail(
   resend: Resend,
   fromEmail: string,
   user: DigestUser,
-  feed: DigestFeedItem[],
+  sections: DigestSection[],
   appUrl: string,
   unsubscribeUrl: string
 ): Promise<SendResult> {
   const { subject, html } = renderMorningDigestEmail({
     firstName: user.firstName,
     locale: user.locale,
-    feed,
+    sections,
     appUrl,
     unsubscribeUrl,
   });
@@ -477,23 +422,25 @@ async function processDigests(
 
     const userStart = Date.now();
     try {
-      const [matches, suggestions] = await Promise.all([
-        getPublicMatchesForUser(supabase, user),
-        getSuggestionsForUser(supabase, user),
-      ]);
+      const sections = await buildSectionsForUser(supabase, user);
 
-      const feed = buildFeed(matches, suggestions);
-
-      // Hard skip when there's nothing relevant to send. Don't bump
-      // last_morning_digest_sent_at so the user stays eligible for tomorrow.
-      if (feed.length === 0) {
+      // Hard skip when there's nothing relevant to send across any sport. Don't
+      // bump last_morning_digest_sent_at so the user stays eligible tomorrow.
+      if (sections.length === 0) {
         emailsSkippedNoContent++;
         console.log(`[digest] Skip ${user.userId}: no relevant content`);
         return;
       }
 
       const unsubscribeUrl = await buildUnsubscribeUrl(appUrl, user.userId, jwtSecret);
-      const result = await sendDigestEmail(resend, fromEmail, user, feed, appUrl, unsubscribeUrl);
+      const result = await sendDigestEmail(
+        resend,
+        fromEmail,
+        user,
+        sections,
+        appUrl,
+        unsubscribeUrl
+      );
 
       if (!result.ok) {
         errors.push(`Resend failed for user ${user.userId}: ${result.error}`);
@@ -505,6 +452,7 @@ async function processDigests(
       // counting as successful. If the function dies mid-batch, the next run
       // skips already-sent users.
       const sentAt = new Date().toISOString();
+      const totalItems = sections.reduce((acc, s) => acc + s.items.length, 0);
       const updates = await Promise.all([
         supabase
           .from('profile')
@@ -515,7 +463,7 @@ async function processDigests(
               user_id: user.userId,
               sent_at: sentAt,
               resend_id: result.resendId,
-              feed_size: feed.length,
+              feed_size: totalItems,
               status: 'sent',
             })
           : Promise.resolve({ error: null }),
@@ -530,8 +478,16 @@ async function processDigests(
       }
 
       emailsSent++;
+      const matchTotal = sections.reduce(
+        (acc, s) => acc + s.items.filter(i => i.kind === 'match').length,
+        0
+      );
+      const suggestionTotal = sections.reduce(
+        (acc, s) => acc + s.items.filter(i => i.kind === 'suggestion').length,
+        0
+      );
       console.log(
-        `[digest] Sent to ${user.email} (feed=${feed.length}, matches=${matches.length}, suggestions=${suggestions.length})`
+        `[digest] Sent to ${user.email} (sections=${sections.length}, items=${totalItems}, matches=${matchTotal}, suggestions=${suggestionTotal})`
       );
     } catch (err) {
       const msg = `Error processing user ${user.userId}: ${

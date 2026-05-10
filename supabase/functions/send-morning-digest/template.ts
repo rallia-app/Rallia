@@ -45,17 +45,26 @@ export interface DigestSuggestion {
 }
 
 /**
- * Discriminated union sent to the template. Built by the edge function as
- * a single chronologically-sorted feed (matches + suggestions interleaved).
+ * One item in a section: either a real match or a slot suggestion.
  */
 export type DigestFeedItem =
-  | { kind: 'match'; sortTime: number; data: DigestMatch }
-  | { kind: 'suggestion'; sortTime: number; data: DigestSuggestion };
+  | { kind: 'match'; data: DigestMatch }
+  | { kind: 'suggestion'; data: DigestSuggestion };
+
+/**
+ * One section per active sport. The edge function builds these via
+ * `composeJustForYou` — matches first, suggestion-padded to MAX_PER_SECTION.
+ */
+export interface DigestSection {
+  sportId: string;
+  sportName: string;
+  items: DigestFeedItem[];
+}
 
 export interface DigestEmailPayload {
   firstName: string | null;
   locale: string;
-  feed: DigestFeedItem[];
+  sections: DigestSection[];
   appUrl: string;
   /** Signed one-click unsubscribe URL — also wired into the
    *  `List-Unsubscribe` header by the edge function. */
@@ -299,7 +308,7 @@ export function renderMorningDigestEmail(payload: DigestEmailPayload): {
   subject: string;
   html: string;
 } {
-  const { firstName, locale, feed, appUrl, unsubscribeUrl } = payload;
+  const { firstName, locale, sections, appUrl, unsubscribeUrl } = payload;
   const T = EMAIL_TOKENS;
 
   const subject = t(locale, 'digest.subject');
@@ -311,12 +320,32 @@ export function renderMorningDigestEmail(payload: DigestEmailPayload): {
   const urlLocale = locale.startsWith('fr') ? 'fr-CA' : 'en-US';
   const browseGamesUrl = `${appUrl}/${urlLocale}/games?src=email_digest`;
 
-  const feedSectionHtml =
-    feed.length > 0
-      ? renderSectionHeading(t(locale, 'digest.feedSection')) +
-        feed.map(item => renderFeedItem(item, locale, appUrl)).join('') +
-        renderCtaButton(t(locale, 'digest.browseAllGames'), browseGamesUrl)
-      : '';
+  // Build per-sport sections. When there's only one section, fall back to the
+  // generic feed heading (matches the prior single-stream digest layout). With
+  // multiple sections, each gets a sport-specific heading so the reader can
+  // scan to the sport they care about.
+  let sectionsHtml = '';
+  if (sections.length > 0) {
+    if (sections.length === 1) {
+      const s = sections[0];
+      sectionsHtml +=
+        renderSectionHeading(t(locale, 'digest.feedSection')) +
+        s.items.map(item => renderFeedItem(item, locale, appUrl)).join('');
+    } else {
+      for (const s of sections) {
+        const headingKey =
+          s.sportName === 'tennis'
+            ? 'digest.sportSection.tennis'
+            : s.sportName === 'pickleball'
+              ? 'digest.sportSection.pickleball'
+              : 'digest.feedSection';
+        sectionsHtml +=
+          renderSectionHeading(t(locale, headingKey)) +
+          s.items.map(item => renderFeedItem(item, locale, appUrl)).join('');
+      }
+    }
+    sectionsHtml += renderCtaButton(t(locale, 'digest.browseAllGames'), browseGamesUrl);
+  }
 
   const content = `
                 <h2 style="margin: 0 0 8px 0; font-family: Poppins, Arial, Helvetica, sans-serif; font-size: 24px; font-weight: bold; color: ${T.primary600}; letter-spacing: -0.025em; line-height: 1.2;">
@@ -327,7 +356,7 @@ export function renderMorningDigestEmail(payload: DigestEmailPayload): {
                   ${escapeHtml(t(locale, 'digest.intro'))}
                 </p>
 
-                ${feedSectionHtml}
+                ${sectionsHtml}
 
                 ${renderDividerAndDisclaimer(t(locale, 'digest.disclaimer'))}`;
 

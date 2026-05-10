@@ -1214,27 +1214,29 @@ const TEMPLATES: TemplateEntry[] = [
           end_time: '16:00:00',
         },
       ];
-      // Build a unified, chronologically-sorted preview feed mirroring what
-      // the edge function produces. Cap to 6 (matches the prod cap).
-      const feed = [
-        ...matches.map(m => ({
-          kind: 'match' as const,
-          sortTime: Date.parse(`${m.match_date}T${m.start_time}`),
-          data: m,
-        })),
-        ...suggestions.map(s => ({
-          kind: 'suggestion' as const,
-          sortTime: Date.parse(`${s.match_date}T${s.start_time}`),
-          data: s,
-        })),
-      ]
-        .sort((a, b) => a.sortTime - b.sortTime)
-        .slice(0, 6);
+      // Build a single tennis section (matches first, then suggestions to
+      // pad to 5) mirroring what `composeJustForYou` produces in prod.
+      const matchItems = matches.slice(0, 5).map(m => ({
+        kind: 'match' as const,
+        data: m,
+      }));
+      const padCount = Math.max(0, 5 - matchItems.length);
+      const suggestionItems = suggestions.slice(0, padCount).map(s => ({
+        kind: 'suggestion' as const,
+        data: s,
+      }));
+      const sections = [
+        {
+          sportId: 'sport-preview-tennis',
+          sportName: 'tennis',
+          items: [...matchItems, ...suggestionItems],
+        },
+      ];
       return renderMorningDigestEmail({
         firstName: 'Alex',
         locale,
         appUrl: PREVIEW_SITE_URL,
-        feed,
+        sections,
         unsubscribeUrl: `${PREVIEW_SITE_URL}/api/digest/unsubscribe?token=preview`,
       }).html;
     },
