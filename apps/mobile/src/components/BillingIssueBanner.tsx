@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Linking } from 'react-native';
 
 import { useTranslation } from '../hooks';
@@ -6,13 +6,11 @@ import HomeBanner from './HomeBanner';
 
 interface BillingIssueBannerProps {
   onManagePress?: () => void;
+  onDismiss: () => void;
 }
 
-const BillingIssueBanner: React.FC<BillingIssueBannerProps> = ({ onManagePress }) => {
+const BillingIssueBanner: React.FC<BillingIssueBannerProps> = ({ onManagePress, onDismiss }) => {
   const { t } = useTranslation();
-  const [dismissed, setDismissed] = useState(false);
-
-  if (dismissed) return null;
 
   const handleManage = () => {
     if (onManagePress) {
@@ -29,7 +27,7 @@ const BillingIssueBanner: React.FC<BillingIssueBannerProps> = ({ onManagePress }
       title={t('subscription.status_billing_issue')}
       description={t('subscription.billing_banner_description')}
       primaryAction={{ label: t('subscription.billing_banner_cta'), onPress: handleManage }}
-      onDismiss={() => setDismissed(true)}
+      onDismiss={onDismiss}
     />
   );
 };

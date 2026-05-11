@@ -5,10 +5,6 @@ import type { CompletenessItem } from '@rallia/shared-hooks';
 
 import HomeBanner from '../../../components/HomeBanner';
 
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
 const STORAGE_KEY_DISMISS_COUNT = '@rallia/profile-completion-banner-dismiss-count';
 const STORAGE_KEY_COOLDOWN = '@rallia/profile-completion-banner-cooldown';
 const MAX_DISMISSALS = 3;
@@ -19,35 +15,16 @@ const COOLDOWN_MS = [
   72 * 60 * 60 * 1000, // 72 hours
 ];
 
-// =============================================================================
-// PROPS
-// =============================================================================
-
-interface ProfileCompletionBannerProps {
-  percentage: number;
-  nextAction: CompletenessItem | null;
-  isComplete: boolean;
-  loading: boolean;
-  onAction: (item: CompletenessItem) => void;
-  t: (key: string, options?: Record<string, string | number | boolean>) => string;
-}
-
-// =============================================================================
-// COMPONENT
-// =============================================================================
-
-const ProfileCompletionBanner: React.FC<ProfileCompletionBannerProps> = ({
-  percentage,
-  nextAction,
-  isComplete,
-  loading,
-  onAction,
-  t,
-}) => {
+/**
+ * Visibility + dismissal state for the profile completion banner.
+ * Lives outside the component so Home can decide whether to render the banner
+ * at all — that keeps `bannerCards.length` accurate so the carousel/full-width
+ * switch matches what the user actually sees.
+ */
+export function useProfileCompletionBannerVisibility(isComplete: boolean) {
   const [visible, setVisible] = useState(false);
   const [ready, setReady] = useState(false);
 
-  // Check dismissal state on mount
   useEffect(() => {
     (async () => {
       try {
@@ -58,14 +35,12 @@ const ProfileCompletionBanner: React.FC<ProfileCompletionBannerProps> = ({
 
         const dismissCount = countStr ? parseInt(countStr, 10) : 0;
 
-        // Permanently dismissed
         if (dismissCount >= MAX_DISMISSALS) {
           setVisible(false);
           setReady(true);
           return;
         }
 
-        // Check cooldown
         if (cooldownStr) {
           const cooldownUntil = parseInt(cooldownStr, 10);
           if (Date.now() < cooldownUntil) {
@@ -84,7 +59,6 @@ const ProfileCompletionBanner: React.FC<ProfileCompletionBannerProps> = ({
     })();
   }, []);
 
-  // Clear dismissal storage when profile becomes complete
   useEffect(() => {
     if (isComplete) {
       AsyncStorage.multiRemove([STORAGE_KEY_DISMISS_COUNT, STORAGE_KEY_COOLDOWN]).catch(() => {});
@@ -110,24 +84,38 @@ const ProfileCompletionBanner: React.FC<ProfileCompletionBannerProps> = ({
     }
   }, []);
 
-  if (!ready || loading || isComplete || !visible || !nextAction) return null;
+  return { visible, ready, handleDismiss };
+}
 
-  return (
-    <HomeBanner
-      variant="action"
-      icon="person-circle-outline"
-      title={t('profileCompletion.bannerTitle', { percentage })}
-      description={t('profileCompletion.bannerDescription')}
-      primaryAction={{
-        label: t('profileCompletion.bannerCta'),
-        onPress: () => {
-          void lightHaptic();
-          onAction(nextAction);
-        },
-      }}
-      onDismiss={handleDismiss}
-    />
-  );
-};
+interface ProfileCompletionBannerProps {
+  percentage: number;
+  nextAction: CompletenessItem;
+  onAction: (item: CompletenessItem) => void;
+  onDismiss: () => void;
+  t: (key: string, options?: Record<string, string | number | boolean>) => string;
+}
+
+const ProfileCompletionBanner: React.FC<ProfileCompletionBannerProps> = ({
+  percentage,
+  nextAction,
+  onAction,
+  onDismiss,
+  t,
+}) => (
+  <HomeBanner
+    variant="action"
+    icon="person-circle-outline"
+    title={t('profileCompletion.bannerTitle', { percentage })}
+    description={t('profileCompletion.bannerDescription')}
+    primaryAction={{
+      label: t('profileCompletion.bannerCta'),
+      onPress: () => {
+        void lightHaptic();
+        onAction(nextAction);
+      },
+    }}
+    onDismiss={onDismiss}
+  />
+);
 
 export default ProfileCompletionBanner;
