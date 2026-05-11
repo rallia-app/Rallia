@@ -106,7 +106,6 @@ export async function createTournament(input: CreateTournamentInput): Promise<To
 
 export interface PlayerProfile {
   id: string;
-  display_name: string | null;
   first_name: string | null;
   last_name: string | null;
   profile_picture_url: string | null;
@@ -115,13 +114,14 @@ export interface PlayerProfile {
 /**
  * Batch-fetch profile info for a set of player ids. Returns a Map keyed
  * by id. Used by tournament screens to render player names in brackets,
- * registrant lists, etc.
+ * registrant lists, etc. display_name is intentionally excluded — see
+ * @rallia/shared-utils/getHumanName for the app-wide convention.
  */
 export async function getProfilesByIds(ids: string[]): Promise<Map<string, PlayerProfile>> {
   if (ids.length === 0) return new Map();
   const { data, error } = await supabase
     .from('profile')
-    .select('id, display_name, first_name, last_name, profile_picture_url')
+    .select('id, first_name, last_name, profile_picture_url')
     .in('id', ids);
   if (error) throw new Error(error.message);
   const map = new Map<string, PlayerProfile>();

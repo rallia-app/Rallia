@@ -19,6 +19,7 @@ import {
   TouchableOpacity,
   Modal,
   Pressable,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -116,6 +117,9 @@ interface ScreenColors {
   statusActiveText: string;
   statusMutedBg: string;
   statusMutedText: string;
+  cancelledBg: string;
+  cancelledBorder: string;
+  cancelledText: string;
 }
 
 // =============================================================================
@@ -246,12 +250,14 @@ export const TournamentDetail: React.FC = () => {
     onError: e => showError(e.message, 'tournamentDetail.errors.withdrawFailed' as TranslationKey),
   });
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
   const [showArchiveModal, setShowArchiveModal] = useState(false);
 
   const cancel = useCancelTournament({
     onSuccess: () => {
       successHaptic();
       setShowCancelModal(false);
+      setCancelReason('');
     },
     onError: e => {
       const msg = e.message.toLowerCase();
@@ -428,6 +434,9 @@ export const TournamentDetail: React.FC = () => {
       statusActiveText: isDark ? primary[300] : primary[700],
       statusMutedBg: isDark ? neutral[800] : neutral[100],
       statusMutedText: isDark ? neutral[400] : neutral[500],
+      cancelledBg: isDark ? '#7c2d1230' : '#fef3c7',
+      cancelledBorder: isDark ? '#f59e0b' : '#fbbf24',
+      cancelledText: isDark ? '#fbbf24' : '#92400e',
     }),
     [themeColors, isDark]
   );
@@ -522,6 +531,32 @@ export const TournamentDetail: React.FC = () => {
             </Text>
           ) : null}
         </View>
+
+        {/* Cancelled-state notice (shown immediately under hero) */}
+        {tournament.status === 'cancelled' && (
+          <View
+            style={[
+              styles.section,
+              styles.cancelledNotice,
+              { backgroundColor: colors.cancelledBg, borderColor: colors.cancelledBorder },
+            ]}
+          >
+            <Ionicons name="alert-circle-outline" size={20} color={colors.cancelledText} />
+            <View style={{ flex: 1 }}>
+              <Text size="sm" weight="semibold" color={colors.cancelledText}>
+                {t('tournamentDetail.cancelledNotice.title' as TranslationKey)}
+              </Text>
+              {tournament.cancelled_reason ? (
+                <Text size="xs" color={colors.cancelledText}>
+                  {t('tournamentDetail.cancelledNotice.reason' as TranslationKey).replace(
+                    '{reason}',
+                    tournament.cancelled_reason
+                  )}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+        )}
 
         <Section title={t('tournamentDetail.sections.format' as TranslationKey)} colors={colors}>
           <InfoRow
@@ -668,7 +703,12 @@ export const TournamentDetail: React.FC = () => {
               />
             );
           }
-          if (!isOrganizer && myActiveRegistration) {
+          if (
+            !isOrganizer &&
+            myActiveRegistration &&
+            tournament.status !== 'cancelled' &&
+            tournament.status !== 'archived'
+          ) {
             const statusLabelKey =
               myActiveRegistration.status === 'pending'
                 ? 'tournamentDetail.actions.registrationPendingLabel'
@@ -698,64 +738,51 @@ export const TournamentDetail: React.FC = () => {
           return null;
         })()}
 
-        {/* Cancelled-state notice (visible to everyone) */}
-        {tournament.status === 'cancelled' && (
-          <View
-            style={[
-              styles.section,
-              styles.cancelledNotice,
-              { backgroundColor: colors.statusMutedBg, borderColor: colors.border },
-            ]}
-          >
-            <Ionicons name="alert-circle-outline" size={20} color={colors.statusMutedText} />
-            <View style={{ flex: 1 }}>
-              <Text size="sm" weight="semibold" color={colors.text}>
-                {t('tournamentDetail.cancelledNotice.title' as TranslationKey)}
-              </Text>
-              {tournament.cancelled_reason ? (
-                <Text size="xs" color={colors.textMuted}>
-                  {t('tournamentDetail.cancelledNotice.reason' as TranslationKey).replace(
-                    '{reason}',
-                    tournament.cancelled_reason
+        {/* Manage card: organizer destructive actions grouped together */}
+        {isOrganizer &&
+          (() => {
+            const showCancel = [
+              'draft',
+              'registration_open',
+              'registration_closed',
+              'in_progress',
+            ].includes(tournament.status);
+            const showArchive =
+              tournament.status === 'completed' || tournament.status === 'cancelled';
+            if (!showCancel && !showArchive) return null;
+            return (
+              <Section
+                title={t('tournamentDetail.sections.manage' as TranslationKey)}
+                colors={colors}
+              >
+                <View style={styles.manageCardInner}>
+                  {showCancel && (
+                    <SecondaryActionButton
+                      label={t('tournamentDetail.actions.cancelTournament' as TranslationKey)}
+                      icon="close-circle-outline"
+                      onPress={() => {
+                        lightHaptic();
+                        setShowCancelModal(true);
+                      }}
+                      colors={colors}
+                      destructive
+                    />
                   )}
-                </Text>
-              ) : null}
-            </View>
-          </View>
-        )}
-
-        {/* Organizer-only destructive actions: Cancel (active) / Archive (terminal) */}
-        {isOrganizer &&
-          ['draft', 'registration_open', 'registration_closed', 'in_progress'].includes(
-            tournament.status
-          ) && (
-            <View style={styles.section}>
-              <SecondaryActionButton
-                label={t('tournamentDetail.actions.cancelTournament' as TranslationKey)}
-                icon="close-circle-outline"
-                onPress={() => {
-                  lightHaptic();
-                  setShowCancelModal(true);
-                }}
-                colors={colors}
-                destructive
-              />
-            </View>
-          )}
-        {isOrganizer &&
-          (tournament.status === 'completed' || tournament.status === 'cancelled') && (
-            <View style={styles.section}>
-              <SecondaryActionButton
-                label={t('tournamentDetail.actions.archiveTournament' as TranslationKey)}
-                icon="archive-outline"
-                onPress={() => {
-                  lightHaptic();
-                  setShowArchiveModal(true);
-                }}
-                colors={colors}
-              />
-            </View>
-          )}
+                  {showArchive && (
+                    <SecondaryActionButton
+                      label={t('tournamentDetail.actions.archiveTournament' as TranslationKey)}
+                      icon="archive-outline"
+                      onPress={() => {
+                        lightHaptic();
+                        setShowArchiveModal(true);
+                      }}
+                      colors={colors}
+                    />
+                  )}
+                </View>
+              </Section>
+            );
+          })()}
       </ScrollView>
 
       {pickerSlot && tournament && (
@@ -788,15 +815,37 @@ export const TournamentDetail: React.FC = () => {
         cancelLabel={t('tournamentDetail.cancelModal.keepIt' as TranslationKey)}
         destructive
         isLoading={cancel.isPending}
-        onClose={() => setShowCancelModal(false)}
+        onClose={() => {
+          setShowCancelModal(false);
+          setCancelReason('');
+        }}
         onConfirm={() => {
           if (!tournament) return;
           cancel.mutate({
             tournamentId: tournament.id,
-            reason: '',
+            reason: cancelReason.trim(),
             versionWas: tournament.version,
           });
         }}
+        extraContent={
+          <TextInput
+            style={[
+              styles.reasonInput,
+              {
+                backgroundColor: colors.statusMutedBg,
+                borderColor: colors.border,
+                color: colors.text,
+              },
+            ]}
+            placeholder={t('tournamentDetail.cancelModal.reasonPlaceholder' as TranslationKey)}
+            placeholderTextColor={colors.textMuted}
+            value={cancelReason}
+            onChangeText={setCancelReason}
+            multiline
+            maxLength={300}
+            editable={!cancel.isPending}
+          />
+        }
       />
 
       <ConfirmationModal
@@ -1337,20 +1386,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[3],
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  placeholderButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[2],
-    paddingVertical: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-  },
-  comingSoonChip: {
-    paddingHorizontal: spacingPixels[2],
-    paddingVertical: spacingPixels[0.5],
-    borderRadius: radiusPixels.full,
-  },
   registrationsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1437,6 +1472,20 @@ const styles = StyleSheet.create({
     padding: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
+  },
+  manageCardInner: {
+    padding: spacingPixels[3],
+    gap: spacingPixels[2],
+  },
+  reasonInput: {
+    borderWidth: 1,
+    borderRadius: radiusPixels.md,
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[3],
+    fontSize: 15,
+    minHeight: 72,
+    marginBottom: spacingPixels[4],
+    textAlignVertical: 'top',
   },
   linkableMatchRow: {
     flexDirection: 'row',

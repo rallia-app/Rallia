@@ -213,6 +213,7 @@ export const Tournaments: React.FC = () => {
     const open: Tournament[] = [];
     const upcoming: Tournament[] = [];
     const past: Tournament[] = [];
+    const cancelled: Tournament[] = [];
     const drafts: Tournament[] = [];
 
     for (const tn of tournaments) {
@@ -227,8 +228,10 @@ export const Tournaments: React.FC = () => {
         mine.push(tn);
       } else if (tn.status === 'registration_open') {
         open.push(tn);
-      } else if (tn.status === 'completed' || tn.status === 'cancelled') {
+      } else if (tn.status === 'completed') {
         past.push(tn);
+      } else if (tn.status === 'cancelled') {
+        cancelled.push(tn);
       } else {
         upcoming.push(tn);
       }
@@ -250,6 +253,11 @@ export const Tournaments: React.FC = () => {
       out.push({ titleKey: 'tournamentList.sectionDraft' as TranslationKey, items: drafts });
     if (past.length)
       out.push({ titleKey: 'tournamentList.sectionPast' as TranslationKey, items: past });
+    if (cancelled.length)
+      out.push({
+        titleKey: 'tournamentList.sectionCancelled' as TranslationKey,
+        items: cancelled,
+      });
     return out;
   }, [tournaments, userId, registeredIds]);
 

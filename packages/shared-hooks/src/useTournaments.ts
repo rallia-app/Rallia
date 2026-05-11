@@ -1,7 +1,9 @@
 /**
- * useCreateTournament Hook
+ * Tournament Hooks
  *
- * TanStack Query mutation wrapping createTournament. Mirrors useCreateMatch.
+ * TanStack Query wrappers for the tournament service surface — list/detail
+ * queries, registration lifecycle mutations, bracket generation, attach,
+ * cancel/archive. Plus useProfilesByIds for the bracket name lookup.
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -36,7 +38,6 @@ export const tournamentKeys = {
   lists: () => [...tournamentKeys.all, 'list'] as const,
   list: (sportId?: string) => [...tournamentKeys.lists(), sportId ?? 'all'] as const,
   detail: (tournamentId: string) => [...tournamentKeys.all, 'detail', tournamentId] as const,
-  byOrganizer: (userId: string) => [...tournamentKeys.all, 'byOrganizer', userId] as const,
   registrations: (tournamentId: string) =>
     [...tournamentKeys.all, 'registrations', tournamentId] as const,
   myRegistration: (tournamentId: string, userId: string) =>
@@ -365,9 +366,6 @@ export function useCreateTournament(options: UseCreateTournamentOptions = {}) {
     onSuccess: tournament => {
       if (invalidateOnSuccess) {
         queryClient.invalidateQueries({ queryKey: tournamentKeys.lists() });
-        queryClient.invalidateQueries({
-          queryKey: tournamentKeys.byOrganizer(tournament.organizer_id),
-        });
       }
       onSuccess?.(tournament);
     },

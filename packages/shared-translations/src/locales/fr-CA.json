@@ -3947,8 +3947,8 @@
     "sectionOpen": "Inscriptions ouvertes",
     "sectionUpcoming": "À venir",
     "sectionPast": "Terminés",
+    "sectionCancelled": "Annulés",
     "sectionDraft": "Brouillons",
-    "participantCount": "{count}/{max}",
     "dateRange": "{start} – {end}"
   },
   "tournamentDetail": {
@@ -3971,7 +3971,8 @@
       "format": "Format",
       "schedule": "Calendrier",
       "visibility": "Visibilité et inscriptions",
-      "organizer": "Organisateur"
+      "organizer": "Organisateur",
+      "manage": "Gestion"
     },
     "labels": {
       "bracketSize": "Taille du tableau",
@@ -4005,20 +4006,17 @@
       "withdrawing": "Retrait...",
       "opening": "Ouverture...",
       "closing": "Fermeture...",
-      "registrationClosedLabel": "Inscriptions fermées",
       "registrationPendingLabel": "Inscription en attente d'approbation",
       "registeredLabel": "Vous êtes inscrit",
       "generateBracket": "Générer le tableau",
       "generating": "Génération du tableau...",
       "cancelTournament": "Annuler le tournoi",
-      "cancelling": "Annulation...",
-      "archiveTournament": "Archiver le tournoi",
-      "archiving": "Archivage...",
-      "comingSoon": "Bientôt disponible"
+      "archiveTournament": "Archiver le tournoi"
     },
     "cancelModal": {
       "title": "Annuler ce tournoi ?",
       "description": "Tous les matchs en attente ou en cours seront annulés. Les joueurs conservent leur historique d'inscription. Cette action est irréversible.",
+      "reasonPlaceholder": "Optionnel : courte raison communiquée aux participants",
       "confirm": "Annuler le tournoi",
       "keepIt": "Garder",
       "errorGeneric": "Impossible d'annuler le tournoi. Veuillez réessayer.",
@@ -4040,9 +4038,7 @@
     },
     "registrations": {
       "sectionTitle": "Inscriptions",
-      "count": "{count} sur {max} inscrits",
-      "empty": "Aucune inscription pour le moment",
-      "emptyOrganizer": "Ouvrez les inscriptions pour commencer à accepter des joueurs."
+      "count": "{count} sur {max} inscrits"
     },
     "bracket": {
       "sectionTitle": "Tableau",
@@ -4052,7 +4048,6 @@
       "quarterfinal": "Quart de finale",
       "bye": "EXEMPT",
       "tbd": "À déterminer",
-      "winnerSuffix": "(gagnant)",
       "phantom": "—",
       "linkMatch": "Lier une partie jouée à ce slot"
     },

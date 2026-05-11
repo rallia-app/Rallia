@@ -3947,8 +3947,8 @@
     "sectionOpen": "Open for registration",
     "sectionUpcoming": "Upcoming",
     "sectionPast": "Completed",
+    "sectionCancelled": "Cancelled",
     "sectionDraft": "Drafts",
-    "participantCount": "{count}/{max}",
     "dateRange": "{start} – {end}"
   },
   "tournamentDetail": {
@@ -3971,7 +3971,8 @@
       "format": "Format",
       "schedule": "Schedule",
       "visibility": "Visibility & registration",
-      "organizer": "Organizer"
+      "organizer": "Organizer",
+      "manage": "Manage"
     },
     "labels": {
       "bracketSize": "Bracket size",
@@ -4005,20 +4006,17 @@
       "withdrawing": "Withdrawing...",
       "opening": "Opening...",
       "closing": "Closing...",
-      "registrationClosedLabel": "Registration closed",
       "registrationPendingLabel": "Registration pending approval",
       "registeredLabel": "You're registered",
       "generateBracket": "Generate bracket",
       "generating": "Generating bracket...",
       "cancelTournament": "Cancel tournament",
-      "cancelling": "Cancelling...",
-      "archiveTournament": "Archive tournament",
-      "archiving": "Archiving...",
-      "comingSoon": "Coming soon"
+      "archiveTournament": "Archive tournament"
     },
     "cancelModal": {
       "title": "Cancel this tournament?",
       "description": "All pending and in-progress matches will be cancelled. Players will keep their registration history. This can't be undone.",
+      "reasonPlaceholder": "Optional: short reason shown to participants",
       "confirm": "Cancel tournament",
       "keepIt": "Keep it",
       "errorGeneric": "Couldn't cancel the tournament. Please try again.",
@@ -4040,9 +4038,7 @@
     },
     "registrations": {
       "sectionTitle": "Registrations",
-      "count": "{count} of {max} registered",
-      "empty": "No registrations yet",
-      "emptyOrganizer": "Open registration to start accepting players."
+      "count": "{count} of {max} registered"
     },
     "bracket": {
       "sectionTitle": "Bracket",
@@ -4052,7 +4048,6 @@
       "quarterfinal": "Quarterfinal",
       "bye": "BYE",
       "tbd": "TBD",
-      "winnerSuffix": "(winner)",
       "phantom": "—",
       "linkMatch": "Link a played match to this slot"
     },
