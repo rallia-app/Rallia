@@ -227,6 +227,127 @@ export async function generateTournamentBracket(
   return (data ?? []) as TournamentMatch[];
 }
 
+export interface LinkableMatch {
+  id: string;
+  match_date: string;
+  start_time: string;
+  end_time: string;
+  match_result_id: string;
+  winning_team: 1 | 2 | null;
+  team1_score: number | null;
+  team2_score: number | null;
+  verified_at: string | null;
+}
+
+/**
+ * List the caller's verified matches that could be linked to the given
+ * tournament_match slot — both bracket players are joined participants,
+ * the match is in the tournament's sport, has a verified result, and is
+ * not already linked to another tournament_match.
+ *
+ * Filters happen client-side via the server-fetched two-sided join; the
+ * eligible set is small (caller's recent matches).
+ */
+export async function listLinkableMatchesForSlot(params: {
+  tournamentMatchId: string;
+  player1UserId: string;
+  player2UserId: string;
+  sportId: string;
+}): Promise<LinkableMatch[]> {
+  // Two-sided IN: matches that include BOTH players as joined participants.
+  // We start by fetching the caller's matches with verified results in this
+  // sport, then filter to those whose participants are exactly the two
+  // bracket players (no third party).
+  const { data, error } = await supabase
+    .from('match')
+    .select(
+      `id, match_date, start_time, end_time,
+       match_result!inner ( id, is_verified, verified_at, winning_team, team1_score, team2_score ),
+       match_participant!inner ( player_id, status )`
+    )
+    .eq('sport_id', params.sportId)
+    .order('match_date', { ascending: false })
+    .limit(50);
+
+  if (error) throw new Error(error.message);
+
+  type Row = {
+    id: string;
+    match_date: string;
+    start_time: string;
+    end_time: string;
+    match_result: Array<{
+      id: string;
+      is_verified: boolean;
+      verified_at: string | null;
+      winning_team: number | null;
+      team1_score: number | null;
+      team2_score: number | null;
+    }>;
+    match_participant: Array<{ player_id: string; status: string }>;
+  };
+
+  const rows = (data ?? []) as unknown as Row[];
+
+  const expected = new Set([params.player1UserId, params.player2UserId]);
+  const eligible: LinkableMatch[] = [];
+
+  for (const row of rows) {
+    const mr = row.match_result?.[0];
+    if (!mr || !mr.is_verified) continue;
+
+    const joinedUsers = row.match_participant
+      .filter(p => p.status === 'joined')
+      .map(p => p.player_id);
+    if (joinedUsers.length !== 2) continue;
+    if (!joinedUsers.every(u => expected.has(u))) continue;
+    if (!Array.from(expected).every(u => joinedUsers.includes(u))) continue;
+
+    eligible.push({
+      id: row.id,
+      match_date: row.match_date,
+      start_time: row.start_time,
+      end_time: row.end_time,
+      match_result_id: mr.id,
+      winning_team: (mr.winning_team as 1 | 2 | null) ?? null,
+      team1_score: mr.team1_score,
+      team2_score: mr.team2_score,
+      verified_at: mr.verified_at,
+    });
+  }
+
+  // Server-side check that none are already linked to another bracket slot.
+  if (eligible.length === 0) return eligible;
+  const { data: linked, error: linkedErr } = await supabase
+    .from('tournament_matches')
+    .select('match_id')
+    .in(
+      'match_id',
+      eligible.map(m => m.id)
+    )
+    .neq('id', params.tournamentMatchId);
+  if (linkedErr) throw new Error(linkedErr.message);
+  const taken = new Set((linked ?? []).map(r => r.match_id).filter((x): x is string => !!x));
+
+  return eligible.filter(m => !taken.has(m.id));
+}
+
+/**
+ * Attach a verified, played match to a pending tournament_match slot. The
+ * server validates participation, sport, and verified result.
+ */
+export async function attachMatchToTournamentSlot(
+  tournamentMatchId: string,
+  matchId: string
+): Promise<TournamentMatch> {
+  const { data, error } = await supabase.rpc('tournament_attach_match', {
+    p_tournament_match_id: tournamentMatchId,
+    p_match_id: matchId,
+  });
+  if (error) throw new Error(error.message);
+  return data as TournamentMatch;
+}
+
 /**
  * Withdraw the caller's own registration. Status flips to 'withdrawn';
  * the row is preserved for audit/history.

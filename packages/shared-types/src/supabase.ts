@@ -9788,9 +9788,9 @@ export type Database = {
         }
         Returns: undefined
       }
-      lt_create_match_for_tournament_match: {
-        Args: { p_tm_id: string }
-        Returns: string
+      lt_propagate_match_result_to_bracket: {
+        Args: { p_match_result_id: string }
+        Returns: undefined
       }
       lt_seed_positions: { Args: { p_size: number }; Returns: number[] }
       mark_alert_read: {
@@ -10154,6 +10154,39 @@ export type Database = {
           p_winning_team: number
         }
         Returns: string
+      }
+      tournament_attach_match: {
+        Args: { p_match_id: string; p_tournament_match_id: string }
+        Returns: {
+          bracket_side: string
+          court_id: string | null
+          created_at: string
+          id: string
+          loser_next_match_id: string | null
+          match_id: string | null
+          match_position: number
+          next_match_id: string | null
+          next_match_slot: number | null
+          played_at: string | null
+          player1_is_bye: boolean
+          player1_registration_id: string | null
+          player2_is_bye: boolean
+          player2_registration_id: string | null
+          round_number: number
+          scheduled_at: string | null
+          score: string | null
+          status: Database["public"]["Enums"]["tournament_match_status"]
+          tournament_id: string
+          updated_at: string
+          version: number
+          winner_registration_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tournament_matches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       tournament_close_registration: {
         Args: { p_tournament_id: string; p_version_was: number }

@@ -18,10 +18,13 @@ import {
   withdrawFromTournament,
   listTournamentMatches,
   generateTournamentBracket,
+  listLinkableMatchesForSlot,
+  attachMatchToTournamentSlot,
   type CreateTournamentInput,
   type Tournament,
   type TournamentRegistration,
   type TournamentMatch,
+  type LinkableMatch,
 } from '@rallia/shared-services';
 
 export const tournamentKeys = {
@@ -121,6 +124,69 @@ export function useTournamentMatches(tournamentId: string | undefined) {
     queryFn: () => listTournamentMatches(tournamentId!),
     enabled: !!tournamentId,
   });
+}
+
+/**
+ * Linkable matches the caller can attach to a tournament_match slot.
+ * Filters server-side by tournament's sport and verified result; eligibility
+ * (both bracket players are joined participants) is computed client-side.
+ */
+export function useLinkableMatchesForSlot(params: {
+  tournamentMatchId: string | undefined;
+  player1UserId: string | undefined;
+  player2UserId: string | undefined;
+  sportId: string | undefined;
+  enabled?: boolean;
+}) {
+  const enabled =
+    (params.enabled ?? true) &&
+    !!params.tournamentMatchId &&
+    !!params.player1UserId &&
+    !!params.player2UserId &&
+    !!params.sportId;
+
+  return useQuery<LinkableMatch[]>({
+    queryKey: [
+      ...tournamentKeys.all,
+      'linkable',
+      params.tournamentMatchId ?? '',
+      params.player1UserId ?? '',
+      params.player2UserId ?? '',
+    ],
+    queryFn: () =>
+      listLinkableMatchesForSlot({
+        tournamentMatchId: params.tournamentMatchId!,
+        player1UserId: params.player1UserId!,
+        player2UserId: params.player2UserId!,
+        sportId: params.sportId!,
+      }),
+    enabled,
+  });
+}
+
+/**
+ * Attach a verified match to a pending bracket slot.
+ */
+export function useAttachMatchToTournamentSlot(options: MutationOptions<TournamentMatch> = {}) {
+  const invalidate = useTournamentDetailInvalidator();
+  const mutation = useMutation<
+    TournamentMatch,
+    Error,
+    { tournamentMatchId: string; matchId: string; tournamentId: string }
+  >({
+    mutationFn: ({ tournamentMatchId, matchId }) =>
+      attachMatchToTournamentSlot(tournamentMatchId, matchId),
+    onSuccess: (tm, vars) => {
+      invalidate(vars.tournamentId);
+      options.onSuccess?.(tm);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
 }
 
 /**

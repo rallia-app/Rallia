@@ -4028,7 +4028,13 @@
       "tbd": "TBD",
       "winnerSuffix": "(winner)",
       "phantom": "—",
-      "openMatch": "Open match to enter score"
+      "linkMatch": "Link a played match to this slot"
+    },
+    "linkPicker": {
+      "title": "Link a played match",
+      "empty": "No matches found",
+      "emptyHint": "Create a match with your bracket opponent and submit a confirmed score, then come back to link it here.",
+      "attachFailed": "Couldn't link the match"
     },
     "generateBracketErrors": {
       "insufficientParticipants": "At least 2 players must be registered.",

@@ -10,8 +10,16 @@
  * Spec: specs/17-leagues-tournaments/rollout.md §V1, §V2
  */
 
-import React, { useMemo, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import React, { useMemo, useCallback, useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+  TouchableOpacity,
+  Modal,
+  Pressable,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute } from '@react-navigation/native';
@@ -37,15 +45,16 @@ import {
   useWithdrawFromTournament,
   useTournamentMatches,
   useGenerateTournamentBracket,
+  useLinkableMatchesForSlot,
+  useAttachMatchToTournamentSlot,
   useSports,
   useAuth,
 } from '@rallia/shared-hooks';
 import type { Enums, Tables } from '@rallia/shared-types';
+import type { LinkableMatch } from '@rallia/shared-services';
 
 import { useTranslation, type TranslationKey } from '../hooks';
 import { SportIcon } from '../components/SportIcon';
-import { useMatchDetailSheet } from '../context';
-import { getMatchWithDetails } from '@rallia/shared-services';
 import type { RootStackParamList } from '../navigation';
 
 type TournamentDetailRoute = RouteProp<RootStackParamList, 'TournamentDetail'>;
@@ -319,19 +328,29 @@ export const TournamentDetail: React.FC = () => {
     return map;
   }, [registrations]);
 
-  const { openSheet: openMatchDetail } = useMatchDetailSheet();
+  const [pickerSlot, setPickerSlot] = useState<{
+    tournamentMatchId: string;
+    player1RegId: string;
+    player2RegId: string;
+    player1UserId: string;
+    player2UserId: string;
+  } | null>(null);
 
   const handleBracketMatchTap = useCallback(
-    async (matchId: string) => {
+    (tournamentMatchId: string, p1RegId: string, p2RegId: string) => {
+      const p1User = userByRegId.get(p1RegId);
+      const p2User = userByRegId.get(p2RegId);
+      if (!p1User || !p2User) return;
       lightHaptic();
-      try {
-        const matchDetails = await getMatchWithDetails(matchId);
-        if (matchDetails) openMatchDetail(matchDetails);
-      } catch (err) {
-        console.error('Failed to open tournament match', err);
-      }
+      setPickerSlot({
+        tournamentMatchId,
+        player1RegId: p1RegId,
+        player2RegId: p2RegId,
+        player1UserId: p1User,
+        player2UserId: p2User,
+      });
     },
-    [openMatchDetail]
+    [userByRegId]
   );
 
   const themeColors = isDark ? darkTheme : lightTheme;
@@ -622,7 +641,207 @@ export const TournamentDetail: React.FC = () => {
           return null;
         })()}
       </ScrollView>
+
+      {pickerSlot && tournament && (
+        <LinkMatchPickerModal
+          slot={pickerSlot}
+          sportId={tournament.sport_id}
+          tournamentId={tournament.id}
+          seedByRegId={seedByRegId}
+          onDismiss={() => setPickerSlot(null)}
+          colors={colors}
+          t={t}
+          locale={locale}
+          onError={msg => {
+            warningHaptic();
+            toast.error(msg);
+          }}
+          onSuccess={() => {
+            successHaptic();
+            setPickerSlot(null);
+          }}
+        />
+      )}
     </SafeAreaView>
+  );
+};
+
+interface PickerSlot {
+  tournamentMatchId: string;
+  player1RegId: string;
+  player2RegId: string;
+  player1UserId: string;
+  player2UserId: string;
+}
+
+const LinkMatchPickerModal: React.FC<{
+  slot: PickerSlot;
+  sportId: string;
+  tournamentId: string;
+  seedByRegId: Map<string, number>;
+  onDismiss: () => void;
+  colors: ScreenColors;
+  t: (k: TranslationKey) => string;
+  locale: string;
+  onError: (msg: string) => void;
+  onSuccess: () => void;
+}> = ({
+  slot,
+  sportId,
+  tournamentId,
+  seedByRegId,
+  onDismiss,
+  colors,
+  t,
+  locale,
+  onError,
+  onSuccess,
+}) => {
+  const { data: matches = [], isLoading } = useLinkableMatchesForSlot({
+    tournamentMatchId: slot.tournamentMatchId,
+    player1UserId: slot.player1UserId,
+    player2UserId: slot.player2UserId,
+    sportId,
+  });
+
+  const attach = useAttachMatchToTournamentSlot({
+    onSuccess: onSuccess,
+    onError: e =>
+      onError(t('tournamentDetail.linkPicker.attachFailed' as TranslationKey) + ` (${e.message})`),
+  });
+
+  const seed1 = seedByRegId.get(slot.player1RegId);
+  const seed2 = seedByRegId.get(slot.player2RegId);
+  const matchupLabel = `Seed ${seed1 ?? '?'} vs Seed ${seed2 ?? '?'}`;
+
+  const handlePick = useCallback(
+    (matchId: string) => {
+      lightHaptic();
+      attach.mutate({
+        tournamentMatchId: slot.tournamentMatchId,
+        matchId,
+        tournamentId,
+      });
+    },
+    [attach, slot.tournamentMatchId, tournamentId]
+  );
+
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={onDismiss}>
+      <Pressable style={styles.modalBackdrop} onPress={onDismiss}>
+        <Pressable
+          style={[styles.modalSheet, { backgroundColor: colors.cardBackground }]}
+          onPress={e => e.stopPropagation()}
+        >
+          <View style={styles.modalHeader}>
+            <View style={{ flex: 1 }}>
+              <Text size="lg" weight="bold" color={colors.text}>
+                {t('tournamentDetail.linkPicker.title' as TranslationKey)}
+              </Text>
+              <Text size="sm" color={colors.textMuted}>
+                {matchupLabel}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={onDismiss}
+              style={styles.iconButton}
+              accessibilityRole="button"
+            >
+              <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+
+          {isLoading && (
+            <View style={styles.modalLoading}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
+          )}
+
+          {!isLoading && matches.length === 0 && (
+            <View style={styles.modalEmpty}>
+              <Ionicons name="search-outline" size={36} color={colors.textMuted} />
+              <Text
+                size="base"
+                weight="semibold"
+                color={colors.text}
+                style={{ marginTop: spacingPixels[3], textAlign: 'center' }}
+              >
+                {t('tournamentDetail.linkPicker.empty' as TranslationKey)}
+              </Text>
+              <Text
+                size="sm"
+                color={colors.textMuted}
+                style={{ marginTop: spacingPixels[2], textAlign: 'center' }}
+              >
+                {t('tournamentDetail.linkPicker.emptyHint' as TranslationKey)}
+              </Text>
+            </View>
+          )}
+
+          {!isLoading && matches.length > 0 && (
+            <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false}>
+              {matches.map(m => (
+                <LinkableMatchRow
+                  key={m.id}
+                  match={m}
+                  onPick={() => handlePick(m.id)}
+                  disabled={attach.isPending}
+                  colors={colors}
+                  locale={locale}
+                />
+              ))}
+            </ScrollView>
+          )}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+};
+
+const LinkableMatchRow: React.FC<{
+  match: LinkableMatch;
+  onPick: () => void;
+  disabled?: boolean;
+  colors: ScreenColors;
+  locale: string;
+}> = ({ match, onPick, disabled, colors, locale }) => {
+  const dateLabel = useMemo(
+    () =>
+      new Date(match.match_date).toLocaleDateString(locale, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }),
+    [match.match_date, locale]
+  );
+  const scoreLabel =
+    match.team1_score !== null && match.team2_score !== null
+      ? `${match.team1_score}–${match.team2_score}`
+      : '';
+  const winnerLabel =
+    match.winning_team === 1 ? 'Team 1' : match.winning_team === 2 ? 'Team 2' : '';
+
+  return (
+    <TouchableOpacity
+      onPress={onPick}
+      disabled={disabled}
+      activeOpacity={0.7}
+      style={[
+        styles.linkableMatchRow,
+        { borderColor: colors.border, backgroundColor: colors.cardBackground },
+        disabled && styles.buttonDisabled,
+      ]}
+    >
+      <View style={{ flex: 1 }}>
+        <Text size="base" weight="semibold" color={colors.text}>
+          {dateLabel}
+        </Text>
+        <Text size="xs" color={colors.textMuted}>
+          {match.start_time} — {scoreLabel} {winnerLabel}
+        </Text>
+      </View>
+      <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+    </TouchableOpacity>
   );
 };
 
@@ -659,7 +878,7 @@ const BracketSection: React.FC<{
   seedByRegId: Map<string, number>;
   userByRegId: Map<string, string>;
   currentUserId: string | undefined;
-  onMatchPress: (matchId: string) => void;
+  onMatchPress: (tournamentMatchId: string, p1RegId: string, p2RegId: string) => void;
   colors: ScreenColors;
   t: (k: TranslationKey) => string;
 }> = ({ matches, seedByRegId, userByRegId, currentUserId, onMatchPress, colors, t }) => {
@@ -726,7 +945,6 @@ const BracketSection: React.FC<{
                   !!currentUserId && (currentUserId === p1User || currentUserId === p2User);
                 const isPlayable =
                   m.status === 'pending' &&
-                  m.match_id !== null &&
                   !m.player1_is_bye &&
                   !m.player2_is_bye &&
                   !!m.player1_registration_id &&
@@ -770,11 +988,13 @@ const BracketSection: React.FC<{
                   </>
                 );
 
-                if (isTappable && m.match_id) {
+                if (isTappable && m.player1_registration_id && m.player2_registration_id) {
+                  const p1RegId = m.player1_registration_id;
+                  const p2RegId = m.player2_registration_id;
                   return (
                     <TouchableOpacity
                       key={m.id}
-                      onPress={() => onMatchPress(m.match_id!)}
+                      onPress={() => onMatchPress(m.id, p1RegId, p2RegId)}
                       activeOpacity={0.7}
                       style={[
                         styles.bracketMatch,
@@ -782,7 +1002,7 @@ const BracketSection: React.FC<{
                         { borderColor: colors.primary },
                       ]}
                       accessibilityRole="button"
-                      accessibilityLabel={t('tournamentDetail.bracket.openMatch' as TranslationKey)}
+                      accessibilityLabel={t('tournamentDetail.bracket.linkMatch' as TranslationKey)}
                     >
                       {matchInner}
                     </TouchableOpacity>
@@ -1012,6 +1232,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[3],
     borderTopWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    paddingHorizontal: spacingPixels[5],
+    paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[8],
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
+    maxHeight: '70%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: spacingPixels[4],
+  },
+  iconButton: { padding: spacingPixels[1] },
+  modalLoading: { padding: spacingPixels[8], alignItems: 'center' },
+  modalEmpty: { padding: spacingPixels[6], alignItems: 'center' },
+  modalList: { maxHeight: 400 },
+  linkableMatchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+    marginBottom: spacingPixels[2],
   },
   bracketSlot: {
     flexDirection: 'row',

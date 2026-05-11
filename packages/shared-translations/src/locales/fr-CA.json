@@ -4028,7 +4028,13 @@
       "tbd": "À déterminer",
       "winnerSuffix": "(gagnant)",
       "phantom": "—",
-      "openMatch": "Ouvrir le match pour entrer le score"
+      "linkMatch": "Lier une partie jouée à ce slot"
+    },
+    "linkPicker": {
+      "title": "Lier une partie jouée",
+      "empty": "Aucune partie trouvée",
+      "emptyHint": "Créez une partie avec votre adversaire du tableau, soumettez un score confirmé, puis revenez ici pour la lier.",
+      "attachFailed": "Impossible de lier la partie"
     },
     "generateBracketErrors": {
       "insufficientParticipants": "Au moins 2 joueurs doivent être inscrits.",
