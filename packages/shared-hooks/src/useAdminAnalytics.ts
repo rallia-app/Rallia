@@ -26,6 +26,11 @@ import {
   getInvitationTopTargets,
   getInvitationTimeseries,
   resolveInvitationTargets,
+  getUtmSignupStats,
+  getUtmTotalsComparison,
+  getUtmCampaigns,
+  createUtmCampaign,
+  archiveUtmCampaign,
   type KPISummary,
   type RealtimeUserStats,
   type MatchStatistics,
@@ -38,6 +43,9 @@ import {
   type InvitationType,
   type InvitationTimeseries,
   type InvitationTimeseriesPoint,
+  type UtmSignupStat,
+  type UtmCampaign,
+  type UtmTotalsComparison,
 } from '@rallia/shared-services';
 
 // =============================================================================
@@ -874,6 +882,261 @@ export function useInvitationTargetNames(
   return { names, loading, error, refetch: fetchData };
 }
 
+// =============================================================================
+// UTM ATTRIBUTION HOOKS
+// =============================================================================
+
+export interface UtmLandingsResponse {
+  window: '24h' | '7d' | '30d' | '90d';
+  landings: { source: string; medium: string; campaign: string; count: number }[];
+  timeseries: { day: string; campaign: string; landings: number }[];
+  totals: { landings: number; uniqueVisitors: number };
+  /** Only present when the request was made with compare=true */
+  previousTotals?: { landings: number; uniqueVisitors: number };
+}
+
+interface PollingOptions {
+  /** Polling interval in ms; pass `null` or `0` to disable */
+  refetchInterval?: number | null;
+  /** Append `?demo=1` to the request — server returns synthetic data in non-prod */
+  demo?: boolean;
+  /** Append `?compare=1` to the landings request — server returns previousTotals */
+  compare?: boolean;
+}
+
+/**
+ * Hook for pre-signup UTM landings, sourced from PostHog via the admin API
+ * route (server runs HogQL). Polls when `refetchInterval` is set, so the
+ * Acquisition tab can be used as a live monitor during a campaign push.
+ */
+export function useUtmLandings(
+  window: '24h' | '7d' | '30d' | '90d',
+  options: PollingOptions = {}
+): {
+  data: UtmLandingsResponse | null;
+  loading: boolean;
+  error: Error | null;
+  lastFetchedAt: number | null;
+  refetch: () => Promise<void>;
+} {
+  const [data, setData] = useState<UtmLandingsResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const [lastFetchedAt, setLastFetchedAt] = useState<number | null>(null);
+  const isMounted = useRef(true);
+
+  const demo = options.demo ?? false;
+  const compare = options.compare ?? false;
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const url = `/api/admin/analytics/utm?window=${window}${demo ? '&demo=1' : ''}${compare ? '&compare=1' : ''}`;
+      const res = await fetch(url, { credentials: 'include' });
+      if (!res.ok) throw new Error(`UTM landings request failed: ${res.status}`);
+      const json = (await res.json()) as UtmLandingsResponse;
+      if (isMounted.current) {
+        setData(json);
+        setLastFetchedAt(Date.now());
+      }
+    } catch (err) {
+      console.error('Error fetching UTM landings:', err);
+      if (isMounted.current) setError(err as Error);
+    } finally {
+      if (isMounted.current) setLoading(false);
+    }
+  }, [window, demo, compare]);
+
+  useEffect(() => {
+    isMounted.current = true;
+    fetchData();
+    return () => {
+      isMounted.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [window, demo, compare]);
+
+  const interval = options.refetchInterval;
+  useEffect(() => {
+    if (!interval || interval <= 0) return;
+    const handle = setInterval(fetchData, interval);
+    return () => clearInterval(handle);
+  }, [interval, fetchData]);
+
+  return { data, loading, error, lastFetchedAt, refetch: fetchData };
+}
+
+/**
+ * Period-over-period totals for the UTM KPI strip — current window vs the
+ * matched-length previous window. Polls when `refetchInterval` is set.
+ */
+export function useUtmTotalsComparison(
+  days: number,
+  options: { refetchInterval?: number | null } = {}
+): {
+  data: UtmTotalsComparison | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<void>;
+} {
+  const [data, setData] = useState<UtmTotalsComparison | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const isMounted = useRef(true);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await getUtmTotalsComparison(days);
+      if (isMounted.current) setData(result);
+    } catch (err) {
+      if (isMounted.current) setError(err as Error);
+    } finally {
+      if (isMounted.current) setLoading(false);
+    }
+  }, [days]);
+
+  useEffect(() => {
+    isMounted.current = true;
+    fetchData();
+    return () => {
+      isMounted.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [days]);
+
+  const interval = options.refetchInterval;
+  useEffect(() => {
+    if (!interval || interval <= 0) return;
+    const handle = setInterval(fetchData, interval);
+    return () => clearInterval(handle);
+  }, [interval, fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
+/**
+ * Hook for signup-and-downstream UTM stats, sourced from Supabase via
+ * `get_utm_signup_stats`. Same polling shape as `useUtmLandings`.
+ */
+export function useUtmSignupStats(
+  days: number,
+  options: PollingOptions = {}
+): {
+  stats: UtmSignupStat[];
+  loading: boolean;
+  error: Error | null;
+  lastFetchedAt: number | null;
+  refetch: () => Promise<void>;
+} {
+  const [stats, setStats] = useState<UtmSignupStat[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const [lastFetchedAt, setLastFetchedAt] = useState<number | null>(null);
+  const isMounted = useRef(true);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await getUtmSignupStats(days);
+      if (isMounted.current) {
+        setStats(result);
+        setLastFetchedAt(Date.now());
+      }
+    } catch (err) {
+      console.error('Error fetching UTM signup stats:', err);
+      if (isMounted.current) setError(err as Error);
+    } finally {
+      if (isMounted.current) setLoading(false);
+    }
+  }, [days]);
+
+  useEffect(() => {
+    isMounted.current = true;
+    fetchData();
+    return () => {
+      isMounted.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [days]);
+
+  const interval = options.refetchInterval;
+  useEffect(() => {
+    if (!interval || interval <= 0) return;
+    const handle = setInterval(fetchData, interval);
+    return () => clearInterval(handle);
+  }, [interval, fetchData]);
+
+  return { stats, loading, error, lastFetchedAt, refetch: fetchData };
+}
+
+/**
+ * Hook for the admin-managed UTM campaign catalog. Returns the active
+ * campaigns plus mutators (create/archive) so the link-builder UI can
+ * manage the list inline. Refetches automatically after a successful
+ * create or archive.
+ */
+export function useUtmCampaigns(): {
+  campaigns: UtmCampaign[];
+  loading: boolean;
+  error: Error | null;
+  create: (params: {
+    slug: string;
+    displayName: string;
+    description?: string;
+  }) => Promise<{ id: string | null; error: string | null }>;
+  archive: (id: string) => Promise<{ error: string | null }>;
+  refetch: () => Promise<void>;
+} {
+  const [campaigns, setCampaigns] = useState<UtmCampaign[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const isMounted = useRef(true);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getUtmCampaigns(false);
+      if (isMounted.current) setCampaigns(data);
+    } catch (err) {
+      if (isMounted.current) setError(err as Error);
+    } finally {
+      if (isMounted.current) setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    isMounted.current = true;
+    fetchData();
+    return () => {
+      isMounted.current = false;
+    };
+  }, [fetchData]);
+
+  const create = useCallback(
+    async (params: { slug: string; displayName: string; description?: string }) => {
+      const result = await createUtmCampaign(params);
+      if (!result.error) await fetchData();
+      return result;
+    },
+    [fetchData]
+  );
+
+  const archive = useCallback(
+    async (id: string) => {
+      const result = await archiveUtmCampaign(id);
+      if (!result.error) await fetchData();
+      return result;
+    },
+    [fetchData]
+  );
+
+  return { campaigns, loading, error, create, archive, refetch: fetchData };
+}
+
 // Re-export types for convenience
 export type {
   KPISummary,
@@ -888,6 +1151,9 @@ export type {
   InvitationType,
   InvitationTimeseries,
   InvitationTimeseriesPoint,
+  UtmSignupStat,
+  UtmCampaign,
+  UtmTotalsComparison,
 } from '@rallia/shared-services';
 
 export default useAdminAnalytics;

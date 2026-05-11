@@ -9,6 +9,7 @@ import './globals.css';
 
 import { Analytics } from '@vercel/analytics/next';
 import { PostHogProvider } from '@/components/posthog-provider';
+import { UtmCapture } from '@/components/utm-capture';
 
 // Theme A: Court Classic - Outfit for headlines
 const outfit = Outfit({
@@ -118,6 +119,7 @@ export default async function LocaleLayout({
       >
         <Analytics />
         <PostHogProvider>
+          <UtmCapture />
           <ThemeProvider
             attribute="class"
             defaultTheme="system"

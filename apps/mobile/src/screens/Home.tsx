@@ -81,7 +81,9 @@ import PickleballIcon from '../../assets/icons/pickleball.svg';
 import TennisCourtIcon from '../../assets/icons/tennis-court.svg';
 import { SportIcon } from '../components/SportIcon';
 import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
-import ProfileCompletionBanner from '../features/profile/components/ProfileCompletionBanner';
+import ProfileCompletionBanner, {
+  useProfileCompletionBannerVisibility,
+} from '../features/profile/components/ProfileCompletionBanner';
 import { SuggestionCard } from '../components/SuggestionCard';
 import type { UnifiedFeedItem } from '@rallia/shared-hooks';
 import BillingIssueBanner from '../components/BillingIssueBanner';
@@ -555,6 +557,14 @@ const Home = () => {
 
   // Profile completeness for banner
   const profileCompleteness = useProfileCompleteness();
+  const profileCompletionBanner = useProfileCompletionBannerVisibility(
+    profileCompleteness.isComplete
+  );
+
+  // Billing-issue banner dismissal — lifted out of the banner so Home knows
+  // whether it will actually render, which keeps the carousel/full-width
+  // switch in sync with the number of *visible* banners.
+  const [billingBannerDismissed, setBillingBannerDismissed] = useState(false);
 
   // Pending incoming reference requests
   const { count: pendingReferenceRequestsCount } = usePendingReferenceRequestsCount();
@@ -1035,11 +1045,12 @@ const Home = () => {
 
     if (session && isOnboarded) {
       // Billing issue banner (shown when subscription payment has failed)
-      if (subscriptionStatus === 'billing_issue') {
+      if (subscriptionStatus === 'billing_issue' && !billingBannerDismissed) {
         bannerCards.push(
           <BillingIssueBanner
             key="billing-issue"
             onManagePress={() => appNavigation.navigate('SubscriptionManagement')}
+            onDismiss={() => setBillingBannerDismissed(true)}
           />
         );
       }
@@ -1094,16 +1105,23 @@ const Home = () => {
         );
       }
 
-      // Profile completion banner
-      if (!profileCompleteness.isComplete && !profileCompleteness.loading) {
+      // Profile completion banner — gated on the hook's visibility/ready state
+      // so an internally-hidden banner doesn't inflate bannerCards.length and
+      // accidentally flip the layout into carousel mode.
+      if (
+        !profileCompleteness.isComplete &&
+        !profileCompleteness.loading &&
+        profileCompleteness.nextAction &&
+        profileCompletionBanner.ready &&
+        profileCompletionBanner.visible
+      ) {
         bannerCards.push(
           <ProfileCompletionBanner
             key="profile-completion"
             percentage={profileCompleteness.percentage}
             nextAction={profileCompleteness.nextAction}
-            isComplete={profileCompleteness.isComplete}
-            loading={profileCompleteness.loading}
             onAction={handleCompletionBannerAction}
+            onDismiss={profileCompletionBanner.handleDismiss}
             t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
           />
         );
@@ -1305,6 +1323,10 @@ const Home = () => {
     subscriptionStatus,
     appNavigation,
     pendingReferenceRequestsCount,
+    billingBannerDismissed,
+    profileCompletionBanner.ready,
+    profileCompletionBanner.visible,
+    profileCompletionBanner.handleDismiss,
   ]);
 
   // No more full-page skeleton. Each section (My Matches, Just for you) owns

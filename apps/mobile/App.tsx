@@ -138,7 +138,7 @@ import {
   useTranslation,
   type TranslationKey,
 } from './src/hooks';
-import { successHaptic } from '@rallia/shared-utils';
+import { parseUtmParams, successHaptic, type UtmParams } from '@rallia/shared-utils';
 import { PostHogProvider, posthogClient } from './src/providers/PostHogProvider';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { SheetManager, SheetProvider } from 'react-native-actions-sheet';
@@ -197,35 +197,6 @@ function parseMatchIdFromUrl(url: string): string | null {
 }
 
 const UTM_STORAGE_KEY = '@rallia/utm-params';
-
-interface UtmParams {
-  utm_source?: string;
-  utm_medium?: string;
-  utm_campaign?: string;
-  utm_content?: string;
-}
-
-function parseUtmParams(url: string): UtmParams | null {
-  try {
-    // Works for both https:// universal links and rallia:// custom scheme
-    const queryIndex = url.indexOf('?');
-    if (queryIndex === -1) return null;
-    const query = url.slice(queryIndex + 1);
-    const params: UtmParams = {};
-    for (const part of query.split('&')) {
-      const [key, value] = part.split('=');
-      if (!key || !value) continue;
-      const decoded = decodeURIComponent(value.replace(/\+/g, ' '));
-      if (key === 'utm_source') params.utm_source = decoded;
-      else if (key === 'utm_medium') params.utm_medium = decoded;
-      else if (key === 'utm_campaign') params.utm_campaign = decoded;
-      else if (key === 'utm_content') params.utm_content = decoded;
-    }
-    return Object.keys(params).length > 0 ? params : null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * AuthenticatedProviders - Wraps providers that need userId from auth context.
@@ -371,15 +342,23 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
     [setPendingMatchId, user?.id, toast, t]
   );
 
-  // After authentication, set UTM params as PostHog person properties (once per install)
+  // After authentication, set UTM params as PostHog person properties AND mirror
+  // them onto profile.utm_* so the admin Acquisition tab can join attribution
+  // to downstream Supabase data. Both happen exactly once per install.
   useEffect(() => {
     if (!userId) return;
-    AsyncStorage.getItem(UTM_STORAGE_KEY).then(raw => {
+    AsyncStorage.getItem(UTM_STORAGE_KEY).then(async raw => {
       if (!raw) return;
       try {
         const utmParams: UtmParams = JSON.parse(raw);
         posthogClient?.setPersonProperties({ ...utmParams });
-        AsyncStorage.removeItem(UTM_STORAGE_KEY);
+        const { error } = await supabase.rpc('set_profile_utm', {
+          p_player_id: userId,
+          p_utm: utmParams,
+        });
+        if (!error) {
+          AsyncStorage.removeItem(UTM_STORAGE_KEY).catch(() => {});
+        }
       } catch {
         // ignore parse errors for malformed UTM storage
       }
