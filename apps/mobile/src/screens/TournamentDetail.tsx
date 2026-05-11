@@ -33,7 +33,7 @@ import {
   primary,
   neutral,
 } from '@rallia/design-system';
-import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
+import { lightHaptic, successHaptic, warningHaptic, getHumanName } from '@rallia/shared-utils';
 import {
   useTheme,
   useTournament,
@@ -336,9 +336,9 @@ export const TournamentDetail: React.FC = () => {
     const map = new Map<string, string>();
     for (const r of registrations) {
       const p = profiles?.get(r.user_id);
-      const composedFromParts =
-        p?.first_name && p?.last_name ? `${p.first_name} ${p.last_name}` : p?.first_name || null;
-      const name = p?.display_name || composedFromParts;
+      // Always use first (+ last). display_name is intentionally ignored
+      // per the app-wide convention in @rallia/shared-utils/getHumanName.
+      const name = p ? getHumanName(p, '') : '';
       if (name) map.set(r.id, name);
     }
     return map;
