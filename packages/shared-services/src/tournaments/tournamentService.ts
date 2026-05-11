@@ -296,19 +296,22 @@ export async function listLinkableMatchesForSlot(params: {
 
   if (error) throw new Error(error.message);
 
+  // match_result.match_id is UNIQUE, so PostgREST returns it as a single
+  // object (not an array). match_participant is to-many → array.
+  type MatchResultEmbed = {
+    id: string;
+    is_verified: boolean;
+    verified_at: string | null;
+    winning_team: number | null;
+    team1_score: number | null;
+    team2_score: number | null;
+  };
   type Row = {
     id: string;
     match_date: string;
     start_time: string;
     end_time: string;
-    match_result: Array<{
-      id: string;
-      is_verified: boolean;
-      verified_at: string | null;
-      winning_team: number | null;
-      team1_score: number | null;
-      team2_score: number | null;
-    }>;
+    match_result: MatchResultEmbed | MatchResultEmbed[] | null;
     match_participant: Array<{ player_id: string; status: string }>;
   };
 
@@ -318,7 +321,7 @@ export async function listLinkableMatchesForSlot(params: {
   const eligible: LinkableMatch[] = [];
 
   for (const row of rows) {
-    const mr = row.match_result?.[0];
+    const mr = Array.isArray(row.match_result) ? row.match_result[0] : row.match_result;
     if (!mr || !mr.is_verified) continue;
 
     const joinedUsers = row.match_participant
