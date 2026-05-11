@@ -4010,7 +4010,35 @@
       "registeredLabel": "You're registered",
       "generateBracket": "Generate bracket",
       "generating": "Generating bracket...",
+      "cancelTournament": "Cancel tournament",
+      "cancelling": "Cancelling...",
+      "archiveTournament": "Archive tournament",
+      "archiving": "Archiving...",
       "comingSoon": "Coming soon"
+    },
+    "cancelModal": {
+      "title": "Cancel this tournament?",
+      "description": "All pending and in-progress matches will be cancelled. Players will keep their registration history. This can't be undone.",
+      "reasonLabel": "Reason (optional)",
+      "reasonPlaceholder": "e.g. Court flooded — rescheduling",
+      "confirm": "Cancel tournament",
+      "keepIt": "Keep it",
+      "errorGeneric": "Couldn't cancel the tournament. Please try again.",
+      "errorNotCancellable": "This tournament can't be cancelled in its current state.",
+      "errorLockConflict": "Someone else made changes — please refresh and try again."
+    },
+    "archiveModal": {
+      "title": "Archive this tournament?",
+      "description": "Archived tournaments hide from active feeds but stay accessible by direct link.",
+      "confirm": "Archive",
+      "keepIt": "Keep visible",
+      "errorGeneric": "Couldn't archive the tournament. Please try again.",
+      "errorNotArchivable": "This tournament can't be archived yet.",
+      "errorLockConflict": "Someone else made changes — please refresh and try again."
+    },
+    "cancelledNotice": {
+      "title": "Tournament cancelled",
+      "reason": "Reason: {reason}"
     },
     "registrations": {
       "sectionTitle": "Registrations",

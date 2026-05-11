@@ -19,6 +19,7 @@ import {
   TouchableOpacity,
   Modal,
   Pressable,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -47,6 +48,8 @@ import {
   useGenerateTournamentBracket,
   useLinkableMatchesForSlot,
   useAttachMatchToTournamentSlot,
+  useCancelTournament,
+  useArchiveTournament,
   useProfilesByIds,
   useSports,
   useAuth,
@@ -242,6 +245,43 @@ export const TournamentDetail: React.FC = () => {
     onSuccess: () => successHaptic(),
     onError: e => showError(e.message, 'tournamentDetail.errors.withdrawFailed' as TranslationKey),
   });
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+
+  const cancel = useCancelTournament({
+    onSuccess: () => {
+      successHaptic();
+      setShowCancelModal(false);
+    },
+    onError: e => {
+      const msg = e.message.toLowerCase();
+      const key: TranslationKey = msg.includes('not_cancellable')
+        ? ('tournamentDetail.cancelModal.errorNotCancellable' as TranslationKey)
+        : msg.includes('optimistic_lock')
+          ? ('tournamentDetail.cancelModal.errorLockConflict' as TranslationKey)
+          : ('tournamentDetail.cancelModal.errorGeneric' as TranslationKey);
+      warningHaptic();
+      toast.error(t(key));
+    },
+  });
+
+  const archive = useArchiveTournament({
+    onSuccess: () => {
+      successHaptic();
+      setShowArchiveModal(false);
+    },
+    onError: e => {
+      const msg = e.message.toLowerCase();
+      const key: TranslationKey = msg.includes('not_archivable')
+        ? ('tournamentDetail.archiveModal.errorNotArchivable' as TranslationKey)
+        : msg.includes('optimistic_lock')
+          ? ('tournamentDetail.archiveModal.errorLockConflict' as TranslationKey)
+          : ('tournamentDetail.archiveModal.errorGeneric' as TranslationKey);
+      warningHaptic();
+      toast.error(t(key));
+    },
+  });
+
   const generateBracket = useGenerateTournamentBracket({
     onSuccess: () => successHaptic(),
     onError: e => {
@@ -657,6 +697,65 @@ export const TournamentDetail: React.FC = () => {
           }
           return null;
         })()}
+
+        {/* Cancelled-state notice (visible to everyone) */}
+        {tournament.status === 'cancelled' && (
+          <View
+            style={[
+              styles.section,
+              styles.cancelledNotice,
+              { backgroundColor: colors.statusMutedBg, borderColor: colors.border },
+            ]}
+          >
+            <Ionicons name="alert-circle-outline" size={20} color={colors.statusMutedText} />
+            <View style={{ flex: 1 }}>
+              <Text size="sm" weight="semibold" color={colors.text}>
+                {t('tournamentDetail.cancelledNotice.title' as TranslationKey)}
+              </Text>
+              {tournament.cancelled_reason ? (
+                <Text size="xs" color={colors.textMuted}>
+                  {t('tournamentDetail.cancelledNotice.reason' as TranslationKey).replace(
+                    '{reason}',
+                    tournament.cancelled_reason
+                  )}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+        )}
+
+        {/* Organizer-only destructive actions: Cancel (active) / Archive (terminal) */}
+        {isOrganizer &&
+          ['draft', 'registration_open', 'registration_closed', 'in_progress'].includes(
+            tournament.status
+          ) && (
+            <View style={styles.section}>
+              <SecondaryActionButton
+                label={t('tournamentDetail.actions.cancelTournament' as TranslationKey)}
+                icon="close-circle-outline"
+                onPress={() => {
+                  lightHaptic();
+                  setShowCancelModal(true);
+                }}
+                colors={colors}
+                destructive
+              />
+            </View>
+          )}
+        {isOrganizer &&
+          (tournament.status === 'completed' || tournament.status === 'cancelled') && (
+            <View style={styles.section}>
+              <SecondaryActionButton
+                label={t('tournamentDetail.actions.archiveTournament' as TranslationKey)}
+                icon="archive-outline"
+                onPress={() => {
+                  lightHaptic();
+                  setShowArchiveModal(true);
+                }}
+                colors={colors}
+              />
+            </View>
+          )}
       </ScrollView>
 
       {pickerSlot && tournament && (
@@ -680,7 +779,171 @@ export const TournamentDetail: React.FC = () => {
           }}
         />
       )}
+
+      {showCancelModal && tournament && (
+        <CancelTournamentModal
+          tournamentId={tournament.id}
+          versionWas={tournament.version}
+          isPending={cancel.isPending}
+          onConfirm={reason =>
+            cancel.mutate({
+              tournamentId: tournament.id,
+              reason,
+              versionWas: tournament.version,
+            })
+          }
+          onDismiss={() => setShowCancelModal(false)}
+          colors={colors}
+          t={t}
+        />
+      )}
+
+      {showArchiveModal && tournament && (
+        <ConfirmModal
+          title={t('tournamentDetail.archiveModal.title' as TranslationKey)}
+          description={t('tournamentDetail.archiveModal.description' as TranslationKey)}
+          confirmLabel={t('tournamentDetail.archiveModal.confirm' as TranslationKey)}
+          cancelLabel={t('tournamentDetail.archiveModal.keepIt' as TranslationKey)}
+          isPending={archive.isPending}
+          onConfirm={() =>
+            archive.mutate({ tournamentId: tournament.id, versionWas: tournament.version })
+          }
+          onDismiss={() => setShowArchiveModal(false)}
+          colors={colors}
+        />
+      )}
     </SafeAreaView>
+  );
+};
+
+// =============================================================================
+// CONFIRM / DESTRUCTIVE MODALS
+// =============================================================================
+
+const ConfirmModal: React.FC<{
+  title: string;
+  description: string;
+  confirmLabel: string;
+  cancelLabel: string;
+  destructive?: boolean;
+  isPending?: boolean;
+  onConfirm: () => void;
+  onDismiss: () => void;
+  colors: ScreenColors;
+  children?: React.ReactNode;
+}> = ({
+  title,
+  description,
+  confirmLabel,
+  cancelLabel,
+  destructive,
+  isPending,
+  onConfirm,
+  onDismiss,
+  colors,
+  children,
+}) => (
+  <Modal visible transparent animationType="slide" onRequestClose={onDismiss}>
+    <Pressable style={styles.modalBackdrop} onPress={onDismiss}>
+      <Pressable
+        style={[styles.modalSheet, { backgroundColor: colors.cardBackground }]}
+        onPress={e => e.stopPropagation()}
+      >
+        <Text
+          size="lg"
+          weight="bold"
+          color={colors.text}
+          style={{ marginBottom: spacingPixels[2] }}
+        >
+          {title}
+        </Text>
+        <Text size="sm" color={colors.textMuted} style={{ marginBottom: spacingPixels[4] }}>
+          {description}
+        </Text>
+        {children}
+        <TouchableOpacity
+          onPress={onConfirm}
+          disabled={isPending}
+          activeOpacity={0.7}
+          style={[
+            styles.primaryButton,
+            { backgroundColor: destructive ? '#dc2626' : colors.primary },
+            isPending && styles.buttonDisabled,
+          ]}
+          accessibilityRole="button"
+        >
+          <Text size="base" weight="semibold" color="#ffffff">
+            {confirmLabel}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={onDismiss}
+          activeOpacity={0.7}
+          style={[
+            styles.secondaryButton,
+            { borderColor: colors.border, marginTop: spacingPixels[2] },
+          ]}
+          accessibilityRole="button"
+        >
+          <Text size="base" weight="semibold" color={colors.text}>
+            {cancelLabel}
+          </Text>
+        </TouchableOpacity>
+      </Pressable>
+    </Pressable>
+  </Modal>
+);
+
+const CancelTournamentModal: React.FC<{
+  tournamentId: string;
+  versionWas: number;
+  isPending: boolean;
+  onConfirm: (reason: string) => void;
+  onDismiss: () => void;
+  colors: ScreenColors;
+  t: (k: TranslationKey) => string;
+}> = ({ isPending, onConfirm, onDismiss, colors, t }) => {
+  const [reason, setReason] = useState('');
+  return (
+    <ConfirmModal
+      title={t('tournamentDetail.cancelModal.title' as TranslationKey)}
+      description={t('tournamentDetail.cancelModal.description' as TranslationKey)}
+      confirmLabel={t('tournamentDetail.cancelModal.confirm' as TranslationKey)}
+      cancelLabel={t('tournamentDetail.cancelModal.keepIt' as TranslationKey)}
+      destructive
+      isPending={isPending}
+      onConfirm={() => onConfirm(reason.trim())}
+      onDismiss={onDismiss}
+      colors={colors}
+    >
+      <Text
+        size="xs"
+        weight="semibold"
+        color={colors.textSecondary}
+        style={{ marginBottom: spacingPixels[1] }}
+      >
+        {t('tournamentDetail.cancelModal.reasonLabel' as TranslationKey)}
+      </Text>
+      <TextInput
+        style={[
+          styles.textInput,
+          {
+            backgroundColor: colors.statusMutedBg,
+            borderColor: colors.border,
+            color: colors.text,
+            marginBottom: spacingPixels[4],
+          },
+        ]}
+        placeholder={t('tournamentDetail.cancelModal.reasonPlaceholder' as TranslationKey)}
+        placeholderTextColor={colors.textMuted}
+        value={reason}
+        onChangeText={setReason}
+        multiline
+        numberOfLines={3}
+        maxLength={300}
+        editable={!isPending}
+      />
+    </ConfirmModal>
   );
 };
 
@@ -1111,25 +1374,30 @@ const SecondaryActionButton: React.FC<{
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
   disabled?: boolean;
+  destructive?: boolean;
   colors: ScreenColors;
-}> = ({ label, icon, onPress, disabled, colors }) => (
-  <TouchableOpacity
-    onPress={onPress}
-    disabled={disabled}
-    activeOpacity={0.7}
-    style={[
-      styles.secondaryButton,
-      { borderColor: colors.border, backgroundColor: colors.cardBackground },
-      disabled && styles.buttonDisabled,
-    ]}
-    accessibilityRole="button"
-  >
-    <Ionicons name={icon} size={18} color={colors.text} />
-    <Text size="base" weight="semibold" color={colors.text}>
-      {label}
-    </Text>
-  </TouchableOpacity>
-);
+}> = ({ label, icon, onPress, disabled, destructive, colors }) => {
+  const fg = destructive ? colors.statusMutedText : colors.text;
+  const border = destructive ? colors.statusMutedBg : colors.border;
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={disabled}
+      activeOpacity={0.7}
+      style={[
+        styles.secondaryButton,
+        { borderColor: border, backgroundColor: colors.cardBackground },
+        disabled && styles.buttonDisabled,
+      ]}
+      accessibilityRole="button"
+    >
+      <Ionicons name={icon} size={18} color={fg} />
+      <Text size="base" weight="semibold" color={fg}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+};
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
@@ -1293,6 +1561,23 @@ const styles = StyleSheet.create({
   modalLoading: { padding: spacingPixels[8], alignItems: 'center' },
   modalEmpty: { padding: spacingPixels[6], alignItems: 'center' },
   modalList: { maxHeight: 400 },
+  cancelledNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacingPixels[2],
+    padding: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderRadius: radiusPixels.lg,
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[3],
+    fontSize: 15,
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
   linkableMatchRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -4010,7 +4010,35 @@
       "registeredLabel": "Vous êtes inscrit",
       "generateBracket": "Générer le tableau",
       "generating": "Génération du tableau...",
+      "cancelTournament": "Annuler le tournoi",
+      "cancelling": "Annulation...",
+      "archiveTournament": "Archiver le tournoi",
+      "archiving": "Archivage...",
       "comingSoon": "Bientôt disponible"
+    },
+    "cancelModal": {
+      "title": "Annuler ce tournoi ?",
+      "description": "Tous les matchs en attente ou en cours seront annulés. Les joueurs conservent leur historique d'inscription. Cette action est irréversible.",
+      "reasonLabel": "Raison (optionnel)",
+      "reasonPlaceholder": "ex. Terrain inondé — reportage",
+      "confirm": "Annuler le tournoi",
+      "keepIt": "Garder",
+      "errorGeneric": "Impossible d'annuler le tournoi. Veuillez réessayer.",
+      "errorNotCancellable": "Ce tournoi ne peut pas être annulé dans son état actuel.",
+      "errorLockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer."
+    },
+    "archiveModal": {
+      "title": "Archiver ce tournoi ?",
+      "description": "Les tournois archivés sont retirés des flux actifs mais restent accessibles par lien direct.",
+      "confirm": "Archiver",
+      "keepIt": "Garder visible",
+      "errorGeneric": "Impossible d'archiver le tournoi. Veuillez réessayer.",
+      "errorNotArchivable": "Ce tournoi ne peut pas encore être archivé.",
+      "errorLockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer."
+    },
+    "cancelledNotice": {
+      "title": "Tournoi annulé",
+      "reason": "Raison : {reason}"
     },
     "registrations": {
       "sectionTitle": "Inscriptions",

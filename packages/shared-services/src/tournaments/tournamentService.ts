@@ -377,6 +377,40 @@ export async function attachMatchToTournamentSlot(
 }
 
 /**
+ * Organizer cancels a tournament (any non-terminal state). Pending and
+ * in-progress matches are also cancelled.
+ */
+export async function cancelTournament(
+  tournamentId: string,
+  reason: string,
+  versionWas: number
+): Promise<Tournament> {
+  const { data, error } = await supabase.rpc('tournament_cancel', {
+    p_tournament_id: tournamentId,
+    p_reason: reason,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return data as Tournament;
+}
+
+/**
+ * Organizer archives a completed or cancelled tournament — hides it from
+ * active discovery feeds.
+ */
+export async function archiveTournament(
+  tournamentId: string,
+  versionWas: number
+): Promise<Tournament> {
+  const { data, error } = await supabase.rpc('tournament_archive', {
+    p_tournament_id: tournamentId,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return data as Tournament;
+}
+
+/**
  * Withdraw the caller's own registration. Status flips to 'withdrawn';
  * the row is preserved for audit/history.
  */

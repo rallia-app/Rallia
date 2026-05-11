@@ -20,6 +20,8 @@ import {
   generateTournamentBracket,
   listLinkableMatchesForSlot,
   attachMatchToTournamentSlot,
+  cancelTournament,
+  archiveTournament,
   getProfilesByIds,
   type CreateTournamentInput,
   type Tournament,
@@ -177,6 +179,49 @@ export function useLinkableMatchesForSlot(params: {
       }),
     enabled,
   });
+}
+
+export function useCancelTournament(options: MutationOptions<Tournament> = {}) {
+  const invalidate = useTournamentDetailInvalidator();
+  const qc = useQueryClient();
+  const mutation = useMutation<
+    Tournament,
+    Error,
+    { tournamentId: string; reason: string; versionWas: number }
+  >({
+    mutationFn: ({ tournamentId, reason, versionWas }) =>
+      cancelTournament(tournamentId, reason, versionWas),
+    onSuccess: t => {
+      invalidate(t.id);
+      qc.invalidateQueries({ queryKey: tournamentKeys.lists() });
+      options.onSuccess?.(t);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+export function useArchiveTournament(options: MutationOptions<Tournament> = {}) {
+  const invalidate = useTournamentDetailInvalidator();
+  const qc = useQueryClient();
+  const mutation = useMutation<Tournament, Error, { tournamentId: string; versionWas: number }>({
+    mutationFn: ({ tournamentId, versionWas }) => archiveTournament(tournamentId, versionWas),
+    onSuccess: t => {
+      invalidate(t.id);
+      qc.invalidateQueries({ queryKey: tournamentKeys.lists() });
+      options.onSuccess?.(t);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
 }
 
 /**
