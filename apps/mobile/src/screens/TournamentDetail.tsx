@@ -963,8 +963,9 @@ const BracketSection: React.FC<{
               {roundMatches.map(m => {
                 const isPhantom =
                   m.player1_is_bye && m.player2_is_bye && m.winner_registration_id === null;
-                const winnerSlot =
-                  m.winner_registration_id === m.player1_registration_id
+                const winnerSlot = !m.winner_registration_id
+                  ? 0
+                  : m.winner_registration_id === m.player1_registration_id
                     ? 1
                     : m.winner_registration_id === m.player2_registration_id
                       ? 2
