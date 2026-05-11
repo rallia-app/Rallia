@@ -104,6 +104,30 @@ export async function createTournament(input: CreateTournamentInput): Promise<To
   return data as Tournament;
 }
 
+export interface PlayerProfile {
+  id: string;
+  display_name: string | null;
+  full_name: string | null;
+  profile_picture_url: string | null;
+}
+
+/**
+ * Batch-fetch profile info for a set of player ids. Returns a Map keyed
+ * by id. Used by tournament screens to render player names in brackets,
+ * registrant lists, etc.
+ */
+export async function getProfilesByIds(ids: string[]): Promise<Map<string, PlayerProfile>> {
+  if (ids.length === 0) return new Map();
+  const { data, error } = await supabase
+    .from('profile')
+    .select('id, display_name, full_name, profile_picture_url')
+    .in('id', ids);
+  if (error) throw new Error(error.message);
+  const map = new Map<string, PlayerProfile>();
+  for (const p of data ?? []) map.set(p.id, p as PlayerProfile);
+  return map;
+}
+
 /**
  * List active registrations (registered + pending) for a tournament.
  * RLS gates visibility per the treg_select policy.

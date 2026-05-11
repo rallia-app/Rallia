@@ -47,6 +47,7 @@ import {
   useGenerateTournamentBracket,
   useLinkableMatchesForSlot,
   useAttachMatchToTournamentSlot,
+  useProfilesByIds,
   useSports,
   useAuth,
 } from '@rallia/shared-hooks';
@@ -328,6 +329,19 @@ export const TournamentDetail: React.FC = () => {
     return map;
   }, [registrations]);
 
+  // Batch-fetch player profiles so the bracket can render real names.
+  const userIds = useMemo(() => registrations.map(r => r.user_id), [registrations]);
+  const { data: profiles } = useProfilesByIds(userIds);
+  const nameByRegId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const r of registrations) {
+      const p = profiles?.get(r.user_id);
+      const name = p?.display_name ?? p?.full_name;
+      if (name) map.set(r.id, name);
+    }
+    return map;
+  }, [registrations, profiles]);
+
   const [pickerSlot, setPickerSlot] = useState<{
     tournamentMatchId: string;
     player1RegId: string;
@@ -538,6 +552,7 @@ export const TournamentDetail: React.FC = () => {
           <BracketSection
             matches={matches}
             seedByRegId={seedByRegId}
+            nameByRegId={nameByRegId}
             userByRegId={userByRegId}
             currentUserId={userId}
             onMatchPress={handleBracketMatchTap}
@@ -648,6 +663,7 @@ export const TournamentDetail: React.FC = () => {
           sportId={tournament.sport_id}
           tournamentId={tournament.id}
           seedByRegId={seedByRegId}
+          nameByRegId={nameByRegId}
           onDismiss={() => setPickerSlot(null)}
           colors={colors}
           t={t}
@@ -679,6 +695,7 @@ const LinkMatchPickerModal: React.FC<{
   sportId: string;
   tournamentId: string;
   seedByRegId: Map<string, number>;
+  nameByRegId: Map<string, string>;
   onDismiss: () => void;
   colors: ScreenColors;
   t: (k: TranslationKey) => string;
@@ -690,6 +707,7 @@ const LinkMatchPickerModal: React.FC<{
   sportId,
   tournamentId,
   seedByRegId,
+  nameByRegId,
   onDismiss,
   colors,
   t,
@@ -712,7 +730,9 @@ const LinkMatchPickerModal: React.FC<{
 
   const seed1 = seedByRegId.get(slot.player1RegId);
   const seed2 = seedByRegId.get(slot.player2RegId);
-  const matchupLabel = `Seed ${seed1 ?? '?'} vs Seed ${seed2 ?? '?'}`;
+  const name1 = nameByRegId.get(slot.player1RegId) ?? `Seed ${seed1 ?? '?'}`;
+  const name2 = nameByRegId.get(slot.player2RegId) ?? `Seed ${seed2 ?? '?'}`;
+  const matchupLabel = `${name1} vs ${name2}`;
 
   const handlePick = useCallback(
     (matchId: string) => {
@@ -864,11 +884,14 @@ const slotLabel = (
   isBye: boolean,
   isPhantom: boolean,
   seedByRegId: Map<string, number>,
+  nameByRegId: Map<string, string>,
   t: (k: TranslationKey) => string
 ): string => {
   if (isPhantom) return t('tournamentDetail.bracket.phantom' as TranslationKey);
   if (isBye) return t('tournamentDetail.bracket.bye' as TranslationKey);
   if (!regId) return t('tournamentDetail.bracket.tbd' as TranslationKey);
+  const name = nameByRegId.get(regId);
+  if (name) return name;
   const seed = seedByRegId.get(regId);
   return seed !== undefined ? `Seed ${seed}` : t('tournamentDetail.bracket.tbd' as TranslationKey);
 };
@@ -876,12 +899,22 @@ const slotLabel = (
 const BracketSection: React.FC<{
   matches: MatchRow[];
   seedByRegId: Map<string, number>;
+  nameByRegId: Map<string, string>;
   userByRegId: Map<string, string>;
   currentUserId: string | undefined;
   onMatchPress: (tournamentMatchId: string, p1RegId: string, p2RegId: string) => void;
   colors: ScreenColors;
   t: (k: TranslationKey) => string;
-}> = ({ matches, seedByRegId, userByRegId, currentUserId, onMatchPress, colors, t }) => {
+}> = ({
+  matches,
+  seedByRegId,
+  nameByRegId,
+  userByRegId,
+  currentUserId,
+  onMatchPress,
+  colors,
+  t,
+}) => {
   const totalRounds = matches.reduce((max, m) => Math.max(max, m.round_number), 0);
   const byRound = new Map<number, MatchRow[]>();
   for (const m of matches) {
@@ -959,6 +992,7 @@ const BracketSection: React.FC<{
                         m.player1_is_bye,
                         isPhantom,
                         seedByRegId,
+                        nameByRegId,
                         t
                       )}
                       isWinner={winnerSlot === 1}
@@ -972,6 +1006,7 @@ const BracketSection: React.FC<{
                         m.player2_is_bye,
                         isPhantom,
                         seedByRegId,
+                        nameByRegId,
                         t
                       )}
                       isWinner={winnerSlot === 2}

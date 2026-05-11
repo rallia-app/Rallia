@@ -20,11 +20,13 @@ import {
   generateTournamentBracket,
   listLinkableMatchesForSlot,
   attachMatchToTournamentSlot,
+  getProfilesByIds,
   type CreateTournamentInput,
   type Tournament,
   type TournamentRegistration,
   type TournamentMatch,
   type LinkableMatch,
+  type PlayerProfile,
 } from '@rallia/shared-services';
 
 export const tournamentKeys = {
@@ -41,6 +43,19 @@ export const tournamentKeys = {
     [...tournamentKeys.all, 'myActiveRegistrations', userId] as const,
   matches: (tournamentId: string) => [...tournamentKeys.all, 'matches', tournamentId] as const,
 };
+
+/**
+ * Batch-fetch player profiles by id (display_name, profile_picture_url).
+ */
+export function useProfilesByIds(ids: string[]) {
+  // Stable key: sorted unique ids joined.
+  const sortedIds = [...new Set(ids)].sort();
+  return useQuery<Map<string, PlayerProfile>>({
+    queryKey: ['profiles', 'byIds', sortedIds.join(',')],
+    queryFn: () => getProfilesByIds(sortedIds),
+    enabled: sortedIds.length > 0,
+  });
+}
 
 /**
  * List all of the caller's active registrations across visible tournaments.
