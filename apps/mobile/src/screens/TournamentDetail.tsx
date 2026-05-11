@@ -19,7 +19,6 @@ import {
   TouchableOpacity,
   Modal,
   Pressable,
-  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -59,6 +58,7 @@ import type { LinkableMatch } from '@rallia/shared-services';
 
 import { useTranslation, type TranslationKey } from '../hooks';
 import { SportIcon } from '../components/SportIcon';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 import type { RootStackParamList } from '../navigation';
 
 type TournamentDetailRoute = RouteProp<RootStackParamList, 'TournamentDetail'>;
@@ -780,170 +780,39 @@ export const TournamentDetail: React.FC = () => {
         />
       )}
 
-      {showCancelModal && tournament && (
-        <CancelTournamentModal
-          tournamentId={tournament.id}
-          versionWas={tournament.version}
-          isPending={cancel.isPending}
-          onConfirm={reason =>
-            cancel.mutate({
-              tournamentId: tournament.id,
-              reason,
-              versionWas: tournament.version,
-            })
-          }
-          onDismiss={() => setShowCancelModal(false)}
-          colors={colors}
-          t={t}
-        />
-      )}
-
-      {showArchiveModal && tournament && (
-        <ConfirmModal
-          title={t('tournamentDetail.archiveModal.title' as TranslationKey)}
-          description={t('tournamentDetail.archiveModal.description' as TranslationKey)}
-          confirmLabel={t('tournamentDetail.archiveModal.confirm' as TranslationKey)}
-          cancelLabel={t('tournamentDetail.archiveModal.keepIt' as TranslationKey)}
-          isPending={archive.isPending}
-          onConfirm={() =>
-            archive.mutate({ tournamentId: tournament.id, versionWas: tournament.version })
-          }
-          onDismiss={() => setShowArchiveModal(false)}
-          colors={colors}
-        />
-      )}
-    </SafeAreaView>
-  );
-};
-
-// =============================================================================
-// CONFIRM / DESTRUCTIVE MODALS
-// =============================================================================
-
-const ConfirmModal: React.FC<{
-  title: string;
-  description: string;
-  confirmLabel: string;
-  cancelLabel: string;
-  destructive?: boolean;
-  isPending?: boolean;
-  onConfirm: () => void;
-  onDismiss: () => void;
-  colors: ScreenColors;
-  children?: React.ReactNode;
-}> = ({
-  title,
-  description,
-  confirmLabel,
-  cancelLabel,
-  destructive,
-  isPending,
-  onConfirm,
-  onDismiss,
-  colors,
-  children,
-}) => (
-  <Modal visible transparent animationType="slide" onRequestClose={onDismiss}>
-    <Pressable style={styles.modalBackdrop} onPress={onDismiss}>
-      <Pressable
-        style={[styles.modalSheet, { backgroundColor: colors.cardBackground }]}
-        onPress={e => e.stopPropagation()}
-      >
-        <Text
-          size="lg"
-          weight="bold"
-          color={colors.text}
-          style={{ marginBottom: spacingPixels[2] }}
-        >
-          {title}
-        </Text>
-        <Text size="sm" color={colors.textMuted} style={{ marginBottom: spacingPixels[4] }}>
-          {description}
-        </Text>
-        {children}
-        <TouchableOpacity
-          onPress={onConfirm}
-          disabled={isPending}
-          activeOpacity={0.7}
-          style={[
-            styles.primaryButton,
-            { backgroundColor: destructive ? '#dc2626' : colors.primary },
-            isPending && styles.buttonDisabled,
-          ]}
-          accessibilityRole="button"
-        >
-          <Text size="base" weight="semibold" color="#ffffff">
-            {confirmLabel}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={onDismiss}
-          activeOpacity={0.7}
-          style={[
-            styles.secondaryButton,
-            { borderColor: colors.border, marginTop: spacingPixels[2] },
-          ]}
-          accessibilityRole="button"
-        >
-          <Text size="base" weight="semibold" color={colors.text}>
-            {cancelLabel}
-          </Text>
-        </TouchableOpacity>
-      </Pressable>
-    </Pressable>
-  </Modal>
-);
-
-const CancelTournamentModal: React.FC<{
-  tournamentId: string;
-  versionWas: number;
-  isPending: boolean;
-  onConfirm: (reason: string) => void;
-  onDismiss: () => void;
-  colors: ScreenColors;
-  t: (k: TranslationKey) => string;
-}> = ({ isPending, onConfirm, onDismiss, colors, t }) => {
-  const [reason, setReason] = useState('');
-  return (
-    <ConfirmModal
-      title={t('tournamentDetail.cancelModal.title' as TranslationKey)}
-      description={t('tournamentDetail.cancelModal.description' as TranslationKey)}
-      confirmLabel={t('tournamentDetail.cancelModal.confirm' as TranslationKey)}
-      cancelLabel={t('tournamentDetail.cancelModal.keepIt' as TranslationKey)}
-      destructive
-      isPending={isPending}
-      onConfirm={() => onConfirm(reason.trim())}
-      onDismiss={onDismiss}
-      colors={colors}
-    >
-      <Text
-        size="xs"
-        weight="semibold"
-        color={colors.textSecondary}
-        style={{ marginBottom: spacingPixels[1] }}
-      >
-        {t('tournamentDetail.cancelModal.reasonLabel' as TranslationKey)}
-      </Text>
-      <TextInput
-        style={[
-          styles.textInput,
-          {
-            backgroundColor: colors.statusMutedBg,
-            borderColor: colors.border,
-            color: colors.text,
-            marginBottom: spacingPixels[4],
-          },
-        ]}
-        placeholder={t('tournamentDetail.cancelModal.reasonPlaceholder' as TranslationKey)}
-        placeholderTextColor={colors.textMuted}
-        value={reason}
-        onChangeText={setReason}
-        multiline
-        numberOfLines={3}
-        maxLength={300}
-        editable={!isPending}
+      <ConfirmationModal
+        visible={showCancelModal && !!tournament}
+        title={t('tournamentDetail.cancelModal.title' as TranslationKey)}
+        message={t('tournamentDetail.cancelModal.description' as TranslationKey)}
+        confirmLabel={t('tournamentDetail.cancelModal.confirm' as TranslationKey)}
+        cancelLabel={t('tournamentDetail.cancelModal.keepIt' as TranslationKey)}
+        destructive
+        isLoading={cancel.isPending}
+        onClose={() => setShowCancelModal(false)}
+        onConfirm={() => {
+          if (!tournament) return;
+          cancel.mutate({
+            tournamentId: tournament.id,
+            reason: '',
+            versionWas: tournament.version,
+          });
+        }}
       />
-    </ConfirmModal>
+
+      <ConfirmationModal
+        visible={showArchiveModal && !!tournament}
+        title={t('tournamentDetail.archiveModal.title' as TranslationKey)}
+        message={t('tournamentDetail.archiveModal.description' as TranslationKey)}
+        confirmLabel={t('tournamentDetail.archiveModal.confirm' as TranslationKey)}
+        cancelLabel={t('tournamentDetail.archiveModal.keepIt' as TranslationKey)}
+        isLoading={archive.isPending}
+        onClose={() => setShowArchiveModal(false)}
+        onConfirm={() => {
+          if (!tournament) return;
+          archive.mutate({ tournamentId: tournament.id, versionWas: tournament.version });
+        }}
+      />
+    </SafeAreaView>
   );
 };
 
@@ -1568,15 +1437,6 @@ const styles = StyleSheet.create({
     padding: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
-  },
-  textInput: {
-    borderWidth: 1,
-    borderRadius: radiusPixels.lg,
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[3],
-    fontSize: 15,
-    minHeight: 80,
-    textAlignVertical: 'top',
   },
   linkableMatchRow: {
     flexDirection: 'row',

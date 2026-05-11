@@ -4019,8 +4019,6 @@
     "cancelModal": {
       "title": "Cancel this tournament?",
       "description": "All pending and in-progress matches will be cancelled. Players will keep their registration history. This can't be undone.",
-      "reasonLabel": "Reason (optional)",
-      "reasonPlaceholder": "e.g. Court flooded — rescheduling",
       "confirm": "Cancel tournament",
       "keepIt": "Keep it",
       "errorGeneric": "Couldn't cancel the tournament. Please try again.",

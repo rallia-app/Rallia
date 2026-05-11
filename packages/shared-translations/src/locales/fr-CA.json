@@ -4019,8 +4019,6 @@
     "cancelModal": {
       "title": "Annuler ce tournoi ?",
       "description": "Tous les matchs en attente ou en cours seront annulés. Les joueurs conservent leur historique d'inscription. Cette action est irréversible.",
-      "reasonLabel": "Raison (optionnel)",
-      "reasonPlaceholder": "ex. Terrain inondé — reportage",
       "confirm": "Annuler le tournoi",
       "keepIt": "Garder",
       "errorGeneric": "Impossible d'annuler le tournoi. Veuillez réessayer.",
