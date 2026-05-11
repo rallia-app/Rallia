@@ -23,6 +23,7 @@ import {
 import { useSubscription } from '../context/SubscriptionContext';
 import { useAppNavigation } from '../navigation/hooks';
 import { useTranslation } from '../hooks';
+import { PRO_ENTITLEMENT_ID } from '../lib/revenuecat';
 import {
   restorePurchasesAttempted,
   restorePurchasesSuccess,
@@ -43,8 +44,8 @@ const SubscriptionManagement: React.FC = () => {
 
   const [isRestoring, setIsRestoring] = useState(false);
 
-  const proEntitlement = customerInfo?.entitlements.active['pro'];
-  const allProEntitlement = customerInfo?.entitlements.all['pro'];
+  const proEntitlement = customerInfo?.entitlements.active[PRO_ENTITLEMENT_ID];
+  const allProEntitlement = customerInfo?.entitlements.all[PRO_ENTITLEMENT_ID];
 
   const renewalDate = proEntitlement?.expirationDate
     ? new Date(proEntitlement.expirationDate).toLocaleDateString()
@@ -103,7 +104,9 @@ const SubscriptionManagement: React.FC = () => {
           ? t('subscription.status_cancelling')
           : status === 'billing_issue'
             ? t('subscription.status_billing_issue')
-            : t('subscription.status_expired');
+            : status === 'expired'
+              ? t('subscription.status_expired')
+              : t('subscription.free_plan');
 
     return (
       <View
@@ -132,9 +135,51 @@ const SubscriptionManagement: React.FC = () => {
     );
   }
 
-  const isActiveOrCancelling =
-    subscriptionStatus === 'active' || subscriptionStatus === 'cancelling';
   const isBillingIssue = subscriptionStatus === 'billing_issue';
+  const isPaying = subscriptionStatus === 'active' || subscriptionStatus === 'cancelling';
+
+  // Per-state card content — same layout, conditional copy/colors/CTA
+  const description: string | null =
+    subscriptionStatus === 'billing_issue'
+      ? t('subscription.billing_banner_title')
+      : isPaying
+        ? t('subscription.manage_via_apple')
+        : null;
+
+  const dateLine: string | null =
+    subscriptionStatus === 'cancelling' && renewalDate
+      ? t('subscription.cancels_on', { date: renewalDate })
+      : subscriptionStatus === 'active' && renewalDate
+        ? t('subscription.renews_on', { date: renewalDate })
+        : subscriptionStatus === 'expired' && expirationDate
+          ? `${t('subscription.status_expired')} · ${expirationDate}`
+          : null;
+
+  const cta = isBillingIssue
+    ? {
+        label: t('subscription.billing_banner_cta'),
+        icon: undefined as keyof typeof Ionicons.glyphMap | undefined,
+        color: statusColors.error.DEFAULT,
+        onPress: handleManageSubscription,
+      }
+    : isPaying
+      ? {
+          label: t('subscription.manage'),
+          icon: 'settings-outline' as keyof typeof Ionicons.glyphMap,
+          color: colors.primary,
+          onPress: handleManageSubscription,
+        }
+      : {
+          label: t('subscription.upgrade_cta'),
+          icon: 'star-outline' as keyof typeof Ionicons.glyphMap,
+          color: colors.primary,
+          onPress: () => {
+            navigation.goBack();
+            presentPaywall();
+          },
+        };
+
+  const cardBorderColor = isBillingIssue ? `${statusColors.error.DEFAULT}50` : colors.border;
 
   return (
     <SafeAreaView
@@ -142,109 +187,39 @@ const SubscriptionManagement: React.FC = () => {
       edges={['bottom']}
     >
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        {/* Active subscription */}
-        {isActiveOrCancelling && (
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={styles.cardHeader}>
-              <View>
-                <Text size="lg" weight="semibold" color={colors.text}>
-                  Rallia Pro
-                </Text>
-                <Text size="sm" color={colors.textMuted} style={styles.planSubtitle}>
-                  {t('subscription.manage_via_apple')}
-                </Text>
-              </View>
-              <StatusBadge status={subscriptionStatus} />
-            </View>
-
-            {renewalDate && (
-              <View style={[styles.infoRow, { borderTopColor: colors.border }]}>
-                <Text size="sm" color={colors.textMuted}>
-                  {subscriptionStatus === 'cancelling'
-                    ? t('subscription.cancels_on', { date: renewalDate })
-                    : t('subscription.renews_on', { date: renewalDate })}
-                </Text>
-              </View>
-            )}
-
-            <TouchableOpacity
-              style={[styles.primaryButton, { backgroundColor: colors.primary }]}
-              onPress={handleManageSubscription}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="settings-outline" size={16} color="#fff" />
-              <Text size="base" weight="semibold" color="#fff">
-                {t('subscription.manage')}
-              </Text>
-            </TouchableOpacity>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: cardBorderColor }]}>
+          <View style={styles.cardHeader}>
+            <Text size="2xl" weight="bold" color={colors.text} style={styles.cardTitle}>
+              Rallia Plus
+            </Text>
+            <StatusBadge status={subscriptionStatus} />
           </View>
-        )}
 
-        {/* Billing issue */}
-        {isBillingIssue && (
-          <View
-            style={[
-              styles.card,
-              { backgroundColor: colors.card, borderColor: `${statusColors.error.DEFAULT}50` },
-            ]}
+          {description && (
+            <Text size="sm" color={colors.textMuted}>
+              {description}
+            </Text>
+          )}
+
+          {dateLine && (
+            <View style={[styles.infoRow, { borderTopColor: colors.border }]}>
+              <Text size="sm" color={colors.textMuted}>
+                {dateLine}
+              </Text>
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={[styles.primaryButton, { backgroundColor: cta.color }]}
+            onPress={cta.onPress}
+            activeOpacity={0.8}
           >
-            <View style={styles.cardHeader}>
-              <View style={styles.billingIssueHeader}>
-                <Ionicons name="warning" size={20} color={statusColors.error.DEFAULT} />
-                <View style={styles.billingIssueText}>
-                  <Text size="base" weight="semibold" color={colors.text}>
-                    Rallia Pro
-                  </Text>
-                  <StatusBadge status="billing_issue" />
-                </View>
-              </View>
-            </View>
-
-            <Text size="sm" color={colors.textMuted} style={styles.billingIssueDesc}>
-              {t('subscription.billing_banner_title')}
+            {cta.icon && <Ionicons name={cta.icon} size={16} color="#fff" />}
+            <Text size="base" weight="semibold" color="#fff">
+              {cta.label}
             </Text>
-
-            <TouchableOpacity
-              style={[styles.primaryButton, { backgroundColor: statusColors.error.DEFAULT }]}
-              onPress={handleManageSubscription}
-              activeOpacity={0.8}
-            >
-              <Text size="base" weight="semibold" color="#fff">
-                {t('subscription.billing_banner_cta')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* No subscription / expired */}
-        {(subscriptionStatus === 'none' || subscriptionStatus === 'expired') && (
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text size="lg" weight="semibold" color={colors.text}>
-              {t('subscription.free_plan')}
-            </Text>
-            {subscriptionStatus === 'expired' && expirationDate && (
-              <Text size="sm" color={colors.textMuted} style={styles.expiredNote}>
-                {t('subscription.status_expired')} · {expirationDate}
-              </Text>
-            )}
-            <TouchableOpacity
-              style={[
-                styles.primaryButton,
-                { backgroundColor: colors.primary, marginTop: spacingPixels[4] },
-              ]}
-              onPress={() => {
-                navigation.goBack();
-                presentPaywall();
-              }}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="star-outline" size={16} color="#fff" />
-              <Text size="base" weight="semibold" color="#fff">
-                {t('subscription.upgrade_cta')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          </TouchableOpacity>
+        </View>
 
         {/* Restore purchases — always visible */}
         <View style={[styles.restoreSection, { borderTopColor: colors.border }]}>
@@ -294,11 +269,11 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
-  planSubtitle: {
-    marginTop: spacingPixels[1],
-    maxWidth: '70%',
+  cardTitle: {
+    lineHeight: 28,
+    includeFontPadding: false,
   },
   badge: {
     borderRadius: radiusPixels.full,
@@ -318,21 +293,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[3],
     borderRadius: radiusPixels.lg,
     marginTop: spacingPixels[2],
-  },
-  billingIssueHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[3],
-    flex: 1,
-  },
-  billingIssueText: {
-    gap: spacingPixels[1],
-  },
-  billingIssueDesc: {
-    marginTop: spacingPixels[1],
-  },
-  expiredNote: {
-    marginTop: spacingPixels[1],
   },
   restoreSection: {
     borderTopWidth: 1,

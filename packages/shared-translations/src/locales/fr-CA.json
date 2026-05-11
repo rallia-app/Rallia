@@ -9366,8 +9366,8 @@
     }
   },
   "subscription": {
-    "pro_badge": "Pro",
-    "upgrade_cta": "Passer à Rallia Pro",
+    "pro_badge": "Plus",
+    "upgrade_cta": "Passer à Rallia Plus",
     "manage": "Gérer l'abonnement",
     "restore": "Restaurer les achats",
     "restore_success": "Abonnement restauré !",

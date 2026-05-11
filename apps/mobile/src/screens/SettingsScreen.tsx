@@ -319,22 +319,22 @@ const SettingsScreen: React.FC = () => {
           </View>
         )}
 
-        {/* Rallia Pro */}
-        {isOnboarded && (
+        {/* Rallia Plus — gated to admins for now */}
+        {isOnboarded && isAdmin && (
           <View style={[styles.settingsGroup, { backgroundColor: colors.background }]}>
-            {subscriptionStatus === 'active' || subscriptionStatus === 'cancelling' ? (
-              <SettingsItem
-                icon="star"
-                title={`Rallia Pro — ${t('subscription.status_active')}`}
-                onPress={() => navigation.navigate('SubscriptionManagement')}
-              />
-            ) : isAdmin ? (
-              <SettingsItem
-                icon="star-outline"
-                title={t('subscription.upgrade_cta')}
-                onPress={() => presentPaywall()}
-              />
-            ) : null}
+            <SettingsItem
+              icon={
+                subscriptionStatus === 'active' || subscriptionStatus === 'cancelling'
+                  ? 'star'
+                  : 'star-outline'
+              }
+              title={
+                subscriptionStatus === 'active' || subscriptionStatus === 'cancelling'
+                  ? `Rallia Plus — ${t('subscription.status_active')}`
+                  : 'Rallia Plus'
+              }
+              onPress={() => navigation.navigate('SubscriptionManagement')}
+            />
           </View>
         )}
 
