@@ -336,7 +336,9 @@ export const TournamentDetail: React.FC = () => {
     const map = new Map<string, string>();
     for (const r of registrations) {
       const p = profiles?.get(r.user_id);
-      const name = p?.display_name ?? p?.full_name;
+      const composedFromParts =
+        p?.first_name && p?.last_name ? `${p.first_name} ${p.last_name}` : p?.first_name || null;
+      const name = p?.display_name || composedFromParts;
       if (name) map.set(r.id, name);
     }
     return map;

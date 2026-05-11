@@ -107,7 +107,8 @@ export async function createTournament(input: CreateTournamentInput): Promise<To
 export interface PlayerProfile {
   id: string;
   display_name: string | null;
-  full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
   profile_picture_url: string | null;
 }
 
@@ -120,7 +121,7 @@ export async function getProfilesByIds(ids: string[]): Promise<Map<string, Playe
   if (ids.length === 0) return new Map();
   const { data, error } = await supabase
     .from('profile')
-    .select('id, display_name, full_name, profile_picture_url')
+    .select('id, display_name, first_name, last_name, profile_picture_url')
     .in('id', ids);
   if (error) throw new Error(error.message);
   const map = new Map<string, PlayerProfile>();
