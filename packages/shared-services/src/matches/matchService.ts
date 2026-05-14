@@ -960,7 +960,7 @@ export async function updateMatch(
   // ========================================
   // SYNC MATCH CONVERSATION TITLE
   // ========================================
-  const titleAffectingFields = ['format', 'matchDate'];
+  const titleAffectingFields = ['format', 'matchDate', 'startTime'];
   const hasTitleChanges = updatedFields.some(field => titleAffectingFields.includes(field));
 
   if (hasTitleChanges) {
