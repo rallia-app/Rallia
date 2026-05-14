@@ -833,26 +833,26 @@ const Home = () => {
     return () => setOnHomeScreen(false);
   }, [setOnHomeScreen]);
 
-  // Combined Just-for-you items (matches first, suggestions tail). Always
-  // exactly `matchLimit` long when fully loaded. Shape matches UnifiedFeedItem
-  // so we can pass it straight into FeedItemCard.
-  const justForYouItems = useMemo<UnifiedFeedItem[]>(
-    () => [
+  // Combined Just-for-you items interleaved in chronological order.
+  const justForYouItems = useMemo<UnifiedFeedItem[]>(() => {
+    const items: UnifiedFeedItem[] = [
       ...jfyMatches.map(m => ({
         kind: 'match' as const,
         key: `match:${m.id}`,
-        sortTime: 0,
+        sortTime: new Date(
+          m.start_time ? `${m.match_date}T${m.start_time}` : `${m.match_date}T00:00:00`
+        ).getTime(),
         data: m,
       })),
       ...jfySuggestions.map(s => ({
         kind: 'suggestion' as const,
         key: `suggestion:${s.opponentId}:${(s.slot.datetime as Date).getTime?.() ?? 0}`,
-        sortTime: 0,
+        sortTime: (s.slot.datetime as Date).getTime?.() ?? 0,
         data: s,
       })),
-    ],
-    [jfyMatches, jfySuggestions]
-  );
+    ];
+    return items.sort((a, b) => a.sortTime - b.sortTime);
+  }, [jfyMatches, jfySuggestions]);
 
   // Render section header with "Soon & Nearby" title, location selector, and "View All" button
   // Render section header with "Soon & Nearby" title and "View All" button

@@ -5,7 +5,7 @@
  * Accessible from the Home screen via the FAB.
  */
 
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { TouchableOpacity } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
@@ -24,7 +24,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { SuggestionCard } from './SuggestionCard';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { lightHaptic } from '@rallia/shared-utils';
+import {
+  lightHaptic,
+  getUpcomingDateSection,
+  UPCOMING_SECTION_ORDER,
+  type UpcomingDateSection,
+} from '@rallia/shared-utils';
 import { useTopSuggestions } from '@rallia/shared-hooks';
 import { suggestionSlotKey, useSuggestionInviteHandler } from '../hooks/useSuggestionInviteHandler';
 import { useThemeStyles, useTranslation, useEffectiveLocation } from '../hooks';
@@ -103,6 +108,37 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
   }));
 
   const totalCards = suggestions.length;
+
+  const sectionLabels = useMemo<Record<UpcomingDateSection, string>>(
+    () => ({
+      today: t('playerMatches.time.today'),
+      tomorrow: t('playerMatches.time.tomorrow'),
+      thisWeek: t('playerMatches.time.thisWeek'),
+      nextWeek: t('playerMatches.time.nextWeek'),
+      later: t('playerMatches.time.later'),
+    }),
+    [t]
+  );
+
+  // Group suggestions by date section in chronological order.
+  // Suggestions arrive score-ordered so we collect all items per section first,
+  // then emit sections in UPCOMING_SECTION_ORDER — preserving score rank within each section.
+  const groupedSuggestions = useMemo(() => {
+    const buckets: Partial<
+      Record<
+        UpcomingDateSection,
+        { suggestion: (typeof suggestions)[number]; originalIndex: number }[]
+      >
+    > = {};
+    suggestions.forEach((s, i) => {
+      const section = getUpcomingDateSection(s.slot.datetime as Date);
+      if (!buckets[section]) buckets[section] = [];
+      buckets[section]!.push({ suggestion: s, originalIndex: i });
+    });
+    return UPCOMING_SECTION_ORDER.filter(section => (buckets[section]?.length ?? 0) > 0).map(
+      section => ({ section, items: buckets[section]! })
+    );
+  }, [suggestions]);
   const cardOpacities = useRef(
     Array.from({ length: MAX_SUGGESTIONS }, () => makeMutable(0))
   ).current;
@@ -218,42 +254,51 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
           </View>
         ) : (
           <View style={styles.cardsContainer}>
-            {suggestions.map((s, index) => {
-              const slotKey = suggestionSlotKey(
-                s.opponentId,
-                s.facility.facilityId,
-                s.slot.datetime
-              );
-              const animStyle =
-                index < MAX_SUGGESTIONS
-                  ? {
-                      opacity: cardOpacities[index],
-                      transform: [{ translateY: cardTranslateYs[index] }],
-                    }
-                  : undefined;
-              return (
-                <Animated.View key={`c:${slotKey}:${index}`} style={animStyle}>
-                  <SuggestionCard
-                    suggestion={s}
-                    colors={{
-                      cardBackground: colors.cardBackground,
-                      text: colors.foreground,
-                      textSecondary: colors.textSecondary,
-                      textMuted: colors.textMuted,
-                      border: colors.border,
-                      buttonActive: colors.primary,
-                      buttonTextActive: '#ffffff',
-                    }}
-                    isDark={isDark}
-                    labels={cardLabels}
-                    locale={locale}
-                    onSendInvite={handleSendInvite}
-                    inviteState={inviteStates[slotKey] ?? 'idle'}
-                    source="sheet"
-                  />
-                </Animated.View>
-              );
-            })}
+            {groupedSuggestions.map(({ section, items }) => (
+              <React.Fragment key={section}>
+                <View style={[styles.sectionHeader, { backgroundColor: colors.cardBackground }]}>
+                  <Text size="sm" weight="semibold" color={colors.textMuted}>
+                    {sectionLabels[section]}
+                  </Text>
+                </View>
+                {items.map(({ suggestion: s, originalIndex }) => {
+                  const slotKey = suggestionSlotKey(
+                    s.opponentId,
+                    s.facility.facilityId,
+                    s.slot.datetime
+                  );
+                  const animStyle =
+                    originalIndex < MAX_SUGGESTIONS
+                      ? {
+                          opacity: cardOpacities[originalIndex],
+                          transform: [{ translateY: cardTranslateYs[originalIndex] }],
+                        }
+                      : undefined;
+                  return (
+                    <Animated.View key={`c:${slotKey}:${originalIndex}`} style={animStyle}>
+                      <SuggestionCard
+                        suggestion={s}
+                        colors={{
+                          cardBackground: colors.cardBackground,
+                          text: colors.foreground,
+                          textSecondary: colors.textSecondary,
+                          textMuted: colors.textMuted,
+                          border: colors.border,
+                          buttonActive: colors.primary,
+                          buttonTextActive: '#ffffff',
+                        }}
+                        isDark={isDark}
+                        labels={cardLabels}
+                        locale={locale}
+                        onSendInvite={handleSendInvite}
+                        inviteState={inviteStates[slotKey] ?? 'idle'}
+                        source="sheet"
+                      />
+                    </Animated.View>
+                  );
+                })}
+              </React.Fragment>
+            ))}
           </View>
         )}
       </ScrollView>
@@ -297,6 +342,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cardsContainer: {},
+  sectionHeader: {
+    paddingVertical: spacingPixels[2],
+    marginBottom: spacingPixels[1],
+  },
   loadingState: {
     alignItems: 'center',
   },

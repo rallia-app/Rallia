@@ -23,6 +23,7 @@ import {
   type MatchScoringPreferences,
   type UnifiedFeedItem,
 } from '@rallia/shared-hooks';
+import { getUpcomingDateSection, type UpcomingDateSection } from '@rallia/shared-utils';
 import {
   useAuth,
   useThemeStyles,
@@ -284,22 +285,46 @@ export default function PublicMatches() {
     return rawSuggestions.filter(s => doesSuggestionPassFilters(s, suggestionFilters, nowMs));
   }, [rawSuggestions, suggestionFilters]);
 
+  // Translate section labels once per locale change, not per match.
+  const upcomingSectionLabels = useMemo<Record<UpcomingDateSection, string>>(
+    () => ({
+      today: t('playerMatches.time.today'),
+      tomorrow: t('playerMatches.time.tomorrow'),
+      thisWeek: t('playerMatches.time.thisWeek'),
+      nextWeek: t('playerMatches.time.nextWeek'),
+      later: t('playerMatches.time.later'),
+    }),
+    [t]
+  );
+
   // Build the flat feed: matches first (chronological with score tiebreak),
   // then a single light "Suggestions for you" divider, then up-to-N suggestions
   // padding to a minimum of 30 total — but only once matches finish paginating.
   type PublicFeedRow =
     | { kind: 'item'; key: string; data: UnifiedFeedItem }
+    | { kind: 'section-header'; key: string; title: string }
     | { kind: 'frontier'; key: string };
   const feed = useMemo<PublicFeedRow[]>(() => {
-    const matchItems: PublicFeedRow[] = sortedMatches.map(m => ({
-      kind: 'item' as const,
-      key: `match:${m.id}`,
-      data: { kind: 'match', key: `match:${m.id}`, sortTime: 0, data: m } as UnifiedFeedItem,
-    }));
+    const matchItems: PublicFeedRow[] = [];
+    let currentSection = '';
+
+    sortedMatches.forEach(m => {
+      const section = getUpcomingDateSection(m.match_date);
+      const label = upcomingSectionLabels[section];
+      if (label !== currentSection) {
+        currentSection = label;
+        matchItems.push({ kind: 'section-header', key: `section:${section}`, title: label });
+      }
+      matchItems.push({
+        kind: 'item',
+        key: `match:${m.id}`,
+        data: { kind: 'match', key: `match:${m.id}`, sortTime: 0, data: m } as UnifiedFeedItem,
+      });
+    });
 
     // Suggestions only kick in when matches genuinely exhausted (no more pages)
     // and the feed has fewer than 30 real matches.
-    const padCount = Math.max(0, 30 - matchItems.length);
+    const padCount = Math.max(0, 30 - sortedMatches.length);
     if (padCount === 0 || hasNextPage) return matchItems;
 
     const suggestionItems: PublicFeedRow[] = filteredSuggestions.slice(0, padCount).map(s => ({
@@ -317,7 +342,7 @@ export default function PublicMatches() {
 
     const frontier: PublicFeedRow = { kind: 'frontier', key: 'frontier' };
     return [...matchItems, frontier, ...suggestionItems];
-  }, [sortedMatches, filteredSuggestions, hasNextPage]);
+  }, [sortedMatches, filteredSuggestions, hasNextPage, upcomingSectionLabels]);
 
   // Suggestion invite plumbing (shared with Home).
   const {
@@ -358,6 +383,15 @@ export default function PublicMatches() {
   // divider between the match block and the suggestion tail.
   const renderFeedItem = useCallback(
     ({ item }: { item: PublicFeedRow }) => {
+      if (item.kind === 'section-header') {
+        return (
+          <View style={[styles.sectionHeader, { backgroundColor: colors.background }]}>
+            <Text size="sm" weight="semibold" color={colors.textMuted}>
+              {item.title}
+            </Text>
+          </View>
+        );
+      }
       if (item.kind === 'frontier') {
         return (
           <View style={styles.frontierRow}>
@@ -650,6 +684,11 @@ const styles = StyleSheet.create({
   footerLoader: {
     padding: spacingPixels[4],
     alignItems: 'center',
+  },
+  sectionHeader: {
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[2],
+    marginBottom: spacingPixels[1],
   },
   frontierRow: {
     flexDirection: 'row',
