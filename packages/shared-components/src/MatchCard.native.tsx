@@ -1223,12 +1223,12 @@ const MatchCard: React.FC<MatchCardProps> = ({
   const tierRibbon = isMostWanted
     ? {
         label: t('match.tier.mostWanted' as TranslationKey),
-        bg: isDark ? accent[600] : accent[700],
+        bg: accent[600],
       }
     : isReadyToPlay
       ? {
           label: t('match.courtStatus.courtBooked'),
-          bg: isDark ? secondary[500] : secondary[600],
+          bg: secondary[500],
         }
       : isTopPlayer
         ? {
@@ -1237,7 +1237,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
                 ? 'match.tier.topPlayerPlural'
                 : 'match.tier.topPlayer') as TranslationKey
             ),
-            bg: isDark ? primary[500] : primary[600],
+            bg: primary[500],
           }
         : null;
 

@@ -1711,6 +1711,7 @@
     },
     "suggestions": {
       "title": "Vos meilleurs matchs",
+      "sheetTitle": "Suggestions personnalisées",
       "subtitle": "Des joueurs près de chez vous, sélectionnés selon votre niveau, vos disponibilités et vos terrains préférés",
       "sendInvite": "Envoyer l'invitation",
       "confirmTitle": "Envoyer l'invitation?",
@@ -3949,7 +3950,8 @@
     "quickNav": {
       "joinCommunity": "Rejoindre une communauté",
       "bookCourt": "Réserver un terrain",
-      "findGame": "Trouver une partie"
+      "findGame": "Trouver une partie",
+      "browseSuggestions": "Découvrir mes suggestions"
     },
     "myMatchesEmpty": {
       "title": "Aucune partie à venir",

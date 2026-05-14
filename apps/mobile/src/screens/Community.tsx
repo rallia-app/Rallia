@@ -23,7 +23,8 @@ import {
   type TranslationKey,
 } from '../hooks';
 import { useSport } from '../context';
-import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
+import { LinearGradient } from 'expo-linear-gradient';
 import { PlayerDirectory } from '../features/community';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import type { RootStackParamList, CommunityStackParamList } from '../navigation/types';
@@ -42,7 +43,7 @@ interface ActionButton {
 }
 
 const Community = () => {
-  const { colors, isDark } = useThemeStyles();
+  const { colors } = useThemeStyles();
   const { session } = useAuth();
   const { selectedSport } = useSport();
   const navigation = useNavigation<CommunityNavigationProp>();
@@ -62,15 +63,6 @@ const Community = () => {
       inputBackground: colors.inputBackground,
     }),
     [colors]
-  );
-
-  // Action button colors
-  const buttonColors = useMemo(
-    () => ({
-      background: isDark ? neutral[800] : primary[50],
-      iconColor: isDark ? primary[400] : primary[600],
-    }),
-    [isDark]
   );
 
   // Action button handlers
@@ -122,24 +114,30 @@ const Community = () => {
           {actionButtons.map(button => (
             <TouchableOpacity
               key={button.id}
-              style={[
-                styles.actionButton,
-                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-              ]}
+              style={styles.actionButton}
               onPress={button.onPress}
-              activeOpacity={0.7}
+              activeOpacity={0.85}
             >
-              <View style={[styles.actionButtonIcon, { backgroundColor: buttonColors.background }]}>
-                <Ionicons name={button.icon} size={28} color={buttonColors.iconColor} />
-              </View>
-              <Text
-                size="base"
-                weight="semibold"
-                color={colors.text}
-                style={styles.actionButtonLabel}
+              <LinearGradient
+                colors={[accent[400], accent[500], accent[600]]}
+                locations={[0, 0.55, 1]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionButtonGradient}
               >
-                {button.label}
-              </Text>
+                <View style={styles.actionButtonTopHighlight} />
+                <View style={styles.actionButtonIcon}>
+                  <Ionicons name={button.icon} size={28} color="#ffffff" />
+                </View>
+                <Text
+                  size="base"
+                  weight="semibold"
+                  color="#ffffff"
+                  style={styles.actionButtonLabel}
+                >
+                  {button.label}
+                </Text>
+              </LinearGradient>
             </TouchableOpacity>
           ))}
         </View>
@@ -151,7 +149,7 @@ const Community = () => {
         </View>
       </>
     ),
-    [actionButtons, buttonColors, colors.text, colors.cardBackground, colors.border, t]
+    [actionButtons, colors.text, t]
   );
 
   return (
@@ -172,12 +170,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  fabContainer: {
-    position: 'absolute',
-    bottom: spacingPixels[6],
-    right: spacingPixels[4],
-    alignItems: 'center',
-  },
   actionButtonsRow: {
     flexDirection: 'row',
     gap: spacingPixels[3],
@@ -189,17 +181,24 @@ const styles = StyleSheet.create({
     flex: 1,
     aspectRatio: 1.5,
     borderRadius: radiusPixels['2xl'],
-    borderWidth: 1,
+  },
+  actionButtonGradient: {
+    flex: 1,
+    borderRadius: radiusPixels['2xl'],
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacingPixels[2],
     paddingVertical: spacingPixels[4],
     paddingHorizontal: spacingPixels[3],
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    overflow: 'hidden',
+  },
+  actionButtonTopHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.35)',
   },
   actionButtonIcon: {
     width: 56,
@@ -207,6 +206,9 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
   },
   actionButtonLabel: {
     textAlign: 'center',

@@ -41,7 +41,7 @@ import { useSport, useUserHomeLocation, useActionsSheet } from '../../../context
 import { useCourtsNavigation } from '../../../navigation/hooks';
 import { useAppNavigation } from '../../../navigation/hooks';
 import { Logger } from '@rallia/shared-services';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, secondary } from '@rallia/design-system';
 import { FacilityCard, FacilityFiltersBar } from '../components';
 import { SportIcon } from '../../../components/SportIcon';
 import { lightHaptic } from '@rallia/shared-utils';
@@ -726,7 +726,7 @@ export default function FacilitiesDirectory() {
       {/* FAB Container */}
       <View style={styles.fabContainer}>
         <TouchableOpacity
-          style={[styles.fab, { backgroundColor: colors.primary }]}
+          style={[styles.fab, { backgroundColor: secondary[500] }]}
           onPress={() => {
             lightHaptic();
             rootNavigation.navigate('Map', {

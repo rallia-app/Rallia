@@ -245,7 +245,7 @@ export default function CommunitiesScreen() {
   const toast = useToast();
   const playerId = session?.user?.id;
 
-  const [activeTab, setActiveTab] = useState<TabType>('discover');
+  const [activeTab, setActiveTab] = useState<TabType>(playerId ? 'my-communities' : 'discover');
   const [showQRScanner, setShowQRScanner] = useState(false);
 
   const openScanner = useCallback(() => {
@@ -470,32 +470,6 @@ export default function CommunitiesScreen() {
   const renderTabs = useMemo(
     () => (
       <View style={[styles.tabContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === 'discover' && [
-              styles.activeTab,
-              { backgroundColor: colors.cardBackground },
-            ],
-          ]}
-          onPress={() => handleTabChange('discover')}
-        >
-          <Ionicons
-            name="compass-outline"
-            size={18}
-            color={activeTab === 'discover' ? colors.primary : colors.textMuted}
-          />
-          <Text
-            size="sm"
-            weight={activeTab === 'discover' ? 'semibold' : 'medium'}
-            style={{
-              color: activeTab === 'discover' ? colors.primary : colors.textMuted,
-              marginLeft: 6,
-            }}
-          >
-            {t('community.tabs.discover')}
-          </Text>
-        </TouchableOpacity>
         {/* Only show "My Communities" tab for authenticated users */}
         {playerId && (
           <TouchableOpacity
@@ -525,6 +499,32 @@ export default function CommunitiesScreen() {
             </Text>
           </TouchableOpacity>
         )}
+        <TouchableOpacity
+          style={[
+            styles.tab,
+            activeTab === 'discover' && [
+              styles.activeTab,
+              { backgroundColor: colors.cardBackground },
+            ],
+          ]}
+          onPress={() => handleTabChange('discover')}
+        >
+          <Ionicons
+            name="compass-outline"
+            size={18}
+            color={activeTab === 'discover' ? colors.primary : colors.textMuted}
+          />
+          <Text
+            size="sm"
+            weight={activeTab === 'discover' ? 'semibold' : 'medium'}
+            style={{
+              color: activeTab === 'discover' ? colors.primary : colors.textMuted,
+              marginLeft: 6,
+            }}
+          >
+            {t('community.tabs.discover')}
+          </Text>
+        </TouchableOpacity>
       </View>
     ),
     [colors, isDark, activeTab, handleTabChange, t, playerId]

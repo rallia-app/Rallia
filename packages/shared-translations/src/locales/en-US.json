@@ -1711,6 +1711,7 @@
     },
     "suggestions": {
       "title": "Your Top Matches",
+      "sheetTitle": "Personalized suggestions",
       "subtitle": "We found players near you that match your level, schedule, and court preferences",
       "sendInvite": "Send Game Invite",
       "confirmTitle": "Send game invite?",
@@ -3948,8 +3949,9 @@
     "myMatches": "My upcoming games",
     "quickNav": {
       "joinCommunity": "Join a community",
-      "bookCourt": "Book a court",
-      "findGame": "Find a game"
+      "bookCourt": "Reserve a court",
+      "findGame": "Find a game nearby",
+      "browseSuggestions": "Discover suggestions"
     },
     "myMatchesEmpty": {
       "title": "No upcoming games",

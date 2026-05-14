@@ -23,7 +23,7 @@ import {
   SkeletonMyMatchCard,
   useToast,
 } from '@rallia/shared-components';
-import { neutral } from '@rallia/design-system';
+
 import { lightHaptic } from '@rallia/shared-utils';
 import { SheetManager } from 'react-native-actions-sheet';
 import {
@@ -74,7 +74,8 @@ import {
   getPendingDeepLink,
   addDeepLinkListener,
 } from '../navigation/deepLinkStore';
-import { spacingPixels, radiusPixels, secondary } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, accent, neutral, secondary } from '@rallia/design-system';
+import { LinearGradient } from 'expo-linear-gradient';
 import TennisIcon from '../../assets/icons/tennis.svg';
 import PickleballIcon from '../../assets/icons/pickleball.svg';
 import TennisCourtIcon from '../../assets/icons/tennis-court.svg';
@@ -134,17 +135,23 @@ const SecondSportBanner: React.FC<{
   />
 );
 
-/** Single circular FAB-style quick-nav button — icon + label below.
- *  In English the label is rendered as a single line; in French it's split at
- *  the first space (first word on line 1, the rest on line 2) so the row
- *  reads consistently despite the longer FR copy. */
+// Splits a label at the last space so every quick-nav button renders exactly
+// two lines, regardless of locale. Single-word labels (rare) still take two
+// lines of vertical space — the second line is empty but reserves height so
+// the row stays visually aligned.
+const splitLabelTwoLines = (label: string): [string, string] => {
+  const trimmed = label.trim();
+  const lastSpace = trimmed.lastIndexOf(' ');
+  if (lastSpace === -1) return [trimmed, ' '];
+  return [trimmed.slice(0, lastSpace), trimmed.slice(lastSpace + 1)];
+};
+
 const QuickNavButton: React.FC<{
-  icon: React.ReactNode;
+  icon: (color: string) => React.ReactNode;
   label: string;
-  splitLabel: boolean;
   onPress: () => void;
-}> = ({ icon, label, splitLabel, onPress }) => {
-  const { colors } = useThemeStyles();
+}> = ({ icon, label, onPress }) => {
+  const [lineOne, lineTwo] = splitLabelTwoLines(label);
   const handlePress = () => {
     void lightHaptic();
     onPress();
@@ -152,33 +159,41 @@ const QuickNavButton: React.FC<{
   return (
     <TouchableOpacity
       onPress={handlePress}
-      activeOpacity={0.7}
+      activeOpacity={0.85}
       style={quickNavStyles.item}
       accessibilityRole="button"
       accessibilityLabel={label}
     >
-      <View style={[quickNavStyles.fab, { backgroundColor: secondary[500] }]}>{icon}</View>
-      {splitLabel ? (
-        (() => {
-          const firstSpace = label.indexOf(' ');
-          const lineOne = firstSpace === -1 ? label : label.slice(0, firstSpace);
-          const lineTwo = firstSpace === -1 ? '' : label.slice(firstSpace + 1);
-          return (
-            <View style={quickNavStyles.labelBlock}>
-              <Text size="xs" color={colors.text} style={quickNavStyles.label} numberOfLines={1}>
-                {lineOne}
-              </Text>
-              <Text size="xs" color={colors.text} style={quickNavStyles.label} numberOfLines={1}>
-                {lineTwo}
-              </Text>
-            </View>
-          );
-        })()
-      ) : (
-        <Text size="xs" color={colors.text} style={quickNavStyles.label} numberOfLines={1}>
-          {label}
-        </Text>
-      )}
+      <LinearGradient
+        colors={[accent[400], accent[500], accent[600]]}
+        locations={[0, 0.55, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={quickNavStyles.gradient}
+      >
+        <View style={quickNavStyles.topHighlight} />
+        <View style={quickNavStyles.iconCircle}>{icon('#ffffff')}</View>
+        <View style={quickNavStyles.labelBlock}>
+          <Text
+            size="sm"
+            weight="semibold"
+            color="#ffffff"
+            style={quickNavStyles.label}
+            numberOfLines={1}
+          >
+            {lineOne}
+          </Text>
+          <Text
+            size="sm"
+            weight="semibold"
+            color="#ffffff"
+            style={quickNavStyles.label}
+            numberOfLines={1}
+          >
+            {lineTwo}
+          </Text>
+        </View>
+      </LinearGradient>
     </TouchableOpacity>
   );
 };
@@ -186,29 +201,41 @@ const QuickNavButton: React.FC<{
 const quickNavStyles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'flex-start',
+    gap: spacingPixels[3],
     paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[5],
+    paddingTop: spacingPixels[2],
     paddingBottom: spacingPixels[2],
   },
   item: {
-    alignItems: 'center',
-    flex: 1,
-    gap: spacingPixels[1.5],
+    width: 150,
+    borderRadius: radiusPixels['2xl'],
   },
-  fab: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+  gradient: {
+    borderRadius: radiusPixels['2xl'],
     alignItems: 'center',
     justifyContent: 'center',
-    // Subtle elevation so the FABs feel raised against the screen background.
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
+    gap: spacingPixels[2],
+    paddingVertical: spacingPixels[4],
+    paddingHorizontal: spacingPixels[5],
+    overflow: 'hidden',
+  },
+  topHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.35)',
+  },
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
   },
   labelBlock: {
     alignItems: 'center',
@@ -1147,38 +1174,50 @@ const Home = () => {
       );
     }
 
-    // Quick-nav row: 3 circular FABs (community / book a court / find a game).
+    // Quick-nav row: 3 card buttons (community / book a court / find a game).
     // Shown for everyone — signed-out users land on the same destinations,
     // which gate themselves where needed.
     const SportIconComponent =
       selectedSport?.name?.toLowerCase() === 'pickleball' ? PickleballIcon : TennisIcon;
-    const splitQuickNavLabel = locale.startsWith('fr');
     headerComponents.push(
-      <View key="quick-nav" style={quickNavStyles.row}>
+      <ScrollView
+        key="quick-nav"
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={quickNavStyles.row}
+      >
+        {isOnboarded && (
+          <QuickNavButton
+            icon={color => <Ionicons name="sparkles" size={24} color={color} />}
+            label={t('home.quickNav.browseSuggestions')}
+            onPress={() => SheetManager.show('match-suggestions')}
+          />
+        )}
         <QuickNavButton
-          icon={<Ionicons name="people-outline" size={32} color="#FFFFFF" />}
+          icon={color => <SportIconComponent width={24} height={24} fill={color} />}
+          label={t('home.quickNav.findGame')}
+          onPress={() => navigation.navigate('PublicMatches')}
+        />
+        <QuickNavButton
+          icon={color => <Ionicons name="people-outline" size={24} color={color} />}
           label={t('home.quickNav.joinCommunity')}
-          splitLabel={splitQuickNavLabel}
           onPress={() =>
             appNavigation.navigate('Main', {
               screen: 'Community',
               params: {
                 screen: 'Communities',
-                // Keep PlayerDirectory as the Community tab root so back from
-                // Communities returns to the Community screen, not Home.
                 initial: false,
               },
             } as never)
           }
         />
         <QuickNavButton
-          icon={
+          icon={color => (
             <View style={{ transform: [{ rotate: '90deg' }] }}>
-              <TennisCourtIcon width={32} height={32} stroke="#FFFFFF" />
+              <TennisCourtIcon width={24} height={24} stroke={color} />
             </View>
-          }
+          )}
           label={t('home.quickNav.bookCourt')}
-          splitLabel={splitQuickNavLabel}
           onPress={() =>
             appNavigation.navigate('Main', {
               screen: 'Courts',
@@ -1186,13 +1225,7 @@ const Home = () => {
             } as never)
           }
         />
-        <QuickNavButton
-          icon={<SportIconComponent width={32} height={32} fill="#FFFFFF" />}
-          label={t('home.quickNav.findGame')}
-          splitLabel={splitQuickNavLabel}
-          onPress={() => navigation.navigate('PublicMatches')}
-        />
-      </View>
+      </ScrollView>
     );
 
     if (!session) {
@@ -1319,6 +1352,7 @@ const Home = () => {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <ScrollView
         ref={scrollRef}
+        style={{ backgroundColor: colors.background }}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -1442,7 +1476,7 @@ const Home = () => {
       <View style={styles.fabContainer}>
         {isOnboarded && (
           <TouchableOpacity
-            style={[styles.suggestionsFab, { backgroundColor: colors.primary }]}
+            style={[styles.suggestionsFab, { backgroundColor: secondary[500] }]}
             onPress={() => {
               lightHaptic();
               SheetManager.show('match-suggestions');
@@ -1502,9 +1536,9 @@ const styles = StyleSheet.create({
     gap: spacingPixels[3],
   },
   suggestionsFab: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -1523,10 +1557,10 @@ const styles = StyleSheet.create({
     paddingBottom: spacingPixels[2],
     gap: spacingPixels[4], // inter-card spacing (16px)
   },
-  // 340px slot per card — wider than standard but still leaves a peek of the
-  // next card on typical phone widths, signalling horizontal scrollability.
+  // 310px slot per card — leaves a clearer peek of the next card on typical
+  // phone widths, signalling horizontal scrollability.
   jfyCardWrapper: {
-    width: 340,
+    width: 320,
   },
   // MatchCard ships with marginHorizontal: spacingPixels[4] built in (so it
   // sits flush in vertical lists). In a horizontal carousel that margin would
@@ -1538,7 +1572,7 @@ const styles = StyleSheet.create({
   // Empty-state card matching the carousel's slot dimensions so the layout
   // doesn't shift when transitioning between loading / empty / data states.
   jfyEmptyCard: {
-    width: 340,
+    width: 320,
     paddingVertical: spacingPixels[6],
     paddingHorizontal: spacingPixels[4],
     alignItems: 'center',

@@ -167,7 +167,7 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
           </Animated.View>
         </TouchableOpacity>
         <Text size="lg" weight="bold" color={colors.foreground}>
-          {t('onboarding.suggestions.title')}
+          {t('onboarding.suggestions.sheetTitle')}
         </Text>
         <TouchableOpacity
           onPress={handleClose}
