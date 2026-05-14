@@ -142,7 +142,6 @@ export function useSuggestionInviteHandler(
         queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'player'] });
         queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'nearby'] });
         queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'public'] });
-        queryClient.invalidateQueries({ queryKey: ['matches', 'topSuggestions'] });
         onSendSuccess?.(payload, key);
       } catch {
         setInviteStates(prev => ({ ...prev, [key]: 'idle' }));
