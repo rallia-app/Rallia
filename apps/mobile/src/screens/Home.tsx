@@ -44,7 +44,6 @@ import {
 } from '../context';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import { CopilotStep, WalkthroughableView } from '../context/TourContext';
-import { FeedbackFAB } from '../components/BugReportFAB';
 import {
   useProfile,
   useTheme,
@@ -1453,7 +1452,6 @@ const Home = () => {
             <Ionicons name="sparkles" size={24} color="#ffffff" />
           </TouchableOpacity>
         )}
-        <FeedbackFAB />
       </View>
     </SafeAreaView>
   );

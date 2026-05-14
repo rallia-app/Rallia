@@ -45,7 +45,6 @@ import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { FacilityCard, FacilityFiltersBar } from '../components';
 import { SportIcon } from '../../../components/SportIcon';
 import { lightHaptic } from '@rallia/shared-utils';
-import { FeedbackFAB } from '../../../components/BugReportFAB';
 import { MyBookingCard } from '../../bookings/components';
 import { SheetManager } from 'react-native-actions-sheet';
 import type { FormattedSlot, CourtOption } from '@rallia/shared-hooks';
@@ -724,9 +723,8 @@ export default function FacilitiesDirectory() {
         ]}
         showsVerticalScrollIndicator={false}
       />
-      {/* FAB Container - Bug Report + Map */}
+      {/* FAB Container */}
       <View style={styles.fabContainer}>
-        <FeedbackFAB />
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: colors.primary }]}
           onPress={() => {

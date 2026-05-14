@@ -25,7 +25,6 @@ import {
 import { useSport } from '../context';
 import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
 import { PlayerDirectory } from '../features/community';
-import { FeedbackFAB } from '../components/BugReportFAB';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import type { RootStackParamList, CommunityStackParamList } from '../navigation/types';
 import type { CompositeNavigationProp } from '@react-navigation/native';
@@ -165,10 +164,6 @@ const Community = () => {
         onPlayerPress={handlePlayerPress}
         ListHeaderComponent={listHeader}
       />
-      {/* Bug Report FAB */}
-      <View style={styles.fabContainer}>
-        <FeedbackFAB />
-      </View>
     </SafeAreaView>
   );
 };

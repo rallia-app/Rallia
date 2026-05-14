@@ -48,7 +48,6 @@ import {
 import { useActionsSheet, useSport } from '../context';
 import { CopilotStep, WalkthroughableView } from '../context/TourContext';
 import SignInPrompt from '../components/SignInPrompt';
-import { FeedbackFAB } from '../components/BugReportFAB';
 import { SearchBar } from '../components/SearchBar';
 import { ConversationItem, ConversationFilterChips } from '../features/chat';
 import { useAppNavigation, useChatNavigation } from '../navigation/hooks';
@@ -528,7 +527,6 @@ const Chat = () => {
       />
 
       <View style={styles.fabContainer}>
-        <FeedbackFAB />
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: primary[500] }]}
           onPress={handleNewGroupPress}
