@@ -163,8 +163,42 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
   const handleAvatarPress = useCallback(() => {
     if (!suggestion.opponentId) return;
     lightHaptic();
+    if (source) {
+      const slotStart =
+        suggestion.slot.datetime instanceof Date
+          ? suggestion.slot.datetime.toISOString()
+          : new Date(suggestion.slot.datetime).toISOString();
+      Analytics.matchSuggestionAvatarTapped({
+        source,
+        opponent_id: suggestion.opponentId,
+        facility_id: suggestion.facility.facilityId,
+        slot_start: slotStart,
+        sport_id: sportId,
+        sport_name: sportName,
+        score: suggestion.score,
+        player_compatibility: suggestion.playerCompatibility,
+        facility_affinity: suggestion.facility.facilityAffinity,
+        rank: suggestion.rank,
+        match_type: suggestion.matchType,
+        match_duration: suggestion.matchDuration,
+      });
+    }
     navigateToPlayerProfile(suggestion.opponentId, sportId);
-  }, [navigateToPlayerProfile, suggestion.opponentId, sportId]);
+  }, [
+    navigateToPlayerProfile,
+    suggestion.opponentId,
+    suggestion.slot.datetime,
+    suggestion.facility.facilityId,
+    suggestion.facility.facilityAffinity,
+    suggestion.score,
+    suggestion.playerCompatibility,
+    suggestion.rank,
+    suggestion.matchType,
+    suggestion.matchDuration,
+    sportId,
+    sportName,
+    source,
+  ]);
 
   const cardScaleAnimation = useMemo(() => new Animated.Value(1), []);
   const handlePressIn = () => {

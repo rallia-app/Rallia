@@ -233,6 +233,30 @@ export function matchSuggestionInviteSent(props: {
   capture('match_suggestion_invite_sent', props);
 }
 
+/**
+ * Fires when a user taps the opponent avatar on a suggestion card, opening
+ * the player profile. Strongest available engagement signal between
+ * impression and invite — the user is investigating the opponent enough to
+ * leave the suggestion surface. Dimensions mirror the shown/invite events
+ * so the engagement funnel joins cleanly in PostHog.
+ */
+export function matchSuggestionAvatarTapped(props: {
+  source: SuggestionSource;
+  opponent_id: string;
+  facility_id: string;
+  slot_start: string;
+  sport_id?: string;
+  sport_name?: string;
+  score?: number;
+  player_compatibility?: number;
+  facility_affinity?: number;
+  rank?: number;
+  match_type?: string;
+  match_duration?: string;
+}): void {
+  capture('match_suggestion_avatar_tapped', props);
+}
+
 export function matchCheckInCompleted(props: { sport_id: string; sport_name: string }): void {
   capture('match_check_in_completed', props);
 }
