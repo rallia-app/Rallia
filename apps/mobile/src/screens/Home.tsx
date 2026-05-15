@@ -165,7 +165,7 @@ const QuickNavButton: React.FC<{
       accessibilityLabel={label}
     >
       <LinearGradient
-        colors={[accent[400], accent[500], accent[600]]}
+        colors={[accent[300], accent[400], accent[500]]}
         locations={[0, 0.55, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}

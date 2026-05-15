@@ -107,15 +107,17 @@ export function normalizeStorageUrl(
 
 /**
  * Whether the Supabase image-transformation render endpoint is available
- * in the current environment. The feature requires Pro plan and above, so
- * staging (Free) must opt out by setting the env var to "false".
- * Defaults to enabled when unset to preserve prod behavior.
+ * in the current environment. The feature requires Pro plan and above.
+ * On mobile, derived from EXPO_PUBLIC_APP_ENV (baked into the binary, OTA-safe).
+ * On web, controlled by NEXT_PUBLIC_ENABLE_IMAGE_TRANSFORM.
  */
 function isImageTransformEnabled(): boolean {
   if (typeof process === 'undefined' || !process.env) return true;
-  const raw =
-    process.env.EXPO_PUBLIC_ENABLE_IMAGE_TRANSFORM ??
-    process.env.NEXT_PUBLIC_ENABLE_IMAGE_TRANSFORM;
+  // Mobile: only production builds run on the Pro Supabase project
+  const appEnv = process.env.EXPO_PUBLIC_APP_ENV;
+  if (appEnv !== undefined) return appEnv === 'production';
+  // Web fallback
+  const raw = process.env.NEXT_PUBLIC_ENABLE_IMAGE_TRANSFORM;
   if (raw === undefined) return true;
   return raw !== 'false' && raw !== '0';
 }
