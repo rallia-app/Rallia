@@ -5,6 +5,7 @@
 
 import { supabase } from '../supabase';
 import { generateInvitationLink } from '../invitation/invitationLinkService';
+import { buildUtmUrl, type UtmParams } from '@rallia/shared-utils';
 
 // ============================================================================
 // TYPES
@@ -60,6 +61,8 @@ export interface ShareMatchInput {
   expiresInDays?: number; // Default 7 days
   /** Sender's referral code for attribution tracking */
   referralCode?: string;
+  /** Optional UTM params appended as query params for inbound attribution */
+  utm?: UtmParams;
 }
 
 export interface ShareMatchResult {
@@ -91,17 +94,24 @@ function generateShareToken(): string {
  * enabling referral attribution for the sender.
  * The optional share token enables per-recipient analytics tracking.
  */
-function generateShareLink(matchId: string, referralCode?: string, token?: string): string {
+function generateShareLink(
+  matchId: string,
+  referralCode?: string,
+  token?: string,
+  utm?: UtmParams
+): string {
   if (referralCode) {
     return generateInvitationLink({
       type: 'match',
       referralCode,
       targetId: matchId,
       shareToken: token,
+      utm,
     });
   }
   const base = `https://rallia.app/match/${matchId}`;
-  return token ? `${base}?share=${token}` : base;
+  const withToken = token ? `${base}?share=${token}` : base;
+  return utm ? buildUtmUrl(withToken, utm) : withToken;
 }
 
 /**
@@ -240,7 +250,7 @@ export async function shareMatchWithContacts(input: ShareMatchInput): Promise<Sh
     throw new Error(`Failed to create recipients: ${recipientsError.message}`);
   }
 
-  const shareLink = generateShareLink(input.matchId, input.referralCode, token);
+  const shareLink = generateShareLink(input.matchId, input.referralCode, token, input.utm);
   const shareMessage = await generateShareMessage(input.matchId, shareLink, senderName);
 
   return {

@@ -16,6 +16,7 @@ import { Text } from '@rallia/shared-components';
 import { lightTheme, darkTheme, spacingPixels, primary, neutral } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useTheme, useReferral } from '@rallia/shared-hooks';
+import { getReferralLink } from '@rallia/shared-services';
 import { useTranslation, type TranslationKey } from '../../../hooks/useTranslation';
 import { useAuth } from '../../../hooks';
 import { useLocale } from '../../../context';
@@ -117,8 +118,18 @@ export const InvitePlayersWizard: React.FC<InvitePlayersWizardProps> = ({
   const isDark = theme === 'dark';
 
   const playerId = session?.user?.id;
-  const { code, codeLoading, referralLink, stats, statsLoading, contest, leaderboard, myRank } =
-    useReferral(playerId, locale);
+  const { code, codeLoading, stats, statsLoading, contest, leaderboard, myRank } = useReferral(
+    playerId,
+    locale
+  );
+  const referralLink = code
+    ? getReferralLink(code, {
+        utm_source: 'app_share',
+        utm_medium: 'referral',
+        utm_campaign: 'referral_invite_2026',
+        utm_content: 'referral_wizard',
+      })
+    : undefined;
 
   const [activeTab, setActiveTab] = useState<'code' | 'qr' | 'contacts'>(initialTab ?? 'code');
 

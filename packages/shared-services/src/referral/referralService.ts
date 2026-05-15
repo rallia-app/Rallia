@@ -90,8 +90,11 @@ export async function getOrCreateReferralCode(playerId: string): Promise<string>
 /**
  * Get the referral link URL for a code (pure referral, no target)
  */
-export function getReferralLink(referralCode: string): string {
-  return generateInvitationLink({ type: 'referral', referralCode });
+export function getReferralLink(
+  referralCode: string,
+  utm?: import('@rallia/shared-utils').UtmParams
+): string {
+  return generateInvitationLink({ type: 'referral', referralCode, utm });
 }
 
 // ============================================================================

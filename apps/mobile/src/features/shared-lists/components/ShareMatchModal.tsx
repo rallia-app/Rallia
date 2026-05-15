@@ -386,6 +386,12 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
             phone: c.phone,
             email: c.email,
           })),
+          utm: {
+            utm_source: 'app_share',
+            utm_medium: 'referral',
+            utm_campaign: 'match_share_2026',
+            utm_content: 'shared_lists_modal',
+          },
         });
 
         if (channel === 'share_sheet' || channel === 'copy_link') {

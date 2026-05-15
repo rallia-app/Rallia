@@ -132,6 +132,15 @@ export function opponentFeedbackSubmitted(props: {
   capture('opponent_feedback_submitted', props);
 }
 
+export function matchFeedbackCompleted(props: {
+  match_id: string;
+  sport_id: string;
+  sport_name: string;
+  opponent_count: number;
+}): void {
+  capture('match_feedback_completed', props);
+}
+
 export function matchCreationAbandoned(props: {
   last_step: number;
   duration_seconds: number;

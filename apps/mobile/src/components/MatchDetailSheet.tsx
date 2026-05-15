@@ -1168,7 +1168,17 @@ export const MatchDetailSheet: React.FC = () => {
     if (!selectedMatch) return;
     lightHaptic();
     try {
-      await shareMatch(selectedMatch, { t, locale, referralCode });
+      await shareMatch(selectedMatch, {
+        t,
+        locale,
+        referralCode,
+        utm: {
+          utm_source: 'app_share',
+          utm_medium: 'referral',
+          utm_campaign: 'match_share_2026',
+          utm_content: 'match_detail',
+        },
+      });
       Analytics.matchShared({
         sport_id: selectedMatch.sport?.id ?? 'unknown',
         sport_name: selectedMatch.sport?.name ?? 'unknown',
