@@ -8,12 +8,20 @@
 
 import { useQuery } from '@tanstack/react-query';
 import {
-  fetchUnifiedAvailability,
+  hasLocalTemplates,
+  fetchLocalAvailability,
   filterFutureSlots,
   isToday,
   formatSlotTime,
+  supabase,
   type AvailabilitySlot,
 } from '@rallia/shared-services';
+
+// Mirror the snapshot's coverage window. Anything beyond this is not in
+// the snapshot, so the hook would return empty for it anyway.
+const SNAPSHOT_HORIZON_DAYS = 3;
+const COLD_START_POLL_INTERVAL_MS = 1000;
+const COLD_START_POLL_MAX_ATTEMPTS = 10;
 
 // =============================================================================
 // TYPES
@@ -315,6 +323,139 @@ function groupSlotsByTime(slots: AvailabilitySlot[]): GroupedSlot[] {
 }
 
 // =============================================================================
+// SNAPSHOT → AvailabilitySlot ADAPTER
+// =============================================================================
+
+interface SnapshotRow {
+  external_court_id: string;
+  slot_start: string;
+  slot_end: string;
+  external_slot_id: string | null;
+  court_name: string | null;
+  court_number: number | null;
+  price_cents: number | null;
+  currency: string | null;
+  source: string;
+}
+
+/**
+ * Provider-specific booking-URL builder, replicating the logic that
+ * `IC3OtiumProvider.buildBookingUrl` and `ActivityMessengerProvider.buildBookingUrl`
+ * apply at fetch time. The snapshot stores raw provider data, not the
+ * built URL, so we reconstruct here.
+ */
+function buildSnapshotBookingUrl(
+  template: string | null,
+  providerType: string | null,
+  externalProviderId: string | null,
+  row: SnapshotRow
+): string | null {
+  if (!template) return null;
+
+  if (providerType === 'ic3_otium') {
+    if (!row.external_slot_id) return null;
+    const formatDT = (s: string) => new Date(s).toISOString().replace(/\.\d{3}Z$/, 'Z');
+    return template
+      .replace('{facilityId}', row.external_court_id)
+      .replace('{startDateTime}', formatDT(row.slot_start))
+      .replace('{endDateTime}', formatDT(row.slot_end))
+      .replace('{facilityScheduleId}', row.external_slot_id);
+  }
+
+  if (providerType === 'activity_messenger') {
+    // ActivityMessenger URLs point at the package overview page, not a
+    // specific slot — so every slot at this facility shares one URL.
+    if (!externalProviderId) return null;
+    return template.replace('{packageId}', externalProviderId);
+  }
+
+  return null;
+}
+
+/**
+ * Convert raw snapshot rows into the AvailabilitySlot shape the rest of the
+ * hook (groupSlotsByTime, formatting, etc.) already knows how to consume.
+ */
+function snapshotRowsToAvailabilitySlots(
+  rows: SnapshotRow[],
+  bookingUrlTemplate: string | null,
+  providerType: string | null,
+  externalProviderId: string | null,
+  sportName?: string
+): AvailabilitySlot[] {
+  const sportFilter = sportName ? sportName.toLowerCase() : null;
+  const out: AvailabilitySlot[] = [];
+  for (const row of rows) {
+    // Sport filter — snapshot stores all sports for a facility (refresh
+    // worker queries the provider without a sport filter). When the caller
+    // is on a sport-specific screen, narrow by substring on court_name,
+    // matching how IC3/AM expose sport in their court labels.
+    if (sportFilter && row.court_name) {
+      if (!row.court_name.toLowerCase().includes(sportFilter)) continue;
+    }
+    const slotStart = new Date(row.slot_start);
+    const slotEnd = new Date(row.slot_end);
+    const bookingUrl = buildSnapshotBookingUrl(
+      bookingUrlTemplate,
+      providerType,
+      externalProviderId,
+      row
+    );
+    out.push({
+      datetime: slotStart,
+      endDateTime: slotEnd,
+      courtCount: 1,
+      facilityId: row.external_court_id,
+      facilityScheduleId: row.external_slot_id ?? row.external_court_id,
+      courtName: row.court_name ?? undefined,
+      shortCourtName: row.court_name ?? undefined,
+      courtNumber: row.court_number ?? undefined,
+      bookingUrl: bookingUrl ?? undefined,
+      price: row.price_cents != null ? row.price_cents / 100 : undefined,
+      currency: row.currency ?? undefined,
+    });
+  }
+  return out;
+}
+
+async function readSnapshotRows(facilityId: string): Promise<SnapshotRow[]> {
+  const now = new Date();
+  const horizonEnd = new Date(now.getTime() + SNAPSHOT_HORIZON_DAYS * 24 * 60 * 60 * 1000);
+  const { data, error } = await supabase
+    .from('facility_availability_snapshot')
+    .select(
+      'external_court_id, slot_start, slot_end, external_slot_id, court_name, court_number, price_cents, currency, source'
+    )
+    .eq('facility_id', facilityId)
+    .eq('is_available', true)
+    .gte('slot_start', now.toISOString())
+    .lte('slot_start', horizonEnd.toISOString())
+    .order('slot_start');
+  if (error) {
+    console.warn('[useCourtAvailability] snapshot read error:', error.message);
+    return [];
+  }
+  return (data ?? []) as SnapshotRow[];
+}
+
+async function readEverRefreshed(facilityId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('facility_refresh_log')
+    .select('facility_id')
+    .eq('facility_id', facilityId)
+    .maybeSingle();
+  if (error) {
+    console.warn('[useCourtAvailability] refresh log read error:', error.message);
+    return false;
+  }
+  return !!data;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// =============================================================================
 // HOOK
 // =============================================================================
 
@@ -364,33 +505,84 @@ export function useCourtAvailability(
     queryKey: courtAvailabilityKeys.facilityWithDates(facilityId, dates),
     queryFn: async () => {
       try {
-        // Use unified availability service (local-first)
-        const result = await fetchUnifiedAvailability({
-          facilityId,
-          dates,
-          dataProviderId,
-          externalProviderId,
-          searchString: sportName,
-        });
+        // Local-first: org-managed facilities serve from in-app templates,
+        // never go through the snapshot. Same path as before.
+        const hasLocal = await hasLocalTemplates(facilityId);
+        if (hasLocal) {
+          const result = await fetchLocalAvailability(facilityId, dates);
+          if (!result.success) {
+            console.warn(`[useCourtAvailability] Local fetch error: ${result.error}`);
+            return [];
+          }
+          return result.slots;
+        }
 
-        if (!result.success) {
-          console.warn(`[useCourtAvailability] Unified fetch error: ${result.error}`);
+        // No local templates AND no external provider → nothing to serve.
+        // Preserves the original behavior where the hook was gated off
+        // entirely for these facilities.
+        if (!hasProvider) {
           return [];
         }
 
-        return result.slots;
+        // External-provider path: read the snapshot. Step 1-2 populate it;
+        // Step 3 keeps it warm via the suggestion-service SWR trigger.
+        // Here we add a focused cold-start poll so a user opening this
+        // facility for the first time doesn't see an empty state.
+        const [snapshotRows, everRefreshed] = await Promise.all([
+          readSnapshotRows(facilityId),
+          readEverRefreshed(facilityId),
+        ]);
+
+        if (everRefreshed) {
+          // Snapshot has data (possibly empty if the provider had no
+          // inventory in the window). Always trigger a refresh: the DB-side
+          // RPC filters by snapshot_needs_refresh, so this is a no-op when
+          // the data is already fresh. Fire-and-forget.
+          void supabase.rpc('request_facility_refresh', {
+            p_facility_ids: [facilityId],
+          });
+          return snapshotRowsToAvailabilitySlots(
+            snapshotRows,
+            _bookingUrlTemplate,
+            dataProviderType,
+            externalProviderId,
+            sportName
+          );
+        }
+
+        // Cold start: trigger a refresh and poll briefly for snapshot
+        // rows to appear. After the poll budget elapses we return what's
+        // there (possibly empty) — TanStack will refetch on the next user
+        // interaction.
+        await supabase.rpc('request_facility_refresh', {
+          p_facility_ids: [facilityId],
+        });
+        for (let i = 0; i < COLD_START_POLL_MAX_ATTEMPTS; i++) {
+          await sleep(COLD_START_POLL_INTERVAL_MS);
+          const polled = await readSnapshotRows(facilityId);
+          if (polled.length > 0) {
+            return snapshotRowsToAvailabilitySlots(
+              polled,
+              _bookingUrlTemplate,
+              dataProviderType,
+              externalProviderId,
+              sportName
+            );
+          }
+        }
+        return [];
       } catch (error) {
         console.warn('[useCourtAvailability] Failed to fetch availability:', error);
-        return []; // Graceful degradation
+        return [];
       }
     },
-    // Only fire when an external provider is configured — this prevents 80+ unnecessary
-    // network requests when FlatList renders many cards at once (Android network stack
-    // overload). Facilities with local templates but no external provider are rare and
-    // handled separately in FacilityDetail.
-    enabled: enabled && hasProvider,
-    staleTime: 30 * 1000, // 30 seconds
-    gcTime: 5 * 60 * 1000, // 5 minutes
+    // hasProvider gates the external path; the queryFn handles the local
+    // branch internally, so the hook is still enabled when only local
+    // templates exist. We can't introspect that here (it's an async
+    // check), so we trust the caller's enabled flag.
+    enabled: enabled && (hasProvider || !!facilityId),
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: 1,
     retryDelay: 1000,

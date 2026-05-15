@@ -3,6 +3,7 @@ import {
   generateFixedHourSlots,
   hasTimeConflict,
   type BusySlot,
+  type FacilitySnapshot,
 } from './suggestionService';
 import type { OverlapSlot } from './suggestionService';
 
@@ -268,5 +269,87 @@ describe('generateFixedHourSlots', () => {
     const slots = generateFixedHourSlots(overlaps, window, [], [], now);
     const hours = slots.map(s => s.datetime.getHours()).sort((a, b) => a - b);
     expect(hours).toEqual([8, 10, 18, 20]);
+  });
+
+  // ───────────────────────────────────────────────────────────────────
+  // Snapshot filter (Step 5)
+  // ───────────────────────────────────────────────────────────────────
+
+  it('keeps all overlap slots when no snapshot is provided (cold start)', () => {
+    const window = buildWindow('2026-05-11');
+    const overlaps: OverlapSlot[] = [{ day: 'monday', period: 'morning' }];
+    const now = new Date('2026-05-11T06:00:00');
+    // No snapshot argument: emit everything the overlap allows.
+    const slots = generateFixedHourSlots(overlaps, window, [], [], now);
+    expect(slots.map(s => s.datetime.getHours()).sort((a, b) => a - b)).toEqual([8, 10]);
+  });
+
+  it('drops within-horizon slots that are not in the snapshot', () => {
+    const window = buildWindow('2026-05-11');
+    const overlaps: OverlapSlot[] = [{ day: 'monday', period: 'morning' }];
+    const now = new Date('2026-05-11T06:00:00');
+    // Snapshot only confirms the 10:00 slot is bookable, not the 08:00 one.
+    const tenAm = new Date('2026-05-11T10:00:00');
+    const snapshot: FacilitySnapshot = {
+      available: new Set([tenAm.toISOString()]),
+    };
+    const slots = generateFixedHourSlots(overlaps, window, [], [], now, snapshot);
+    expect(slots.map(s => s.datetime.getHours())).toEqual([10]);
+  });
+
+  it('emits within-horizon slots that ARE in the snapshot', () => {
+    const window = buildWindow('2026-05-11');
+    const overlaps: OverlapSlot[] = [{ day: 'monday', period: 'morning' }];
+    const now = new Date('2026-05-11T06:00:00');
+    const eightAm = new Date('2026-05-11T08:00:00');
+    const tenAm = new Date('2026-05-11T10:00:00');
+    const snapshot: FacilitySnapshot = {
+      available: new Set([eightAm.toISOString(), tenAm.toISOString()]),
+    };
+    const slots = generateFixedHourSlots(overlaps, window, [], [], now, snapshot);
+    expect(slots.map(s => s.datetime.getHours()).sort((a, b) => a - b)).toEqual([8, 10]);
+  });
+
+  it('drops all slots when refreshed-but-empty snapshot is passed', () => {
+    const window = buildWindow('2026-05-11');
+    const overlaps: OverlapSlot[] = [{ day: 'monday', period: 'morning' }];
+    const now = new Date('2026-05-11T06:00:00');
+    // Empty Set = facility was refreshed, provider returned nothing in the
+    // upcoming window. Hard "no inventory" signal.
+    const snapshot: FacilitySnapshot = { available: new Set() };
+    const slots = generateFixedHourSlots(overlaps, window, [], [], now, snapshot);
+    expect(slots).toEqual([]);
+  });
+
+  it('emits beyond-horizon slots speculatively even when snapshot is provided', () => {
+    // Window starts Monday 2026-05-11, snapshot horizon is 3 days.
+    // The Friday 2026-05-15 slot lies past the 3-day horizon, so the snapshot
+    // filter should NOT apply to it.
+    const window = buildWindow('2026-05-11');
+    const overlaps: OverlapSlot[] = [{ day: 'friday', period: 'morning' }];
+    const now = new Date('2026-05-11T06:00:00');
+    // Snapshot is empty — within horizon this would drop everything, but
+    // Friday is beyond horizon, so emission should still happen.
+    const snapshot: FacilitySnapshot = { available: new Set() };
+    const slots = generateFixedHourSlots(overlaps, window, [], [], now, snapshot);
+    expect(slots).toHaveLength(2); // 8 + 10 AM on Friday
+    expect(slots.every(s => s.datetime.getDay() === 5 /* Friday */)).toBe(true);
+  });
+
+  it('combines snapshot filter with busy-slot conflict on the same slot', () => {
+    const window = buildWindow('2026-05-11');
+    const overlaps: OverlapSlot[] = [{ day: 'monday', period: 'morning' }];
+    const now = new Date('2026-05-11T06:00:00');
+    const eightAm = new Date('2026-05-11T08:00:00');
+    const tenAm = new Date('2026-05-11T10:00:00');
+    // Both slots are in the snapshot, but 10 AM conflicts with caller busy.
+    const snapshot: FacilitySnapshot = {
+      available: new Set([eightAm.toISOString(), tenAm.toISOString()]),
+    };
+    const callerBusy: BusySlot[] = [
+      { matchDate: '2026-05-11', startTime: '10:00', endTime: '11:00' },
+    ];
+    const slots = generateFixedHourSlots(overlaps, window, callerBusy, [], now, snapshot);
+    expect(slots.map(s => s.datetime.getHours())).toEqual([8]);
   });
 });
