@@ -49,6 +49,14 @@ interface ScoredMatchup {
   player_compatibility: number;
   facility_affinity: number;
   matchup_score: number;
+  /**
+   * Caller↔opponent history score in [-0.5, +0.5]. Computed in the RPC by
+   * folding past matches, star feedback, favorites, shared networks, etc.
+   * Applied as a 0.5× signed boost to player_compatibility before that
+   * field is returned. Surfaced here so the TS layer can pass it through
+   * to PostHog events for funnel analysis.
+   */
+  score_history: number;
 }
 
 export interface OverlapSlot {
@@ -92,6 +100,12 @@ export interface SlotSuggestion {
   score: number;
   /** Per-opponent compatibility from the RPC, before per-slot boosts. */
   playerCompatibility: number;
+  /**
+   * Caller↔opponent history score in [-0.5, +0.5]. Pass-through from the
+   * RPC. Surfaces to analytics events so PostHog can break down conversion
+   * by history bucket.
+   */
+  scoreHistory: number;
   /**
    * 1-indexed rank within the result list. Populated by `pickTopGlobal`
    * (and other top-level selectors). Surfaces to analytics so we can
@@ -705,6 +719,7 @@ function toSlotSuggestion(t: {
     slot: t.slot,
     score: t.score,
     playerCompatibility: Number(r.player_compatibility),
+    scoreHistory: Number(r.score_history ?? 0),
   };
 }
 

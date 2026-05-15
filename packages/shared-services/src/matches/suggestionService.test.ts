@@ -41,6 +41,7 @@ function makeTriplet(opts: {
       player_compatibility: 0.5,
       facility_affinity: 0.5,
       matchup_score: 0.5,
+      score_history: 0,
     } as Parameters<typeof pickTopGlobal>[0][number]['row'],
     slot: {
       datetime: date,

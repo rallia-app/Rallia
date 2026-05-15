@@ -140,6 +140,7 @@ export function useSuggestionInviteHandler(
             score: suggestion.score,
             player_compatibility: suggestion.playerCompatibility,
             facility_affinity: suggestion.facility.facilityAffinity,
+            score_history: suggestion.scoreHistory,
             rank: suggestion.rank,
             match_type: suggestion.matchType,
             match_duration: suggestion.matchDuration,

@@ -206,6 +206,8 @@ export function matchSuggestionShown(props: {
   player_compatibility?: number;
   /** Facility-affinity score from the RPC. */
   facility_affinity?: number;
+  /** Caller↔opponent history score (RPC-provided). */
+  score_history?: number;
   /** 1-indexed position in the surface's list at the moment of impression. */
   rank?: number;
   match_type?: string;
@@ -226,6 +228,7 @@ export function matchSuggestionInviteSent(props: {
   score?: number;
   player_compatibility?: number;
   facility_affinity?: number;
+  score_history?: number;
   rank?: number;
   match_type?: string;
   match_duration?: string;
@@ -250,6 +253,7 @@ export function matchSuggestionAvatarTapped(props: {
   score?: number;
   player_compatibility?: number;
   facility_affinity?: number;
+  score_history?: number;
   rank?: number;
   match_type?: string;
   match_duration?: string;

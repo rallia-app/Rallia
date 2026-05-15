@@ -7421,6 +7421,7 @@ export type Database = {
           opponent_reputation_tier: Database["public"]["Enums"]["reputation_tier"]
           overlapping_days_periods: Json
           player_compatibility: number
+          score_history: number
         }[]
       }
       get_match_type_types: {
@@ -8466,6 +8467,10 @@ export type Database = {
         Returns: number
       }
       player_activity_score: { Args: { p_player_id: string }; Returns: number }
+      player_history_score: {
+        Args: { p_caller_id: string; p_opponent_id: string }
+        Returns: number
+      }
       player_responsiveness_score: {
         Args: { p_player_id: string; p_window_days?: number }
         Returns: number
@@ -8798,6 +8803,10 @@ export type Database = {
       snapshot_needs_refresh: {
         Args: { p_facility_id: string }
         Returns: boolean
+      }
+      snapshot_prewarm_facility_ids: {
+        Args: { p_limit?: number }
+        Returns: string[]
       }
       snapshot_record_refresh_error: {
         Args: { p_error: string; p_facility_id: string; p_source: string }
