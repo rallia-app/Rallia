@@ -1219,11 +1219,14 @@ const MatchCard: React.FC<MatchCardProps> = ({
       ? `${primary[400]}40`
       : `${primary[500]}20`;
 
-  // Tier ribbon badge config — one hue per tier (gold / red / teal)
+  // Tier ribbon badge config — one hue per tier (gold / red / teal).
+  // mostWanted uses the same gold anchor as Home's quick-nav buttons
+  // (accent[500] light / accent[400] dark) instead of accent[600] which
+  // skewed orange.
   const tierRibbon = isMostWanted
     ? {
         label: t('match.tier.mostWanted' as TranslationKey),
-        bg: accent[600],
+        bg: isDark ? accent[400] : accent[500],
       }
     : isReadyToPlay
       ? {

@@ -4,16 +4,23 @@
  * availability preview, and favorite toggle.
  */
 
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, Animated, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { Text, Skeleton } from '@rallia/shared-components';
+import {
+  spacingPixels,
+  radiusPixels,
+  primary,
+  status,
+  lightTheme,
+  darkTheme,
+} from '@rallia/design-system';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useCourtAvailability, type FormattedSlot } from '@rallia/shared-hooks';
 import { useAuth } from '../../../context';
-import { useRequireOnboarding } from '../../../hooks';
+import { useRequireOnboarding, useThemeStyles } from '../../../hooks';
 import { SportIcon } from '../../../components/SportIcon';
 import * as Analytics from '../../../services/analytics';
 import type { TranslationKey, TranslationOptions } from '../../../hooks';
@@ -30,9 +37,13 @@ interface FacilityCardProps {
   sportName?: string;
   /** Callback when a slot is pressed - receives facility and slot for court selection handling */
   onSlotPress?: (facility: FacilitySearchResult, slot: FormattedSlot) => void;
-  /** Whether dark mode is active */
-  isDark: boolean;
-  colors: {
+  /**
+   * Kept for API parity with existing callers. The card derives its own
+   * theme-aware surface internally (mirrors PlayerCard / MatchCard), so these
+   * props no longer influence the card's framing.
+   */
+  isDark?: boolean;
+  colors?: {
     card: string;
     cardForeground: string;
     text: string;
@@ -48,41 +59,81 @@ interface FacilityCardProps {
 // SKELETON SLOT PLACEHOLDER
 // =============================================================================
 
-function SlotSkeleton({ color }: { color: string }) {
-  const pulseAnim = useMemo(() => new Animated.Value(0.3), []);
+// Static loading "schedule" — varies chip counts and court-badge presence so
+// the loading state reads as a plausible availability snapshot.
+const SLOT_SKELETON_SCHEDULE: Array<{
+  labelWidth: number;
+  chips: Array<{ timeWidth: number; hasCourtBadge: boolean }>;
+}> = [
+  {
+    labelWidth: 38,
+    chips: [
+      { timeWidth: 36, hasCourtBadge: true },
+      { timeWidth: 32, hasCourtBadge: false },
+      { timeWidth: 36, hasCourtBadge: true },
+    ],
+  },
+  {
+    labelWidth: 30,
+    chips: [
+      { timeWidth: 36, hasCourtBadge: true },
+      { timeWidth: 36, hasCourtBadge: true },
+    ],
+  },
+  {
+    labelWidth: 32,
+    chips: [
+      { timeWidth: 32, hasCourtBadge: false },
+      { timeWidth: 36, hasCourtBadge: true },
+    ],
+  },
+];
 
-  useEffect(() => {
-    const pulse = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 0.7,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 0.3,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    pulse.start();
-    return () => pulse.stop();
-  }, [pulseAnim]);
+interface SlotSkeletonProps {
+  borderColor: string;
+  chipFill: string;
+  skeletonBg: string;
+  skeletonHighlight: string;
+}
 
+function SlotSkeleton({ borderColor, chipFill, skeletonBg, skeletonHighlight }: SlotSkeletonProps) {
   return (
-    <View style={styles.slotsSkeletonRow}>
-      {[1, 2, 3].map(i => (
-        <Animated.View
-          key={i}
-          style={{
-            width: 56,
-            height: 24,
-            borderRadius: 12,
-            backgroundColor: color,
-            opacity: pulseAnim,
-          }}
-        />
+    <View style={styles.slotsLoadingScroller}>
+      {SLOT_SKELETON_SCHEDULE.map((group, groupIdx) => (
+        <View key={groupIdx} style={styles.dateGroup}>
+          <Skeleton
+            width={group.labelWidth}
+            height={12}
+            borderRadius={3}
+            backgroundColor={skeletonBg}
+            highlightColor={skeletonHighlight}
+          />
+          <View style={styles.dateSlotsRow}>
+            {group.chips.map((chip, chipIdx) => (
+              <View
+                key={chipIdx}
+                style={[styles.slotChipSkeleton, { borderColor, backgroundColor: chipFill }]}
+              >
+                <Skeleton
+                  width={chip.timeWidth}
+                  height={12}
+                  borderRadius={3}
+                  backgroundColor={skeletonBg}
+                  highlightColor={skeletonHighlight}
+                />
+                {chip.hasCourtBadge && (
+                  <Skeleton
+                    width={14}
+                    height={14}
+                    circle
+                    backgroundColor={skeletonBg}
+                    highlightColor={skeletonHighlight}
+                  />
+                )}
+              </View>
+            ))}
+          </View>
+        </View>
       ))}
     </View>
   );
@@ -108,13 +159,48 @@ export default function FacilityCard({
   showFavoriteButton,
   sportName,
   onSlotPress,
-  isDark,
-  colors,
   t,
 }: FacilityCardProps) {
   const { isAuthenticated } = useAuth();
   const { guardAction } = useRequireOnboarding();
+  const { isDark } = useThemeStyles();
   const canShowFavorite = showFavoriteButton !== undefined ? showFavoriteButton : isAuthenticated;
+
+  // Derive theme/tier colors using the exact same pattern as PlayerCard /
+  // MatchCard so the three card surfaces stay visually identical.
+  const themeColors = isDark ? darkTheme : lightTheme;
+  const cardBackground = isDark ? primary[950] : primary[50];
+  const dynamicBorderColor = isDark ? `${primary[400]}40` : `${primary[500]}20`;
+  const textColor = themeColors.foreground;
+  const mutedColor = themeColors.mutedForeground;
+  const tierAccent = isDark ? primary[400] : primary[500];
+  const successColor = isDark ? status.success.light : status.success.DEFAULT;
+  const warningColor = isDark ? status.warning.light : status.warning.DEFAULT;
+  // Slot-skeleton colors mirror FacilityCardSkeleton — tinted shades one step
+  // off the card surface, plus the inactive-chip background tone for chip fill.
+  const slotSkeletonBg = isDark ? primary[900] : primary[100];
+  const slotSkeletonHighlight = isDark ? primary[800] : primary[50];
+  const slotChipFill = isDark ? `${primary[400]}10` : `${primary[500]}08`;
+
+  const scaleAnim = useMemo(() => new Animated.Value(1), []);
+
+  const handlePressIn = useCallback(() => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.975,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 0,
+    }).start();
+  }, [scaleAnim]);
+
+  const handlePressOut = useCallback(() => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 4,
+    }).start();
+  }, [scaleAnim]);
 
   const handleFavoritePress = useCallback(() => {
     lightHaptic();
@@ -160,285 +246,293 @@ export default function FacilityCard({
   const favoriteDisabled = !isFavorite && isMaxFavoritesReached;
 
   return (
-    <TouchableOpacity
-      style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <View style={styles.content}>
-        {/* Header row with name and favorite */}
-        <View style={styles.headerRow}>
-          <View style={styles.nameContainer}>
-            <Text size="base" weight="semibold" color={colors.text} numberOfLines={1}>
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <TouchableOpacity
+        style={[styles.card, { backgroundColor: cardBackground, borderColor: dynamicBorderColor }]}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        activeOpacity={1}
+        accessibilityRole="button"
+        accessibilityLabel={facility.name}
+      >
+        <View style={styles.content}>
+          {/* Row 1: name + favorite */}
+          <View style={styles.headerRow}>
+            <Text
+              size="base"
+              weight="bold"
+              color={textColor}
+              numberOfLines={1}
+              style={styles.nameText}
+            >
               {facility.name}
             </Text>
-          </View>
-          {canShowFavorite && (
-            <TouchableOpacity
-              onPress={handleFavoritePress}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              disabled={favoriteDisabled}
-              style={[styles.favoriteButton, favoriteDisabled && styles.favoriteButtonDisabled]}
-            >
-              <Ionicons
-                name={isFavorite ? 'heart' : 'heart-outline'}
-                size={24}
-                color={
-                  isFavorite ? colors.error : favoriteDisabled ? colors.textMuted : colors.textMuted
-                }
-              />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Address row */}
-        {addressText && (
-          <View style={styles.addressRow}>
-            <Ionicons name="location-outline" size={14} color={colors.textMuted} />
-            <Text size="sm" color={colors.textMuted} numberOfLines={1} style={styles.addressText}>
-              {addressText}
-            </Text>
-          </View>
-        )}
-
-        {/* Distance, court count, and upcoming matches row */}
-        {(distanceText || !!facility.court_count || !!facility.upcoming_match_count) && (
-          <View style={styles.distanceRow}>
-            {distanceText && (
-              <>
-                <Ionicons name="navigate-outline" size={14} color={colors.primary} />
-                <Text size="sm" color={colors.primary} weight="medium">
-                  {distanceText}
-                </Text>
-              </>
-            )}
-            {!!facility.court_count && (
-              <>
-                {distanceText && (
-                  <Text size="sm" color={colors.textMuted} style={styles.dotSeparator}>
-                    ·
-                  </Text>
-                )}
-                <Ionicons name="grid-outline" size={13} color={colors.textMuted} />
-                <Text size="sm" color={colors.textMuted}>
-                  {facility.court_count === 1
-                    ? t('facilitiesTab.badges.courtCountSingular')
-                    : t('facilitiesTab.badges.courtCount').replace(
-                        '{count}',
-                        String(facility.court_count)
-                      )}
-                </Text>
-              </>
-            )}
-            {!!facility.upcoming_match_count && (
-              <>
-                {(distanceText || !!facility.court_count) && (
-                  <Text size="sm" color={colors.textMuted} style={styles.dotSeparator}>
-                    ·
-                  </Text>
-                )}
-                <SportIcon sportName={sportName ?? 'tennis'} size={13} color={colors.primary} />
-                <Text size="sm" color={colors.primary} weight="medium">
-                  {facility.upcoming_match_count === 1
-                    ? t('facilitiesTab.badges.upcomingMatchCountSingular')
-                    : t('facilitiesTab.badges.upcomingMatchCount').replace(
-                        '{count}',
-                        String(facility.upcoming_match_count)
-                      )}
-                </Text>
-              </>
+            {canShowFavorite && (
+              <TouchableOpacity
+                onPress={handleFavoritePress}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                disabled={favoriteDisabled}
+                style={[styles.favoriteButton, favoriteDisabled && styles.favoriteButtonDisabled]}
+              >
+                <Ionicons
+                  name={isFavorite ? 'heart' : 'heart-outline'}
+                  size={20}
+                  color={isFavorite ? '#EF4444' : mutedColor}
+                />
+              </TouchableOpacity>
             )}
           </View>
-        )}
 
-        {/* Badges row */}
-        {(facility.organization_nature ||
-          facility.is_first_come_first_serve ||
-          (facility.booking_url_template && facility.external_provider_id) ||
-          facility.membership_required) && (
-          <View style={styles.badgesRow}>
-            {facility.organization_nature === 'public' && (
-              <View style={[styles.badge, { backgroundColor: '#16a34a18' }]}>
-                <Ionicons name="business-outline" size={12} color="#16a34a" />
-                <Text size="xs" color="#16a34a" weight="medium">
-                  {t('facilitiesTab.badges.public')}
-                </Text>
-              </View>
-            )}
-            {facility.organization_nature === 'private' && (
-              <View style={[styles.badge, { backgroundColor: '#f59e0b18' }]}>
-                <Ionicons name="lock-closed-outline" size={12} color="#d97706" />
-                <Text size="xs" color="#d97706" weight="medium">
-                  {t('facilitiesTab.badges.private')}
-                </Text>
-              </View>
-            )}
-            {facility.is_first_come_first_serve && (
-              <View style={[styles.badge, { backgroundColor: colors.primary + '18' }]}>
-                <Ionicons name="walk-outline" size={12} color={colors.primary} />
-                <Text size="xs" color={colors.primary} weight="medium">
-                  {t('facilitiesTab.badges.firstComeFirstServe')}
-                </Text>
-              </View>
-            )}
-            {facility.booking_url_template && facility.external_provider_id && (
-              <View style={[styles.badge, { backgroundColor: colors.primary + '18' }]}>
-                <Ionicons name="calendar-outline" size={12} color={colors.primary} />
-                <Text size="xs" color={colors.primary} weight="medium">
-                  {t('facilitiesTab.badges.bookable')}
-                </Text>
-              </View>
-            )}
-            {facility.membership_required && (
-              <View style={[styles.badge, { backgroundColor: '#f59e0b18' }]}>
-                <Ionicons name="card-outline" size={12} color="#d97706" />
-                <Text size="xs" color="#d97706" weight="medium">
-                  {t('facilitiesTab.badges.membershipRequired')}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* Skeleton slots while loading */}
-        {slotsLoading && !facility.is_first_come_first_serve && !!facility.external_provider_id && (
-          <SlotSkeleton color={colors.border} />
-        )}
-
-        {/* Date-sectioned slots with horizontal scroll */}
-        {slotsByDate.length > 0 &&
-          !slotsLoading &&
-          !facility.is_first_come_first_serve &&
-          !!facility.external_provider_id && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.slotsScrollContent}
-              style={styles.slotsScrollView}
-            >
-              {slotsByDate.map(dateGroup => (
-                <View key={dateGroup.dateKey} style={styles.dateGroup}>
-                  <Text
-                    size="xs"
-                    weight="semibold"
-                    color={dateGroup.isToday ? colors.primary : colors.textMuted}
-                    style={styles.dateLabel}
-                  >
-                    {dateGroup.dateLabel}
-                  </Text>
-                  <View style={styles.dateSlotsRow}>
-                    {dateGroup.slots.map((slot, index) => {
-                      const isTappable = !!slot.bookingUrl || !!slot.isLocalSlot;
-                      return (
-                        <TouchableOpacity
-                          key={`${slot.facilityScheduleId}-${index}`}
-                          style={[
-                            styles.slotChip,
-                            {
-                              backgroundColor: isTappable
-                                ? `${colors.primary}15`
-                                : isDark
-                                  ? '#262626'
-                                  : '#f5f5f5',
-                              borderColor: isTappable ? colors.primary : colors.border,
-                            },
-                          ]}
-                          onPress={() => isTappable && handleSlotPress(slot)}
-                          disabled={!isTappable}
-                          activeOpacity={0.7}
-                        >
-                          <Text
-                            size="xs"
-                            weight="medium"
-                            color={isTappable ? colors.primary : colors.textMuted}
-                          >
-                            {slot.time}
-                          </Text>
-                          {slot.isLocalSlot ? (
-                            <Ionicons name="business-outline" size={10} color={colors.primary} />
-                          ) : (
-                            slot.courtCount > 0 && (
-                              <View
-                                style={[
-                                  styles.courtCountBadge,
-                                  {
-                                    backgroundColor: isTappable
-                                      ? colors.primary
-                                      : isDark
-                                        ? colors.border
-                                        : colors.textMuted,
-                                  },
-                                ]}
-                              >
-                                <Text
-                                  size="xs"
-                                  weight="bold"
-                                  color={isTappable ? '#fff' : colors.card}
-                                  style={styles.courtCountText}
-                                >
-                                  {slot.courtCount}
-                                </Text>
-                              </View>
-                            )
-                          )}
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-          )}
-
-        {/* Empty state when no slots available */}
-        {slotsByDate.length === 0 &&
-          !slotsLoading &&
-          !facility.is_first_come_first_serve &&
-          !!facility.external_provider_id && (
-            <View style={styles.emptySlots}>
-              <Ionicons name="calendar-clear-outline" size={14} color={colors.textMuted} />
-              <Text size="xs" color={colors.textMuted}>
-                {t('matchCreation.booking.noSlotsAvailable' as TranslationKey)}
+          {/* Row 2: address */}
+          {addressText && (
+            <View style={styles.addressRow}>
+              <Ionicons name="location-outline" size={14} color={mutedColor} />
+              <Text size="sm" color={mutedColor} numberOfLines={1} style={styles.addressText}>
+                {addressText}
               </Text>
             </View>
           )}
-      </View>
 
-      {/* Chevron indicator */}
-      <View style={styles.chevronContainer}>
-        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-      </View>
-    </TouchableOpacity>
+          {/* Row 3: distance · court count · upcoming matches */}
+          {(distanceText || !!facility.court_count || !!facility.upcoming_match_count) && (
+            <View style={styles.distanceRow}>
+              {distanceText && (
+                <>
+                  <Ionicons name="navigate-outline" size={14} color={tierAccent} />
+                  <Text size="sm" color={tierAccent} weight="medium">
+                    {distanceText}
+                  </Text>
+                </>
+              )}
+              {!!facility.court_count && (
+                <>
+                  {distanceText && (
+                    <Text size="sm" color={mutedColor} style={styles.dotSeparator}>
+                      ·
+                    </Text>
+                  )}
+                  <Ionicons name="grid-outline" size={13} color={mutedColor} />
+                  <Text size="sm" color={mutedColor}>
+                    {facility.court_count === 1
+                      ? t('facilitiesTab.badges.courtCountSingular')
+                      : t('facilitiesTab.badges.courtCount').replace(
+                          '{count}',
+                          String(facility.court_count)
+                        )}
+                  </Text>
+                </>
+              )}
+              {!!facility.upcoming_match_count && (
+                <>
+                  {(distanceText || !!facility.court_count) && (
+                    <Text size="sm" color={mutedColor} style={styles.dotSeparator}>
+                      ·
+                    </Text>
+                  )}
+                  <SportIcon sportName={sportName ?? 'tennis'} size={13} color={tierAccent} />
+                  <Text size="sm" color={tierAccent} weight="medium">
+                    {facility.upcoming_match_count === 1
+                      ? t('facilitiesTab.badges.upcomingMatchCountSingular')
+                      : t('facilitiesTab.badges.upcomingMatchCount').replace(
+                          '{count}',
+                          String(facility.upcoming_match_count)
+                        )}
+                  </Text>
+                </>
+              )}
+            </View>
+          )}
+
+          {/* Row 4: badges */}
+          {(facility.organization_nature ||
+            facility.is_first_come_first_serve ||
+            (facility.booking_url_template && facility.external_provider_id) ||
+            facility.membership_required) && (
+            <View style={styles.badgesRow}>
+              {facility.organization_nature === 'public' && (
+                <View style={[styles.badge, { backgroundColor: `${successColor}26` }]}>
+                  <Ionicons name="business-outline" size={12} color={successColor} />
+                  <Text size="xs" color={successColor} weight="medium">
+                    {t('facilitiesTab.badges.public')}
+                  </Text>
+                </View>
+              )}
+              {facility.organization_nature === 'private' && (
+                <View style={[styles.badge, { backgroundColor: `${warningColor}26` }]}>
+                  <Ionicons name="lock-closed-outline" size={12} color={warningColor} />
+                  <Text size="xs" color={warningColor} weight="medium">
+                    {t('facilitiesTab.badges.private')}
+                  </Text>
+                </View>
+              )}
+              {facility.is_first_come_first_serve && (
+                <View style={[styles.badge, { backgroundColor: `${tierAccent}26` }]}>
+                  <Ionicons name="walk-outline" size={12} color={tierAccent} />
+                  <Text size="xs" color={tierAccent} weight="medium">
+                    {t('facilitiesTab.badges.firstComeFirstServe')}
+                  </Text>
+                </View>
+              )}
+              {facility.booking_url_template && facility.external_provider_id && (
+                <View style={[styles.badge, { backgroundColor: `${tierAccent}26` }]}>
+                  <Ionicons name="calendar-outline" size={12} color={tierAccent} />
+                  <Text size="xs" color={tierAccent} weight="medium">
+                    {t('facilitiesTab.badges.bookable')}
+                  </Text>
+                </View>
+              )}
+              {facility.membership_required && (
+                <View style={[styles.badge, { backgroundColor: `${warningColor}26` }]}>
+                  <Ionicons name="card-outline" size={12} color={warningColor} />
+                  <Text size="xs" color={warningColor} weight="medium">
+                    {t('facilitiesTab.badges.membershipRequired')}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Skeleton slots while loading */}
+          {slotsLoading &&
+            !facility.is_first_come_first_serve &&
+            !!facility.external_provider_id && (
+              <SlotSkeleton
+                borderColor={dynamicBorderColor}
+                chipFill={slotChipFill}
+                skeletonBg={slotSkeletonBg}
+                skeletonHighlight={slotSkeletonHighlight}
+              />
+            )}
+
+          {/* Date-sectioned slots with horizontal scroll */}
+          {slotsByDate.length > 0 &&
+            !slotsLoading &&
+            !facility.is_first_come_first_serve &&
+            !!facility.external_provider_id && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.slotsScrollContent}
+                style={styles.slotsScrollView}
+              >
+                {slotsByDate.map(dateGroup => (
+                  <View key={dateGroup.dateKey} style={styles.dateGroup}>
+                    <Text
+                      size="xs"
+                      weight="semibold"
+                      color={dateGroup.isToday ? tierAccent : mutedColor}
+                      style={styles.dateLabel}
+                    >
+                      {dateGroup.dateLabel}
+                    </Text>
+                    <View style={styles.dateSlotsRow}>
+                      {dateGroup.slots.map((slot, index) => {
+                        const isTappable = !!slot.bookingUrl || !!slot.isLocalSlot;
+                        return (
+                          <TouchableOpacity
+                            key={`${slot.facilityScheduleId}-${index}`}
+                            style={[
+                              styles.slotChip,
+                              {
+                                backgroundColor: isTappable
+                                  ? `${tierAccent}15`
+                                  : isDark
+                                    ? `${primary[400]}10`
+                                    : `${primary[500]}08`,
+                                borderColor: isTappable ? tierAccent : dynamicBorderColor,
+                              },
+                            ]}
+                            onPress={() => isTappable && handleSlotPress(slot)}
+                            disabled={!isTappable}
+                            activeOpacity={0.7}
+                          >
+                            <Text
+                              size="xs"
+                              weight="medium"
+                              color={isTappable ? tierAccent : mutedColor}
+                            >
+                              {slot.time}
+                            </Text>
+                            {slot.isLocalSlot ? (
+                              <Ionicons name="business-outline" size={10} color={tierAccent} />
+                            ) : (
+                              slot.courtCount > 0 && (
+                                <View
+                                  style={[
+                                    styles.courtCountBadge,
+                                    {
+                                      backgroundColor: isTappable ? tierAccent : mutedColor,
+                                    },
+                                  ]}
+                                >
+                                  <Text
+                                    size="xs"
+                                    weight="bold"
+                                    color={isTappable ? '#fff' : cardBackground}
+                                    style={styles.courtCountText}
+                                  >
+                                    {slot.courtCount}
+                                  </Text>
+                                </View>
+                              )
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+
+          {/* Empty state when no slots available */}
+          {slotsByDate.length === 0 &&
+            !slotsLoading &&
+            !facility.is_first_come_first_serve &&
+            !!facility.external_provider_id && (
+              <View style={styles.emptySlots}>
+                <Ionicons name="calendar-clear-outline" size={14} color={mutedColor} />
+                <Text size="xs" color={mutedColor}>
+                  {t('matchCreation.booking.noSlotsAvailable' as TranslationKey)}
+                </Text>
+              </View>
+            )}
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  // Mirrors PlayerCard / MatchCard surface so all three card families look identical.
+  card: {
+    borderRadius: radiusPixels.xl,
     marginHorizontal: spacingPixels[4],
     marginBottom: spacingPixels[3],
-    padding: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
+    borderWidth: 1.5,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 5,
   },
   content: {
-    flex: 1,
+    padding: spacingPixels[4],
+    gap: spacingPixels[1],
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacingPixels[1],
-  },
-  nameContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: spacingPixels[2],
+  },
+  nameText: {
+    flex: 1,
   },
   favoriteButton: {
     padding: spacingPixels[1],
+    flexShrink: 0,
   },
   favoriteButtonDisabled: {
     opacity: 0.5,
@@ -447,7 +541,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[1],
-    marginBottom: spacingPixels[1],
   },
   addressText: {
     flex: 1,
@@ -464,7 +557,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacingPixels[1],
-    marginTop: spacingPixels[2],
+    marginTop: spacingPixels[1],
   },
   badge: {
     flexDirection: 'row',
@@ -474,13 +567,28 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: radiusPixels.full,
   },
-  chevronContainer: {
-    marginLeft: spacingPixels[2],
-  },
-  slotsSkeletonRow: {
+  // Same horizontal padding + border as the real slot chip, but paddingV
+  // bumped so the loading chip container reads taller (matches the
+  // skeleton card's slot chips for visual consistency).
+  slotChipSkeleton: {
     flexDirection: 'row',
-    gap: spacingPixels[2],
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: 7,
+    borderRadius: radiusPixels.full,
+    borderWidth: 1,
+    gap: spacingPixels[1],
+  },
+  // Same outer footprint as slotsScrollView so loaded slots replace the
+  // skeleton with zero layout shift.
+  slotsLoadingScroller: {
     marginTop: spacingPixels[2],
+    marginHorizontal: -spacingPixels[4],
+    paddingLeft: spacingPixels[4],
+    paddingRight: spacingPixels[2],
+    flexDirection: 'row',
+    gap: spacingPixels[4],
+    overflow: 'hidden',
   },
   slotsScrollView: {
     marginTop: spacingPixels[2],

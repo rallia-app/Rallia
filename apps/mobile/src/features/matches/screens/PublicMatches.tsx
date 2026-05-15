@@ -8,7 +8,7 @@ import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { Text, SkeletonMatchCard } from '@rallia/shared-components';
+import { Text } from '@rallia/shared-components';
 import {
   useTheme,
   usePlayer,
@@ -36,7 +36,7 @@ import { useMatchDetailSheet, useSport, useUserHomeLocation } from '../../../con
 import type { MatchDetailData } from '../../../context/MatchDetailSheetContext';
 import { Logger, supabase } from '@rallia/shared-services';
 import { spacingPixels } from '@rallia/design-system';
-import { SearchBar, MatchFiltersBar } from '../components';
+import { SearchBar, MatchFiltersBar, MatchCardSkeleton } from '../components';
 import { FeedItemCard } from '../components/FeedItemCard';
 
 // =============================================================================
@@ -558,15 +558,7 @@ export default function PublicMatches() {
       {isLoading || loadingSuggestions ? (
         <View style={styles.listLoadingContainer}>
           {[1, 2, 3, 4].map(i => (
-            <SkeletonMatchCard
-              key={i}
-              backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-              highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-              style={{
-                backgroundColor: isDark ? '#1C1C1E' : '#FAFAFA',
-                borderColor: colors.border,
-              }}
-            />
+            <MatchCardSkeleton key={i} />
           ))}
         </View>
       ) : (

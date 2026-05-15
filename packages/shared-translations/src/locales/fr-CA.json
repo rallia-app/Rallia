@@ -916,7 +916,7 @@
       "noRating": "Aucun classement pour le moment",
       "noRatingSubtext": "Configurez votre classement pour commencer à jouer",
       "activeNow": "En ligne",
-      "lastSeen": "Vu il y a",
+      "lastSeen": "Vu",
       "offline": "Hors ligne"
     },
     "sportsHint": "Vous pouvez activer d'autres sports à tout moment",
@@ -2830,6 +2830,19 @@
     "selectSportDescription": "Choisissez un sport dans l'en-tête pour voir les joueurs",
     "chooseSport": "Choisissez un sport dans l'en-tête pour voir les joueurs",
     "nearby": "À proximité",
+    "online": "En ligne",
+    "lastSeenToday": "Aujourd'hui",
+    "lastSeenYesterday": "Hier",
+    "lastSeenDaysAgo": "il y a {count} jours",
+    "dayLetters": {
+      "monday": "L",
+      "tuesday": "M",
+      "wednesday": "M",
+      "thursday": "J",
+      "friday": "V",
+      "saturday": "S",
+      "sunday": "D"
+    },
     "failedToLoad": "Échec du chargement des joueurs",
     "checkConnection": "Veuillez vérifier votre connexion et réessayer",
     "favorites": {
@@ -3537,6 +3550,7 @@
     "error": "Erreur",
     "info": "Info",
     "availabilitiesUpdated": "Vos disponibilités ont été mises à jour!",
+    "minAvailabilitiesRequired": "Veuillez sélectionner au moins 3 plages de disponibilité.",
     "peerRatingRequestsSent": "Demandes d'évaluation par les pairs envoyées à {count} joueur(s)",
     "referenceRequestsSent": "Demandes de référence envoyées à {count} joueur(s)",
     "failedToSendPeerRatingRequests": "Échec de l'envoi des demandes d'évaluation par les pairs",

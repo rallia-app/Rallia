@@ -116,35 +116,35 @@ export function ReputationExplainerActionSheet(_props: SheetProps<'reputation-ex
           mutedColor={mutedColor}
         >
           <TierRow
-            color={TIER_COLORS.unknown.text}
+            color={TIER_COLORS.unknown.primary}
             label={t('explainers.reputation.tiers.unknown')}
             range={t('explainers.reputation.tiers.unknownRange')}
             mutedColor={mutedColor}
             textColor={textColor}
           />
           <TierRow
-            color={TIER_COLORS.bronze.text}
+            color={TIER_COLORS.bronze.primary}
             label={t('explainers.reputation.tiers.bronze')}
             range="0 – 59"
             mutedColor={mutedColor}
             textColor={textColor}
           />
           <TierRow
-            color={TIER_COLORS.silver.text}
+            color={TIER_COLORS.silver.primary}
             label={t('explainers.reputation.tiers.silver')}
             range="60 – 74"
             mutedColor={mutedColor}
             textColor={textColor}
           />
           <TierRow
-            color={TIER_COLORS.gold.text}
+            color={TIER_COLORS.gold.primary}
             label={t('explainers.reputation.tiers.gold')}
             range="75 – 89"
             mutedColor={mutedColor}
             textColor={textColor}
           />
           <TierRow
-            color={TIER_COLORS.platinum.text}
+            color={TIER_COLORS.platinum.primary}
             label={t('explainers.reputation.tiers.platinum')}
             range="90 – 100"
             mutedColor={mutedColor}

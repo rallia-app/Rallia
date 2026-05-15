@@ -654,12 +654,6 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
         {
           backgroundColor: tierPaletteColors.background,
           borderColor: dynamicBorderColor,
-          // Softer shadow for light mode, subtle for dark mode
-          shadowColor: isDark ? '#000' : neutral[400],
-          shadowOffset: { width: 0, height: isDark ? 2 : 3 },
-          shadowOpacity: isDark ? 0.2 : 0.15,
-          shadowRadius: isDark ? 8 : 10,
-          elevation: isDark ? 3 : 2,
           opacity: isExpired ? 0.7 : 1,
         },
       ]}

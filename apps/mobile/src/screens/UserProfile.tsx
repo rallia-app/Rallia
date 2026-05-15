@@ -659,6 +659,19 @@ const UserProfile = () => {
     uiAvailabilities: WeeklyAvailability,
     privacyShowAvailability: boolean
   ) => {
+    const selectedCount = (Object.keys(uiAvailabilities) as DayOfWeek[]).reduce(
+      (count, day) =>
+        count +
+        (Object.keys(uiAvailabilities[day]) as TimeSlot[]).filter(
+          slot => uiAvailabilities[day][slot]
+        ).length,
+      0
+    );
+    if (selectedCount < 3) {
+      toast.error(t('alerts.minAvailabilitiesRequired'));
+      return;
+    }
+
     try {
       const {
         data: { user },
@@ -927,10 +940,7 @@ const UserProfile = () => {
   };
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Profile Picture with Edit Overlay - Wrapped with CopilotStep for tour */}
         <CopilotStep
@@ -938,15 +948,23 @@ const UserProfile = () => {
           order={20}
           name="profile_picture"
         >
-          <WalkthroughableView style={[styles.profileHeader, { backgroundColor: colors.card }]}>
+          <WalkthroughableView
+            style={[
+              styles.profileHeader,
+              {
+                backgroundColor: isDark ? primary[950] : primary[50],
+                borderColor: isDark ? `${primary[400]}40` : `${primary[500]}20`,
+              },
+            ]}
+          >
             {loadingCore ? (
-              <>
+              <View style={styles.profileTopRow}>
                 <SkeletonAvatar
                   size={spacingPixels[20]}
                   backgroundColor={skeletonBg}
                   highlightColor={skeletonHighlight}
                 />
-                <View style={{ marginTop: 16, alignItems: 'center' }}>
+                <View style={styles.profileIdentity}>
                   <Skeleton
                     width={150}
                     height={18}
@@ -961,97 +979,102 @@ const UserProfile = () => {
                     style={{ marginTop: 8 }}
                   />
                 </View>
-              </>
+              </View>
             ) : (
               <>
-                <View style={styles.profilePicWrapper}>
-                  <View
-                    style={[
-                      styles.profilePicContainer,
-                      { borderColor: colors.primary, backgroundColor: colors.inputBackground },
-                    ]}
-                  >
-                    {profile?.profile_picture_url || newProfileImage ? (
-                      <Image
-                        source={{
-                          uri:
-                            newProfileImage ||
-                            getProfilePictureUrl(profile?.profile_picture_url) ||
-                            '',
+                <View style={styles.profileTopRow}>
+                  <View style={styles.profilePicWrapper}>
+                    <View
+                      style={[
+                        styles.profilePicContainer,
+                        {
+                          borderColor: isDark ? primary[400] : primary[500],
+                          backgroundColor: colors.inputBackground,
+                          shadowColor: isDark ? primary[400] : primary[500],
+                        },
+                      ]}
+                    >
+                      {profile?.profile_picture_url || newProfileImage ? (
+                        <Image
+                          source={{
+                            uri:
+                              newProfileImage ||
+                              getProfilePictureUrl(profile?.profile_picture_url) ||
+                              '',
+                          }}
+                          style={styles.profileImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <Ionicons name="camera-outline" size={32} color={colors.primary} />
+                      )}
+                      {uploadingImage && (
+                        <View style={styles.uploadingOverlay}>
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        </View>
+                      )}
+                    </View>
+                    {!uploadingImage && (
+                      <TouchableOpacity
+                        style={[styles.profilePicEditBadge, { backgroundColor: colors.primary }]}
+                        onPress={() => {
+                          void lightHaptic();
+                          openPicker();
                         }}
-                        style={styles.profileImage}
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <Ionicons name="camera-outline" size={32} color={colors.primary} />
-                    )}
-                    {uploadingImage && (
-                      <View style={styles.uploadingOverlay}>
-                        <ActivityIndicator size="small" color="#FFFFFF" />
-                      </View>
+                        activeOpacity={0.7}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons
+                          name="camera-outline"
+                          size={14}
+                          color={colors.primaryForeground}
+                        />
+                      </TouchableOpacity>
                     )}
                   </View>
-                  {!uploadingImage && (
-                    <TouchableOpacity
-                      style={[
-                        styles.profilePicEditBadge,
-                        { backgroundColor: colors.primary, borderColor: colors.card },
-                      ]}
-                      onPress={() => {
-                        void lightHaptic();
-                        openPicker();
-                      }}
-                      activeOpacity={0.7}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Ionicons name="camera-outline" size={14} color={colors.primaryForeground} />
-                    </TouchableOpacity>
-                  )}
-                </View>
-                <Text style={[styles.profileName, { color: colors.text }]}>
-                  {getHumanName(profile, t('profile.user'))}
-                </Text>
-
-                {/* Coveted Badge */}
-                <CovetedBadge
-                  reputationScore={reputationDisplay?.score}
-                  certificationStatus={primaryRating?.badge_status}
-                  totalEvents={reputationTotalEvents}
-                  isDark={isDark}
-                  isLoading={playerLoading}
-                />
-
-                {/* Rating & Reputation Badges */}
-                <View style={styles.profileBadgesRow}>
-                  <RatingBadge
-                    ratingValue={primaryRating?.value}
-                    ratingLabel={primaryRating?.label}
-                    certificationStatus={primaryRating?.badge_status}
-                    isDark={isDark}
-                    isLoading={playerLoading}
-                    onInfoPress={() =>
-                      SheetManager.show('rating-explainer', {
-                        payload: {
-                          sportName:
-                            primaryRating?.ratingSystemCode === 'dupr' ? 'pickleball' : 'tennis',
-                        },
-                      })
-                    }
-                  />
-                  <ReputationBadge
-                    reputationDisplay={reputationDisplay ?? undefined}
-                    isDark={isDark}
-                    isLoading={playerLoading}
-                    onInfoPress={() => SheetManager.show('reputation-explainer')}
-                  />
-                </View>
-
-                {/* Joined Date */}
-                <View style={styles.joinedContainer}>
-                  <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-                  <Text style={[styles.joinedText, { color: colors.textMuted }]}>
-                    {t('profile.joined')} {formatJoinedDate(player?.created_at || null)}
-                  </Text>
+                  <View style={styles.profileIdentity}>
+                    <Text style={[styles.profileName, { color: colors.text }]} numberOfLines={1}>
+                      {getHumanName(profile, t('profile.user'))}
+                    </Text>
+                    <View style={styles.joinedContainer}>
+                      <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
+                      <Text style={[styles.joinedText, { color: colors.textMuted }]}>
+                        {t('profile.joined')} {formatJoinedDate(player?.created_at || null)}
+                      </Text>
+                    </View>
+                    <View style={styles.profileBadgesRow}>
+                      <CovetedBadge
+                        reputationScore={reputationDisplay?.score}
+                        certificationStatus={primaryRating?.badge_status}
+                        totalEvents={reputationTotalEvents}
+                        isDark={isDark}
+                        isLoading={playerLoading}
+                      />
+                      <RatingBadge
+                        ratingValue={primaryRating?.value}
+                        ratingLabel={primaryRating?.label}
+                        certificationStatus={primaryRating?.badge_status}
+                        isDark={isDark}
+                        isLoading={playerLoading}
+                        onInfoPress={() =>
+                          SheetManager.show('rating-explainer', {
+                            payload: {
+                              sportName:
+                                primaryRating?.ratingSystemCode === 'dupr'
+                                  ? 'pickleball'
+                                  : 'tennis',
+                            },
+                          })
+                        }
+                      />
+                      <ReputationBadge
+                        reputationDisplay={reputationDisplay ?? undefined}
+                        isDark={isDark}
+                        isLoading={playerLoading}
+                        onInfoPress={() => SheetManager.show('reputation-explainer')}
+                      />
+                    </View>
+                  </View>
                 </View>
               </>
             )}
@@ -1891,9 +1914,6 @@ const UserProfile = () => {
             )}
           </View>
         )}
-
-        {/* Bottom Spacing */}
-        <View style={{ height: 40 }} />
       </ScrollView>
 
       {/* Reactivate sport confirmation */}
@@ -1956,13 +1976,30 @@ const styles = StyleSheet.create({
     fontWeight: fontWeightNumeric.semibold,
   },
   profileHeader: {
-    alignItems: 'center',
-    paddingVertical: spacingPixels[6],
+    marginTop: spacingPixels[4],
+    marginHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[5],
     paddingHorizontal: spacingPixels[4],
+    borderRadius: radiusPixels.xl,
+    borderWidth: 1.5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  profileTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[4],
+  },
+  profileIdentity: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacingPixels[1],
   },
   profilePicWrapper: {
     position: 'relative',
-    marginBottom: spacingPixels[1],
   },
   profilePicContainer: {
     width: spacingPixels[20],
@@ -1972,6 +2009,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     overflow: 'hidden',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   profilePicEditBadge: {
     position: 'absolute',
@@ -1982,8 +2023,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
   },
   profileImage: {
     width: spacingPixels[20],
@@ -1993,19 +2032,17 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: fontSizePixels.xl,
     fontWeight: fontWeightNumeric.bold,
-    marginBottom: spacingPixels[1],
   },
   profileBadgesRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: spacingPixels[2],
-    marginBottom: spacingPixels[2],
   },
   joinedContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[1],
-    marginBottom: spacingPixels[1],
   },
   joinedText: {
     fontSize: fontSizePixels.xs,

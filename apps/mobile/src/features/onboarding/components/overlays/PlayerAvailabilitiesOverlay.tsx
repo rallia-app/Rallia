@@ -89,6 +89,14 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
 
     // Edit mode: use the onSave callback
     if (mode === 'edit' && onSave) {
+      const selectedCount = days.reduce(
+        (count, day) => count + timeSlots.filter(slot => availabilities[day][slot]).length,
+        0
+      );
+      if (selectedCount < 3) {
+        toast.error(t('alerts.minAvailabilitiesRequired'));
+        return;
+      }
       onSave(availabilities, privacyShowAvailability);
       SheetManager.hide('player-availabilities');
       return;

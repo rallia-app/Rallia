@@ -42,7 +42,7 @@ import { useCourtsNavigation } from '../../../navigation/hooks';
 import { useAppNavigation } from '../../../navigation/hooks';
 import { Logger } from '@rallia/shared-services';
 import { spacingPixels, radiusPixels, secondary } from '@rallia/design-system';
-import { FacilityCard, FacilityFiltersBar } from '../components';
+import { FacilityCard, FacilityCardSkeleton, FacilityFiltersBar } from '../components';
 import { SportIcon } from '../../../components/SportIcon';
 import { lightHaptic } from '@rallia/shared-utils';
 import { MyBookingCard } from '../../bookings/components';
@@ -90,78 +90,11 @@ function EmptyState({ hasActiveSearch, hasLocation, colors, t }: EmptyStateProps
   );
 }
 
-function LoadingSkeleton({
-  colors,
-  isDark,
-}: {
-  colors: ReturnType<typeof useThemeStyles>['colors'];
-  isDark: boolean;
-}) {
-  // Theme-aware skeleton colors
-  const skeletonBg = isDark ? '#262626' : '#E1E9EE'; // neutral[800] : light default
-  const skeletonHighlight = isDark ? '#404040' : '#F2F8FC'; // neutral[700] : light default
-
+function LoadingSkeleton() {
   return (
     <View style={styles.skeletonContainer}>
-      {/* Facility card skeletons */}
       {[1, 2, 3, 4, 5].map(i => (
-        <View
-          key={i}
-          style={[
-            styles.skeletonCard,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}
-        >
-          <View style={styles.skeletonCardContent}>
-            {/* Name skeleton */}
-            <Skeleton
-              width="55%"
-              height={18}
-              backgroundColor={skeletonBg}
-              highlightColor={skeletonHighlight}
-            />
-            {/* Address skeleton */}
-            <View style={styles.skeletonRow}>
-              <Skeleton
-                width={14}
-                height={14}
-                backgroundColor={skeletonBg}
-                highlightColor={skeletonHighlight}
-                style={{ borderRadius: 7 }}
-              />
-              <Skeleton
-                width="70%"
-                height={14}
-                backgroundColor={skeletonBg}
-                highlightColor={skeletonHighlight}
-              />
-            </View>
-            {/* Distance skeleton */}
-            <View style={styles.skeletonRow}>
-              <Skeleton
-                width={14}
-                height={14}
-                backgroundColor={skeletonBg}
-                highlightColor={skeletonHighlight}
-                style={{ borderRadius: 7 }}
-              />
-              <Skeleton
-                width={50}
-                height={14}
-                backgroundColor={skeletonBg}
-                highlightColor={skeletonHighlight}
-              />
-            </View>
-          </View>
-          {/* Chevron placeholder */}
-          <Skeleton
-            width={20}
-            height={20}
-            backgroundColor={skeletonBg}
-            highlightColor={skeletonHighlight}
-            style={{ borderRadius: 10, marginLeft: spacingPixels[2] }}
-          />
-        </View>
+        <FacilityCardSkeleton key={i} />
       ))}
     </View>
   );
@@ -647,6 +580,7 @@ export default function FacilitiesDirectory() {
           onLocationModeChange={setLocationMode}
           hasHomeLocation={hasHomeLocation}
           homeLocationLabel={homeLocationLabel}
+          showFavoritesFilter={showFavoriteButton}
         />
         {queryError && (
           <View style={[styles.errorContainer, { backgroundColor: colors.card }]}>
@@ -655,8 +589,8 @@ export default function FacilitiesDirectory() {
             </Text>
           </View>
         )}
-        {(isLoading || sportLoading) && <LoadingSkeleton colors={colors} isDark={isDark} />}
-        <View style={styles.headerBottomSpacer} />
+        <View style={styles.filtersBottomSpacer} />
+        {(isLoading || sportLoading) && <LoadingSkeleton />}
       </>
     );
   }, [
@@ -755,9 +689,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  headerBottomSpacer: {
-    height: spacingPixels[2],
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -769,10 +700,10 @@ const styles = StyleSheet.create({
   searchContainer: {
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[2],
-    paddingBottom: spacingPixels[2],
+    paddingBottom: spacingPixels[3],
   },
   listContent: {
-    paddingTop: spacingPixels[2],
+    paddingTop: 0,
     paddingBottom: spacingPixels[4],
   },
   emptyListContent: {
@@ -800,27 +731,13 @@ const styles = StyleSheet.create({
   emptyDescription: {
     textAlign: 'center',
   },
+  // Sits inside the list header below the filters so the gap above the first
+  // card is the same whether the skeleton or the loaded items are rendering.
+  filtersBottomSpacer: {
+    height: spacingPixels[3],
+  },
   skeletonContainer: {
-    paddingTop: spacingPixels[3],
     paddingBottom: spacingPixels[4],
-  },
-  skeletonCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: spacingPixels[4],
-    marginBottom: spacingPixels[3],
-    padding: spacingPixels[4],
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  skeletonCardContent: {
-    flex: 1,
-    gap: spacingPixels[2],
-  },
-  skeletonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[1],
   },
   errorContainer: {
     padding: spacingPixels[4],

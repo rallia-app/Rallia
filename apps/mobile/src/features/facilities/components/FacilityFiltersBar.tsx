@@ -316,6 +316,7 @@ interface FacilityFiltersBarProps {
   onLocationModeChange?: (mode: LocationMode) => void;
   hasHomeLocation?: boolean;
   homeLocationLabel?: string;
+  showFavoritesFilter?: boolean;
 }
 
 export default function FacilityFiltersBar({
@@ -328,6 +329,7 @@ export default function FacilityFiltersBar({
   onLocationModeChange,
   hasHomeLocation = false,
   homeLocationLabel,
+  showFavoritesFilter = true,
 }: FacilityFiltersBarProps) {
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -545,14 +547,18 @@ export default function FacilityFiltersBar({
       icon?: keyof typeof Ionicons.glyphMap;
       hasDropdown?: boolean;
     }[] = [
-      {
-        key: 'favorites',
-        value: t('facilitiesTab.filters.favorites.label'),
-        isActive: filters.favoritesOnly,
-        onPress: handleFavoritesOnlyToggle,
-        icon: 'heart-outline',
-        hasDropdown: false,
-      },
+      ...(showFavoritesFilter
+        ? [
+            {
+              key: 'favorites',
+              value: t('facilitiesTab.filters.favorites.label'),
+              isActive: filters.favoritesOnly,
+              onPress: handleFavoritesOnlyToggle,
+              icon: 'heart-outline' as keyof typeof Ionicons.glyphMap,
+              hasDropdown: false,
+            },
+          ]
+        : []),
       {
         key: 'distance',
         value: distanceDisplay,
@@ -633,6 +639,7 @@ export default function FacilityFiltersBar({
     getLightingIcon,
     getMembershipIcon,
     getOrgNatureIcon,
+    showFavoritesFilter,
   ]);
 
   return (

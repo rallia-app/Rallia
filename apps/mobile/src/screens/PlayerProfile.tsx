@@ -15,6 +15,7 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  Animated,
   FlatList,
   Dimensions,
 } from 'react-native';
@@ -44,19 +45,22 @@ import ReputationBadge from '../components/ReputationBadge';
 import CovetedBadge from '../components/CovetedBadge';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import { getProfilePictureUrl, lightHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { formatDateMonthYear, formatRelativeTime } from '../utils/dateFormatting';
 import * as Analytics from '../services/analytics';
 import type { RootStackParamList } from '../navigation/types';
 import type { Profile, Player } from '@rallia/shared-types';
 import { MATCH_DURATION_ENUM_LABELS } from '@rallia/shared-types';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   spacingPixels,
   radiusPixels,
   fontSizePixels,
   fontWeightNumeric,
+  accent,
   neutral,
+  primary,
   status,
 } from '@rallia/design-system';
+import { formatDateMonthYear } from '../utils/dateFormatting';
 import { CertificationBadge, ProofViewer, type BadgeStatus } from '../features/ratings/components';
 import { useVideoThumbnail } from '../hooks/useVideoThumbnail';
 import { useOgImage } from '../hooks/useOgImage';
@@ -262,6 +266,84 @@ const ProofGalleryCard: React.FC<{
   );
 };
 
+// Rectangular accent-gradient pill: icon on the left, single-line label on the right.
+const HeroActionButton: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  onPress: () => void;
+  loading?: boolean;
+  disabled?: boolean;
+}> = ({ icon, label, onPress, loading = false, disabled = false }) => {
+  const handlePress = () => {
+    void lightHaptic();
+    onPress();
+  };
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      activeOpacity={0.85}
+      disabled={loading || disabled}
+      style={heroActionStyles.item}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: loading || disabled, busy: loading }}
+    >
+      <LinearGradient
+        colors={[accent[300], accent[400], accent[500]]}
+        locations={[0, 0.55, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[heroActionStyles.gradient, (loading || disabled) && { opacity: 0.6 }]}
+      >
+        <View style={heroActionStyles.topHighlight} />
+        <View style={heroActionStyles.iconWrap}>
+          {loading ? <ActivityIndicator size="small" color="#ffffff" /> : icon}
+        </View>
+        <Text
+          size="sm"
+          weight="semibold"
+          color="#ffffff"
+          style={heroActionStyles.label}
+          numberOfLines={1}
+        >
+          {label}
+        </Text>
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+};
+
+const heroActionStyles = StyleSheet.create({
+  item: {
+    borderRadius: radiusPixels.lg,
+  },
+  gradient: {
+    flexDirection: 'row',
+    borderRadius: radiusPixels.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
+    height: 44,
+    paddingHorizontal: spacingPixels[4],
+    overflow: 'hidden',
+  },
+  topHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.35)',
+  },
+  iconWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  label: {
+    textAlign: 'center',
+  },
+});
+
 const PlayerProfile = () => {
   const route = useRoute<PlayerProfileRouteProp>();
   const navigation = useNavigation<NavigationProp>();
@@ -271,6 +353,10 @@ const PlayerProfile = () => {
   // Skeleton loading colors
   const skeletonBg = isDark ? '#262626' : '#E1E9EE';
   const skeletonHighlight = isDark ? '#404040' : '#F2F8FC';
+  // Tinted skeleton shades for use against the primary-tinted hero card —
+  // matches PlayerCardSkeleton so they read as "loading" without clashing.
+  const heroSkeletonBg = isDark ? primary[900] : primary[100];
+  const heroSkeletonHighlight = isDark ? primary[800] : primary[50];
   const { t, locale } = useTranslation();
   const { selectedSport } = useSport();
   const { homeLocation } = useUserHomeLocation();
@@ -301,6 +387,25 @@ const PlayerProfile = () => {
   const [blockLoading, setBlockLoading] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
   const [isOnline, setIsOnline] = useState(false);
+  const onlineColor = isDark ? status.success.light : status.success.DEFAULT;
+  const pulseAnim = useMemo(() => new Animated.Value(1), []);
+  useEffect(() => {
+    if (!isOnline) {
+      pulseAnim.setValue(1);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 0.35, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => {
+      loop.stop();
+      pulseAnim.setValue(1);
+    };
+  }, [isOnline, pulseAnim]);
   const [favoriteFacilities, setFavoriteFacilities] = useState<FavoriteFacilityData[]>([]);
   const [favoriteFacilitiesLoading, setFavoriteFacilitiesLoading] = useState(true);
   const [referenceLoading, setReferenceLoading] = useState(false);
@@ -326,6 +431,21 @@ const PlayerProfile = () => {
     if (meters < 1000) return `${Math.round(meters)} m`;
     return `${(meters / 1000).toFixed(1)} km`;
   }, [homeLocation, player?.latitude, player?.longitude, t]);
+
+  // Calendar-day "last active" label — matches PlayerCard semantics exactly.
+  const lastSeenLabel = useMemo(() => {
+    if (isOnline || !player?.last_seen_at) return null;
+    const seen = new Date(player.last_seen_at);
+    const now = new Date();
+    if (seen.getTime() > now.getTime()) return null;
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const startOfSeen = new Date(seen.getFullYear(), seen.getMonth(), seen.getDate()).getTime();
+    const diffDays = Math.round((startOfToday - startOfSeen) / 86_400_000);
+    if (diffDays <= 0) return t('playerDirectory.lastSeenToday');
+    if (diffDays === 1) return t('playerDirectory.lastSeenYesterday');
+    if (diffDays <= 14) return t('playerDirectory.lastSeenDaysAgo', { count: diffDays });
+    return null;
+  }, [isOnline, player?.last_seen_at, t]);
 
   // Fetch favorite facilities for the player being viewed (separate from main data fetch)
   useEffect(() => {
@@ -460,22 +580,6 @@ const PlayerProfile = () => {
       setChatLoading(false);
     }
   }, [currentUserId, playerId, chatLoading, getOrCreateDirectConversation, navigation, profile]);
-
-  // Add chat icon to header right
-  useEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity
-          onPress={handleStartChat}
-          disabled={!currentUserId}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          style={{ marginRight: spacingPixels[2] }}
-        >
-          <Ionicons name="chatbubble-outline" size={24} color={colors.headerForeground} />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, currentUserId, handleStartChat, colors.headerForeground]);
 
   const fetchPlayerProfileData = async () => {
     try {
@@ -943,11 +1047,6 @@ const PlayerProfile = () => {
     }
   };
 
-  const formatJoinedDate = (dateString: string | null): string => {
-    if (!dateString) return '';
-    return formatDateMonthYear(dateString, locale);
-  };
-
   const formatGender = (gender: string | null): string => {
     if (!gender) return '-';
     const genderMap: { [key: string]: TranslationKey } = {
@@ -1315,6 +1414,70 @@ const PlayerProfile = () => {
     }
   }, [currentUserId, blockLoading, isBlocked, isFavorite, playerId, t]);
 
+  // Block + favorite icons in the screen header right
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacingPixels[3],
+            marginRight: spacingPixels[2],
+          }}
+        >
+          <TouchableOpacity
+            onPress={handleToggleBlock}
+            disabled={blockLoading || !currentUserId}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            {blockLoading ? (
+              <ActivityIndicator size="small" color={colors.headerForeground} />
+            ) : (
+              <Ionicons
+                name={isBlocked ? 'ban' : 'ban-outline'}
+                size={22}
+                color={isBlocked ? status.error.DEFAULT : colors.headerForeground}
+              />
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleToggleFavorite}
+            disabled={favoriteLoading || !currentUserId || isBlocked}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            {favoriteLoading ? (
+              <ActivityIndicator size="small" color={colors.headerForeground} />
+            ) : (
+              <Ionicons
+                name={isFavorite ? 'heart' : 'heart-outline'}
+                size={24}
+                color={
+                  isFavorite
+                    ? status.error.DEFAULT
+                    : isBlocked
+                      ? colors.border
+                      : colors.headerForeground
+                }
+              />
+            )}
+          </TouchableOpacity>
+        </View>
+      ),
+    });
+  }, [
+    navigation,
+    currentUserId,
+    blockLoading,
+    favoriteLoading,
+    isBlocked,
+    isFavorite,
+    handleToggleBlock,
+    handleToggleFavorite,
+    colors.headerForeground,
+    colors.border,
+  ]);
+
   // Get the primary/selected sport for rating display
   const primarySport = useMemo(() => {
     if (sportId) {
@@ -1414,96 +1577,138 @@ const PlayerProfile = () => {
 
   if (loading) {
     return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['bottom']}
-      >
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {/* Profile Header Skeleton */}
-          <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
-            <View style={{ marginBottom: spacingPixels[3] }}>
+          <View
+            style={[
+              styles.profileHeader,
+              {
+                backgroundColor: isDark ? primary[950] : primary[50],
+                borderColor: isDark ? `${primary[400]}40` : `${primary[500]}20`,
+              },
+            ]}
+          >
+            <View style={styles.profileTopRow}>
               <SkeletonAvatar
                 size={100}
-                backgroundColor={skeletonBg}
-                highlightColor={skeletonHighlight}
+                backgroundColor={heroSkeletonBg}
+                highlightColor={heroSkeletonHighlight}
               />
-            </View>
-            <Skeleton
-              width={150}
-              height={20}
-              borderRadius={4}
-              backgroundColor={skeletonBg}
-              highlightColor={skeletonHighlight}
-              style={{ marginBottom: spacingPixels[1] }}
-            />
-            <Skeleton
-              width={80}
-              height={14}
-              borderRadius={4}
-              backgroundColor={skeletonBg}
-              highlightColor={skeletonHighlight}
-              style={{ marginBottom: spacingPixels[2] }}
-            />
-            {/* Badges row */}
-            <View style={styles.profileBadgesRow}>
-              <Skeleton
-                width={70}
-                height={28}
-                borderRadius={14}
-                backgroundColor={skeletonBg}
-                highlightColor={skeletonHighlight}
-              />
-              <Skeleton
-                width={70}
-                height={28}
-                borderRadius={14}
-                backgroundColor={skeletonBg}
-                highlightColor={skeletonHighlight}
-              />
-            </View>
-            {/* Joined date */}
-            <View style={styles.joinedContainer}>
-              <Skeleton
-                width={120}
-                height={12}
-                borderRadius={4}
-                backgroundColor={skeletonBg}
-                highlightColor={skeletonHighlight}
-              />
-            </View>
-            {/* Last seen */}
-            <View style={styles.lastSeenContainer}>
-              <Skeleton
-                width={90}
-                height={12}
-                borderRadius={4}
-                backgroundColor={skeletonBg}
-                highlightColor={skeletonHighlight}
-              />
-            </View>
-            {/* Action button */}
-            <View style={styles.actionButtons}>
-              <View style={{ flex: 1 }}>
+              <View style={styles.profileIdentity}>
+                {/* Name */}
                 <Skeleton
-                  width="100%"
-                  height={44}
-                  borderRadius={22}
-                  backgroundColor={skeletonBg}
-                  highlightColor={skeletonHighlight}
+                  width="55%"
+                  height={24}
+                  borderRadius={4}
+                  backgroundColor={heroSkeletonBg}
+                  highlightColor={heroSkeletonHighlight}
                 />
+                {/* Location row: pin · distance · separator · activity */}
+                <View style={styles.locationRow}>
+                  <Skeleton
+                    width={13}
+                    height={13}
+                    circle
+                    backgroundColor={heroSkeletonBg}
+                    highlightColor={heroSkeletonHighlight}
+                  />
+                  <Skeleton
+                    width={42}
+                    height={14}
+                    borderRadius={4}
+                    backgroundColor={heroSkeletonBg}
+                    highlightColor={heroSkeletonHighlight}
+                  />
+                  <Skeleton
+                    width={3}
+                    height={3}
+                    circle
+                    backgroundColor={heroSkeletonBg}
+                    highlightColor={heroSkeletonHighlight}
+                  />
+                  <Skeleton
+                    width={62}
+                    height={14}
+                    borderRadius={4}
+                    backgroundColor={heroSkeletonBg}
+                    highlightColor={heroSkeletonHighlight}
+                  />
+                </View>
+                {/* Joined date row */}
+                <View style={styles.joinedRow}>
+                  <Skeleton
+                    width={13}
+                    height={13}
+                    circle
+                    backgroundColor={heroSkeletonBg}
+                    highlightColor={heroSkeletonHighlight}
+                  />
+                  <Skeleton
+                    width={110}
+                    height={14}
+                    borderRadius={4}
+                    backgroundColor={heroSkeletonBg}
+                    highlightColor={heroSkeletonHighlight}
+                  />
+                </View>
+                {/* Badges row */}
+                <View style={styles.profileBadgesRow}>
+                  <Skeleton
+                    width={80}
+                    height={26}
+                    borderRadius={radiusPixels.full}
+                    backgroundColor={heroSkeletonBg}
+                    highlightColor={heroSkeletonHighlight}
+                  />
+                  <Skeleton
+                    width={60}
+                    height={26}
+                    borderRadius={radiusPixels.full}
+                    backgroundColor={heroSkeletonBg}
+                    highlightColor={heroSkeletonHighlight}
+                  />
+                  <Skeleton
+                    width={80}
+                    height={26}
+                    borderRadius={radiusPixels.full}
+                    backgroundColor={heroSkeletonBg}
+                    highlightColor={heroSkeletonHighlight}
+                  />
+                </View>
               </View>
             </View>
-            {/* Request Reference button */}
-            <View style={styles.secondaryAction}>
-              <Skeleton
-                width={180}
-                height={36}
-                borderRadius={18}
-                backgroundColor={skeletonBg}
-                highlightColor={skeletonHighlight}
-              />
-            </View>
           </View>
+
+          {/* Action buttons skeleton (horizontal scroll under the card) */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.actionScrollContent}
+            style={styles.actionScroll}
+          >
+            <Skeleton
+              width={160}
+              height={44}
+              borderRadius={radiusPixels.lg}
+              backgroundColor={skeletonBg}
+              highlightColor={skeletonHighlight}
+            />
+            <Skeleton
+              width={120}
+              height={44}
+              borderRadius={radiusPixels.lg}
+              backgroundColor={skeletonBg}
+              highlightColor={skeletonHighlight}
+            />
+            <Skeleton
+              width={180}
+              height={44}
+              borderRadius={radiusPixels.lg}
+              backgroundColor={skeletonBg}
+              highlightColor={skeletonHighlight}
+            />
+          </ScrollView>
 
           {/* Statistics Section */}
           <View style={styles.section}>
@@ -1627,9 +1832,6 @@ const PlayerProfile = () => {
               highlightColor={skeletonHighlight}
             />
           </View>
-
-          {/* Bottom Spacing */}
-          <View style={{ height: 40 }} />
         </ScrollView>
       </SafeAreaView>
     );
@@ -1640,186 +1842,169 @@ const PlayerProfile = () => {
     profile?.display_name ||
     t('common.player');
 
-  const username =
-    profile?.display_name ||
-    `${profile?.first_name?.toLowerCase() || ''}${profile?.last_name?.toLowerCase() || ''}`;
-
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Profile Header */}
-        <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
-          {/* Block Icon - Top Left */}
-          <TouchableOpacity
-            style={styles.blockButton}
-            onPress={handleToggleBlock}
-            disabled={blockLoading || !currentUserId}
-          >
-            {blockLoading ? (
-              <ActivityIndicator size="small" color={colors.textMuted} />
-            ) : (
-              <Ionicons
-                name={isBlocked ? 'ban' : 'ban-outline'}
-                size={24}
-                color={isBlocked ? status.error.DEFAULT : colors.textMuted}
-              />
-            )}
-          </TouchableOpacity>
-
-          {/* Favorite Heart Icon - Top Right */}
-          <TouchableOpacity
-            style={styles.favoriteButton}
-            onPress={handleToggleFavorite}
-            disabled={favoriteLoading || !currentUserId || isBlocked}
-          >
-            {favoriteLoading ? (
-              <ActivityIndicator size="small" color={colors.primary} />
-            ) : (
-              <Ionicons
-                name={isFavorite ? 'heart' : 'heart-outline'}
-                size={28}
-                color={
-                  isFavorite ? status.error.DEFAULT : isBlocked ? colors.border : colors.textMuted
-                }
-              />
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.avatarWrapper}>
-            <View style={[styles.profilePicContainer, { borderColor: colors.primary }]}>
-              {profile?.profile_picture_url ? (
-                <Image
-                  source={{ uri: getProfilePictureUrl(profile.profile_picture_url) || '' }}
-                  style={styles.profileImage}
-                />
-              ) : (
-                <Ionicons name="person-outline" size={40} color={colors.primary} />
-              )}
-            </View>
-            {/* Online Status Indicator */}
-            <View
-              style={[
-                styles.onlineIndicator,
-                {
-                  backgroundColor: isOnline ? '#22C55E' : neutral[400],
-                  borderColor: colors.card,
-                },
-              ]}
-            />
-          </View>
-
-          <Text style={[styles.profileName, { color: colors.text }]}>{displayName}</Text>
-          <Text style={[styles.username, { color: colors.textMuted }]}>@{username}</Text>
-
-          {/* Location & Distance */}
-          {player?.city || distanceText ? (
-            <View style={styles.locationRow}>
-              <Ionicons name="location-outline" size={14} color={colors.textMuted} />
-              <Text style={[styles.locationText, { color: colors.textMuted }]}>
-                {[player?.city, distanceText].filter(Boolean).join(' · ')}
-              </Text>
-            </View>
-          ) : null}
-
-          {/* Coveted Badge */}
-          <CovetedBadge
-            reputationScore={reputationDisplay?.score}
-            certificationStatus={primarySport?.badgeStatus}
-            totalEvents={reputationTotalEvents}
-            isDark={isDark}
-            isLoading={loading}
-          />
-
-          {/* Rating & Reputation Badges */}
-          <View style={styles.profileBadgesRow}>
-            <RatingBadge
-              ratingValue={primarySport?.ratingValue}
-              ratingLabel={primarySport?.ratingLabel}
-              certificationStatus={
-                primarySport?.badgeStatus as 'self_declared' | 'certified' | 'disputed' | undefined
-              }
-              isDark={isDark}
-              isLoading={loading}
-              onInfoPress={() =>
-                SheetManager.show('rating-explainer', {
-                  payload: {
-                    sportName: (primarySport?.name as 'tennis' | 'pickleball') ?? 'tennis',
+        <View
+          style={[
+            styles.profileHeader,
+            {
+              backgroundColor: isDark ? primary[950] : primary[50],
+              borderColor: isDark ? `${primary[400]}40` : `${primary[500]}20`,
+            },
+          ]}
+        >
+          <View style={styles.profileTopRow}>
+            <View style={styles.avatarWrapper}>
+              <View
+                style={[
+                  styles.profilePicContainer,
+                  {
+                    borderColor: isDark ? primary[400] : primary[500],
+                    shadowColor: isDark ? primary[400] : primary[500],
                   },
-                })
-              }
-            />
-            <ReputationBadge
-              reputationDisplay={reputationDisplay ?? undefined}
-              isDark={isDark}
-              isLoading={loading}
-              onInfoPress={() => SheetManager.show('reputation-explainer')}
-            />
-          </View>
+                ]}
+              >
+                {profile?.profile_picture_url ? (
+                  <Image
+                    source={{ uri: getProfilePictureUrl(profile.profile_picture_url) || '' }}
+                    style={styles.profileImage}
+                  />
+                ) : (
+                  <Ionicons name="person-outline" size={40} color={colors.primary} />
+                )}
+              </View>
+            </View>
 
-          <View style={styles.joinedContainer}>
-            <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-            <Text style={[styles.joinedText, { color: colors.textMuted }]}>
-              {t('playerProfile.joined')} {formatJoinedDate(player?.created_at || null)}
-            </Text>
-          </View>
+            <View style={styles.profileIdentity}>
+              <Text style={[styles.profileName, { color: colors.text }]} numberOfLines={1}>
+                {displayName}
+              </Text>
+              {/* Location + activity — same layout as PlayerCard locationRow */}
+              {(!!distanceText || isOnline || !!lastSeenLabel) && (
+                <View style={styles.locationRow}>
+                  {!!distanceText && (
+                    <>
+                      <Ionicons name="location" size={13} color={colors.textMuted} />
+                      <Text
+                        size="sm"
+                        color={colors.textMuted}
+                        numberOfLines={1}
+                        style={styles.locationDistance}
+                      >
+                        {distanceText}
+                      </Text>
+                    </>
+                  )}
+                  {!!distanceText && (isOnline || !!lastSeenLabel) && (
+                    <Text size="sm" color={colors.textMuted}>
+                      ·
+                    </Text>
+                  )}
+                  {isOnline ? (
+                    <View style={styles.onlineInline}>
+                      <Animated.View
+                        style={[
+                          styles.onlineDot,
+                          { backgroundColor: onlineColor, opacity: pulseAnim },
+                        ]}
+                      />
+                      <Text size="sm" weight="semibold" color={onlineColor} numberOfLines={1}>
+                        {t('playerDirectory.online')}
+                      </Text>
+                    </View>
+                  ) : lastSeenLabel ? (
+                    <Text
+                      size="sm"
+                      color={colors.textMuted}
+                      numberOfLines={1}
+                      style={styles.activityText}
+                    >
+                      {lastSeenLabel}
+                    </Text>
+                  ) : null}
+                </View>
+              )}
 
-          {/* Last Seen / Active Status */}
-          <View style={styles.lastSeenContainer}>
-            <Ionicons
-              name={isOnline ? 'ellipse' : 'time-outline'}
-              size={isOnline ? 8 : 14}
-              color={isOnline ? '#22C55E' : colors.textMuted}
-            />
-            <Text style={[styles.lastSeenText, { color: isOnline ? '#22C55E' : colors.textMuted }]}>
-              {isOnline
-                ? t('profile.status.activeNow')
-                : player?.last_seen_at
-                  ? `${t('profile.status.lastSeen')} ${formatRelativeTime(player.last_seen_at, locale)}`
-                  : t('profile.status.offline')}
-            </Text>
-          </View>
+              {/* Joined date */}
+              {player?.created_at && (
+                <View style={styles.joinedRow}>
+                  <Ionicons name="calendar-outline" size={13} color={colors.textMuted} />
+                  <Text size="sm" color={colors.textMuted} numberOfLines={1}>
+                    {t('playerProfile.joined')} {formatDateMonthYear(player.created_at, locale)}
+                  </Text>
+                </View>
+              )}
 
-          {/* Action Buttons */}
-          <View style={styles.actionButtons}>
-            <Button
-              variant="primary"
-              size="md"
-              onPress={handleInviteToMatch}
-              leftIcon={
-                <SportIcon
-                  sportName={selectedSport?.name ?? 'tennis'}
-                  size={18}
-                  color={colors.primaryForeground}
+              {/* Badges row */}
+              <View style={styles.profileBadgesRow}>
+                <CovetedBadge
+                  reputationScore={reputationDisplay?.score}
+                  certificationStatus={primarySport?.badgeStatus}
+                  totalEvents={reputationTotalEvents}
+                  isDark={isDark}
+                  isLoading={loading}
                 />
-              }
-              isDark={isDark}
-              style={{ flex: 1 }}
-            >
-              {t('playerProfile.inviteToMatch')}
-            </Button>
-          </View>
-
-          {/* Secondary Action */}
-          <View style={styles.secondaryAction}>
-            <Button
-              variant="outline"
-              size="sm"
-              onPress={handleRequestReference}
-              loading={referenceLoading}
-              leftIcon={
-                !referenceLoading ? (
-                  <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
-                ) : undefined
-              }
-              isDark={isDark}
-            >
-              {t('playerProfile.requestReference')}
-            </Button>
+                <RatingBadge
+                  ratingValue={primarySport?.ratingValue}
+                  ratingLabel={primarySport?.ratingLabel}
+                  certificationStatus={
+                    primarySport?.badgeStatus as
+                      | 'self_declared'
+                      | 'certified'
+                      | 'disputed'
+                      | undefined
+                  }
+                  isDark={isDark}
+                  isLoading={loading}
+                  onInfoPress={() =>
+                    SheetManager.show('rating-explainer', {
+                      payload: {
+                        sportName: (primarySport?.name as 'tennis' | 'pickleball') ?? 'tennis',
+                      },
+                    })
+                  }
+                />
+                <ReputationBadge
+                  reputationDisplay={reputationDisplay ?? undefined}
+                  isDark={isDark}
+                  isLoading={loading}
+                  onInfoPress={() => SheetManager.show('reputation-explainer')}
+                />
+              </View>
+            </View>
           </View>
         </View>
+
+        {/* Action buttons — horizontal scroll, transparent, sits under the hero card */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.actionScrollContent}
+          style={styles.actionScroll}
+        >
+          <HeroActionButton
+            label={t('playerProfile.inviteToMatch')}
+            onPress={handleInviteToMatch}
+            icon={
+              <SportIcon sportName={selectedSport?.name ?? 'tennis'} size={18} color="#ffffff" />
+            }
+          />
+          <HeroActionButton
+            label={t('playerProfile.chat')}
+            onPress={handleStartChat}
+            loading={chatLoading}
+            disabled={!currentUserId}
+            icon={<Ionicons name="chatbubble-outline" size={18} color="#ffffff" />}
+          />
+          <HeroActionButton
+            label={t('playerProfile.requestReference')}
+            onPress={handleRequestReference}
+            loading={referenceLoading}
+            icon={<Ionicons name="document-text-outline" size={18} color="#ffffff" />}
+          />
+        </ScrollView>
 
         {/* Statistics Section */}
         <View style={styles.section}>
@@ -2221,9 +2406,6 @@ const PlayerProfile = () => {
             </View>
           </View>
         )}
-
-        {/* Bottom Spacing */}
-        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -2246,46 +2428,44 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileHeader: {
-    alignItems: 'center',
-    paddingVertical: spacingPixels[6],
+    marginTop: spacingPixels[4],
+    marginHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[5],
     paddingHorizontal: spacingPixels[4],
+    borderRadius: radiusPixels.xl,
+    borderWidth: 1.5,
     position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    elevation: 2,
   },
-  blockButton: {
-    position: 'absolute',
-    top: spacingPixels[4],
-    left: spacingPixels[4],
-    padding: spacingPixels[2],
-    zIndex: 1,
+  profileTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[4],
   },
-  favoriteButton: {
-    position: 'absolute',
-    top: spacingPixels[4],
-    right: spacingPixels[4],
-    padding: spacingPixels[2],
-    zIndex: 1,
+  profileIdentity: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacingPixels[1],
   },
   avatarWrapper: {
     position: 'relative',
-    marginBottom: spacingPixels[3],
   },
   profilePicContainer: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    borderWidth: 3,
+    borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-  },
-  onlineIndicator: {
-    position: 'absolute',
-    bottom: 4,
-    right: 4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   profileImage: {
     width: '100%',
@@ -2294,49 +2474,42 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: fontSizePixels.xl,
     fontWeight: fontWeightNumeric.bold,
-    marginBottom: spacingPixels[1],
-  },
-  username: {
-    fontSize: fontSizePixels.sm,
-    marginBottom: spacingPixels[2],
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[1],
-    marginBottom: spacingPixels[2],
   },
-  locationText: {
-    fontSize: fontSizePixels.sm,
-  },
-  joinedContainer: {
+  joinedRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[1],
-    marginBottom: spacingPixels[1],
   },
-  joinedText: {
-    fontSize: fontSizePixels.xs,
+  locationDistance: {
+    flexShrink: 1,
+    minWidth: 0,
   },
-  lastSeenContainer: {
+  onlineInline: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[1],
-    marginBottom: spacingPixels[4],
+    flexShrink: 0,
   },
-  lastSeenText: {
-    fontSize: fontSizePixels.xs,
+  onlineDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
   },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: spacingPixels[3],
-    width: '100%',
+  activityText: {
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  actionScroll: {
+    marginTop: spacingPixels[3],
+  },
+  actionScrollContent: {
     paddingHorizontal: spacingPixels[4],
-  },
-  secondaryAction: {
-    width: '100%',
-    paddingHorizontal: spacingPixels[4],
-    marginTop: spacingPixels[2],
+    gap: spacingPixels[2],
     alignItems: 'center',
   },
   section: {
@@ -2596,7 +2769,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[2],
-    marginBottom: spacingPixels[2],
+    flexWrap: 'wrap',
   },
   statsGrid: {
     flexDirection: 'row',

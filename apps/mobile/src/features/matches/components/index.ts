@@ -16,6 +16,7 @@ export type { NetworkLeaderboardTabProps } from './NetworkLeaderboardTab';
 
 // Player matches components
 export { default as PlayerMatchFilterChips } from './PlayerMatchFilterChips';
+export { default as MatchCardSkeleton } from './MatchCardSkeleton';
 
 // Add Score flow components
 export { AddScoreIntroModal } from './AddScoreIntroModal';

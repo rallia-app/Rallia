@@ -2830,6 +2830,19 @@
     "selectSportDescription": "Choose a sport from the header to view players",
     "chooseSport": "Choose a sport from the header to view players",
     "nearby": "Nearby",
+    "online": "Online",
+    "lastSeenToday": "Today",
+    "lastSeenYesterday": "Yesterday",
+    "lastSeenDaysAgo": "{count} days ago",
+    "dayLetters": {
+      "monday": "M",
+      "tuesday": "T",
+      "wednesday": "W",
+      "thursday": "T",
+      "friday": "F",
+      "saturday": "S",
+      "sunday": "S"
+    },
     "failedToLoad": "Failed to load players",
     "checkConnection": "Please check your connection and try again",
     "favorites": {
@@ -3537,6 +3550,7 @@
     "error": "Error",
     "info": "Info",
     "availabilitiesUpdated": "Your availabilities have been updated!",
+    "minAvailabilitiesRequired": "Please select at least 3 availability slots.",
     "peerRatingRequestsSent": "Peer rating requests sent to {count} player(s)",
     "referenceRequestsSent": "Reference requests sent to {count} player(s)",
     "failedToSendPeerRatingRequests": "Failed to send peer rating requests",

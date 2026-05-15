@@ -74,7 +74,14 @@ import {
   getPendingDeepLink,
   addDeepLinkListener,
 } from '../navigation/deepLinkStore';
-import { spacingPixels, radiusPixels, accent, neutral, secondary } from '@rallia/design-system';
+import {
+  spacingPixels,
+  radiusPixels,
+  accent,
+  neutral,
+  primary,
+  secondary,
+} from '@rallia/design-system';
 import { LinearGradient } from 'expo-linear-gradient';
 import TennisIcon from '../../assets/icons/tennis.svg';
 import PickleballIcon from '../../assets/icons/pickleball.svg';
@@ -265,6 +272,14 @@ const Home = () => {
   const { t, locale } = useTranslation();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+
+  // Card-skeleton palette — mirrors PlayerCardSkeleton / FacilityCardSkeleton
+  // so My Matches & Just-for-you skeletons sit on the same tinted surface
+  // as the real MatchCard / MyMatchCard (primary[50/950]).
+  const skeletonCardBg = isDark ? primary[950] : primary[50];
+  const skeletonCardBorder = isDark ? `${primary[400]}40` : `${primary[500]}20`;
+  const skeletonShimmerBg = isDark ? primary[900] : primary[100];
+  const skeletonShimmerHighlight = isDark ? primary[800] : primary[50];
   const navigation = useHomeNavigation();
   const appNavigation = useAppNavigation();
   const toast = useToast();
@@ -995,9 +1010,14 @@ const Home = () => {
                 ? [1, 2, 3].map(i => (
                     <SkeletonMyMatchCard
                       key={i}
-                      backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-                      highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-                      style={{ backgroundColor: colors.card }}
+                      backgroundColor={skeletonShimmerBg}
+                      highlightColor={skeletonShimmerHighlight}
+                      style={{
+                        backgroundColor: skeletonCardBg,
+                        borderColor: skeletonCardBorder,
+                        borderWidth: 1.5,
+                        borderRadius: radiusPixels.lg,
+                      }}
                     />
                   ))
                 : myMatches.slice(0, 5).map((match: MatchWithDetails) => {
@@ -1383,11 +1403,13 @@ const Home = () => {
               [1, 2, 3].map(i => (
                 <View key={i} style={styles.jfyCardWrapper}>
                   <SkeletonMatchCard
-                    backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-                    highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                    backgroundColor={skeletonShimmerBg}
+                    highlightColor={skeletonShimmerHighlight}
                     style={{
-                      backgroundColor: isDark ? '#1C1C1E' : '#FAFAFA',
-                      borderColor: colors.border,
+                      backgroundColor: skeletonCardBg,
+                      borderColor: skeletonCardBorder,
+                      borderWidth: 1.5,
+                      borderRadius: radiusPixels.xl,
                     }}
                   />
                 </View>

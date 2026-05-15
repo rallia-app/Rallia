@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Text, Skeleton } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
 import { TIER_COLORS } from '@rallia/shared-services';
@@ -19,6 +20,14 @@ interface ReputationBadgeProps {
   onInfoPress?: () => void;
 }
 
+function withAlpha(hex: string, alpha: number): string {
+  const clamped = Math.max(0, Math.min(1, alpha));
+  const a = Math.round(clamped * 255)
+    .toString(16)
+    .padStart(2, '0');
+  return `${hex}${a}`;
+}
+
 const ReputationBadge: React.FC<ReputationBadgeProps> = ({
   reputationDisplay,
   isDark,
@@ -28,7 +37,6 @@ const ReputationBadge: React.FC<ReputationBadgeProps> = ({
 }) => {
   const height = size === 'sm' ? 20 : 24;
 
-  // Show skeleton while loading
   if (isLoading) {
     return (
       <Skeleton
@@ -44,20 +52,39 @@ const ReputationBadge: React.FC<ReputationBadgeProps> = ({
   if (!reputationDisplay?.isVisible) return null;
 
   const tierKey = reputationDisplay.tier as keyof typeof TIER_COLORS;
-  const tierPalette = TIER_COLORS[tierKey] ?? TIER_COLORS.unknown;
+  const tier = TIER_COLORS[tierKey] ?? TIER_COLORS.unknown;
 
-  const bgColor = isDark ? tierPalette.text : tierPalette.background;
-  const textColor = isDark ? tierPalette.background : tierPalette.text;
+  const gradientColors = (
+    isDark
+      ? [withAlpha(tier.primary, 0.4), tier.text]
+      : [tier.background, withAlpha(tier.primary, 0.22)]
+  ) as [string, string];
+
+  const iconColor = isDark ? tier.background : tier.primary;
+  const textColor = isDark ? tier.background : tier.text;
+  const borderColor = isDark ? withAlpha(tier.primary, 0.55) : withAlpha(tier.primary, 0.32);
   const iconSize = size === 'sm' ? 10 : 12;
 
   const badge = (
-    <View style={[styles.badge, { backgroundColor: bgColor }]}>
+    <LinearGradient
+      colors={gradientColors}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={[
+        styles.badge,
+        {
+          borderColor,
+          shadowColor: tier.primary,
+          shadowOpacity: isDark ? 0 : 0.22,
+        },
+      ]}
+    >
       <Ionicons
         name={reputationDisplay.tierIcon as keyof typeof Ionicons.glyphMap}
         size={iconSize}
-        color={textColor}
+        color={iconColor}
       />
-      <Text size="xs" weight="semibold" color={textColor}>
+      <Text size="xs" weight="semibold" color={textColor} style={styles.label}>
         {reputationDisplay.tierLabel}
       </Text>
       {onInfoPress && (
@@ -67,7 +94,7 @@ const ReputationBadge: React.FC<ReputationBadgeProps> = ({
           color={isDark ? neutral[400] : neutral[500]}
         />
       )}
-    </View>
+    </LinearGradient>
   );
 
   if (onInfoPress) {
@@ -94,6 +121,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[1.5],
     paddingVertical: spacingPixels[0.5],
     borderRadius: radiusPixels.full,
+    borderWidth: StyleSheet.hairlineWidth,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  label: {
+    letterSpacing: 0.2,
   },
 });
 

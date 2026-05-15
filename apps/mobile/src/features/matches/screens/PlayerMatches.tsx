@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { MatchCard, Text, SkeletonMatchCard } from '@rallia/shared-components';
+import { MatchCard, Text } from '@rallia/shared-components';
 import { SportIcon } from '../../../components/SportIcon';
 import { useTheme, usePlayerMatches, usePlayerMatchFilters } from '@rallia/shared-hooks';
 import {
@@ -30,7 +30,7 @@ import { useAuth, useThemeStyles, useTranslation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { useMatchDetailSheet, useSport } from '../../../context';
 import { Logger } from '@rallia/shared-services';
-import { PlayerMatchFilterChips } from '../components';
+import { PlayerMatchFilterChips, MatchCardSkeleton } from '../components';
 import { spacingPixels, neutral } from '@rallia/design-system';
 
 // =============================================================================
@@ -359,15 +359,7 @@ export default function PlayerMatches() {
       {isLoading && isInitialLoad ? (
         <View style={styles.loadingContainer}>
           {[1, 2, 3, 4].map(i => (
-            <SkeletonMatchCard
-              key={i}
-              backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-              highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-              style={{
-                backgroundColor: isDark ? '#1C1C1E' : '#FAFAFA',
-                borderColor: colors.border,
-              }}
-            />
+            <MatchCardSkeleton key={i} />
           ))}
         </View>
       ) : (

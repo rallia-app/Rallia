@@ -106,7 +106,26 @@ export interface PlayerSearchResult {
   reputation_is_public: boolean;
   /** Last seen timestamp for online status */
   last_seen_at: string | null;
+  /**
+   * Active availability slots keyed by day. Each value is an ordered list of
+   * periods the player is available that day. Days with no slots are omitted.
+   * Null when the player has set no availability at all.
+   *
+   * Example: { monday: ['evening'], saturday: ['morning', 'afternoon'] }
+   */
+  availability: Partial<Record<AvailabilityDay, AvailabilityPeriod[]>> | null;
 }
+
+export type AvailabilityDay =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday';
+
+export type AvailabilityPeriod = 'morning' | 'afternoon' | 'evening';
 
 /**
  * Paginated response for player search
@@ -296,6 +315,7 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     reputation_score: number | null;
     reputation_is_public: boolean | null;
     last_seen_at: string | null;
+    availability: Partial<Record<AvailabilityDay, AvailabilityPeriod[]>> | null;
   };
 
   const rows = (data ?? []) as RpcRow[];
@@ -324,6 +344,7 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     reputation_score: row.reputation_score ?? null,
     reputation_is_public: row.reputation_is_public ?? false,
     last_seen_at: row.last_seen_at ?? null,
+    availability: row.availability ?? null,
   }));
 
   const hasMore = offset + rows.length < totalCount;
