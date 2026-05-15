@@ -200,6 +200,16 @@ export function matchSuggestionShown(props: {
   slot_start: string;
   sport_id?: string;
   sport_name?: string;
+  /** Final ranking score the algorithm assigned. */
+  score?: number;
+  /** Per-opponent compat score (RPC output, before per-slot boosts). */
+  player_compatibility?: number;
+  /** Facility-affinity score from the RPC. */
+  facility_affinity?: number;
+  /** 1-indexed position in the surface's list at the moment of impression. */
+  rank?: number;
+  match_type?: string;
+  match_duration?: string;
 }): void {
   capture('match_suggestion_shown', props);
 }
@@ -212,6 +222,13 @@ export function matchSuggestionInviteSent(props: {
   match_id: string;
   sport_id?: string;
   sport_name?: string;
+  /** Final ranking score the algorithm assigned at impression time. */
+  score?: number;
+  player_compatibility?: number;
+  facility_affinity?: number;
+  rank?: number;
+  match_type?: string;
+  match_duration?: string;
 }): void {
   capture('match_suggestion_invite_sent', props);
 }

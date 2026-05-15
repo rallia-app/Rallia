@@ -92,6 +92,12 @@ export interface SlotSuggestion {
   score: number;
   /** Per-opponent compatibility from the RPC, before per-slot boosts. */
   playerCompatibility: number;
+  /**
+   * 1-indexed rank within the result list. Populated by `pickTopGlobal`
+   * (and other top-level selectors). Surfaces to analytics so we can
+   * correlate position-in-list with conversion downstream.
+   */
+  rank?: number;
 }
 
 export interface GetMatchSuggestionsParams {
@@ -667,7 +673,7 @@ export function pickTopGlobal(
   return [...bestByOpponent.values()]
     .sort((a, b) => b.score - a.score)
     .slice(0, maxItems)
-    .map(toSlotSuggestion);
+    .map((t, idx) => ({ ...toSlotSuggestion(t), rank: idx + 1 }));
 }
 
 function toSlotSuggestion(t: {

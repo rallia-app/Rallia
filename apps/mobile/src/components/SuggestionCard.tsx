@@ -135,6 +135,12 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
       slot_start: slotStart,
       sport_id: sportId,
       sport_name: sportName,
+      score: suggestion.score,
+      player_compatibility: suggestion.playerCompatibility,
+      facility_affinity: suggestion.facility.facilityAffinity,
+      rank: suggestion.rank,
+      match_type: suggestion.matchType,
+      match_duration: suggestion.matchDuration,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
