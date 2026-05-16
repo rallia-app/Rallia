@@ -306,7 +306,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
         {hasAvailability && (
           <View style={styles.availabilitySection}>
             <AvailabilityGrid
-              availability={player.availability}
+              availability={player.availability ?? null}
               activeColor={tierAccent}
               mutedColor={mutedColor}
             />

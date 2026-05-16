@@ -6,6 +6,7 @@
  */
 
 import { supabase } from './supabase';
+import { expandPeriodToHours } from './availability/periodHourBridge';
 import type {
   Profile,
   ProfileInsert,
@@ -1061,8 +1062,20 @@ export const OnboardingService = {
   },
 
   /**
-   * Save player availability from AvailabilityOverlay
-   * Uses upsert to handle resubmissions gracefully
+   * Save player availability.
+   *
+   * Accepts either the new hourly shape (`{ day, hour_of_day, is_active }`)
+   * or the legacy period shape (`{ day, period, is_active }`). Period inputs
+   * are expanded to their constituent hours via {@link expandPeriodToHours}
+   * so the underlying write is always hourly. Diff strategy: gather the
+   * desired set of active `(day, hour)` cells, upsert them with
+   * `last_confirmed_at = NOW()`, then delete any rows for this player whose
+   * `(day, hour_of_day)` is not in the desired set. Avoids leaving orphaned
+   * is_active=false rows in the table now that the schema is hourly.
+   *
+   * Every successful save bumps last_confirmed_at — including the "tap save
+   * without changes" gesture from the weekly refresh prompt — so the
+   * staleness UI and refresh cron treat the player as current.
    */
   async saveAvailability(
     availabilities: OnboardingAvailability[]
@@ -1073,27 +1086,90 @@ export const OnboardingService = {
         throw new Error('User not authenticated');
       }
 
-      // Single chokepoint for the freshness timestamp — every save (including
-      // no-op "refresh" saves from the weekly prompt) bumps last_confirmed_at
-      // so the staleness UI and refresh cron treat this player as current.
       const confirmedAt = new Date().toISOString();
-      const availabilityData = availabilities.map(availability => ({
-        player_id: userId,
-        day: availability.day ?? availability.day_of_week,
-        period: availability.period ?? availability.time_period,
-        is_active: availability.is_active,
-        last_confirmed_at: confirmedAt,
-      }));
 
-      // Use upsert to handle resubmissions (user navigating back and submitting again)
-      const { data, error } = await supabase
-        .from('player_availability')
-        .upsert(availabilityData, { onConflict: 'player_id,day,period' })
-        .select();
+      // Build the desired set of active hourly cells. Period inputs expand
+      // into their hour cells; duplicates within an input collapse via the
+      // Set key. is_active=false rows are excluded from the desired set so
+      // they end up deleted below.
+      type HourRow = {
+        player_id: string;
+        day: string;
+        hour_of_day: number;
+        is_active: boolean;
+        last_confirmed_at: string;
+      };
+      const desired = new Map<string, HourRow>();
 
-      if (error) throw error;
+      for (const a of availabilities) {
+        if (!a.is_active) continue;
+        const day = a.day ?? a.day_of_week;
+        if (!day) continue;
 
-      return { data: data || [], error: null };
+        const hours: number[] = [];
+        if (typeof a.hour_of_day === 'number') {
+          hours.push(a.hour_of_day);
+        } else if (a.period) {
+          for (const h of expandPeriodToHours(a.period)) hours.push(h);
+        }
+
+        for (const h of hours) {
+          const key = `${day}-${h}`;
+          desired.set(key, {
+            player_id: userId,
+            day,
+            hour_of_day: h,
+            is_active: true,
+            last_confirmed_at: confirmedAt,
+          });
+        }
+      }
+
+      const desiredRows = Array.from(desired.values());
+
+      // Upsert all desired cells; the unique key (player_id, day, hour_of_day)
+      // is set as the conflict target so re-saves bump last_confirmed_at
+      // without churning the id column.
+      let inserted: PlayerAvailability[] = [];
+      if (desiredRows.length > 0) {
+        const { data, error } = await supabase
+          .from('player_availability')
+          .upsert(desiredRows, { onConflict: 'player_id,day,hour_of_day' })
+          .select();
+        if (error) throw error;
+        inserted = data ?? [];
+      }
+
+      // Delete any pre-existing rows for this player that aren't in the
+      // desired set. PostgREST can't NOT IN a composite (day, hour) tuple,
+      // so we fetch the current id+(day, hour) for this player, compute the
+      // delete set client-side, and issue a single id-keyed delete.
+      if (desiredRows.length === 0) {
+        const { error: wipeErr } = await supabase
+          .from('player_availability')
+          .delete()
+          .eq('player_id', userId);
+        if (wipeErr) throw wipeErr;
+      } else {
+        const desiredKeys = new Set(desiredRows.map(r => `${r.day}-${r.hour_of_day}`));
+        const { data: existing, error: selErr } = await supabase
+          .from('player_availability')
+          .select('id, day, hour_of_day')
+          .eq('player_id', userId);
+        if (selErr) throw selErr;
+        const toDelete = (existing ?? [])
+          .filter(row => !desiredKeys.has(`${row.day}-${row.hour_of_day}`))
+          .map(row => row.id);
+        if (toDelete.length > 0) {
+          const { error: delErr } = await supabase
+            .from('player_availability')
+            .delete()
+            .in('id', toDelete);
+          if (delErr) throw delErr;
+        }
+      }
+
+      return { data: inserted, error: null };
     } catch (error) {
       return { data: null, error: handleError(error) };
     }

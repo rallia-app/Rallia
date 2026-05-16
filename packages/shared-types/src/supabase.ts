@@ -4142,30 +4142,30 @@ export type Database = {
         Row: {
           created_at: string
           day: Database["public"]["Enums"]["day_enum"]
+          hour_of_day: number
           id: string
           is_active: boolean
           last_confirmed_at: string | null
-          period: Database["public"]["Enums"]["period_enum"]
           player_id: string
           updated_at: string
         }
         Insert: {
           created_at?: string
           day: Database["public"]["Enums"]["day_enum"]
+          hour_of_day: number
           id?: string
           is_active?: boolean
           last_confirmed_at?: string | null
-          period: Database["public"]["Enums"]["period_enum"]
           player_id: string
           updated_at?: string
         }
         Update: {
           created_at?: string
           day?: Database["public"]["Enums"]["day_enum"]
+          hour_of_day?: number
           id?: string
           is_active?: boolean
           last_confirmed_at?: string | null
-          period?: Database["public"]["Enums"]["period_enum"]
           player_id?: string
           updated_at?: string
         }
@@ -8696,6 +8696,8 @@ export type Database = {
           p_latitude?: number
           p_limit?: number
           p_longitude?: number
+          p_max_hour?: number
+          p_min_hour?: number
           p_min_skill_value?: number
           p_min_travel_distance_km?: number
           p_offset?: number
@@ -8707,7 +8709,6 @@ export type Database = {
           p_sport_id: string
         }
         Returns: {
-          availability: Json
           city: string
           display_name: string
           distance_meters: number
@@ -9161,13 +9162,6 @@ export type Database = {
         | "bank_transfer"
       payment_plan_enum: "full" | "installment"
       payment_status: "pending" | "completed" | "failed" | "refunded"
-      period_enum:
-        | "early"
-        | "morning"
-        | "midday"
-        | "afternoon"
-        | "evening"
-        | "late"
       play_attribute_enum:
         | "serve_speed_and_placement"
         | "net_play"
@@ -9715,14 +9709,6 @@ export const Constants = {
       ],
       payment_plan_enum: ["full", "installment"],
       payment_status: ["pending", "completed", "failed", "refunded"],
-      period_enum: [
-        "early",
-        "morning",
-        "midday",
-        "afternoon",
-        "evening",
-        "late",
-      ],
       play_attribute_enum: [
         "serve_speed_and_placement",
         "net_play",

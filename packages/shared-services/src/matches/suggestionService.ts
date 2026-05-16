@@ -61,7 +61,7 @@ interface ScoredMatchup {
 
 export interface OverlapSlot {
   day: string; // 'monday' .. 'sunday'
-  period: string; // 'early' | 'morning' | 'midday' | 'afternoon' | 'evening' | 'late'
+  hour: number; // 6..22 — start hour of the [hour, hour+1) cell
 }
 
 export interface SuggestionFacility {
@@ -150,13 +150,6 @@ export interface FacilitySnapshot {
 
 /** Lookahead window for slot generation. */
 const DAYS_AHEAD = 7;
-
-/** Fixed candidate hours per period (product spec). */
-const PERIOD_FIXED_HOURS: Record<string, number[]> = {
-  morning: [8, 10],
-  afternoon: [14, 16],
-  evening: [18, 20],
-};
 
 const DAY_NAMES = [
   'sunday',
@@ -383,9 +376,11 @@ async function fetchOpponentsWithPendingInviteFromCaller(
 // =============================================================================
 
 /**
- * For a single (opponent, facility) row, emit one candidate slot per matching
- * (date, fixed-hour) cell across the 7-day window. Returns slots already
- * filtered against the caller's and the opponent's busy windows.
+ * For a single (opponent, facility) row, emit one candidate slot per
+ * (date, hour) cell in the caller↔opponent overlap, across the 7-day window.
+ * Each slot represents a 1-hour booking starting at the hour mark. Returns
+ * slots already filtered against the caller's and the opponent's busy
+ * windows.
  *
  * Exported for unit testing.
  */
@@ -399,8 +394,16 @@ export function generateFixedHourSlots(
 ): SuggestionSlot[] {
   if (overlaps.length === 0) return [];
 
-  // Build a Set of "day:period" pairs for O(1) lookup
-  const overlapSet = new Set(overlaps.map(o => `${o.day}:${o.period}`));
+  // Group overlap hours by day for O(1) lookup per (day, hour).
+  const overlapsByDay = new Map<string, Set<number>>();
+  for (const o of overlaps) {
+    let s = overlapsByDay.get(o.day);
+    if (!s) {
+      s = new Set<number>();
+      overlapsByDay.set(o.day, s);
+    }
+    s.add(o.hour);
+  }
 
   const out: SuggestionSlot[] = [];
   const nowMs = now.getTime();
@@ -408,32 +411,31 @@ export function generateFixedHourSlots(
 
   for (const { date, key } of window) {
     const dayName = DAY_NAMES[date.getDay()];
-    for (const period of Object.keys(PERIOD_FIXED_HOURS)) {
-      if (!overlapSet.has(`${dayName}:${period}`)) continue;
-      const hours = PERIOD_FIXED_HOURS[period];
-      for (const h of hours) {
-        const slotStart = new Date(date);
-        slotStart.setHours(h, 0, 0, 0);
-        const slotMs = slotStart.getTime();
-        if (slotMs <= nowMs) continue;
-        if (hasTimeConflict(key, h, h + 1, callerBusy)) continue;
-        if (hasTimeConflict(key, h, h + 1, opponentBusy)) continue;
+    const hours = overlapsByDay.get(dayName);
+    if (!hours || hours.size === 0) continue;
 
-        // Hard filter against the snapshot — only within the 3-day horizon
-        // and only when this facility has been refreshed at least once.
-        // Beyond the horizon (snapshot has no data) we emit speculatively;
-        // for never-refreshed facilities the caller passes `undefined` for
-        // `snapshot` so this block doesn't trigger.
-        if (snapshot && slotMs < horizonMs) {
-          if (!snapshot.available.has(slotStart.toISOString())) continue;
-        }
+    for (const h of hours) {
+      const slotStart = new Date(date);
+      slotStart.setHours(h, 0, 0, 0);
+      const slotMs = slotStart.getTime();
+      if (slotMs <= nowMs) continue;
+      if (hasTimeConflict(key, h, h + 1, callerBusy)) continue;
+      if (hasTimeConflict(key, h, h + 1, opponentBusy)) continue;
 
-        out.push({
-          datetime: slotStart,
-          endDatetime: new Date(slotStart.getTime() + 60 * 60 * 1000),
-          bookingUrl: null,
-        });
+      // Hard filter against the snapshot — only within the 3-day horizon
+      // and only when this facility has been refreshed at least once.
+      // Beyond the horizon (snapshot has no data) we emit speculatively;
+      // for never-refreshed facilities the caller passes `undefined` for
+      // `snapshot` so this block doesn't trigger.
+      if (snapshot && slotMs < horizonMs) {
+        if (!snapshot.available.has(slotStart.toISOString())) continue;
       }
+
+      out.push({
+        datetime: slotStart,
+        endDatetime: new Date(slotStart.getTime() + 60 * 60 * 1000),
+        bookingUrl: null,
+      });
     }
   }
   return out;

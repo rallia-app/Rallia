@@ -80,7 +80,24 @@ export type AvailabilityEnum = DbEnum<'availability_enum'>;
 
 // Time & Schedule
 export type DayEnum = DbEnum<'day_enum'>;
-export type PeriodEnum = DbEnum<'period_enum'>;
+
+/**
+ * Hour cell on the weekly availability grid. 6..22 inclusive — 6 represents
+ * the 06:00–07:00 window, 22 the 22:00–23:00 window. Stored on
+ * `player_availability.hour_of_day` (SMALLINT).
+ */
+export type AvailabilityHour = number;
+
+/**
+ * @deprecated The 6-block period model has been replaced by per-hour cells
+ * (`AvailabilityHour`). This string-literal union is kept as a transitional
+ * type so legacy UI code that still thinks in named bands continues to
+ * compile. New code should use `AvailabilityHour` directly. The shim in
+ * `OnboardingService.saveAvailability` expands `period` to the corresponding
+ * hour set; the inverse (hours → most-recent-period) is provided by helpers
+ * in `shared-services/availability`.
+ */
+export type PeriodEnum = 'early' | 'morning' | 'midday' | 'afternoon' | 'evening' | 'late';
 
 // Rating
 export type RatingCertificationMethodEnum = DbEnum<'rating_certification_method_enum'>;
@@ -562,15 +579,30 @@ export interface OnboardingRating {
   display_label: string;
 }
 
+/**
+ * Onboarding/edit payload for a single availability assertion.
+ *
+ * Two compatible shapes are supported during the hourly migration window:
+ *   • Hourly (new): `{ day, hour_of_day, is_active }` — one row per cell.
+ *     Use this for any new code and any new selection UI.
+ *   • Period-grid (legacy): `{ day, period, is_active }` — one row per band.
+ *     `OnboardingService.saveAvailability` expands the period to its
+ *     constituent hours before insert. Kept here while the UI still composes
+ *     period grids. Remove once the UI is rewritten to hour cells.
+ */
 export interface OnboardingAvailability {
-  /** Day of the week (new column name) */
   day?: DayEnum;
-  /** Time period (new column name) */
+  /** Hourly cell (6..22). Preferred for new code. */
+  hour_of_day?: AvailabilityHour;
+  /**
+   * @deprecated Use `hour_of_day` instead. Legacy period-grid input; the
+   * service layer expands each period to its hours on save.
+   */
   period?: PeriodEnum;
   is_active: boolean;
   /** @deprecated Use 'day' instead */
   day_of_week?: DayOfWeek;
-  /** @deprecated Use 'period' instead */
+  /** @deprecated No replacement; period_enum has been removed from the DB. */
   time_period?: TimePeriod;
 }
 

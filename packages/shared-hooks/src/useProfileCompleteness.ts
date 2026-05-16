@@ -86,7 +86,11 @@ const BASE_WEIGHTS: Record<CompletenessItemKey, number> = {
   play_style: 5,
 };
 
-const MIN_AVAILABILITY_SLOTS = 3;
+// Hourly schema: each "slot" is one cell from the 7×17 weekly grid (one
+// hour). The legacy 3-block floor translated to ≈3–9 hours; 6 hours is a
+// loose-but-meaningful floor under the new model. Matches the onboarding
+// MIN_SELECTIONS used in the availability picker.
+const MIN_AVAILABILITY_SLOTS = 6;
 const MIN_FAVORITE_FACILITIES_PER_SPORT = 2;
 
 // =============================================================================

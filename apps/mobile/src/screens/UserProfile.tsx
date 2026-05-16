@@ -26,7 +26,7 @@ import {
   VStack,
   HStack,
 } from '@rallia/shared-components';
-import { supabase, Logger, OnboardingService } from '@rallia/shared-services';
+import { supabase, Logger, OnboardingService, periodForHour } from '@rallia/shared-services';
 import { useProfile, usePlayer, useProfileCompleteness } from '@rallia/shared-hooks';
 import type { CompletenessItem } from '@rallia/shared-hooks';
 import { replaceImage } from '../services/imageUpload';
@@ -520,7 +520,10 @@ const UserProfile = () => {
     }
   };
 
-  // Fetch only availabilities (used after saving to avoid full screen reload)
+  // Fetch only availabilities (used after saving to avoid full screen reload).
+  // Reads the new hourly schema and folds each hour back into its containing
+  // period for the legacy 6×7 grid — any hour in a band marks that band
+  // active. PR B replaces this surface with a true hourly grid.
   const refetchAvailabilities = async () => {
     const {
       data: { user },
@@ -533,7 +536,7 @@ const UserProfile = () => {
         (async () =>
           supabase
             .from('player_availability')
-            .select('day, period, is_active, last_confirmed_at')
+            .select('day, hour_of_day, is_active, last_confirmed_at')
             .eq('player_id', user.id)
             .eq('is_active', true))(),
         15000,
@@ -547,8 +550,8 @@ const UserProfile = () => {
       let mostRecentConfirmedAt: string | null = null;
       (availData || []).forEach(avail => {
         const day = avail.day as keyof AvailabilityGrid;
-        const period = avail.period as PeriodKey;
-        if (availGrid[day] && period in availGrid[day]) {
+        const period = periodForHour(avail.hour_of_day as number) as PeriodKey | undefined;
+        if (period && availGrid[day] && period in availGrid[day]) {
           availGrid[day][period] = true;
         }
         if (
@@ -595,14 +598,15 @@ const UserProfile = () => {
       }
     };
 
-    // Availabilities
+    // Availabilities — read hourly rows and fold into period grid for the
+    // legacy UI. See refetchAvailabilities() above for the same shim.
     const fetchAvailabilities = async () => {
       try {
         const availResult = await withTimeout(
           (async () =>
             supabase
               .from('player_availability')
-              .select('day, period, is_active, last_confirmed_at')
+              .select('day, hour_of_day, is_active, last_confirmed_at')
               .eq('player_id', user.id)
               .eq('is_active', true))(),
           15000,
@@ -616,8 +620,8 @@ const UserProfile = () => {
         let mostRecentConfirmedAt: string | null = null;
         (availData || []).forEach(avail => {
           const day = avail.day as keyof AvailabilityGrid;
-          const period = avail.period as PeriodKey;
-          if (availGrid[day] && period in availGrid[day]) {
+          const period = periodForHour(avail.hour_of_day as number) as PeriodKey | undefined;
+          if (period && availGrid[day] && period in availGrid[day]) {
             availGrid[day][period] = true;
           }
           if (

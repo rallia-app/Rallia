@@ -171,10 +171,14 @@ describe('generateFixedHourSlots', () => {
     expect(generateFixedHourSlots([], window, [], [], now)).toEqual([]);
   });
 
-  it('emits both fixed hours per overlap cell (e.g. morning → 8 + 10)', () => {
-    // 2026-05-11 is a Monday
+  it('emits one slot per overlap (day, hour) cell', () => {
+    // 2026-05-11 is a Monday. With hourly overlap cells, the slot generator
+    // emits one slot per cell — no period-based hour expansion any more.
     const window = buildWindow('2026-05-11');
-    const overlaps: OverlapSlot[] = [{ day: 'monday', period: 'morning' }];
+    const overlaps: OverlapSlot[] = [
+      { day: 'monday', hour: 8 },
+      { day: 'monday', hour: 10 },
+    ];
     const now = new Date('2026-05-11T07:00:00');
     const slots = generateFixedHourSlots(overlaps, window, [], [], now);
     const hours = slots.map(s => s.datetime.getHours()).sort((a, b) => a - b);
@@ -183,7 +187,10 @@ describe('generateFixedHourSlots', () => {
 
   it('drops slots whose start time is at or before "now"', () => {
     const window = buildWindow('2026-05-11'); // Monday
-    const overlaps: OverlapSlot[] = [{ day: 'monday', period: 'morning' }];
+    const overlaps: OverlapSlot[] = [
+      { day: 'monday', hour: 8 },
+      { day: 'monday', hour: 10 },
+    ];
     // Now = 9:00 AM Monday. The 8:00 AM slot is past; the 10:00 AM slot is future.
     const now = new Date('2026-05-11T09:00:00');
     const slots = generateFixedHourSlots(overlaps, window, [], [], now);
@@ -192,7 +199,10 @@ describe('generateFixedHourSlots', () => {
 
   it("drops slots that conflict with the caller's busy window", () => {
     const window = buildWindow('2026-05-11'); // Monday
-    const overlaps: OverlapSlot[] = [{ day: 'monday', period: 'morning' }];
+    const overlaps: OverlapSlot[] = [
+      { day: 'monday', hour: 8 },
+      { day: 'monday', hour: 10 },
+    ];
     const now = new Date('2026-05-11T06:00:00');
     const callerBusy: BusySlot[] = [
       { matchDate: '2026-05-11', startTime: '08:00', endTime: '09:30' },
@@ -204,7 +214,10 @@ describe('generateFixedHourSlots', () => {
 
   it("drops slots that conflict with the opponent's busy window", () => {
     const window = buildWindow('2026-05-11'); // Monday
-    const overlaps: OverlapSlot[] = [{ day: 'monday', period: 'morning' }];
+    const overlaps: OverlapSlot[] = [
+      { day: 'monday', hour: 8 },
+      { day: 'monday', hour: 10 },
+    ];
     const now = new Date('2026-05-11T06:00:00');
     const opponentBusy: BusySlot[] = [
       { matchDate: '2026-05-11', startTime: '09:30', endTime: '11:00' },
@@ -216,18 +229,24 @@ describe('generateFixedHourSlots', () => {
 
   it('keeps slots when busy windows are on a different date', () => {
     const window = buildWindow('2026-05-11'); // Monday
-    const overlaps: OverlapSlot[] = [{ day: 'monday', period: 'morning' }];
+    const overlaps: OverlapSlot[] = [
+      { day: 'monday', hour: 8 },
+      { day: 'monday', hour: 10 },
+    ];
     const now = new Date('2026-05-11T06:00:00');
     const callerBusy: BusySlot[] = [
       { matchDate: '2026-05-12', startTime: '08:00', endTime: '11:00' },
     ];
     const slots = generateFixedHourSlots(overlaps, window, callerBusy, [], now);
-    expect(slots.map(s => s.datetime.getHours())).toEqual([8, 10]);
+    expect(slots.map(s => s.datetime.getHours()).sort((a, b) => a - b)).toEqual([8, 10]);
   });
 
   it('respects both caller AND opponent conflicts simultaneously', () => {
     const window = buildWindow('2026-05-11'); // Monday
-    const overlaps: OverlapSlot[] = [{ day: 'monday', period: 'morning' }];
+    const overlaps: OverlapSlot[] = [
+      { day: 'monday', hour: 8 },
+      { day: 'monday', hour: 10 },
+    ];
     const now = new Date('2026-05-11T06:00:00');
     const callerBusy: BusySlot[] = [
       { matchDate: '2026-05-11', startTime: '08:00', endTime: '09:00' },
@@ -240,36 +259,29 @@ describe('generateFixedHourSlots', () => {
     expect(slots).toEqual([]);
   });
 
-  it('skips date+period combinations not in the overlap set', () => {
+  it('skips date+hour combinations not in the overlap set', () => {
     const window = buildWindow('2026-05-11'); // Monday
-    // Only Tuesday morning is in the overlap.
-    const overlaps: OverlapSlot[] = [{ day: 'tuesday', period: 'morning' }];
+    // Only Tuesday 8 AM is in the overlap.
+    const overlaps: OverlapSlot[] = [{ day: 'tuesday', hour: 8 }];
     const now = new Date('2026-05-11T06:00:00');
     const slots = generateFixedHourSlots(overlaps, window, [], [], now);
-    // Monday produces no slots; Tuesday (the next day in window) produces 8 + 10.
-    expect(slots).toHaveLength(2);
-    expect(slots.every(s => s.datetime.getDay() === 2 /* Tuesday */)).toBe(true);
-  });
-
-  it('expands a single overlap across the 7-day window if the day repeats', () => {
-    const window = buildWindow('2026-05-11'); // Monday → next Sunday (May 17)
-    // Only one Monday in this window; only 8 AM + 10 AM should be emitted.
-    const overlaps: OverlapSlot[] = [{ day: 'monday', period: 'morning' }];
-    const now = new Date('2026-05-11T06:00:00');
-    const slots = generateFixedHourSlots(overlaps, window, [], [], now);
-    expect(slots).toHaveLength(2);
+    // Monday produces no slots; Tuesday produces exactly the 8 AM cell.
+    expect(slots).toHaveLength(1);
+    expect(slots[0].datetime.getDay()).toBe(2); // Tuesday
+    expect(slots[0].datetime.getHours()).toBe(8);
   });
 
   it('emits multiple cells from multiple overlap entries', () => {
     const window = buildWindow('2026-05-11');
     const overlaps: OverlapSlot[] = [
-      { day: 'monday', period: 'morning' }, // 8, 10
-      { day: 'monday', period: 'evening' }, // 18, 20
+      { day: 'monday', hour: 9 },
+      { day: 'monday', hour: 18 },
+      { day: 'monday', hour: 20 },
     ];
     const now = new Date('2026-05-11T06:00:00');
     const slots = generateFixedHourSlots(overlaps, window, [], [], now);
     const hours = slots.map(s => s.datetime.getHours()).sort((a, b) => a - b);
-    expect(hours).toEqual([8, 10, 18, 20]);
+    expect(hours).toEqual([9, 18, 20]);
   });
 
   // ───────────────────────────────────────────────────────────────────
@@ -278,7 +290,10 @@ describe('generateFixedHourSlots', () => {
 
   it('keeps all overlap slots when no snapshot is provided (cold start)', () => {
     const window = buildWindow('2026-05-11');
-    const overlaps: OverlapSlot[] = [{ day: 'monday', period: 'morning' }];
+    const overlaps: OverlapSlot[] = [
+      { day: 'monday', hour: 8 },
+      { day: 'monday', hour: 10 },
+    ];
     const now = new Date('2026-05-11T06:00:00');
     // No snapshot argument: emit everything the overlap allows.
     const slots = generateFixedHourSlots(overlaps, window, [], [], now);
@@ -287,7 +302,10 @@ describe('generateFixedHourSlots', () => {
 
   it('drops within-horizon slots that are not in the snapshot', () => {
     const window = buildWindow('2026-05-11');
-    const overlaps: OverlapSlot[] = [{ day: 'monday', period: 'morning' }];
+    const overlaps: OverlapSlot[] = [
+      { day: 'monday', hour: 8 },
+      { day: 'monday', hour: 10 },
+    ];
     const now = new Date('2026-05-11T06:00:00');
     // Snapshot only confirms the 10:00 slot is bookable, not the 08:00 one.
     const tenAm = new Date('2026-05-11T10:00:00');
@@ -300,7 +318,10 @@ describe('generateFixedHourSlots', () => {
 
   it('emits within-horizon slots that ARE in the snapshot', () => {
     const window = buildWindow('2026-05-11');
-    const overlaps: OverlapSlot[] = [{ day: 'monday', period: 'morning' }];
+    const overlaps: OverlapSlot[] = [
+      { day: 'monday', hour: 8 },
+      { day: 'monday', hour: 10 },
+    ];
     const now = new Date('2026-05-11T06:00:00');
     const eightAm = new Date('2026-05-11T08:00:00');
     const tenAm = new Date('2026-05-11T10:00:00');
@@ -313,7 +334,10 @@ describe('generateFixedHourSlots', () => {
 
   it('drops all slots when refreshed-but-empty snapshot is passed', () => {
     const window = buildWindow('2026-05-11');
-    const overlaps: OverlapSlot[] = [{ day: 'monday', period: 'morning' }];
+    const overlaps: OverlapSlot[] = [
+      { day: 'monday', hour: 8 },
+      { day: 'monday', hour: 10 },
+    ];
     const now = new Date('2026-05-11T06:00:00');
     // Empty Set = facility was refreshed, provider returned nothing in the
     // upcoming window. Hard "no inventory" signal.
@@ -327,19 +351,25 @@ describe('generateFixedHourSlots', () => {
     // The Friday 2026-05-15 slot lies past the 3-day horizon, so the snapshot
     // filter should NOT apply to it.
     const window = buildWindow('2026-05-11');
-    const overlaps: OverlapSlot[] = [{ day: 'friday', period: 'morning' }];
+    const overlaps: OverlapSlot[] = [
+      { day: 'friday', hour: 8 },
+      { day: 'friday', hour: 10 },
+    ];
     const now = new Date('2026-05-11T06:00:00');
     // Snapshot is empty — within horizon this would drop everything, but
     // Friday is beyond horizon, so emission should still happen.
     const snapshot: FacilitySnapshot = { available: new Set() };
     const slots = generateFixedHourSlots(overlaps, window, [], [], now, snapshot);
-    expect(slots).toHaveLength(2); // 8 + 10 AM on Friday
+    expect(slots).toHaveLength(2);
     expect(slots.every(s => s.datetime.getDay() === 5 /* Friday */)).toBe(true);
   });
 
   it('combines snapshot filter with busy-slot conflict on the same slot', () => {
     const window = buildWindow('2026-05-11');
-    const overlaps: OverlapSlot[] = [{ day: 'monday', period: 'morning' }];
+    const overlaps: OverlapSlot[] = [
+      { day: 'monday', hour: 8 },
+      { day: 'monday', hour: 10 },
+    ];
     const now = new Date('2026-05-11T06:00:00');
     const eightAm = new Date('2026-05-11T08:00:00');
     const tenAm = new Date('2026-05-11T10:00:00');

@@ -114,13 +114,12 @@ export interface PlayerSearchResult {
   /** Last seen timestamp for online status */
   last_seen_at: string | null;
   /**
-   * Active availability slots keyed by day. Each value is an ordered list of
-   * periods the player is available that day. Days with no slots are omitted.
-   * Null when the player has set no availability at all.
-   *
-   * Example: { monday: ['evening'], saturday: ['morning', 'afternoon'] }
+   * @deprecated The search RPC no longer returns this field as of the
+   * hourly-availability migration (20260516184214_player_availability_hourly).
+   * Kept as optional so consumers continue to compile until they remove the
+   * read in PR C (which also deletes AvailabilityGrid on PlayerCard).
    */
-  availability: Partial<Record<AvailabilityDay, AvailabilityPeriod[]>> | null;
+  availability?: Partial<Record<AvailabilityDay, AvailabilityPeriod[]>> | null;
 }
 
 export type AvailabilityDay = DayEnum;

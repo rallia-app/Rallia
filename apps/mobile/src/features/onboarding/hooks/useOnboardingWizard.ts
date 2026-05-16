@@ -8,7 +8,7 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import DatabaseService, { Logger, supabase } from '@rallia/shared-services';
+import DatabaseService, { Logger, supabase, periodForHour } from '@rallia/shared-services';
 import type { FacilitySearchResult, PeriodEnum } from '@rallia/shared-types';
 import * as Analytics from '../../../services/analytics';
 
@@ -452,7 +452,10 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
             sunday: 'Sun',
           };
 
-          // Period keys match the DB enum 1:1 — no translation map needed.
+          // Player_availability rows are now hourly. Aggregate each hour
+          // back into its containing period so the wizard's 6×7 grid renders.
+          // PR B replaces the grid with a true hourly editor and drops this
+          // fold.
           const availabilities: Record<string, Record<PeriodEnum, boolean>> = {
             Mon: { ...EMPTY_DAY },
             Tue: { ...EMPTY_DAY },
@@ -465,8 +468,9 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
 
           for (const avail of availRes.data) {
             const day = dayMap[avail.day];
-            if (day && avail.is_active) {
-              availabilities[day][avail.period as PeriodEnum] = true;
+            const period = periodForHour(avail.hour_of_day);
+            if (day && period && avail.is_active) {
+              availabilities[day][period] = true;
             }
           }
 

@@ -38,3 +38,12 @@ export {
   fetchLocalAvailability,
   clearLocalTemplatesCache,
 } from './localAvailabilityFetcher';
+
+// Period ↔ hour bridge (transitional — remove after the UI is rewritten to
+// hourly cells in PR B).
+export {
+  PERIOD_TO_HOURS,
+  expandPeriodToHours,
+  periodForHour,
+  periodsCoveredByHours,
+} from './periodHourBridge';

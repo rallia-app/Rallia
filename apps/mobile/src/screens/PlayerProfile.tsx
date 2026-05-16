@@ -34,6 +34,7 @@ import {
   getTierForScore,
   getTierConfig,
   MIN_EVENTS_FOR_PUBLIC,
+  periodForHour,
 } from '@rallia/shared-services';
 import type { ReputationDisplay } from '@rallia/shared-services';
 import { useGetOrCreateDirectConversation } from '@rallia/shared-hooks';
@@ -705,12 +706,13 @@ const PlayerProfile = () => {
           'Failed to load ratings'
         ),
 
-        // Fetch player availabilities
+        // Fetch player availabilities — hourly rows; folded back into the
+        // legacy period grid downstream via periodForHour().
         withTimeout(
           (async () =>
             supabase
               .from('player_availability')
-              .select('day, period, is_active')
+              .select('day, hour_of_day, is_active')
               .eq('player_id', playerId)
               .eq('is_active', true))(),
           15000,
@@ -1023,8 +1025,8 @@ const PlayerProfile = () => {
 
       (availData || []).forEach(avail => {
         const day = avail.day as keyof AvailabilityGrid;
-        const period = avail.period as PeriodKey;
-        if (availGrid[day] && period in availGrid[day]) {
+        const period = periodForHour(avail.hour_of_day as number) as PeriodKey | undefined;
+        if (period && availGrid[day] && period in availGrid[day]) {
           availGrid[day][period] = true;
         }
       });
