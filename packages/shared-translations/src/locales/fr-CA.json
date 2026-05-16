@@ -8403,6 +8403,9 @@
       "hasAvailabilities": {
         "label": "Réservable"
       },
+      "hasOpenSlots": {
+        "label": "Créneaux libres"
+      },
       "organizationNature": {
         "label": "Type",
         "all": "Tous",

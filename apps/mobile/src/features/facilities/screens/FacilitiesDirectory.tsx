@@ -160,6 +160,7 @@ export default function FacilitiesDirectory() {
       filters.membership !== 'all' ||
       filters.organizationNature !== 'all' ||
       filters.hasAvailabilities ||
+      filters.hasOpenSlots ||
       filters.favoritesOnly
     );
   }, [filters]);

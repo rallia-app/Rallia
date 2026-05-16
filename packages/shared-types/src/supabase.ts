@@ -1316,6 +1316,7 @@ export type Database = {
           slot_end: string
           slot_start: string
           source: string
+          sport_id: string | null
         }
         Insert: {
           court_name?: string | null
@@ -1330,6 +1331,7 @@ export type Database = {
           slot_end: string
           slot_start: string
           source: string
+          sport_id?: string | null
         }
         Update: {
           court_name?: string | null
@@ -1344,6 +1346,7 @@ export type Database = {
           slot_end?: string
           slot_start?: string
           source?: string
+          sport_id?: string | null
         }
         Relationships: [
           {
@@ -1351,6 +1354,13 @@ export type Database = {
             columns: ["facility_id"]
             isOneToOne: false
             referencedRelation: "facility"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facility_availability_snapshot_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "sport"
             referencedColumns: ["id"]
           },
         ]
@@ -8576,6 +8586,7 @@ export type Database = {
           external_provider_id: string
           facility_id: string
           provider_type: string
+          sports: Json
         }[]
       }
       resolve_invitation_targets: {
@@ -8614,6 +8625,7 @@ export type Database = {
           p_favorites_only?: boolean
           p_has_availabilities?: boolean
           p_has_lighting?: boolean
+          p_has_open_slots?: boolean
           p_latitude: number
           p_limit?: number
           p_longitude: number
@@ -8656,6 +8668,7 @@ export type Database = {
           p_facility_types?: string[]
           p_has_availabilities?: boolean
           p_has_lighting?: boolean
+          p_has_open_slots?: boolean
           p_latitude: number
           p_longitude: number
           p_max_distance_km?: number
@@ -9858,4 +9871,3 @@ export const Constants = {
     },
   },
 } as const
-

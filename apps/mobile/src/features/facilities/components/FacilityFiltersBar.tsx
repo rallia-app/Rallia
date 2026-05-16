@@ -530,6 +530,10 @@ export default function FacilityFiltersBar({
     onFiltersChange({ ...filters, hasAvailabilities: !filters.hasAvailabilities });
   }, [filters, onFiltersChange]);
 
+  const handleHasOpenSlotsToggle = useCallback(() => {
+    onFiltersChange({ ...filters, hasOpenSlots: !filters.hasOpenSlots });
+  }, [filters, onFiltersChange]);
+
   const handleFavoritesOnlyToggle = useCallback(() => {
     onFiltersChange({ ...filters, favoritesOnly: !filters.favoritesOnly });
   }, [filters, onFiltersChange]);
@@ -560,11 +564,12 @@ export default function FacilityFiltersBar({
           ]
         : []),
       {
-        key: 'distance',
-        value: distanceDisplay,
-        isActive: filters.distance !== 'all',
-        onPress: () => setShowDistanceDropdown(true),
-        icon: filters.distance !== 'all' ? 'navigate-outline' : undefined,
+        key: 'hasOpenSlots',
+        value: t('facilitiesTab.filters.hasOpenSlots.label'),
+        isActive: filters.hasOpenSlots,
+        onPress: handleHasOpenSlotsToggle,
+        icon: 'flash-outline',
+        hasDropdown: false,
       },
       {
         key: 'hasAvailabilities',
@@ -573,6 +578,13 @@ export default function FacilityFiltersBar({
         onPress: handleHasAvailabilitiesToggle,
         icon: 'calendar-outline',
         hasDropdown: false,
+      },
+      {
+        key: 'distance',
+        value: distanceDisplay,
+        isActive: filters.distance !== 'all',
+        onPress: () => setShowDistanceDropdown(true),
+        icon: filters.distance !== 'all' ? 'navigate-outline' : undefined,
       },
       {
         key: 'courtType',
@@ -635,6 +647,7 @@ export default function FacilityFiltersBar({
     orgNatureDisplay,
     handleFavoritesOnlyToggle,
     handleHasAvailabilitiesToggle,
+    handleHasOpenSlotsToggle,
     getCourtTypeIcon,
     getLightingIcon,
     getMembershipIcon,
