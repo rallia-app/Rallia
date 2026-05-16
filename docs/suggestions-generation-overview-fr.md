@@ -34,8 +34,42 @@ Mélange pondéré (somme = 1,0) :
 
 **Ajustements supplémentaires sur `player_compat`** :
 
-- **Historique caller↔adversaire** (`-0,5` à `+0,5`) : matchs passés (récents pondérés plus fort), étoiles données, favori, réseaux partagés, conversations — vs rapports, no-shows, retards. Activé seulement quand on a au moins 2 signaux (sinon = 0, pour éviter qu'un seul favori fasse exploser le classement).
+- **Historique caller↔adversaire** (`-0,5` à `+0,5`) : voir détail ci-dessous. Activé seulement quand on a au moins 2 signaux (sinon = 0, pour éviter qu'un seul favori fasse exploser le classement).
 - **Pénalité « contesté »** (`-0,15`) : un adversaire dont le classement est contesté est rétrogradé d'un cran, sans être exclu.
+
+#### Détail du score d'historique
+
+**Signaux positifs** (poussent le score vers +0,5) :
+
+| Signal                         | Impact                                                                                                                      |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| Matchs joués ensemble          | Jusqu'à +0,40. Récents pondérés plus fort : ≤ 90 j = poids plein, ≤ 180 j = ½, ≤ 365 j = ¼, au-delà = 0.                    |
+| Étoiles données                | Jusqu'à ±0,30 (signé : 5★ = positif, 1★ = négatif), récents pondérés plus fort.                                             |
+| Favori (appelant → adversaire) | +0,15.                                                                                                                      |
+| Favori mutuel                  | +0,10 supplémentaires (en plus du +0,15) quand l'adversaire a aussi mis l'appelant en favori.                               |
+| Réseaux partagés               | Poids selon le type de réseau, plafonné à +0,20 : voir tableau ci-dessous.                                                  |
+| Conversations                  | +0,05 si une conversation existe; +0,05 supplémentaires s'il y a au moins un message dans les 30 derniers jours. Max +0,10. |
+
+**Pondération par type de réseau partagé** (on prend le poids du réseau le plus fort en commun) :
+
+| Type de réseau           | Poids |
+| ------------------------ | ----- |
+| Amis / groupe de joueurs | 0,20  |
+| Club                     | 0,12  |
+| Communauté               | 0,08  |
+| Réseau privé             | 0,06  |
+| Réseau public            | 0,04  |
+
+**Signaux négatifs** (poussent le score vers −0,5) :
+
+| Signal                                               | Impact                          |
+| ---------------------------------------------------- | ------------------------------- |
+| Signalements de joueur (par l'appelant, non rejetés) | −0,20 chacun, plafonné à −0,30. |
+| Signalements de match (par l'appelant)               | −0,10 chacun, plafonné à −0,20. |
+| No-shows marqués par l'appelant                      | −0,25 chacun, plafonné à −0,40. |
+| Retards marqués par l'appelant                       | −0,05 chacun, plafonné à −0,10. |
+
+Le total est ensuite clampé dans `[-0,5, +0,5]`, puis ajouté à `player_compat` avec un coefficient 0,5 (donc l'effet final sur la compatibilité est de ±25 % au maximum).
 
 **Filtres durs** (avant même le scoring) :
 
