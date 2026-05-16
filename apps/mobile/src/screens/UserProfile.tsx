@@ -732,7 +732,7 @@ const UserProfile = () => {
       const selectedCount = availabilityData.filter(a => a.is_active).length;
       if (selectedCount > 0) {
         const { error: saveError } = await OnboardingService.saveAvailability(availabilityData);
-        if (saveError) throw saveError;
+        if (saveError) throw new Error(saveError.message);
       }
 
       // Save the privacy setting to the player table
