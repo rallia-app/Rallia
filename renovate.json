@@ -1,0 +1,52 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:best-practices", ":dependencyDashboard", ":semanticCommits"],
+  "baseBranches": ["dev"],
+  "timezone": "America/Toronto",
+  "schedule": ["before 5am on monday"],
+  "labels": ["dependencies"],
+  "prConcurrentLimit": 10,
+  "prHourlyLimit": 4,
+  "rangeStrategy": "bump",
+  "minimumReleaseAge": "7 days",
+  "internalChecksFilter": "strict",
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "labels": ["security", "dependencies"],
+    "schedule": ["at any time"]
+  },
+  "packageRules": [
+    {
+      "description": "Group Expo SDK packages",
+      "matchPackageNames": ["expo", "expo-*", "@expo/**"],
+      "groupName": "expo"
+    },
+    {
+      "description": "Group React Native packages",
+      "matchPackageNames": ["react-native", "react-native-*", "@react-native/**"],
+      "groupName": "react-native"
+    },
+    {
+      "description": "Group Next.js + React core",
+      "matchPackageNames": ["next", "@next/**", "react", "react-dom", "react-test-renderer"],
+      "groupName": "next-react-core"
+    },
+    {
+      "description": "Group Supabase packages",
+      "matchPackageNames": ["@supabase/**"],
+      "groupName": "supabase"
+    },
+    {
+      "description": "Group dev-dependency minor/patch updates",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "dev-dependencies"
+    },
+    {
+      "description": "GitHub Actions on the same monday cadence",
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions",
+      "schedule": ["before 5am on monday"]
+    }
+  ]
+}
