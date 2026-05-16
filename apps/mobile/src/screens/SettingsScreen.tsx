@@ -318,6 +318,7 @@ const SettingsScreen: React.FC = () => {
                     {t('feedback.description')}
                   </Text>
                 </View>
+                <Ionicons name="chevron-forward" size={20} color={`${BASE_WHITE}CC`} />
               </LinearGradient>
             </TouchableOpacity>
           </View>

@@ -23,8 +23,7 @@ import {
   type TranslationKey,
 } from '../hooks';
 import { useSport } from '../context';
-import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
-import { LinearGradient } from 'expo-linear-gradient';
+import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
 import { PlayerDirectory } from '../features/community';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import type { RootStackParamList, CommunityStackParamList } from '../navigation/types';
@@ -43,7 +42,7 @@ interface ActionButton {
 }
 
 const Community = () => {
-  const { colors } = useThemeStyles();
+  const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
   const { selectedSport } = useSport();
   const navigation = useNavigation<CommunityNavigationProp>();
@@ -114,30 +113,36 @@ const Community = () => {
           {actionButtons.map(button => (
             <TouchableOpacity
               key={button.id}
-              style={styles.actionButton}
+              style={[
+                styles.actionButton,
+                {
+                  backgroundColor: isDark ? primary[950] : primary[50],
+                  borderColor: isDark ? `${primary[400]}40` : `${primary[500]}20`,
+                },
+              ]}
               onPress={button.onPress}
               activeOpacity={0.85}
             >
-              <LinearGradient
-                colors={[accent[300], accent[400], accent[500]]}
-                locations={[0, 0.55, 1]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.actionButtonGradient}
+              <View
+                style={[
+                  styles.actionButtonIcon,
+                  { backgroundColor: isDark ? `${primary[400]}20` : `${primary[500]}15` },
+                ]}
               >
-                <View style={styles.actionButtonTopHighlight} />
-                <View style={styles.actionButtonIcon}>
-                  <Ionicons name={button.icon} size={28} color="#ffffff" />
-                </View>
-                <Text
-                  size="base"
-                  weight="semibold"
-                  color="#ffffff"
-                  style={styles.actionButtonLabel}
-                >
-                  {button.label}
-                </Text>
-              </LinearGradient>
+                <Ionicons
+                  name={button.icon}
+                  size={28}
+                  color={isDark ? primary[400] : primary[500]}
+                />
+              </View>
+              <Text
+                size="base"
+                weight="semibold"
+                color={isDark ? primary[300] : primary[600]}
+                style={styles.actionButtonLabel}
+              >
+                {button.label}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -180,35 +185,20 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 1,
     aspectRatio: 1.5,
-    borderRadius: radiusPixels['2xl'],
-  },
-  actionButtonGradient: {
-    flex: 1,
-    borderRadius: radiusPixels['2xl'],
+    borderRadius: radiusPixels.xl,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacingPixels[2],
     paddingVertical: spacingPixels[4],
     paddingHorizontal: spacingPixels[3],
-    overflow: 'hidden',
-  },
-  actionButtonTopHighlight: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.35)',
   },
   actionButtonIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.22)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
   },
   actionButtonLabel: {
     textAlign: 'center',

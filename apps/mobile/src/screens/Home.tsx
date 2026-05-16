@@ -74,14 +74,7 @@ import {
   getPendingDeepLink,
   addDeepLinkListener,
 } from '../navigation/deepLinkStore';
-import {
-  spacingPixels,
-  radiusPixels,
-  accent,
-  neutral,
-  primary,
-  secondary,
-} from '@rallia/design-system';
+import { spacingPixels, radiusPixels, accent, neutral, primary } from '@rallia/design-system';
 import { LinearGradient } from 'expo-linear-gradient';
 import TennisIcon from '../../assets/icons/tennis.svg';
 import PickleballIcon from '../../assets/icons/pickleball.svg';
@@ -214,16 +207,16 @@ const quickNavStyles = StyleSheet.create({
     paddingBottom: spacingPixels[2],
   },
   item: {
-    width: 150,
+    width: 190,
     borderRadius: radiusPixels['2xl'],
   },
   gradient: {
+    flexDirection: 'row',
     borderRadius: radiusPixels['2xl'],
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[2],
-    paddingVertical: spacingPixels[4],
-    paddingHorizontal: spacingPixels[5],
+    gap: spacingPixels[1],
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
     overflow: 'hidden',
   },
   topHighlight: {
@@ -235,16 +228,18 @@ const quickNavStyles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.35)',
   },
   iconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.22)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.25)',
+    flexShrink: 0,
   },
   labelBlock: {
+    flex: 1,
     alignItems: 'center',
   },
   label: {
@@ -1353,12 +1348,10 @@ const Home = () => {
             {
               backgroundColor: colors.card,
               borderColor: colors.border,
+              paddingHorizontal: spacingPixels[10],
             },
           ]}
         >
-          <View style={[styles.matchesSectionIconWrap, { backgroundColor: `${primary[500]}20` }]}>
-            <SportIcon sportName={selectedSport?.name ?? 'tennis'} size={40} color={primary[500]} />
-          </View>
           <Text size="xl" weight="bold" color={colors.text} style={styles.matchesSectionTitle}>
             {t('home.yourMatches')}
           </Text>
@@ -1498,34 +1491,12 @@ const Home = () => {
         {renderListHeader()}
 
         {showNearbySection && (
-          /* Single horizontal ScrollView always rendered — only its children
-             change between loading / empty / real states. Avoids layout
-             shift and preserves horizontal scroll position across transitions. */
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.justForYouScrollContent}
-          >
-            {showJfyLoading ? (
-              [1, 2, 3].map(i => (
-                <View key={i} style={styles.jfyCardWrapper}>
-                  <SkeletonMatchCard
-                    backgroundColor={skeletonShimmerBg}
-                    highlightColor={skeletonShimmerHighlight}
-                    style={{
-                      backgroundColor: skeletonCardBg,
-                      borderColor: skeletonCardBorder,
-                      borderWidth: 1.5,
-                      borderRadius: radiusPixels.xl,
-                    }}
-                  />
-                </View>
-              ))
-            ) : showJfyEmpty ? (
+          <>
+            {showJfyEmpty ? (
               <View
                 style={[
-                  styles.jfyEmptyCard,
-                  { backgroundColor: colors.card, borderColor: colors.border },
+                  styles.matchesSection,
+                  { backgroundColor: colors.card, borderColor: colors.border, marginTop: 0 },
                 ]}
               >
                 <Ionicons name="location-outline" size={32} color={colors.textMuted} />
@@ -1534,88 +1505,98 @@ const Home = () => {
                 </Text>
               </View>
             ) : (
-              justForYouItems.map(item =>
-                item.kind === 'match' ? (
-                  <View key={item.key} style={styles.jfyCardWrapper}>
-                    {/* MatchCard has built-in marginHorizontal:16; the
+              /* Single horizontal ScrollView always rendered — only its children
+             change between loading / real states. Avoids layout
+             shift and preserves horizontal scroll position across transitions. */
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.justForYouScrollContent}
+              >
+                {showJfyLoading
+                  ? [1, 2, 3].map(i => (
+                      <View key={i} style={styles.jfyCardWrapper}>
+                        <SkeletonMatchCard
+                          backgroundColor={skeletonShimmerBg}
+                          highlightColor={skeletonShimmerHighlight}
+                          style={{
+                            backgroundColor: skeletonCardBg,
+                            borderColor: skeletonCardBorder,
+                            borderWidth: 1.5,
+                            borderRadius: radiusPixels.xl,
+                          }}
+                        />
+                      </View>
+                    ))
+                  : justForYouItems.map(item =>
+                      item.kind === 'match' ? (
+                        <View key={item.key} style={styles.jfyCardWrapper}>
+                          {/* MatchCard has built-in marginHorizontal:16; the
                           negative wrapper margin neutralizes it so the card
                           fills our 340px slot exactly. */}
-                    <View style={styles.jfyMatchInner}>
-                      <MatchCard
-                        match={item.data}
-                        isDark={isDark}
-                        t={
-                          t as (
-                            key: string,
-                            options?: Record<string, string | number | boolean>
-                          ) => string
-                        }
-                        locale={locale}
-                        currentPlayerId={player?.id}
-                        sportIcon={
-                          <SportIcon
-                            sportName={item.data.sport?.name ?? selectedSport?.name ?? 'tennis'}
-                            size={100}
-                            color={isDark ? neutral[600] : neutral[400]}
+                          <View style={styles.jfyMatchInner}>
+                            <MatchCard
+                              match={item.data}
+                              isDark={isDark}
+                              t={
+                                t as (
+                                  key: string,
+                                  options?: Record<string, string | number | boolean>
+                                ) => string
+                              }
+                              locale={locale}
+                              currentPlayerId={player?.id}
+                              sportIcon={
+                                <SportIcon
+                                  sportName={
+                                    item.data.sport?.name ?? selectedSport?.name ?? 'tennis'
+                                  }
+                                  size={100}
+                                  color={isDark ? neutral[600] : neutral[400]}
+                                />
+                              }
+                              onPress={() => {
+                                Logger.logUserAction('match_pressed', { matchId: item.data.id });
+                                openMatchDetail(item.data as MatchDetailData);
+                              }}
+                            />
+                          </View>
+                        </View>
+                      ) : (
+                        <View key={item.key} style={styles.jfyCardWrapper}>
+                          <SuggestionCard
+                            suggestion={item.data}
+                            colors={{
+                              cardBackground: colors.cardBackground,
+                              text: colors.foreground,
+                              textSecondary: colors.textSecondary,
+                              textMuted: colors.textMuted,
+                              border: colors.border,
+                              buttonActive: colors.primary,
+                              buttonTextActive: '#ffffff',
+                            }}
+                            isDark={isDark}
+                            labels={suggestionLabels}
+                            locale={locale}
+                            onSendInvite={handleSendInvite}
+                            inviteState={getInviteState(
+                              item.data.opponentId,
+                              item.data.facility.facilityId,
+                              item.data.slot.datetime
+                            )}
+                            source="feed"
+                            sportId={selectedSport?.id}
+                            sportName={selectedSport?.name}
+                            defaultMatchType={callerMatchType}
                           />
-                        }
-                        onPress={() => {
-                          Logger.logUserAction('match_pressed', { matchId: item.data.id });
-                          openMatchDetail(item.data as MatchDetailData);
-                        }}
-                      />
-                    </View>
-                  </View>
-                ) : (
-                  <View key={item.key} style={styles.jfyCardWrapper}>
-                    <SuggestionCard
-                      suggestion={item.data}
-                      colors={{
-                        cardBackground: colors.cardBackground,
-                        text: colors.foreground,
-                        textSecondary: colors.textSecondary,
-                        textMuted: colors.textMuted,
-                        border: colors.border,
-                        buttonActive: colors.primary,
-                        buttonTextActive: '#ffffff',
-                      }}
-                      isDark={isDark}
-                      labels={suggestionLabels}
-                      locale={locale}
-                      onSendInvite={handleSendInvite}
-                      inviteState={getInviteState(
-                        item.data.opponentId,
-                        item.data.facility.facilityId,
-                        item.data.slot.datetime
-                      )}
-                      source="feed"
-                      sportId={selectedSport?.id}
-                      sportName={selectedSport?.name}
-                      defaultMatchType={callerMatchType}
-                    />
-                  </View>
-                )
-              )
+                        </View>
+                      )
+                    )}
+              </ScrollView>
             )}
-          </ScrollView>
+          </>
         )}
       </ScrollView>
-
-      {/* FAB buttons */}
-      <View style={styles.fabContainer}>
-        {isOnboarded && (
-          <TouchableOpacity
-            style={[styles.suggestionsFab, { backgroundColor: secondary[500] }]}
-            onPress={() => {
-              lightHaptic();
-              SheetManager.show('match-suggestions');
-            }}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="sparkles" size={24} color="#ffffff" />
-          </TouchableOpacity>
-        )}
-      </View>
     </SafeAreaView>
   );
 
@@ -1657,25 +1638,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  fabContainer: {
-    position: 'absolute',
-    bottom: spacingPixels[6],
-    right: spacingPixels[4],
-    alignItems: 'center',
-    gap: spacingPixels[3],
-  },
-  suggestionsFab: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
   listContent: {
     flexGrow: 1,
     paddingTop: spacingPixels[2],
@@ -1697,18 +1659,6 @@ const styles = StyleSheet.create({
   // it so the card fills the 340px slot exactly.
   jfyMatchInner: {
     marginHorizontal: -spacingPixels[4],
-  },
-  // Empty-state card matching the carousel's slot dimensions so the layout
-  // doesn't shift when transitioning between loading / empty / data states.
-  jfyEmptyCard: {
-    width: 320,
-    paddingVertical: spacingPixels[6],
-    paddingHorizontal: spacingPixels[4],
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[2],
-    borderRadius: radiusPixels.xl,
-    borderWidth: 1.5,
   },
   jfyEmptyText: {
     textAlign: 'center',
