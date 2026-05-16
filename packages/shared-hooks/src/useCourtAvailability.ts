@@ -336,6 +336,24 @@ interface SnapshotRow {
   price_cents: number | null;
   currency: string | null;
   source: string;
+  sport_id: string | null;
+}
+
+// Memoize sport.name → sport.id for the session. The sport table has a
+// handful of rows and never changes during a session, so one lookup is
+// enough. Snapshot rows store sport_id; callers still pass sportName for
+// historical reasons.
+let sportIdByNameCache: Promise<Map<string, string>> | null = null;
+async function getSportIdByName(name: string): Promise<string | null> {
+  if (!sportIdByNameCache) {
+    sportIdByNameCache = (async () => {
+      const { data, error } = await supabase.from('sport').select('id, name');
+      if (error || !data) return new Map();
+      return new Map(data.map(s => [s.name.toLowerCase(), s.id]));
+    })();
+  }
+  const m = await sportIdByNameCache;
+  return m.get(name.toLowerCase()) ?? null;
 }
 
 /**
@@ -380,19 +398,12 @@ function snapshotRowsToAvailabilitySlots(
   rows: SnapshotRow[],
   bookingUrlTemplate: string | null,
   providerType: string | null,
-  externalProviderId: string | null,
-  sportName?: string
+  externalProviderId: string | null
 ): AvailabilitySlot[] {
-  const sportFilter = sportName ? sportName.toLowerCase() : null;
+  // Sport scoping is handled DB-side via sport_id (stamped at ingestion by
+  // the refresh worker). No client-side filter needed here.
   const out: AvailabilitySlot[] = [];
   for (const row of rows) {
-    // Sport filter — snapshot stores all sports for a facility (refresh
-    // worker queries the provider without a sport filter). When the caller
-    // is on a sport-specific screen, narrow by substring on court_name,
-    // matching how IC3/AM expose sport in their court labels.
-    if (sportFilter && row.court_name) {
-      if (!row.court_name.toLowerCase().includes(sportFilter)) continue;
-    }
     const slotStart = new Date(row.slot_start);
     const slotEnd = new Date(row.slot_end);
     const bookingUrl = buildSnapshotBookingUrl(
@@ -418,19 +429,24 @@ function snapshotRowsToAvailabilitySlots(
   return out;
 }
 
-async function readSnapshotRows(facilityId: string): Promise<SnapshotRow[]> {
+async function readSnapshotRows(
+  facilityId: string,
+  sportId: string | null
+): Promise<SnapshotRow[]> {
   const now = new Date();
   const horizonEnd = new Date(now.getTime() + SNAPSHOT_HORIZON_DAYS * 24 * 60 * 60 * 1000);
-  const { data, error } = await supabase
+  let query = supabase
     .from('facility_availability_snapshot')
     .select(
-      'external_court_id, slot_start, slot_end, external_slot_id, court_name, court_number, price_cents, currency, source'
+      'external_court_id, slot_start, slot_end, external_slot_id, court_name, court_number, price_cents, currency, source, sport_id'
     )
     .eq('facility_id', facilityId)
     .eq('is_available', true)
     .gte('slot_start', now.toISOString())
     .lte('slot_start', horizonEnd.toISOString())
     .order('slot_start');
+  if (sportId) query = query.eq('sport_id', sportId);
+  const { data, error } = await query;
   if (error) {
     console.warn('[useCourtAvailability] snapshot read error:', error.message);
     return [];
@@ -502,7 +518,7 @@ export function useCourtAvailability(
   const hasProvider = !!dataProviderId && !!dataProviderType && !!externalProviderId;
 
   const query = useQuery<AvailabilitySlot[], Error>({
-    queryKey: courtAvailabilityKeys.facilityWithDates(facilityId, dates),
+    queryKey: courtAvailabilityKeys.facilityWithDates(facilityId, dates).concat(sportName ?? ''),
     queryFn: async () => {
       try {
         // Local-first: org-managed facilities serve from in-app templates,
@@ -524,12 +540,15 @@ export function useCourtAvailability(
           return [];
         }
 
+        // Resolve sportName → sport_id once; the snapshot filter uses sport_id.
+        const sportId = sportName ? await getSportIdByName(sportName) : null;
+
         // External-provider path: read the snapshot. Step 1-2 populate it;
         // Step 3 keeps it warm via the suggestion-service SWR trigger.
         // Here we add a focused cold-start poll so a user opening this
         // facility for the first time doesn't see an empty state.
         const [snapshotRows, everRefreshed] = await Promise.all([
-          readSnapshotRows(facilityId),
+          readSnapshotRows(facilityId, sportId),
           readEverRefreshed(facilityId),
         ]);
 
@@ -545,8 +564,7 @@ export function useCourtAvailability(
             snapshotRows,
             _bookingUrlTemplate,
             dataProviderType,
-            externalProviderId,
-            sportName
+            externalProviderId
           );
         }
 
@@ -559,14 +577,13 @@ export function useCourtAvailability(
         });
         for (let i = 0; i < COLD_START_POLL_MAX_ATTEMPTS; i++) {
           await sleep(COLD_START_POLL_INTERVAL_MS);
-          const polled = await readSnapshotRows(facilityId);
+          const polled = await readSnapshotRows(facilityId, sportId);
           if (polled.length > 0) {
             return snapshotRowsToAvailabilitySlots(
               polled,
               _bookingUrlTemplate,
               dataProviderType,
-              externalProviderId,
-              sportName
+              externalProviderId
             );
           }
         }

@@ -40,12 +40,41 @@ interface RequestBody {
   facility_ids?: unknown;
 }
 
+interface FacilitySport {
+  id: string;
+  name: string;
+}
+
 interface FacilityRow {
   facility_id: string;
   external_provider_id: string | null;
   provider_type: string | null;
   api_base_url: string | null;
   api_config: Record<string, unknown> | null;
+  sports: FacilitySport[] | null;
+}
+
+/**
+ * Resolves sport_id for a provider row.
+ *
+ * - 0 sports on the facility → null (caller can't filter; row will be unreachable
+ *   from a sport-scoped read).
+ * - 1 sport → stamp it. Common case, including all AM packages (sport-bound by
+ *   construction) and most IC3 sites.
+ * - >1 sport → substring-match court_name against each sport name (case-insensitive).
+ *   Handles the 9 IC3 sites that share one siteId across tennis and pickleball
+ *   (their courts are labeled "Terrain de tennis #N" / "Terrain de pickleball #N").
+ *   No match → null.
+ */
+function resolveSportId(sports: FacilitySport[] | null, courtName: string | null): string | null {
+  if (!sports || sports.length === 0) return null;
+  if (sports.length === 1) return sports[0].id;
+  if (!courtName) return null;
+  const lower = courtName.toLowerCase();
+  for (const s of sports) {
+    if (lower.includes(s.name.toLowerCase())) return s.id;
+  }
+  return null;
 }
 
 interface RefreshResult {
@@ -136,7 +165,7 @@ async function refreshOneFacility(
   supabase: SupabaseClient,
   facilityRow: FacilityRow
 ): Promise<RefreshOutcome> {
-  const { facility_id, external_provider_id, provider_type, api_base_url, api_config } =
+  const { facility_id, external_provider_id, provider_type, api_base_url, api_config, sports } =
     facilityRow;
 
   if (!external_provider_id || !provider_type || !api_base_url) {
@@ -185,6 +214,11 @@ async function refreshOneFacility(
     });
     rows = result.rows;
     source = result.source;
+    // Stamp sport_id per row using facility_sport (with court_name as
+    // tie-breaker for multi-sport sites).
+    for (const r of rows) {
+      r.sport_id = resolveSportId(sports, r.court_name);
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     await supabase.rpc('snapshot_record_refresh_error', {

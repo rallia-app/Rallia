@@ -22,6 +22,9 @@ export interface SnapshotRow {
   court_number: number | null;
   price_cents: number | null;
   currency: string | null;
+  /** Resolved by the orchestrator from facility_sport (and court_name for
+   *  multi-sport sites). Providers leave this null. */
+  sport_id: string | null;
 }
 
 export interface ProviderConfig {
@@ -82,63 +85,73 @@ interface IC3SearchResponse {
 
 async function fetchIC3(config: ProviderConfig, params: FetchParams): Promise<FetchResult> {
   const searchPath = (config.apiConfig.searchPath as string | undefined) ?? '/public/search';
-  const defaultLimit = (config.apiConfig.defaultLimit as number | undefined) ?? 500;
+  const pageSize = (config.apiConfig.defaultLimit as number | undefined) ?? 500;
   const url = `${config.apiBaseUrl}${searchPath}?_=${Date.now()}`;
   const siteId = parseInt(params.externalProviderId, 10);
   // Date format the IC3 endpoints expect — Eastern Time offset, midnight.
   const formattedDates = params.dates.map(d => (d.includes('T') ? d : `${d}T00:00:00.000-04:00`));
 
-  const body = {
-    dates: formattedDates,
-    siteId: Number.isFinite(siteId) ? siteId : null,
-    startTime: null,
-    endTime: null,
-    boroughIds: null,
-    facilityTypeIds: null,
-    searchString: null,
-    limit: defaultLimit,
-    offset: 0,
-    sortColumn: 'facility.name',
-    isSortOrderAsc: true,
-  };
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30_000);
-  let json: IC3SearchResponse;
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
-    if (!res.ok) throw new Error(`IC3 HTTP ${res.status}`);
-    json = await res.json();
-  } finally {
-    clearTimeout(timeout);
-  }
-
+  // IC3 truncates at `limit` server-side with no "total" hint, so paginate
+  // until we get a short page. Hard cap iterations as a safety net against a
+  // bad offset implementation.
+  const MAX_PAGES = 20;
   const rows: SnapshotRow[] = [];
-  for (const item of json.results ?? []) {
-    if (!item.startDateTime || !item.endDateTime || !item.facilityScheduleId) continue;
-    if (item.canReserve && item.canReserve.value === false) continue;
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const body = {
+      dates: formattedDates,
+      siteId: Number.isFinite(siteId) ? siteId : null,
+      startTime: null,
+      endTime: null,
+      boroughIds: null,
+      facilityTypeIds: null,
+      searchString: null,
+      limit: pageSize,
+      offset: page * pageSize,
+      sortColumn: 'facility.name',
+      isSortOrderAsc: true,
+    };
 
-    const externalCourtId =
-      item.facility?.id != null ? String(item.facility.id) : String(item.facilityScheduleId);
-    const shortCourtName = cleanIC3Name(item.facility?.name);
-    const siteName = cleanIC3Name(item.facility?.site?.name);
-    rows.push({
-      external_court_id: externalCourtId,
-      slot_start: new Date(item.startDateTime).toISOString(),
-      slot_end: new Date(item.endDateTime).toISOString(),
-      is_available: true,
-      external_slot_id: String(item.facilityScheduleId),
-      court_name:
-        siteName && shortCourtName ? `${siteName} - ${shortCourtName}` : (shortCourtName ?? null),
-      court_number: extractCourtNumber(item.facility?.name) ?? null,
-      price_cents: priceToCents(item.totalPrice),
-      currency: 'CAD',
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30_000);
+    let json: IC3SearchResponse;
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error(`IC3 HTTP ${res.status}`);
+      json = await res.json();
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    const results = json.results ?? [];
+    for (const item of results) {
+      if (!item.startDateTime || !item.endDateTime || !item.facilityScheduleId) continue;
+      if (item.canReserve && item.canReserve.value === false) continue;
+
+      const externalCourtId =
+        item.facility?.id != null ? String(item.facility.id) : String(item.facilityScheduleId);
+      const shortCourtName = cleanIC3Name(item.facility?.name);
+      const siteName = cleanIC3Name(item.facility?.site?.name);
+      rows.push({
+        external_court_id: externalCourtId,
+        slot_start: new Date(item.startDateTime).toISOString(),
+        slot_end: new Date(item.endDateTime).toISOString(),
+        is_available: true,
+        external_slot_id: String(item.facilityScheduleId),
+        court_name:
+          siteName && shortCourtName ? `${siteName} - ${shortCourtName}` : (shortCourtName ?? null),
+        court_number: extractCourtNumber(item.facility?.name) ?? null,
+        price_cents: priceToCents(item.totalPrice),
+        currency: 'CAD',
+        sport_id: null,
+      });
+    }
+
+    if (results.length < pageSize) break;
   }
 
   return { rows, source: 'ic3_otium' };
@@ -176,9 +189,17 @@ async function fetchActivityMessenger(
   config: ProviderConfig,
   params: FetchParams
 ): Promise<FetchResult> {
-  // ActivityMessenger's public endpoint takes a packageId and returns a
-  // calendar payload spanning roughly the next ~3 days.
-  const url = `${config.apiBaseUrl}/api/v1/calendar/package/${params.externalProviderId}/events`;
+  // AM's public availability endpoint requires orgId + a start/end window.
+  // Keep this in sync with packages/shared-services/.../ActivityMessengerProvider.ts.
+  const orgId = config.apiConfig.orgId as string | undefined;
+  if (!orgId) throw new Error('ActivityMessenger: missing api_config.orgId');
+
+  const sortedDates = [...params.dates].sort();
+  const start = sortedDates[0];
+  const end = sortedDates[sortedDates.length - 1];
+  const url =
+    `${config.apiBaseUrl}/org/${orgId}/package/${params.externalProviderId}/availability` +
+    `?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30_000);
@@ -225,6 +246,7 @@ async function fetchActivityMessenger(
           court_number: loc.number ?? extractCourtNumber(loc.name) ?? null,
           price_cents: priceCents,
           currency: 'CAD',
+          sport_id: null,
         });
       }
     } else if (availability.location_ids && availability.location_ids.length > 0) {
@@ -239,6 +261,7 @@ async function fetchActivityMessenger(
           court_number: null,
           price_cents: priceCents,
           currency: 'CAD',
+          sport_id: null,
         });
       }
     }
