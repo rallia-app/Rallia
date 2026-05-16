@@ -1,5 +1,12 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Switch } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Switch,
+  ScrollView as RNScrollView,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Text, useToast } from '@rallia/shared-components';
@@ -11,16 +18,104 @@ import { useThemeStyles, useTranslation, type TranslationKey } from '../../../..
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
 import * as Analytics from '../../../../services/analytics';
 
-type TimeSlot = 'AM' | 'PM' | 'EVE';
+type TimeSlot = PeriodEnum;
 type DayOfWeek = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
 
-interface DayAvailability {
-  AM: boolean;
-  PM: boolean;
-  EVE: boolean;
+export type DayAvailability = Record<PeriodEnum, boolean>;
+export type WeeklyAvailability = Record<DayOfWeek, DayAvailability>;
+
+const TIME_SLOTS: TimeSlot[] = ['early', 'morning', 'midday', 'afternoon', 'evening', 'late'];
+const DAYS: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const WEEKDAYS: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+const WEEKEND: DayOfWeek[] = ['Sat', 'Sun'];
+
+const SLOT_TO_I18N_KEY: Record<TimeSlot, TranslationKey> = {
+  early: 'onboarding.availabilityStep.early',
+  morning: 'onboarding.availabilityStep.morning',
+  midday: 'onboarding.availabilityStep.midday',
+  afternoon: 'onboarding.availabilityStep.afternoon',
+  evening: 'onboarding.availabilityStep.evening',
+  late: 'onboarding.availabilityStep.late',
+};
+
+const SLOT_TO_RANGE_KEY: Record<TimeSlot, TranslationKey> = {
+  early: 'onboarding.availabilityStep.earlyRange',
+  morning: 'onboarding.availabilityStep.morningRange',
+  midday: 'onboarding.availabilityStep.middayRange',
+  afternoon: 'onboarding.availabilityStep.afternoonRange',
+  evening: 'onboarding.availabilityStep.eveningRange',
+  late: 'onboarding.availabilityStep.lateRange',
+};
+
+interface Preset {
+  key: 'afterWork' | 'weekendsAny' | 'weekdayLunches' | 'mornings';
+  labelKey: TranslationKey;
+  apply: () => Partial<Record<DayOfWeek, TimeSlot[]>>;
 }
 
-export type WeeklyAvailability = Record<DayOfWeek, DayAvailability>;
+const PRESETS: Preset[] = [
+  {
+    key: 'afterWork',
+    labelKey: 'onboarding.availabilityStep.presets.afterWork',
+    apply: () => Object.fromEntries(WEEKDAYS.map(d => [d, ['evening', 'late']])),
+  },
+  {
+    key: 'weekendsAny',
+    labelKey: 'onboarding.availabilityStep.presets.weekendsAny',
+    apply: () => Object.fromEntries(WEEKEND.map(d => [d, [...TIME_SLOTS]])),
+  },
+  {
+    key: 'weekdayLunches',
+    labelKey: 'onboarding.availabilityStep.presets.weekdayLunches',
+    apply: () => Object.fromEntries(WEEKDAYS.map(d => [d, ['midday']])),
+  },
+  {
+    key: 'mornings',
+    labelKey: 'onboarding.availabilityStep.presets.mornings',
+    apply: () => Object.fromEntries(DAYS.map(d => [d, ['early', 'morning']])),
+  },
+];
+
+const DAY_TRANSLATION_KEY: Record<DayOfWeek, string> = {
+  Mon: 'monday',
+  Tue: 'tuesday',
+  Wed: 'wednesday',
+  Thu: 'thursday',
+  Fri: 'friday',
+  Sat: 'saturday',
+  Sun: 'sunday',
+};
+
+const DAY_MAP: Record<DayOfWeek, DayEnum> = {
+  Mon: 'monday',
+  Tue: 'tuesday',
+  Wed: 'wednesday',
+  Thu: 'thursday',
+  Fri: 'friday',
+  Sat: 'saturday',
+  Sun: 'sunday',
+};
+
+const STALENESS_DAYS = 14;
+
+const emptyDay = (): DayAvailability => ({
+  early: false,
+  morning: false,
+  midday: false,
+  afternoon: false,
+  evening: false,
+  late: false,
+});
+
+const defaultAvailabilities = (): WeeklyAvailability => ({
+  Mon: emptyDay(),
+  Tue: emptyDay(),
+  Wed: emptyDay(),
+  Thu: emptyDay(),
+  Fri: emptyDay(),
+  Sat: emptyDay(),
+  Sun: emptyDay(),
+});
 
 export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-availabilities'>) {
   const mode = payload?.mode || 'onboarding';
@@ -32,43 +127,30 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
   const totalSteps = payload?.totalSteps || 8;
   const initialData = payload?.initialData;
   const initialPrivacyShowAvailability = payload?.initialPrivacyShowAvailability ?? true;
+  const initialLastConfirmedAt = payload?.initialLastConfirmedAt ?? null;
   const _selectedSportIds = payload?.selectedSportIds;
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
   const toast = useToast();
-  const days: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const timeSlots: TimeSlot[] = ['AM', 'PM', 'EVE'];
 
-  // Map short day labels to translation keys (monday, tuesday, ...)
-  const dayTranslationKey: Record<DayOfWeek, string> = {
-    Mon: 'monday',
-    Tue: 'tuesday',
-    Wed: 'wednesday',
-    Thu: 'thursday',
-    Fri: 'friday',
-    Sat: 'saturday',
-    Sun: 'sunday',
-  };
-
-  // Default availabilities for onboarding mode (all unselected)
-  const defaultAvailabilities: WeeklyAvailability = {
-    Mon: { AM: false, PM: false, EVE: false },
-    Tue: { AM: false, PM: false, EVE: false },
-    Wed: { AM: false, PM: false, EVE: false },
-    Thu: { AM: false, PM: false, EVE: false },
-    Fri: { AM: false, PM: false, EVE: false },
-    Sat: { AM: false, PM: false, EVE: false },
-    Sun: { AM: false, PM: false, EVE: false },
-  };
-
-  // Initialize availabilities: use initialData for edit mode, defaults for onboarding
   const [availabilities, setAvailabilities] = useState<WeeklyAvailability>(
-    initialData || defaultAvailabilities
+    initialData || defaultAvailabilities()
   );
   const [isSaving, setIsSaving] = useState(false);
   const [privacyShowAvailability, setPrivacyShowAvailability] = useState(
     initialPrivacyShowAvailability
   );
+
+  // Staleness — show the "confirm your week" banner whenever last_confirmed_at
+  // is missing or older than STALENESS_DAYS. Visible in edit mode only; the
+  // onboarding flow already implies a fresh write.
+  const isStale = useMemo(() => {
+    if (mode !== 'edit') return false;
+    if (!initialLastConfirmedAt) return true;
+    const last = new Date(initialLastConfirmedAt).getTime();
+    if (Number.isNaN(last)) return true;
+    return Date.now() - last > STALENESS_DAYS * 24 * 60 * 60 * 1000;
+  }, [mode, initialLastConfirmedAt]);
 
   const toggleAvailability = (day: DayOfWeek, slot: TimeSlot) => {
     selectionHaptic();
@@ -81,22 +163,104 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
     }));
   };
 
+  // Smart toggle: tap a day letter to fill (or clear) all 6 blocks of that
+  // day at once. If every block is already filled the tap clears the day.
+  const toggleDay = (day: DayOfWeek) => {
+    selectionHaptic();
+    setAvailabilities(prev => {
+      const allFilled = TIME_SLOTS.every(slot => prev[day][slot]);
+      const next: DayAvailability = TIME_SLOTS.reduce(
+        (acc, slot) => ({ ...acc, [slot]: !allFilled }),
+        {} as DayAvailability
+      );
+      return { ...prev, [day]: next };
+    });
+  };
+
+  // Same idea, the other axis: tap a time-block label to fill/clear that
+  // block across all 7 days.
+  const toggleTimeBlock = (slot: TimeSlot) => {
+    selectionHaptic();
+    setAvailabilities(prev => {
+      const allFilled = DAYS.every(day => prev[day][slot]);
+      const next: WeeklyAvailability = DAYS.reduce(
+        (acc, day) => ({
+          ...acc,
+          [day]: { ...prev[day], [slot]: !allFilled },
+        }),
+        {} as WeeklyAvailability
+      );
+      return next;
+    });
+  };
+
+  // Presets are toggleable: tap once to apply the pattern, tap again to
+  // clear those exact cells. We detect "applied" by checking that every
+  // cell in the preset's pattern is currently filled — if any cell of the
+  // pattern is missing, the tap fills the gap rather than clearing.
+  const isPresetApplied = (preset: Preset, state: WeeklyAvailability) => {
+    const pattern = preset.apply();
+    return (Object.entries(pattern) as Array<[DayOfWeek, TimeSlot[]]>).every(([day, slots]) =>
+      slots.every(slot => state[day]?.[slot])
+    );
+  };
+
+  const togglePreset = (preset: Preset) => {
+    selectionHaptic();
+    setAvailabilities(prev => {
+      const pattern = preset.apply();
+      const applied = isPresetApplied(preset, prev);
+      const next: WeeklyAvailability = { ...prev };
+      (Object.entries(pattern) as Array<[DayOfWeek, TimeSlot[]]>).forEach(([day, slots]) => {
+        next[day] = { ...prev[day] };
+        slots.forEach(slot => {
+          next[day][slot] = !applied;
+        });
+      });
+      return next;
+    });
+  };
+
+  const clearAll = () => {
+    selectionHaptic();
+    setAvailabilities(defaultAvailabilities());
+  };
+
+  const totalSelections = useMemo(
+    () =>
+      DAYS.reduce(
+        (count, day) => count + TIME_SLOTS.filter(slot => availabilities[day][slot]).length,
+        0
+      ),
+    [availabilities]
+  );
+
   const handleContinue = async () => {
     mediumHaptic();
 
-    // Prevent double-tap
     if (isSaving) return;
 
-    // Edit mode: use the onSave callback
+    // Edit mode: hand the in-memory state back to the caller, who is
+    // responsible for persisting via OnboardingService.saveAvailability (which
+    // bumps last_confirmed_at). The Save button intentionally remains tappable
+    // even when no toggles changed — tapping "Save" refreshes the freshness
+    // timestamp, which is the "I confirm this week" UX driven by the weekly
+    // refresh notification.
     if (mode === 'edit' && onSave) {
-      const selectedCount = days.reduce(
-        (count, day) => count + timeSlots.filter(slot => availabilities[day][slot]).length,
+      const selectedCount = DAYS.reduce(
+        (count, day) => count + TIME_SLOTS.filter(slot => availabilities[day][slot]).length,
         0
       );
       if (selectedCount < 3) {
         toast.error(t('alerts.minAvailabilitiesRequired'));
         return;
       }
+      // Detect no-op "refresh only" save vs a real edit so the analytics
+      // event can distinguish weekly-confirm taps from actual schedule
+      // changes. Cheap structural compare against the initial payload.
+      const wasRefreshOnly =
+        !!initialData && JSON.stringify(availabilities) === JSON.stringify(initialData);
+      Analytics.availabilityScheduleUpdated({ was_refresh_only: wasRefreshOnly });
       onSave(availabilities, privacyShowAvailability);
       SheetManager.hide('player-availabilities');
       return;
@@ -106,40 +270,21 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
     if (onContinue) {
       setIsSaving(true);
       try {
-        // Map UI data to database format
-        const dayMap: Record<DayOfWeek, DayEnum> = {
-          Mon: 'monday',
-          Tue: 'tuesday',
-          Wed: 'wednesday',
-          Thu: 'thursday',
-          Fri: 'friday',
-          Sat: 'saturday',
-          Sun: 'sunday',
-        };
-
-        const timeSlotMap: Record<TimeSlot, PeriodEnum> = {
-          AM: 'morning',
-          PM: 'afternoon',
-          EVE: 'evening',
-        };
-
-        // Convert availability grid to database format
-        // Create one entry per day/period combination (not per sport)
+        // Slot keys match the DB period_enum 1:1 after the 6-block refactor —
+        // no AM→morning translation needed.
         const availabilityData: OnboardingAvailability[] = [];
-
-        days.forEach(day => {
-          timeSlots.forEach(slot => {
+        DAYS.forEach(day => {
+          TIME_SLOTS.forEach(slot => {
             if (availabilities[day][slot]) {
               availabilityData.push({
-                day: dayMap[day],
-                period: timeSlotMap[slot],
+                day: DAY_MAP[day],
+                period: slot,
                 is_active: true,
               });
             }
           });
         });
 
-        // Save availability to database
         const { error } = await OnboardingService.saveAvailability(availabilityData);
 
         if (error) {
@@ -150,9 +295,8 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
         }
 
         Logger.debug('player_availabilities_saved', { availabilityData });
-        Analytics.availabilityScheduleUpdated();
+        Analytics.availabilityScheduleUpdated({ was_refresh_only: false });
 
-        // Save the privacy setting to the player table
         const {
           data: { user },
         } = await supabase.auth.getUser();
@@ -164,18 +308,14 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
 
           if (privacyError) {
             Logger.warn('Failed to save availability privacy setting', { error: privacyError });
-            // Don't block the flow if this fails - just log it
           } else {
             Logger.debug('availability_privacy_saved', { privacyShowAvailability });
           }
         }
 
-        // Mark onboarding as completed
         const { error: completeError } = await OnboardingService.completeOnboarding();
-
         if (completeError) {
           Logger.warn('Failed to mark onboarding as completed', { error: completeError });
-          // Don't block the flow if this fails - just log it
         } else {
           Logger.info('onboarding_completed', {
             message: 'Onboarding marked as completed in profile',
@@ -198,7 +338,6 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
       <View style={styles.modalContent}>
-        {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <View style={styles.headerCenter}>
             <Text weight="semibold" size="lg" style={{ color: colors.text }}>
@@ -210,75 +349,153 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
           </TouchableOpacity>
         </View>
 
-        {/* Scrollable Content */}
         <ScrollView
           style={styles.scrollContent}
           contentContainerStyle={[styles.content, { paddingBottom: spacingPixels[8] }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Show progress indicator only in onboarding mode */}
           {mode === 'onboarding' && (
             <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
           )}
 
-          {/* Back Button - Only show in onboarding mode */}
           {mode === 'onboarding' && onBack && (
             <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.7}>
               <Ionicons name="chevron-back" size={24} color={colors.text} />
             </TouchableOpacity>
           )}
 
-          {/* Subtitle */}
+          {isStale && (
+            <View style={[styles.staleBanner, { backgroundColor: colors.inputBackground }]}>
+              <Ionicons name="time-outline" size={18} color={colors.text} />
+              <Text size="sm" style={[styles.staleBannerText, { color: colors.text }]}>
+                {t('playerAvailability.staleHint')}
+              </Text>
+            </View>
+          )}
+
           <Text style={[styles.subtitle, { color: colors.text }]}>
             {t('onboarding.availabilityStep.subtitle')}
           </Text>
 
-          {/* Availability Grid */}
-          <View style={styles.gridContainer}>
-            {/* Day Rows */}
-            {days.map(day => (
-              <View key={day} style={styles.row}>
-                <View style={styles.dayCell}>
-                  <Text style={[styles.dayText, { color: colors.text }]}>
-                    {t(
-                      `onboarding.availabilityStep.days.${dayTranslationKey[day]}` as TranslationKey
-                    )}
-                  </Text>
-                </View>
-                {timeSlots.map(slot => (
-                  <TouchableOpacity
-                    key={`${day}-${slot}`}
-                    style={[
-                      styles.timeSlotCell,
-                      { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder },
-                      availabilities[day][slot] && [
-                        styles.timeSlotCellSelected,
-                        { backgroundColor: colors.primary, borderColor: colors.primary },
-                      ],
-                    ]}
-                    onPress={() => toggleAvailability(day, slot)}
-                    activeOpacity={0.8}
+          {/* Preset chips — tap to toggle a common pattern on/off. Active
+              chips render with the primary fill so the user can see at a
+              glance which presets are currently part of their selection. */}
+          <RNScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.presetRow}
+          >
+            {PRESETS.map(preset => {
+              const active = isPresetApplied(preset, availabilities);
+              return (
+                <TouchableOpacity
+                  key={preset.key}
+                  style={[
+                    styles.presetChip,
+                    {
+                      backgroundColor: active ? colors.primary : colors.inputBackground,
+                      borderColor: active ? colors.primary : colors.inputBorder,
+                    },
+                  ]}
+                  onPress={() => togglePreset(preset)}
+                  activeOpacity={0.7}
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: active }}
+                >
+                  {active && (
+                    <Ionicons
+                      name="checkmark"
+                      size={14}
+                      color={colors.primaryForeground}
+                      style={styles.presetChipIcon}
+                    />
+                  )}
+                  <Text
+                    size="xs"
+                    weight="semibold"
+                    color={active ? colors.primaryForeground : colors.text}
                   >
-                    <Text
+                    {t(preset.labelKey)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+            {totalSelections > 0 && (
+              <TouchableOpacity
+                style={[
+                  styles.presetChip,
+                  { backgroundColor: 'transparent', borderColor: colors.inputBorder },
+                ]}
+                onPress={clearAll}
+                activeOpacity={0.7}
+              >
+                <Text size="xs" weight="semibold" color={colors.textMuted}>
+                  {t('onboarding.availabilityStep.presets.clear')}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </RNScrollView>
+
+          <View style={styles.gridContainer}>
+            <View style={styles.headerRow}>
+              <View style={styles.timeLabelCell} />
+              {DAYS.map(day => (
+                <TouchableOpacity
+                  key={`header-${day}`}
+                  style={styles.headerCell}
+                  onPress={() => toggleDay(day)}
+                  activeOpacity={0.6}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t(`playerDirectory.dayLetters.${DAY_TRANSLATION_KEY[day]}` as TranslationKey)} — ${t('onboarding.availabilityStep.toggleDayHint')}`}
+                >
+                  <Text size="xs" weight="semibold" color={colors.textMuted}>
+                    {t(`playerDirectory.dayLetters.${DAY_TRANSLATION_KEY[day]}` as TranslationKey)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {TIME_SLOTS.map(slot => (
+              <View key={slot} style={styles.row}>
+                <TouchableOpacity
+                  style={styles.timeLabelCell}
+                  onPress={() => toggleTimeBlock(slot)}
+                  activeOpacity={0.6}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t(SLOT_TO_I18N_KEY[slot])} — ${t('onboarding.availabilityStep.toggleBlockHint')}`}
+                >
+                  <Text size="sm" weight="semibold" color={colors.text}>
+                    {t(SLOT_TO_I18N_KEY[slot])}
+                  </Text>
+                  <Text size="xs" color={colors.textMuted} style={styles.timeRangeText}>
+                    {t(SLOT_TO_RANGE_KEY[slot])}
+                  </Text>
+                </TouchableOpacity>
+                {DAYS.map(day => {
+                  const isSelected = availabilities[day][slot];
+                  return (
+                    <TouchableOpacity
+                      key={`${day}-${slot}`}
                       style={[
-                        styles.timeSlotText,
+                        styles.dayCell,
                         {
-                          color: availabilities[day][slot]
-                            ? colors.primaryForeground
-                            : colors.textMuted,
+                          backgroundColor: isSelected ? colors.primary : colors.inputBackground,
+                          borderColor: isSelected ? colors.primary : colors.inputBorder,
                         },
                       ]}
-                    >
-                      {t(`onboarding.availabilityStep.${slot.toLowerCase()}` as TranslationKey)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      onPress={() => toggleAvailability(day, slot)}
+                      activeOpacity={0.8}
+                      accessibilityRole="switch"
+                      accessibilityState={{ checked: isSelected }}
+                      accessibilityLabel={`${t(`onboarding.availabilityStep.days.${DAY_TRANSLATION_KEY[day]}` as TranslationKey)} ${t(SLOT_TO_I18N_KEY[slot])}`}
+                    />
+                  );
+                })}
               </View>
             ))}
           </View>
 
-          {/* Privacy Toggle - Shows in both onboarding and edit modes */}
           <View style={[styles.privacySection, { borderTopColor: colors.border }]}>
             <View style={styles.privacyHeader}>
               <Ionicons
@@ -314,7 +531,6 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
           </View>
         </ScrollView>
 
-        {/* Sticky Footer */}
         <View style={[styles.footer, { borderTopColor: colors.border }]}>
           <TouchableOpacity
             style={[
@@ -386,6 +602,17 @@ const styles = StyleSheet.create({
     padding: spacingPixels[2],
     marginBottom: spacingPixels[2],
   },
+  staleBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    padding: spacingPixels[3],
+    borderRadius: radiusPixels.md,
+    marginBottom: spacingPixels[4],
+  },
+  staleBannerText: {
+    flex: 1,
+  },
   subtitle: {
     fontSize: 14,
     textAlign: 'center',
@@ -394,46 +621,54 @@ const styles = StyleSheet.create({
   gridContainer: {
     marginBottom: spacingPixels[6],
   },
+  headerRow: {
+    flexDirection: 'row',
+    marginBottom: spacingPixels[2],
+    alignItems: 'center',
+  },
   row: {
     flexDirection: 'row',
     marginBottom: spacingPixels[2],
     alignItems: 'center',
   },
-  dayCell: {
-    width: 50,
+  timeLabelCell: {
+    width: 96,
+    paddingRight: spacingPixels[2],
     justifyContent: 'center',
   },
-  dayText: {
-    fontSize: 14,
-    fontWeight: '500',
+  timeRangeText: {
+    marginTop: 2,
+    lineHeight: 14,
+  },
+  presetRow: {
+    paddingVertical: spacingPixels[1],
+    gap: spacingPixels[2],
+    marginBottom: spacingPixels[4],
+  },
+  presetChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[2],
+    borderRadius: radiusPixels.full,
+    borderWidth: 1,
+  },
+  presetChipIcon: {
+    marginRight: spacingPixels[1],
   },
   headerCell: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  timeSlotCell: {
+  dayCell: {
     flex: 1,
-    borderRadius: radiusPixels.lg,
-    paddingVertical: spacingPixels[3],
-    marginHorizontal: spacingPixels[1],
+    height: 36,
+    borderRadius: radiusPixels.md,
+    marginHorizontal: spacingPixels[1] / 2,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-  },
-  timeSlotCellSelected: {
-    // backgroundColor and borderColor applied inline
-  },
-  timeSlotText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  timeSlotTextSelected: {
-    // color applied inline
   },
   footer: {
     padding: spacingPixels[4],

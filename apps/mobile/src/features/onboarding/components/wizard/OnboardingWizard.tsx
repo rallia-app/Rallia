@@ -825,12 +825,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             Sun: 'sunday',
           };
 
-          const timeSlotMap: Record<string, PeriodEnum> = {
-            AM: 'morning',
-            PM: 'afternoon',
-            EVE: 'evening',
-          };
-
+          // Slot keys are already period_enum values (early/morning/midday/
+          // afternoon/evening/late) after the 6-block refactor — no map needed.
           const availabilityData: OnboardingAvailability[] = [];
 
           Object.entries(formData.availabilities).forEach(([day, slots]) => {
@@ -838,7 +834,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               if (isActive) {
                 availabilityData.push({
                   day: dayMap[day],
-                  period: timeSlotMap[slot],
+                  period: slot as PeriodEnum,
                   is_active: true,
                 });
               }

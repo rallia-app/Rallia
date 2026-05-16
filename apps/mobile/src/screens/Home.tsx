@@ -62,6 +62,7 @@ import type { MatchScoringPreferences } from '@rallia/shared-hooks';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import {
   Logger,
+  supabase,
   getMatchWithDetails,
   joinGroupByInviteCode,
   requestToJoinCommunityByInviteCode,
@@ -255,6 +256,15 @@ const quickNavStyles = StyleSheet.create({
 const SECOND_SPORT_BANNER_COOLDOWN_KEY = '@rallia/second-sport-banner-cooldown';
 const SECOND_SPORT_BANNER_COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2 hours
 const SECOND_SPORT_BANNER_FADE_MS = 10 * 60 * 1000; // 10 minutes
+
+// Availability staleness banner — matches the 14-day threshold the weekly
+// refresh cron and edit-overlay banner already use. Dismissing the banner
+// hides it for 1 day; after that, it re-appears until the user actually
+// confirms their schedule (which advances last_confirmed_at and clears it
+// for the full 14-day window).
+const AVAILABILITY_STALENESS_DAYS = 14;
+const AVAILABILITY_BANNER_COOLDOWN_KEY = '@rallia/availability-refresh-banner-cooldown';
+const AVAILABILITY_BANNER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 const Home = () => {
   // Use custom hooks for auth, profile, and overlay context
@@ -712,6 +722,72 @@ const Home = () => {
     });
   }, [secondSportFadeAnim]);
 
+  // Availability-refresh banner state. We check freshness once when the
+  // player loads; the banner shows whenever the player's most-recent
+  // last_confirmed_at is NULL (never confirmed under the 6-block model) or
+  // older than AVAILABILITY_STALENESS_DAYS. Dismissal stores a short
+  // AsyncStorage cooldown so the user isn't nagged on every Home open.
+  const [availabilityIsStale, setAvailabilityIsStale] = useState(false);
+  const [availabilityBannerDismissed, setAvailabilityBannerDismissed] = useState(false);
+
+  useEffect(() => {
+    if (!isOnboarded || !player?.id) return;
+
+    const checkStaleness = async () => {
+      try {
+        const cooldownRaw = await AsyncStorage.getItem(AVAILABILITY_BANNER_COOLDOWN_KEY);
+        if (
+          cooldownRaw &&
+          Date.now() - parseInt(cooldownRaw, 10) < AVAILABILITY_BANNER_COOLDOWN_MS
+        ) {
+          return;
+        }
+
+        // Fetch the most-recent last_confirmed_at across the player's active
+        // rows. nullsLast: true puts confirmed rows ahead of NULL ones, so
+        // the single result reflects the freshest signal we have.
+        const { data, error } = await supabase
+          .from('player_availability')
+          .select('last_confirmed_at')
+          .eq('player_id', player.id)
+          .eq('is_active', true)
+          .order('last_confirmed_at', { ascending: false, nullsFirst: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error || !data) return; // No rows = no availability set at all; profile-completion banner handles that
+
+        const mostRecent = data.last_confirmed_at;
+        const isStale =
+          !mostRecent ||
+          Date.now() - new Date(mostRecent).getTime() >
+            AVAILABILITY_STALENESS_DAYS * 24 * 60 * 60 * 1000;
+        setAvailabilityIsStale(isStale);
+      } catch {
+        // Swallow — banner is a soft nudge, not load-bearing.
+      }
+    };
+
+    void checkStaleness();
+  }, [isOnboarded, player?.id]);
+
+  const handleAvailabilityBannerAction = useCallback(() => {
+    // Jump to UserProfile with an explicit "open the availability sheet"
+    // intent. UserProfile waits for its availability rows to load, then auto-
+    // opens the edit overlay prefilled with the player's current schedule.
+    appNavigation.navigate('UserProfile', { openSheet: 'availability' });
+  }, [appNavigation]);
+
+  const handleDismissAvailabilityBanner = useCallback(async () => {
+    setAvailabilityBannerDismissed(true);
+    try {
+      await AsyncStorage.setItem(AVAILABILITY_BANNER_COOLDOWN_KEY, Date.now().toString());
+    } catch {
+      // Cooldown is best-effort; failing to persist just means the banner
+      // may reappear sooner than intended on the next Home mount.
+    }
+  }, []);
+
   // Handle activate second sport
   const handleActivateSecondSport = useCallback(() => {
     if (inactiveSports.length > 0) {
@@ -1132,6 +1208,26 @@ const Home = () => {
         }
       });
 
+      // Availability refresh banner — shown when the player's schedule has
+      // gone stale (no confirmation in the last 14 days). Tapping the CTA
+      // jumps to UserProfile where the edit overlay is one tap away.
+      if (availabilityIsStale && !availabilityBannerDismissed) {
+        bannerCards.push(
+          <HomeBanner
+            key="availability-refresh"
+            variant="action"
+            leading={accent => <Ionicons name="time-outline" size={20} color={accent} />}
+            title={t('home.availabilityRefreshBanner.title')}
+            description={t('home.availabilityRefreshBanner.description')}
+            primaryAction={{
+              label: t('home.availabilityRefreshBanner.cta'),
+              onPress: handleAvailabilityBannerAction,
+            }}
+            onDismiss={handleDismissAvailabilityBanner}
+          />
+        );
+      }
+
       // Second sport activation banner (for users with only 1 sport)
       if (shouldShowSecondSportBanner && inactiveSports.length > 0) {
         const sportToActivate = inactiveSports[0];
@@ -1364,6 +1460,10 @@ const Home = () => {
     profileCompletionBanner.ready,
     profileCompletionBanner.visible,
     profileCompletionBanner.handleDismiss,
+    availabilityIsStale,
+    availabilityBannerDismissed,
+    handleAvailabilityBannerAction,
+    handleDismissAvailabilityBanner,
   ]);
 
   // No more full-page skeleton. Each section (My Matches, Just for you) owns

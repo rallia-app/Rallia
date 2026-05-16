@@ -353,6 +353,8 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   program_payment_received: 'checkmark-done-circle-outline',
   // Morning digest email
   morning_digest: 'mail-outline',
+  // Weekly availability refresh nudge
+  availability_refresh_reminder: 'time-outline',
   // Stripe JIT reimbursement notifications
   payouts_setup_required: 'card-outline',
   payouts_released: 'send-outline',
@@ -432,6 +434,8 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   program_payment_received: '#4CAF50', // Green
   // Morning digest email
   morning_digest: '#4DB8A8', // Teal — matches the email primary
+  // Weekly availability refresh nudge
+  availability_refresh_reminder: '#4DB8A8', // Teal — same family as morning digest
   // Stripe JIT reimbursement notifications
   payouts_setup_required: '#FF9800', // Orange — action required
   payouts_released: '#4CAF50', // Green — money on the way
@@ -507,6 +511,8 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   program_payment_received: 'Payment Received',
   // Morning digest email
   morning_digest: 'Morning Digest',
+  // Weekly availability refresh nudge
+  availability_refresh_reminder: 'Availability Refresh',
   // Stripe JIT reimbursement notifications
   payouts_setup_required: 'Payouts Setup Required',
   payouts_released: 'Payouts Released',
@@ -590,6 +596,8 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   program_payment_received: 'organization',
   // Morning digest email — system category since it's a generated daily summary
   morning_digest: 'system',
+  // Weekly availability refresh — also a system-generated nudge
+  availability_refresh_reminder: 'system',
   // Stripe JIT reimbursement notifications — system category (money/admin)
   payouts_setup_required: 'system',
   payouts_released: 'system',
@@ -713,6 +721,9 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   // Morning digest email — opt-in by default; user can disable via the
   // unsubscribe link in the footer or the in-app notification preferences.
   morning_digest: { email: true, push: false, sms: false },
+  // Weekly availability refresh — push-only weekly nudge; quiet enough that
+  // email would be overkill but the push closes the loop on stale data.
+  availability_refresh_reminder: { email: false, push: true, sms: false },
   // Stripe JIT reimbursement notifications — money matters, push always on,
   // email for the high-priority "set up payouts" prompt so it's not missed.
   payouts_setup_required: { email: true, push: true, sms: false },

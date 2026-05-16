@@ -9,7 +9,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DatabaseService, { Logger, supabase } from '@rallia/shared-services';
-import type { FacilitySearchResult } from '@rallia/shared-types';
+import type { FacilitySearchResult, PeriodEnum } from '@rallia/shared-types';
 import * as Analytics from '../../../services/analytics';
 
 /**
@@ -71,8 +71,11 @@ export interface OnboardingFormData {
   // Favorite facilities (up to 6 for dual-sport users)
   favoriteFacilities: FacilitySearchResult[];
 
-  // Availabilities
-  availabilities: Record<string, { AM: boolean; PM: boolean; EVE: boolean }>;
+  // Availabilities — keyed by short day label and by period_enum value.
+  // The DB enum is the source of truth, so we use those exact keys here to
+  // remove the AM/PM/EVE → morning/afternoon/evening translation that lived
+  // in OnboardingWizard's save flow before the 6-block refactor.
+  availabilities: Record<string, Record<PeriodEnum, boolean>>;
   privacyShowAvailability: boolean;
 }
 
@@ -106,14 +109,23 @@ interface UseOnboardingWizardReturn {
   steps: OnboardingStepId[];
 }
 
-const DEFAULT_AVAILABILITIES = {
-  Mon: { AM: false, PM: false, EVE: false },
-  Tue: { AM: false, PM: false, EVE: false },
-  Wed: { AM: false, PM: false, EVE: false },
-  Thu: { AM: false, PM: false, EVE: false },
-  Fri: { AM: false, PM: false, EVE: false },
-  Sat: { AM: false, PM: false, EVE: false },
-  Sun: { AM: false, PM: false, EVE: false },
+const EMPTY_DAY: Record<PeriodEnum, boolean> = {
+  early: false,
+  morning: false,
+  midday: false,
+  afternoon: false,
+  evening: false,
+  late: false,
+};
+
+const DEFAULT_AVAILABILITIES: Record<string, Record<PeriodEnum, boolean>> = {
+  Mon: { ...EMPTY_DAY },
+  Tue: { ...EMPTY_DAY },
+  Wed: { ...EMPTY_DAY },
+  Thu: { ...EMPTY_DAY },
+  Fri: { ...EMPTY_DAY },
+  Sat: { ...EMPTY_DAY },
+  Sun: { ...EMPTY_DAY },
 };
 
 const INITIAL_FORM_DATA: OnboardingFormData = {
@@ -222,8 +234,8 @@ function isStepComplete(stepId: OnboardingStepId, formData: OnboardingFormData):
 
     case 'availabilities':
       // Availabilities have defaults, check if at least one slot is selected
-      return Object.values(formData.availabilities).some(
-        slots => slots.AM || slots.PM || slots.EVE
+      return Object.values(formData.availabilities).some(slots =>
+        Object.values(slots).some(Boolean)
       );
 
     case 'success':
@@ -440,28 +452,21 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
             sunday: 'Sun',
           };
 
-          const periodMap: Record<string, 'AM' | 'PM' | 'EVE'> = {
-            morning: 'AM',
-            afternoon: 'PM',
-            evening: 'EVE',
-          };
-
-          // Start with all false
-          const availabilities: Record<string, { AM: boolean; PM: boolean; EVE: boolean }> = {
-            Mon: { AM: false, PM: false, EVE: false },
-            Tue: { AM: false, PM: false, EVE: false },
-            Wed: { AM: false, PM: false, EVE: false },
-            Thu: { AM: false, PM: false, EVE: false },
-            Fri: { AM: false, PM: false, EVE: false },
-            Sat: { AM: false, PM: false, EVE: false },
-            Sun: { AM: false, PM: false, EVE: false },
+          // Period keys match the DB enum 1:1 — no translation map needed.
+          const availabilities: Record<string, Record<PeriodEnum, boolean>> = {
+            Mon: { ...EMPTY_DAY },
+            Tue: { ...EMPTY_DAY },
+            Wed: { ...EMPTY_DAY },
+            Thu: { ...EMPTY_DAY },
+            Fri: { ...EMPTY_DAY },
+            Sat: { ...EMPTY_DAY },
+            Sun: { ...EMPTY_DAY },
           };
 
           for (const avail of availRes.data) {
             const day = dayMap[avail.day];
-            const period = periodMap[avail.period];
-            if (day && period && avail.is_active) {
-              availabilities[day][period] = true;
+            if (day && avail.is_active) {
+              availabilities[day][avail.period as PeriodEnum] = true;
             }
           }
 
@@ -496,9 +501,14 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
         if (favoritesError) {
           Logger.warn('Failed to load favorite facilities', { error: favoritesError });
         } else if (favoritesData && favoritesData.length > 0) {
-          // Transform to FacilitySearchResult format with sport_ids populated
-          // sport_ids is critical for computeFavoriteSportCounts to work correctly
-          const favoriteFacilities: FacilitySearchResult[] = favoritesData.map(item => {
+          // player_favorite_facility's unique constraint is
+          // (player_id, facility_id, sport_id) — so a facility favorited for
+          // BOTH tennis and pickleball returns two rows with the same
+          // facility_id. Dedupe by facility id; the embedded `facility_sport`
+          // join already carries the facility's full sport list, so we don't
+          // lose multi-sport coverage by collapsing duplicate rows.
+          const byId = new Map<string, FacilitySearchResult>();
+          for (const item of favoritesData) {
             const facility = item.facility as unknown as {
               id: string;
               name: string;
@@ -508,22 +518,24 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
               timezone: string | null;
               facility_sport: Array<{ sport_id: string }>;
             };
-            // Extract sport_ids from the facility_sport junction table
+            const id = facility?.id || item.facility_id;
+            if (byId.has(id)) continue;
             const sportIds = facility?.facility_sport?.map(fs => fs.sport_id) ?? [];
-            return {
-              id: facility?.id || item.facility_id,
+            byId.set(id, {
+              id,
               name: facility?.name || 'Unknown Facility',
               city: facility?.city || null,
               address: facility?.address || null,
-              distance_meters: null, // Not relevant for saved favorites
+              distance_meters: null,
               data_provider_id: facility?.data_provider_id || null,
               data_provider_type: null,
               booking_url_template: null,
               external_provider_id: null,
               timezone: facility?.timezone || null,
-              sport_ids: sportIds, // Critical for per-sport counting!
-            };
-          });
+              sport_ids: sportIds,
+            });
+          }
+          const favoriteFacilities: FacilitySearchResult[] = Array.from(byId.values());
           updates.favoriteFacilities = favoriteFacilities;
           Logger.debug('Loaded favorite facilities', {
             count: favoriteFacilities.length,

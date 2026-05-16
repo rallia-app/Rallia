@@ -61,7 +61,7 @@ interface ScoredMatchup {
 
 export interface OverlapSlot {
   day: string; // 'monday' .. 'sunday'
-  period: string; // 'morning' | 'afternoon' | 'evening'
+  period: string; // 'early' | 'morning' | 'midday' | 'afternoon' | 'evening' | 'late'
 }
 
 export interface SuggestionFacility {

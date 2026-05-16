@@ -15,7 +15,13 @@ const DAYS: AvailabilityDay[] = [
   'sunday',
 ];
 
-const PERIODS: AvailabilityPeriod[] = ['morning', 'afternoon', 'evening'];
+// 6-block availability collapses to a 2-row AM/PM aggregation on the compact
+// widget: top dot = any of the morning cluster (early/morning/midday); bottom
+// dot = any of the afternoon cluster (afternoon/evening/late). Keeps the
+// PlayerCard footprint identical to the 3-period version while still conveying
+// the new 6-block precision.
+const AM_CLUSTER: AvailabilityPeriod[] = ['early', 'morning', 'midday'];
+const PM_CLUSTER: AvailabilityPeriod[] = ['afternoon', 'evening', 'late'];
 
 interface AvailabilityGridProps {
   availability: Partial<Record<AvailabilityDay, AvailabilityPeriod[]>> | null;
@@ -25,9 +31,11 @@ interface AvailabilityGridProps {
 
 /**
  * Compact 7-day availability grid: one cell per day with a colored day letter
- * (muted when the player has zero slots that day) and a row of three period
- * dots underneath (morning / afternoon / evening). Renders nothing when the
- * player has set no availability at all.
+ * and a 2×3 dot matrix underneath. Top row dots = AM cluster (early, morning,
+ * midday) in order; bottom row dots = PM cluster (afternoon, evening, late).
+ * Each dot represents one block, so the widget conveys all 6 blocks per day
+ * at a glance without text. Renders nothing when the player has set no
+ * availability at all.
  */
 const AvailabilityGrid: React.FC<AvailabilityGridProps> = ({
   availability,
@@ -37,6 +45,16 @@ const AvailabilityGrid: React.FC<AvailabilityGridProps> = ({
   const { t } = useTranslation();
 
   if (!availability || Object.keys(availability).length === 0) return null;
+
+  const renderDot = (filled: boolean, key: string) => (
+    <View
+      key={key}
+      style={[
+        styles.dot,
+        filled ? { backgroundColor: activeColor } : { backgroundColor: mutedColor, opacity: 0.25 },
+      ]}
+    />
+  );
 
   return (
     <View style={styles.container}>
@@ -48,21 +66,13 @@ const AvailabilityGrid: React.FC<AvailabilityGridProps> = ({
             <Text size="xs" weight="semibold" color={isActive ? activeColor : mutedColor}>
               {t(`playerDirectory.dayLetters.${day}`)}
             </Text>
-            <View style={styles.dotsRow}>
-              {PERIODS.map(period => {
-                const filled = periods.includes(period);
-                return (
-                  <View
-                    key={period}
-                    style={[
-                      styles.dot,
-                      filled
-                        ? { backgroundColor: activeColor }
-                        : { backgroundColor: mutedColor, opacity: 0.25 },
-                    ]}
-                  />
-                );
-              })}
+            <View style={styles.dotsGrid}>
+              <View style={styles.dotsRow}>
+                {AM_CLUSTER.map(p => renderDot(periods.includes(p), `${day}-${p}`))}
+              </View>
+              <View style={styles.dotsRow}>
+                {PM_CLUSTER.map(p => renderDot(periods.includes(p), `${day}-${p}`))}
+              </View>
             </View>
           </View>
         );
@@ -82,6 +92,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 3,
     flex: 1,
+  },
+  dotsGrid: {
+    flexDirection: 'column',
+    gap: 2,
   },
   dotsRow: {
     flexDirection: 'row',

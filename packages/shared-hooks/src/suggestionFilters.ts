@@ -91,15 +91,19 @@ export function doesSuggestionPassFilters(
     const filterHour = parseInt(filters.specificTime.split(':')[0], 10);
     if (slotHour !== filterHour) return false;
   } else if (filters.timeOfDay !== 'all') {
+    // Boundaries aligned with the 6-block player availability taxonomy
+    // (morning = early+morning, afternoon = midday+afternoon, evening =
+    // evening+late) so the same word means a coherent time range across
+    // the player and match surfaces.
     switch (filters.timeOfDay) {
       case 'morning':
         if (slotHour < 6 || slotHour >= 12) return false;
         break;
       case 'afternoon':
-        if (slotHour < 12 || slotHour >= 18) return false;
+        if (slotHour < 12 || slotHour >= 17) return false;
         break;
       case 'evening':
-        if (slotHour < 18) return false;
+        if (slotHour < 17) return false;
         break;
     }
   }

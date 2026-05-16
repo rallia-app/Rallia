@@ -1411,6 +1411,8 @@
       "am": "MAT",
       "pm": "PM",
       "eve": "SOIR",
+      "showDetails": "Voir l'horaire complet",
+      "hideDetails": "Masquer les détails",
       "days": {
         "monday": "Lun",
         "tuesday": "Mar",
@@ -1633,6 +1635,27 @@
       "am": "AM",
       "pm": "PM",
       "eve": "SOIR",
+      "early": "Tôt",
+      "morning": "Matin",
+      "midday": "Midi",
+      "afternoon": "Après-midi",
+      "evening": "Soir",
+      "late": "Tard",
+      "earlyRange": "6 h – 9 h",
+      "morningRange": "9 h – 12 h",
+      "middayRange": "12 h – 14 h",
+      "afternoonRange": "14 h – 17 h",
+      "eveningRange": "17 h – 20 h",
+      "lateRange": "20 h – 23 h",
+      "toggleDayHint": "Touchez pour cocher toute la journée",
+      "toggleBlockHint": "Touchez pour cocher ce bloc sur toute la semaine",
+      "presets": {
+        "afterWork": "Après le travail",
+        "weekendsAny": "Fin de semaine",
+        "weekdayLunches": "Heures de dîner",
+        "mornings": "Matins",
+        "clear": "Effacer"
+      },
       "minimumSelected": "{count} / {minimum} minimum sélectionnés",
       "selected": "{count} disponibilités sélectionnées",
       "saveButton": "Enregistrer",
@@ -2816,6 +2839,12 @@
     "locationRequiredForFacilities": "La localisation est requise pour rechercher des sites de jeu",
     "favoriteFacilitiesHint": "Vous pouvez toujours ajouter ou changer les sites de jeu plus tard"
   },
+  "playerAvailability": {
+    "staleHint": "Cela fait un moment — confirmez votre disponibilité pour la semaine.",
+    "lastConfirmed": "Confirmée {ago}",
+    "neverConfirmed": "Jamais confirmée",
+    "confirmCta": "Confirmer ma semaine"
+  },
   "playerDirectory": {
     "title": "Répertoire des joueurs",
     "searchPlaceholder": "Rechercher par nom ou ville...",
@@ -2864,6 +2893,8 @@
       "distanceKm": "{distance} km",
       "availability": "Disponibilité",
       "availabilityAll": "Toutes",
+      "availabilityAm": "AM",
+      "availabilityPm": "PM",
       "availabilityMorning": "Matin",
       "availabilityAfternoon": "Après-midi",
       "availabilityEvening": "Soir",
@@ -3996,6 +4027,11 @@
       "bannerTitle": "Essayez {sportName} aussi",
       "bannerDescription": "Activez {sportName} pour trouver plus de matchs et de joueurs près de chez vous.",
       "activate": "Activer"
+    },
+    "availabilityRefreshBanner": {
+      "title": "Mettez à jour vos disponibilités",
+      "description": "Confirmez votre horaire hebdomadaire pour qu'on suggère des matchs qui vous conviennent.",
+      "cta": "Mettre à jour"
     },
     "header": {
       "ctaButton": "Télécharger",
@@ -8920,14 +8956,20 @@
         "sunday": "Dim"
       },
       "periods": {
+        "early": "Tôt",
         "morning": "Matin",
+        "midday": "Midi",
         "afternoon": "Après-midi",
-        "evening": "Soirée"
+        "evening": "Soirée",
+        "late": "Tard"
       },
       "periodRanges": {
-        "morning": "6h - 12h",
-        "afternoon": "12h - 17h",
-        "evening": "17h - 21h"
+        "early": "6h - 9h",
+        "morning": "9h - 12h",
+        "midday": "12h - 14h",
+        "afternoon": "14h - 17h",
+        "evening": "17h - 20h",
+        "late": "20h - 23h"
       },
       "availabilityCount": "{count} sélectionnés",
       "submitButton": "Je suis partant",

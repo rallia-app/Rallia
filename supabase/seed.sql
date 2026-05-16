@@ -1081,7 +1081,9 @@ END $$;
 DO $$
 DECLARE
   days day_enum[] := ARRAY['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-  periods period_enum[] := ARRAY['morning', 'afternoon', 'evening'];
+  -- 6-block enum (post-20260515220000 refactor). Indexed p=1..6 ⇒
+  --   1 early, 2 morning, 3 midday, 4 afternoon, 5 evening, 6 late.
+  periods period_enum[] := ARRAY['early', 'morning', 'midday', 'afternoon', 'evening', 'late'];
   fake_id UUID;
   idx INT;
   d INT;
@@ -1092,19 +1094,19 @@ BEGIN
     fake_id := ('a1000000-0000-0000-0000-00000000' || LPAD(idx::text, 4, '0'))::uuid;
 
     FOR d IN 1..7 LOOP
-      FOR p IN 1..3 LOOP
-        -- Deterministic pseudo-random: each player gets 5-12 active slots
+      FOR p IN 1..6 LOOP
+        -- Deterministic pseudo-random: each player gets ~10–20 active slots
         slot_hash := (idx * 31 + d * 7 + p * 13) % 100;
 
-        -- Weekend mornings/afternoons: high probability (70%)
-        -- Weekday evenings: medium probability (50%)
-        -- Weekday mornings/afternoons: lower probability (25%)
-        IF (d >= 6 AND p <= 2 AND slot_hash < 70)         -- weekend morning/afternoon
-           OR (d < 6 AND p = 3 AND slot_hash < 50)        -- weekday evening
-           OR (d < 6 AND p <= 2 AND slot_hash < 25)       -- weekday morning/afternoon
+        -- Weekend AM cluster (p=1..3): high probability (70%)
+        -- Weekday PM cluster (p=4..6): medium probability (50%)
+        -- Weekday AM cluster (p=1..3): lower probability (25%)
+        IF (d >= 6 AND p <= 3 AND slot_hash < 70)         -- weekend AM cluster
+           OR (d < 6 AND p >= 4 AND slot_hash < 50)       -- weekday PM cluster
+           OR (d < 6 AND p <= 3 AND slot_hash < 25)       -- weekday AM cluster
         THEN
-          INSERT INTO player_availability (player_id, day, period, is_active)
-          VALUES (fake_id, days[d], periods[p], true)
+          INSERT INTO player_availability (player_id, day, period, is_active, last_confirmed_at)
+          VALUES (fake_id, days[d], periods[p], true, NOW())
           ON CONFLICT DO NOTHING;
         END IF;
       END LOOP;

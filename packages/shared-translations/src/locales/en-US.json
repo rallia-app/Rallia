@@ -1411,6 +1411,8 @@
       "am": "AM",
       "pm": "PM",
       "eve": "EVE",
+      "showDetails": "Show full schedule",
+      "hideDetails": "Hide details",
       "days": {
         "monday": "Mon",
         "tuesday": "Tue",
@@ -1633,6 +1635,27 @@
       "am": "AM",
       "pm": "PM",
       "eve": "EVE",
+      "early": "Early",
+      "morning": "Morning",
+      "midday": "Midday",
+      "afternoon": "Afternoon",
+      "evening": "Evening",
+      "late": "Late",
+      "earlyRange": "6 – 9 am",
+      "morningRange": "9 am – 12 pm",
+      "middayRange": "12 – 2 pm",
+      "afternoonRange": "2 – 5 pm",
+      "eveningRange": "5 – 8 pm",
+      "lateRange": "8 – 11 pm",
+      "toggleDayHint": "Tap to toggle the whole day",
+      "toggleBlockHint": "Tap to toggle this time block across the week",
+      "presets": {
+        "afterWork": "After work",
+        "weekendsAny": "Weekends",
+        "weekdayLunches": "Lunches",
+        "mornings": "Mornings",
+        "clear": "Clear"
+      },
       "minimumSelected": "{count} / {minimum} minimum selected",
       "selected": "{count} availabilities selected",
       "saveButton": "Save",
@@ -2816,6 +2839,12 @@
     "locationRequiredForFacilities": "Location is required to search facilities",
     "favoriteFacilitiesHint": "You can always add or change facilities later"
   },
+  "playerAvailability": {
+    "staleHint": "It's been a while — confirm your availability for the week ahead.",
+    "lastConfirmed": "Last confirmed {ago}",
+    "neverConfirmed": "Not confirmed yet",
+    "confirmCta": "Confirm my week"
+  },
   "playerDirectory": {
     "title": "Player Directory",
     "searchPlaceholder": "Search by name or city...",
@@ -2864,6 +2893,8 @@
       "distanceKm": "{distance} km",
       "availability": "Time",
       "availabilityAll": "All",
+      "availabilityAm": "AM",
+      "availabilityPm": "PM",
       "availabilityMorning": "Morning",
       "availabilityAfternoon": "Afternoon",
       "availabilityEvening": "Evening",
@@ -3996,6 +4027,11 @@
       "bannerTitle": "Try {sportName} too",
       "bannerDescription": "Activate {sportName} to find more matches and players nearby.",
       "activate": "Activate"
+    },
+    "availabilityRefreshBanner": {
+      "title": "Refresh your availability",
+      "description": "Confirm your weekly schedule so we can suggest matches that actually fit.",
+      "cta": "Update"
     },
     "header": {
       "ctaButton": "Download",
@@ -8918,14 +8954,20 @@
         "sunday": "Sun"
       },
       "periods": {
+        "early": "Early",
         "morning": "Morning",
+        "midday": "Midday",
         "afternoon": "Afternoon",
-        "evening": "Evening"
+        "evening": "Evening",
+        "late": "Late"
       },
       "periodRanges": {
-        "morning": "6am - 12pm",
-        "afternoon": "12pm - 5pm",
-        "evening": "5pm - 9pm"
+        "early": "6am - 9am",
+        "morning": "9am - 12pm",
+        "midday": "12pm - 2pm",
+        "afternoon": "2pm - 5pm",
+        "evening": "5pm - 8pm",
+        "late": "8pm - 11pm"
       },
       "availabilityCount": "{count} selected",
       "submitButton": "Count me in",

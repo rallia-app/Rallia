@@ -321,8 +321,12 @@ export function userAcquired(props: {
 
 // ---- Settings ----
 
-export function availabilityScheduleUpdated(): void {
-  capture('availability_schedule_updated');
+export function availabilityScheduleUpdated(props?: {
+  /** True when the user tapped Save without toggling any cell — i.e. just
+   *  refreshing last_confirmed_at in response to the weekly nudge. */
+  was_refresh_only?: boolean;
+}): void {
+  capture('availability_schedule_updated', props);
 }
 
 export function notificationPreferenceChanged(props: {

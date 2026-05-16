@@ -2,7 +2,10 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
 const VALID_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-const VALID_PERIODS = ['morning', 'afternoon', 'evening'];
+// Mirrors the post-20260515220000 `period_enum`. Server-side gate on the
+// /play lead form; the client-side AvailabilityGrid in player-interest-form.tsx
+// emits these exact strings.
+const VALID_PERIODS = ['early', 'morning', 'midday', 'afternoon', 'evening', 'late'];
 
 export async function POST(request: NextRequest) {
   try {

@@ -40,6 +40,7 @@ import { useGetOrCreateDirectConversation } from '@rallia/shared-hooks';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
 import { useSport, useUserHomeLocation } from '../context';
 import { SportIcon } from '../components/SportIcon';
+import { AvailabilityGrid as CompactAvailabilityGrid } from '../features/community/components';
 import RatingBadge from '../components/RatingBadge';
 import ReputationBadge from '../components/ReputationBadge';
 import CovetedBadge from '../components/CovetedBadge';
@@ -47,7 +48,7 @@ import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import { getProfilePictureUrl, lightHaptic, mediumHaptic } from '@rallia/shared-utils';
 import * as Analytics from '../services/analytics';
 import type { RootStackParamList } from '../navigation/types';
-import type { Profile, Player } from '@rallia/shared-types';
+import type { PeriodEnum, Profile, Player } from '@rallia/shared-types';
 import { MATCH_DURATION_ENUM_LABELS } from '@rallia/shared-types';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -128,17 +129,43 @@ interface FavoriteFacilityData {
   };
 }
 
-type PeriodKey = 'morning' | 'afternoon' | 'evening';
-
-interface DayPeriods {
-  morning: boolean;
-  afternoon: boolean;
-  evening: boolean;
-}
+type PeriodKey = PeriodEnum;
+type DayPeriods = Record<PeriodKey, boolean>;
 
 interface AvailabilityGrid {
-  [key: string]: DayPeriods;
+  [day: string]: DayPeriods;
 }
+
+const PERIOD_KEYS: PeriodKey[] = ['early', 'morning', 'midday', 'afternoon', 'evening', 'late'];
+
+const EMPTY_DAY_PERIODS = (): DayPeriods => ({
+  early: false,
+  morning: false,
+  midday: false,
+  afternoon: false,
+  evening: false,
+  late: false,
+});
+
+const EMPTY_AVAIL_GRID = (): AvailabilityGrid => ({
+  monday: EMPTY_DAY_PERIODS(),
+  tuesday: EMPTY_DAY_PERIODS(),
+  wednesday: EMPTY_DAY_PERIODS(),
+  thursday: EMPTY_DAY_PERIODS(),
+  friday: EMPTY_DAY_PERIODS(),
+  saturday: EMPTY_DAY_PERIODS(),
+  sunday: EMPTY_DAY_PERIODS(),
+});
+
+const DAYS_ORDER: string[] = [
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+  'sunday',
+];
 
 interface PlayerStats {
   hoursPlayed: number;
@@ -375,6 +402,10 @@ const PlayerProfile = () => {
   const [sports, setSports] = useState<SportWithRating[]>([]);
   const [sportPreferences, setSportPreferences] = useState<PlayerSportPreferences | null>(null);
   const [availabilities, setAvailabilities] = useState<AvailabilityGrid>({});
+  // Default to the full 6×7 grid on profile view — the heatmap is reserved
+  // for the PlayerCard widget where space is constrained. Tap "Hide details"
+  // to collapse to the compact 2×3-dot heatmap if needed.
+  const [availabilityExpanded, setAvailabilityExpanded] = useState(true);
   const [stats, setStats] = useState<PlayerStats>({
     hoursPlayed: 0,
     gamesHosted: 0,
@@ -413,6 +444,20 @@ const PlayerProfile = () => {
   const [proofsLoading, setProofsLoading] = useState(false);
   const [selectedProof, setSelectedProof] = useState<RatingProofData | null>(null);
   const [showProofViewer, setShowProofViewer] = useState(false);
+
+  // Convert PlayerProfile's boolean grid into the {day: [period, …]} shape
+  // the compact AvailabilityGrid widget expects. Empty days are omitted so
+  // the widget renders them muted.
+  const availabilityForCompactWidget = useMemo(() => {
+    const result: Partial<Record<string, PeriodKey[]>> = {};
+    for (const day of DAYS_ORDER) {
+      const dayData = availabilities[day];
+      if (!dayData) continue;
+      const periods = PERIOD_KEYS.filter(p => dayData[p]);
+      if (periods.length > 0) result[day] = periods;
+    }
+    return Object.keys(result).length > 0 ? result : null;
+  }, [availabilities]);
 
   // Calculate distance from current user to this player
   const distanceText = useMemo(() => {
@@ -974,15 +1019,7 @@ const PlayerProfile = () => {
       }
       const availData = availResult.data;
 
-      const availGrid: AvailabilityGrid = {
-        monday: { morning: false, afternoon: false, evening: false },
-        tuesday: { morning: false, afternoon: false, evening: false },
-        wednesday: { morning: false, afternoon: false, evening: false },
-        thursday: { morning: false, afternoon: false, evening: false },
-        friday: { morning: false, afternoon: false, evening: false },
-        saturday: { morning: false, afternoon: false, evening: false },
-        sunday: { morning: false, afternoon: false, evening: false },
-      };
+      const availGrid = EMPTY_AVAIL_GRID();
 
       (availData || []).forEach(avail => {
         const day = avail.day as keyof AvailabilityGrid;
@@ -1578,7 +1615,11 @@ const PlayerProfile = () => {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Profile Header Skeleton */}
           <View
             style={[
@@ -1844,7 +1885,11 @@ const PlayerProfile = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Profile Header */}
         <View
           style={[
@@ -2362,47 +2407,86 @@ const PlayerProfile = () => {
             <View
               style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
             >
-              <View style={styles.availabilityGrid}>
-                {/* Day Rows */}
-                {Object.keys(availabilities).map(day => (
-                  <View key={day} style={styles.availabilityRow}>
-                    <View style={styles.dayCell}>
-                      <Text size="sm" weight="medium" color={colors.text}>
-                        {getDayLabel(day)}
-                      </Text>
-                    </View>
-                    {(['morning', 'afternoon', 'evening'] as PeriodKey[]).map(period => (
-                      <View key={period} style={styles.slotWrapper}>
-                        <View
-                          style={[
-                            styles.slotCell,
-                            { backgroundColor: colors.inputBackground },
-                            availabilities[day]?.[period] && {
-                              backgroundColor: colors.primary,
-                            },
-                          ]}
-                        >
-                          <Text
-                            size="xs"
-                            weight="semibold"
-                            color={
-                              availabilities[day]?.[period]
-                                ? colors.primaryForeground
-                                : colors.textMuted
-                            }
-                          >
-                            {period === 'morning'
-                              ? t('playerProfile.availability.am' as TranslationKey)
-                              : period === 'afternoon'
-                                ? t('playerProfile.availability.pm' as TranslationKey)
-                                : t('playerProfile.availability.eve' as TranslationKey)}
+              {!availabilityExpanded ? (
+                <>
+                  {/* Compact AM/PM heatmap — same widget as PlayerCard. */}
+                  <View style={styles.availabilityCompactWrapper}>
+                    <CompactAvailabilityGrid
+                      availability={availabilityForCompactWidget ?? null}
+                      activeColor={colors.primary}
+                      mutedColor={colors.textMuted}
+                    />
+                  </View>
+                  <TouchableOpacity
+                    style={styles.availabilityToggle}
+                    onPress={() => setAvailabilityExpanded(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text size="sm" weight="semibold" color={colors.primary}>
+                      {t('playerProfile.availability.showDetails')}
+                    </Text>
+                    <Ionicons name="chevron-down" size={16} color={colors.primary} />
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  {/* Full 6×7 grid: time-block rows, day-letter columns. */}
+                  <View style={styles.availabilityGrid}>
+                    <View style={styles.availabilityRow}>
+                      <View style={styles.dayCell} />
+                      {DAYS_ORDER.map(day => (
+                        <View key={`hdr-${day}`} style={styles.headerCell}>
+                          <Text size="xs" weight="semibold" color={colors.textMuted}>
+                            {t(`playerDirectory.dayLetters.${day}` as TranslationKey)}
                           </Text>
                         </View>
+                      ))}
+                    </View>
+
+                    {PERIOD_KEYS.map(period => (
+                      <View key={period} style={styles.availabilityRow}>
+                        <View style={styles.dayCell}>
+                          <Text size="sm" weight="semibold" color={colors.text}>
+                            {t(`onboarding.availabilityStep.${period}` as TranslationKey)}
+                          </Text>
+                          <Text size="xs" color={colors.textMuted} style={styles.timeRangeText}>
+                            {t(`onboarding.availabilityStep.${period}Range` as TranslationKey)}
+                          </Text>
+                        </View>
+                        {DAYS_ORDER.map(day => {
+                          const isSelected = availabilities[day]?.[period] ?? false;
+                          return (
+                            <View
+                              key={`${period}-${day}`}
+                              style={[
+                                styles.slotCell,
+                                {
+                                  backgroundColor: colors.inputBackground,
+                                  borderColor: colors.inputBorder,
+                                },
+                                isSelected && {
+                                  backgroundColor: colors.primary,
+                                  borderColor: colors.primary,
+                                },
+                              ]}
+                            />
+                          );
+                        })}
                       </View>
                     ))}
                   </View>
-                ))}
-              </View>
+                  <TouchableOpacity
+                    style={styles.availabilityToggle}
+                    onPress={() => setAvailabilityExpanded(false)}
+                    activeOpacity={0.7}
+                  >
+                    <Text size="sm" weight="semibold" color={colors.primary}>
+                      {t('playerProfile.availability.hideDetails')}
+                    </Text>
+                    <Ionicons name="chevron-up" size={16} color={colors.primary} />
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           </View>
         )}
@@ -2427,19 +2511,17 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: spacingPixels[10],
+  },
   profileHeader: {
     marginTop: spacingPixels[4],
     marginHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[5],
     paddingHorizontal: spacingPixels[4],
     borderRadius: radiusPixels.xl,
-    borderWidth: 1.5,
+    borderWidth: 1,
     position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.07,
-    shadowRadius: 10,
-    elevation: 2,
   },
   profileTopRow: {
     flexDirection: 'row',
@@ -2795,7 +2877,9 @@ const styles = StyleSheet.create({
     fontSize: 10,
     textAlign: 'center',
   },
-  // Availability Grid Styles - Same as UserProfile
+  // Availability Grid Styles — kept in sync with AvailabilitiesStep,
+  // PlayerAvailabilitiesOverlay, and UserProfile so all four surfaces feel
+  // identical.
   availabilityGrid: {
     marginTop: spacingPixels[2],
   },
@@ -2805,27 +2889,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dayCell: {
-    width: 50,
+    width: 96,
+    paddingRight: spacingPixels[2],
     justifyContent: 'center',
   },
   headerCell: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  slotWrapper: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[1],
+    paddingVertical: spacingPixels[1],
   },
   slotCell: {
-    width: '100%',
-    borderRadius: radiusPixels.lg,
-    paddingVertical: spacingPixels[3],
+    flex: 1,
+    height: 36,
+    borderRadius: radiusPixels.md,
+    marginHorizontal: spacingPixels[1] / 2,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
+    borderWidth: 1,
+  },
+  timeRangeText: {
+    marginTop: 2,
+    lineHeight: 14,
+  },
+  availabilityCompactWrapper: {
+    paddingVertical: spacingPixels[2],
+    paddingHorizontal: spacingPixels[2],
+  },
+  availabilityToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[1],
+    paddingTop: spacingPixels[3],
+    marginTop: spacingPixels[2],
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
   },
 });
 

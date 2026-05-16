@@ -839,15 +839,19 @@ export async function getNetworkMemberUpcomingMatches(
     const endTime = `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
     fullQuery = fullQuery.gte('start_time', startTime).lt('start_time', endTime);
   } else if (filters.timeOfDay && filters.timeOfDay !== 'all') {
+    // Boundaries aligned with the 6-block player availability taxonomy
+    // (morning = early+morning, afternoon = midday+afternoon, evening =
+    // evening+late) so the same word means a coherent time range across
+    // the player and match surfaces.
     switch (filters.timeOfDay) {
       case 'morning':
         fullQuery = fullQuery.gte('start_time', '06:00:00').lt('start_time', '12:00:00');
         break;
       case 'afternoon':
-        fullQuery = fullQuery.gte('start_time', '12:00:00').lt('start_time', '18:00:00');
+        fullQuery = fullQuery.gte('start_time', '12:00:00').lt('start_time', '17:00:00');
         break;
       case 'evening':
-        fullQuery = fullQuery.gte('start_time', '18:00:00').lte('start_time', '23:59:59');
+        fullQuery = fullQuery.gte('start_time', '17:00:00').lte('start_time', '23:59:59');
         break;
     }
   }

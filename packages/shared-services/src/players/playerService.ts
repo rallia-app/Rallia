@@ -3,6 +3,7 @@
  * Handles player search and related operations.
  */
 
+import type { DayEnum, PeriodEnum } from '@rallia/shared-types';
 import { supabase } from '../supabase';
 
 // =============================================================================
@@ -28,7 +29,13 @@ export interface HomeLocation {
  * Filter types for player search
  */
 export type GenderFilter = 'all' | 'male' | 'female' | 'other';
-export type AvailabilityFilter = 'all' | 'morning' | 'afternoon' | 'evening';
+// AvailabilityFilter accepts both the legacy 3-period values (morning/
+// afternoon/evening) and the new AM/PM macros from the 6-block UI. The
+// `search_players_nearby` RPC takes a single TEXT and matches against
+// period_enum equality; for the macros we pass null (no RPC-level filter)
+// since they span multiple enum values, and the macro filter is intended
+// to be applied client-side against the returned `availability` JSONB.
+export type AvailabilityFilter = 'all' | 'morning' | 'afternoon' | 'evening' | 'am' | 'pm';
 export type DayFilter =
   | 'all'
   | 'monday'
@@ -116,16 +123,9 @@ export interface PlayerSearchResult {
   availability: Partial<Record<AvailabilityDay, AvailabilityPeriod[]>> | null;
 }
 
-export type AvailabilityDay =
-  | 'monday'
-  | 'tuesday'
-  | 'wednesday'
-  | 'thursday'
-  | 'friday'
-  | 'saturday'
-  | 'sunday';
+export type AvailabilityDay = DayEnum;
 
-export type AvailabilityPeriod = 'morning' | 'afternoon' | 'evening';
+export type AvailabilityPeriod = PeriodEnum;
 
 /**
  * Paginated response for player search
@@ -238,8 +238,15 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
         : parseInt(String(filters.maxDistance), 10)
       : null;
 
-  const availability =
-    filters.availability && filters.availability !== 'all' ? filters.availability : null;
+  // Macro AM/PM filters span multiple enum values, so they're passed as null
+  // here and applied client-side against the JSONB availability map.
+  const isLegacyPeriodFilter =
+    filters.availability === 'morning' ||
+    filters.availability === 'afternoon' ||
+    filters.availability === 'evening';
+  const availability = isLegacyPeriodFilter
+    ? (filters.availability as 'morning' | 'afternoon' | 'evening')
+    : null;
 
   const day = filters.day && filters.day !== 'all' ? filters.day : null;
 

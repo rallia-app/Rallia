@@ -1073,11 +1073,16 @@ export const OnboardingService = {
         throw new Error('User not authenticated');
       }
 
+      // Single chokepoint for the freshness timestamp — every save (including
+      // no-op "refresh" saves from the weekly prompt) bumps last_confirmed_at
+      // so the staleness UI and refresh cron treat this player as current.
+      const confirmedAt = new Date().toISOString();
       const availabilityData = availabilities.map(availability => ({
         player_id: userId,
         day: availability.day ?? availability.day_of_week,
         period: availability.period ?? availability.time_period,
         is_active: availability.is_active,
+        last_confirmed_at: confirmedAt,
       }));
 
       // Use upsert to handle resubmissions (user navigating back and submitting again)

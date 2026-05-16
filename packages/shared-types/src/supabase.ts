@@ -4144,6 +4144,7 @@ export type Database = {
           day: Database["public"]["Enums"]["day_enum"]
           id: string
           is_active: boolean
+          last_confirmed_at: string | null
           period: Database["public"]["Enums"]["period_enum"]
           player_id: string
           updated_at: string
@@ -4153,6 +4154,7 @@ export type Database = {
           day: Database["public"]["Enums"]["day_enum"]
           id?: string
           is_active?: boolean
+          last_confirmed_at?: string | null
           period: Database["public"]["Enums"]["period_enum"]
           player_id: string
           updated_at?: string
@@ -4162,6 +4164,7 @@ export type Database = {
           day?: Database["public"]["Enums"]["day_enum"]
           id?: string
           is_active?: boolean
+          last_confirmed_at?: string | null
           period?: Database["public"]["Enums"]["period_enum"]
           player_id?: string
           updated_at?: string
@@ -5084,6 +5087,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           last_active_at: string | null
+          last_availability_refresh_sent_at: string | null
           last_morning_digest_sent_at: string | null
           last_name: string | null
           onboarding_completed: boolean | null
@@ -5116,6 +5120,7 @@ export type Database = {
           id: string
           is_active?: boolean | null
           last_active_at?: string | null
+          last_availability_refresh_sent_at?: string | null
           last_morning_digest_sent_at?: string | null
           last_name?: string | null
           onboarding_completed?: boolean | null
@@ -5148,6 +5153,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           last_active_at?: string | null
+          last_availability_refresh_sent_at?: string | null
           last_morning_digest_sent_at?: string | null
           last_name?: string | null
           onboarding_completed?: boolean | null
@@ -7163,6 +7169,16 @@ export type Database = {
           total_actions: number
         }[]
       }
+      get_availability_refresh_eligible_users: {
+        Args: never
+        Returns: {
+          email: string
+          first_name: string
+          most_recent_confirmed_at: string
+          preferred_locale: string
+          user_id: string
+        }[]
+      }
       get_available_slots: {
         Args: { p_court_id: string; p_date: string }
         Returns: {
@@ -8792,6 +8808,14 @@ export type Database = {
         Args: { p_player_id: string; p_utm: Json }
         Returns: undefined
       }
+      shares_active_network_of_type: {
+        Args: {
+          p_network_type_name: string
+          p_player_a: string
+          p_player_b: string
+        }
+        Returns: boolean
+      }
       snapshot_acceptable_age: { Args: { slot_start: string }; Returns: string }
       snapshot_cleanup_expired: { Args: never; Returns: number }
       snapshot_facilities_needing_refresh: {
@@ -9120,6 +9144,7 @@ export type Database = {
         | "payouts_expired_refunded"
         | "reimbursement_received"
         | "reimbursement_all_received"
+        | "availability_refresh_reminder"
       organization_nature_enum: "public" | "private"
       organization_type:
         | "club"
@@ -9136,7 +9161,13 @@ export type Database = {
         | "bank_transfer"
       payment_plan_enum: "full" | "installment"
       payment_status: "pending" | "completed" | "failed" | "refunded"
-      period_enum: "morning" | "afternoon" | "evening"
+      period_enum:
+        | "early"
+        | "morning"
+        | "midday"
+        | "afternoon"
+        | "evening"
+        | "late"
       play_attribute_enum:
         | "serve_speed_and_placement"
         | "net_play"
@@ -9664,6 +9695,7 @@ export const Constants = {
         "payouts_expired_refunded",
         "reimbursement_received",
         "reimbursement_all_received",
+        "availability_refresh_reminder",
       ],
       organization_nature_enum: ["public", "private"],
       organization_type: [
@@ -9683,7 +9715,14 @@ export const Constants = {
       ],
       payment_plan_enum: ["full", "installment"],
       payment_status: ["pending", "completed", "failed", "refunded"],
-      period_enum: ["morning", "afternoon", "evening"],
+      period_enum: [
+        "early",
+        "morning",
+        "midday",
+        "afternoon",
+        "evening",
+        "late",
+      ],
       play_attribute_enum: [
         "serve_speed_and_placement",
         "net_play",

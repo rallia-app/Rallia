@@ -28,7 +28,10 @@ import { lightHaptic, selectionHaptic } from '../../../utils/haptics';
 // =============================================================================
 
 export type GenderFilter = 'all' | 'male' | 'female' | 'other';
-export type AvailabilityFilter = 'all' | 'morning' | 'afternoon' | 'evening';
+// 6-block macro filter: 'am' covers early/morning/midday, 'pm' covers
+// afternoon/evening/late. Granular 6-value filter is a follow-up — the
+// current dropdown stays at 3 options to keep the chip density unchanged.
+export type AvailabilityFilter = 'all' | 'am' | 'pm';
 export type DayFilter =
   | 'all'
   | 'monday'
@@ -93,7 +96,7 @@ export const DEFAULT_PLAYER_FILTERS: PlayerFilters = {
 // =============================================================================
 
 const GENDER_OPTIONS: GenderFilter[] = ['all', 'male', 'female', 'other'];
-const AVAILABILITY_OPTIONS: AvailabilityFilter[] = ['all', 'morning', 'afternoon', 'evening'];
+const AVAILABILITY_OPTIONS: AvailabilityFilter[] = ['all', 'am', 'pm'];
 const DAY_OPTIONS: DayFilter[] = [
   'all',
   'monday',
@@ -141,9 +144,8 @@ const GENDER_LABEL_KEYS: Record<GenderFilter, TranslationKey> = {
 
 const AVAILABILITY_LABEL_KEYS: Record<AvailabilityFilter, TranslationKey> = {
   all: 'playerDirectory.filters.availabilityAll',
-  morning: 'playerDirectory.filters.availabilityMorning',
-  afternoon: 'playerDirectory.filters.availabilityAfternoon',
-  evening: 'playerDirectory.filters.availabilityEvening',
+  am: 'playerDirectory.filters.availabilityAm',
+  pm: 'playerDirectory.filters.availabilityPm',
 };
 
 const DAY_LABEL_KEYS: Record<DayFilter, string> = {

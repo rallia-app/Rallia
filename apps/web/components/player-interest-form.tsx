@@ -44,7 +44,7 @@ const DAYS = [
   'saturday',
   'sunday',
 ] as const;
-const PERIODS = ['morning', 'afternoon', 'evening'] as const;
+const PERIODS = ['early', 'morning', 'midday', 'afternoon', 'evening', 'late'] as const;
 const POSTAL_CODE_REGEX = /^[A-Za-z]\d[A-Za-z]\s?\d[A-Za-z]\d$/;
 
 // ============================================

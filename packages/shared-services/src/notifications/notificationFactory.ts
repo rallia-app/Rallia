@@ -419,6 +419,7 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
   program_payment_due: 'high',
   program_payment_received: 'normal',
   morning_digest: 'low',
+  availability_refresh_reminder: 'low',
 
   // Stripe JIT reimbursement notifications (see supabase/migrations/20260504000001_payouts_notification_enum_values.sql)
   payouts_setup_required: 'high',
@@ -499,6 +500,7 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   program_payment_due: 'Payment Due',
   program_payment_received: 'Payment Received',
   morning_digest: 'Your morning game briefing',
+  availability_refresh_reminder: 'Confirm your week',
 
   // Stripe JIT reimbursement
   payouts_setup_required: 'Reimbursement ready',
@@ -600,6 +602,8 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
     'Payment for {programName} is due. Please complete payment to secure your spot.',
   program_payment_received: 'Payment for {programName} has been received. Thank you!',
   morning_digest: 'Upcoming games near you + players to challenge this week.',
+  availability_refresh_reminder:
+    'Refresh your availability so we can suggest matches that actually fit.',
 
   // Stripe JIT reimbursement — body templates use {amount} which the renderer
   // formats from amountCents via Intl.NumberFormat for the recipient's locale.
