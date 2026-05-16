@@ -16,7 +16,6 @@ import {
   MatchCard,
   MyMatchCard,
   Text,
-  Heading,
   Button,
   LocationSelector,
   SkeletonMatchCard,
@@ -210,7 +209,7 @@ const quickNavStyles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacingPixels[3],
     paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[2],
+    paddingTop: spacingPixels[4],
     paddingBottom: spacingPixels[2],
   },
   item: {
@@ -1261,19 +1260,23 @@ const Home = () => {
             },
           ]}
         >
-          <SportIcon
-            sportName={selectedSport?.name ?? 'tennis'}
-            size={32}
-            color={colors.text}
-            style={styles.matchesSectionIcon}
-          />
-          <Heading level={3} color={colors.text}>
+          <View style={[styles.matchesSectionIconWrap, { backgroundColor: `${primary[500]}20` }]}>
+            <SportIcon sportName={selectedSport?.name ?? 'tennis'} size={40} color={primary[500]} />
+          </View>
+          <Text size="xl" weight="bold" color={colors.text} style={styles.matchesSectionTitle}>
             {t('home.yourMatches')}
-          </Heading>
+          </Text>
           <Text size="sm" color={colors.textMuted} style={styles.sectionSubtitle}>
             {t('home.signInPrompt')}
           </Text>
-          <Button variant="primary" onPress={openSheet} style={styles.signInButton}>
+          <Button
+            variant="primary"
+            rounded
+            onPress={openSheet}
+            style={styles.signInButton}
+            leftIcon={<Ionicons name="log-in-outline" size={20} color="#FFFFFF" />}
+            isDark={isDark}
+          >
             {t('auth.signIn')}
           </Button>
         </View>
@@ -1291,19 +1294,23 @@ const Home = () => {
             },
           ]}
         >
-          <SportIcon
-            sportName={selectedSport?.name ?? 'tennis'}
-            size={32}
-            color={colors.text}
-            style={styles.matchesSectionIcon}
-          />
-          <Heading level={3} color={colors.text}>
+          <View style={[styles.matchesSectionIconWrap, { backgroundColor: `${primary[500]}20` }]}>
+            <Ionicons name="person-add-outline" size={40} color={primary[500]} />
+          </View>
+          <Text size="xl" weight="bold" color={colors.text} style={styles.matchesSectionTitle}>
             {t('home.yourMatches')}
-          </Heading>
+          </Text>
           <Text size="sm" color={colors.textMuted} style={styles.sectionSubtitle}>
             {t('home.onboardingPrompt')}
           </Text>
-          <Button variant="primary" onPress={openSheet} style={styles.signInButton}>
+          <Button
+            variant="primary"
+            rounded
+            onPress={openSheet}
+            style={styles.signInButton}
+            leftIcon={<Ionicons name="person-add-outline" size={20} color="#FFFFFF" />}
+            isDark={isDark}
+          >
             {t('home.completeProfile')}
           </Button>
         </View>
@@ -1607,15 +1614,23 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   matchesSection: {
-    padding: spacingPixels[5],
+    padding: spacingPixels[6],
     margin: spacingPixels[4],
     marginTop: spacingPixels[5],
     borderRadius: radiusPixels.xl,
-    borderWidth: 2,
-    borderStyle: 'dashed',
+    borderWidth: 1,
     alignItems: 'center',
   },
-  matchesSectionIcon: {
+  matchesSectionIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacingPixels[4],
+  },
+  matchesSectionTitle: {
+    textAlign: 'center',
     marginBottom: spacingPixels[2],
   },
   sectionSubtitle: {
@@ -1630,7 +1645,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[5],
+    paddingTop: spacingPixels[2],
+    paddingBottom: spacingPixels[5],
   },
   sectionTitleRow: {
     flexDirection: 'row',

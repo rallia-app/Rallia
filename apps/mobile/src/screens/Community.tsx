@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacingPixels[3],
     paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[2],
+    paddingTop: spacingPixels[4],
     paddingBottom: spacingPixels[2],
   },
   actionButton: {
