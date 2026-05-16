@@ -76,7 +76,7 @@
     "expo-video": "~55.0.15",
     "expo-video-thumbnails": "~55.0.14",
     "expo-web-browser": "~55.0.14",
-    "i18next": "^25.7.2",
+    "i18next": "^26.2.0",
     "lottie-react-native": "^7.3.6",
     "nativewind": "5.0.0-preview.2",
     "posthog-react-native": "^4.39.1",
