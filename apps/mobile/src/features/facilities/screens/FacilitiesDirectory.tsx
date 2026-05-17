@@ -11,6 +11,7 @@ import {
   RefreshControl,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -178,11 +179,14 @@ export default function FacilitiesDirectory() {
     location.longitude !== undefined &&
     !!selectedSport;
 
-  // Fetch facilities (all at once — ~200 total, no need for pagination)
+  // Fetch facilities with server-side pagination
   const {
     facilities,
     isLoading,
     isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
     refetch,
     error: queryError,
   } = useFacilitySearch({
@@ -193,9 +197,23 @@ export default function FacilitiesDirectory() {
     filters,
     userGender: player?.gender,
     playerId: player?.id,
-    pageSize: 500,
     enabled: showFacilities,
   });
+
+  const handleLoadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const renderFooter = useCallback(() => {
+    if (!isFetchingNextPage) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color={colors.primary} />
+      </View>
+    );
+  }, [isFetchingNextPage, colors.primary]);
 
   // Favorites management
   const { favorites, isFavorite, addFavorite, removeFavorite, isMaxReached } =
@@ -645,6 +663,9 @@ export default function FacilitiesDirectory() {
         keyExtractor={item => item.id}
         ListHeaderComponent={renderListHeader()}
         ListEmptyComponent={renderEmptyComponent}
+        ListFooterComponent={renderFooter}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
         refreshControl={
           <RefreshControl
             refreshing={isFetching && !isLoading}
@@ -739,6 +760,10 @@ const styles = StyleSheet.create({
   },
   skeletonContainer: {
     paddingBottom: spacingPixels[4],
+  },
+  footerLoader: {
+    alignItems: 'center',
+    paddingVertical: spacingPixels[4],
   },
   errorContainer: {
     padding: spacingPixels[4],
