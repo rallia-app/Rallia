@@ -108,6 +108,14 @@ interface HourlyAvailabilityGridProps {
   t: (key: TranslationKey) => string;
   /** Locale (e.g. 'en-US', 'fr-CA') — drives the hour label formatter. */
   locale: string;
+  /**
+   * Optional. Fired with `true` when a touch gesture starts on the grid and
+   * `false` when it ends. Lets the parent disable its enclosing ScrollView
+   * (`scrollEnabled={!active}`) so a vertical drag paints cells instead of
+   * scrolling the surrounding container. Belt-and-suspenders on top of the
+   * PanResponder's capture-phase claim.
+   */
+  onInteractionChange?: (active: boolean) => void;
 }
 
 // =============================================================================
@@ -146,6 +154,7 @@ export const HourlyAvailabilityGrid: React.FC<HourlyAvailabilityGridProps> = ({
   colors,
   t,
   locale,
+  onInteractionChange,
 }) => {
   // Captured at the parent container's onLayout: total width minus the
   // time-label column, divided by 7 = cell width. PanResponder needs this
@@ -218,18 +227,41 @@ export const HourlyAvailabilityGrid: React.FC<HourlyAvailabilityGridProps> = ({
     [computeCellFromTouch, onChange, value]
   );
 
+  // Pin the latest `onInteractionChange` so the PanResponder (created once
+  // via useRef) always calls the current callback, not a stale closure.
+  const interactionCbRef = useRef(onInteractionChange);
+  interactionCbRef.current = onInteractionChange;
+
   const resetGesture = useCallback(() => {
     paintModeRef.current = null;
     visitedRef.current = null;
     draftRef.current = null;
+    interactionCbRef.current?.(false);
   }, []);
 
   const panResponderRef = useRef(
     PanResponder.create({
+      // Initial tap on the grid surface: claim the gesture. Inner
+      // TouchableOpacity children (hour-row labels) are deeper in the tree
+      // and win the bubble-phase responder negotiation before this view
+      // is asked, so their bulk-toggle taps still fire.
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_e, gesture) =>
+      onMoveShouldSetPanResponder: () => true,
+      // Capture-phase claim on move: as soon as the user starts dragging
+      // we steal the gesture from any parent ScrollView so the surrounding
+      // sheet doesn't scroll while painting. Threshold of 2pt keeps tiny
+      // jitter from triggering a steal on what was meant as a tap.
+      onMoveShouldSetPanResponderCapture: (_e, gesture) =>
         Math.abs(gesture.dx) > 2 || Math.abs(gesture.dy) > 2,
-      onPanResponderGrant: e => handleTouch(e),
+      // Once we've grabbed the gesture, refuse to surrender it if the
+      // parent ScrollView later asks for it back. Otherwise a long vertical
+      // drag near the sheet edge can be yanked away mid-paint.
+      onPanResponderTerminationRequest: () => false,
+      onShouldBlockNativeResponder: () => true,
+      onPanResponderGrant: e => {
+        interactionCbRef.current?.(true);
+        handleTouch(e);
+      },
       onPanResponderMove: e => handleTouch(e),
       onPanResponderRelease: resetGesture,
       onPanResponderTerminate: resetGesture,

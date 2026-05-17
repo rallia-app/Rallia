@@ -11,7 +11,7 @@
  * useOnboardingWizard — see formData.availabilities.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { Text } from '@rallia/shared-components';
@@ -57,6 +57,10 @@ export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
   const totalSelections = grid.size;
   const hasMinimum = totalSelections >= MIN_SELECTIONS;
 
+  // Disabled while the user is paint-dragging the grid so the surrounding
+  // SheetScrollView can't scroll the page out from under them.
+  const [scrollEnabled, setScrollEnabled] = useState(true);
+
   const onGridChange = (next: HourGrid) => onUpdateFormData({ availabilities: next });
 
   const gridColors = useMemo(
@@ -92,6 +96,7 @@ export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
+      scrollEnabled={scrollEnabled}
     >
       <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
         {t('onboarding.availability')}
@@ -123,6 +128,7 @@ export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
           colors={gridColors}
           t={t}
           locale={locale}
+          onInteractionChange={active => setScrollEnabled(!active)}
         />
       </View>
     </SheetScrollView>

@@ -61,6 +61,9 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
 
   const [selection, setSelection] = useState<HourGrid>(initialData ?? emptyGrid());
   const [isSaving, setIsSaving] = useState(false);
+  // Disabled while the user is paint-dragging the grid, so the surrounding
+  // ScrollView can't steal the gesture and scroll the sheet vertically.
+  const [scrollEnabled, setScrollEnabled] = useState(true);
 
   // Staleness — show "confirm your week" in edit mode when last_confirmed_at
   // is missing or older than the cutoff. Onboarding implies a fresh write.
@@ -183,6 +186,7 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
           contentContainerStyle={[styles.content, { paddingBottom: spacingPixels[8] }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          scrollEnabled={scrollEnabled}
         >
           {mode === 'onboarding' && (
             <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
@@ -238,6 +242,7 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
               colors={gridColors}
               t={t}
               locale={locale}
+              onInteractionChange={active => setScrollEnabled(!active)}
             />
           </View>
         </ScrollView>
