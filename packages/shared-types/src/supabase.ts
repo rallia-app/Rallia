@@ -1017,6 +1017,7 @@ export type Database = {
           is_active: boolean
           name: string
           provider_type: string
+          served_sport_ids: string[] | null
           updated_at: string
         }
         Insert: {
@@ -1028,6 +1029,7 @@ export type Database = {
           is_active?: boolean
           name: string
           provider_type: string
+          served_sport_ids?: string[] | null
           updated_at?: string
         }
         Update: {
@@ -1039,6 +1041,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           provider_type?: string
+          served_sport_ids?: string[] | null
           updated_at?: string
         }
         Relationships: []
@@ -1304,6 +1307,7 @@ export type Database = {
       }
       facility_availability_snapshot: {
         Row: {
+          booking_url: string | null
           court_name: string | null
           court_number: number | null
           currency: string | null
@@ -1319,6 +1323,7 @@ export type Database = {
           sport_id: string | null
         }
         Insert: {
+          booking_url?: string | null
           court_name?: string | null
           court_number?: number | null
           currency?: string | null
@@ -1334,6 +1339,7 @@ export type Database = {
           sport_id?: string | null
         }
         Update: {
+          booking_url?: string | null
           court_name?: string | null
           court_number?: number | null
           currency?: string | null
@@ -2854,6 +2860,64 @@ export type Database = {
             columns: ["share_id"]
             isOneToOne: false
             referencedRelation: "match_share"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      match_time_suggestion: {
+        Row: {
+          created_at: string
+          id: string
+          match_id: string
+          note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          suggested_start_time: string
+          suggester_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          match_id: string
+          note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          suggested_start_time: string
+          suggester_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          match_id?: string
+          note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          suggested_start_time?: string
+          suggester_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_time_suggestion_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "match"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_time_suggestion_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_time_suggestion_suggester_id_fkey"
+            columns: ["suggester_id"]
+            isOneToOne: false
+            referencedRelation: "player"
             referencedColumns: ["id"]
           },
         ]
@@ -6922,6 +6986,10 @@ export type Database = {
       }
     }
     Functions: {
+      accept_match_time_suggestion: {
+        Args: { p_suggestion_id: string }
+        Returns: Json
+      }
       accept_rebuttal_score: {
         Args: { p_match_result_id: string; p_player_id: string }
         Returns: boolean
@@ -8583,10 +8651,13 @@ export type Database = {
         Returns: {
           api_base_url: string
           api_config: Json
+          booking_url_template: string
           external_provider_id: string
           facility_id: string
           provider_type: string
+          served_sport_ids: string[]
           sports: Json
+          timezone: string
         }[]
       }
       resolve_invitation_targets: {
@@ -8910,6 +8981,10 @@ export type Database = {
         }
         Returns: Json
       }
+      withdraw_match_time_suggestion: {
+        Args: { p_suggestion_id: string }
+        Returns: string
+      }
     }
     Enums: {
       account_status:
@@ -9159,6 +9234,9 @@ export type Database = {
         | "reimbursement_received"
         | "reimbursement_all_received"
         | "availability_refresh_reminder"
+        | "match_time_suggested"
+        | "match_time_suggestion_accepted"
+        | "match_time_suggestion_declined"
       organization_nature_enum: "public" | "private"
       organization_type:
         | "club"
@@ -9703,6 +9781,9 @@ export const Constants = {
         "reimbursement_received",
         "reimbursement_all_received",
         "availability_refresh_reminder",
+        "match_time_suggested",
+        "match_time_suggestion_accepted",
+        "match_time_suggestion_declined",
       ],
       organization_nature_enum: ["public", "private"],
       organization_type: [
@@ -9871,3 +9952,4 @@ export const Constants = {
     },
   },
 } as const
+

@@ -9,6 +9,7 @@ import type {
 import { FeedbackReportActionSheet } from '../components/BugReportSheet';
 import { MatchSuggestionsActionSheet } from '../components/MatchSuggestionsSheet';
 import { MatchInviteConfirmActionSheet } from '../components/MatchInviteConfirmSheet';
+import { SuggestMatchTimeActionSheet } from '../components/SuggestMatchTimeSheet';
 import { CreateCommunityActionSheet } from '../features/communities/components/CreateCommunityModal';
 import { CreateListActionSheet } from '../features/shared-lists/components/CreateListModal';
 import { ShareMatchActionSheet } from '../features/shared-lists/components/ShareMatchModal';
@@ -717,6 +718,19 @@ declare module 'react-native-actions-sheet' {
         endTime: string;
       };
     }>;
+    'suggest-match-time': SheetDefinition<{
+      payload: {
+        matchId: string;
+        matchDate: string;
+        matchTimezone: string;
+        currentStartTime: string; // HH:MM or HH:MM:SS in match.timezone
+        currentEndTime: string;
+        /** Set when the caller already has a pending suggestion (edit mode). */
+        existingSuggestionId?: string;
+        existingSuggestionTime?: string;
+        existingNote?: string;
+      };
+    }>;
     'report-proof': SheetDefinition<{
       payload: {
         reporterId: string;
@@ -815,6 +829,7 @@ export const Sheets = () => {
         'choose-payouts': ChoosePayoutsActionSheet,
         'match-suggestions': MatchSuggestionsActionSheet,
         'match-invite-confirm': MatchInviteConfirmActionSheet,
+        'suggest-match-time': SuggestMatchTimeActionSheet,
       }}
     />
   );

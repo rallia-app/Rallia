@@ -331,6 +331,10 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   payouts_expired_refunded: 'alert-circle-outline',
   reimbursement_received: 'cash-outline',
   reimbursement_all_received: 'checkmark-done-circle-outline',
+  // Match time suggestion
+  match_time_suggested: 'time-outline',
+  match_time_suggestion_accepted: 'checkmark-circle-outline',
+  match_time_suggestion_declined: 'close-circle-outline',
 };
 
 /**
@@ -412,6 +416,10 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   payouts_expired_refunded: '#F44336', // Red — failure / refund
   reimbursement_received: '#4CAF50', // Green — money received
   reimbursement_all_received: '#4CAF50', // Green — fully done
+  // Match time suggestion
+  match_time_suggested: '#FF9800', // Orange — action required from the host
+  match_time_suggestion_accepted: '#4CAF50', // Green
+  match_time_suggestion_declined: '#F44336', // Red
 };
 
 /**
@@ -489,6 +497,10 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   payouts_expired_refunded: 'Reimbursement Expired',
   reimbursement_received: 'Reimbursement Received',
   reimbursement_all_received: 'All Reimbursements Received',
+  // Match time suggestion
+  match_time_suggested: 'Time Change Suggested',
+  match_time_suggestion_accepted: 'Time Change Accepted',
+  match_time_suggestion_declined: 'Time Change Declined',
 };
 
 /**
@@ -574,6 +586,10 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   payouts_expired_refunded: 'system',
   reimbursement_received: 'system',
   reimbursement_all_received: 'system',
+  // Match time suggestion
+  match_time_suggested: 'match',
+  match_time_suggestion_accepted: 'match',
+  match_time_suggestion_declined: 'match',
 };
 
 /**
@@ -701,6 +717,11 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   payouts_expired_refunded: { email: true, push: true, sms: false },
   reimbursement_received: { email: false, push: true, sms: false },
   reimbursement_all_received: { email: false, push: true, sms: false },
+  // Match time suggestion — push always on; email matches the high-signal
+  // match_invitation / match_join_request defaults so it lands beside them.
+  match_time_suggested: { email: true, push: true, sms: false },
+  match_time_suggestion_accepted: { email: true, push: true, sms: false },
+  match_time_suggestion_declined: { email: false, push: true, sms: false },
 };
 
 // ============================================

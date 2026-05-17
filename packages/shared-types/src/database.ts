@@ -246,6 +246,14 @@ export type MatchResult = TableRow<'match_result'>;
 export type MatchSet = TableRow<'match_set'>;
 export type MatchFeedback = TableRow<'match_feedback'>;
 export type MatchReport = TableRow<'match_report'>;
+export type MatchTimeSuggestion = TableRow<'match_time_suggestion'>;
+/** Narrow status type — the underlying column is TEXT with a CHECK constraint. */
+export type MatchTimeSuggestionStatus =
+  | 'pending'
+  | 'accepted'
+  | 'declined'
+  | 'withdrawn'
+  | 'superseded';
 
 /** Match result with nested set scores and confirmations (from getMatchWithDetails) */
 export interface MatchResultWithSets extends MatchResult {

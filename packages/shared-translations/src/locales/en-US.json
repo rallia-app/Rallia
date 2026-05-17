@@ -462,6 +462,18 @@
       "reimbursement_all_received": {
         "title": "All reimbursements received",
         "body": "Everyone has paid you back for the game."
+      },
+      "match_time_suggested": {
+        "title": "{playerName} suggested {suggestedStartTime}",
+        "body": "{playerName} can't make {sportName} on {matchDate} at the current time — they suggested {suggestedStartTime} instead. Tap to accept or decline."
+      },
+      "match_time_suggestion_accepted": {
+        "title": "Your time change was accepted",
+        "body": "Your {sportName} game on {matchDate} now starts at {suggestedStartTime}."
+      },
+      "match_time_suggestion_declined": {
+        "title": "Time change declined",
+        "body": "Your suggestion for the {sportName} game on {matchDate} wasn't accepted. You can still join at the original time."
       }
     }
   },
@@ -1920,7 +1932,9 @@
     "participantStatus": {
       "pending": "Pending",
       "declined": "Declined"
-    }
+    },
+    "suggestDifferentTime": "Suggest a different time",
+    "viewYourSuggestion": "Your suggestion: {time}"
   },
   "ratings": {
     "title": "Ratings",
@@ -3315,7 +3329,35 @@
       "switchToManualConfirmMessage": "Future payments won't go through Stripe — you'll mark each player as paid yourself. Pending payments already in Stripe will still be released to you."
     },
     "switchToStripe": "Switch to Stripe",
-    "trackingOnly": "Tracking payments manually"
+    "trackingOnly": "Tracking payments manually",
+    "timeSuggestion": {
+      "sheetTitle": "Suggest a different time",
+      "sheetSubtitle": "Same day — propose a new start time. The host can accept (which will reschedule the game) or decline.",
+      "currentTime": "Currently: {time}",
+      "newTimeLabel": "Your suggestion",
+      "noteLabel": "Note (optional)",
+      "notePlaceholder": "e.g. I could play if we start an hour later",
+      "timezoneBanner": "Times shown in match timezone ({tz})",
+      "submit": "Send suggestion",
+      "submitUpdate": "Update suggestion",
+      "withdraw": "Withdraw suggestion",
+      "submitSuccess": "Suggestion sent to host",
+      "withdrawSuccess": "Suggestion withdrawn",
+      "alreadyPending": "You already have a pending suggestion — withdraw it first.",
+      "errorGeneric": "Couldn't send your suggestion. Please try again.",
+      "sectionTitle": "Time suggestions",
+      "sectionEmpty": "No pending suggestions",
+      "suggestedBy": "{name} suggests {time}",
+      "youSuggested": "You suggested {time}",
+      "youSuggestedPending": "Waiting for the host to respond",
+      "accept": "Accept",
+      "decline": "Decline",
+      "acceptConfirmTitle": "Accept this time?",
+      "acceptConfirmBody": "This will reschedule the game to {time} and notify all participants.",
+      "acceptSuccess": "Game rescheduled",
+      "declineSuccess": "Suggestion declined",
+      "errorMatchFull": "The match filled up while this was pending. Free up a spot or decline."
+    }
   },
   "registerMatchScore": {
     "title": "Register score",

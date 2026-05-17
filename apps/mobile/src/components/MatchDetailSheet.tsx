@@ -101,6 +101,9 @@ import {
   getTierConfig,
   MIN_EVENTS_FOR_PUBLIC,
   supabase,
+  listTimeSuggestionsForMatch,
+  respondToTimeSuggestion,
+  type MatchTimeSuggestionWithSuggester,
 } from '@rallia/shared-services';
 import { useStripe } from '@stripe/stripe-react-native';
 import { SheetManager } from 'react-native-actions-sheet';
@@ -2037,6 +2040,99 @@ export const MatchDetailSheet: React.FC = () => {
     setShowSwitchToManualConfirm(false);
   }, [playerId, toast, t]);
 
+  // ===========================================================================
+  // Time-suggestion hooks (must run on every render, hence above the early
+  // return). RLS narrows the fetch: the host sees all pending suggestions on
+  // the match; everyone else sees their own.
+  // ===========================================================================
+  const [timeSuggestions, setTimeSuggestions] = useState<MatchTimeSuggestionWithSuggester[]>([]);
+  const [respondingSuggestionId, setRespondingSuggestionId] = useState<string | null>(null);
+
+  const timeSuggestionMatchId = selectedMatch?.id ?? null;
+
+  const refreshTimeSuggestions = useCallback(async () => {
+    if (!timeSuggestionMatchId) return;
+    try {
+      const rows = await listTimeSuggestionsForMatch(timeSuggestionMatchId);
+      setTimeSuggestions(rows);
+    } catch (err) {
+      // Best-effort — RLS may simply return an empty set for non-creators.
+      console.warn('[MatchDetailSheet] Failed to load time suggestions', err);
+    }
+  }, [timeSuggestionMatchId]);
+
+  useEffect(() => {
+    if (!timeSuggestionMatchId) {
+      setTimeSuggestions([]);
+      return;
+    }
+    refreshTimeSuggestions();
+  }, [timeSuggestionMatchId, refreshTimeSuggestions]);
+
+  const myPendingSuggestion = useMemo(
+    () => timeSuggestions.find(s => s.suggester_id === playerId && s.status === 'pending') ?? null,
+    [timeSuggestions, playerId]
+  );
+
+  const pendingSuggestionsForHost = useMemo(
+    () => timeSuggestions.filter(s => s.status === 'pending'),
+    [timeSuggestions]
+  );
+
+  const handleOpenSuggestTime = useCallback(async () => {
+    if (!selectedMatch) return;
+    lightHaptic();
+    await SheetManager.hide('match-detail');
+    await SheetManager.show('suggest-match-time', {
+      payload: {
+        matchId: selectedMatch.id,
+        matchDate: selectedMatch.match_date,
+        matchTimezone: selectedMatch.timezone || 'UTC',
+        currentStartTime: selectedMatch.start_time,
+        currentEndTime: selectedMatch.end_time,
+        existingSuggestionId: myPendingSuggestion?.id,
+        existingSuggestionTime: myPendingSuggestion?.suggested_start_time,
+        existingNote: myPendingSuggestion?.note ?? undefined,
+      },
+    });
+  }, [selectedMatch, myPendingSuggestion]);
+
+  const handleRespondToSuggestion = useCallback(
+    async (suggestion: MatchTimeSuggestionWithSuggester, accept: boolean) => {
+      if (respondingSuggestionId) return;
+      setRespondingSuggestionId(suggestion.id);
+      try {
+        const result = await respondToTimeSuggestion({
+          suggestionId: suggestion.id,
+          accept,
+        });
+        if (result.kind === 'error' && result.reason === 'match_full_after_suggestion') {
+          errorHaptic();
+          toast.error(t('matchDetail.timeSuggestion.errorMatchFull'));
+        } else {
+          successHaptic();
+          toast.success(
+            accept
+              ? t('matchDetail.timeSuggestion.acceptSuccess')
+              : t('matchDetail.timeSuggestion.declineSuccess')
+          );
+          if (accept && selectedMatch) {
+            const refreshed = await getMatchWithDetails(selectedMatch.id);
+            if (refreshed) updateSelectedMatch(refreshed);
+          }
+        }
+        await refreshTimeSuggestions();
+      } catch (err) {
+        errorHaptic();
+        toast.error(t('matchDetail.timeSuggestion.errorGeneric'));
+        console.warn('[MatchDetailSheet] respond suggestion failed', err);
+      } finally {
+        setRespondingSuggestionId(null);
+      }
+    },
+    [respondingSuggestionId, refreshTimeSuggestions, toast, t, selectedMatch, updateSelectedMatch]
+  );
+
   // Render nothing if no match is selected
   if (!selectedMatch) {
     return (
@@ -2136,6 +2232,12 @@ export const MatchDetailSheet: React.FC = () => {
 
   // Check if match is expired (started or ended but not full)
   const isExpired = (isInProgress || hasMatchEnded) && !isFull;
+
+  // canSuggestTime — visibility flag for the tertiary "Suggest a different
+  // time" button. Hooks for this flow are hoisted above the early return; we
+  // gate the *side effects* here, after we have a fully-derived view.
+  const canSuggestTime =
+    !isCreator && (isInvited || isParticipant) && !isCancelled && !isInProgress && !hasMatchEnded;
 
   // Determine animation type for time indicator:
   // - isInProgress = live indicator
@@ -2798,6 +2900,23 @@ export const MatchDetailSheet: React.FC = () => {
 
       return (
         <>
+          {canSuggestTime && (
+            <TouchableOpacity
+              onPress={handleOpenSuggestTime}
+              style={styles.suggestTimeButton}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+            >
+              <Ionicons name="time-outline" size={16} color={accent[500]} />
+              <Text size="sm" weight="semibold" color={accent[500]}>
+                {myPendingSuggestion
+                  ? t('matchActions.viewYourSuggestion', {
+                      time: myPendingSuggestion.suggested_start_time.slice(0, 5),
+                    })
+                  : t('matchActions.suggestDifferentTime')}
+              </Text>
+            </TouchableOpacity>
+          )}
           <Button
             variant="primary"
             onPress={handleDeclineInvite}
@@ -2898,17 +3017,36 @@ export const MatchDetailSheet: React.FC = () => {
     // Participant (not host, joined): Leave button (danger red)
     if (isParticipant) {
       return (
-        <Button
-          variant="primary"
-          onPress={handleLeaveMatch}
-          style={styles.actionButton}
-          themeColors={destructiveThemeColors}
-          isDark={isDark}
-          loading={isLeaving}
-          leftIcon={<Ionicons name="log-out-outline" size={18} color={base.white} />}
-        >
-          {t('matches.leaveMatch')}
-        </Button>
+        <>
+          {canSuggestTime && !isCreator && (
+            <TouchableOpacity
+              onPress={handleOpenSuggestTime}
+              style={styles.suggestTimeButton}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+            >
+              <Ionicons name="time-outline" size={16} color={accent[500]} />
+              <Text size="sm" weight="semibold" color={accent[500]}>
+                {myPendingSuggestion
+                  ? t('matchActions.viewYourSuggestion', {
+                      time: myPendingSuggestion.suggested_start_time.slice(0, 5),
+                    })
+                  : t('matchActions.suggestDifferentTime')}
+              </Text>
+            </TouchableOpacity>
+          )}
+          <Button
+            variant="primary"
+            onPress={handleLeaveMatch}
+            style={styles.actionButton}
+            themeColors={destructiveThemeColors}
+            isDark={isDark}
+            loading={isLeaving}
+            leftIcon={<Ionicons name="log-out-outline" size={18} color={base.white} />}
+          >
+            {t('matches.leaveMatch')}
+          </Button>
+        </>
       );
     }
 
@@ -4344,6 +4482,136 @@ export const MatchDetailSheet: React.FC = () => {
               )}
             </View>
           )}
+
+          {/* Pending Time Suggestions Section - host-only counter-proposals */}
+          {isCreator &&
+            pendingSuggestionsForHost.length > 0 &&
+            !isCancelled &&
+            !hasStartTimePassed && (
+              <View style={styles.pendingRequestsSection}>
+                <View style={styles.pendingRequestsHeader}>
+                  <Text
+                    size="sm"
+                    weight="semibold"
+                    color={colors.primary}
+                    style={styles.pendingRequestsTitle}
+                  >
+                    {t('matchDetail.timeSuggestion.sectionTitle')} (
+                    {pendingSuggestionsForHost.length})
+                  </Text>
+                </View>
+                {pendingSuggestionsForHost.map(suggestion => {
+                  const suggesterName = suggestion.suggester
+                    ? `${suggestion.suggester.first_name ?? ''} ${
+                        suggestion.suggester.last_name
+                          ? suggestion.suggester.last_name.charAt(0) + '.'
+                          : ''
+                      }`.trim() || t('matchDetail.host')
+                    : t('matchDetail.host');
+                  const suggestedDisplay = suggestion.suggested_start_time.slice(0, 5);
+                  const isResponding = respondingSuggestionId === suggestion.id;
+                  return (
+                    <View
+                      key={suggestion.id}
+                      style={[
+                        styles.pendingRequestInfo,
+                        {
+                          backgroundColor: isDark ? neutral[800] : neutral[50],
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                          borderRadius: radiusPixels.xl,
+                          padding: spacingPixels[3],
+                        },
+                      ]}
+                    >
+                      <View style={styles.pendingRequestContent}>
+                        <TouchableOpacity
+                          onPress={() =>
+                            suggestion.suggester_id &&
+                            handleParticipantProfilePress(suggestion.suggester_id)
+                          }
+                          activeOpacity={0.7}
+                        >
+                          <View
+                            style={[
+                              styles.pendingRequestAvatar,
+                              {
+                                backgroundColor: colors.primary,
+                                borderColor: isDark ? primary[400] : primary[500],
+                              },
+                            ]}
+                          >
+                            {suggestion.suggester?.profile_picture_url ? (
+                              <Image
+                                source={{
+                                  uri:
+                                    getProfilePictureUrl(
+                                      suggestion.suggester.profile_picture_url
+                                    ) ?? undefined,
+                                }}
+                                style={styles.pendingRequestAvatarImage}
+                              />
+                            ) : (
+                              <Ionicons name="time-outline" size={16} color={base.white} />
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                        <View style={styles.pendingRequestNameContainer}>
+                          <Text size="sm" weight="medium" color={colors.text} numberOfLines={2}>
+                            {t('matchDetail.timeSuggestion.suggestedBy', {
+                              name: suggesterName,
+                              time: suggestedDisplay,
+                            })}
+                          </Text>
+                          {suggestion.note && (
+                            <Text
+                              size="xs"
+                              color={colors.textMuted}
+                              numberOfLines={2}
+                              style={{ marginTop: spacingPixels[1] }}
+                            >
+                              {suggestion.note}
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                      <View style={styles.pendingRequestActions}>
+                        <TouchableOpacity
+                          style={[
+                            styles.requestActionButton,
+                            styles.acceptButton,
+                            {
+                              backgroundColor: isResponding
+                                ? neutral[400]
+                                : isDark
+                                  ? primary[400]
+                                  : primary[500],
+                            },
+                          ]}
+                          onPress={() => handleRespondToSuggestion(suggestion, true)}
+                          disabled={!!respondingSuggestionId}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="checkmark-outline" size={16} color={base.white} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[
+                            styles.requestActionButton,
+                            styles.rejectButton,
+                            { backgroundColor: isDark ? secondary[400] : secondary[500] },
+                          ]}
+                          onPress={() => handleRespondToSuggestion(suggestion, false)}
+                          disabled={!!respondingSuggestionId}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="close-outline" size={16} color={base.white} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
 
           {/* Invitations Section - only visible to host */}
           {isCreator && allInvitations.length > 0 && !isCancelled && !hasStartTimePassed && (
@@ -6000,6 +6268,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacingPixels[2],
     paddingHorizontal: spacingPixels[2],
+  },
+  // Tertiary "Suggest a different time" link — spans the row above the
+  // primary action buttons so it never competes with them visually.
+  suggestTimeButton: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[1],
+    paddingVertical: spacingPixels[2],
+    marginBottom: spacingPixels[1],
   },
   matchEndedContainer: {
     flex: 1,

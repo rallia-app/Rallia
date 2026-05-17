@@ -462,6 +462,18 @@
       "reimbursement_all_received": {
         "title": "Tous les remboursements reçus",
         "body": "Tout le monde t'a remboursé pour la partie."
+      },
+      "match_time_suggested": {
+        "title": "{playerName} propose {suggestedStartTime}",
+        "body": "{playerName} ne peut pas jouer au {sportName} le {matchDate} à l'heure prévue — il propose {suggestedStartTime}. Touche pour accepter ou refuser."
+      },
+      "match_time_suggestion_accepted": {
+        "title": "Ta proposition a été acceptée",
+        "body": "Ta partie de {sportName} le {matchDate} commence maintenant à {suggestedStartTime}."
+      },
+      "match_time_suggestion_declined": {
+        "title": "Proposition refusée",
+        "body": "Ta proposition pour la partie de {sportName} le {matchDate} n'a pas été retenue. Tu peux quand même te joindre à l'heure originale."
       }
     }
   },
@@ -1920,7 +1932,9 @@
     "participantStatus": {
       "pending": "En attente",
       "declined": "Refusé"
-    }
+    },
+    "suggestDifferentTime": "Proposer une autre heure",
+    "viewYourSuggestion": "Ta proposition : {time}"
   },
   "ratings": {
     "title": "Classements",
@@ -3315,7 +3329,35 @@
       "switchToManualConfirmMessage": "Les paiements futurs ne passeront plus par Stripe — tu marqueras chaque joueur comme payé toi-même. Les paiements en attente dans Stripe te seront quand même versés."
     },
     "switchToStripe": "Passer à Stripe",
-    "trackingOnly": "Suivi manuel des paiements"
+    "trackingOnly": "Suivi manuel des paiements",
+    "timeSuggestion": {
+      "sheetTitle": "Proposer une autre heure",
+      "sheetSubtitle": "Même journée — propose une nouvelle heure de début. L'hôte peut accepter (et reprogrammer la partie) ou refuser.",
+      "currentTime": "Actuellement : {time}",
+      "newTimeLabel": "Ta proposition",
+      "noteLabel": "Note (facultatif)",
+      "notePlaceholder": "ex. Je pourrais jouer si on commence une heure plus tard",
+      "timezoneBanner": "Heures affichées dans le fuseau de la partie ({tz})",
+      "submit": "Envoyer la proposition",
+      "submitUpdate": "Mettre à jour la proposition",
+      "withdraw": "Retirer la proposition",
+      "submitSuccess": "Proposition envoyée à l'hôte",
+      "withdrawSuccess": "Proposition retirée",
+      "alreadyPending": "Tu as déjà une proposition en attente — retire-la d'abord.",
+      "errorGeneric": "Impossible d'envoyer ta proposition. Réessaie.",
+      "sectionTitle": "Propositions d'heure",
+      "sectionEmpty": "Aucune proposition en attente",
+      "suggestedBy": "{name} propose {time}",
+      "youSuggested": "Tu as proposé {time}",
+      "youSuggestedPending": "En attente de la réponse de l'hôte",
+      "accept": "Accepter",
+      "decline": "Refuser",
+      "acceptConfirmTitle": "Accepter cette heure ?",
+      "acceptConfirmBody": "La partie sera reprogrammée à {time} et tous les joueurs seront avisés.",
+      "acceptSuccess": "Partie reprogrammée",
+      "declineSuccess": "Proposition refusée",
+      "errorMatchFull": "La partie s'est remplie pendant l'attente. Libère une place ou refuse."
+    }
   },
   "registerMatchScore": {
     "title": "Enregistrer le score",

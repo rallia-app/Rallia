@@ -975,6 +975,33 @@ export async function updateMatch(
     });
   }
 
+  // ========================================
+  // SUPERSEDE PENDING TIME SUGGESTIONS
+  // The host directly changed the time window, so any pending counter-
+  // proposals are now pointing at the wrong baseline. Mark them superseded
+  // so they disappear from the host's pending list and the suggester sees a
+  // resolved state. The match-updated push above already informs every
+  // joined player (including suggesters) of the new window.
+  // ========================================
+  const timeAffectingFields = ['matchDate', 'startTime', 'endTime', 'duration', 'timezone'];
+  const hasTimeChanges = updatedFields.some(field => timeAffectingFields.includes(field));
+  if (hasTimeChanges) {
+    supabase
+      .from('match_time_suggestion')
+      .update({
+        status: 'superseded',
+        resolved_at: new Date().toISOString(),
+        resolved_by: (data as Match).created_by,
+      })
+      .eq('match_id', matchId)
+      .eq('status', 'pending')
+      .then(({ error: supersedeError }) => {
+        if (supersedeError) {
+          Logger.error('Failed to supersede pending time suggestions:', supersedeError);
+        }
+      });
+  }
+
   return data as Match;
 }
 
