@@ -39,15 +39,15 @@ function getSecret(): string {
   return key;
 }
 
+// Node's native 'base64url' encoding (≥16.0.0) avoids the regex-based
+// '+/=' rewriting and removes the ReDoS surface CodeQL flags on `=+$`.
 function base64urlEncode(input: Buffer | string): string {
   const buf = typeof input === 'string' ? Buffer.from(input, 'utf8') : input;
-  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return buf.toString('base64url');
 }
 
 function base64urlDecode(input: string): Buffer {
-  const pad = input.length % 4 === 0 ? '' : '='.repeat(4 - (input.length % 4));
-  const b64 = input.replace(/-/g, '+').replace(/_/g, '/') + pad;
-  return Buffer.from(b64, 'base64');
+  return Buffer.from(input, 'base64url');
 }
 
 export function signAttributionToken(payload: AttributionTokenPayload): string {
