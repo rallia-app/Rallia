@@ -11,8 +11,10 @@
  * invocations for the same facility resolve as one writer and N "locked"
  * results. The lock auto-releases at transaction end.
  *
- * Window: 3 days from today. Matches what both IC3/Otium and ActivityMessenger
- * return today.
+ * Window: 7 days from today. Well inside the upstream booking horizon
+ * (Loisirs Montréal ~14d, Tennis Laval ~5d for the free package), and
+ * enough lead time for users planning the next weekend. Daily cron keeps
+ * the far end of the window from going stale.
  *
  * Auth: same `apikey` secret-header model as the other internal edge
  * functions (see `_shared/auth.ts`).
@@ -22,13 +24,18 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 import { requireSecretApikey } from '../_shared/auth.ts';
 
-import { fetchProviderAvailability, type ProviderConfig, type SnapshotRow } from './providers.ts';
+import {
+  buildBookingUrl,
+  fetchProviderAvailability,
+  type ProviderConfig,
+  type SnapshotRow,
+} from './providers.ts';
 
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
 
-const WINDOW_DAYS = 3;
+const WINDOW_DAYS = 7;
 const MAX_FACILITIES_PER_INVOCATION = 50;
 const FACILITY_CONCURRENCY = 8;
 
@@ -51,27 +58,43 @@ interface FacilityRow {
   provider_type: string | null;
   api_base_url: string | null;
   api_config: Record<string, unknown> | null;
+  booking_url_template: string | null;
+  /** Sport IDs this provider can emit events for. When the facility is
+   *  tagged with sports the provider can't serve, those sports are ignored
+   *  during sport_id resolution. */
+  served_sport_ids: string[] | null;
   sports: FacilitySport[] | null;
 }
 
 /**
  * Resolves sport_id for a provider row.
  *
- * - 0 sports on the facility → null (caller can't filter; row will be unreachable
- *   from a sport-scoped read).
- * - 1 sport → stamp it. Common case, including all AM packages (sport-bound by
- *   construction) and most IC3 sites.
- * - >1 sport → substring-match court_name against each sport name (case-insensitive).
- *   Handles the 9 IC3 sites that share one siteId across tennis and pickleball
- *   (their courts are labeled "Terrain de tennis #N" / "Terrain de pickleball #N").
- *   No match → null.
+ * Filters the facility's sports through the provider's `served_sport_ids`
+ * first — a facility may be tagged with sports its current provider can't
+ * actually emit events for (e.g., a multi-sport park whose pickleball lives
+ * on a different platform). Then:
+ *
+ * - 0 candidate sports → null.
+ * - 1 candidate sport → stamp it. Covers single-sport facilities and
+ *   multi-sport facilities whose other sports are served elsewhere.
+ * - >1 candidate sports → substring-match court_name against each sport
+ *   name. Handles the IC3 sites that share one siteId across tennis and
+ *   pickleball (courts labeled "Terrain de tennis #N" / "Terrain de
+ *   pickleball #N"). No match → null.
  */
-function resolveSportId(sports: FacilitySport[] | null, courtName: string | null): string | null {
+function resolveSportId(
+  sports: FacilitySport[] | null,
+  servedSportIds: string[] | null,
+  courtName: string | null
+): string | null {
   if (!sports || sports.length === 0) return null;
-  if (sports.length === 1) return sports[0].id;
+  const served = servedSportIds && servedSportIds.length > 0 ? new Set(servedSportIds) : null;
+  const candidates = served ? sports.filter(s => served.has(s.id)) : sports;
+  if (candidates.length === 0) return null;
+  if (candidates.length === 1) return candidates[0].id;
   if (!courtName) return null;
   const lower = courtName.toLowerCase();
-  for (const s of sports) {
+  for (const s of candidates) {
     if (lower.includes(s.name.toLowerCase())) return s.id;
   }
   return null;
@@ -165,8 +188,16 @@ async function refreshOneFacility(
   supabase: SupabaseClient,
   facilityRow: FacilityRow
 ): Promise<RefreshOutcome> {
-  const { facility_id, external_provider_id, provider_type, api_base_url, api_config, sports } =
-    facilityRow;
+  const {
+    facility_id,
+    external_provider_id,
+    provider_type,
+    api_base_url,
+    api_config,
+    booking_url_template,
+    served_sport_ids,
+    sports,
+  } = facilityRow;
 
   if (!external_provider_id || !provider_type || !api_base_url) {
     return {
@@ -183,6 +214,8 @@ async function refreshOneFacility(
     providerType: provider_type,
     apiBaseUrl: api_base_url,
     apiConfig: api_config ?? {},
+    bookingUrlTemplate: booking_url_template,
+    externalProviderId: external_provider_id,
   };
 
   const dates = nextNDates(WINDOW_DAYS);
@@ -214,10 +247,13 @@ async function refreshOneFacility(
     });
     rows = result.rows;
     source = result.source;
-    // Stamp sport_id per row using facility_sport (with court_name as
-    // tie-breaker for multi-sport sites).
+    // Stamp sport_id (facility_sport + court_name fallback) and booking_url
+    // (provider-template resolution) per row. Both used to be done at read
+    // time on the client; now stored on the snapshot for an exact-equality
+    // sport filter and a one-field client URL.
     for (const r of rows) {
-      r.sport_id = resolveSportId(sports, r.court_name);
+      r.sport_id = resolveSportId(sports, served_sport_ids, r.court_name);
+      r.booking_url = buildBookingUrl(providerConfig, r);
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

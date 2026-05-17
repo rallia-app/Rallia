@@ -17,9 +17,10 @@ import {
   type AvailabilitySlot,
 } from '@rallia/shared-services';
 
-// Mirror the snapshot's coverage window. Anything beyond this is not in
-// the snapshot, so the hook would return empty for it anyway.
-const SNAPSHOT_HORIZON_DAYS = 3;
+// Mirror the snapshot's coverage window (worker's WINDOW_DAYS). Anything
+// beyond this is not in the snapshot, so the hook would return empty for
+// it anyway.
+const SNAPSHOT_HORIZON_DAYS = 7;
 const COLD_START_POLL_INTERVAL_MS = 1000;
 const COLD_START_POLL_MAX_ATTEMPTS = 10;
 
@@ -46,8 +47,6 @@ export interface UseCourtAvailabilityOptions {
   sportName?: string;
   /** Enable/disable the query (default: true) */
   enabled?: boolean;
-  /** Maximum number of slots to return (default: 3) */
-  maxSlots?: number;
 }
 
 /** Individual court option for selection */
@@ -153,21 +152,20 @@ export const courtAvailabilityKeys = {
 // =============================================================================
 
 /**
- * Get default dates (today and next 2 days) for availability fetching.
- * Returns the next 3 days: today, tomorrow, and the day after tomorrow.
+ * Default date list spanning SNAPSHOT_HORIZON_DAYS forward from today.
+ * Used as the queryKey discriminant and as input to local-template
+ * fetches; the external-provider read path uses a time-range filter
+ * rather than this list directly.
  */
 function getDefaultDates(): string[] {
-  const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const dayAfterTomorrow = new Date(today);
-  dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
-
-  return [
-    today.toISOString().split('T')[0],
-    tomorrow.toISOString().split('T')[0],
-    dayAfterTomorrow.toISOString().split('T')[0],
-  ];
+  const out: string[] = [];
+  const base = new Date();
+  for (let i = 0; i < SNAPSHOT_HORIZON_DAYS; i++) {
+    const d = new Date(base);
+    d.setDate(d.getDate() + i);
+    out.push(d.toISOString().split('T')[0]);
+  }
+  return out;
 }
 
 /**
@@ -337,6 +335,7 @@ interface SnapshotRow {
   currency: string | null;
   source: string;
   sport_id: string | null;
+  booking_url: string | null;
 }
 
 // Memoize sport.name → sport.id for the session. The sport table has a
@@ -357,61 +356,18 @@ async function getSportIdByName(name: string): Promise<string | null> {
 }
 
 /**
- * Provider-specific booking-URL builder, replicating the logic that
- * `IC3OtiumProvider.buildBookingUrl` and `ActivityMessengerProvider.buildBookingUrl`
- * apply at fetch time. The snapshot stores raw provider data, not the
- * built URL, so we reconstruct here.
- */
-function buildSnapshotBookingUrl(
-  template: string | null,
-  providerType: string | null,
-  externalProviderId: string | null,
-  row: SnapshotRow
-): string | null {
-  if (!template) return null;
-
-  if (providerType === 'ic3_otium') {
-    if (!row.external_slot_id) return null;
-    const formatDT = (s: string) => new Date(s).toISOString().replace(/\.\d{3}Z$/, 'Z');
-    return template
-      .replace('{facilityId}', row.external_court_id)
-      .replace('{startDateTime}', formatDT(row.slot_start))
-      .replace('{endDateTime}', formatDT(row.slot_end))
-      .replace('{facilityScheduleId}', row.external_slot_id);
-  }
-
-  if (providerType === 'activity_messenger') {
-    // ActivityMessenger URLs point at the package overview page, not a
-    // specific slot — so every slot at this facility shares one URL.
-    if (!externalProviderId) return null;
-    return template.replace('{packageId}', externalProviderId);
-  }
-
-  return null;
-}
-
-/**
  * Convert raw snapshot rows into the AvailabilitySlot shape the rest of the
  * hook (groupSlotsByTime, formatting, etc.) already knows how to consume.
+ *
+ * Sport scoping is handled DB-side via sport_id; booking URLs are built by
+ * the refresh worker and stored on the snapshot row. The client just reads.
  */
-function snapshotRowsToAvailabilitySlots(
-  rows: SnapshotRow[],
-  bookingUrlTemplate: string | null,
-  providerType: string | null,
-  externalProviderId: string | null
-): AvailabilitySlot[] {
-  // Sport scoping is handled DB-side via sport_id (stamped at ingestion by
-  // the refresh worker). No client-side filter needed here.
+function snapshotRowsToAvailabilitySlots(rows: SnapshotRow[]): AvailabilitySlot[] {
   const out: AvailabilitySlot[] = [];
   for (const row of rows) {
     const slotStart = new Date(row.slot_start);
     const slotEnd = new Date(row.slot_end);
-    const bookingUrl = buildSnapshotBookingUrl(
-      bookingUrlTemplate,
-      providerType,
-      externalProviderId,
-      row
-    );
+    const bookingUrl = row.booking_url;
     out.push({
       datetime: slotStart,
       endDateTime: slotEnd,
@@ -438,7 +394,7 @@ async function readSnapshotRows(
   let query = supabase
     .from('facility_availability_snapshot')
     .select(
-      'external_court_id, slot_start, slot_end, external_slot_id, court_name, court_number, price_cents, currency, source, sport_id'
+      'external_court_id, slot_start, slot_end, external_slot_id, court_name, court_number, price_cents, currency, source, sport_id, booking_url'
     )
     .eq('facility_id', facilityId)
     .eq('is_available', true)
@@ -509,7 +465,6 @@ export function useCourtAvailability(
     sportName,
     dates = getDefaultDates(),
     enabled = true,
-    maxSlots = 20, // Increased to show more slots for date-sectioned display
   } = options;
 
   // Check if we have all required provider configuration:
@@ -560,12 +515,7 @@ export function useCourtAvailability(
           void supabase.rpc('request_facility_refresh', {
             p_facility_ids: [facilityId],
           });
-          return snapshotRowsToAvailabilitySlots(
-            snapshotRows,
-            _bookingUrlTemplate,
-            dataProviderType,
-            externalProviderId
-          );
+          return snapshotRowsToAvailabilitySlots(snapshotRows);
         }
 
         // Cold start: trigger a refresh and poll briefly for snapshot
@@ -579,12 +529,7 @@ export function useCourtAvailability(
           await sleep(COLD_START_POLL_INTERVAL_MS);
           const polled = await readSnapshotRows(facilityId, sportId);
           if (polled.length > 0) {
-            return snapshotRowsToAvailabilitySlots(
-              polled,
-              _bookingUrlTemplate,
-              dataProviderType,
-              externalProviderId
-            );
+            return snapshotRowsToAvailabilitySlots(polled);
           }
         }
         return [];
@@ -605,17 +550,17 @@ export function useCourtAvailability(
     retryDelay: 1000,
   });
 
-  // Get future slots, group by time, then limit to maxSlots
-  // Use facility timezone to correctly filter slots based on current time at the facility
+  // Filter to future slots only (facility-timezone aware) and group by
+  // datetime so multiple courts at the same time render as one chip. No
+  // count cap — the 3-day snapshot horizon already bounds the result; any
+  // render-side truncation belongs at the call site.
   const rawSlots = query.data ?? [];
   const futureSlots = filterFutureSlots(rawSlots, facilityTimezone).sort(
     (a, b) => a.datetime.getTime() - b.datetime.getTime()
   );
-
-  // Group slots by datetime/endDateTime to merge multiple courts at the same time
-  const groupedSlots = groupSlotsByTime(futureSlots)
-    .sort((a, b) => a.datetime.getTime() - b.datetime.getTime())
-    .slice(0, maxSlots);
+  const groupedSlots = groupSlotsByTime(futureSlots).sort(
+    (a, b) => a.datetime.getTime() - b.datetime.getTime()
+  );
 
   // Format slots for display
   const formattedSlots: FormattedSlot[] = groupedSlots.map(slot => ({

@@ -25,12 +25,20 @@ export interface SnapshotRow {
   /** Resolved by the orchestrator from facility_sport (and court_name for
    *  multi-sport sites). Providers leave this null. */
   sport_id: string | null;
+  /** Resolved per-provider booking URL. Set by buildBookingUrl after the
+   *  fetch. Stored on the snapshot row so the client can use it directly
+   *  without any template knowledge. */
+  booking_url: string | null;
 }
 
 export interface ProviderConfig {
   providerType: 'ic3_otium' | 'activity_messenger' | string;
   apiBaseUrl: string;
   apiConfig: Record<string, unknown>;
+  /** Optional booking-URL template — placeholders resolved by buildBookingUrl. */
+  bookingUrlTemplate?: string | null;
+  /** External provider id (e.g. IC3 siteId, AM packageId). Needed for AM URLs. */
+  externalProviderId?: string | null;
 }
 
 export interface FetchParams {
@@ -60,6 +68,42 @@ function extractCourtNumber(name: string | null | undefined): number | undefined
 function priceToCents(p: unknown): number | null {
   if (typeof p !== 'number' || !isFinite(p)) return null;
   return Math.round(p * 100);
+}
+
+/**
+ * Resolve a provider's booking_url_template against the row + provider config.
+ *
+ * IC3 templates encode start/end times and the per-slot schedule id, so the
+ * URL is per-row. AM templates only need orgId + packageId, so every row at a
+ * facility shares one URL. Both shapes are handled here so the worker can
+ * stamp `booking_url` on every snapshot row.
+ *
+ * Returns null when required placeholders can't be filled.
+ */
+export function buildBookingUrl(config: ProviderConfig, row: SnapshotRow): string | null {
+  const template = config.bookingUrlTemplate;
+  if (!template) return null;
+
+  if (config.providerType === 'ic3_otium') {
+    if (!row.external_slot_id) return null;
+    const formatDT = (s: string) => new Date(s).toISOString().replace(/\.\d{3}Z$/, 'Z');
+    return template
+      .replace('{facilityId}', row.external_court_id)
+      .replace('{startDateTime}', formatDT(row.slot_start))
+      .replace('{endDateTime}', formatDT(row.slot_end))
+      .replace('{facilityScheduleId}', row.external_slot_id);
+  }
+
+  if (config.providerType === 'activity_messenger') {
+    const orgId = config.apiConfig.orgId as string | undefined;
+    const packageId = config.externalProviderId;
+    if (!packageId) return null;
+    let url = template.replace('{packageId}', packageId);
+    if (orgId) url = url.replace('{orgId}', orgId);
+    return url;
+  }
+
+  return null;
 }
 
 // =============================================================================
@@ -148,6 +192,7 @@ async function fetchIC3(config: ProviderConfig, params: FetchParams): Promise<Fe
         price_cents: priceToCents(item.totalPrice),
         currency: 'CAD',
         sport_id: null,
+        booking_url: null,
       });
     }
 
