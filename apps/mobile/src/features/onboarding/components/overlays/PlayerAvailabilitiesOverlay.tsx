@@ -12,8 +12,6 @@
  * presets component. Both are controlled by local `selection` state here,
  * which is seeded from the caller's `initialData`.
  *
- * A stale banner shows in edit mode when `last_confirmed_at` is missing or
- * older than 14 days, prompting the user to re-confirm.
  */
 import React, { useMemo, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
@@ -37,7 +35,6 @@ import {
 import { HourlyAvailabilityPresets } from '../HourlyAvailabilityPresets';
 
 const MIN_SELECTIONS = 6;
-const STALENESS_DAYS = 14;
 
 // =============================================================================
 // COMPONENT
@@ -52,7 +49,6 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
   const currentStep = payload?.currentStep || 1;
   const totalSteps = payload?.totalSteps || 8;
   const initialData = payload?.initialData;
-  const initialLastConfirmedAt = payload?.initialLastConfirmedAt ?? null;
   const _selectedSportIds = payload?.selectedSportIds;
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
@@ -61,21 +57,6 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
 
   const [selection, setSelection] = useState<HourGrid>(initialData ?? emptyGrid());
   const [isSaving, setIsSaving] = useState(false);
-  // Disabled while the user is paint-dragging the grid, so the surrounding
-  // ScrollView can't steal the gesture and scroll the sheet vertically.
-  const [scrollEnabled, setScrollEnabled] = useState(true);
-
-  // Staleness — show "confirm your week" in edit mode when last_confirmed_at
-  // is missing or older than the cutoff. Onboarding implies a fresh write.
-  const isStale = useMemo(() => {
-    if (mode !== 'edit') return false;
-    if (!initialLastConfirmedAt) return true;
-    const last = new Date(initialLastConfirmedAt).getTime();
-    if (Number.isNaN(last)) return true;
-    return Date.now() - last > STALENESS_DAYS * 24 * 60 * 60 * 1000;
-  }, [mode, initialLastConfirmedAt]);
-
-  const totalSelections = selection.size;
 
   const gridColors = useMemo(
     () => ({
@@ -183,10 +164,9 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
 
         <ScrollView
           style={styles.scrollContent}
-          contentContainerStyle={[styles.content, { paddingBottom: spacingPixels[8] }]}
+          contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          scrollEnabled={scrollEnabled}
         >
           {mode === 'onboarding' && (
             <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
@@ -197,36 +177,6 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
               <Ionicons name="chevron-back" size={24} color={colors.text} />
             </TouchableOpacity>
           )}
-
-          {isStale && (
-            <View style={[styles.staleBanner, { backgroundColor: colors.inputBackground }]}>
-              <Ionicons name="time-outline" size={18} color={colors.text} />
-              <Text size="sm" style={[styles.staleBannerText, { color: colors.text }]}>
-                {t('playerAvailability.staleHint')}
-              </Text>
-            </View>
-          )}
-
-          {/* Title is in the sheet header — keep only the live count here so
-              users can see the selected-vs-minimum signal at a glance. The
-              full title+subtitle+counter triplet stacked vertically pushed
-              the grid below the fold on smaller phones. */}
-          <View style={styles.counterRow}>
-            <Text
-              size="xs"
-              weight="semibold"
-              color={totalSelections >= MIN_SELECTIONS ? colors.primary : colors.textMuted}
-            >
-              {totalSelections >= MIN_SELECTIONS
-                ? t('onboarding.availabilityStep.selected').replace(
-                    '{count}',
-                    String(totalSelections)
-                  )
-                : t('onboarding.availabilityStep.minimumSelected')
-                    .replace('{count}', String(totalSelections))
-                    .replace('{minimum}', String(MIN_SELECTIONS))}
-            </Text>
-          </View>
 
           <HourlyAvailabilityPresets
             value={selection}
@@ -242,7 +192,6 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
               colors={gridColors}
               t={t}
               locale={locale}
-              onInteractionChange={active => setScrollEnabled(!active)}
             />
           </View>
         </ScrollView>
@@ -326,31 +275,15 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacingPixels[3],
     paddingTop: spacingPixels[2],
-    paddingBottom: spacingPixels[4],
+    paddingBottom: 0,
   },
   backButton: {
     alignSelf: 'flex-start',
     padding: spacingPixels[2],
-    marginBottom: spacingPixels[2],
-  },
-  staleBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[2],
-    padding: spacingPixels[2],
-    borderRadius: radiusPixels.md,
-    marginBottom: spacingPixels[2],
-  },
-  staleBannerText: {
-    flex: 1,
-  },
-  counterRow: {
-    alignItems: 'flex-end',
-    marginBottom: spacingPixels[2],
+    marginBottom: spacingPixels[1],
   },
   gridWrapper: {
     marginTop: spacingPixels[2],
-    marginBottom: spacingPixels[2],
   },
   footer: {
     padding: spacingPixels[4],

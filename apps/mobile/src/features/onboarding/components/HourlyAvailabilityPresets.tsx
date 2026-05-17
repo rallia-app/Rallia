@@ -124,6 +124,20 @@ export const HourlyAvailabilityPresets: React.FC<HourlyAvailabilityPresetsProps>
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.row}
     >
+      {totalSelected > 0 && (
+        <TouchableOpacity
+          style={[styles.chip, { backgroundColor: 'transparent', borderColor: colors.border }]}
+          onPress={clearAll}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t('onboarding.availabilityStep.presets.clear')}
+        >
+          <Ionicons name="trash-outline" size={14} color={colors.textMuted} style={styles.icon} />
+          <Text size="xs" weight="semibold" color={colors.textMuted}>
+            {t('onboarding.availabilityStep.presets.clear')}
+          </Text>
+        </TouchableOpacity>
+      )}
       {PRESETS.map((preset, idx) => {
         const active = appliedFlags[idx];
         return (
@@ -159,17 +173,6 @@ export const HourlyAvailabilityPresets: React.FC<HourlyAvailabilityPresetsProps>
           </TouchableOpacity>
         );
       })}
-      {totalSelected > 0 && (
-        <TouchableOpacity
-          style={[styles.chip, { backgroundColor: 'transparent', borderColor: colors.border }]}
-          onPress={clearAll}
-          activeOpacity={0.7}
-        >
-          <Text size="xs" weight="semibold" color={colors.textMuted}>
-            {t('onboarding.availabilityStep.presets.clear')}
-          </Text>
-        </TouchableOpacity>
-      )}
     </ScrollView>
   );
 };
@@ -177,6 +180,10 @@ export const HourlyAvailabilityPresets: React.FC<HourlyAvailabilityPresetsProps>
 const styles = StyleSheet.create({
   row: {
     paddingVertical: spacingPixels[1],
+    // Horizontal padding so the first/last chip don't kiss the screen edge
+    // when the parent only adds minimal padding (the grid below uses an
+    // asymmetric tight-left layout because of its hours column).
+    paddingHorizontal: spacingPixels[2],
     gap: spacingPixels[2],
   },
   chip: {

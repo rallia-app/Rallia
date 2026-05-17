@@ -17,24 +17,31 @@
  *   • Tap a row label (hour) or column header (day letter) for a smart bulk
  *     toggle of that row/column.
  *
- * Drag hit-testing relies on knowing cell width/height, captured via the
- * grid container's `onLayout`. Cell coords map back to (day, hour) by integer
- * division on the touch's locationX/Y, gated by the time-label column width.
+ * Why react-native-gesture-handler instead of PanResponder:
+ *   When the grid renders inside a react-native-actions-sheet, the sheet
+ *   attaches a `Gesture.Pan()` with `.activeOffsetY([-5, 5])` and
+ *   `.failOffsetX([-5, 5])` for its drag-to-dismiss / snap behavior. Even
+ *   with `gestureEnabled={false}` (where the handler no-ops), the gesture
+ *   STILL participates in arbitration and wins vertical drags before a
+ *   plain PanResponder can claim them. Horizontal drags work because the
+ *   sheet's gesture fails on horizontal movement. By using
+ *   `Gesture.Pan().blocksExternalGesture(sheetPanRef)` we force the sheet's
+ *   gesture to defer to ours whenever a touch starts on the cells area.
  *
- * Performance: a single useState holds the value as `Set<string>` (immutable
- * — each update wraps a fresh Set). 119 cells × 60fps drag is well within
- * RN's render budget on every device we ship to; if profiling ever shows
- * jank we'd switch to a useReducer keyed on cell flips.
+ * Layout split: time-label column and day-header row sit *outside* the
+ * GestureDetector. The cells container is the only thing the pan gesture
+ * wraps, so `e.x` / `e.y` from the event are simple cell-local coordinates
+ * — no `measureInWindow` required.
+ *
+ * Performance: a single Set is mutated in place during a gesture (a fresh
+ * wrapper Set is published to the parent only when at least one cell flips
+ * in a given move event). Fast drags interpolate the line between
+ * consecutive samples so no cell is skipped between PanResponder ticks.
  */
-import React, { useCallback, useRef, useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  PanResponder,
-  type GestureResponderEvent,
-  type LayoutChangeEvent,
-} from 'react-native';
+import React, { useCallback, useMemo, useRef } from 'react';
+import { View, StyleSheet, TouchableOpacity, type LayoutChangeEvent } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { useScrollHandlers } from 'react-native-actions-sheet';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { selectionHaptic } from '@rallia/shared-utils';
@@ -108,14 +115,6 @@ interface HourlyAvailabilityGridProps {
   t: (key: TranslationKey) => string;
   /** Locale (e.g. 'en-US', 'fr-CA') — drives the hour label formatter. */
   locale: string;
-  /**
-   * Optional. Fired with `true` when a touch gesture starts on the grid and
-   * `false` when it ends. Lets the parent disable its enclosing ScrollView
-   * (`scrollEnabled={!active}`) so a vertical drag paints cells instead of
-   * scrolling the surrounding container. Belt-and-suspenders on top of the
-   * PanResponder's capture-phase claim.
-   */
-  onInteractionChange?: (active: boolean) => void;
 }
 
 // =============================================================================
@@ -145,10 +144,11 @@ function formatHourLabel(hour: number, locale: string): string {
 // COMPONENT
 // =============================================================================
 
-// Tightened to fit the full 7×17 grid + the surrounding step chrome on the
-// smallest iPhone screen (SE) without forcing the user to scroll.
-const TIME_COL_WIDTH = 44;
-const CELL_HEIGHT = 22;
+// 28pt rows give ~25pt tappable height — below Apple's 44pt HIG floor, but
+// paint-drag + bulk-toggle row/column headers mitigate it. TIME_COL_WIDTH
+// 40 just fits the longest right-aligned hour label ("12 PM" in en-US).
+const TIME_COL_WIDTH = 40;
+const CELL_HEIGHT = 28;
 
 export const HourlyAvailabilityGrid: React.FC<HourlyAvailabilityGridProps> = ({
   value,
@@ -156,41 +156,73 @@ export const HourlyAvailabilityGrid: React.FC<HourlyAvailabilityGridProps> = ({
   colors,
   t,
   locale,
-  onInteractionChange,
 }) => {
-  // Captured at the parent container's onLayout: total width minus the
-  // time-label column, divided by 7 = cell width. PanResponder needs this
-  // to convert touch coords into (day, hour) cells.
+  // ─── Refs the gesture closures read from ──────────────────────────────────
+  //
+  // The gesture is created via useMemo and rebuilt only when its deps change.
+  // We pin value/onChange/cell-width via refs so the gesture callbacks always
+  // see the latest state without needing to recreate the gesture on every
+  // render (which would invalidate the gesture mid-touch).
+  const valueRef = useRef<HourGrid>(value);
+  valueRef.current = value;
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  // Cell width: derived from cells-container width / 7. Captured at layout.
   const cellWidthRef = useRef<number>(0);
 
-  // Per-gesture paint mode: 'fill' or 'clear'. Set on press-down based on
-  // whether the first cell touched is empty or filled.
+  // ─── Per-gesture refs ─────────────────────────────────────────────────────
+  //
+  // paintMode: 'fill' or 'clear', decided from the first touched cell.
+  // visited: cells the touch has already traversed (no re-toggle on drag-back).
+  // draft: mutable working copy of the selection for the gesture's life; a
+  //   fresh Set wrapper is published to the parent per move event in which
+  //   at least one cell actually flipped.
+  // lastCell: last cell the touch sampled, used to interpolate the line to
+  //   the next sample (PanResponder ticks at ~60fps; fast drags would
+  //   otherwise skip whole rows).
   const paintModeRef = useRef<'fill' | 'clear' | null>(null);
-
-  // Cells visited within the current gesture, so we don't re-toggle a cell
-  // when the touch moves back over it.
   const visitedRef = useRef<Set<string> | null>(null);
-
-  // Mutable snapshot of `value` for the gesture's lifetime. We mutate this
-  // in place during the drag (faster than spawning a new Set per touch event)
-  // and call onChange with a fresh wrapper Set whenever we add/remove.
   const draftRef = useRef<Set<string> | null>(null);
+  const lastCellRef = useRef<{ day: DayEnum; hour: number } | null>(null);
 
-  const [gridOffset, setGridOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  // ─── Action-sheet integration ─────────────────────────────────────────────
+  //
+  // Inside a react-native-actions-sheet, the sheet's own Gesture.Pan
+  // (configured with .activeOffsetY([-5,5]) and .failOffsetX([-5,5])) wins
+  // vertical drags before our gesture can claim them — that's why
+  // horizontal-first drags work but pure vertical drags get yanked away.
+  // useScrollHandlers exposes the sheet's gesture ref via simultaneousHandlers
+  // so we can pass it to .blocksExternalGesture(), which makes the sheet's
+  // gesture defer to ours whenever a touch starts on this area.
+  //
+  // Outside an action sheet, the hook returns a default no-op ref; passing
+  // it to blocksExternalGesture is harmless.
+  const scrollHandlers = useScrollHandlers<View>();
+  const sheetGestureRef = scrollHandlers.simultaneousHandlers[0];
 
-  const onGridLayout = useCallback((e: LayoutChangeEvent) => {
-    const { width } = e.nativeEvent.layout;
-    cellWidthRef.current = (width - TIME_COL_WIDTH) / 7;
-  }, []);
+  // ─── Cells container layout ───────────────────────────────────────────────
 
-  const computeCellFromTouch = useCallback(
-    (locationX: number, locationY: number): { day: DayEnum; hour: number } | null => {
-      const x = locationX - TIME_COL_WIDTH;
-      if (x < 0) return null;
+  const onCellsLayout = useCallback(
+    (e: LayoutChangeEvent) => {
+      const { width } = e.nativeEvent.layout;
+      cellWidthRef.current = width / 7;
+      // useScrollHandlers tracks layout for the draggable-node registration
+      // (which the sheet uses to defer to nested scrollables on web).
+      scrollHandlers.onLayout();
+    },
+    [scrollHandlers]
+  );
+
+  // ─── Hit-testing ──────────────────────────────────────────────────────────
+
+  const computeCellFromLocal = useCallback(
+    (localX: number, localY: number): { day: DayEnum; hour: number } | null => {
       const cellW = cellWidthRef.current;
       if (cellW <= 0) return null;
-      const dayIdx = Math.floor(x / cellW);
-      const hourIdx = Math.floor(locationY / CELL_HEIGHT);
+      if (localX < 0 || localY < 0) return null;
+      const dayIdx = Math.floor(localX / cellW);
+      const hourIdx = Math.floor(localY / CELL_HEIGHT);
       if (dayIdx < 0 || dayIdx >= ORDERED_DAYS.length) return null;
       if (hourIdx < 0 || hourIdx >= SUPPORTED_HOURS.length) return null;
       return { day: ORDERED_DAYS[dayIdx], hour: SUPPORTED_HOURS[hourIdx] };
@@ -198,184 +230,219 @@ export const HourlyAvailabilityGrid: React.FC<HourlyAvailabilityGridProps> = ({
     []
   );
 
+  // ─── Gesture handler ──────────────────────────────────────────────────────
+
   const handleTouch = useCallback(
-    (e: GestureResponderEvent) => {
-      const cell = computeCellFromTouch(e.nativeEvent.locationX, e.nativeEvent.locationY);
-      if (!cell) return;
-      const key = cellKey(cell.day, cell.hour);
+    (x: number, y: number) => {
+      const currentCell = computeCellFromLocal(x, y);
+      if (!currentCell) {
+        // Off-grid: end this sub-stroke. If the finger re-enters somewhere
+        // else, we don't want to draw a long line across the gap.
+        lastCellRef.current = null;
+        return;
+      }
 
-      // First touch of the gesture: capture paint mode + first cell.
+      // First touch of the entire gesture: decide paint mode + seed the
+      // draft from the LATEST committed value (via ref).
       if (!paintModeRef.current) {
-        paintModeRef.current = value.has(key) ? 'clear' : 'fill';
+        const firstKey = cellKey(currentCell.day, currentCell.hour);
+        const currentValue = valueRef.current;
+        paintModeRef.current = currentValue.has(firstKey) ? 'clear' : 'fill';
         visitedRef.current = new Set();
-        draftRef.current = new Set(value);
-        selectionHaptic();
+        draftRef.current = new Set(currentValue);
+        void selectionHaptic();
       }
 
-      if (visitedRef.current!.has(key)) return;
-      visitedRef.current!.add(key);
+      const prevCell = lastCellRef.current;
+      lastCellRef.current = currentCell;
 
-      const draft = draftRef.current!;
-      if (paintModeRef.current === 'fill') {
-        if (draft.has(key)) return;
-        draft.add(key);
+      // Build the list of cells this sample should touch. If we have a
+      // previous on-grid cell, walk the line from there to currentCell so
+      // fast drags don't skip rows. Otherwise (first touch, or re-entry
+      // after an off-grid excursion) just touch currentCell.
+      const cells: { day: DayEnum; hour: number }[] = [];
+      if (prevCell) {
+        const fromDayIdx = ORDERED_DAYS.indexOf(prevCell.day);
+        const fromHourIdx = SUPPORTED_HOURS.indexOf(prevCell.hour);
+        const toDayIdx = ORDERED_DAYS.indexOf(currentCell.day);
+        const toHourIdx = SUPPORTED_HOURS.indexOf(currentCell.hour);
+        const dx = toDayIdx - fromDayIdx;
+        const dy = toHourIdx - fromHourIdx;
+        const steps = Math.max(Math.abs(dx), Math.abs(dy));
+        if (steps === 0) {
+          cells.push(currentCell);
+        } else {
+          for (let i = 1; i <= steps; i++) {
+            const t = i / steps;
+            const dIdx = fromDayIdx + Math.round(dx * t);
+            const hIdx = fromHourIdx + Math.round(dy * t);
+            cells.push({ day: ORDERED_DAYS[dIdx], hour: SUPPORTED_HOURS[hIdx] });
+          }
+        }
       } else {
-        if (!draft.has(key)) return;
-        draft.delete(key);
+        cells.push(currentCell);
       }
-      // Hand the parent a *new* Set so React detects the change.
-      onChange(new Set(draft));
-    },
-    [computeCellFromTouch, onChange, value]
-  );
 
-  // Pin the latest `onInteractionChange` so the PanResponder (created once
-  // via useRef) always calls the current callback, not a stale closure.
-  const interactionCbRef = useRef(onInteractionChange);
-  interactionCbRef.current = onInteractionChange;
+      // Apply paint mode to every cell along the segment, deduping via the
+      // visited set. Batch all flips into a single onChange so the parent
+      // re-renders at most once per move event regardless of how many cells
+      // a fast drag covers.
+      const visited = visitedRef.current!;
+      const draft = draftRef.current!;
+      const mode = paintModeRef.current;
+      let mutated = false;
+      for (const c of cells) {
+        const key = cellKey(c.day, c.hour);
+        if (visited.has(key)) continue;
+        visited.add(key);
+        if (mode === 'fill') {
+          if (!draft.has(key)) {
+            draft.add(key);
+            mutated = true;
+          }
+        } else {
+          if (draft.has(key)) {
+            draft.delete(key);
+            mutated = true;
+          }
+        }
+      }
+      if (mutated) {
+        onChangeRef.current(new Set(draft));
+      }
+    },
+    [computeCellFromLocal]
+  );
 
   const resetGesture = useCallback(() => {
     paintModeRef.current = null;
     visitedRef.current = null;
     draftRef.current = null;
-    interactionCbRef.current?.(false);
+    lastCellRef.current = null;
   }, []);
 
-  const panResponderRef = useRef(
-    PanResponder.create({
-      // Initial tap on the grid surface: claim the gesture. Inner
-      // TouchableOpacity children (hour-row labels) are deeper in the tree
-      // and win the bubble-phase responder negotiation before this view
-      // is asked, so their bulk-toggle taps still fire.
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      // Capture-phase claim on move: as soon as the user starts dragging
-      // we steal the gesture from any parent ScrollView so the surrounding
-      // sheet doesn't scroll while painting. Threshold of 2pt keeps tiny
-      // jitter from triggering a steal on what was meant as a tap.
-      onMoveShouldSetPanResponderCapture: (_e, gesture) =>
-        Math.abs(gesture.dx) > 2 || Math.abs(gesture.dy) > 2,
-      // Once we've grabbed the gesture, refuse to surrender it if the
-      // parent ScrollView later asks for it back. Otherwise a long vertical
-      // drag near the sheet edge can be yanked away mid-paint.
-      onPanResponderTerminationRequest: () => false,
-      onShouldBlockNativeResponder: () => true,
-      onPanResponderGrant: e => {
-        interactionCbRef.current?.(true);
-        handleTouch(e);
-      },
-      onPanResponderMove: e => handleTouch(e),
-      onPanResponderRelease: resetGesture,
-      onPanResponderTerminate: resetGesture,
-    })
+  // ─── Pan gesture ──────────────────────────────────────────────────────────
+  //
+  // .minDistance(0) activates immediately on touch-down so a single tap
+  // flips a cell. .blocksExternalGesture(sheetGestureRef) tells the sheet's
+  // pan to defer to us when a touch lands on the cells area — the key fix
+  // for vertical paint-drag inside the sheet. runOnJS(true) keeps callbacks
+  // on the JS thread (we don't need worklet performance for this).
+
+  const pan = useMemo(
+    () =>
+      Gesture.Pan()
+        .blocksExternalGesture(sheetGestureRef)
+        .minDistance(0)
+        .runOnJS(true)
+        .onBegin(e => handleTouch(e.x, e.y))
+        .onUpdate(e => handleTouch(e.x, e.y))
+        .onFinalize(() => resetGesture()),
+    [sheetGestureRef, handleTouch, resetGesture]
   );
 
-  // Smart bulk toggle: tap a day-column header to fill (or clear) all 17
-  // hours of that day. If every hour is already filled, the tap clears.
-  const toggleDay = useCallback(
-    (day: DayEnum) => {
-      selectionHaptic();
-      const next = new Set(value);
-      const allFilled = SUPPORTED_HOURS.every(h => next.has(cellKey(day, h)));
-      if (allFilled) {
-        for (const h of SUPPORTED_HOURS) next.delete(cellKey(day, h));
-      } else {
-        for (const h of SUPPORTED_HOURS) next.add(cellKey(day, h));
-      }
-      onChange(next);
-    },
-    [onChange, value]
-  );
+  // ─── Bulk toggles ─────────────────────────────────────────────────────────
 
-  // Same the other axis: tap an hour-row label to fill/clear that hour across
-  // all 7 days.
-  const toggleHour = useCallback(
-    (hour: number) => {
-      selectionHaptic();
-      const next = new Set(value);
-      const allFilled = ORDERED_DAYS.every(d => next.has(cellKey(d, hour)));
-      if (allFilled) {
-        for (const d of ORDERED_DAYS) next.delete(cellKey(d, hour));
-      } else {
-        for (const d of ORDERED_DAYS) next.add(cellKey(d, hour));
-      }
-      onChange(next);
-    },
-    [onChange, value]
-  );
+  const toggleDay = useCallback((day: DayEnum) => {
+    void selectionHaptic();
+    const next = new Set(valueRef.current);
+    const allFilled = SUPPORTED_HOURS.every(h => next.has(cellKey(day, h)));
+    if (allFilled) {
+      for (const h of SUPPORTED_HOURS) next.delete(cellKey(day, h));
+    } else {
+      for (const h of SUPPORTED_HOURS) next.add(cellKey(day, h));
+    }
+    onChangeRef.current(next);
+  }, []);
+
+  const toggleHour = useCallback((hour: number) => {
+    void selectionHaptic();
+    const next = new Set(valueRef.current);
+    const allFilled = ORDERED_DAYS.every(d => next.has(cellKey(d, hour)));
+    if (allFilled) {
+      for (const d of ORDERED_DAYS) next.delete(cellKey(d, hour));
+    } else {
+      for (const d of ORDERED_DAYS) next.add(cellKey(d, hour));
+    }
+    onChangeRef.current(next);
+  }, []);
 
   return (
     <View style={styles.container}>
-      {/* Column headers — day letters (tappable to bulk-toggle the day). */}
-      <View style={styles.headerRow}>
-        <View style={{ width: TIME_COL_WIDTH }} />
-        {ORDERED_DAYS.map(day => (
+      {/* Two-column row layout: hours column on the left (TouchableOpacities
+          for bulk toggle), header + cells stack on the right. */}
+      <View style={[styles.timeColumn, { width: TIME_COL_WIDTH }]}>
+        {/* Spacer matching the day-header row's height so the time labels
+            line up vertically with the cell rows. */}
+        <View style={styles.timeColumnHeaderSpacer} />
+        {SUPPORTED_HOURS.map(hour => (
           <TouchableOpacity
-            key={`hdr-${day}`}
-            style={styles.dayHeader}
-            onPress={() => toggleDay(day)}
+            key={`time-${hour}`}
+            style={[styles.timeLabel, { height: CELL_HEIGHT }]}
+            onPress={() => toggleHour(hour)}
             activeOpacity={0.6}
             accessibilityRole="button"
-            accessibilityLabel={t(DAY_LETTER_KEY[day])}
+            accessibilityLabel={formatHourLabel(hour, locale)}
           >
-            <Text size="xs" weight="semibold" color={colors.textMuted}>
-              {t(DAY_LETTER_KEY[day])}
+            <Text size="xs" weight="semibold" color={colors.text}>
+              {formatHourLabel(hour, locale)}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* Grid rows: hour label + 7 cells. The cell-row container is the
-          PanResponder target, which lets a drag paint across both axes
-          without losing the gesture mid-stroke. */}
-      <View
-        onLayout={e => {
-          onGridLayout(e);
-          setGridOffset({ x: 0, y: e.nativeEvent.layout.y });
-        }}
-        // eslint-disable-next-line react/jsx-props-no-spreading
-        {...panResponderRef.current.panHandlers}
-      >
-        {SUPPORTED_HOURS.map((hour, rowIdx) => (
-          <View key={`row-${hour}`} style={[styles.row, { height: CELL_HEIGHT }]}>
+      <View style={styles.rightArea}>
+        {/* Day-letter headers — tappable to bulk-toggle the day. Outside
+            the GestureDetector so they don't compete with the pan gesture. */}
+        <View style={styles.headerRow}>
+          {ORDERED_DAYS.map(day => (
             <TouchableOpacity
-              style={[styles.timeLabel, { width: TIME_COL_WIDTH }]}
-              onPress={() => toggleHour(hour)}
+              key={`hdr-${day}`}
+              style={styles.dayHeader}
+              onPress={() => toggleDay(day)}
               activeOpacity={0.6}
               accessibilityRole="button"
-              accessibilityLabel={formatHourLabel(hour, locale)}
+              accessibilityLabel={t(DAY_LETTER_KEY[day])}
             >
-              <Text size="xs" weight="semibold" color={colors.text}>
-                {formatHourLabel(hour, locale)}
+              <Text size="xs" weight="semibold" color={colors.textMuted}>
+                {t(DAY_LETTER_KEY[day])}
               </Text>
             </TouchableOpacity>
-            {ORDERED_DAYS.map(day => {
-              const filled = value.has(cellKey(day, hour));
-              return (
-                <View
-                  key={`cell-${day}-${hour}`}
-                  style={[
-                    styles.cell,
-                    {
-                      backgroundColor: filled ? colors.cellActive : colors.cellInactive,
-                      borderColor: filled ? colors.cellActive : colors.border,
-                    },
-                  ]}
-                  // The actual hit-testing for the cell goes through the row
-                  // container's PanResponder. We keep the cell view non-
-                  // touchable so taps don't intercept the pan gesture; the
-                  // PanResponder handles both single taps and drags.
-                  pointerEvents="none"
-                  accessibilityRole="switch"
-                  accessibilityState={{ checked: filled }}
-                  accessibilityLabel={`${t(DAY_LETTER_KEY[day])} ${formatHourLabel(hour, locale)}`}
-                />
-              );
-            })}
-            {/* unused — silences lint about gridOffset */}
-            {rowIdx === -1 ? <Text>{gridOffset.x}</Text> : null}
+          ))}
+        </View>
+
+        {/* Cells. GestureDetector wraps ONLY this container, so the pan
+            gesture's e.x/e.y are cell-local coordinates and no inner
+            interactive child competes with the gesture. */}
+        <GestureDetector gesture={pan}>
+          <View ref={scrollHandlers.ref} onLayout={onCellsLayout} collapsable={false}>
+            {SUPPORTED_HOURS.map(hour => (
+              <View key={`row-${hour}`} style={[styles.row, { height: CELL_HEIGHT }]}>
+                {ORDERED_DAYS.map(day => {
+                  const filled = value.has(cellKey(day, hour));
+                  return (
+                    <View
+                      key={`cell-${day}-${hour}`}
+                      style={[
+                        styles.cell,
+                        {
+                          backgroundColor: filled ? colors.cellActive : colors.cellInactive,
+                          borderColor: filled ? colors.cellActive : colors.border,
+                        },
+                      ]}
+                      // pointerEvents="none" so touches always reach the
+                      // GestureDetector — never get absorbed by a cell view.
+                      pointerEvents="none"
+                      accessibilityRole="switch"
+                      accessibilityState={{ checked: filled }}
+                      accessibilityLabel={`${t(DAY_LETTER_KEY[day])} ${formatHourLabel(hour, locale)}`}
+                    />
+                  );
+                })}
+              </View>
+            ))}
           </View>
-        ))}
+        </GestureDetector>
       </View>
     </View>
   );
@@ -384,6 +451,21 @@ export const HourlyAvailabilityGrid: React.FC<HourlyAvailabilityGridProps> = ({
 const styles = StyleSheet.create({
   container: {
     width: '100%',
+    flexDirection: 'row',
+  },
+  timeColumn: {
+    flexDirection: 'column',
+  },
+  timeColumnHeaderSpacer: {
+    // Matches the headerRow's effective height so timeLabel rows line up
+    // with their cell rows. The headerRow's children render at the natural
+    // height of the day-letter Text (~16pt) plus 2pt marginBottom on the
+    // row. Bump if the day-header typography changes.
+    height: 16 + 2,
+  },
+  rightArea: {
+    flex: 1,
+    flexDirection: 'column',
   },
   headerRow: {
     flexDirection: 'row',
@@ -394,7 +476,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 0,
   },
   row: {
     flexDirection: 'row',

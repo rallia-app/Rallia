@@ -2,19 +2,20 @@
  * AvailabilitiesStep — last onboarding step.
  *
  * Hourly weekly grid (7 days × 17 hours) with paint-drag selection plus a
- * preset chip row above the grid for one-tap patterns. Total hour count is
- * shown alongside the minimum-required hint so users know when the step
- * unlocks. Privacy toggle for `privacy_show_availability` lives at the
- * bottom, unchanged from the previous version.
+ * preset chip row above. State is a `Set<string>` of `${day}-${hour}` cell
+ * keys owned by useOnboardingWizard — see formData.availabilities.
  *
- * State is a `Set<string>` of `${day}-${hour}` cell keys owned by
- * useOnboardingWizard — see formData.availabilities.
+ * The step wraps its content in `SheetScrollView` so the chips + grid can
+ * overflow + scroll on small phones without squishing chip heights. Safe
+ * to nest a scrollable here because HourlyAvailabilityGrid now uses
+ * `Gesture.Pan().minDistance(0).blocksExternalGesture(sheetGestureRef)`,
+ * which wins gesture arbitration before any parent scroll can claim the
+ * vertical pan.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
-import { Text } from '@rallia/shared-components';
 import { spacingPixels } from '@rallia/design-system';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { HourlyAvailabilityGrid, type HourGrid } from '../../HourlyAvailabilityGrid';
@@ -42,9 +43,6 @@ interface AvailabilitiesStepProps {
   locale?: string;
 }
 
-/** Minimum cells required for the step to validate. 6 ≈ "one decent block." */
-const MIN_SELECTIONS = 6;
-
 export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
   formData,
   onUpdateFormData,
@@ -54,12 +52,6 @@ export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
   locale = 'en-US',
 }) => {
   const grid = formData.availabilities;
-  const totalSelections = grid.size;
-  const hasMinimum = totalSelections >= MIN_SELECTIONS;
-
-  // Disabled while the user is paint-dragging the grid so the surrounding
-  // SheetScrollView can't scroll the page out from under them.
-  const [scrollEnabled, setScrollEnabled] = useState(true);
 
   const onGridChange = (next: HourGrid) => onUpdateFormData({ availabilities: next });
 
@@ -92,33 +84,9 @@ export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
   return (
     <SheetScrollView
       style={styles.container}
-      contentContainerStyle={styles.contentContainer}
+      contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="interactive"
-      scrollEnabled={scrollEnabled}
     >
-      {/* Compact header row: title on the left, live count on the right.
-          Collapses what used to be three stacked rows (title, subtitle,
-          counter) into one ~26pt line so the 17-hour grid clears the screen
-          on iPhone SE without scrolling. */}
-      <View style={styles.headerRow}>
-        <Text size="lg" weight="bold" color={colors.text} style={styles.title}>
-          {t('onboarding.availability')}
-        </Text>
-        <Text
-          size="xs"
-          weight="semibold"
-          color={hasMinimum ? colors.buttonActive : colors.textMuted}
-        >
-          {totalSelections >= MIN_SELECTIONS
-            ? t('onboarding.availabilityStep.selected').replace('{count}', String(totalSelections))
-            : t('onboarding.availabilityStep.minimumSelected')
-                .replace('{count}', String(totalSelections))
-                .replace('{minimum}', String(MIN_SELECTIONS))}
-        </Text>
-      </View>
-
       <HourlyAvailabilityPresets value={grid} onChange={onGridChange} colors={presetColors} t={t} />
 
       <View style={styles.gridWrapper}>
@@ -128,7 +96,6 @@ export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
           colors={gridColors}
           t={t}
           locale={locale}
-          onInteractionChange={active => setScrollEnabled(!active)}
         />
       </View>
     </SheetScrollView>
@@ -139,24 +106,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  contentContainer: {
-    paddingHorizontal: spacingPixels[3],
+  content: {
+    // Asymmetric: the hours column on the left already looks padded thanks
+    // to its right-aligned label inside a 40pt column, so we hug the screen
+    // edge there. The right side needs real breathing room past the last
+    // cell column.
+    paddingLeft: spacingPixels[1],
+    paddingRight: spacingPixels[3],
     paddingTop: spacingPixels[2],
-    paddingBottom: spacingPixels[4],
-    flexGrow: 1,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    marginBottom: spacingPixels[2],
-  },
-  title: {
-    flexShrink: 1,
+    paddingBottom: spacingPixels[2],
   },
   gridWrapper: {
     marginTop: spacingPixels[2],
-    marginBottom: spacingPixels[2],
   },
 });
 

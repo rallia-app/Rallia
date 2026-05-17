@@ -431,13 +431,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     [setSelectedSport]
   );
 
-  // Calculate total availability selections for validation
-  const totalAvailabilitySelections = useMemo(() => {
-    return Object.values(formData.availabilities).reduce(
-      (count, day) => count + Object.values(day).filter(Boolean).length,
-      0
-    );
-  }, [formData.availabilities]);
+  // Total selected hour cells. formData.availabilities is a Set<string>
+  // of `${day}-${hour}` cell keys (see HourlyAvailabilityGrid), so size
+  // is the count directly. The pre-hourly version of this file walked an
+  // {day: {period: bool}} record — left over from before PR B and the
+  // reason the Complete button was permanently disabled.
+  const totalAvailabilitySelections = formData.availabilities.size;
 
   // Check if button should be disabled based on current step's mandatory fields.
   // Mirrors the required-field checks performed inside validateAndSaveStep so the
@@ -474,7 +473,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         return formData.favoriteFacilities.length < 2;
       }
       case 'availabilities':
-        return totalAvailabilitySelections < 3;
+        // 6 hour cells minimum — matches MIN_AVAILABILITIES used on
+        // UserProfile save + useProfileCompleteness; the old "3" was the
+        // pre-hourly block-count floor.
+        return totalAvailabilitySelections < 6;
       default:
         return false;
     }
@@ -486,13 +488,28 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   // Get current step index for animations
   const currentStepIndex = steps.indexOf(currentStepId);
 
-  // Animate step changes
+  // Track the previous index so we can tell apart a single-step user
+  // navigation (delta = 1) from a multi-step jump triggered by the
+  // auto-skip after data loads (delta > 1, e.g. 0 → 5). The auto-skip
+  // would otherwise spring across every intermediate step and visually
+  // "bounce" through the skipped ones.
+  const prevStepIndexRef = useRef(currentStepIndex);
+
   useEffect(() => {
-    translateX.value = withSpring(-currentStepIndex * SCREEN_WIDTH, {
-      damping: 80,
-      stiffness: 600,
-      overshootClamping: false,
-    });
+    const delta = Math.abs(currentStepIndex - prevStepIndexRef.current);
+    prevStepIndexRef.current = currentStepIndex;
+    const target = -currentStepIndex * SCREEN_WIDTH;
+    if (delta > 1) {
+      // Multi-step jump (auto-skip, wizard reset): snap instantly.
+      translateX.value = target;
+    } else {
+      // Single-step user navigation: animate.
+      translateX.value = withSpring(target, {
+        damping: 80,
+        stiffness: 600,
+        overshootClamping: false,
+      });
+    }
   }, [currentStepIndex, translateX]);
 
   // Validate and save current step data
