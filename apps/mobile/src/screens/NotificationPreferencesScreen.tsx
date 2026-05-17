@@ -69,6 +69,10 @@ const ACTIVE_NOTIFICATION_TYPES = new Set<ExtendedNotificationTypeEnum>([
   'nearby_match_available',
   'player_kicked',
   'player_left',
+  // Match time-suggestion (counter-proposal) flow
+  'match_time_suggested',
+  'match_time_suggestion_accepted',
+  'match_time_suggestion_declined',
   // Feedback
   'feedback_request',
   'feedback_reminder',
@@ -82,6 +86,8 @@ const ACTIVE_NOTIFICATION_TYPES = new Set<ExtendedNotificationTypeEnum>([
   'reference_request_declined',
   // Email digest
   'morning_digest',
+  // Weekly availability refresh nudge
+  'availability_refresh_reminder',
 ] as ExtendedNotificationTypeEnum[]);
 
 // Types where only the email channel is relevant — push and sms toggles are disabled
@@ -116,6 +122,12 @@ const NOTIFICATION_DS_COLORS: Partial<Record<ExtendedNotificationTypeEnum, strin
   reference_request_accepted: status.success.light,
   reference_request_declined: secondary[500],
   morning_digest: status.info.DEFAULT,
+  // Match time-suggestion flow
+  match_time_suggested: accent[600],
+  match_time_suggestion_accepted: status.success.light,
+  match_time_suggestion_declined: secondary[500],
+  // Weekly availability refresh
+  availability_refresh_reminder: primary[500],
 };
 
 // Group notification types by category
@@ -207,7 +219,9 @@ const NotificationTypeRow: React.FC<NotificationTypeRowProps> = ({
 }) => {
   const iconName = NOTIFICATION_TYPE_ICONS[notificationType];
   const iconColor = NOTIFICATION_DS_COLORS[notificationType] ?? neutral[500];
-  const channels: DeliveryChannelEnum[] = ['push', 'email', 'sms'];
+  // SMS is intentionally omitted: the Twilio provider is not configured and
+  // no phone-verification flow exists yet, so SMS toggles would be cosmetic.
+  const channels: DeliveryChannelEnum[] = ['push', 'email'];
 
   return (
     <View style={[styles.typeRow, { borderBottomColor: colors.border }]}>
@@ -281,7 +295,9 @@ const CategorySection: React.FC<CategorySectionProps> = ({
   channelLabels,
   typeLabels,
 }) => {
-  const channels: DeliveryChannelEnum[] = ['push', 'email', 'sms'];
+  // SMS is intentionally omitted: the Twilio provider is not configured and
+  // no phone-verification flow exists yet, so SMS toggles would be cosmetic.
+  const channels: DeliveryChannelEnum[] = ['push', 'email'];
   const [isExpanded, setIsExpanded] = useState(true);
   const rotateAnim = useMemo(() => new Animated.Value(1), []);
 
@@ -450,8 +466,14 @@ const NotificationPreferencesScreen: React.FC = () => {
         reference_request_received: t('notifications.types.reference_request_received'),
         reference_request_accepted: t('notifications.types.reference_request_accepted'),
         reference_request_declined: t('notifications.types.reference_request_declined'),
+        // Match time-suggestion flow
+        match_time_suggested: t('notifications.types.match_time_suggested'),
+        match_time_suggestion_accepted: t('notifications.types.match_time_suggestion_accepted'),
+        match_time_suggestion_declined: t('notifications.types.match_time_suggestion_declined'),
         // Morning digest
         morning_digest: t('notifications.types.morning_digest'),
+        // Weekly availability refresh
+        availability_refresh_reminder: t('notifications.types.availability_refresh_reminder'),
         // System category
         reminder: t('notifications.types.reminder'),
         payment: t('notifications.types.payment'),
@@ -632,7 +654,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
+    paddingVertical: spacingPixels[4],
     borderBottomWidth: 1,
   },
   typeInfo: {
@@ -651,10 +673,11 @@ const styles = StyleSheet.create({
   typeLabel: {
     flex: 1,
     lineHeight: 18,
-    minHeight: 36,
   },
   togglesRow: {
     flexDirection: 'row',
+    marginLeft: spacingPixels[6],
+    gap: spacingPixels[3],
   },
   toggleCell: {
     width: spacingPixels[16],

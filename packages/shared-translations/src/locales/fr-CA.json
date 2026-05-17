@@ -195,8 +195,8 @@
       "match_cancelled": "Partie annulée",
       "match_updated": "Partie mise à jour",
       "match_starting_soon": "Partie imminente",
-      "match_check_in_available": "Enregistrement disponible",
-      "match_new_available": "Nouvelle partie dans un groupe",
+      "match_check_in_available": "Check-in disponible",
+      "match_new_available": "Nouvelle partie de groupe",
       "match_spot_opened": "Place libérée",
       "nearby_match_available": "Partie à proximité",
       "player_kicked": "Retiré de la partie",
@@ -233,7 +233,11 @@
       "booking_cancelled_by_org": "Réservation annulée par l'établissement",
       "membership_approved": "Adhésion approuvée",
       "org_announcement": "Annonce",
-      "morning_digest": "Récapitulatif matinal"
+      "morning_digest": "Récapitulatif matinal",
+      "availability_refresh_reminder": "Rappel de disponibilités",
+      "match_time_suggested": "Heure proposée",
+      "match_time_suggestion_accepted": "Heure acceptée",
+      "match_time_suggestion_declined": "Heure refusée"
     },
     "categories": {
       "match": "Notifications de parties",

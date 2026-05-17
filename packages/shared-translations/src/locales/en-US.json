@@ -233,7 +233,11 @@
       "booking_cancelled_by_org": "Booking cancelled by facility",
       "membership_approved": "Membership approved",
       "org_announcement": "Announcement",
-      "morning_digest": "Morning Digest"
+      "morning_digest": "Morning Digest",
+      "availability_refresh_reminder": "Availability refresh",
+      "match_time_suggested": "Time change suggested",
+      "match_time_suggestion_accepted": "Time change accepted",
+      "match_time_suggestion_declined": "Time change declined"
     },
     "categories": {
       "match": "Game Notifications",
