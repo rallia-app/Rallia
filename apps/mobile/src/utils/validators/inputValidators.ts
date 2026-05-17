@@ -62,7 +62,11 @@ export const validatePhoneNumber = (text: string): string => {
  * validateEmail("invalid-email") // Returns false
  */
 export const validateEmail = (email: string): boolean => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  // Excluding `.` from the middle character class eliminates the overlap
+  // between the two `[^\s@]+` runs around `\.`, which CodeQL flagged as
+  // polynomial-ReDoS-prone (js/polynomial-redos). The final segment still
+  // accepts dots so subdomains like `mail.example.com` validate.
+  const emailRegex = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
   return emailRegex.test(email);
 };
 
