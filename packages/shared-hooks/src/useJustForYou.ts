@@ -7,7 +7,12 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { composeJustForYou } from '@rallia/shared-services';
-import type { Scorable, MatchScoringPreferences, SlotSuggestion } from '@rallia/shared-services';
+import type {
+  Scorable,
+  MatchScoringPreferences,
+  SlotSuggestion,
+  JustForYouItem,
+} from '@rallia/shared-services';
 import { useCallback } from 'react';
 
 export const justForYouKeys = {
@@ -39,7 +44,11 @@ export interface UseJustForYouOptions {
 }
 
 export interface UseJustForYouResult {
+  /** Ordered (score-desc) merged feed — the canonical output of the composer. */
+  items: JustForYouItem[];
+  /** Matches that made it into `items`. Kept for analytics / dismiss state. */
   matches: Scorable[];
+  /** Suggestions that made it into `items`. Kept for analytics / dismiss state. */
   suggestions: SlotSuggestion[];
   isLoading: boolean;
   isRefetching: boolean;
@@ -128,6 +137,7 @@ export function useJustForYou(options: UseJustForYouOptions): UseJustForYouResul
   }, [queryRefetch]);
 
   return {
+    items: data?.items ?? [],
     matches: data?.matches ?? [],
     suggestions: data?.suggestions ?? [],
     isLoading: queryEnabled ? isLoading : false,

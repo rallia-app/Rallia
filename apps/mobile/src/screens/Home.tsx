@@ -84,7 +84,6 @@ import ProfileCompletionBanner, {
   useProfileCompletionBannerVisibility,
 } from '../features/profile/components/ProfileCompletionBanner';
 import { SuggestionCard } from '../components/SuggestionCard';
-import type { UnifiedFeedItem } from '@rallia/shared-hooks';
 import BillingIssueBanner from '../components/BillingIssueBanner';
 import ReferenceRequestsBanner from '../components/ReferenceRequestsBanner';
 import HomeBanner, { HomeBannerLayoutProvider } from '../components/HomeBanner';
@@ -857,8 +856,7 @@ const Home = () => {
     [session?.user?.id]
   );
   const {
-    matches: jfyMatches,
-    suggestions: jfySuggestions,
+    items: justForYouItems,
     isLoading: loadingJustForYou,
     isRefetching,
     refetch: refetchJustForYou,
@@ -917,26 +915,8 @@ const Home = () => {
     return () => setOnHomeScreen(false);
   }, [setOnHomeScreen]);
 
-  // Combined Just-for-you items interleaved in chronological order.
-  const justForYouItems = useMemo<UnifiedFeedItem[]>(() => {
-    const items: UnifiedFeedItem[] = [
-      ...jfyMatches.map(m => ({
-        kind: 'match' as const,
-        key: `match:${m.id}`,
-        sortTime: new Date(
-          m.start_time ? `${m.match_date}T${m.start_time}` : `${m.match_date}T00:00:00`
-        ).getTime(),
-        data: m,
-      })),
-      ...jfySuggestions.map(s => ({
-        kind: 'suggestion' as const,
-        key: `suggestion:${s.opponentId}:${(s.slot.datetime as Date).getTime?.() ?? 0}`,
-        sortTime: (s.slot.datetime as Date).getTime?.() ?? 0,
-        data: s,
-      })),
-    ];
-    return items.sort((a, b) => a.sortTime - b.sortTime);
-  }, [jfyMatches, jfySuggestions]);
+  // Just-for-you items come pre-ranked (score-desc) from the composer. No
+  // local re-sort — the canonical ranking is the composer's output.
 
   // Render section header with "Soon & Nearby" title, location selector, and "View All" button
   // Render section header with "Soon & Nearby" title and "View All" button
@@ -1515,7 +1495,7 @@ const Home = () => {
                     ))
                   : justForYouItems.map(item =>
                       item.kind === 'match' ? (
-                        <View key={item.key} style={styles.jfyCardWrapper}>
+                        <View key={`match:${item.data.id}`} style={styles.jfyCardWrapper}>
                           {/* MatchCard has built-in marginHorizontal:16; the
                           negative wrapper margin neutralizes it so the card
                           fills our 340px slot exactly. */}
@@ -1548,7 +1528,10 @@ const Home = () => {
                           </View>
                         </View>
                       ) : (
-                        <View key={item.key} style={styles.jfyCardWrapper}>
+                        <View
+                          key={`suggestion:${item.data.opponentId}:${(item.data.slot.datetime as Date).getTime?.() ?? 0}`}
+                          style={styles.jfyCardWrapper}
+                        >
                           <SuggestionCard
                             suggestion={item.data}
                             colors={{
