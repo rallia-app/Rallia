@@ -637,12 +637,29 @@ export async function getNetworkMemberUpcomingMatches(
     throw new Error(creatorError.message);
   }
 
-  // Step 4: Get match IDs where members are participants
-  const { data: participantMatches, error: participantError } = await supabase
+  // Step 4: Get match IDs where members are participants.
+  // Filter via the joined match row to upcoming, non-cancelled, network-visible
+  // matches — otherwise this returns every historical participation and the
+  // resulting `.in('id', ...)` URL in Step 5 exceeds PostgREST's limit (400).
+  let participantQuery = supabase
     .from('match_participant')
-    .select('match_id')
+    .select('match_id, match:match_id!inner(id)')
     .in('player_id', memberPlayerIds)
-    .eq('status', 'joined');
+    .eq('status', 'joined')
+    .in('match.visibility', ['public', 'private'])
+    .is('match.cancelled_at', null)
+    .gte('match.match_date', today);
+
+  if (networkType === 'community') {
+    participantQuery = participantQuery.eq('match.visible_in_communities', true);
+  } else {
+    participantQuery = participantQuery.eq('match.visible_in_groups', true);
+  }
+  if (sportId) {
+    participantQuery = participantQuery.eq('match.sport_id', sportId);
+  }
+
+  const { data: participantMatches, error: participantError } = await participantQuery;
 
   if (participantError) {
     console.error('Error fetching participant matches:', participantError);
