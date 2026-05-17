@@ -4045,7 +4045,7 @@
     },
     "availabilityRefreshBanner": {
       "title": "Your weekly availability",
-      "description": "Tell us when you can play over the next 7 days — a quick weekly check-in keeps your match suggestions on point.",
+      "description": "Tell us when you can play this week — keeps your match suggestions on point.",
       "cta": "Update"
     },
     "header": {

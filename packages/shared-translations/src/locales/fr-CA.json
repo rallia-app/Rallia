@@ -4045,7 +4045,7 @@
     },
     "availabilityRefreshBanner": {
       "title": "Vos disponibilités de la semaine",
-      "description": "Dites-nous quand vous pouvez jouer dans les 7 prochains jours — un petit point hebdo garde vos suggestions de matchs pertinentes.",
+      "description": "Dites-nous quand vous pouvez jouer cette semaine — vos suggestions resteront pertinentes.",
       "cta": "Mettre à jour"
     },
     "header": {
