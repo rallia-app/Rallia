@@ -9,13 +9,11 @@ const AVATAR_SIZE = 60;
 const AVATAR_RING_BORDER = 2;
 const CARD_HORIZONTAL_MARGIN = spacingPixels[4];
 const CARD_PADDING = spacingPixels[4];
-const DAY_CELL_COUNT = 7;
 // Text-box heights (fontSize × normal lineHeight 1.5). Match these to reserve
 // the exact vertical space the real Text component will occupy on swap-in.
 const NAME_LINE_HEIGHT = 24; // base: 16 × 1.5
 const LOCATION_LINE_HEIGHT = 21; // sm:  14 × 1.5 — row height
 const LOCATION_TEXT_GLYPH_HEIGHT = 14; // sm fontSize — visible text glyph
-const DAY_LETTER_LINE_HEIGHT = 18; // xs:  12 × 1.5
 // Bumped above the real sm-badge height (20) so the skeleton pill reads
 // fuller — matches the visual weight of the loaded badge content.
 const BADGE_HEIGHT_SM = 26;
@@ -125,33 +123,6 @@ const PlayerCardSkeleton: React.FC = () => {
           </View>
         </View>
       </View>
-
-      {/* Availability grid skeleton — matches AvailabilityGrid layout */}
-      <View style={styles.availabilitySection}>
-        {Array.from({ length: DAY_CELL_COUNT }).map((_, i) => (
-          <View key={i} style={styles.dayCell}>
-            <Skeleton
-              width={10}
-              height={DAY_LETTER_LINE_HEIGHT}
-              borderRadius={2}
-              backgroundColor={skeletonBg}
-              highlightColor={skeletonHighlight}
-            />
-            <View style={styles.dotsRow}>
-              {Array.from({ length: 3 }).map((__, j) => (
-                <Skeleton
-                  key={j}
-                  width={4}
-                  height={4}
-                  borderRadius={2}
-                  backgroundColor={skeletonBg}
-                  highlightColor={skeletonHighlight}
-                />
-              ))}
-            </View>
-          </View>
-        ))}
-      </View>
     </View>
   );
 };
@@ -206,23 +177,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacingPixels[1.5],
     marginTop: spacingPixels[1],
-  },
-  availabilitySection: {
-    paddingHorizontal: CARD_PADDING,
-    paddingBottom: CARD_PADDING,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacingPixels[1],
-  },
-  dayCell: {
-    alignItems: 'center',
-    gap: 3,
-    flex: 1,
-  },
-  dotsRow: {
-    flexDirection: 'row',
-    gap: 2,
   },
 });
 

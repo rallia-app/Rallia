@@ -89,7 +89,8 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
       filters.rating.length > 0 ||
       filters.reputation !== 'all' ||
       filters.certifiedOnly ||
-      filters.availability !== 'all' ||
+      filters.hourRange.minHour !== null ||
+      filters.hourRange.maxHour !== null ||
       filters.day !== 'all' ||
       filters.playStyle !== 'all' ||
       filters.maxDistance !== 'all' ||
@@ -106,7 +107,7 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
       rating: filters.rating,
       reputation: filters.reputation,
       certifiedOnly: filters.certifiedOnly,
-      availability: filters.availability,
+      hourRange: filters.hourRange,
       day: filters.day,
       playStyle: filters.playStyle,
       maxDistance: filters.maxDistance,

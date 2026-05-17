@@ -3,7 +3,7 @@
  * Handles player search and related operations.
  */
 
-import type { DayEnum, PeriodEnum } from '@rallia/shared-types';
+import type { DayEnum } from '@rallia/shared-types';
 import { supabase } from '../supabase';
 
 // =============================================================================
@@ -29,13 +29,15 @@ export interface HomeLocation {
  * Filter types for player search
  */
 export type GenderFilter = 'all' | 'male' | 'female' | 'other';
-// AvailabilityFilter accepts both the legacy 3-period values (morning/
-// afternoon/evening) and the new AM/PM macros from the 6-block UI. The
-// `search_players_nearby` RPC takes a single TEXT and matches against
-// period_enum equality; for the macros we pass null (no RPC-level filter)
-// since they span multiple enum values, and the macro filter is intended
-// to be applied client-side against the returned `availability` JSONB.
-export type AvailabilityFilter = 'all' | 'morning' | 'afternoon' | 'evening' | 'am' | 'pm';
+/**
+ * Hour-range filter for `search_players_nearby`. The RPC takes optional
+ * `p_min_hour` / `p_max_hour` SMALLINT params (0..23). `null` on either
+ * bound means open-ended; both null = no hour-range filter at all.
+ */
+export interface HourRangeFilter {
+  minHour: number | null;
+  maxHour: number | null;
+}
 export type DayFilter =
   | 'all'
   | 'monday'
@@ -72,7 +74,8 @@ export interface PlayerFilters {
   reputation?: ReputationFilter; // reputation tier filter
   certifiedOnly?: boolean; // show only certified players
   maxDistance?: DistanceFilter;
-  availability?: AvailabilityFilter;
+  /** Hour range filter (06..22). Both `minHour`/`maxHour` null = no filter. */
+  hourRange?: HourRangeFilter;
   day?: DayFilter;
   playStyle?: PlayStyleFilter;
   sortBy?: SortByFilter;
@@ -113,18 +116,9 @@ export interface PlayerSearchResult {
   reputation_is_public: boolean;
   /** Last seen timestamp for online status */
   last_seen_at: string | null;
-  /**
-   * @deprecated The search RPC no longer returns this field as of the
-   * hourly-availability migration (20260516184214_player_availability_hourly).
-   * Kept as optional so consumers continue to compile until they remove the
-   * read in PR C (which also deletes AvailabilityGrid on PlayerCard).
-   */
-  availability?: Partial<Record<AvailabilityDay, AvailabilityPeriod[]>> | null;
 }
 
 export type AvailabilityDay = DayEnum;
-
-export type AvailabilityPeriod = PeriodEnum;
 
 /**
  * Paginated response for player search
@@ -237,15 +231,10 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
         : parseInt(String(filters.maxDistance), 10)
       : null;
 
-  // Macro AM/PM filters span multiple enum values, so they're passed as null
-  // here and applied client-side against the JSONB availability map.
-  const isLegacyPeriodFilter =
-    filters.availability === 'morning' ||
-    filters.availability === 'afternoon' ||
-    filters.availability === 'evening';
-  const availability = isLegacyPeriodFilter
-    ? (filters.availability as 'morning' | 'afternoon' | 'evening')
-    : null;
+  // Hour range → RPC's optional p_min_hour / p_max_hour. Null means
+  // open-ended on that bound; both null = no hour-range filter.
+  const minHour = filters.hourRange?.minHour ?? null;
+  const maxHour = filters.hourRange?.maxHour ?? null;
 
   const day = filters.day && filters.day !== 'all' ? filters.day : null;
 
@@ -281,7 +270,9 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     p_min_skill_value: minSkillValue,
     p_min_travel_distance_km:
       !minTravelDistanceKm || isNaN(minTravelDistanceKm) ? null : minTravelDistanceKm,
-    p_availability: availability,
+    // p_availability is a deprecated no-op on the RPC; kept null to satisfy
+    // the signature. Hour filtering now flows through p_min_hour/p_max_hour.
+    p_availability: null,
     p_day: day,
     p_play_style: playStyle,
     p_favorite_player_ids: favoritePlayerIds.length > 0 ? favoritePlayerIds : null,
@@ -295,6 +286,8 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     p_rating_score_ids: ratingScoreIds,
     p_reputation_tier: reputationTier,
     p_certified_only: certifiedOnly,
+    p_min_hour: minHour,
+    p_max_hour: maxHour,
   });
 
   if (error) {
@@ -321,7 +314,6 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     reputation_score: number | null;
     reputation_is_public: boolean | null;
     last_seen_at: string | null;
-    availability: Partial<Record<AvailabilityDay, AvailabilityPeriod[]>> | null;
   };
 
   const rows = (data ?? []) as RpcRow[];
@@ -350,7 +342,6 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     reputation_score: row.reputation_score ?? null,
     reputation_is_public: row.reputation_is_public ?? false,
     last_seen_at: row.last_seen_at ?? null,
-    availability: row.availability ?? null,
   }));
 
   const hasMore = offset + rows.length < totalCount;

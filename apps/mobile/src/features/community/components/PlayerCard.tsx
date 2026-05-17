@@ -16,7 +16,6 @@ import type { PlayerSearchResult } from '@rallia/shared-services';
 import type { ReputationDisplay } from '@rallia/shared-services';
 import RatingBadge from '../../../components/RatingBadge';
 import ReputationBadge from '../../../components/ReputationBadge';
-import AvailabilityGrid from './AvailabilityGrid';
 import { useTranslation, useThemeStyles } from '../../../hooks';
 
 // Match MatchCard token usage: same background tier, same border alpha,
@@ -137,7 +136,6 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   const onlineColor = isDark ? status.success.light : status.success.DEFAULT;
 
   const hasBadges = !!(player.rating || reputationDisplay?.isVisible);
-  const hasAvailability = !!player.availability && Object.keys(player.availability).length > 0;
 
   // When the player isn't online, derive a calendar-day "last active" label.
   // Hidden when missing or stale beyond 14 days so the row doesn't carry
@@ -301,17 +299,6 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
             )}
           </View>
         </View>
-
-        {/* Full-width availability section beneath the avatar/info row */}
-        {hasAvailability && (
-          <View style={styles.availabilitySection}>
-            <AvailabilityGrid
-              availability={player.availability ?? null}
-              activeColor={tierAccent}
-              mutedColor={mutedColor}
-            />
-          </View>
-        )}
       </TouchableOpacity>
     </Animated.View>
   );
@@ -408,10 +395,6 @@ const styles = StyleSheet.create({
   favoriteButton: {
     padding: spacingPixels[1],
     flexShrink: 0,
-  },
-  availabilitySection: {
-    paddingHorizontal: CARD_PADDING,
-    paddingBottom: CARD_PADDING,
   },
 });
 

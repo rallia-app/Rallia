@@ -28,10 +28,38 @@ import { lightHaptic, selectionHaptic } from '../../../utils/haptics';
 // =============================================================================
 
 export type GenderFilter = 'all' | 'male' | 'female' | 'other';
-// 6-block macro filter: 'am' covers early/morning/midday, 'pm' covers
-// afternoon/evening/late. Granular 6-value filter is a follow-up — the
-// current dropdown stays at 3 options to keep the chip density unchanged.
-export type AvailabilityFilter = 'all' | 'am' | 'pm';
+
+/**
+ * Hour-range filter sent to `search_players_nearby`. The RPC takes
+ * `p_min_hour` / `p_max_hour` SMALLINT bounds (6..22). `null` means
+ * open-ended on that bound; both null = no hour filter.
+ */
+export interface HourRangeFilter {
+  minHour: number | null;
+  maxHour: number | null;
+}
+
+/**
+ * UI presets for the hour-range chip. The data layer is range-based so a
+ * future commit can swap in a true from/to picker without touching the
+ * service or the filter shape. For v1 we keep the legacy AM/PM macros
+ * (now actually executed server-side via the hourly column).
+ */
+export type HourRangePreset = 'all' | 'am' | 'pm';
+
+const HOUR_RANGE_PRESETS: Record<HourRangePreset, HourRangeFilter> = {
+  all: { minHour: null, maxHour: null },
+  am: { minHour: 6, maxHour: 11 },
+  pm: { minHour: 12, maxHour: 22 },
+};
+
+function presetFromRange(r: HourRangeFilter | undefined): HourRangePreset {
+  if (!r) return 'all';
+  if (r.minHour == null && r.maxHour == null) return 'all';
+  if (r.minHour === 6 && r.maxHour === 11) return 'am';
+  if (r.minHour === 12 && r.maxHour === 22) return 'pm';
+  return 'all';
+}
 export type DayFilter =
   | 'all'
   | 'monday'
@@ -71,7 +99,8 @@ export interface PlayerFilters {
   reputation: ReputationFilter;
   certifiedOnly: boolean;
   maxDistance: DistanceFilter;
-  availability: AvailabilityFilter;
+  /** Hour range (object) sent straight to the service. */
+  hourRange: HourRangeFilter;
   day: DayFilter;
   playStyle: PlayStyleFilter;
   sortBy: SortOption;
@@ -85,7 +114,7 @@ export const DEFAULT_PLAYER_FILTERS: PlayerFilters = {
   reputation: 'all',
   certifiedOnly: false,
   maxDistance: 'all',
-  availability: 'all',
+  hourRange: HOUR_RANGE_PRESETS.all,
   day: 'all',
   playStyle: 'all',
   sortBy: 'distance',
@@ -96,7 +125,7 @@ export const DEFAULT_PLAYER_FILTERS: PlayerFilters = {
 // =============================================================================
 
 const GENDER_OPTIONS: GenderFilter[] = ['all', 'male', 'female', 'other'];
-const AVAILABILITY_OPTIONS: AvailabilityFilter[] = ['all', 'am', 'pm'];
+const HOUR_RANGE_PRESET_OPTIONS: HourRangePreset[] = ['all', 'am', 'pm'];
 const DAY_OPTIONS: DayFilter[] = [
   'all',
   'monday',
@@ -142,7 +171,7 @@ const GENDER_LABEL_KEYS: Record<GenderFilter, TranslationKey> = {
   other: 'playerDirectory.filters.genderOther',
 };
 
-const AVAILABILITY_LABEL_KEYS: Record<AvailabilityFilter, TranslationKey> = {
+const HOUR_RANGE_LABEL_KEYS: Record<HourRangePreset, TranslationKey> = {
   all: 'playerDirectory.filters.availabilityAll',
   am: 'playerDirectory.filters.availabilityAm',
   pm: 'playerDirectory.filters.availabilityPm',
@@ -643,7 +672,7 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
       filters.reputation !== 'all' ||
       filters.certifiedOnly ||
       filters.maxDistance !== 'all' ||
-      filters.availability !== 'all' ||
+      presetFromRange(filters.hourRange) !== 'all' ||
       filters.day !== 'all' ||
       filters.playStyle !== 'all' ||
       (filters.sortBy && filters.sortBy !== 'distance')
@@ -683,9 +712,9 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
     [filters, onFiltersChange]
   );
 
-  const handleAvailabilityChange = useCallback(
-    (value: AvailabilityFilter) => {
-      onFiltersChange({ ...filters, availability: value });
+  const handleHourRangeChange = useCallback(
+    (preset: HourRangePreset) => {
+      onFiltersChange({ ...filters, hourRange: HOUR_RANGE_PRESETS[preset] });
     },
     [filters, onFiltersChange]
   );
@@ -748,10 +777,7 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
     (v: DistanceFilter) => (v === 'all' ? t('playerDirectory.filters.distanceAll') : `< ${v} km`),
     [t]
   );
-  const getAvailabilityLabel = useCallback(
-    (v: AvailabilityFilter) => t(AVAILABILITY_LABEL_KEYS[v]),
-    [t]
-  );
+  const getHourRangeLabel = useCallback((v: HourRangePreset) => t(HOUR_RANGE_LABEL_KEYS[v]), [t]);
   const getDayLabel = useCallback((v: DayFilter) => t(DAY_LABEL_KEYS[v] as TranslationKey), [t]);
   const getStyleLabel = useCallback((v: PlayStyleFilter) => t(PLAY_STYLE_LABEL_KEYS[v]), [t]);
   const getSortLabel = useCallback((v: SortOption) => t(SORT_LABEL_KEYS[v]), [t]);
@@ -792,10 +818,11 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
     filters.maxDistance === 'all'
       ? t('playerDirectory.filters.distance')
       : `< ${filters.maxDistance} km`;
-  const availabilityDisplay =
-    filters.availability === 'all'
+  const hourRangePreset = presetFromRange(filters.hourRange);
+  const hourRangeDisplay =
+    hourRangePreset === 'all'
       ? t('playerDirectory.filters.availability')
-      : t(AVAILABILITY_LABEL_KEYS[filters.availability]);
+      : t(HOUR_RANGE_LABEL_KEYS[hourRangePreset]);
   const dayDisplay =
     filters.day === 'all'
       ? t('playerDirectory.filters.day' as TranslationKey)
@@ -881,12 +908,12 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
         onPress: () => setShowGenderDropdown(true),
         show: true,
       },
-      // Availability Filter
+      // Hour-range Filter (AM/PM v1 — preset chips on top of HourRangeFilter)
       {
-        key: 'availability',
+        key: 'hourRange',
         label: t('playerDirectory.filters.availability'),
-        value: availabilityDisplay,
-        isActive: filters.availability !== 'all',
+        value: hourRangeDisplay,
+        isActive: hourRangePreset !== 'all',
         onPress: () => setShowAvailabilityDropdown(true),
         show: true,
       },
@@ -943,7 +970,8 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
       isAuthenticated,
       genderDisplay,
       distanceDisplay,
-      availabilityDisplay,
+      hourRangeDisplay,
+      hourRangePreset,
       dayDisplay,
       styleDisplay,
       sortDisplay,
@@ -1077,12 +1105,12 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
       <FilterDropdown
         visible={showAvailabilityDropdown}
         title={t('playerDirectory.filters.selectAvailability')}
-        options={AVAILABILITY_OPTIONS}
-        selectedValue={filters.availability}
-        onSelect={handleAvailabilityChange}
+        options={HOUR_RANGE_PRESET_OPTIONS}
+        selectedValue={hourRangePreset}
+        onSelect={handleHourRangeChange}
         onClose={() => setShowAvailabilityDropdown(false)}
         isDark={isDark}
-        getLabel={getAvailabilityLabel}
+        getLabel={getHourRangeLabel}
       />
 
       <FilterDropdown
