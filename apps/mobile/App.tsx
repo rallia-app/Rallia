@@ -5,6 +5,7 @@
  */
 import './src/lib/supabase';
 import { initRevenueCat } from './src/lib/revenuecat';
+
 import * as Sentry from '@sentry/react-native';
 import { isRunningInExpoGo } from 'expo';
 import Mapbox from '@rnmapbox/maps';
@@ -82,9 +83,6 @@ SystemUI.setBackgroundColorAsync('#fafafa');
 import { focusManager, QueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
-import AppNavigator from './src/navigation/AppNavigator';
-import { navigationRef } from './src/navigation';
-import { linking } from './src/navigation/linking';
 import {
   ThemeProvider,
   useTheme,
@@ -99,14 +97,23 @@ import {
   useTopSuggestions,
 } from '@rallia/shared-hooks';
 import { useBadgeCountSync } from '@rallia/shared-hooks/src/useBadgeCountSync';
-import { WelcomeTourModal } from './src/components/WelcomeTourModal';
-import { TourCompleteModal } from './src/components/TourCompleteModal';
-import { ErrorBoundary, ToastProvider, NetworkProvider } from '@rallia/shared-components';
+import { ErrorBoundary, ToastProvider, NetworkProvider, useToast } from '@rallia/shared-components';
 import type { ErrorBoundaryTranslations } from '@rallia/shared-components';
 import { getLocales } from 'expo-localization';
 import * as Application from 'expo-application';
-import { Logger } from './src/services/logger';
-import { appOpened, deepLinkOpened } from './src/services/analytics';
+
+import { parseUtmParams, successHaptic, type UtmParams } from '@rallia/shared-utils';
+import { PostHogProvider, posthogClient } from './src/providers/PostHogProvider';
+import { StripeProvider } from '@stripe/stripe-react-native';
+import { SheetManager, SheetProvider } from 'react-native-actions-sheet';
+import { Sheets } from './src/context/sheets';
+import { getMatchWithDetails, supabase } from '@rallia/shared-services';
+import {
+  usePushNotifications,
+  useEffectiveLocation,
+  useTranslation,
+  type TranslationKey,
+} from './src/hooks';
 import {
   AuthProvider,
   useAuth,
@@ -134,21 +141,18 @@ import {
   useTour,
   TourProvider,
 } from './src/context';
-import {
-  usePushNotifications,
-  useEffectiveLocation,
-  useTranslation,
-  type TranslationKey,
-} from './src/hooks';
-import { parseUtmParams, successHaptic, type UtmParams } from '@rallia/shared-utils';
-import { PostHogProvider, posthogClient } from './src/providers/PostHogProvider';
-import { StripeProvider } from '@stripe/stripe-react-native';
-import { SheetManager, SheetProvider } from 'react-native-actions-sheet';
-import { Sheets } from './src/context/sheets';
-import { useToast } from '@rallia/shared-components';
-import { getMatchWithDetails, supabase } from '@rallia/shared-services';
+import { appOpened, deepLinkOpened } from './src/services/analytics';
+import { Logger } from './src/services/logger';
+import { TourCompleteModal } from './src/components/TourCompleteModal';
+import { WelcomeTourModal } from './src/components/WelcomeTourModal';
+import { linking } from './src/navigation/linking';
+import { navigationRef } from './src/navigation';
+import AppNavigator from './src/navigation/AppNavigator';
 import type { MatchDetailData } from './src/context/MatchDetailSheetContext';
-import { attemptFirstLaunchAttribution } from './src/utils/referralAttribution';
+import {
+  attemptFirstLaunchAttribution,
+  WEB_DISTINCT_ID_KEY,
+} from './src/utils/referralAttribution';
 
 // Import NativeWind global styles
 // import './global.css';
@@ -300,9 +304,24 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
   }, []);
 
   useEffect(() => {
-    if (user) {
-      posthogClient?.identify(user.id, { email: user.email ?? null });
-    }
+    if (!user) return;
+    // Bridge the web visitor's PostHog distinct_id into the authenticated
+    // mobile profile. `alias` merges the anonymous web-side person (which
+    // carries person.utm_source set by web's UtmCapture) into the current
+    // mobile distinct_id; then `identify(user.id)` promotes everything to
+    // the canonical authenticated user id. Sequence matters: alias MUST
+    // run before identify so the merge resolves cleanly.
+    void (async () => {
+      try {
+        const webDid = await AsyncStorage.getItem(WEB_DISTINCT_ID_KEY);
+        if (webDid) {
+          posthogClient?.alias(webDid);
+          await AsyncStorage.removeItem(WEB_DISTINCT_ID_KEY).catch(() => {});
+        }
+      } finally {
+        posthogClient?.identify(user.id, { email: user.email ?? null });
+      }
+    })();
   }, [user]);
 
   // Handle incoming deep link URL
@@ -318,6 +337,25 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
             AsyncStorage.setItem(UTM_STORAGE_KEY, JSON.stringify(utmParams)).catch(() => {});
           }
         });
+      }
+
+      // PostHog distinct_id passthrough — when a web visitor taps a Universal
+      // Link (e.g. the Smart App Banner or a /match/[id] link) the URL carries
+      // `?ph_did=<their web distinct_id>`. Persisting this on cold start lets
+      // the post-auth alias merge their pre-install web events into the user.
+      if (isColdStart) {
+        try {
+          const phDid = new URL(url).searchParams.get('ph_did');
+          if (phDid) {
+            AsyncStorage.getItem(WEB_DISTINCT_ID_KEY).then(existing => {
+              if (!existing) {
+                AsyncStorage.setItem(WEB_DISTINCT_ID_KEY, phDid).catch(() => {});
+              }
+            });
+          }
+        } catch {
+          // Malformed URL — ignore.
+        }
       }
 
       const matchId = parseMatchIdFromUrl(url);
@@ -343,7 +381,7 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
 
           if (data?.onboarding_completed) {
             successHaptic();
-            toast.success(t('profile.payments.connectedToast' as TranslationKey));
+            toast.success(t('profile.payments.connectedToast'));
           } else if (attempts < 5) {
             setTimeout(() => checkOnboarding(attempts + 1), 2000);
           }
@@ -425,7 +463,7 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
   // iOS: Match device fingerprint against web invite page visits
   useEffect(() => {
     if (userId) {
-      attemptFirstLaunchAttribution(userId).catch(() => {});
+      attemptFirstLaunchAttribution().catch(() => {});
     }
   }, [userId]);
 
@@ -830,7 +868,7 @@ function App() {
                     // Skip queries whose payloads contain Date instances —
                     // JSON persistence turns them into strings and breaks
                     // consumers that call Date methods on the rehydrated value.
-                    const [root, sub] = query.queryKey as readonly unknown[];
+                    const [root, sub] = query.queryKey;
                     if (root === 'court-availability') return false;
                     if (root === 'matches' && (sub === 'justForYou' || sub === 'topSuggestions')) {
                       return false;

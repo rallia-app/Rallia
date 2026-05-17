@@ -11,6 +11,7 @@ import type { UtmParams } from '@rallia/shared-utils';
  */
 
 const COOKIE_NAME = 'rallia_utm';
+const DID_COOKIE_NAME = 'ph_did';
 const COOKIE_MAX_AGE_DAYS = 90;
 
 export function readUtmCookie(): UtmParams | null {
@@ -39,4 +40,33 @@ export function writeUtmCookieIfAbsent(params: UtmParams): boolean {
 export function clearUtmCookie(): void {
   if (typeof document === 'undefined') return;
   document.cookie = `${COOKIE_NAME}=; Max-Age=0; Path=/; SameSite=Lax`;
+}
+
+/**
+ * PostHog anonymous distinct_id mirrored to a first-party cookie so it's
+ * readable by server-rendered components (Smart App Banner meta tag,
+ * `logReferralClick`) and by the Layer 2 clipboard handoff. First-touch
+ * semantics — only writes once per browser, so a returning visitor's
+ * distinct_id stays stable across visits.
+ */
+export function readDistinctIdCookie(): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.split('; ').find(row => row.startsWith(`${DID_COOKIE_NAME}=`));
+  if (!match) return null;
+  const value = decodeURIComponent(match.slice(DID_COOKIE_NAME.length + 1));
+  return value || null;
+}
+
+export function writeDistinctIdCookieIfAbsent(distinctId: string): boolean {
+  if (typeof document === 'undefined') return false;
+  if (readDistinctIdCookie()) return false;
+  const value = encodeURIComponent(distinctId);
+  const maxAge = COOKIE_MAX_AGE_DAYS * 24 * 60 * 60;
+  document.cookie = `${DID_COOKIE_NAME}=${value}; Max-Age=${maxAge}; Path=/; SameSite=Lax`;
+  return true;
+}
+
+export function clearDistinctIdCookie(): void {
+  if (typeof document === 'undefined') return;
+  document.cookie = `${DID_COOKIE_NAME}=; Max-Age=0; Path=/; SameSite=Lax`;
 }

@@ -1,61 +1,69 @@
 /**
  * Referral Attribution Utilities
  *
- * Handles automatic referral code detection on first app launch:
- * - Android: Parse referral_code, invitation_type, target_id from Play Install Referrer
- * - iOS: No automatic attribution. Users enter the referral code manually during
- *   onboarding (PersonalInfoStep / DiscoveryStep). The web invite page displays
- *   the code prominently for that purpose.
+ * Handles automatic attribution capture on first app launch:
+ * - Android: Parse referral_code, invitation_type, target_id, ph_did, and
+ *   utm_* from the Play Install Referrer string. UTM params get persisted
+ *   to UTM_STORAGE_KEY for the post-auth flush in App.tsx; the
+ *   PostHog distinct_id from the web visitor goes to WEB_DISTINCT_ID_KEY
+ *   so App.tsx can `posthog.alias(webDid)` before `identify(user.id)`.
+ * - iOS: Read the clipboard handoff token written by the web's App Store
+ *   badge click handler. `Clipboard.hasUrlAsync()` checks silently, then
+ *   `getStringAsync()` triggers the one-time paste banner only if a URL
+ *   was actually present. Server-side `/api/attribution/verify` validates
+ *   HMAC + 15-min expiry.
  *
- * Stores structured PendingReferral data in AsyncStorage for post-signup attribution.
+ * Stores structured PendingReferral data in AsyncStorage for post-signup
+ * attribution. The attribution-attempted flag guarantees this only runs
+ * once per install.
  */
 
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Application from 'expo-application';
+import { Logger } from '@rallia/shared-services';
+import type { InvitationType } from '@rallia/shared-services';
+
 import {
   PENDING_REFERRAL_KEY,
   type PendingReferral,
   type DeepLinkPayload,
   setPendingDeepLink,
 } from '../navigation/deepLinkStore';
-import { Logger } from '@rallia/shared-services';
-import type { InvitationType } from '@rallia/shared-services';
+
+import { readClipboardAttribution } from './iosClipboardAttribution';
 
 const ATTRIBUTION_ATTEMPTED_KEY = 'referral_attribution_attempted';
 
-/**
- * Attempt automatic referral attribution on first launch.
- * Safe to call multiple times — only runs once per install.
- *
- * iOS is intentionally a no-op: Apple provides no Install Referrer equivalent,
- * and the previous clipboard + fingerprint workarounds were unreliable and
- * triggered the iOS 16+ "Allow Paste" banner. iOS users enter their code
- * manually in onboarding instead.
- */
-export async function attemptFirstLaunchAttribution(_playerId: string): Promise<void> {
-  try {
-    if (Platform.OS !== 'android') return;
+/** Web visitor's PostHog distinct_id, captured at marketing-site click time
+ * and bridged to mobile via either the Android install referrer or the
+ * iOS clipboard handoff. Read by App.tsx after auth to call
+ * `posthog.alias(webDid)` so pre-install web events merge into the user. */
+export const WEB_DISTINCT_ID_KEY = '@rallia/web-distinct-id';
 
-    // Only attempt once per install
+/** UTM params from the web visit. Matches the key already consumed by
+ * App.tsx's post-auth flush (kept in sync with apps/mobile/App.tsx). */
+const UTM_STORAGE_KEY = '@rallia/utm-params';
+
+const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'] as const;
+
+export async function attemptFirstLaunchAttribution(): Promise<void> {
+  try {
+    // Only attempt once per install — both platforms.
     const alreadyAttempted = await AsyncStorage.getItem(ATTRIBUTION_ATTEMPTED_KEY);
     if (alreadyAttempted) return;
 
-    // Don't override a manually entered code (from deep link)
+    // Don't override a manually entered code (from deep link).
     const existingRaw = await AsyncStorage.getItem(PENDING_REFERRAL_KEY);
     if (existingRaw) {
       await AsyncStorage.setItem(ATTRIBUTION_ATTEMPTED_KEY, 'true');
       return;
     }
 
-    const pendingReferral = await getAndroidInstallReferrer();
-
-    if (pendingReferral) {
-      await AsyncStorage.setItem(PENDING_REFERRAL_KEY, JSON.stringify(pendingReferral));
-      // Also push to in-memory store so Home's listener fires immediately
-      // (avoids race condition for already-onboarded users who reinstall)
-      const payload = toDeepLinkPayload(pendingReferral);
-      if (payload) setPendingDeepLink(payload);
+    if (Platform.OS === 'android') {
+      await captureAndroidInstallReferrer();
+    } else if (Platform.OS === 'ios') {
+      await captureIOSClipboardAttribution();
     }
 
     await AsyncStorage.setItem(ATTRIBUTION_ATTEMPTED_KEY, 'true');
@@ -63,48 +71,67 @@ export async function attemptFirstLaunchAttribution(_playerId: string): Promise<
     Logger.warn('[referralAttribution] First launch attribution failed', {
       error: String(error),
     });
-    // Mark as attempted to avoid retrying on every launch
+    // Mark as attempted to avoid retrying on every launch.
     await AsyncStorage.setItem(ATTRIBUTION_ATTEMPTED_KEY, 'true').catch(() => {});
   }
 }
 
-/**
- * Android: Parse referral data from the Play Install Referrer string.
- * The web invite page appends referral_code, invitation_type, and target_id
- * to the Play Store URL's referrer parameter.
- */
-async function getAndroidInstallReferrer(): Promise<PendingReferral | null> {
-  try {
-    const referrer = await Application.getInstallReferrerAsync();
-    if (!referrer) return null;
+async function captureAndroidInstallReferrer(): Promise<void> {
+  const referrer = await Application.getInstallReferrerAsync();
+  if (!referrer) return;
 
-    const params = new URLSearchParams(referrer);
-    const code = params.get('referral_code');
-    const invitationType = params.get('invitation_type') as InvitationType | null;
-    const targetId = params.get('target_id');
+  const params = new URLSearchParams(referrer);
+  const code = params.get('referral_code');
+  const invitationType = params.get('invitation_type') as InvitationType | null;
+  const targetId = params.get('target_id');
+  const webDistinctId = params.get('ph_did');
 
-    // If we have a referral code, return full referral data
-    if (code) {
-      return {
-        code,
-        type: invitationType || 'referral',
-        targetId: targetId || undefined,
-      };
-    }
+  // Persist the web distinct_id so App.tsx can alias post-auth.
+  if (webDistinctId) {
+    await AsyncStorage.setItem(WEB_DISTINCT_ID_KEY, webDistinctId);
+  }
 
-    // No referral code but invitation context present (e.g., /join/{code} or /match/{id})
-    // — still capture the invitation type and target for deferred deep linking
-    if (invitationType && targetId) {
-      return {
-        code: '',
-        type: invitationType,
-        targetId,
-      };
-    }
+  // Persist UTM keys (matching what App.tsx's post-auth flush reads).
+  const utm: Record<string, string> = {};
+  for (const key of UTM_KEYS) {
+    const value = params.get(key);
+    if (value) utm[key] = value;
+  }
+  if (Object.keys(utm).length > 0) {
+    await AsyncStorage.setItem(UTM_STORAGE_KEY, JSON.stringify(utm));
+  }
 
-    return null;
-  } catch {
-    return null;
+  // Referral-code branch: full PendingReferral payload, surfaced via the
+  // existing deep-link store so onboarding picks it up.
+  if (code) {
+    const pending: PendingReferral = {
+      code,
+      type: invitationType || 'referral',
+      targetId: targetId || undefined,
+    };
+    await AsyncStorage.setItem(PENDING_REFERRAL_KEY, JSON.stringify(pending));
+    const payload = toDeepLinkPayload(pending);
+    if (payload) setPendingDeepLink(payload);
+    return;
+  }
+
+  // No referral code but invitation context present (e.g., /join/{code} or
+  // /match/{id} via Play Store install referrer).
+  if (invitationType && targetId) {
+    const pending: PendingReferral = { code: '', type: invitationType, targetId };
+    await AsyncStorage.setItem(PENDING_REFERRAL_KEY, JSON.stringify(pending));
+    const payload = toDeepLinkPayload(pending);
+    if (payload) setPendingDeepLink(payload);
+  }
+}
+
+async function captureIOSClipboardAttribution(): Promise<void> {
+  const payload = await readClipboardAttribution();
+  if (!payload) return;
+
+  await AsyncStorage.setItem(WEB_DISTINCT_ID_KEY, payload.did);
+  if (payload.utm && Object.keys(payload.utm).length > 0) {
+    await AsyncStorage.setItem(UTM_STORAGE_KEY, JSON.stringify(payload.utm));
   }
 }
 

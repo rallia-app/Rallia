@@ -1,13 +1,16 @@
 import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
+import Image from 'next/image';
+import { QRCodeSVG } from 'qrcode.react';
+
+import { IOSCodeHandoff } from '../../invite/[code]/_components/ios-code-handoff';
+
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { logReferralClick, buildPlayStoreUrl, APP_STORE_URL } from '@/lib/referral-tracking';
 import { getLandingContext } from '@/lib/landing-attribution';
 import { Card, CardContent } from '@/components/ui/card';
-import Image from 'next/image';
-import { QRCodeSVG } from 'qrcode.react';
-import { IOSCodeHandoff } from '../../invite/[code]/_components/ios-code-handoff';
+import ThemeLogo from '@/components/theme-logo';
 
 type Props = {
   params: Promise<{ code: string; locale: string }>;
@@ -43,13 +46,13 @@ export default async function GroupJoinPage({ params }: Props) {
   const { code, locale } = await params;
 
   // Attribution: log click and detect platform
-  const { platform, fingerprint, ip, userAgent } = await getLandingContext();
+  const { platform, ip, userAgent, webDistinctId, utm } = await getLandingContext();
 
   // Log click for analytics (non-blocking, no referral code)
-  logReferralClick('', fingerprint, ip, userAgent, 'group', code).catch(() => {});
+  logReferralClick('', ip, userAgent, 'group', code, webDistinctId, utm).catch(() => {});
 
   if (platform === 'android') {
-    redirect(buildPlayStoreUrl(undefined, 'group', code));
+    redirect(buildPlayStoreUrl(undefined, 'group', code, { webDistinctId, utm }));
   }
 
   // iOS + Desktop: show landing page (iOS gets clipboard CTA, desktop gets QR code)
@@ -70,7 +73,7 @@ export default async function GroupJoinPage({ params }: Props) {
 
   return (
     <div className="flex flex-col items-center gap-8 py-16 w-full max-w-lg mx-auto animate-fade-in">
-      <Image src="/rallia_logo_light.svg" alt="Rallia" width={140} height={40} priority />
+      <ThemeLogo width={140} height={40} />
 
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold">{heading}</h1>
@@ -118,7 +121,7 @@ export default async function GroupJoinPage({ params }: Props) {
               />
             </a>
             <a
-              href={buildPlayStoreUrl(undefined, 'group', code)}
+              href={buildPlayStoreUrl(undefined, 'group', code, { webDistinctId, utm })}
               target="_blank"
               rel="noopener noreferrer"
             >

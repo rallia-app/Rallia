@@ -1,10 +1,5 @@
 'use client';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import type { Appearance } from '@stripe/stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
@@ -12,6 +7,20 @@ import { ArrowLeft, Heart, Lock, Mail } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useState } from 'react';
+
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  donateAmountSelected,
+  donateCompleted,
+  donateFailed,
+  donateIntentCreated,
+} from '@/lib/analytics';
+
+const DONATE_CURRENCY = 'CAD';
 
 const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
@@ -55,7 +64,12 @@ interface PaymentFormProps {
   onError: (msg: string) => void;
 }
 
-function PaymentForm({ formattedAmount, onSuccess, onError }: PaymentFormProps) {
+function PaymentForm({
+  formattedAmount,
+  amountCents,
+  onSuccess,
+  onError,
+}: PaymentFormProps & { amountCents: number }) {
   const stripe = useStripe();
   const elements = useElements();
   const t = useTranslations('donate');
@@ -73,6 +87,11 @@ function PaymentForm({ formattedAmount, onSuccess, onError }: PaymentFormProps) 
 
     if (error) {
       onError(error.message ?? t('errors.paymentFailed'));
+      donateFailed({
+        amount_cents: amountCents,
+        currency: DONATE_CURRENCY,
+        stage: 'payment_confirm',
+      });
       setIsSubmitting(false);
     } else {
       onSuccess();
@@ -154,9 +173,15 @@ export default function DonationPageClient({ defaultCompleted = false }: Props) 
       const { clientSecret: secret } = await res.json();
       setClientSecret(secret);
       setStep('CHECKOUT');
+      donateIntentCreated({ amount_cents: amountCents, currency: DONATE_CURRENCY });
     } catch (err) {
       setError(err instanceof Error ? err.message : t('errors.generic'));
       setStep('IDLE');
+      donateFailed({
+        amount_cents: amountCents,
+        currency: DONATE_CURRENCY,
+        stage: 'intent_create',
+      });
     }
   }, [amountCents, amountIsValid, donorEmail, donorMessage, donorName, t]);
 
@@ -173,7 +198,17 @@ export default function DonationPageClient({ defaultCompleted = false }: Props) 
   }, []);
 
   useEffect(() => {
-    if (defaultCompleted) setStep('COMPLETED');
+    if (defaultCompleted) {
+      setStep('COMPLETED');
+      // amount_cents may be unknown here — we landed via Stripe redirect-back
+      // with only `payment_intent` in the URL. Falling back to 0 keeps the
+      // event firing for funnel-count purposes; PostHog can join the amount
+      // from the prior donate_intent_created event in the same session.
+      donateCompleted({ amount_cents: amountCents, currency: DONATE_CURRENCY });
+    }
+    // amountCents is intentionally not in deps — we only fire once on mount
+    // when defaultCompleted is true.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultCompleted]);
 
   if (step === 'COMPLETED') {
@@ -223,7 +258,11 @@ export default function DonationPageClient({ defaultCompleted = false }: Props) 
         >
           <PaymentForm
             formattedAmount={formattedAmount}
-            onSuccess={() => setStep('COMPLETED')}
+            amountCents={amountCents}
+            onSuccess={() => {
+              setStep('COMPLETED');
+              donateCompleted({ amount_cents: amountCents, currency: DONATE_CURRENCY });
+            }}
             onError={msg => setError(msg)}
           />
         </Elements>
@@ -251,6 +290,11 @@ export default function DonationPageClient({ defaultCompleted = false }: Props) 
                 setIsCustom(false);
                 setCustomAmount('');
                 setError(null);
+                donateAmountSelected({
+                  amount_cents: amount * 100,
+                  currency: DONATE_CURRENCY,
+                  is_custom: false,
+                });
               }}
               className={`rounded-xl border-2 py-3 text-base font-semibold transition-all ${
                 !isCustom && selectedPreset === amount
@@ -267,6 +311,11 @@ export default function DonationPageClient({ defaultCompleted = false }: Props) 
               setIsCustom(true);
               setSelectedPreset(null);
               setError(null);
+              donateAmountSelected({
+                amount_cents: 0,
+                currency: DONATE_CURRENCY,
+                is_custom: true,
+              });
             }}
             className={`rounded-xl border-2 py-3 text-base font-semibold transition-all ${
               isCustom

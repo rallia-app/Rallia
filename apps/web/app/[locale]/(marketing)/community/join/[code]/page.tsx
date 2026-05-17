@@ -1,13 +1,17 @@
 import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
+import { QRCodeSVG } from 'qrcode.react';
+
+import { IOSCodeHandoff } from '../../../invite/[code]/_components/ios-code-handoff';
+
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { logReferralClick, buildPlayStoreUrl, APP_STORE_URL } from '@/lib/referral-tracking';
 import { getLandingContext } from '@/lib/landing-attribution';
 import { Card, CardContent } from '@/components/ui/card';
-import Image from 'next/image';
-import { QRCodeSVG } from 'qrcode.react';
-import { IOSCodeHandoff } from '../../../invite/[code]/_components/ios-code-handoff';
+import { TrackedStoreBadges } from '@/components/tracked-store-badges';
+import { InviteLandingTracker } from '@/components/invite-landing-tracker';
+import ThemeLogo from '@/components/theme-logo';
 
 type Props = {
   params: Promise<{ code: string; locale: string }>;
@@ -45,13 +49,13 @@ export default async function CommunityJoinPage({ params }: Props) {
   const { code, locale } = await params;
 
   // Attribution: log click and detect platform
-  const { platform, fingerprint, ip, userAgent } = await getLandingContext();
+  const { platform, ip, userAgent, webDistinctId, utm } = await getLandingContext();
 
   // Log click for analytics (non-blocking, no referral code)
-  logReferralClick('', fingerprint, ip, userAgent, 'community', code).catch(() => {});
+  logReferralClick('', ip, userAgent, 'community', code, webDistinctId, utm).catch(() => {});
 
   if (platform === 'android') {
-    redirect(buildPlayStoreUrl(undefined, 'community', code));
+    redirect(buildPlayStoreUrl(undefined, 'community', code, { webDistinctId, utm }));
   }
 
   // iOS + Desktop: show landing page (iOS gets clipboard CTA, desktop gets QR code)
@@ -72,7 +76,13 @@ export default async function CommunityJoinPage({ params }: Props) {
 
   return (
     <div className="flex flex-col items-center gap-8 py-16 w-full max-w-lg mx-auto animate-fade-in">
-      <Image src="/rallia_logo_light.svg" alt="Rallia" width={140} height={40} priority />
+      <InviteLandingTracker
+        surface="community_join"
+        invitationType="community"
+        platform={platform ?? 'desktop'}
+        code={code}
+      />
+      <ThemeLogo width={140} height={40} />
 
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold">{heading}</h1>
@@ -102,44 +112,13 @@ export default async function CommunityJoinPage({ params }: Props) {
             </CardContent>
           </Card>
 
-          <div className="flex gap-4">
-            <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
-              <Image
-                src="/app-store-badge-light.svg"
-                alt={t('appStore')}
-                width={120}
-                height={40}
-                className="button-scale block dark:hidden"
-              />
-              <Image
-                src="/app-store-badge.svg"
-                alt={t('appStore')}
-                width={120}
-                height={40}
-                className="button-scale hidden dark:block"
-              />
-            </a>
-            <a
-              href={buildPlayStoreUrl(undefined, 'community', code)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Image
-                src="/google-play-badge-light.svg"
-                alt={t('googlePlay')}
-                width={135}
-                height={40}
-                className="button-scale block dark:hidden"
-              />
-              <Image
-                src="/google-play-badge.svg"
-                alt={t('googlePlay')}
-                width={135}
-                height={40}
-                className="button-scale hidden dark:block"
-              />
-            </a>
-          </div>
+          <TrackedStoreBadges
+            placement="invite_page"
+            playStoreUrl={buildPlayStoreUrl(undefined, 'community', code, { webDistinctId, utm })}
+            appStoreLabel={t('appStore')}
+            playStoreLabel={t('googlePlay')}
+            invitationCode={code}
+          />
         </>
       )}
     </div>

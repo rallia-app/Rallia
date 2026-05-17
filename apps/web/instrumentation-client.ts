@@ -36,6 +36,12 @@ if (process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_POSTHOG_KEY
     api_host: '/ingest',
     ui_host: 'https://us.posthog.com',
     defaults: '2026-01-30',
+    loaded: ph => {
+      // Tags every event from the web client so PostHog cohorts can separate
+      // marketing-site traffic from mobile-app events. PostHogIdentify
+      // overlays auth context on top via setPersonProperties.
+      ph.register({ web_role: 'marketing_visitor' });
+    },
   });
 }
 

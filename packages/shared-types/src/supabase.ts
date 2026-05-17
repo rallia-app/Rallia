@@ -6337,8 +6337,15 @@ export type Database = {
           invitation_type: string | null
           ip_address: string | null
           referral_code: string
+          referrer_host: string | null
           target_id: string | null
           user_agent: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+          web_distinct_id: string | null
         }
         Insert: {
           created_at?: string
@@ -6347,8 +6354,15 @@ export type Database = {
           invitation_type?: string | null
           ip_address?: string | null
           referral_code: string
+          referrer_host?: string | null
           target_id?: string | null
           user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          web_distinct_id?: string | null
         }
         Update: {
           created_at?: string
@@ -6357,8 +6371,15 @@ export type Database = {
           invitation_type?: string | null
           ip_address?: string | null
           referral_code?: string
+          referrer_host?: string | null
           target_id?: string | null
           user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          web_distinct_id?: string | null
         }
         Relationships: []
       }
@@ -8264,6 +8285,24 @@ export type Database = {
         Args: { p_player_id: string }
         Returns: number
       }
+      get_upcoming_matches_scored: {
+        Args: {
+          p_caller_id: string
+          p_latitude: number
+          p_limit?: number
+          p_longitude: number
+          p_max_distance_km: number
+          p_sport_id: string
+          p_user_gender?: string
+        }
+        Returns: {
+          distance_meters: number
+          facility_affinity: number
+          match_id: string
+          player_compatibility: number
+          score_history: number
+        }[]
+      }
       get_user_conversation_ids: {
         Args: { user_id: string }
         Returns: string[]
@@ -8501,6 +8540,8 @@ export type Database = {
           p_referral_code: string
           p_target_id?: string
           p_user_agent?: string
+          p_utm?: Json
+          p_web_distinct_id?: string
         }
         Returns: undefined
       }

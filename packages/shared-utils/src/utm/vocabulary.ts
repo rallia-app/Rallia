@@ -25,12 +25,20 @@ export const UTM_SOURCES = [
   // Paid
   'google_ads',
   'meta_ads',
+  'bing_ads',
+  // Organic search (set by inbound referrer inference)
+  'google',
+  'bing',
+  'duckduckgo',
   // Partner / event
   'partner',
   'event',
   // App-internal share (user shared a link from inside the app)
   'app_share',
+  // Physical / scan
+  'qr',
   // Catch-all
+  'referral',
   'direct',
   'other',
 ] as const;

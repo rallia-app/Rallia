@@ -36,8 +36,9 @@ import { Textarea } from '@/components/ui/textarea';
 const DEFAULT_DESTINATIONS = [
   { value: 'https://rallia.app/', label: 'Home' },
   { value: 'https://rallia.app/play', label: '/play (Friends & Family)' },
-  { value: 'https://rallia.app/tennis', label: '/tennis' },
-  { value: 'https://rallia.app/pickleball', label: '/pickleball' },
+  { value: 'https://rallia.app/games', label: '/games (public matches)' },
+  { value: 'https://rallia.app/communities', label: '/communities' },
+  { value: 'https://rallia.app/donate', label: '/donate' },
 ];
 
 /**
