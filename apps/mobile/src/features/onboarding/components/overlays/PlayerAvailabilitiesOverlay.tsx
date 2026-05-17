@@ -207,13 +207,13 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
             </View>
           )}
 
-          <Text style={[styles.subtitle, { color: colors.text }]}>
-            {t('onboarding.availabilityStep.subtitle')}
-          </Text>
-
-          <View style={styles.counterContainer}>
+          {/* Title is in the sheet header — keep only the live count here so
+              users can see the selected-vs-minimum signal at a glance. The
+              full title+subtitle+counter triplet stacked vertically pushed
+              the grid below the fold on smaller phones. */}
+          <View style={styles.counterRow}>
             <Text
-              size="sm"
+              size="xs"
               weight="semibold"
               color={totalSelections >= MIN_SELECTIONS ? colors.primary : colors.textMuted}
             >
@@ -324,7 +324,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: spacingPixels[4],
+    paddingHorizontal: spacingPixels[3],
+    paddingTop: spacingPixels[2],
+    paddingBottom: spacingPixels[4],
   },
   backButton: {
     alignSelf: 'flex-start',
@@ -335,25 +337,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[2],
-    padding: spacingPixels[3],
+    padding: spacingPixels[2],
     borderRadius: radiusPixels.md,
-    marginBottom: spacingPixels[4],
+    marginBottom: spacingPixels[2],
   },
   staleBannerText: {
     flex: 1,
   },
-  subtitle: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: spacingPixels[4],
-  },
-  counterContainer: {
-    alignItems: 'center',
-    marginBottom: spacingPixels[3],
+  counterRow: {
+    alignItems: 'flex-end',
+    marginBottom: spacingPixels[2],
   },
   gridWrapper: {
-    marginTop: spacingPixels[4],
-    marginBottom: spacingPixels[6],
+    marginTop: spacingPixels[2],
+    marginBottom: spacingPixels[2],
   },
   footer: {
     padding: spacingPixels[4],

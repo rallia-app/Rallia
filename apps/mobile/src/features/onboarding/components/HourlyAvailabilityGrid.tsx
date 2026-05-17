@@ -145,8 +145,10 @@ function formatHourLabel(hour: number, locale: string): string {
 // COMPONENT
 // =============================================================================
 
-const TIME_COL_WIDTH = 56;
-const CELL_HEIGHT = 28;
+// Tightened to fit the full 7×17 grid + the surrounding step chrome on the
+// smallest iPhone screen (SE) without forcing the user to scroll.
+const TIME_COL_WIDTH = 44;
+const CELL_HEIGHT = 22;
 
 export const HourlyAvailabilityGrid: React.FC<HourlyAvailabilityGridProps> = ({
   value,
@@ -386,27 +388,27 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacingPixels[1],
+    marginBottom: 2,
   },
   dayHeader: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacingPixels[1],
+    paddingVertical: 0,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   timeLabel: {
-    paddingRight: spacingPixels[2],
+    paddingRight: spacingPixels[1],
     justifyContent: 'center',
     alignItems: 'flex-end',
   },
   cell: {
     flex: 1,
-    height: CELL_HEIGHT - 4,
-    marginHorizontal: 1.5,
+    height: CELL_HEIGHT - 3,
+    marginHorizontal: 1,
     borderRadius: radiusPixels.sm,
     borderWidth: 1,
   },

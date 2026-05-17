@@ -98,16 +98,16 @@ export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
       keyboardDismissMode="interactive"
       scrollEnabled={scrollEnabled}
     >
-      <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
-        {t('onboarding.availability')}
-      </Text>
-      <Text size="base" color={colors.textSecondary} style={styles.subtitle}>
-        {t('onboarding.availabilitySubtitle')}
-      </Text>
-
-      <View style={styles.counterContainer}>
+      {/* Compact header row: title on the left, live count on the right.
+          Collapses what used to be three stacked rows (title, subtitle,
+          counter) into one ~26pt line so the 17-hour grid clears the screen
+          on iPhone SE without scrolling. */}
+      <View style={styles.headerRow}>
+        <Text size="lg" weight="bold" color={colors.text} style={styles.title}>
+          {t('onboarding.availability')}
+        </Text>
         <Text
-          size="sm"
+          size="xs"
           weight="semibold"
           color={hasMinimum ? colors.buttonActive : colors.textMuted}
         >
@@ -140,27 +140,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[4],
-    paddingBottom: spacingPixels[8],
+    paddingHorizontal: spacingPixels[3],
+    paddingTop: spacingPixels[2],
+    paddingBottom: spacingPixels[4],
     flexGrow: 1,
   },
-  title: {
-    textAlign: 'center',
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
     marginBottom: spacingPixels[2],
-    lineHeight: 28,
   },
-  subtitle: {
-    textAlign: 'center',
-    marginBottom: spacingPixels[3],
-  },
-  counterContainer: {
-    alignItems: 'center',
-    marginBottom: spacingPixels[3],
+  title: {
+    flexShrink: 1,
   },
   gridWrapper: {
-    marginTop: spacingPixels[4],
-    marginBottom: spacingPixels[6],
+    marginTop: spacingPixels[2],
+    marginBottom: spacingPixels[2],
   },
 });
 
