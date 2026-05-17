@@ -79,7 +79,9 @@ SplashScreen.setOptions({ fade: true, duration: 400 });
 // Set the native root view background color immediately so it's visible
 // behind the React tree (e.g. area above the Dynamic Island).
 SystemUI.setBackgroundColorAsync('#fafafa');
-import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { focusManager, QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import AppNavigator from './src/navigation/AppNavigator';
 import { navigationRef } from './src/navigation';
 import { linking } from './src/navigation/linking';
@@ -170,13 +172,27 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: true,
       // Don't refetch on mount if data is fresh
       refetchOnMount: 'always',
-      // Keep unused data in cache for 5 minutes
-      gcTime: 1000 * 60 * 5,
+      // Keep persisted entries usable for 24h. The persister itself also
+      // enforces a maxAge, but TanStack only restores a query into cache
+      // when gcTime hasn't elapsed, so gcTime must be ≥ the persister's
+      // maxAge for cold-start hydration to actually populate the cache.
+      gcTime: 1000 * 60 * 60 * 24,
       // Retry failed requests once
       retry: 1,
     },
   },
 });
+
+// AsyncStorage-backed persister — cold-start hydration of TanStack Query so
+// Home (and other screens) render real cards instead of skeletons on launch.
+const queryPersister = createAsyncStoragePersister({
+  storage: AsyncStorage,
+  key: '@rallia/rq-cache',
+});
+
+// Bump this string to invalidate every persisted query at once — e.g. after a
+// breaking change to a query key shape or a payload schema.
+const QUERY_CACHE_BUSTER = 'v1';
 
 /**
  * Parse match ID from deep link URL.
@@ -416,9 +432,9 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
   return (
     <UserLocationProvider>
       <LocationModeProvider>
-        <HomeLocationSync userId={userId} />
         <ProfileProvider userId={userId}>
           <PlayerProvider userId={userId}>
+            <HomeLocationSync userId={userId} />
             <SportProvider userId={userId}>
               <SubscriptionProvider>
                 <MatchSuggestionsWarmer />
@@ -482,23 +498,45 @@ function ProfileCompletenessBridge({ children }: PropsWithChildren) {
 }
 
 /**
- * HomeLocationSync - Syncs home location to database when user is authenticated.
- * Must be inside UserLocationProvider.
+ * HomeLocationSync - Syncs the AsyncStorage home location to the player row
+ * after sign-in, only when the DB and local values diverge. Skipping the
+ * UPDATE when nothing changed avoids contending with usePushNotifications
+ * (which also UPDATEs the same player row on sign-in) and the statement
+ * timeout that contention occasionally triggers.
+ *
+ * Must be inside UserLocationProvider AND PlayerProvider.
  */
 function HomeLocationSync({ userId }: { userId: string | undefined }) {
-  const { hasHomeLocation, syncToDatabase } = useUserHomeLocation();
+  const { homeLocation, hasHomeLocation, syncToDatabase } = useUserHomeLocation();
+  const { player, loading: playerLoading } = usePlayer();
   const [hasSynced, setHasSynced] = useState(false);
 
-  // Sync home location to database when user is first authenticated
   useEffect(() => {
-    if (userId && hasHomeLocation && !hasSynced) {
-      syncToDatabase(userId).then(success => {
-        if (success) {
-          setHasSynced(true);
-        }
-      });
+    if (!userId || !hasHomeLocation || hasSynced || playerLoading || !player || !homeLocation) {
+      return;
     }
-  }, [userId, hasHomeLocation, hasSynced, syncToDatabase]);
+
+    // Skip the UPDATE when the DB already matches AsyncStorage. The sync runs
+    // unconditionally on every sign-in by design (defensive — covers cases
+    // where the user changed postal code on another device), but in the
+    // common case nothing has drifted and the write is wasted lock contention.
+    const matches =
+      player.latitude === homeLocation.latitude &&
+      player.longitude === homeLocation.longitude &&
+      player.postal_code === homeLocation.postalCode &&
+      player.country === homeLocation.country;
+
+    if (matches) {
+      setHasSynced(true);
+      return;
+    }
+
+    syncToDatabase(userId).then(success => {
+      if (success) {
+        setHasSynced(true);
+      }
+    });
+  }, [userId, hasHomeLocation, hasSynced, playerLoading, player, homeLocation, syncToDatabase]);
 
   return null;
 }
@@ -781,7 +819,10 @@ function App() {
       <ErrorBoundary onError={handleError} translations={errorBoundaryTranslations}>
         <SafeAreaProvider>
           <PostHogProvider>
-            <QueryClientProvider client={queryClient}>
+            <PersistQueryClientProvider
+              client={queryClient}
+              persistOptions={{ persister: queryPersister, buster: QUERY_CACHE_BUSTER }}
+            >
               <LocaleProvider>
                 <ThemeProvider>
                   <TourProvider>
@@ -820,7 +861,7 @@ function App() {
                   </TourProvider>
                 </ThemeProvider>
               </LocaleProvider>
-            </QueryClientProvider>
+            </PersistQueryClientProvider>
           </PostHogProvider>
         </SafeAreaProvider>
       </ErrorBoundary>

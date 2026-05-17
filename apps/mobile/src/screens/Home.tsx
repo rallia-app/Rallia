@@ -8,6 +8,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Modal,
+  InteractionManager,
 } from 'react-native';
 import { useScrollToTop } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -289,85 +290,94 @@ const Home = () => {
   // Overlay state for deep link async operations (group join, community request)
   const [deepLinkOverlay, setDeepLinkOverlay] = useState(false);
 
-  // Consume pending navigation from post-onboarding join (AsyncStorage)
+  // Consume pending navigation from post-onboarding join (AsyncStorage).
+  // Deferred past first paint via InteractionManager — none of this is on the
+  // critical-path for the initial frame and AsyncStorage reads add up.
   useEffect(() => {
-    AsyncStorage.getItem('@rallia/pending-navigation').then(raw => {
-      if (!raw) return;
-      AsyncStorage.removeItem('@rallia/pending-navigation');
-      try {
-        const nav = JSON.parse(raw) as { screen: string; params?: Record<string, string> };
-        if (nav.screen === 'GroupDetail' && nav.params?.groupId) {
-          appNavigation.navigate('GroupDetail', {
-            groupId: nav.params.groupId,
-            groupName: nav.params.groupName,
-          });
-        } else if (nav.screen === 'CommunityDetail' && nav.params?.communityId) {
-          appNavigation.navigate('CommunityDetail', {
-            communityId: nav.params.communityId,
-            communityName: nav.params.communityName,
-          });
-        } else if (nav.screen === 'MatchDetail' && nav.params?.matchId) {
-          getMatchWithDetails(nav.params.matchId).then(match => {
-            if (match) {
-              openMatchDetail(match as MatchDetailData);
-            }
-          });
+    const handle = InteractionManager.runAfterInteractions(() => {
+      AsyncStorage.getItem('@rallia/pending-navigation').then(raw => {
+        if (!raw) return;
+        AsyncStorage.removeItem('@rallia/pending-navigation');
+        try {
+          const nav = JSON.parse(raw) as { screen: string; params?: Record<string, string> };
+          if (nav.screen === 'GroupDetail' && nav.params?.groupId) {
+            appNavigation.navigate('GroupDetail', {
+              groupId: nav.params.groupId,
+              groupName: nav.params.groupName,
+            });
+          } else if (nav.screen === 'CommunityDetail' && nav.params?.communityId) {
+            appNavigation.navigate('CommunityDetail', {
+              communityId: nav.params.communityId,
+              communityName: nav.params.communityName,
+            });
+          } else if (nav.screen === 'MatchDetail' && nav.params?.matchId) {
+            getMatchWithDetails(nav.params.matchId).then(match => {
+              if (match) {
+                openMatchDetail(match as MatchDetailData);
+              }
+            });
+          }
+        } catch {
+          // Ignore parse errors
         }
-      } catch {
-        // Ignore parse errors
-      }
+      });
     });
+    return () => handle.cancel();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fallback: consume PendingReferral from AsyncStorage if DeepLinkContext expired
-  // (e.g., session-expired user taps a deep link, signs in, and DeepLinkContext has expired)
+  // (e.g., session-expired user taps a deep link, signs in, and DeepLinkContext has expired).
+  // Deferred past first paint — not critical for initial frame.
   useEffect(() => {
-    AsyncStorage.getItem(PENDING_REFERRAL_KEY).then(raw => {
-      if (!raw) return;
-      try {
-        const pending: PendingReferral = JSON.parse(raw);
-        // Only consume if there's a deferred action (match/group/community with target)
-        if (!pending.targetId) return;
+    const handle = InteractionManager.runAfterInteractions(() => {
+      AsyncStorage.getItem(PENDING_REFERRAL_KEY).then(raw => {
+        if (!raw) return;
+        try {
+          const pending: PendingReferral = JSON.parse(raw);
+          // Only consume if there's a deferred action (match/group/community with target)
+          if (!pending.targetId) return;
 
-        AsyncStorage.removeItem(PENDING_REFERRAL_KEY);
+          AsyncStorage.removeItem(PENDING_REFERRAL_KEY);
 
-        if (pending.type === 'match') {
-          getMatchWithDetails(pending.targetId).then(match => {
-            if (match) {
-              openMatchDetail(match as MatchDetailData);
-            }
-          });
-        } else if (pending.type === 'group' && player?.id) {
-          joinGroupByInviteCode(pending.targetId, player.id)
-            .then(result => {
-              if (result.success && result.groupId) {
-                toast.success(t('groups.joinedViaLinkMessage', { name: result.groupName ?? '' }));
-                appNavigation.navigate('GroupDetail', {
-                  groupId: result.groupId,
-                  groupName: result.groupName,
-                });
+          if (pending.type === 'match') {
+            getMatchWithDetails(pending.targetId).then(match => {
+              if (match) {
+                openMatchDetail(match as MatchDetailData);
               }
-            })
-            .catch(() => {});
-        } else if (pending.type === 'community' && player?.id) {
-          requestToJoinCommunityByInviteCode(pending.targetId, player.id)
-            .then(result => {
-              if (result.success && result.communityId) {
-                toast.success(
-                  t('community.requestSentViaLinkMessage', { name: result.communityName ?? '' })
-                );
-                appNavigation.navigate('CommunityDetail', {
-                  communityId: result.communityId,
-                  communityName: result.communityName,
-                });
-              }
-            })
-            .catch(() => {});
+            });
+          } else if (pending.type === 'group' && player?.id) {
+            joinGroupByInviteCode(pending.targetId, player.id)
+              .then(result => {
+                if (result.success && result.groupId) {
+                  toast.success(t('groups.joinedViaLinkMessage', { name: result.groupName ?? '' }));
+                  appNavigation.navigate('GroupDetail', {
+                    groupId: result.groupId,
+                    groupName: result.groupName,
+                  });
+                }
+              })
+              .catch(() => {});
+          } else if (pending.type === 'community' && player?.id) {
+            requestToJoinCommunityByInviteCode(pending.targetId, player.id)
+              .then(result => {
+                if (result.success && result.communityId) {
+                  toast.success(
+                    t('community.requestSentViaLinkMessage', { name: result.communityName ?? '' })
+                  );
+                  appNavigation.navigate('CommunityDetail', {
+                    communityId: result.communityId,
+                    communityName: result.communityName,
+                  });
+                }
+              })
+              .catch(() => {});
+          }
+        } catch {
+          // Ignore parse errors
         }
-      } catch {
-        // Ignore parse errors
-      }
+      });
     });
+    return () => handle.cancel();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Home screen tour - triggers after main navigation tour is completed
@@ -541,10 +551,20 @@ const Home = () => {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Check on mount + subscribe so re-fires when Home is already mounted (fixes app-open bug)
+  // Check on mount + subscribe so re-fires when Home is already mounted (fixes app-open bug).
+  // The mount-time check is deferred past first paint — the overlay Modal shows
+  // during async processing anyway, so a one-frame delay is imperceptible and
+  // keeps Supabase/network work off the initial render path. The listener stays
+  // synchronous so runtime deep links (app already open) still fire immediately.
   useEffect(() => {
-    processDeepLink();
-    return addDeepLinkListener(processDeepLink);
+    const handle = InteractionManager.runAfterInteractions(() => {
+      processDeepLink();
+    });
+    const unsubscribe = addDeepLinkListener(processDeepLink);
+    return () => {
+      handle.cancel();
+      unsubscribe();
+    };
   }, [processDeepLink]);
 
   // Retry once player data arrives in case it was null on first run
@@ -552,21 +572,25 @@ const Home = () => {
     if (player?.id) processDeepLink();
   }, [player?.id, processDeepLink]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Referral invite prompt — shown every 3 launches (0 referrals) or 7 launches (1+ referrals)
+  // Referral invite prompt — shown every 3 launches (0 referrals) or 7 launches (1+ referrals).
+  // Deferred past first paint — this is a periodic prompt, never time-sensitive.
   const { stats: referralStats, statsLoading: referralStatsLoading } = useReferral(player?.id);
   useEffect(() => {
     if (!isOnboarded || !player?.id || referralStatsLoading) return;
 
     const hasReferredUser = (referralStats?.total_converted ?? 0) >= 1;
 
-    (async () => {
-      await incrementOnboardedLaunchCount();
-      const show = await shouldShowReferralInvite(hasReferredUser);
-      if (show) {
-        await markSheetShown();
-        SheetManager.show('referral-invite');
-      }
-    })();
+    const handle = InteractionManager.runAfterInteractions(() => {
+      (async () => {
+        await incrementOnboardedLaunchCount();
+        const show = await shouldShowReferralInvite(hasReferredUser);
+        if (show) {
+          await markSheetShown();
+          SheetManager.show('referral-invite');
+        }
+      })();
+    });
+    return () => handle.cancel();
   }, [isOnboarded, player?.id, referralStatsLoading, referralStats?.total_converted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { selectedSport, isLoading: sportLoading, userSports, setSelectedSport } = useSport();
@@ -663,7 +687,8 @@ const Home = () => {
     secondSportBannerDismissed,
   ]);
 
-  // Check cooldown and set up auto-fade timer for second sport banner
+  // Check cooldown and set up auto-fade timer for second sport banner.
+  // Deferred past first paint — banner is a soft nudge, never first-frame.
   useEffect(() => {
     if (!isOnboarded || userSports.length !== 1 || inactiveSports.length === 0) {
       return;
@@ -701,7 +726,10 @@ const Home = () => {
       }
     };
 
-    void checkCooldownAndShow();
+    const handle = InteractionManager.runAfterInteractions(() => {
+      void checkCooldownAndShow();
+    });
+    return () => handle.cancel();
   }, [isOnboarded, userSports.length, inactiveSports.length, secondSportFadeAnim]);
 
   // Handle second sport banner dismiss
@@ -761,7 +789,12 @@ const Home = () => {
       }
     };
 
-    void checkStaleness();
+    // Deferred past first paint — Supabase round-trip plus AsyncStorage read,
+    // none of it on the critical path for the initial frame.
+    const handle = InteractionManager.runAfterInteractions(() => {
+      void checkStaleness();
+    });
+    return () => handle.cancel();
   }, [isOnboarded, player?.id]);
 
   const handleAvailabilityBannerAction = useCallback(() => {
