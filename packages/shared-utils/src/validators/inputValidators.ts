@@ -15,8 +15,8 @@
  * validateFullName("John123 Doe!") // Returns "John Doe"
  */
 export const validateFullName = (text: string): string => {
-  // Only allow letters and spaces
-  return text.replace(/[^a-zA-Z\s]/g, '');
+  // Allow Unicode letters (covers accented characters), spaces, hyphens, and apostrophes
+  return text.replace(/[^\p{L}\s'\-]/gu, '');
 };
 
 /**
