@@ -44,8 +44,11 @@ export interface ProviderConfig {
 export interface FetchParams {
   /** External facility ID (IC3 siteId or ActivityMessenger packageId). */
   externalProviderId: string;
-  /** ISO date strings (YYYY-MM-DD), inclusive. */
+  /** ISO date strings (YYYY-MM-DD), inclusive. Computed in `timezone`. */
   dates: string[];
+  /** IANA timezone of the facility (e.g., 'America/Toronto'). Used to keep
+   *  date arithmetic in the facility's local calendar instead of UTC. */
+  timezone: string | null;
 }
 
 export interface FetchResult {
@@ -263,14 +266,25 @@ async function fetchActivityMessenger(
 
   const rows: SnapshotRow[] = [];
   const wantedDates = new Set(params.dates);
+  // wantedDates is already in the facility's local timezone (built by the
+  // orchestrator). Format slot dates in the same TZ to compare apples-to-
+  // apples, otherwise a late-evening Montreal slot whose UTC date is
+  // tomorrow gets filtered out.
+  const tz = params.timezone || 'UTC';
+  const localDateFmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
   for (const event of events ?? []) {
     if (event.extendedProps?.disabled) continue;
     const slotStart = new Date(event.start);
     const slotEnd = new Date(event.end);
     if (isNaN(slotStart.getTime()) || isNaN(slotEnd.getTime())) continue;
 
-    // Only keep events whose date falls in the requested window.
-    const dateKey = slotStart.toISOString().slice(0, 10);
+    // Only keep events whose local date falls in the requested window.
+    const dateKey = localDateFmt.format(slotStart);
     if (!wantedDates.has(dateKey)) continue;
 
     const availability = event.extendedProps?.availability?.[0];

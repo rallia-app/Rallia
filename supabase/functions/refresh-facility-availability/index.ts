@@ -63,6 +63,7 @@ interface FacilityRow {
    *  tagged with sports the provider can't serve, those sports are ignored
    *  during sport_id resolution. */
   served_sport_ids: string[] | null;
+  timezone: string | null;
   sports: FacilitySport[] | null;
 }
 
@@ -136,14 +137,28 @@ function parseFacilityIds(body: RequestBody): { ids: string[]; error: string | n
 // DATA HELPERS
 // =============================================================================
 
-function nextNDates(n: number): string[] {
-  const out: string[] = [];
-  const base = new Date();
-  for (let i = 0; i < n; i++) {
-    const d = new Date(base);
-    d.setDate(d.getDate() + i);
+/**
+ * Build the N-day date window in the facility's local timezone. Edge
+ * runtime is UTC, so doing this in UTC would treat 8pm-midnight EDT as
+ * "tomorrow already" and drop the remaining Montreal evening's slots.
+ *
+ * Falls back to UTC when no timezone is provided.
+ */
+function nextNDates(n: number, timezone: string | null): string[] {
+  const tz = timezone || 'UTC';
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const today = fmt.format(new Date()); // YYYY-MM-DD in `tz`
+  const out: string[] = [today];
+  for (let i = 1; i < n; i++) {
+    const [y, m, d] = out[out.length - 1].split('-').map(Number);
+    const next = new Date(Date.UTC(y, m - 1, d + 1)); // day arithmetic via UTC is safe
     out.push(
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, '0')}-${String(next.getUTCDate()).padStart(2, '0')}`
     );
   }
   return out;
@@ -196,6 +211,7 @@ async function refreshOneFacility(
     api_config,
     booking_url_template,
     served_sport_ids,
+    timezone,
     sports,
   } = facilityRow;
 
@@ -218,7 +234,7 @@ async function refreshOneFacility(
     externalProviderId: external_provider_id,
   };
 
-  const dates = nextNDates(WINDOW_DAYS);
+  const dates = nextNDates(WINDOW_DAYS, timezone);
 
   // Probe the lock before paying the provider call. The same lock is taken
   // again in the write RPC to make the entire fetch-and-write critical
@@ -244,6 +260,7 @@ async function refreshOneFacility(
     const result = await fetchProviderAvailability(providerConfig, {
       externalProviderId: external_provider_id,
       dates,
+      timezone,
     });
     rows = result.rows;
     source = result.source;

@@ -152,18 +152,28 @@ export const courtAvailabilityKeys = {
 // =============================================================================
 
 /**
- * Default date list spanning SNAPSHOT_HORIZON_DAYS forward from today.
- * Used as the queryKey discriminant and as input to local-template
- * fetches; the external-provider read path uses a time-range filter
- * rather than this list directly.
+ * Default date list spanning SNAPSHOT_HORIZON_DAYS forward from today,
+ * computed in the facility's local timezone (UTC fallback). Used as the
+ * queryKey discriminant and as input to local-template fetches; the
+ * external-provider read path uses a time-range filter rather than this
+ * list directly.
  */
-function getDefaultDates(): string[] {
-  const out: string[] = [];
-  const base = new Date();
-  for (let i = 0; i < SNAPSHOT_HORIZON_DAYS; i++) {
-    const d = new Date(base);
-    d.setDate(d.getDate() + i);
-    out.push(d.toISOString().split('T')[0]);
+function getDefaultDates(timezone?: string | null): string[] {
+  const tz = timezone || 'UTC';
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const today = fmt.format(new Date());
+  const out: string[] = [today];
+  for (let i = 1; i < SNAPSHOT_HORIZON_DAYS; i++) {
+    const [y, m, d] = out[out.length - 1].split('-').map(Number);
+    const next = new Date(Date.UTC(y, m - 1, d + 1));
+    out.push(
+      `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, '0')}-${String(next.getUTCDate()).padStart(2, '0')}`
+    );
   }
   return out;
 }
@@ -463,9 +473,10 @@ export function useCourtAvailability(
     bookingUrlTemplate: _bookingUrlTemplate,
     facilityTimezone,
     sportName,
-    dates = getDefaultDates(),
     enabled = true,
   } = options;
+  // Default dates depend on facilityTimezone, so compute after destructure.
+  const dates = options.dates ?? getDefaultDates(facilityTimezone);
 
   // Check if we have all required provider configuration:
   // 1. A data provider (from facility or organization)
