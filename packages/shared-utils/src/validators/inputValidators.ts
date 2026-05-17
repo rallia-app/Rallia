@@ -16,7 +16,7 @@
  */
 export const validateFullName = (text: string): string => {
   // Allow Unicode letters (covers accented characters), spaces, hyphens, and apostrophes
-  return text.replace(/[^\p{L}\s'\-]/gu, '');
+  return text.replace(/[^\p{L}\s'-]/gu, '');
 };
 
 /**

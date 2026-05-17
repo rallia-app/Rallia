@@ -18,7 +18,7 @@ export const isValidFullName = (name: string): boolean => {
   }
 
   // Unicode letters, spaces, hyphens, and apostrophes allowed
-  const nameRegex = /^[\p{L}\s'\-]+$/u;
+  const nameRegex = /^[\p{L}\s'-]+$/u;
   return nameRegex.test(name);
 };
 
@@ -27,7 +27,7 @@ export const isValidFullName = (name: string): boolean => {
  * Same as validateFullName from inputValidators, provided as alias
  */
 export const sanitizeName = (name: string): string => {
-  return name.replace(/[^\p{L}\s'\-]/gu, '');
+  return name.replace(/[^\p{L}\s'-]/gu, '');
 };
 
 /**
@@ -44,7 +44,7 @@ export const isValidName = (name: string): boolean => {
   }
 
   // Unicode letters, hyphens, and apostrophes allowed
-  const nameRegex = /^[\p{L}'\-]+$/u;
+  const nameRegex = /^[\p{L}'-]+$/u;
   return nameRegex.test(name.trim());
 };
 
