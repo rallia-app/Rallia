@@ -2061,13 +2061,17 @@ export const MatchDetailSheet: React.FC = () => {
     }
   }, [timeSuggestionMatchId]);
 
+  // Refetch on every fresh selectedMatch reference (not just on id-change), so
+  // reopening the same match after submitting a suggestion picks up the new
+  // pending row. openSheet / getMatchWithDetails creates a new object each
+  // time so this fires on each navigation back to the sheet.
   useEffect(() => {
     if (!timeSuggestionMatchId) {
       setTimeSuggestions([]);
       return;
     }
     refreshTimeSuggestions();
-  }, [timeSuggestionMatchId, refreshTimeSuggestions]);
+  }, [selectedMatch, timeSuggestionMatchId, refreshTimeSuggestions]);
 
   const myPendingSuggestion = useMemo(
     () => timeSuggestions.find(s => s.suggester_id === playerId && s.status === 'pending') ?? null,
@@ -2233,12 +2237,6 @@ export const MatchDetailSheet: React.FC = () => {
   // Check if match is expired (started or ended but not full)
   const isExpired = (isInProgress || hasMatchEnded) && !isFull;
 
-  // canSuggestTime — visibility flag for the tertiary "Suggest a different
-  // time" button. Hooks for this flow are hoisted above the early return; we
-  // gate the *side effects* here, after we have a fully-derived view.
-  const canSuggestTime =
-    !isCreator && (isInvited || isParticipant) && !isCancelled && !isInProgress && !hasMatchEnded;
-
   // Determine animation type for time indicator:
   // - isInProgress = live indicator
   // - isUrgent (< 3 hours) but not in_progress = starting soon
@@ -2352,6 +2350,21 @@ export const MatchDetailSheet: React.FC = () => {
     match.timezone
   );
   const playerHasCheckedIn = !!currentPlayerParticipant?.checked_in_at;
+
+  // canSuggestTime — visibility flag for the tertiary "Suggest a different
+  // time" link. Rendered as its own full-width row above the CTAs in the
+  // sticky footer, so we only surface it when the matching CTAs (Accept/
+  // Decline for invitees, Leave for joined participants) would also be on
+  // screen. Excluded for waitlisted and already-checked-in users since their
+  // CTAs are unrelated.
+  const canSuggestTime =
+    !isCreator &&
+    !isCancelled &&
+    !isInProgress &&
+    !hasMatchEnded &&
+    !playerHasCheckedIn &&
+    (isInvited || (isParticipant && !isWaitlisted));
+
   // Check-in is only available for matches with a confirmed location (facility or custom)
   // TBD matches don't have a location to check in at
   // Also requires location permission to be granted for geolocation verification
@@ -2900,23 +2913,6 @@ export const MatchDetailSheet: React.FC = () => {
 
       return (
         <>
-          {canSuggestTime && (
-            <TouchableOpacity
-              onPress={handleOpenSuggestTime}
-              style={styles.suggestTimeButton}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-            >
-              <Ionicons name="time-outline" size={16} color={accent[500]} />
-              <Text size="sm" weight="semibold" color={accent[500]}>
-                {myPendingSuggestion
-                  ? t('matchActions.viewYourSuggestion', {
-                      time: myPendingSuggestion.suggested_start_time.slice(0, 5),
-                    })
-                  : t('matchActions.suggestDifferentTime')}
-              </Text>
-            </TouchableOpacity>
-          )}
           <Button
             variant="primary"
             onPress={handleDeclineInvite}
@@ -3017,36 +3013,17 @@ export const MatchDetailSheet: React.FC = () => {
     // Participant (not host, joined): Leave button (danger red)
     if (isParticipant) {
       return (
-        <>
-          {canSuggestTime && !isCreator && (
-            <TouchableOpacity
-              onPress={handleOpenSuggestTime}
-              style={styles.suggestTimeButton}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-            >
-              <Ionicons name="time-outline" size={16} color={accent[500]} />
-              <Text size="sm" weight="semibold" color={accent[500]}>
-                {myPendingSuggestion
-                  ? t('matchActions.viewYourSuggestion', {
-                      time: myPendingSuggestion.suggested_start_time.slice(0, 5),
-                    })
-                  : t('matchActions.suggestDifferentTime')}
-              </Text>
-            </TouchableOpacity>
-          )}
-          <Button
-            variant="primary"
-            onPress={handleLeaveMatch}
-            style={styles.actionButton}
-            themeColors={destructiveThemeColors}
-            isDark={isDark}
-            loading={isLeaving}
-            leftIcon={<Ionicons name="log-out-outline" size={18} color={base.white} />}
-          >
-            {t('matches.leaveMatch')}
-          </Button>
-        </>
+        <Button
+          variant="primary"
+          onPress={handleLeaveMatch}
+          style={styles.actionButton}
+          themeColors={destructiveThemeColors}
+          isDark={isDark}
+          loading={isLeaving}
+          leftIcon={<Ionicons name="log-out-outline" size={18} color={base.white} />}
+        >
+          {t('matches.leaveMatch')}
+        </Button>
       );
     }
 
@@ -4524,7 +4501,7 @@ export const MatchDetailSheet: React.FC = () => {
                         },
                       ]}
                     >
-                      <View style={styles.pendingRequestContent}>
+                      <View style={[styles.pendingRequestContent, styles.timeSuggestionContent]}>
                         <TouchableOpacity
                           onPress={() =>
                             suggestion.suggester_id &&
@@ -4556,7 +4533,7 @@ export const MatchDetailSheet: React.FC = () => {
                             )}
                           </View>
                         </TouchableOpacity>
-                        <View style={styles.pendingRequestNameContainer}>
+                        <View style={styles.timeSuggestionTextColumn}>
                           <Text size="sm" weight="medium" color={colors.text} numberOfLines={2}>
                             {t('matchDetail.timeSuggestion.suggestedBy', {
                               name: suggesterName,
@@ -4567,8 +4544,8 @@ export const MatchDetailSheet: React.FC = () => {
                             <Text
                               size="xs"
                               color={colors.textMuted}
-                              numberOfLines={2}
-                              style={{ marginTop: spacingPixels[1] }}
+                              numberOfLines={3}
+                              style={styles.timeSuggestionNote}
                             >
                               {suggestion.note}
                             </Text>
@@ -5495,42 +5472,61 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
             {t('matchDetail.provideFeedbackOnly')}
           </Button>
         )}
-        <View
-          style={[
-            styles.actionButtonsContainer,
-            needsScoreConfirmAndFeedback &&
-              hasTwoScoreActions &&
-              styles.actionButtonsContainerColumn,
-          ]}
-        >
-          {/* Feedback side-by-side with single score action (register score) */}
-          {needsScoreConfirmAndFeedback && !hasTwoScoreActions && (
-            <Button
-              variant="primary"
-              onPress={handleOpenFeedback}
-              style={styles.actionButton}
-              themeColors={{
-                primary: isDark ? primary[500] : primary[600],
-                primaryForeground: base.white,
-                buttonActive: isDark ? primary[500] : primary[600],
-                buttonInactive: neutral[300],
-                buttonTextActive: base.white,
-                buttonTextInactive: neutral[500],
-                text: colors.text,
-                textMuted: colors.textMuted,
-                border: colors.border,
-                background: colors.cardBackground,
-              }}
-              isDark={isDark}
-              leftIcon={
-                <Ionicons name="chatbubble-ellipses-outline" size={18} color={base.white} />
-              }
+        <View style={styles.footerActionsColumn}>
+          {canSuggestTime && (
+            <TouchableOpacity
+              onPress={handleOpenSuggestTime}
+              style={styles.suggestTimeButton}
+              activeOpacity={0.7}
+              accessibilityRole="button"
             >
-              {t('matchDetail.provideFeedbackOnly')}
-            </Button>
+              <Ionicons name="time-outline" size={16} color={accent[500]} />
+              <Text size="sm" weight="semibold" color={accent[500]}>
+                {myPendingSuggestion
+                  ? t('matchActions.viewYourSuggestion', {
+                      time: myPendingSuggestion.suggested_start_time.slice(0, 5),
+                    })
+                  : t('matchActions.suggestDifferentTime')}
+              </Text>
+            </TouchableOpacity>
           )}
-          {/* Cap at 2 CTA buttons to prevent layout overflow */}
-          {React.Children.toArray(renderActionButtons()).slice(0, 2)}
+          <View
+            style={[
+              styles.actionButtonsContainer,
+              needsScoreConfirmAndFeedback &&
+                hasTwoScoreActions &&
+                styles.actionButtonsContainerColumn,
+            ]}
+          >
+            {/* Feedback side-by-side with single score action (register score) */}
+            {needsScoreConfirmAndFeedback && !hasTwoScoreActions && (
+              <Button
+                variant="primary"
+                onPress={handleOpenFeedback}
+                style={styles.actionButton}
+                themeColors={{
+                  primary: isDark ? primary[500] : primary[600],
+                  primaryForeground: base.white,
+                  buttonActive: isDark ? primary[500] : primary[600],
+                  buttonInactive: neutral[300],
+                  buttonTextActive: base.white,
+                  buttonTextInactive: neutral[500],
+                  text: colors.text,
+                  textMuted: colors.textMuted,
+                  border: colors.border,
+                  background: colors.cardBackground,
+                }}
+                isDark={isDark}
+                leftIcon={
+                  <Ionicons name="chatbubble-ellipses-outline" size={18} color={base.white} />
+                }
+              >
+                {t('matchDetail.provideFeedbackOnly')}
+              </Button>
+            )}
+            {/* Cap at 2 CTA buttons to prevent layout overflow */}
+            {React.Children.toArray(renderActionButtons()).slice(0, 2)}
+          </View>
         </View>
       </View>
 
@@ -6115,6 +6111,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacingPixels[2],
   },
+  // Time-suggestion row override: stack the suggester label and note
+  // vertically instead of horizontally, and top-align the avatar so it
+  // doesn't drift to the middle of a multi-line block.
+  timeSuggestionContent: {
+    alignItems: 'flex-start',
+  },
+  timeSuggestionTextColumn: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'column',
+  },
+  timeSuggestionNote: {
+    marginTop: 2,
+    lineHeight: 16,
+  },
   pendingRequestName: {
     flexShrink: 1,
   },
@@ -6228,10 +6239,13 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
   },
   actionButtonsContainer: {
-    flex: 1,
+    // Lives inside `footerActionsColumn` (flexDirection: 'column'); needs an
+    // explicit width to span horizontally. `flex: 1` here would claim vertical
+    // space in the column and collapse since the parent has no fixed height.
     flexDirection: 'row',
     gap: spacingPixels[2],
-    minWidth: 0, // Allow shrinking
+    width: '100%',
+    minWidth: 0,
   },
   actionButtonsContainerColumn: {
     flex: 0,
@@ -6269,16 +6283,24 @@ const styles = StyleSheet.create({
     gap: spacingPixels[2],
     paddingHorizontal: spacingPixels[2],
   },
-  // Tertiary "Suggest a different time" link — spans the row above the
-  // primary action buttons so it never competes with them visually.
+  // Footer column wrapper: stacks the tertiary "Suggest a different time"
+  // link on top of the row of primary CTAs without disturbing the existing
+  // stickyFooter row layout.
+  footerActionsColumn: {
+    flex: 1,
+    flexDirection: 'column',
+    gap: spacingPixels[2],
+    minWidth: 0,
+  },
+  // Tertiary "Suggest a different time" link — full-width tappable row,
+  // with a touch of breathing room before the primary CTA row below.
   suggestTimeButton: {
-    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacingPixels[1],
     paddingVertical: spacingPixels[2],
-    marginBottom: spacingPixels[1],
+    marginBottom: spacingPixels[2],
   },
   matchEndedContainer: {
     flex: 1,

@@ -63,65 +63,75 @@ interface AcceptRpcResult {
 export async function listTimeSuggestionsForMatch(
   matchId: string
 ): Promise<MatchTimeSuggestionWithSuggester[]> {
-  const { data, error } = await supabase
+  // `player` and `profile` share the same UUID (`player.id = profile.id`,
+  // no separate `profile_id` FK), so PostgREST can't auto-embed profile via
+  // player. We fetch the suggestions first, then batch-fetch the suggester
+  // profiles by id.
+  const { data: rows, error } = await supabase
     .from('match_time_suggestion')
     .select(
-      `
-        id,
-        match_id,
-        suggester_id,
-        suggested_start_time,
-        note,
-        status,
-        created_at,
-        resolved_at,
-        resolved_by,
-        suggester:player!match_time_suggestion_suggester_id_fkey (
-          id,
-          profile:profile_id (
-            id,
-            first_name,
-            last_name,
-            profile_picture_url,
-            display_name
-          )
-        )
-      `
+      'id, match_id, suggester_id, suggested_start_time, note, status, created_at, resolved_at, resolved_by'
     )
     .eq('match_id', matchId)
-    .order('status', { ascending: true }) // 'pending' sorts before 'accepted'/etc. alphabetically — fine.
+    .order('status', { ascending: true })
     .order('created_at', { ascending: false });
 
   if (error) {
     throw new Error(`Failed to list time suggestions: ${error.message}`);
   }
 
-  return (data ?? []).map(row => {
-    // PostgREST returns one-to-many joins as arrays. The FK is single-target,
-    // so we just pluck the first row.
-    const suggesterRaw = (row as { suggester?: unknown }).suggester;
-    const suggesterRow = Array.isArray(suggesterRaw)
-      ? (suggesterRaw[0] as { id?: string; profile?: unknown } | undefined)
-      : (suggesterRaw as { id?: string; profile?: unknown } | null | undefined);
-    const profileRaw = suggesterRow?.profile;
-    const profile = (Array.isArray(profileRaw) ? profileRaw[0] : profileRaw) as {
-      first_name?: string | null;
-      last_name?: string | null;
-      profile_picture_url?: string | null;
-      display_name?: string | null;
-    } | null;
+  const suggestionRows = (rows ?? []) as MatchTimeSuggestion[];
+  if (suggestionRows.length === 0) return [];
+
+  const uniqueSuggesterIds = Array.from(new Set(suggestionRows.map(r => r.suggester_id)));
+  const { data: profileRows, error: profileError } = await supabase
+    .from('profile')
+    .select('id, first_name, last_name, profile_picture_url, display_name')
+    .in('id', uniqueSuggesterIds);
+
+  if (profileError) {
+    // Surface as an empty profile rather than failing — the suggestions are
+    // still the source of truth; missing names just degrade the UI.
+    Logger.error('Failed to batch-fetch suggester profiles', new Error(profileError.message));
+  }
+
+  const profileById = new Map<
+    string,
+    {
+      first_name: string | null;
+      last_name: string | null;
+      profile_picture_url: string | null;
+      display_name: string | null;
+    }
+  >();
+  for (const p of (profileRows ?? []) as Array<{
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    profile_picture_url: string | null;
+    display_name: string | null;
+  }>) {
+    profileById.set(p.id, {
+      first_name: p.first_name,
+      last_name: p.last_name,
+      profile_picture_url: p.profile_picture_url,
+      display_name: p.display_name,
+    });
+  }
+
+  return suggestionRows.map(row => {
+    const prof = profileById.get(row.suggester_id) ?? null;
     return {
-      ...(row as unknown as MatchTimeSuggestion),
-      suggester:
-        suggesterRow && suggesterRow.id
-          ? {
-              id: suggesterRow.id,
-              first_name: profile?.first_name ?? null,
-              last_name: profile?.last_name ?? null,
-              profile_picture_url: profile?.profile_picture_url ?? null,
-              display_name: profile?.display_name ?? null,
-            }
-          : null,
+      ...row,
+      suggester: prof
+        ? {
+            id: row.suggester_id,
+            first_name: prof.first_name,
+            last_name: prof.last_name,
+            profile_picture_url: prof.profile_picture_url,
+            display_name: prof.display_name,
+          }
+        : null,
     };
   });
 }
@@ -189,6 +199,12 @@ export async function suggestMatchTime(
     // 23505 = unique_violation — partial index on (match_id, suggester_id) WHERE status='pending'.
     if (error.code === '23505') {
       throw new Error('already_pending');
+    }
+    // Trigger-raised exception when the suggested time equals the parent
+    // match.start_time. Race case (host edited mid-flight) — client already
+    // disables submit for the no-race version.
+    if (error.message?.includes('suggested_time_matches_current_time')) {
+      throw new Error('same_as_current_time');
     }
     throw new Error(`Failed to send time suggestion: ${error.message}`);
   }

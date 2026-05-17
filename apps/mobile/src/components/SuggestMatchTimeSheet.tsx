@@ -13,7 +13,6 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Modal,
   Platform,
   Pressable,
@@ -22,22 +21,22 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useQueryClient } from '@tanstack/react-query';
-import { Text, useToast } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
+import { Button, Text, VStack, useToast } from '@rallia/shared-components';
+import { spacingPixels, radiusPixels, base, neutral, primary } from '@rallia/design-system';
 import { errorHaptic, lightHaptic, successHaptic } from '@rallia/shared-utils';
 import { Logger, suggestMatchTime, withdrawTimeSuggestion } from '@rallia/shared-services';
+
+import { BaseActionSheet } from './BaseActionSheet';
 import { useThemeStyles, useTranslation } from '../hooks';
 
 const NOTE_MAX = 280;
-
 type SheetStatus = 'idle' | 'sending' | 'sent' | 'error';
 
 function parseTimeToDate(time: string): Date {
-  // Accept HH:MM or HH:MM:SS. Build a Date pinned to today.
   const [hStr, mStr] = time.split(':');
   const d = new Date();
   d.setSeconds(0, 0);
@@ -67,8 +66,6 @@ export function SuggestMatchTimeActionSheet(props: SheetProps<'suggest-match-tim
   const queryClient = useQueryClient();
   const payload = props.payload;
 
-  const accent = isDark ? primary[400] : primary[500];
-
   const initialTime = useMemo(() => {
     if (payload?.existingSuggestionTime) return payload.existingSuggestionTime;
     return payload?.currentStartTime ?? '12:00';
@@ -90,7 +87,29 @@ export function SuggestMatchTimeActionSheet(props: SheetProps<'suggest-match-tim
   }, [initialTime, payload?.existingNote, payload?.matchId]);
 
   const isEditing = !!payload?.existingSuggestionId;
-  const sameAsCurrent = selectedTime === (payload?.currentStartTime ?? '');
+  // Normalize both sides to "HH:MM" — selectedTime is always HH:MM (from the
+  // picker) but currentStartTime arrives as HH:MM:SS from Postgres, so a raw
+  // string compare would never match.
+  const currentTimeHHMM = (payload?.currentStartTime ?? '').slice(0, 5);
+  const sameAsCurrent = selectedTime === currentTimeHHMM;
+
+  // Theme tokens for the Button shared-component's themeColors prop. Matches
+  // the convention used in ChoosePayoutsSheet.tsx.
+  const buttonThemeColors = useMemo(
+    () => ({
+      primary: colors.primary,
+      primaryForeground: base.white,
+      buttonActive: colors.primary,
+      buttonInactive: isDark ? neutral[700] : neutral[300],
+      buttonTextActive: base.white,
+      buttonTextInactive: isDark ? neutral[400] : neutral[500],
+      text: colors.text,
+      textMuted: colors.textMuted,
+      border: colors.border,
+      background: colors.cardBackground,
+    }),
+    [colors, isDark]
+  );
 
   const openPicker = useCallback(() => {
     lightHaptic();
@@ -101,9 +120,7 @@ export function SuggestMatchTimeActionSheet(props: SheetProps<'suggest-match-tim
   const handlePickerChange = useCallback((_event: unknown, date?: Date) => {
     if (Platform.OS === 'android') {
       setShowPicker(false);
-      if (date) {
-        setSelectedTime(formatHHMM(date));
-      }
+      if (date) setSelectedTime(formatHHMM(date));
       return;
     }
     if (date) setTempTime(date);
@@ -128,7 +145,7 @@ export function SuggestMatchTimeActionSheet(props: SheetProps<'suggest-match-tim
 
     try {
       // "Update" semantics: withdraw the existing pending suggestion first,
-      // then insert the new one. Two round-trips, but it keeps the partial
+      // then insert the new one. Two round-trips, but keeps the partial
       // unique index and the audit trail clean.
       if (isEditing && payload.existingSuggestionId) {
         await withdrawTimeSuggestion(payload.existingSuggestionId);
@@ -153,10 +170,13 @@ export function SuggestMatchTimeActionSheet(props: SheetProps<'suggest-match-tim
         'Suggest match time failed',
         err instanceof Error ? err : new Error(String(err))
       );
+      const errMsg = err instanceof Error ? err.message : '';
       const msg =
-        err instanceof Error && err.message === 'already_pending'
+        errMsg === 'already_pending'
           ? t('matchDetail.timeSuggestion.alreadyPending')
-          : t('matchDetail.timeSuggestion.errorGeneric');
+          : errMsg === 'same_as_current_time'
+            ? t('matchDetail.timeSuggestion.sameAsCurrent')
+            : t('matchDetail.timeSuggestion.errorGeneric');
       setStatus('error');
       setErrorMsg(msg);
       errorHaptic();
@@ -191,32 +211,80 @@ export function SuggestMatchTimeActionSheet(props: SheetProps<'suggest-match-tim
 
   if (!payload) return null;
 
-  return (
-    <ActionSheet
-      gestureEnabled
-      containerStyle={{ backgroundColor: colors.background }}
-      indicatorStyle={{ backgroundColor: isDark ? neutral[600] : neutral[300] }}
-    >
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Ionicons name="time-outline" size={22} color={accent} />
-          <Text size="xl" weight="bold" color={colors.foreground} style={styles.title}>
-            {t('matchDetail.timeSuggestion.sheetTitle')}
-          </Text>
-        </View>
+  const submitDisabled = status === 'sending' || status === 'sent' || sameAsCurrent;
 
-        <Text size="sm" color={colors.textMuted} style={styles.subtitle}>
+  return (
+    <BaseActionSheet
+      title={t('matchDetail.timeSuggestion.sheetTitle')}
+      onClose={handleCancel}
+      flex={false}
+      scrollable
+      footer={
+        <VStack spacing={spacingPixels[2]}>
+          <Button
+            variant="primary"
+            onPress={handleSubmit}
+            disabled={submitDisabled}
+            loading={status === 'sending'}
+            isDark={isDark}
+            themeColors={buttonThemeColors}
+            leftIcon={<Ionicons name="paper-plane-outline" size={16} color={base.white} />}
+          >
+            {isEditing
+              ? t('matchDetail.timeSuggestion.submitUpdate')
+              : t('matchDetail.timeSuggestion.submit')}
+          </Button>
+
+          {isEditing && (
+            <Button
+              variant="outline"
+              onPress={handleWithdraw}
+              disabled={status === 'sending'}
+              isDark={isDark}
+              themeColors={{
+                ...buttonThemeColors,
+                primary: '#dc2626',
+                buttonActive: '#dc2626',
+                text: '#dc2626',
+              }}
+            >
+              {t('matchDetail.timeSuggestion.withdraw')}
+            </Button>
+          )}
+
+          <Button
+            variant="ghost"
+            onPress={handleCancel}
+            isDark={isDark}
+            themeColors={buttonThemeColors}
+          >
+            {t('common.cancel')}
+          </Button>
+        </VStack>
+      }
+    >
+      <VStack spacing={spacingPixels[4]}>
+        <Text size="sm" color={colors.textMuted}>
           {t('matchDetail.timeSuggestion.sheetSubtitle')}
         </Text>
 
-        <Text size="sm" color={colors.textMuted} style={styles.currentTime}>
-          {t('matchDetail.timeSuggestion.currentTime', {
-            time: formatTimeForDisplay(payload.currentStartTime, locale),
-          })}
-        </Text>
+        <View
+          style={[
+            styles.currentTimeChip,
+            { backgroundColor: isDark ? `${primary[500]}14` : `${primary[500]}0A` },
+          ]}
+        >
+          <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
+          <Text size="sm" color={colors.primary}>
+            {t('matchDetail.timeSuggestion.currentTime', {
+              time: formatTimeForDisplay(payload.currentStartTime, locale),
+            })}
+          </Text>
+        </View>
 
-        <View style={styles.fieldGroup}>
-          <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
+        {/* New time picker */}
+        <VStack spacing={spacingPixels[2]}>
+          <Text size="sm" weight="semibold" color={colors.textSecondary}>
             {t('matchDetail.timeSuggestion.newTimeLabel')}
           </Text>
           <TouchableOpacity
@@ -225,23 +293,23 @@ export function SuggestMatchTimeActionSheet(props: SheetProps<'suggest-match-tim
               { borderColor: colors.border, backgroundColor: colors.buttonInactive },
             ]}
             onPress={openPicker}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
           >
             <Ionicons name="time-outline" size={20} color={colors.buttonActive} />
             <Text size="base" color={colors.text}>
               {formatTimeForDisplay(selectedTime, locale)}
             </Text>
           </TouchableOpacity>
-
           {payload.matchTimezone && (
-            <Text size="xs" color={colors.textMuted} style={styles.timezoneBanner}>
+            <Text size="xs" color={colors.textMuted}>
               {t('matchDetail.timeSuggestion.timezoneBanner', { tz: payload.matchTimezone })}
             </Text>
           )}
-        </View>
+        </VStack>
 
-        <View style={styles.fieldGroup}>
-          <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
+        {/* Optional note */}
+        <VStack spacing={spacingPixels[2]}>
+          <Text size="sm" weight="semibold" color={colors.textSecondary}>
             {t('matchDetail.timeSuggestion.noteLabel')}
           </Text>
           <TextInput
@@ -259,8 +327,9 @@ export function SuggestMatchTimeActionSheet(props: SheetProps<'suggest-match-tim
             placeholderTextColor={colors.textMuted}
             multiline
             maxLength={NOTE_MAX}
+            textAlignVertical="top"
           />
-        </View>
+        </VStack>
 
         {status === 'error' && errorMsg && (
           <View
@@ -275,131 +344,75 @@ export function SuggestMatchTimeActionSheet(props: SheetProps<'suggest-match-tim
             </Text>
           </View>
         )}
+      </VStack>
 
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={[
-              styles.button,
-              styles.primaryButton,
-              { backgroundColor: accent, opacity: status === 'sending' || sameAsCurrent ? 0.6 : 1 },
-            ]}
-            onPress={handleSubmit}
-            disabled={status === 'sending' || status === 'sent' || sameAsCurrent}
-            activeOpacity={0.8}
-          >
-            {status === 'sending' ? (
-              <ActivityIndicator size="small" color="#ffffff" />
-            ) : (
-              <Text size="sm" weight="bold" color="#ffffff">
-                {isEditing
-                  ? t('matchDetail.timeSuggestion.submitUpdate')
-                  : t('matchDetail.timeSuggestion.submit')}
-              </Text>
-            )}
-          </TouchableOpacity>
+      {/* Android picker: one-shot dialog rendered inline. */}
+      {showPicker && Platform.OS === 'android' && (
+        <DateTimePicker
+          value={tempTime}
+          mode="time"
+          display="spinner"
+          onChange={handlePickerChange}
+          minuteInterval={15}
+        />
+      )}
 
-          {isEditing && (
-            <TouchableOpacity
-              style={[styles.button, styles.secondaryButton, { borderColor: '#dc2626' }]}
-              onPress={handleWithdraw}
-              disabled={status === 'sending'}
-              activeOpacity={0.7}
-            >
-              <Text size="sm" weight="semibold" color="#dc2626">
-                {t('matchDetail.timeSuggestion.withdraw')}
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity
-            style={[
-              styles.button,
-              styles.secondaryButton,
-              { borderColor: isDark ? neutral[600] : neutral[300] },
-            ]}
-            onPress={handleCancel}
-            activeOpacity={0.7}
-          >
-            <Text size="sm" weight="semibold" color={colors.foreground}>
-              {t('common.cancel')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Android picker renders inline as a one-shot dialog */}
-        {showPicker && Platform.OS === 'android' && (
-          <DateTimePicker
-            value={tempTime}
-            mode="time"
-            display="spinner"
-            onChange={handlePickerChange}
-            minuteInterval={15}
-          />
-        )}
-
-        {/* iOS picker uses a modal sheet — matches WhenFormatStep convention */}
-        {Platform.OS === 'ios' && (
-          <Modal
-            visible={showPicker}
-            transparent
-            animationType="fade"
-            onRequestClose={() => setShowPicker(false)}
-          >
-            <Pressable style={styles.modalOverlay} onPress={() => setShowPicker(false)}>
-              <View style={[styles.pickerModal, { backgroundColor: colors.cardBackground }]}>
-                <View style={[styles.pickerHeader, { borderBottomColor: colors.border }]}>
-                  <TouchableOpacity
-                    onPress={() => setShowPicker(false)}
-                    style={styles.pickerHeaderButton}
-                  >
-                    <Text size="base" color={colors.textMuted}>
-                      {t('common.cancel')}
-                    </Text>
-                  </TouchableOpacity>
-                  <Text size="base" weight="semibold" color={colors.text}>
-                    {t('matchDetail.timeSuggestion.newTimeLabel')}
+      {/* iOS picker: modal sheet on top, matches the convention from
+          features/matches/components/steps/WhenFormatStep.tsx. */}
+      {Platform.OS === 'ios' && (
+        <Modal
+          visible={showPicker}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowPicker(false)}
+        >
+          <Pressable style={styles.modalOverlay} onPress={() => setShowPicker(false)}>
+            <View style={[styles.pickerModal, { backgroundColor: colors.cardBackground }]}>
+              <View style={[styles.pickerHeader, { borderBottomColor: colors.border }]}>
+                <TouchableOpacity
+                  onPress={() => setShowPicker(false)}
+                  style={styles.pickerHeaderButton}
+                >
+                  <Text size="base" color={colors.textMuted}>
+                    {t('common.cancel')}
                   </Text>
-                  <TouchableOpacity onPress={handlePickerDone} style={styles.pickerHeaderButton}>
-                    <Text size="base" weight="semibold" color={accent}>
-                      {t('common.done')}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-                <DateTimePicker
-                  value={tempTime}
-                  mode="time"
-                  display="spinner"
-                  onChange={handlePickerChange}
-                  minuteInterval={15}
-                  themeVariant={isDark ? 'dark' : 'light'}
-                  style={styles.iosPicker}
-                />
+                </TouchableOpacity>
+                <Text size="base" weight="semibold" color={colors.text}>
+                  {t('matchDetail.timeSuggestion.newTimeLabel')}
+                </Text>
+                <TouchableOpacity onPress={handlePickerDone} style={styles.pickerHeaderButton}>
+                  <Text size="base" weight="semibold" color={colors.primary}>
+                    {t('common.done')}
+                  </Text>
+                </TouchableOpacity>
               </View>
-            </Pressable>
-          </Modal>
-        )}
-      </View>
-    </ActionSheet>
+              <DateTimePicker
+                value={tempTime}
+                mode="time"
+                display="spinner"
+                onChange={handlePickerChange}
+                minuteInterval={15}
+                themeVariant={isDark ? 'dark' : 'light'}
+                style={styles.iosPicker}
+              />
+            </View>
+          </Pressable>
+        </Modal>
+      )}
+    </BaseActionSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: spacingPixels[5],
-    paddingTop: spacingPixels[4],
-    paddingBottom: spacingPixels[6],
-  },
-  header: {
+  currentTimeChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[2],
-    marginBottom: spacingPixels[2],
+    paddingVertical: spacingPixels[2],
+    paddingHorizontal: spacingPixels[3],
+    borderRadius: radiusPixels.md,
+    alignSelf: 'flex-start',
   },
-  title: { flexShrink: 1 },
-  subtitle: { marginBottom: spacingPixels[3], lineHeight: 20 },
-  currentTime: { marginBottom: spacingPixels[4] },
-  fieldGroup: { marginBottom: spacingPixels[4] },
-  label: { marginBottom: spacingPixels[2] },
   pickerButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -409,9 +422,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radiusPixels.md,
   },
-  timezoneBanner: { marginTop: spacingPixels[2] },
   noteInput: {
-    minHeight: 64,
+    minHeight: 72,
     paddingVertical: spacingPixels[3],
     paddingHorizontal: spacingPixels[4],
     borderWidth: 1,
@@ -425,20 +437,8 @@ const styles = StyleSheet.create({
     padding: spacingPixels[3],
     borderRadius: radiusPixels.md,
     borderWidth: 1,
-    marginBottom: spacingPixels[4],
   },
   errorText: { flexShrink: 1 },
-  actions: { gap: spacingPixels[3] },
-  button: {
-    paddingVertical: spacingPixels[3],
-    paddingHorizontal: spacingPixels[5],
-    borderRadius: radiusPixels.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 44,
-  },
-  primaryButton: {},
-  secondaryButton: { backgroundColor: 'transparent', borderWidth: 1 },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',

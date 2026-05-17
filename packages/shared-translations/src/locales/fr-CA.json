@@ -469,7 +469,7 @@
       },
       "match_time_suggestion_accepted": {
         "title": "Ta proposition a été acceptée",
-        "body": "Ta partie de {sportName} le {matchDate} commence maintenant à {suggestedStartTime}."
+        "body": "Ta partie de {sportName} le {matchDate} commence désormais à {suggestedStartTime}."
       },
       "match_time_suggestion_declined": {
         "title": "Proposition refusée",
@@ -3143,6 +3143,7 @@
       "join": "Rejoindre la partie",
       "askToJoin": "Demander à rejoindre",
       "acceptInvitation": "Accepter invitation",
+      "manageInvitation": "Gérer l'invitation",
       "full": "Complet",
       "view": "Voir détails",
       "viewResults": "Voir résultats",
@@ -3344,6 +3345,7 @@
       "submitSuccess": "Proposition envoyée à l'hôte",
       "withdrawSuccess": "Proposition retirée",
       "alreadyPending": "Tu as déjà une proposition en attente — retire-la d'abord.",
+      "sameAsCurrent": "C'est l'heure actuelle — choisis-en une autre.",
       "errorGeneric": "Impossible d'envoyer ta proposition. Réessaie.",
       "sectionTitle": "Propositions d'heure",
       "sectionEmpty": "Aucune proposition en attente",

@@ -838,11 +838,13 @@ const CardFooter: React.FC<CardFooterProps> = ({
     ctaDisabled = true;
     ctaIcon = 'time-outline';
   } else if (isInvited && !isFull && !isRequestMode) {
-    // Invited (pending status) to direct-join match with spots → Accept Invitation (success green)
-    ctaLabel = t('match.cta.acceptInvitation');
+    // Invited (pending status) to direct-join match with spots → opens the
+    // detail sheet where the user can accept, decline, or suggest a different
+    // time, so "Manage" reads more honestly than "Accept" here.
+    ctaLabel = t('match.cta.manageInvitation' as TranslationKey);
     ctaBgColor = ctaPositive;
     ctaTextColor = base.white;
-    ctaIcon = 'checkmark-circle-outline';
+    ctaIcon = 'mail-open-outline';
   } else if (isFull) {
     // Join Waitlist → success green
     ctaLabel = t('match.cta.joinWaitlist');
