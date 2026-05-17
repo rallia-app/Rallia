@@ -1631,45 +1631,15 @@
     },
     "availabilityStep": {
       "title": "Parlez-nous de votre horaire",
-      "subtitle": "Sélectionnez vos disponibilités",
-      "am": "AM",
-      "pm": "PM",
-      "eve": "SOIR",
-      "early": "Tôt",
-      "morning": "Matin",
-      "midday": "Midi",
-      "afternoon": "Après-midi",
-      "evening": "Soir",
-      "late": "Tard",
-      "earlyRange": "6 h – 9 h",
-      "morningRange": "9 h – 12 h",
-      "middayRange": "12 h – 14 h",
-      "afternoonRange": "14 h – 17 h",
-      "eveningRange": "17 h – 20 h",
-      "lateRange": "20 h – 23 h",
-      "toggleDayHint": "Touchez pour cocher toute la journée",
-      "toggleBlockHint": "Touchez pour cocher ce bloc sur toute la semaine",
       "presets": {
         "afterWork": "Après le travail",
         "weekendsAny": "Fin de semaine",
         "lunch": "Dîner",
-        "weekdayLunches": "Heures de dîner",
         "mornings": "Matins",
         "clear": "Effacer"
       },
-      "minimumSelected": "{count} / {minimum} minimum sélectionnés",
-      "selected": "{count} disponibilités sélectionnées",
       "saveButton": "Enregistrer",
-      "complete": "Terminer",
-      "days": {
-        "monday": "Lun",
-        "tuesday": "Mar",
-        "wednesday": "Mer",
-        "thursday": "Jeu",
-        "friday": "Ven",
-        "saturday": "Sam",
-        "sunday": "Dim"
-      }
+      "complete": "Terminer"
     },
     "validation": {
       "fillRequiredFields": "Veuillez remplir tous les champs obligatoires",
@@ -1765,7 +1735,9 @@
       "feedEmptyTitle": "Aucune suggestion disponible",
       "feedEmptySubtitle": "Revenez plus tard quand d'autres joueurs se joindront.",
       "selectDate": "Sélectionnez une date",
-      "selectTime": "Sélectionnez un horaire"
+      "selectTime": "Sélectionnez un horaire",
+      "reassureTitle": "Triés sur le volet pour vous",
+      "reassureMessage": "Ces joueurs correspondent à votre niveau, sont disponibles à ce moment et fréquentent vos terrains préférés. Ils espèrent qu'un joueur comme vous fasse le premier pas — vous ne dérangez personne, vous faites leur semaine."
     },
     "complete": "Terminer",
     "locationStep": {

@@ -664,8 +664,7 @@ const PlayerProfile = () => {
           'Failed to load ratings'
         ),
 
-        // Fetch player availabilities — hourly rows; folded back into the
-        // legacy period grid downstream via periodForHour().
+        // Fetch player availabilities — hourly rows populate the grid Set.
         withTimeout(
           (async () =>
             supabase

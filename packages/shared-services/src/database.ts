@@ -6,7 +6,6 @@
  */
 
 import { supabase } from './supabase';
-import { expandPeriodToHours } from './availability/periodHourBridge';
 import type {
   Profile,
   ProfileInsert,
@@ -1064,14 +1063,10 @@ export const OnboardingService = {
   /**
    * Save player availability.
    *
-   * Accepts either the new hourly shape (`{ day, hour_of_day, is_active }`)
-   * or the legacy period shape (`{ day, period, is_active }`). Period inputs
-   * are expanded to their constituent hours via {@link expandPeriodToHours}
-   * so the underlying write is always hourly. Diff strategy: gather the
-   * desired set of active `(day, hour)` cells, upsert them with
-   * `last_confirmed_at = NOW()`, then delete any rows for this player whose
-   * `(day, hour_of_day)` is not in the desired set. Avoids leaving orphaned
-   * is_active=false rows in the table now that the schema is hourly.
+   * Diff strategy: gather the desired set of active `(day, hour)` cells from
+   * the input, upsert them with `last_confirmed_at = NOW()`, then delete any
+   * rows for this player whose `(day, hour_of_day)` is not in the desired
+   * set. Avoids leaving orphaned is_active=false rows in the table.
    *
    * Every successful save bumps last_confirmed_at — including the "tap save
    * without changes" gesture from the weekly refresh prompt — so the
@@ -1088,10 +1083,9 @@ export const OnboardingService = {
 
       const confirmedAt = new Date().toISOString();
 
-      // Build the desired set of active hourly cells. Period inputs expand
-      // into their hour cells; duplicates within an input collapse via the
-      // Set key. is_active=false rows are excluded from the desired set so
-      // they end up deleted below.
+      // Build the desired set of active hourly cells. Duplicates within the
+      // input collapse via the Map key. is_active=false rows are excluded
+      // so they end up deleted below.
       type HourRow = {
         player_id: string;
         day: string;
@@ -1103,26 +1097,14 @@ export const OnboardingService = {
 
       for (const a of availabilities) {
         if (!a.is_active) continue;
-        const day = a.day ?? a.day_of_week;
-        if (!day) continue;
-
-        const hours: number[] = [];
-        if (typeof a.hour_of_day === 'number') {
-          hours.push(a.hour_of_day);
-        } else if (a.period) {
-          for (const h of expandPeriodToHours(a.period)) hours.push(h);
-        }
-
-        for (const h of hours) {
-          const key = `${day}-${h}`;
-          desired.set(key, {
-            player_id: userId,
-            day,
-            hour_of_day: h,
-            is_active: true,
-            last_confirmed_at: confirmedAt,
-          });
-        }
+        const key = `${a.day}-${a.hour_of_day}`;
+        desired.set(key, {
+          player_id: userId,
+          day: a.day,
+          hour_of_day: a.hour_of_day,
+          is_active: true,
+          last_confirmed_at: confirmedAt,
+        });
       }
 
       const desiredRows = Array.from(desired.values());

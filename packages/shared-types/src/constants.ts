@@ -12,7 +12,6 @@ import type {
   MatchType,
   MatchDuration,
   DayOfWeek,
-  TimePeriod,
   GenderEnum,
   CourtSurface,
   CourtType,
@@ -174,35 +173,6 @@ export const DAYS_OF_WEEK_ORDERED: DayOfWeek[] = [
   'saturday',
   'sunday',
 ];
-
-// ============================================
-// TIME PERIOD
-// ============================================
-
-/**
- * Human-readable labels for time periods
- */
-export const TIME_PERIOD_LABELS: Record<TimePeriod, string> = {
-  morning: 'Morning',
-  afternoon: 'Afternoon',
-  evening: 'Evening',
-  night: 'Night',
-};
-
-/**
- * Time ranges for each period
- */
-export const TIME_PERIOD_RANGES: Record<TimePeriod, string> = {
-  morning: '6am - 12pm',
-  afternoon: '12pm - 5pm',
-  evening: '5pm - 9pm',
-  night: '9pm - 12am',
-};
-
-/**
- * Ordered list of time periods for iteration
- */
-export const TIME_PERIODS_ORDERED: TimePeriod[] = ['morning', 'afternoon', 'evening', 'night'];
 
 // ============================================
 // GENDER

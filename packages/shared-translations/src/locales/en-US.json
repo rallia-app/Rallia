@@ -1631,45 +1631,15 @@
     },
     "availabilityStep": {
       "title": "Tell us about your schedule",
-      "subtitle": "Select your availabilities",
-      "am": "AM",
-      "pm": "PM",
-      "eve": "EVE",
-      "early": "Early",
-      "morning": "Morning",
-      "midday": "Midday",
-      "afternoon": "Afternoon",
-      "evening": "Evening",
-      "late": "Late",
-      "earlyRange": "6 – 9 am",
-      "morningRange": "9 am – 12 pm",
-      "middayRange": "12 – 2 pm",
-      "afternoonRange": "2 – 5 pm",
-      "eveningRange": "5 – 8 pm",
-      "lateRange": "8 – 11 pm",
-      "toggleDayHint": "Tap to toggle the whole day",
-      "toggleBlockHint": "Tap to toggle this time block across the week",
       "presets": {
         "afterWork": "After work",
         "weekendsAny": "Weekends",
         "lunch": "Lunch",
-        "weekdayLunches": "Lunches",
         "mornings": "Mornings",
         "clear": "Clear"
       },
-      "minimumSelected": "{count} / {minimum} minimum selected",
-      "selected": "{count} availabilities selected",
       "saveButton": "Save",
-      "complete": "Complete",
-      "days": {
-        "monday": "Mon",
-        "tuesday": "Tue",
-        "wednesday": "Wed",
-        "thursday": "Thu",
-        "friday": "Fri",
-        "saturday": "Sat",
-        "sunday": "Sun"
-      }
+      "complete": "Complete"
     },
     "validation": {
       "fillRequiredFields": "Please fill in all required fields",
@@ -1765,7 +1735,9 @@
       "feedEmptyTitle": "No suggestions available",
       "feedEmptySubtitle": "Check back later as more players join.",
       "selectDate": "Select a date",
-      "selectTime": "Select a time"
+      "selectTime": "Select a time",
+      "reassureTitle": "Hand-picked just for you",
+      "reassureMessage": "These players match your level, are free at this time, and play at courts you love. They're hoping someone like you reaches out — you're not interrupting, you're making their week."
     },
     "complete": "Complete",
     "locationStep": {

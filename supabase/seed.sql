@@ -1077,13 +1077,18 @@ END $$;
 
 -- ============================================================================
 -- 7. Player Availability
+--
+-- Hourly schema (post-20260516184214 refactor): `player_availability` is keyed
+-- on (player_id, day, hour_of_day) with hour_of_day in 6..22. We still roll
+-- the dice per 6-block "band" (the same morning/afternoon/etc. semantics
+-- users think in) and expand each rolled band into its constituent hour
+-- cells. That keeps seed data band-coherent (a player free at 5 PM is also
+-- free at 6 PM and 7 PM), which matches real user patterns far better than
+-- rolling each hour independently and getting Swiss-cheese availability.
 -- ============================================================================
 DO $$
 DECLARE
   days day_enum[] := ARRAY['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-  -- 6-block enum (post-20260515220000 refactor). Indexed p=1..6 ⇒
-  --   1 early, 2 morning, 3 midday, 4 afternoon, 5 evening, 6 late.
-  periods period_enum[] := ARRAY['early', 'morning', 'midday', 'afternoon', 'evening', 'late'];
   fake_id UUID;
   idx INT;
   d INT;
@@ -1094,8 +1099,16 @@ BEGIN
     fake_id := ('a1000000-0000-0000-0000-00000000' || LPAD(idx::text, 4, '0'))::uuid;
 
     FOR d IN 1..7 LOOP
+      -- p=1..6 indexes the legacy 6-block bands, only used here to control
+      -- the seeded distribution:
+      --   1 early     → hours 6,7,8
+      --   2 morning   → hours 9,10,11
+      --   3 midday    → hours 12,13
+      --   4 afternoon → hours 14,15,16
+      --   5 evening   → hours 17,18,19
+      --   6 late      → hours 20,21,22
       FOR p IN 1..6 LOOP
-        -- Deterministic pseudo-random: each player gets ~10–20 active slots
+        -- Deterministic pseudo-random: each player gets ~10–20 active bands.
         slot_hash := (idx * 31 + d * 7 + p * 13) % 100;
 
         -- Weekend AM cluster (p=1..3): high probability (70%)
@@ -1105,8 +1118,18 @@ BEGIN
            OR (d < 6 AND p >= 4 AND slot_hash < 50)       -- weekday PM cluster
            OR (d < 6 AND p <= 3 AND slot_hash < 25)       -- weekday AM cluster
         THEN
-          INSERT INTO player_availability (player_id, day, period, is_active, last_confirmed_at)
-          VALUES (fake_id, days[d], periods[p], true, NOW())
+          INSERT INTO player_availability (player_id, day, hour_of_day, is_active, last_confirmed_at)
+          SELECT fake_id, days[d], h::smallint, true, NOW()
+          FROM unnest(
+            CASE p
+              WHEN 1 THEN ARRAY[6, 7, 8]
+              WHEN 2 THEN ARRAY[9, 10, 11]
+              WHEN 3 THEN ARRAY[12, 13]
+              WHEN 4 THEN ARRAY[14, 15, 16]
+              WHEN 5 THEN ARRAY[17, 18, 19]
+              WHEN 6 THEN ARRAY[20, 21, 22]
+            END
+          ) AS h
           ON CONFLICT DO NOTHING;
         END IF;
       END LOOP;

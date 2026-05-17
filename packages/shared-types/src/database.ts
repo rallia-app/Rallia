@@ -88,17 +88,6 @@ export type DayEnum = DbEnum<'day_enum'>;
  */
 export type AvailabilityHour = number;
 
-/**
- * @deprecated The 6-block period model has been replaced by per-hour cells
- * (`AvailabilityHour`). This string-literal union is kept as a transitional
- * type so legacy UI code that still thinks in named bands continues to
- * compile. New code should use `AvailabilityHour` directly. The shim in
- * `OnboardingService.saveAvailability` expands `period` to the corresponding
- * hour set; the inverse (hours → most-recent-period) is provided by helpers
- * in `shared-services/availability`.
- */
-export type PeriodEnum = 'early' | 'morning' | 'midday' | 'afternoon' | 'evening' | 'late';
-
 // Rating
 export type RatingCertificationMethodEnum = DbEnum<'rating_certification_method_enum'>;
 export type RatingRequestStatusEnum = DbEnum<'rating_request_status_enum'>;
@@ -184,7 +173,6 @@ export type MatchDuration = DbEnum<'match_duration_enum'>;
 
 // Time & Schedule (non-suffixed variants)
 export type DayOfWeek = DbEnum<'day_of_week'>;
-export type TimePeriod = DbEnum<'time_period'>;
 
 // Court (non-suffixed variants)
 export type CourtSurface = DbEnum<'court_surface'>;
@@ -580,30 +568,14 @@ export interface OnboardingRating {
 }
 
 /**
- * Onboarding/edit payload for a single availability assertion.
- *
- * Two compatible shapes are supported during the hourly migration window:
- *   • Hourly (new): `{ day, hour_of_day, is_active }` — one row per cell.
- *     Use this for any new code and any new selection UI.
- *   • Period-grid (legacy): `{ day, period, is_active }` — one row per band.
- *     `OnboardingService.saveAvailability` expands the period to its
- *     constituent hours before insert. Kept here while the UI still composes
- *     period grids. Remove once the UI is rewritten to hour cells.
+ * Onboarding/edit payload for a single availability assertion. One row per
+ * (day, hour_of_day) cell from the 7×17 weekly hourly grid.
  */
 export interface OnboardingAvailability {
-  day?: DayEnum;
-  /** Hourly cell (6..22). Preferred for new code. */
-  hour_of_day?: AvailabilityHour;
-  /**
-   * @deprecated Use `hour_of_day` instead. Legacy period-grid input; the
-   * service layer expands each period to its hours on save.
-   */
-  period?: PeriodEnum;
+  day: DayEnum;
+  /** Hourly cell (6..22). */
+  hour_of_day: AvailabilityHour;
   is_active: boolean;
-  /** @deprecated Use 'day' instead */
-  day_of_week?: DayOfWeek;
-  /** @deprecated No replacement; period_enum has been removed from the DB. */
-  time_period?: TimePeriod;
 }
 
 export interface OnboardingData {
