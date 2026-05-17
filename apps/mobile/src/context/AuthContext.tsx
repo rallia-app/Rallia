@@ -23,9 +23,10 @@ import React, {
   PropsWithChildren,
 } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import type { Session, AuthError, Provider, User } from '@supabase/supabase-js';
-import { Logger } from '@rallia/shared-services';
+import { Logger, unregisterPushToken } from '@rallia/shared-services';
 import { posthogClient } from '../providers/PostHogProvider';
 
 // =============================================================================
@@ -186,6 +187,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [sessionExpired, setSessionExpired] = useState(false);
   const [accountSuspended, setAccountSuspended] = useState(false);
 
+  const queryClient = useQueryClient();
+
   // Track previous session to detect expiry
   const previousSessionRef = useRef<Session | null>(null);
 
@@ -219,6 +222,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
         Logger.warn('Account suspended — signing user out');
         previousSessionRef.current = null; // Prevent sessionExpired from triggering
         setAccountSuspended(true);
+        await unregisterPushToken(userId).catch(error => {
+          Logger.error('Failed to clear push token on suspended sign-out', error as Error);
+        });
         try {
           await supabase.auth.signOut();
         } catch {
@@ -534,16 +540,33 @@ export function AuthProvider({ children }: PropsWithChildren) {
    */
   const signOut = useCallback(async (): Promise<AuthResult> => {
     try {
+      // Capture user id before clearing the ref so we can unregister the
+      // push token while the Supabase session JWT is still valid.
+      const userId = previousSessionRef.current?.user?.id;
       // Clear previous session ref first to prevent expiry detection
       previousSessionRef.current = null;
       // Clear any existing session expired flag
       setSessionExpired(false);
+
+      // Abort in-flight queries so screens that key on session/player id
+      // (e.g. useJustForYou, useTopSuggestions) don't re-fire in anon mode
+      // against heavier RPCs the moment the session goes null.
+      await queryClient.cancelQueries();
+
+      if (userId) {
+        await unregisterPushToken(userId).catch(error => {
+          Logger.error('Failed to clear push token on sign-out', error as Error);
+        });
+      }
 
       const { error } = await supabase.auth.signOut();
       if (error) {
         Logger.error('Error signing out', error);
         return { success: false, error };
       }
+      // Drop cached data tied to the previous user so it can't bleed into
+      // the next session and so no auth-keyed query refetches as anon.
+      queryClient.clear();
       posthogClient?.reset();
       return { success: true };
     } catch (error) {
@@ -553,7 +576,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         error: error instanceof Error ? error : new Error('Unknown error'),
       };
     }
-  }, []);
+  }, [queryClient]);
 
   const value: AuthContextType = {
     // State

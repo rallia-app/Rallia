@@ -369,7 +369,7 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
 export async function syncHomeLocation(
   playerId: string,
   location: HomeLocation
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; transient?: boolean }> {
   try {
     const { error } = await supabase
       .from('player')
@@ -382,8 +382,17 @@ export async function syncHomeLocation(
       .eq('id', playerId);
 
     if (error) {
-      console.error('[PlayerService] Failed to sync home location:', error);
-      return { success: false, error: error.message };
+      // 57014 = statement_timeout. The sync is redundant most of the time
+      // (caller now compares values before calling), so a transient timeout
+      // shouldn't surface as a scary console error. The next sign-in will
+      // retry if anything actually drifted.
+      const isStatementTimeout = error.code === '57014';
+      if (isStatementTimeout) {
+        console.debug('[PlayerService] Home location sync timed out (will retry next sign-in)');
+      } else {
+        console.error('[PlayerService] Failed to sync home location:', error);
+      }
+      return { success: false, error: error.message, transient: isStatementTimeout };
     }
 
     return { success: true };

@@ -547,23 +547,19 @@ export function usePushNotifications(
     }
   }, [isSplashComplete, handleNotificationResponse]);
 
-  // Unregister on logout
+  // Reset local registration state on logout. The token is cleared from the
+  // DB inside AuthContext.signOut (before the Supabase JWT is dropped), so we
+  // only need to reset hook state here — not call unregisterPushToken.
   useEffect(() => {
-    return () => {
-      // Clean up when user logs out (userId becomes null)
-      if (previousUserId.current && !userId) {
-        unregisterPushToken(previousUserId.current).catch(error => {
-          Logger.error('Failed to unregister push token on logout', error);
-        });
-        previousUserId.current = null;
-        setState({
-          expoPushToken: null,
-          isRegistered: false,
-          isRegistering: false,
-          error: null,
-        });
-      }
-    };
+    if (!userId && previousUserId.current) {
+      previousUserId.current = null;
+      setState({
+        expoPushToken: null,
+        isRegistered: false,
+        isRegistering: false,
+        error: null,
+      });
+    }
   }, [userId]);
 
   const requestPermissions = useCallback(async (): Promise<boolean> => {
