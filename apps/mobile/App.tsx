@@ -192,7 +192,7 @@ const queryPersister = createAsyncStoragePersister({
 
 // Bump this string to invalidate every persisted query at once — e.g. after a
 // breaking change to a query key shape or a payload schema.
-const QUERY_CACHE_BUSTER = 'v1';
+const QUERY_CACHE_BUSTER = 'v2';
 
 /**
  * Parse match ID from deep link URL.
@@ -821,7 +821,24 @@ function App() {
           <PostHogProvider>
             <PersistQueryClientProvider
               client={queryClient}
-              persistOptions={{ persister: queryPersister, buster: QUERY_CACHE_BUSTER }}
+              persistOptions={{
+                persister: queryPersister,
+                buster: QUERY_CACHE_BUSTER,
+                dehydrateOptions: {
+                  shouldDehydrateQuery: query => {
+                    if (query.state.status !== 'success') return false;
+                    // Skip queries whose payloads contain Date instances —
+                    // JSON persistence turns them into strings and breaks
+                    // consumers that call Date methods on the rehydrated value.
+                    const [root, sub] = query.queryKey as readonly unknown[];
+                    if (root === 'court-availability') return false;
+                    if (root === 'matches' && (sub === 'justForYou' || sub === 'topSuggestions')) {
+                      return false;
+                    }
+                    return true;
+                  },
+                },
+              }}
             >
               <LocaleProvider>
                 <ThemeProvider>
