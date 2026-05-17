@@ -4044,8 +4044,8 @@
       "activate": "Activer"
     },
     "availabilityRefreshBanner": {
-      "title": "Mettez à jour vos disponibilités",
-      "description": "Confirmez votre horaire hebdomadaire pour qu'on suggère des matchs qui vous conviennent.",
+      "title": "Vos disponibilités de la semaine",
+      "description": "Dites-nous quand vous pouvez jouer dans les 7 prochains jours — un petit point hebdo garde vos suggestions de matchs pertinentes.",
       "cta": "Mettre à jour"
     },
     "header": {

@@ -251,12 +251,12 @@ const SECOND_SPORT_BANNER_COOLDOWN_KEY = '@rallia/second-sport-banner-cooldown';
 const SECOND_SPORT_BANNER_COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2 hours
 const SECOND_SPORT_BANNER_FADE_MS = 10 * 60 * 1000; // 10 minutes
 
-// Availability staleness banner — matches the 14-day threshold the weekly
+// Availability staleness banner — matches the 7-day threshold the weekly
 // refresh cron and edit-overlay banner already use. Dismissing the banner
 // hides it for 1 day; after that, it re-appears until the user actually
 // confirms their schedule (which advances last_confirmed_at and clears it
-// for the full 14-day window).
-const AVAILABILITY_STALENESS_DAYS = 14;
+// for the full 7-day window).
+const AVAILABILITY_STALENESS_DAYS = 7;
 const AVAILABILITY_BANNER_COOLDOWN_KEY = '@rallia/availability-refresh-banner-cooldown';
 const AVAILABILITY_BANNER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
@@ -1203,7 +1203,7 @@ const Home = () => {
       });
 
       // Availability refresh banner — shown when the player's schedule has
-      // gone stale (no confirmation in the last 14 days). Tapping the CTA
+      // gone stale (no confirmation in the last 7 days). Tapping the CTA
       // jumps to UserProfile where the edit overlay is one tap away.
       if (availabilityIsStale && !availabilityBannerDismissed) {
         bannerCards.push(

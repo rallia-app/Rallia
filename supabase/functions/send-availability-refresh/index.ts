@@ -2,7 +2,7 @@
  * send-availability-refresh Edge Function
  *
  * Sends a weekly "confirm your week" push notification to onboarded users
- * whose availability data has gone stale (>14 days since last_confirmed_at,
+ * whose availability data has gone stale (>7 days since last_confirmed_at,
  * or never confirmed under the 6-block model). Tapping the push deep-links
  * to the player-availabilities overlay where a no-op "Save" tap refreshes
  * last_confirmed_at — closing the loop.
@@ -70,13 +70,13 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 function buildCopy(locale: string): { title: string; body: string } {
   if (locale.startsWith('fr')) {
     return {
-      title: 'Confirmez votre semaine',
-      body: 'Mettez à jour vos disponibilités pour rester visible aux bons joueurs.',
+      title: 'Vos disponibilités de la semaine',
+      body: 'Dites-nous quand vous pouvez jouer dans les 7 prochains jours pour garder vos suggestions de matchs pertinentes.',
     };
   }
   return {
-    title: 'Confirm your week',
-    body: 'Refresh your availability so we can suggest matches that actually fit.',
+    title: 'Your weekly availability',
+    body: 'Tell us when you can play over the next 7 days so we keep your match suggestions on point.',
   };
 }
 

@@ -4044,8 +4044,8 @@
       "activate": "Activate"
     },
     "availabilityRefreshBanner": {
-      "title": "Refresh your availability",
-      "description": "Confirm your weekly schedule so we can suggest matches that actually fit.",
+      "title": "Your weekly availability",
+      "description": "Tell us when you can play over the next 7 days — a quick weekly check-in keeps your match suggestions on point.",
       "cta": "Update"
     },
     "header": {
