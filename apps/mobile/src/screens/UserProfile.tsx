@@ -26,7 +26,7 @@ import {
   VStack,
   HStack,
 } from '@rallia/shared-components';
-import { supabase, Logger, OnboardingService, periodForHour } from '@rallia/shared-services';
+import { supabase, Logger, OnboardingService } from '@rallia/shared-services';
 import { useProfile, usePlayer, useProfileCompleteness } from '@rallia/shared-hooks';
 import type { CompletenessItem } from '@rallia/shared-hooks';
 import { replaceImage } from '../services/imageUpload';
@@ -50,7 +50,13 @@ import {
   errorHaptic,
   getHumanName,
 } from '@rallia/shared-utils';
-import type { DayEnum, PeriodEnum, Sport } from '@rallia/shared-types';
+import type { DayEnum, Sport } from '@rallia/shared-types';
+import {
+  HourlyAvailabilityGrid,
+  cellKey,
+  emptyGrid,
+  type HourGrid,
+} from '../features/onboarding/components/HourlyAvailabilityGrid';
 import {
   spacingPixels,
   radiusPixels,
@@ -75,41 +81,10 @@ interface SportWithRating extends Sport {
   ratingLabel?: string;
 }
 
-// Period keys mirror the DB period_enum 1:1 after the 6-block refactor.
-type PeriodKey = PeriodEnum;
-type DayPeriods = Record<PeriodKey, boolean>;
-
-interface AvailabilityGrid {
-  [day: string]: DayPeriods;
-}
-
-// Overlay payload uses short day labels (Mon/Tue/...) and the same 6-period
-// keys. Slot keys match period_enum 1:1, so no AM→morning translation runs.
-type TimeSlot = PeriodKey;
-type DayOfWeek = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
-type DayAvailability = Record<PeriodKey, boolean>;
-type WeeklyAvailability = Record<DayOfWeek, DayAvailability>;
-
-const PERIOD_KEYS: PeriodKey[] = ['early', 'morning', 'midday', 'afternoon', 'evening', 'late'];
-
-const EMPTY_DAY_PERIODS = (): DayPeriods => ({
-  early: false,
-  morning: false,
-  midday: false,
-  afternoon: false,
-  evening: false,
-  late: false,
-});
-
-const EMPTY_AVAIL_GRID = (): AvailabilityGrid => ({
-  monday: EMPTY_DAY_PERIODS(),
-  tuesday: EMPTY_DAY_PERIODS(),
-  wednesday: EMPTY_DAY_PERIODS(),
-  thursday: EMPTY_DAY_PERIODS(),
-  friday: EMPTY_DAY_PERIODS(),
-  saturday: EMPTY_DAY_PERIODS(),
-  sunday: EMPTY_DAY_PERIODS(),
-});
+// Hourly availability — see HourlyAvailabilityGrid for the data shape.
+// The flat Set of `${day}-${hour}` cell keys flows end-to-end (state,
+// overlay payload, save).
+const MIN_AVAILABILITIES = 6;
 
 const UserProfile = () => {
   const navigation = useAppNavigation();
@@ -139,7 +114,7 @@ const UserProfile = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [allSports, setAllSports] = useState<Sport[]>([]);
   const [loadingAllSports, setLoadingAllSports] = useState(true);
-  const [availabilities, setAvailabilities] = useState<AvailabilityGrid>({});
+  const [availabilities, setAvailabilities] = useState<HourGrid>(emptyGrid());
   // Most-recent last_confirmed_at across the player's rows — drives the
   // staleness banner in the edit overlay.
   const [availabilityLastConfirmedAt, setAvailabilityLastConfirmedAt] = useState<string | null>(
@@ -520,10 +495,9 @@ const UserProfile = () => {
     }
   };
 
-  // Fetch only availabilities (used after saving to avoid full screen reload).
-  // Reads the new hourly schema and folds each hour back into its containing
-  // period for the legacy 6×7 grid — any hour in a band marks that band
-  // active. PR B replaces this surface with a true hourly grid.
+  // Refresh just the availability set (used after the overlay saves so we
+  // don't re-fetch the whole profile). Populates the hour grid one cell per
+  // active row and tracks the freshest last_confirmed_at for the stale UI.
   const refetchAvailabilities = async () => {
     const {
       data: { user },
@@ -546,14 +520,10 @@ const UserProfile = () => {
         throw availResult.error;
       }
       const availData = availResult.data;
-      const availGrid = EMPTY_AVAIL_GRID();
+      const grid: Set<string> = new Set();
       let mostRecentConfirmedAt: string | null = null;
       (availData || []).forEach(avail => {
-        const day = avail.day as keyof AvailabilityGrid;
-        const period = periodForHour(avail.hour_of_day as number) as PeriodKey | undefined;
-        if (period && availGrid[day] && period in availGrid[day]) {
-          availGrid[day][period] = true;
-        }
+        grid.add(cellKey(avail.day, avail.hour_of_day as number));
         if (
           avail.last_confirmed_at &&
           (!mostRecentConfirmedAt || avail.last_confirmed_at > mostRecentConfirmedAt)
@@ -561,7 +531,7 @@ const UserProfile = () => {
           mostRecentConfirmedAt = avail.last_confirmed_at;
         }
       });
-      setAvailabilities(availGrid);
+      setAvailabilities(grid);
       setAvailabilityLastConfirmedAt(mostRecentConfirmedAt);
     } catch (error) {
       Logger.error('Failed to fetch availabilities', error as Error);
@@ -598,8 +568,7 @@ const UserProfile = () => {
       }
     };
 
-    // Availabilities — read hourly rows and fold into period grid for the
-    // legacy UI. See refetchAvailabilities() above for the same shim.
+    // Availabilities — hourly rows straight into the cell-key Set.
     const fetchAvailabilities = async () => {
       try {
         const availResult = await withTimeout(
@@ -616,14 +585,10 @@ const UserProfile = () => {
           throw availResult.error;
         }
         const availData = availResult.data;
-        const availGrid = EMPTY_AVAIL_GRID();
+        const grid: Set<string> = new Set();
         let mostRecentConfirmedAt: string | null = null;
         (availData || []).forEach(avail => {
-          const day = avail.day as keyof AvailabilityGrid;
-          const period = periodForHour(avail.hour_of_day as number) as PeriodKey | undefined;
-          if (period && availGrid[day] && period in availGrid[day]) {
-            availGrid[day][period] = true;
-          }
+          grid.add(cellKey(avail.day, avail.hour_of_day as number));
           if (
             avail.last_confirmed_at &&
             (!mostRecentConfirmedAt || avail.last_confirmed_at > mostRecentConfirmedAt)
@@ -631,7 +596,7 @@ const UserProfile = () => {
             mostRecentConfirmedAt = avail.last_confirmed_at;
           }
         });
-        setAvailabilities(availGrid);
+        setAvailabilities(grid);
         setAvailabilityLastConfirmedAt(mostRecentConfirmedAt);
       } catch (error) {
         Logger.error('Failed to fetch availabilities', error as Error);
@@ -644,141 +609,34 @@ const UserProfile = () => {
     await Promise.all([fetchSports(), fetchAvailabilities()]);
   };
 
-  // Convert DB format (lowercase day keys) to overlay format (short day labels).
-  // Period keys are identical between the two shapes after the 6-block refactor,
-  // so the inner object just passes through.
-  const convertToUIFormat = (dbAvailabilities: AvailabilityGrid): WeeklyAvailability => {
-    const dayMap: Record<string, DayOfWeek> = {
-      monday: 'Mon',
-      tuesday: 'Tue',
-      wednesday: 'Wed',
-      thursday: 'Thu',
-      friday: 'Fri',
-      saturday: 'Sat',
-      sunday: 'Sun',
-    };
-
-    const uiFormat: WeeklyAvailability = {
-      Mon: EMPTY_DAY_PERIODS(),
-      Tue: EMPTY_DAY_PERIODS(),
-      Wed: EMPTY_DAY_PERIODS(),
-      Thu: EMPTY_DAY_PERIODS(),
-      Fri: EMPTY_DAY_PERIODS(),
-      Sat: EMPTY_DAY_PERIODS(),
-      Sun: EMPTY_DAY_PERIODS(),
-    };
-
-    if (dbAvailabilities && Object.keys(dbAvailabilities).length > 0) {
-      Object.keys(dbAvailabilities).forEach(day => {
-        const uiDay = dayMap[day];
-        const dayData = dbAvailabilities[day];
-        if (uiDay && dayData) {
-          uiFormat[uiDay] = { ...dayData };
-        }
-      });
-    }
-
-    return uiFormat;
-  };
-
-  // Handle saving availabilities from the overlay
-  const handleSaveAvailabilities = async (
-    uiAvailabilities: WeeklyAvailability,
-    privacyShowAvailability: boolean
-  ) => {
-    const selectedCount = (Object.keys(uiAvailabilities) as DayOfWeek[]).reduce(
-      (count, day) =>
-        count +
-        (Object.keys(uiAvailabilities[day]) as TimeSlot[]).filter(
-          slot => uiAvailabilities[day][slot]
-        ).length,
-      0
-    );
-    if (selectedCount < 3) {
+  // Persist the hour grid returned by the overlay. Every save is routed
+  // through OnboardingService.saveAvailability, which diff-syncs the
+  // requested cells and stamps last_confirmed_at on every row touched
+  // (including no-op "refresh only" re-saves from the weekly prompt).
+  const handleSaveAvailabilities = async (grid: HourGrid) => {
+    if (grid.size < MIN_AVAILABILITIES) {
       toast.error(t('alerts.minAvailabilitiesRequired'));
       return;
     }
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error(t('errors.unauthorized'));
-        return;
-      }
-
-      // Slot keys match period_enum 1:1 after the 6-block refactor.
-      const dayMap: Record<DayOfWeek, DayEnum> = {
-        Mon: 'monday',
-        Tue: 'tuesday',
-        Wed: 'wednesday',
-        Thu: 'thursday',
-        Fri: 'friday',
-        Sat: 'saturday',
-        Sun: 'sunday',
-      };
-
-      // Route every save through OnboardingService.saveAvailability so the
-      // last_confirmed_at chokepoint runs on every write — including the
-      // "tap save without changes" refresh gesture from the weekly prompt.
-      // The service upserts on (player_id, day, period) and stamps
-      // last_confirmed_at on every row it touches; rows for unselected slots
-      // stay in the table but are flipped to is_active = false here.
-      const availabilityData = (Object.keys(uiAvailabilities) as DayOfWeek[]).flatMap(day =>
-        PERIOD_KEYS.map(slot => ({
-          day: dayMap[day],
-          period: slot,
-          is_active: uiAvailabilities[day][slot] === true,
-        }))
-      );
-
-      const selectedCount = availabilityData.filter(a => a.is_active).length;
-      if (selectedCount > 0) {
-        const { error: saveError } = await OnboardingService.saveAvailability(availabilityData);
-        if (saveError) throw new Error(saveError.message);
-      }
-
-      // Save the privacy setting to the player table
-      const privacyResult = await withTimeout(
-        (async () =>
-          supabase
-            .from('player')
-            .update({
-              privacy_show_availability: privacyShowAvailability,
-            })
-            .eq('id', user.id))(),
-        10000,
-        'Failed to save privacy setting - connection timeout'
-      );
-
-      if (privacyResult.error) throw privacyResult.error;
-
-      // Update local state from the in-memory UI shape (no extra fetch).
-      const dayMapReverse: Record<DayOfWeek, string> = {
-        Mon: 'monday',
-        Tue: 'tuesday',
-        Wed: 'wednesday',
-        Thu: 'thursday',
-        Fri: 'friday',
-        Sat: 'saturday',
-        Sun: 'sunday',
-      };
-      const newGrid = EMPTY_AVAIL_GRID();
-      (Object.keys(uiAvailabilities) as DayOfWeek[]).forEach(day => {
-        const dbDay = dayMapReverse[day];
-        newGrid[dbDay] = { ...uiAvailabilities[day] };
+      const availabilityData = Array.from(grid).map(key => {
+        const sepIdx = key.lastIndexOf('-');
+        const day = key.slice(0, sepIdx) as DayEnum;
+        const hour = Number(key.slice(sepIdx + 1));
+        return { day, hour_of_day: hour, is_active: true };
       });
-      setAvailabilities(newGrid);
-      // Tapping save (with or without edits) always refreshes the freshness
-      // signal, since saveAvailability stamps last_confirmed_at = NOW().
+
+      const { error: saveError } = await OnboardingService.saveAvailability(availabilityData);
+      if (saveError) throw new Error(saveError.message);
+
+      // Adopt the saved grid into local state (no extra fetch) and refresh
+      // the staleness signal — saveAvailability set last_confirmed_at = NOW().
+      setAvailabilities(new Set(grid));
       setAvailabilityLastConfirmedAt(new Date().toISOString());
 
       SheetManager.hide('player-availabilities');
-
       toast.success(t('alerts.availabilitiesUpdated'));
-
-      // Refresh completeness so the checklist reflects the new availability count
       profileCompleteness.refetch();
     } catch (error) {
       Logger.error('Failed to save availabilities', error as Error, { playerId: player?.id });
@@ -797,8 +655,7 @@ const UserProfile = () => {
     SheetManager.show('player-availabilities', {
       payload: {
         mode: 'edit',
-        initialData: convertToUIFormat(availabilities),
-        initialPrivacyShowAvailability: player?.privacy_show_availability ?? true,
+        initialData: availabilities,
         initialLastConfirmedAt: availabilityLastConfirmedAt,
         onSave: handleSaveAvailabilities,
       },
@@ -876,8 +733,7 @@ const UserProfile = () => {
           SheetManager.show('player-availabilities', {
             payload: {
               mode: 'edit',
-              initialData: convertToUIFormat(availabilities),
-              initialPrivacyShowAvailability: player?.privacy_show_availability ?? true,
+              initialData: availabilities,
               onSave: handleSaveAvailabilities,
             },
           });
@@ -895,7 +751,6 @@ const UserProfile = () => {
       refetchProfile,
       refetchPlayer,
       availabilities,
-      convertToUIFormat,
       handleSaveAvailabilities,
     ]
   );
@@ -923,42 +778,6 @@ const UserProfile = () => {
       both: t('profile.hand.both'),
     };
     return handMap[hand] || hand;
-  };
-
-  const getDayLabel = (day: string): string => {
-    const key = `onboarding.availabilityStep.days.${day}` as TranslationKey;
-    const translated = t(key);
-    return translated !== key ? translated : day;
-  };
-
-  const getPeriodLabel = (period: PeriodKey): string => {
-    const keyMap = {
-      early: 'onboarding.availabilityStep.early',
-      morning: 'onboarding.availabilityStep.morning',
-      midday: 'onboarding.availabilityStep.midday',
-      afternoon: 'onboarding.availabilityStep.afternoon',
-      evening: 'onboarding.availabilityStep.evening',
-      late: 'onboarding.availabilityStep.late',
-    } as const;
-    return t(keyMap[period]);
-  };
-
-  const getPeriodRangeLabel = (period: PeriodKey): string => {
-    const keyMap = {
-      early: 'onboarding.availabilityStep.earlyRange',
-      morning: 'onboarding.availabilityStep.morningRange',
-      midday: 'onboarding.availabilityStep.middayRange',
-      afternoon: 'onboarding.availabilityStep.afternoonRange',
-      evening: 'onboarding.availabilityStep.eveningRange',
-      late: 'onboarding.availabilityStep.lateRange',
-    } as const;
-    return t(keyMap[period]);
-  };
-
-  const getDayLetterLabel = (day: string): string => {
-    const key = `playerDirectory.dayLetters.${day}` as TranslationKey;
-    const translated = t(key);
-    return translated !== key ? translated : day.charAt(0).toUpperCase();
   };
 
   return (
@@ -1619,8 +1438,7 @@ const UserProfile = () => {
                     SheetManager.show('player-availabilities', {
                       payload: {
                         mode: 'edit',
-                        initialData: convertToUIFormat(availabilities),
-                        initialPrivacyShowAvailability: player?.privacy_show_availability ?? true,
+                        initialData: availabilities,
                         initialLastConfirmedAt: availabilityLastConfirmedAt,
                         onSave: handleSaveAvailabilities,
                       },
@@ -1636,106 +1454,55 @@ const UserProfile = () => {
               <View
                 style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
               >
-                <View style={styles.gridContainer}>
-                  {[1, 2, 3, 4, 5, 6].map(row => (
-                    <View key={row} style={styles.gridRow}>
-                      <View style={styles.dayCell}>
-                        <Skeleton
-                          width={70}
-                          height={14}
-                          backgroundColor={skeletonBg}
-                          highlightColor={skeletonHighlight}
-                        />
-                      </View>
-                      {[1, 2, 3, 4, 5, 6, 7].map(cell => (
-                        <View
-                          key={cell}
-                          style={[styles.timeSlotCell, { borderColor: colors.inputBorder }]}
-                        >
-                          <Skeleton
-                            width="100%"
-                            height={32}
-                            borderRadius={radiusPixels.md}
-                            backgroundColor={skeletonBg}
-                            highlightColor={skeletonHighlight}
-                          />
-                        </View>
-                      ))}
-                    </View>
-                  ))}
-                </View>
+                <Skeleton
+                  width="100%"
+                  height={520}
+                  borderRadius={radiusPixels.md}
+                  backgroundColor={skeletonBg}
+                  highlightColor={skeletonHighlight}
+                />
               </View>
             ) : (
-              <View
-                style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+              // Read-only preview of the player's hourly grid. Wrapped in a
+              // TouchableOpacity that opens the edit overlay — the grid
+              // itself swallows pointer events so the tap goes to the wrapper.
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => {
+                  SheetManager.show('player-availabilities', {
+                    payload: {
+                      mode: 'edit',
+                      initialData: availabilities,
+                      initialLastConfirmedAt: availabilityLastConfirmedAt,
+                      onSave: handleSaveAvailabilities,
+                    },
+                  });
+                }}
               >
-                {/* Availability Grid — 6 time-block rows × 7 day columns,
-                    matching PlayerAvailabilitiesOverlay's transposed layout. */}
-                <View style={styles.gridContainer}>
-                  {/* Header Row: day letters across the top */}
-                  <View style={styles.gridRow}>
-                    <View style={styles.dayCell} />
-                    {(
-                      [
-                        'monday',
-                        'tuesday',
-                        'wednesday',
-                        'thursday',
-                        'friday',
-                        'saturday',
-                        'sunday',
-                      ] as const
-                    ).map(day => (
-                      <View key={day} style={styles.headerCell}>
-                        <Text size="xs" weight="semibold" color={colors.textMuted}>
-                          {getDayLetterLabel(day)}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-
-                  {/* Time-block Rows */}
-                  {PERIOD_KEYS.map(period => (
-                    <View key={period} style={styles.gridRow}>
-                      <View style={styles.dayCell}>
-                        <Text size="sm" weight="semibold" color={colors.text}>
-                          {getPeriodLabel(period)}
-                        </Text>
-                        <Text size="xs" color={colors.textMuted} style={styles.timeRangeText}>
-                          {getPeriodRangeLabel(period)}
-                        </Text>
-                      </View>
-                      {(
-                        [
-                          'monday',
-                          'tuesday',
-                          'wednesday',
-                          'thursday',
-                          'friday',
-                          'saturday',
-                          'sunday',
-                        ] as const
-                      ).map(day => {
-                        const isSelected = availabilities[day]?.[period] ?? false;
-                        return (
-                          <View
-                            key={`${period}-${day}`}
-                            style={[
-                              styles.timeSlotCell,
-                              {
-                                backgroundColor: isSelected
-                                  ? colors.primary
-                                  : colors.inputBackground,
-                                borderColor: isSelected ? colors.primary : colors.inputBorder,
-                              },
-                            ]}
-                          />
-                        );
-                      })}
-                    </View>
-                  ))}
+                <View
+                  pointerEvents="none"
+                  style={[
+                    styles.card,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                  ]}
+                >
+                  <HourlyAvailabilityGrid
+                    value={availabilities}
+                    // No-op: the wrapper intercepts taps and opens the edit overlay.
+                    onChange={() => {}}
+                    colors={{
+                      text: colors.text,
+                      textSecondary: colors.textSecondary,
+                      textMuted: colors.textMuted,
+                      border: colors.inputBorder,
+                      cellInactive: colors.inputBackground,
+                      cellActive: colors.primary,
+                    }}
+                    t={t}
+                    locale={locale}
+                  />
                 </View>
-              </View>
+              </TouchableOpacity>
             )}
           </WalkthroughableView>
         </CopilotStep>

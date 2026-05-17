@@ -1,121 +1,47 @@
+/**
+ * PlayerAvailabilitiesActionSheet
+ *
+ * Action-sheet wrapper around the hourly availability editor. Two modes:
+ *   • onboarding — saves directly via OnboardingService.saveAvailability,
+ *     stamps last_confirmed_at, completes onboarding.
+ *   • edit — hands the new grid back to the caller (e.g. UserProfile) via
+ *     `onSave(grid, privacy)`. The caller is responsible for persisting.
+ *
+ * The grid is the hourly 7×17 component from
+ * `components/HourlyAvailabilityGrid`; presets come from the matching
+ * presets component. Both are controlled by local `selection` state here,
+ * which is seeded from the caller's `initialData`.
+ *
+ * A stale banner shows in edit mode when `last_confirmed_at` is missing or
+ * older than 14 days, prompting the user to re-confirm.
+ */
 import React, { useMemo, useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-  Switch,
-  ScrollView as RNScrollView,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Text, useToast } from '@rallia/shared-components';
-import { OnboardingService, Logger, supabase } from '@rallia/shared-services';
-import type { DayEnum, PeriodEnum, OnboardingAvailability } from '@rallia/shared-types';
+import { OnboardingService, Logger } from '@rallia/shared-services';
+import type { OnboardingAvailability, DayEnum } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
-import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
+import { mediumHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
+import { useLocale } from '../../../../context';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
 import * as Analytics from '../../../../services/analytics';
+import {
+  HourlyAvailabilityGrid,
+  cellKey,
+  emptyGrid,
+  type HourGrid,
+} from '../HourlyAvailabilityGrid';
+import { HourlyAvailabilityPresets } from '../HourlyAvailabilityPresets';
 
-type TimeSlot = PeriodEnum;
-type DayOfWeek = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
-
-export type DayAvailability = Record<PeriodEnum, boolean>;
-export type WeeklyAvailability = Record<DayOfWeek, DayAvailability>;
-
-const TIME_SLOTS: TimeSlot[] = ['early', 'morning', 'midday', 'afternoon', 'evening', 'late'];
-const DAYS: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const WEEKDAYS: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-const WEEKEND: DayOfWeek[] = ['Sat', 'Sun'];
-
-const SLOT_TO_I18N_KEY: Record<TimeSlot, TranslationKey> = {
-  early: 'onboarding.availabilityStep.early',
-  morning: 'onboarding.availabilityStep.morning',
-  midday: 'onboarding.availabilityStep.midday',
-  afternoon: 'onboarding.availabilityStep.afternoon',
-  evening: 'onboarding.availabilityStep.evening',
-  late: 'onboarding.availabilityStep.late',
-};
-
-const SLOT_TO_RANGE_KEY: Record<TimeSlot, TranslationKey> = {
-  early: 'onboarding.availabilityStep.earlyRange',
-  morning: 'onboarding.availabilityStep.morningRange',
-  midday: 'onboarding.availabilityStep.middayRange',
-  afternoon: 'onboarding.availabilityStep.afternoonRange',
-  evening: 'onboarding.availabilityStep.eveningRange',
-  late: 'onboarding.availabilityStep.lateRange',
-};
-
-interface Preset {
-  key: 'afterWork' | 'weekendsAny' | 'weekdayLunches' | 'mornings';
-  labelKey: TranslationKey;
-  apply: () => Partial<Record<DayOfWeek, TimeSlot[]>>;
-}
-
-const PRESETS: Preset[] = [
-  {
-    key: 'afterWork',
-    labelKey: 'onboarding.availabilityStep.presets.afterWork',
-    apply: () => Object.fromEntries(WEEKDAYS.map(d => [d, ['evening', 'late']])),
-  },
-  {
-    key: 'weekendsAny',
-    labelKey: 'onboarding.availabilityStep.presets.weekendsAny',
-    apply: () => Object.fromEntries(WEEKEND.map(d => [d, [...TIME_SLOTS]])),
-  },
-  {
-    key: 'weekdayLunches',
-    labelKey: 'onboarding.availabilityStep.presets.weekdayLunches',
-    apply: () => Object.fromEntries(WEEKDAYS.map(d => [d, ['midday']])),
-  },
-  {
-    key: 'mornings',
-    labelKey: 'onboarding.availabilityStep.presets.mornings',
-    apply: () => Object.fromEntries(DAYS.map(d => [d, ['early', 'morning']])),
-  },
-];
-
-const DAY_TRANSLATION_KEY: Record<DayOfWeek, string> = {
-  Mon: 'monday',
-  Tue: 'tuesday',
-  Wed: 'wednesday',
-  Thu: 'thursday',
-  Fri: 'friday',
-  Sat: 'saturday',
-  Sun: 'sunday',
-};
-
-const DAY_MAP: Record<DayOfWeek, DayEnum> = {
-  Mon: 'monday',
-  Tue: 'tuesday',
-  Wed: 'wednesday',
-  Thu: 'thursday',
-  Fri: 'friday',
-  Sat: 'saturday',
-  Sun: 'sunday',
-};
-
+const MIN_SELECTIONS = 6;
 const STALENESS_DAYS = 14;
 
-const emptyDay = (): DayAvailability => ({
-  early: false,
-  morning: false,
-  midday: false,
-  afternoon: false,
-  evening: false,
-  late: false,
-});
-
-const defaultAvailabilities = (): WeeklyAvailability => ({
-  Mon: emptyDay(),
-  Tue: emptyDay(),
-  Wed: emptyDay(),
-  Thu: emptyDay(),
-  Fri: emptyDay(),
-  Sat: emptyDay(),
-  Sun: emptyDay(),
-});
+// =============================================================================
+// COMPONENT
+// =============================================================================
 
 export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-availabilities'>) {
   const mode = payload?.mode || 'onboarding';
@@ -126,24 +52,18 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
   const currentStep = payload?.currentStep || 1;
   const totalSteps = payload?.totalSteps || 8;
   const initialData = payload?.initialData;
-  const initialPrivacyShowAvailability = payload?.initialPrivacyShowAvailability ?? true;
   const initialLastConfirmedAt = payload?.initialLastConfirmedAt ?? null;
   const _selectedSportIds = payload?.selectedSportIds;
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
+  const { locale } = useLocale();
   const toast = useToast();
 
-  const [availabilities, setAvailabilities] = useState<WeeklyAvailability>(
-    initialData || defaultAvailabilities()
-  );
+  const [selection, setSelection] = useState<HourGrid>(initialData ?? emptyGrid());
   const [isSaving, setIsSaving] = useState(false);
-  const [privacyShowAvailability, setPrivacyShowAvailability] = useState(
-    initialPrivacyShowAvailability
-  );
 
-  // Staleness — show the "confirm your week" banner whenever last_confirmed_at
-  // is missing or older than STALENESS_DAYS. Visible in edit mode only; the
-  // onboarding flow already implies a fresh write.
+  // Staleness — show "confirm your week" in edit mode when last_confirmed_at
+  // is missing or older than the cutoff. Onboarding implies a fresh write.
   const isStale = useMemo(() => {
     if (mode !== 'edit') return false;
     if (!initialLastConfirmedAt) return true;
@@ -152,166 +72,75 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
     return Date.now() - last > STALENESS_DAYS * 24 * 60 * 60 * 1000;
   }, [mode, initialLastConfirmedAt]);
 
-  const toggleAvailability = (day: DayOfWeek, slot: TimeSlot) => {
-    selectionHaptic();
-    setAvailabilities(prev => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        [slot]: !prev[day][slot],
-      },
-    }));
-  };
+  const totalSelections = selection.size;
 
-  // Smart toggle: tap a day letter to fill (or clear) all 6 blocks of that
-  // day at once. If every block is already filled the tap clears the day.
-  const toggleDay = (day: DayOfWeek) => {
-    selectionHaptic();
-    setAvailabilities(prev => {
-      const allFilled = TIME_SLOTS.every(slot => prev[day][slot]);
-      const next: DayAvailability = TIME_SLOTS.reduce(
-        (acc, slot) => ({ ...acc, [slot]: !allFilled }),
-        {} as DayAvailability
-      );
-      return { ...prev, [day]: next };
-    });
-  };
+  const gridColors = useMemo(
+    () => ({
+      text: colors.text,
+      textSecondary: colors.textSecondary,
+      textMuted: colors.textMuted,
+      border: colors.inputBorder,
+      cellInactive: colors.inputBackground,
+      cellActive: colors.primary,
+    }),
+    [colors]
+  );
 
-  // Same idea, the other axis: tap a time-block label to fill/clear that
-  // block across all 7 days.
-  const toggleTimeBlock = (slot: TimeSlot) => {
-    selectionHaptic();
-    setAvailabilities(prev => {
-      const allFilled = DAYS.every(day => prev[day][slot]);
-      const next: WeeklyAvailability = DAYS.reduce(
-        (acc, day) => ({
-          ...acc,
-          [day]: { ...prev[day], [slot]: !allFilled },
-        }),
-        {} as WeeklyAvailability
-      );
-      return next;
-    });
-  };
-
-  // Presets are toggleable: tap once to apply the pattern, tap again to
-  // clear those exact cells. We detect "applied" by checking that every
-  // cell in the preset's pattern is currently filled — if any cell of the
-  // pattern is missing, the tap fills the gap rather than clearing.
-  const isPresetApplied = (preset: Preset, state: WeeklyAvailability) => {
-    const pattern = preset.apply();
-    return (Object.entries(pattern) as Array<[DayOfWeek, TimeSlot[]]>).every(([day, slots]) =>
-      slots.every(slot => state[day]?.[slot])
-    );
-  };
-
-  const togglePreset = (preset: Preset) => {
-    selectionHaptic();
-    setAvailabilities(prev => {
-      const pattern = preset.apply();
-      const applied = isPresetApplied(preset, prev);
-      const next: WeeklyAvailability = { ...prev };
-      (Object.entries(pattern) as Array<[DayOfWeek, TimeSlot[]]>).forEach(([day, slots]) => {
-        next[day] = { ...prev[day] };
-        slots.forEach(slot => {
-          next[day][slot] = !applied;
-        });
-      });
-      return next;
-    });
-  };
-
-  const clearAll = () => {
-    selectionHaptic();
-    setAvailabilities(defaultAvailabilities());
-  };
-
-  const totalSelections = useMemo(
-    () =>
-      DAYS.reduce(
-        (count, day) => count + TIME_SLOTS.filter(slot => availabilities[day][slot]).length,
-        0
-      ),
-    [availabilities]
+  const presetColors = useMemo(
+    () => ({
+      presetActiveBg: colors.primary,
+      presetInactiveBg: colors.inputBackground,
+      presetActiveBorder: colors.primary,
+      presetInactiveBorder: colors.inputBorder,
+      presetActiveText: colors.primaryForeground,
+      presetInactiveText: colors.text,
+      textMuted: colors.textMuted,
+      border: colors.inputBorder,
+    }),
+    [colors]
   );
 
   const handleContinue = async () => {
     mediumHaptic();
-
     if (isSaving) return;
 
-    // Edit mode: hand the in-memory state back to the caller, who is
-    // responsible for persisting via OnboardingService.saveAvailability (which
-    // bumps last_confirmed_at). The Save button intentionally remains tappable
-    // even when no toggles changed — tapping "Save" refreshes the freshness
-    // timestamp, which is the "I confirm this week" UX driven by the weekly
-    // refresh notification.
+    // Edit mode: detect refresh-only save (no data change) so analytics can
+    // distinguish weekly-confirm taps from real edits. The Save button stays
+    // tappable even on no-op so users can refresh last_confirmed_at via the
+    // weekly prompt.
     if (mode === 'edit' && onSave) {
-      const selectedCount = DAYS.reduce(
-        (count, day) => count + TIME_SLOTS.filter(slot => availabilities[day][slot]).length,
-        0
-      );
-      if (selectedCount < 3) {
+      if (selection.size < MIN_SELECTIONS) {
         toast.error(t('alerts.minAvailabilitiesRequired'));
         return;
       }
-      // Detect no-op "refresh only" save vs a real edit so the analytics
-      // event can distinguish weekly-confirm taps from actual schedule
-      // changes. Cheap structural compare against the initial payload.
-      const wasRefreshOnly =
-        !!initialData && JSON.stringify(availabilities) === JSON.stringify(initialData);
+      const wasRefreshOnly = !!initialData && setsEqual(selection, initialData);
       Analytics.availabilityScheduleUpdated({ was_refresh_only: wasRefreshOnly });
-      onSave(availabilities, privacyShowAvailability);
+      onSave(selection);
       SheetManager.hide('player-availabilities');
       return;
     }
 
-    // Onboarding mode: save to database
+    // Onboarding mode: persist directly.
     if (onContinue) {
       setIsSaving(true);
       try {
-        // Slot keys match the DB period_enum 1:1 after the 6-block refactor —
-        // no AM→morning translation needed.
         const availabilityData: OnboardingAvailability[] = [];
-        DAYS.forEach(day => {
-          TIME_SLOTS.forEach(slot => {
-            if (availabilities[day][slot]) {
-              availabilityData.push({
-                day: DAY_MAP[day],
-                period: slot,
-                is_active: true,
-              });
-            }
-          });
-        });
+        for (const key of selection) {
+          const sepIdx = key.lastIndexOf('-');
+          const day = key.slice(0, sepIdx) as DayEnum;
+          const hour = Number(key.slice(sepIdx + 1));
+          availabilityData.push({ day, hour_of_day: hour, is_active: true });
+        }
 
         const { error } = await OnboardingService.saveAvailability(availabilityData);
-
         if (error) {
           Logger.error('Failed to save player availability', error as Error, { availabilityData });
           setIsSaving(false);
           toast.error(t('onboarding.validation.failedToSaveAvailability'));
           return;
         }
-
-        Logger.debug('player_availabilities_saved', { availabilityData });
+        Logger.debug('player_availabilities_saved', { count: availabilityData.length });
         Analytics.availabilityScheduleUpdated({ was_refresh_only: false });
-
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (user) {
-          const { error: privacyError } = await supabase
-            .from('player')
-            .update({ privacy_show_availability: privacyShowAvailability })
-            .eq('id', user.id);
-
-          if (privacyError) {
-            Logger.warn('Failed to save availability privacy setting', { error: privacyError });
-          } else {
-            Logger.debug('availability_privacy_saved', { privacyShowAvailability });
-          }
-        }
 
         const { error: completeError } = await OnboardingService.completeOnboarding();
         if (completeError) {
@@ -322,7 +151,7 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
           });
         }
 
-        onContinue(availabilities);
+        onContinue(selection);
       } catch (error) {
         Logger.error('Unexpected error saving availability', error as Error);
         setIsSaving(false);
@@ -378,156 +207,38 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
             {t('onboarding.availabilityStep.subtitle')}
           </Text>
 
-          {/* Preset chips — tap to toggle a common pattern on/off. Active
-              chips render with the primary fill so the user can see at a
-              glance which presets are currently part of their selection. */}
-          <RNScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.presetRow}
-          >
-            {PRESETS.map(preset => {
-              const active = isPresetApplied(preset, availabilities);
-              return (
-                <TouchableOpacity
-                  key={preset.key}
-                  style={[
-                    styles.presetChip,
-                    {
-                      backgroundColor: active ? colors.primary : colors.inputBackground,
-                      borderColor: active ? colors.primary : colors.inputBorder,
-                    },
-                  ]}
-                  onPress={() => togglePreset(preset)}
-                  activeOpacity={0.7}
-                  accessibilityRole="switch"
-                  accessibilityState={{ checked: active }}
-                >
-                  {active && (
-                    <Ionicons
-                      name="checkmark"
-                      size={14}
-                      color={colors.primaryForeground}
-                      style={styles.presetChipIcon}
-                    />
-                  )}
-                  <Text
-                    size="xs"
-                    weight="semibold"
-                    color={active ? colors.primaryForeground : colors.text}
-                  >
-                    {t(preset.labelKey)}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-            {totalSelections > 0 && (
-              <TouchableOpacity
-                style={[
-                  styles.presetChip,
-                  { backgroundColor: 'transparent', borderColor: colors.inputBorder },
-                ]}
-                onPress={clearAll}
-                activeOpacity={0.7}
-              >
-                <Text size="xs" weight="semibold" color={colors.textMuted}>
-                  {t('onboarding.availabilityStep.presets.clear')}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </RNScrollView>
-
-          <View style={styles.gridContainer}>
-            <View style={styles.headerRow}>
-              <View style={styles.timeLabelCell} />
-              {DAYS.map(day => (
-                <TouchableOpacity
-                  key={`header-${day}`}
-                  style={styles.headerCell}
-                  onPress={() => toggleDay(day)}
-                  activeOpacity={0.6}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${t(`playerDirectory.dayLetters.${DAY_TRANSLATION_KEY[day]}` as TranslationKey)} — ${t('onboarding.availabilityStep.toggleDayHint')}`}
-                >
-                  <Text size="xs" weight="semibold" color={colors.textMuted}>
-                    {t(`playerDirectory.dayLetters.${DAY_TRANSLATION_KEY[day]}` as TranslationKey)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {TIME_SLOTS.map(slot => (
-              <View key={slot} style={styles.row}>
-                <TouchableOpacity
-                  style={styles.timeLabelCell}
-                  onPress={() => toggleTimeBlock(slot)}
-                  activeOpacity={0.6}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${t(SLOT_TO_I18N_KEY[slot])} — ${t('onboarding.availabilityStep.toggleBlockHint')}`}
-                >
-                  <Text size="sm" weight="semibold" color={colors.text}>
-                    {t(SLOT_TO_I18N_KEY[slot])}
-                  </Text>
-                  <Text size="xs" color={colors.textMuted} style={styles.timeRangeText}>
-                    {t(SLOT_TO_RANGE_KEY[slot])}
-                  </Text>
-                </TouchableOpacity>
-                {DAYS.map(day => {
-                  const isSelected = availabilities[day][slot];
-                  return (
-                    <TouchableOpacity
-                      key={`${day}-${slot}`}
-                      style={[
-                        styles.dayCell,
-                        {
-                          backgroundColor: isSelected ? colors.primary : colors.inputBackground,
-                          borderColor: isSelected ? colors.primary : colors.inputBorder,
-                        },
-                      ]}
-                      onPress={() => toggleAvailability(day, slot)}
-                      activeOpacity={0.8}
-                      accessibilityRole="switch"
-                      accessibilityState={{ checked: isSelected }}
-                      accessibilityLabel={`${t(`onboarding.availabilityStep.days.${DAY_TRANSLATION_KEY[day]}` as TranslationKey)} ${t(SLOT_TO_I18N_KEY[slot])}`}
-                    />
-                  );
-                })}
-              </View>
-            ))}
+          <View style={styles.counterContainer}>
+            <Text
+              size="sm"
+              weight="semibold"
+              color={totalSelections >= MIN_SELECTIONS ? colors.primary : colors.textMuted}
+            >
+              {totalSelections >= MIN_SELECTIONS
+                ? t('onboarding.availabilityStep.selected').replace(
+                    '{count}',
+                    String(totalSelections)
+                  )
+                : t('onboarding.availabilityStep.minimumSelected')
+                    .replace('{count}', String(totalSelections))
+                    .replace('{minimum}', String(MIN_SELECTIONS))}
+            </Text>
           </View>
 
-          <View style={[styles.privacySection, { borderTopColor: colors.border }]}>
-            <View style={styles.privacyHeader}>
-              <Ionicons
-                name={privacyShowAvailability ? 'globe-outline' : 'lock-closed-outline'}
-                size={20}
-                color={colors.text}
-              />
-              <Text weight="semibold" style={[styles.privacyTitle, { color: colors.text }]}>
-                {t('profile.availabilities.privacyTitle')}
-              </Text>
-            </View>
-            <Text style={[styles.privacyDescription, { color: colors.textMuted }]}>
-              {privacyShowAvailability
-                ? t('profile.availabilities.publicDescription')
-                : t('profile.availabilities.privateDescription')}
-            </Text>
-            <View style={styles.privacyToggleRow}>
-              <Text style={{ color: colors.text }}>
-                {privacyShowAvailability
-                  ? t('profile.availabilities.public')
-                  : t('profile.availabilities.private')}
-              </Text>
-              <Switch
-                value={privacyShowAvailability}
-                onValueChange={value => {
-                  selectionHaptic();
-                  setPrivacyShowAvailability(value);
-                }}
-                trackColor={{ false: colors.inputBackground, true: colors.primary }}
-                thumbColor={colors.card}
-              />
-            </View>
+          <HourlyAvailabilityPresets
+            value={selection}
+            onChange={setSelection}
+            colors={presetColors}
+            t={t}
+          />
+
+          <View style={styles.gridWrapper}>
+            <HourlyAvailabilityGrid
+              value={selection}
+              onChange={setSelection}
+              colors={gridColors}
+              t={t}
+              locale={locale}
+            />
           </View>
         </ScrollView>
 
@@ -559,6 +270,19 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
 }
 
 export default PlayerAvailabilitiesActionSheet;
+
+// Helper: shallow equality between two Sets of cell keys. Used to detect
+// "refresh only" saves so analytics can distinguish them from real edits.
+function setsEqual(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  if (a.size !== b.size) return false;
+  for (const k of a) if (!b.has(k)) return false;
+  return true;
+}
+
+// Re-export so legacy imports (UserProfile, sheet registry payload typing)
+// keep resolving. The old `DayAvailability` / `WeeklyAvailability` shapes
+// are gone; consumers now thread `HourGrid` through.
+export { cellKey, type HourGrid };
 
 const styles = StyleSheet.create({
   sheetBackground: {
@@ -616,59 +340,15 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     textAlign: 'center',
-    marginBottom: spacingPixels[6],
-  },
-  gridContainer: {
-    marginBottom: spacingPixels[6],
-  },
-  headerRow: {
-    flexDirection: 'row',
-    marginBottom: spacingPixels[2],
-    alignItems: 'center',
-  },
-  row: {
-    flexDirection: 'row',
-    marginBottom: spacingPixels[2],
-    alignItems: 'center',
-  },
-  timeLabelCell: {
-    width: 96,
-    paddingRight: spacingPixels[2],
-    justifyContent: 'center',
-  },
-  timeRangeText: {
-    marginTop: 2,
-    lineHeight: 14,
-  },
-  presetRow: {
-    paddingVertical: spacingPixels[1],
-    gap: spacingPixels[2],
     marginBottom: spacingPixels[4],
   },
-  presetChip: {
-    flexDirection: 'row',
+  counterContainer: {
     alignItems: 'center',
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[2],
-    borderRadius: radiusPixels.full,
-    borderWidth: 1,
+    marginBottom: spacingPixels[3],
   },
-  presetChipIcon: {
-    marginRight: spacingPixels[1],
-  },
-  headerCell: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dayCell: {
-    flex: 1,
-    height: 36,
-    borderRadius: radiusPixels.md,
-    marginHorizontal: spacingPixels[1] / 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
+  gridWrapper: {
+    marginTop: spacingPixels[4],
+    marginBottom: spacingPixels[6],
   },
   footer: {
     padding: spacingPixels[4],
@@ -681,28 +361,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     gap: spacingPixels[2],
-  },
-  privacySection: {
-    marginTop: spacingPixels[2],
-    paddingTop: spacingPixels[4],
-    borderTopWidth: 1,
-  },
-  privacyHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[2],
-    marginBottom: spacingPixels[2],
-  },
-  privacyTitle: {
-    fontSize: 16,
-  },
-  privacyDescription: {
-    fontSize: 13,
-    marginBottom: spacingPixels[3],
-  },
-  privacyToggleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
 });

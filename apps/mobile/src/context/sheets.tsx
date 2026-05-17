@@ -92,18 +92,10 @@ import {
 } from '../components/explainers';
 // Reimbursement sheets
 import { ChoosePayoutsActionSheet } from '../components/ChoosePayoutsSheet';
-// Define WeeklyAvailability inline to avoid circular dependencies.
-// Keys match the period_enum 1:1 after the 6-block refactor.
-type DayOfWeek = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
-type DayAvailability = {
-  early: boolean;
-  morning: boolean;
-  midday: boolean;
-  afternoon: boolean;
-  evening: boolean;
-  late: boolean;
-};
-type WeeklyAvailability = Record<DayOfWeek, DayAvailability>;
+// Availability grid payload type. Flat `Set<string>` of `${day}-${hour}`
+// cell keys from the hourly 7×17 grid (hours 6..22). Defined inline to keep
+// this declaration free of feature-folder imports.
+type HourGrid = ReadonlySet<string>;
 
 // We extend some of the types here to give us great intellisense
 // across the app for all registered sheets.
@@ -477,16 +469,15 @@ declare module 'react-native-actions-sheet' {
     'player-availabilities': SheetDefinition<{
       payload: {
         mode?: 'onboarding' | 'edit';
-        initialData?: WeeklyAvailability;
-        initialPrivacyShowAvailability?: boolean;
+        initialData?: HourGrid;
         /**
          * Most-recent last_confirmed_at across the player's availability rows
          * (ISO 8601 string). When older than ~14 days or NULL, the overlay
          * renders a "confirm your week" staleness banner. Edit-mode only.
          */
         initialLastConfirmedAt?: string | null;
-        onSave?: (availabilities: WeeklyAvailability, privacyShowAvailability: boolean) => void;
-        onContinue?: (availabilities: WeeklyAvailability) => void;
+        onSave?: (availabilities: HourGrid) => void;
+        onContinue?: (availabilities: HourGrid) => void;
         onBack?: () => void;
         currentStep?: number;
         totalSteps?: number;

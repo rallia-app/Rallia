@@ -8,8 +8,9 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import DatabaseService, { Logger, supabase, periodForHour } from '@rallia/shared-services';
-import type { FacilitySearchResult, PeriodEnum } from '@rallia/shared-types';
+import DatabaseService, { Logger, supabase } from '@rallia/shared-services';
+import type { FacilitySearchResult } from '@rallia/shared-types';
+import { cellKey, emptyGrid, type HourGrid } from '../components/HourlyAvailabilityGrid';
 import * as Analytics from '../../../services/analytics';
 
 /**
@@ -71,12 +72,11 @@ export interface OnboardingFormData {
   // Favorite facilities (up to 6 for dual-sport users)
   favoriteFacilities: FacilitySearchResult[];
 
-  // Availabilities — keyed by short day label and by period_enum value.
-  // The DB enum is the source of truth, so we use those exact keys here to
-  // remove the AM/PM/EVE → morning/afternoon/evening translation that lived
-  // in OnboardingWizard's save flow before the 6-block refactor.
-  availabilities: Record<string, Record<PeriodEnum, boolean>>;
-  privacyShowAvailability: boolean;
+  // Availabilities — flat `Set<string>` of `${day}-${hour}` cell keys from
+  // the 7×17 weekly hourly grid (hours 6..22 inclusive). See
+  // HourlyAvailabilityGrid for the cell-key helpers; save flow in
+  // OnboardingWizard converts to OnboardingAvailability[] with hour_of_day.
+  availabilities: HourGrid;
 }
 
 interface UseOnboardingWizardReturn {
@@ -109,24 +109,7 @@ interface UseOnboardingWizardReturn {
   steps: OnboardingStepId[];
 }
 
-const EMPTY_DAY: Record<PeriodEnum, boolean> = {
-  early: false,
-  morning: false,
-  midday: false,
-  afternoon: false,
-  evening: false,
-  late: false,
-};
-
-const DEFAULT_AVAILABILITIES: Record<string, Record<PeriodEnum, boolean>> = {
-  Mon: { ...EMPTY_DAY },
-  Tue: { ...EMPTY_DAY },
-  Wed: { ...EMPTY_DAY },
-  Thu: { ...EMPTY_DAY },
-  Fri: { ...EMPTY_DAY },
-  Sat: { ...EMPTY_DAY },
-  Sun: { ...EMPTY_DAY },
-};
+const DEFAULT_AVAILABILITIES: HourGrid = emptyGrid();
 
 const INITIAL_FORM_DATA: OnboardingFormData = {
   firstName: '',
@@ -154,7 +137,6 @@ const INITIAL_FORM_DATA: OnboardingFormData = {
   pickleballMatchType: 'competitive',
   favoriteFacilities: [],
   availabilities: DEFAULT_AVAILABILITIES,
-  privacyShowAvailability: true,
 };
 
 /**
@@ -233,10 +215,8 @@ function isStepComplete(stepId: OnboardingStepId, formData: OnboardingFormData):
     }
 
     case 'availabilities':
-      // Availabilities have defaults, check if at least one slot is selected
-      return Object.values(formData.availabilities).some(slots =>
-        Object.values(slots).some(Boolean)
-      );
+      // Availabilities have defaults, check if at least one cell is selected
+      return formData.availabilities.size > 0;
 
     case 'success':
     case 'suggestions':
@@ -331,9 +311,6 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
           if (playerRes.data.max_travel_distance) {
             updates.maxTravelDistance = playerRes.data.max_travel_distance;
           }
-          // Load privacy_show_availability (defaults to true if not set)
-          // This ensures the visibility toggle shows the user's saved preference
-          updates.privacyShowAvailability = playerRes.data.privacy_show_availability ?? true;
         }
 
         // Sports data
@@ -440,40 +417,15 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
           }
         }
 
-        // Availability data
+        // Availability data — populate the hour grid directly. One cell per
+        // active row; the grid is keyed by the same DB DayEnum the row carries.
         if (availRes.data && availRes.data.length > 0) {
-          const dayMap: Record<string, string> = {
-            monday: 'Mon',
-            tuesday: 'Tue',
-            wednesday: 'Wed',
-            thursday: 'Thu',
-            friday: 'Fri',
-            saturday: 'Sat',
-            sunday: 'Sun',
-          };
-
-          // Player_availability rows are now hourly. Aggregate each hour
-          // back into its containing period so the wizard's 6×7 grid renders.
-          // PR B replaces the grid with a true hourly editor and drops this
-          // fold.
-          const availabilities: Record<string, Record<PeriodEnum, boolean>> = {
-            Mon: { ...EMPTY_DAY },
-            Tue: { ...EMPTY_DAY },
-            Wed: { ...EMPTY_DAY },
-            Thu: { ...EMPTY_DAY },
-            Fri: { ...EMPTY_DAY },
-            Sat: { ...EMPTY_DAY },
-            Sun: { ...EMPTY_DAY },
-          };
-
+          const availabilities: Set<string> = new Set();
           for (const avail of availRes.data) {
-            const day = dayMap[avail.day];
-            const period = periodForHour(avail.hour_of_day);
-            if (day && period && avail.is_active) {
-              availabilities[day][period] = true;
+            if (avail.is_active) {
+              availabilities.add(cellKey(avail.day, avail.hour_of_day));
             }
           }
-
           updates.availabilities = availabilities;
         }
 

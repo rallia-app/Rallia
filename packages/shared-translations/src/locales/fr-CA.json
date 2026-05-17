@@ -1652,6 +1652,7 @@
       "presets": {
         "afterWork": "Après le travail",
         "weekendsAny": "Fin de semaine",
+        "lunch": "Dîner",
         "weekdayLunches": "Heures de dîner",
         "mornings": "Matins",
         "clear": "Effacer"

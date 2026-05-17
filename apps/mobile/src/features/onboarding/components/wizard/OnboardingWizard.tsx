@@ -63,7 +63,6 @@ import type {
   OnboardingPlayerPreferences,
   OnboardingAvailability,
   DayEnum,
-  PeriodEnum,
   GenderEnum,
 } from '@rallia/shared-types';
 
@@ -815,31 +814,16 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       case 'availabilities':
         setIsSaving(true);
         try {
-          const dayMap: Record<string, DayEnum> = {
-            Mon: 'monday',
-            Tue: 'tuesday',
-            Wed: 'wednesday',
-            Thu: 'thursday',
-            Fri: 'friday',
-            Sat: 'saturday',
-            Sun: 'sunday',
-          };
-
-          // Slot keys are already period_enum values (early/morning/midday/
-          // afternoon/evening/late) after the 6-block refactor — no map needed.
+          // formData.availabilities is a flat Set of `${day}-${hour}` cell
+          // keys from the hourly grid; one OnboardingAvailability row per
+          // active cell, all with is_active = true.
           const availabilityData: OnboardingAvailability[] = [];
-
-          Object.entries(formData.availabilities).forEach(([day, slots]) => {
-            Object.entries(slots).forEach(([slot, isActive]) => {
-              if (isActive) {
-                availabilityData.push({
-                  day: dayMap[day],
-                  period: slot as PeriodEnum,
-                  is_active: true,
-                });
-              }
-            });
-          });
+          for (const key of formData.availabilities) {
+            const sepIdx = key.lastIndexOf('-');
+            const day = key.slice(0, sepIdx) as DayEnum;
+            const hour = Number(key.slice(sepIdx + 1));
+            availabilityData.push({ day, hour_of_day: hour, is_active: true });
+          }
 
           const { error } = await OnboardingService.saveAvailability(availabilityData);
 
@@ -848,26 +832,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             Alert.alert(t('alerts.error'), t('onboarding.validation.failedToSaveAvailability'));
             setIsSaving(false);
             return false;
-          }
-
-          // Save the privacy setting to the player table
-          const {
-            data: { user },
-          } = await supabase.auth.getUser();
-          if (user) {
-            const { error: privacyError } = await supabase
-              .from('player')
-              .update({ privacy_show_availability: formData.privacyShowAvailability })
-              .eq('id', user.id);
-
-            if (privacyError) {
-              Logger.warn('Failed to save availability privacy setting', { error: privacyError });
-              // Don't block the flow if this fails - just log it
-            } else {
-              Logger.debug('availability_privacy_saved', {
-                privacyShowAvailability: formData.privacyShowAvailability,
-              });
-            }
           }
 
           // Mark onboarding as completed - this is CRITICAL and must succeed
@@ -1187,6 +1151,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             colors={colors}
             t={t}
             isDark={isDark}
+            locale={locale}
           />
         );
       case 'success':
