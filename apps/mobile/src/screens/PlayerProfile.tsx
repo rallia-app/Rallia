@@ -270,9 +270,10 @@ const ProofGalleryCard: React.FC<{
   );
 };
 
-// Rectangular accent-gradient pill: icon on the left, single-line label on the right.
+// Accent-gradient pill matching Home's QuickNavButton: round icon chip on the
+// left, single-line label on the right, inside a 2xl-radius card.
 const HeroActionButton: React.FC<{
-  icon: React.ReactNode;
+  icon: (color: string) => React.ReactNode;
   label: string;
   onPress: () => void;
   loading?: boolean;
@@ -300,18 +301,20 @@ const HeroActionButton: React.FC<{
         style={[heroActionStyles.gradient, (loading || disabled) && { opacity: 0.6 }]}
       >
         <View style={heroActionStyles.topHighlight} />
-        <View style={heroActionStyles.iconWrap}>
-          {loading ? <ActivityIndicator size="small" color="#ffffff" /> : icon}
+        <View style={heroActionStyles.iconCircle}>
+          {loading ? <ActivityIndicator size="small" color="#ffffff" /> : icon('#ffffff')}
         </View>
-        <Text
-          size="sm"
-          weight="semibold"
-          color="#ffffff"
-          style={heroActionStyles.label}
-          numberOfLines={1}
-        >
-          {label}
-        </Text>
+        <View style={heroActionStyles.labelBlock}>
+          <Text
+            size="sm"
+            weight="semibold"
+            color="#ffffff"
+            style={heroActionStyles.label}
+            numberOfLines={1}
+          >
+            {label}
+          </Text>
+        </View>
       </LinearGradient>
     </TouchableOpacity>
   );
@@ -319,15 +322,14 @@ const HeroActionButton: React.FC<{
 
 const heroActionStyles = StyleSheet.create({
   item: {
-    borderRadius: radiusPixels.lg,
+    borderRadius: radiusPixels['2xl'],
   },
   gradient: {
     flexDirection: 'row',
-    borderRadius: radiusPixels.lg,
+    borderRadius: radiusPixels['2xl'],
     alignItems: 'center',
-    justifyContent: 'center',
     gap: spacingPixels[2],
-    height: 44,
+    paddingVertical: spacingPixels[3],
     paddingHorizontal: spacingPixels[4],
     overflow: 'hidden',
   },
@@ -339,9 +341,19 @@ const heroActionStyles = StyleSheet.create({
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.35)',
   },
-  iconWrap: {
+  iconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    flexShrink: 0,
+  },
+  labelBlock: {
+    alignItems: 'center',
   },
   label: {
     textAlign: 'center',
@@ -1684,23 +1696,23 @@ const PlayerProfile = () => {
             style={styles.actionScroll}
           >
             <Skeleton
-              width={160}
-              height={44}
-              borderRadius={radiusPixels.lg}
+              width={170}
+              height={60}
+              borderRadius={radiusPixels['2xl']}
               backgroundColor={skeletonBg}
               highlightColor={skeletonHighlight}
             />
             <Skeleton
-              width={120}
-              height={44}
-              borderRadius={radiusPixels.lg}
+              width={110}
+              height={60}
+              borderRadius={radiusPixels['2xl']}
               backgroundColor={skeletonBg}
               highlightColor={skeletonHighlight}
             />
             <Skeleton
-              width={180}
-              height={44}
-              borderRadius={radiusPixels.lg}
+              width={200}
+              height={60}
+              borderRadius={radiusPixels['2xl']}
               backgroundColor={skeletonBg}
               highlightColor={skeletonHighlight}
             />
@@ -1987,22 +1999,22 @@ const PlayerProfile = () => {
           <HeroActionButton
             label={t('playerProfile.inviteToMatch')}
             onPress={handleInviteToMatch}
-            icon={
-              <SportIcon sportName={selectedSport?.name ?? 'tennis'} size={18} color="#ffffff" />
-            }
+            icon={color => (
+              <SportIcon sportName={selectedSport?.name ?? 'tennis'} size={18} color={color} />
+            )}
           />
           <HeroActionButton
             label={t('playerProfile.chat')}
             onPress={handleStartChat}
             loading={chatLoading}
             disabled={!currentUserId}
-            icon={<Ionicons name="chatbubble-outline" size={18} color="#ffffff" />}
+            icon={color => <Ionicons name="chatbubble-outline" size={18} color={color} />}
           />
           <HeroActionButton
             label={t('playerProfile.requestReference')}
             onPress={handleRequestReference}
             loading={referenceLoading}
-            icon={<Ionicons name="document-text-outline" size={18} color="#ffffff" />}
+            icon={color => <Ionicons name="document-text-outline" size={18} color={color} />}
           />
         </ScrollView>
 
@@ -2403,7 +2415,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacingPixels[10],
   },
   profileHeader: {
-    marginTop: spacingPixels[4],
+    marginTop: spacingPixels[6],
     marginHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[5],
     paddingHorizontal: spacingPixels[4],
@@ -2475,11 +2487,11 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   actionScroll: {
-    marginTop: spacingPixels[3],
+    marginTop: spacingPixels[5],
   },
   actionScrollContent: {
     paddingHorizontal: spacingPixels[4],
-    gap: spacingPixels[2],
+    gap: spacingPixels[3],
     alignItems: 'center',
   },
   section: {
