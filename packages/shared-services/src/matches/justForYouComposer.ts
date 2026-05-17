@@ -107,7 +107,12 @@ export async function composeJustForYou(
   } = input;
 
   // ── 1. Fetch both pools in parallel ─────────────────────────────────
-  const [matchPool, rawSuggestions] = await Promise.all([
+  // `allSettled` so a slow / failing suggestion RPC doesn't kill the
+  // carousel. Matches are the more critical signal — if the suggestion
+  // RPC times out (it has a heavy plan that can hit statement_timeout),
+  // we still render the match pool. Empty suggestions just means no
+  // padding/competition this round.
+  const [matchSettled, suggSettled] = await Promise.allSettled([
     getNearbyMatches({
       callerId: playerId,
       latitude,
@@ -138,7 +143,19 @@ export async function composeJustForYou(
     return { items: [], matches: [], suggestions: [] };
   }
 
-  const rawMatches = matchPool.matches;
+  // If the match pool itself fails, propagate (the carousel needs matches).
+  // Suggestion failure degrades gracefully to an empty array.
+  if (matchSettled.status === 'rejected') {
+    throw matchSettled.reason;
+  }
+  const rawMatches = matchSettled.value.matches;
+  const rawSuggestions = suggSettled.status === 'fulfilled' ? suggSettled.value : [];
+  if (suggSettled.status === 'rejected') {
+    console.warn(
+      '[composeJustForYou] suggestion pool unavailable — rendering matches only:',
+      suggSettled.reason
+    );
+  }
 
   // ── 2. Filter exclusions (anon fallback: scored RPC already excludes
   //    caller-as-creator/participant; legacy RPC does not) ─────────────

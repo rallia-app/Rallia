@@ -320,6 +320,27 @@ describe('composeJustForYou', () => {
     expect(result.items[0].kind).toBe('match');
   });
 
+  it('suggestion RPC failure falls back to matches-only (does not break the carousel)', async () => {
+    mockGetNearby.mockResolvedValue({
+      matches: [makeMatch({ id: 'm1', creatorId: 'c1', player_compatibility: 0.6 })],
+      hasMore: false,
+      nextOffset: null,
+    });
+    mockGetTopSugg.mockRejectedValue(new Error('statement timeout'));
+
+    const result = await composeJustForYou(defaultInput());
+    expect(result.items.length).toBe(1);
+    expect(result.items[0].kind).toBe('match');
+    expect(result.suggestions).toEqual([]);
+  });
+
+  it('match RPC failure propagates (matches are critical)', async () => {
+    mockGetNearby.mockRejectedValue(new Error('network down'));
+    mockGetTopSugg.mockResolvedValue([makeSuggestion({ opponentId: 'o1', score: 0.7 })]);
+
+    await expect(composeJustForYou(defaultInput())).rejects.toThrow('network down');
+  });
+
   it('aborted signal short-circuits with empty result', async () => {
     const ctrl = new AbortController();
     ctrl.abort();
