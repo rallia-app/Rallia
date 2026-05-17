@@ -1736,8 +1736,8 @@
       "feedEmptySubtitle": "Revenez plus tard quand d'autres joueurs se joindront.",
       "selectDate": "Sélectionnez une date",
       "selectTime": "Sélectionnez un horaire",
-      "reassureTitle": "Triés sur le volet pour vous",
-      "reassureMessage": "Ces joueurs correspondent à votre niveau, sont disponibles à ce moment et fréquentent vos terrains préférés. Ils espèrent qu'un joueur comme vous fasse le premier pas — vous ne dérangez personne, vous faites leur semaine."
+      "reassureTitle": "Choisis avec soin pour vous",
+      "reassureMessage": "Ces joueurs ont un niveau semblable au vôtre, sont libres à ce moment-là et jouent sur vos terrains préférés. Ils n'attendent qu'une chose : qu'on leur propose une partie. Vous ne dérangerez personne — au contraire, ça va leur faire plaisir."
     },
     "complete": "Terminer",
     "locationStep": {

@@ -254,6 +254,29 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
           </View>
         ) : (
           <View style={styles.cardsContainer}>
+            <View
+              style={[
+                styles.reassureBanner,
+                {
+                  backgroundColor: colors.primary + '12',
+                  borderColor: colors.primary + '33',
+                },
+              ]}
+            >
+              <View
+                style={[styles.reassureIconContainer, { backgroundColor: colors.primary + '20' }]}
+              >
+                <Ionicons name="sparkles" size={18} color={colors.primary} />
+              </View>
+              <View style={styles.reassureTextContainer}>
+                <Text size="sm" weight="semibold" color={colors.foreground}>
+                  {t('onboarding.suggestions.reassureTitle')}
+                </Text>
+                <Text size="xs" color={colors.textSecondary} style={styles.reassureMessage}>
+                  {t('onboarding.suggestions.reassureMessage')}
+                </Text>
+              </View>
+            </View>
             {groupedSuggestions.map(({ section, items }) => (
               <React.Fragment key={section}>
                 <View style={[styles.sectionHeader, { backgroundColor: colors.cardBackground }]}>
@@ -342,6 +365,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cardsContainer: {},
+  reassureBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacingPixels[3],
+    padding: spacingPixels[3],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+    marginBottom: spacingPixels[3],
+  },
+  reassureIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reassureTextContainer: {
+    flex: 1,
+  },
+  reassureMessage: {
+    marginTop: spacingPixels[1],
+    lineHeight: 16,
+  },
   sectionHeader: {
     paddingVertical: spacingPixels[2],
     marginBottom: spacingPixels[1],
