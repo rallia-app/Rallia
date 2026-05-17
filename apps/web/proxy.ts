@@ -32,10 +32,13 @@ export default async function middleware(request: NextRequest) {
   // This refreshes the auth token if expired
   await supabase.auth.getUser();
 
-  // For API routes and Sentry tunnel, return the response with refreshed cookies only
+  // For API routes, Sentry tunnel, and the PostHog ingest proxy, return the
+  // response with refreshed cookies only — bypass next-intl so it doesn't
+  // prepend `/en-US/` and break the rewrite rules in next.config.ts.
   if (
     request.nextUrl.pathname.startsWith('/api') ||
-    request.nextUrl.pathname.startsWith('/monitoring')
+    request.nextUrl.pathname.startsWith('/monitoring') ||
+    request.nextUrl.pathname.startsWith('/ingest')
   ) {
     return supabaseResponse;
   }
