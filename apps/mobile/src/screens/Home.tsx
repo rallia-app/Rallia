@@ -78,7 +78,6 @@ import { spacingPixels, radiusPixels, accent, neutral, primary } from '@rallia/d
 import { LinearGradient } from 'expo-linear-gradient';
 import TennisIcon from '../../assets/icons/tennis.svg';
 import PickleballIcon from '../../assets/icons/pickleball.svg';
-import TennisCourtIcon from '../../assets/icons/tennis-court.svg';
 import { SportIcon } from '../components/SportIcon';
 import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
 import ProfileCompletionBanner, {
@@ -1318,20 +1317,6 @@ const Home = () => {
                 screen: 'Communities',
                 initial: false,
               },
-            } as never)
-          }
-        />
-        <QuickNavButton
-          icon={color => (
-            <View style={{ transform: [{ rotate: '90deg' }] }}>
-              <TennisCourtIcon width={24} height={24} stroke={color} />
-            </View>
-          )}
-          label={t('home.quickNav.bookCourt')}
-          onPress={() =>
-            appNavigation.navigate('Main', {
-              screen: 'Courts',
-              params: { screen: 'FacilitiesDirectory' },
             } as never)
           }
         />
