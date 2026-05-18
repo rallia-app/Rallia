@@ -137,7 +137,7 @@ jobs:
         run: npm ci --prefer-offline --no-audit --fund=false
 
       - name: Run lint, type-check, and tests
-        run: npx turbo run lint type-check test --continue -- --passWithNoTests
+        run: npx turbo run lint type-check test --continue
 
   build-mobile:
     name: Build Mobile App
