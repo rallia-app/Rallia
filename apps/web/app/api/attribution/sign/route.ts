@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { signAttributionToken } from '@/lib/attribution-token';
+import { signAttributionToken, type ReferralContext } from '@/lib/attribution-token';
 
 /**
  * Mints a signed attribution token from the visitor's PostHog distinct_id
@@ -17,6 +17,7 @@ export const dynamic = 'force-dynamic';
 interface SignRequest {
   did?: string;
   utm?: Record<string, string>;
+  referral?: ReferralContext;
 }
 
 export async function POST(request: Request) {
@@ -32,10 +33,15 @@ export async function POST(request: Request) {
   }
 
   try {
+    const referral =
+      body.referral && typeof body.referral === 'object' && Object.keys(body.referral).length > 0
+        ? body.referral
+        : undefined;
     const token = signAttributionToken({
       did: body.did,
       utm: body.utm && typeof body.utm === 'object' ? body.utm : {},
       ts: Date.now(),
+      ...(referral ? { referral } : {}),
     });
     return NextResponse.json({ token, expires_in_ms: 15 * 60 * 1000 });
   } catch (err) {

@@ -315,6 +315,7 @@ export default async function MatchPage({ params }: Props) {
               appStoreLabel={t('appStore')}
               playStoreLabel={t('googlePlay')}
               matchId={id}
+              referral={{ type: 'match', targetId: id }}
             />
           </div>
         </section>

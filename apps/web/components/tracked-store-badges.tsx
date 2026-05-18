@@ -4,6 +4,7 @@ import Image from 'next/image';
 
 import { APP_STORE_URL } from '@/lib/store-urls';
 import { appStoreClicked, type AppStorePlacement } from '@/lib/analytics';
+import type { ReferralContext } from '@/lib/attribution-token';
 import { useAttributionHandoff } from '@/lib/use-attribution-handoff';
 
 /**
@@ -24,6 +25,7 @@ export function TrackedStoreBadges({
   playStoreLabel,
   matchId,
   invitationCode,
+  referral,
 }: {
   placement: AppStorePlacement;
   playStoreUrl: string;
@@ -32,8 +34,14 @@ export function TrackedStoreBadges({
   playStoreLabel: string;
   matchId?: string;
   invitationCode?: string;
+  /**
+   * Referral context for the iOS clipboard handoff — when present, the
+   * signed token carries it so the mobile app auto-attributes the invite
+   * on first launch (no manual code entry needed in onboarding).
+   */
+  referral?: ReferralContext;
 }) {
-  const writeClipboard = useAttributionHandoff();
+  const writeClipboard = useAttributionHandoff({ referral });
   return (
     <div className="flex gap-4">
       <a

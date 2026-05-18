@@ -22,11 +22,21 @@
  */
 import * as Clipboard from 'expo-clipboard';
 import { Platform } from 'react-native';
+import type { InvitationType } from '@rallia/shared-services';
 
 import { Logger } from '../services/logger';
 
 const TOKEN_PREFIX = 'rallia_attrib_v1:';
 const VERIFY_ENDPOINT = 'https://rallia.app/api/attribution/verify';
+
+export interface AttributionReferral {
+  /** Referral code from the URL path (e.g. /invite/{code}). */
+  code?: string;
+  /** Invitation type — matches the InvitationType enum. */
+  type?: InvitationType;
+  /** Entity id when the invitation targets a specific match/group/community. */
+  targetId?: string;
+}
 
 export interface AttributionPayload {
   /** PostHog distinct_id from the web visitor. */
@@ -35,6 +45,13 @@ export interface AttributionPayload {
   utm: Record<string, string>;
   /** Unix ms when the token was minted (already validated to be ≤15min old). */
   ts: number;
+  /**
+   * Referral context from the source page when the user clicked App Store
+   * from a deep-link landing (/invite/{code}, /match/{id}, etc.). Mirrors
+   * Android's install-referrer payload shape so the existing PendingReferral
+   * onboarding flow consumes it without changes.
+   */
+  referral?: AttributionReferral;
 }
 
 export async function readClipboardAttribution(): Promise<AttributionPayload | null> {

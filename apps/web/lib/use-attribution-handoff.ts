@@ -2,11 +2,22 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 
+import type { ReferralContext } from '@/lib/attribution-token';
 import { readDistinctIdCookie, readUtmCookie } from '@/lib/utm-cookie';
 
 const PREFIX = 'rallia_attrib_v1:';
 const TOKEN_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 const TOKEN_TTL_MS = 14 * 60 * 1000;
+
+export interface AttributionHandoffOptions {
+  /**
+   * Optional referral context from the current page (e.g. /invite/{code}
+   * yields { code, type, targetId }). When present, the signed token
+   * carries it through the clipboard so the mobile app can auto-attribute
+   * the referral without the user typing a code in onboarding.
+   */
+  referral?: ReferralContext;
+}
 
 /**
  * Pre-fetches a signed attribution token on mount + on refresh interval,
@@ -17,20 +28,29 @@ const TOKEN_TTL_MS = 14 * 60 * 1000;
  *
  * Tokens expire 15 minutes after minting; we refresh every 10 minutes and
  * treat anything older than 14 minutes as stale to leave headroom.
+ *
+ * When called from a deep-link page (`/invite`, `/match`, `/community/join`),
+ * pass `options.referral` so the token also carries the invitation context
+ * — mobile auto-attributes the referral on first launch via the same
+ * AsyncStorage PendingReferral path Android already uses.
  */
-export function useAttributionHandoff() {
+export function useAttributionHandoff(options: AttributionHandoffOptions = {}) {
   const tokenRef = useRef<{ value: string; mintedAt: number } | null>(null);
+  // Serialize the referral context for stable useEffect deps — passing the
+  // object directly would re-fire on every render of the caller.
+  const referralKey = options.referral ? JSON.stringify(options.referral) : '';
 
   const refresh = useCallback(async () => {
     if (typeof window === 'undefined') return;
     const did = readDistinctIdCookie();
     if (!did) return;
     const utm = readUtmCookie() ?? {};
+    const referral = referralKey ? (JSON.parse(referralKey) as ReferralContext) : undefined;
     try {
       const res = await fetch('/api/attribution/sign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ did, utm }),
+        body: JSON.stringify({ did, utm, ...(referral ? { referral } : {}) }),
       });
       if (!res.ok) return;
       const data = (await res.json()) as { token?: string };
@@ -41,7 +61,7 @@ export function useAttributionHandoff() {
       // Best-effort. A failed sign just means clipboard handoff won't fire
       // on the next click — Smart App Banner path still works.
     }
-  }, []);
+  }, [referralKey]);
 
   useEffect(() => {
     void refresh();

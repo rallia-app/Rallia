@@ -40,6 +40,7 @@ export async function POST(request: Request) {
       did: result.payload.did,
       utm: result.payload.utm,
       ts: result.payload.ts,
+      ...(result.payload.referral ? { referral: result.payload.referral } : {}),
     });
   } catch (err) {
     console.error('[attribution/verify] failed', err);

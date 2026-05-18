@@ -118,6 +118,7 @@ export default async function CommunityJoinPage({ params }: Props) {
             appStoreLabel={t('appStore')}
             playStoreLabel={t('googlePlay')}
             invitationCode={code}
+            referral={{ type: 'community', targetId: code }}
           />
         </>
       )}

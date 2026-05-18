@@ -133,6 +133,23 @@ async function captureIOSClipboardAttribution(): Promise<void> {
   if (payload.utm && Object.keys(payload.utm).length > 0) {
     await AsyncStorage.setItem(UTM_STORAGE_KEY, JSON.stringify(payload.utm));
   }
+
+  // If the source page was a deep-link landing (/invite, /match,
+  // /community/join, /join), the token carries the referral context.
+  // Mirror to the same AsyncStorage key Android populates from the Install
+  // Referrer string — onboarding's existing PendingReferral consumer picks
+  // it up without changes, and setPendingDeepLink fires immediately so
+  // Home's listener gets it for already-onboarded users.
+  if (payload.referral && (payload.referral.code || payload.referral.targetId)) {
+    const pending: PendingReferral = {
+      code: payload.referral.code || '',
+      type: payload.referral.type || 'referral',
+      targetId: payload.referral.targetId,
+    };
+    await AsyncStorage.setItem(PENDING_REFERRAL_KEY, JSON.stringify(pending));
+    const dpl = toDeepLinkPayload(pending);
+    if (dpl) setPendingDeepLink(dpl);
+  }
 }
 
 function toDeepLinkPayload(referral: PendingReferral): DeepLinkPayload | null {

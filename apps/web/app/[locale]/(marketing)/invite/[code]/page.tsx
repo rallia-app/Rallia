@@ -268,6 +268,11 @@ export default async function InvitePage({ params, searchParams }: Props) {
             playStoreLabel={t('googlePlay')}
             invitationCode={code}
             {...(targetId ? { matchId: targetId } : {})}
+            referral={{
+              code,
+              type: invitationType,
+              ...(targetId ? { targetId } : {}),
+            }}
           />
         </>
       )}

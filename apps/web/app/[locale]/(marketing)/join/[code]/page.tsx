@@ -1,7 +1,6 @@
 import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import Image from 'next/image';
 import { QRCodeSVG } from 'qrcode.react';
 
 import { IOSCodeHandoff } from '../../invite/[code]/_components/ios-code-handoff';
@@ -11,6 +10,7 @@ import { logReferralClick, buildPlayStoreUrl, APP_STORE_URL } from '@/lib/referr
 import { getLandingContext } from '@/lib/landing-attribution';
 import { Card, CardContent } from '@/components/ui/card';
 import ThemeLogo from '@/components/theme-logo';
+import { TrackedStoreBadges } from '@/components/tracked-store-badges';
 
 type Props = {
   params: Promise<{ code: string; locale: string }>;
@@ -103,44 +103,14 @@ export default async function GroupJoinPage({ params }: Props) {
             </CardContent>
           </Card>
 
-          <div className="flex gap-4">
-            <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
-              <Image
-                src="/app-store-badge-light.svg"
-                alt={t('appStore')}
-                width={120}
-                height={40}
-                className="button-scale block dark:hidden"
-              />
-              <Image
-                src="/app-store-badge.svg"
-                alt={t('appStore')}
-                width={120}
-                height={40}
-                className="button-scale hidden dark:block"
-              />
-            </a>
-            <a
-              href={buildPlayStoreUrl(undefined, 'group', code, { webDistinctId, utm })}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Image
-                src="/google-play-badge-light.svg"
-                alt={t('googlePlay')}
-                width={135}
-                height={40}
-                className="button-scale block dark:hidden"
-              />
-              <Image
-                src="/google-play-badge.svg"
-                alt={t('googlePlay')}
-                width={135}
-                height={40}
-                className="button-scale hidden dark:block"
-              />
-            </a>
-          </div>
+          <TrackedStoreBadges
+            placement="invite_page"
+            playStoreUrl={buildPlayStoreUrl(undefined, 'group', code, { webDistinctId, utm })}
+            appStoreLabel={t('appStore')}
+            playStoreLabel={t('googlePlay')}
+            invitationCode={code}
+            referral={{ type: 'group', targetId: code }}
+          />
         </>
       )}
     </div>

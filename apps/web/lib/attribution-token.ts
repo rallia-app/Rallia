@@ -22,6 +22,24 @@ const TOKEN_VERSION = 'v1';
 const TOKEN_PREFIX = 'rallia_attrib_';
 const MAX_AGE_MS = 15 * 60 * 1000;
 
+export type InvitationKind =
+  | 'referral'
+  | 'match'
+  | 'group'
+  | 'community'
+  | 'flyer'
+  | 'poster'
+  | 'social';
+
+export interface ReferralContext {
+  /** Referral code from the URL path (e.g. /invite/{code} or /join/{code}). */
+  code?: string;
+  /** Invitation type — matches the InvitationType enum used everywhere. */
+  type?: InvitationKind;
+  /** Entity id when the invitation targets a specific match/group/community. */
+  targetId?: string;
+}
+
 export interface AttributionTokenPayload {
   /** PostHog distinct_id from the web visitor. */
   did: string;
@@ -29,6 +47,14 @@ export interface AttributionTokenPayload {
   utm: Record<string, string>;
   /** Unix ms when the token was minted. */
   ts: number;
+  /**
+   * Optional referral context from the URL path of deep-link landings
+   * (/invite/{code}, /match/{id}, /community/join/{code}). Mobile uses
+   * this to surface a PendingReferral on first launch — same data shape
+   * Android's Play Install Referrer provides, so onboarding's existing
+   * attribution flow consumes it without changes.
+   */
+  referral?: ReferralContext;
 }
 
 function getSecret(): string {
