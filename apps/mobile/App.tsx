@@ -461,14 +461,16 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
     }
   }, [userId, isLocaleReady, syncLocaleToDatabase]);
 
-  // Attempt automatic referral attribution on first launch
-  // Android: Parse referral_code from Play Install Referrer
-  // iOS: Match device fingerprint against web invite page visits
+  // Attempt automatic referral attribution on first launch — must run
+  // pre-auth so PENDING_REFERRAL_KEY is populated before DiscoveryStep
+  // checks for it and OnboardingWizard consumes it post-signup.
+  //   Android: Parse referral_code from the Play Install Referrer
+  //   iOS:     Read the rallia_attrib_v1 clipboard handoff token written
+  //            by the marketing /invite landing's Download button
+  // Idempotent — guarded by ATTRIBUTION_ATTEMPTED_KEY in AsyncStorage.
   useEffect(() => {
-    if (userId) {
-      attemptFirstLaunchAttribution().catch(() => {});
-    }
-  }, [userId]);
+    attemptFirstLaunchAttribution().catch(() => {});
+  }, []);
 
   return (
     <UserLocationProvider>
