@@ -32,7 +32,7 @@ export function AddScoreIntroModal({
       <View style={styles.container}>
         {/* Tennis image background */}
         <ImageBackground
-          source={require('../../../../assets/images/tennis.jpg')}
+          source={require('../../../../assets/images/tennis.webp')}
           style={styles.backgroundImage}
           resizeMode="cover"
         >

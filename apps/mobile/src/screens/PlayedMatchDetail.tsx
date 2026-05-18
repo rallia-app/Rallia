@@ -248,9 +248,9 @@ export default function PlayedMatchDetailScreen() {
       {/* Header with sport image */}
       <View style={styles.header}>
         <Image
-          source={require('../../assets/images/tennis.jpg')}
+          source={require('../../assets/images/tennis.webp')}
           style={styles.headerImage}
-          defaultSource={require('../../assets/images/tennis.jpg')}
+          defaultSource={require('../../assets/images/tennis.webp')}
         />
         <View style={styles.headerOverlay} />
 
