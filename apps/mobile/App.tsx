@@ -870,6 +870,10 @@ function App() {
                     // consumers that call Date methods on the rehydrated value.
                     const [root, sub] = query.queryKey;
                     if (root === 'court-availability') return false;
+                    // Pending-feedback must be re-checked live on every cold
+                    // start — a persisted hit would re-open the sheet for a
+                    // match the user already submitted feedback on.
+                    if (root === 'pendingFeedback') return false;
                     if (root === 'matches' && (sub === 'justForYou' || sub === 'topSuggestions')) {
                       return false;
                     }
