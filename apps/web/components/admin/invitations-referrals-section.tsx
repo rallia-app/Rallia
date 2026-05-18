@@ -53,10 +53,9 @@ export function InvitationsReferralsSection({ days }: { days: number }) {
     (acc, row) => ({
       clicks: acc.clicks + row.clicks,
       uniqueDevices: acc.uniqueDevices + row.uniqueDevices,
-      matchedInstalls: acc.matchedInstalls + row.matchedInstalls,
       attributedSignups: acc.attributedSignups + row.attributedSignups,
     }),
-    { clicks: 0, uniqueDevices: 0, matchedInstalls: 0, attributedSignups: 0 }
+    { clicks: 0, uniqueDevices: 0, attributedSignups: 0 }
   );
 
   const selectedRow = invitationStats.find(row => row.invitationType === selectedType) ?? null;
@@ -73,8 +72,9 @@ export function InvitationsReferralsSection({ days }: { days: number }) {
         </p>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        {/* KPI strip — same shape & visual rhythm as UTM */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {/* KPI strip — 3 cards (matched_installs was always 0 since the iOS
+            fingerprint flow was retired in favour of the clipboard handoff). */}
+        <div className="grid grid-cols-3 gap-3">
           <KpiCard
             label={t('totalClicks')}
             value={invitationsLoading ? null : invitationTotals.clicks}
@@ -83,11 +83,6 @@ export function InvitationsReferralsSection({ days }: { days: number }) {
           <KpiCard
             label={t('uniqueDevices')}
             value={invitationsLoading ? null : invitationTotals.uniqueDevices}
-            loading={invitationsLoading}
-          />
-          <KpiCard
-            label={t('matchedInstalls')}
-            value={invitationsLoading ? null : invitationTotals.matchedInstalls}
             loading={invitationsLoading}
           />
           <KpiCard
@@ -136,7 +131,6 @@ export function InvitationsReferralsSection({ days }: { days: number }) {
                   <TableHead>{t('clickType')}</TableHead>
                   <TableHead className="text-right">{t('totalClicks')}</TableHead>
                   <TableHead className="text-right">{t('uniqueDevices')}</TableHead>
-                  <TableHead className="text-right">{t('matchedInstalls')}</TableHead>
                   <TableHead className="text-right">{t('attributedSignups')}</TableHead>
                   <TableHead className="text-right">{t('conversionRate')}</TableHead>
                 </TableRow>
@@ -155,7 +149,6 @@ export function InvitationsReferralsSection({ days }: { days: number }) {
                       </TableCell>
                       <TableCell className="text-right">{row.clicks}</TableCell>
                       <TableCell className="text-right">{row.uniqueDevices}</TableCell>
-                      <TableCell className="text-right">{row.matchedInstalls}</TableCell>
                       <TableCell className="text-right">{row.attributedSignups}</TableCell>
                       <TableCell className="text-right">
                         <Badge variant="outline" className="text-xs">
@@ -180,7 +173,6 @@ export function InvitationsReferralsSection({ days }: { days: number }) {
               stages={[
                 { label: t('totalClicks'), value: selectedRow.clicks },
                 { label: t('uniqueDevices'), value: selectedRow.uniqueDevices },
-                { label: t('matchedInstalls'), value: selectedRow.matchedInstalls },
                 { label: t('attributedSignups'), value: selectedRow.attributedSignups },
               ]}
             />
