@@ -6250,56 +6250,6 @@ export type Database = {
         }
         Relationships: []
       }
-      referral_fingerprint: {
-        Row: {
-          created_at: string
-          device_fingerprint: string
-          expires_at: string
-          id: string
-          invitation_type: string | null
-          ip_address: string | null
-          matched_at: string | null
-          matched_player_id: string | null
-          referral_code: string
-          target_id: string | null
-          user_agent: string | null
-        }
-        Insert: {
-          created_at?: string
-          device_fingerprint: string
-          expires_at?: string
-          id?: string
-          invitation_type?: string | null
-          ip_address?: string | null
-          matched_at?: string | null
-          matched_player_id?: string | null
-          referral_code: string
-          target_id?: string | null
-          user_agent?: string | null
-        }
-        Update: {
-          created_at?: string
-          device_fingerprint?: string
-          expires_at?: string
-          id?: string
-          invitation_type?: string | null
-          ip_address?: string | null
-          matched_at?: string | null
-          matched_player_id?: string | null
-          referral_code?: string
-          target_id?: string | null
-          user_agent?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "referral_fingerprint_matched_player_id_fkey"
-            columns: ["matched_player_id"]
-            isOneToOne: false
-            referencedRelation: "profile"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       referral_invite: {
         Row: {
           created_at: string | null
@@ -7411,7 +7361,6 @@ export type Database = {
           attributed_signups: number
           clicks: number
           invitation_type: string
-          matched_installs: number
           unique_devices: number
         }[]
       }
@@ -8547,17 +8496,6 @@ export type Database = {
         }
         Returns: undefined
       }
-      log_referral_fingerprint: {
-        Args: {
-          p_device_fingerprint: string
-          p_invitation_type?: string
-          p_ip_address?: string
-          p_referral_code: string
-          p_target_id?: string
-          p_user_agent?: string
-        }
-        Returns: undefined
-      }
       mark_alert_read: {
         Args: { p_admin_id: string; p_alert_id: string }
         Returns: boolean
@@ -8590,14 +8528,6 @@ export type Database = {
       mark_messages_as_read: {
         Args: { p_conversation_id: string; p_reader_id: string }
         Returns: undefined
-      }
-      match_referral_fingerprint: {
-        Args: {
-          p_device_fingerprint: string
-          p_ip_address: string
-          p_player_id: string
-        }
-        Returns: Json
       }
       parse_match_duration_to_minutes: {
         Args: { p_duration: string }

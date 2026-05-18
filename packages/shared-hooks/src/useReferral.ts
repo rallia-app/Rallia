@@ -9,7 +9,6 @@ import {
   getReferralLink,
   getReferralStats,
   attributeReferral,
-  matchReferralFingerprint,
   getActiveContest,
   getReferralLeaderboard,
   getMyContestRank,
@@ -106,7 +105,6 @@ export function useReferral(playerId?: string, locale?: string) {
     myRank,
     attributeReferral: attributeReferralMutation.mutateAsync,
     isAttributing: attributeReferralMutation.isPending,
-    matchReferralFingerprint,
   };
 }
 

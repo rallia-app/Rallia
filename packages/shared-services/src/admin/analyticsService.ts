@@ -92,7 +92,6 @@ export interface InvitationStat {
   invitationType: InvitationType;
   clicks: number;
   uniqueDevices: number;
-  matchedInstalls: number;
   attributedSignups: number;
   conversionRate: number;
 }
@@ -3005,14 +3004,12 @@ export async function getInvitationStats(days: number = 30): Promise<InvitationS
     return data.map((row: Record<string, unknown>) => {
       const clicks = Number(row.clicks) || 0;
       const uniqueDevices = Number(row.unique_devices) || 0;
-      const matchedInstalls = Number(row.matched_installs) || 0;
       const attributedSignups = Number(row.attributed_signups) || 0;
       const conversionRate = uniqueDevices > 0 ? Math.min(1, attributedSignups / uniqueDevices) : 0;
       return {
         invitationType: String(row.invitation_type) as InvitationType,
         clicks,
         uniqueDevices,
-        matchedInstalls,
         attributedSignups,
         conversionRate,
       };
