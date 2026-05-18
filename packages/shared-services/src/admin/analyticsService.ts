@@ -3129,17 +3129,29 @@ export async function getUtmSignupStats(days: number = 30): Promise<UtmSignupSta
 /**
  * Period-over-period totals for the UTM KPI strip. `current` is the requested
  * window; `previous` is the equal-length prior window, so deltas are
- * apples-to-apples.
+ * apples-to-apples. `totalSignups` is all profile rows in the window
+ * (attributed + unattributed) — pair with `signups` for an attribution-rate
+ * KPI (`signups / totalSignups`).
  */
 export interface UtmTotalsComparison {
-  current: { signups: number; matchesCreated: number; matchesPlayed: number };
-  previous: { signups: number; matchesCreated: number; matchesPlayed: number };
+  current: {
+    signups: number;
+    totalSignups: number;
+    matchesCreated: number;
+    matchesPlayed: number;
+  };
+  previous: {
+    signups: number;
+    totalSignups: number;
+    matchesCreated: number;
+    matchesPlayed: number;
+  };
 }
 
 export async function getUtmTotalsComparison(days: number = 7): Promise<UtmTotalsComparison> {
   const empty: UtmTotalsComparison = {
-    current: { signups: 0, matchesCreated: 0, matchesPlayed: 0 },
-    previous: { signups: 0, matchesCreated: 0, matchesPlayed: 0 },
+    current: { signups: 0, totalSignups: 0, matchesCreated: 0, matchesPlayed: 0 },
+    previous: { signups: 0, totalSignups: 0, matchesCreated: 0, matchesPlayed: 0 },
   };
   try {
     const { data, error } = await supabase.rpc('get_utm_totals_with_comparison', {
@@ -3153,11 +3165,13 @@ export async function getUtmTotalsComparison(days: number = 7): Promise<UtmTotal
     return {
       current: {
         signups: Number(row.current_signups) || 0,
+        totalSignups: Number(row.current_total_signups) || 0,
         matchesCreated: Number(row.current_matches_created) || 0,
         matchesPlayed: Number(row.current_matches_played) || 0,
       },
       previous: {
         signups: Number(row.previous_signups) || 0,
+        totalSignups: Number(row.previous_total_signups) || 0,
         matchesCreated: Number(row.previous_matches_created) || 0,
         matchesPlayed: Number(row.previous_matches_played) || 0,
       },

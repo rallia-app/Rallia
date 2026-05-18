@@ -100,7 +100,13 @@ export function UtmMonitoringSection({
   const aggregated = useAggregated(landings, signups, dimension);
   const totalSignups = signups.reduce((acc, row) => acc + row.signups, 0);
   const totalLandings = landings?.totals.landings ?? 0;
-  const conversionRate = totalLandings > 0 ? totalSignups / totalLandings : null;
+  // Attribution rate = attributed signups / total signups in the window.
+  // Replaces the prior "Conversion Rate" (landings/signups) which divided
+  // a PostHog count by a Supabase count — two different cohorts, two
+  // different platforms, never a true conversion rate.
+  const attributedSignups = comparison?.current.signups ?? totalSignups;
+  const totalSignupsAll = comparison?.current.totalSignups ?? 0;
+  const attributionRate = totalSignupsAll > 0 ? attributedSignups / totalSignupsAll : null;
   const topCampaign = useTopCampaign(signups);
 
   const chartData = useChartData(landings);
@@ -137,9 +143,17 @@ export function UtmMonitoringSection({
             }
           />
           <KpiCard
-            label={t('utm.conversionRate')}
-            value={conversionRate != null ? `${(conversionRate * 100).toFixed(1)}%` : '—'}
-            loading={landingsLoading || signupsLoading}
+            label={t('utm.attributionRate')}
+            value={attributionRate != null ? `${(attributionRate * 100).toFixed(1)}%` : '—'}
+            hint={
+              totalSignupsAll > 0
+                ? t('utm.attributionRateHint', {
+                    attributed: attributedSignups,
+                    total: totalSignupsAll,
+                  })
+                : undefined
+            }
+            loading={signupsLoading || !comparison}
           />
           <KpiCard
             label={t('utm.topCampaign')}

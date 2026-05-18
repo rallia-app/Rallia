@@ -6989,6 +6989,8 @@
         "signups": "Signups",
         "signupsToday": "Signups today",
         "conversionRate": "Conv. rate",
+        "attributionRate": "Attribution rate",
+        "attributionRateHint": "{attributed} of {total} signups attributed",
         "topCampaign": "Top campaign",
         "topCampaignsTrend": "Landings per day, by campaign",
         "chartHint": "Comparing the top {n} campaigns over the selected window.",

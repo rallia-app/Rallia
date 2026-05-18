@@ -6991,6 +6991,8 @@
         "signups": "Inscriptions",
         "signupsToday": "Inscriptions aujourd'hui",
         "conversionRate": "Taux de conv.",
+        "attributionRate": "Taux d'attribution",
+        "attributionRateHint": "{attributed} sur {total} inscriptions attribuées",
         "topCampaign": "Meilleure campagne",
         "topCampaignsTrend": "Atterrissages par jour, par campagne",
         "chartHint": "Comparaison des {n} meilleures campagnes sur la plage sélectionnée.",

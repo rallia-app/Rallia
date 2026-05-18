@@ -8341,9 +8341,11 @@ export type Database = {
           current_matches_created: number
           current_matches_played: number
           current_signups: number
+          current_total_signups: number
           previous_matches_created: number
           previous_matches_played: number
           previous_signups: number
+          previous_total_signups: number
         }[]
       }
       insert_notification:

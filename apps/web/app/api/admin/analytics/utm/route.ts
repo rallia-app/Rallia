@@ -77,11 +77,14 @@ export async function GET(request: Request) {
     const hours = windowToHours(window);
     const compare = url.searchParams.get('compare') === '1';
 
-    // Filter to the events fired by utm-capture.tsx (web) and App.tsx (mobile).
-    // We deliberately query the explicit `utm_*` props we set ourselves rather
-    // than PostHog's autocaptured `$initial_utm_*` so we control the schema.
+    // Filter to events fired by web's utm-capture.tsx specifically. Mobile
+    // (App.tsx) also fires `deep_link_opened` with utm_* whenever a Universal
+    // Link carries them (e.g. tap on a Smart App Banner with app-argument);
+    // without the `$lib = 'web'` clause every installed-user banner tap would
+    // double-count the web landing it originated from.
     const whereClause = `
       event = 'deep_link_opened'
+      AND properties.$lib = 'web'
       AND timestamp >= now() - INTERVAL ${hours} HOUR
       AND (
         properties.utm_source IS NOT NULL
@@ -92,6 +95,7 @@ export async function GET(request: Request) {
 
     const previousWhere = `
       event = 'deep_link_opened'
+      AND properties.$lib = 'web'
       AND timestamp >= now() - INTERVAL ${hours * 2} HOUR
       AND timestamp <  now() - INTERVAL ${hours} HOUR
       AND (
