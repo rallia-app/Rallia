@@ -7,18 +7,40 @@ import { inferInboundAttribution } from '@/lib/inbound-attribution';
 import { writeDistinctIdCookieIfAbsent, writeUtmCookieIfAbsent } from '@/lib/utm-cookie';
 
 /**
- * Mounts once at the root of the app. On the visitor's first landing it
- * captures the inbound attribution (UTM params + paid-ad click IDs +
- * document.referrer fallback), persists a 90-day cookie, fires
- * `deep_link_opened` for landings reporting, and — critically — writes the
- * attribution as PostHog *person properties with set-once semantics*. That
- * sticks the source to the visitor's distinct_id so every subsequent event
- * carries `person.utm_source` etc., which is what makes "where did this
- * unique visitor come from?" queryable across the whole session.
+ * Mounts once at the root of the app. On every landing it:
+ *   - Mirrors the PostHog distinct_id into a first-party `ph_did` cookie
+ *     (server-side handlers and the App Store clipboard handoff both need
+ *     it, and neither can call posthog-js).
+ *   - Infers inbound attribution from URL UTM params + paid-ad click IDs +
+ *     document.referrer fallback (see inferInboundAttribution).
+ *   - Persists the canonical UTM subset to a 90-day first-touch cookie.
+ *   - Fires `deep_link_opened` for landings reporting in the admin UI.
+ *   - Writes `referrer_host` to PostHog person properties (set-once).
+ *
+ * ===========================================================================
+ * IMPORTANT — PostHog first-touch convention (don't overwrite this!)
+ * ===========================================================================
+ * PostHog's `defaults: '2026-01-30'` enables `save_campaign_params: true`,
+ * which automatically mirrors utm_*, gclid, fbclid, ttclid, msclkid, etc.
+ * onto the person record under TWO parallel namespaces on every $pageview:
+ *
+ *   person.utm_source           = LAST-touch (overwritten every visit)
+ *   person.$initial_utm_source  = FIRST-touch (set-once, preserved forever)
+ *
+ * For unique-visitor first-touch attribution in HogQL queries, ALWAYS use
+ * `person.$initial_utm_*`. Querying `person.utm_*` gives last-touch, which
+ * is not what you want for marketing source attribution.
+ *
+ * We deliberately do NOT write utm_*, gclid, fbclid via setPersonProperties
+ * here — PostHog's autocapture path writes them through `$set` (overwrite),
+ * which would shadow any set-once we'd attempt. The only field we DO write
+ * is `referrer_host`, because PostHog doesn't classify document.referrer
+ * the way we do (we map facebook.com to 'facebook', l.facebook.com to
+ * 'facebook', t.co to 'twitter', etc.).
  *
  * The cookie is also flushed to profile.utm_* by PostHogIdentify on the
- * auth'd surfaces — that path is mostly dormant on the marketing site since
- * end-users don't sign in here.
+ * auth'd surfaces — that path mostly applies to mobile signups (web has
+ * no end-user auth on the marketing site).
  */
 export function UtmCapture() {
   const posthog = usePostHog();
@@ -26,10 +48,6 @@ export function UtmCapture() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Mirror the PostHog distinct_id into a first-party cookie on every
-    // landing. Even visitors with no UTM context get a ph_did cookie — the
-    // Smart App Banner and the App Store clipboard handoff both need it.
-    // First-touch semantics keep the distinct_id stable across visits.
     const did = posthog?.get_distinct_id();
     if (did) writeDistinctIdCookieIfAbsent(did);
 
@@ -52,12 +70,14 @@ export function UtmCapture() {
     const hasUtm = Object.values(utmOnly).some(v => v != null);
     const isFirstTouch = hasUtm ? writeUtmCookieIfAbsent(utmOnly) : false;
 
-    // Person properties with setOnce semantics. PostHog only writes keys
-    // that don't already exist on the person, giving us native first-touch
-    // semantics on the (still-anonymous) distinct_id. Once the visitor
-    // identifies (via PostHogIdentify on auth'd surfaces) these stick to
-    // the user record and are queryable as person.utm_source etc.
-    posthog?.setPersonProperties(undefined, attribution);
+    // Only write fields PostHog doesn't already auto-capture. referrer_host
+    // is our custom inference (e.g. "facebook" mapped from l.facebook.com);
+    // set-once so a returning visitor's later inference doesn't overwrite.
+    if (attribution.referrer_host) {
+      posthog?.setPersonProperties(undefined, {
+        referrer_host: attribution.referrer_host,
+      });
+    }
 
     posthog?.capture('deep_link_opened', {
       link_type: 'utm',
