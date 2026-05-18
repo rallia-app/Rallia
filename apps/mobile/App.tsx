@@ -41,7 +41,10 @@ Sentry.init({
 
 // Wire up the shared logger's SentryTransport so Logger.error() calls also go to Sentry
 import { SentryTransport } from '@rallia/shared-services';
-SentryTransport.configure(Sentry);
+import { AppState as RNAppState } from 'react-native';
+SentryTransport.configure(Sentry, {
+  getAppState: () => RNAppState.currentState,
+});
 
 // Global handler for unhandled JS errors outside the React tree
 // (e.g. setTimeout callbacks, event listeners, native module errors)
