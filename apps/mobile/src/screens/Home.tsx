@@ -10,7 +10,7 @@ import {
   Modal,
   InteractionManager,
 } from 'react-native';
-import { useScrollToTop } from '@react-navigation/native';
+import { useScrollToTop, useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -751,17 +751,22 @@ const Home = () => {
   const [availabilityIsStale, setAvailabilityIsStale] = useState(false);
   const [availabilityBannerDismissed, setAvailabilityBannerDismissed] = useState(false);
 
-  useEffect(() => {
-    if (!isOnboarded || !player?.id) return;
-
-    const checkStaleness = async () => {
+  // Stable callback so both initial-mount and focus effects re-use the same
+  // logic. `respectCooldown` is true on mount (so dismissals stick) but false
+  // on focus refresh — a fresh confirmation from the edit sheet must be able
+  // to clear the banner immediately regardless of any prior dismiss cooldown.
+  const checkAvailabilityStaleness = useCallback(
+    async (respectCooldown: boolean) => {
+      if (!isOnboarded || !player?.id) return;
       try {
-        const cooldownRaw = await AsyncStorage.getItem(AVAILABILITY_BANNER_COOLDOWN_KEY);
-        if (
-          cooldownRaw &&
-          Date.now() - parseInt(cooldownRaw, 10) < AVAILABILITY_BANNER_COOLDOWN_MS
-        ) {
-          return;
+        if (respectCooldown) {
+          const cooldownRaw = await AsyncStorage.getItem(AVAILABILITY_BANNER_COOLDOWN_KEY);
+          if (
+            cooldownRaw &&
+            Date.now() - parseInt(cooldownRaw, 10) < AVAILABILITY_BANNER_COOLDOWN_MS
+          ) {
+            return;
+          }
         }
 
         // Fetch the most-recent last_confirmed_at across the player's active
@@ -784,18 +789,35 @@ const Home = () => {
           Date.now() - new Date(mostRecent).getTime() >
             AVAILABILITY_STALENESS_DAYS * 24 * 60 * 60 * 1000;
         setAvailabilityIsStale(isStale);
+        // A fresh confirmation also clears the local dismiss flag so the
+        // banner won't reappear stuck-hidden if it ever goes stale again
+        // later in this session.
+        if (!isStale) setAvailabilityBannerDismissed(false);
       } catch {
         // Swallow — banner is a soft nudge, not load-bearing.
       }
-    };
+    },
+    [isOnboarded, player?.id]
+  );
 
+  useEffect(() => {
     // Deferred past first paint — Supabase round-trip plus AsyncStorage read,
     // none of it on the critical path for the initial frame.
     const handle = InteractionManager.runAfterInteractions(() => {
-      void checkStaleness();
+      void checkAvailabilityStaleness(true);
     });
     return () => handle.cancel();
-  }, [isOnboarded, player?.id]);
+  }, [checkAvailabilityStaleness]);
+
+  // Re-check whenever Home regains focus — covers the case where the user
+  // updated availability on UserProfile (or any other screen) and bounced
+  // back. Bypasses the dismiss cooldown so a fresh confirmation clears the
+  // banner immediately.
+  useFocusEffect(
+    useCallback(() => {
+      void checkAvailabilityStaleness(false);
+    }, [checkAvailabilityStaleness])
+  );
 
   const handleAvailabilityBannerAction = useCallback(() => {
     // Jump to UserProfile with an explicit "open the availability sheet"
@@ -1222,7 +1244,7 @@ const Home = () => {
         bannerCards.push(
           <HomeBanner
             key="availability-refresh"
-            variant="action"
+            variant="danger"
             leading={accent => <Ionicons name="time-outline" size={20} color={accent} />}
             title={t('home.availabilityRefreshBanner.title')}
             description={t('home.availabilityRefreshBanner.description')}

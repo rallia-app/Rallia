@@ -4050,8 +4050,8 @@
       "activate": "Activer"
     },
     "availabilityRefreshBanner": {
-      "title": "Vos disponibilités de la semaine",
-      "description": "Dites-nous quand vous pouvez jouer cette semaine — vos suggestions resteront pertinentes.",
+      "title": "Quand veux-tu jouer cette semaine?",
+      "description": "Fournis tes dispos pour les 7 prochains jours et laisse-nous te trouver les meilleurs matchs.",
       "cta": "Mettre à jour"
     },
     "header": {
