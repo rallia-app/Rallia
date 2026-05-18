@@ -91,7 +91,6 @@ interface MatchDetailRow {
   participants?: Array<{
     status: string | null;
     player_id: string | null;
-    player?: { sport_certification_status?: string | null } | null;
   }> | null;
 }
 
@@ -158,7 +157,7 @@ export async function composeJustForYou(
   const { data: details, error: detailErr } = await supabase
     .from('match')
     .select(
-      'id, match_date, start_time, end_time, format, duration, join_mode, player_expectation, preferred_opponent_gender, is_court_free, estimated_cost, court_status, facility_id, created_by, sport:sport_id(name), facility:facility_id(name, city), min_rating_score:min_rating_score_id(value), participants:match_participant(status, player_id, player:player_id(sport_certification_status))'
+      'id, match_date, start_time, end_time, format, duration, join_mode, player_expectation, preferred_opponent_gender, is_court_free, estimated_cost, court_status, facility_id, created_by, sport:sport_id(name), facility:facility_id(name, city), min_rating_score:min_rating_score_id(value), participants:match_participant(status, player_id)'
     )
     .in(
       'id',
@@ -213,9 +212,6 @@ export async function composeJustForYou(
         m.participants?.map(p => ({
           status: p.status,
           player_id: p.player_id,
-          player: p.player
-            ? { sportCertificationStatus: p.player.sport_certification_status ?? null }
-            : null,
         })) ?? null,
       // Extras carried for downstream rendering — not used by the scorer.
       end_time: m.end_time,
