@@ -195,8 +195,8 @@
       "match_cancelled": "Partie annulée",
       "match_updated": "Partie mise à jour",
       "match_starting_soon": "Partie imminente",
-      "match_check_in_available": "Enregistrement disponible",
-      "match_new_available": "Nouvelle partie dans un groupe",
+      "match_check_in_available": "Check-in disponible",
+      "match_new_available": "Nouvelle partie de groupe",
       "match_spot_opened": "Place libérée",
       "nearby_match_available": "Partie à proximité",
       "player_kicked": "Retiré de la partie",
@@ -233,7 +233,11 @@
       "booking_cancelled_by_org": "Réservation annulée par l'établissement",
       "membership_approved": "Adhésion approuvée",
       "org_announcement": "Annonce",
-      "morning_digest": "Récapitulatif matinal"
+      "morning_digest": "Récapitulatif matinal",
+      "availability_refresh_reminder": "Rappel de disponibilités",
+      "match_time_suggested": "Heure proposée",
+      "match_time_suggestion_accepted": "Heure acceptée",
+      "match_time_suggestion_declined": "Heure refusée"
     },
     "categories": {
       "match": "Notifications de parties",
@@ -442,6 +446,38 @@
       "org_announcement": {
         "title": "Annonce de {orgName}",
         "body": "{orgName} a partagé une nouvelle annonce. Touche pour lire."
+      },
+      "payouts_setup_required": {
+        "title": "{amount} prêt à recevoir",
+        "body": "Un joueur t'a remboursé. Vérifie ton compte bancaire pour recevoir l'argent (5 min)."
+      },
+      "payouts_released": {
+        "title": "{amount} en route",
+        "body": "Ton remboursement est en route vers ta banque — arrive en 1 à 2 jours ouvrables."
+      },
+      "payouts_expired_refunded": {
+        "title": "Remboursement non complété",
+        "body": "{amount} a été remboursé au joueur car le paiement n'a pas pu être configuré à temps."
+      },
+      "reimbursement_received": {
+        "title": "Remboursement reçu : {amount}",
+        "body": "Un joueur a payé {amount} pour ta réservation."
+      },
+      "reimbursement_all_received": {
+        "title": "Tous les remboursements reçus",
+        "body": "Tout le monde t'a remboursé pour la partie."
+      },
+      "match_time_suggested": {
+        "title": "{playerName} propose {suggestedStartTime}",
+        "body": "{playerName} ne peut pas jouer au {sportName} le {matchDate} à l'heure prévue — il propose {suggestedStartTime}. Touche pour accepter ou refuser."
+      },
+      "match_time_suggestion_accepted": {
+        "title": "Ta proposition a été acceptée",
+        "body": "Ta partie de {sportName} le {matchDate} commence désormais à {suggestedStartTime}."
+      },
+      "match_time_suggestion_declined": {
+        "title": "Proposition refusée",
+        "body": "Ta proposition pour la partie de {sportName} le {matchDate} n'a pas été retenue. Tu peux quand même te joindre à l'heure originale."
       }
     }
   },
@@ -460,6 +496,8 @@
     "reviewAndRespond": "Examiner et répondre",
     "pendingCount": "{count} joueurs attendent la confirmation de leur niveau",
     "pendingCount_one": "{count} joueur attend la confirmation de son niveau",
+    "bannerTitle": "{count} références en attente",
+    "bannerDescription": "Des joueurs attendent votre approbation pour confirmer leur niveau officiel.",
     "reviewCta": "Examiner",
     "respondTitle": "Vérifier le niveau",
     "respondSubtitle": "Aidez ce joueur à faire certifier son niveau",
@@ -894,7 +932,7 @@
       "noRating": "Aucun classement pour le moment",
       "noRatingSubtext": "Configurez votre classement pour commencer à jouer",
       "activeNow": "En ligne",
-      "lastSeen": "Vu il y a",
+      "lastSeen": "Vu",
       "offline": "Hors ligne"
     },
     "sportsHint": "Vous pouvez activer d'autres sports à tout moment",
@@ -1321,6 +1359,26 @@
       "private": "Privée",
       "publicDescription": "Les autres joueurs peuvent voir quand vous êtes disponible pour jouer.",
       "privateDescription": "Vos disponibilités sont cachées des autres joueurs."
+    },
+    "payments": {
+      "section": "Paiements",
+      "connectAccount": "Connecter un compte",
+      "continueSetup": "Terminer la configuration",
+      "connected": "Paiements connectés",
+      "connectedDescription": "Les joueurs peuvent te payer avec Apple Pay. Les fonds arrivent dans ta banque en 1 à 2 jours ouvrables.",
+      "setupPrompt": "Configurez les paiements pour recevoir votre part des joueurs",
+      "manualMode": "Suivi manuel des paiements",
+      "manualModeDescription": "Tu n'utilises pas Stripe. Les joueurs te paient directement (comptant, Interac, etc.) et tu les marques comme payés.",
+      "switchToStripe": "Passer à Stripe",
+      "switchToManual": "Passer au manuel",
+      "useManualInstead": "Suivre manuellement",
+      "pendingTitle": "{amount} prêt à recevoir",
+      "pendingBody": "Termine la configuration des paiements pour transférer cet argent à ta banque.",
+      "connectedToast": "Paiements connectés !",
+      "onboardingError": "Échec du démarrage de la configuration. Réessayez.",
+      "modeUpdateError": "Impossible de mettre à jour le mode de paiement. Réessayez.",
+      "switchToManualConfirmTitle": "Passer au suivi manuel?",
+      "switchToManualConfirmMessage": "Les paiements futurs ne passeront plus par Stripe — tu marqueras chaque joueur comme payé toi-même. Les paiements en attente dans Stripe te seront quand même versés."
     }
   },
   "playerProfile": {
@@ -1369,6 +1427,8 @@
       "am": "MAT",
       "pm": "PM",
       "eve": "SOIR",
+      "showDetails": "Voir l'horaire complet",
+      "hideDetails": "Masquer les détails",
       "days": {
         "monday": "Lun",
         "tuesday": "Mar",
@@ -1587,23 +1647,15 @@
     },
     "availabilityStep": {
       "title": "Parlez-nous de votre horaire",
-      "subtitle": "Sélectionnez vos disponibilités",
-      "am": "AM",
-      "pm": "PM",
-      "eve": "SOIR",
-      "minimumSelected": "{count} / {minimum} minimum sélectionnés",
-      "selected": "{count} disponibilités sélectionnées",
+      "presets": {
+        "afterWork": "Après le travail",
+        "weekendsAny": "Fin de semaine",
+        "lunch": "Dîner",
+        "mornings": "Matins",
+        "clear": "Effacer"
+      },
       "saveButton": "Enregistrer",
-      "complete": "Terminer",
-      "days": {
-        "monday": "Lun",
-        "tuesday": "Mar",
-        "wednesday": "Mer",
-        "thursday": "Jeu",
-        "friday": "Ven",
-        "saturday": "Sam",
-        "sunday": "Dim"
-      }
+      "complete": "Terminer"
     },
     "validation": {
       "fillRequiredFields": "Veuillez remplir tous les champs obligatoires",
@@ -1654,7 +1706,7 @@
       "linkCopied": "Lien copié!",
       "contactsTitle": "Invitez vos amis à jouer",
       "contactsSubtitle": "Choisissez parmi vos contacts et nous leur enverrons votre invitation par texto. Les joueurs avec des amis sur Rallia trouvent des matchs plus vite.",
-      "findFromContacts": "Trouver des amis dans mes contacts",
+      "findFromContacts": "Chercher dans mes contacts",
       "shareLinkInstead": "Partager le lien d'invitation",
       "permissionDenied": "Accès aux contacts refusé",
       "permissionDeniedHint": "Vous pouvez toujours partager votre lien, ou activer les contacts dans les Réglages.",
@@ -1669,6 +1721,7 @@
     },
     "suggestions": {
       "title": "Vos meilleurs matchs",
+      "sheetTitle": "Suggestions personnalisées",
       "subtitle": "Des joueurs près de chez vous, sélectionnés selon votre niveau, vos disponibilités et vos terrains préférés",
       "sendInvite": "Envoyer l'invitation",
       "confirmTitle": "Envoyer l'invitation?",
@@ -1698,7 +1751,9 @@
       "feedEmptyTitle": "Aucune suggestion disponible",
       "feedEmptySubtitle": "Revenez plus tard quand d'autres joueurs se joindront.",
       "selectDate": "Sélectionnez une date",
-      "selectTime": "Sélectionnez un horaire"
+      "selectTime": "Sélectionnez un horaire",
+      "reassureTitle": "Choisis avec soin pour vous",
+      "reassureMessage": "Ces joueurs ont un niveau semblable au vôtre, sont libres à ce moment-là et jouent sur vos terrains préférés. Ils n'attendent qu'une chose : qu'on leur propose une partie. Vous ne dérangerez personne — au contraire, ça va leur faire plaisir."
     },
     "complete": "Terminer",
     "locationStep": {
@@ -1881,7 +1936,9 @@
     "participantStatus": {
       "pending": "En attente",
       "declined": "Refusé"
-    }
+    },
+    "suggestDifferentTime": "Proposer une autre heure",
+    "viewYourSuggestion": "Ta proposition : {time}"
   },
   "ratings": {
     "title": "Classements",
@@ -2773,6 +2830,12 @@
     "locationRequiredForFacilities": "La localisation est requise pour rechercher des sites de jeu",
     "favoriteFacilitiesHint": "Vous pouvez toujours ajouter ou changer les sites de jeu plus tard"
   },
+  "playerAvailability": {
+    "staleHint": "Cela fait un moment — confirmez votre disponibilité pour la semaine.",
+    "lastConfirmed": "Confirmée {ago}",
+    "neverConfirmed": "Jamais confirmée",
+    "confirmCta": "Confirmer ma semaine"
+  },
   "playerDirectory": {
     "title": "Répertoire des joueurs",
     "searchPlaceholder": "Rechercher par nom ou ville...",
@@ -2787,6 +2850,19 @@
     "selectSportDescription": "Choisissez un sport dans l'en-tête pour voir les joueurs",
     "chooseSport": "Choisissez un sport dans l'en-tête pour voir les joueurs",
     "nearby": "À proximité",
+    "online": "En ligne",
+    "lastSeenToday": "Aujourd'hui",
+    "lastSeenYesterday": "Hier",
+    "lastSeenDaysAgo": "il y a {count} jours",
+    "dayLetters": {
+      "monday": "L",
+      "tuesday": "M",
+      "wednesday": "M",
+      "thursday": "J",
+      "friday": "V",
+      "saturday": "S",
+      "sunday": "D"
+    },
     "failedToLoad": "Échec du chargement des joueurs",
     "checkConnection": "Veuillez vérifier votre connexion et réessayer",
     "favorites": {
@@ -2808,6 +2884,8 @@
       "distanceKm": "{distance} km",
       "availability": "Disponibilité",
       "availabilityAll": "Toutes",
+      "availabilityAm": "AM",
+      "availabilityPm": "PM",
       "availabilityMorning": "Matin",
       "availabilityAfternoon": "Après-midi",
       "availabilityEvening": "Soir",
@@ -3069,6 +3147,7 @@
       "join": "Rejoindre la partie",
       "askToJoin": "Demander à rejoindre",
       "acceptInvitation": "Accepter invitation",
+      "manageInvitation": "Gérer l'invitation",
       "full": "Complet",
       "view": "Voir détails",
       "viewResults": "Voir résultats",
@@ -3132,7 +3211,7 @@
     "shareFormat": "Format : {format}",
     "shareDuration": "Durée : {duration}",
     "shareMinLevel": "Niveau minimum : {level}",
-    "qrAndLink": "Code QR et lien",
+    "qrAndLink": "Code QR",
     "qrModalTitle": "Inviter à ce match",
     "qrModalDescription": "Laisse quelqu'un scanner le code, ou copie le lien pour le coller ailleurs",
     "distance": "Distance",
@@ -3207,7 +3286,84 @@
     "scoreConfirmProgress_one": "{confirmed}/{total} joueur confirmé",
     "scoreConfirmProgress_other": "{confirmed}/{total} joueurs confirmés",
     "yourScoreConfirmed": "Votre confirmation reçue",
-    "reviewRebuttal": "Revoir le score"
+    "reviewRebuttal": "Revoir le score",
+    "reimbursement": "Remboursement",
+    "matchCost": "Coût du match",
+    "payNow": "Payer maintenant",
+    "markAsPaid": "Marquer comme payé",
+    "markedAsPaid": "Marqué comme payé",
+    "markedAsPaidWithAmount": "{name} marqué comme payé · {amount}",
+    "paymentSuccess": "Paiement envoyé !",
+    "paymentSuccessWithDetails": "Paiement envoyé — {amount} à {name}",
+    "paymentError": "Paiement échoué. Réessayez.",
+    "payErrors": {
+      "matchNotFinished": "Tu pourras payer une fois le match terminé.",
+      "matchNotFull": "Ce match n'a pas rempli ses places — aucun remboursement collecté.",
+      "hostManualOnly": "{name} préfère être payé directement.",
+      "alreadyPaid": "Tu as déjà payé ta part.",
+      "alreadyPaidViaStripe": "Déjà payé via Rallia. Pas besoin de marquer manuellement."
+    },
+    "payNote": "Aucuns frais · Propulsé par Stripe",
+    "yourShare": "Ta part · {amount}",
+    "yourShareSubtitle": "{name} recevra ce montant directement",
+    "youHavePaid": "✓ Vous avez payé votre part ({amount})",
+    "youOweHost": "{amount} dû à {name}",
+    "youOweHostWithDate": "{amount} pour le match du {date} avec {name}",
+    "payDirectly": "Payer {name} directement · {amount}",
+    "hostNotConnected": "{name} n'a pas encore configuré les paiements",
+    "hostManualOnly": "{name} préfère être payé directement · {amount}",
+    "paidCount": "{paid}/{total} joueurs ont payé",
+    "everyonePaid": "Tout le monde t'a remboursé",
+    "payoutsSetupBanner": {
+      "title": "{amount} prêt à recevoir",
+      "body": "Les fonds arrivent 1 à 2 jours ouvrables après la configuration.",
+      "cta": "Recevoir le paiement"
+    },
+    "choosePayouts": {
+      "title": "Comment veux-tu gérer les remboursements?",
+      "subtitle": "Choisis comment les joueurs te remboursent le terrain.",
+      "prompt": "Comment veux-tu être remboursé?",
+      "stripeOption": "Stripe (recommandé)",
+      "stripeDescription": "Les joueurs paient avec Apple Pay en 3 secondes. L'argent va à ta banque. ~5 min de configuration.",
+      "stripeBadge": "~5 min de configuration",
+      "manualOption": "Suivi seulement",
+      "manualDescription": "Marque qui t'a payé en personne (comptant, Interac, etc.). Aucune configuration, aucuns frais.",
+      "manualBadge": "Aucuns frais",
+      "later": "Plus tard",
+      "switchToManualConfirmTitle": "Passer au suivi manuel?",
+      "switchToManualConfirmMessage": "Les paiements futurs ne passeront plus par Stripe — tu marqueras chaque joueur comme payé toi-même. Les paiements en attente dans Stripe te seront quand même versés."
+    },
+    "switchToStripe": "Passer à Stripe",
+    "trackingOnly": "Suivi manuel des paiements",
+    "timeSuggestion": {
+      "sheetTitle": "Proposer une autre heure",
+      "sheetSubtitle": "Même journée — propose une nouvelle heure de début. L'hôte peut accepter (et reprogrammer la partie) ou refuser.",
+      "currentTime": "Actuellement : {time}",
+      "newTimeLabel": "Ta proposition",
+      "noteLabel": "Note (facultatif)",
+      "notePlaceholder": "ex. Je pourrais jouer si on commence une heure plus tard",
+      "timezoneBanner": "Heures affichées dans le fuseau de la partie ({tz})",
+      "submit": "Envoyer la proposition",
+      "submitUpdate": "Mettre à jour la proposition",
+      "withdraw": "Retirer la proposition",
+      "submitSuccess": "Proposition envoyée à l'hôte",
+      "withdrawSuccess": "Proposition retirée",
+      "alreadyPending": "Tu as déjà une proposition en attente — retire-la d'abord.",
+      "sameAsCurrent": "C'est l'heure actuelle — choisis-en une autre.",
+      "errorGeneric": "Impossible d'envoyer ta proposition. Réessaie.",
+      "sectionTitle": "Propositions d'heure",
+      "sectionEmpty": "Aucune proposition en attente",
+      "suggestedBy": "{name} propose {time}",
+      "youSuggested": "Tu as proposé {time}",
+      "youSuggestedPending": "En attente de la réponse de l'hôte",
+      "accept": "Accepter",
+      "decline": "Refuser",
+      "acceptConfirmTitle": "Accepter cette heure ?",
+      "acceptConfirmBody": "La partie sera reprogrammée à {time} et tous les joueurs seront avisés.",
+      "acceptSuccess": "Partie reprogrammée",
+      "declineSuccess": "Proposition refusée",
+      "errorMatchFull": "La partie s'est remplie pendant l'attente. Libère une place ou refuse."
+    }
   },
   "registerMatchScore": {
     "title": "Enregistrer le score",
@@ -3446,6 +3602,7 @@
     "error": "Erreur",
     "info": "Info",
     "availabilitiesUpdated": "Vos disponibilités ont été mises à jour!",
+    "minAvailabilitiesRequired": "Veuillez sélectionner au moins 3 plages de disponibilité.",
     "peerRatingRequestsSent": "Demandes d'évaluation par les pairs envoyées à {count} joueur(s)",
     "referenceRequestsSent": "Demandes de référence envoyées à {count} joueur(s)",
     "failedToSendPeerRatingRequests": "Échec de l'envoi des demandes d'évaluation par les pairs",
@@ -3852,9 +4009,16 @@
     "user": "Utilisateur",
     "subtitle": "La meilleure façon de trouver votre prochain partenaire de tennis ou de pickleball",
     "soonAndNearby": "À proximité",
+    "justForYou": "Juste pour vous",
     "publicMatches": "Parties publiques",
     "viewAll": "Voir tout",
     "myMatches": "Mes parties",
+    "quickNav": {
+      "joinCommunity": "Rejoindre une communauté",
+      "bookCourt": "Réserver un terrain",
+      "findGame": "Trouver une partie",
+      "browseSuggestions": "Découvrir mes suggestions"
+    },
     "myMatchesEmpty": {
       "title": "Aucune partie à venir",
       "description": "Créez une partie ou rejoignez-en une pour la voir ici"
@@ -3875,11 +4039,20 @@
     },
     "crossSportBanner": {
       "unreadNotifications": "Vous avez {count} notification(s) en attente pour {sportName}",
+      "bannerTitle": "{count} mises à jour en {sportName}",
+      "bannerDescription": "Changez de sport pour voir les notifications manquées dans l'autre sport.",
       "switch": "Changer"
     },
     "secondSportBanner": {
       "message": "Prêt à élargir vos horizons? Activez votre profil {sportName}!",
+      "bannerTitle": "Essayez {sportName} aussi",
+      "bannerDescription": "Activez {sportName} pour trouver plus de matchs et de joueurs près de chez vous.",
       "activate": "Activer"
+    },
+    "availabilityRefreshBanner": {
+      "title": "Vos disponibilités de la semaine",
+      "description": "Dites-nous quand vous pouvez jouer cette semaine — vos suggestions resteront pertinentes.",
+      "cta": "Mettre à jour"
     },
     "header": {
       "ctaButton": "Télécharger",
@@ -4203,6 +4376,7 @@
   "publicMatches": {
     "title": "Parties publiques",
     "searchPlaceholder": "Rechercher parties, lieux, joueurs...",
+    "suggestionsFrontier": "Suggestions pour vous",
     "filters": {
       "format": {
         "label": "Format",
@@ -6756,6 +6930,8 @@
       "noData": "Aucune donnée disponible",
       "invitations": "Invitations et parrainages",
       "invitationsDescription": "D'où viennent les redirections vers Rallia — {days} derniers jours. Cliquez sur une ligne pour voir les principales cibles.",
+      "invitationsTrendTitle": "Clics par jour, par type d'invitation",
+      "invitationsTrendHint": "Tous les types actifs sur la plage sélectionnée.",
       "totalClicks": "Clics",
       "uniqueDevices": "Appareils uniques",
       "matchedInstalls": "Installations attribuées (iOS)",
@@ -6766,13 +6942,96 @@
       "targetId": "Cible",
       "noClicksYet": "Aucun clic sur les liens d'invitation pour l'instant.",
       "trend": "Tendance",
+      "overviewHint": "Aperçu en direct de toutes les surfaces d'analyse. Cliquez sur une carte pour explorer.",
+      "tabs": {
+        "overview": "Aperçu",
+        "acquisition": "Acquisition",
+        "invitations": "Invitations",
+        "engagement": "Engagement",
+        "users": "Utilisateurs"
+      },
+      "links": {
+        "builderTitle": "Créer un lien traçable",
+        "builderDescription": "Choisissez une destination et étiquetez la campagne. L'URL à droite est celle à copier/partager.",
+        "destination": "Destination",
+        "campaign": "Campagne",
+        "campaignPlaceholder": "Choisir une campagne…",
+        "newCampaign": "Nouvelle campagne",
+        "source": "Source",
+        "sourcePlaceholder": "Choisir une source…",
+        "medium": "Médium",
+        "mediumPlaceholder": "Choisir un médium…",
+        "content": "Variante de contenu",
+        "contentPlaceholder": "ex. story_swipeup, header_cta",
+        "generatedUrl": "URL générée",
+        "fillFormPrompt": "Remplissez le formulaire pour générer une URL…",
+        "copy": "Copier",
+        "qrHint": "Imprimer ou partager — le scan ouvre la même URL.",
+        "newCampaignTitle": "Nouvelle campagne",
+        "newCampaignDescription": "Une campagne regroupe tous les liens d'une même initiative de croissance.",
+        "campaignName": "Nom de la campagne",
+        "slugPreview": "Slug (utilisé dans l'URL):",
+        "campaignDescriptionLabel": "Description",
+        "campaignDescriptionPlaceholder": "À quoi sert cette campagne ?",
+        "create": "Créer la campagne",
+        "creating": "Création…",
+        "cancel": "Annuler",
+        "campaignsTitle": "Campagnes",
+        "campaignsDescription": "Campagnes actives. Archiver masque la campagne du sélecteur — l'attribution historique est préservée.",
+        "name": "Nom",
+        "slug": "Slug",
+        "description": "Description",
+        "archive": "Archiver",
+        "noCampaigns": "Aucune campagne — créez-en une ci-dessus."
+      },
+      "utm": {
+        "title": "Suivi UTM",
+        "description": "Atterrissages avant inscription (PostHog) joints aux inscriptions et parties par campagne.",
+        "landings": "Atterrissages",
+        "signups": "Inscriptions",
+        "signupsToday": "Inscriptions aujourd'hui",
+        "conversionRate": "Taux de conv.",
+        "attributionRate": "Taux d'attribution",
+        "attributionRateHint": "{attributed} sur {total} inscriptions attribuées",
+        "topCampaign": "Meilleure campagne",
+        "topCampaignsTrend": "Atterrissages par jour, par campagne",
+        "chartHint": "Comparaison des {n} meilleures campagnes sur la plage sélectionnée.",
+        "topN": "Top {n}",
+        "matchesCreated": "Parties créées",
+        "drilldownTitle": "{value} — entonnoir complet",
+        "noUtmYet": "Aucun atterrissage ou inscription avec UTM dans cette plage.",
+        "timeWindow": "Plage",
+        "autoRefresh": "Actualisation auto",
+        "demoMode": "Données démo",
+        "refreshNow": "Actualiser",
+        "lastRefreshed": "Mis à jour à {time}",
+        "notYetLoaded": "Chargement…",
+        "windows": {
+          "24h": "24 heures",
+          "7d": "7 jours",
+          "30d": "30 jours",
+          "90d": "90 jours"
+        },
+        "dimensions": {
+          "campaign": "Campagne",
+          "source": "Source",
+          "medium": "Médium"
+        },
+        "funnel": {
+          "landings": "Atterrissages",
+          "signups": "Inscriptions",
+          "firstMatch": "Parties créées",
+          "firstMatchPlayed": "Parties jouées"
+        }
+      },
       "invitationType": {
         "referral": "Parrainage",
         "match": "Partie",
         "group": "Groupe",
         "community": "Communauté",
         "flyer": "Dépliant",
-        "poster": "Affiche"
+        "poster": "Affiche",
+        "social": "Réseaux sociaux"
       },
       "timeRange": {
         "7d": "7 jours",
@@ -8167,6 +8426,9 @@
       "hasAvailabilities": {
         "label": "Réservable"
       },
+      "hasOpenSlots": {
+        "label": "Créneaux libres"
+      },
       "organizationNature": {
         "label": "Type",
         "all": "Tous",
@@ -8720,14 +8982,20 @@
         "sunday": "Dim"
       },
       "periods": {
+        "early": "Tôt",
         "morning": "Matin",
+        "midday": "Midi",
         "afternoon": "Après-midi",
-        "evening": "Soirée"
+        "evening": "Soirée",
+        "late": "Tard"
       },
       "periodRanges": {
-        "morning": "6h - 12h",
-        "afternoon": "12h - 17h",
-        "evening": "17h - 21h"
+        "early": "6h - 9h",
+        "morning": "9h - 12h",
+        "midday": "12h - 14h",
+        "afternoon": "14h - 17h",
+        "evening": "17h - 20h",
+        "late": "20h - 23h"
       },
       "availabilityCount": "{count} sélectionnés",
       "submitButton": "Je suis partant",
@@ -9112,6 +9380,7 @@
     "percentComplete": "{percentage}% complété",
     "complete": "Profil complété",
     "bannerTitle": "Profil à {percentage}%",
+    "bannerDescription": "Complétez votre profil pour obtenir plus de matchs et vous démarquer.",
     "bannerCta": "Compléter",
     "tiers": {
       "getting_started": "Début — remplissez les bases pour de meilleurs matchs",
@@ -9181,8 +9450,8 @@
     }
   },
   "subscription": {
-    "pro_badge": "Pro",
-    "upgrade_cta": "Passer à Rallia Pro",
+    "pro_badge": "Plus",
+    "upgrade_cta": "Passer à Rallia Plus",
     "manage": "Gérer l'abonnement",
     "restore": "Restaurer les achats",
     "restore_success": "Abonnement restauré !",
@@ -9194,6 +9463,7 @@
     "renews_on": "Renouvellement le {date}",
     "cancels_on": "Accès jusqu'au {date}",
     "billing_banner_title": "Problème de paiement avec votre abonnement",
+    "billing_banner_description": "Votre abonnement est en pause jusqu'à la mise à jour de votre paiement.",
     "billing_banner_cta": "Mettre à jour",
     "manage_via_apple": "Gérez votre abonnement via les réglages Apple",
     "free_plan": "Forfait gratuit",

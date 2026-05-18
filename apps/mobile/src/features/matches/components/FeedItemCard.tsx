@@ -27,6 +27,11 @@ export interface FeedItemCardProps {
   getInviteState: (opponentId: string, facilityId: string, startTime: Date | string) => InviteState;
   onMatchPress: (match: UnifiedFeedMatch) => void;
   onSendInvite: (payload: InvitePayload) => void;
+  /** Optional sport context for suggestion analytics breakdowns. */
+  sportId?: string;
+  sportName?: string;
+  /** Default match-type chip for SuggestionCard (mirrors MatchCard chips). */
+  defaultMatchType?: 'competitive' | 'casual' | 'both';
 }
 
 function FeedItemCardImpl({
@@ -40,6 +45,9 @@ function FeedItemCardImpl({
   getInviteState,
   onMatchPress,
   onSendInvite,
+  sportId,
+  sportName,
+  defaultMatchType,
 }: FeedItemCardProps) {
   if (item.kind === 'match') {
     const match = item.data;
@@ -63,10 +71,11 @@ function FeedItemCardImpl({
   }
 
   const suggestion = item.data;
-  const pickedFacility = suggestion.facilities[item.pickedFacilityIndex ?? 0];
-  const inviteState = pickedFacility
-    ? getInviteState(suggestion.opponentId, pickedFacility.facilityId, item.pickedSlot.datetime)
-    : 'idle';
+  const inviteState = getInviteState(
+    suggestion.opponentId,
+    suggestion.facility.facilityId,
+    suggestion.slot.datetime
+  );
   return (
     <View style={styles.suggestionWrapper}>
       <SuggestionCard
@@ -85,9 +94,10 @@ function FeedItemCardImpl({
         locale={locale}
         onSendInvite={onSendInvite}
         inviteState={inviteState}
-        lockSelections
-        pickedSlot={item.pickedSlot}
-        pickedFacilityIndex={item.pickedFacilityIndex}
+        source="feed"
+        sportId={sportId}
+        sportName={sportName}
+        defaultMatchType={defaultMatchType}
       />
     </View>
   );

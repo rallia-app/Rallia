@@ -2,28 +2,28 @@ import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import {
   View,
   StyleSheet,
-  FlatList,
   Animated,
   RefreshControl,
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
   Modal,
+  InteractionManager,
 } from 'react-native';
 import { useScrollToTop } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import {
+  MatchCard,
   MyMatchCard,
   Text,
-  Heading,
   Button,
   LocationSelector,
-  Skeleton,
   SkeletonMatchCard,
   SkeletonMyMatchCard,
   useToast,
 } from '@rallia/shared-components';
+
 import { lightHaptic } from '@rallia/shared-utils';
 import { SheetManager } from 'react-native-actions-sheet';
 import {
@@ -44,18 +44,14 @@ import {
 } from '../context';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import { CopilotStep, WalkthroughableView } from '../context/TourContext';
-import { FeedbackFAB } from '../components/BugReportFAB';
 import {
   useProfile,
   useTheme,
   usePlayer,
-  useNearbyMatches,
-  useMatchSuggestions,
-  useUnifiedMatchFeed,
+  useJustForYou,
   usePlayerMatches,
   usePlayerSports,
   useRatingScoresForSport,
-  useSortedNearbyMatches,
   useFavoriteFacilities,
   useOtherSportsUnreadCount,
   useSports,
@@ -63,10 +59,11 @@ import {
   useReferral,
 } from '@rallia/shared-hooks';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { MatchScoringPreferences, UnifiedFeedItem } from '@rallia/shared-hooks';
+import type { MatchScoringPreferences } from '@rallia/shared-hooks';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import {
   Logger,
+  supabase,
   getMatchWithDetails,
   joinGroupByInviteCode,
   requestToJoinCommunityByInviteCode,
@@ -78,13 +75,19 @@ import {
   getPendingDeepLink,
   addDeepLinkListener,
 } from '../navigation/deepLinkStore';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, accent, neutral, primary } from '@rallia/design-system';
+import { LinearGradient } from 'expo-linear-gradient';
+import TennisIcon from '../../assets/icons/tennis.svg';
+import PickleballIcon from '../../assets/icons/pickleball.svg';
 import { SportIcon } from '../components/SportIcon';
 import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
-import ProfileCompletionBanner from '../features/profile/components/ProfileCompletionBanner';
-import { FeedItemCard } from '../features/matches/components/FeedItemCard';
+import ProfileCompletionBanner, {
+  useProfileCompletionBannerVisibility,
+} from '../features/profile/components/ProfileCompletionBanner';
+import { SuggestionCard } from '../components/SuggestionCard';
 import BillingIssueBanner from '../components/BillingIssueBanner';
 import ReferenceRequestsBanner from '../components/ReferenceRequestsBanner';
+import HomeBanner, { HomeBannerLayoutProvider } from '../components/HomeBanner';
 import { useSubscription } from '../context';
 import {
   incrementOnboardedLaunchCount,
@@ -99,64 +102,17 @@ const CrossSportBanner: React.FC<{
   count: number;
   onSwitch: () => void;
   onDismiss: () => void;
-  colors: { card: string; text: string; textMuted: string; primary: string; border: string };
   t: (key: string, options?: Record<string, string | number | boolean>) => string;
-}> = ({ sportName, displayName, count, onSwitch, onDismiss, colors, t }) => (
-  <View
-    style={[
-      crossBannerStyles.container,
-      { backgroundColor: colors.card, borderColor: colors.border },
-    ]}
-  >
-    <View style={crossBannerStyles.content}>
-      <SportIcon
-        sportName={sportName}
-        size={20}
-        color={colors.primary}
-        style={{ marginRight: 8 }}
-      />
-      <Text size="sm" color={colors.text} style={crossBannerStyles.text} numberOfLines={2}>
-        {t('home.crossSportBanner.unreadNotifications', { count, sportName: displayName })}
-      </Text>
-    </View>
-    <View style={crossBannerStyles.actions}>
-      <Button variant="primary" size="xs" onPress={onSwitch}>
-        {t('home.crossSportBanner.switch')}
-      </Button>
-      <TouchableOpacity onPress={onDismiss} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-        <Ionicons name="close" size={18} color={colors.textMuted} />
-      </TouchableOpacity>
-    </View>
-  </View>
+}> = ({ sportName, displayName, count, onSwitch, onDismiss, t }) => (
+  <HomeBanner
+    variant="info"
+    leading={accent => <SportIcon sportName={sportName} size={20} color={accent} />}
+    title={t('home.crossSportBanner.bannerTitle', { count, sportName: displayName })}
+    description={t('home.crossSportBanner.bannerDescription')}
+    primaryAction={{ label: t('home.crossSportBanner.switch'), onPress: onSwitch }}
+    onDismiss={onDismiss}
+  />
 );
-
-const crossBannerStyles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginHorizontal: spacingPixels[4],
-    marginTop: spacingPixels[3],
-    marginBottom: spacingPixels[2],
-    padding: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-  },
-  content: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: spacingPixels[2],
-  },
-  text: {
-    flex: 1,
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[2],
-  },
-});
 
 /** Banner encouraging users with only one sport to activate their second sport */
 const SecondSportBanner: React.FC<{
@@ -165,48 +121,151 @@ const SecondSportBanner: React.FC<{
   onActivate: () => void;
   onDismiss: () => void;
   fadeAnim: Animated.Value;
-  colors: { card: string; text: string; textMuted: string; primary: string; border: string };
   t: (key: string, options?: Record<string, string | number | boolean>) => string;
-}> = ({ sportName, displayName, onActivate, onDismiss, fadeAnim, colors, t }) => (
-  <Animated.View
-    style={[
-      crossBannerStyles.container,
-      { backgroundColor: colors.card, borderColor: colors.border, opacity: fadeAnim },
-    ]}
-  >
-    <View style={crossBannerStyles.content}>
-      <SportIcon
-        sportName={sportName}
-        size={20}
-        color={colors.primary}
-        style={{ marginRight: 8 }}
-      />
-      <Text size="sm" color={colors.text} style={crossBannerStyles.text} numberOfLines={2}>
-        {t('home.secondSportBanner.message', { sportName: displayName })}
-      </Text>
-    </View>
-    <View style={crossBannerStyles.actions}>
-      <Button variant="primary" size="xs" onPress={onActivate}>
-        {t('home.secondSportBanner.activate')}
-      </Button>
-      <TouchableOpacity onPress={onDismiss} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-        <Ionicons name="close" size={18} color={colors.textMuted} />
-      </TouchableOpacity>
-    </View>
-  </Animated.View>
+}> = ({ sportName, displayName, onActivate, onDismiss, fadeAnim, t }) => (
+  <HomeBanner
+    variant="action"
+    leading={accent => <SportIcon sportName={sportName} size={20} color={accent} />}
+    title={t('home.secondSportBanner.bannerTitle', { sportName: displayName })}
+    description={t('home.secondSportBanner.bannerDescription', { sportName: displayName })}
+    primaryAction={{ label: t('home.secondSportBanner.activate'), onPress: onActivate }}
+    onDismiss={onDismiss}
+    fadeAnim={fadeAnim}
+  />
 );
+
+// Splits a label at the last space so every quick-nav button renders exactly
+// two lines, regardless of locale. Single-word labels (rare) still take two
+// lines of vertical space — the second line is empty but reserves height so
+// the row stays visually aligned.
+const splitLabelTwoLines = (label: string): [string, string] => {
+  const trimmed = label.trim();
+  const lastSpace = trimmed.lastIndexOf(' ');
+  if (lastSpace === -1) return [trimmed, ' '];
+  return [trimmed.slice(0, lastSpace), trimmed.slice(lastSpace + 1)];
+};
+
+const QuickNavButton: React.FC<{
+  icon: (color: string) => React.ReactNode;
+  label: string;
+  onPress: () => void;
+}> = ({ icon, label, onPress }) => {
+  const [lineOne, lineTwo] = splitLabelTwoLines(label);
+  const handlePress = () => {
+    void lightHaptic();
+    onPress();
+  };
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      activeOpacity={0.85}
+      style={quickNavStyles.item}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      <LinearGradient
+        colors={[accent[300], accent[400], accent[500]]}
+        locations={[0, 0.55, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={quickNavStyles.gradient}
+      >
+        <View style={quickNavStyles.topHighlight} />
+        <View style={quickNavStyles.iconCircle}>{icon('#ffffff')}</View>
+        <View style={quickNavStyles.labelBlock}>
+          <Text
+            size="sm"
+            weight="semibold"
+            color="#ffffff"
+            style={quickNavStyles.label}
+            numberOfLines={1}
+          >
+            {lineOne}
+          </Text>
+          <Text
+            size="sm"
+            weight="semibold"
+            color="#ffffff"
+            style={quickNavStyles.label}
+            numberOfLines={1}
+          >
+            {lineTwo}
+          </Text>
+        </View>
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+};
+
+const quickNavStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    gap: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[2],
+  },
+  item: {
+    width: 190,
+    borderRadius: radiusPixels['2xl'],
+  },
+  gradient: {
+    flexDirection: 'row',
+    borderRadius: radiusPixels['2xl'],
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    overflow: 'hidden',
+  },
+  topHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.35)',
+  },
+  iconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    flexShrink: 0,
+  },
+  labelBlock: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  label: {
+    textAlign: 'center',
+  },
+});
 
 // AsyncStorage key for second sport banner cooldown
 const SECOND_SPORT_BANNER_COOLDOWN_KEY = '@rallia/second-sport-banner-cooldown';
 const SECOND_SPORT_BANNER_COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2 hours
 const SECOND_SPORT_BANNER_FADE_MS = 10 * 60 * 1000; // 10 minutes
 
+// Availability staleness banner — matches the 7-day threshold the weekly
+// refresh cron and edit-overlay banner already use. Dismissing the banner
+// hides it for 1 day; after that, it re-appears until the user actually
+// confirms their schedule (which advances last_confirmed_at and clears it
+// for the full 7-day window).
+const AVAILABILITY_STALENESS_DAYS = 7;
+const AVAILABILITY_BANNER_COOLDOWN_KEY = '@rallia/availability-refresh-banner-cooldown';
+const AVAILABILITY_BANNER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
 const Home = () => {
   // Use custom hooks for auth, profile, and overlay context
   const { session, loading: authLoading } = useAuth();
   const { profile } = useProfile();
   const { setOnHomeScreen } = useOverlay();
-  const { openSheet } = useActionsSheet();
+  const { openSheet, openSheetForMatchCreation } = useActionsSheet();
   const { subscriptionStatus } = useSubscription();
 
   // User is fully onboarded only if authenticated AND onboarding is complete
@@ -216,6 +275,14 @@ const Home = () => {
   const { t, locale } = useTranslation();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+
+  // Card-skeleton palette — mirrors PlayerCardSkeleton / FacilityCardSkeleton
+  // so My Matches & Just-for-you skeletons sit on the same tinted surface
+  // as the real MatchCard / MyMatchCard (primary[50/950]).
+  const skeletonCardBg = isDark ? primary[950] : primary[50];
+  const skeletonCardBorder = isDark ? `${primary[400]}40` : `${primary[500]}20`;
+  const skeletonShimmerBg = isDark ? primary[900] : primary[100];
+  const skeletonShimmerHighlight = isDark ? primary[800] : primary[50];
   const navigation = useHomeNavigation();
   const appNavigation = useAppNavigation();
   const toast = useToast();
@@ -223,85 +290,94 @@ const Home = () => {
   // Overlay state for deep link async operations (group join, community request)
   const [deepLinkOverlay, setDeepLinkOverlay] = useState(false);
 
-  // Consume pending navigation from post-onboarding join (AsyncStorage)
+  // Consume pending navigation from post-onboarding join (AsyncStorage).
+  // Deferred past first paint via InteractionManager — none of this is on the
+  // critical-path for the initial frame and AsyncStorage reads add up.
   useEffect(() => {
-    AsyncStorage.getItem('@rallia/pending-navigation').then(raw => {
-      if (!raw) return;
-      AsyncStorage.removeItem('@rallia/pending-navigation');
-      try {
-        const nav = JSON.parse(raw) as { screen: string; params?: Record<string, string> };
-        if (nav.screen === 'GroupDetail' && nav.params?.groupId) {
-          appNavigation.navigate('GroupDetail', {
-            groupId: nav.params.groupId,
-            groupName: nav.params.groupName,
-          });
-        } else if (nav.screen === 'CommunityDetail' && nav.params?.communityId) {
-          appNavigation.navigate('CommunityDetail', {
-            communityId: nav.params.communityId,
-            communityName: nav.params.communityName,
-          });
-        } else if (nav.screen === 'MatchDetail' && nav.params?.matchId) {
-          getMatchWithDetails(nav.params.matchId).then(match => {
-            if (match) {
-              openMatchDetail(match as MatchDetailData);
-            }
-          });
+    const handle = InteractionManager.runAfterInteractions(() => {
+      AsyncStorage.getItem('@rallia/pending-navigation').then(raw => {
+        if (!raw) return;
+        AsyncStorage.removeItem('@rallia/pending-navigation');
+        try {
+          const nav = JSON.parse(raw) as { screen: string; params?: Record<string, string> };
+          if (nav.screen === 'GroupDetail' && nav.params?.groupId) {
+            appNavigation.navigate('GroupDetail', {
+              groupId: nav.params.groupId,
+              groupName: nav.params.groupName,
+            });
+          } else if (nav.screen === 'CommunityDetail' && nav.params?.communityId) {
+            appNavigation.navigate('CommunityDetail', {
+              communityId: nav.params.communityId,
+              communityName: nav.params.communityName,
+            });
+          } else if (nav.screen === 'MatchDetail' && nav.params?.matchId) {
+            getMatchWithDetails(nav.params.matchId).then(match => {
+              if (match) {
+                openMatchDetail(match as MatchDetailData);
+              }
+            });
+          }
+        } catch {
+          // Ignore parse errors
         }
-      } catch {
-        // Ignore parse errors
-      }
+      });
     });
+    return () => handle.cancel();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fallback: consume PendingReferral from AsyncStorage if DeepLinkContext expired
-  // (e.g., session-expired user taps a deep link, signs in, and DeepLinkContext has expired)
+  // (e.g., session-expired user taps a deep link, signs in, and DeepLinkContext has expired).
+  // Deferred past first paint — not critical for initial frame.
   useEffect(() => {
-    AsyncStorage.getItem(PENDING_REFERRAL_KEY).then(raw => {
-      if (!raw) return;
-      try {
-        const pending: PendingReferral = JSON.parse(raw);
-        // Only consume if there's a deferred action (match/group/community with target)
-        if (!pending.targetId) return;
+    const handle = InteractionManager.runAfterInteractions(() => {
+      AsyncStorage.getItem(PENDING_REFERRAL_KEY).then(raw => {
+        if (!raw) return;
+        try {
+          const pending: PendingReferral = JSON.parse(raw);
+          // Only consume if there's a deferred action (match/group/community with target)
+          if (!pending.targetId) return;
 
-        AsyncStorage.removeItem(PENDING_REFERRAL_KEY);
+          AsyncStorage.removeItem(PENDING_REFERRAL_KEY);
 
-        if (pending.type === 'match') {
-          getMatchWithDetails(pending.targetId).then(match => {
-            if (match) {
-              openMatchDetail(match as MatchDetailData);
-            }
-          });
-        } else if (pending.type === 'group' && player?.id) {
-          joinGroupByInviteCode(pending.targetId, player.id)
-            .then(result => {
-              if (result.success && result.groupId) {
-                toast.success(t('groups.joinedViaLinkMessage', { name: result.groupName ?? '' }));
-                appNavigation.navigate('GroupDetail', {
-                  groupId: result.groupId,
-                  groupName: result.groupName,
-                });
+          if (pending.type === 'match') {
+            getMatchWithDetails(pending.targetId).then(match => {
+              if (match) {
+                openMatchDetail(match as MatchDetailData);
               }
-            })
-            .catch(() => {});
-        } else if (pending.type === 'community' && player?.id) {
-          requestToJoinCommunityByInviteCode(pending.targetId, player.id)
-            .then(result => {
-              if (result.success && result.communityId) {
-                toast.success(
-                  t('community.requestSentViaLinkMessage', { name: result.communityName ?? '' })
-                );
-                appNavigation.navigate('CommunityDetail', {
-                  communityId: result.communityId,
-                  communityName: result.communityName,
-                });
-              }
-            })
-            .catch(() => {});
+            });
+          } else if (pending.type === 'group' && player?.id) {
+            joinGroupByInviteCode(pending.targetId, player.id)
+              .then(result => {
+                if (result.success && result.groupId) {
+                  toast.success(t('groups.joinedViaLinkMessage', { name: result.groupName ?? '' }));
+                  appNavigation.navigate('GroupDetail', {
+                    groupId: result.groupId,
+                    groupName: result.groupName,
+                  });
+                }
+              })
+              .catch(() => {});
+          } else if (pending.type === 'community' && player?.id) {
+            requestToJoinCommunityByInviteCode(pending.targetId, player.id)
+              .then(result => {
+                if (result.success && result.communityId) {
+                  toast.success(
+                    t('community.requestSentViaLinkMessage', { name: result.communityName ?? '' })
+                  );
+                  appNavigation.navigate('CommunityDetail', {
+                    communityId: result.communityId,
+                    communityName: result.communityName,
+                  });
+                }
+              })
+              .catch(() => {});
+          }
+        } catch {
+          // Ignore parse errors
         }
-      } catch {
-        // Ignore parse errors
-      }
+      });
     });
+    return () => handle.cancel();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Home screen tour - triggers after main navigation tour is completed
@@ -475,10 +551,20 @@ const Home = () => {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Check on mount + subscribe so re-fires when Home is already mounted (fixes app-open bug)
+  // Check on mount + subscribe so re-fires when Home is already mounted (fixes app-open bug).
+  // The mount-time check is deferred past first paint — the overlay Modal shows
+  // during async processing anyway, so a one-frame delay is imperceptible and
+  // keeps Supabase/network work off the initial render path. The listener stays
+  // synchronous so runtime deep links (app already open) still fire immediately.
   useEffect(() => {
-    processDeepLink();
-    return addDeepLinkListener(processDeepLink);
+    const handle = InteractionManager.runAfterInteractions(() => {
+      processDeepLink();
+    });
+    const unsubscribe = addDeepLinkListener(processDeepLink);
+    return () => {
+      handle.cancel();
+      unsubscribe();
+    };
   }, [processDeepLink]);
 
   // Retry once player data arrives in case it was null on first run
@@ -486,21 +572,25 @@ const Home = () => {
     if (player?.id) processDeepLink();
   }, [player?.id, processDeepLink]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Referral invite prompt — shown every 3 launches (0 referrals) or 7 launches (1+ referrals)
+  // Referral invite prompt — shown every 3 launches (0 referrals) or 7 launches (1+ referrals).
+  // Deferred past first paint — this is a periodic prompt, never time-sensitive.
   const { stats: referralStats, statsLoading: referralStatsLoading } = useReferral(player?.id);
   useEffect(() => {
     if (!isOnboarded || !player?.id || referralStatsLoading) return;
 
     const hasReferredUser = (referralStats?.total_converted ?? 0) >= 1;
 
-    (async () => {
-      await incrementOnboardedLaunchCount();
-      const show = await shouldShowReferralInvite(hasReferredUser);
-      if (show) {
-        await markSheetShown();
-        SheetManager.show('referral-invite');
-      }
-    })();
+    const handle = InteractionManager.runAfterInteractions(() => {
+      (async () => {
+        await incrementOnboardedLaunchCount();
+        const show = await shouldShowReferralInvite(hasReferredUser);
+        if (show) {
+          await markSheetShown();
+          SheetManager.show('referral-invite');
+        }
+      })();
+    });
+    return () => handle.cancel();
   }, [isOnboarded, player?.id, referralStatsLoading, referralStats?.total_converted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { selectedSport, isLoading: sportLoading, userSports, setSelectedSport } = useSport();
@@ -532,6 +622,14 @@ const Home = () => {
 
   // Profile completeness for banner
   const profileCompleteness = useProfileCompleteness();
+  const profileCompletionBanner = useProfileCompletionBannerVisibility(
+    profileCompleteness.isComplete
+  );
+
+  // Billing-issue banner dismissal — lifted out of the banner so Home knows
+  // whether it will actually render, which keeps the carousel/full-width
+  // switch in sync with the number of *visible* banners.
+  const [billingBannerDismissed, setBillingBannerDismissed] = useState(false);
 
   // Pending incoming reference requests
   const { count: pendingReferenceRequestsCount } = usePendingReferenceRequestsCount();
@@ -589,7 +687,8 @@ const Home = () => {
     secondSportBannerDismissed,
   ]);
 
-  // Check cooldown and set up auto-fade timer for second sport banner
+  // Check cooldown and set up auto-fade timer for second sport banner.
+  // Deferred past first paint — banner is a soft nudge, never first-frame.
   useEffect(() => {
     if (!isOnboarded || userSports.length !== 1 || inactiveSports.length === 0) {
       return;
@@ -627,7 +726,10 @@ const Home = () => {
       }
     };
 
-    void checkCooldownAndShow();
+    const handle = InteractionManager.runAfterInteractions(() => {
+      void checkCooldownAndShow();
+    });
+    return () => handle.cancel();
   }, [isOnboarded, userSports.length, inactiveSports.length, secondSportFadeAnim]);
 
   // Handle second sport banner dismiss
@@ -640,6 +742,77 @@ const Home = () => {
       setSecondSportBannerDismissed(true);
     });
   }, [secondSportFadeAnim]);
+
+  // Availability-refresh banner state. We check freshness once when the
+  // player loads; the banner shows whenever the player's most-recent
+  // last_confirmed_at is NULL (never confirmed under the 6-block model) or
+  // older than AVAILABILITY_STALENESS_DAYS. Dismissal stores a short
+  // AsyncStorage cooldown so the user isn't nagged on every Home open.
+  const [availabilityIsStale, setAvailabilityIsStale] = useState(false);
+  const [availabilityBannerDismissed, setAvailabilityBannerDismissed] = useState(false);
+
+  useEffect(() => {
+    if (!isOnboarded || !player?.id) return;
+
+    const checkStaleness = async () => {
+      try {
+        const cooldownRaw = await AsyncStorage.getItem(AVAILABILITY_BANNER_COOLDOWN_KEY);
+        if (
+          cooldownRaw &&
+          Date.now() - parseInt(cooldownRaw, 10) < AVAILABILITY_BANNER_COOLDOWN_MS
+        ) {
+          return;
+        }
+
+        // Fetch the most-recent last_confirmed_at across the player's active
+        // rows. nullsLast: true puts confirmed rows ahead of NULL ones, so
+        // the single result reflects the freshest signal we have.
+        const { data, error } = await supabase
+          .from('player_availability')
+          .select('last_confirmed_at')
+          .eq('player_id', player.id)
+          .eq('is_active', true)
+          .order('last_confirmed_at', { ascending: false, nullsFirst: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error || !data) return; // No rows = no availability set at all; profile-completion banner handles that
+
+        const mostRecent = data.last_confirmed_at;
+        const isStale =
+          !mostRecent ||
+          Date.now() - new Date(mostRecent).getTime() >
+            AVAILABILITY_STALENESS_DAYS * 24 * 60 * 60 * 1000;
+        setAvailabilityIsStale(isStale);
+      } catch {
+        // Swallow — banner is a soft nudge, not load-bearing.
+      }
+    };
+
+    // Deferred past first paint — Supabase round-trip plus AsyncStorage read,
+    // none of it on the critical path for the initial frame.
+    const handle = InteractionManager.runAfterInteractions(() => {
+      void checkStaleness();
+    });
+    return () => handle.cancel();
+  }, [isOnboarded, player?.id]);
+
+  const handleAvailabilityBannerAction = useCallback(() => {
+    // Jump to UserProfile with an explicit "open the availability sheet"
+    // intent. UserProfile waits for its availability rows to load, then auto-
+    // opens the edit overlay prefilled with the player's current schedule.
+    appNavigation.navigate('UserProfile', { openSheet: 'availability' });
+  }, [appNavigation]);
+
+  const handleDismissAvailabilityBanner = useCallback(async () => {
+    setAvailabilityBannerDismissed(true);
+    try {
+      await AsyncStorage.setItem(AVAILABILITY_BANNER_COOLDOWN_KEY, Date.now().toString());
+    } catch {
+      // Cooldown is best-effort; failing to persist just means the banner
+      // may reappear sooner than intended on the next Home mount.
+    }
+  }, []);
 
   // Handle activate second sport
   const handleActivateSecondSport = useCallback(() => {
@@ -674,53 +847,21 @@ const Home = () => {
   // Use player's travel distance if signed in, otherwise use guest default
   const searchRadiusKm = session ? maxTravelDistanceKm : GUEST_SEARCH_RADIUS_KM;
 
-  // Determine if we should show the nearby matches section
-  // For dev: always show since we're using hardcoded location
-  const showNearbySection = !!location && !!selectedSport;
+  // The section becomes visible as soon as we have sport + location, and
+  // stays visible across transitions (sign-in, sport switching) so the
+  // header (title / location selector / view all) doesn't flash out while
+  // the carousel re-fetches. The carousel itself swaps to skeletons via
+  // `showJfyLoading` when the fetch isn't ready yet.
+  const isNearbyFetchReady = !!location && !!selectedSport;
+  const [hasShownNearby, setHasShownNearby] = useState(false);
+  useEffect(() => {
+    if (isNearbyFetchReady) setHasShownNearby(true);
+  }, [isNearbyFetchReady]);
+  const showNearbySection = isNearbyFetchReady || hasShownNearby;
 
   // Use TanStack Query hook for fetching nearby matches with infinite scrolling
   // Query refetches automatically when sportId or player gender changes (included in query key)
-  const {
-    matches: allNearbyMatches,
-    isLoading: loadingMatches,
-    isRefetching,
-    isFetchingNextPage,
-    hasNextPage,
-    fetchNextPage,
-    refetch,
-    error: matchesError,
-  } = useNearbyMatches({
-    latitude: location?.latitude,
-    longitude: location?.longitude,
-    maxDistanceKm: searchRadiusKm,
-    sportId: selectedSport?.id,
-    userGender: player?.gender,
-    limit: 20,
-    enabled: showNearbySection,
-  });
-
-  // Filter out matches where user is creator or participant (these show in "My Matches" section)
-  const filteredMatches = useMemo(() => {
-    if (!session?.user?.id) return allNearbyMatches;
-
-    return allNearbyMatches.filter(match => {
-      // Exclude if user is the creator
-      if (match.created_by === session.user.id) return false;
-
-      // Exclude if user is a participant, has requested to join, or is waitlisted
-      const isInvolved = match.participants?.some(
-        p =>
-          p.player_id === session.user.id &&
-          p.status != null &&
-          ['joined', 'requested', 'waitlisted'].includes(p.status)
-      );
-      if (isInvolved) return false;
-
-      return true;
-    });
-  }, [allNearbyMatches, session?.user?.id]);
-
-  // Build scoring preferences for match relevance sorting
+  // Build scoring preferences for the "Just for you" composer.
   const scoringPreferences = useMemo<MatchScoringPreferences>(
     () => ({
       playerGender: player?.gender,
@@ -740,33 +881,41 @@ const Home = () => {
     ]
   );
 
-  // Sort nearby matches by relevance score
-  const matches = useSortedNearbyMatches(filteredMatches, scoringPreferences);
-
-  // Fetch matchup suggestions to fill the feed up to ≥30 items.
+  // Just for you: top 5 = best matches in the area, padded with suggestions
+  // when matches < 5. Score-ordered, opponent-deduped on the suggestion side,
+  // creator/participant matches filtered out by the composer's exclude set.
+  const excludeUserIds = useMemo(
+    () => (session?.user?.id ? [session.user.id] : []),
+    [session?.user?.id]
+  );
   const {
-    suggestions,
-    isLoading: loadingSuggestions,
-    refetch: refetchSuggestions,
-  } = useMatchSuggestions({
-    playerId: player?.id,
+    items: justForYouItems,
+    isLoading: loadingJustForYou,
+    isRefetching,
+    refetch: refetchJustForYou,
+  } = useJustForYou({
+    playerId: player?.id ?? session?.user?.id,
     sportId: selectedSport?.id,
     sportName: selectedSport?.name,
     latitude: location?.latitude,
     longitude: location?.longitude,
-    limit: 30,
+    maxDistanceKm: searchRadiusKm,
+    userGender: player?.gender,
+    scoringPreferences,
+    excludeUserIds,
+    matchLimit: 5,
+    // Anon-mode supported by the composer/hook — gate only on the location
+    // and sport context that the carousel itself depends on.
     enabled: showNearbySection,
   });
-
-  // Build the unified chronological feed.
-  const feed = useUnifiedMatchFeed({ matches, suggestions });
 
   // Suggestion invite plumbing (shared with PublicMatches via the hook).
   const {
     cardLabels: suggestionLabels,
     handleSendInvite,
     getInviteState,
-  } = useSuggestionInviteHandler(selectedSport?.id);
+    callerMatchType,
+  } = useSuggestionInviteHandler({ sportId: selectedSport?.id, source: 'feed' });
 
   // Use TanStack Query hook for fetching player's upcoming matches
   // Filters by selected sport to match the Soon & Nearby section
@@ -782,9 +931,9 @@ const Home = () => {
     enabled: !!session?.user?.id,
   });
 
-  const flatListRef = useRef<FlatList>(null);
+  const scrollRef = useRef<ScrollView>(null);
   const isManualRefresh = useRef(false);
-  useScrollToTop(flatListRef);
+  useScrollToTop(scrollRef);
 
   // Clear manual refresh flag when refetching completes
   useEffect(() => {
@@ -793,103 +942,14 @@ const Home = () => {
     }
   }, [isRefetching]);
 
-  // Log errors from match fetching
-  useEffect(() => {
-    if (matchesError) {
-      Logger.error('Failed to fetch matches', matchesError);
-    }
-  }, [matchesError]);
-
   // Notify OverlayContext that we're on Home screen (safe to show permission overlays)
   useEffect(() => {
     setOnHomeScreen(true);
     return () => setOnHomeScreen(false);
   }, [setOnHomeScreen]);
 
-  // Auto-paginate matches up to 30 before relying on suggestions to fill the feed.
-  useEffect(() => {
-    if (
-      showNearbySection &&
-      !loadingMatches &&
-      !isFetchingNextPage &&
-      hasNextPage &&
-      matches.length < 30
-    ) {
-      fetchNextPage();
-    }
-  }, [
-    showNearbySection,
-    loadingMatches,
-    isFetchingNextPage,
-    hasNextPage,
-    matches.length,
-    fetchNextPage,
-  ]);
-
-  // Handle end reached for infinite scroll
-  const handleEndReached = useCallback(() => {
-    if (feed.length === 0) return;
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [feed.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  // Render individual feed item (match or suggestion)
-  const renderFeedItem = useCallback(
-    ({ item }: { item: UnifiedFeedItem }) => (
-      <FeedItemCard
-        item={item}
-        isDark={isDark}
-        locale={locale}
-        t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
-        currentPlayerId={player?.id}
-        themeColors={colors}
-        suggestionLabels={suggestionLabels}
-        getInviteState={getInviteState}
-        onMatchPress={match => {
-          Logger.logUserAction('match_pressed', { matchId: match.id });
-          openMatchDetail(match as MatchDetailData);
-        }}
-        onSendInvite={handleSendInvite}
-      />
-    ),
-    [
-      isDark,
-      t,
-      locale,
-      openMatchDetail,
-      player?.id,
-      colors,
-      suggestionLabels,
-      getInviteState,
-      handleSendInvite,
-    ]
-  );
-
-  // Render footer with loading indicator
-  const renderFooter = useCallback(() => {
-    if (isFetchingNextPage || (loadingSuggestions && feed.length < 30)) {
-      return (
-        <View style={styles.footerLoader}>
-          <ActivityIndicator size="small" color={colors.primary} />
-        </View>
-      );
-    }
-    return null;
-  }, [isFetchingNextPage, loadingSuggestions, feed.length, colors.primary]);
-
-  // Compact empty state for the rare case both matches and suggestions are empty.
-  const renderEmptyComponent = useCallback(
-    () => (
-      <View style={styles.emptyContainer}>
-        <Ionicons name="location-outline" size={20} color={colors.textMuted} />
-        <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-          {t('home.nearbyEmpty.title')}
-        </Text>
-      </View>
-    ),
-    [colors.textMuted, t]
-  );
+  // Just-for-you items come pre-ranked (score-desc) from the composer. No
+  // local re-sort — the canonical ranking is the composer's output.
 
   // Render section header with "Soon & Nearby" title, location selector, and "View All" button
   // Render section header with "Soon & Nearby" title and "View All" button
@@ -900,11 +960,15 @@ const Home = () => {
       ? [player.address.split(',')[0].trim(), player.city].filter(Boolean).join(', ')
       : homeLocation?.postalCode || homeLocation?.formattedAddress?.split(',')[0];
 
+    // Signed-in users get the personalized "Just for you" title; signed-out
+    // sees the original "Nearby" since the only signal is geographic.
+    const titleKey = session?.user?.id ? 'home.justForYou' : 'home.soonAndNearby';
+
     return (
       <View style={[styles.sectionHeader]}>
         <View style={styles.sectionTitleRow}>
           <Text size="xl" weight="bold" color={colors.text}>
-            {t('home.soonAndNearby')}
+            {t(titleKey)}
           </Text>
           {/* Only show LocationSelector when both GPS and home location are available */}
           {hasBothLocationOptions && (
@@ -953,6 +1017,7 @@ const Home = () => {
     isDark,
     player?.address,
     player?.city,
+    session?.user?.id,
   ]);
 
   // Render "My Matches" section with horizontal scroll
@@ -992,31 +1057,30 @@ const Home = () => {
             </TouchableOpacity>
           </View>
 
-          {/* Content: horizontal scroll or empty state */}
-          {loadingMyMatches ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.myMatchesScrollContent}
-            >
-              {[1, 2, 3].map(i => (
-                <SkeletonMyMatchCard
-                  key={i}
-                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-                  style={{ backgroundColor: colors.card }}
-                />
-              ))}
-            </ScrollView>
-          ) : myMatches.length === 0 ? (
-            <View style={styles.myMatchesEmpty}>
-              <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
-              <Text size="sm" color={colors.textMuted} style={styles.myMatchesEmptyText}>
-                {t('home.myMatchesEmpty.title')}
-              </Text>
-              <Text size="xs" color={colors.textMuted} style={styles.myMatchesEmptyDescription}>
-                {t('home.myMatchesEmpty.description')}
-              </Text>
+          {/* Loading + populated states share the same horizontal ScrollView
+              for layout stability; the empty state breaks out into a static
+              full-width card so the message reads as a section, not a card. */}
+          {!loadingMyMatches && myMatches.length === 0 ? (
+            <View style={styles.myMatchesEmptyWrap}>
+              <View style={[styles.myMatchesEmpty, { backgroundColor: colors.card }]}>
+                <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
+                <Text size="sm" color={colors.textMuted} style={styles.myMatchesEmptyText}>
+                  {t('home.myMatchesEmpty.title')}
+                </Text>
+                <Text size="xs" color={colors.textMuted} style={styles.myMatchesEmptyDescription}>
+                  {t('home.myMatchesEmpty.description')}
+                </Text>
+                <Button
+                  variant="primary"
+                  onPress={() => {
+                    void lightHaptic();
+                    openSheetForMatchCreation();
+                  }}
+                  style={styles.myMatchesEmptyCta}
+                >
+                  {t('actions.createMatch')}
+                </Button>
+              </View>
             </View>
           ) : (
             <ScrollView
@@ -1024,39 +1088,55 @@ const Home = () => {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.myMatchesScrollContent}
             >
-              {myMatches.slice(0, 5).map((match: MatchWithDetails) => {
-                // Check if current player is invited (has pending invitation)
-                const isInvited = !!(
-                  player?.id &&
-                  match.participants?.some(p => p.player_id === player.id && p.status === 'pending')
-                );
-                // Count pending join requests (only relevant if current user is creator)
-                const pendingRequestCount =
-                  match.created_by === player?.id
-                    ? (match.participants?.filter(p => p.status === 'requested').length ?? 0)
-                    : 0;
+              {loadingMyMatches
+                ? [1, 2, 3].map(i => (
+                    <SkeletonMyMatchCard
+                      key={i}
+                      backgroundColor={skeletonShimmerBg}
+                      highlightColor={skeletonShimmerHighlight}
+                      style={{
+                        backgroundColor: skeletonCardBg,
+                        borderColor: skeletonCardBorder,
+                        borderWidth: 1.5,
+                        borderRadius: radiusPixels.lg,
+                      }}
+                    />
+                  ))
+                : myMatches.slice(0, 5).map((match: MatchWithDetails) => {
+                    // Check if current player is invited (has pending invitation)
+                    const isInvited = !!(
+                      player?.id &&
+                      match.participants?.some(
+                        p => p.player_id === player.id && p.status === 'pending'
+                      )
+                    );
+                    // Count pending join requests (only relevant if current user is creator)
+                    const pendingRequestCount =
+                      match.created_by === player?.id
+                        ? (match.participants?.filter(p => p.status === 'requested').length ?? 0)
+                        : 0;
 
-                return (
-                  <MyMatchCard
-                    key={match.id}
-                    match={match}
-                    isDark={isDark}
-                    t={
-                      t as (
-                        key: string,
-                        options?: Record<string, string | number | boolean>
-                      ) => string
-                    }
-                    locale={locale}
-                    isInvited={isInvited}
-                    pendingRequestCount={pendingRequestCount}
-                    onPress={() => {
-                      Logger.logUserAction('my_match_pressed', { matchId: match.id });
-                      openMatchDetail(match);
-                    }}
-                  />
-                );
-              })}
+                    return (
+                      <MyMatchCard
+                        key={match.id}
+                        match={match}
+                        isDark={isDark}
+                        t={
+                          t as (
+                            key: string,
+                            options?: Record<string, string | number | boolean>
+                          ) => string
+                        }
+                        locale={locale}
+                        isInvited={isInvited}
+                        pendingRequestCount={pendingRequestCount}
+                        onPress={() => {
+                          Logger.logUserAction('my_match_pressed', { matchId: match.id });
+                          openMatchDetail(match);
+                        }}
+                      />
+                    );
+                  })}
             </ScrollView>
           )}
         </WalkthroughableView>
@@ -1068,6 +1148,7 @@ const Home = () => {
     colors.text,
     colors.primary,
     colors.textMuted,
+    colors.card,
     t,
     navigation,
     loadingMyMatches,
@@ -1075,12 +1156,185 @@ const Home = () => {
     isDark,
     locale,
     openMatchDetail,
+    openSheetForMatchCreation,
     player,
   ]);
 
   // Render list header (welcome section for logged-in users)
   const renderListHeader = useCallback(() => {
     const headerComponents = [];
+
+    // Banners go first so they sit above everything else on the home screen,
+    // including the quick-nav FAB row. Only signed-in + onboarded users see
+    // them; the bucket is built up below and only flushed if non-empty.
+    const bannerCards: React.ReactNode[] = [];
+
+    if (session && isOnboarded) {
+      // Billing issue banner (shown when subscription payment has failed)
+      if (subscriptionStatus === 'billing_issue' && !billingBannerDismissed) {
+        bannerCards.push(
+          <BillingIssueBanner
+            key="billing-issue"
+            onManagePress={() => appNavigation.navigate('SubscriptionManagement')}
+            onDismiss={() => setBillingBannerDismissed(true)}
+          />
+        );
+      }
+
+      // Pending incoming reference requests
+      if (pendingReferenceRequestsCount > 0) {
+        bannerCards.push(
+          <ReferenceRequestsBanner
+            key="reference-requests"
+            count={pendingReferenceRequestsCount}
+            onPress={() => appNavigation.navigate('IncomingReferenceRequests')}
+            t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
+          />
+        );
+      }
+
+      // Cross-sport banners for unread notifications in other sports
+      Object.entries(otherSportsUnreadCount).forEach(([sportName, count]) => {
+        if (count > 0 && !dismissedBannerSports.has(sportName)) {
+          const sport = userSports.find(s => s.name === sportName);
+          if (sport) {
+            bannerCards.push(
+              <CrossSportBanner
+                key={`cross-sport-${sportName}`}
+                sportName={sportName}
+                displayName={sport.display_name.toLowerCase()}
+                count={count}
+                onSwitch={() => setSelectedSport(sport)}
+                onDismiss={() => setDismissedBannerSports(prev => new Set(prev).add(sportName))}
+                t={
+                  t as (key: string, options?: Record<string, string | number | boolean>) => string
+                }
+              />
+            );
+          }
+        }
+      });
+
+      // Availability refresh banner — shown when the player's schedule has
+      // gone stale (no confirmation in the last 7 days). Tapping the CTA
+      // jumps to UserProfile where the edit overlay is one tap away.
+      if (availabilityIsStale && !availabilityBannerDismissed) {
+        bannerCards.push(
+          <HomeBanner
+            key="availability-refresh"
+            variant="action"
+            leading={accent => <Ionicons name="time-outline" size={20} color={accent} />}
+            title={t('home.availabilityRefreshBanner.title')}
+            description={t('home.availabilityRefreshBanner.description')}
+            primaryAction={{
+              label: t('home.availabilityRefreshBanner.cta'),
+              onPress: handleAvailabilityBannerAction,
+            }}
+            onDismiss={handleDismissAvailabilityBanner}
+          />
+        );
+      }
+
+      // Second sport activation banner (for users with only 1 sport)
+      if (shouldShowSecondSportBanner && inactiveSports.length > 0) {
+        const sportToActivate = inactiveSports[0];
+        bannerCards.push(
+          <SecondSportBanner
+            key="second-sport-banner"
+            sportName={sportToActivate.name}
+            displayName={sportToActivate.display_name.toLowerCase()}
+            onActivate={handleActivateSecondSport}
+            onDismiss={handleDismissSecondSportBanner}
+            fadeAnim={secondSportFadeAnim}
+            t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
+          />
+        );
+      }
+
+      // Profile completion banner — gated on the hook's visibility/ready state
+      // so an internally-hidden banner doesn't inflate bannerCards.length and
+      // accidentally flip the layout into carousel mode.
+      if (
+        !profileCompleteness.isComplete &&
+        !profileCompleteness.loading &&
+        profileCompleteness.nextAction &&
+        profileCompletionBanner.ready &&
+        profileCompletionBanner.visible
+      ) {
+        bannerCards.push(
+          <ProfileCompletionBanner
+            key="profile-completion"
+            percentage={profileCompleteness.percentage}
+            nextAction={profileCompleteness.nextAction}
+            onAction={handleCompletionBannerAction}
+            onDismiss={profileCompletionBanner.handleDismiss}
+            t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
+          />
+        );
+      }
+    }
+
+    // Single banner gets the full row; multiple banners scroll horizontally
+    // as a carousel (matching My Matches / Just for you below).
+    if (bannerCards.length === 1) {
+      headerComponents.push(
+        <HomeBannerLayoutProvider key="banner-single" layout="fullWidth">
+          <View style={styles.bannerSingleWrap}>{bannerCards[0]}</View>
+        </HomeBannerLayoutProvider>
+      );
+    } else if (bannerCards.length > 1) {
+      headerComponents.push(
+        <HomeBannerLayoutProvider key="banner-carousel" layout="card">
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.bannerCarouselContent}
+          >
+            {bannerCards}
+          </ScrollView>
+        </HomeBannerLayoutProvider>
+      );
+    }
+
+    // Quick-nav row: 3 card buttons (community / book a court / find a game).
+    // Shown for everyone — signed-out users land on the same destinations,
+    // which gate themselves where needed.
+    const SportIconComponent =
+      selectedSport?.name?.toLowerCase() === 'pickleball' ? PickleballIcon : TennisIcon;
+    headerComponents.push(
+      <ScrollView
+        key="quick-nav"
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={quickNavStyles.row}
+      >
+        {isOnboarded && (
+          <QuickNavButton
+            icon={color => <Ionicons name="sparkles" size={24} color={color} />}
+            label={t('home.quickNav.browseSuggestions')}
+            onPress={() => SheetManager.show('match-suggestions')}
+          />
+        )}
+        <QuickNavButton
+          icon={color => <SportIconComponent width={24} height={24} fill={color} />}
+          label={t('home.quickNav.findGame')}
+          onPress={() => navigation.navigate('PublicMatches')}
+        />
+        <QuickNavButton
+          icon={color => <Ionicons name="people-outline" size={24} color={color} />}
+          label={t('home.quickNav.joinCommunity')}
+          onPress={() =>
+            appNavigation.navigate('Main', {
+              screen: 'Community',
+              params: {
+                screen: 'Communities',
+                initial: false,
+              },
+            } as never)
+          }
+        />
+      </ScrollView>
+    );
 
     if (!session) {
       // Not signed in: show sign-in prompt
@@ -1092,22 +1346,24 @@ const Home = () => {
             {
               backgroundColor: colors.card,
               borderColor: colors.border,
+              paddingHorizontal: spacingPixels[10],
             },
           ]}
         >
-          <SportIcon
-            sportName={selectedSport?.name ?? 'tennis'}
-            size={32}
-            color={colors.text}
-            style={styles.matchesSectionIcon}
-          />
-          <Heading level={3} color={colors.text}>
+          <Text size="xl" weight="bold" color={colors.text} style={styles.matchesSectionTitle}>
             {t('home.yourMatches')}
-          </Heading>
+          </Text>
           <Text size="sm" color={colors.textMuted} style={styles.sectionSubtitle}>
             {t('home.signInPrompt')}
           </Text>
-          <Button variant="primary" onPress={openSheet} style={styles.signInButton}>
+          <Button
+            variant="primary"
+            rounded
+            onPress={openSheet}
+            style={styles.signInButton}
+            leftIcon={<Ionicons name="log-in-outline" size={20} color="#FFFFFF" />}
+            isDark={isDark}
+          >
             {t('auth.signIn')}
           </Button>
         </View>
@@ -1125,106 +1381,28 @@ const Home = () => {
             },
           ]}
         >
-          <SportIcon
-            sportName={selectedSport?.name ?? 'tennis'}
-            size={32}
-            color={colors.text}
-            style={styles.matchesSectionIcon}
-          />
-          <Heading level={3} color={colors.text}>
+          <View style={[styles.matchesSectionIconWrap, { backgroundColor: `${primary[500]}20` }]}>
+            <Ionicons name="person-add-outline" size={40} color={primary[500]} />
+          </View>
+          <Text size="xl" weight="bold" color={colors.text} style={styles.matchesSectionTitle}>
             {t('home.yourMatches')}
-          </Heading>
+          </Text>
           <Text size="sm" color={colors.textMuted} style={styles.sectionSubtitle}>
             {t('home.onboardingPrompt')}
           </Text>
-          <Button variant="primary" onPress={openSheet} style={styles.signInButton}>
+          <Button
+            variant="primary"
+            rounded
+            onPress={openSheet}
+            style={styles.signInButton}
+            leftIcon={<Ionicons name="person-add-outline" size={20} color="#FFFFFF" />}
+            isDark={isDark}
+          >
             {t('home.completeProfile')}
           </Button>
         </View>
       );
     } else {
-      // Billing issue banner (shown when subscription payment has failed)
-      if (subscriptionStatus === 'billing_issue') {
-        headerComponents.push(
-          <BillingIssueBanner
-            key="billing-issue"
-            onManagePress={() => appNavigation.navigate('SubscriptionManagement')}
-          />
-        );
-      }
-
-      // Pending incoming reference requests
-      if (pendingReferenceRequestsCount > 0) {
-        headerComponents.push(
-          <ReferenceRequestsBanner
-            key="reference-requests"
-            count={pendingReferenceRequestsCount}
-            onPress={() => appNavigation.navigate('IncomingReferenceRequests')}
-            colors={colors}
-            t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
-          />
-        );
-      }
-
-      // Fully onboarded: show My Matches
-      // Cross-sport banners for unread notifications in other sports
-      Object.entries(otherSportsUnreadCount).forEach(([sportName, count]) => {
-        if (count > 0 && !dismissedBannerSports.has(sportName)) {
-          const sport = userSports.find(s => s.name === sportName);
-          if (sport) {
-            headerComponents.push(
-              <CrossSportBanner
-                key={`cross-sport-${sportName}`}
-                sportName={sportName}
-                displayName={sport.display_name.toLowerCase()}
-                count={count}
-                onSwitch={() => setSelectedSport(sport)}
-                onDismiss={() => setDismissedBannerSports(prev => new Set(prev).add(sportName))}
-                colors={colors}
-                t={
-                  t as (key: string, options?: Record<string, string | number | boolean>) => string
-                }
-              />
-            );
-          }
-        }
-      });
-
-      // Second sport activation banner (for users with only 1 sport)
-      if (shouldShowSecondSportBanner && inactiveSports.length > 0) {
-        const sportToActivate = inactiveSports[0];
-        headerComponents.push(
-          <SecondSportBanner
-            key="second-sport-banner"
-            sportName={sportToActivate.name}
-            displayName={sportToActivate.display_name.toLowerCase()}
-            onActivate={handleActivateSecondSport}
-            onDismiss={handleDismissSecondSportBanner}
-            fadeAnim={secondSportFadeAnim}
-            colors={colors}
-            t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
-          />
-        );
-      }
-
-      // Profile completion banner
-      if (!profileCompleteness.isComplete && !profileCompleteness.loading) {
-        headerComponents.push(
-          <ProfileCompletionBanner
-            key="profile-completion"
-            percentage={profileCompleteness.percentage}
-            tier={profileCompleteness.tier}
-            nextAction={profileCompleteness.nextAction}
-            isComplete={profileCompleteness.isComplete}
-            loading={profileCompleteness.loading}
-            onAction={handleCompletionBannerAction}
-            colors={colors}
-            isDark={isDark}
-            t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
-          />
-        );
-      }
-
       // Add "My Matches" section for fully onboarded users
       headerComponents.push(<View key="my-matches">{renderMyMatchesSection()}</View>);
     }
@@ -1269,159 +1447,159 @@ const Home = () => {
     subscriptionStatus,
     appNavigation,
     pendingReferenceRequestsCount,
+    billingBannerDismissed,
+    profileCompletionBanner.ready,
+    profileCompletionBanner.visible,
+    profileCompletionBanner.handleDismiss,
+    availabilityIsStale,
+    availabilityBannerDismissed,
+    handleAvailabilityBannerAction,
+    handleDismissAvailabilityBanner,
   ]);
 
-  // Show loading if auth is loading, or if player/sport data is loading initially
-  // Note: locationLoading is ignored when using hardcoded Montreal location for dev
+  // No more full-page skeleton. Each section (My Matches, Just for you) owns
+  // its own loading state, so the page renders immediately and the relevant
+  // section shows its skeleton until its data arrives. Avoids the layout
+  // flicker that came from swapping a full-page skeleton in and out.
+  // Treat "fetch not yet ready" as a loading state so the carousel renders
+  // skeletons (instead of the empty card) while sport/location settle.
+  const showJfyLoading = loadingJustForYou || !isNearbyFetchReady;
+  const showJfyEmpty = !showJfyLoading && justForYouItems.length === 0;
 
-  const isInitialLoading = authLoading || playerLoading || sportLoading;
-
-  // Determine main content based on loading / data state
-  let content: React.ReactNode;
-
-  if (isInitialLoading) {
-    content = (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-        <View style={styles.loadingContainer}>
-          {/* My Matches skeleton */}
-          <View style={styles.skeletonSection}>
-            <Skeleton
-              width={120}
-              height={20}
-              backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-              highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-              style={{ marginBottom: 12, marginHorizontal: 16 }}
-            />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.myMatchesScrollContent}
-            >
-              {[1, 2, 3].map(i => (
-                <SkeletonMyMatchCard
-                  key={i}
-                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-                  style={{ backgroundColor: colors.card }}
-                />
-              ))}
-            </ScrollView>
-          </View>
-
-          {/* Nearby Matches skeleton */}
-          <View style={styles.skeletonSection}>
-            <Skeleton
-              width={150}
-              height={20}
-              backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-              highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-              style={{ marginBottom: 12, marginHorizontal: 16 }}
-            />
-            {[1, 2, 3].map(i => (
-              <SkeletonMatchCard
-                key={i}
-                backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-                highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-                style={{
-                  backgroundColor: isDark ? '#1C1C1E' : '#FAFAFA',
-                  borderColor: colors.border,
-                  marginHorizontal: spacingPixels[4],
-                  marginBottom: spacingPixels[3],
-                }}
-              />
-            ))}
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  } else if (!showNearbySection) {
-    content = (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-        <FlatList
-          ref={flatListRef}
-          data={[]}
-          renderItem={renderFeedItem}
-          keyExtractor={item => item.key}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          automaticallyAdjustContentInsets={false}
-          ListHeaderComponent={renderListHeader()}
-          ListEmptyComponent={null}
-        />
-      </SafeAreaView>
-    );
-  } else {
-    content = (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-        {loadingMatches || loadingSuggestions ? (
-          <View style={styles.loadingContainer}>
-            {renderListHeader()}
-            <View style={styles.skeletonSection}>
-              {[1, 2, 3].map(i => (
-                <SkeletonMatchCard
-                  key={i}
-                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-                  style={{
-                    backgroundColor: isDark ? '#1C1C1E' : '#FAFAFA',
-                    borderColor: colors.border,
-                    marginHorizontal: spacingPixels[4],
-                    marginBottom: spacingPixels[3],
-                  }}
-                />
-              ))}
-            </View>
-          </View>
-        ) : (
-          <FlatList
-            ref={flatListRef}
-            data={feed}
-            renderItem={renderFeedItem}
-            keyExtractor={item => item.key}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            automaticallyAdjustContentInsets={false}
-            ListHeaderComponent={renderListHeader()}
-            ListEmptyComponent={renderEmptyComponent()}
-            ListFooterComponent={renderFooter()}
-            onEndReached={handleEndReached}
-            onEndReachedThreshold={0.3}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefetching && isManualRefresh.current}
-                onRefresh={() => {
-                  isManualRefresh.current = true;
-                  refetch();
-                  refetchSuggestions();
-                  if (session?.user?.id) {
-                    refetchMyMatches();
-                  }
-                }}
-                tintColor={colors.primary}
-                colors={[colors.primary]}
-              />
-            }
+  const content = (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <ScrollView
+        ref={scrollRef}
+        style={{ backgroundColor: colors.background }}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching && isManualRefresh.current}
+            onRefresh={() => {
+              isManualRefresh.current = true;
+              refetchJustForYou();
+              if (session?.user?.id) refetchMyMatches();
+            }}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
+        }
+      >
+        {renderListHeader()}
+
+        {showNearbySection && (
+          <>
+            {showJfyEmpty ? (
+              <View
+                style={[
+                  styles.matchesSection,
+                  { backgroundColor: colors.card, borderColor: colors.border, marginTop: 0 },
+                ]}
+              >
+                <Ionicons name="location-outline" size={32} color={colors.textMuted} />
+                <Text size="sm" color={colors.textMuted} style={styles.jfyEmptyText}>
+                  {t('home.nearbyEmpty.title')}
+                </Text>
+              </View>
+            ) : (
+              /* Single horizontal ScrollView always rendered — only its children
+             change between loading / real states. Avoids layout
+             shift and preserves horizontal scroll position across transitions. */
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.justForYouScrollContent}
+              >
+                {showJfyLoading
+                  ? [1, 2, 3].map(i => (
+                      <View key={i} style={styles.jfyCardWrapper}>
+                        <SkeletonMatchCard
+                          backgroundColor={skeletonShimmerBg}
+                          highlightColor={skeletonShimmerHighlight}
+                          style={{
+                            backgroundColor: skeletonCardBg,
+                            borderColor: skeletonCardBorder,
+                            borderWidth: 1.5,
+                            borderRadius: radiusPixels.xl,
+                          }}
+                        />
+                      </View>
+                    ))
+                  : justForYouItems.map(item =>
+                      item.kind === 'match' ? (
+                        <View key={`match:${item.data.id}`} style={styles.jfyCardWrapper}>
+                          {/* MatchCard has built-in marginHorizontal:16; the
+                          negative wrapper margin neutralizes it so the card
+                          fills our 340px slot exactly. */}
+                          <View style={styles.jfyMatchInner}>
+                            <MatchCard
+                              match={item.data}
+                              isDark={isDark}
+                              t={
+                                t as (
+                                  key: string,
+                                  options?: Record<string, string | number | boolean>
+                                ) => string
+                              }
+                              locale={locale}
+                              currentPlayerId={player?.id}
+                              sportIcon={
+                                <SportIcon
+                                  sportName={
+                                    item.data.sport?.name ?? selectedSport?.name ?? 'tennis'
+                                  }
+                                  size={100}
+                                  color={isDark ? neutral[600] : neutral[400]}
+                                />
+                              }
+                              onPress={() => {
+                                Logger.logUserAction('match_pressed', { matchId: item.data.id });
+                                openMatchDetail(item.data as MatchDetailData);
+                              }}
+                            />
+                          </View>
+                        </View>
+                      ) : (
+                        <View
+                          key={`suggestion:${item.data.opponentId}:${(item.data.slot.datetime as Date).getTime?.() ?? 0}`}
+                          style={styles.jfyCardWrapper}
+                        >
+                          <SuggestionCard
+                            suggestion={item.data}
+                            colors={{
+                              cardBackground: colors.cardBackground,
+                              text: colors.foreground,
+                              textSecondary: colors.textSecondary,
+                              textMuted: colors.textMuted,
+                              border: colors.border,
+                              buttonActive: colors.primary,
+                              buttonTextActive: '#ffffff',
+                            }}
+                            isDark={isDark}
+                            labels={suggestionLabels}
+                            locale={locale}
+                            onSendInvite={handleSendInvite}
+                            inviteState={getInviteState(
+                              item.data.opponentId,
+                              item.data.facility.facilityId,
+                              item.data.slot.datetime
+                            )}
+                            source="feed"
+                            sportId={selectedSport?.id}
+                            sportName={selectedSport?.name}
+                            defaultMatchType={callerMatchType}
+                          />
+                        </View>
+                      )
+                    )}
+              </ScrollView>
+            )}
+          </>
         )}
-        {/* FAB buttons */}
-        <View style={styles.fabContainer}>
-          {isOnboarded && (
-            <TouchableOpacity
-              style={[styles.suggestionsFab, { backgroundColor: colors.primary }]}
-              onPress={() => {
-                lightHaptic();
-                SheetManager.show('match-suggestions');
-              }}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="sparkles" size={24} color="#ffffff" />
-            </TouchableOpacity>
-          )}
-          <FeedbackFAB />
-        </View>
-      </SafeAreaView>
-    );
-  }
+      </ScrollView>
+    </SafeAreaView>
+  );
 
   return (
     <>
@@ -1461,46 +1639,49 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  fabContainer: {
-    position: 'absolute',
-    bottom: spacingPixels[6],
-    right: spacingPixels[4],
-    alignItems: 'center',
-    gap: spacingPixels[3],
-  },
-  suggestionsFab: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  loadingContainer: {
-    flex: 1,
-    paddingTop: spacingPixels[2],
-  },
-  skeletonSection: {
-    marginBottom: spacingPixels[6],
-  },
   listContent: {
     flexGrow: 1,
     paddingTop: spacingPixels[2],
+    paddingBottom: spacingPixels[6],
+  },
+  justForYouScrollContent: {
+    paddingHorizontal: spacingPixels[4], // leading & trailing edge from screen
+    paddingBottom: spacingPixels[2],
+    gap: spacingPixels[4], // inter-card spacing (16px)
+  },
+  // 310px slot per card — leaves a clearer peek of the next card on typical
+  // phone widths, signalling horizontal scrollability.
+  jfyCardWrapper: {
+    width: 320,
+  },
+  // MatchCard ships with marginHorizontal: spacingPixels[4] built in (so it
+  // sits flush in vertical lists). In a horizontal carousel that margin would
+  // shrink the visible card and add unwanted gap. Negative margin neutralizes
+  // it so the card fills the 340px slot exactly.
+  jfyMatchInner: {
+    marginHorizontal: -spacingPixels[4],
+  },
+  jfyEmptyText: {
+    textAlign: 'center',
   },
   matchesSection: {
-    padding: spacingPixels[5],
+    padding: spacingPixels[6],
     margin: spacingPixels[4],
     marginTop: spacingPixels[5],
     borderRadius: radiusPixels.xl,
-    borderWidth: 2,
-    borderStyle: 'dashed',
+    borderWidth: 1,
     alignItems: 'center',
   },
-  matchesSectionIcon: {
+  matchesSectionIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacingPixels[4],
+  },
+  matchesSectionTitle: {
+    textAlign: 'center',
     marginBottom: spacingPixels[2],
   },
   sectionSubtitle: {
@@ -1510,28 +1691,13 @@ const styles = StyleSheet.create({
   signInButton: {
     marginTop: spacingPixels[2],
   },
-  emptyContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[2],
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
-  },
-  emptyDescription: {
-    flexShrink: 1,
-    textAlign: 'center',
-  },
-  footerLoader: {
-    padding: spacingPixels[4],
-    alignItems: 'center',
-  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[5],
+    paddingTop: spacingPixels[2],
+    paddingBottom: spacingPixels[5],
   },
   sectionTitleRow: {
     flexDirection: 'row',
@@ -1556,9 +1722,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Full-width empty-state card — replaces the carousel entirely when there
+  // are no upcoming games, so the message reads as a section instead of a
+  // single scrollable card.
+  myMatchesEmptyWrap: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: 10,
+    paddingBottom: spacingPixels[2],
+  },
   myMatchesEmpty: {
     padding: spacingPixels[6],
-    marginHorizontal: spacingPixels[4],
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radiusPixels.xl,
@@ -1571,12 +1744,27 @@ const styles = StyleSheet.create({
     marginTop: spacingPixels[1],
     textAlign: 'center',
   },
+  myMatchesEmptyCta: {
+    marginTop: spacingPixels[4],
+    minWidth: 180,
+  },
   myMatchesScrollContent: {
     paddingTop: 10, // Minimal space for corner badges (badge extends 8px above card)
     paddingLeft: spacingPixels[4],
     paddingRight: spacingPixels[4],
     paddingBottom: spacingPixels[2],
     gap: spacingPixels[2],
+  },
+  bannerCarouselContent: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
+    paddingBottom: spacingPixels[2],
+    gap: spacingPixels[3],
+  },
+  bannerSingleWrap: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
+    paddingBottom: spacingPixels[2],
   },
   deepLinkOverlay: {
     flex: 1,

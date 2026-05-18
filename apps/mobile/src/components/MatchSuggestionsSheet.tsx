@@ -1,9 +1,8 @@
 /**
  * Match Suggestions Bottom Sheet
  *
- * Displays personalized match suggestions in a full-height action sheet.
- * Accessible from the Home screen via a FAB button.
- * Uses the shared SuggestionCard and useMatchSuggestions hook.
+ * Renders a flat list of up to 15 score-ordered match suggestions.
+ * Accessible from the Home screen via the FAB.
  */
 
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
@@ -25,12 +24,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { SuggestionCard } from './SuggestionCard';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { lightHaptic } from '@rallia/shared-utils';
-import { useMatchSuggestions, deduplicateSuggestionsByTimeSlot } from '@rallia/shared-hooks';
+import {
+  lightHaptic,
+  getUpcomingDateSection,
+  UPCOMING_SECTION_ORDER,
+  type UpcomingDateSection,
+} from '@rallia/shared-utils';
+import { useTopSuggestions } from '@rallia/shared-hooks';
 import { suggestionSlotKey, useSuggestionInviteHandler } from '../hooks/useSuggestionInviteHandler';
 import { useThemeStyles, useTranslation, useEffectiveLocation } from '../hooks';
 import { useSport } from '../context';
 import { useAuth, usePlayer } from '../hooks';
+
+const MAX_SUGGESTIONS = 15;
 
 export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestions'>) {
   const { colors, isDark } = useThemeStyles();
@@ -41,19 +47,18 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
   const { location: effectiveLocation } = useEffectiveLocation();
 
   const resolvedPlayerId = player?.id ?? session?.user?.id;
-  const isAnon = !resolvedPlayerId;
 
-  const { suggestions, isLoading, isRefetching, refetch } = useMatchSuggestions({
+  const { suggestions, isLoading, isRefetching, refetch } = useTopSuggestions({
     playerId: resolvedPlayerId,
     sportId: selectedSport?.id,
     sportName: selectedSport?.name,
     latitude: effectiveLocation?.latitude,
     longitude: effectiveLocation?.longitude,
-    limit: 10,
+    maxItems: MAX_SUGGESTIONS,
     enabled: true,
   });
 
-  // Pulsing animation for loading icon
+  // Loading pulse
   const pulseScale = useSharedValue(1);
   const pulseOpacity = useSharedValue(0.6);
 
@@ -83,7 +88,7 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
     opacity: pulseOpacity.value,
   }));
 
-  // Spinning animation for refresh icon
+  // Refresh spin
   const spinRotation = useSharedValue(0);
 
   useEffect(() => {
@@ -102,28 +107,57 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
     transform: [{ rotate: `${spinRotation.value}deg` }],
   }));
 
-  // Staggered card entry animations
-  const MAX_ANIMATED = 10;
-  const cardOpacities = useRef(Array.from({ length: MAX_ANIMATED }, () => makeMutable(0))).current;
+  const totalCards = suggestions.length;
+
+  const sectionLabels = useMemo<Record<UpcomingDateSection, string>>(
+    () => ({
+      today: t('playerMatches.time.today'),
+      tomorrow: t('playerMatches.time.tomorrow'),
+      thisWeek: t('playerMatches.time.thisWeek'),
+      nextWeek: t('playerMatches.time.nextWeek'),
+      later: t('playerMatches.time.later'),
+    }),
+    [t]
+  );
+
+  // Group suggestions by date section in chronological order.
+  // Suggestions arrive score-ordered so we collect all items per section first,
+  // then emit sections in UPCOMING_SECTION_ORDER — preserving score rank within each section.
+  const groupedSuggestions = useMemo(() => {
+    const buckets: Partial<
+      Record<
+        UpcomingDateSection,
+        { suggestion: (typeof suggestions)[number]; originalIndex: number }[]
+      >
+    > = {};
+    suggestions.forEach((s, i) => {
+      const section = getUpcomingDateSection(s.slot.datetime as Date);
+      if (!buckets[section]) buckets[section] = [];
+      buckets[section]!.push({ suggestion: s, originalIndex: i });
+    });
+    return UPCOMING_SECTION_ORDER.filter(section => (buckets[section]?.length ?? 0) > 0).map(
+      section => ({ section, items: buckets[section]! })
+    );
+  }, [suggestions]);
+  const cardOpacities = useRef(
+    Array.from({ length: MAX_SUGGESTIONS }, () => makeMutable(0))
+  ).current;
   const cardTranslateYs = useRef(
-    Array.from({ length: MAX_ANIMATED }, () => makeMutable(20))
+    Array.from({ length: MAX_SUGGESTIONS }, () => makeMutable(20))
   ).current;
   const hasAnimated = useRef(false);
 
   useEffect(() => {
-    if (!isLoading && suggestions.length > 0 && !hasAnimated.current) {
+    if (!isLoading && totalCards > 0 && !hasAnimated.current) {
       hasAnimated.current = true;
-      suggestions.forEach((_, index) => {
-        if (index < MAX_ANIMATED) {
-          cardOpacities[index].value = withDelay(index * 100, withTiming(1, { duration: 300 }));
-          cardTranslateYs[index].value = withDelay(
-            index * 100,
-            withSpring(0, { damping: 40, stiffness: 300 })
-          );
-        }
-      });
+      for (let i = 0; i < Math.min(totalCards, MAX_SUGGESTIONS); i++) {
+        cardOpacities[i].value = withDelay(i * 60, withTiming(1, { duration: 300 }));
+        cardTranslateYs[i].value = withDelay(
+          i * 60,
+          withSpring(0, { damping: 40, stiffness: 300 })
+        );
+      }
     }
-    // Reset when refetching finishes with new data
     if (isRefetching) {
       hasAnimated.current = false;
       cardOpacities.forEach(v => {
@@ -133,7 +167,7 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
         v.value = 20;
       });
     }
-  }, [isLoading, suggestions.length, isRefetching]);
+  }, [isLoading, totalCards, isRefetching]);
 
   const handleClose = useCallback(() => {
     lightHaptic();
@@ -146,14 +180,9 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
   }, [refetch]);
 
   const { cardLabels, inviteStates, handleSendInvite } = useSuggestionInviteHandler({
+    source: 'sheet',
     onAuthRequired: () => SheetManager.hide('match-suggestions'),
   });
-
-  // Deduplicate suggestions by day+hour — only one card per time slot
-  const dedupedSuggestions = useMemo(
-    () => deduplicateSuggestionsByTimeSlot(suggestions, Date.now()),
-    [suggestions]
-  );
 
   return (
     <ActionSheet
@@ -162,7 +191,6 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
       containerStyle={[styles.container, { backgroundColor: colors.cardBackground }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
-      {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity
           onPress={handleRefresh}
@@ -175,7 +203,7 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
           </Animated.View>
         </TouchableOpacity>
         <Text size="lg" weight="bold" color={colors.foreground}>
-          {t('onboarding.suggestions.title')}
+          {t('onboarding.suggestions.sheetTitle')}
         </Text>
         <TouchableOpacity
           onPress={handleClose}
@@ -186,7 +214,6 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
         </TouchableOpacity>
       </View>
 
-      {/* Content */}
       <ScrollView
         style={styles.scrollContent}
         contentContainerStyle={[
@@ -213,7 +240,7 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
               {t('onboarding.suggestions.subtitle')}
             </Text>
           </View>
-        ) : suggestions.length === 0 ? (
+        ) : totalCards === 0 ? (
           <View style={styles.emptyState}>
             <View style={[styles.emptyIconContainer, { backgroundColor: colors.textMuted + '15' }]}>
               <Ionicons name="search-outline" size={36} color={colors.textMuted} />
@@ -227,45 +254,74 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
           </View>
         ) : (
           <View style={styles.cardsContainer}>
-            {dedupedSuggestions.map(({ suggestion, pickedSlot, pickedFacilityIndex }, index) => {
-              const animStyle =
-                index < MAX_ANIMATED
-                  ? {
-                      opacity: cardOpacities[index],
-                      transform: [{ translateY: cardTranslateYs[index] }],
-                    }
-                  : undefined;
-              const pickedFacility = suggestion.facilities[pickedFacilityIndex];
-              const slotKey = suggestionSlotKey(
-                suggestion.opponentId,
-                pickedFacility.facilityId,
-                pickedSlot.datetime
-              );
-              return (
-                <Animated.View key={suggestion.opponentId} style={animStyle}>
-                  <SuggestionCard
-                    suggestion={suggestion}
-                    colors={{
-                      cardBackground: colors.cardBackground,
-                      text: colors.foreground,
-                      textSecondary: colors.textSecondary,
-                      textMuted: colors.textMuted,
-                      border: colors.border,
-                      buttonActive: colors.primary,
-                      buttonTextActive: '#ffffff',
-                    }}
-                    isDark={isDark}
-                    labels={cardLabels}
-                    locale={locale}
-                    onSendInvite={handleSendInvite}
-                    inviteState={inviteStates[slotKey] ?? 'idle'}
-                    lockSelections
-                    pickedSlot={pickedSlot}
-                    pickedFacilityIndex={pickedFacilityIndex}
-                  />
-                </Animated.View>
-              );
-            })}
+            <View
+              style={[
+                styles.reassureBanner,
+                {
+                  backgroundColor: colors.primary + '12',
+                  borderColor: colors.primary + '33',
+                },
+              ]}
+            >
+              <View
+                style={[styles.reassureIconContainer, { backgroundColor: colors.primary + '20' }]}
+              >
+                <Ionicons name="sparkles" size={18} color={colors.primary} />
+              </View>
+              <View style={styles.reassureTextContainer}>
+                <Text size="sm" weight="semibold" color={colors.foreground}>
+                  {t('onboarding.suggestions.reassureTitle')}
+                </Text>
+                <Text size="xs" color={colors.textSecondary} style={styles.reassureMessage}>
+                  {t('onboarding.suggestions.reassureMessage')}
+                </Text>
+              </View>
+            </View>
+            {groupedSuggestions.map(({ section, items }) => (
+              <React.Fragment key={section}>
+                <View style={[styles.sectionHeader, { backgroundColor: colors.cardBackground }]}>
+                  <Text size="sm" weight="semibold" color={colors.textMuted}>
+                    {sectionLabels[section]}
+                  </Text>
+                </View>
+                {items.map(({ suggestion: s, originalIndex }) => {
+                  const slotKey = suggestionSlotKey(
+                    s.opponentId,
+                    s.facility.facilityId,
+                    s.slot.datetime
+                  );
+                  const animStyle =
+                    originalIndex < MAX_SUGGESTIONS
+                      ? {
+                          opacity: cardOpacities[originalIndex],
+                          transform: [{ translateY: cardTranslateYs[originalIndex] }],
+                        }
+                      : undefined;
+                  return (
+                    <Animated.View key={`c:${slotKey}:${originalIndex}`} style={animStyle}>
+                      <SuggestionCard
+                        suggestion={s}
+                        colors={{
+                          cardBackground: colors.cardBackground,
+                          text: colors.foreground,
+                          textSecondary: colors.textSecondary,
+                          textMuted: colors.textMuted,
+                          border: colors.border,
+                          buttonActive: colors.primary,
+                          buttonTextActive: '#ffffff',
+                        }}
+                        isDark={isDark}
+                        labels={cardLabels}
+                        locale={locale}
+                        onSendInvite={handleSendInvite}
+                        inviteState={inviteStates[slotKey] ?? 'idle'}
+                        source="sheet"
+                      />
+                    </Animated.View>
+                  );
+                })}
+              </React.Fragment>
+            ))}
           </View>
         )}
       </ScrollView>
@@ -309,7 +365,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cardsContainer: {},
-  // Loading state
+  reassureBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacingPixels[3],
+    padding: spacingPixels[3],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+    marginBottom: spacingPixels[3],
+  },
+  reassureIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reassureTextContainer: {
+    flex: 1,
+  },
+  reassureMessage: {
+    marginTop: spacingPixels[1],
+    lineHeight: 16,
+  },
+  sectionHeader: {
+    paddingVertical: spacingPixels[2],
+    marginBottom: spacingPixels[1],
+  },
   loadingState: {
     alignItems: 'center',
   },
@@ -329,8 +411,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: spacingPixels[6],
   },
-
-  // Empty state
   emptyState: {
     flex: 1,
     alignItems: 'center',

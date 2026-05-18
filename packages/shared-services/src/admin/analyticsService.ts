@@ -3085,6 +3085,173 @@ export async function getInvitationTimeseries(days: number = 30): Promise<Invita
 }
 
 /**
+ * UTM signup attribution row — one per (source, medium, campaign) tuple.
+ * `(none)` is used when a tuple component is NULL on profile.
+ */
+export interface UtmSignupStat {
+  source: string;
+  medium: string;
+  campaign: string;
+  signups: number;
+  matchesCreated: number;
+  matchesPlayed: number;
+}
+
+/**
+ * Aggregate signups + downstream matches per UTM tuple. Backed by
+ * `get_utm_signup_stats` RPC (admin-gated, SECURITY DEFINER).
+ *
+ * Pre-signup landings are tracked in PostHog via `deep_link_opened` and
+ * exposed by /api/admin/analytics/utm.
+ */
+export async function getUtmSignupStats(days: number = 30): Promise<UtmSignupStat[]> {
+  try {
+    const { data, error } = await supabase.rpc('get_utm_signup_stats', { p_days: days });
+    if (error) {
+      console.error('Error fetching UTM signup stats:', error);
+      return [];
+    }
+    if (!data) return [];
+    return (data as Array<Record<string, unknown>>).map(row => ({
+      source: String(row.utm_source ?? '(none)'),
+      medium: String(row.utm_medium ?? '(none)'),
+      campaign: String(row.utm_campaign ?? '(none)'),
+      signups: Number(row.signups) || 0,
+      matchesCreated: Number(row.matches_created) || 0,
+      matchesPlayed: Number(row.matches_played) || 0,
+    }));
+  } catch (error) {
+    console.error('Error in getUtmSignupStats:', error);
+    return [];
+  }
+}
+
+/**
+ * Period-over-period totals for the UTM KPI strip. `current` is the requested
+ * window; `previous` is the equal-length prior window, so deltas are
+ * apples-to-apples. `totalSignups` is all profile rows in the window
+ * (attributed + unattributed) — pair with `signups` for an attribution-rate
+ * KPI (`signups / totalSignups`).
+ */
+export interface UtmTotalsComparison {
+  current: {
+    signups: number;
+    totalSignups: number;
+    matchesCreated: number;
+    matchesPlayed: number;
+  };
+  previous: {
+    signups: number;
+    totalSignups: number;
+    matchesCreated: number;
+    matchesPlayed: number;
+  };
+}
+
+export async function getUtmTotalsComparison(days: number = 7): Promise<UtmTotalsComparison> {
+  const empty: UtmTotalsComparison = {
+    current: { signups: 0, totalSignups: 0, matchesCreated: 0, matchesPlayed: 0 },
+    previous: { signups: 0, totalSignups: 0, matchesCreated: 0, matchesPlayed: 0 },
+  };
+  try {
+    const { data, error } = await supabase.rpc('get_utm_totals_with_comparison', {
+      p_days: days,
+    });
+    if (error || !data || (data as unknown[]).length === 0) {
+      if (error) console.error('Error fetching UTM totals comparison:', error);
+      return empty;
+    }
+    const row = (data as Array<Record<string, unknown>>)[0];
+    return {
+      current: {
+        signups: Number(row.current_signups) || 0,
+        totalSignups: Number(row.current_total_signups) || 0,
+        matchesCreated: Number(row.current_matches_created) || 0,
+        matchesPlayed: Number(row.current_matches_played) || 0,
+      },
+      previous: {
+        signups: Number(row.previous_signups) || 0,
+        totalSignups: Number(row.previous_total_signups) || 0,
+        matchesCreated: Number(row.previous_matches_created) || 0,
+        matchesPlayed: Number(row.previous_matches_played) || 0,
+      },
+    };
+  } catch (err) {
+    console.error('Error in getUtmTotalsComparison:', err);
+    return empty;
+  }
+}
+
+/**
+ * UTM campaign catalog — admin-managed list used by the link-builder UI.
+ */
+export interface UtmCampaign {
+  id: string;
+  slug: string;
+  displayName: string;
+  description: string | null;
+  isActive: boolean;
+  createdAt: string;
+  archivedAt: string | null;
+}
+
+export async function getUtmCampaigns(includeArchived: boolean = false): Promise<UtmCampaign[]> {
+  try {
+    const { data, error } = await supabase.rpc('list_utm_campaigns', {
+      p_include_archived: includeArchived,
+    });
+    if (error) {
+      console.error('Error fetching UTM campaigns:', error);
+      return [];
+    }
+    if (!data) return [];
+    return (data as Array<Record<string, unknown>>).map(row => ({
+      id: String(row.id),
+      slug: String(row.slug),
+      displayName: String(row.display_name),
+      description: row.description ? String(row.description) : null,
+      isActive: Boolean(row.is_active),
+      createdAt: String(row.created_at),
+      archivedAt: row.archived_at ? String(row.archived_at) : null,
+    }));
+  } catch (error) {
+    console.error('Error in getUtmCampaigns:', error);
+    return [];
+  }
+}
+
+export async function createUtmCampaign(params: {
+  slug: string;
+  displayName: string;
+  description?: string;
+}): Promise<{ id: string | null; error: string | null }> {
+  try {
+    const { data, error } = await supabase.rpc('create_utm_campaign', {
+      p_slug: params.slug,
+      p_display_name: params.displayName,
+      p_description: params.description ?? '',
+    });
+    if (error) {
+      // Surface DB-side validation messages (slug format, uniqueness, admin gate).
+      return { id: null, error: error.message };
+    }
+    return { id: data ? String(data) : null, error: null };
+  } catch (err) {
+    return { id: null, error: err instanceof Error ? err.message : 'Unknown error' };
+  }
+}
+
+export async function archiveUtmCampaign(id: string): Promise<{ error: string | null }> {
+  try {
+    const { error } = await supabase.rpc('archive_utm_campaign', { p_id: id });
+    if (error) return { error: error.message };
+    return { error: null };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Unknown error' };
+  }
+}
+
+/**
  * Resolve raw target_id values to friendly entity names for the drill-down.
  * Backed by `resolve_invitation_targets` RPC.
  */
@@ -3163,4 +3330,11 @@ export default {
   getInvitationTopTargets,
   getInvitationTimeseries,
   resolveInvitationTargets,
+  // UTM attribution
+  getUtmSignupStats,
+  getUtmTotalsComparison,
+  // UTM campaigns
+  getUtmCampaigns,
+  createUtmCampaign,
+  archiveUtmCampaign,
 };

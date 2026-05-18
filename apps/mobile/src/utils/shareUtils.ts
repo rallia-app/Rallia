@@ -6,7 +6,7 @@
 
 import { Share } from 'react-native';
 import { generateInvitationLink } from '@rallia/shared-services';
-import { formatIntuitiveDateInTimezone } from '@rallia/shared-utils';
+import { buildUtmUrl, formatIntuitiveDateInTimezone, type UtmParams } from '@rallia/shared-utils';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import type { TranslationKey } from '../hooks';
 
@@ -28,6 +28,8 @@ interface ShareOptions {
   locale: string;
   /** Sender's referral code for attribution tracking */
   referralCode?: string;
+  /** Optional UTM params for inbound attribution */
+  utm?: UtmParams;
 }
 
 /**
@@ -35,11 +37,16 @@ interface ShareOptions {
  * When referralCode is provided, uses the unified invitation link format
  * for referral attribution.
  */
-export function generateMatchDeepLink(matchId: string, referralCode?: string): string {
+export function generateMatchDeepLink(
+  matchId: string,
+  referralCode?: string,
+  utm?: UtmParams
+): string {
   if (referralCode) {
-    return generateInvitationLink({ type: 'match', referralCode, targetId: matchId });
+    return generateInvitationLink({ type: 'match', referralCode, targetId: matchId, utm });
   }
-  return `https://rallia.app/match/${matchId}`;
+  const base = `https://rallia.app/match/${matchId}`;
+  return utm ? buildUtmUrl(base, utm) : base;
 }
 
 /**
@@ -145,7 +152,7 @@ export function generateMatchShareMessage(match: MatchDetailData, options: Share
   const date = formatShareDate(match.match_date, locale, match.timezone);
   const time = match.start_time ? formatShareTime(match.start_time, locale) : '';
   const location = match.location_name || match.facility?.name || t('matchDetail.locationTBD');
-  const deepLink = generateMatchDeepLink(match.id, options.referralCode);
+  const deepLink = generateMatchDeepLink(match.id, options.referralCode, options.utm);
 
   // Use translated strings
   const inviteText = t('matchDetail.shareInvite', { sport: sportName });
@@ -244,7 +251,7 @@ export function generateFacebookPostMessage(match: MatchDetailData, options: Sha
   const datePhrase = buildDatePhrase(match.match_date, match.timezone || 'UTC', locale, t);
   const time = match.start_time ? formatShareTime(match.start_time, locale) : '';
   const location = match.location_name || match.facility?.name || null;
-  const deepLink = generateMatchDeepLink(match.id, options.referralCode);
+  const deepLink = generateMatchDeepLink(match.id, options.referralCode, options.utm);
 
   // contentParts collects sentences that will be joined with a space into one
   // prose paragraph, avoiding a bullet-pointish look.

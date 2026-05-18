@@ -1,17 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Text, Button } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import type { CompletenessTier, CompletenessItem } from '@rallia/shared-hooks';
-import ProfileCompletionRing from './ProfileCompletionRing';
-import { getTierColors } from '../completionTierColors';
+import type { CompletenessItem } from '@rallia/shared-hooks';
 
-// =============================================================================
-// CONSTANTS
-// =============================================================================
+import HomeBanner from '../../../components/HomeBanner';
 
 const STORAGE_KEY_DISMISS_COUNT = '@rallia/profile-completion-banner-dismiss-count';
 const STORAGE_KEY_COOLDOWN = '@rallia/profile-completion-banner-cooldown';
@@ -23,47 +15,16 @@ const COOLDOWN_MS = [
   72 * 60 * 60 * 1000, // 72 hours
 ];
 
-// =============================================================================
-// PROPS
-// =============================================================================
-
-interface ProfileCompletionBannerProps {
-  percentage: number;
-  tier: CompletenessTier;
-  nextAction: CompletenessItem | null;
-  isComplete: boolean;
-  loading: boolean;
-  onAction: (item: CompletenessItem) => void;
-  colors: {
-    card: string;
-    text: string;
-    textMuted: string;
-    primary: string;
-    border: string;
-  };
-  isDark: boolean;
-  t: (key: string, options?: Record<string, string | number | boolean>) => string;
-}
-
-// =============================================================================
-// COMPONENT
-// =============================================================================
-
-const ProfileCompletionBanner: React.FC<ProfileCompletionBannerProps> = ({
-  percentage,
-  tier,
-  nextAction,
-  isComplete,
-  loading,
-  onAction,
-  colors,
-  isDark,
-  t,
-}) => {
+/**
+ * Visibility + dismissal state for the profile completion banner.
+ * Lives outside the component so Home can decide whether to render the banner
+ * at all — that keeps `bannerCards.length` accurate so the carousel/full-width
+ * switch matches what the user actually sees.
+ */
+export function useProfileCompletionBannerVisibility(isComplete: boolean) {
   const [visible, setVisible] = useState(false);
   const [ready, setReady] = useState(false);
 
-  // Check dismissal state on mount
   useEffect(() => {
     (async () => {
       try {
@@ -74,14 +35,12 @@ const ProfileCompletionBanner: React.FC<ProfileCompletionBannerProps> = ({
 
         const dismissCount = countStr ? parseInt(countStr, 10) : 0;
 
-        // Permanently dismissed
         if (dismissCount >= MAX_DISMISSALS) {
           setVisible(false);
           setReady(true);
           return;
         }
 
-        // Check cooldown
         if (cooldownStr) {
           const cooldownUntil = parseInt(cooldownStr, 10);
           if (Date.now() < cooldownUntil) {
@@ -100,7 +59,6 @@ const ProfileCompletionBanner: React.FC<ProfileCompletionBannerProps> = ({
     })();
   }, []);
 
-  // Clear dismissal storage when profile becomes complete
   useEffect(() => {
     if (isComplete) {
       AsyncStorage.multiRemove([STORAGE_KEY_DISMISS_COUNT, STORAGE_KEY_COOLDOWN]).catch(() => {});
@@ -126,86 +84,38 @@ const ProfileCompletionBanner: React.FC<ProfileCompletionBannerProps> = ({
     }
   }, []);
 
-  if (!ready || loading || isComplete || !visible || !nextAction) return null;
+  return { visible, ready, handleDismiss };
+}
 
-  const tierColors = getTierColors(tier, isDark);
-  const accentColor = tierColors.accent;
-  const trackColor = tierColors.trackColor;
+interface ProfileCompletionBannerProps {
+  percentage: number;
+  nextAction: CompletenessItem;
+  onAction: (item: CompletenessItem) => void;
+  onDismiss: () => void;
+  t: (key: string, options?: Record<string, string | number | boolean>) => string;
+}
 
-  return (
-    <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      <View style={styles.content}>
-        <ProfileCompletionRing
-          percentage={percentage}
-          size={40}
-          strokeWidth={4}
-          color={accentColor}
-          trackColor={trackColor}
-          labelColor={colors.text}
-        />
-        <View style={styles.textContainer}>
-          <Text size="sm" weight="semibold" style={{ color: colors.text }} numberOfLines={1}>
-            {t('profileCompletion.bannerTitle', { percentage })}
-          </Text>
-          <Text size="xs" style={{ color: colors.textMuted }} numberOfLines={1}>
-            {t(nextAction.labelKey)}
-          </Text>
-        </View>
-      </View>
-      <View style={styles.actions}>
-        <Button
-          variant="primary"
-          size="xs"
-          onPress={() => {
-            void lightHaptic();
-            onAction(nextAction);
-          }}
-        >
-          {t('profileCompletion.bannerCta')}
-        </Button>
-        <TouchableOpacity
-          onPress={handleDismiss}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="close" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-};
-
-// =============================================================================
-// STYLES
-// =============================================================================
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginHorizontal: spacingPixels[4],
-    marginTop: spacingPixels[3],
-    marginBottom: spacingPixels[2],
-    padding: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-  },
-  content: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: spacingPixels[2],
-    gap: spacingPixels[2.5],
-  },
-  textContainer: {
-    flex: 1,
-    gap: 2,
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[2],
-  },
-});
+const ProfileCompletionBanner: React.FC<ProfileCompletionBannerProps> = ({
+  percentage,
+  nextAction,
+  onAction,
+  onDismiss,
+  t,
+}) => (
+  <HomeBanner
+    variant="action"
+    icon="person-circle-outline"
+    title={t('profileCompletion.bannerTitle', { percentage })}
+    description={t('profileCompletion.bannerDescription')}
+    primaryAction={{
+      label: t('profileCompletion.bannerCta'),
+      onPress: () => {
+        void lightHaptic();
+        onAction(nextAction);
+      },
+    }}
+    onDismiss={onDismiss}
+  />
+);
 
 export default ProfileCompletionBanner;

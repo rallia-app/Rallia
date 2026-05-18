@@ -8,6 +8,13 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import {
+  playerInterestFormDuplicate,
+  playerInterestFormSubmitted,
+  playerInterestFormValidationError,
+  playerInterestSportToggled,
+  type PlayerInterestValidationError,
+} from '@/lib/analytics';
 import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -44,7 +51,7 @@ const DAYS = [
   'saturday',
   'sunday',
 ] as const;
-const PERIODS = ['morning', 'afternoon', 'evening'] as const;
+const PERIODS = ['early', 'morning', 'midday', 'afternoon', 'evening', 'late'] as const;
 const POSTAL_CODE_REGEX = /^[A-Za-z]\d[A-Za-z]\s?\d[A-Za-z]\d$/;
 
 // ============================================
@@ -381,34 +388,20 @@ export function PlayerInterestForm() {
   };
 
   const validateForm = (): boolean => {
-    if (!playsTennis && !playsPickleball) {
-      setValidationError(tv('atLeastOneSport'));
+    const fail = (key: PlayerInterestValidationError) => {
+      setValidationError(tv(key));
+      playerInterestFormValidationError({ error_key: key });
       return false;
-    }
-    if (playsTennis && !tennisRatingId) {
-      setValidationError(tv('tennisRatingRequired'));
-      return false;
-    }
-    if (playsTennis && !tennisFacilityId && !tennisFacilityName.trim()) {
-      setValidationError(tv('tennisFacilityRequired'));
-      return false;
-    }
-    if (playsPickleball && !pickleballRatingId) {
-      setValidationError(tv('pickleballRatingRequired'));
-      return false;
-    }
-    if (playsPickleball && !pickleballFacilityId && !pickleballFacilityName.trim()) {
-      setValidationError(tv('pickleballFacilityRequired'));
-      return false;
-    }
-    if (!POSTAL_CODE_REGEX.test(postalCode.trim())) {
-      setValidationError(tv('postalCodeInvalid'));
-      return false;
-    }
-    if (availabilitySlots.length < 3) {
-      setValidationError(tv('availabilityMinimum'));
-      return false;
-    }
+    };
+    if (!playsTennis && !playsPickleball) return fail('atLeastOneSport');
+    if (playsTennis && !tennisRatingId) return fail('tennisRatingRequired');
+    if (playsTennis && !tennisFacilityId && !tennisFacilityName.trim())
+      return fail('tennisFacilityRequired');
+    if (playsPickleball && !pickleballRatingId) return fail('pickleballRatingRequired');
+    if (playsPickleball && !pickleballFacilityId && !pickleballFacilityName.trim())
+      return fail('pickleballFacilityRequired');
+    if (!POSTAL_CODE_REGEX.test(postalCode.trim())) return fail('postalCodeInvalid');
+    if (availabilitySlots.length < 3) return fail('availabilityMinimum');
     setValidationError(null);
     return true;
   };
@@ -457,6 +450,7 @@ export function PlayerInterestForm() {
 
       if (response.status === 409) {
         setSubmitStatus('duplicate');
+        playerInterestFormDuplicate();
         return;
       }
 
@@ -466,6 +460,13 @@ export function PlayerInterestForm() {
       }
 
       setSubmitStatus('success');
+      playerInterestFormSubmitted({
+        plays_tennis: playsTennis,
+        plays_pickleball: playsPickleball,
+        tennis_facility_matched: playsTennis && !!tennisFacilityId,
+        pickleball_facility_matched: playsPickleball && !!pickleballFacilityId,
+        availability_slot_count: availabilitySlots.length,
+      });
     } catch (error) {
       console.error('Submission error:', error);
       setSubmitStatus('error');
@@ -583,6 +584,7 @@ export function PlayerInterestForm() {
                         setTennisFacilityId('');
                       }
                       setValidationError(null);
+                      playerInterestSportToggled({ sport: 'tennis', enabled: checked });
                     }}
                   />
                 </div>
@@ -635,6 +637,7 @@ export function PlayerInterestForm() {
                         setPickleballFacilityId('');
                       }
                       setValidationError(null);
+                      playerInterestSportToggled({ sport: 'pickleball', enabled: checked });
                     }}
                   />
                 </div>

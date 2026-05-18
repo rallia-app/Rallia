@@ -12,7 +12,6 @@ import type {
   MatchType,
   MatchDuration,
   DayOfWeek,
-  TimePeriod,
   GenderEnum,
   CourtSurface,
   CourtType,
@@ -176,35 +175,6 @@ export const DAYS_OF_WEEK_ORDERED: DayOfWeek[] = [
 ];
 
 // ============================================
-// TIME PERIOD
-// ============================================
-
-/**
- * Human-readable labels for time periods
- */
-export const TIME_PERIOD_LABELS: Record<TimePeriod, string> = {
-  morning: 'Morning',
-  afternoon: 'Afternoon',
-  evening: 'Evening',
-  night: 'Night',
-};
-
-/**
- * Time ranges for each period
- */
-export const TIME_PERIOD_RANGES: Record<TimePeriod, string> = {
-  morning: '6am - 12pm',
-  afternoon: '12pm - 5pm',
-  evening: '5pm - 9pm',
-  night: '9pm - 12am',
-};
-
-/**
- * Ordered list of time periods for iteration
- */
-export const TIME_PERIODS_ORDERED: TimePeriod[] = ['morning', 'afternoon', 'evening', 'night'];
-
-// ============================================
 // GENDER
 // ============================================
 
@@ -353,6 +323,18 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   program_payment_received: 'checkmark-done-circle-outline',
   // Morning digest email
   morning_digest: 'mail-outline',
+  // Weekly availability refresh nudge
+  availability_refresh_reminder: 'time-outline',
+  // Stripe JIT reimbursement notifications
+  payouts_setup_required: 'card-outline',
+  payouts_released: 'send-outline',
+  payouts_expired_refunded: 'alert-circle-outline',
+  reimbursement_received: 'cash-outline',
+  reimbursement_all_received: 'checkmark-done-circle-outline',
+  // Match time suggestion
+  match_time_suggested: 'time-outline',
+  match_time_suggestion_accepted: 'checkmark-circle-outline',
+  match_time_suggestion_declined: 'close-circle-outline',
 };
 
 /**
@@ -426,6 +408,18 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   program_payment_received: '#4CAF50', // Green
   // Morning digest email
   morning_digest: '#4DB8A8', // Teal — matches the email primary
+  // Weekly availability refresh nudge
+  availability_refresh_reminder: '#4DB8A8', // Teal — same family as morning digest
+  // Stripe JIT reimbursement notifications
+  payouts_setup_required: '#FF9800', // Orange — action required
+  payouts_released: '#4CAF50', // Green — money on the way
+  payouts_expired_refunded: '#F44336', // Red — failure / refund
+  reimbursement_received: '#4CAF50', // Green — money received
+  reimbursement_all_received: '#4CAF50', // Green — fully done
+  // Match time suggestion
+  match_time_suggested: '#FF9800', // Orange — action required from the host
+  match_time_suggestion_accepted: '#4CAF50', // Green
+  match_time_suggestion_declined: '#F44336', // Red
 };
 
 /**
@@ -495,6 +489,18 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   program_payment_received: 'Payment Received',
   // Morning digest email
   morning_digest: 'Morning Digest',
+  // Weekly availability refresh nudge
+  availability_refresh_reminder: 'Availability Refresh',
+  // Stripe JIT reimbursement notifications
+  payouts_setup_required: 'Payouts Setup Required',
+  payouts_released: 'Payouts Released',
+  payouts_expired_refunded: 'Reimbursement Expired',
+  reimbursement_received: 'Reimbursement Received',
+  reimbursement_all_received: 'All Reimbursements Received',
+  // Match time suggestion
+  match_time_suggested: 'Time Change Suggested',
+  match_time_suggestion_accepted: 'Time Change Accepted',
+  match_time_suggestion_declined: 'Time Change Declined',
 };
 
 /**
@@ -572,6 +578,18 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   program_payment_received: 'organization',
   // Morning digest email — system category since it's a generated daily summary
   morning_digest: 'system',
+  // Weekly availability refresh — also a system-generated nudge
+  availability_refresh_reminder: 'system',
+  // Stripe JIT reimbursement notifications — system category (money/admin)
+  payouts_setup_required: 'system',
+  payouts_released: 'system',
+  payouts_expired_refunded: 'system',
+  reimbursement_received: 'system',
+  reimbursement_all_received: 'system',
+  // Match time suggestion
+  match_time_suggested: 'match',
+  match_time_suggestion_accepted: 'match',
+  match_time_suggestion_declined: 'match',
 };
 
 /**
@@ -689,6 +707,21 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   // Morning digest email — opt-in by default; user can disable via the
   // unsubscribe link in the footer or the in-app notification preferences.
   morning_digest: { email: true, push: false, sms: false },
+  // Weekly availability refresh — push-only weekly nudge; quiet enough that
+  // email would be overkill but the push closes the loop on stale data.
+  availability_refresh_reminder: { email: false, push: true, sms: false },
+  // Stripe JIT reimbursement notifications — money matters, push always on,
+  // email for the high-priority "set up payouts" prompt so it's not missed.
+  payouts_setup_required: { email: true, push: true, sms: false },
+  payouts_released: { email: false, push: true, sms: false },
+  payouts_expired_refunded: { email: true, push: true, sms: false },
+  reimbursement_received: { email: false, push: true, sms: false },
+  reimbursement_all_received: { email: false, push: true, sms: false },
+  // Match time suggestion — push always on; email matches the high-signal
+  // match_invitation / match_join_request defaults so it lands beside them.
+  match_time_suggested: { email: true, push: true, sms: false },
+  match_time_suggestion_accepted: { email: true, push: true, sms: false },
+  match_time_suggestion_declined: { email: false, push: true, sms: false },
 };
 
 // ============================================

@@ -280,6 +280,7 @@ export interface ConversationPreview {
   match_info?: {
     sport_name: string;
     match_date: string;
+    start_time: string | null;
     format: 'singles' | 'doubles';
   } | null;
   // Network-linked chat info (for groups/communities)

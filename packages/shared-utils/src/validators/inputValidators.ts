@@ -15,8 +15,8 @@
  * validateFullName("John123 Doe!") // Returns "John Doe"
  */
 export const validateFullName = (text: string): string => {
-  // Only allow letters and spaces
-  return text.replace(/[^a-zA-Z\s]/g, '');
+  // Allow Unicode letters (covers accented characters), spaces, hyphens, and apostrophes
+  return text.replace(/[^\p{L}\s'-]/gu, '');
 };
 
 /**
@@ -62,7 +62,11 @@ export const validatePhoneNumber = (text: string): string => {
  * validateEmail("invalid-email") // Returns false
  */
 export const validateEmail = (email: string): boolean => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  // Excluding `.` from the middle character class eliminates the overlap
+  // between the two `[^\s@]+` runs around `\.`, which CodeQL flagged as
+  // polynomial-ReDoS-prone (js/polynomial-redos). The final segment still
+  // accepts dots so subdomains like `mail.example.com` validate.
+  const emailRegex = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
   return emailRegex.test(email);
 };
 

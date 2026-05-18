@@ -49,8 +49,18 @@ jobs:
           node-version: "20"
           cache: "npm"
 
+      # Validate package-lock.json only references the official npm registry
+      # over HTTPS — guards against lockfile-injection supply chain attacks.
+      - name: Lint lockfile hosts
+        run: npx --yes lockfile-lint@4 --path package-lock.json --type npm --allowed-hosts npm --validate-https
+
       - name: Install dependencies
         run: npm ci
+
+      # Verify Sigstore/ECDSA registry signatures on every installed package.
+      # Catches tampered registry artifacts and missing publisher signatures.
+      - name: Verify package signatures
+        run: npm audit signatures
 
       - name: Check for dependency conflicts
         run: npm run check-deps

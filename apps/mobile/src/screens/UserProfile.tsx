@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useFocusEffect, useRoute, type RouteProp } from '@react-navigation/native';
+import type { RootStackParamList } from '../navigation/types';
 import {
   View,
   StyleSheet,
@@ -8,13 +9,24 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  AppState,
 } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { SheetManager } from 'react-native-actions-sheet';
 import { useAppNavigation } from '../navigation/hooks';
-import { Text, Skeleton, SkeletonAvatar, useToast } from '@rallia/shared-components';
-import { supabase, Logger } from '@rallia/shared-services';
+import {
+  Text,
+  Skeleton,
+  SkeletonAvatar,
+  useToast,
+  Card,
+  Button,
+  VStack,
+  HStack,
+} from '@rallia/shared-components';
+import { supabase, Logger, OnboardingService } from '@rallia/shared-services';
 import { useProfile, usePlayer, useProfileCompleteness } from '@rallia/shared-hooks';
 import type { CompletenessItem } from '@rallia/shared-hooks';
 import { replaceImage } from '../services/imageUpload';
@@ -31,8 +43,20 @@ import { CopilotStep, WalkthroughableView } from '../context/TourContext';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { formatDate as formatDateUtil, formatDateMonthYear } from '../utils/dateFormatting';
-import { lightHaptic, mediumHaptic, getHumanName } from '@rallia/shared-utils';
-import type { Sport } from '@rallia/shared-types';
+import {
+  lightHaptic,
+  mediumHaptic,
+  successHaptic,
+  errorHaptic,
+  getHumanName,
+} from '@rallia/shared-utils';
+import type { DayEnum, Sport } from '@rallia/shared-types';
+import {
+  HourlyAvailabilityGrid,
+  cellKey,
+  emptyGrid,
+  type HourGrid,
+} from '../features/onboarding/components/HourlyAvailabilityGrid';
 import {
   spacingPixels,
   radiusPixels,
@@ -40,7 +64,10 @@ import {
   fontWeightNumeric,
   primary,
   neutral,
+  status,
+  base,
 } from '@rallia/design-system';
+import { MATCH_REIMBURSEMENT_ENABLED } from '../constants/features';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import RatingBadge from '../components/RatingBadge';
 import ReputationBadge from '../components/ReputationBadge';
@@ -54,29 +81,10 @@ interface SportWithRating extends Sport {
   ratingLabel?: string;
 }
 
-type PeriodKey = 'morning' | 'afternoon' | 'evening';
-
-interface DayPeriods {
-  morning: boolean;
-  afternoon: boolean;
-  evening: boolean;
-}
-
-interface AvailabilityGrid {
-  [key: string]: DayPeriods;
-}
-
-// Types matching PlayerAvailabilitiesOverlay's expectations
-type TimeSlot = 'AM' | 'PM' | 'EVE';
-type DayOfWeek = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
-
-interface DayAvailability {
-  AM: boolean;
-  PM: boolean;
-  EVE: boolean;
-}
-
-type WeeklyAvailability = Record<DayOfWeek, DayAvailability>;
+// Hourly availability — see HourlyAvailabilityGrid for the data shape.
+// The flat Set of `${day}-${hour}` cell keys flows end-to-end (state,
+// overlay payload, save).
+const MIN_AVAILABILITIES = 6;
 
 const UserProfile = () => {
   const navigation = useAppNavigation();
@@ -106,13 +114,178 @@ const UserProfile = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [allSports, setAllSports] = useState<Sport[]>([]);
   const [loadingAllSports, setLoadingAllSports] = useState(true);
-  const [availabilities, setAvailabilities] = useState<AvailabilityGrid>({});
+  const [availabilities, setAvailabilities] = useState<HourGrid>(emptyGrid());
+  // Most-recent last_confirmed_at across the player's rows — drives the
+  // staleness banner in the edit overlay.
+  const [availabilityLastConfirmedAt, setAvailabilityLastConfirmedAt] = useState<string | null>(
+    null
+  );
   const [loadingAvailabilities, setLoadingAvailabilities] = useState(true);
+
+  // Auto-open the availability edit overlay when arriving via the Home
+  // "refresh your availability" banner (or any future caller passing
+  // `openSheet: 'availability'`). Waits for the availability rows to load so
+  // the overlay opens with the player's actual schedule prefilled; fires
+  // exactly once per navigation so backgrounding/foregrounding doesn't
+  // re-open it.
+  const route = useRoute<RouteProp<RootStackParamList, 'UserProfile'>>();
+  const shouldAutoOpenAvailabilitySheet = route.params?.openSheet === 'availability';
+  const autoOpenedAvailabilitySheetRef = useRef(false);
   const [reactivateConfirm, setReactivateConfirm] = useState<{
     visible: boolean;
     sport: SportWithRating | null;
     recordId: string | null;
   }>({ visible: false, sport: null, recordId: null });
+
+  const [stripeAccount, setStripeAccount] = useState<
+    | {
+        onboarding_completed: boolean;
+      }
+    | null
+    | undefined
+  >(undefined);
+  const [stripeOnboarding, setStripeOnboarding] = useState(false);
+  // Stripe JIT: host's chosen payouts mode and any funds awaiting onboarding
+  const [payoutsMode, setPayoutsMode] = useState<'auto' | 'manual_only' | 'undecided' | null>(null);
+  const [pendingFundsCents, setPendingFundsCents] = useState<number>(0);
+  const [switchingMode, setSwitchingMode] = useState(false);
+  // Confirmation dialog before flipping a connected Stripe account into manual mode
+  const [showSwitchToManualConfirm, setShowSwitchToManualConfirm] = useState(false);
+
+  const refetchStripeState = useCallback(async () => {
+    if (!MATCH_REIMBURSEMENT_ENABLED) return;
+    if (!player?.id) return;
+    const [{ data: acct }, { data: playerRow }, { data: pending }] = await Promise.all([
+      supabase
+        .from('player_stripe_account')
+        .select('onboarding_completed')
+        .eq('player_id', player.id)
+        .maybeSingle(),
+      supabase.from('player').select('payouts_mode').eq('id', player.id).maybeSingle(),
+      supabase
+        .from('pending_host_transfer')
+        .select('amount_cents')
+        .eq('host_player_id', player.id)
+        .eq('status', 'awaiting_onboarding'),
+    ]);
+    setStripeAccount(acct);
+    setPayoutsMode(
+      (playerRow?.payouts_mode as 'auto' | 'manual_only' | 'undecided') ?? 'undecided'
+    );
+    setPendingFundsCents((pending ?? []).reduce((sum, r) => sum + (r.amount_cents ?? 0), 0));
+  }, [player?.id]);
+
+  useEffect(() => {
+    void refetchStripeState();
+  }, [refetchStripeState]);
+
+  // Stripe Connect onboarding hands off to expo-web-browser; the AuthSession
+  // callback resolves when the user closes the in-app browser, but we still
+  // refetch on AppState 'active' as a fallback (e.g. user returns via
+  // Universal Link from the system browser if the in-app browser failed).
+  useEffect(() => {
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const sub = AppState.addEventListener('change', state => {
+      if (state !== 'active') return;
+      void refetchStripeState();
+      if (retry) clearTimeout(retry);
+      retry = setTimeout(() => {
+        void refetchStripeState();
+      }, 3000);
+    });
+    return () => {
+      sub.remove();
+      if (retry) clearTimeout(retry);
+    };
+  }, [refetchStripeState]);
+
+  const handleStripeOnboard = useCallback(async () => {
+    lightHaptic();
+    setStripeOnboarding(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('player-stripe-onboard');
+      if (error || !data?.url) throw new Error(error?.message);
+      await WebBrowser.openAuthSessionAsync(data.url, 'https://rallia.app/stripe-connect-return');
+      // Refetch immediately on return — webhook may not have fired yet, but
+      // the polling AppState handler above will keep retrying.
+      await refetchStripeState();
+    } catch {
+      errorHaptic();
+      toast.error(t('profile.payments.onboardingError' as TranslationKey));
+    } finally {
+      setStripeOnboarding(false);
+    }
+  }, [toast, t, refetchStripeState]);
+
+  // Stripe JIT: switch to manual-only (skip Stripe entirely). When the host
+  // already has a connected Stripe account, gate behind a confirmation.
+  const handleSwitchToManual = useCallback(() => {
+    if (!player?.id) return;
+    if (stripeAccount?.onboarding_completed) {
+      mediumHaptic();
+      setShowSwitchToManualConfirm(true);
+      return;
+    }
+    void (async () => {
+      lightHaptic();
+      setSwitchingMode(true);
+      const { error } = await supabase
+        .from('player')
+        .update({ payouts_mode: 'manual_only' })
+        .eq('id', player.id);
+      setSwitchingMode(false);
+      if (error) {
+        errorHaptic();
+        toast.error(t('profile.payments.modeUpdateError' as TranslationKey));
+        return;
+      }
+      successHaptic();
+      setPayoutsMode('manual_only');
+    })();
+  }, [player?.id, stripeAccount?.onboarding_completed, toast, t]);
+
+  // Confirmed path for switching a connected Stripe account into manual mode.
+  const handleConfirmSwitchToManual = useCallback(async () => {
+    if (!player?.id) return;
+    setSwitchingMode(true);
+    const { error } = await supabase
+      .from('player')
+      .update({ payouts_mode: 'manual_only' })
+      .eq('id', player.id);
+    setSwitchingMode(false);
+    if (error) {
+      errorHaptic();
+      toast.error(t('profile.payments.modeUpdateError' as TranslationKey));
+      return;
+    }
+    successHaptic();
+    setPayoutsMode('manual_only');
+    setShowSwitchToManualConfirm(false);
+  }, [player?.id, toast, t]);
+
+  // Stripe JIT: switch from manual_only back to auto + open onboarding
+  const handleSwitchToAuto = useCallback(async () => {
+    if (!player?.id) return;
+    lightHaptic();
+    setSwitchingMode(true);
+    const { error } = await supabase
+      .from('player')
+      .update({ payouts_mode: 'auto' })
+      .eq('id', player.id);
+    if (error) {
+      setSwitchingMode(false);
+      errorHaptic();
+      toast.error(t('profile.payments.modeUpdateError' as TranslationKey));
+      return;
+    }
+    successHaptic();
+    setPayoutsMode('auto');
+    setSwitchingMode(false);
+    // If no Stripe account yet, kick off onboarding immediately
+    if (!stripeAccount?.onboarding_completed) {
+      await handleStripeOnboard();
+    }
+  }, [player?.id, stripeAccount?.onboarding_completed, handleStripeOnboard, toast, t]);
 
   // Derive sport cards from shared contexts (updated automatically by SportProfile)
   const sports: SportWithRating[] = useMemo(() => {
@@ -322,7 +495,9 @@ const UserProfile = () => {
     }
   };
 
-  // Fetch only availabilities (used after saving to avoid full screen reload)
+  // Refresh just the availability set (used after the overlay saves so we
+  // don't re-fetch the whole profile). Populates the hour grid one cell per
+  // active row and tracks the freshest last_confirmed_at for the stale UI.
   const refetchAvailabilities = async () => {
     const {
       data: { user },
@@ -335,7 +510,7 @@ const UserProfile = () => {
         (async () =>
           supabase
             .from('player_availability')
-            .select('day, period, is_active')
+            .select('day, hour_of_day, is_active, last_confirmed_at')
             .eq('player_id', user.id)
             .eq('is_active', true))(),
         15000,
@@ -345,23 +520,19 @@ const UserProfile = () => {
         throw availResult.error;
       }
       const availData = availResult.data;
-      const availGrid: AvailabilityGrid = {
-        monday: { morning: false, afternoon: false, evening: false },
-        tuesday: { morning: false, afternoon: false, evening: false },
-        wednesday: { morning: false, afternoon: false, evening: false },
-        thursday: { morning: false, afternoon: false, evening: false },
-        friday: { morning: false, afternoon: false, evening: false },
-        saturday: { morning: false, afternoon: false, evening: false },
-        sunday: { morning: false, afternoon: false, evening: false },
-      };
+      const grid: Set<string> = new Set();
+      let mostRecentConfirmedAt: string | null = null;
       (availData || []).forEach(avail => {
-        const day = avail.day as keyof AvailabilityGrid;
-        const period = avail.period as keyof AvailabilityGrid[keyof AvailabilityGrid];
-        if (availGrid[day] && period in availGrid[day]) {
-          availGrid[day][period] = true;
+        grid.add(cellKey(avail.day, avail.hour_of_day as number));
+        if (
+          avail.last_confirmed_at &&
+          (!mostRecentConfirmedAt || avail.last_confirmed_at > mostRecentConfirmedAt)
+        ) {
+          mostRecentConfirmedAt = avail.last_confirmed_at;
         }
       });
-      setAvailabilities(availGrid);
+      setAvailabilities(grid);
+      setAvailabilityLastConfirmedAt(mostRecentConfirmedAt);
     } catch (error) {
       Logger.error('Failed to fetch availabilities', error as Error);
       toast.error(getNetworkErrorMessage(error));
@@ -397,14 +568,14 @@ const UserProfile = () => {
       }
     };
 
-    // Availabilities
+    // Availabilities — hourly rows straight into the cell-key Set.
     const fetchAvailabilities = async () => {
       try {
         const availResult = await withTimeout(
           (async () =>
             supabase
               .from('player_availability')
-              .select('day, period, is_active')
+              .select('day, hour_of_day, is_active, last_confirmed_at')
               .eq('player_id', user.id)
               .eq('is_active', true))(),
           15000,
@@ -414,23 +585,19 @@ const UserProfile = () => {
           throw availResult.error;
         }
         const availData = availResult.data;
-        const availGrid: AvailabilityGrid = {
-          monday: { morning: false, afternoon: false, evening: false },
-          tuesday: { morning: false, afternoon: false, evening: false },
-          wednesday: { morning: false, afternoon: false, evening: false },
-          thursday: { morning: false, afternoon: false, evening: false },
-          friday: { morning: false, afternoon: false, evening: false },
-          saturday: { morning: false, afternoon: false, evening: false },
-          sunday: { morning: false, afternoon: false, evening: false },
-        };
+        const grid: Set<string> = new Set();
+        let mostRecentConfirmedAt: string | null = null;
         (availData || []).forEach(avail => {
-          const day = avail.day as keyof AvailabilityGrid;
-          const period = avail.period as keyof AvailabilityGrid[keyof AvailabilityGrid];
-          if (availGrid[day] && period in availGrid[day]) {
-            availGrid[day][period] = true;
+          grid.add(cellKey(avail.day, avail.hour_of_day as number));
+          if (
+            avail.last_confirmed_at &&
+            (!mostRecentConfirmedAt || avail.last_confirmed_at > mostRecentConfirmedAt)
+          ) {
+            mostRecentConfirmedAt = avail.last_confirmed_at;
           }
         });
-        setAvailabilities(availGrid);
+        setAvailabilities(grid);
+        setAvailabilityLastConfirmedAt(mostRecentConfirmedAt);
       } catch (error) {
         Logger.error('Failed to fetch availabilities', error as Error);
         toast.error(getNetworkErrorMessage(error));
@@ -442,185 +609,59 @@ const UserProfile = () => {
     await Promise.all([fetchSports(), fetchAvailabilities()]);
   };
 
-  // Convert DB format to UI format for the overlay
-  const convertToUIFormat = (dbAvailabilities: AvailabilityGrid): WeeklyAvailability => {
-    const dayMap: Record<string, DayOfWeek> = {
-      monday: 'Mon',
-      tuesday: 'Tue',
-      wednesday: 'Wed',
-      thursday: 'Thu',
-      friday: 'Fri',
-      saturday: 'Sat',
-      sunday: 'Sun',
-    };
-
-    // Start with defaults for all days
-    const defaultAvailability: DayAvailability = { AM: false, PM: false, EVE: false };
-    const uiFormat: WeeklyAvailability = {
-      Mon: { ...defaultAvailability },
-      Tue: { ...defaultAvailability },
-      Wed: { ...defaultAvailability },
-      Thu: { ...defaultAvailability },
-      Fri: { ...defaultAvailability },
-      Sat: { ...defaultAvailability },
-      Sun: { ...defaultAvailability },
-    };
-
-    // Override with actual data if available
-    if (dbAvailabilities && Object.keys(dbAvailabilities).length > 0) {
-      Object.keys(dbAvailabilities).forEach(day => {
-        const uiDay = dayMap[day];
-        const dayData = dbAvailabilities[day];
-        if (uiDay && dayData) {
-          uiFormat[uiDay] = {
-            AM: dayData.morning ?? false,
-            PM: dayData.afternoon ?? false,
-            EVE: dayData.evening ?? false,
-          };
-        }
-      });
+  // Persist the hour grid returned by the overlay. Every save is routed
+  // through OnboardingService.saveAvailability, which diff-syncs the
+  // requested cells and stamps last_confirmed_at on every row touched
+  // (including no-op "refresh only" re-saves from the weekly prompt).
+  const handleSaveAvailabilities = async (grid: HourGrid) => {
+    if (grid.size < MIN_AVAILABILITIES) {
+      toast.error(t('alerts.minAvailabilitiesRequired'));
+      return;
     }
 
-    return uiFormat;
-  };
-
-  // Handle saving availabilities from the overlay
-  const handleSaveAvailabilities = async (
-    uiAvailabilities: WeeklyAvailability,
-    privacyShowAvailability: boolean
-  ) => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error(t('errors.unauthorized'));
-        return;
-      }
-
-      // Convert UI format back to DB format
-      const dayMap: { [key: string]: string } = {
-        Mon: 'monday',
-        Tue: 'tuesday',
-        Wed: 'wednesday',
-        Thu: 'thursday',
-        Fri: 'friday',
-        Sat: 'saturday',
-        Sun: 'sunday',
-      };
-
-      const timeMap: { [key: string]: string } = {
-        AM: 'morning',
-        PM: 'afternoon',
-        EVE: 'evening',
-      };
-
-      // Delete existing availabilities for this player
-      const deleteResult = await withTimeout(
-        (async () => supabase.from('player_availability').delete().eq('player_id', user.id))(),
-        10000,
-        'Failed to update availability - connection timeout'
-      );
-
-      if (deleteResult.error) throw deleteResult.error;
-
-      // Prepare new availability data
-      const availabilityData: Array<{
-        player_id: string;
-        day: string;
-        period: string;
-        is_active: boolean;
-      }> = [];
-
-      (Object.keys(uiAvailabilities) as DayOfWeek[]).forEach(day => {
-        (Object.keys(uiAvailabilities[day]) as TimeSlot[]).forEach(slot => {
-          if (uiAvailabilities[day][slot]) {
-            availabilityData.push({
-              player_id: user.id,
-              day: dayMap[day],
-              period: timeMap[slot],
-              is_active: true,
-            });
-          }
-        });
+      const availabilityData = Array.from(grid).map(key => {
+        const sepIdx = key.lastIndexOf('-');
+        const day = key.slice(0, sepIdx) as DayEnum;
+        const hour = Number(key.slice(sepIdx + 1));
+        return { day, hour_of_day: hour, is_active: true };
       });
 
-      // Upsert new availabilities (handles duplicates gracefully)
-      if (availabilityData.length > 0) {
-        const insertResult = await withTimeout(
-          (async () =>
-            supabase.from('player_availability').upsert(availabilityData, {
-              onConflict: 'player_id,day,period',
-              ignoreDuplicates: false,
-            }))(),
-          10000,
-          'Failed to save availability - connection timeout'
-        );
+      const { error: saveError } = await OnboardingService.saveAvailability(availabilityData);
+      if (saveError) throw new Error(saveError.message);
 
-        if (insertResult.error) throw insertResult.error;
-      }
-
-      // Save the privacy setting to the player table
-      const privacyResult = await withTimeout(
-        (async () =>
-          supabase
-            .from('player')
-            .update({
-              privacy_show_availability: privacyShowAvailability,
-            })
-            .eq('id', user.id))(),
-        10000,
-        'Failed to save privacy setting - connection timeout'
-      );
-
-      if (privacyResult.error) throw privacyResult.error;
-
-      // Update local state directly from the saved data
-      const dayMapReverse: Record<string, string> = {
-        Mon: 'monday',
-        Tue: 'tuesday',
-        Wed: 'wednesday',
-        Thu: 'thursday',
-        Fri: 'friday',
-        Sat: 'saturday',
-        Sun: 'sunday',
-      };
-      const timeMapReverse: Record<string, PeriodKey> = {
-        AM: 'morning',
-        PM: 'afternoon',
-        EVE: 'evening',
-      };
-      const newGrid: AvailabilityGrid = {
-        monday: { morning: false, afternoon: false, evening: false },
-        tuesday: { morning: false, afternoon: false, evening: false },
-        wednesday: { morning: false, afternoon: false, evening: false },
-        thursday: { morning: false, afternoon: false, evening: false },
-        friday: { morning: false, afternoon: false, evening: false },
-        saturday: { morning: false, afternoon: false, evening: false },
-        sunday: { morning: false, afternoon: false, evening: false },
-      };
-      (Object.keys(uiAvailabilities) as DayOfWeek[]).forEach(day => {
-        const dbDay = dayMapReverse[day];
-        (Object.keys(uiAvailabilities[day]) as TimeSlot[]).forEach(slot => {
-          const period = timeMapReverse[slot];
-          if (dbDay && period) {
-            newGrid[dbDay][period] = uiAvailabilities[day][slot];
-          }
-        });
-      });
-      setAvailabilities(newGrid);
+      // Adopt the saved grid into local state (no extra fetch) and refresh
+      // the staleness signal — saveAvailability set last_confirmed_at = NOW().
+      setAvailabilities(new Set(grid));
+      setAvailabilityLastConfirmedAt(new Date().toISOString());
 
       SheetManager.hide('player-availabilities');
-
       toast.success(t('alerts.availabilitiesUpdated'));
-
-      // Refresh completeness so the checklist reflects the new availability count
       profileCompleteness.refetch();
     } catch (error) {
       Logger.error('Failed to save availabilities', error as Error, { playerId: player?.id });
       toast.error(getNetworkErrorMessage(error));
     }
   };
+
+  // Auto-open the availability edit overlay when navigation arrives with
+  // `openSheet: 'availability'`. Waits for the availability rows to load so
+  // the overlay opens prefilled, and guards against re-firing on rerenders.
+  useEffect(() => {
+    if (!shouldAutoOpenAvailabilitySheet) return;
+    if (loadingAvailabilities) return;
+    if (autoOpenedAvailabilitySheetRef.current) return;
+    autoOpenedAvailabilitySheetRef.current = true;
+    SheetManager.show('player-availabilities', {
+      payload: {
+        mode: 'edit',
+        initialData: availabilities,
+        initialLastConfirmedAt: availabilityLastConfirmedAt,
+        onSave: handleSaveAvailabilities,
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shouldAutoOpenAvailabilitySheet, loadingAvailabilities]);
 
   // Handle completeness checklist item actions
   const handleCompletenessAction = useCallback(
@@ -692,8 +733,7 @@ const UserProfile = () => {
           SheetManager.show('player-availabilities', {
             payload: {
               mode: 'edit',
-              initialData: convertToUIFormat(availabilities),
-              initialPrivacyShowAvailability: player?.privacy_show_availability ?? true,
+              initialData: availabilities,
               onSave: handleSaveAvailabilities,
             },
           });
@@ -711,7 +751,6 @@ const UserProfile = () => {
       refetchProfile,
       refetchPlayer,
       availabilities,
-      convertToUIFormat,
       handleSaveAvailabilities,
     ]
   );
@@ -741,42 +780,36 @@ const UserProfile = () => {
     return handMap[hand] || hand;
   };
 
-  const getDayLabel = (day: string): string => {
-    const key = `onboarding.availabilityStep.days.${day}` as TranslationKey;
-    const translated = t(key);
-    return translated !== key ? translated : day;
-  };
-
-  const getPeriodLabel = (period: PeriodKey): string => {
-    const keyMap = {
-      morning: 'onboarding.availabilityStep.am',
-      afternoon: 'onboarding.availabilityStep.pm',
-      evening: 'onboarding.availabilityStep.eve',
-    } as const;
-    return t(keyMap[period]);
-  };
-
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
-    >
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Profile Picture with Edit Overlay - Wrapped with CopilotStep for tour */}
         <CopilotStep
           text={t('tour.profileScreen.picture.description')}
           order={20}
           name="profile_picture"
         >
-          <WalkthroughableView style={[styles.profileHeader, { backgroundColor: colors.card }]}>
+          <WalkthroughableView
+            style={[
+              styles.profileHeader,
+              {
+                backgroundColor: isDark ? primary[950] : primary[50],
+                borderColor: isDark ? `${primary[400]}40` : `${primary[500]}20`,
+              },
+            ]}
+          >
             {loadingCore ? (
-              <>
+              <View style={styles.profileTopRow}>
                 <SkeletonAvatar
                   size={spacingPixels[20]}
                   backgroundColor={skeletonBg}
                   highlightColor={skeletonHighlight}
                 />
-                <View style={{ marginTop: 16, alignItems: 'center' }}>
+                <View style={styles.profileIdentity}>
                   <Skeleton
                     width={150}
                     height={18}
@@ -791,97 +824,102 @@ const UserProfile = () => {
                     style={{ marginTop: 8 }}
                   />
                 </View>
-              </>
+              </View>
             ) : (
               <>
-                <View style={styles.profilePicWrapper}>
-                  <View
-                    style={[
-                      styles.profilePicContainer,
-                      { borderColor: colors.primary, backgroundColor: colors.inputBackground },
-                    ]}
-                  >
-                    {profile?.profile_picture_url || newProfileImage ? (
-                      <Image
-                        source={{
-                          uri:
-                            newProfileImage ||
-                            getProfilePictureUrl(profile?.profile_picture_url) ||
-                            '',
+                <View style={styles.profileTopRow}>
+                  <View style={styles.profilePicWrapper}>
+                    <View
+                      style={[
+                        styles.profilePicContainer,
+                        {
+                          borderColor: isDark ? primary[400] : primary[500],
+                          backgroundColor: colors.inputBackground,
+                          shadowColor: isDark ? primary[400] : primary[500],
+                        },
+                      ]}
+                    >
+                      {profile?.profile_picture_url || newProfileImage ? (
+                        <Image
+                          source={{
+                            uri:
+                              newProfileImage ||
+                              getProfilePictureUrl(profile?.profile_picture_url) ||
+                              '',
+                          }}
+                          style={styles.profileImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <Ionicons name="camera-outline" size={32} color={colors.primary} />
+                      )}
+                      {uploadingImage && (
+                        <View style={styles.uploadingOverlay}>
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        </View>
+                      )}
+                    </View>
+                    {!uploadingImage && (
+                      <TouchableOpacity
+                        style={[styles.profilePicEditBadge, { backgroundColor: colors.primary }]}
+                        onPress={() => {
+                          void lightHaptic();
+                          openPicker();
                         }}
-                        style={styles.profileImage}
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <Ionicons name="camera-outline" size={32} color={colors.primary} />
-                    )}
-                    {uploadingImage && (
-                      <View style={styles.uploadingOverlay}>
-                        <ActivityIndicator size="small" color="#FFFFFF" />
-                      </View>
+                        activeOpacity={0.7}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons
+                          name="camera-outline"
+                          size={14}
+                          color={colors.primaryForeground}
+                        />
+                      </TouchableOpacity>
                     )}
                   </View>
-                  {!uploadingImage && (
-                    <TouchableOpacity
-                      style={[
-                        styles.profilePicEditBadge,
-                        { backgroundColor: colors.primary, borderColor: colors.card },
-                      ]}
-                      onPress={() => {
-                        void lightHaptic();
-                        openPicker();
-                      }}
-                      activeOpacity={0.7}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Ionicons name="camera-outline" size={14} color={colors.primaryForeground} />
-                    </TouchableOpacity>
-                  )}
-                </View>
-                <Text style={[styles.profileName, { color: colors.text }]}>
-                  {getHumanName(profile, t('profile.user'))}
-                </Text>
-
-                {/* Coveted Badge */}
-                <CovetedBadge
-                  reputationScore={reputationDisplay?.score}
-                  certificationStatus={primaryRating?.badge_status}
-                  totalEvents={reputationTotalEvents}
-                  isDark={isDark}
-                  isLoading={playerLoading}
-                />
-
-                {/* Rating & Reputation Badges */}
-                <View style={styles.profileBadgesRow}>
-                  <RatingBadge
-                    ratingValue={primaryRating?.value}
-                    ratingLabel={primaryRating?.label}
-                    certificationStatus={primaryRating?.badge_status}
-                    isDark={isDark}
-                    isLoading={playerLoading}
-                    onInfoPress={() =>
-                      SheetManager.show('rating-explainer', {
-                        payload: {
-                          sportName:
-                            primaryRating?.ratingSystemCode === 'dupr' ? 'pickleball' : 'tennis',
-                        },
-                      })
-                    }
-                  />
-                  <ReputationBadge
-                    reputationDisplay={reputationDisplay ?? undefined}
-                    isDark={isDark}
-                    isLoading={playerLoading}
-                    onInfoPress={() => SheetManager.show('reputation-explainer')}
-                  />
-                </View>
-
-                {/* Joined Date */}
-                <View style={styles.joinedContainer}>
-                  <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-                  <Text style={[styles.joinedText, { color: colors.textMuted }]}>
-                    {t('profile.joined')} {formatJoinedDate(player?.created_at || null)}
-                  </Text>
+                  <View style={styles.profileIdentity}>
+                    <Text style={[styles.profileName, { color: colors.text }]} numberOfLines={1}>
+                      {getHumanName(profile, t('profile.user'))}
+                    </Text>
+                    <View style={styles.joinedContainer}>
+                      <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
+                      <Text style={[styles.joinedText, { color: colors.textMuted }]}>
+                        {t('profile.joined')} {formatJoinedDate(player?.created_at || null)}
+                      </Text>
+                    </View>
+                    <View style={styles.profileBadgesRow}>
+                      <CovetedBadge
+                        reputationScore={reputationDisplay?.score}
+                        certificationStatus={primaryRating?.badge_status}
+                        totalEvents={reputationTotalEvents}
+                        isDark={isDark}
+                        isLoading={playerLoading}
+                      />
+                      <RatingBadge
+                        ratingValue={primaryRating?.value}
+                        ratingLabel={primaryRating?.label}
+                        certificationStatus={primaryRating?.badge_status}
+                        isDark={isDark}
+                        isLoading={playerLoading}
+                        onInfoPress={() =>
+                          SheetManager.show('rating-explainer', {
+                            payload: {
+                              sportName:
+                                primaryRating?.ratingSystemCode === 'dupr'
+                                  ? 'pickleball'
+                                  : 'tennis',
+                            },
+                          })
+                        }
+                      />
+                      <ReputationBadge
+                        reputationDisplay={reputationDisplay ?? undefined}
+                        isDark={isDark}
+                        isLoading={playerLoading}
+                        onInfoPress={() => SheetManager.show('reputation-explainer')}
+                      />
+                    </View>
+                  </View>
                 </View>
               </>
             )}
@@ -1400,8 +1438,8 @@ const UserProfile = () => {
                     SheetManager.show('player-availabilities', {
                       payload: {
                         mode: 'edit',
-                        initialData: convertToUIFormat(availabilities),
-                        initialPrivacyShowAvailability: player?.privacy_show_availability ?? true,
+                        initialData: availabilities,
+                        initialLastConfirmedAt: availabilityLastConfirmedAt,
                         onSave: handleSaveAvailabilities,
                       },
                     });
@@ -1416,97 +1454,275 @@ const UserProfile = () => {
               <View
                 style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
               >
-                <View style={styles.gridContainer}>
-                  {[1, 2, 3, 4, 5, 6, 7].map(row => (
-                    <View key={row} style={styles.gridRow}>
-                      <Skeleton
-                        width={40}
-                        height={14}
-                        backgroundColor={skeletonBg}
-                        highlightColor={skeletonHighlight}
-                      />
-                      {[1, 2, 3].map(cell => (
-                        <View key={cell} style={styles.timeSlotWrapper}>
-                          <Skeleton
-                            width="100%"
-                            height={36}
-                            borderRadius={radiusPixels.lg}
-                            backgroundColor={skeletonBg}
-                            highlightColor={skeletonHighlight}
-                          />
-                        </View>
-                      ))}
-                    </View>
-                  ))}
-                </View>
+                <Skeleton
+                  width="100%"
+                  height={520}
+                  borderRadius={radiusPixels.md}
+                  backgroundColor={skeletonBg}
+                  highlightColor={skeletonHighlight}
+                />
               </View>
             ) : (
-              <View
-                style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+              // Read-only preview of the player's hourly grid. Wrapped in a
+              // TouchableOpacity that opens the edit overlay — the grid
+              // itself swallows pointer events so the tap goes to the wrapper.
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => {
+                  SheetManager.show('player-availabilities', {
+                    payload: {
+                      mode: 'edit',
+                      initialData: availabilities,
+                      initialLastConfirmedAt: availabilityLastConfirmedAt,
+                      onSave: handleSaveAvailabilities,
+                    },
+                  });
+                }}
               >
-                {/* Availability Grid - Same as PlayerAvailabilitiesOverlay */}
-                <View style={styles.gridContainer}>
-                  {/* Header Row */}
-                  <View style={styles.gridRow}>
-                    <View style={styles.dayCell} />
-                    {(['AM', 'PM', 'EVE'] as const).map(slot => {
-                      const labelKey = slot === 'AM' ? 'am' : slot === 'PM' ? 'pm' : 'eve';
-                      return (
-                        <View key={slot} style={styles.headerCell}>
-                          <Text size="xs" weight="semibold" color={colors.textMuted}>
-                            {t(`playerProfile.availability.${labelKey}` as TranslationKey)}
-                          </Text>
-                        </View>
-                      );
-                    })}
-                  </View>
-
-                  {/* Day Rows */}
-                  {Object.keys(availabilities).map(day => (
-                    <View key={day} style={styles.gridRow}>
-                      <View style={styles.dayCell}>
-                        <Text size="sm" weight="medium" color={colors.text}>
-                          {getDayLabel(day)}
-                        </Text>
-                      </View>
-                      {(['morning', 'afternoon', 'evening'] as PeriodKey[]).map(period => (
-                        <View key={period} style={styles.timeSlotWrapper}>
-                          <View
-                            style={[
-                              styles.timeSlotCell,
-                              {
-                                backgroundColor: colors.inputBackground,
-                              },
-                              availabilities[day]?.[period] && [
-                                styles.timeSlotCellSelected,
-                                { backgroundColor: colors.primary, borderColor: colors.primary },
-                              ],
-                            ]}
-                          >
-                            <Text
-                              size="xs"
-                              weight="semibold"
-                              color={
-                                availabilities[day]?.[period]
-                                  ? colors.primaryForeground
-                                  : colors.textMuted
-                              }
-                            >
-                              {getPeriodLabel(period)}
-                            </Text>
-                          </View>
-                        </View>
-                      ))}
-                    </View>
-                  ))}
+                <View
+                  pointerEvents="none"
+                  style={[
+                    styles.card,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                  ]}
+                >
+                  <HourlyAvailabilityGrid
+                    value={availabilities}
+                    // No-op: the wrapper intercepts taps and opens the edit overlay.
+                    onChange={() => {}}
+                    colors={{
+                      text: colors.text,
+                      textSecondary: colors.textSecondary,
+                      textMuted: colors.textMuted,
+                      border: colors.inputBorder,
+                      cellInactive: colors.inputBackground,
+                      cellActive: colors.primary,
+                    }}
+                    t={t}
+                    locale={locale}
+                  />
                 </View>
-              </View>
+              </TouchableOpacity>
             )}
           </WalkthroughableView>
         </CopilotStep>
 
-        {/* Bottom Spacing */}
-        <View style={{ height: 40 }} />
+        {/* Payments Section */}
+        {MATCH_REIMBURSEMENT_ENABLED && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                {t('profile.payments.section' as TranslationKey)}
+              </Text>
+            </View>
+            {stripeAccount === undefined || payoutsMode === null ? (
+              // Loading state — render skeletons matching the card heights below
+              <Card
+                variant="outlined"
+                padding={spacingPixels[4]}
+                borderRadius={radiusPixels.xl}
+                backgroundColor={colors.card}
+                style={{ borderColor: colors.border }}
+              >
+                <VStack spacing={spacingPixels[3]}>
+                  <Skeleton
+                    width="60%"
+                    height={18}
+                    backgroundColor={skeletonBg}
+                    highlightColor={skeletonHighlight}
+                  />
+                  <Skeleton
+                    width="100%"
+                    height={14}
+                    backgroundColor={skeletonBg}
+                    highlightColor={skeletonHighlight}
+                  />
+                  <Skeleton
+                    width={120}
+                    height={36}
+                    borderRadius={radiusPixels.md}
+                    backgroundColor={skeletonBg}
+                    highlightColor={skeletonHighlight}
+                  />
+                </VStack>
+              </Card>
+            ) : (
+              <Card
+                variant="outlined"
+                padding={spacingPixels[4]}
+                borderRadius={radiusPixels.xl}
+                backgroundColor={colors.card}
+                style={{ borderColor: colors.border }}
+              >
+                <VStack spacing={spacingPixels[3]}>
+                  {/* Pending funds banner (host has earned money but hasn't onboarded) */}
+                  {pendingFundsCents > 0 &&
+                    !stripeAccount?.onboarding_completed &&
+                    payoutsMode !== 'manual_only' && (
+                      <Card
+                        variant="outlined"
+                        padding={spacingPixels[3]}
+                        borderRadius={radiusPixels.lg}
+                        backgroundColor={isDark ? primary[900] : primary[50]}
+                        style={{ borderColor: isDark ? primary[700] : primary[200] }}
+                      >
+                        <VStack spacing={spacingPixels[1]} align="start">
+                          <HStack spacing={spacingPixels[2]} align="center">
+                            <Ionicons
+                              name="time-outline"
+                              size={18}
+                              color={isDark ? primary[300] : primary[600]}
+                            />
+                            <Text size="sm" weight="semibold" color={colors.text}>
+                              {t('profile.payments.pendingTitle' as TranslationKey, {
+                                amount: new Intl.NumberFormat(locale, {
+                                  style: 'currency',
+                                  currency: 'CAD',
+                                }).format(pendingFundsCents / 100),
+                              })}
+                            </Text>
+                          </HStack>
+                          <Text size="xs" color={colors.textMuted}>
+                            {t('profile.payments.pendingBody' as TranslationKey)}
+                          </Text>
+                        </VStack>
+                      </Card>
+                    )}
+
+                  {/* Manual-only mode */}
+                  {payoutsMode === 'manual_only' ? (
+                    <VStack spacing={spacingPixels[3]} align="start">
+                      <HStack spacing={spacingPixels[2]} align="center">
+                        <Ionicons name="hand-left-outline" size={20} color={colors.textMuted} />
+                        <Text weight="medium" color={colors.text}>
+                          {t('profile.payments.manualMode' as TranslationKey)}
+                        </Text>
+                      </HStack>
+                      <Text size="sm" color={colors.textMuted}>
+                        {t('profile.payments.manualModeDescription' as TranslationKey)}
+                      </Text>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onPress={handleSwitchToAuto}
+                        loading={switchingMode || stripeOnboarding}
+                        disabled={switchingMode || stripeOnboarding}
+                        isDark={isDark}
+                        themeColors={{
+                          primary: colors.primary,
+                          primaryForeground: base.white,
+                          buttonActive: colors.primary,
+                          buttonInactive: isDark ? neutral[700] : neutral[300],
+                          buttonTextActive: base.white,
+                          buttonTextInactive: isDark ? neutral[400] : neutral[500],
+                          text: colors.text,
+                          textMuted: colors.textMuted,
+                          border: colors.border,
+                          background: colors.card,
+                        }}
+                      >
+                        {t('profile.payments.switchToStripe' as TranslationKey)}
+                      </Button>
+                    </VStack>
+                  ) : stripeAccount?.onboarding_completed ? (
+                    /* Auto mode + onboarded */
+                    <VStack spacing={spacingPixels[3]} align="start">
+                      <HStack spacing={spacingPixels[2]} align="center">
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={20}
+                          color={status.success.DEFAULT}
+                        />
+                        <Text weight="medium" color={colors.text}>
+                          {t('profile.payments.connected' as TranslationKey)}
+                        </Text>
+                      </HStack>
+                      <Text size="sm" color={colors.textMuted}>
+                        {t('profile.payments.connectedDescription' as TranslationKey)}
+                      </Text>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onPress={handleSwitchToManual}
+                        loading={switchingMode}
+                        disabled={switchingMode}
+                        isDark={isDark}
+                        themeColors={{
+                          primary: colors.primary,
+                          primaryForeground: base.white,
+                          buttonActive: colors.primary,
+                          buttonInactive: isDark ? neutral[700] : neutral[300],
+                          buttonTextActive: base.white,
+                          buttonTextInactive: isDark ? neutral[400] : neutral[500],
+                          text: colors.text,
+                          textMuted: colors.textMuted,
+                          border: colors.border,
+                          background: colors.card,
+                        }}
+                      >
+                        {t('profile.payments.switchToManual' as TranslationKey)}
+                      </Button>
+                    </VStack>
+                  ) : (
+                    /* Auto / undecided + not onboarded — original setup prompt with manual escape */
+                    <VStack spacing={spacingPixels[3]} align="start">
+                      <Text color={colors.textMuted} size="sm">
+                        {t('profile.payments.setupPrompt' as TranslationKey)}
+                      </Text>
+                      <HStack spacing={spacingPixels[2]} wrap>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onPress={handleStripeOnboard}
+                          loading={stripeOnboarding}
+                          disabled={stripeOnboarding || switchingMode}
+                          isDark={isDark}
+                          themeColors={{
+                            primary: colors.primary,
+                            primaryForeground: base.white,
+                            buttonActive: colors.primary,
+                            buttonInactive: isDark ? neutral[700] : neutral[300],
+                            buttonTextActive: base.white,
+                            buttonTextInactive: isDark ? neutral[400] : neutral[500],
+                            text: colors.text,
+                            textMuted: colors.textMuted,
+                            border: colors.border,
+                            background: colors.card,
+                          }}
+                        >
+                          {stripeAccount === null
+                            ? t('profile.payments.connectAccount' as TranslationKey)
+                            : t('profile.payments.continueSetup' as TranslationKey)}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onPress={handleSwitchToManual}
+                          disabled={switchingMode || stripeOnboarding}
+                          isDark={isDark}
+                          themeColors={{
+                            primary: colors.primary,
+                            primaryForeground: base.white,
+                            buttonActive: colors.primary,
+                            buttonInactive: isDark ? neutral[700] : neutral[300],
+                            buttonTextActive: base.white,
+                            buttonTextInactive: isDark ? neutral[400] : neutral[500],
+                            text: colors.text,
+                            textMuted: colors.textMuted,
+                            border: colors.border,
+                            background: colors.card,
+                          }}
+                        >
+                          {t('profile.payments.useManualInstead' as TranslationKey)}
+                        </Button>
+                      </HStack>
+                    </VStack>
+                  )}
+                </VStack>
+              </Card>
+            )}
+          </View>
+        )}
       </ScrollView>
 
       {/* Reactivate sport confirmation */}
@@ -1521,6 +1737,18 @@ const UserProfile = () => {
         confirmLabel={t('profile.sport.reactivateConfirm')}
         cancelLabel={t('common.cancel')}
         isLoading={reactivating}
+      />
+
+      {/* Switch from connected Stripe to manual mode confirmation */}
+      <ConfirmationModal
+        visible={showSwitchToManualConfirm}
+        onClose={() => setShowSwitchToManualConfirm(false)}
+        onConfirm={handleConfirmSwitchToManual}
+        title={t('profile.payments.switchToManualConfirmTitle' as TranslationKey)}
+        message={t('profile.payments.switchToManualConfirmMessage' as TranslationKey)}
+        confirmLabel={t('profile.payments.switchToManual' as TranslationKey)}
+        cancelLabel={t('common.cancel')}
+        isLoading={switchingMode}
       />
     </SafeAreaView>
   );
@@ -1552,18 +1780,33 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: spacingPixels[10],
+  },
   headerTitle: {
     fontSize: fontSizePixels.lg,
     fontWeight: fontWeightNumeric.semibold,
   },
   profileHeader: {
-    alignItems: 'center',
-    paddingVertical: spacingPixels[6],
+    marginTop: spacingPixels[4],
+    marginHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[5],
     paddingHorizontal: spacingPixels[4],
+    borderRadius: radiusPixels.xl,
+    borderWidth: 1,
+  },
+  profileTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[4],
+  },
+  profileIdentity: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacingPixels[1],
   },
   profilePicWrapper: {
     position: 'relative',
-    marginBottom: spacingPixels[1],
   },
   profilePicContainer: {
     width: spacingPixels[20],
@@ -1573,6 +1816,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     overflow: 'hidden',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   profilePicEditBadge: {
     position: 'absolute',
@@ -1583,8 +1830,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
   },
   profileImage: {
     width: spacingPixels[20],
@@ -1594,19 +1839,17 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: fontSizePixels.xl,
     fontWeight: fontWeightNumeric.bold,
-    marginBottom: spacingPixels[1],
   },
   profileBadgesRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: spacingPixels[2],
-    marginBottom: spacingPixels[2],
   },
   joinedContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[1],
-    marginBottom: spacingPixels[1],
   },
   joinedText: {
     fontSize: fontSizePixels.xs,
@@ -1739,7 +1982,8 @@ const styles = StyleSheet.create({
     fontSize: fontSizePixels.xs,
     fontWeight: fontWeightNumeric.semibold,
   },
-  // Availability Grid Styles - Same as PlayerAvailabilitiesOverlay
+  // Availability Grid Styles — kept in sync with AvailabilitiesStep and
+  // PlayerAvailabilitiesOverlay so the read/write surfaces feel identical.
   gridContainer: {
     marginTop: spacingPixels[2],
   },
@@ -1749,29 +1993,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dayCell: {
-    width: 50, // 12.5 * 4px base unit
+    width: 96,
+    paddingRight: spacingPixels[2],
     justifyContent: 'center',
   },
   headerCell: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  timeSlotWrapper: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[1],
+    paddingVertical: spacingPixels[1],
   },
   timeSlotCell: {
-    width: '100%',
-    borderRadius: radiusPixels.lg,
-    paddingVertical: spacingPixels[3],
+    flex: 1,
+    height: 36,
+    borderRadius: radiusPixels.md,
+    marginHorizontal: spacingPixels[1] / 2,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
+    borderWidth: 1,
   },
-  timeSlotCellSelected: {},
+  timeRangeText: {
+    marginTop: 2,
+    lineHeight: 14,
+  },
   uploadingOverlay: {
     position: 'absolute',
     top: 0,

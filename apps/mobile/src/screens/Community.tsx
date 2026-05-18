@@ -25,7 +25,6 @@ import {
 import { useSport } from '../context';
 import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
 import { PlayerDirectory } from '../features/community';
-import { FeedbackFAB } from '../components/BugReportFAB';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import type { RootStackParamList, CommunityStackParamList } from '../navigation/types';
 import type { CompositeNavigationProp } from '@react-navigation/native';
@@ -63,15 +62,6 @@ const Community = () => {
       inputBackground: colors.inputBackground,
     }),
     [colors]
-  );
-
-  // Action button colors
-  const buttonColors = useMemo(
-    () => ({
-      background: isDark ? neutral[800] : primary[50],
-      iconColor: isDark ? primary[400] : primary[600],
-    }),
-    [isDark]
   );
 
   // Action button handlers
@@ -125,18 +115,30 @@ const Community = () => {
               key={button.id}
               style={[
                 styles.actionButton,
-                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                {
+                  backgroundColor: isDark ? primary[950] : primary[50],
+                  borderColor: isDark ? `${primary[400]}40` : `${primary[500]}20`,
+                },
               ]}
               onPress={button.onPress}
-              activeOpacity={0.7}
+              activeOpacity={0.85}
             >
-              <View style={[styles.actionButtonIcon, { backgroundColor: buttonColors.background }]}>
-                <Ionicons name={button.icon} size={28} color={buttonColors.iconColor} />
+              <View
+                style={[
+                  styles.actionButtonIcon,
+                  { backgroundColor: isDark ? `${primary[400]}20` : `${primary[500]}15` },
+                ]}
+              >
+                <Ionicons
+                  name={button.icon}
+                  size={28}
+                  color={isDark ? primary[400] : primary[500]}
+                />
               </View>
               <Text
                 size="base"
                 weight="semibold"
-                color={colors.text}
+                color={isDark ? primary[300] : primary[600]}
                 style={styles.actionButtonLabel}
               >
                 {button.label}
@@ -152,7 +154,7 @@ const Community = () => {
         </View>
       </>
     ),
-    [actionButtons, buttonColors, colors.text, colors.cardBackground, colors.border, t]
+    [actionButtons, colors.text, t]
   );
 
   return (
@@ -165,10 +167,6 @@ const Community = () => {
         onPlayerPress={handlePlayerPress}
         ListHeaderComponent={listHeader}
       />
-      {/* Bug Report FAB */}
-      <View style={styles.fabContainer}>
-        <FeedbackFAB />
-      </View>
     </SafeAreaView>
   );
 };
@@ -177,39 +175,28 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  fabContainer: {
-    position: 'absolute',
-    bottom: spacingPixels[6],
-    right: spacingPixels[4],
-    alignItems: 'center',
-  },
   actionButtonsRow: {
     flexDirection: 'row',
     gap: spacingPixels[3],
     paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[2],
+    paddingTop: spacingPixels[4],
     paddingBottom: spacingPixels[2],
   },
   actionButton: {
     flex: 1,
     aspectRatio: 1.5,
-    borderRadius: radiusPixels['2xl'],
-    borderWidth: 1,
+    borderRadius: radiusPixels.xl,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacingPixels[2],
     paddingVertical: spacingPixels[4],
     paddingHorizontal: spacingPixels[3],
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
   },
   actionButtonIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
   },

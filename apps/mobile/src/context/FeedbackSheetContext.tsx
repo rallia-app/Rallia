@@ -20,7 +20,8 @@ interface FeedbackSheetContextType {
     matchId: string,
     reviewerId: string,
     participantId: string,
-    opponents: OpponentForFeedback[]
+    opponents: OpponentForFeedback[],
+    sport?: { id: string; name: string }
   ) => void;
 
   /** Close the Feedback bottom sheet */
@@ -55,7 +56,8 @@ export const FeedbackSheetProvider: React.FC<FeedbackSheetProviderProps> = ({ ch
       matchId: string,
       reviewerId: string,
       participantId: string,
-      opponents: OpponentForFeedback[]
+      opponents: OpponentForFeedback[],
+      sport?: { id: string; name: string }
     ) => {
       // Filter out opponents who already have feedback
       const alreadyRatedOpponentIds = opponents
@@ -68,6 +70,8 @@ export const FeedbackSheetProvider: React.FC<FeedbackSheetProviderProps> = ({ ch
         participantId,
         opponents,
         alreadyRatedOpponentIds,
+        sportId: sport?.id,
+        sportName: sport?.name,
       });
       SheetManager.show('feedback');
     },

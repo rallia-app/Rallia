@@ -33,6 +33,7 @@ import { lightHaptic, successHaptic } from '@rallia/shared-utils';
 import { useTranslation } from '../../../hooks';
 import { generateFacebookPostMessage } from '../../../utils/shareUtils';
 import type { MatchDetailData } from '../../../context';
+import * as Analytics from '../../../services/analytics';
 
 const FACEBOOK_BLUE = '#1877F2';
 const FACEBOOK_APP_URL = 'fb://';
@@ -110,6 +111,10 @@ export function ShareToFacebookActionSheet({ payload }: SheetProps<'share-to-fac
       successHaptic();
       setHasCopied(true);
       toast.success(t('matchCreation.shareToFacebook.copied'));
+      Analytics.invitationLinkGenerated({
+        invitation_type: 'match',
+        channel: 'facebook_copy',
+      });
     } catch (error) {
       console.error('Clipboard write failed:', error);
       toast.error(t('matchCreation.shareToFacebook.copyError'));
@@ -121,10 +126,18 @@ export function ShareToFacebookActionSheet({ payload }: SheetProps<'share-to-fac
     try {
       const canOpenApp = await Linking.canOpenURL(FACEBOOK_APP_URL);
       await Linking.openURL(canOpenApp ? FACEBOOK_APP_URL : FACEBOOK_WEB_URL);
+      Analytics.invitationLinkGenerated({
+        invitation_type: 'match',
+        channel: 'facebook_open',
+      });
     } catch {
       // Last-resort fallback to web
       try {
         await Linking.openURL(FACEBOOK_WEB_URL);
+        Analytics.invitationLinkGenerated({
+          invitation_type: 'match',
+          channel: 'facebook_open',
+        });
       } catch {
         // Silently ignore — nothing else we can do
       }

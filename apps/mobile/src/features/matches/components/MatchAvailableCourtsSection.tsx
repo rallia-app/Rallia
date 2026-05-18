@@ -141,6 +141,9 @@ export function MatchAvailableCourtsSection({
         slot: matchingSlot,
         selectedCourt: court,
         matchId: match.id,
+        source: 'match_courts',
+        sportId: match.sport?.id,
+        sportName: match.sport?.name,
       });
     },
     [facility, matchingSlot, match.id, openExternalBooking]

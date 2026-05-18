@@ -239,6 +239,8 @@ export async function getMatchWithDetails(matchId: string) {
         score,
         team_number,
         feedback_completed,
+        has_paid,
+        payment_intent_id,
         checked_in_at,
         joined_at,
         created_at,
@@ -958,7 +960,7 @@ export async function updateMatch(
   // ========================================
   // SYNC MATCH CONVERSATION TITLE
   // ========================================
-  const titleAffectingFields = ['format', 'matchDate'];
+  const titleAffectingFields = ['format', 'matchDate', 'startTime'];
   const hasTitleChanges = updatedFields.some(field => titleAffectingFields.includes(field));
 
   if (hasTitleChanges) {
@@ -971,6 +973,33 @@ export async function updateMatch(
     ).catch((err: unknown) => {
       console.error('[updateMatch] Failed to sync conversation title:', err);
     });
+  }
+
+  // ========================================
+  // SUPERSEDE PENDING TIME SUGGESTIONS
+  // The host directly changed the time window, so any pending counter-
+  // proposals are now pointing at the wrong baseline. Mark them superseded
+  // so they disappear from the host's pending list and the suggester sees a
+  // resolved state. The match-updated push above already informs every
+  // joined player (including suggesters) of the new window.
+  // ========================================
+  const timeAffectingFields = ['matchDate', 'startTime', 'endTime', 'duration', 'timezone'];
+  const hasTimeChanges = updatedFields.some(field => timeAffectingFields.includes(field));
+  if (hasTimeChanges) {
+    supabase
+      .from('match_time_suggestion')
+      .update({
+        status: 'superseded',
+        resolved_at: new Date().toISOString(),
+        resolved_by: (data as Match).created_by,
+      })
+      .eq('match_id', matchId)
+      .eq('status', 'pending')
+      .then(({ error: supersedeError }) => {
+        if (supersedeError) {
+          Logger.error('Failed to supersede pending time suggestions:', supersedeError);
+        }
+      });
   }
 
   return data as Match;
@@ -2454,12 +2483,20 @@ export interface SearchNearbyMatchesParams {
   sportId: string;
   /** The viewing user's gender for eligibility filtering */
   userGender?: string | null;
+  /**
+   * Authenticated caller's player id. When provided, routes through the
+   * scored RPC `get_upcoming_matches_scored` which returns relevance-ordered
+   * matches with `player_compatibility`, `facility_affinity`, and
+   * `score_history` attached. When omitted (anon), uses `search_matches_nearby`
+   * which only filters and chronologically orders.
+   */
+  callerId?: string | null;
   limit?: number;
   offset?: number;
 }
 
 /**
- * Result from nearby matches RPC
+ * Result from nearby matches RPC (anon path)
  */
 interface NearbyMatchResult {
   match_id: string;
@@ -2467,10 +2504,28 @@ interface NearbyMatchResult {
 }
 
 /**
- * Match with details including distance (for nearby matches)
+ * Result from scored RPC (auth path)
  */
-interface MatchWithDetailsAndDistance extends MatchWithDetails {
+interface ScoredNearbyMatchResult {
+  match_id: string;
+  distance_meters: number;
+  player_compatibility: number;
+  facility_affinity: number;
+  score_history: number;
+}
+
+/**
+ * Match with details including distance (for nearby matches).
+ * Scoring fields are populated when the auth scored RPC was used.
+ */
+export interface MatchWithDetailsAndDistance extends MatchWithDetails {
   distance_meters: number | null;
+  /** Caller↔creator relevance in [0,1]. NULL when called anonymously. */
+  player_compatibility?: number | null;
+  /** Match-location affinity (shared favorite + distance decay) in [0,1]. NULL when anon. */
+  facility_affinity?: number | null;
+  /** Caller↔creator history score in [-0.5, +0.5]. NULL when anon. */
+  score_history?: number | null;
 }
 
 /**
@@ -2485,44 +2540,85 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
     maxDistanceKm,
     sportId,
     userGender,
+    callerId,
     limit = 20,
     offset = 0,
   } = params;
 
-  // Step 1: Get match IDs within distance using RPC
-  const { data: nearbyResults, error: rpcError } = await supabase.rpc('search_matches_nearby', {
-    p_latitude: latitude,
-    p_longitude: longitude,
-    p_max_distance_km: maxDistanceKm,
-    p_sport_id: sportId,
-    p_limit: limit + 1, // Fetch one extra to check if more exist
-    p_offset: offset,
-    p_user_gender: userGender || null, // Pass user's gender for eligibility filtering
-  });
+  // Step 1: Get match IDs (+ optional scoring) via RPC.
+  // Authenticated callers route through the scored RPC; anon callers use the
+  // legacy filter-only RPC. The scored RPC returns relevance-desc order and
+  // doesn't support offset pagination.
+  const isScoredPath = !!callerId;
+  const distanceMap = new Map<string, number>();
+  const scoringMap = new Map<
+    string,
+    { player_compatibility: number; facility_affinity: number; score_history: number }
+  >();
+  let matchIds: string[] = [];
+  let hasMore = false;
 
-  if (rpcError) {
-    throw new Error(`Failed to search nearby matches: ${rpcError.message}`);
+  if (isScoredPath) {
+    const { data: scoredResults, error: scoredError } = await supabase.rpc(
+      'get_upcoming_matches_scored',
+      {
+        p_caller_id: callerId!,
+        p_sport_id: sportId,
+        p_latitude: latitude,
+        p_longitude: longitude,
+        p_max_distance_km: maxDistanceKm,
+        p_user_gender: userGender || null,
+        p_limit: limit + 1, // pop one to detect hasMore
+      }
+    );
+
+    if (scoredError) {
+      throw new Error(`Failed to score nearby matches: ${scoredError.message}`);
+    }
+
+    const results = (scoredResults ?? []) as ScoredNearbyMatchResult[];
+    hasMore = results.length > limit;
+    if (hasMore) results.pop();
+
+    matchIds = results.map(r => r.match_id);
+    results.forEach(r => {
+      distanceMap.set(r.match_id, r.distance_meters);
+      scoringMap.set(r.match_id, {
+        player_compatibility: r.player_compatibility,
+        facility_affinity: r.facility_affinity,
+        score_history: r.score_history,
+      });
+    });
+  } else {
+    const { data: nearbyResults, error: rpcError } = await supabase.rpc('search_matches_nearby', {
+      p_latitude: latitude,
+      p_longitude: longitude,
+      p_max_distance_km: maxDistanceKm,
+      p_sport_id: sportId,
+      p_limit: limit + 1,
+      p_offset: offset,
+      p_user_gender: userGender || null,
+    });
+
+    if (rpcError) {
+      throw new Error(`Failed to search nearby matches: ${rpcError.message}`);
+    }
+
+    const results = (nearbyResults ?? []) as NearbyMatchResult[];
+    hasMore = results.length > limit;
+    if (hasMore) results.pop();
+
+    matchIds = results.map(r => r.match_id);
+    results.forEach(r => distanceMap.set(r.match_id, r.distance_meters));
   }
 
-  const results = (nearbyResults ?? []) as NearbyMatchResult[];
-  const hasMore = results.length > limit;
-
-  // Remove the extra item used for pagination check
-  if (hasMore) {
-    results.pop();
-  }
-
-  if (results.length === 0) {
+  if (matchIds.length === 0) {
     return {
       matches: [],
       hasMore: false,
       nextOffset: null,
     };
   }
-
-  // Step 2: Fetch full match details for the found IDs
-  const matchIds = results.map(r => r.match_id);
-  const distanceMap = new Map(results.map(r => [r.match_id, r.distance_meters]));
 
   const { data: matchesData, error: matchError } = await supabase
     .from('match')
@@ -2555,6 +2651,8 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
         score,
         team_number,
         feedback_completed,
+        has_paid,
+        payment_intent_id,
         checked_in_at,
         joined_at,
         created_at,
@@ -2746,23 +2844,36 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
       });
     }
 
-    // Attach distance
+    // Attach distance + (if scored path) per-match scoring fields
+    const scoring = scoringMap.get(match.id);
     const matchWithDistance: MatchWithDetailsAndDistance = {
       ...match,
       distance_meters: distanceMap.get(match.id) ?? null,
+      player_compatibility: scoring?.player_compatibility ?? null,
+      facility_affinity: scoring?.facility_affinity ?? null,
+      score_history: scoring?.score_history ?? null,
     };
 
     matchMap.set(match.id, matchWithDistance);
   });
 
-  // Maintain order from RPC results (sorted by date/time)
+  // Maintain order from RPC results.
+  // Scored path: order is score-desc — preserve it and skip the chronological re-sort.
+  // Anon path: order is chronological — keep the existing client-side sort as a safety net.
   const orderedMatches = matchIds
     .map(id => matchMap.get(id))
     .filter(Boolean) as MatchWithDetailsAndDistance[];
 
-  // Additional client-side sort to ensure correct ordering by datetime
-  // This handles edge cases where order might not be preserved
-  // We create proper datetime objects by combining date + time
+  if (isScoredPath) {
+    return {
+      matches: orderedMatches,
+      hasMore,
+      nextOffset: hasMore ? offset + limit : null,
+    };
+  }
+
+  // Anon path: chronological re-sort as a safety net (RPC already orders by
+  // date+time but this handles any drift from the multi-step join).
   orderedMatches.sort((a: MatchWithDetailsAndDistance, b: MatchWithDetailsAndDistance) => {
     // Create datetime objects by combining date and time
     // Use string parsing to avoid timezone issues with Date constructor
@@ -2882,6 +2993,8 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
         score,
         team_number,
         feedback_completed,
+        has_paid,
+        payment_intent_id,
         checked_in_at,
         joined_at,
         created_at,
@@ -3293,6 +3406,8 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
         score,
         team_number,
         feedback_completed,
+        has_paid,
+        payment_intent_id,
         checked_in_at,
         joined_at,
         created_at,

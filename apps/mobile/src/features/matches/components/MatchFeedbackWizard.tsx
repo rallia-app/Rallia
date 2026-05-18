@@ -31,6 +31,7 @@ import type {
 } from '@rallia/shared-types';
 
 import { useTranslation, type TranslationKey } from '../../../hooks/useTranslation';
+import * as Analytics from '../../../services/analytics';
 import { MatchOutcomeStep, OpponentFeedbackStep } from './feedback-steps';
 
 const BASE_WHITE = '#ffffff';
@@ -181,6 +182,16 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
     isLoadingMatchContext,
   } = useMatchFeedback(feedbackData.matchId, feedbackData.reviewerId, {
     onOutcomeSuccess: result => {
+      Analytics.matchOutcomeSubmitted({
+        match_id: feedbackData.matchId,
+        sport_id: feedbackData.sportId ?? 'unknown',
+        sport_name: (feedbackData.sportName ?? 'unknown').toLowerCase(),
+        outcome: result.outcome,
+        cancellation_reason:
+          result.outcome === 'mutual_cancel' && cancellationReason ? cancellationReason : undefined,
+        no_show_count: result.outcome === 'opponent_no_show' ? noShowPlayerIds.length : undefined,
+        opponent_count: opponents.length,
+      });
       if (result.feedbackCompleted) {
         // Cancelled - close immediately
         successHaptic();
@@ -198,8 +209,26 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
       console.error('[MatchFeedbackWizard] Outcome error:', error);
     },
     onFeedbackSuccess: result => {
+      const opponentIndex = getOpponentIndex(currentStep);
+      const submittedFeedback = opponentFeedback[opponentIndex];
+      if (submittedFeedback) {
+        Analytics.opponentFeedbackSubmitted({
+          match_id: feedbackData.matchId,
+          sport_id: feedbackData.sportId ?? 'unknown',
+          sport_name: (feedbackData.sportName ?? 'unknown').toLowerCase(),
+          showed_up: submittedFeedback.showedUp,
+          was_late: submittedFeedback.showedUp ? submittedFeedback.wasLate : null,
+          star_rating: submittedFeedback.showedUp ? (submittedFeedback.starRating ?? null) : null,
+        });
+      }
       if (result.allOpponentsRated || currentStep >= totalSteps - 1) {
         // All done - close immediately
+        Analytics.matchFeedbackCompleted({
+          match_id: feedbackData.matchId,
+          sport_id: feedbackData.sportId ?? 'unknown',
+          sport_name: (feedbackData.sportName ?? 'unknown').toLowerCase(),
+          opponent_count: opponents.length,
+        });
         successHaptic();
         toast.success(t('matchFeedback.success'));
         onComplete?.();

@@ -233,7 +233,11 @@
       "booking_cancelled_by_org": "Booking cancelled by facility",
       "membership_approved": "Membership approved",
       "org_announcement": "Announcement",
-      "morning_digest": "Morning Digest"
+      "morning_digest": "Morning Digest",
+      "availability_refresh_reminder": "Availability refresh",
+      "match_time_suggested": "Time change suggested",
+      "match_time_suggestion_accepted": "Time change accepted",
+      "match_time_suggestion_declined": "Time change declined"
     },
     "categories": {
       "match": "Game Notifications",
@@ -442,6 +446,38 @@
       "org_announcement": {
         "title": "Announcement from {orgName}",
         "body": "{orgName} shared a new announcement. Tap to read."
+      },
+      "payouts_setup_required": {
+        "title": "{amount} ready to receive",
+        "body": "A player paid you back. Verify your bank account to get paid (5 min)."
+      },
+      "payouts_released": {
+        "title": "{amount} on the way",
+        "body": "Your reimbursement is heading to your bank — arrives in 1–2 business days."
+      },
+      "payouts_expired_refunded": {
+        "title": "Reimbursement could not be completed",
+        "body": "{amount} was refunded because the payout couldn't be set up in time."
+      },
+      "reimbursement_received": {
+        "title": "Reimbursement received: {amount}",
+        "body": "A player paid {amount} toward your court cost."
+      },
+      "reimbursement_all_received": {
+        "title": "All reimbursements received",
+        "body": "Everyone has paid you back for the game."
+      },
+      "match_time_suggested": {
+        "title": "{playerName} suggested {suggestedStartTime}",
+        "body": "{playerName} can't make {sportName} on {matchDate} at the current time — they suggested {suggestedStartTime} instead. Tap to accept or decline."
+      },
+      "match_time_suggestion_accepted": {
+        "title": "Your time change was accepted",
+        "body": "Your {sportName} game on {matchDate} now starts at {suggestedStartTime}."
+      },
+      "match_time_suggestion_declined": {
+        "title": "Time change declined",
+        "body": "Your suggestion for the {sportName} game on {matchDate} wasn't accepted. You can still join at the original time."
       }
     }
   },
@@ -460,6 +496,8 @@
     "reviewAndRespond": "Review & Respond",
     "pendingCount": "{count} players are waiting for your rating confirmation",
     "pendingCount_one": "{count} player is waiting for your rating confirmation",
+    "bannerTitle": "{count} pending references",
+    "bannerDescription": "Players you've matched with want your endorsement to verify their level.",
     "reviewCta": "Review",
     "respondTitle": "Verify Rating",
     "respondSubtitle": "Help this player get their rating certified",
@@ -1321,6 +1359,26 @@
       "private": "Private",
       "publicDescription": "Other players can see when you're available to play.",
       "privateDescription": "Your availability is hidden from other players."
+    },
+    "payments": {
+      "section": "Payments",
+      "connectAccount": "Connect Account",
+      "continueSetup": "Finish Setup",
+      "connected": "Payments connected",
+      "connectedDescription": "Players can pay you with Apple Pay. Funds arrive in your bank in 1–2 business days.",
+      "setupPrompt": "Set up payments to receive your share from players",
+      "manualMode": "Tracking payments manually",
+      "manualModeDescription": "You're not using Stripe. Players settle with you directly (cash, Interac, etc.) and you mark them as paid.",
+      "switchToStripe": "Switch to Stripe",
+      "switchToManual": "Switch to manual",
+      "useManualInstead": "Track manually instead",
+      "pendingTitle": "{amount} ready to receive",
+      "pendingBody": "Finish payment setup to get this transferred to your bank.",
+      "connectedToast": "Payments connected!",
+      "onboardingError": "Failed to start payment setup. Please try again.",
+      "modeUpdateError": "Could not update payment mode. Try again.",
+      "switchToManualConfirmTitle": "Switch to manual tracking?",
+      "switchToManualConfirmMessage": "Future payments won't go through Stripe — you'll mark each player as paid yourself. Pending payments already in Stripe will still be released to you."
     }
   },
   "playerProfile": {
@@ -1369,6 +1427,8 @@
       "am": "AM",
       "pm": "PM",
       "eve": "EVE",
+      "showDetails": "Show full schedule",
+      "hideDetails": "Hide details",
       "days": {
         "monday": "Mon",
         "tuesday": "Tue",
@@ -1587,23 +1647,15 @@
     },
     "availabilityStep": {
       "title": "Tell us about your schedule",
-      "subtitle": "Select your availabilities",
-      "am": "AM",
-      "pm": "PM",
-      "eve": "EVE",
-      "minimumSelected": "{count} / {minimum} minimum selected",
-      "selected": "{count} availabilities selected",
+      "presets": {
+        "afterWork": "After work",
+        "weekendsAny": "Weekends",
+        "lunch": "Lunch",
+        "mornings": "Mornings",
+        "clear": "Clear"
+      },
       "saveButton": "Save",
-      "complete": "Complete",
-      "days": {
-        "monday": "Mon",
-        "tuesday": "Tue",
-        "wednesday": "Wed",
-        "thursday": "Thu",
-        "friday": "Fri",
-        "saturday": "Sat",
-        "sunday": "Sun"
-      }
+      "complete": "Complete"
     },
     "validation": {
       "fillRequiredFields": "Please fill in all required fields",
@@ -1669,6 +1721,7 @@
     },
     "suggestions": {
       "title": "Your Top Matches",
+      "sheetTitle": "Personalized suggestions",
       "subtitle": "We found players near you that match your level, schedule, and court preferences",
       "sendInvite": "Send Game Invite",
       "confirmTitle": "Send game invite?",
@@ -1698,7 +1751,9 @@
       "feedEmptyTitle": "No suggestions available",
       "feedEmptySubtitle": "Check back later as more players join.",
       "selectDate": "Select a date",
-      "selectTime": "Select a time"
+      "selectTime": "Select a time",
+      "reassureTitle": "Hand-picked just for you",
+      "reassureMessage": "These players match your level, are free at this time, and play at courts you like. They're hoping someone reaches out — you're not bugging anyone, you'll likely make their day."
     },
     "complete": "Complete",
     "locationStep": {
@@ -1881,7 +1936,9 @@
     "participantStatus": {
       "pending": "Pending",
       "declined": "Declined"
-    }
+    },
+    "suggestDifferentTime": "Suggest a different time",
+    "viewYourSuggestion": "Your suggestion: {time}"
   },
   "ratings": {
     "title": "Ratings",
@@ -2773,6 +2830,12 @@
     "locationRequiredForFacilities": "Location is required to search facilities",
     "favoriteFacilitiesHint": "You can always add or change facilities later"
   },
+  "playerAvailability": {
+    "staleHint": "It's been a while — confirm your availability for the week ahead.",
+    "lastConfirmed": "Last confirmed {ago}",
+    "neverConfirmed": "Not confirmed yet",
+    "confirmCta": "Confirm my week"
+  },
   "playerDirectory": {
     "title": "Player Directory",
     "searchPlaceholder": "Search by name or city...",
@@ -2787,6 +2850,19 @@
     "selectSportDescription": "Choose a sport from the header to view players",
     "chooseSport": "Choose a sport from the header to view players",
     "nearby": "Nearby",
+    "online": "Online",
+    "lastSeenToday": "Today",
+    "lastSeenYesterday": "Yesterday",
+    "lastSeenDaysAgo": "{count} days ago",
+    "dayLetters": {
+      "monday": "M",
+      "tuesday": "T",
+      "wednesday": "W",
+      "thursday": "T",
+      "friday": "F",
+      "saturday": "S",
+      "sunday": "S"
+    },
     "failedToLoad": "Failed to load players",
     "checkConnection": "Please check your connection and try again",
     "favorites": {
@@ -2808,6 +2884,8 @@
       "distanceKm": "{distance} km",
       "availability": "Time",
       "availabilityAll": "All",
+      "availabilityAm": "AM",
+      "availabilityPm": "PM",
       "availabilityMorning": "Morning",
       "availabilityAfternoon": "Afternoon",
       "availabilityEvening": "Evening",
@@ -3069,6 +3147,7 @@
       "join": "Join game",
       "askToJoin": "Request to join",
       "acceptInvitation": "Accept Invitation",
+      "manageInvitation": "Manage invitation",
       "full": "Full",
       "view": "View details",
       "viewResults": "View results",
@@ -3207,7 +3286,84 @@
     "scoreConfirmProgress_one": "{confirmed}/{total} player confirmed",
     "scoreConfirmProgress_other": "{confirmed}/{total} players confirmed",
     "yourScoreConfirmed": "Your confirmation received",
-    "reviewRebuttal": "Review Score"
+    "reviewRebuttal": "Review Score",
+    "reimbursement": "Reimbursement",
+    "matchCost": "Match Cost",
+    "payNow": "Pay Now",
+    "markAsPaid": "Mark as Paid",
+    "markedAsPaid": "Marked as paid",
+    "markedAsPaidWithAmount": "{name} marked as paid · {amount}",
+    "paymentSuccess": "Payment sent!",
+    "paymentSuccessWithDetails": "Payment sent — {amount} to {name}",
+    "paymentError": "Payment failed. Try again.",
+    "payErrors": {
+      "matchNotFinished": "You can pay once the match has ended.",
+      "matchNotFull": "This match didn't fill its slots — no reimbursement collected.",
+      "hostManualOnly": "{name} prefers to be paid directly.",
+      "alreadyPaid": "You've already paid your share.",
+      "alreadyPaidViaStripe": "Already paid through Rallia. No need to mark manually."
+    },
+    "payNote": "No fees · Powered by Stripe",
+    "yourShare": "Your share · {amount}",
+    "yourShareSubtitle": "{name} will receive this directly",
+    "youHavePaid": "✓ You've paid your share ({amount})",
+    "youOweHost": "{amount} owed to {name}",
+    "youOweHostWithDate": "{amount} for the {date} match with {name}",
+    "payDirectly": "Pay {name} directly · {amount}",
+    "hostNotConnected": "{name} hasn't set up payments yet",
+    "hostManualOnly": "{name} prefers to be paid directly · {amount}",
+    "paidCount": "{paid}/{total} players have paid",
+    "everyonePaid": "Everyone has paid you back",
+    "payoutsSetupBanner": {
+      "title": "{amount} ready to receive",
+      "body": "Funds arrive 1–2 business days after setup.",
+      "cta": "Get paid"
+    },
+    "choosePayouts": {
+      "title": "How do you want to handle reimbursements?",
+      "subtitle": "Choose how players pay you back for the court.",
+      "prompt": "How do you want to be paid back?",
+      "stripeOption": "Stripe (recommended)",
+      "stripeDescription": "Players pay with Apple Pay in 3 seconds. Funds go to your bank. ~5 min one-time setup.",
+      "stripeBadge": "~5 min setup",
+      "manualOption": "Track only",
+      "manualDescription": "Mark who paid you out-of-band (cash, Interac, etc.). No setup, no fees.",
+      "manualBadge": "No fees",
+      "later": "Decide later",
+      "switchToManualConfirmTitle": "Switch to manual tracking?",
+      "switchToManualConfirmMessage": "Future payments won't go through Stripe — you'll mark each player as paid yourself. Pending payments already in Stripe will still be released to you."
+    },
+    "switchToStripe": "Switch to Stripe",
+    "trackingOnly": "Tracking payments manually",
+    "timeSuggestion": {
+      "sheetTitle": "Suggest a different time",
+      "sheetSubtitle": "Same day — propose a new start time. The host can accept (which will reschedule the game) or decline.",
+      "currentTime": "Currently: {time}",
+      "newTimeLabel": "Your suggestion",
+      "noteLabel": "Note (optional)",
+      "notePlaceholder": "e.g. I could play if we start an hour later",
+      "timezoneBanner": "Times shown in match timezone ({tz})",
+      "submit": "Send suggestion",
+      "submitUpdate": "Update suggestion",
+      "withdraw": "Withdraw suggestion",
+      "submitSuccess": "Suggestion sent to host",
+      "withdrawSuccess": "Suggestion withdrawn",
+      "alreadyPending": "You already have a pending suggestion — withdraw it first.",
+      "sameAsCurrent": "That's the current start time — pick something different.",
+      "errorGeneric": "Couldn't send your suggestion. Please try again.",
+      "sectionTitle": "Time suggestions",
+      "sectionEmpty": "No pending suggestions",
+      "suggestedBy": "{name} suggests {time}",
+      "youSuggested": "You suggested {time}",
+      "youSuggestedPending": "Waiting for the host to respond",
+      "accept": "Accept",
+      "decline": "Decline",
+      "acceptConfirmTitle": "Accept this time?",
+      "acceptConfirmBody": "This will reschedule the game to {time} and notify all participants.",
+      "acceptSuccess": "Game rescheduled",
+      "declineSuccess": "Suggestion declined",
+      "errorMatchFull": "The match filled up while this was pending. Free up a spot or decline."
+    }
   },
   "registerMatchScore": {
     "title": "Register score",
@@ -3446,6 +3602,7 @@
     "error": "Error",
     "info": "Info",
     "availabilitiesUpdated": "Your availabilities have been updated!",
+    "minAvailabilitiesRequired": "Please select at least 3 availability slots.",
     "peerRatingRequestsSent": "Peer rating requests sent to {count} player(s)",
     "referenceRequestsSent": "Reference requests sent to {count} player(s)",
     "failedToSendPeerRatingRequests": "Failed to send peer rating requests",
@@ -3852,9 +4009,16 @@
     "user": "User",
     "subtitle": "The best way to find your next tennis or pickleball partner",
     "soonAndNearby": "Nearby",
+    "justForYou": "Just for you",
     "publicMatches": "Public Games",
     "viewAll": "View All",
-    "myMatches": "My Games",
+    "myMatches": "My games",
+    "quickNav": {
+      "joinCommunity": "Join a community",
+      "bookCourt": "Reserve a court",
+      "findGame": "Find a game nearby",
+      "browseSuggestions": "Discover suggestions"
+    },
     "myMatchesEmpty": {
       "title": "No upcoming games",
       "description": "Create a game or join one to see it here"
@@ -3875,11 +4039,20 @@
     },
     "crossSportBanner": {
       "unreadNotifications": "You have {count} pending notification(s) in {sportName}",
+      "bannerTitle": "{count} updates in {sportName}",
+      "bannerDescription": "Switch sports to see notifications you missed in your other sport.",
       "switch": "Switch"
     },
     "secondSportBanner": {
       "message": "Ready to expand your game? Activate your {sportName} profile!",
+      "bannerTitle": "Try {sportName} too",
+      "bannerDescription": "Activate {sportName} to find more matches and players nearby.",
       "activate": "Activate"
+    },
+    "availabilityRefreshBanner": {
+      "title": "Your weekly availability",
+      "description": "Tell us when you can play this week — keeps your match suggestions on point.",
+      "cta": "Update"
     },
     "header": {
       "ctaButton": "Download",
@@ -4203,6 +4376,7 @@
   "publicMatches": {
     "title": "Public Games",
     "searchPlaceholder": "Search games, locations, players...",
+    "suggestionsFrontier": "Suggestions for you",
     "filters": {
       "format": {
         "label": "Format",
@@ -6754,6 +6928,8 @@
       "noData": "No data available",
       "invitations": "Invitations & Referrals",
       "invitationsDescription": "Where users are getting redirected from — last {days} days. Click a row for top targets.",
+      "invitationsTrendTitle": "Clicks per day, by invitation type",
+      "invitationsTrendHint": "All active invitation types over the selected window.",
       "totalClicks": "Clicks",
       "uniqueDevices": "Unique devices",
       "matchedInstalls": "Matched installs (iOS)",
@@ -6764,13 +6940,96 @@
       "targetId": "Target",
       "noClicksYet": "No invitation link clicks yet.",
       "trend": "Trend",
+      "overviewHint": "Live snapshot across all analytics surfaces. Click a card to drill in.",
+      "tabs": {
+        "overview": "Overview",
+        "acquisition": "Acquisition",
+        "invitations": "Invitations",
+        "engagement": "Engagement",
+        "users": "Users"
+      },
+      "links": {
+        "builderTitle": "Build a tracked link",
+        "builderDescription": "Pick a destination and tag the campaign you're sharing it for. The URL on the right is what you copy/share.",
+        "destination": "Destination",
+        "campaign": "Campaign",
+        "campaignPlaceholder": "Pick a campaign…",
+        "newCampaign": "New campaign",
+        "source": "Source",
+        "sourcePlaceholder": "Pick a source…",
+        "medium": "Medium",
+        "mediumPlaceholder": "Pick a medium…",
+        "content": "Content variant",
+        "contentPlaceholder": "e.g. story_swipeup, header_cta",
+        "generatedUrl": "Generated URL",
+        "fillFormPrompt": "Fill the form to generate a URL…",
+        "copy": "Copy",
+        "qrHint": "Print or share — scanning opens the same URL.",
+        "newCampaignTitle": "New campaign",
+        "newCampaignDescription": "A campaign groups all the links for one growth initiative.",
+        "campaignName": "Campaign name",
+        "slugPreview": "Slug (used in URL):",
+        "campaignDescriptionLabel": "Description",
+        "campaignDescriptionPlaceholder": "What's this campaign for?",
+        "create": "Create campaign",
+        "creating": "Creating…",
+        "cancel": "Cancel",
+        "campaignsTitle": "Campaigns",
+        "campaignsDescription": "Active campaigns. Archive a campaign to hide it from the picker — historical attribution stays.",
+        "name": "Name",
+        "slug": "Slug",
+        "description": "Description",
+        "archive": "Archive",
+        "noCampaigns": "No campaigns yet — create one above."
+      },
+      "utm": {
+        "title": "UTM Monitoring",
+        "description": "Pre-signup landings (PostHog) joined with downstream signups & matches per campaign.",
+        "landings": "Landings",
+        "signups": "Signups",
+        "signupsToday": "Signups today",
+        "conversionRate": "Conv. rate",
+        "attributionRate": "Attribution rate",
+        "attributionRateHint": "{attributed} of {total} signups attributed",
+        "topCampaign": "Top campaign",
+        "topCampaignsTrend": "Landings per day, by campaign",
+        "chartHint": "Comparing the top {n} campaigns over the selected window.",
+        "topN": "Top {n}",
+        "matchesCreated": "Matches created",
+        "drilldownTitle": "{value} — full funnel",
+        "noUtmYet": "No UTM-tagged landings or signups in this window yet.",
+        "timeWindow": "Window",
+        "autoRefresh": "Auto-refresh",
+        "demoMode": "Demo data",
+        "refreshNow": "Refresh",
+        "lastRefreshed": "Updated {time}",
+        "notYetLoaded": "Loading…",
+        "windows": {
+          "24h": "24 hours",
+          "7d": "7 days",
+          "30d": "30 days",
+          "90d": "90 days"
+        },
+        "dimensions": {
+          "campaign": "Campaign",
+          "source": "Source",
+          "medium": "Medium"
+        },
+        "funnel": {
+          "landings": "Landings",
+          "signups": "Signups",
+          "firstMatch": "Matches created",
+          "firstMatchPlayed": "Matches played"
+        }
+      },
       "invitationType": {
         "referral": "Referral",
         "match": "Match",
         "group": "Group",
         "community": "Community",
         "flyer": "Flyer",
-        "poster": "Poster"
+        "poster": "Poster",
+        "social": "Social"
       },
       "timeRange": {
         "7d": "7 Days",
@@ -8165,6 +8424,9 @@
       "hasAvailabilities": {
         "label": "Bookable"
       },
+      "hasOpenSlots": {
+        "label": "Slots open"
+      },
       "organizationNature": {
         "label": "Ownership",
         "all": "All",
@@ -8718,14 +8980,20 @@
         "sunday": "Sun"
       },
       "periods": {
+        "early": "Early",
         "morning": "Morning",
+        "midday": "Midday",
         "afternoon": "Afternoon",
-        "evening": "Evening"
+        "evening": "Evening",
+        "late": "Late"
       },
       "periodRanges": {
-        "morning": "6am - 12pm",
-        "afternoon": "12pm - 5pm",
-        "evening": "5pm - 9pm"
+        "early": "6am - 9am",
+        "morning": "9am - 12pm",
+        "midday": "12pm - 2pm",
+        "afternoon": "2pm - 5pm",
+        "evening": "5pm - 8pm",
+        "late": "8pm - 11pm"
       },
       "availabilityCount": "{count} selected",
       "submitButton": "Count me in",
@@ -9110,6 +9378,7 @@
     "percentComplete": "{percentage}% complete",
     "complete": "Profile complete",
     "bannerTitle": "{percentage}% complete",
+    "bannerDescription": "Complete your profile to find more matches and stand out to other players.",
     "bannerCta": "Complete",
     "tiers": {
       "getting_started": "Getting started — fill in the basics for better matches",
@@ -9179,8 +9448,8 @@
     }
   },
   "subscription": {
-    "pro_badge": "Pro",
-    "upgrade_cta": "Upgrade to Rallia Pro",
+    "pro_badge": "Plus",
+    "upgrade_cta": "Upgrade to Rallia Plus",
     "manage": "Manage Subscription",
     "restore": "Restore Purchases",
     "restore_success": "Subscription restored!",
@@ -9192,6 +9461,7 @@
     "renews_on": "Renews {date}",
     "cancels_on": "Access until {date}",
     "billing_banner_title": "Payment issue with your subscription",
+    "billing_banner_description": "Your subscription is on hold until you update your payment method.",
     "billing_banner_cta": "Update payment",
     "manage_via_apple": "Manage your subscription via Apple Settings",
     "free_plan": "Free Plan",

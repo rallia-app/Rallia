@@ -5,4 +5,7 @@
  */
 
 export * from './matchService';
+export * from './matchTimeSuggestionService';
 export * from './suggestionService';
+export * from './matchScoring';
+export * from './justForYouComposer';

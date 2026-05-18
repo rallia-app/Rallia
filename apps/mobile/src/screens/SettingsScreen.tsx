@@ -4,7 +4,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Image,
   ActivityIndicator,
   Alert,
   Linking,
@@ -13,6 +12,7 @@ import Constants from 'expo-constants';
 import * as Updates from 'expo-updates';
 import * as Application from 'expo-application';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
 import { Logger, tourService, supabase } from '@rallia/shared-services';
@@ -28,17 +28,13 @@ import {
   spacingPixels,
   radiusPixels,
   primary,
+  secondary,
   neutral,
   status,
 } from '@rallia/design-system';
 
 const BASE_WHITE = '#ffffff';
-import {
-  lightHaptic,
-  warningHaptic,
-  getProfilePictureUrl,
-  getHumanName,
-} from '@rallia/shared-utils';
+import { lightHaptic, warningHaptic } from '@rallia/shared-utils';
 
 // Get app environment (EXPO_PUBLIC_ vars are inlined at build time by Metro)
 const appEnv = process.env.EXPO_PUBLIC_APP_ENV || 'development';
@@ -66,8 +62,11 @@ const SettingsScreen: React.FC = () => {
   // User is fully onboarded only if authenticated AND onboarding is complete
   const isOnboarded = isAuthenticated && profile?.onboarding_completed;
 
-  const [isChangingLocale, setIsChangingLocale] = useState(false);
+  const [pendingLocale, setPendingLocale] = useState<Locale | null>(null);
+  const [isResettingLocale, setIsResettingLocale] = useState(false);
+  const isChangingLocale = pendingLocale !== null || isResettingLocale;
   const { theme, themePreference, setThemePreference } = useTheme();
+  const [pendingTheme, setPendingTheme] = useState<typeof themePreference | null>(null);
   const isDark = theme === 'dark';
 
   // Theme-aware colors from design system
@@ -96,7 +95,7 @@ const SettingsScreen: React.FC = () => {
     if (newLocale === locale || isChangingLocale) return;
 
     lightHaptic();
-    setIsChangingLocale(true);
+    setPendingLocale(newLocale);
     try {
       await setLocale(newLocale);
       Logger.logUserAction('language_changed', { locale: newLocale });
@@ -104,26 +103,41 @@ const SettingsScreen: React.FC = () => {
       Logger.error('Failed to change language', error as Error);
       toast.error(t('errors.unknown'));
     } finally {
-      setIsChangingLocale(false);
+      setPendingLocale(null);
     }
   };
 
   const handleResetToSystemLocale = async () => {
     if (!isManuallySet || isChangingLocale) return;
 
-    setIsChangingLocale(true);
+    setIsResettingLocale(true);
     try {
       await resetToDeviceLocale();
       Logger.logUserAction('language_reset_to_system');
     } catch (error) {
       Logger.error('Failed to reset language', error as Error);
     } finally {
-      setIsChangingLocale(false);
+      setIsResettingLocale(false);
     }
   };
 
-  const handleEditProfile = () => {
-    navigation.navigate('UserProfile', {});
+  const handleThemeChange = (themePref: typeof themePreference) => {
+    if (themePref === themePreference || pendingTheme !== null) return;
+    lightHaptic();
+    setPendingTheme(themePref);
+    // Defer the actual theme switch by two frames. setThemePreference cascades
+    // a re-render across every component that subscribes to useTheme, which
+    // would otherwise be batched with this event and delay the paint of the
+    // optimistic active state until the heavy work finishes.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setThemePreference(themePref);
+        // Clear pending after the theme has propagated; the active state
+        // remains visible the whole time because we compare against
+        // (pendingTheme ?? themePreference).
+        requestAnimationFrame(() => setPendingTheme(null));
+      });
+    });
   };
 
   const handleNotificationPreferences = () => {
@@ -275,50 +289,37 @@ const SettingsScreen: React.FC = () => {
         style={[styles.scrollContent, { backgroundColor: colors.background }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Edit Profile - Only show when fully onboarded */}
+        {/* Prominent Feedback CTA — styled like Home quick-nav buttons */}
         {isOnboarded && (
-          <View style={[styles.profileGroup, { backgroundColor: colors.background }]}>
-            <View style={[styles.profileSection, { backgroundColor: colors.background }]}>
-              {profile?.profile_picture_url ? (
-                <Image
-                  source={{ uri: getProfilePictureUrl(profile.profile_picture_url) || '' }}
-                  style={styles.profileImage}
-                />
-              ) : (
-                <View style={styles.profileImagePlaceholder}>
-                  <Ionicons name="person-outline" size={32} color={colors.iconMuted} />
-                </View>
-              )}
-              <View style={styles.profileInfo}>
-                <Text size="lg" weight="semibold" color={colors.text}>
-                  {getHumanName(profile, '')}
-                </Text>
-                <Text size="sm" color={colors.textSecondary} style={styles.profileEmail}>
-                  {profile?.email || ''}
-                </Text>
-              </View>
-            </View>
+          <View style={[styles.feedbackCardWrapper, { backgroundColor: colors.background }]}>
             <TouchableOpacity
-              style={[
-                styles.editProfileButton,
-                { backgroundColor: colors.background, borderBottomColor: colors.border },
-              ]}
-              onPress={() => {
-                lightHaptic();
-                handleEditProfile();
-              }}
-              activeOpacity={0.7}
+              onPress={handleFeedback}
+              activeOpacity={0.85}
+              style={styles.feedbackCard}
+              accessibilityRole="button"
+              accessibilityLabel={t('settings.feedback')}
             >
-              <Ionicons name="create-outline" size={18} color={colors.icon} />
-              <Text size="base" color={colors.text}>
-                {t('profile.editProfile')}
-              </Text>
-              <Ionicons
-                name="chevron-forward"
-                size={20}
-                color={colors.iconMuted}
-                style={{ marginLeft: 'auto' }}
-              />
+              <LinearGradient
+                colors={[secondary[400], secondary[500], secondary[500]]}
+                locations={[0, 0.55, 1]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.feedbackGradient}
+              >
+                <View style={styles.feedbackTopHighlight} />
+                <View style={styles.feedbackIconCircle}>
+                  <Ionicons name="chatbox-ellipses" size={22} color={BASE_WHITE} />
+                </View>
+                <View style={styles.feedbackTextWrapper}>
+                  <Text size="base" weight="semibold" color={BASE_WHITE}>
+                    {t('settings.feedback')}
+                  </Text>
+                  <Text size="xs" color={`${BASE_WHITE}D9`} style={styles.feedbackSubtitleText}>
+                    {t('feedback.description')}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={`${BASE_WHITE}CC`} />
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         )}
@@ -342,13 +343,6 @@ const SettingsScreen: React.FC = () => {
             title={t('tour.settings.restartTour')}
             onPress={handleResetTour}
           />
-          {isOnboarded && (
-            <SettingsItem
-              icon="chatbox-ellipses-outline"
-              title={t('settings.feedback')}
-              onPress={handleFeedback}
-            />
-          )}
           <SettingsItem
             icon="document-text-outline"
             title={t('settings.termsOfService')}
@@ -377,22 +371,22 @@ const SettingsScreen: React.FC = () => {
           </View>
         )}
 
-        {/* Rallia Pro */}
-        {isOnboarded && (
+        {/* Rallia Plus — gated to admins for now */}
+        {isOnboarded && isAdmin && (
           <View style={[styles.settingsGroup, { backgroundColor: colors.background }]}>
-            {subscriptionStatus === 'active' || subscriptionStatus === 'cancelling' ? (
-              <SettingsItem
-                icon="star"
-                title={`Rallia Pro — ${t('subscription.status_active')}`}
-                onPress={() => navigation.navigate('SubscriptionManagement')}
-              />
-            ) : isAdmin ? (
-              <SettingsItem
-                icon="star-outline"
-                title={t('subscription.upgrade_cta')}
-                onPress={() => presentPaywall()}
-              />
-            ) : null}
+            <SettingsItem
+              icon={
+                subscriptionStatus === 'active' || subscriptionStatus === 'cancelling'
+                  ? 'star'
+                  : 'star-outline'
+              }
+              title={
+                subscriptionStatus === 'active' || subscriptionStatus === 'cancelling'
+                  ? `Rallia Plus — ${t('subscription.status_active')}`
+                  : 'Rallia Plus'
+              }
+              onPress={() => navigation.navigate('SubscriptionManagement')}
+            />
           </View>
         )}
 
@@ -422,7 +416,9 @@ const SettingsScreen: React.FC = () => {
           <View style={styles.preferenceOptions}>
             {availableLocales.map(loc => {
               const config = localeConfigs[loc];
-              const isActive = locale === loc;
+              const effectiveLocale = pendingLocale ?? locale;
+              const isActive = effectiveLocale === loc;
+              const isPending = pendingLocale === loc;
               return (
                 <TouchableOpacity
                   key={loc}
@@ -436,9 +432,7 @@ const SettingsScreen: React.FC = () => {
                   disabled={isChangingLocale}
                   activeOpacity={0.7}
                 >
-                  {isChangingLocale && !isActive ? (
-                    <ActivityIndicator size="small" color={colors.buttonActive} />
-                  ) : (
+                  <View style={styles.preferenceButtonContent}>
                     <Text
                       size="sm"
                       weight="medium"
@@ -446,7 +440,10 @@ const SettingsScreen: React.FC = () => {
                     >
                       {config.nativeName}
                     </Text>
-                  )}
+                    {isPending && (
+                      <ActivityIndicator size="small" color={colors.buttonTextActive} />
+                    )}
+                  </View>
                 </TouchableOpacity>
               );
             })}
@@ -465,7 +462,9 @@ const SettingsScreen: React.FC = () => {
           </Text>
           <View style={styles.preferenceOptions}>
             {(['light', 'dark', 'system'] as const).map(themePref => {
-              const isActive = themePreference === themePref;
+              const effectiveTheme = pendingTheme ?? themePreference;
+              const isActive = effectiveTheme === themePref;
+              const isPending = pendingTheme === themePref;
               const labelKey =
                 themePref === 'light'
                   ? 'settings.lightMode'
@@ -481,19 +480,22 @@ const SettingsScreen: React.FC = () => {
                       backgroundColor: isActive ? colors.buttonActive : colors.buttonInactive,
                     },
                   ]}
-                  onPress={() => {
-                    lightHaptic();
-                    setThemePreference(themePref);
-                  }}
+                  onPress={() => handleThemeChange(themePref)}
+                  disabled={pendingTheme !== null}
                   activeOpacity={0.7}
                 >
-                  <Text
-                    size="sm"
-                    weight="medium"
-                    color={isActive ? colors.buttonTextActive : colors.buttonTextInactive}
-                  >
-                    {t(labelKey)}
-                  </Text>
+                  <View style={styles.preferenceButtonContent}>
+                    <Text
+                      size="sm"
+                      weight="medium"
+                      color={isActive ? colors.buttonTextActive : colors.buttonTextInactive}
+                    >
+                      {t(labelKey)}
+                    </Text>
+                    {isPending && (
+                      <ActivityIndicator size="small" color={colors.buttonTextActive} />
+                    )}
+                  </View>
                 </TouchableOpacity>
               );
             })}
@@ -611,46 +613,50 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: spacingPixels[5],
   },
-  profileSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[2],
-  },
-  profileImage: {
-    width: spacingPixels[14],
-    height: spacingPixels[14],
-    borderRadius: radiusPixels.full,
-  },
-  profileImagePlaceholder: {
-    width: spacingPixels[14],
-    height: spacingPixels[14],
-    borderRadius: radiusPixels.full,
-    backgroundColor: neutral[200],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileInfo: {
-    marginLeft: spacingPixels[4],
-    flex: 1,
-  },
-  profileEmail: {
-    marginTop: spacingPixels[1],
-  },
-  editProfileButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[5],
-    paddingVertical: spacingPixels[4],
-    borderBottomWidth: 1,
-    gap: spacingPixels[2],
-  },
   settingsGroup: {
     paddingHorizontal: spacingPixels[5],
     paddingVertical: spacingPixels[5],
   },
-  profileGroup: {
+  feedbackCardWrapper: {
     paddingHorizontal: spacingPixels[5],
-    paddingVertical: spacingPixels[5],
+    paddingTop: spacingPixels[3],
+    paddingBottom: spacingPixels[1],
+  },
+  feedbackCard: {
+    borderRadius: radiusPixels['2xl'],
+  },
+  feedbackGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    paddingVertical: spacingPixels[4],
+    paddingHorizontal: spacingPixels[4],
+    borderRadius: radiusPixels['2xl'],
+    overflow: 'hidden',
+  },
+  feedbackTopHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.35)',
+  },
+  feedbackIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  feedbackTextWrapper: {
+    flex: 1,
+  },
+  feedbackSubtitleText: {
+    marginTop: spacingPixels[0.5],
   },
   settingsItem: {
     flexDirection: 'row',
@@ -691,6 +697,11 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.full,
     minWidth: spacingPixels[20],
     alignItems: 'center',
+  },
+  preferenceButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
   },
   autoDetectedText: {
     marginTop: spacingPixels[2],

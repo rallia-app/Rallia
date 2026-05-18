@@ -82,6 +82,7 @@ export const facilityKeys = {
     lighting: LightingFilter,
     membership: MembershipFilter,
     hasAvailabilities: boolean,
+    hasOpenSlots: boolean,
     userGender?: string | null,
     playerId?: string | null
   ) =>
@@ -98,6 +99,7 @@ export const facilityKeys = {
       lighting,
       membership,
       hasAvailabilities,
+      hasOpenSlots,
       userGender,
       playerId,
     ] as const,
@@ -113,6 +115,7 @@ export interface FacilityFilters {
   membership: MembershipFilter;
   organizationNature: OrganizationNatureFilter;
   hasAvailabilities: boolean;
+  hasOpenSlots: boolean;
   favoritesOnly: boolean;
 }
 
@@ -126,6 +129,7 @@ export const DEFAULT_FACILITY_FILTERS: FacilityFilters = {
   membership: 'all',
   organizationNature: 'all',
   hasAvailabilities: false,
+  hasOpenSlots: false,
   favoritesOnly: false,
 };
 
@@ -214,6 +218,7 @@ export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilit
         filters.lighting,
         filters.membership,
         filters.hasAvailabilities,
+        filters.hasOpenSlots,
         userGender,
         playerId
       ),
@@ -246,6 +251,7 @@ export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilit
         hasLighting,
         membershipRequired,
         hasAvailabilities: filters.hasAvailabilities ? true : undefined,
+        hasOpenSlots: filters.hasOpenSlots ? true : undefined,
         favoritesOnly: filters.favoritesOnly ? true : undefined,
         organizationNature:
           filters.organizationNature === 'all' ? undefined : filters.organizationNature,

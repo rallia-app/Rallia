@@ -27,6 +27,16 @@ const config = getSentryExpoConfig(projectRoot, {
   },
 });
 
+// Packages that MUST resolve to a single physical copy across the workspace.
+// npm auto-installs peerDependencies in npm 7+, so workspace packages like
+// shared-hooks end up with their own physical copy of @tanstack/react-query
+// even with version overrides in place. Same version, different files →
+// different module instances → different React Contexts → useQueryClient()
+// throws "No QueryClient set". This resolver re-anchors singleton imports to
+// apps/mobile's copy so every importer lands on the same physical module.
+const SINGLETON_PACKAGES = ['@tanstack/react-query', '@tanstack/query-core'];
+const singletonOrigin = path.join(projectRoot, '_metro_singleton_origin.js');
+
 // Monorepo: look for modules in both local and root node_modules
 config.resolver = {
   ...config.resolver,
@@ -36,6 +46,19 @@ config.resolver = {
   ],
   extraNodeModules: {
     'react-native-web': path.resolve(workspaceRoot, 'node_modules/react-native-web'),
+  },
+  resolveRequest: (context, moduleName, platform) => {
+    const isSingleton = SINGLETON_PACKAGES.some(
+      pkg => moduleName === pkg || moduleName.startsWith(`${pkg}/`)
+    );
+    if (isSingleton) {
+      return context.resolveRequest(
+        { ...context, originModulePath: singletonOrigin },
+        moduleName,
+        platform
+      );
+    }
+    return context.resolveRequest(context, moduleName, platform);
   },
 };
 

@@ -70,6 +70,8 @@ interface PlayerInviteStepProps {
   onInviteSuccess?: (participants: MatchParticipantWithPlayer[]) => void;
   /** When true, show a close (X) icon in the top right that calls onComplete (e.g. in wizard; sheet has its own X) */
   showCloseButton?: boolean;
+  /** Optional callback to navigate back (e.g. to the previous step in a wizard). When provided, a back chevron is rendered in the header. */
+  onBack?: () => void;
 }
 
 // =============================================================================
@@ -267,6 +269,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
   excludePlayerIds,
   onInviteSuccess,
   showCloseButton = false,
+  onBack,
 }) => {
   const toast = useToast();
 
@@ -489,8 +492,20 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header with optional close (X) */}
+      {/* Header with optional back (chevron) and close (X) */}
       <View style={styles.header}>
+        {onBack && (
+          <TouchableOpacity
+            onPress={() => {
+              selectionHaptic();
+              onBack();
+            }}
+            style={styles.headerBackButton}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="chevron-back-outline" size={24} color={colors.buttonActive} />
+          </TouchableOpacity>
+        )}
         <View style={styles.headerTextBlock}>
           <Text size="lg" weight="bold" color={colors.text}>
             {t('matchCreation.invite.title')}
@@ -605,6 +620,10 @@ const styles = StyleSheet.create({
   },
   headerCloseButton: {
     padding: spacingPixels[1],
+  },
+  headerBackButton: {
+    padding: spacingPixels[1],
+    marginRight: spacingPixels[2],
   },
   selectedStrip: {
     paddingVertical: spacingPixels[2],

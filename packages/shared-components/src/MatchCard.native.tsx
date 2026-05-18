@@ -200,13 +200,12 @@ interface ThemeColors {
  * - "Month Day" for dates further out (e.g., "Jan 15")
  *
  * Time format is locale-aware:
- * - English: 12-hour format (e.g., "2:00 PM - 4:00 PM")
- * - French: 24-hour format (e.g., "14:00 - 16:00")
+ * - English: 12-hour format (e.g., "2:00 PM")
+ * - French: 24-hour format (e.g., "14:00")
  */
 function getRelativeTimeDisplay(
   dateString: string,
   startTime: string,
-  endTime: string,
   timezone: string,
   locale: string,
   t: (key: TranslationKey, options?: TranslationOptions) => string
@@ -232,22 +231,9 @@ function getRelativeTimeDisplay(
   // Format start time (locale-aware: 12h for English, 24h for French)
   const startResult = formatTimeInTimezone(dateString, startTime, tz, locale);
 
-  // Calculate duration from start and end times
-  const [startH, startM] = startTime.split(':').map(Number);
-  const [endH, endM] = endTime.split(':').map(Number);
-  let durationMin = endH * 60 + endM - (startH * 60 + startM);
-  if (durationMin <= 0) durationMin += 24 * 60; // handle midnight crossing
-  const durationHours = Math.floor(durationMin / 60);
-  const durationRemMin = durationMin % 60;
-  const durationStr =
-    durationRemMin > 0
-      ? `${durationHours}h${durationRemMin.toString().padStart(2, '0')}`
-      : `${durationHours}h`;
-
   const separator = t('common.time.timeSeparator');
-  const timeRange = `${startResult.formattedTime}${separator}${durationStr}`;
 
-  return { label: `${dateLabel}${separator}${timeRange}`, isUrgent };
+  return { label: `${dateLabel}${separator}${startResult.formattedTime}`, isUrgent };
 }
 
 /**
@@ -852,11 +838,13 @@ const CardFooter: React.FC<CardFooterProps> = ({
     ctaDisabled = true;
     ctaIcon = 'time-outline';
   } else if (isInvited && !isFull && !isRequestMode) {
-    // Invited (pending status) to direct-join match with spots → Accept Invitation (success green)
-    ctaLabel = t('match.cta.acceptInvitation');
+    // Invited (pending status) to direct-join match with spots → opens the
+    // detail sheet where the user can accept, decline, or suggest a different
+    // time, so "Manage" reads more honestly than "Accept" here.
+    ctaLabel = t('match.cta.manageInvitation' as TranslationKey);
     ctaBgColor = ctaPositive;
     ctaTextColor = base.white;
-    ctaIcon = 'checkmark-circle-outline';
+    ctaIcon = 'mail-open-outline';
   } else if (isFull) {
     // Join Waitlist → success green
     ctaLabel = t('match.cta.joinWaitlist');
@@ -1077,7 +1065,6 @@ const MatchCard: React.FC<MatchCardProps> = ({
   const { label: timeLabel, isUrgent } = getRelativeTimeDisplay(
     match.match_date,
     match.start_time,
-    match.end_time,
     match.timezone,
     locale,
     t
@@ -1234,16 +1221,19 @@ const MatchCard: React.FC<MatchCardProps> = ({
       ? `${primary[400]}40`
       : `${primary[500]}20`;
 
-  // Tier ribbon badge config — one hue per tier (gold / red / teal)
+  // Tier ribbon badge config — one hue per tier (gold / red / teal).
+  // mostWanted uses the same gold anchor as Home's quick-nav buttons
+  // (accent[500] light / accent[400] dark) instead of accent[600] which
+  // skewed orange.
   const tierRibbon = isMostWanted
     ? {
         label: t('match.tier.mostWanted' as TranslationKey),
-        bg: isDark ? accent[600] : accent[700],
+        bg: isDark ? accent[400] : accent[500],
       }
     : isReadyToPlay
       ? {
           label: t('match.courtStatus.courtBooked'),
-          bg: isDark ? secondary[500] : secondary[600],
+          bg: secondary[500],
         }
       : isTopPlayer
         ? {
@@ -1252,7 +1242,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
                 ? 'match.tier.topPlayerPlural'
                 : 'match.tier.topPlayer') as TranslationKey
             ),
-            bg: isDark ? primary[500] : primary[600],
+            bg: primary[500],
           }
         : null;
 
@@ -1462,6 +1452,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 16,
     elevation: 5,
+    minHeight: 244,
   },
 
   // Tier ribbon badge (top-right corner)

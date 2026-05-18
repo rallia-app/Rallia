@@ -637,12 +637,29 @@ export async function getNetworkMemberUpcomingMatches(
     throw new Error(creatorError.message);
   }
 
-  // Step 4: Get match IDs where members are participants
-  const { data: participantMatches, error: participantError } = await supabase
+  // Step 4: Get match IDs where members are participants.
+  // Filter via the joined match row to upcoming, non-cancelled, network-visible
+  // matches — otherwise this returns every historical participation and the
+  // resulting `.in('id', ...)` URL in Step 5 exceeds PostgREST's limit (400).
+  let participantQuery = supabase
     .from('match_participant')
-    .select('match_id')
+    .select('match_id, match:match_id!inner(id)')
     .in('player_id', memberPlayerIds)
-    .eq('status', 'joined');
+    .eq('status', 'joined')
+    .in('match.visibility', ['public', 'private'])
+    .is('match.cancelled_at', null)
+    .gte('match.match_date', today);
+
+  if (networkType === 'community') {
+    participantQuery = participantQuery.eq('match.visible_in_communities', true);
+  } else {
+    participantQuery = participantQuery.eq('match.visible_in_groups', true);
+  }
+  if (sportId) {
+    participantQuery = participantQuery.eq('match.sport_id', sportId);
+  }
+
+  const { data: participantMatches, error: participantError } = await participantQuery;
 
   if (participantError) {
     console.error('Error fetching participant matches:', participantError);
@@ -839,15 +856,19 @@ export async function getNetworkMemberUpcomingMatches(
     const endTime = `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
     fullQuery = fullQuery.gte('start_time', startTime).lt('start_time', endTime);
   } else if (filters.timeOfDay && filters.timeOfDay !== 'all') {
+    // Boundaries aligned with the 6-block player availability taxonomy
+    // (morning = early+morning, afternoon = midday+afternoon, evening =
+    // evening+late) so the same word means a coherent time range across
+    // the player and match surfaces.
     switch (filters.timeOfDay) {
       case 'morning':
         fullQuery = fullQuery.gte('start_time', '06:00:00').lt('start_time', '12:00:00');
         break;
       case 'afternoon':
-        fullQuery = fullQuery.gte('start_time', '12:00:00').lt('start_time', '18:00:00');
+        fullQuery = fullQuery.gte('start_time', '12:00:00').lt('start_time', '17:00:00');
         break;
       case 'evening':
-        fullQuery = fullQuery.gte('start_time', '18:00:00').lte('start_time', '23:59:59');
+        fullQuery = fullQuery.gte('start_time', '17:00:00').lte('start_time', '23:59:59');
         break;
     }
   }

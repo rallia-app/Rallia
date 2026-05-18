@@ -8,7 +8,7 @@ import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { Text, SkeletonMatchCard } from '@rallia/shared-components';
+import { Text } from '@rallia/shared-components';
 import {
   useTheme,
   usePlayer,
@@ -18,11 +18,12 @@ import {
   useRatingScoresForSport,
   useSortedNearbyMatches,
   useFavoriteFacilities,
-  useMatchSuggestions,
-  useUnifiedMatchFeed,
+  useTopSuggestions,
+  doesSuggestionPassFilters,
   type MatchScoringPreferences,
   type UnifiedFeedItem,
 } from '@rallia/shared-hooks';
+import { getUpcomingDateSection, type UpcomingDateSection } from '@rallia/shared-utils';
 import {
   useAuth,
   useThemeStyles,
@@ -35,7 +36,7 @@ import { useMatchDetailSheet, useSport, useUserHomeLocation } from '../../../con
 import type { MatchDetailData } from '../../../context/MatchDetailSheetContext';
 import { Logger, supabase } from '@rallia/shared-services';
 import { spacingPixels } from '@rallia/design-system';
-import { SearchBar, MatchFiltersBar } from '../components';
+import { SearchBar, MatchFiltersBar, MatchCardSkeleton } from '../components';
 import { FeedItemCard } from '../components/FeedItemCard';
 
 // =============================================================================
@@ -237,18 +238,19 @@ export default function PublicMatches() {
   // Sort: chronological primary, relevance score as tiebreaker for same date+time
   const sortedMatches = useSortedNearbyMatches(filteredMatches, scoringPreferences);
 
-  // Fetch matchup suggestions to fill the feed up to ≥30 items.
+  // Fetch a flat top-N list of opponent-deduped, score-sorted suggestions.
+  // Used to pad the feed when there are fewer than 30 real matches.
   const {
-    suggestions,
+    suggestions: rawSuggestions,
     isLoading: loadingSuggestions,
     refetch: refetchSuggestions,
-  } = useMatchSuggestions({
+  } = useTopSuggestions({
     playerId: player?.id,
     sportId: selectedSport?.id,
     sportName: selectedSport?.name,
     latitude: location?.latitude,
     longitude: location?.longitude,
-    limit: 30,
+    maxItems: 30,
     enabled: showMatches,
   });
 
@@ -277,19 +279,78 @@ export default function PublicMatches() {
     ]
   );
 
-  // Build the unified chronological feed (matches + suggestions interleaved).
-  const feed = useUnifiedMatchFeed({
-    matches: sortedMatches,
-    suggestions,
-    filters: suggestionFilters,
-  });
+  // Apply user-selected filters to suggestions (matches are already filtered server-side).
+  const filteredSuggestions = useMemo(() => {
+    const nowMs = Date.now();
+    return rawSuggestions.filter(s => doesSuggestionPassFilters(s, suggestionFilters, nowMs));
+  }, [rawSuggestions, suggestionFilters]);
+
+  // Translate section labels once per locale change, not per match.
+  const upcomingSectionLabels = useMemo<Record<UpcomingDateSection, string>>(
+    () => ({
+      today: t('playerMatches.time.today'),
+      tomorrow: t('playerMatches.time.tomorrow'),
+      thisWeek: t('playerMatches.time.thisWeek'),
+      nextWeek: t('playerMatches.time.nextWeek'),
+      later: t('playerMatches.time.later'),
+    }),
+    [t]
+  );
+
+  // Build the flat feed: matches first (chronological with score tiebreak),
+  // then a single light "Suggestions for you" divider, then up-to-N suggestions
+  // padding to a minimum of 30 total — but only once matches finish paginating.
+  type PublicFeedRow =
+    | { kind: 'item'; key: string; data: UnifiedFeedItem }
+    | { kind: 'section-header'; key: string; title: string }
+    | { kind: 'frontier'; key: string };
+  const feed = useMemo<PublicFeedRow[]>(() => {
+    const matchItems: PublicFeedRow[] = [];
+    let currentSection = '';
+
+    sortedMatches.forEach(m => {
+      const section = getUpcomingDateSection(m.match_date);
+      const label = upcomingSectionLabels[section];
+      if (label !== currentSection) {
+        currentSection = label;
+        matchItems.push({ kind: 'section-header', key: `section:${section}`, title: label });
+      }
+      matchItems.push({
+        kind: 'item',
+        key: `match:${m.id}`,
+        data: { kind: 'match', key: `match:${m.id}`, sortTime: 0, data: m } as UnifiedFeedItem,
+      });
+    });
+
+    // Suggestions only kick in when matches genuinely exhausted (no more pages)
+    // and the feed has fewer than 30 real matches.
+    const padCount = Math.max(0, 30 - sortedMatches.length);
+    if (padCount === 0 || hasNextPage) return matchItems;
+
+    const suggestionItems: PublicFeedRow[] = filteredSuggestions.slice(0, padCount).map(s => ({
+      kind: 'item' as const,
+      key: `suggestion:${s.opponentId}:${(s.slot.datetime as Date).getTime()}`,
+      data: {
+        kind: 'suggestion',
+        key: `suggestion:${s.opponentId}:${(s.slot.datetime as Date).getTime()}`,
+        sortTime: 0,
+        data: s,
+      } as UnifiedFeedItem,
+    }));
+
+    if (suggestionItems.length === 0) return matchItems;
+
+    const frontier: PublicFeedRow = { kind: 'frontier', key: 'frontier' };
+    return [...matchItems, frontier, ...suggestionItems];
+  }, [sortedMatches, filteredSuggestions, hasNextPage, upcomingSectionLabels]);
 
   // Suggestion invite plumbing (shared with Home).
   const {
     cardLabels: suggestionLabels,
     handleSendInvite,
     getInviteState,
-  } = useSuggestionInviteHandler(selectedSport?.id);
+    callerMatchType,
+  } = useSuggestionInviteHandler({ sportId: selectedSport?.id, source: 'feed' });
 
   // Auto-paginate matches up to 30 before relying on suggestions to fill the feed.
   useEffect(() => {
@@ -318,25 +379,51 @@ export default function PublicMatches() {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Render feed item (match or suggestion)
+  // Render feed row — either a match/suggestion card or the single hairline
+  // divider between the match block and the suggestion tail.
   const renderFeedItem = useCallback(
-    ({ item }: { item: UnifiedFeedItem }) => (
-      <FeedItemCard
-        item={item}
-        isDark={isDark}
-        locale={locale}
-        t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
-        currentPlayerId={player?.id}
-        themeColors={colors}
-        suggestionLabels={suggestionLabels}
-        getInviteState={getInviteState}
-        onMatchPress={match => {
-          Logger.logUserAction('public_match_pressed', { matchId: match.id });
-          openMatchDetail(match as MatchDetailData);
-        }}
-        onSendInvite={handleSendInvite}
-      />
-    ),
+    ({ item }: { item: PublicFeedRow }) => {
+      if (item.kind === 'section-header') {
+        return (
+          <View style={[styles.sectionHeader, { backgroundColor: colors.background }]}>
+            <Text size="sm" weight="semibold" color={colors.textMuted}>
+              {item.title}
+            </Text>
+          </View>
+        );
+      }
+      if (item.kind === 'frontier') {
+        return (
+          <View style={styles.frontierRow}>
+            <View style={[styles.frontierLine, { backgroundColor: colors.border }]} />
+            <Text size="xs" color={colors.textMuted} style={styles.frontierLabel}>
+              {t('publicMatches.suggestionsFrontier')}
+            </Text>
+            <View style={[styles.frontierLine, { backgroundColor: colors.border }]} />
+          </View>
+        );
+      }
+      return (
+        <FeedItemCard
+          item={item.data}
+          isDark={isDark}
+          locale={locale}
+          t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
+          currentPlayerId={player?.id}
+          themeColors={colors}
+          suggestionLabels={suggestionLabels}
+          getInviteState={getInviteState}
+          onMatchPress={match => {
+            Logger.logUserAction('public_match_pressed', { matchId: match.id });
+            openMatchDetail(match as MatchDetailData);
+          }}
+          onSendInvite={handleSendInvite}
+          sportId={selectedSport?.id}
+          sportName={selectedSport?.name}
+          defaultMatchType={callerMatchType}
+        />
+      );
+    },
     [
       isDark,
       t,
@@ -471,15 +558,7 @@ export default function PublicMatches() {
       {isLoading || loadingSuggestions ? (
         <View style={styles.listLoadingContainer}>
           {[1, 2, 3, 4].map(i => (
-            <SkeletonMatchCard
-              key={i}
-              backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-              highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-              style={{
-                backgroundColor: isDark ? '#1C1C1E' : '#FAFAFA',
-                borderColor: colors.border,
-              }}
-            />
+            <MatchCardSkeleton key={i} />
           ))}
         </View>
       ) : (
@@ -597,5 +676,26 @@ const styles = StyleSheet.create({
   footerLoader: {
     padding: spacingPixels[4],
     alignItems: 'center',
+  },
+  sectionHeader: {
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[2],
+    marginBottom: spacingPixels[1],
+  },
+  frontierRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: 0,
+    paddingBottom: spacingPixels[4],
+    gap: spacingPixels[3],
+  },
+  frontierLine: {
+    flex: 1,
+    height: 1,
+  },
+  frontierLabel: {
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

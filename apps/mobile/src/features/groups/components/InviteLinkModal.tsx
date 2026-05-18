@@ -114,7 +114,14 @@ export function InviteLinkActionSheet({ payload }: SheetProps<'invite-link'>) {
   const { code: referralCode } = useReferral(currentUserId || undefined);
 
   const getInviteLink = type === 'community' ? getCommunityInviteLink : getGroupInviteLink;
-  const inviteLink = inviteCode ? getInviteLink(inviteCode, referralCode) : '';
+  const inviteLink = inviteCode
+    ? getInviteLink(inviteCode, referralCode, {
+        utm_source: 'app_share',
+        utm_medium: 'referral',
+        utm_campaign: type === 'community' ? 'community_invite_2026' : 'group_invite_2026',
+        utm_content: 'invite_modal',
+      })
+    : '';
 
   const handleCopyLink = useCallback(async () => {
     if (!inviteLink) return;

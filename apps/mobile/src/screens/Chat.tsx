@@ -21,7 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, SkeletonConversation } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
 import { getConversationDisplayName } from '@rallia/shared-services';
-import { spacingPixels, fontSizePixels, primary } from '@rallia/design-system';
+import { spacingPixels, fontSizePixels, primary, secondary } from '@rallia/design-system';
 import {
   useFilteredConversations,
   usePlayerConversations,
@@ -48,7 +48,6 @@ import {
 import { useActionsSheet, useSport } from '../context';
 import { CopilotStep, WalkthroughableView } from '../context/TourContext';
 import SignInPrompt from '../components/SignInPrompt';
-import { FeedbackFAB } from '../components/BugReportFAB';
 import { SearchBar } from '../components/SearchBar';
 import { ConversationItem, ConversationFilterChips } from '../features/chat';
 import { useAppNavigation, useChatNavigation } from '../navigation/hooks';
@@ -486,7 +485,7 @@ const Chat = () => {
         ListEmptyComponent={
           isLoading ? (
             <View style={styles.loadingContainer}>
-              {[1, 2, 3, 4, 5, 6].map(i => (
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(i => (
                 <SkeletonConversation
                   key={i}
                   backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
@@ -528,13 +527,12 @@ const Chat = () => {
       />
 
       <View style={styles.fabContainer}>
-        <FeedbackFAB />
         <TouchableOpacity
-          style={[styles.fab, { backgroundColor: primary[500] }]}
+          style={[styles.fab, { backgroundColor: secondary[500] }]}
           onPress={handleNewGroupPress}
           activeOpacity={0.8}
         >
-          <Ionicons name="add-outline" size={28} color="#fff" />
+          <Ionicons name="add" size={28} color="#fff" />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -579,11 +577,11 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
+    elevation: 5,
   },
   loadingContainer: {
     flex: 1,

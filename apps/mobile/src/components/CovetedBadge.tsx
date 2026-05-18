@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Text, Skeleton } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
 import { isCoveted } from '@rallia/shared-utils';
@@ -19,6 +20,14 @@ interface CovetedBadgeProps {
   size?: 'sm' | 'md';
   /** Whether the badge is loading */
   isLoading?: boolean;
+}
+
+function withAlpha(hex: string, alpha: number): string {
+  const clamped = Math.max(0, Math.min(1, alpha));
+  const a = Math.round(clamped * 255)
+    .toString(16)
+    .padStart(2, '0');
+  return `${hex}${a}`;
 }
 
 const CovetedBadge: React.FC<CovetedBadgeProps> = ({
@@ -46,17 +55,37 @@ const CovetedBadge: React.FC<CovetedBadgeProps> = ({
 
   if (!isCoveted(reputationScore, certificationStatus ?? undefined, totalEvents)) return null;
 
-  const baseColor = isDark ? accent[400] : accent[500];
-  const bgColor = `${baseColor}25`;
+  const accentColor = isDark ? accent[400] : accent[500];
+
+  const gradientColors = (
+    isDark
+      ? [withAlpha(accentColor, 0.32), withAlpha(accentColor, 0.5)]
+      : [withAlpha(accentColor, 0.08), withAlpha(accentColor, 0.22)]
+  ) as [string, string];
+
+  const borderColor = isDark ? withAlpha(accentColor, 0.55) : withAlpha(accentColor, 0.3);
+
   const iconSize = size === 'sm' ? 10 : 12;
 
   return (
-    <View style={[styles.badge, { backgroundColor: bgColor }]}>
-      <Ionicons name="star" size={iconSize} color={baseColor} />
-      <Text size="xs" weight="semibold" color={baseColor}>
+    <LinearGradient
+      colors={gradientColors}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={[
+        styles.badge,
+        {
+          borderColor,
+          shadowColor: accentColor,
+          shadowOpacity: isDark ? 0 : 0.22,
+        },
+      ]}
+    >
+      <Ionicons name="star" size={iconSize} color={accentColor} />
+      <Text size="xs" weight="semibold" color={accentColor} style={styles.label}>
         {t('match.tier.topPlayer' as TranslationKey)}
       </Text>
-    </View>
+    </LinearGradient>
   );
 };
 
@@ -69,7 +98,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[1.5],
     paddingVertical: spacingPixels[0.5],
     borderRadius: radiusPixels.full,
-    marginBottom: spacingPixels[1],
+    borderWidth: StyleSheet.hairlineWidth,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  label: {
+    letterSpacing: 0.2,
   },
 });
 

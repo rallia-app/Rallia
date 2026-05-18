@@ -106,6 +106,23 @@ export function normalizeStorageUrl(
 }
 
 /**
+ * Whether the Supabase image-transformation render endpoint is available
+ * in the current environment. The feature requires Pro plan and above.
+ * On mobile, derived from EXPO_PUBLIC_APP_ENV (baked into the binary, OTA-safe).
+ * On web, controlled by NEXT_PUBLIC_ENABLE_IMAGE_TRANSFORM.
+ */
+function isImageTransformEnabled(): boolean {
+  if (typeof process === 'undefined' || !process.env) return true;
+  // Mobile: only production builds run on the Pro Supabase project
+  const appEnv = process.env.EXPO_PUBLIC_APP_ENV;
+  if (appEnv !== undefined) return appEnv === 'production';
+  // Web fallback
+  const raw = process.env.NEXT_PUBLIC_ENABLE_IMAGE_TRANSFORM;
+  if (raw === undefined) return true;
+  return raw !== 'false' && raw !== '0';
+}
+
+/**
  * Rewrite a public Supabase Storage URL to use the image render endpoint,
  * which resizes and recompresses the image server-side before delivery.
  * The rendered result is CDN-cached, so repeated requests are free.
@@ -128,6 +145,7 @@ export function getStorageImageUrl(
   if (!url) return null;
   if (!url.includes('.supabase.co')) return url;
   if (!url.includes('/storage/v1/object/public/')) return url;
+  if (!isImageTransformEnabled()) return url;
 
   const renderUrl = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
   const params = new URLSearchParams();

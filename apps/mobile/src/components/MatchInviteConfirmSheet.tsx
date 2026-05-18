@@ -25,7 +25,7 @@ import {
   getProfilePictureUrl,
 } from '@rallia/shared-utils';
 import { Logger, supabase } from '@rallia/shared-services';
-import { suggestionKeys } from '@rallia/shared-hooks';
+import { topSuggestionKeys, justForYouKeys } from '@rallia/shared-hooks';
 import { useThemeStyles, useTranslation } from '../hooks';
 import { useToast } from '@rallia/shared-components';
 
@@ -194,7 +194,8 @@ export function MatchInviteConfirmActionSheet(props: SheetProps<'match-invite-co
       toastSuccess(t('inviteConfirmSheet.successToast'));
       queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'player'] });
       queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'nearby'] });
-      queryClient.invalidateQueries({ queryKey: suggestionKeys.all });
+      queryClient.invalidateQueries({ queryKey: topSuggestionKeys.all });
+      queryClient.invalidateQueries({ queryKey: justForYouKeys.all });
       // Brief delay so the user perceives the success state before dismiss.
       setTimeout(() => {
         SheetManager.hide('match-invite-confirm');

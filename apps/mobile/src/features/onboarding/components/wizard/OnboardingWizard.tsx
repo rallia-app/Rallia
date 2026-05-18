@@ -46,7 +46,7 @@ import {
   requestToJoinCommunityByInviteCode,
   syncHomeLocation as syncHomeLocationToPlayer,
 } from '@rallia/shared-services';
-import { useProfile, usePlayer, useMatchSuggestions } from '@rallia/shared-hooks';
+import { useProfile, usePlayer, useTopSuggestions } from '@rallia/shared-hooks';
 import {
   PENDING_REFERRAL_KEY,
   ACQUISITION_CHANNEL_KEY,
@@ -63,7 +63,6 @@ import type {
   OnboardingPlayerPreferences,
   OnboardingAvailability,
   DayEnum,
-  PeriodEnum,
   GenderEnum,
 } from '@rallia/shared-types';
 
@@ -337,18 +336,18 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   // Player ID for referral sharing on success step
   const [successPlayerId, setSuccessPlayerId] = useState<string | null>(null);
 
-  // Match suggestions for post-success step
-  // Resolves sport from context or onboarding data
+  // Match suggestions for post-success step — pedagogical preview, suggestions
+  // only (no real matches mixed in). Top-5 by score, opponent-deduped.
   const suggestionSport = selectedSport ?? selectedSportsForSuccess[0];
   const {
     suggestions: matchSuggestions,
     isLoading: suggestionsLoading,
     refetch: refetchSuggestions,
-  } = useMatchSuggestions({
+  } = useTopSuggestions({
     playerId: successPlayerId,
     sportId: suggestionSport?.id,
     sportName: suggestionSport?.name,
-    limit: 5,
+    maxItems: 5,
     enabled: currentStepId === 'success' || currentStepId === 'suggestions',
   });
 
@@ -432,13 +431,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     [setSelectedSport]
   );
 
-  // Calculate total availability selections for validation
-  const totalAvailabilitySelections = useMemo(() => {
-    return Object.values(formData.availabilities).reduce(
-      (count, day) => count + Object.values(day).filter(Boolean).length,
-      0
-    );
-  }, [formData.availabilities]);
+  // Total selected hour cells. formData.availabilities is a Set<string>
+  // of `${day}-${hour}` cell keys (see HourlyAvailabilityGrid), so size
+  // is the count directly. The pre-hourly version of this file walked an
+  // {day: {period: bool}} record — left over from before PR B and the
+  // reason the Complete button was permanently disabled.
+  const totalAvailabilitySelections = formData.availabilities.size;
 
   // Check if button should be disabled based on current step's mandatory fields.
   // Mirrors the required-field checks performed inside validateAndSaveStep so the
@@ -475,7 +473,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         return formData.favoriteFacilities.length < 2;
       }
       case 'availabilities':
-        return totalAvailabilitySelections < 3;
+        // 6 hour cells minimum — matches MIN_AVAILABILITIES used on
+        // UserProfile save + useProfileCompleteness; the old "3" was the
+        // pre-hourly block-count floor.
+        return totalAvailabilitySelections < 6;
       default:
         return false;
     }
@@ -487,13 +488,28 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   // Get current step index for animations
   const currentStepIndex = steps.indexOf(currentStepId);
 
-  // Animate step changes
+  // Track the previous index so we can tell apart a single-step user
+  // navigation (delta = 1) from a multi-step jump triggered by the
+  // auto-skip after data loads (delta > 1, e.g. 0 → 5). The auto-skip
+  // would otherwise spring across every intermediate step and visually
+  // "bounce" through the skipped ones.
+  const prevStepIndexRef = useRef(currentStepIndex);
+
   useEffect(() => {
-    translateX.value = withSpring(-currentStepIndex * SCREEN_WIDTH, {
-      damping: 80,
-      stiffness: 600,
-      overshootClamping: false,
-    });
+    const delta = Math.abs(currentStepIndex - prevStepIndexRef.current);
+    prevStepIndexRef.current = currentStepIndex;
+    const target = -currentStepIndex * SCREEN_WIDTH;
+    if (delta > 1) {
+      // Multi-step jump (auto-skip, wizard reset): snap instantly.
+      translateX.value = target;
+    } else {
+      // Single-step user navigation: animate.
+      translateX.value = withSpring(target, {
+        damping: 80,
+        stiffness: 600,
+        overshootClamping: false,
+      });
+    }
   }, [currentStepIndex, translateX]);
 
   // Validate and save current step data
@@ -815,35 +831,16 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       case 'availabilities':
         setIsSaving(true);
         try {
-          const dayMap: Record<string, DayEnum> = {
-            Mon: 'monday',
-            Tue: 'tuesday',
-            Wed: 'wednesday',
-            Thu: 'thursday',
-            Fri: 'friday',
-            Sat: 'saturday',
-            Sun: 'sunday',
-          };
-
-          const timeSlotMap: Record<string, PeriodEnum> = {
-            AM: 'morning',
-            PM: 'afternoon',
-            EVE: 'evening',
-          };
-
+          // formData.availabilities is a flat Set of `${day}-${hour}` cell
+          // keys from the hourly grid; one OnboardingAvailability row per
+          // active cell, all with is_active = true.
           const availabilityData: OnboardingAvailability[] = [];
-
-          Object.entries(formData.availabilities).forEach(([day, slots]) => {
-            Object.entries(slots).forEach(([slot, isActive]) => {
-              if (isActive) {
-                availabilityData.push({
-                  day: dayMap[day],
-                  period: timeSlotMap[slot],
-                  is_active: true,
-                });
-              }
-            });
-          });
+          for (const key of formData.availabilities) {
+            const sepIdx = key.lastIndexOf('-');
+            const day = key.slice(0, sepIdx) as DayEnum;
+            const hour = Number(key.slice(sepIdx + 1));
+            availabilityData.push({ day, hour_of_day: hour, is_active: true });
+          }
 
           const { error } = await OnboardingService.saveAvailability(availabilityData);
 
@@ -852,26 +849,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             Alert.alert(t('alerts.error'), t('onboarding.validation.failedToSaveAvailability'));
             setIsSaving(false);
             return false;
-          }
-
-          // Save the privacy setting to the player table
-          const {
-            data: { user },
-          } = await supabase.auth.getUser();
-          if (user) {
-            const { error: privacyError } = await supabase
-              .from('player')
-              .update({ privacy_show_availability: formData.privacyShowAvailability })
-              .eq('id', user.id);
-
-            if (privacyError) {
-              Logger.warn('Failed to save availability privacy setting', { error: privacyError });
-              // Don't block the flow if this fails - just log it
-            } else {
-              Logger.debug('availability_privacy_saved', {
-                privacyShowAvailability: formData.privacyShowAvailability,
-              });
-            }
           }
 
           // Mark onboarding as completed - this is CRITICAL and must succeed
@@ -1191,6 +1168,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             colors={colors}
             t={t}
             isDark={isDark}
+            locale={locale}
           />
         );
       case 'success':

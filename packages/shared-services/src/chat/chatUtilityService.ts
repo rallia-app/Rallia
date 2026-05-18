@@ -11,6 +11,13 @@ import { getPlayerConversations } from './conversationService';
 // DISPLAY NAME UTILITY
 // ============================================================================
 
+function formatMatchTime(pgTime: string): string {
+  const [hours, minutes] = pgTime.split(':').map(Number);
+  const d = new Date();
+  d.setHours(hours, minutes, 0, 0);
+  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+
 /**
  * Derive the display name for a conversation from its data.
  *
@@ -45,10 +52,9 @@ export function getConversationDisplayName(
             day: 'numeric',
           })
         : '';
-      const sportName = mi.sport_name
-        ? mi.sport_name.charAt(0).toUpperCase() + mi.sport_name.slice(1)
-        : '';
-      return dateStr ? `${sportName} ${formatLabel} - ${dateStr}` : `${sportName} ${formatLabel}`;
+      const timeStr = mi.start_time ? formatMatchTime(mi.start_time) : '';
+      const datePart = [dateStr, timeStr].filter(Boolean).join(', ');
+      return datePart ? `${formatLabel} - ${datePart}` : formatLabel;
     }
     return conversation.title || t('chat.filters.match');
   }

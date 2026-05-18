@@ -78,6 +78,9 @@ export type {
   InvitationTopTarget,
   InvitationTimeseriesPoint,
   InvitationTimeseries,
+  UtmSignupStat,
+  UtmCampaign,
+  UtmTotalsComparison,
 } from './analyticsService';
 
 // Analytics Service - Functions
@@ -126,6 +129,11 @@ export {
   getInvitationTopTargets,
   getInvitationTimeseries,
   resolveInvitationTargets,
+  getUtmSignupStats,
+  getUtmTotalsComparison,
+  getUtmCampaigns,
+  createUtmCampaign,
+  archiveUtmCampaign,
 } from './analyticsService';
 
 // Audit Service - Types

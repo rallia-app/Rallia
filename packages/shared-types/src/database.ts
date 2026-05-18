@@ -80,7 +80,13 @@ export type AvailabilityEnum = DbEnum<'availability_enum'>;
 
 // Time & Schedule
 export type DayEnum = DbEnum<'day_enum'>;
-export type PeriodEnum = DbEnum<'period_enum'>;
+
+/**
+ * Hour cell on the weekly availability grid. 6..22 inclusive — 6 represents
+ * the 06:00–07:00 window, 22 the 22:00–23:00 window. Stored on
+ * `player_availability.hour_of_day` (SMALLINT).
+ */
+export type AvailabilityHour = number;
 
 // Rating
 export type RatingCertificationMethodEnum = DbEnum<'rating_certification_method_enum'>;
@@ -167,7 +173,6 @@ export type MatchDuration = DbEnum<'match_duration_enum'>;
 
 // Time & Schedule (non-suffixed variants)
 export type DayOfWeek = DbEnum<'day_of_week'>;
-export type TimePeriod = DbEnum<'time_period'>;
 
 // Court (non-suffixed variants)
 export type CourtSurface = DbEnum<'court_surface'>;
@@ -241,6 +246,14 @@ export type MatchResult = TableRow<'match_result'>;
 export type MatchSet = TableRow<'match_set'>;
 export type MatchFeedback = TableRow<'match_feedback'>;
 export type MatchReport = TableRow<'match_report'>;
+export type MatchTimeSuggestion = TableRow<'match_time_suggestion'>;
+/** Narrow status type — the underlying column is TEXT with a CHECK constraint. */
+export type MatchTimeSuggestionStatus =
+  | 'pending'
+  | 'accepted'
+  | 'declined'
+  | 'withdrawn'
+  | 'superseded';
 
 /** Match result with nested set scores and confirmations (from getMatchWithDetails) */
 export interface MatchResultWithSets extends MatchResult {
@@ -562,16 +575,15 @@ export interface OnboardingRating {
   display_label: string;
 }
 
+/**
+ * Onboarding/edit payload for a single availability assertion. One row per
+ * (day, hour_of_day) cell from the 7×17 weekly hourly grid.
+ */
 export interface OnboardingAvailability {
-  /** Day of the week (new column name) */
-  day?: DayEnum;
-  /** Time period (new column name) */
-  period?: PeriodEnum;
+  day: DayEnum;
+  /** Hourly cell (6..22). */
+  hour_of_day: AvailabilityHour;
   is_active: boolean;
-  /** @deprecated Use 'day' instead */
-  day_of_week?: DayOfWeek;
-  /** @deprecated Use 'period' instead */
-  time_period?: TimePeriod;
 }
 
 export interface OnboardingData {

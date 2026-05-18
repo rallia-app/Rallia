@@ -3,6 +3,7 @@
  */
 
 export { default as FacilityCard } from './FacilityCard';
+export { default as FacilityCardSkeleton } from './FacilityCardSkeleton';
 export { default as FacilityFiltersBar } from './FacilityFiltersBar';
 export { default as InfoTab } from './InfoTab';
 export { default as AvailabilityTab } from './AvailabilityTab';

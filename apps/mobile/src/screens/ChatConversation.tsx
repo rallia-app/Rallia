@@ -262,7 +262,6 @@ export default function ChatConversationScreen() {
     }
     getMatchWithDetails(conversation.match_id).then(match => {
       if (!match) return;
-      const sportName = (match.sport as { name?: string } | null)?.name ?? '';
       const format = match.format ?? 'singles';
       const formatLabel =
         format === 'doubles' ? t('match.format.doubles') : t('match.format.singles');
@@ -270,9 +269,17 @@ export default function ChatConversationScreen() {
       const dateStr = matchDate
         ? new Date(matchDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
         : '';
-      setDerivedMatchTitle(
-        dateStr ? `${sportName} ${formatLabel} - ${dateStr}` : `${sportName} ${formatLabel}`
-      );
+      const startTime = (match as { start_time?: string | null }).start_time;
+      const timeStr = startTime
+        ? (() => {
+            const [h, m] = startTime.split(':').map(Number);
+            const d = new Date();
+            d.setHours(h, m, 0, 0);
+            return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+          })()
+        : '';
+      const datePart = [dateStr, timeStr].filter(Boolean).join(', ');
+      setDerivedMatchTitle(datePart ? `${formatLabel} - ${datePart}` : formatLabel);
     });
   }, [conversation, routeTitle, t]);
 

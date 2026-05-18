@@ -10,6 +10,8 @@
 // TYPES
 // ============================================================================
 
+import { buildUtmUrl, type UtmParams } from '@rallia/shared-utils';
+
 export type InvitationType =
   | 'referral'
   | 'match'
@@ -26,6 +28,8 @@ export interface InvitationLinkParams {
   targetId?: string;
   /** Optional per-recipient match share token for contact-based tracking */
   shareToken?: string;
+  /** Optional UTM params for inbound attribution — built via @rallia/shared-utils buildUtmUrl */
+  utm?: UtmParams;
 }
 
 export interface ParsedInvitationLink {
@@ -67,12 +71,8 @@ const LOCALE_PREFIX = /^\/(en|en-US|fr|fr-CA|fr-FR)\//;
  *     → https://rallia.app/invite/ABCD1234?type=match&id=uuid&share=tok
  */
 export function generateInvitationLink(params: InvitationLinkParams): string {
-  const { type, referralCode, targetId, shareToken } = params;
+  const { type, referralCode, targetId, shareToken, utm } = params;
   const base = `${BASE_URL}/invite/${encodeURIComponent(referralCode)}`;
-
-  if (type === 'referral' && !targetId && !shareToken) {
-    return base;
-  }
 
   const searchParams = new URLSearchParams();
   if (type !== 'referral') {
@@ -86,7 +86,8 @@ export function generateInvitationLink(params: InvitationLinkParams): string {
   }
 
   const qs = searchParams.toString();
-  return qs ? `${base}?${qs}` : base;
+  const withRouting = qs ? `${base}?${qs}` : base;
+  return utm ? buildUtmUrl(withRouting, utm) : withRouting;
 }
 
 // ============================================================================

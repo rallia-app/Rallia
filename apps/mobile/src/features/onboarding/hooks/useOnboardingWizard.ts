@@ -10,6 +10,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DatabaseService, { Logger, supabase } from '@rallia/shared-services';
 import type { FacilitySearchResult } from '@rallia/shared-types';
+import { cellKey, emptyGrid, type HourGrid } from '../components/HourlyAvailabilityGrid';
 import * as Analytics from '../../../services/analytics';
 
 /**
@@ -71,9 +72,11 @@ export interface OnboardingFormData {
   // Favorite facilities (up to 6 for dual-sport users)
   favoriteFacilities: FacilitySearchResult[];
 
-  // Availabilities
-  availabilities: Record<string, { AM: boolean; PM: boolean; EVE: boolean }>;
-  privacyShowAvailability: boolean;
+  // Availabilities — flat `Set<string>` of `${day}-${hour}` cell keys from
+  // the 7×17 weekly hourly grid (hours 6..22 inclusive). See
+  // HourlyAvailabilityGrid for the cell-key helpers; save flow in
+  // OnboardingWizard converts to OnboardingAvailability[] with hour_of_day.
+  availabilities: HourGrid;
 }
 
 interface UseOnboardingWizardReturn {
@@ -106,15 +109,7 @@ interface UseOnboardingWizardReturn {
   steps: OnboardingStepId[];
 }
 
-const DEFAULT_AVAILABILITIES = {
-  Mon: { AM: false, PM: false, EVE: false },
-  Tue: { AM: false, PM: false, EVE: false },
-  Wed: { AM: false, PM: false, EVE: false },
-  Thu: { AM: false, PM: false, EVE: false },
-  Fri: { AM: false, PM: false, EVE: false },
-  Sat: { AM: false, PM: false, EVE: false },
-  Sun: { AM: false, PM: false, EVE: false },
-};
+const DEFAULT_AVAILABILITIES: HourGrid = emptyGrid();
 
 const INITIAL_FORM_DATA: OnboardingFormData = {
   firstName: '',
@@ -142,7 +137,6 @@ const INITIAL_FORM_DATA: OnboardingFormData = {
   pickleballMatchType: 'competitive',
   favoriteFacilities: [],
   availabilities: DEFAULT_AVAILABILITIES,
-  privacyShowAvailability: true,
 };
 
 /**
@@ -221,10 +215,8 @@ function isStepComplete(stepId: OnboardingStepId, formData: OnboardingFormData):
     }
 
     case 'availabilities':
-      // Availabilities have defaults, check if at least one slot is selected
-      return Object.values(formData.availabilities).some(
-        slots => slots.AM || slots.PM || slots.EVE
-      );
+      // Availabilities have defaults, check if at least one cell is selected
+      return formData.availabilities.size > 0;
 
     case 'success':
     case 'suggestions':
@@ -319,9 +311,6 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
           if (playerRes.data.max_travel_distance) {
             updates.maxTravelDistance = playerRes.data.max_travel_distance;
           }
-          // Load privacy_show_availability (defaults to true if not set)
-          // This ensures the visibility toggle shows the user's saved preference
-          updates.privacyShowAvailability = playerRes.data.privacy_show_availability ?? true;
         }
 
         // Sports data
@@ -428,43 +417,15 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
           }
         }
 
-        // Availability data
+        // Availability data — populate the hour grid directly. One cell per
+        // active row; the grid is keyed by the same DB DayEnum the row carries.
         if (availRes.data && availRes.data.length > 0) {
-          const dayMap: Record<string, string> = {
-            monday: 'Mon',
-            tuesday: 'Tue',
-            wednesday: 'Wed',
-            thursday: 'Thu',
-            friday: 'Fri',
-            saturday: 'Sat',
-            sunday: 'Sun',
-          };
-
-          const periodMap: Record<string, 'AM' | 'PM' | 'EVE'> = {
-            morning: 'AM',
-            afternoon: 'PM',
-            evening: 'EVE',
-          };
-
-          // Start with all false
-          const availabilities: Record<string, { AM: boolean; PM: boolean; EVE: boolean }> = {
-            Mon: { AM: false, PM: false, EVE: false },
-            Tue: { AM: false, PM: false, EVE: false },
-            Wed: { AM: false, PM: false, EVE: false },
-            Thu: { AM: false, PM: false, EVE: false },
-            Fri: { AM: false, PM: false, EVE: false },
-            Sat: { AM: false, PM: false, EVE: false },
-            Sun: { AM: false, PM: false, EVE: false },
-          };
-
+          const availabilities: Set<string> = new Set();
           for (const avail of availRes.data) {
-            const day = dayMap[avail.day];
-            const period = periodMap[avail.period];
-            if (day && period && avail.is_active) {
-              availabilities[day][period] = true;
+            if (avail.is_active) {
+              availabilities.add(cellKey(avail.day, avail.hour_of_day));
             }
           }
-
           updates.availabilities = availabilities;
         }
 
@@ -496,9 +457,14 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
         if (favoritesError) {
           Logger.warn('Failed to load favorite facilities', { error: favoritesError });
         } else if (favoritesData && favoritesData.length > 0) {
-          // Transform to FacilitySearchResult format with sport_ids populated
-          // sport_ids is critical for computeFavoriteSportCounts to work correctly
-          const favoriteFacilities: FacilitySearchResult[] = favoritesData.map(item => {
+          // player_favorite_facility's unique constraint is
+          // (player_id, facility_id, sport_id) — so a facility favorited for
+          // BOTH tennis and pickleball returns two rows with the same
+          // facility_id. Dedupe by facility id; the embedded `facility_sport`
+          // join already carries the facility's full sport list, so we don't
+          // lose multi-sport coverage by collapsing duplicate rows.
+          const byId = new Map<string, FacilitySearchResult>();
+          for (const item of favoritesData) {
             const facility = item.facility as unknown as {
               id: string;
               name: string;
@@ -508,22 +474,24 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
               timezone: string | null;
               facility_sport: Array<{ sport_id: string }>;
             };
-            // Extract sport_ids from the facility_sport junction table
+            const id = facility?.id || item.facility_id;
+            if (byId.has(id)) continue;
             const sportIds = facility?.facility_sport?.map(fs => fs.sport_id) ?? [];
-            return {
-              id: facility?.id || item.facility_id,
+            byId.set(id, {
+              id,
               name: facility?.name || 'Unknown Facility',
               city: facility?.city || null,
               address: facility?.address || null,
-              distance_meters: null, // Not relevant for saved favorites
+              distance_meters: null,
               data_provider_id: facility?.data_provider_id || null,
               data_provider_type: null,
               booking_url_template: null,
               external_provider_id: null,
               timezone: facility?.timezone || null,
-              sport_ids: sportIds, // Critical for per-sport counting!
-            };
-          });
+              sport_ids: sportIds,
+            });
+          }
+          const favoriteFacilities: FacilitySearchResult[] = Array.from(byId.values());
           updates.favoriteFacilities = favoriteFacilities;
           Logger.debug('Loaded favorite facilities', {
             count: favoriteFacilities.length,

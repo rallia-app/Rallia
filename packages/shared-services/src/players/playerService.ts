@@ -3,6 +3,7 @@
  * Handles player search and related operations.
  */
 
+import type { DayEnum } from '@rallia/shared-types';
 import { supabase } from '../supabase';
 
 // =============================================================================
@@ -28,7 +29,15 @@ export interface HomeLocation {
  * Filter types for player search
  */
 export type GenderFilter = 'all' | 'male' | 'female' | 'other';
-export type AvailabilityFilter = 'all' | 'morning' | 'afternoon' | 'evening';
+/**
+ * Hour-range filter for `search_players_nearby`. The RPC takes optional
+ * `p_min_hour` / `p_max_hour` SMALLINT params (0..23). `null` on either
+ * bound means open-ended; both null = no hour-range filter at all.
+ */
+export interface HourRangeFilter {
+  minHour: number | null;
+  maxHour: number | null;
+}
 export type DayFilter =
   | 'all'
   | 'monday'
@@ -65,7 +74,8 @@ export interface PlayerFilters {
   reputation?: ReputationFilter; // reputation tier filter
   certifiedOnly?: boolean; // show only certified players
   maxDistance?: DistanceFilter;
-  availability?: AvailabilityFilter;
+  /** Hour range filter (06..22). Both `minHour`/`maxHour` null = no filter. */
+  hourRange?: HourRangeFilter;
   day?: DayFilter;
   playStyle?: PlayStyleFilter;
   sortBy?: SortByFilter;
@@ -107,6 +117,8 @@ export interface PlayerSearchResult {
   /** Last seen timestamp for online status */
   last_seen_at: string | null;
 }
+
+export type AvailabilityDay = DayEnum;
 
 /**
  * Paginated response for player search
@@ -219,8 +231,10 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
         : parseInt(String(filters.maxDistance), 10)
       : null;
 
-  const availability =
-    filters.availability && filters.availability !== 'all' ? filters.availability : null;
+  // Hour range → RPC's optional p_min_hour / p_max_hour. Null means
+  // open-ended on that bound; both null = no hour-range filter.
+  const minHour = filters.hourRange?.minHour ?? null;
+  const maxHour = filters.hourRange?.maxHour ?? null;
 
   const day = filters.day && filters.day !== 'all' ? filters.day : null;
 
@@ -256,7 +270,9 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     p_min_skill_value: minSkillValue,
     p_min_travel_distance_km:
       !minTravelDistanceKm || isNaN(minTravelDistanceKm) ? null : minTravelDistanceKm,
-    p_availability: availability,
+    // p_availability is a deprecated no-op on the RPC; kept null to satisfy
+    // the signature. Hour filtering now flows through p_min_hour/p_max_hour.
+    p_availability: null,
     p_day: day,
     p_play_style: playStyle,
     p_favorite_player_ids: favoritePlayerIds.length > 0 ? favoritePlayerIds : null,
@@ -270,6 +286,8 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     p_rating_score_ids: ratingScoreIds,
     p_reputation_tier: reputationTier,
     p_certified_only: certifiedOnly,
+    p_min_hour: minHour,
+    p_max_hour: maxHour,
   });
 
   if (error) {
@@ -351,7 +369,7 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
 export async function syncHomeLocation(
   playerId: string,
   location: HomeLocation
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; transient?: boolean }> {
   try {
     const { error } = await supabase
       .from('player')
@@ -364,8 +382,17 @@ export async function syncHomeLocation(
       .eq('id', playerId);
 
     if (error) {
-      console.error('[PlayerService] Failed to sync home location:', error);
-      return { success: false, error: error.message };
+      // 57014 = statement_timeout. The sync is redundant most of the time
+      // (caller now compares values before calling), so a transient timeout
+      // shouldn't surface as a scary console error. The next sign-in will
+      // retry if anything actually drifted.
+      const isStatementTimeout = error.code === '57014';
+      if (isStatementTimeout) {
+        console.debug('[PlayerService] Home location sync timed out (will retry next sign-in)');
+      } else {
+        console.error('[PlayerService] Failed to sync home location:', error);
+      }
+      return { success: false, error: error.message, transient: isStatementTimeout };
     }
 
     return { success: true };

@@ -126,6 +126,11 @@ export interface FeedbackSheetData {
   opponents: OpponentForFeedback[];
   /** IDs of opponents already rated (for resuming partial feedback) */
   alreadyRatedOpponentIds: string[];
+  /** Sport ID — propagated to analytics on submit so events have sport context
+   *  even when the match-detail sheet is no longer open */
+  sportId?: string;
+  /** Sport name (lowercased internal slug, e.g. "tennis") */
+  sportName?: string;
 }
 
 /**

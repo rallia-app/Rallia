@@ -32,7 +32,15 @@ export type RootStackParamList = {
   Main: NavigatorScreenParams<BottomTabParamList>;
 
   // Shared screens - full screen, hides tabs when navigated to
-  UserProfile: { userId?: string }; // undefined = current user's profile
+  UserProfile: {
+    userId?: string; // undefined = current user's profile
+    /**
+     * When `'availability'`, UserProfile auto-opens the player-availabilities
+     * edit overlay once the player's data has loaded. Used by the Home
+     * "refresh your availability" banner CTA.
+     */
+    openSheet?: 'availability';
+  };
   PlayerProfile: { playerId: string; sportId?: string }; // View another player's profile
   SportProfile: SportProfileScreenParams;
   Settings: undefined;

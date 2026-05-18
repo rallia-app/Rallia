@@ -27,12 +27,22 @@ import {
   Easing,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import * as WebBrowser from 'expo-web-browser';
 import MapView, { Marker } from 'react-native-maps';
 import { WebView } from 'react-native-webview';
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { BaseActionSheet } from './BaseActionSheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Button, useToast } from '@rallia/shared-components';
+import {
+  Text,
+  Button,
+  useToast,
+  Card,
+  Badge as DSBadge,
+  VStack,
+  HStack,
+  Divider,
+} from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -90,8 +100,14 @@ import {
   getTierForScore,
   getTierConfig,
   MIN_EVENTS_FOR_PUBLIC,
+  supabase,
+  listTimeSuggestionsForMatch,
+  respondToTimeSuggestion,
+  type MatchTimeSuggestionWithSuggester,
 } from '@rallia/shared-services';
+import { useStripe } from '@stripe/stripe-react-native';
 import { SheetManager } from 'react-native-actions-sheet';
+import { MATCH_REIMBURSEMENT_ENABLED } from '../constants/features';
 import { shareMatch } from '../utils';
 import { openInMaps } from '../utils/openInMaps';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
@@ -106,6 +122,17 @@ import * as Analytics from '../services/analytics';
 import { MatchAvailableCourtsSection } from '../features/matches/components/MatchAvailableCourtsSection';
 
 // Use base.white from design system for consistency
+
+/**
+ * Format a CAD amount (in cents) using the active locale.
+ * Use this anywhere money is displayed — never hand-roll `$${X}` strings.
+ */
+function formatCAD(cents: number, locale: string): string {
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: 'CAD',
+  }).format(cents / 100);
+}
 
 // =============================================================================
 // TYPES & CONSTANTS
@@ -719,6 +746,7 @@ export const MatchDetailSheet: React.FC = () => {
   const { location: locationPermission } = usePermissions();
   const isDark = theme === 'dark';
   const toast = useToast();
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const playerId = player?.id;
   const navigation = useAppNavigation();
   // Derive reputation display from the match data (already fetched with the match)
@@ -865,19 +893,21 @@ export const MatchDetailSheet: React.FC = () => {
     onJoinSuccess: result => {
       const sport_id = selectedMatch?.sport?.id ?? 'unknown';
       const sport_name = selectedMatch?.sport?.name ?? 'unknown';
+      const match_id = selectedMatch?.id ?? 'unknown';
       if (result.status === 'joined') {
-        Analytics.matchJoined({ sport_id, sport_name });
+        Analytics.matchJoined({ match_id, sport_id, sport_name });
         if (selectedMatch && getParticipantInfo(selectedMatch).spotsLeft === 1) {
           Analytics.matchFilled({
+            match_id: selectedMatch.id,
             sport_id,
             sport_name,
             format: selectedMatch.format ?? 'unknown',
           });
         }
       } else if (result.status === 'waitlisted') {
-        Analytics.waitlistJoined({ sport_id, sport_name });
+        Analytics.waitlistJoined({ match_id, sport_id, sport_name });
       } else {
-        Analytics.matchJoinRequested({ sport_id, sport_name });
+        Analytics.matchJoinRequested({ match_id, sport_id, sport_name });
       }
       successHaptic();
       closeSheet();
@@ -1141,7 +1171,17 @@ export const MatchDetailSheet: React.FC = () => {
     if (!selectedMatch) return;
     lightHaptic();
     try {
-      await shareMatch(selectedMatch, { t, locale, referralCode });
+      await shareMatch(selectedMatch, {
+        t,
+        locale,
+        referralCode,
+        utm: {
+          utm_source: 'app_share',
+          utm_medium: 'referral',
+          utm_campaign: 'match_share_2026',
+          utm_content: 'match_detail',
+        },
+      });
       Analytics.matchShared({
         sport_id: selectedMatch.sport?.id ?? 'unknown',
         sport_name: selectedMatch.sport?.name ?? 'unknown',
@@ -1282,7 +1322,15 @@ export const MatchDetailSheet: React.FC = () => {
           hasExistingReport: false,
         };
       });
-    openFeedbackSheet(selectedMatch.id, playerId, participant.id, opponents);
+    openFeedbackSheet(
+      selectedMatch.id,
+      playerId,
+      participant.id,
+      opponents,
+      selectedMatch.sport
+        ? { id: selectedMatch.sport.id, name: selectedMatch.sport.name }
+        : undefined
+    );
   }, [selectedMatch, playerId, openFeedbackSheet]);
 
   // Handle opening the match chat conversation
@@ -1670,6 +1718,425 @@ export const MatchDetailSheet: React.FC = () => {
     };
   }, [isStartingSoonForAnimation, selectedMatch]);
 
+  // Reimbursement hooks — must be before early return for hooks rules
+  const [isPaying, setIsPaying] = useState(false);
+  // Host's Stripe Connect onboarding status (null while loading)
+  const [hostStripeConnected, setHostStripeConnected] = useState<boolean | null>(null);
+  // Host's chosen payouts mode: 'auto' | 'manual_only' | 'undecided' | null while loading
+  const [hostPayoutsMode, setHostPayoutsMode] = useState<
+    'auto' | 'manual_only' | 'undecided' | null
+  >(null);
+  // For host view: total cents currently parked in Rallia balance awaiting their onboarding
+  const [pendingFundsCents, setPendingFundsCents] = useState<number>(0);
+  // Whether to show the "How do you want to handle reimbursements?" choice sheet
+  // Confirmation modal before host opts into manual_only when they have pending funds
+  const [showSwitchToManualConfirm, setShowSwitchToManualConfirm] = useState(false);
+  // Per-participant in-flight tracker for the host's "Mark as Paid" buttons
+  // and the non-host "Mark as Paid" button. Keyed by participant.id.
+  const [markingPaid, setMarkingPaid] = useState<Set<string>>(() => new Set());
+
+  // Hydrate host data: payouts_mode + Stripe onboarding status, in parallel
+  useEffect(() => {
+    if (!MATCH_REIMBURSEMENT_ENABLED) return;
+    if (
+      !selectedMatch ||
+      !selectedMatch.estimated_cost ||
+      selectedMatch.is_court_free ||
+      selectedMatch.cost_split_type !== 'split_equal' ||
+      !selectedMatch.created_by
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    Promise.all([
+      supabase
+        .from('player')
+        .select('payouts_mode')
+        .eq('id', selectedMatch.created_by)
+        .maybeSingle(),
+      supabase
+        .from('player_stripe_account')
+        .select('onboarding_completed')
+        .eq('player_id', selectedMatch.created_by)
+        .maybeSingle(),
+    ]).then(([{ data: playerRow }, { data: psaRow }]) => {
+      if (cancelled) return;
+      setHostPayoutsMode(
+        (playerRow?.payouts_mode as 'auto' | 'manual_only' | 'undecided') ?? 'undecided'
+      );
+      setHostStripeConnected(psaRow?.onboarding_completed ?? false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    selectedMatch?.created_by,
+    selectedMatch?.cost_split_type,
+    selectedMatch?.is_court_free,
+    selectedMatch?.estimated_cost,
+  ]);
+
+  // For the host: load pending_host_transfer total awaiting their onboarding,
+  // so we can show the "$X ready to receive" banner.
+  useEffect(() => {
+    if (!MATCH_REIMBURSEMENT_ENABLED) return;
+    if (!selectedMatch || !playerId || selectedMatch.created_by !== playerId) {
+      setPendingFundsCents(0);
+      return;
+    }
+    if (hostStripeConnected) {
+      // Already onboarded — no pending banner needed
+      setPendingFundsCents(0);
+      return;
+    }
+
+    let cancelled = false;
+    supabase
+      .from('pending_host_transfer')
+      .select('amount_cents')
+      .eq('host_player_id', playerId)
+      .eq('status', 'awaiting_onboarding')
+      .then(({ data }) => {
+        if (cancelled) return;
+        const total = (data ?? []).reduce((sum, row) => sum + (row.amount_cents ?? 0), 0);
+        setPendingFundsCents(total);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedMatch?.id, selectedMatch?.created_by, playerId, hostStripeConnected]);
+
+  const handlePayNow = useCallback(async () => {
+    if (!selectedMatch?.id) return;
+    lightHaptic();
+    setIsPaying(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('match-reimbursement-create', {
+        body: { matchId: selectedMatch.id },
+      });
+
+      // Map server-side guard codes to specific, actionable toasts.
+      const guardCode = (data as { error?: string } | null)?.error;
+      if (guardCode) {
+        const hostName = getHumanName(
+          selectedMatch.created_by_player?.profile,
+          t('matchDetail.host' as TranslationKey)
+        );
+        switch (guardCode) {
+          case 'match_not_finished':
+            warningHaptic();
+            toast.error(t('matchDetail.payErrors.matchNotFinished' as TranslationKey));
+            return;
+          case 'match_not_full':
+            warningHaptic();
+            toast.error(t('matchDetail.payErrors.matchNotFull' as TranslationKey));
+            return;
+          case 'host_manual_only':
+            warningHaptic();
+            toast.error(
+              t('matchDetail.payErrors.hostManualOnly' as TranslationKey, { name: hostName })
+            );
+            return;
+          case 'already_paid':
+            warningHaptic();
+            toast.error(t('matchDetail.payErrors.alreadyPaid' as TranslationKey));
+            return;
+          default:
+            break;
+        }
+      }
+
+      if (error || !data?.clientSecret) throw new Error(error?.message ?? 'No client secret');
+
+      const { error: initError } = await initPaymentSheet({
+        paymentIntentClientSecret: data.clientSecret,
+        merchantDisplayName: 'Rallia',
+        applePay: { merchantCountryCode: 'CA' },
+        googlePay: { merchantCountryCode: 'CA', currencyCode: 'CAD', testEnv: __DEV__ },
+      });
+      if (initError) throw new Error(initError.message);
+
+      const { error: paymentError } = await presentPaymentSheet();
+      if (paymentError?.code === 'Canceled') return;
+      if (paymentError) throw new Error(paymentError.message);
+
+      updateSelectedMatch({
+        ...selectedMatch,
+        participants: selectedMatch.participants?.map(p =>
+          p.player_id === playerId ? { ...p, has_paid: true } : p
+        ),
+      });
+      successHaptic();
+      const paidAmount = formatCAD(data.amountCents ?? 0, locale);
+      const hostNameForToast = getHumanName(
+        selectedMatch.created_by_player?.profile,
+        t('matchDetail.host' as TranslationKey)
+      );
+      toast.success(
+        t('matchDetail.paymentSuccessWithDetails' as TranslationKey, {
+          amount: paidAmount,
+          name: hostNameForToast,
+        })
+      );
+    } catch {
+      errorHaptic();
+      toast.error(t('matchDetail.paymentError' as TranslationKey));
+    } finally {
+      setIsPaying(false);
+    }
+  }, [
+    selectedMatch,
+    playerId,
+    initPaymentSheet,
+    presentPaymentSheet,
+    updateSelectedMatch,
+    toast,
+    t,
+    locale,
+  ]);
+
+  const handleMarkAsPaid = useCallback(
+    async (targetPlayerId?: string) => {
+      const pid = targetPlayerId ?? playerId;
+      if (!selectedMatch?.id || !pid) return;
+      // Resolve the participant id we want to mark
+      const participant = selectedMatch.participants?.find(p => p.player_id === pid);
+      if (!participant?.id) return;
+
+      // Track per-row in-flight state so the Mark-as-Paid button can disable
+      // and avoid double-fire on rapid taps.
+      lightHaptic();
+      setMarkingPaid(prev => {
+        if (prev.has(participant.id)) return prev;
+        const next = new Set(prev);
+        next.add(participant.id);
+        return next;
+      });
+
+      let alreadyPaidViaStripe = false;
+      // Server-side: handles Stripe refund if there's an in-flight charge.
+      // Falls back to a direct DB update if the function call fails (offline,
+      // host opted into manual_only with no stripe row, etc.).
+      try {
+        const { data, error } = await supabase.functions.invoke('match-payment-mark-manual', {
+          body: { participantId: participant.id },
+        });
+        if (error) throw error;
+        if ((data as { error?: string } | null)?.error === 'already_paid_via_stripe') {
+          alreadyPaidViaStripe = true;
+        }
+      } catch {
+        // Fall back to direct DB update — fine for hosts in manual_only mode
+        // since there's no Stripe charge to reconcile.
+        await supabase
+          .from('match_participant')
+          .update({ has_paid: true })
+          .eq('match_id', selectedMatch.id)
+          .eq('player_id', pid);
+      } finally {
+        setMarkingPaid(prev => {
+          if (!prev.has(participant.id)) return prev;
+          const next = new Set(prev);
+          next.delete(participant.id);
+          return next;
+        });
+      }
+
+      if (alreadyPaidViaStripe) {
+        errorHaptic();
+        toast.error(t('matchDetail.payErrors.alreadyPaidViaStripe' as TranslationKey));
+        return;
+      }
+
+      updateSelectedMatch({
+        ...selectedMatch,
+        participants: selectedMatch.participants?.map(p =>
+          p.player_id === pid ? { ...p, has_paid: true } : p
+        ),
+      });
+      successHaptic();
+      const targetParticipant = selectedMatch.participants?.find(p => p.player_id === pid);
+      const targetName = getShortName(targetParticipant?.player?.profile, '');
+      const totalCostCentsForToast = Math.round((selectedMatch.estimated_cost ?? 0) * 100);
+      const joinedCount =
+        selectedMatch.participants?.filter(p => p.status === 'joined').length ?? 0;
+      const perPlayerCentsForToast =
+        joinedCount > 0 ? Math.round(totalCostCentsForToast / joinedCount) : 0;
+      const amountFormatted = formatCAD(perPlayerCentsForToast, locale);
+      toast.success(
+        targetName
+          ? t('matchDetail.markedAsPaidWithAmount' as TranslationKey, {
+              name: targetName,
+              amount: amountFormatted,
+            })
+          : t('matchDetail.markedAsPaid' as TranslationKey)
+      );
+    },
+    [selectedMatch, playerId, updateSelectedMatch, toast, t, locale]
+  );
+
+  // Host taps "Get paid" on the JIT banner → invoke onboarding edge function
+  // and open the returned hosted-onboarding URL inside an in-app browser.
+  const handleStartPayoutsOnboarding = useCallback(async () => {
+    lightHaptic();
+    try {
+      const { data, error } = await supabase.functions.invoke('player-stripe-onboard');
+      if (error || !data?.url) throw error ?? new Error('no url');
+      await WebBrowser.openAuthSessionAsync(data.url, 'https://rallia.app/stripe-connect-return');
+    } catch {
+      errorHaptic();
+      toast.error(t('profile.payments.onboardingError' as TranslationKey));
+    }
+  }, [toast, t]);
+
+  // Host chooses to opt out of Stripe (manual_only) or in (auto). When the
+  // host has pending Stripe-routed funds, opting into manual_only is gated
+  // by a confirmation dialog to avoid surprising the host.
+  const handleChoosePayouts = useCallback(
+    async (choice: 'auto' | 'manual_only') => {
+      if (!playerId) return;
+      selectionHaptic();
+      // Guard: if there are funds awaiting Stripe release, confirm the switch.
+      if (choice === 'manual_only' && hostStripeConnected !== true && pendingFundsCents > 0) {
+        setShowSwitchToManualConfirm(true);
+        return;
+      }
+      const { error: dbError } = await supabase
+        .from('player')
+        .update({ payouts_mode: choice })
+        .eq('id', playerId);
+      if (dbError) {
+        errorHaptic();
+        toast.error(t('profile.payments.modeUpdateError' as TranslationKey));
+        return;
+      }
+      successHaptic();
+      setHostPayoutsMode(choice);
+      if (choice === 'auto') {
+        // Immediately kick off onboarding so the host has $ visible if any
+        // payments are already pending.
+        await handleStartPayoutsOnboarding();
+      }
+    },
+    [playerId, handleStartPayoutsOnboarding, hostStripeConnected, pendingFundsCents, toast, t]
+  );
+
+  // Confirmed path for the host opting into manual_only despite pending funds.
+  const handleConfirmSwitchToManual = useCallback(async () => {
+    if (!playerId) return;
+    const { error: dbError } = await supabase
+      .from('player')
+      .update({ payouts_mode: 'manual_only' })
+      .eq('id', playerId);
+    if (dbError) {
+      errorHaptic();
+      toast.error(t('profile.payments.modeUpdateError' as TranslationKey));
+      return;
+    }
+    successHaptic();
+    setHostPayoutsMode('manual_only');
+    setShowSwitchToManualConfirm(false);
+  }, [playerId, toast, t]);
+
+  // ===========================================================================
+  // Time-suggestion hooks (must run on every render, hence above the early
+  // return). RLS narrows the fetch: the host sees all pending suggestions on
+  // the match; everyone else sees their own.
+  // ===========================================================================
+  const [timeSuggestions, setTimeSuggestions] = useState<MatchTimeSuggestionWithSuggester[]>([]);
+  const [respondingSuggestionId, setRespondingSuggestionId] = useState<string | null>(null);
+
+  const timeSuggestionMatchId = selectedMatch?.id ?? null;
+
+  const refreshTimeSuggestions = useCallback(async () => {
+    if (!timeSuggestionMatchId) return;
+    try {
+      const rows = await listTimeSuggestionsForMatch(timeSuggestionMatchId);
+      setTimeSuggestions(rows);
+    } catch (err) {
+      // Best-effort — RLS may simply return an empty set for non-creators.
+      console.warn('[MatchDetailSheet] Failed to load time suggestions', err);
+    }
+  }, [timeSuggestionMatchId]);
+
+  // Refetch on every fresh selectedMatch reference (not just on id-change), so
+  // reopening the same match after submitting a suggestion picks up the new
+  // pending row. openSheet / getMatchWithDetails creates a new object each
+  // time so this fires on each navigation back to the sheet.
+  useEffect(() => {
+    if (!timeSuggestionMatchId) {
+      setTimeSuggestions([]);
+      return;
+    }
+    refreshTimeSuggestions();
+  }, [selectedMatch, timeSuggestionMatchId, refreshTimeSuggestions]);
+
+  const myPendingSuggestion = useMemo(
+    () => timeSuggestions.find(s => s.suggester_id === playerId && s.status === 'pending') ?? null,
+    [timeSuggestions, playerId]
+  );
+
+  const pendingSuggestionsForHost = useMemo(
+    () => timeSuggestions.filter(s => s.status === 'pending'),
+    [timeSuggestions]
+  );
+
+  const handleOpenSuggestTime = useCallback(async () => {
+    if (!selectedMatch) return;
+    lightHaptic();
+    await SheetManager.hide('match-detail');
+    await SheetManager.show('suggest-match-time', {
+      payload: {
+        matchId: selectedMatch.id,
+        matchDate: selectedMatch.match_date,
+        matchTimezone: selectedMatch.timezone || 'UTC',
+        currentStartTime: selectedMatch.start_time,
+        currentEndTime: selectedMatch.end_time,
+        existingSuggestionId: myPendingSuggestion?.id,
+        existingSuggestionTime: myPendingSuggestion?.suggested_start_time,
+        existingNote: myPendingSuggestion?.note ?? undefined,
+      },
+    });
+  }, [selectedMatch, myPendingSuggestion]);
+
+  const handleRespondToSuggestion = useCallback(
+    async (suggestion: MatchTimeSuggestionWithSuggester, accept: boolean) => {
+      if (respondingSuggestionId) return;
+      setRespondingSuggestionId(suggestion.id);
+      try {
+        const result = await respondToTimeSuggestion({
+          suggestionId: suggestion.id,
+          accept,
+        });
+        if (result.kind === 'error' && result.reason === 'match_full_after_suggestion') {
+          errorHaptic();
+          toast.error(t('matchDetail.timeSuggestion.errorMatchFull'));
+        } else {
+          successHaptic();
+          toast.success(
+            accept
+              ? t('matchDetail.timeSuggestion.acceptSuccess')
+              : t('matchDetail.timeSuggestion.declineSuccess')
+          );
+          if (accept && selectedMatch) {
+            const refreshed = await getMatchWithDetails(selectedMatch.id);
+            if (refreshed) updateSelectedMatch(refreshed);
+          }
+        }
+        await refreshTimeSuggestions();
+      } catch (err) {
+        errorHaptic();
+        toast.error(t('matchDetail.timeSuggestion.errorGeneric'));
+        console.warn('[MatchDetailSheet] respond suggestion failed', err);
+      } finally {
+        setRespondingSuggestionId(null);
+      }
+    },
+    [respondingSuggestionId, refreshTimeSuggestions, toast, t, selectedMatch, updateSelectedMatch]
+  );
+
   // Render nothing if no match is selected
   if (!selectedMatch) {
     return (
@@ -1883,6 +2350,21 @@ export const MatchDetailSheet: React.FC = () => {
     match.timezone
   );
   const playerHasCheckedIn = !!currentPlayerParticipant?.checked_in_at;
+
+  // canSuggestTime — visibility flag for the tertiary "Suggest a different
+  // time" link. Rendered as its own full-width row above the CTAs in the
+  // sticky footer, so we only surface it when the matching CTAs (Accept/
+  // Decline for invitees, Leave for joined participants) would also be on
+  // screen. Excluded for waitlisted and already-checked-in users since their
+  // CTAs are unrelated.
+  const canSuggestTime =
+    !isCreator &&
+    !isCancelled &&
+    !isInProgress &&
+    !hasMatchEnded &&
+    !playerHasCheckedIn &&
+    (isInvited || (isParticipant && !isWaitlisted));
+
   // Check-in is only available for matches with a confirmed location (facility or custom)
   // TBD matches don't have a location to check in at
   // Also requires location permission to be granted for geolocation verification
@@ -2059,8 +2541,31 @@ export const MatchDetailSheet: React.FC = () => {
   const isCourtFree = !!match.is_court_free;
   const hasCostData = isCourtFree || !!match.estimated_cost;
   const totalCost = match.estimated_cost ?? 0;
-  const perPlayerCost =
-    participantInfo.total > 0 ? (totalCost / participantInfo.total).toFixed(2) : '0.00';
+  const totalCents = Math.round(totalCost * 100);
+  const perPlayerCents =
+    participantInfo.total > 0 ? Math.round(totalCents / participantInfo.total) : 0;
+  const totalCostFormatted = formatCAD(totalCents, locale);
+  const perPlayerCostFormatted = formatCAD(perPlayerCents, locale);
+
+  // Reimbursement (hooks are above the early return; only derived values here)
+  // Gated on isFull: the server rejects PaymentIntent creation for unfilled
+  // matches, so we hide the section entirely to match.
+  const showReimbursement =
+    MATCH_REIMBURSEMENT_ENABLED &&
+    hasMatchEnded &&
+    isFull &&
+    !isCourtFree &&
+    totalCost > 0 &&
+    match.cost_split_type === 'split_equal' &&
+    !!currentPlayerParticipant;
+  const isNonHostParticipant = showReimbursement && !currentPlayerParticipant?.is_host;
+  // Reimbursement progress counts non-hosts only. The host's share is paid
+  // implicitly upfront when they booked the court, so they don't appear in
+  // the "X/Y players have paid" tracker.
+  const paidParticipants =
+    match.participants?.filter(p => p.status === 'joined' && !p.is_host && p.has_paid).length ?? 0;
+  const totalParticipants =
+    match.participants?.filter(p => p.status === 'joined' && !p.is_host).length ?? 0;
 
   // Location display
   const facilityName = match.facility?.name || match.location_name;
@@ -3955,6 +4460,136 @@ export const MatchDetailSheet: React.FC = () => {
             </View>
           )}
 
+          {/* Pending Time Suggestions Section - host-only counter-proposals */}
+          {isCreator &&
+            pendingSuggestionsForHost.length > 0 &&
+            !isCancelled &&
+            !hasStartTimePassed && (
+              <View style={styles.pendingRequestsSection}>
+                <View style={styles.pendingRequestsHeader}>
+                  <Text
+                    size="sm"
+                    weight="semibold"
+                    color={colors.primary}
+                    style={styles.pendingRequestsTitle}
+                  >
+                    {t('matchDetail.timeSuggestion.sectionTitle')} (
+                    {pendingSuggestionsForHost.length})
+                  </Text>
+                </View>
+                {pendingSuggestionsForHost.map(suggestion => {
+                  const suggesterName = suggestion.suggester
+                    ? `${suggestion.suggester.first_name ?? ''} ${
+                        suggestion.suggester.last_name
+                          ? suggestion.suggester.last_name.charAt(0) + '.'
+                          : ''
+                      }`.trim() || t('matchDetail.host')
+                    : t('matchDetail.host');
+                  const suggestedDisplay = suggestion.suggested_start_time.slice(0, 5);
+                  const isResponding = respondingSuggestionId === suggestion.id;
+                  return (
+                    <View
+                      key={suggestion.id}
+                      style={[
+                        styles.pendingRequestInfo,
+                        {
+                          backgroundColor: isDark ? neutral[800] : neutral[50],
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                          borderRadius: radiusPixels.xl,
+                          padding: spacingPixels[3],
+                        },
+                      ]}
+                    >
+                      <View style={[styles.pendingRequestContent, styles.timeSuggestionContent]}>
+                        <TouchableOpacity
+                          onPress={() =>
+                            suggestion.suggester_id &&
+                            handleParticipantProfilePress(suggestion.suggester_id)
+                          }
+                          activeOpacity={0.7}
+                        >
+                          <View
+                            style={[
+                              styles.pendingRequestAvatar,
+                              {
+                                backgroundColor: colors.primary,
+                                borderColor: isDark ? primary[400] : primary[500],
+                              },
+                            ]}
+                          >
+                            {suggestion.suggester?.profile_picture_url ? (
+                              <Image
+                                source={{
+                                  uri:
+                                    getProfilePictureUrl(
+                                      suggestion.suggester.profile_picture_url
+                                    ) ?? undefined,
+                                }}
+                                style={styles.pendingRequestAvatarImage}
+                              />
+                            ) : (
+                              <Ionicons name="time-outline" size={16} color={base.white} />
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                        <View style={styles.timeSuggestionTextColumn}>
+                          <Text size="sm" weight="medium" color={colors.text} numberOfLines={2}>
+                            {t('matchDetail.timeSuggestion.suggestedBy', {
+                              name: suggesterName,
+                              time: suggestedDisplay,
+                            })}
+                          </Text>
+                          {suggestion.note && (
+                            <Text
+                              size="xs"
+                              color={colors.textMuted}
+                              numberOfLines={3}
+                              style={styles.timeSuggestionNote}
+                            >
+                              {suggestion.note}
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                      <View style={styles.pendingRequestActions}>
+                        <TouchableOpacity
+                          style={[
+                            styles.requestActionButton,
+                            styles.acceptButton,
+                            {
+                              backgroundColor: isResponding
+                                ? neutral[400]
+                                : isDark
+                                  ? primary[400]
+                                  : primary[500],
+                            },
+                          ]}
+                          onPress={() => handleRespondToSuggestion(suggestion, true)}
+                          disabled={!!respondingSuggestionId}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="checkmark-outline" size={16} color={base.white} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[
+                            styles.requestActionButton,
+                            styles.rejectButton,
+                            { backgroundColor: isDark ? secondary[400] : secondary[500] },
+                          ]}
+                          onPress={() => handleRespondToSuggestion(suggestion, false)}
+                          disabled={!!respondingSuggestionId}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="close-outline" size={16} color={base.white} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
           {/* Invitations Section - only visible to host */}
           {isCreator && allInvitations.length > 0 && !isCancelled && !hasStartTimePassed && (
             <View style={styles.pendingRequestsSection}>
@@ -4382,7 +5017,7 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
             availability and no court is booked yet. */}
         <MatchAvailableCourtsSection match={match} isCreator={isCreator} />
 
-        {/* Cost Section */}
+        {/* Match Cost Section — merged cost breakdown + reimbursement controls */}
         {hasCostData && (
           <Animated.View
             entering={FadeInDown.delay(300).springify()}
@@ -4391,82 +5026,381 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
             <View style={styles.sectionHeader}>
               <Ionicons name="wallet-outline" size={20} color={colors.iconMuted} />
               <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
-                {t('matchDetail.estimatedCost')}
+                {t('matchDetail.matchCost' as TranslationKey)}
               </Text>
             </View>
+
             {isCourtFree ? (
-              <View
-                style={[
-                  styles.costCard,
-                  {
-                    backgroundColor: isDark ? 'rgba(5, 150, 105, 0.12)' : 'rgba(5, 150, 105, 0.06)',
-                    borderColor: isDark ? 'rgba(5, 150, 105, 0.25)' : 'rgba(5, 150, 105, 0.15)',
-                  },
-                ]}
+              <Card
+                variant="outlined"
+                padding={spacingPixels[4]}
+                borderRadius={radiusPixels.xl}
+                backgroundColor={
+                  isDark ? `${status.success.DEFAULT}1F` : `${status.success.DEFAULT}0F`
+                }
+                style={{
+                  borderColor: isDark
+                    ? `${status.success.DEFAULT}40`
+                    : `${status.success.DEFAULT}26`,
+                }}
               >
-                <View style={styles.costFreeContent}>
+                <HStack spacing={spacingPixels[2]} align="center">
                   <Ionicons name="checkmark-circle" size={22} color={status.success.DEFAULT} />
                   <Text
                     size="lg"
                     weight="bold"
                     color={isDark ? status.success.light : status.success.dark}
-                    style={styles.costFreeText}
                   >
                     {t('matchDetail.free')}
                   </Text>
-                </View>
-              </View>
+                </HStack>
+              </Card>
             ) : (
-              <View
-                style={[
-                  styles.costCard,
-                  {
-                    backgroundColor: isDark ? `${primary[500]}14` : `${primary[500]}0A`,
+              <VStack spacing={spacingPixels[3]}>
+                {/* Cost split breakdown */}
+                <Card
+                  variant="outlined"
+                  padding={spacingPixels[4]}
+                  borderRadius={radiusPixels.xl}
+                  backgroundColor={isDark ? `${primary[500]}14` : `${primary[500]}0A`}
+                  style={{
                     borderColor: isDark ? `${primary[500]}40` : `${primary[500]}26`,
-                  },
-                ]}
-              >
-                <View style={styles.costCardMain}>
-                  {/* Total cost */}
-                  <View style={styles.costCardColumn}>
-                    <Text size="sm" weight="semibold" color={colors.textMuted}>
-                      {t('matchDetail.totalCost')}
-                    </Text>
-                    <Text
-                      size="xl"
-                      weight="bold"
-                      color={colors.textSecondary}
-                      style={styles.costAmount}
-                    >
-                      ${totalCost}
-                    </Text>
-                  </View>
-
-                  {/* Divider */}
-                  <View style={styles.costCardDivider}>
-                    <View
-                      style={[
-                        styles.costCardDividerLine,
-                        { backgroundColor: isDark ? neutral[600] : neutral[300] },
-                      ]}
+                  }}
+                >
+                  <HStack align="center" justify="space-between">
+                    <VStack spacing={spacingPixels[1]} align="start" style={{ flex: 1 }}>
+                      <Text size="sm" weight="semibold" color={colors.textMuted}>
+                        {t('matchDetail.totalCost')}
+                      </Text>
+                      <Text size="xl" weight="bold" color={colors.textSecondary}>
+                        {totalCostFormatted}
+                      </Text>
+                    </VStack>
+                    <Divider
+                      orientation="vertical"
+                      length={40}
+                      spacing={spacingPixels[3]}
+                      color={isDark ? neutral[600] : neutral[300]}
                     />
-                  </View>
+                    <VStack spacing={spacingPixels[1]} align="start" style={{ flex: 1 }}>
+                      <Text size="sm" weight="semibold" color={colors.textMuted}>
+                        {isCreator
+                          ? match.format === 'singles'
+                            ? t('matchDetail.perPlayerCostOrganizer')
+                            : t('matchDetail.perPlayerCostOrganizerDoubles')
+                          : t('matchDetail.perPlayerCostPlayer')}
+                      </Text>
+                      <Text size="xl" weight="bold" color={colors.primary}>
+                        {perPlayerCostFormatted}
+                      </Text>
+                    </VStack>
+                  </HStack>
+                </Card>
 
-                  {/* Per player cost */}
-                  <View style={styles.costCardColumn}>
-                    <Text size="sm" weight="semibold" color={colors.textMuted}>
-                      {isCreator
-                        ? match.format === 'singles'
-                          ? t('matchDetail.perPlayerCostOrganizer')
-                          : t('matchDetail.perPlayerCostOrganizerDoubles')
-                        : t('matchDetail.perPlayerCostPlayer')}
-                    </Text>
-                    <Text size={30} weight="bold" color={colors.primary} style={styles.costAmount}>
-                      ${perPlayerCost}
-                    </Text>
-                  </View>
-                </View>
-              </View>
+                {/* Payment controls — only for finished, full, paid matches */}
+                {showReimbursement && (
+                  <>
+                    {isNonHostParticipant ? (
+                      currentPlayerParticipant?.has_paid ? (
+                        // Player has paid — compact success row
+                        <HStack
+                          spacing={spacingPixels[2]}
+                          align="center"
+                          style={{ paddingVertical: spacingPixels[1] }}
+                        >
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={20}
+                            color={status.success.DEFAULT}
+                          />
+                          <Text
+                            size="sm"
+                            weight="medium"
+                            color={isDark ? status.success.light : status.success.dark}
+                          >
+                            {t('matchDetail.youHavePaid' as TranslationKey, {
+                              amount: perPlayerCostFormatted,
+                            })}
+                          </Text>
+                        </HStack>
+                      ) : hostPayoutsMode === 'manual_only' ? (
+                        // Host opted into manual-only — no Stripe, pay out-of-band
+                        <Card
+                          variant="outlined"
+                          padding={spacingPixels[3]}
+                          borderRadius={radiusPixels.lg}
+                          backgroundColor={colors.cardBackground}
+                          style={{ borderColor: colors.border }}
+                        >
+                          <VStack spacing={spacingPixels[2]} align="start">
+                            <Text size="sm" color={colors.textMuted}>
+                              {t('matchDetail.hostManualOnly' as TranslationKey, {
+                                amount: perPlayerCostFormatted,
+                                name: hostName,
+                              })}
+                            </Text>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onPress={() => handleMarkAsPaid()}
+                              loading={
+                                !!currentPlayerParticipant?.id &&
+                                markingPaid.has(currentPlayerParticipant.id)
+                              }
+                              isDark={isDark}
+                              themeColors={{
+                                primary: colors.primary,
+                                primaryForeground: base.white,
+                                buttonActive: colors.primary,
+                                buttonInactive: isDark ? neutral[700] : neutral[300],
+                                buttonTextActive: base.white,
+                                buttonTextInactive: isDark ? neutral[400] : neutral[500],
+                                text: colors.text,
+                                textMuted: colors.textMuted,
+                                border: colors.border,
+                                background: colors.cardBackground,
+                              }}
+                            >
+                              {t('matchDetail.markAsPaid' as TranslationKey)}
+                            </Button>
+                          </VStack>
+                        </Card>
+                      ) : (
+                        // JIT: always show Pay Now regardless of host's Stripe onboarding state.
+                        // Funds are held in Rallia's balance and released when host onboards.
+                        <Card
+                          variant="outlined"
+                          padding={spacingPixels[3]}
+                          borderRadius={radiusPixels.lg}
+                          backgroundColor={colors.cardBackground}
+                          style={{ borderColor: colors.border }}
+                        >
+                          <VStack spacing={spacingPixels[2]} align="start">
+                            <Text size="sm" color={colors.textMuted}>
+                              {t('matchDetail.yourShareSubtitle' as TranslationKey, {
+                                name: hostName,
+                              })}
+                            </Text>
+                            <Button
+                              variant="primary"
+                              size="md"
+                              onPress={handlePayNow}
+                              loading={isPaying}
+                              leftIcon={
+                                <Ionicons name="card-outline" size={18} color={base.white} />
+                              }
+                              isDark={isDark}
+                              themeColors={{
+                                primary: colors.primary,
+                                primaryForeground: base.white,
+                                buttonActive: colors.primary,
+                                buttonInactive: isDark ? neutral[700] : neutral[300],
+                                buttonTextActive: base.white,
+                                buttonTextInactive: isDark ? neutral[400] : neutral[500],
+                                text: colors.text,
+                                textMuted: colors.textMuted,
+                                border: colors.border,
+                                background: colors.cardBackground,
+                              }}
+                            >
+                              {t('matchDetail.payNow' as TranslationKey)}
+                            </Button>
+                            <HStack spacing={spacingPixels[2]} align="center">
+                              {Platform.OS === 'ios' && (
+                                <Ionicons name="logo-apple" size={14} color={colors.textMuted} />
+                              )}
+                              {Platform.OS === 'android' && (
+                                <Ionicons name="logo-google" size={14} color={colors.textMuted} />
+                              )}
+                              <Text size="xs" color={colors.textMuted}>
+                                {t('matchDetail.payNote' as TranslationKey)}
+                              </Text>
+                            </HStack>
+                          </VStack>
+                        </Card>
+                      )
+                    ) : (
+                      // Host view
+                      <VStack spacing={spacingPixels[3]}>
+                        {/* JIT banner: $X ready to receive — appears when funds are
+                            parked in Rallia's balance awaiting this host's onboarding. */}
+                        {pendingFundsCents > 0 &&
+                          !hostStripeConnected &&
+                          hostPayoutsMode !== 'manual_only' && (
+                            <Card
+                              variant="outlined"
+                              padding={spacingPixels[3]}
+                              borderRadius={radiusPixels.lg}
+                              backgroundColor={isDark ? primary[900] : primary[50]}
+                              style={{
+                                borderColor: isDark ? primary[700] : primary[200],
+                              }}
+                            >
+                              <VStack spacing={spacingPixels[2]} align="start">
+                                <HStack spacing={spacingPixels[2]} align="center">
+                                  <Ionicons
+                                    name="time-outline"
+                                    size={18}
+                                    color={isDark ? primary[300] : primary[600]}
+                                  />
+                                  <Text size="sm" weight="semibold" color={colors.text}>
+                                    {t('matchDetail.payoutsSetupBanner.title' as TranslationKey, {
+                                      amount: formatCAD(pendingFundsCents, locale),
+                                    })}
+                                  </Text>
+                                </HStack>
+                                <Text size="xs" color={colors.textMuted}>
+                                  {t('matchDetail.payoutsSetupBanner.body' as TranslationKey)}
+                                </Text>
+                                <Button
+                                  variant="primary"
+                                  size="sm"
+                                  onPress={handleStartPayoutsOnboarding}
+                                  isDark={isDark}
+                                  themeColors={{
+                                    primary: colors.primary,
+                                    primaryForeground: base.white,
+                                    buttonActive: colors.primary,
+                                    buttonInactive: isDark ? neutral[700] : neutral[300],
+                                    buttonTextActive: base.white,
+                                    buttonTextInactive: isDark ? neutral[400] : neutral[500],
+                                    text: colors.text,
+                                    textMuted: colors.textMuted,
+                                    border: colors.border,
+                                    background: colors.cardBackground,
+                                  }}
+                                >
+                                  {t('matchDetail.payoutsSetupBanner.cta' as TranslationKey)}
+                                </Button>
+                              </VStack>
+                            </Card>
+                          )}
+
+                        {/* First-time prompt for hosts who haven't chosen yet */}
+                        {hostPayoutsMode === 'undecided' && playerId === match.created_by && (
+                          <Card
+                            variant="outlined"
+                            padding={spacingPixels[3]}
+                            borderRadius={radiusPixels.lg}
+                            backgroundColor={colors.cardBackground}
+                            style={{ borderColor: colors.border }}
+                            onPress={async () => {
+                              mediumHaptic();
+                              await SheetManager.show('choose-payouts', {
+                                payload: {
+                                  onChoose: handleChoosePayouts,
+                                },
+                              });
+                            }}
+                          >
+                            <HStack align="center" justify="space-between">
+                              <Text size="sm" weight="medium" color={colors.text}>
+                                {t('matchDetail.choosePayouts.prompt' as TranslationKey)}
+                              </Text>
+                              <Ionicons name="chevron-forward" size={18} color={colors.iconMuted} />
+                            </HStack>
+                          </Card>
+                        )}
+
+                        {/* Progress: all paid → celebratory row, otherwise per-row list */}
+                        {paidParticipants === totalParticipants && totalParticipants > 0 ? (
+                          <HStack spacing={spacingPixels[2]} align="center">
+                            <Ionicons
+                              name="checkmark-done-circle"
+                              size={22}
+                              color={status.success.DEFAULT}
+                            />
+                            <DSBadge variant="success" size="md">
+                              {t('matchDetail.everyonePaid' as TranslationKey)}
+                            </DSBadge>
+                          </HStack>
+                        ) : (
+                          <VStack spacing={spacingPixels[2]}>
+                            <Text size="sm" color={colors.textMuted}>
+                              {t('matchDetail.paidCount' as TranslationKey, {
+                                paid: paidParticipants,
+                                total: totalParticipants,
+                              })}
+                            </Text>
+                            {match.participants
+                              ?.filter(p => p.status === 'joined' && !p.is_host)
+                              .map(p => {
+                                const isMarking = !!p.id && markingPaid.has(p.id);
+                                const playerName = getShortName(p.player?.profile, '');
+                                return (
+                                  <HStack key={p.id} spacing={spacingPixels[2]} align="center">
+                                    {p.has_paid ? (
+                                      <Ionicons
+                                        name="checkmark-circle"
+                                        size={16}
+                                        color={status.success.DEFAULT}
+                                      />
+                                    ) : (
+                                      <Ionicons
+                                        name="time-outline"
+                                        size={16}
+                                        color={colors.textMuted}
+                                      />
+                                    )}
+                                    <TouchableOpacity
+                                      style={{ flex: 1 }}
+                                      onPress={() => {
+                                        if (p.player_id) {
+                                          lightHaptic();
+                                          navigation.navigate('PlayerProfile', {
+                                            playerId: p.player_id,
+                                          });
+                                        }
+                                      }}
+                                      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                                    >
+                                      <Text
+                                        size="sm"
+                                        color={
+                                          p.has_paid
+                                            ? isDark
+                                              ? status.success.light
+                                              : status.success.dark
+                                            : colors.text
+                                        }
+                                      >
+                                        {playerName}
+                                      </Text>
+                                    </TouchableOpacity>
+                                    {!p.has_paid && (
+                                      <Button
+                                        variant="outline"
+                                        size="xs"
+                                        onPress={() => handleMarkAsPaid(p.player_id)}
+                                        loading={isMarking}
+                                        disabled={isMarking}
+                                        isDark={isDark}
+                                        themeColors={{
+                                          primary: colors.primary,
+                                          primaryForeground: base.white,
+                                          buttonActive: colors.primary,
+                                          buttonInactive: isDark ? neutral[700] : neutral[300],
+                                          buttonTextActive: base.white,
+                                          buttonTextInactive: isDark ? neutral[400] : neutral[500],
+                                          text: colors.text,
+                                          textMuted: colors.textMuted,
+                                          border: colors.border,
+                                          background: colors.cardBackground,
+                                        }}
+                                      >
+                                        {t('matchDetail.markAsPaid' as TranslationKey)}
+                                      </Button>
+                                    )}
+                                  </HStack>
+                                );
+                              })}
+                          </VStack>
+                        )}
+                      </VStack>
+                    )}
+                  </>
+                )}
+              </VStack>
             )}
           </Animated.View>
         )}
@@ -4538,42 +5472,61 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
             {t('matchDetail.provideFeedbackOnly')}
           </Button>
         )}
-        <View
-          style={[
-            styles.actionButtonsContainer,
-            needsScoreConfirmAndFeedback &&
-              hasTwoScoreActions &&
-              styles.actionButtonsContainerColumn,
-          ]}
-        >
-          {/* Feedback side-by-side with single score action (register score) */}
-          {needsScoreConfirmAndFeedback && !hasTwoScoreActions && (
-            <Button
-              variant="primary"
-              onPress={handleOpenFeedback}
-              style={styles.actionButton}
-              themeColors={{
-                primary: isDark ? primary[500] : primary[600],
-                primaryForeground: base.white,
-                buttonActive: isDark ? primary[500] : primary[600],
-                buttonInactive: neutral[300],
-                buttonTextActive: base.white,
-                buttonTextInactive: neutral[500],
-                text: colors.text,
-                textMuted: colors.textMuted,
-                border: colors.border,
-                background: colors.cardBackground,
-              }}
-              isDark={isDark}
-              leftIcon={
-                <Ionicons name="chatbubble-ellipses-outline" size={18} color={base.white} />
-              }
+        <View style={styles.footerActionsColumn}>
+          {canSuggestTime && (
+            <TouchableOpacity
+              onPress={handleOpenSuggestTime}
+              style={styles.suggestTimeButton}
+              activeOpacity={0.7}
+              accessibilityRole="button"
             >
-              {t('matchDetail.provideFeedbackOnly')}
-            </Button>
+              <Ionicons name="time-outline" size={16} color={accent[500]} />
+              <Text size="sm" weight="semibold" color={accent[500]}>
+                {myPendingSuggestion
+                  ? t('matchActions.viewYourSuggestion', {
+                      time: myPendingSuggestion.suggested_start_time.slice(0, 5),
+                    })
+                  : t('matchActions.suggestDifferentTime')}
+              </Text>
+            </TouchableOpacity>
           )}
-          {/* Cap at 2 CTA buttons to prevent layout overflow */}
-          {React.Children.toArray(renderActionButtons()).slice(0, 2)}
+          <View
+            style={[
+              styles.actionButtonsContainer,
+              needsScoreConfirmAndFeedback &&
+                hasTwoScoreActions &&
+                styles.actionButtonsContainerColumn,
+            ]}
+          >
+            {/* Feedback side-by-side with single score action (register score) */}
+            {needsScoreConfirmAndFeedback && !hasTwoScoreActions && (
+              <Button
+                variant="primary"
+                onPress={handleOpenFeedback}
+                style={styles.actionButton}
+                themeColors={{
+                  primary: isDark ? primary[500] : primary[600],
+                  primaryForeground: base.white,
+                  buttonActive: isDark ? primary[500] : primary[600],
+                  buttonInactive: neutral[300],
+                  buttonTextActive: base.white,
+                  buttonTextInactive: neutral[500],
+                  text: colors.text,
+                  textMuted: colors.textMuted,
+                  border: colors.border,
+                  background: colors.cardBackground,
+                }}
+                isDark={isDark}
+                leftIcon={
+                  <Ionicons name="chatbubble-ellipses-outline" size={18} color={base.white} />
+                }
+              >
+                {t('matchDetail.provideFeedbackOnly')}
+              </Button>
+            )}
+            {/* Cap at 2 CTA buttons to prevent layout overflow */}
+            {React.Children.toArray(renderActionButtons()).slice(0, 2)}
+          </View>
         </View>
       </View>
 
@@ -4601,6 +5554,17 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
         cancelLabel={t('common.cancel')}
         destructive={!isWaitlisted}
         isLoading={isLeaving}
+      />
+
+      {/* Switch-to-manual confirmation when host has pending Stripe-routed funds */}
+      <ConfirmationModal
+        visible={showSwitchToManualConfirm}
+        onClose={() => setShowSwitchToManualConfirm(false)}
+        onConfirm={handleConfirmSwitchToManual}
+        title={t('matchDetail.choosePayouts.switchToManualConfirmTitle' as TranslationKey)}
+        message={t('matchDetail.choosePayouts.switchToManualConfirmMessage' as TranslationKey)}
+        confirmLabel={t('matchDetail.choosePayouts.manualOption' as TranslationKey)}
+        cancelLabel={t('common.cancel')}
       />
 
       {/* Cancel Match Confirmation Modal */}
@@ -5147,6 +6111,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacingPixels[2],
   },
+  // Time-suggestion row override: stack the suggester label and note
+  // vertically instead of horizontally, and top-align the avatar so it
+  // doesn't drift to the middle of a multi-line block.
+  timeSuggestionContent: {
+    alignItems: 'flex-start',
+  },
+  timeSuggestionTextColumn: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'column',
+  },
+  timeSuggestionNote: {
+    marginTop: 2,
+    lineHeight: 16,
+  },
   pendingRequestName: {
     flexShrink: 1,
   },
@@ -5260,10 +6239,13 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
   },
   actionButtonsContainer: {
-    flex: 1,
+    // Lives inside `footerActionsColumn` (flexDirection: 'column'); needs an
+    // explicit width to span horizontally. `flex: 1` here would claim vertical
+    // space in the column and collapse since the parent has no fixed height.
     flexDirection: 'row',
     gap: spacingPixels[2],
-    minWidth: 0, // Allow shrinking
+    width: '100%',
+    minWidth: 0,
   },
   actionButtonsContainerColumn: {
     flex: 0,
@@ -5301,6 +6283,25 @@ const styles = StyleSheet.create({
     gap: spacingPixels[2],
     paddingHorizontal: spacingPixels[2],
   },
+  // Footer column wrapper: stacks the tertiary "Suggest a different time"
+  // link on top of the row of primary CTAs without disturbing the existing
+  // stickyFooter row layout.
+  footerActionsColumn: {
+    flex: 1,
+    flexDirection: 'column',
+    gap: spacingPixels[2],
+    minWidth: 0,
+  },
+  // Tertiary "Suggest a different time" link — full-width tappable row,
+  // with a touch of breathing room before the primary CTA row below.
+  suggestTimeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[1],
+    paddingVertical: spacingPixels[2],
+    marginBottom: spacingPixels[2],
+  },
   matchEndedContainer: {
     flex: 1,
     flexDirection: 'row',
@@ -5310,47 +6311,6 @@ const styles = StyleSheet.create({
     gap: spacingPixels[2],
   },
   matchEndedText: {
-    textAlign: 'center',
-  },
-  // Cost section – breakdown card
-  costCard: {
-    borderRadius: radiusPixels.xl,
-    borderWidth: 1,
-    paddingVertical: spacingPixels[4],
-    paddingHorizontal: spacingPixels[4],
-    alignItems: 'center',
-  },
-  costCardMain: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[5],
-  },
-  costCardColumn: {
-    alignItems: 'center',
-    minWidth: 72,
-  },
-  costAmount: {
-    marginTop: spacingPixels[1],
-    lineHeight: 40,
-  },
-  costCardDivider: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacingPixels[4],
-  },
-  costCardDividerLine: {
-    width: 20,
-    height: 2,
-    borderRadius: 1,
-  },
-  costFreeContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[2],
-  },
-  costFreeText: {
     textAlign: 'center',
   },
   // Date & time section – breakdown card

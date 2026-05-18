@@ -135,7 +135,9 @@ export function UserLocationProvider({ children }: UserLocationProviderProps) {
         longitude: homeLocation.longitude,
       });
 
-      if (!result.success) {
+      if (!result.success && !result.transient) {
+        // Transient failures (e.g. statement_timeout) are already logged at
+        // debug level by playerService; don't promote them to console errors.
         console.error('[UserLocationContext] Failed to sync:', result.error);
       }
 

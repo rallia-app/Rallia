@@ -9,6 +9,7 @@ import './globals.css';
 
 import { Analytics } from '@vercel/analytics/next';
 import { PostHogProvider } from '@/components/posthog-provider';
+import { UtmCapture } from '@/components/utm-capture';
 
 // Theme A: Court Classic - Outfit for headlines
 const outfit = Outfit({
@@ -63,21 +64,12 @@ export const metadata: Metadata = {
     description:
       'Download Rallia and find your next tennis or pickleball game. Smart player matching, instant scheduling, and reliable partners.',
     siteName: 'Rallia',
-    images: [
-      {
-        url: '/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: 'Rallia - Tennis & Pickleball Matchmaking',
-      },
-    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Rallia - Where Rallies Live On',
     description:
       'Download Rallia and find your next tennis or pickleball game. Available now on iOS and Android.',
-    images: ['/og-image.png'],
     creator: '@rallia',
   },
   robots: {
@@ -127,6 +119,7 @@ export default async function LocaleLayout({
       >
         <Analytics />
         <PostHogProvider>
+          <UtmCapture />
           <ThemeProvider
             attribute="class"
             defaultTheme="system"

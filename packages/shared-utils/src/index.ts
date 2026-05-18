@@ -11,3 +11,4 @@ export * from './storage';
 export * from './match';
 export * from './geo';
 export * from './devMocks';
+export * from './utm';

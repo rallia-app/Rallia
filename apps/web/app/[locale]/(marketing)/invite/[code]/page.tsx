@@ -1,19 +1,17 @@
 import { Metadata } from 'next';
-import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { createServiceRoleClient } from '@/lib/supabase/server';
-import {
-  computeFingerprint,
-  detectPlatform,
-  logReferralClick,
-  buildPlayStoreUrl,
-  APP_STORE_URL,
-} from '@/lib/referral-tracking';
-import { Card, CardContent } from '@/components/ui/card';
-import Image from 'next/image';
 import { QRCodeSVG } from 'qrcode.react';
+
 import { IOSCodeHandoff } from './_components/ios-code-handoff';
+
+import { createServiceRoleClient } from '@/lib/supabase/server';
+import { logReferralClick, buildPlayStoreUrl, APP_STORE_URL } from '@/lib/referral-tracking';
+import { getLandingContext } from '@/lib/landing-attribution';
+import { Card, CardContent } from '@/components/ui/card';
+import { TrackedStoreBadges } from '@/components/tracked-store-badges';
+import { InviteLandingTracker } from '@/components/invite-landing-tracker';
+import ThemeLogo from '@/components/theme-logo';
 
 type InvitationType = 'referral' | 'match' | 'group' | 'community' | 'flyer' | 'poster' | 'social';
 
@@ -136,19 +134,15 @@ export default async function InvitePage({ params, searchParams }: Props) {
   const invitationType = parseInvitationType(query.type);
   const targetId = query.id;
 
-  const headersList = await headers();
-  const userAgent = headersList.get('user-agent') ?? '';
-  const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '0.0.0.0';
-  const acceptLanguage = headersList.get('accept-language') ?? '';
-
-  const fingerprint = computeFingerprint(ip, userAgent, acceptLanguage);
-  const platform = detectPlatform(userAgent);
+  const { platform, ip, userAgent, webDistinctId, utm } = await getLandingContext();
 
   // Log click for all visitors (non-blocking)
-  logReferralClick(code, fingerprint, ip, userAgent, invitationType, targetId).catch(() => {});
+  logReferralClick(code, ip, userAgent, invitationType, targetId, webDistinctId, utm).catch(
+    () => {}
+  );
 
   if (platform === 'android') {
-    redirect(buildPlayStoreUrl(code, invitationType, targetId));
+    redirect(buildPlayStoreUrl(code, invitationType, targetId, { webDistinctId, utm }));
   }
 
   // iOS + Desktop: show landing page (iOS gets clipboard CTA, desktop gets QR code)
@@ -185,7 +179,7 @@ export default async function InvitePage({ params, searchParams }: Props) {
     if (match) {
       const rawSport = match.sport?.name;
       const sportName = rawSport ? rawSport.charAt(0).toUpperCase() + rawSport.slice(1) : 'a game';
-      const [year, month, day] = (match.match_date as string).split('-').map(Number);
+      const [year, month, day] = match.match_date.split('-').map(Number);
       const dateObj = new Date(year, month - 1, day);
       const matchDate = dateObj.toLocaleDateString(locale, {
         weekday: 'short',
@@ -227,7 +221,14 @@ export default async function InvitePage({ params, searchParams }: Props) {
 
   return (
     <div className="flex flex-col items-center gap-8 py-16 w-full max-w-lg mx-auto animate-fade-in">
-      <Image src="/rallia_logo_light.svg" alt="Rallia" width={140} height={40} priority />
+      <InviteLandingTracker
+        surface="invite"
+        invitationType={invitationType}
+        platform={platform ?? 'desktop'}
+        code={code}
+        {...(targetId ? { targetId } : {})}
+      />
+      <ThemeLogo width={140} height={40} />
 
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold">{heading}</h1>
@@ -257,44 +258,22 @@ export default async function InvitePage({ params, searchParams }: Props) {
             </CardContent>
           </Card>
 
-          <div className="flex gap-4">
-            <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
-              <Image
-                src="/app-store-badge-light.svg"
-                alt={t('appStore')}
-                width={120}
-                height={40}
-                className="button-scale block dark:hidden"
-              />
-              <Image
-                src="/app-store-badge.svg"
-                alt={t('appStore')}
-                width={120}
-                height={40}
-                className="button-scale hidden dark:block"
-              />
-            </a>
-            <a
-              href={buildPlayStoreUrl(code, invitationType, targetId)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Image
-                src="/google-play-badge-light.svg"
-                alt={t('googlePlay')}
-                width={135}
-                height={40}
-                className="button-scale block dark:hidden"
-              />
-              <Image
-                src="/google-play-badge.svg"
-                alt={t('googlePlay')}
-                width={135}
-                height={40}
-                className="button-scale hidden dark:block"
-              />
-            </a>
-          </div>
+          <TrackedStoreBadges
+            placement="invite_page"
+            playStoreUrl={buildPlayStoreUrl(code, invitationType, targetId, {
+              webDistinctId,
+              utm,
+            })}
+            appStoreLabel={t('appStore')}
+            playStoreLabel={t('googlePlay')}
+            invitationCode={code}
+            {...(targetId ? { matchId: targetId } : {})}
+            referral={{
+              code,
+              type: invitationType,
+              ...(targetId ? { targetId } : {}),
+            }}
+          />
         </>
       )}
     </div>

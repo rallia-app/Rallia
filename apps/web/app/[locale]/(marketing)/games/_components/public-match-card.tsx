@@ -18,6 +18,7 @@ import {
 import { useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { getRelativeDateLabel, formatDuration } from './utils';
+import { publicMatchShareClicked } from '@/lib/analytics';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -129,6 +130,7 @@ function ShareButton({ matchId }: { matchId: string }) {
     if ('share' in navigator) {
       try {
         await navigator.share({ url });
+        publicMatchShareClicked({ match_id: matchId, share_channel: 'native_share' });
         return;
       } catch {
         // User cancelled or not supported — fall through to clipboard
@@ -139,6 +141,7 @@ function ShareButton({ matchId }: { matchId: string }) {
       await navigator.clipboard.writeText(url);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      publicMatchShareClicked({ match_id: matchId, share_channel: 'clipboard' });
     } catch {
       // Clipboard not available
     }

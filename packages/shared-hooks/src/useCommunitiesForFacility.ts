@@ -24,7 +24,8 @@ interface UseCommunitiesForFacilityResult {
 }
 
 export function useCommunitiesForFacility(
-  facilityId: string | null
+  facilityId: string | null,
+  sportId?: string | null
 ): UseCommunitiesForFacilityResult {
   const [communities, setCommunities] = useState<CommunityForFacility[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -73,8 +74,8 @@ export function useCommunitiesForFacility(
             is_certified: boolean;
           };
 
-          // Only include public communities
           if (!network || network.is_private) return null;
+          if (sportId && network.sport_id !== sportId) return null;
 
           return {
             id: network.id,
@@ -95,7 +96,7 @@ export function useCommunitiesForFacility(
     } finally {
       setIsLoading(false);
     }
-  }, [facilityId]);
+  }, [facilityId, sportId]);
 
   useEffect(() => {
     fetchCommunities();

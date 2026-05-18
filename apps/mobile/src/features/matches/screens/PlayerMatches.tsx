@@ -14,15 +14,23 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { MatchCard, Text, SkeletonMatchCard } from '@rallia/shared-components';
+import { MatchCard, Text } from '@rallia/shared-components';
 import { SportIcon } from '../../../components/SportIcon';
 import { useTheme, usePlayerMatches, usePlayerMatchFilters } from '@rallia/shared-hooks';
+import {
+  getUpcomingDateSection,
+  getPastDateSection,
+  UPCOMING_SECTION_ORDER,
+  PAST_SECTION_ORDER,
+  type UpcomingDateSection,
+  type PastDateSection,
+} from '@rallia/shared-utils';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import { useAuth, useThemeStyles, useTranslation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { useMatchDetailSheet, useSport } from '../../../context';
 import { Logger } from '@rallia/shared-services';
-import { PlayerMatchFilterChips } from '../components';
+import { PlayerMatchFilterChips, MatchCardSkeleton } from '../components';
 import { spacingPixels, neutral } from '@rallia/design-system';
 
 // =============================================================================
@@ -31,117 +39,34 @@ import { spacingPixels, neutral } from '@rallia/design-system';
 
 type TimeFilter = 'upcoming' | 'past';
 
-interface TranslationOptions {
-  [key: string]: string | number | boolean;
-}
-
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
 
-/**
- * Get the section key for a match date (for upcoming matches)
- */
-function getUpcomingDateSectionKey(
-  matchDate: string,
-  t: (key: TranslationKey, options?: TranslationOptions) => string
-): string {
-  const date = new Date(matchDate + 'T00:00:00');
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const thisWeekEnd = new Date(today);
-  thisWeekEnd.setDate(thisWeekEnd.getDate() + 7);
-  const nextWeekEnd = new Date(today);
-  nextWeekEnd.setDate(nextWeekEnd.getDate() + 14);
-
-  const matchDateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-  if (matchDateOnly.getTime() === today.getTime()) {
-    return t('playerMatches.time.today');
-  } else if (matchDateOnly.getTime() === tomorrow.getTime()) {
-    return t('playerMatches.time.tomorrow');
-  } else if (matchDateOnly < thisWeekEnd) {
-    return t('playerMatches.time.thisWeek');
-  } else if (matchDateOnly < nextWeekEnd) {
-    return t('playerMatches.time.nextWeek');
-  } else {
-    return t('playerMatches.time.later');
-  }
-}
-
-/**
- * Get the section key for a match date (for past matches)
- * Now includes "Today" since matches can be past once their end_time has passed
- */
-function getPastDateSectionKey(
-  matchDate: string,
-  t: (key: TranslationKey, options?: TranslationOptions) => string
-): string {
-  const date = new Date(matchDate + 'T00:00:00');
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const lastWeekStart = new Date(today);
-  lastWeekStart.setDate(lastWeekStart.getDate() - 7);
-
-  const matchDateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-  // Check for today first (matches that ended earlier today)
-  if (matchDateOnly.getTime() === today.getTime()) {
-    return t('playerMatches.time.today');
-  } else if (matchDateOnly.getTime() === yesterday.getTime()) {
-    return t('playerMatches.time.yesterday');
-  } else if (matchDateOnly >= lastWeekStart) {
-    return t('playerMatches.time.lastWeek');
-  } else {
-    return t('playerMatches.time.earlier');
-  }
-}
-
-/**
- * Group matches by date section
- */
 function groupMatchesByDate(
   matches: MatchWithDetails[],
   timeFilter: TimeFilter,
-  t: (key: TranslationKey, options?: TranslationOptions) => string
+  sectionLabels: Record<UpcomingDateSection | PastDateSection, string>
 ): { title: string; data: MatchWithDetails[] }[] {
-  const getSectionKey =
-    timeFilter === 'upcoming' ? getUpcomingDateSectionKey : getPastDateSectionKey;
-
-  // Define section order based on filter
   const order =
     timeFilter === 'upcoming'
-      ? [
-          t('playerMatches.time.today'),
-          t('playerMatches.time.tomorrow'),
-          t('playerMatches.time.thisWeek'),
-          t('playerMatches.time.nextWeek'),
-          t('playerMatches.time.later'),
-        ]
-      : [
-          t('playerMatches.time.today'),
-          t('playerMatches.time.yesterday'),
-          t('playerMatches.time.lastWeek'),
-          t('playerMatches.time.earlier'),
-        ];
+      ? (UPCOMING_SECTION_ORDER as (UpcomingDateSection | PastDateSection)[])
+      : (PAST_SECTION_ORDER as (UpcomingDateSection | PastDateSection)[]);
 
-  const groups: Record<string, MatchWithDetails[]> = {};
+  const groups: Partial<Record<UpcomingDateSection | PastDateSection, MatchWithDetails[]>> = {};
 
   matches.forEach(match => {
-    const key = getSectionKey(match.match_date, t);
-    if (!groups[key]) {
-      groups[key] = [];
-    }
-    groups[key].push(match);
+    const key =
+      timeFilter === 'upcoming'
+        ? getUpcomingDateSection(match.match_date)
+        : getPastDateSection(match.match_date);
+    if (!groups[key]) groups[key] = [];
+    groups[key]!.push(match);
   });
 
   return order
-    .filter(key => groups[key]?.length > 0)
-    .map(key => ({ title: key, data: groups[key] }));
+    .filter(key => (groups[key]?.length ?? 0) > 0)
+    .map(key => ({ title: sectionLabels[key], data: groups[key]! }));
 }
 
 // =============================================================================
@@ -210,10 +135,24 @@ export default function PlayerMatches() {
     }
   }, [isInitialLoad, isLoading]);
 
+  const sectionLabels = useMemo<Record<UpcomingDateSection | PastDateSection, string>>(
+    () => ({
+      today: t('playerMatches.time.today'),
+      tomorrow: t('playerMatches.time.tomorrow'),
+      thisWeek: t('playerMatches.time.thisWeek'),
+      nextWeek: t('playerMatches.time.nextWeek'),
+      later: t('playerMatches.time.later'),
+      yesterday: t('playerMatches.time.yesterday'),
+      lastWeek: t('playerMatches.time.lastWeek'),
+      earlier: t('playerMatches.time.earlier'),
+    }),
+    [t]
+  );
+
   // Group matches by date
   const sections = useMemo(
-    () => groupMatchesByDate(matches, activeTab, t),
-    [matches, activeTab, t]
+    () => groupMatchesByDate(matches, activeTab, sectionLabels),
+    [matches, activeTab, sectionLabels]
   );
 
   // Handle load more
@@ -420,15 +359,7 @@ export default function PlayerMatches() {
       {isLoading && isInitialLoad ? (
         <View style={styles.loadingContainer}>
           {[1, 2, 3, 4].map(i => (
-            <SkeletonMatchCard
-              key={i}
-              backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-              highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-              style={{
-                backgroundColor: isDark ? '#1C1C1E' : '#FAFAFA',
-                borderColor: colors.border,
-              }}
-            />
+            <MatchCardSkeleton key={i} />
           ))}
         </View>
       ) : (

@@ -86,7 +86,11 @@ const BASE_WEIGHTS: Record<CompletenessItemKey, number> = {
   play_style: 5,
 };
 
-const MIN_AVAILABILITY_SLOTS = 3;
+// Hourly schema: each "slot" is one cell from the 7×17 weekly grid (one
+// hour). The legacy 3-block floor translated to ≈3–9 hours; 6 hours is a
+// loose-but-meaningful floor under the new model. Matches the onboarding
+// MIN_SELECTIONS used in the availability picker.
+const MIN_AVAILABILITY_SLOTS = 6;
 const MIN_FAVORITE_FACILITIES_PER_SPORT = 2;
 
 // =============================================================================
@@ -144,9 +148,11 @@ export const ProfileCompletenessProvider: React.FC<ProfileCompletenessProviderPr
 
   const fetchAsyncData = useCallback(async () => {
     if (!playerId) {
-      setAvailabilityCount(0);
-      setProofCount(0);
-      setFavoritesCount(0);
+      // Cold start: keep counts as null so `loading` stays true until the real
+      // player/profile load and counts are fetched. Seeding with 0 here would
+      // briefly compute isComplete=false against placeholder data, causing the
+      // banner/ring to flash on screen and then disappear once the real counts
+      // come in.
       return;
     }
 
@@ -216,15 +222,12 @@ export const ProfileCompletenessProvider: React.FC<ProfileCompletenessProviderPr
     }
   }, [playerId, selectedSportId]);
 
-  // Reset sport-specific counts synchronously when selectedSportId changes,
-  // so stale values from the previous sport are never used in the useMemo
-  // before fetchAsyncData runs.
-  useEffect(() => {
-    setProofCount(null);
-    setFavoritesCount(null);
-  }, [selectedSportId]);
-
-  // Fetch once on mount and when stable keys change
+  // When selectedSportId changes, refetch in the background but keep the
+  // previous counts visible until the new ones arrive. Resetting to null
+  // would briefly flip `loading` back to true and cause consumers (e.g. the
+  // Home ProfileCompletionBanner) to flicker out and back in. The slightly
+  // stale percentage during the ~100ms refetch window is far less jarring
+  // than a disappearing banner.
   useEffect(() => {
     fetchAsyncData();
   }, [fetchAsyncData]);

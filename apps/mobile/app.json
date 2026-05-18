@@ -166,7 +166,7 @@
         "@stripe/stripe-react-native",
         {
           "merchantIdentifier": "merchant.com.mathisl971.rallia-app",
-          "enableGooglePay": false
+          "enableGooglePay": true
         }
       ],
       [
