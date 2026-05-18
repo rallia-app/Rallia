@@ -15,7 +15,12 @@ import { View, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, status as statusColors } from '@rallia/design-system';
+import {
+  spacingPixels,
+  radiusPixels,
+  status as statusColors,
+  secondary,
+} from '@rallia/design-system';
 import { useThemeStyles } from '@rallia/shared-hooks';
 
 /**
@@ -33,7 +38,7 @@ export const HomeBannerLayoutProvider: React.FC<{
   <HomeBannerLayoutContext.Provider value={layout}>{children}</HomeBannerLayoutContext.Provider>
 );
 
-export type HomeBannerVariant = 'info' | 'warning' | 'success' | 'action';
+export type HomeBannerVariant = 'info' | 'warning' | 'success' | 'action' | 'danger';
 
 export interface HomeBannerProps {
   /** Tint and CTA color family. Default `action` (primary). */
@@ -66,7 +71,9 @@ function variantTint(
         ? statusColors.info.DEFAULT
         : variant === 'success'
           ? statusColors.success.DEFAULT
-          : primary;
+          : variant === 'danger'
+            ? secondary[500]
+            : primary;
   // 7% / 22% opacity — soft tint, readable border at every brightness.
   return { accent, bg: `${accent}12`, border: `${accent}38` };
 }
