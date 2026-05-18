@@ -6,7 +6,6 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { ReferralContext } from '@/lib/attribution-token';
 import { readDistinctIdCookie, readUtmCookie } from '@/lib/utm-cookie';
 
-const PREFIX = 'rallia_attrib_v1:';
 const TOKEN_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 const TOKEN_TTL_MS = 14 * 60 * 1000;
 
@@ -79,6 +78,12 @@ export function useAttributionHandoff(options: AttributionHandoffOptions = {}) {
    * Synchronous clipboard write — must be called from inside a user-gesture
    * handler (onClick) on iOS Safari. Silently no-ops if no token is cached
    * or if the cached token is stale.
+   *
+   * `cached.value` is the full `rallia_attrib_v1:<body>.<sig>` string the
+   * server returns — `signAttributionToken` already bakes the prefix in.
+   * Writing it verbatim. (Earlier we re-prepended the prefix, producing
+   * `rallia_attrib_v1:rallia_attrib_v1:…`; verify then HMAC'd the wrong
+   * body and rejected every iOS handoff with `bad_signature`.)
    */
   const writeClipboard = useCallback((): void => {
     const cached = tokenRef.current;
@@ -88,7 +93,7 @@ export function useAttributionHandoff(options: AttributionHandoffOptions = {}) {
     // Fire-and-forget — we don't await because the user is about to be
     // navigated to the App Store. The Promise resolves async but the
     // clipboard write itself happens immediately on iOS Safari.
-    void navigator.clipboard.writeText(`${PREFIX}${cached.value}`).catch(() => {});
+    void navigator.clipboard.writeText(cached.value).catch(() => {});
   }, []);
 
   return writeClipboard;
