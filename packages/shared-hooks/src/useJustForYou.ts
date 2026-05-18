@@ -1,12 +1,15 @@
 /**
  * useJustForYou Hook
  *
- * TanStack wrapper around `composeJustForYou` from `@rallia/shared-services`.
- * Returns the same `{matches, suggestions}` shape, plus standard query state.
+ * TanStack wrapper around `getJustForYou` from `@rallia/shared-services` — a
+ * single-round-trip RPC that owns scoring + slot expansion + cross-pool dedup
+ * server-side. Anon callers fall through to the legacy `composeJustForYou`
+ * orchestration inside the service wrapper, so the hook API is identical
+ * across both paths.
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { composeJustForYou } from '@rallia/shared-services';
+import { getJustForYou } from '@rallia/shared-services';
 import type {
   Scorable,
   MatchScoringPreferences,
@@ -112,7 +115,7 @@ export function useJustForYou(options: UseJustForYouOptions): UseJustForYouResul
   } = useQuery({
     queryKey,
     queryFn: ({ signal }) =>
-      composeJustForYou({
+      getJustForYou({
         playerId: playerId ?? undefined,
         sportId: sportId!,
         sportName,
@@ -128,7 +131,10 @@ export function useJustForYou(options: UseJustForYouOptions): UseJustForYouResul
     enabled: queryEnabled,
     staleTime: 2 * 60 * 1000,
     gcTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: true,
+    // The new RPC is a single round-trip, but it's still real work — a mobile
+    // foreground transition shouldn't replay the entire pipeline. staleTime is
+    // the freshness contract; window-focus refetches are not.
+    refetchOnWindowFocus: false,
     refetchOnReconnect: true,
   });
 
