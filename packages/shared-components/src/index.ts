@@ -102,31 +102,11 @@ export type { PermissionType } from './overlays';
 export { PreferencesChips } from './preferences';
 export type { PreferencesChipsProps } from './preferences';
 
-// Charts Components
-export {
-  SparklineChart,
-  TimeRangeSelector,
-  AnalyticsSectionCard,
-  BarChart,
-  LineChart,
-  PieChart,
-  FunnelChart,
-} from './charts';
-export type {
-  SparklineChartProps,
-  SparklineDataPoint,
-  TimeRangeSelectorProps,
-  TimeRange,
-  AnalyticsSectionCardProps,
-  BarChartProps,
-  BarChartDataPoint,
-  LineChartProps,
-  LineChartDataPoint,
-  PieChartProps,
-  PieChartDataPoint,
-  FunnelChartProps,
-  FunnelChartDataPoint,
-} from './charts';
+// Charts and analytics layout components are intentionally NOT re-exported
+// here. They pull in `react-native-gifted-charts`, whose top-level module
+// init has crashed on iOS 26 (Sentry REACT-NATIVE-6J). Keeping them on a
+// subpath means non-admin bundles never evaluate the chart code at startup.
+// Import from '@rallia/shared-components/src/charts' in admin screens.
 
 // Theme
 export { colors, typography, spacing } from './theme';
