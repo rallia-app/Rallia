@@ -16,7 +16,8 @@ import { BarChart, PieChart } from 'react-native-gifted-charts';
 import { useTheme, useAnalyticsTimeRange, type TimeRangeOption } from '@rallia/shared-hooks';
 import { useTranslation } from '../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
-import { Text, TimeRangeSelector, LineChart } from '@rallia/shared-components';
+import { Text } from '@rallia/shared-components';
+import { TimeRangeSelector, LineChart } from '@rallia/shared-components/src/charts';
 import { primary, neutral, status, spacingPixels, radiusPixels } from '@rallia/design-system';
 import {
   getNetworkGrowth,

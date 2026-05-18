@@ -134,7 +134,7 @@ export default async function InvitePage({ params, searchParams }: Props) {
   const invitationType = parseInvitationType(query.type);
   const targetId = query.id;
 
-  const { platform, ip, userAgent, webDistinctId, utm } = await getLandingContext();
+  const { platform, ip, userAgent, webDistinctId, utm } = await getLandingContext(query);
 
   // Log click for all visitors (non-blocking)
   logReferralClick(code, ip, userAgent, invitationType, targetId, webDistinctId, utm).catch(
@@ -248,6 +248,11 @@ export default async function InvitePage({ params, searchParams }: Props) {
           codeHint={t('iosCodeHint')}
           copyLabel={t('iosCopyCode')}
           copiedLabel={t('iosCodeCopied')}
+          referral={{
+            code,
+            type: invitationType,
+            ...(targetId ? { targetId } : {}),
+          }}
         />
       ) : (
         <>
