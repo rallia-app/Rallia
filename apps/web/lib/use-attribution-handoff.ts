@@ -1,5 +1,6 @@
 'use client';
 
+import { usePostHog } from 'posthog-js/react';
 import { useCallback, useEffect, useRef } from 'react';
 
 import type { ReferralContext } from '@/lib/attribution-token';
@@ -35,6 +36,7 @@ export interface AttributionHandoffOptions {
  * AsyncStorage PendingReferral path Android already uses.
  */
 export function useAttributionHandoff(options: AttributionHandoffOptions = {}) {
+  const posthog = usePostHog();
   const tokenRef = useRef<{ value: string; mintedAt: number } | null>(null);
   // Serialize the referral context for stable useEffect deps — passing the
   // object directly would re-fire on every render of the caller.
@@ -42,7 +44,11 @@ export function useAttributionHandoff(options: AttributionHandoffOptions = {}) {
 
   const refresh = useCallback(async () => {
     if (typeof window === 'undefined') return;
-    const did = readDistinctIdCookie();
+    // Prefer the in-memory posthog distinct_id over the cookie. UtmCapture
+    // writes the `ph_did` cookie from its own useEffect, so on first visit
+    // the cookie may still be empty when this hook runs — but posthog-js
+    // has the id available synchronously once init has run.
+    const did = posthog?.get_distinct_id?.() || readDistinctIdCookie();
     if (!did) return;
     const utm = readUtmCookie() ?? {};
     const referral = referralKey ? (JSON.parse(referralKey) as ReferralContext) : undefined;
@@ -61,7 +67,7 @@ export function useAttributionHandoff(options: AttributionHandoffOptions = {}) {
       // Best-effort. A failed sign just means clipboard handoff won't fire
       // on the next click — Smart App Banner path still works.
     }
-  }, [referralKey]);
+  }, [posthog, referralKey]);
 
   useEffect(() => {
     void refresh();

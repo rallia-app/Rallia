@@ -15,6 +15,7 @@ import ThemeLogo from '@/components/theme-logo';
 
 type Props = {
   params: Promise<{ code: string; locale: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 async function getCommunityDetails(inviteCode: string) {
@@ -45,11 +46,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function CommunityJoinPage({ params }: Props) {
+export default async function CommunityJoinPage({ params, searchParams }: Props) {
   const { code, locale } = await params;
+  const query = await searchParams;
 
   // Attribution: log click and detect platform
-  const { platform, ip, userAgent, webDistinctId, utm } = await getLandingContext();
+  const { platform, ip, userAgent, webDistinctId, utm } = await getLandingContext(query);
 
   // Log click for analytics (non-blocking, no referral code)
   logReferralClick('', ip, userAgent, 'community', code, webDistinctId, utm).catch(() => {});

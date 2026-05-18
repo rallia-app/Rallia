@@ -17,6 +17,7 @@ import { InviteLandingTracker } from '@/components/invite-landing-tracker';
 
 type Props = {
   params: Promise<{ id: string; locale: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -71,11 +72,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function MatchPage({ params }: Props) {
+export default async function MatchPage({ params, searchParams }: Props) {
   const { id, locale } = await params;
+  const query = await searchParams;
 
   // Attribution: log click and detect platform
-  const { platform, ip, userAgent, webDistinctId, utm } = await getLandingContext();
+  const { platform, ip, userAgent, webDistinctId, utm } = await getLandingContext(query);
 
   // Log click for analytics (non-blocking, no referral code)
   logReferralClick('', ip, userAgent, 'match', id, webDistinctId, utm).catch(() => {});

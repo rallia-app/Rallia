@@ -1,8 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Check, Copy, Download } from 'lucide-react';
+import { useState } from 'react';
+
+import { Button } from '@/components/ui/button';
+import { appStoreClicked } from '@/lib/analytics';
+import type { ReferralContext } from '@/lib/attribution-token';
+import { useAttributionHandoff } from '@/lib/use-attribution-handoff';
 
 interface IOSCodeHandoffProps {
   code: string;
@@ -12,6 +16,12 @@ interface IOSCodeHandoffProps {
   codeHint: string;
   copyLabel: string;
   copiedLabel: string;
+  /**
+   * Referral context for the iOS clipboard handoff — when present, the
+   * signed token written on App Store click carries it so the mobile app
+   * auto-attributes the invite on first launch (no manual code entry).
+   */
+  referral?: ReferralContext;
 }
 
 export function IOSCodeHandoff({
@@ -22,8 +32,13 @@ export function IOSCodeHandoff({
   codeHint,
   copyLabel,
   copiedLabel,
+  referral,
 }: IOSCodeHandoffProps) {
   const [copied, setCopied] = useState(false);
+  // Pre-mints a signed `rallia_attrib_v1:<token>` and returns a sync writer
+  // we can call inside the App Store click handler (iOS Safari requires
+  // the clipboard write to happen within an active user gesture).
+  const writeClipboard = useAttributionHandoff(referral ? { referral } : {});
 
   const handleCopy = async () => {
     try {
@@ -57,7 +72,24 @@ export function IOSCodeHandoff({
         </p>
       </div>
 
-      <a href={appStoreUrl} target="_blank" rel="noopener noreferrer" className="w-full">
+      <a
+        href={appStoreUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="w-full"
+        onClick={() => {
+          // Sync clipboard write inside the user gesture, then fire the
+          // analytics event. Order matters: navigator.clipboard.writeText
+          // must happen before any awaited work to satisfy Safari's
+          // user-activation requirement.
+          writeClipboard();
+          appStoreClicked({
+            store: 'app_store',
+            placement: 'invite_page',
+            invitation_code: code,
+          });
+        }}
+      >
         <Button size="lg" className="w-full text-base gap-2">
           <Download className="h-5 w-5" />
           {downloadLabel}
