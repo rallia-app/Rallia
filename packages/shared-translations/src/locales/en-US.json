@@ -4943,7 +4943,8 @@
       "backToFacilities": "Back to Facilities",
       "creating": "Creating...",
       "createButton": "Create Facility",
-      "error": "Failed to create facility. Please try again."
+      "error": "Failed to create facility. Please try again.",
+      "success": "Facility created successfully"
     },
     "edit": {
       "title": "Edit Facility",
@@ -4990,7 +4991,8 @@
       "organizationLabel": "Organization",
       "selectOrganization": "Select organization",
       "loadingOrganizations": "Loading organizations...",
-      "organizationChangeWarning": "Changing the organization will move this facility and all its courts/contacts to the selected organization."
+      "organizationChangeWarning": "Changing the organization will move this facility and all its courts/contacts to the selected organization.",
+      "success": "Facility updated successfully"
     },
     "facilityTypes": {
       "park": "Park",
