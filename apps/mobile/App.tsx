@@ -196,7 +196,7 @@ const queryPersister = createAsyncStoragePersister({
 
 // Bump this string to invalidate every persisted query at once — e.g. after a
 // breaking change to a query key shape or a payload schema.
-const QUERY_CACHE_BUSTER = 'v2';
+const QUERY_CACHE_BUSTER = 'v3';
 
 /**
  * Parse match ID from deep link URL.
@@ -877,6 +877,11 @@ function App() {
                     if (root === 'matches' && (sub === 'justForYou' || sub === 'topSuggestions')) {
                       return false;
                     }
+                    // Skip queries whose payloads are Set/Map instances —
+                    // JSON serialization turns `new Set([...])` into `{}`,
+                    // and consumers calling .has() on the rehydrated value
+                    // crash with "undefined is not a function".
+                    if (root === 'blockedUserIds' || root === 'favoriteUserIds') return false;
                     return true;
                   },
                 },
