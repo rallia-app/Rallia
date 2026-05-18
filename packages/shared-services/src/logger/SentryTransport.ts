@@ -64,17 +64,17 @@ function isBackgroundNetworkNoise(entry: LogEntry): boolean {
   const name = (err as { name?: unknown }).name;
   if (name === 'NetworkTimeoutError') return true;
 
-  const message = (err as { message?: unknown }).message;
-  if (typeof message === 'string' && message.includes('Network request failed')) {
-    return true;
-  }
+  // RN/Hermes surfaces fetch failures as "Network request failed" and timeouts
+  // as "Network request timed out" — both fire when iOS suspends the runtime.
+  const matchesNetworkNoise = (s: unknown): boolean =>
+    typeof s === 'string' &&
+    (s.includes('Network request failed') || s.includes('Network request timed out'));
+
+  if (matchesNetworkNoise((err as { message?: unknown }).message)) return true;
 
   // Supabase wraps fetch failures into a PostgrestError-shaped object whose
   // `details` carries the underlying TypeError string.
-  const details = (err as { details?: unknown }).details;
-  if (typeof details === 'string' && details.includes('Network request failed')) {
-    return true;
-  }
+  if (matchesNetworkNoise((err as { details?: unknown }).details)) return true;
 
   return false;
 }
