@@ -65,6 +65,13 @@ interface FacilityRow {
   served_sport_ids: string[] | null;
   timezone: string | null;
   sports: FacilitySport[] | null;
+  /** Per-provider mapping from the provider's facility-type identifier
+   *  to our sport_id. Populated from `data_provider_facility_type` via
+   *  `resolve_facility_providers`. Empty object when the provider has no
+   *  mappings configured. The map is the primary signal in resolveSportId:
+   *  if a snapshot row's `external_facility_type_id` is in the map and the
+   *  mapped sport is a candidate, stamp it. */
+  facility_type_sport_map: Record<string, string> | null;
 }
 
 /**
@@ -78,26 +85,59 @@ interface FacilityRow {
  * - 0 candidate sports → null.
  * - 1 candidate sport → stamp it. Covers single-sport facilities and
  *   multi-sport facilities whose other sports are served elsewhere.
- * - >1 candidate sports → substring-match court_name against each sport
- *   name. Handles the IC3 sites that share one siteId across tennis and
- *   pickleball (courts labeled "Terrain de tennis #N" / "Terrain de
- *   pickleball #N"). No match → null.
+ * - >1 candidate sports → resolve in this order:
+ *     1. `facility_type_sport_map` lookup keyed on the row's
+ *        `external_facility_type_id`. Deterministic per provider.
+ *     2. Substring-match the provider's `facility_type_name` against each
+ *        candidate sport name. Reliable for IC3 — facilityType.name always
+ *        contains the sport word ("Terrain tennis ext", "Terrain de
+ *        pickleball") even when court_name doesn't.
+ *     3. Substring-match `court_name` against each candidate sport name.
+ *        Legacy fallback for providers/types we haven't mapped yet.
+ *   No match → null.
+ *
+ * Only stamps a sport that's in the candidate set, so a provider returning
+ * volleyball rows for a tennis+pickleball-tagged facility correctly stays
+ * null instead of leaking an untagged sport into the snapshot.
  */
 function resolveSportId(
   sports: FacilitySport[] | null,
   servedSportIds: string[] | null,
-  courtName: string | null
+  courtName: string | null,
+  facilityTypeId: string | null,
+  facilityTypeName: string | null,
+  facilityTypeSportMap: Record<string, string> | null
 ): string | null {
   if (!sports || sports.length === 0) return null;
   const served = servedSportIds && servedSportIds.length > 0 ? new Set(servedSportIds) : null;
   const candidates = served ? sports.filter(s => served.has(s.id)) : sports;
   if (candidates.length === 0) return null;
   if (candidates.length === 1) return candidates[0].id;
-  if (!courtName) return null;
-  const lower = courtName.toLowerCase();
-  for (const s of candidates) {
-    if (lower.includes(s.name.toLowerCase())) return s.id;
+
+  const candidateIds = new Set(candidates.map(s => s.id));
+
+  // 1. Provider-curated facilityType → sport mapping.
+  if (facilityTypeId && facilityTypeSportMap) {
+    const mapped = facilityTypeSportMap[facilityTypeId];
+    if (mapped && candidateIds.has(mapped)) return mapped;
   }
+
+  // 2. Substring on facilityType.name — strong signal for IC3.
+  if (facilityTypeName) {
+    const lower = facilityTypeName.toLowerCase();
+    for (const s of candidates) {
+      if (lower.includes(s.name.toLowerCase())) return s.id;
+    }
+  }
+
+  // 3. Substring on court_name — last-resort fallback.
+  if (courtName) {
+    const lower = courtName.toLowerCase();
+    for (const s of candidates) {
+      if (lower.includes(s.name.toLowerCase())) return s.id;
+    }
+  }
+
   return null;
 }
 
@@ -213,6 +253,7 @@ async function refreshOneFacility(
     served_sport_ids,
     timezone,
     sports,
+    facility_type_sport_map,
   } = facilityRow;
 
   if (!external_provider_id || !provider_type || !api_base_url) {
@@ -264,12 +305,19 @@ async function refreshOneFacility(
     });
     rows = result.rows;
     source = result.source;
-    // Stamp sport_id (facility_sport + court_name fallback) and booking_url
-    // (provider-template resolution) per row. Both used to be done at read
-    // time on the client; now stored on the snapshot for an exact-equality
-    // sport filter and a one-field client URL.
+    // Stamp sport_id (mapping > facilityType.name substring > court_name
+    // substring) and booking_url (provider-template resolution) per row.
+    // Both used to be done at read time on the client; now stored on the
+    // snapshot for an exact-equality sport filter and a one-field client URL.
     for (const r of rows) {
-      r.sport_id = resolveSportId(sports, served_sport_ids, r.court_name);
+      r.sport_id = resolveSportId(
+        sports,
+        served_sport_ids,
+        r.court_name,
+        r.external_facility_type_id ?? null,
+        r.external_facility_type_name ?? null,
+        facility_type_sport_map
+      );
       r.booking_url = buildBookingUrl(providerConfig, r);
     }
   } catch (err) {
