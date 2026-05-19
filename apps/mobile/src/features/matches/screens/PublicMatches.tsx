@@ -239,7 +239,13 @@ export default function PublicMatches() {
   const sortedMatches = useSortedNearbyMatches(filteredMatches, scoringPreferences);
 
   // Fetch a flat top-N list of opponent-deduped, score-sorted suggestions.
-  // Used to pad the feed when there are fewer than 30 real matches.
+  // Only used to pad the feed once matches genuinely run out — gate the fetch
+  // on `!hasNextPage && sortedMatches.length < 30` so the suggestion RPC
+  // doesn't fire on every screen open (it competes with the public-matches
+  // RPC for the same Postgres pool and is rarely consumed for users with
+  // enough nearby matches). `isLoading` is included so we don't kick off the
+  // RPC before the first page of matches has even resolved.
+  const suggestionsNeeded = showMatches && !isLoading && !hasNextPage && sortedMatches.length < 30;
   const {
     suggestions: rawSuggestions,
     isLoading: loadingSuggestions,
@@ -251,7 +257,7 @@ export default function PublicMatches() {
     latitude: location?.latitude,
     longitude: location?.longitude,
     maxItems: 30,
-    enabled: showMatches,
+    enabled: suggestionsNeeded,
   });
 
   // Build suggestion-applicable filters (stable ref via useMemo).
@@ -352,25 +358,10 @@ export default function PublicMatches() {
     callerMatchType,
   } = useSuggestionInviteHandler({ sportId: selectedSport?.id, source: 'feed' });
 
-  // Auto-paginate matches up to 30 before relying on suggestions to fill the feed.
-  useEffect(() => {
-    if (
-      showMatches &&
-      !isLoading &&
-      !isFetchingNextPage &&
-      hasNextPage &&
-      sortedMatches.length < 30
-    ) {
-      fetchNextPage();
-    }
-  }, [
-    showMatches,
-    isLoading,
-    isFetchingNextPage,
-    hasNextPage,
-    sortedMatches.length,
-    fetchNextPage,
-  ]);
+  // Pagination is driven by FlatList `onEndReached` so the first page renders
+  // immediately and additional pages only fetch as the user scrolls. Padding
+  // suggestions surface when matches run out before the user scrolls past
+  // them (see the `padCount`/`hasNextPage` branch in the `feed` memo above).
 
   // Handle infinite scroll
   const handleEndReached = useCallback(() => {
@@ -440,9 +431,12 @@ export default function PublicMatches() {
   // Check if we're loading due to filter/search changes (not initial load or pagination)
   const isSearching = isFetching && !isLoading && !isRefetching && !isFetchingNextPage;
 
-  // Render empty state — only shows when both matches AND suggestions are empty.
+  // Render empty state — only shows when both matches AND suggestions are
+  // empty. While suggestions are still loading (after matches exhausted but
+  // before the suggestion RPC returns), hold the empty card so we don't
+  // flash "no matches" → suggestions populating.
   const renderEmptyComponent = useCallback(() => {
-    if (isLoading || isSearching) return null;
+    if (isLoading || isSearching || loadingSuggestions) return null;
     return (
       <EmptyState
         hasFilters={hasActiveFilters || debouncedSearchQuery.length > 0}
@@ -450,7 +444,15 @@ export default function PublicMatches() {
         t={t as (key: TranslationKey) => string}
       />
     );
-  }, [isLoading, isSearching, hasActiveFilters, debouncedSearchQuery, colors.textMuted, t]);
+  }, [
+    isLoading,
+    isSearching,
+    loadingSuggestions,
+    hasActiveFilters,
+    debouncedSearchQuery,
+    colors.textMuted,
+    t,
+  ]);
 
   // Render footer — pagination spinner or suggestion-loading spinner.
   const renderFooter = useCallback(() => {
@@ -555,7 +557,7 @@ export default function PublicMatches() {
       </View>
 
       {/* Match List */}
-      {isLoading || loadingSuggestions ? (
+      {isLoading ? (
         <View style={styles.listLoadingContainer}>
           {[1, 2, 3, 4].map(i => (
             <MatchCardSkeleton key={i} />

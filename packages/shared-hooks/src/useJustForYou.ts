@@ -129,11 +129,15 @@ export function useJustForYou(options: UseJustForYouOptions): UseJustForYouResul
         signal,
       }),
     enabled: queryEnabled,
-    staleTime: 2 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
-    // The new RPC is a single round-trip, but it's still real work — a mobile
-    // foreground transition shouldn't replay the entire pipeline. staleTime is
-    // the freshness contract; window-focus refetches are not.
+    // The RPC scores the full opponent + match pool against the caller and is
+    // the most expensive query on Home. The carousel's value doesn't decay
+    // minute-to-minute — bumping staleTime keeps cold reopens within a 10-min
+    // window instant, and pull-to-refresh still lets the user force a fetch.
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    // Override the global `refetchOnMount: 'always'` so the bumped staleTime
+    // is actually honored on Home remount (back-nav, splash transitions).
+    refetchOnMount: true,
     refetchOnWindowFocus: false,
     refetchOnReconnect: true,
   });

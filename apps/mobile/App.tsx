@@ -97,7 +97,6 @@ import {
   usePendingFeedbackCheck,
   useUpdateLastSeen,
   ProfileCompletenessProvider,
-  useTopSuggestions,
 } from '@rallia/shared-hooks';
 import { useBadgeCountSync } from '@rallia/shared-hooks/src/useBadgeCountSync';
 import { ErrorBoundary, ToastProvider, NetworkProvider, useToast } from '@rallia/shared-components';
@@ -111,12 +110,7 @@ import { StripeProvider } from '@stripe/stripe-react-native';
 import { SheetManager, SheetProvider } from 'react-native-actions-sheet';
 import { Sheets } from './src/context/sheets';
 import { getMatchWithDetails, supabase } from '@rallia/shared-services';
-import {
-  usePushNotifications,
-  useEffectiveLocation,
-  useTranslation,
-  type TranslationKey,
-} from './src/hooks';
+import { usePushNotifications, useTranslation, type TranslationKey } from './src/hooks';
 import {
   AuthProvider,
   useAuth,
@@ -480,7 +474,6 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
             <HomeLocationSync userId={userId} />
             <SportProvider userId={userId}>
               <SubscriptionProvider>
-                <MatchSuggestionsWarmer />
                 <SplashGate>
                   <ProfileCompletenessBridge>{children}</ProfileCompletenessBridge>
                 </SplashGate>
@@ -491,30 +484,6 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
       </LocationModeProvider>
     </UserLocationProvider>
   );
-}
-
-/**
- * Warms the top-suggestions cache as soon as sport (+player or location) is
- * known, so the Suggestion Sheet and Public Matches suggestion-pad render
- * instantly. Pre-warms the maxItems=15 query (the largest of the surfaces);
- * smaller-cap callers reuse the same cache key when their inputs match.
- */
-function MatchSuggestionsWarmer() {
-  const { player } = usePlayer();
-  const { selectedSport } = useSport();
-  const { location } = useEffectiveLocation();
-
-  useTopSuggestions({
-    playerId: player?.id,
-    sportId: selectedSport?.id,
-    sportName: selectedSport?.name,
-    latitude: !player?.id ? location?.latitude : undefined,
-    longitude: !player?.id ? location?.longitude : undefined,
-    maxItems: 15,
-    enabled: true,
-  });
-
-  return null;
 }
 
 /**
