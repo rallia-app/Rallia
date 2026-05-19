@@ -3852,7 +3852,7 @@ export async function invitePlayersToMatch(
 /**
  * Check-in radius in meters
  */
-const CHECK_IN_RADIUS_METERS = 100;
+const CHECK_IN_RADIUS_METERS = 500;
 
 /**
  * Result of a check-in attempt
