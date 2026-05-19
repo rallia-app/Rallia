@@ -29,6 +29,14 @@ export interface SnapshotRow {
    *  fetch. Stored on the snapshot row so the client can use it directly
    *  without any template knowledge. */
   booking_url: string | null;
+  /** Provider's facility-type identifier (IC3 `facility.facilityType.id`).
+   *  Transient: consumed by the orchestrator's sport-resolution step and
+   *  not persisted to the snapshot table. Null for providers that don't
+   *  expose a facility-type concept (e.g. ActivityMessenger). */
+  external_facility_type_id?: string | null;
+  /** Human-readable label for the facility type (e.g. "Terrain tennis ext").
+   *  Used as a substring fallback when no id-based mapping exists. */
+  external_facility_type_name?: string | null;
 }
 
 export interface ProviderConfig {
@@ -123,6 +131,7 @@ interface IC3Slot {
     id?: string | number;
     name?: string;
     site?: { name?: string };
+    facilityType?: { id?: string | number; name?: string };
   };
 }
 
@@ -183,6 +192,8 @@ async function fetchIC3(config: ProviderConfig, params: FetchParams): Promise<Fe
         item.facility?.id != null ? String(item.facility.id) : String(item.facilityScheduleId);
       const shortCourtName = cleanIC3Name(item.facility?.name);
       const siteName = cleanIC3Name(item.facility?.site?.name);
+      const ftId = item.facility?.facilityType?.id;
+      const ftName = item.facility?.facilityType?.name;
       rows.push({
         external_court_id: externalCourtId,
         slot_start: new Date(item.startDateTime).toISOString(),
@@ -196,6 +207,8 @@ async function fetchIC3(config: ProviderConfig, params: FetchParams): Promise<Fe
         currency: 'CAD',
         sport_id: null,
         booking_url: null,
+        external_facility_type_id: ftId != null ? String(ftId) : null,
+        external_facility_type_name: ftName ?? null,
       });
     }
 
@@ -306,6 +319,7 @@ async function fetchActivityMessenger(
           price_cents: priceCents,
           currency: 'CAD',
           sport_id: null,
+          booking_url: null,
         });
       }
     } else if (availability.location_ids && availability.location_ids.length > 0) {
@@ -321,6 +335,7 @@ async function fetchActivityMessenger(
           price_cents: priceCents,
           currency: 'CAD',
           sport_id: null,
+          booking_url: null,
         });
       }
     }
