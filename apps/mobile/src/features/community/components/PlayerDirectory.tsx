@@ -5,7 +5,7 @@
  * Features infinite scrolling, search, filters, and empty states.
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -313,6 +313,19 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     longitude: location?.longitude,
   });
 
+  const isManualRefresh = useRef(false);
+
+  useEffect(() => {
+    if (!isFetching) {
+      isManualRefresh.current = false;
+    }
+  }, [isFetching]);
+
+  const handleRefresh = useCallback(() => {
+    isManualRefresh.current = true;
+    refetch();
+  }, [refetch]);
+
   // Derive reputation display data directly from search results (no extra API calls)
   const getReputationDisplay = useCallback((player: PlayerSearchResult) => {
     if (!player.reputation_tier || !player.reputation_is_public) return undefined;
@@ -557,8 +570,8 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
         onEndReachedThreshold={0.5}
         refreshControl={
           <RefreshControl
-            refreshing={isFetching && !isFetchingNextPage && !isLoading}
-            onRefresh={refetch}
+            refreshing={isFetching && isManualRefresh.current}
+            onRefresh={handleRefresh}
             colors={[colors.primary]}
             tintColor={colors.primary}
           />
