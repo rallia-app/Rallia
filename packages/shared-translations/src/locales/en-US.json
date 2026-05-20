@@ -8453,7 +8453,8 @@
       "favorite": "Favorite",
       "addedToFavorites": "Added to favorites",
       "removedFromFavorites": "Removed from favorites",
-      "maxReached": "Maximum 3 favorites reached"
+      "maxReached": "Maximum 3 favorites reached",
+      "minimumRequired": "You can't have less than {min} favorite facilities selected for the current sport"
     },
     "badges": {
       "public": "Public",

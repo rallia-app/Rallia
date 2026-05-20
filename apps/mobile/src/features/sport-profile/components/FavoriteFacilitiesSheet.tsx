@@ -14,8 +14,9 @@ import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
+import { useQueryClient } from '@tanstack/react-query';
 import { Text } from '@rallia/shared-components';
-import { useFacilitySearch } from '@rallia/shared-hooks';
+import { useFacilitySearch, facilityKeys } from '@rallia/shared-hooks';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 import { lightHaptic, selectionHaptic, successHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../../hooks';
@@ -168,12 +169,18 @@ export function FavoriteFacilitiesActionSheet({ payload }: SheetProps<'favorite-
   const minFavorites = payload?.minFavorites ?? MIN_FAVORITES;
 
   const didSaveRef = useRef(false);
+  const queryClient = useQueryClient();
 
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Local selection state — array of FacilitySearchResult objects
-  const [selectedFacilities, setSelectedFacilities] = useState<FacilitySearchResult[]>([]);
-  const [initialised, setInitialised] = useState(false);
+  // Local selection state. Seeded directly from payload.initialFavorites so
+  // far-away favorites that don't appear in the first paginated page of
+  // search results still render as selected. Stored as a minimal
+  // {id, name} shape because FacilitySearchResult satisfies that on toggle.
+  type SelectedFacility = { id: string; name: string };
+  const [selectedFacilities, setSelectedFacilities] = useState<SelectedFacility[]>(
+    () => payload?.initialFavorites ?? []
+  );
 
   // Search facilities sorted by distance
   const {
@@ -190,31 +197,6 @@ export function FavoriteFacilitiesActionSheet({ payload }: SheetProps<'favorite-
     enabled: !!sportId && latitude !== null && longitude !== null,
   });
 
-  // Seed selected state from search results once they arrive
-  // (match initialFacilityIds against the loaded facilities)
-  const initialFacilityIds = payload?.initialFacilityIds;
-  if (
-    !initialised &&
-    searchResults.length > 0 &&
-    initialFacilityIds &&
-    initialFacilityIds.length > 0
-  ) {
-    const idSet = new Set(initialFacilityIds);
-    const matched = searchResults.filter(f => idSet.has(f.id));
-    // Preserve the original order from initialFacilityIds
-    const ordered = initialFacilityIds
-      .map(id => matched.find(f => f.id === id))
-      .filter((f): f is FacilitySearchResult => !!f);
-    setSelectedFacilities(ordered);
-    setInitialised(true);
-  } else if (
-    !initialised &&
-    searchResults.length > 0 &&
-    (!initialFacilityIds || initialFacilityIds.length === 0)
-  ) {
-    setInitialised(true);
-  }
-
   const selectedIds = useMemo(
     () => new Set(selectedFacilities.map(f => f.id)),
     [selectedFacilities]
@@ -227,7 +209,7 @@ export function FavoriteFacilitiesActionSheet({ payload }: SheetProps<'favorite-
 
   const handleSelectFacility = useCallback((facility: FacilitySearchResult) => {
     successHaptic();
-    setSelectedFacilities(prev => [...prev, facility]);
+    setSelectedFacilities(prev => [...prev, { id: facility.id, name: facility.name }]);
     setSearchQuery('');
   }, []);
 
@@ -253,8 +235,13 @@ export function FavoriteFacilitiesActionSheet({ payload }: SheetProps<'favorite-
     mediumHaptic();
     didSaveRef.current = true;
     onSave?.(selectedFacilities.map(f => f.id));
+    // The onSave callbacks write to player_favorite_facility directly
+    // (bypassing useFavoriteFacilities). Invalidate the facility-search cache
+    // so the RPC-computed `is_favorite` flag re-fetches and the heart icon /
+    // favoritesOnly filter stay consistent in FacilitiesDirectory.
+    queryClient.invalidateQueries({ queryKey: facilityKeys.search() });
     SheetManager.hide('favorite-facilities');
-  }, [onSave, selectedFacilities]);
+  }, [onSave, selectedFacilities, queryClient]);
 
   // Scroll-to-load pagination
   const handleScroll = useCallback(

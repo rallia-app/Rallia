@@ -58,7 +58,10 @@ export const NetworkFavoriteFacilities: React.FC<NetworkFavoriteFacilitiesProps>
         sportId,
         latitude,
         longitude,
-        initialFacilityIds: favorites.map(f => f.facilityId),
+        initialFavorites: favorites.map(f => ({
+          id: f.facilityId,
+          name: f.facility.name,
+        })),
         minFavorites: 0,
         onSave: async (facilityIds: string[]) => {
           try {

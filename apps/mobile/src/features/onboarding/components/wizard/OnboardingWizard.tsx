@@ -46,7 +46,8 @@ import {
   requestToJoinCommunityByInviteCode,
   syncHomeLocation as syncHomeLocationToPlayer,
 } from '@rallia/shared-services';
-import { useProfile, usePlayer, useTopSuggestions } from '@rallia/shared-hooks';
+import { useProfile, usePlayer, useTopSuggestions, facilityKeys } from '@rallia/shared-hooks';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   PENDING_REFERRAL_KEY,
   ACQUISITION_CHANNEL_KEY,
@@ -311,6 +312,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   // Track the last uploaded profile picture URL to clean up old uploads
   const [lastUploadedProfileUrl, setLastUploadedProfileUrl] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   // Profile hook to refetch profile when onboarding completes
   const { refetch: refetchProfile } = useProfile();
@@ -818,6 +820,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             return false;
           }
 
+          // Sync RPC-computed `is_favorite` so FacilitiesDirectory's heart
+          // icon and favoritesOnly filter reflect onboarding picks right away.
+          queryClient.invalidateQueries({ queryKey: facilityKeys.search() });
+
           setIsSaving(false);
           return true;
         } catch (error) {
@@ -1058,6 +1064,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     refetchPlayer,
     refetchSports,
     lastUploadedProfileUrl,
+    queryClient,
   ]);
 
   // Handle next button press
