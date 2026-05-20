@@ -3,7 +3,7 @@
  * Displays facilities with search, filtering, and favorites.
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -659,7 +659,16 @@ export default function FacilitiesDirectory() {
     );
   }, [isLoading, hasActiveSearch, location, colors, t]);
 
+  const isManualRefresh = useRef(false);
+
+  useEffect(() => {
+    if (!isFetching) {
+      isManualRefresh.current = false;
+    }
+  }, [isFetching]);
+
   const handleRefresh = useCallback(() => {
+    isManualRefresh.current = true;
     refetch();
     if (session?.user?.id) {
       refetchBookings();
@@ -679,7 +688,7 @@ export default function FacilitiesDirectory() {
         onEndReachedThreshold={0.5}
         refreshControl={
           <RefreshControl
-            refreshing={isFetching && !isLoading}
+            refreshing={isFetching && isManualRefresh.current}
             onRefresh={handleRefresh}
             tintColor={colors.primary}
           />
