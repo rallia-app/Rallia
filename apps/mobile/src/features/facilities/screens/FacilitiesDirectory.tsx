@@ -25,6 +25,7 @@ import {
   useUpcomingBookings,
   useProfile,
   DEFAULT_FACILITY_FILTERS,
+  MIN_FAVORITE_FACILITIES,
   type FacilityFilters,
 } from '@rallia/shared-hooks';
 import type { FacilitySearchResult } from '@rallia/shared-types';
@@ -215,9 +216,14 @@ export default function FacilitiesDirectory() {
     );
   }, [isFetchingNextPage, colors.primary]);
 
-  // Favorites management
-  const { favorites, isFavorite, addFavorite, removeFavorite, isMaxReached } =
-    useFavoriteFacilities(player?.id ?? null, selectedSport?.id);
+  // Favorites mutations. Heart state is read off the RPC row (`is_favorite`)
+  // so the heart and the server-side `favoritesOnly` filter share a single
+  // source of truth — addFavorite/removeFavorite invalidate the search cache
+  // so the RPC re-runs and the flag updates.
+  const { addFavorite, removeFavorite, isMaxReached, canRemoveFavorite } = useFavoriteFacilities(
+    player?.id ?? null,
+    selectedSport?.id
+  );
 
   // Handle facility press
   const handleFacilityPress = useCallback(
@@ -238,9 +244,15 @@ export default function FacilitiesDirectory() {
       }
 
       lightHaptic();
-      const wasAdded = isFavorite(facility.id);
+      const wasAdded = !!facility.is_favorite;
 
       if (wasAdded) {
+        if (!canRemoveFavorite) {
+          toast.info(
+            t('facilitiesTab.favorites.minimumRequired', { min: MIN_FAVORITE_FACILITIES })
+          );
+          return;
+        }
         const success = await removeFavorite(facility.id);
         if (success) {
           toast.success(t('facilitiesTab.favorites.removedFromFavorites'));
@@ -256,7 +268,7 @@ export default function FacilitiesDirectory() {
         }
       }
     },
-    [player?.id, isFavorite, removeFavorite, addFavorite, isMaxReached, t, toast]
+    [player?.id, removeFavorite, addFavorite, isMaxReached, canRemoveFavorite, t, toast]
   );
 
   // Handle slot press - show court selection sheet if multiple courts available
@@ -305,7 +317,7 @@ export default function FacilitiesDirectory() {
     ({ item }: { item: FacilitySearchResult }) => (
       <FacilityCard
         facility={item}
-        isFavorite={isFavorite(item.id)}
+        isFavorite={!!item.is_favorite}
         onPress={() => handleFacilityPress(item)}
         onToggleFavorite={handleToggleFavorite}
         isMaxFavoritesReached={isMaxReached}
@@ -318,7 +330,6 @@ export default function FacilitiesDirectory() {
       />
     ),
     [
-      isFavorite,
       handleFacilityPress,
       handleToggleFavorite,
       handleSlotPress,

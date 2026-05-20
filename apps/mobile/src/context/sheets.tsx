@@ -627,7 +627,12 @@ declare module 'react-native-actions-sheet' {
         sportId: string;
         latitude: number | null;
         longitude: number | null;
-        initialFacilityIds: string[];
+        /**
+         * Pre-seeded favorites with id + display name. The sheet uses these
+         * directly so far-away favorites that aren't in the first paginated
+         * page of search results still render as selected.
+         */
+        initialFavorites: { id: string; name: string }[];
         minFavorites?: number;
         onSave?: (facilityIds: string[]) => void;
         onDismiss?: () => void;

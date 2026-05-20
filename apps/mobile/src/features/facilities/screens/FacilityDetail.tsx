@@ -27,6 +27,7 @@ import {
   usePlayer,
   useCourtAvailability,
   useProfile,
+  MIN_FAVORITE_FACILITIES,
 } from '@rallia/shared-hooks';
 import {
   useThemeStyles,
@@ -116,10 +117,8 @@ export default function FacilityDetail() {
   });
 
   // Favorites management
-  const { isFavorite, addFavorite, removeFavorite, isMaxReached } = useFavoriteFacilities(
-    player?.id ?? null,
-    selectedSport?.id
-  );
+  const { isFavorite, addFavorite, removeFavorite, isMaxReached, canRemoveFavorite } =
+    useFavoriteFacilities(player?.id ?? null, selectedSport?.id);
 
   const facilityIsFavorite = facility ? isFavorite(facility.id) : false;
 
@@ -130,6 +129,10 @@ export default function FacilityDetail() {
     lightHaptic();
 
     if (facilityIsFavorite) {
+      if (!canRemoveFavorite) {
+        toast.info(t('facilitiesTab.favorites.minimumRequired', { min: MIN_FAVORITE_FACILITIES }));
+        return;
+      }
       const success = await removeFavorite(facility.id);
       if (success) {
         toast.success(t('facilitiesTab.favorites.removedFromFavorites'));
@@ -151,6 +154,7 @@ export default function FacilityDetail() {
     removeFavorite,
     addFavorite,
     isMaxReached,
+    canRemoveFavorite,
     t,
     toast,
   ]);
