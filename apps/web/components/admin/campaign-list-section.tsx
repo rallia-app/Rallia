@@ -1,6 +1,6 @@
 'use client';
 
-import { useUtmCampaigns } from '@rallia/shared-hooks';
+import type { UtmCampaign } from '@rallia/shared-hooks';
 import { Archive } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -18,23 +18,19 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-/**
- * List of active campaigns with archive action. Reads/writes via the shared
- * `useUtmCampaigns` hook so any change here updates the LinkBuilder dropdown
- * on the same page (both hooks share the underlying RPC).
- *
- * Note: the hook caches per-mount, so the LinkBuilder still calls its own
- * instance — refetch coordination is by user action (archive succeeds →
- * both will re-pull on their next render that the user triggers).
- */
-export function CampaignListSection() {
+interface CampaignListSectionProps {
+  campaigns: UtmCampaign[];
+  loading: boolean;
+  onArchive: (id: string) => Promise<{ error: string | null }>;
+}
+
+export function CampaignListSection({ campaigns, loading, onArchive }: CampaignListSectionProps) {
   const t = useTranslations('admin.analytics.links');
-  const { campaigns, loading, archive } = useUtmCampaigns();
   const [archivingId, setArchivingId] = useState<string | null>(null);
 
   const handleArchive = async (id: string) => {
     setArchivingId(id);
-    await archive(id);
+    await onArchive(id);
     setArchivingId(null);
   };
 
