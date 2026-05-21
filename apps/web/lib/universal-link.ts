@@ -7,7 +7,7 @@
  * authenticated user before calling `identify()`. UTM params come along for
  * the same ride so PostHog person properties stay coherent.
  *
- * Pass a path like `/match/abc` or a full URL like `https://rallia.app/play`;
+ * Pass a path like `/match/abc` or a full URL like `https://rallia.app/games`;
  * relative paths return relative URLs, absolute paths preserve their origin.
  */
 
