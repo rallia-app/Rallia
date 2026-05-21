@@ -6980,6 +6980,12 @@
         "campaignsDescription": "Campagnes actives. Archiver masque la campagne du sélecteur — l'attribution historique est préservée.",
         "name": "Nom",
         "slug": "Slug",
+        "slugLabel": "Slug",
+        "slugHint": "Identifiant compatible URL (a–z, 0–9, underscore).",
+        "slugTaken": "Une campagne avec ce slug existe déjà.",
+        "slugInvalid": "Le slug ne doit contenir que des minuscules, des chiffres et des underscores.",
+        "invalidDestination": "La destination doit être une URL valide.",
+        "restrictedDestination": "La destination doit être sur rallia.app.",
         "description": "Description",
         "archive": "Archiver",
         "noCampaigns": "Aucune campagne — créez-en une ci-dessus."

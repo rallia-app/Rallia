@@ -1,6 +1,6 @@
 'use client';
 
-import { useUtmCampaigns } from '@rallia/shared-hooks';
+import type { UtmCampaign } from '@rallia/shared-hooks';
 import {
   buildUtmUrl,
   UTM_MEDIUMS,
@@ -10,7 +10,7 @@ import {
 } from '@rallia/shared-utils';
 import { Check, Copy, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,17 +40,49 @@ const DEFAULT_DESTINATIONS = [
   { value: 'https://rallia.app/donate', label: '/donate' },
 ];
 
+const SLUG_REGEX = /^[a-z0-9_]+$/;
+
+function isRalliaHost(host: string): boolean {
+  return host === 'rallia.app' || host.endsWith('.rallia.app');
+}
+
+type DestinationValidation = { ok: true } | { ok: false; reason: 'invalid' | 'restricted' };
+
+function validateDestination(url: string): DestinationValidation {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      return { ok: false, reason: 'invalid' };
+    }
+    if (!isRalliaHost(parsed.host)) {
+      return { ok: false, reason: 'restricted' };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, reason: 'invalid' };
+  }
+}
+
+interface LinkBuilderProps {
+  campaigns: UtmCampaign[];
+  onCreate: (params: {
+    slug: string;
+    displayName: string;
+    description?: string;
+  }) => Promise<{ id: string | null; error: string | null }>;
+}
+
 /**
  * Self-service URL builder for non-technical admins. Pick a destination,
  * a campaign (from DB), source/medium (from typed vocabulary), optional
  * content variant. Live-preview the URL, copy or grab a QR code.
  *
  * Inline "+ New campaign" so the operator doesn't bounce between screens
- * to add a campaign mid-flow.
+ * to add a campaign mid-flow. Campaigns are owned by the parent so a
+ * create here is visible in the catalog list without a page refresh.
  */
-export function LinkBuilder() {
+export function LinkBuilder({ campaigns, onCreate }: LinkBuilderProps) {
   const t = useTranslations('admin.analytics.links');
-  const { campaigns, create } = useUtmCampaigns();
 
   const [destination, setDestination] = useState(DEFAULT_DESTINATIONS[0].value);
   const [campaignId, setCampaignId] = useState<string>('');
@@ -62,15 +94,24 @@ export function LinkBuilder() {
 
   const selectedCampaign = campaigns.find(c => c.id === campaignId);
 
+  const destinationValidation = useMemo(() => validateDestination(destination), [destination]);
+  const destinationError = !destinationValidation.ok
+    ? destinationValidation.reason === 'restricted'
+      ? t('restrictedDestination')
+      : t('invalidDestination')
+    : null;
+
+  const existingSlugs = useMemo(() => new Set(campaigns.map(c => c.slug)), [campaigns]);
+
   const generatedUrl = useMemo(() => {
-    if (!destination || !selectedCampaign || !source || !medium) return '';
+    if (!destinationValidation.ok || !selectedCampaign || !source || !medium) return '';
     return buildUtmUrl(destination, {
       utm_source: source,
       utm_medium: medium,
       utm_campaign: selectedCampaign.slug,
       utm_content: content || undefined,
     });
-  }, [destination, selectedCampaign, source, medium, content]);
+  }, [destination, destinationValidation.ok, selectedCampaign, source, medium, content]);
 
   const handleCopy = async () => {
     if (!generatedUrl) return;
@@ -107,8 +148,12 @@ export function LinkBuilder() {
                 onChange={e => setDestination(e.target.value)}
                 placeholder="https://rallia.app/..."
                 className="flex-1"
+                aria-invalid={destinationError ? true : undefined}
               />
             </div>
+            {destinationError && (
+              <p className="text-xs text-destructive m-0 mt-1">{destinationError}</p>
+            )}
           </Field>
 
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
@@ -204,8 +249,9 @@ export function LinkBuilder() {
       <NewCampaignDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
+        existingSlugs={existingSlugs}
         onCreate={async params => {
-          const result = await create(params);
+          const result = await onCreate(params);
           if (result.id) setCampaignId(result.id);
           return result;
         }}
@@ -239,10 +285,12 @@ function Field({
 function NewCampaignDialog({
   open,
   onOpenChange,
+  existingSlugs,
   onCreate,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  existingSlugs: Set<string>;
   onCreate: (params: {
     slug: string;
     displayName: string;
@@ -252,22 +300,36 @@ function NewCampaignDialog({
   const t = useTranslations('admin.analytics.links');
   const [displayName, setDisplayName] = useState('');
   const [description, setDescription] = useState('');
+  const [slug, setSlug] = useState('');
+  const [slugTouched, setSlugTouched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Auto-derive slug from display name. Operator can paste a name like
-  // "Friends & Family 2026" and we produce `friends_family_2026`.
-  const slug = useMemo(() => slugify(displayName), [displayName]);
+  // Auto-derive slug from the display name until the operator edits it.
+  // Once touched, it stays in sync with whatever the operator typed.
+  const derivedSlug = useMemo(() => slugify(displayName), [displayName]);
+  useEffect(() => {
+    if (!slugTouched) setSlug(derivedSlug);
+  }, [derivedSlug, slugTouched]);
+
+  const slugFormatValid = slug !== '' && SLUG_REGEX.test(slug);
+  const slugTaken = slug !== '' && existingSlugs.has(slug);
+  const slugInlineError =
+    slug !== '' && !slugFormatValid ? t('slugInvalid') : slugTaken ? t('slugTaken') : null;
+
+  const canSubmit = !!displayName && slugFormatValid && !slugTaken && !submitting;
 
   const reset = () => {
     setDisplayName('');
     setDescription('');
+    setSlug('');
+    setSlugTouched(false);
     setError(null);
     setSubmitting(false);
   };
 
   const handleSubmit = async () => {
-    if (!slug || !displayName) return;
+    if (!canSubmit) return;
     setSubmitting(true);
     setError(null);
     const result = await onCreate({ slug, displayName, description: description || undefined });
@@ -300,9 +362,22 @@ function NewCampaignDialog({
               onChange={e => setDisplayName(e.target.value)}
               placeholder="Friends & Family 2026"
             />
-            <p className="text-xs text-muted-foreground m-0 mt-1">
-              {t('slugPreview')} <span className="font-mono">{slug || '—'}</span>
-            </p>
+          </Field>
+          <Field label={t('slugLabel')}>
+            <Input
+              value={slug}
+              onChange={e => {
+                setSlugTouched(true);
+                setSlug(e.target.value);
+              }}
+              placeholder="friends_family_2026"
+              className="font-mono text-xs"
+              aria-invalid={slugInlineError ? true : undefined}
+            />
+            <p className="text-xs text-muted-foreground m-0 mt-1">{t('slugHint')}</p>
+            {slugInlineError && (
+              <p className="text-xs text-destructive m-0 mt-1">{slugInlineError}</p>
+            )}
           </Field>
           <Field label={t('campaignDescriptionLabel')} optional>
             <Textarea
@@ -318,10 +393,7 @@ function NewCampaignDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
             {t('cancel')}
           </Button>
-          <Button
-            onClick={() => void handleSubmit()}
-            disabled={!slug || !displayName || submitting}
-          >
+          <Button onClick={() => void handleSubmit()} disabled={!canSubmit}>
             {submitting ? t('creating') : t('create')}
           </Button>
         </DialogFooter>
@@ -334,7 +406,7 @@ function slugify(input: string): string {
   return input
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '') // strip accents
+    .replace(/[\u0300-\u036f]/g, '') // strip combining diacritics
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '')
     .replace(/_{2,}/g, '_');
