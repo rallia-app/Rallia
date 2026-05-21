@@ -341,13 +341,18 @@ describe('composeJustForYou', () => {
     await expect(composeJustForYou(defaultInput())).rejects.toThrow('network down');
   });
 
-  it('aborted signal short-circuits with empty result', async () => {
+  it('aborted signal throws AbortError so React Query does not cache an empty payload', async () => {
     const ctrl = new AbortController();
     ctrl.abort();
     mockGetNearby.mockResolvedValue({ matches: [], hasMore: false, nextOffset: null });
     mockGetTopSugg.mockResolvedValue([]);
 
-    const result = await composeJustForYou(defaultInput({ signal: ctrl.signal }));
-    expect(result.items).toEqual([]);
+    // The composer used to silently return `{items: []}` on abort, which
+    // would poison the persisted React Query cache for "Just for you" with
+    // an empty payload. Now it throws AbortError — React Query treats that
+    // specially and won't update cache state.
+    await expect(composeJustForYou(defaultInput({ signal: ctrl.signal }))).rejects.toMatchObject({
+      name: 'AbortError',
+    });
   });
 });

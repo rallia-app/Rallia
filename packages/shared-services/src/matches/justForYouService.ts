@@ -70,7 +70,11 @@ export async function getJustForYou(
   });
 
   if (input.signal?.aborted) {
-    return { items: [], matches: [], suggestions: [] };
+    // Throw rather than returning empty — React Query treats AbortError
+    // specially and won't write the empty payload to cache. Important now
+    // that this query is persisted: a cached `{items: []}` would leave
+    // the user staring at the empty-state card until the next refetch.
+    throw new DOMException('Aborted', 'AbortError');
   }
   if (error) {
     throw error;
