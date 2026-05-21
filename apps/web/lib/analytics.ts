@@ -49,46 +49,6 @@ export function appStoreClicked(props: {
   capture('app_store_clicked', props);
 }
 
-// ---- /play lead capture ----
-
-export type PlayerInterestSport = 'tennis' | 'pickleball';
-
-export function playerInterestSportToggled(props: {
-  sport: PlayerInterestSport;
-  enabled: boolean;
-}): void {
-  capture('player_interest_sport_toggled', props);
-}
-
-export type PlayerInterestValidationError =
-  | 'atLeastOneSport'
-  | 'tennisRatingRequired'
-  | 'tennisFacilityRequired'
-  | 'pickleballRatingRequired'
-  | 'pickleballFacilityRequired'
-  | 'postalCodeInvalid'
-  | 'availabilityMinimum';
-
-export function playerInterestFormValidationError(props: {
-  error_key: PlayerInterestValidationError;
-}): void {
-  capture('player_interest_form_validation_error', props);
-}
-
-export function playerInterestFormSubmitted(props: {
-  plays_tennis: boolean;
-  plays_pickleball: boolean;
-  tennis_facility_matched: boolean;
-  pickleball_facility_matched: boolean;
-  availability_slot_count: number;
-}): void {
-  capture('player_interest_form_submitted', props);
-}
-
-export function playerInterestFormDuplicate(): void {
-  capture('player_interest_form_duplicate');
-}
-
 // ---- /donate revenue funnel ----
 
 export function donateAmountSelected(props: {
