@@ -111,6 +111,7 @@ import { SheetManager, SheetProvider } from 'react-native-actions-sheet';
 import { Sheets } from './src/context/sheets';
 import { getMatchWithDetails, supabase } from '@rallia/shared-services';
 import { usePushNotifications, useTranslation, type TranslationKey } from './src/hooks';
+import { serializeQueryCache, deserializeQueryCache } from './src/lib/queryPersister';
 import {
   AuthProvider,
   useAuth,
@@ -140,6 +141,7 @@ import {
 } from './src/context';
 import { appOpened, deepLinkOpened } from './src/services/analytics';
 import { Logger } from './src/services/logger';
+import { JustForYouPrefetch } from './src/components/JustForYouPrefetch';
 import { TourCompleteModal } from './src/components/TourCompleteModal';
 import { WelcomeTourModal } from './src/components/WelcomeTourModal';
 import { linking } from './src/navigation/linking';
@@ -186,14 +188,22 @@ const queryClient = new QueryClient({
 
 // AsyncStorage-backed persister — cold-start hydration of TanStack Query so
 // Home (and other screens) render real cards instead of skeletons on launch.
+// Custom serialize/deserialize round-trip JS `Date` instances (suggestion
+// slots in the "Just for you" carousel carry them); plain JSON would lose
+// them and crash consumers that call `.getTime()` on the rehydrated value.
 const queryPersister = createAsyncStoragePersister({
   storage: AsyncStorage,
   key: '@rallia/rq-cache',
+  serialize: serializeQueryCache,
+  deserialize: deserializeQueryCache,
 });
 
 // Bump this string to invalidate every persisted query at once — e.g. after a
 // breaking change to a query key shape or a payload schema.
-const QUERY_CACHE_BUSTER = 'v3';
+// v4: Date-aware serializer added; bust v3 entries so we don't try to rehydrate
+// a payload written before Date markers existed (would no-op safely, but the
+// bust also covers the newly-included `matches/justForYou` shape).
+const QUERY_CACHE_BUSTER = 'v4';
 
 /**
  * Parse match ID from deep link URL.
@@ -474,6 +484,11 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
             <HomeLocationSync userId={userId} />
             <SportProvider userId={userId}>
               <SubscriptionProvider>
+                {/* Warms the React Query cache for Home's "Just for you"
+                    carousel as soon as auth + sport + location resolve, so
+                    the heavy RPC overlaps with the splash animation instead
+                    of starting after Home mounts. Renders nothing. */}
+                <JustForYouPrefetch />
                 <SplashGate>
                   <ProfileCompletenessBridge>{children}</ProfileCompletenessBridge>
                 </SplashGate>
@@ -848,7 +863,11 @@ function App() {
                     // start — a persisted hit would re-open the sheet for a
                     // match the user already submitted feedback on.
                     if (root === 'pendingFeedback') return false;
-                    if (root === 'matches' && (sub === 'justForYou' || sub === 'topSuggestions')) {
+                    // `matches/justForYou` is now persisted — the custom
+                    // serializer round-trips Date instances on its suggestion
+                    // slots. `topSuggestions` stays excluded for now (same
+                    // Date hazard, no prefetch counterpart yet).
+                    if (root === 'matches' && sub === 'topSuggestions') {
                       return false;
                     }
                     // Skip queries whose payloads are Set/Map instances —
