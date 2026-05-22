@@ -4,10 +4,11 @@
  * Provides infinite scrolling, debounced search, and filtering.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import {
   searchFacilitiesNearby,
+  supabase,
   type FacilityTypeFilter,
   type SurfaceTypeFilter,
   type CourtTypeFilter,
@@ -16,6 +17,17 @@ import {
 } from '@rallia/shared-services';
 import type { FacilitiesPage, FacilitySearchResult } from '@rallia/shared-types';
 import { useDebounce } from './useDebounce';
+
+// How long to wait after firing request_facility_refresh before refetching
+// the search query. The edge function fans out to provider APIs and writes
+// snapshot rows; 5s comfortably covers a typical batch. The refetch is
+// idempotent and only scheduled if the RPC reported > 0 stale facilities.
+const SWR_REFETCH_DELAY_MS = 5000;
+
+// request_facility_refresh caps at 50 facility ids per invocation (matches
+// the edge function's per-call provider fan-out budget). We chunk our
+// payloads to that cap.
+const REFRESH_BATCH_SIZE = 50;
 
 // Re-export filter types for convenience
 export type {
@@ -278,6 +290,79 @@ export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilit
     () => query.data?.pages.flatMap(page => page.facilities) ?? [],
     [query.data]
   );
+
+  // SWR availability refresh. After each successful fetch we ask the DB which
+  // of the currently-loaded facility ids are stale (request_facility_refresh
+  // applies snapshot_needs_refresh internally) and fan out to the refresh
+  // edge function. If anything was actually stale, schedule a single refetch
+  // so the freshly-snapshotted slots land in the cards without user action.
+  // Subsequent fires return 0 and don't reschedule, so this self-stabilizes.
+  //
+  // Page-aware: on scroll (fetchNextPage appended a page) we refresh-check
+  // only the newly-arrived page's ids, so later pages are covered without
+  // re-firing for ids we already checked. On a full refetch (pull-to-refresh
+  // or invalidation, page count unchanged or shrunk) we re-check every
+  // loaded page so stale rows on earlier pages don't slip through. Payloads
+  // are chunked to REFRESH_BATCH_SIZE so the per-call cap never truncates.
+  const dataUpdatedAt = query.dataUpdatedAt;
+  const refetch = query.refetch;
+  const triggeredPageCountRef = useRef(0);
+  useEffect(() => {
+    const pages = query.data?.pages;
+    if (!pages || pages.length === 0) {
+      triggeredPageCountRef.current = 0;
+      return;
+    }
+
+    // If page count grew → newly-appended page(s); check just those.
+    // Otherwise → refetch (or filter switch); check everything visible.
+    const grew = pages.length > triggeredPageCountRef.current;
+    const pagesToCheck = grew ? pages.slice(triggeredPageCountRef.current) : pages;
+    triggeredPageCountRef.current = pages.length;
+
+    // Only refreshable facilities go to the RPC. Non-provider facilities
+    // (community parks, FCFS courts) never yield snapshot rows, so flagging
+    // them as "needs refresh" would loop fruitlessly — the RPC would count
+    // them stale, we'd schedule a refetch, the next pass would find them
+    // stale again. The card's slot strip uses the same gate
+    // (external_provider_id) to decide whether to render slots at all.
+    const allIds = pagesToCheck
+      .flatMap(p => p.facilities)
+      .filter(f => !!f.external_provider_id)
+      .map(f => f.id);
+    if (allIds.length === 0) return;
+
+    // Chunk into <=50 (request_facility_refresh's per-call cap) so a single
+    // large refetch can still cover every loaded facility.
+    const batches: string[][] = [];
+    for (let i = 0; i < allIds.length; i += REFRESH_BATCH_SIZE) {
+      batches.push(allIds.slice(i, i + REFRESH_BATCH_SIZE));
+    }
+
+    let cancelled = false;
+    let refetchHandle: ReturnType<typeof setTimeout> | null = null;
+
+    (async () => {
+      const results = await Promise.all(
+        batches.map(ids => supabase.rpc('request_facility_refresh', { p_facility_ids: ids }))
+      );
+      if (cancelled) return;
+      const anyStale = results.some(r => !r.error && typeof r.data === 'number' && r.data > 0);
+      if (anyStale) {
+        refetchHandle = setTimeout(() => {
+          if (!cancelled) refetch();
+        }, SWR_REFETCH_DELAY_MS);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (refetchHandle) clearTimeout(refetchHandle);
+    };
+    // dataUpdatedAt ticks on every successful page fetch / refetch, which is
+    // exactly when we want to re-evaluate staleness.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataUpdatedAt]);
 
   // Get total count from first page (only fetched on first page)
   const totalCount = query.data?.pages[0]?.totalCount;
