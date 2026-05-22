@@ -60,6 +60,11 @@ export interface ComposeJustForYouInput {
   excludeUserIds?: string[];
   /** Total number of items to return. Defaults to 5. */
   matchLimit?: number;
+  /**
+   * When false, skip the suggestion pool entirely (matches-only carousel).
+   * Defaults to true.
+   */
+  includeSuggestions?: boolean;
   /** Cancellation signal — wired through TanStack queryFn or AbortController. */
   signal?: AbortSignal;
 }
@@ -103,17 +108,60 @@ export async function composeJustForYou(
     scoringPreferences,
     excludeUserIds,
     matchLimit = DEFAULT_LIMIT,
+    includeSuggestions = true,
     signal,
   } = input;
 
-  // ── 1. Fetch both pools in parallel ─────────────────────────────────
-  // `allSettled` so a slow / failing suggestion RPC doesn't kill the
-  // carousel. Matches are the more critical signal — if the suggestion
-  // RPC times out (it has a heavy plan that can hit statement_timeout),
-  // we still render the match pool. Empty suggestions just means no
-  // padding/competition this round.
-  const [matchSettled, suggSettled] = await Promise.allSettled([
-    getNearbyMatches({
+  // ── 1. Fetch match pool (and optionally suggestions) ──────────────────
+  let rawMatches: Scorable[];
+  let rawSuggestions: SlotSuggestion[] = [];
+
+  if (includeSuggestions) {
+    // `allSettled` so a slow / failing suggestion RPC doesn't kill the
+    // carousel. Matches are the more critical signal — if the suggestion
+    // RPC times out (it has a heavy plan that can hit statement_timeout),
+    // we still render the match pool. Empty suggestions just means no
+    // padding/competition this round.
+    const [matchSettled, suggSettled] = await Promise.allSettled([
+      getNearbyMatches({
+        callerId: playerId,
+        latitude,
+        longitude,
+        maxDistanceKm,
+        sportId,
+        userGender,
+        limit: MATCH_POOL_SIZE,
+        offset: 0,
+      }),
+      getTopSuggestions({
+        playerId,
+        sportId,
+        sportName,
+        latitude,
+        longitude,
+        maxDistanceKm,
+        maxItems: matchLimit,
+        signal,
+      }),
+    ]);
+
+    if (signal?.aborted) {
+      throw new DOMException('Aborted', 'AbortError');
+    }
+
+    if (matchSettled.status === 'rejected') {
+      throw matchSettled.reason;
+    }
+    rawMatches = matchSettled.value.matches;
+    rawSuggestions = suggSettled.status === 'fulfilled' ? suggSettled.value : [];
+    if (suggSettled.status === 'rejected') {
+      console.warn(
+        '[composeJustForYou] suggestion pool unavailable — rendering matches only:',
+        suggSettled.reason
+      );
+    }
+  } else {
+    const matchResult = await getNearbyMatches({
       callerId: playerId,
       latitude,
       longitude,
@@ -122,43 +170,12 @@ export async function composeJustForYou(
       userGender,
       limit: MATCH_POOL_SIZE,
       offset: 0,
-    }),
-    // Fetch up to matchLimit suggestions (already opponent-deduped + score-desc
-    // by `getTopSuggestions`). Asking for `matchLimit` gives us enough
-    // headroom: even if all matches lose to suggestions, we have exactly the
-    // count we need.
-    getTopSuggestions({
-      playerId,
-      sportId,
-      sportName,
-      latitude,
-      longitude,
-      maxDistanceKm,
-      maxItems: matchLimit,
-      signal,
-    }),
-  ]);
+    });
 
-  if (signal?.aborted) {
-    // Throw rather than returning empty — React Query treats AbortError
-    // specially and won't write the empty payload to cache. Important now
-    // that this query is persisted: a cached `{items: []}` would leave
-    // the user staring at the empty-state card until the next refetch.
-    throw new DOMException('Aborted', 'AbortError');
-  }
-
-  // If the match pool itself fails, propagate (the carousel needs matches).
-  // Suggestion failure degrades gracefully to an empty array.
-  if (matchSettled.status === 'rejected') {
-    throw matchSettled.reason;
-  }
-  const rawMatches = matchSettled.value.matches;
-  const rawSuggestions = suggSettled.status === 'fulfilled' ? suggSettled.value : [];
-  if (suggSettled.status === 'rejected') {
-    console.warn(
-      '[composeJustForYou] suggestion pool unavailable — rendering matches only:',
-      suggSettled.reason
-    );
+    if (signal?.aborted) {
+      throw new DOMException('Aborted', 'AbortError');
+    }
+    rawMatches = matchResult.matches;
   }
 
   // ── 2. Filter exclusions (anon fallback: scored RPC already excludes

@@ -19,6 +19,12 @@ import type {
 } from '@rallia/shared-services';
 import { useCallback } from 'react';
 
+/**
+ * TEMP: Home "Just for you" fetches matches only while suggestion RPC perf
+ * is investigated. Flip to true to restore padded suggestions.
+ */
+export const JUST_FOR_YOU_INCLUDE_SUGGESTIONS = false;
+
 export const justForYouKeys = {
   all: ['matches', 'justForYou'] as const,
   list: (params: {
@@ -28,6 +34,7 @@ export const justForYouKeys = {
     lng: number;
     maxDistanceKm: number;
     matchLimit: number;
+    includeSuggestions: boolean;
     /** Stable hash of scoring prefs so cache invalidates when prefs change. */
     prefsHash: string;
   }) => [...justForYouKeys.all, params] as const,
@@ -44,6 +51,8 @@ export interface UseJustForYouOptions {
   scoringPreferences: MatchScoringPreferences;
   excludeUserIds?: string[];
   matchLimit?: number;
+  /** When false, skip suggestion fetch (matches-only). Defaults to {@link JUST_FOR_YOU_INCLUDE_SUGGESTIONS}. */
+  includeSuggestions?: boolean;
   enabled?: boolean;
 }
 
@@ -107,6 +116,7 @@ export function justForYouQueryOptions(
     scoringPreferences,
     excludeUserIds,
     matchLimit = 5,
+    includeSuggestions = JUST_FOR_YOU_INCLUDE_SUGGESTIONS,
     enabled = true,
   } = options;
 
@@ -124,6 +134,7 @@ export function justForYouQueryOptions(
     lng: roundCoord(longitude),
     maxDistanceKm: maxDistanceKm ?? 0,
     matchLimit,
+    includeSuggestions,
     prefsHash,
   });
 
@@ -141,6 +152,7 @@ export function justForYouQueryOptions(
         scoringPreferences,
         excludeUserIds,
         matchLimit,
+        includeSuggestions,
         signal,
       }),
     enabled: enabled && hasRequired,
