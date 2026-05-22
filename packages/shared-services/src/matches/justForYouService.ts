@@ -55,7 +55,9 @@ export async function getJustForYou(
 ): Promise<ComposeJustForYouResult> {
   // Anon fallback: the RPC needs a caller ID for the scoring CTEs. The legacy
   // composer handles both auth and anon paths; reuse it as the anon backstop.
-  if (!input.playerId) {
+  // Matches-only mode also uses the composer so we skip the combined RPC's
+  // suggestion CTEs entirely.
+  if (!input.playerId || input.includeSuggestions === false) {
     return composeJustForYou(input);
   }
 

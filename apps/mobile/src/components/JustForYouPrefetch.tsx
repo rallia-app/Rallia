@@ -22,6 +22,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   justForYouQueryOptions,
+  JUST_FOR_YOU_INCLUDE_SUGGESTIONS,
   usePlayer,
   usePlayerSports,
   useRatingScoresForSport,
@@ -104,6 +105,7 @@ export function JustForYouPrefetch() {
       scoringPreferences,
       excludeUserIds,
       matchLimit: MATCH_LIMIT,
+      includeSuggestions: JUST_FOR_YOU_INCLUDE_SUGGESTIONS,
     });
 
     hasPrefetchedRef.current = true;
