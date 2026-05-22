@@ -456,6 +456,26 @@ export interface FacilityWithDetails extends Facility {
 /** Data provider configuration (e.g., Loisir Montreal) */
 export type DataProvider = TableRow<'data_provider'>;
 
+/**
+ * Raw snapshot-row shape inlined into facility search results. Mirrors the
+ * jsonb_build_object columns in search_facilities_nearby's LATERAL join on
+ * facility_availability_snapshot. The client formats these into FormattedSlot
+ * via the shared availability helpers — no per-card fetch required.
+ */
+export interface FacilityAvailabilitySlotRow {
+  external_court_id: string;
+  slot_start: string;
+  slot_end: string;
+  external_slot_id: string | null;
+  court_name: string | null;
+  court_number: number | null;
+  price_cents: number | null;
+  currency: string | null;
+  source: string;
+  sport_id: string | null;
+  booking_url: string | null;
+}
+
 /** Facility search result from nearby search */
 export interface FacilitySearchResult {
   id: string;
@@ -491,6 +511,11 @@ export interface FacilitySearchResult {
   longitude?: number | null;
   /** Whether this facility is favorited by the requesting player */
   is_favorite?: boolean;
+  /**
+   * Sport-scoped, future-only, available snapshot rows for this facility.
+   * Populated by the RPC's LATERAL join; never null (defaults to []).
+   */
+  availability_slots?: FacilityAvailabilitySlotRow[];
 }
 
 /** Paginated facilities response */

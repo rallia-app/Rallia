@@ -4,6 +4,7 @@
  * Provides infinite scrolling, debounced search, and filtering.
  */
 
+import { useMemo } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import {
   searchFacilitiesNearby,
@@ -269,8 +270,14 @@ export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilit
     refetchOnMount: true, // Always refetch when component mounts if enabled
   });
 
-  // Flatten pages into a single array of facilities
-  const allFacilities = query.data?.pages.flatMap(page => page.facilities) ?? [];
+  // Flatten pages into a single array of facilities. Memoized so the returned
+  // reference is stable between renders that didn't change the page set — the
+  // mobile FlatList downstream uses identity equality on this array to decide
+  // whether to re-render rows.
+  const allFacilities = useMemo(
+    () => query.data?.pages.flatMap(page => page.facilities) ?? [],
+    [query.data]
+  );
 
   // Get total count from first page (only fetched on first page)
   const totalCount = query.data?.pages[0]?.totalCount;

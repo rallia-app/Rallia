@@ -16,6 +16,7 @@ import {
   supabase,
   type AvailabilitySlot,
 } from '@rallia/shared-services';
+import type { FacilityAvailabilitySlotRow } from '@rallia/shared-types';
 
 // Mirror the snapshot's coverage window (worker's WINDOW_DAYS). Anything
 // beyond this is not in the snapshot, so the hook would return empty for
@@ -566,34 +567,10 @@ export function useCourtAvailability(
   // count cap — the 3-day snapshot horizon already bounds the result; any
   // render-side truncation belongs at the call site.
   const rawSlots = query.data ?? [];
-  const futureSlots = filterFutureSlots(rawSlots, facilityTimezone).sort(
-    (a, b) => a.datetime.getTime() - b.datetime.getTime()
+  const { slots: formattedSlots, slotsByDate } = formatAvailabilityForDisplay(
+    rawSlots,
+    facilityTimezone
   );
-  const groupedSlots = groupSlotsByTime(futureSlots).sort(
-    (a, b) => a.datetime.getTime() - b.datetime.getTime()
-  );
-
-  // Format slots for display
-  const formattedSlots: FormattedSlot[] = groupedSlots.map(slot => ({
-    time: formatTime(slot.datetime),
-    endTime: formatTime(slot.endDateTime),
-    courtCount: slot.courtCount,
-    isToday: isToday(slot.datetime),
-    bookingUrl: slot.bookingUrl ?? null,
-    facilityScheduleId: slot.facilityScheduleId,
-    externalCourtId: slot.facilityId,
-    datetime: slot.datetime,
-    endDateTime: slot.endDateTime,
-    price: slot.price,
-    courtOptions: slot.courtOptions,
-    // Local slot fields
-    isLocalSlot: slot.isLocalSlot,
-    courtId: slot.courtId,
-    templateSource: slot.templateSource,
-  }));
-
-  // Group slots by date for sectioned display
-  const slotsByDate = groupSlotsByDate(formattedSlots);
 
   return {
     slots: formattedSlots,
@@ -605,6 +582,66 @@ export function useCourtAvailability(
     hasProvider,
     refetch: query.refetch,
   };
+}
+
+// =============================================================================
+// PURE FORMATTERS (for callers that already have raw rows in hand)
+// =============================================================================
+
+/**
+ * Run the post-fetch availability pipeline — future-only filter, time grouping,
+ * date sectioning, FormattedSlot mapping — on an array of AvailabilitySlot
+ * values. Pure: same input ⇒ same output, no React, no network. Used by the
+ * hook above and by callers that get slots inlined from another RPC (e.g. the
+ * facility search query, where each row carries its own availability_slots).
+ */
+export function formatAvailabilityForDisplay(
+  rawSlots: AvailabilitySlot[],
+  facilityTimezone: string | null | undefined
+): { slots: FormattedSlot[]; slotsByDate: DateGroupedSlots[] } {
+  const futureSlots = filterFutureSlots(rawSlots, facilityTimezone).sort(
+    (a, b) => a.datetime.getTime() - b.datetime.getTime()
+  );
+  const groupedSlots = groupSlotsByTime(futureSlots).sort(
+    (a, b) => a.datetime.getTime() - b.datetime.getTime()
+  );
+
+  const slots: FormattedSlot[] = groupedSlots.map(slot => ({
+    time: formatTime(slot.datetime),
+    endTime: formatTime(slot.endDateTime),
+    courtCount: slot.courtCount,
+    isToday: isToday(slot.datetime),
+    bookingUrl: slot.bookingUrl ?? null,
+    facilityScheduleId: slot.facilityScheduleId,
+    externalCourtId: slot.facilityId,
+    datetime: slot.datetime,
+    endDateTime: slot.endDateTime,
+    price: slot.price,
+    courtOptions: slot.courtOptions,
+    isLocalSlot: slot.isLocalSlot,
+    courtId: slot.courtId,
+    templateSource: slot.templateSource,
+  }));
+
+  const slotsByDate = groupSlotsByDate(slots);
+  return { slots, slotsByDate };
+}
+
+/**
+ * Format inline snapshot rows (as returned by search_facilities_nearby's
+ * availability_slots column) into the FormattedSlot / DateGroupedSlots shape
+ * the cards consume. Adapts the JSON row shape to AvailabilitySlot and then
+ * delegates to formatAvailabilityForDisplay.
+ */
+export function formatInlineSnapshotSlots(
+  rows: FacilityAvailabilitySlotRow[] | null | undefined,
+  facilityTimezone: string | null | undefined
+): { slots: FormattedSlot[]; slotsByDate: DateGroupedSlots[] } {
+  if (!rows || rows.length === 0) {
+    return { slots: [], slotsByDate: [] };
+  }
+  const adapted = snapshotRowsToAvailabilitySlots(rows as SnapshotRow[]);
+  return formatAvailabilityForDisplay(adapted, facilityTimezone);
 }
 
 export default useCourtAvailability;
