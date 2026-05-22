@@ -7,7 +7,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, Animated, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Skeleton } from '@rallia/shared-components';
+import { Text } from '@rallia/shared-components';
 import {
   spacingPixels,
   radiusPixels,
@@ -18,7 +18,7 @@ import {
 } from '@rallia/design-system';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 import { lightHaptic } from '@rallia/shared-utils';
-import { useCourtAvailability, type FormattedSlot } from '@rallia/shared-hooks';
+import { formatInlineSnapshotSlots, type FormattedSlot } from '@rallia/shared-hooks';
 import { useAuth } from '../../../context';
 import { useRequireOnboarding, useThemeStyles } from '../../../hooks';
 import { SportIcon } from '../../../components/SportIcon';
@@ -28,7 +28,8 @@ import type { TranslationKey, TranslationOptions } from '../../../hooks';
 interface FacilityCardProps {
   facility: FacilitySearchResult;
   isFavorite: boolean;
-  onPress: () => void;
+  /** Invoked with the facility — keeps the caller's onPress stable across rows. */
+  onPress: (facility: FacilitySearchResult) => void;
   onToggleFavorite: (facility: FacilitySearchResult) => void;
   isMaxFavoritesReached: boolean;
   /** When false, the favorite heart is hidden (e.g. signed out or not onboarded). When undefined, falls back to isAuthenticated. */
@@ -55,90 +56,6 @@ interface FacilityCardProps {
   t: (key: TranslationKey, options?: TranslationOptions) => string;
 }
 
-// =============================================================================
-// SKELETON SLOT PLACEHOLDER
-// =============================================================================
-
-// Static loading "schedule" — varies chip counts and court-badge presence so
-// the loading state reads as a plausible availability snapshot.
-const SLOT_SKELETON_SCHEDULE: Array<{
-  labelWidth: number;
-  chips: Array<{ timeWidth: number; hasCourtBadge: boolean }>;
-}> = [
-  {
-    labelWidth: 38,
-    chips: [
-      { timeWidth: 36, hasCourtBadge: true },
-      { timeWidth: 32, hasCourtBadge: false },
-      { timeWidth: 36, hasCourtBadge: true },
-    ],
-  },
-  {
-    labelWidth: 30,
-    chips: [
-      { timeWidth: 36, hasCourtBadge: true },
-      { timeWidth: 36, hasCourtBadge: true },
-    ],
-  },
-  {
-    labelWidth: 32,
-    chips: [
-      { timeWidth: 32, hasCourtBadge: false },
-      { timeWidth: 36, hasCourtBadge: true },
-    ],
-  },
-];
-
-interface SlotSkeletonProps {
-  borderColor: string;
-  chipFill: string;
-  skeletonBg: string;
-  skeletonHighlight: string;
-}
-
-function SlotSkeleton({ borderColor, chipFill, skeletonBg, skeletonHighlight }: SlotSkeletonProps) {
-  return (
-    <View style={styles.slotsLoadingScroller}>
-      {SLOT_SKELETON_SCHEDULE.map((group, groupIdx) => (
-        <View key={groupIdx} style={styles.dateGroup}>
-          <Skeleton
-            width={group.labelWidth}
-            height={12}
-            borderRadius={3}
-            backgroundColor={skeletonBg}
-            highlightColor={skeletonHighlight}
-          />
-          <View style={styles.dateSlotsRow}>
-            {group.chips.map((chip, chipIdx) => (
-              <View
-                key={chipIdx}
-                style={[styles.slotChipSkeleton, { borderColor, backgroundColor: chipFill }]}
-              >
-                <Skeleton
-                  width={chip.timeWidth}
-                  height={12}
-                  borderRadius={3}
-                  backgroundColor={skeletonBg}
-                  highlightColor={skeletonHighlight}
-                />
-                {chip.hasCourtBadge && (
-                  <Skeleton
-                    width={14}
-                    height={14}
-                    circle
-                    backgroundColor={skeletonBg}
-                    highlightColor={skeletonHighlight}
-                  />
-                )}
-              </View>
-            ))}
-          </View>
-        </View>
-      ))}
-    </View>
-  );
-}
-
 /**
  * Formats distance in meters to a human-readable string
  */
@@ -150,7 +67,7 @@ function formatDistance(meters: number | null): string {
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
-export default function FacilityCard({
+function FacilityCard({
   facility,
   isFavorite,
   onPress,
@@ -176,13 +93,12 @@ export default function FacilityCard({
   const tierAccent = isDark ? primary[400] : primary[500];
   const successColor = isDark ? status.success.light : status.success.DEFAULT;
   const warningColor = isDark ? status.warning.light : status.warning.DEFAULT;
-  // Slot-skeleton colors mirror FacilityCardSkeleton — tinted shades one step
-  // off the card surface, plus the inactive-chip background tone for chip fill.
-  const slotSkeletonBg = isDark ? primary[900] : primary[100];
-  const slotSkeletonHighlight = isDark ? primary[800] : primary[50];
-  const slotChipFill = isDark ? `${primary[400]}10` : `${primary[500]}08`;
 
   const scaleAnim = useMemo(() => new Animated.Value(1), []);
+
+  const handlePress = useCallback(() => {
+    onPress(facility);
+  }, [onPress, facility]);
 
   const handlePressIn = useCallback(() => {
     Animated.spring(scaleAnim, {
@@ -210,16 +126,13 @@ export default function FacilityCard({
   const distanceText = formatDistance(facility.distance_meters);
   const addressText = [facility.address, facility.city].filter(Boolean).join(', ');
 
-  // Court availability
-  const { slotsByDate, isLoading: slotsLoading } = useCourtAvailability({
-    facilityId: facility.id,
-    dataProviderId: facility.data_provider_id,
-    dataProviderType: facility.data_provider_type,
-    externalProviderId: facility.external_provider_id,
-    bookingUrlTemplate: facility.booking_url_template,
-    facilityTimezone: facility.timezone,
-    sportName,
-  });
+  // Court availability — inlined on the facility row by the search RPC.
+  // Memoize the formatting pipeline so identical inputs (same JSONB array
+  // reference) skip the filter/group/sort/map work entirely.
+  const { slotsByDate } = useMemo(
+    () => formatInlineSnapshotSlots(facility.availability_slots, facility.timezone),
+    [facility.availability_slots, facility.timezone]
+  );
 
   const handleSlotPress = useCallback(
     (slot: FormattedSlot) => {
@@ -249,7 +162,7 @@ export default function FacilityCard({
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
       <TouchableOpacity
         style={[styles.card, { backgroundColor: cardBackground, borderColor: dynamicBorderColor }]}
-        onPress={onPress}
+        onPress={handlePress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={1}
@@ -393,21 +306,10 @@ export default function FacilityCard({
             </View>
           )}
 
-          {/* Skeleton slots while loading */}
-          {slotsLoading &&
-            !facility.is_first_come_first_serve &&
-            !!facility.external_provider_id && (
-              <SlotSkeleton
-                borderColor={dynamicBorderColor}
-                chipFill={slotChipFill}
-                skeletonBg={slotSkeletonBg}
-                skeletonHighlight={slotSkeletonHighlight}
-              />
-            )}
-
-          {/* Date-sectioned slots with horizontal scroll */}
+          {/* Date-sectioned slots with horizontal scroll. Slots arrive
+              inlined on the facility row from search_facilities_nearby, so
+              there is no separate loading state for this card. */}
           {slotsByDate.length > 0 &&
-            !slotsLoading &&
             !facility.is_first_come_first_serve &&
             !!facility.external_provider_id && (
               <ScrollView
@@ -488,7 +390,6 @@ export default function FacilityCard({
 
           {/* Empty state when no slots available */}
           {slotsByDate.length === 0 &&
-            !slotsLoading &&
             !facility.is_first_come_first_serve &&
             !!facility.external_provider_id && (
               <View style={styles.emptySlots}>
@@ -503,6 +404,8 @@ export default function FacilityCard({
     </Animated.View>
   );
 }
+
+export default React.memo(FacilityCard);
 
 const styles = StyleSheet.create({
   // Mirrors PlayerCard / MatchCard surface so all three card families look identical.
@@ -566,29 +469,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[2],
     paddingVertical: 3,
     borderRadius: radiusPixels.full,
-  },
-  // Same horizontal padding + border as the real slot chip, but paddingV
-  // bumped so the loading chip container reads taller (matches the
-  // skeleton card's slot chips for visual consistency).
-  slotChipSkeleton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[2],
-    paddingVertical: 7,
-    borderRadius: radiusPixels.full,
-    borderWidth: 1,
-    gap: spacingPixels[1],
-  },
-  // Same outer footprint as slotsScrollView so loaded slots replace the
-  // skeleton with zero layout shift.
-  slotsLoadingScroller: {
-    marginTop: spacingPixels[2],
-    marginHorizontal: -spacingPixels[4],
-    paddingLeft: spacingPixels[4],
-    paddingRight: spacingPixels[2],
-    flexDirection: 'row',
-    gap: spacingPixels[4],
-    overflow: 'hidden',
   },
   slotsScrollView: {
     marginTop: spacingPixels[2],
