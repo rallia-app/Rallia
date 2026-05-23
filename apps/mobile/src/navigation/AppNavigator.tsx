@@ -134,6 +134,7 @@ import PlayerMatches from '../features/matches/screens/PlayerMatches';
 import { FacilitiesDirectory, FacilityDetail } from '../features/facilities';
 import { MyBookingsScreen, BookingDetailScreen } from '../features/bookings';
 import { InviteReferralScreen } from '../screens/InviteReferralScreen';
+import { WeeklyCheckInScreen } from '../features/weekly-checkin/WeeklyCheckInScreen';
 
 // =============================================================================
 // TYPED NAVIGATORS
@@ -1578,6 +1579,16 @@ export default function AppNavigator() {
         name="InviteReferral"
         component={InviteReferralScreen}
         options={{ headerShown: false }}
+      />
+
+      <RootStack.Screen
+        name="WeeklyCheckIn"
+        component={WeeklyCheckInScreen}
+        options={{
+          headerShown: false,
+          presentation: 'fullScreenModal',
+          gestureEnabled: false, // discrete × is the only dismiss path
+        }}
       />
     </RootStack.Navigator>
   );
