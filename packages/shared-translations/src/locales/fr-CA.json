@@ -4053,9 +4053,10 @@
       "activate": "Activer"
     },
     "availabilityRefreshBanner": {
-      "title": "Quand veux-tu jouer cette semaine?",
-      "description": "Fournis tes dispos pour les 7 prochains jours et laisse-nous te trouver les meilleurs matchs.",
-      "cta": "Mettre à jour"
+      "title": "C'est l'heure du check-in hebdo 🐿️",
+      "description": "Fixe ton objectif et confirme tes dispos pour la semaine.",
+      "descriptionStreak": "Continue ta séquence de {count} semaines.",
+      "cta": "Commencer"
     },
     "header": {
       "ctaButton": "Télécharger",
@@ -4063,6 +4064,7 @@
         "home": "Accueil",
         "games": "Parties",
         "communities": "Communautés",
+        "guides": "Guides",
         "donate": "Soutenir"
       }
     },
@@ -4253,6 +4255,10 @@
         "downloadButton": "Télécharger l'application",
         "learnMore": "En savoir plus"
       },
+      "leadAnswer": {
+        "headline": "Qu'est-ce que Rallia ?",
+        "body": "Rallia est une application iOS et Android qui connecte les joueurs de tennis et de pickleball pour de vraies parties planifiées. Trouve les terrains près de chez toi sur une carte interactive avec les disponibilités en temps réel. Évalue ton niveau sur l'échelle NTRP ou DUPR et fais-le certifier. Crée ou joins des parties ouvertes — définis le format, le niveau et le partage des coûts. Chaque joueur a un score de fiabilité, pour voir qui tend à se présenter avant de t'engager."
+      },
       "solutions": {
         "sectionTitle": "La solution",
         "sectionBadge": "Comment ça marche",
@@ -4291,6 +4297,25 @@
         "step4": {
           "title": "Jouer et évaluer",
           "description": "Présente-toi, joue, et évalue ton expérience. Construis ton réseau de joueurs fiables."
+        }
+      },
+      "explore": {
+        "sectionBadge": "Explorer",
+        "sectionTitle": "Plongez plus loin dans Rallia",
+        "games": {
+          "title": "Parties ouvertes",
+          "description": "Parcourez les parties à venir près de chez vous et rejoignez-les en un clic.",
+          "cta": "Voir les parties"
+        },
+        "communities": {
+          "title": "Communautés",
+          "description": "Trouvez des clubs et groupes de tennis et pickleball dans votre région.",
+          "cta": "Voir les communautés"
+        },
+        "guides": {
+          "title": "Guides",
+          "description": "Conseils, exercices et tutoriels pour faire progresser votre jeu.",
+          "cta": "Lire les guides"
         }
       },
       "downloadCta": {
@@ -4629,9 +4654,52 @@
     "description": "La plateforme qui connectera les joueurs de tennis et de pickleball pour de meilleures parties, à chaque fois.",
     "quickLinks": "Liens rapides",
     "download": "Télécharger l'application",
+    "about": "À propos",
+    "guides": "Guides",
+    "games": "Parties ouvertes",
+    "communities": "Communautés",
+    "donate": "Soutenir Rallia",
+    "legal": "Légal",
     "privacy": "Politique de confidentialité",
     "terms": "Conditions d'utilisation",
+    "eula": "CLUF",
+    "deleteAccount": "Supprimer le compte",
     "rights": "Tous droits réservés."
+  },
+  "notFoundPage": {
+    "title": "Page introuvable",
+    "description": "Nous n'avons pas trouvé la page que vous cherchez. Elle a peut-être été déplacée ou n'existe plus.",
+    "backHome": "Retour à l'accueil",
+    "exploreHeading": "Ou explorez",
+    "games": "Parties",
+    "communities": "Communautés",
+    "guides": "Guides"
+  },
+  "cookieConsent": {
+    "title": "Nous utilisons des témoins",
+    "body": "Rallia utilise des témoins (cookies) et technologies similaires pour faire fonctionner le site, mesurer son utilisation et comprendre quels canaux marketing vous y ont mené. Vous pouvez tout accepter, refuser les témoins non essentiels, ou choisir par catégorie. Vous pouvez modifier votre choix à tout moment depuis le pied de page.",
+    "acceptAll": "Tout accepter",
+    "rejectAll": "Refuser les non essentiels",
+    "customize": "Personnaliser",
+    "learnMore": "Consulter notre Politique de confidentialité",
+    "savePreferences": "Enregistrer mes préférences",
+    "footerLink": "Préférences de témoins",
+    "preferencesTitle": "Préférences de témoins",
+    "preferencesIntro": "Choisissez les catégories de témoins que Rallia peut utiliser sur votre appareil. Conformément à la Loi 25 du Québec, seuls les témoins strictement nécessaires sont activés tant que vous n'avez pas consenti.",
+    "categories": {
+      "necessary": {
+        "title": "Strictement nécessaires",
+        "description": "Requis pour faire fonctionner le site : authentification, langue, thème et mémorisation de votre choix de témoins. Toujours actifs."
+      },
+      "analytics": {
+        "title": "Mesure et performance",
+        "description": "Nous aide à comprendre comment le site est utilisé (PostHog, Vercel Web Analytics, Sentry session replay). Désactivés tant que vous n'avez pas consenti."
+      },
+      "marketing": {
+        "title": "Marketing et attribution",
+        "description": "Permet de mesurer quelles campagnes et quels référents vous amènent sur Rallia (témoin UTM de première visite, identifiant visiteur PostHog). Désactivés tant que vous n'avez pas consenti."
+      }
+    }
   },
   "signIn": {
     "title": "Connexion Organisation",
@@ -6916,7 +6984,7 @@
       "lastUpdated": "Dernière mise à jour",
       "overview": "Aperçu",
       "players": "Joueurs",
-      "matches": "Parties",
+      "matches": "Matchs",
       "completed": "Terminées",
       "views": "vues",
       "sportStatistics": "Statistiques sportives",
@@ -9410,5 +9478,155 @@
     "free_plan": "Forfait gratuit",
     "privacy_policy": "Politique de confidentialité",
     "terms_of_service": "Conditions d'utilisation"
+  },
+  "weeklyCheckIn": {
+    "exit": {
+      "title": "On se reprend plus tard?",
+      "description": "Ace reviendra te voir la semaine prochaine — tes réglages ne seront pas sauvegardés cette fois-ci.",
+      "confirm": "Quitter pour cette fois",
+      "cancel": "Continuer"
+    },
+    "step1": {
+      "bubbleHit": "Salut 👋 De retour — tu as explosé ton objectif la semaine passée. La séquence grimpe. 🔥",
+      "bubbleMet": "Salut 👋 De retour — tu as joué tes {goal} sessions la semaine passée. La séquence tient bon. 💪",
+      "bubbleMiss": "Salut 👋 De retour — tu as manqué l'objectif, mais pas la séquence. On se replace cette semaine. 🌱",
+      "bubbleFirstTime": "Salut 👋 Bienvenue à ton check-in hebdo. On va te préparer une belle semaine de tennis.",
+      "streakTitle": "Séquence de {count} semaines",
+      "streakTitleZero": "Commence une séquence cette semaine",
+      "streakSubtitle": "semaines",
+      "streakSubtitleOne": "semaine de suite",
+      "freezeTooltip": "Les jokers de séquence te protègent si tu rates un check-in.",
+      "goalsHitLabel": "Objectifs atteints",
+      "recapGoal": "Objectif",
+      "recapPlayed": "Joué",
+      "cta": "Planifions la semaine 🎾"
+    },
+    "step2": {
+      "bubble": "Quand es-tu libre cette semaine? Tape ou glisse pour peindre tes plages — je vais faire opérer ma magie autour de ça. ✨",
+      "cta": "Parfait"
+    },
+    "step3": {
+      "bubble": "Combien de sessions veux-tu jouer cette semaine? Je vais garder l'œil sur l'objectif. 🎯",
+      "frequencyOption": {
+        "1": "1×",
+        "2": "2×",
+        "3": "3×",
+        "4": "4×",
+        "5plus": "5+×"
+      },
+      "frequencyContextSame": "Comme la semaine passée — la régularité paie! 🌱",
+      "frequencyContextUp": "On monte de {last} → {current}. J'adore l'ambition! 🔥",
+      "frequencyContextDown": "On revient à {current}. Mieux vaut tenir la cadence. 💆",
+      "opsLabel": "Pour te simplifier la vie",
+      "autoCreateTitle": "Créer des matchs ouverts automatiquement",
+      "autoCreateDesc": "Publie des matchs request-to-join à tes heures libres.",
+      "autoInviteTitle": "Inviter des joueurs compatibles automatiquement",
+      "autoInviteDesc": "Trouve des joueurs de ton niveau et envoie-leur une invitation.",
+      "cta": "Lancer ma semaine"
+    },
+    "step4": {
+      "bubble": "Boom 💥 C'est tout réglé. Je m'occupe du reste — on se voit sur le terrain! 🎾",
+      "streakHeroCount": "{count} semaines!",
+      "streakHeroCountOne": "1 semaine!",
+      "streakHeroSub": "Séquence prolongée · +1",
+      "streakHeroSubMilestone": "Étape franchie · +1 joker gagné ❄️",
+      "summaryGoal": "Objectif: {freq}",
+      "summarySlots": "{count} heures confirmées",
+      "summarySlotsOne": "1 heure confirmée",
+      "summaryAutoCreate": "Matchmaking automatique activé",
+      "summaryAutoInvite": "Invitations automatiques activées",
+      "cta": "Retour à l'accueil"
+    }
+  },
+  "seo": {
+    "root": {
+      "title": "Rallia — Matchmaking de tennis et pickleball, simplifié",
+      "description": "Rallia transforme l'intention en vraies parties. Trouvez des joueurs de tennis et pickleball près de chez vous, parcourez les parties ouvertes et rejoignez une communauté locale active. Disponible sur iOS et Android.",
+      "ogTitle": "Rallia — Là où les échanges continuent",
+      "ogDescription": "Jumelage par niveau, planification simplifiée et score de fiabilité pour chaque joueur. Téléchargez Rallia sur iOS et Android."
+    },
+    "landing": {
+      "title": "Trouvez des partenaires de tennis et pickleball près de chez vous",
+      "description": "Fatigué des groupes de discussion et des annulations? Rallia vous aide à trouver des joueurs de tennis et pickleball de votre niveau, à consulter leur score de fiabilité et à joindre une partie en une touche. Disponible sur iOS et Android.",
+      "ogTitle": "Rallia — Trouvez votre prochaine partie de tennis ou pickleball",
+      "ogDescription": "Jumelage par niveau, planification simplifiée et score de fiabilité pour voir qui tend à se présenter. Téléchargez Rallia sur iOS et Android."
+    },
+    "games": {
+      "title": "Parties de tennis et pickleball ouvertes près de chez vous",
+      "description": "Parcourez les parties de tennis et pickleball ouvertes près de vous. Joignez-vous à une partie en quelques secondes — simples, doubles, tous niveaux, vrais terrains, vrais joueurs.",
+      "ogTitle": "Parties ouvertes de tennis et pickleball — Joignez-vous maintenant",
+      "ogDescription": "Liste en direct des parties ouvertes près de vous. Simples, doubles, tous niveaux. Joignez-vous en quelques secondes avec Rallia."
+    },
+    "communities": {
+      "title": "Communautés de tennis et pickleball",
+      "description": "Trouvez des communautés de tennis et pickleball dans votre ville. Rejoignez des groupes locaux, rencontrez des partenaires à votre niveau — découvrez les communautés sur Rallia.",
+      "ogTitle": "Trouvez une communauté locale de tennis ou pickleball",
+      "ogDescription": "Rejoignez des communautés actives de tennis et pickleball près de chez vous sur Rallia."
+    },
+    "guides": {
+      "title": "Guides de tennis et pickleball",
+      "description": "Conseils, exercices, étiquette et règles pour les joueurs de tennis et pickleball. Améliorez votre jeu avec les guides Rallia.",
+      "ogTitle": "Guides de tennis et pickleball",
+      "ogDescription": "Conseils, exercices et règles de la communauté Rallia."
+    },
+    "donate": {
+      "title": "Soutenir Rallia",
+      "description": "Aidez à garder Rallia gratuit pour les joueurs de tennis et pickleball. Votre contribution finance le matchmaking, les partenariats avec les clubs et la communauté.",
+      "ogTitle": "Soutenir Rallia",
+      "ogDescription": "Aidez à garder Rallia gratuit pour les joueurs de tennis et pickleball partout."
+    },
+    "privacy": {
+      "title": "Politique de confidentialité",
+      "description": "Comment Rallia recueille, utilise et protège vos renseignements personnels.",
+      "ogTitle": "Politique de confidentialité de Rallia",
+      "ogDescription": "Comment Rallia traite vos données."
+    },
+    "terms": {
+      "title": "Conditions d'utilisation",
+      "description": "Les conditions régissant votre utilisation de la plateforme de matchmaking Rallia.",
+      "ogTitle": "Conditions d'utilisation de Rallia",
+      "ogDescription": "Les conditions régissant votre utilisation de Rallia."
+    },
+    "eula": {
+      "title": "Contrat de licence utilisateur final",
+      "description": "Contrat de licence utilisateur final de Rallia pour l'application mobile.",
+      "ogTitle": "CLUF de Rallia",
+      "ogDescription": "Contrat de licence utilisateur final pour l'application Rallia."
+    },
+    "deleteAccount": {
+      "title": "Supprimer votre compte Rallia",
+      "description": "Demandez la suppression de votre compte Rallia et de vos données personnelles.",
+      "ogTitle": "Supprimer votre compte Rallia",
+      "ogDescription": "Demandez la suppression de votre compte Rallia."
+    },
+    "about": {
+      "title": "À propos de Rallia — Matchmaking tennis et pickleball, conçu par des joueurs",
+      "description": "Rallia transforme l'intention en vraies parties. Rencontrez l'équipe derrière l'application et la mission de simplifier la recherche de partenaires.",
+      "ogTitle": "À propos de Rallia — Conçu par des joueurs, pour des joueurs",
+      "ogDescription": "La mission et l'équipe derrière Rallia — transformer l'intention en vraies parties."
+    }
+  },
+  "about": {
+    "hero": {
+      "heading": "À propos de Rallia",
+      "subheading": "Nous transformons l'intention en vraies parties. Voici la mission derrière l'application et les gens qui la bâtissent."
+    },
+    "mission": {
+      "heading": "Notre mission",
+      "body1": "La plupart des joueurs de sports de raquette dépensent plus d'énergie à organiser leurs parties qu'à les jouer. Les groupes de discussion s'enlisent, les plans tombent à l'eau, et des parties qui devraient être faciles à monter finissent par être reportées indéfiniment.",
+      "body2": "Rallia existe pour réduire l'écart entre vouloir jouer et jouer pour de vrai. On t'aide à trouver des joueurs de tennis et de pickleball à ton niveau, à voir qui tend à se présenter, et à réserver une partie en quelques touches — pour que le temps que tu as pour le tennis serve à jouer au tennis."
+    },
+    "story": {
+      "heading": "Pourquoi on a bâti ça",
+      "body": "Rallia est né parce que chaque joueur qu'on connaissait frappait le même mur : connaître d'autres joueurs, connaître des terrains, et ne toujours pas réussir à mettre en place une partie régulière. On a bâti l'application qu'on voulait utiliser — un moyen simple de faire apparaître le bon joueur, au bon niveau, sur le bon terrain, cette semaine."
+    },
+    "team": {
+      "heading": "L'équipe",
+      "intro": "Rallia est bâti par une petite équipe de joueurs. On utilise l'application chaque semaine et on livre les changements qu'on aimerait y voir."
+    },
+    "cta": {
+      "heading": "Sur le terrain",
+      "body": "Rallia est disponible sur iOS et Android. Inscris ton niveau, choisis tes terrains habituels, et commence à trouver des parties près de chez toi."
+    }
   }
 }
