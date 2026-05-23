@@ -6950,8 +6950,8 @@
         "overview": "Overview",
         "acquisition": "Acquisition",
         "invitations": "Invitations",
-        "engagement": "Engagement",
-        "users": "Users"
+        "users": "Users",
+        "matches": "Matches"
       },
       "links": {
         "builderTitle": "Build a tracked link",
@@ -7456,6 +7456,22 @@
         "scheduling": "Scheduling",
         "injury": "Injury",
         "other": "Other"
+      },
+      "matchesTab": {
+        "title": "Match Activity",
+        "description": "Created vs filled matches over time, broken down by sport.",
+        "totalCreated": "Created",
+        "totalFilled": "Filled",
+        "fillRate": "Fill rate",
+        "avgParticipants": "Avg. participants",
+        "fillRateHint": "{filled} of {created} matches filled",
+        "chartTitle": "Created vs filled per day",
+        "chartHint": "Non-cancelled matches over the selected window, by sport.",
+        "sportBreakdown": "By sport",
+        "noData": "No match data in this window yet.",
+        "created": "Created",
+        "filled": "Filled",
+        "rate": "Fill %"
       }
     },
     "settings": {

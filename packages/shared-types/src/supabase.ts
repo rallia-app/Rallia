@@ -1046,6 +1046,45 @@ export type Database = {
         }
         Relationships: []
       }
+      data_provider_facility_type: {
+        Row: {
+          created_at: string
+          data_provider_id: string
+          external_facility_type_id: string
+          external_facility_type_name: string | null
+          sport_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_provider_id: string
+          external_facility_type_id: string
+          external_facility_type_name?: string | null
+          sport_id: string
+        }
+        Update: {
+          created_at?: string
+          data_provider_id?: string
+          external_facility_type_id?: string
+          external_facility_type_name?: string | null
+          sport_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_provider_facility_type_data_provider_id_fkey"
+            columns: ["data_provider_id"]
+            isOneToOne: false
+            referencedRelation: "data_provider"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_provider_facility_type_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "sport"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_attempt: {
         Row: {
           attempt_number: number
@@ -4362,6 +4401,38 @@ export type Database = {
           },
         ]
       }
+      player_check_in_preferences: {
+        Row: {
+          auto_create_matches: boolean
+          auto_invite_players: boolean
+          last_frequency_goal: number | null
+          player_id: string
+          updated_at: string
+        }
+        Insert: {
+          auto_create_matches?: boolean
+          auto_invite_players?: boolean
+          last_frequency_goal?: number | null
+          player_id: string
+          updated_at?: string
+        }
+        Update: {
+          auto_create_matches?: boolean
+          auto_invite_players?: boolean
+          last_frequency_goal?: number | null
+          player_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_check_in_preferences_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: true
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_favorite: {
         Row: {
           created_at: string | null
@@ -4967,6 +5038,47 @@ export type Database = {
           },
         ]
       }
+      player_streak: {
+        Row: {
+          created_at: string
+          current_streak: number
+          freeze_cap: number
+          freeze_inventory: number
+          last_checkin_week_start: string | null
+          longest_streak: number
+          player_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_streak?: number
+          freeze_cap?: number
+          freeze_inventory?: number
+          last_checkin_week_start?: string | null
+          longest_streak?: number
+          player_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_streak?: number
+          freeze_cap?: number
+          freeze_inventory?: number
+          last_checkin_week_start?: string | null
+          longest_streak?: number
+          player_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_streak_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: true
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_stripe_account: {
         Row: {
           created_at: string
@@ -5062,6 +5174,41 @@ export type Database = {
             foreignKeyName: "player_subscription_player_id_fkey"
             columns: ["player_id"]
             isOneToOne: true
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_weekly_checkin: {
+        Row: {
+          completed_at: string
+          freeze_consumed: boolean
+          frequency_goal: number | null
+          player_id: string
+          sessions_played: number | null
+          week_start_date: string
+        }
+        Insert: {
+          completed_at?: string
+          freeze_consumed?: boolean
+          frequency_goal?: number | null
+          player_id: string
+          sessions_played?: number | null
+          week_start_date: string
+        }
+        Update: {
+          completed_at?: string
+          freeze_consumed?: boolean
+          frequency_goal?: number | null
+          player_id?: string
+          sessions_played?: number | null
+          week_start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_weekly_checkin_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
             referencedRelation: "player"
             referencedColumns: ["id"]
           },
@@ -7266,6 +7413,20 @@ export type Database = {
           users_count: number
         }[]
       }
+      get_check_in_context: {
+        Args: never
+        Returns: {
+          current_streak: number
+          freeze_cap: number
+          freeze_inventory: number
+          goals_hit_last_4_weeks: boolean[]
+          is_pending_check_in: boolean
+          last_frequency_goal: number
+          last_week_frequency_goal: number
+          last_week_sessions_played: number
+          longest_streak: number
+        }[]
+      }
       get_compatible_players: {
         Args: {
           p_max_results?: number
@@ -7372,6 +7533,26 @@ export type Database = {
           unique_devices: number
         }[]
       }
+      get_just_for_you: {
+        Args: {
+          p_caller_id: string
+          p_latitude: number
+          p_limit?: number
+          p_longitude: number
+          p_max_distance_km: number
+          p_sport_id: string
+          p_user_gender?: string
+        }
+        Returns: {
+          facility_affinity: number
+          kind: string
+          match_payload: Json
+          player_compatibility: number
+          score: number
+          score_history: number
+          suggestion_payload: Json
+        }[]
+      }
       get_latest_metric: {
         Args: {
           p_metric_name: string
@@ -7405,6 +7586,16 @@ export type Database = {
         Returns: {
           label: string
           value: string
+        }[]
+      }
+      get_match_fill_analytics: {
+        Args: { p_end_date: string; p_start_date: string }
+        Returns: {
+          date: string
+          matches_created: number
+          matches_filled: number
+          sport_id: string
+          sport_name: string
         }[]
       }
       get_match_statistics: {
@@ -8578,6 +8769,19 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      record_weekly_checkin: {
+        Args: {
+          p_auto_create: boolean
+          p_auto_invite: boolean
+          p_frequency_goal: number
+        }
+        Returns: {
+          freezes: number
+          longest_streak: number
+          milestone_reached: boolean
+          new_streak: number
+        }[]
+      }
       reevaluate_certification_for_player_rating: {
         Args: { p_player_rating_score_id: string }
         Returns: undefined
@@ -8627,6 +8831,7 @@ export type Database = {
           booking_url_template: string
           external_provider_id: string
           facility_id: string
+          facility_type_sport_map: Json
           provider_type: string
           served_sport_ids: string[]
           sports: Json
@@ -8685,6 +8890,7 @@ export type Database = {
         }
         Returns: {
           address: string
+          availability_slots: Json
           booking_url_template: string
           city: string
           court_count: number

@@ -31,6 +31,7 @@ import {
   getUtmCampaigns,
   createUtmCampaign,
   archiveUtmCampaign,
+  getMatchFillAnalytics,
   type KPISummary,
   type RealtimeUserStats,
   type MatchStatistics,
@@ -46,6 +47,7 @@ import {
   type UtmSignupStat,
   type UtmCampaign,
   type UtmTotalsComparison,
+  type MatchFillPoint,
 } from '@rallia/shared-services';
 
 // =============================================================================
@@ -1137,6 +1139,49 @@ export function useUtmCampaigns(): {
   return { campaigns, loading, error, create, archive, refetch: fetchData };
 }
 
+// =============================================================================
+// MATCH FILL ANALYTICS
+// =============================================================================
+
+export function useMatchFillAnalytics(days: number = 30): {
+  data: MatchFillPoint[];
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<void>;
+} {
+  const [data, setData] = useState<MatchFillPoint[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const isMounted = useRef(true);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const endDate = new Date();
+      const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      const result = await getMatchFillAnalytics(startDate, endDate);
+      if (isMounted.current) setData(result);
+    } catch (err) {
+      console.error('Error fetching match fill analytics:', err);
+      if (isMounted.current) setError(err as Error);
+    } finally {
+      if (isMounted.current) setLoading(false);
+    }
+  }, [days]);
+
+  useEffect(() => {
+    isMounted.current = true;
+    fetchData();
+    return () => {
+      isMounted.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [days]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
 // Re-export types for convenience
 export type {
   KPISummary,
@@ -1154,6 +1199,7 @@ export type {
   UtmSignupStat,
   UtmCampaign,
   UtmTotalsComparison,
+  MatchFillPoint,
 } from '@rallia/shared-services';
 
 export default useAdminAnalytics;
