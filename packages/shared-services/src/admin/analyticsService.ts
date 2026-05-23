@@ -3278,6 +3278,53 @@ export async function resolveInvitationTargets(
   }
 }
 
+// =============================================================================
+// MATCH FILL ANALYTICS
+// =============================================================================
+
+export interface MatchFillPoint {
+  date: string;
+  sportId: string;
+  sportName: string;
+  matchesCreated: number;
+  matchesFilled: number;
+}
+
+export async function getMatchFillAnalytics(
+  startDate: Date,
+  endDate: Date
+): Promise<MatchFillPoint[]> {
+  try {
+    const { data, error } = await supabase.rpc('get_match_fill_analytics', {
+      p_start_date: startDate.toISOString().split('T')[0],
+      p_end_date: endDate.toISOString().split('T')[0],
+    });
+
+    if (error) {
+      // Supabase errors stringify to {} by default — pull the fields out
+      // explicitly so the dev console actually shows what happened.
+      console.error('Error in getMatchFillAnalytics:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+      });
+      return [];
+    }
+
+    return (data || []).map((row: Record<string, unknown>) => ({
+      date: row.date ? String(row.date).split('T')[0] : '',
+      sportId: row.sport_id as string,
+      sportName: row.sport_name as string,
+      matchesCreated: Number(row.matches_created) || 0,
+      matchesFilled: Number(row.matches_filled) || 0,
+    }));
+  } catch (error) {
+    console.error('Error in getMatchFillAnalytics (thrown):', error);
+    return [];
+  }
+}
+
 export default {
   getRealtimeUserStats,
   getMatchStatistics,
@@ -3334,4 +3381,6 @@ export default {
   getUtmCampaigns,
   createUtmCampaign,
   archiveUtmCampaign,
+  // Match fill analytics
+  getMatchFillAnalytics,
 };
