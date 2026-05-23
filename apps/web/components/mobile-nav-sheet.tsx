@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ComponentType } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ArrowUpRight,
   BookOpen,
@@ -10,6 +10,7 @@ import {
   Trophy,
   Users,
   X,
+  type LucideIcon,
 } from 'lucide-react';
 import { Link, usePathname } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
@@ -19,12 +20,10 @@ import ModeToggle from './mode-toggle';
 import { SocialIcons } from './social-icons';
 import ThemeLogo from './theme-logo';
 
-type IconType = ComponentType<{ className?: string }>;
-
 type NavLink = {
   href: string;
   key: 'home' | 'games' | 'communities' | 'guides';
-  icon: IconType;
+  icon: LucideIcon;
 };
 
 const navLinks: NavLink[] = [
